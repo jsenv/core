@@ -37,6 +37,7 @@
     "@babel/plugin-transform-for-of": "./node_modules/@babel/plugin-transform-for-of/lib/index.js",
     "@babel/plugin-transform-spread": "./node_modules/@babel/plugin-transform-spread/lib/index.js",
     "@babel/helper-hoist-variables": "./node_modules/@babel/helper-hoist-variables/lib/index.js",
+    "@jsenv/github-release-package": "./node_modules/@jsenv/github-release-package/index.js",
     "@jsenv/node-module-import-map": "./node_modules/@jsenv/node-module-import-map/index.js",
     "@jsenv/prettier-check-project": "./node_modules/@jsenv/prettier-check-project/index.js",
     "@babel/helper-module-imports": "./node_modules/@babel/helper-module-imports/lib/index.js",
@@ -46,6 +47,7 @@
     "rollup-plugin-node-globals": "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.es6.js",
     "@rollup/plugin-commonjs": "./node_modules/@rollup/plugin-commonjs/dist/index.es.js",
     "istanbul-lib-instrument": "./node_modules/istanbul-lib-instrument/dist/index.js",
+    "@jsenv/package-publish": "./node_modules/@jsenv/package-publish/index.js",
     "@rollup/plugin-replace": "./node_modules/@rollup/plugin-replace/dist/rollup-plugin-replace.es.js",
     "@jsenv/codecov-upload": "./node_modules/@jsenv/codecov-upload/index.js",
     "istanbul-lib-coverage": "./node_modules/istanbul-lib-coverage/index.js",
@@ -154,6 +156,12 @@
     },
     "./node_modules/rollup-plugin-node-globals/node_modules/magic-string/": {
       "vlq": "./node_modules/vlq/src/vlq.js"
+    },
+    "./node_modules/@jsenv/package-publish/node_modules/@jsenv/server/": {
+      "abort-controller": "./node_modules/abort-controller/dist/abort-controller.js",
+      "@jsenv/server": "./node_modules/@jsenv/package-publish/node_modules/@jsenv/server/index.js",
+      "node-fetch": "./node_modules/node-fetch/lib/index.mjs",
+      "kill-port": "./node_modules/kill-port/index.js"
     },
     "./node_modules/@babel/plugin-transform-exponentiation-operator/": {
       "@babel/helper-builder-binary-assignment-operator-visitor": "./node_modules/@babel/helper-builder-binary-assignment-operator-visitor/lib/index.js"
@@ -547,6 +555,10 @@
       "@babel/traverse": "./node_modules/@babel/traverse/lib/index.js",
       "@babel/parser": "./node_modules/@babel/parser/lib/index.js",
       "semver": "./node_modules/istanbul-lib-instrument/node_modules/semver/semver.js"
+    },
+    "./node_modules/@jsenv/package-publish/": {
+      "@jsenv/server": "./node_modules/@jsenv/package-publish/node_modules/@jsenv/server/index.js",
+      "semver": "./node_modules/@jsenv/package-publish/node_modules/semver/index.js"
     },
     "./node_modules/@rollup/plugin-replace/": {
       "@rollup/pluginutils": "./node_modules/@rollup/pluginutils/dist/index.es.js",
