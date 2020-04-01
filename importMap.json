@@ -229,6 +229,9 @@
     "./node_modules/@babel/plugin-transform-template-literals/": {
       "@babel/helper-annotate-as-pure": "./node_modules/@babel/helper-annotate-as-pure/lib/index.js"
     },
+    "./node_modules/@jsenv/core/node_modules/istanbul-reports/": {
+      "html-escaper": "./node_modules/html-escaper/esm/index.js"
+    },
     "./node_modules/eslint-plugin-react/node_modules/doctrine/": {
       "esutils": "./node_modules/esutils/lib/utils.js"
     },
@@ -405,6 +408,16 @@
       "@babel/helper-function-name": "./node_modules/@babel/helper-function-name/lib/index.js",
       "@babel/helper-define-map": "./node_modules/@babel/helper-define-map/lib/index.js",
       "globals": "./node_modules/globals/index.js"
+    },
+    "./node_modules/@jsenv/core/node_modules/rollup/": {
+      "rollup/dist/": "./node_modules/@jsenv/core/node_modules/rollup/dist/",
+      "fsevents": "./node_modules/fsevents/fsevents.js",
+      "rollup": "./node_modules/@jsenv/core/node_modules/rollup/dist/es/rollup.js"
+    },
+    "./node_modules/@jsenv/core/node_modules/terser/": {
+      "source-map-support": "./node_modules/source-map-support/source-map-support.js",
+      "source-map": "./node_modules/@jsenv/core/node_modules/terser/node_modules/source-map/source-map.js",
+      "commander": "./node_modules/commander/index.js"
     },
     "./node_modules/bl/node_modules/readable-stream/": {
       "string_decoder": "./node_modules/string_decoder/lib/string_decoder.js",
@@ -1013,8 +1026,12 @@
       "regenerator-runtime": "./node_modules/@jsenv/core/node_modules/regenerator-runtime/runtime.js",
       "@jsenv/import-map/": "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/",
       "@jsenv/import-map": "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/index.js",
+      "istanbul-reports": "./node_modules/@jsenv/core/node_modules/istanbul-reports/index.js",
       "@babel/helpers": "./node_modules/@jsenv/core/node_modules/@babel/helpers/lib/index.js",
-      "@babel/core": "./node_modules/@jsenv/core/node_modules/@babel/core/lib/index.js"
+      "rollup/dist/": "./node_modules/@jsenv/core/node_modules/rollup/dist/",
+      "@babel/core": "./node_modules/@jsenv/core/node_modules/@babel/core/lib/index.js",
+      "rollup": "./node_modules/@jsenv/core/node_modules/rollup/dist/es/rollup.js",
+      "terser": "./node_modules/@jsenv/core/node_modules/terser/dist/bundle.min.js"
     },
     "./node_modules/@jsenv/util/": {
       "@jsenv/url-meta": "./node_modules/@jsenv/url-meta/index.js"
