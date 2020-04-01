@@ -1,11 +1,10 @@
 import { createOperation } from "@jsenv/cancellation"
 import { resolveUrl, urlToFileSystemPath, readFile } from "@jsenv/util"
 import { require } from "../../require.js"
+import { minimalBabelPluginArray } from "../../minimalBabelPluginArray.js"
 import { createInstrumentBabelPlugin } from "./createInstrumentBabelPlugin.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
-const syntaxDynamicImport = require("@babel/plugin-syntax-dynamic-import")
-const syntaxImportMeta = require("@babel/plugin-syntax-import-meta")
 const { transformAsync } = require("@babel/core")
 
 export const relativeUrlToEmptyCoverage = async (
@@ -35,8 +34,7 @@ export const relativeUrlToEmptyCoverage = async (
             allowAwaitOutsideFunction: true,
           },
           plugins: [
-            syntaxDynamicImport,
-            syntaxImportMeta,
+            ...minimalBabelPluginArray,
             ...Object.keys(babelPluginMap).map(
               (babelPluginName) => babelPluginMap[babelPluginName],
             ),
@@ -51,7 +49,7 @@ export const relativeUrlToEmptyCoverage = async (
     }
 
     // https://github.com/gotwarlost/istanbul/blob/bc84c315271a5dd4d39bcefc5925cfb61a3d174a/lib/command/common/run-with-cover.js#L229
-    Object.keys(coverage.s).forEach(function(key) {
+    Object.keys(coverage.s).forEach(function (key) {
       coverage.s[key] = 0
     })
 
