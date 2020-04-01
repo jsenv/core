@@ -15,6 +15,7 @@
     "babel-plugin-transform-async-to-promises": "./node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js",
     "@babel/plugin-syntax-object-rest-spread": "./node_modules/@babel/plugin-syntax-object-rest-spread/lib/index.js",
     "@babel/plugin-transform-arrow-functions": "./node_modules/@babel/plugin-transform-arrow-functions/lib/index.js",
+    "@babel/plugin-syntax-numeric-separator": "./node_modules/@babel/plugin-syntax-numeric-separator/lib/index.js",
     "@babel/plugin-transform-duplicate-keys": "./node_modules/@babel/plugin-transform-duplicate-keys/lib/index.js",
     "@babel/plugin-transform-block-scoping": "./node_modules/@babel/plugin-transform-block-scoping/lib/index.js",
     "@babel/plugin-transform-destructuring": "./node_modules/@babel/plugin-transform-destructuring/lib/index.js",
@@ -134,10 +135,6 @@
       "to-fast-properties": "./node_modules/to-fast-properties/index.js",
       "lodash": "./node_modules/lodash/lodash.js"
     },
-    "./node_modules/@jsenv/importmap-eslint-resolver/node_modules/@jsenv/util/": {
-      "@jsenv/url-meta": "./node_modules/@jsenv/url-meta/index.js",
-      "@jsenv/util": "./node_modules/@jsenv/importmap-eslint-resolver/node_modules/@jsenv/util/index.js"
-    },
     "./node_modules/@babel/helper-builder-binary-assignment-operator-visitor/": {
       "@babel/helper-explode-assignable-expression": "./node_modules/@babel/helper-explode-assignable-expression/lib/index.js",
       "@babel/types": "./node_modules/@babel/types/lib/index.js"
@@ -171,25 +168,6 @@
     },
     "./node_modules/@babel/plugin-proposal-unicode-property-regex/": {
       "@babel/helper-create-regexp-features-plugin": "./node_modules/@babel/plugin-proposal-unicode-property-regex/node_modules/@babel/helper-create-regexp-features-plugin/lib/index.js"
-    },
-    "./node_modules/@jsenv/eslint-config/node_modules/@babel/core/": {
-      "convert-source-map": "./node_modules/convert-source-map/index.js",
-      "@babel/code-frame": "./node_modules/@babel/code-frame/lib/index.js",
-      "@babel/generator": "./node_modules/@babel/generator/lib/index.js",
-      "@babel/template": "./node_modules/@babel/template/lib/index.js",
-      "@babel/traverse": "./node_modules/@babel/traverse/lib/index.js",
-      "@babel/parser": "./node_modules/@babel/parser/lib/index.js",
-      "@babel/types": "./node_modules/@babel/types/lib/index.js",
-      "gensync": "./node_modules/gensync/index.js",
-      "resolve": "./node_modules/resolve/index.js",
-      "lodash": "./node_modules/lodash/lodash.js",
-      "semver": "./node_modules/semver/semver.js",
-      "debug": "./node_modules/debug/src/index.js",
-      "json5": "./node_modules/json5/dist/index.mjs"
-    },
-    "./node_modules/@jsenv/eslint-config/node_modules/@jsenv/util/": {
-      "@jsenv/url-meta": "./node_modules/@jsenv/url-meta/index.js",
-      "@jsenv/util": "./node_modules/@jsenv/eslint-config/node_modules/@jsenv/util/index.js"
     },
     "./node_modules/@babel/helper-builder-react-jsx-experimental/": {
       "@babel/helper-annotate-as-pure": "./node_modules/@babel/helper-annotate-as-pure/lib/index.js",
@@ -258,9 +236,6 @@
       "@babel/helper-validator-identifier": "./node_modules/@babel/helper-validator-identifier/lib/index.js",
       "to-fast-properties": "./node_modules/to-fast-properties/index.js",
       "lodash": "./node_modules/lodash/lodash.js"
-    },
-    "./node_modules/@babel/plugin-proposal-numeric-separator/": {
-      "@babel/plugin-syntax-numeric-separator": "./node_modules/@babel/plugin-syntax-numeric-separator/lib/index.js"
     },
     "./node_modules/@babel/plugin-proposal-optional-chaining/": {
       "@babel/plugin-syntax-optional-chaining": "./node_modules/@babel/plugin-syntax-optional-chaining/lib/index.js"
@@ -386,8 +361,7 @@
     "./node_modules/@jsenv/importmap-eslint-resolver/": {
       "@jsenv/importmap-eslint-resolver": "./node_modules/@jsenv/importmap-eslint-resolver/index.js",
       "@jsenv/import-map/": "./node_modules/@jsenv/importmap-eslint-resolver/node_modules/@jsenv/import-map/",
-      "@jsenv/import-map": "./node_modules/@jsenv/importmap-eslint-resolver/node_modules/@jsenv/import-map/index.js",
-      "@jsenv/util": "./node_modules/@jsenv/importmap-eslint-resolver/node_modules/@jsenv/util/index.js"
+      "@jsenv/import-map": "./node_modules/@jsenv/importmap-eslint-resolver/node_modules/@jsenv/import-map/index.js"
     },
     "./node_modules/babel-plugin-dynamic-import-node/": {
       "object.assign": "./node_modules/object.assign/index.js"
@@ -522,8 +496,13 @@
       "acorn": "./node_modules/acorn/dist/acorn.es.js"
     },
     "./node_modules/string.prototype.trimright/": {
+      "string.prototype.trimend": "./node_modules/string.prototype.trimend/index.js",
       "define-properties": "./node_modules/define-properties/index.js",
-      "function-bind": "./node_modules/function-bind/index.js"
+      "es-abstract": "./node_modules/es-abstract/index.js"
+    },
+    "./node_modules/string.prototype.trimstart/": {
+      "define-properties": "./node_modules/define-properties/index.js",
+      "es-abstract": "./node_modules/es-abstract/index.js"
     },
     "./node_modules/string.prototype.matchall/": {
       "regexp.prototype.flags": "./node_modules/regexp.prototype.flags/index.js",
@@ -534,13 +513,18 @@
       "has-symbols": "./node_modules/has-symbols/index.js"
     },
     "./node_modules/string.prototype.trimleft/": {
+      "string.prototype.trimstart": "./node_modules/string.prototype.trimstart/index.js",
       "define-properties": "./node_modules/define-properties/index.js",
-      "function-bind": "./node_modules/function-bind/index.js"
+      "es-abstract": "./node_modules/es-abstract/index.js"
     },
     "./node_modules/@babel/helper-define-map/": {
       "@babel/helper-function-name": "./node_modules/@babel/helper-function-name/lib/index.js",
       "@babel/types": "./node_modules/@babel/types/lib/index.js",
       "lodash": "./node_modules/lodash/lodash.js"
+    },
+    "./node_modules/string.prototype.trimend/": {
+      "define-properties": "./node_modules/define-properties/index.js",
+      "es-abstract": "./node_modules/es-abstract/index.js"
     },
     "./node_modules/@rollup/plugin-commonjs/": {
       "@rollup/pluginutils": "./node_modules/@rollup/pluginutils/dist/index.es.js",
@@ -555,6 +539,9 @@
       "@babel/traverse": "./node_modules/@babel/traverse/lib/index.js",
       "@babel/parser": "./node_modules/@babel/parser/lib/index.js",
       "semver": "./node_modules/istanbul-lib-instrument/node_modules/semver/semver.js"
+    },
+    "./node_modules/@babel/runtime-corejs3/": {
+      "core-js-pure": "./node_modules/core-js-pure/index.js"
     },
     "./node_modules/@jsenv/package-publish/": {
       "@jsenv/server": "./node_modules/@jsenv/package-publish/node_modules/@jsenv/server/index.js",
@@ -589,9 +576,7 @@
       "@jsenv/importmap-eslint-resolver": "./node_modules/@jsenv/importmap-eslint-resolver/index.js",
       "@babel/plugin-syntax-jsx": "./node_modules/@babel/plugin-syntax-jsx/lib/index.js",
       "eslint-plugin-import": "./node_modules/eslint-plugin-import/lib/index.js",
-      "eslint-plugin-react": "./node_modules/eslint-plugin-react/index.js",
-      "@babel/core": "./node_modules/@jsenv/eslint-config/node_modules/@babel/core/lib/index.js",
-      "@jsenv/util": "./node_modules/@jsenv/eslint-config/node_modules/@jsenv/util/index.js"
+      "eslint-plugin-react": "./node_modules/eslint-plugin-react/index.js"
     },
     "./node_modules/array.prototype.flat/": {
       "define-properties": "./node_modules/define-properties/index.js",
@@ -634,6 +619,8 @@
       "prop-types": "./node_modules/prop-types/index.js",
       "doctrine": "./node_modules/eslint-plugin-react/node_modules/doctrine/lib/doctrine.js",
       "resolve": "./node_modules/resolve/index.js",
+      "xregexp": "./node_modules/xregexp/lib/index.js",
+      "semver": "./node_modules/eslint-plugin-react/node_modules/semver/semver.js",
       "has": "./node_modules/has/src/index.js"
     },
     "./node_modules/istanbul-lib-report/": {
@@ -1367,6 +1354,9 @@
     },
     "./node_modules/resolve/": {
       "path-parse": "./node_modules/path-parse/index.js"
+    },
+    "./node_modules/xregexp/": {
+      "@babel/runtime-corejs3": "./node_modules/@babel/runtime-corejs3/index"
     },
     "./node_modules/des.js/": {
       "minimalistic-assert": "./node_modules/minimalistic-assert/index.js",
