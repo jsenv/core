@@ -1,4 +1,4 @@
-export function isNativeReflectConstruct() {
+export default function isNativeReflectConstruct() {
   if (typeof Reflect === "undefined" || !Reflect.construct) return false
   // core-js@3
   if (Reflect.construct.sham) return false
