@@ -199,6 +199,9 @@ ${fileRelativeUrl}`),
           completedExecutionLogMerging &&
           previousExecutionResult &&
           previousExecutionResult.status === "completed" &&
+          (previousExecutionResult.consoleCalls
+            ? previousExecutionResult.consoleCalls.length === 0
+            : true) &&
           executionResult.status === "completed"
         ) {
           previousExecutionLog = previousExecutionLog.update(log)
