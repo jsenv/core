@@ -50,7 +50,7 @@
     "generate-import-map": "node --no-warnings ./script/generate-import-map/generate-import-map.js",
     "install-git-hooks": "node --no-warnings ./script/install-git-hooks/install-git-hooks.js",
     "dist": "npm run generate-commonjs-bundle",
-    "postinstall": "npm run generate-import-map && npm run install-git-hooks && cd ./.github/release && npm install",
+    "postinstall": "npm run generate-import-map && npm run install-git-hooks",
     "prepublishOnly": "node ./script/transform-package/remove-postinstall.js && npm run dist",
     "postpublish": "node ./script/transform-package/restore-postinstall.js",
     "git-hook-pre-commit": "npm run prettier-format-stage"
