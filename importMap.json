@@ -9,6 +9,7 @@
     "@babel/plugin-transform-computed-properties": "./node_modules/@babel/plugin-transform-computed-properties/lib/index.js",
     "@babel/plugin-proposal-object-rest-spread": "./node_modules/@babel/plugin-proposal-object-rest-spread/lib/index.js",
     "@babel/plugin-transform-template-literals": "./node_modules/@babel/plugin-transform-template-literals/lib/index.js",
+    "@babel/plugin-proposal-numeric-separator": "./node_modules/@babel/plugin-proposal-numeric-separator/lib/index.js",
     "@babel/plugin-proposal-optional-chaining": "./node_modules/@babel/plugin-proposal-optional-chaining/lib/index.js",
     "@babel/plugin-transform-modules-systemjs": "./node_modules/@babel/plugin-transform-modules-systemjs/lib/index.js",
     "babel-plugin-transform-async-to-promises": "./node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js",
@@ -148,6 +149,9 @@
       "@babel/helper-define-map": "./node_modules/@babel/helper-define-map/lib/index.js",
       "globals": "./node_modules/globals/index.js"
     },
+    "./node_modules/@jsenv/core/node_modules/@jsenv/node-module-import-map/": {
+      "@jsenv/node-module-import-map": "./node_modules/@jsenv/core/node_modules/@jsenv/node-module-import-map/index.js"
+    },
     "./node_modules/rollup-plugin-node-globals/node_modules/magic-string/": {
       "vlq": "./node_modules/vlq/src/vlq.js"
     },
@@ -213,6 +217,10 @@
     "./node_modules/level-sublevel/node_modules/level-fix-range/": {
       "clone": "./node_modules/clone/clone.js"
     },
+    "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/": {
+      "@jsenv/import-map/": "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/",
+      "@jsenv/import-map": "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/index.js"
+    },
     "./node_modules/@babel/core/node_modules/@babel/generator/": {
       "@babel/types": "./node_modules/@babel/types/lib/index.js",
       "lodash": "./node_modules/lodash/lodash.js",
@@ -239,6 +247,9 @@
       "@babel/helper-validator-identifier": "./node_modules/@babel/helper-validator-identifier/lib/index.js",
       "to-fast-properties": "./node_modules/to-fast-properties/index.js",
       "lodash": "./node_modules/lodash/lodash.js"
+    },
+    "./node_modules/@babel/plugin-proposal-numeric-separator/": {
+      "@babel/plugin-syntax-numeric-separator": "./node_modules/@babel/plugin-syntax-numeric-separator/lib/index.js"
     },
     "./node_modules/@babel/plugin-proposal-optional-chaining/": {
       "@babel/plugin-syntax-optional-chaining": "./node_modules/@babel/plugin-syntax-optional-chaining/lib/index.js"
@@ -998,6 +1009,10 @@
       "@babel/plugin-transform-parameters": "./node_modules/@jsenv/core/node_modules/@babel/plugin-transform-parameters/lib/index.js",
       "@babel/plugin-transform-classes": "./node_modules/@jsenv/core/node_modules/@babel/plugin-transform-classes/lib/index.js",
       "@babel/plugin-transform-for-of": "./node_modules/@jsenv/core/node_modules/@babel/plugin-transform-for-of/lib/index.js",
+      "@jsenv/node-module-import-map": "./node_modules/@jsenv/core/node_modules/@jsenv/node-module-import-map/index.js",
+      "regenerator-runtime": "./node_modules/@jsenv/core/node_modules/regenerator-runtime/runtime.js",
+      "@jsenv/import-map/": "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/",
+      "@jsenv/import-map": "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/index.js",
       "@babel/helpers": "./node_modules/@jsenv/core/node_modules/@babel/helpers/lib/index.js",
       "@babel/core": "./node_modules/@jsenv/core/node_modules/@babel/core/lib/index.js"
     },

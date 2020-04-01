@@ -3,8 +3,10 @@
 import { require } from "./internal/require.js"
 
 const proposalJSONStrings = require("@babel/plugin-proposal-json-strings")
+const proposalNumericSeparator = require("@babel/plugin-proposal-numeric-separator")
 const proposalObjectRestSpread = require("@babel/plugin-proposal-object-rest-spread")
 const proposalOptionalCatchBinding = require("@babel/plugin-proposal-optional-catch-binding")
+const proposalOptionalChaining = require("@babel/plugin-proposal-optional-chaining")
 const proposalUnicodePropertyRegex = require("@babel/plugin-proposal-unicode-property-regex")
 const syntaxObjectRestSpread = require("@babel/plugin-syntax-object-rest-spread")
 const syntaxOptionalCatchBinding = require("@babel/plugin-syntax-optional-catch-binding")
@@ -33,10 +35,12 @@ const transformTypeOfSymbol = require("@babel/plugin-transform-typeof-symbol")
 const transformUnicodeRegex = require("@babel/plugin-transform-unicode-regex")
 
 export const jsenvBabelPluginMap = {
+  "proposal-numeric-separator": [proposalNumericSeparator],
+  "proposal-json-strings": [proposalJSONStrings],
   "proposal-object-rest-spread": [proposalObjectRestSpread],
   "proposal-optional-catch-binding": [proposalOptionalCatchBinding],
+  "proposal-optional-chaining": [proposalOptionalChaining],
   "proposal-unicode-property-regex": [proposalUnicodePropertyRegex],
-  "proposal-json-strings": [proposalJSONStrings],
   "syntax-object-rest-spread": [syntaxObjectRestSpread],
   "syntax-optional-catch-binding": [syntaxOptionalCatchBinding],
   "transform-async-to-promises": [transformAsyncToPromises],
