@@ -99,7 +99,9 @@ import { jsenvBabelPluginMap } from "../../index.js"
     best: {
       babelPluginRequiredNameArray: [
         "proposal-json-strings",
+        "proposal-numeric-separator",
         "proposal-optional-catch-binding",
+        "proposal-optional-chaining",
         "proposal-unicode-property-regex",
         "syntax-object-rest-spread",
         "syntax-optional-catch-binding",
