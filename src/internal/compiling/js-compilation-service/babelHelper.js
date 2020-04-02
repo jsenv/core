@@ -8,6 +8,7 @@ const { list } = require("@babel/helpers")
 
 const babelHelperNameInsideJsenvCoreArray = [
   "applyDecoratedDescriptor",
+  "arrayLikeToArray",
   "arrayWithHoles",
   "arrayWithoutHoles",
   "assertThisInitialized",
@@ -32,6 +33,9 @@ const babelHelperNameInsideJsenvCoreArray = [
   "classStaticPrivateMethodSet",
   "construct",
   "createClass",
+  "createForOfIterableHelper",
+  "createForOfIterableHelperLoose",
+  "createSuper",
   "decorate",
   "defaults",
   "defineEnumerableProperties",
@@ -47,6 +51,7 @@ const babelHelperNameInsideJsenvCoreArray = [
   "interopRequireDefault",
   "interopRequireWildcard",
   "isNativeFunction",
+  "isNativeReflectConstruct",
   "iterableToArray",
   "iterableToArrayLimit",
   "iterableToArrayLimitLoose",
@@ -77,6 +82,7 @@ const babelHelperNameInsideJsenvCoreArray = [
   "toPrimitive",
   "toPropertyKey",
   "typeof",
+  "unsupportedIterableToArray",
   "wrapAsyncGenerator",
   "wrapNativeSuper",
   "wrapRegExp",

@@ -22,6 +22,7 @@ try {
     },
   })
 } catch (actual) {
+  process.exitCode = undefined // restore process exitCode set by error in generateCommonJsBundle
   const expected = new Error(
     `Module format cjs does not support top-level await. Use the "es" or "system" output formats rather.`,
   )

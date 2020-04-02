@@ -1,5 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { require } from "../../require.js"
+import { minimalBabelPluginArray } from "../../minimalBabelPluginArray.js"
 import transformModulesSystemJs from "./babel-plugin-transform-modules-systemjs/index.js"
 import { findAsyncPluginNameInBabelPluginMap } from "./findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"
@@ -9,10 +10,6 @@ import { transformBabelHelperToImportBabelPlugin } from "./transformBabelHelperT
 import { filePathToBabelHelperName } from "./babelHelper.js"
 
 const { transformAsync, transformFromAstAsync } = require("@babel/core")
-const syntaxDynamicImport = require("@babel/plugin-syntax-dynamic-import")
-const syntaxImportMeta = require("@babel/plugin-syntax-import-meta")
-
-const defaultBabelPluginArray = [syntaxDynamicImport, syntaxImportMeta]
 
 export const jsenvTransform = async ({
   inputCode,
@@ -98,7 +95,7 @@ export const jsenvTransform = async ({
       options: {
         ...options,
         plugins: [
-          ...defaultBabelPluginArray,
+          ...minimalBabelPluginArray,
           ...babelPluginArrayWithoutAsync,
           [transformModulesSystemJs, { topLevelAwait: transformTopLevelAwait }],
         ],
@@ -119,7 +116,7 @@ export const jsenvTransform = async ({
         // https://github.com/babel/babel/blob/eac4c5bc17133c2857f2c94c1a6a8643e3b547a7/packages/babel-core/src/transformation/file/generate.js#L57
         // https://github.com/babel/babel/blob/090c364a90fe73d36a30707fc612ce037bdbbb24/packages/babel-core/src/transformation/file/merge-map.js#L6s
         inputSourceMap: result.map,
-        plugins: [...defaultBabelPluginArray, babelPluginMap[asyncPluginName]],
+        plugins: [...minimalBabelPluginArray, babelPluginMap[asyncPluginName]],
       },
     })
 
@@ -131,7 +128,7 @@ export const jsenvTransform = async ({
   }
 
   const babelPluginArray = [
-    ...defaultBabelPluginArray,
+    ...minimalBabelPluginArray,
     ...Object.keys(babelPluginMap).map((babelPluginName) => babelPluginMap[babelPluginName]),
     ...(transformModuleIntoSystemFormat
       ? [[transformModulesSystemJs, { topLevelAwait: transformTopLevelAwait }]]

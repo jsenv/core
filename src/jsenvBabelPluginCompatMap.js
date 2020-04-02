@@ -1,5 +1,6 @@
 // copied from
 // https://github.com/babel/babel/blob/master/packages/babel-compat-data/data/plugins.json#L1
+// now moved at https://github.com/babel/babel/blob/548cb3ee89552ffc08ee5625b084bd33f8107530/packages/babel-compat-data/data/plugins.json#L1
 // Because this is an hidden implementation detail of @babel/preset-env
 // it could be deprecated or moved anytime.
 // For that reason it makes more sens to have it inlined here
@@ -7,17 +8,31 @@
 // Ideally it would be documented or a separate module
 
 export const jsenvBabelPluginCompatMap = {
+  "proposal-numeric-separator": {
+    chrome: "75",
+    edge: "79",
+    firefox: "70",
+    safari: "13",
+    node: "12.5",
+    ios: "13",
+    opera: "62",
+    electron: "6.1",
+  },
   "proposal-nullish-coalescing-operator": {
     chrome: "80",
+    edge: "80",
     firefox: "72",
-    safari: "tp",
+    safari: "13.1",
     opera: "67",
+    electron: "8.1",
   },
   "proposal-optional-chaining": {
     chrome: "80",
+    edge: "80",
     firefox: "74",
-    safari: "tp",
+    safari: "13.1",
     opera: "67",
+    electron: "8.1",
   },
   "proposal-json-strings": {
     chrome: "66",
@@ -94,8 +109,7 @@ export const jsenvBabelPluginCompatMap = {
     electron: "3.1",
   },
   // copy of transform-async-to-generator
-  // this is not in the babel-preset-env repo
-  // but we need this
+  // so that async is not transpiled when supported
   "transform-async-to-promises": {
     chrome: "55",
     edge: "15",
