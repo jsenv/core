@@ -83,13 +83,9 @@ npm install --save-dev @jsenv/core
 
 # Configuration
 
-Jsenv can execute standard JavaScript without additional configuration. It means Jsenv support JavaScript Modules, destructuring, optional chaining and so on by default.
+Jsenv can execute standard JavaScript without additional configuration. It means Jsenv support [JavaScript Modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules), destructuring, optional chaining and so on by default.
 
-Jsenv can be configured to understand JavaScript that derivates from standards. For instance you need some configuration when some files or some dependency files uses CommonJS format, JSX syntax or TypeScript syntax.
-
-— see [JavaScript Modules on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)<br/>
-— see [JSX Introduction on React website](https://reactjs.org/docs/introducing-jsx.html)<br/>
-— see [TypeScript website](https://www.typescriptlang.org)
+Jsenv can be configured to understand JavaScript that derivates from standards. For instance you need some configuration when some files or some dependency files uses CommonJS format, [JSX](https://reactjs.org/docs/introducing-jsx.html) or [TypeScript](https://www.typescriptlang.org).
 
 ## jsenv.config.js
 
@@ -112,7 +108,6 @@ const transformReactJSX = require("@babel/plugin-transform-react-jsx")
 
 export const babelPluginMap = {
   ...jsenvBabelPluginMap,
-  // enable JSX syntax (you can configure the babel plugin too)
   "transform-react-jsx": [
     transformReactJSX,
     { pragma: "React.createElement", pragmaFrag: "React.Fragment" },
@@ -120,29 +115,37 @@ export const babelPluginMap = {
 }
 
 export const convertMap = {
-  // converts react into JavaScript Modules format
   "./node_modules/react/index.js": convertCommonJsWithRollup,
-  // converts react-dom into JavaScript Modules format
   "./node_modules/react-dom/index.js": (options) => {
     return convertCommonJsWithRollup({ ...options, external: ["react"] })
   },
 }
 ```
 
+See also
+
+- [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
+- [convertMap](./docs/shared-parameters.md#convertMap)
+- [transform-react-jsx on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-react-jsx.html)
+
 ## TypeScript
 
-TypeScript is a subset of JavaScript, it requires some configuration if you use it. The following `jsenv.config.js` enables TypeScript.
+TypeScript is a subset of JavaScript, it requires some configuration if you use it. The following `jsenv.config.js` enable TypeScript.
 
 ```js
 import { createRequire } from "module"
 import { jsenvBabelPluginMap } from "@jsenv/core"
 
 const require = createRequire(import.meta.url)
-const syntaxTypeScript = require("@babel/plugin-syntax-typescript")
+const transformTypeScript = require("@babel/plugin-transform-typescript")
 
 export const babelPluginMap = {
   ...jsenvBabelPluginMap,
-  // enable TypeScript syntax
-  "syntax-typescript": [syntaxTypeScript],
+  "transform-typescript": [transformTypeScript, { allowNamespaces: true }],
 }
 ```
+
+See also
+
+- [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
+- [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)

@@ -30,6 +30,7 @@
     "@babel/plugin-transform-regenerator": "./node_modules/@babel/plugin-transform-regenerator/lib/index.js",
     "@babel/plugin-transform-new-target": "./node_modules/@babel/plugin-transform-new-target/lib/index.js",
     "@babel/plugin-transform-parameters": "./node_modules/@babel/plugin-transform-parameters/lib/index.js",
+    "@babel/plugin-transform-typescript": "./node_modules/@babel/plugin-transform-typescript/lib/index.js",
     "@babel/plugin-transform-react-jsx": "./node_modules/@babel/plugin-transform-react-jsx/lib/index.js",
     "@babel/plugin-syntax-import-meta": "./node_modules/@babel/plugin-syntax-import-meta/lib/index.js",
     "@babel/plugin-transform-literals": "./node_modules/@babel/plugin-transform-literals/lib/index.js",
@@ -203,6 +204,13 @@
     "./node_modules/level-sublevel/node_modules/level-fix-range/": {
       "clone": "./node_modules/clone/clone.js"
     },
+    "./node_modules/@babel/helper-create-class-features-plugin/": {
+      "@babel/helper-member-expression-to-functions": "./node_modules/@babel/helper-member-expression-to-functions/lib/index.js",
+      "@babel/helper-optimise-call-expression": "./node_modules/@babel/helper-optimise-call-expression/lib/index.js",
+      "@babel/helper-split-export-declaration": "./node_modules/@babel/helper-split-export-declaration/lib/index.js",
+      "@babel/helper-replace-supers": "./node_modules/@babel/helper-replace-supers/lib/index.js",
+      "@babel/helper-function-name": "./node_modules/@babel/helper-function-name/lib/index.js"
+    },
     "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/": {
       "@jsenv/import-map/": "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/",
       "@jsenv/import-map": "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/index.js"
@@ -335,6 +343,10 @@
     },
     "./node_modules/@babel/plugin-transform-parameters/": {
       "@babel/helper-get-function-arity": "./node_modules/@babel/helper-get-function-arity/lib/index.js"
+    },
+    "./node_modules/@babel/plugin-transform-typescript/": {
+      "@babel/helper-create-class-features-plugin": "./node_modules/@babel/helper-create-class-features-plugin/lib/index.js",
+      "@babel/plugin-syntax-typescript": "./node_modules/@babel/plugin-syntax-typescript/lib/index.js"
     },
     "./node_modules/wrap-ansi/node_modules/ansi-styles/": {
       "color-convert": "./node_modules/color-convert/index.js"

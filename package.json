@@ -69,9 +69,9 @@
     "@babel/plugin-proposal-unicode-property-regex": "7.8.8",
     "@babel/plugin-syntax-dynamic-import": "7.8.3",
     "@babel/plugin-syntax-import-meta": "7.8.3",
+    "@babel/plugin-syntax-numeric-separator": "7.8.3",
     "@babel/plugin-syntax-object-rest-spread": "7.8.3",
     "@babel/plugin-syntax-optional-catch-binding": "7.8.3",
-    "@babel/plugin-syntax-numeric-separator": "7.8.3",
     "@babel/plugin-transform-arrow-functions": "7.8.3",
     "@babel/plugin-transform-block-scoped-functions": "7.8.3",
     "@babel/plugin-transform-block-scoping": "7.8.3",
@@ -136,6 +136,7 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-react-jsx": "7.9.4",
+    "@babel/plugin-transform-typescript": "7.9.4",
     "@jsenv/assert": "2.1.0",
     "@jsenv/codecov-upload": "3.4.0",
     "@jsenv/core": "12.2.2",
