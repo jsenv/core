@@ -11,16 +11,16 @@ Execute JavaScript on multiple environments for testing.
 
 - [Presentation](#Presentation)
 - [Installation](#Installation)
-- [API](#API)
 - [Configuration](#Configuration)
   - [jsenv.config.js](#jsenv.config.js)
   - [CommonJS](#CommonJS)
   - [React](#React)
   - [TypeScript](#TypeScript)
+- [Advanced features](#Advanced-features)
 
 # Presentation
 
-`@jsenv/core` is above all a testing framework. It executes your tests on a browser, nodejs or both and can generate the combined coverage from all executions.
+`@jsenv/core` is above all a testing library. It executes your tests on a browser, nodejs or both and can generate the combined coverage from all executions.
 
 > In reality you would never test `Math.max`, the code below is testing it to show an example unrelated to a specific codebase.
 
@@ -56,6 +56,8 @@ executeTestPlan({
 
 ![test execution terminal screenshot](./docs/testing/main-example-terminal-screenshot.png)
 
+See [testing](./docs/testing/readme.md) documentation for more.
+
 # Installation
 
 ```console
@@ -63,18 +65,6 @@ npm install --save-dev @jsenv/core
 ```
 
 `@jsenv/core` is tested on Mac, Windows, Linux on Node.js 13.7.0 and 12.8.0. Other operating systems and Node.js versions are not tested.
-
-# API
-
-`@jsenv/core` exports functions needed during the life of a typical JavaScript project.
-
-[Testing](./docs/testing/readme.md): execute many JavaScript files in parallel in browsers and/or Node.js.
-
-[Exploring](./docs/exploring/readme.md): starts a server listing files that will be executed as you visit them with a browser.
-
-[Executing](./docs/executing/readme.md): execute one JavaScript file in a browser or Node.js.
-
-[Bundling](./docs/bundling/readme.md): generate bundles compatible with browsers and Node.js.
 
 # Configuration
 
@@ -88,7 +78,7 @@ Jsenv can be configured to be compatible with non-standard JavaScript. For insta
 
 We recommend regroup Jsenv configuration in a `jsenv.config.js` file at the root of your working directory.
 
-To get a better idea check Jsenv self configuration file: [jsenv.config.js](./jsenv.config.js). This file is imported by jsenv scripts such as [./script/test/test.js](./script/test/test.js) or [./script/generate-commonjs-bundle/generate-commonjs-bundle.js](./script/generate-commonjs-bundle/generate-commonjs-bundle.js).
+To get a better idea check [jsenv.config.js](./jsenv.config.js). This file is just imported by [script/test/test.js](./script/test/test.js).
 
 This pattern is used by all jsenv packages and is a delight to work with. That being said it's only a recommendation, you can organize your files as you want.
 
@@ -158,3 +148,16 @@ See also
 
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
 - [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
+
+# Advanced features
+
+`@jsenv/core` can execute standard JavaScript and be configured to run non-standard JavaScript. This can be reused for more than executing test files:
+
+- [Exploring](./docs/exploring/readme.md):
+  Start a development server to execute any file, comes with livereloading without configuration.
+
+- [Executing](./docs/executing/readme.md):
+  Execute one JavaScript file in a browser or Node.js, can be used to debug within VS Code.
+
+- [Bundling](./docs/bundling/readme.md):
+  Generate bundles compatible with browsers and Node.js.
