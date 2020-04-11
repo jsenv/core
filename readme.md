@@ -14,6 +14,7 @@ Execute JavaScript on multiple environments for testing.
 - [API](#API)
 - [Configuration](#Configuration)
   - [jsenv.config.js](#jsenv.config.js)
+  - [CommonJS](#CommonJS)
   - [React](#React)
   - [TypeScript](#TypeScript)
 
@@ -55,8 +56,6 @@ executeTestPlan({
 
 ![test execution terminal screenshot](./docs/testing/main-example-terminal-screenshot.png)
 
-There is a detailed documentation about testing at [./docs/testing/readme.md](./docs/testing/readme.md). `@jsenv/core` can also bring you more as shown in the [API](#API) part.
-
 # Installation
 
 ```console
@@ -67,37 +66,47 @@ npm install --save-dev @jsenv/core
 
 # API
 
-`@jsenv/core` exports functions needed during the life of a typical JavaScript project. These functions are independant, you can use them according to each project requirements. Using every `@jsenv/core` functions results in a unified developer experience.
+`@jsenv/core` exports functions needed during the life of a typical JavaScript project.
 
-- execute test files on a browser and/or node.js.<br/>
-  — see [./docs/testing/readme.md](./docs/testing/readme.md)
+[Testing](./docs/testing/readme.md): execute many JavaScript files in parallel in browsers and/or Node.js.
 
-- explore files using a browser.<br/>
-  — see [./docs/exploring/readme.md](./docs/exploring/readme.md)
+[Exploring](./docs/exploring/readme.md): starts a server listing files that will be executed as you visit them with a browser.
 
-- execute file on a browser or node.js.<br/>
-  — see [./docs/executing/readme.md](./docs/executing/readme.md)
+[Executing](./docs/executing/readme.md): execute one JavaScript file in a browser or Node.js.
 
-- bundle your package into a format compatible with browsers and/or node.js.<br/>
-  — see [./docs/bundling/readme.md](./docs/bundling/readme.md)
+[Bundling](./docs/bundling/readme.md): generate bundles compatible with browsers and Node.js.
 
 # Configuration
 
 Jsenv can execute standard JavaScript without additional configuration. It means Jsenv support [JavaScript Modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules), destructuring, optional chaining and so on by default.
 
-Jsenv can be configured to understand JavaScript that derivates from standards. For instance you need some configuration when some files or some dependency files uses CommonJS format, [JSX](https://reactjs.org/docs/introducing-jsx.html) or [TypeScript](https://www.typescriptlang.org).
+Jsenv can be configured to be compatible with non-standard JavaScript. For instance using [CommonJS modules](https://code-trotter.com/web/understand-the-different-javascript-modules-formats/#commonjs-cjs), [JSX](https://reactjs.org/docs/introducing-jsx.html) or [TypeScript](https://www.typescriptlang.org).
+
+> Keep in mind one of your dependency may use non-standard JavaScript.
 
 ## jsenv.config.js
 
-We recommend to put your configuration in a `jsenv.config.js` file at the root of your repository.
+We recommend regroup Jsenv configuration in a `jsenv.config.js` file at the root of your working directory.
 
-To get a better idea check jsenv configuration file: [./jsenv.config.js](./jsenv.config.js). This file is imported by jsenv scripts such as [./script/test/test.js](./script/test/test.js) or [./script/generate-commonjs-bundle/generate-commonjs-bundle.js](./script/generate-commonjs-bundle/generate-commonjs-bundle.js).
+To get a better idea check Jsenv self configuration file: [jsenv.config.js](./jsenv.config.js). This file is imported by jsenv scripts such as [./script/test/test.js](./script/test/test.js) or [./script/generate-commonjs-bundle/generate-commonjs-bundle.js](./script/generate-commonjs-bundle/generate-commonjs-bundle.js).
 
-This pattern is used by all jsenv packages and is a delight to work with. That being said it's only a recommended pattern, you can organize jsenv configuration and your scripts files the way you want.
+This pattern is used by all jsenv packages and is a delight to work with. That being said it's only a recommendation, you can organize your files as you want.
+
+## CommonJS
+
+CommonJS module format is not standard JavaScript. Using it requires some configuration. The following `jsenv.config.js` makes Jsenv compatible with a package written in CommonJS (`module.exports` and `require`).
+
+```js
+import { jsenvBabelPluginMap, convertCommonJsWithRollup } from "@jsenv/core"
+
+export const convertMap = {
+  "./node_modules/whatever/index.js": convertCommonJsWithRollup,
+}
+```
 
 ## React
 
-React is written in CommonJS and JSX is not standard JavaScript. If you use them it requires some configuration. The following `jsenv.config.js` enables react and JSX.
+React is written in CommonJS and comes with JSX. If you use them it requires some configuration. The following `jsenv.config.js` enables react and JSX.
 
 ```js
 import { createRequire } from "module"

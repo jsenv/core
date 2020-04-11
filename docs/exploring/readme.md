@@ -23,7 +23,7 @@ These type of servers focuses on development. During development files change of
 
 You can use jsenv to start a server serving an html page containing a list of links to your project files. Each link goes to an url where your JavaScript file will be executed. Thanks to this, any file in your project can become an entry point. You can use it to debug a file in isolation, create a storybook and so on.
 
-Jsenv calls it exploring.
+Jsenv call this `exploring`.
 
 # Exploring recorded video
 
