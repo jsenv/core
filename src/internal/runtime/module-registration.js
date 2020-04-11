@@ -91,7 +91,7 @@ ${importerUrl}`)
   const asText = fromFunctionReturningNamespace(
     () => {
       return {
-        default: JSON.stringify(body),
+        default: body,
       }
     },
     { url: responseUrl, importerUrl },
