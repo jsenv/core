@@ -5,6 +5,7 @@
 - [Exploring concrete example](#Exploring-concrete-example)
   - [1 - Setup basic project](#1---Setup-basic-project)
   - [2 - Explore basic project](#2---Explore-basic-project)
+- [Exploring integration](#Exploring-integration)
 - [startExploring example](#startExploring-example)
 - [startExploring parameters](#startExploring-parameters)
   - [explorableConfig](#ExplorableConfig)
@@ -56,9 +57,22 @@ npm install
 
 ## 2 - Explore basic project
 
+Check your Node.js version
+
 ```console
-node ./start-exploring.js
+node -v
 ```
+
+- If node version > 12
+
+  ```console
+  node ./start-exploring.js
+  ```
+
+- If node version < 13
+  ```console
+  node ./start-exploring.cjs
+  ```
 
 A first server will start. This one is used by the whole jsenv project.<br />
 A second server will start. That's the one we're interested in right now. The url `http://127.0.0.1:3456` is logged in your terminal.<br />
@@ -71,6 +85,32 @@ Once server is started you can navigate to `http://127.0.0.1:3456` and you will 
   It shows that if your file execution renders something, you can see the effect in your browser.
 - If you go to `http://127.0.0.1:3456/src/text.js` nothing special will happen because `/src/text.js` is just a module with an export default.<br />
   It shows that even if your file do not render anything, you still can use this functionnality to debug your file.
+
+Now you have seen a basic example it's time to integrate it in your own project.
+
+# Exploring integration
+
+1. Go to your project root directory
+
+   ```console
+   cd /your-project
+   ```
+
+2. Install `@jsenv/core` to your dependencies.
+
+   ```console
+   npm install --save-dev @jsenv/core
+   ```
+
+3. Create a file to start the exploring server
+
+   If your node version is above 13 and your `package.json` contains `"type": "module"`, copy [jsenv-core/docs/exploring/basic-project/start-exploring.js](./basic-project/start-exploring.js) into your project.
+
+   Otherwise copy [jsenv-core/docs/exploring/basic-project/start-exploring.cjs](./basic-project/start-exploring.cjs).
+
+4. Execute start exploring file
+
+   At this point exploring server will start in your project. Check `startExploring` documentation below.
 
 # startExploring example
 
@@ -90,11 +130,11 @@ startExploring({
 
 — source code at [src/startExploring.js](../../src/startExploring.js).
 
-# startExploring Parameters
+# startExploring parameters
 
-`startExploring` uses named parameters documented here.
+Each named parameter got a dedicated section to shortly explain what it does and if it's required or optional.
 
-Each parameter got a dedicated section to shortly explain what it does and if it's required or optional.
+When you change a parameter don't forget to restart the server.
 
 ## explorableConfig
 
