@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, readFile, resolveUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
@@ -36,8 +36,7 @@ const actual = await launchAndExecute({
 const expected = {
   status: "completed",
   namespace: {
-    default: `<div id="whatever"></div>
-`,
+    default: await readFile(resolveUrl("./data.html", import.meta.url)),
   },
 }
 assert({ actual, expected })
