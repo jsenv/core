@@ -99,7 +99,9 @@ const normalizeXhr = (xhr) => {
     status: xhr.status,
     statusText: xhr.statusText,
     headers: getHeadersFromXHR(xhr),
-    body: xhr.responseText,
+    // ici idéalement il faudrait mieux retourner un truc qui ressemble a l'api de fetch
+    // de sorte que le code qui lit peut encore choisir de lire la réponse comme bon lui semble
+    body: xhr.response,
   }
 }
 

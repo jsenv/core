@@ -88,7 +88,7 @@ ${url}
 ${importerUrl}`)
   }
 
-  const asText = fromFunctionReturningNamespace(
+  const raw = fromFunctionReturningNamespace(
     () => {
       return {
         default: body,
@@ -97,13 +97,15 @@ ${importerUrl}`)
     { url: responseUrl, importerUrl },
   )
 
+  // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
+
   if ("content-type" in headers === false) {
-    console.warn(`Module handled as text because of missing content-type.
+    console.warn(`Module file response has no content-type.
 --- url ---
 ${responseUrl}
 --- importer url ---
 ${importerUrl}`)
-    return asText
+    return raw
   }
 
   const contentType = headers["content-type"]
@@ -119,7 +121,7 @@ ${importerUrl}`)
     return fromFunctionReturningNamespace(
       () => {
         return {
-          default: JSON.parse(body),
+          default: typeof body === "string" ? JSON.parse(body) : body,
         }
       },
       { url: responseUrl, importerUrl },
@@ -140,5 +142,5 @@ ${url}
 ${importerUrl}`)
   }
 
-  return asText
+  return raw
 }
