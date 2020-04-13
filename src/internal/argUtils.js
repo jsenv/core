@@ -9,6 +9,9 @@ export const assertProjectDirectoryExists = ({ projectDirectoryUrl }) => {
 }
 
 export const assertImportMapFileRelativeUrl = ({ importMapFileRelativeUrl }) => {
+  if (importMapFileRelativeUrl === "") {
+    throw new TypeError(`importMapFileRelativeUrl is an empty string`)
+  }
   if (typeof importMapFileRelativeUrl !== "string") {
     throw new TypeError(
       `importMapFileRelativeUrl must be a string, received ${importMapFileRelativeUrl}`,

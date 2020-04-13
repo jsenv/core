@@ -80,16 +80,15 @@ const convertMap = {
 
 # importMapFileRelativeUrl
 
-`importMapFileRelativeUrl` parameter is a string representing a relative url to a file containing import map. This parameter is optional with a default value of `"./importMap.json"`. The file presence becomes mandatory if you use `import.meta` in your codebase. You need this file as soon as you use an import that is not explicitely targeting a file like:
+`importMapFileRelativeUrl` parameter is a string representing a relative url to a file containing import map. This parameter is optional with a default value of `"./importMap.json"`. This file becomes mandatory as soon as you use an import that is not explicitely targeting a file like:
 
 ```js
 import whatever from "foo"
 ```
 
-You should read importMap specification to understand how it works.<br />
-— see [importMap spec](https://github.com/WICG/import-maps)
+You can create the import map file manually and maintain it. If these remapping correspond to node modules you can use [jsenv-node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map) to generate the importmap file for you.
 
-See also [jsenv-node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map) github repository capable to generate automatically importMap file for your node modules.
+See also [importmap specification](https://github.com/WICG/import-maps).
 
 # importDefaultExtension
 
