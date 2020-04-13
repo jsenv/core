@@ -1,7 +1,5 @@
 // https://github.com/github/fetch/blob/master/fetch.js
 
-import { memoize } from "./memoize.js"
-
 export const fetchUsingXHR = async (url, { credentials = "same-origin", headers = {} } = {}) => {
   const headersPromise = createPromiseAndHooks()
   const bodyPromise = createPromiseAndHooks()
@@ -58,7 +56,7 @@ export const fetchUsingXHR = async (url, { credentials = "same-origin", headers 
     xhr.setRequestHeader(key, headers[key])
   })
   xhr.withCredentials = computeWithCredentials({ credentials, url })
-  if ("responseType" in xhr && hasBlob()) {
+  if ("responseType" in xhr && hasBlob) {
     xhr.responseType = "blob"
   }
   xhr.send(null)
@@ -115,7 +113,7 @@ export const fetchUsingXHR = async (url, { credentials = "same-origin", headers 
   }
 
   const blob = async () => {
-    if (!hasBlob()) {
+    if (!hasBlob) {
       throw new Error(`blob not supported`)
     }
 
@@ -147,7 +145,7 @@ export const fetchUsingXHR = async (url, { credentials = "same-origin", headers 
   }
 
   const formData = async () => {
-    if (!hasFormData()) {
+    if (!hasFormData) {
       throw new Error(`formData not supported`)
     }
     const responseText = await text()
@@ -166,6 +164,28 @@ export const fetchUsingXHR = async (url, { credentials = "same-origin", headers 
     formData,
   }
 }
+
+const canUseBlob = () => {
+  if (typeof window.FileReader !== "function") return false
+
+  if (typeof window.Blob !== "function") return false
+
+  try {
+    // eslint-disable-next-line no-new
+    new Blob()
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
+const hasBlob = canUseBlob()
+
+const hasFormData = typeof window.FormData === "function"
+
+const hasArrayBuffer = typeof window.ArrayBuffer === "function"
+
+const hasSearchParams = typeof window.URLSearchParams === "function"
 
 const createRequestError = (error, { url }) => {
   return new Error(`error during xhr request on ${url}.
@@ -216,21 +236,21 @@ const detectBodyType = (body) => {
   if (typeof body === "string") {
     return "text"
   }
-  if (hasBlob() && Blob.prototype.isPrototypeOf(body)) {
+  if (hasBlob && Blob.prototype.isPrototypeOf(body)) {
     return "blob"
   }
-  if (hasFormData() && FormData.prototype.isPrototypeOf(body)) {
+  if (hasFormData && FormData.prototype.isPrototypeOf(body)) {
     return "formData"
   }
-  if (hasArrayBuffer()) {
-    if (hasBlob() && isDataView(body)) {
+  if (hasArrayBuffer) {
+    if (hasBlob && isDataView(body)) {
       return `dataView`
     }
     if (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body)) {
       return `arrayBuffer`
     }
   }
-  if (hasSearchParams() && URLSearchParams.prototype.isPrototypeOf(body)) {
+  if (hasSearchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
     return "searchParams"
   }
   return ""
@@ -277,26 +297,6 @@ const hrefToScheme = (href) => {
   if (colonIndex === -1) return ""
   return href.slice(0, colonIndex)
 }
-
-const hasBlob = memoize(() => {
-  if (typeof window.FileReader !== "function") return false
-
-  if (typeof window.Blob !== "function") return false
-
-  try {
-    // eslint-disable-next-line no-new
-    new Blob()
-    return true
-  } catch (e) {
-    return false
-  }
-})
-
-const hasFormData = memoize(() => typeof window.FormData === "function")
-
-const hasArrayBuffer = memoize(() => typeof window.ArrayBuffer === "function")
-
-const hasSearchParams = memoize(() => typeof window.URLSearchParams === "function")
 
 const isDataView = (obj) => {
   return obj && DataView.prototype.isPrototypeOf(obj)

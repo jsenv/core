@@ -52,10 +52,9 @@ ${url}
 ${importerUrl}`)
   }
 
-  if (
-    moduleResponse.status === 500 &&
-    moduleResponse.headers["content-type"] === "application/json"
-  ) {
+  const contentType = moduleResponse.headers["content-type"] || ""
+
+  if (moduleResponse.status === 500 && contentType === "application/json") {
     const bodyAsJson = await moduleResponse.json()
     if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
       const error = new Error(`imported module parsing error.
@@ -85,7 +84,6 @@ ${importerUrl}`)
   }
 
   // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
-  const contentType = moduleResponse.headers["content-type"] || ""
 
   if (contentType === "application/javascript") {
     const bodyAsText = await moduleResponse.text()
@@ -126,7 +124,7 @@ ${importerUrl}`)
     console.warn(`Module handled as blob because of unexpected content-type.
 --- content-type ---
 ${contentType}
---- expected content-type ---
+--- allowed content-type ---
 application/javascript
 application/json
 text/*
@@ -136,9 +134,7 @@ ${url}
 ${importerUrl}`)
   } else {
     console.warn(`Module handled as blob because of missing content-type.
---- content-type ---
-${contentType}
---- expected content-type ---
+--- allowed content-type ---
 application/javascript
 application/json
 text/*
