@@ -332,7 +332,7 @@ ${moduleUrl}`)
     return {
       responseUrl: response.url,
       contentType: response.headers["content-type"],
-      content: response.body,
+      content: await response.text(),
     }
   }
 
