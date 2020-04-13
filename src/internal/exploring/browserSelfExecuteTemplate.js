@@ -1,8 +1,7 @@
 // eslint-disable-next-line import/no-unresolved
 import env from "/.jsenv/out/env.json"
 
-// TODO: find how to convert this import
-// into a dynamic import inside if (Error.prepareStackTrace)
+// TODO: find how to convert this import to dynamic import inside if (Error.prepareStackTrace)
 // until then browser without it like firefox will download the file and never use it
 import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
 import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"

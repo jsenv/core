@@ -69,6 +69,8 @@ export const startExploring = async ({
       throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`)
     }
     const htmlFileUrl = resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl)
+    // normalize htmlFileRelativeUrl
+    htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl)
     await assertFilePresence(htmlFileUrl)
 
     const stopExploringCancellationSource = createCancellationSource()
@@ -210,7 +212,10 @@ export const startExploring = async ({
           const { origin } = request
           const { referer } = headers
           if (referer === origin || urlIsInsideOf(referer, origin)) {
-            const refererRelativeUrl = urlToRelativeUrl(referer, origin)
+            const refererRelativeUrl = urlIsHtmlTemplate(referer)
+              ? new URL(referer).searchParams.get("file")
+              : urlToRelativeUrl(referer, origin)
+            if (!refererRelativeUrl) return
             const refererFileUrl = `${projectDirectoryUrl}${refererRelativeUrl}`
 
             if (
@@ -246,9 +251,13 @@ export const startExploring = async ({
       }
 
       rawProjectFileRequestedCallback = ({ relativeUrl, request }) => {
-        // when it's the html file used to execute the files
-        if (relativeUrl === htmlFileRelativeUrl) {
-          dependencyTracker[relativeUrl] = []
+        const url = resolveUrl(relativeUrl, projectDirectoryUrl)
+
+        if (urlIsHtmlTemplate(url)) {
+          const executionId = new URL(url).searchParams.get("file")
+          if (executionId) {
+            dependencyTracker[executionId] = []
+          }
         } else {
           projectFileRequestedCallback({ relativeUrl, request })
           projectFileSet.add(relativeUrl)
@@ -268,6 +277,11 @@ export const startExploring = async ({
         roomMap[relativeUrl] = room
         return room
       }
+    }
+
+    const urlIsHtmlTemplate = (url) => {
+      // url.pathname to remove any query parameter
+      return new URL(url).pathname.slice(1) === htmlFileRelativeUrl
     }
 
     const {
