@@ -3,20 +3,37 @@ import { installErrorStackRemapping } from "./installErrorStackRemapping.js"
 export const installBrowserErrorStackRemapping = (options = {}) =>
   installErrorStackRemapping({
     fetchFile: async (url) => {
-      const response = await fetch(url)
+      // browser having Error.captureStackTrace got window.fetch
+      // and this executes only when Error.captureStackTrace exists
+      // so no need for polyfill or whatever here
+      const response = await window.fetch(url)
       // we read response test before anything because once memoized fetch
       // gets annoying preventing you to read
       // body multiple times, even using response.clone()
-      const text = await response.text()
+      // const text = await response.text()
       return {
         status: response.status,
-        body: text,
+        url: response.url,
+        statusText: response.statusText,
+        headers: responseToHeaders(response),
+        text: response.text.bind(response),
+        json: response.json.bind(response),
+        blob: response.blob.bind(response),
+        arrayBuffer: response.arrayBuffer.bind(response),
       }
     },
     resolveFile: (specifier, importer = window.location.href) => {
-      // if browser does not support window.URL it will fail
-      // but no browser got Error.captureStackTrace without window.URL
-      return String(new URL(specifier, importer))
+      // browsers having Error.captureStrackTrace got window.URL
+      // and this executes only when Error.captureStackTrace exists
+      return String(new window.URL(specifier, importer))
     },
     ...options,
   })
+
+const responseToHeaders = (response) => {
+  const headers = {}
+  response.headers.forEach((value, name) => {
+    headers[name] = value
+  })
+  return headers
+}

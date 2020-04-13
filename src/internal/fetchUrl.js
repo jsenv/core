@@ -6,7 +6,26 @@ globalAgent.options.rejectUnauthorized = false
 
 export const fetchUrl = async (
   url,
-  { simplified = true, ignoreHttpsError = true, ...rest } = {},
+  { simplified = false, ignoreHttpsError = true, ...rest } = {},
 ) => {
-  return serverFetchUrl(url, { simplified, ignoreHttpsError, ...rest })
+  const response = await serverFetchUrl(url, { simplified, ignoreHttpsError, ...rest })
+
+  return {
+    url: response.url,
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseToHeaders(response),
+    text: response.text.bind(response),
+    json: response.json.bind(response),
+    blob: response.blob.bind(response),
+    arrayBuffer: response.arrayBuffer.bind(response),
+  }
+}
+
+const responseToHeaders = (response) => {
+  const headers = {}
+  response.headers.forEach((value, name) => {
+    headers[name] = value
+  })
+  return headers
 }

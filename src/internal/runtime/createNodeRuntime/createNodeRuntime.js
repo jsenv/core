@@ -109,7 +109,7 @@ export const createNodeRuntime = async ({
 }
 
 const importJson = async (url) => {
-  const response = await fetchUrl(url, { simplified: false, ignoreHttpsError: true })
+  const response = await fetchUrl(url)
   const object = await response.json()
   return object
 }

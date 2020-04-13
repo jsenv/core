@@ -44,15 +44,16 @@ const fileRelativeUrl = new URLSearchParams(location.search).get("file")
   }
 
   const dynamicDataFileRemoteUrl = `${window.origin}/${jsenvDirectoryRelativeUrl}browser-execute-dynamic-data.json`
-  const { body } = await fetchUsingXHR(dynamicDataFileRemoteUrl, {
+  const dynamicDataFileResponse = await fetchUsingXHR(dynamicDataFileRemoteUrl, {
     credentials: "include",
   })
+  const dynamicData = await dynamicDataFileResponse.json()
   const {
     browserRuntimeFileRelativeUrl,
     sourcemapMainFileRelativeUrl,
     sourcemapMappingFileRelativeUrl,
     compileServerOrigin,
-  } = JSON.parse(body)
+  } = dynamicData
 
   const browserRuntimeCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserRuntimeFileRelativeUrl}`
   await fetchAndEvalUsingScript(browserRuntimeCompiledFileRemoteUrl)

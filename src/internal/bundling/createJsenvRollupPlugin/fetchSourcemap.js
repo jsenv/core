@@ -31,9 +31,10 @@ ${okValidation.message}`)
     return null
   }
 
-  // in theory we should also check response content-type
-  // not really important
-  return generateSourcemapFromString(sourcemapResponse.body, {
+  // in theory we should also check sourcemapResponse content-type is correctly set
+  // but not really important.
+  const sourcemapBodyAsText = await sourcemapResponse.text()
+  return generateSourcemapFromString(sourcemapBodyAsText, {
     logger,
     sourcemapUrl,
     moduleUrl,
