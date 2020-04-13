@@ -32,7 +32,7 @@ ${stackTraceFileUrl}`)
           }
           return null
         }
-        text = fileResponse.body
+        text = await fileResponse.text()
       } catch (e) {
         onFailure(`error while fetching stack trace file.
 --- fetch error stack ---
@@ -67,13 +67,13 @@ ${stackTraceFileUrl}`)
 --- response status ---
 ${status}
 --- response text ---
-${sourcemapResponse.body}
+${await sourcemapResponse.text()}
 --- sourcemap url ---
 ${sourcemapUrl}`)
             }
             return null
           }
-          sourcemapString = sourcemapResponse.body
+          sourcemapString = await sourcemapResponse.text()
         } catch (e) {
           onFailure(`error while fetching sourcemap.
 --- fetch error stack ---
@@ -128,7 +128,7 @@ ${sourcemapUrl}`
   --- response status ---
   ${status}
   --- response text ---
-  ${sourceResponse.body}
+  ${await sourceResponse.text()}
   --- sourcemap source url ---
   ${sourcemapSourceUrl}
   --- sourcemap url ---
@@ -136,7 +136,7 @@ ${sourcemapUrl}`
               return
             }
 
-            const sourceString = sourceResponse.body
+            const sourceString = await sourceResponse.text()
             sourcesContent[index] = sourceString
           } catch (e) {
             if (firstSourceMapSourceFailure) return
