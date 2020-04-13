@@ -183,13 +183,9 @@ export const startExploring = async ({
 
       const trackDependency = ({ relativeUrl, executionId }) => {
         if (executionId) {
-          // quand on voit main on marque tout ce qui existe actuallement
-          // comme plus dépendant ?
-          // mais si ce qui était la
-
           if (dependencyTracker.hasOwnProperty(executionId)) {
             const dependencyArray = dependencyTracker[executionId]
-            if (!dependencyArray.includes(dependencyTracker)) {
+            if (!dependencyArray.includes(relativeUrl)) {
               dependencyArray.push(relativeUrl)
             }
           } else {
