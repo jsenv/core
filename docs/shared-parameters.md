@@ -18,16 +18,23 @@
 
 # projectDirectoryUrl
 
-`projectDirectoryUrl` parameter is a string leading to your project directory. This parameter is **required**, an example value could be `"file:///Users/you/project"`. All parameter containing `relativeUrl` in their name are resolved against `projectDirectoryUrl`. It is recommended to pass an url string leading to a directory. But a windows file path, linux/mac file path or URL object works.
+`projectDirectoryUrl` parameter is a string leading to your project directory. This parameter is **required**, an example value could be `"file:///Users/you/project"`. All parameter containing `relativeUrl` in their name are resolved against `projectDirectoryUrl`. An URL string, URL object, windows file path, linux/mac file path can be used as `projectDirectoryUrl` value.
 
+<!-- prettier-ignore -->
 ```js
+"file:///Users/you/project" // URL string
+new URL("file:///Users/you/project") // URL object
 "/Users/you/project" // linux/mac file path
 "C:\\Users\\you\\project" // windows file path
-new URL("file:///Users/you/project") // URL object
 ```
 
-You can put a trailing slash in `projectDirectoryUrl` value if you want.
-You can use `__dirname` to provide the value inside commonjs file.
+If your node version is 13+ and your `package.json` contains `"type": "module"` it's preferrable to use [import.meta.url](https://nodejs.org/docs/latest-v13.x/api/esm.html#esm_import_meta) and url resolution to compute `projectDirectoryUrl`.
+
+```js
+const projectDirectoryUrl = new URL("./", import.meta.url)
+```
+
+Otherwise use [\_\_dirname](https://nodejs.org/docs/latest/api/modules.html#modules_dirname) and path resolution to compute `projectDirectoryUrl`.
 
 ```js
 const { resolve } = require("path")
@@ -35,17 +42,11 @@ const { resolve } = require("path")
 const projectDirectoryUrl = resolve("../", __dirname)
 ```
 
-— see [\_\_dirname documentation on node.js](https://nodejs.org/docs/latest/api/modules.html#modules_dirname)
-
-You can use `import.meta.url` to provide the value inside a module file (node 13+).
-
-```js
-const projectDirectoryUrl = new URL("./", import.meta.url)
-```
+Please note you can put a trailing slash in `projectDirectoryUrl` value if you want.
 
 # jsenvDirectoryRelativeUrl
 
-`jsenvDirectoryRelativeUrl` parameter is a string leading to a directory used by jsenv to write compiled version of your files. This parameter is optional with a default value of `"./.jsenv/"`. Every time a file is compiled, the compiled version of the file is written into that directory. Alongside with the compiled file, some metadata on the source used to generate the compiled version is written. These metadata are used later to know if the compiled version is still valid.
+`jsenvDirectoryRelativeUrl` parameter is a string leading to a directory used by jsenv to write compiled version of your files. This parameter is optional with a default value of `"./.jsenv/"`. Every time a file is compiled, the compiled version of the file is written into that directory. Alongside with the compiled file, some metadata on the source used to generate the compiled version is written. These metadata are used later to know if the compiled version is still valid. This directory should be added to your `.gitignore`.
 
 # babelPluginMap
 

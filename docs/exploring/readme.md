@@ -146,19 +146,19 @@ This parameter must be an object where keys are relative or absolute urls. These
 
 `htmlFileRelativeUrl` parameter is a relative url string leading to an html file used as template to execute JavaScript files. This is an optional parameter with a default leading to [src/internal/jsenv-html-file.html](../../src/internal/jsenv-html-file.html).
 
-If you to use a custom html file be sure it contains the following script tag:
+If you wanto to use a custom html file be sure it contains the following script tag:
 
 ```html
 <script src="/.jsenv/browser-script.js"></script>
 ```
 
-This is how the server can arbitrary execute some javaScript inside your custom html file.
+When exploring server receives a request for `/.jsenv/browser-script.js` it will replace it the JavaScript file to execute. This is how server can arbitrary execute JavaScript inside your custom html file.
 
 ## livereloading
 
-`livereloading` parameter is a boolean controlling if the browser will auto reload when a file is saved. This is an optional parameter with a default value of `false`.
+`livereloading` parameter is a boolean controlling if the browser will auto reload when a file is saved. This is an optional parameter disabled by default.
 
-Note that any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file loads image or css these files will also be considered as dependency and trigger livereloading when saved.
+Note that any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file load assets such as image or css these asset files will also trigger livereloading when saved.
 
 ## watchConfig
 
@@ -186,6 +186,8 @@ The defaults values let you use exploring right away but you might want to confi
 The following parameter controls the exploring server:
 
 - [protocol](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#protocol)
+- [privateKey](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#privateKey)
+- [certificate](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#certificate)
 - [ip](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#ip)
 - [port](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port)
 - [forcePort](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#forcePort)

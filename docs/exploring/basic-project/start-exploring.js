@@ -7,4 +7,5 @@ startExploring({
     "./src/*.js": true,
   },
   port: 3456,
+  livereloading: true,
 })
