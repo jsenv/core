@@ -35,7 +35,6 @@ const actual = await launchAndExecute({
   allocatedMs: 10000,
   captureConsole: true,
 })
-console.log(JSON.stringify(actual.consoleCalls, null, "  "))
 const expected = {
   status: "timedout",
   consoleCalls: [
