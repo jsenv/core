@@ -1,3 +1,5 @@
+// https://github.com/github/fetch/blob/master/fetch.js
+
 import { memoize } from "./memoize.js"
 
 export const fetchUsingXHR = async (url, { credentials = "same-origin", headers = {} } = {}) => {
