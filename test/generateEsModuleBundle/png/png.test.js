@@ -18,7 +18,8 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
-const svgText = await readFile(resolveUrl("./icon.svg", import.meta.url))
+const pngText = await readFile(resolveUrl("./jsenv.png", import.meta.url))
+const pngBase64 = Buffer.from(pngText).toString("base64")
 
 await generateEsModuleBundle({
   ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
@@ -34,7 +35,7 @@ await generateEsModuleBundle({
     ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = svgText
+  const expected = pngBase64
   assert({ actual, expected })
 }
 
@@ -44,6 +45,6 @@ if (SourceMap) {
     ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = svgText
+  const expected = pngBase64
   assert({ actual, expected })
 }

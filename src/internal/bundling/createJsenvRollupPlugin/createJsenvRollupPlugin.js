@@ -21,6 +21,30 @@ import { minifyHtml } from "./minifyHtml.js"
 import { minifyJs } from "./minifyJs.js"
 import { minifyCss } from "./minifyCss.js"
 
+/**
+
+import styles from "./style.css"
+
+Returns either:
+
+- a css constructable stylesheet object according to CSS modulesthe proposal.
+(https://github.com/w3c/webcomponents/blob/gh-pages/proposals/css-modules-v1-explainer.md)
+
+- an absolute url when bundled by rollup or webpack.
+
+So in your code you don't know what to expect depending if the code is executed directly or bundled.
+
+In this context it looks future proof to prefer export default file content over export default an asbolute url to the file.
+Every imported file that is not javaScript is converted to text consumable by JavaScript code.
+Non textual files (png, jpg, video) are converted to base64 text.
+
+- To keep file splitted use dynamic import
+- To keep file as an asset use window.fetch and ensure your asset files ends up in dist/
+
+Also https://gist.github.com/fupslot/5015897
+
+*/
+
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
   logger,
@@ -242,16 +266,15 @@ export const createJsenvRollupPlugin = async ({
     }
 
     if (contentType === "application/javascript") {
-      const map = await fetchSourcemap({
-        cancellationToken,
-        logger,
-        moduleUrl,
-        moduleContent: moduleText,
-      })
       return {
         ...commonData,
         content: moduleText,
-        map,
+        map: await fetchSourcemap({
+          cancellationToken,
+          logger,
+          moduleUrl,
+          moduleContent: moduleText,
+        }),
       }
     }
 
@@ -290,20 +313,16 @@ export const createJsenvRollupPlugin = async ({
       }
     }
 
-    logger.warn(`unexpected content-type for module. Fallback to text.
+    logger.debug(`Using base64 to bundle module because of its content-type.
 --- content-type ---
 ${contentType}
---- expected content-types ---
-"application/javascript"
-"application/json"
-"text/*"
 --- module url ---
 ${moduleUrl}`)
 
-    // fallback to text
+    // fallback to base64 text
     return {
       ...commonData,
-      content: textToJavascript(moduleText),
+      content: textToJavascript(Buffer.from(moduleText).toString("base64")),
     }
   }
 
