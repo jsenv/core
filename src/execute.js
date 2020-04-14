@@ -29,10 +29,10 @@ export const execute = async ({
   mirrorConsole = true,
   stopAfterExecute = false,
   gracefulStopAllocatedMs,
-  updateProcessExitCode = true,
+  ignoreError = false,
   ...rest
 }) => {
-  return catchCancellation(async () => {
+  const executionPromise = catchCancellation(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
@@ -44,27 +44,29 @@ export const execute = async ({
       throw new TypeError(`launch must be a function, got ${launch}`)
     }
 
-    const { outDirectoryRelativeUrl, origin: compileServerOrigin } = await startCompileServer({
-      cancellationToken,
-      compileServerLogLevel,
+    const { outDirectoryRelativeUrl, origin: compileServerOrigin, stop } = await startCompileServer(
+      {
+        cancellationToken,
+        compileServerLogLevel,
 
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-      jsenvDirectoryClean,
-      importMapFileRelativeUrl,
-      importDefaultExtension,
+        projectDirectoryUrl,
+        jsenvDirectoryRelativeUrl,
+        jsenvDirectoryClean,
+        importMapFileRelativeUrl,
+        importDefaultExtension,
 
-      compileServerProtocol,
-      compileServerPrivateKey,
-      compileServerCertificate,
-      compileServerIp,
-      compileServerPort,
-      babelPluginMap,
-      convertMap,
-      compileGroupCount,
-    })
+        compileServerProtocol,
+        compileServerPrivateKey,
+        compileServerCertificate,
+        compileServerIp,
+        compileServerPort,
+        babelPluginMap,
+        convertMap,
+        compileGroupCount,
+      },
+    )
 
-    return launchAndExecute({
+    const result = await launchAndExecute({
       cancellationToken,
       executionLogLevel,
 
@@ -81,24 +83,37 @@ export const execute = async ({
       gracefulStopAllocatedMs,
       ...rest,
     })
-  }).then(
-    (result) => {
-      if (result.status === "errored") {
-        // unexpected execution error
-        // -> update process.exitCode by default
-        // (we can disable this for testing)
-        if (updateProcessExitCode) {
-          process.exitCode = 1
-        }
-        throw result.error
-      }
-      return result
-    },
-    (e) => {
-      // unexpected internal error
-      // -> always updates process.exitCode
-      process.exitCode = 1
-      throw e
-    },
-  )
+
+    stop("execution-done")
+
+    return result
+  }).catch((e) => {
+    // unexpected internal error
+    // -> always updates process.exitCode because we can't trust unhandled rejection
+    // to do this
+    process.exitCode = 1
+    throw e
+  })
+
+  if (ignoreError) {
+    return executionPromise
+  }
+
+  const result = await executionPromise
+  if (result.status === "errored") {
+    /*
+    Warning: when node launched with --unhandled-rejections=strict, despites
+    this promise being rejected by throw result.error node will compltely ignore it.
+
+    The error can be logged by doing
+    ```js
+    process.setUncaughtExceptionCaptureCallback((error) => {
+      console.error(error.stack)
+    })
+    ```
+    But it feels like a hack.
+    */
+    throw result.error
+  }
+  return result
 }

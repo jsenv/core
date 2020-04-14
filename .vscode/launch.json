@@ -56,9 +56,9 @@
       "program": "${workspaceFolder}/script/run-node/run-node.js",
       // "program": "${workspaceFolder}/script/run-node/run-node.common.js",
       "runtimeArgs": [
-        "--unhandled-rejections=strict",
-        // this is to disable experimental warning
-        "--no-warnings"
+        // "--unhandled-rejections=strict"
+        // this is to disable experimental warnings, but it would disable unhandled rejection warning
+        // "--no-warnings"
       ],
       "args": ["${relativeFile}"],
       "autoAttachChildProcesses": true,
@@ -71,12 +71,14 @@
         "node_modules/@babel/core/**",
         "node_modules/gensync/**",
         "node_modules/@jsenv/core/**",
+        // "node_modules/@jsenv/assert/**",
         // "node_modules/@jsenv/cancellation/**",
         "node_modules/@rollup/**",
         "node_modules/playwright/**",
         "node_modules/rollup/**",
         "src/internal/supportsDynamicImport.js",
         "src/internal/dynamicImportSource.js",
+        "src/execute.js",
         "script/run-node/**"
       ]
     },
