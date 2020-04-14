@@ -108,7 +108,7 @@ ${importerUrl}`)
     )
   }
 
-  if (contentType.startsWith("text/")) {
+  if (contentTypeShouldBeReadAsText(contentType)) {
     const bodyAsText = await moduleResponse.text()
     return fromFunctionReturningNamespace(
       () => {
@@ -121,7 +121,7 @@ ${importerUrl}`)
   }
 
   if (contentType) {
-    console.warn(`Module handled as blob because of unexpected content-type.
+    console.warn(`Module handled as base64 text because of its content-type.
 --- content-type ---
 ${contentType}
 --- allowed content-type ---
@@ -133,7 +133,7 @@ ${url}
 --- importer url ---
 ${importerUrl}`)
   } else {
-    console.warn(`Module handled as blob because of missing content-type.
+    console.warn(`Module handled as base64 text because of missing content-type.
 --- allowed content-type ---
 application/javascript
 application/json
@@ -144,13 +144,29 @@ ${url}
 ${importerUrl}`)
   }
 
-  const bodyAsBlob = await moduleResponse.blob()
+  const bodyAsText = await moduleResponse.text()
+  const bodyAsBase64 = textToBase64(bodyAsText)
   return fromFunctionReturningNamespace(
     () => {
       return {
-        default: bodyAsBlob,
+        default: bodyAsBase64,
       }
     },
     { url: moduleResponse.url, importerUrl },
   )
 }
+
+const contentTypeShouldBeReadAsText = (contentType) => {
+  if (contentType.startsWith("text/")) {
+    return true
+  }
+  if (contentType === "image/svg+xml") {
+    return true
+  }
+  return false
+}
+
+const textToBase64 =
+  typeof window === "object"
+    ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
+    : (text) => Buffer.from(text, "utf8").toString("base64")
