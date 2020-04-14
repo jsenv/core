@@ -108,7 +108,7 @@ ${importerUrl}`)
     )
   }
 
-  if (contentType.startsWith("text/")) {
+  if (contentTypeShouldBeReadAsText(contentType)) {
     const bodyAsText = await moduleResponse.text()
     return fromFunctionReturningNamespace(
       () => {
@@ -153,4 +153,14 @@ ${importerUrl}`)
     },
     { url: moduleResponse.url, importerUrl },
   )
+}
+
+const contentTypeShouldBeReadAsText = (contentType) => {
+  if (contentType.startsWith("text/")) {
+    return true
+  }
+  if (contentType === "image/svg+xml") {
+    return true
+  }
+  return false
 }

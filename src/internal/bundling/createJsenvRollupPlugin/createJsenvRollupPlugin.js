@@ -232,49 +232,65 @@ export const createJsenvRollupPlugin = async ({
   }
 
   const loadModule = async (moduleUrl) => {
-    const { responseUrl, contentType, content } = await getModule(moduleUrl)
+    const moduleResponse = await fetchModule(moduleUrl)
+    const contentType = moduleResponse.headers["content-type"] || ""
+    const moduleText = await moduleResponse.text()
+
+    const commonData = {
+      responseUrl: moduleResponse.url,
+      contentRaw: moduleText,
+    }
 
     if (contentType === "application/javascript") {
       const map = await fetchSourcemap({
         cancellationToken,
         logger,
         moduleUrl,
-        moduleContent: content,
+        moduleContent: moduleText,
       })
       return {
-        responseUrl,
-        contentRaw: content,
-        content,
+        ...commonData,
+        content: moduleText,
         map,
       }
     }
 
     if (contentType === "application/json") {
       return {
-        responseUrl,
-        contentRaw: content,
-        content: jsonToJavascript(content),
+        ...commonData,
+        content: jsonToJavascript(moduleText),
       }
     }
 
     if (contentType === "text/html") {
       return {
-        responseUrl,
-        contentRaw: content,
-        content: htmlToJavascript(content),
+        ...commonData,
+        content: htmlToJavascript(moduleText),
       }
     }
 
     if (contentType === "text/css") {
       return {
-        responseUrl,
-        contentRaw: content,
-        content: cssToJavascript(content),
+        ...commonData,
+        content: cssToJavascript(moduleText),
       }
     }
 
-    if (!contentType.startsWith("text/")) {
-      logger.warn(`unexpected content-type for module.
+    if (contentType === "image/svg+xml") {
+      return {
+        ...commonData,
+        content: svgToJavaScript(moduleText),
+      }
+    }
+
+    if (contentType.startsWith("text/")) {
+      return {
+        ...commonData,
+        content: textToJavascript(moduleText),
+      }
+    }
+
+    logger.warn(`unexpected content-type for module. Fallback to text.
 --- content-type ---
 ${contentType}
 --- expected content-types ---
@@ -283,13 +299,11 @@ ${contentType}
 "text/*"
 --- module url ---
 ${moduleUrl}`)
-    }
 
     // fallback to text
     return {
-      responseUrl,
-      contentRaw: content,
-      content: textToJavascript(content),
+      ...commonData,
+      content: textToJavascript(moduleText),
     }
   }
 
@@ -314,11 +328,16 @@ ${moduleUrl}`)
     return `export default ${JSON.stringify(cssString)}`
   }
 
+  const svgToJavaScript = (svgString) => {
+    // could also benefit of minification https://github.com/svg/svgo
+    return `export default ${JSON.stringify(svgString)}`
+  }
+
   const textToJavascript = (textString) => {
     return `export default ${JSON.stringify(textString)}`
   }
 
-  const getModule = async (moduleUrl) => {
+  const fetchModule = async (moduleUrl) => {
     const response = await fetchUrl(moduleUrl, {
       cancellationToken,
       ignoreHttpsError: true,
@@ -329,11 +348,7 @@ ${moduleUrl}`)
       throw new Error(okValidation.message)
     }
 
-    return {
-      responseUrl: response.url,
-      contentType: response.headers["content-type"],
-      content: await response.text(),
-    }
+    return response
   }
 
   return {
