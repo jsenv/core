@@ -23,25 +23,26 @@ import { minifyCss } from "./minifyCss.js"
 
 /**
 
-import styles from "./style.css"
+A word about bundler choosing to return an absolute url for import like
 
-Returns either:
+import styleFileUrl from "./style.css"
+import iconFileUrl from "./icon.png"
 
-- a css constructable stylesheet object according to CSS modulesthe proposal.
-(https://github.com/w3c/webcomponents/blob/gh-pages/proposals/css-modules-v1-explainer.md)
+Bundler choose to return an url so that you can still access your bundled files.
+In a structure like this one I would rather choose to keep target asset with "/directory/icon.png"
 
-- an absolute url when bundled by rollup or webpack.
+dist/
+  esmodule/
+    index.js
+directory/
+  icon.png
 
-So in your code you don't know what to expect depending if the code is executed directly or bundled.
+Considering it's possible to target original file from bundled files (using import starting with '/'),
+Jsenv bundle do not emit any asset file.
 
-In this context it looks future proof to prefer export default file content over export default an asbolute url to the file.
-Every imported file that is not javaScript is converted to text consumable by JavaScript code.
+Using import to import something else than a JavaScript file convert it to
+a JavaScript module with an export default of that file content as text.
 Non textual files (png, jpg, video) are converted to base64 text.
-
-- To keep file splitted use dynamic import
-- To keep file as an asset use window.fetch and ensure your asset files ends up in dist/
-
-Also https://gist.github.com/fupslot/5015897
 
 */
 
@@ -265,7 +266,8 @@ export const createJsenvRollupPlugin = async ({
       contentRaw: moduleText,
     }
 
-    if (contentType === "application/javascript") {
+    // keep this in sync with module-registration.js
+    if (contentType === "application/javascript" || contentType === "text/javascript") {
       return {
         ...commonData,
         content: moduleText,

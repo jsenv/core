@@ -84,8 +84,8 @@ ${importerUrl}`)
   }
 
   // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
-
-  if (contentType === "application/javascript") {
+  // and in sync with loadModule in createJsenvRollupPlugin.js
+  if (contentType === "application/javascript" || contentType === "text/javascript") {
     const bodyAsText = await moduleResponse.text()
     return fromFunctionReturningRegisteredModule(
       () => instantiateJavaScript(bodyAsText, moduleResponse.url),
