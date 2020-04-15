@@ -7,40 +7,35 @@ import { installBrowserErrorStackRemapping } from "../error-stack-remapping/inst
 import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
 import { fetchAndEvalUsingScript } from "../fetchAndEvalUsingScript.js"
 import { fetchUsingXHR } from "../fetchUsingXHR.js"
+import { connectFileChangesEventSource } from "./fileChangesEventSource.js"
 
 const { jsenvDirectoryRelativeUrl, outDirectoryRelativeUrl } = env
-const { EventSource, location } = window
+const { location } = window
 // TODO: find something for old browsers where URLSearchParams is not available
 const fileRelativeUrl = new URLSearchParams(location.search).get("file")
 
 // eslint-disable-next-line import/newline-after-import
 ;(async () => {
-  if (typeof EventSource === "function") {
-    const eventSourceOrigin = window.location.origin
-    const eventSourceHref = `${eventSourceOrigin}/${fileRelativeUrl}`
-    const eventSource = new EventSource(eventSourceHref, {
-      withCredentials: true,
-    })
-
-    const close = () => {
-      eventSource.close()
-    }
-
-    eventSource.onerror = () => {
-      // we could try to reconnect several times before giving up
-      // but dont keep it open as it would try to reconnect forever
-      // maybe, it depends what error occurs, or we could
-      // retry less frequently
-      close()
-    }
-    eventSource.addEventListener("file-changed", (e) => {
-      if (e.origin !== eventSourceOrigin) {
-        return
+  const eventSourceUrl = `${location.origin}/${fileRelativeUrl}`
+  connectFileChangesEventSource(eventSourceUrl, {
+    onConnect: ({ isReconnection }) => {
+      if (isReconnection) {
+        console.info(`reconnected to file change event source at ${eventSourceUrl} -> reload page`)
+        location.reload()
+      } else {
+        console.info(`connected to file change event source at ${eventSourceUrl}`)
       }
-      // const fileChanged = e.data
+    },
+    onFileChange: (file) => {
+      console.info(`${file} changed -> reload page`)
       location.reload()
-    })
-  }
+    },
+    onDisconnect: () => {
+      console.info(
+        `disconnected from file change event source at ${eventSourceUrl} -> trying to reconnect`,
+      )
+    },
+  })
 
   const dynamicDataFileRemoteUrl = `${window.origin}/${jsenvDirectoryRelativeUrl}browser-execute-dynamic-data.json`
   const dynamicDataFileResponse = await fetchUsingXHR(dynamicDataFileRemoteUrl, {
