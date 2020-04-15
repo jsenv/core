@@ -17,26 +17,24 @@ export const fromFunctionReturningNamespace = (fn, data) => {
   }, data)
 }
 
-export const fromFunctionReturningRegisteredModule = (fn, { url, importerUrl }) => {
+const fromFunctionReturningRegisteredModule = (fn, data) => {
   try {
     return fn()
   } catch (error) {
-    throw new Error(`imported module instantiation error.
+    throw new Error(`Module instantiation error.
 --- instantiation error stack ---
-${error.stack}
---- url ---
-${url}
---- importer url ---
-${importerUrl}`)
+${error.stack}${getModuleDetails(data)}`)
   }
 }
 
 export const fromUrl = async ({
   url,
   importerUrl,
-  executionId,
   fetchSource,
   instantiateJavaScript,
+  executionId,
+  compileServerOrigin,
+  outDirectoryRelativeUrl,
 }) => {
   const moduleResponse = await fetchSource({
     url,
@@ -45,11 +43,16 @@ export const fromUrl = async ({
   })
 
   if (moduleResponse.status === 404) {
-    throw new Error(`imported module not found.
---- url ---
-${url}
---- importer url ---
-${importerUrl}`)
+    throw new Error(
+      `Module file cannot be found.
+${getModuleDetails({
+  url,
+  importerUrl,
+  compileServerOrigin,
+  outDirectoryRelativeUrl,
+  notFound: true,
+})}`,
+    )
   }
 
   const contentType = moduleResponse.headers["content-type"] || ""
@@ -57,30 +60,24 @@ ${importerUrl}`)
   if (moduleResponse.status === 500 && contentType === "application/json") {
     const bodyAsJson = await moduleResponse.json()
     if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
-      const error = new Error(`imported module parsing error.
+      const error = new Error(`Module file cannot be parsed.
 --- parsing error message ---
 ${bodyAsJson.message}
---- url ---
-${url}
---- importer url ---
-${importerUrl}`)
+${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
       error.parsingError = bodyAsJson
       throw error
     }
   }
 
   if (moduleResponse.status < 200 || moduleResponse.status >= 300) {
-    throw new Error(`imported module response unsupported status.
+    throw new Error(`Module file response status is unexpected.
 --- status ---
 ${moduleResponse.status}
 --- allowed status
 200 to 299
 --- statusText ---
 ${moduleResponse.statusText}
---- url ---
-${url}
---- importer url ---
-${importerUrl}`)
+${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
   }
 
   // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
@@ -92,6 +89,8 @@ ${importerUrl}`)
       {
         url: moduleResponse.url,
         importerUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
       },
     )
   }
@@ -104,7 +103,12 @@ ${importerUrl}`)
           default: bodyAsJson,
         }
       },
-      { url: moduleResponse.url, importerUrl },
+      {
+        url: moduleResponse.url,
+        importerUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
+      },
     )
   }
 
@@ -116,7 +120,12 @@ ${importerUrl}`)
           default: bodyAsText,
         }
       },
-      { url: moduleResponse.url, importerUrl },
+      {
+        url: moduleResponse.url,
+        importerUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
+      },
     )
   }
 
@@ -128,20 +137,14 @@ ${contentType}
 application/javascript
 application/json
 text/*
---- url ---
-${url}
---- importer url ---
-${importerUrl}`)
+${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
   } else {
     console.warn(`Module handled as base64 text because of missing content-type.
 --- allowed content-type ---
 application/javascript
 application/json
 text/*
---- url ---
-${url}
---- importer url ---
-${importerUrl}`)
+${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
   }
 
   const bodyAsText = await moduleResponse.text()
@@ -152,7 +155,12 @@ ${importerUrl}`)
         default: bodyAsBase64,
       }
     },
-    { url: moduleResponse.url, importerUrl },
+    {
+      url: moduleResponse.url,
+      importerUrl,
+      compileServerOrigin,
+      outDirectoryRelativeUrl,
+    },
   )
 }
 
@@ -170,3 +178,67 @@ const textToBase64 =
   typeof window === "object"
     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
     : (text) => Buffer.from(text, "utf8").toString("base64")
+
+const getModuleDetails = ({
+  url,
+  importerUrl,
+  compileServerOrigin,
+  outDirectoryRelativeUrl,
+  notFound = false,
+}) => {
+  const relativeUrl = tryToFindProjectRelativeUrl(url, {
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+  })
+
+  const importerRelativeUrl = tryToFindProjectRelativeUrl(importerUrl, {
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+  })
+
+  const details = notFound
+    ? {
+        ...(importerUrl ? { ["import declared in"]: importerRelativeUrl || importerUrl } : {}),
+        ...(relativeUrl ? { file: relativeUrl } : {}),
+        ["file url"]: url,
+      }
+    : {
+        ...(relativeUrl ? { file: relativeUrl } : {}),
+        ["file url"]: url,
+        ...(importerUrl ? { ["imported by"]: importerRelativeUrl || importerUrl } : {}),
+      }
+
+  return Object.keys(details).map((key) => {
+    return `--- ${key} ---
+${details[key]}`
+  }).join(`
+`)
+}
+
+const tryToFindProjectRelativeUrl = (url, { compileServerOrigin, outDirectoryRelativeUrl }) => {
+  if (!url) {
+    return null
+  }
+
+  if (!url.startsWith(`${compileServerOrigin}/`)) {
+    return null
+  }
+
+  if (url === compileServerOrigin) {
+    return null
+  }
+
+  const afterOrigin = url.slice(`${compileServerOrigin}/`.length)
+  if (!afterOrigin.startsWith(outDirectoryRelativeUrl)) {
+    return null
+  }
+
+  const afterCompileDirectory = afterOrigin.slice(outDirectoryRelativeUrl.length)
+  const nextSlashIndex = afterCompileDirectory.indexOf("/")
+  if (nextSlashIndex === -1) {
+    return null
+  }
+
+  const afterCompileId = afterCompileDirectory.slice(nextSlashIndex + 1)
+  return afterCompileId
+}

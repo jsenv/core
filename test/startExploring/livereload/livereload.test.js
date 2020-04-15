@@ -37,7 +37,10 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
 {
   const actual = { pageLogs, pageErrors, executionResult }
   const expected = {
-    pageLogs: [],
+    pageLogs: [
+      // this is the log saying "livereloading connected to"
+      actual.pageLogs[0],
+    ],
     pageErrors: [],
     executionResult: {
       status: "completed",

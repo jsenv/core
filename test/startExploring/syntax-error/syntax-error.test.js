@@ -12,6 +12,7 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.main.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const compileId = `best`
 const filePath = urlToFileSystemPath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
 const parentDirectoryUrl = resolveUrl("../", testDirectoryUrl)
 const parentDirectoryRelativeUrl = urlToRelativeUrl(parentDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -25,6 +26,8 @@ const { exploringServer, compileServer } = await startExploring({
 const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
   `${exploringServer.origin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
 )
+const compiledFileUrl = `${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
+
 const actual = { pageLogs, pageErrors, executionResult }
 const expectedParsingErrorMessage = `${filePath}: Unexpected token (1:17)
 
@@ -37,13 +40,13 @@ const expectedParsingError = {
   lineNumber: 1,
   columnNumber: 17,
 }
-const expectedError = new Error(`imported module parsing error.
+const expectedError = new Error(`Module file cannot be parsed.
 --- parsing error message ---
 ${expectedParsingError.message}
---- url ---
-${compileServer.origin}/${jsenvDirectoryRelativeUrl}out/best/${fileRelativeUrl}
---- importer url ---
-undefined`)
+--- file ---
+${fileRelativeUrl}
+--- file url ---
+${compiledFileUrl}`)
 Object.assign(expectedError, {
   parsingError: expectedParsingError,
 })

@@ -23,6 +23,11 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
   compileGroupCount: 1, // force otherwise compileId
 })
+const importedFileRelativeUrl = `${testDirectoryRelativeUrl}foo.js`
+const importedFileUrl = resolveUrl(
+  `${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`,
+  jsenvCoreDirectoryUrl,
+)
 
 await Promise.all(
   [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
@@ -44,14 +49,13 @@ await Promise.all(
     }
     const expected = {
       status: "errored",
-      errorMessage: `imported module not found.
---- url ---
-${resolveUrl(
-  `${outDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}foo.js`,
-  jsenvCoreDirectoryUrl,
-)}
---- importer url ---
-${resolveUrl(`${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`, jsenvCoreDirectoryUrl)}`,
+      errorMessage: `Module file cannot be found.
+--- import declared in ---
+${fileRelativeUrl}
+--- file ---
+${importedFileRelativeUrl}
+--- file url ---
+${importedFileUrl}`,
     }
     assert({ actual, expected })
   }),

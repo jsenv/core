@@ -6,7 +6,12 @@ import { evalSource } from "./evalSource.js"
 
 const GLOBAL_SPECIFIER = "global"
 
-export const createBrowserSystem = async ({ resolveImport, executionId }) => {
+export const createBrowserSystem = async ({
+  resolveImport,
+  executionId,
+  compileServerOrigin,
+  outDirectoryRelativeUrl,
+}) => {
   if (typeof window.System === "undefined") {
     throw new Error(`window.System is undefined`)
   }
@@ -19,7 +24,12 @@ export const createBrowserSystem = async ({ resolveImport, executionId }) => {
 
   browserSystem.instantiate = (url, importerUrl) => {
     if (url === GLOBAL_SPECIFIER) {
-      return fromFunctionReturningNamespace(() => window, { url, importerUrl })
+      return fromFunctionReturningNamespace(() => window, {
+        url,
+        importerUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
+      })
     }
 
     return fromUrl({
@@ -37,6 +47,8 @@ export const createBrowserSystem = async ({ resolveImport, executionId }) => {
         return browserSystem.getRegister()
       },
       executionId,
+      compileServerOrigin,
+      outDirectoryRelativeUrl,
     })
   }
 

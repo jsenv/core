@@ -17,6 +17,7 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const compileId = "otherwise"
 const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
 const filePath = urlToFileSystemPath(fileUrl)
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
@@ -24,6 +25,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
   compileGroupCount: 1,
 })
+const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
 
 await Promise.all(
   [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
@@ -46,16 +48,16 @@ await Promise.all(
     }
     const expected = {
       status: "errored",
-      errorMessage: `imported module parsing error.
+      errorMessage: `Module file cannot be parsed.
 --- parsing error message ---
 ${filePath}: Unexpected token (1:17)
 
 > 1 | const browser = (
     |                  ^
---- url ---
-${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/otherwise/${fileRelativeUrl}
---- importer url ---
-undefined`,
+--- file ---
+${fileRelativeUrl}
+--- file url ---
+${compiledFileUrl}`,
       errorParsingErrror: {
         message: `${filePath}: Unexpected token (1:17)
 

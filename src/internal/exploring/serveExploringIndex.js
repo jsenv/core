@@ -1,4 +1,13 @@
-import { collectFiles, metaMapToSpecifierMetaMap } from "@jsenv/util"
+import { readFileSync } from "fs"
+import {
+  collectFiles,
+  metaMapToSpecifierMetaMap,
+  resolveUrl,
+  urlToFileSystemPath,
+} from "@jsenv/util"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+
+const JSENV_ICON_URL = resolveUrl("src/internal/jsenv.png", jsenvCoreDirectoryUrl)
 
 export const serveExploringIndex = async ({
   projectDirectoryUrl,
@@ -16,7 +25,7 @@ export const serveExploringIndex = async ({
   })
   const explorableRelativeUrlArray = matchingFileResultArray.map(({ relativeUrl }) => relativeUrl)
 
-  const html = getBrowsingIndexPageHTML({
+  const html = await getBrowsingIndexPageHTML({
     projectDirectoryUrl,
     htmlFileRelativeUrl,
     explorableRelativeUrlArray,
@@ -33,16 +42,21 @@ export const serveExploringIndex = async ({
   }
 }
 
-const getBrowsingIndexPageHTML = ({
+const getBrowsingIndexPageHTML = async ({
   projectDirectoryUrl,
   htmlFileRelativeUrl,
   explorableRelativeUrlArray,
 }) => {
+  const jsenvIcon = readFileSync(urlToFileSystemPath(JSENV_ICON_URL))
+  const jsenvBase64Data = Buffer.from(jsenvIcon).toString("base64")
+  const faviconBase64 = `data:image/png;base64,${jsenvBase64Data}`
+
   return `<!doctype html>
 
   <head>
-    <title>Exploring ${projectDirectoryUrl}</title>
     <meta charset="utf-8" />
+    <title>Exploring ${projectDirectoryUrl}</title>
+    <link rel="icon" type="image/png" href="${faviconBase64}">
   </head>
 
   <body>
