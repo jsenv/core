@@ -19,11 +19,12 @@ const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
 const filePath = urlToFileSystemPath(fileUrl)
-const compiledFileUrl = `${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/best/${fileRelativeUrl}`
+const compileId = "best"
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
+const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
 
 const actual = await launchAndExecute({
   ...EXECUTE_TEST_PARAMS,
@@ -37,16 +38,16 @@ const actual = await launchAndExecute({
       compileServerOrigin,
     }),
 })
-const expectedError = new Error(`imported module parsing error.
+const expectedError = new Error(`Module file cannot be parsed.
 --- parsing error message ---
 ${filePath}: Unexpected token (1:14)
 
 > 1 | const node = (
     |               ^
---- url ---
-${compiledFileUrl}
---- importer url ---
-undefined`)
+--- file ---
+${fileRelativeUrl}
+--- file url ---
+${compiledFileUrl}`)
 expectedError.parsingError = {
   message: `${filePath}: Unexpected token (1:14)
 

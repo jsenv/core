@@ -22,6 +22,11 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
+const importedFileRelativeUrl = `${testDirectoryRelativeUrl}foo.js`
+const importedFileUrl = resolveUrl(
+  `${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`,
+  jsenvCoreDirectoryUrl,
+)
 
 const actual = await launchAndExecute({
   ...EXECUTE_TEST_PARAMS,
@@ -37,13 +42,12 @@ const actual = await launchAndExecute({
 })
 const expected = {
   status: "errored",
-  error: new Error(`imported module not found.
---- url ---
-${resolveUrl(
-  `${outDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}foo.js`,
-  jsenvCoreDirectoryUrl,
-)}
---- importer url ---
-${resolveUrl(`${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`, jsenvCoreDirectoryUrl)}`),
+  error: new Error(`Module file cannot be found.
+--- import declared in ---
+${fileRelativeUrl}
+--- file ---
+${importedFileRelativeUrl}
+--- file url ---
+${importedFileUrl}`),
 }
 assert({ actual, expected })

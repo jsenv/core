@@ -24,7 +24,12 @@ export const createBrowserSystem = async ({
 
   browserSystem.instantiate = (url, importerUrl) => {
     if (url === GLOBAL_SPECIFIER) {
-      return fromFunctionReturningNamespace(() => window, { url, importerUrl })
+      return fromFunctionReturningNamespace(() => window, {
+        url,
+        importerUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
+      })
     }
 
     return fromUrl({

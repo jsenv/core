@@ -30,6 +30,8 @@ export const createNodeSystem = ({
       return fromFunctionReturningNamespace(() => global, {
         url,
         importerUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
       })
     }
 
@@ -40,7 +42,12 @@ export const createNodeSystem = ({
           const moduleExportsForNativeNodeModule = require(url)
           return moduleExportsToModuleNamespace(moduleExportsForNativeNodeModule)
         },
-        { url, importerUrl },
+        {
+          url,
+          importerUrl,
+          compileServerOrigin,
+          outDirectoryRelativeUrl,
+        },
       )
     }
 

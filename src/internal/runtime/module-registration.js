@@ -17,17 +17,13 @@ export const fromFunctionReturningNamespace = (fn, data) => {
   }, data)
 }
 
-export const fromFunctionReturningRegisteredModule = (fn, { url, importerUrl }) => {
+const fromFunctionReturningRegisteredModule = (fn, data) => {
   try {
     return fn()
   } catch (error) {
-    throw new Error(`imported module instantiation error.
+    throw new Error(`Module instantiation error.
 --- instantiation error stack ---
-${error.stack}
---- url ---
-${url}
---- importer url ---
-${importerUrl}`)
+${error.stack}${getModuleDetails(data)}`)
   }
 }
 
@@ -47,8 +43,16 @@ export const fromUrl = async ({
   })
 
   if (moduleResponse.status === 404) {
-    throw new Error(`File cannot be found for import.
-${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
+    throw new Error(
+      `Module file cannot be found.
+${getModuleDetails({
+  url,
+  importerUrl,
+  compileServerOrigin,
+  outDirectoryRelativeUrl,
+  notFound: true,
+})}`,
+    )
   }
 
   const contentType = moduleResponse.headers["content-type"] || ""
@@ -56,7 +60,7 @@ ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelative
   if (moduleResponse.status === 500 && contentType === "application/json") {
     const bodyAsJson = await moduleResponse.json()
     if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
-      const error = new Error(`imported module parsing error.
+      const error = new Error(`Module file cannot be parsed.
 --- parsing error message ---
 ${bodyAsJson.message}
 ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
@@ -66,7 +70,7 @@ ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelative
   }
 
   if (moduleResponse.status < 200 || moduleResponse.status >= 300) {
-    throw new Error(`imported module response unsupported status.
+    throw new Error(`Module file response status is unexpected.
 --- status ---
 ${moduleResponse.status}
 --- allowed status
@@ -85,6 +89,8 @@ ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelative
       {
         url: moduleResponse.url,
         importerUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
       },
     )
   }
@@ -97,7 +103,12 @@ ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelative
           default: bodyAsJson,
         }
       },
-      { url: moduleResponse.url, importerUrl },
+      {
+        url: moduleResponse.url,
+        importerUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
+      },
     )
   }
 
@@ -109,7 +120,12 @@ ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelative
           default: bodyAsText,
         }
       },
-      { url: moduleResponse.url, importerUrl },
+      {
+        url: moduleResponse.url,
+        importerUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
+      },
     )
   }
 
@@ -139,7 +155,12 @@ ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelative
         default: bodyAsBase64,
       }
     },
-    { url: moduleResponse.url, importerUrl },
+    {
+      url: moduleResponse.url,
+      importerUrl,
+      compileServerOrigin,
+      outDirectoryRelativeUrl,
+    },
   )
 }
 
@@ -158,7 +179,13 @@ const textToBase64 =
     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
     : (text) => Buffer.from(text, "utf8").toString("base64")
 
-const getModuleDetails = ({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl }) => {
+const getModuleDetails = ({
+  url,
+  importerUrl,
+  compileServerOrigin,
+  outDirectoryRelativeUrl,
+  notFound = false,
+}) => {
   const relativeUrl = tryToFindProjectRelativeUrl(url, {
     compileServerOrigin,
     outDirectoryRelativeUrl,
@@ -169,11 +196,17 @@ const getModuleDetails = ({ url, importerUrl, compileServerOrigin, outDirectoryR
     outDirectoryRelativeUrl,
   })
 
-  const details = {
-    ...(importerUrl ? { ["import declared in"]: importerRelativeUrl || importerUrl } : {}),
-    ...(relativeUrl ? { file: relativeUrl } : {}),
-    ["file url"]: url,
-  }
+  const details = notFound
+    ? {
+        ...(importerUrl ? { ["import declared in"]: importerRelativeUrl || importerUrl } : {}),
+        ...(relativeUrl ? { file: relativeUrl } : {}),
+        ["file url"]: url,
+      }
+    : {
+        ...(relativeUrl ? { file: relativeUrl } : {}),
+        ["file url"]: url,
+        ...(importerUrl ? { ["imported by"]: importerRelativeUrl || importerUrl } : {}),
+      }
 
   return Object.keys(details).map((key) => {
     return `--- ${key} ---
