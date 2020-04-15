@@ -17,23 +17,29 @@ const fileRelativeUrl = new URLSearchParams(location.search).get("file")
 // eslint-disable-next-line import/newline-after-import
 ;(async () => {
   const eventSourceUrl = `${location.origin}/${fileRelativeUrl}`
+  const logLivereloading = (message) => {
+    console.log(
+      `%clivereloading%c ${message}`,
+      `background: #ffdc00; color: black; padding: 1px 3px; margin: 0 1px`,
+      "",
+    )
+  }
+
   connectFileChangesEventSource(eventSourceUrl, {
     onConnect: ({ isReconnection }) => {
       if (isReconnection) {
-        console.info(`reconnected to file change event source at ${eventSourceUrl} -> reload page`)
+        logLivereloading(`reconnected to ${eventSourceUrl} -> reload page`)
         location.reload()
       } else {
-        console.info(`connected to file change event source at ${eventSourceUrl}`)
+        logLivereloading(`connected to ${eventSourceUrl}`)
       }
     },
     onFileChange: (file) => {
-      console.info(`${file} changed -> reload page`)
+      logLivereloading(`${file} changed -> reload page`)
       location.reload()
     },
     onDisconnect: () => {
-      console.info(
-        `disconnected from file change event source at ${eventSourceUrl} -> trying to reconnect`,
-      )
+      logLivereloading(`disconnected from ${eventSourceUrl}`)
     },
   })
 
