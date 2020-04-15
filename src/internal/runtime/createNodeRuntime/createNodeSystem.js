@@ -65,6 +65,8 @@ export const createNodeSystem = ({
         return nodeSystem.getRegister()
       },
       executionId,
+      outDirectoryRelativeUrl,
+      compileServerOrigin,
     })
   }
 
@@ -111,7 +113,6 @@ const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirec
 
 const urlToOriginalUrl = (
   url,
-
   { projectDirectoryUrl, outDirectoryRelativeUrl, compileServerOrigin },
 ) => {
   if (!url.startsWith(`${compileServerOrigin}/`)) {

@@ -34,9 +34,11 @@ ${importerUrl}`)
 export const fromUrl = async ({
   url,
   importerUrl,
-  executionId,
   fetchSource,
   instantiateJavaScript,
+  executionId,
+  compileServerOrigin,
+  outDirectoryRelativeUrl,
 }) => {
   const moduleResponse = await fetchSource({
     url,
@@ -45,11 +47,8 @@ export const fromUrl = async ({
   })
 
   if (moduleResponse.status === 404) {
-    throw new Error(`imported module not found.
---- url ---
-${url}
---- importer url ---
-${importerUrl}`)
+    throw new Error(`File cannot be found for import.
+${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
   }
 
   const contentType = moduleResponse.headers["content-type"] || ""
@@ -60,10 +59,7 @@ ${importerUrl}`)
       const error = new Error(`imported module parsing error.
 --- parsing error message ---
 ${bodyAsJson.message}
---- url ---
-${url}
---- importer url ---
-${importerUrl}`)
+${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
       error.parsingError = bodyAsJson
       throw error
     }
@@ -77,10 +73,7 @@ ${moduleResponse.status}
 200 to 299
 --- statusText ---
 ${moduleResponse.statusText}
---- url ---
-${url}
---- importer url ---
-${importerUrl}`)
+${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
   }
 
   // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
@@ -128,20 +121,14 @@ ${contentType}
 application/javascript
 application/json
 text/*
---- url ---
-${url}
---- importer url ---
-${importerUrl}`)
+${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
   } else {
     console.warn(`Module handled as base64 text because of missing content-type.
 --- allowed content-type ---
 application/javascript
 application/json
 text/*
---- url ---
-${url}
---- importer url ---
-${importerUrl}`)
+${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
   }
 
   const bodyAsText = await moduleResponse.text()
@@ -170,3 +157,55 @@ const textToBase64 =
   typeof window === "object"
     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
     : (text) => Buffer.from(text, "utf8").toString("base64")
+
+const getModuleDetails = ({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl }) => {
+  const relativeUrl = tryToFindProjectRelativeUrl(url, {
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+  })
+
+  const importerRelativeUrl = tryToFindProjectRelativeUrl(importerUrl, {
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+  })
+
+  const details = {
+    ...(importerUrl ? { ["import declared in"]: importerRelativeUrl || importerUrl } : {}),
+    ...(relativeUrl ? { file: relativeUrl } : {}),
+    ["file url"]: url,
+  }
+
+  return Object.keys(details).map((key) => {
+    return `--- ${key} ---
+${details[key]}`
+  }).join(`
+`)
+}
+
+const tryToFindProjectRelativeUrl = (url, { compileServerOrigin, outDirectoryRelativeUrl }) => {
+  if (!url) {
+    return null
+  }
+
+  if (!url.startsWith(`${compileServerOrigin}/`)) {
+    return null
+  }
+
+  if (url === compileServerOrigin) {
+    return null
+  }
+
+  const afterOrigin = url.slice(`${compileServerOrigin}/`.length)
+  if (!afterOrigin.startsWith(outDirectoryRelativeUrl)) {
+    return null
+  }
+
+  const afterCompileDirectory = afterOrigin.slice(outDirectoryRelativeUrl.length)
+  const nextSlashIndex = afterCompileDirectory.indexOf("/")
+  if (nextSlashIndex === -1) {
+    return null
+  }
+
+  const afterCompileId = afterCompileDirectory.slice(nextSlashIndex + 1)
+  return afterCompileId
+}

@@ -49,6 +49,8 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
   const importFile = async (specifier) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       resolveImport: resolveImportScoped,
+      compileServerOrigin,
+      outDirectoryRelativeUrl,
     })
     return browserSystem.import(specifier)
   }
@@ -69,6 +71,8 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       resolveImport: resolveImportScoped,
       executionId,
+      compileServerOrigin,
+      outDirectoryRelativeUrl,
     })
 
     let executionResult
