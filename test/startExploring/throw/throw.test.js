@@ -33,7 +33,10 @@ const {
 {
   const actual = { pageLogs, pageErrors, executionResult }
   const expected = {
-    pageLogs: [{ type: "error", text: "JSHandle@error" }],
+    pageLogs: [
+      actual.pageLogs[0], // eventSource connected log
+      { type: "error", text: "JSHandle@error" },
+    ],
     pageErrors: [],
     executionResult: {
       status: "errored",

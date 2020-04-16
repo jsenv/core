@@ -7,7 +7,7 @@ import { installBrowserErrorStackRemapping } from "../error-stack-remapping/inst
 import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
 import { fetchAndEvalUsingScript } from "../fetchAndEvalUsingScript.js"
 import { fetchUsingXHR } from "../fetchUsingXHR.js"
-import { connectFileChangesEventSource } from "./fileChangesEventSource.js"
+import { connectEventSource } from "./connectEventSource.js"
 
 const { jsenvDirectoryRelativeUrl, outDirectoryRelativeUrl } = env
 const { location } = window
@@ -17,31 +17,36 @@ const fileRelativeUrl = new URLSearchParams(location.search).get("file")
 // eslint-disable-next-line import/newline-after-import
 ;(async () => {
   const eventSourceUrl = `${location.origin}/${fileRelativeUrl}`
-  const logLivereloading = (message) => {
+  const logEventSource = (message) => {
     console.log(
-      `%clivereloading%c ${message}`,
+      `%ceventSource%c ${message}`,
       `background: #ffdc00; color: black; padding: 1px 3px; margin: 0 1px`,
       "",
     )
   }
 
-  connectFileChangesEventSource(eventSourceUrl, {
-    onConnect: ({ isReconnection }) => {
-      if (isReconnection) {
-        logLivereloading(`reconnected to ${eventSourceUrl} -> reload page`)
+  connectEventSource(
+    eventSourceUrl,
+    {
+      "file-changed": ({ data }) => {
+        logEventSource(`${data} changed -> reload page`)
         location.reload()
-      } else {
-        logLivereloading(`connected to ${eventSourceUrl}`)
-      }
+      },
     },
-    onFileChange: (file) => {
-      logLivereloading(`${file} changed -> reload page`)
-      location.reload()
+    {
+      onConnect: ({ isReconnection }) => {
+        if (isReconnection) {
+          logEventSource(`reconnected to ${eventSourceUrl} -> reload page`)
+          location.reload()
+        } else {
+          logEventSource(`connected to ${eventSourceUrl}`)
+        }
+      },
+      onDisconnect: () => {
+        logEventSource(`disconnected from ${eventSourceUrl}`)
+      },
     },
-    onDisconnect: () => {
-      logLivereloading(`disconnected from ${eventSourceUrl}`)
-    },
-  })
+  )
 
   const dynamicDataFileRemoteUrl = `${window.origin}/${jsenvDirectoryRelativeUrl}browser-execute-dynamic-data.json`
   const dynamicDataFileResponse = await fetchUsingXHR(dynamicDataFileRemoteUrl, {

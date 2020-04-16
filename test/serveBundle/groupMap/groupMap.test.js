@@ -23,101 +23,106 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const babelPluginMap = jsenvBabelPluginMap
-const {
-  outDirectoryRelativeUrl,
-  origin: compileServerOrigin,
-  compileServerImportMap,
-} = await startCompileServer({
-  compileServerLogLevel: "warn",
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  jsenvDirectoryClean: true,
-  babelPluginMap,
-  env: {
-    whatever: 42,
-  },
-})
-const ressource = `/${outDirectoryRelativeUrl}file.cjs`
-const serveBundleParams = {
-  cancellationToken: createCancellationToken(),
-  logger: createLogger({ logLevel: "warn" }),
 
-  projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  outDirectoryRelativeUrl,
-  originalFileUrl,
-  compiledFileUrl,
-  compileServerOrigin,
-  compileServerImportMap,
+;["etag", "mtime"].reduce(async (previous, compileCacheStrategy) => {
+  await previous
 
-  format: "commonjs",
-  projectFileRequestedCallback: () => {},
-  request: {
-    origin: compileServerOrigin,
-    ressource,
-    method: "GET",
-    headers: {},
-  },
-  babelPluginMap,
-}
+  const compileServer = await startCompileServer({
+    compileServerLogLevel: "warn",
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    jsenvDirectoryClean: true,
+    babelPluginMap,
+    env: {
+      whatever: 42,
+    },
+  })
+  const ressource = `/${compileServer.outDirectoryRelativeUrl}file.cjs`
+  const serveBundleParams = {
+    cancellationToken: createCancellationToken(),
+    logger: createLogger({ logLevel: "warn" }),
 
-const response = await serveBundle(serveBundleParams)
-{
-  const { status: actual } = response
-  const expected = 200
-  assert({ actual, expected })
-}
-{
-  const sourcemapFileUrl = `${compiledFileUrl}.map`
-  const actual = JSON.parse(await readFile(sourcemapFileUrl))
-  const expected = {
-    version: 3,
-    file: "file.cjs",
-    sources: ["out/groupMap.json", "../file.cjs"],
-    sourcesContent: null,
-    names: actual.names,
-    mappings: actual.mappings,
+    projectDirectoryUrl: jsenvCoreDirectoryUrl,
+    outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
+    originalFileUrl,
+    compiledFileUrl,
+    compileServerOrigin: compileServer.origin,
+    compileServerImportMap: compileServer.compileServerImportMap,
+    compileCacheStrategy,
+
+    format: "commonjs",
+    projectFileRequestedCallback: () => {},
+    request: {
+      origin: compileServer.origin,
+      ressource,
+      method: "GET",
+      headers: {},
+    },
+    babelPluginMap,
   }
-  assert({ actual, expected })
-}
-{
-  const metaFileUrl = `${compiledFileUrl}__asset__/meta.json`
-  const actual = JSON.parse(await readFile(metaFileUrl))
-  const expected = {
-    contentType: "application/javascript",
-    sources: ["../out/groupMap.json", "../../file.cjs"],
-    sourcesEtag: [
-      bufferToEtag(
-        readFileSync(urlToFileSystemPath(resolveUrl("../out/groupMap.json", metaFileUrl))),
-      ),
-      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../../file.cjs", metaFileUrl)))),
-    ],
-    assets: ["../file.cjs.map"],
-    assetsEtag: [
-      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../file.cjs.map", metaFileUrl)))),
-    ],
-    createdMs: actual.createdMs,
-    lastModifiedMs: actual.lastModifiedMs,
+
+  const response = await serveBundle(serveBundleParams)
+  {
+    const { status: actual } = response
+    const expected = 200
+    assert({ actual, expected })
   }
-  assert({ actual, expected })
-}
-{
-  // eslint-disable-next-line import/no-dynamic-require
-  const actual = typeof require(urlToFileSystemPath(compiledFileUrl))
-  const expected = "object"
-  assert({ actual, expected })
-}
-{
+  {
+    const sourcemapFileUrl = `${compiledFileUrl}.map`
+    const actual = JSON.parse(await readFile(sourcemapFileUrl))
+    const expected = {
+      version: 3,
+      file: "file.cjs",
+      sources: ["out/groupMap.json", "../file.cjs"],
+      sourcesContent: null,
+      names: actual.names,
+      mappings: actual.mappings,
+    }
+    assert({ actual, expected })
+  }
+  {
+    const metaFileUrl = `${compiledFileUrl}__asset__/meta.json`
+    const actual = JSON.parse(await readFile(metaFileUrl))
+    const expected = {
+      contentType: "application/javascript",
+      sources: ["../out/groupMap.json", "../../file.cjs"],
+      sourcesEtag: [
+        bufferToEtag(
+          readFileSync(urlToFileSystemPath(resolveUrl("../out/groupMap.json", metaFileUrl))),
+        ),
+        bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../../file.cjs", metaFileUrl)))),
+      ],
+      assets: ["../file.cjs.map"],
+      assetsEtag: [
+        bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../file.cjs.map", metaFileUrl)))),
+      ],
+      createdMs: actual.createdMs,
+      lastModifiedMs: actual.lastModifiedMs,
+    }
+    assert({ actual, expected })
+  }
+  {
+    // eslint-disable-next-line import/no-dynamic-require
+    const actual = typeof require(urlToFileSystemPath(compiledFileUrl))
+    const expected = "object"
+    assert({ actual, expected })
+  }
+
   // ensure serveBundle cache works
   const secondResponse = await serveBundle({
     ...serveBundleParams,
     request: {
       ...serveBundleParams.request,
       headers: {
-        "if-none-match": response.headers.eTag,
+        ...(compileCacheStrategy === "etag"
+          ? { "if-none-match": response.headers.eTag }
+          : {
+              "if-modified-since": response.headers["last-modified"],
+            }),
       },
     },
   })
   const actual = secondResponse.status
   const expected = 304
   assert({ actual, expected })
-}
+}, Promise.resolve())

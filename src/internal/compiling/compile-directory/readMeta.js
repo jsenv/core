@@ -12,6 +12,11 @@ export const readMeta = async ({ logger, compiledFileUrl }) => {
     return metaJsonObject
   } catch (error) {
     if (error && error.code === "ENOENT") {
+      logger.debug(`no meta.json.
+--- meta.json path ---
+${urlToFileSystemPath(metaJsonFileUrl)}
+--- compiled file ---
+${urlToFileSystemPath(compiledFileUrl)}`)
       return null
     }
 
@@ -29,7 +34,7 @@ export const readMeta = async ({ logger, compiledFileUrl }) => {
   }
 }
 
-const createCacheSyntaxErrorMessage = ({ syntaxError, metaJsonFileUrl }) => `cache syntax error
+const createCacheSyntaxErrorMessage = ({ syntaxError, metaJsonFileUrl }) => `meta.json syntax error.
 --- syntax error stack ---
 ${syntaxError.stack}
 --- meta.json path ---

@@ -72,7 +72,7 @@
         "node_modules/gensync/**",
         "node_modules/@jsenv/core/**",
         // "node_modules/@jsenv/assert/**",
-        // "node_modules/@jsenv/cancellation/**",
+        "node_modules/@jsenv/cancellation/**",
         "node_modules/@rollup/**",
         "node_modules/playwright/**",
         "node_modules/rollup/**",

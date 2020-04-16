@@ -14,12 +14,17 @@ export const validateMeta = async ({
   ifModifiedSinceDate,
 }) => {
   const compiledFileValidation = await validateCompiledFile({
-    logger,
     compiledFileUrl,
     ifEtagMatch,
     ifModifiedSinceDate,
   })
-  if (!compiledFileValidation.valid) return compiledFileValidation
+  if (!compiledFileValidation.valid) {
+    logger.debug(
+      `${urlToFileSystemPath(compiledFileUrl)} modified (${compiledFileValidation.code})`,
+    )
+    return compiledFileValidation
+  }
+  logger.debug(`${urlToFileSystemPath(compiledFileUrl)} not modified`)
 
   if (meta.sources.length === 0) {
     logger.warn(`meta.sources is empty, cache considered as invalid by precaution`)
@@ -31,22 +36,33 @@ export const validateMeta = async ({
 
   const [sourcesValidations, assetValidations] = await Promise.all([
     validateSources({
-      logger,
       meta,
       compiledFileUrl,
     }),
     validateAssets({
-      logger,
       meta,
       compiledFileUrl,
     }),
   ])
-
   const invalidSourceValidation = sourcesValidations.find(({ valid }) => !valid)
-  if (invalidSourceValidation) return invalidSourceValidation
-
+  if (invalidSourceValidation) {
+    logger.debug(
+      `${urlToFileSystemPath(invalidSourceValidation.data.sourceFileUrl)} source modified (${
+        invalidSourceValidation.code
+      })`,
+    )
+    return invalidSourceValidation
+  }
   const invalidAssetValidation = assetValidations.find(({ valid }) => !valid)
-  if (invalidAssetValidation) return invalidAssetValidation
+  if (invalidAssetValidation) {
+    logger.debug(
+      `${urlToFileSystemPath(invalidAssetValidation.data.assetFileUrl)} asset modified (${
+        invalidAssetValidation.code
+      })`,
+    )
+    return invalidAssetValidation
+  }
+  logger.debug(`${urlToFileSystemPath(compiledFileUrl)} cache is valid`)
 
   const compiledSource = compiledFileValidation.data.compiledSource
   const sourcesContent = sourcesValidations.map(({ data }) => data.sourceContent)
@@ -62,19 +78,13 @@ export const validateMeta = async ({
   }
 }
 
-const validateCompiledFile = async ({
-  logger,
-  compiledFileUrl,
-  ifEtagMatch,
-  ifModifiedSinceDate,
-}) => {
+const validateCompiledFile = async ({ compiledFileUrl, ifEtagMatch, ifModifiedSinceDate }) => {
   try {
     const compiledSource = await readFile(compiledFileUrl)
 
     if (ifEtagMatch) {
       const compiledEtag = bufferToEtag(Buffer.from(compiledSource))
       if (ifEtagMatch !== compiledEtag) {
-        logger.debug(`etag changed for ${urlToFileSystemPath(compiledFileUrl)}`)
         return {
           code: "COMPILED_FILE_ETAG_MISMATCH",
           valid: false,
@@ -86,7 +96,6 @@ const validateCompiledFile = async ({
     if (ifModifiedSinceDate) {
       const compiledMtime = await readFileSystemNodeModificationTime(compiledFileUrl)
       if (ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)) {
-        logger.debug(`mtime changed for ${urlToFileSystemPath(compiledFileUrl)}`)
         return {
           code: "COMPILED_FILE_MTIME_OUTDATED",
           valid: false,
@@ -101,7 +110,6 @@ const validateCompiledFile = async ({
     }
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.debug(`compiled file not found at ${urlToFileSystemPath(compiledFileUrl)}`)
       return {
         code: "COMPILED_FILE_NOT_FOUND",
         valid: false,
@@ -112,11 +120,10 @@ const validateCompiledFile = async ({
   }
 }
 
-const validateSources = ({ logger, meta, compiledFileUrl }) => {
+const validateSources = ({ meta, compiledFileUrl }) => {
   return Promise.all(
     meta.sources.map((source, index) =>
       validateSource({
-        logger,
         compiledFileUrl,
         source,
         eTag: meta.sourcesEtag[index],
@@ -125,7 +132,7 @@ const validateSources = ({ logger, meta, compiledFileUrl }) => {
   )
 }
 
-const validateSource = async ({ logger, compiledFileUrl, source, eTag }) => {
+const validateSource = async ({ compiledFileUrl, source, eTag }) => {
   const sourceFileUrl = resolveSourceFileUrl({
     source,
     compiledFileUrl,
@@ -136,7 +143,6 @@ const validateSource = async ({ logger, compiledFileUrl, source, eTag }) => {
     const sourceETag = bufferToEtag(Buffer.from(sourceContent))
 
     if (sourceETag !== eTag) {
-      logger.debug(`etag changed for ${urlToFileSystemPath(sourceFileUrl)}`)
       return {
         code: "SOURCE_ETAG_MISMATCH",
         valid: false,
@@ -163,7 +169,6 @@ const validateSource = async ({ logger, compiledFileUrl, source, eTag }) => {
       // which are not truly on the filesystem
       // (IN theory the above happens only for convertCommonJsWithRollup because jsenv
       // always have a concrete file especially to avoid that kind of thing)
-      logger.warn(`source not found at ${sourceFileUrl}`)
       return {
         code: "SOURCE_NOT_FOUND",
         valid: false,
@@ -178,11 +183,10 @@ const validateSource = async ({ logger, compiledFileUrl, source, eTag }) => {
   }
 }
 
-const validateAssets = ({ logger, compiledFileUrl, meta }) =>
+const validateAssets = ({ compiledFileUrl, meta }) =>
   Promise.all(
     meta.assets.map((asset, index) =>
       validateAsset({
-        logger,
         asset,
         compiledFileUrl,
         eTag: meta.assetsEtag[index],
@@ -190,7 +194,7 @@ const validateAssets = ({ logger, compiledFileUrl, meta }) =>
     ),
   )
 
-const validateAsset = async ({ logger, asset, compiledFileUrl, eTag }) => {
+const validateAsset = async ({ asset, compiledFileUrl, eTag }) => {
   const assetFileUrl = resolveAssetFileUrl({
     compiledFileUrl,
     asset,
@@ -201,7 +205,6 @@ const validateAsset = async ({ logger, asset, compiledFileUrl, eTag }) => {
     const assetContentETag = bufferToEtag(Buffer.from(assetContent))
 
     if (eTag !== assetContentETag) {
-      logger.debug(`etag changed for ${urlToFileSystemPath(assetFileUrl)}`)
       return {
         code: "ASSET_ETAG_MISMATCH",
         valid: false,
@@ -215,7 +218,6 @@ const validateAsset = async ({ logger, asset, compiledFileUrl, eTag }) => {
     }
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.debug(`asset not found at ${urlToFileSystemPath(assetFileUrl)}`)
       return {
         code: "ASSET_FILE_NOT_FOUND",
         valid: false,

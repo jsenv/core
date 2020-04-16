@@ -1,5 +1,11 @@
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server"
-import { urlToRelativeUrl, fileSystemPathToUrl, resolveUrl, bufferToEtag } from "@jsenv/util"
+import {
+  urlToRelativeUrl,
+  fileSystemPathToUrl,
+  resolveUrl,
+  bufferToEtag,
+  readFileSystemNodeModificationTime,
+} from "@jsenv/util"
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
 
 export const serveCompiledFile = async ({
@@ -26,15 +32,13 @@ export const serveCompiledFile = async ({
   const { headers = {} } = request
 
   let ifEtagMatch
-  if (cacheWithETag) {
-    if ("if-none-match" in headers) {
-      ifEtagMatch = headers["if-none-match"]
-    }
+  if (cacheWithETag && "if-none-match" in headers) {
+    ifEtagMatch = headers["if-none-match"]
   }
 
   const cacheWithMtime = writeOnFilesystem && compileCacheStrategy === "mtime"
   let ifModifiedSinceDate
-  if (cacheWithMtime) {
+  if (cacheWithMtime && "if-modified-since" in headers) {
     const ifModifiedSince = headers["if-modified-since"]
     try {
       ifModifiedSinceDate = new Date(ifModifiedSince)
@@ -47,7 +51,7 @@ export const serveCompiledFile = async ({
   }
 
   try {
-    const { meta, compileResult, compileResultStatus } = await getOrGenerateCompiledFile({
+    const { compileResult, compileResultStatus } = await getOrGenerateCompiledFile({
       logger,
       projectDirectoryUrl,
       originalFileUrl,
@@ -103,7 +107,9 @@ export const serveCompiledFile = async ({
         headers: {
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
-          "last-modified": new Date(meta.lastModifiedMs).toUTCString(),
+          "last-modified": new Date(
+            await readFileSystemNodeModificationTime(compiledFileUrl),
+          ).toUTCString(),
         },
         body: compiledSource,
       }
@@ -114,7 +120,6 @@ export const serveCompiledFile = async ({
       headers: {
         "content-length": Buffer.byteLength(compiledSource),
         "content-type": contentType,
-        "cache-control": "no-store",
       },
       body: compiledSource,
     }
