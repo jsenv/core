@@ -52,6 +52,7 @@ Object.assign(expectedError, {
 })
 const expected = {
   pageLogs: [
+    actual.pageLogs[0], // eventSource connected log
     {
       type: "error",
       text: "Failed to load resource: the server responded with a status of 500 (parse error)",

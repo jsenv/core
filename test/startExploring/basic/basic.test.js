@@ -27,6 +27,7 @@ const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage
 const actual = { pageLogs, pageErrors, executionResult }
 const expected = {
   pageLogs: [
+    actual.pageLogs[0], // eventSource connected log
     { type: "log", text: "42" },
     { type: "log", text: "bar" },
   ],
