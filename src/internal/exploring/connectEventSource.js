@@ -1,9 +1,10 @@
 const RECONNECT_ATTEMPT_MIN_DELAY = 100
 const RECONNECT_ATTEMPT_MAX_DELAY = 2000
 
-export const connectFileChangesEventSource = (
+export const connectEventSource = async (
   eventSourceUrl,
-  { onConnect = () => {}, onFileChange = () => {}, onDisconnect = () => {} } = {},
+  events = {},
+  { onConnect = () => {}, onDisconnect = () => {} } = {},
 ) => {
   const { EventSource } = window
 
@@ -19,7 +20,7 @@ export const connectFileChangesEventSource = (
   let timeoutId
   let close = () => {}
 
-  const connect = () => {
+  const connect = async () => {
     const eventSource = new EventSource(eventSourceUrl, {
       withCredentials: true,
     })
@@ -30,6 +31,22 @@ export const connectFileChangesEventSource = (
         connected = false
         onDisconnect()
       }
+    }
+
+    eventSource.onopen = () => {
+      connected = true
+      onConnect({ isReconnection: reconnecting })
+      reconnecting = false
+    }
+    Object.keys(events).forEach((eventName) => {
+      eventSource.addEventListener(eventName, (e) => {
+        if (e.origin === eventSourceOrigin) {
+          events[eventName](e)
+        }
+      })
+    })
+    eventSource.onerror = () => {
+      close()
 
       if (reconnecting) {
         timeoutId = setTimeout(
@@ -43,26 +60,6 @@ export const connectFileChangesEventSource = (
         connect()
       }
     }
-
-    eventSource.onopen = () => {
-      connected = true
-      onConnect({ isReconnection: reconnecting })
-      reconnecting = false
-    }
-    eventSource.onerror = () => {
-      // we could try to reconnect several times before giving up
-      // but dont keep it open as it would try to reconnect forever
-      // maybe, it depends what error occurs, or we could
-      // retry less frequently
-      close()
-    }
-    eventSource.addEventListener("file-changed", (e) => {
-      if (e.origin !== eventSourceOrigin) {
-        return
-      }
-      const fileChanged = e.data
-      onFileChange(fileChanged)
-    })
   }
   connect()
 

@@ -80,11 +80,7 @@ export const startExploring = async ({
       stopExploringCancellationSource.token,
     )
 
-    let livereloadServerSentEventService = () => {
-      return {
-        status: 204,
-      }
-    }
+    let livereloadServerSentEventService
     let rawProjectFileRequestedCallback = () => {}
     let projectFileRequestedCallback = () => {}
 
@@ -276,6 +272,13 @@ export const startExploring = async ({
         cancellationToken.register(room.stop)
         roomMap[relativeUrl] = room
         return room
+      }
+    } else {
+      const emptyRoom = createSSERoom()
+      emptyRoom.start()
+      cancellationToken.register(emptyRoom.stop)
+      livereloadServerSentEventService = () => {
+        return emptyRoom.connect()
       }
     }
 
