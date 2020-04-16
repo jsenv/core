@@ -1,5 +1,5 @@
 const RECONNECT_ATTEMPT_MIN_DELAY = 100
-const RECONNECT_ATTEMPT_MAX_DELAY = 2000
+const RECONNECT_ATTEMPT_MAX_DELAY = 3000
 
 export const connectEventSource = async (
   eventSourceUrl,

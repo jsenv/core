@@ -120,7 +120,6 @@ export const serveCompiledFile = async ({
       headers: {
         "content-length": Buffer.byteLength(compiledSource),
         "content-type": contentType,
-        "cache-control": "no-store",
       },
       body: compiledSource,
     }
