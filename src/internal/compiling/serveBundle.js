@@ -17,6 +17,7 @@ export const serveBundle = async ({
   compileServerImportMap,
   importDefaultExtension,
   externalImportSpecifiers = [],
+  compileCacheStrategy,
 
   format,
   formatOutputOptions = {},
@@ -78,6 +79,7 @@ export const serveBundle = async ({
     compiledFileUrl,
     writeOnFilesystem: true,
     useFilesystemAsCache: true,
+    compileCacheStrategy,
     projectFileRequestedCallback,
     compile,
     request,
