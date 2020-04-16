@@ -47,6 +47,7 @@ export const startCompileServer = async ({
 
   writeOnFilesystem = true,
   useFilesystemAsCache = true,
+  compileCacheStrategy = "etag",
 
   importMapFileRelativeUrl = "importMap.json",
   importDefaultExtension,
@@ -216,6 +217,7 @@ ${projectDirectoryUrl}`)
               projectFileRequestedCallback,
               useFilesystemAsCache,
               writeOnFilesystem,
+              compileCacheStrategy,
             })
           },
           () => {

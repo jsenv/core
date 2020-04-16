@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, readFile, bufferToEtag } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
 import { COMPILE_ID_OTHERWISE } from "../../../src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
@@ -13,41 +13,69 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+// const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
+const compiledFileRelativeUrl = `${jsenvDirectoryRelativeUrl}out/${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
+const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
 
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-  ...COMPILE_SERVER_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-})
-const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-const { status, statusText, headers } = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
+// just the file itself
 {
-  const actual = {
-    status,
-    statusText,
-    contentType: headers.get("content-type"),
+  const { origin: compileServerOrigin } = await startCompileServer({
+    ...COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    compileCacheStrategy: "etag",
+  })
+  const fileServerUrl = `${compileServerOrigin}/${compiledFileRelativeUrl}`
+  const { status, statusText, headers } = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
+  {
+    const actual = {
+      status,
+      statusText,
+      contentType: headers.get("content-type"),
+    }
+    const expected = {
+      status: 200,
+      statusText: "OK",
+      contentType: "application/javascript",
+    }
+    assert({ actual, expected })
   }
-  const expected = {
-    status: 200,
-    statusText: "OK",
-    contentType: "application/javascript",
-  }
-  assert({ actual, expected })
 }
-// test the cache now
+
+// etag caching
 {
-  const { status, statusText } = await fetchUrl(fileServerUrl, {
+  const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
+    ...COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    compileCacheStrategy: "etag",
+  })
+  const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
+  const firstResponse = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
+  {
+    const actual = {
+      status: firstResponse.status,
+      etag: firstResponse.headers.get("etag"),
+    }
+    const expected = {
+      status: 200,
+      etag: bufferToEtag(Buffer.from(await readFile(compiledFileUrl))),
+    }
+    assert({ actual, expected })
+  }
+  const secondResponse = await fetchUrl(fileServerUrl, {
     ignoreHttpsError: true,
     headers: {
-      "if-none-match": headers.get("etag"),
+      "if-none-match": firstResponse.headers.get("etag"),
     },
   })
-  const actual = {
-    status,
-    statusText,
+  {
+    const actual = {
+      status: secondResponse.status,
+      statusText: secondResponse.statusText,
+    }
+    const expected = {
+      status: 304,
+      statusText: "Not Modified",
+    }
+    assert({ actual, expected })
   }
-  const expected = {
-    status: 304,
-    statusText: "Not Modified",
-  }
-  assert({ actual, expected })
 }

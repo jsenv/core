@@ -32,6 +32,7 @@ export const serveCompiledJs = async ({
   projectFileRequestedCallback,
   useFilesystemAsCache,
   writeOnFilesystem,
+  compileCacheStrategy,
 }) => {
   const { origin, ressource, method, headers } = request
   const requestUrl = `${origin}${ressource}`
@@ -138,6 +139,7 @@ export const serveCompiledJs = async ({
 
     writeOnFilesystem,
     useFilesystemAsCache,
+    compileCacheStrategy,
     projectFileRequestedCallback,
     request,
     compile: async () => {
