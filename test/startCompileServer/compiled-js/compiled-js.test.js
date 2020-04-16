@@ -1,6 +1,12 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, readFile, bufferToEtag } from "@jsenv/util"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  readFile,
+  bufferToEtag,
+  readFileSystemNodeModificationTime,
+} from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
 import { COMPILE_ID_OTHERWISE } from "../../../src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
@@ -65,6 +71,47 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
     ignoreHttpsError: true,
     headers: {
       "if-none-match": firstResponse.headers.get("etag"),
+    },
+  })
+  {
+    const actual = {
+      status: secondResponse.status,
+      statusText: secondResponse.statusText,
+    }
+    const expected = {
+      status: 304,
+      statusText: "Not Modified",
+    }
+    assert({ actual, expected })
+  }
+}
+
+// mtime caching
+{
+  const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
+    ...COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    compileCacheStrategy: "mtime",
+  })
+  const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
+  const firstResponse = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
+  {
+    const actual = {
+      status: firstResponse.status,
+      lastModified: firstResponse.headers.get("last-modified"),
+    }
+    const expected = {
+      status: 200,
+      lastModified: new Date(
+        await readFileSystemNodeModificationTime(compiledFileUrl),
+      ).toUTCString(),
+    }
+    assert({ actual, expected })
+  }
+  const secondResponse = await fetchUrl(fileServerUrl, {
+    ignoreHttpsError: true,
+    headers: {
+      "if-modified-since": firstResponse.headers.get("last-modified"),
     },
   })
   {
