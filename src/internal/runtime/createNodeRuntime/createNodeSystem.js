@@ -1,8 +1,10 @@
 /* eslint-disable import/max-dependencies */
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
+import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import { require } from "../../require.js"
 import "../s.js"
 import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
+import { fetchUrl } from "../../fetchUrl.js"
 import { valueInstall } from "../valueInstall.js"
 import { isNativeNodeModuleBareSpecifier } from "./isNativeNodeModuleBareSpecifier.js"
 import { fetchSource } from "./fetchSource.js"
@@ -10,19 +12,37 @@ import { evalSource } from "./evalSource.js"
 
 const GLOBAL_SPECIFIER = "global"
 
-export const createNodeSystem = ({
+export const createNodeSystem = async ({
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
   compileServerOrigin,
-  resolveImport,
+  outDirectoryRelativeUrl,
+  compileDirectoryRelativeUrl,
+  importMapFileRelativeUrl,
+  importDefaultExtension,
   executionId,
 } = {}) => {
-  if (typeof global.System === "undefined") throw new Error(`global.System is undefined`)
+  if (typeof global.System === "undefined") {
+    throw new Error(`global.System is undefined`)
+  }
+
+  const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
+  const importmapFileResponse = await fetchUrl(importmapFileUrl)
+  const importmap = await importmapFileResponse.json()
+  const importmapNormalized = normalizeImportMap(importmap, importmapFileUrl)
 
   const nodeSystem = new global.System.constructor()
 
   nodeSystem.resolve = (specifier, importer) => {
-    return resolveImport(specifier, importer)
+    if (specifier === GLOBAL_SPECIFIER) return specifier
+
+    if (isNativeNodeModuleBareSpecifier(specifier)) return specifier
+
+    return resolveImport({
+      specifier,
+      importer,
+      importMap: importmapNormalized,
+      defaultExtension: importDefaultExtension,
+    })
   }
 
   nodeSystem.instantiate = async (url, importerUrl) => {

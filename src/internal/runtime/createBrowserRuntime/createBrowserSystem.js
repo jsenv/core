@@ -13,7 +13,7 @@ export const createBrowserSystem = async ({
   executionId,
   compileServerOrigin,
   outDirectoryRelativeUrl,
-  compileDirectoryRemoteUrl,
+  compileDirectoryRelativeUrl,
   importMapFileRelativeUrl,
   importDefaultExtension,
 }) => {
@@ -21,9 +21,9 @@ export const createBrowserSystem = async ({
     throw new Error(`window.System is undefined`)
   }
 
-  const importmapFileUrl = `${compileDirectoryRemoteUrl}${importMapFileRelativeUrl}`
+  const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
   const importmapFileResponse = await fetchUsingXHR(importmapFileUrl)
-  const importmap = importmapFileResponse.json()
+  const importmap = await importmapFileResponse.json()
   const importmapNormalized = normalizeImportMap(importmap, importmapFileUrl)
 
   const browserSystem = new window.System.constructor()

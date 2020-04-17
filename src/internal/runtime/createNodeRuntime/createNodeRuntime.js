@@ -1,15 +1,11 @@
 import { uneval } from "@jsenv/uneval"
-import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
-import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
 // do not use memoize form @jsenv/util to avoid pulling @jsenv/util code into the node bundle
 import { memoize } from "../../memoize.js"
 import { fetchUrl } from "../../fetchUrl.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveNodeGroup } from "../resolveNodeGroup.js"
-import { isNativeNodeModuleBareSpecifier } from "./isNativeNodeModuleBareSpecifier.js"
 import { createNodeSystem } from "./createNodeSystem.js"
 
-const GLOBAL_SPECIFIER = "global"
 const memoizedCreateNodeSystem = memoize(createNodeSystem)
 
 export const createNodeRuntime = async ({
@@ -19,11 +15,9 @@ export const createNodeRuntime = async ({
 }) => {
   const outDirectoryUrl = `${projectDirectoryUrl}${outDirectoryRelativeUrl}`
   const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
-  const importMapUrl = String(new URL("importMap.json", outDirectoryUrl))
   const envUrl = String(new URL("env.json", outDirectoryUrl))
-  const [groupMap, importMap, { importDefaultExtension }] = await Promise.all([
+  const [groupMap, { importMapFileRelativeUrl, importDefaultExtension }] = await Promise.all([
     importJson(groupMapUrl),
-    importJson(importMapUrl),
     importJson(envUrl),
   ])
 
@@ -31,29 +25,16 @@ export const createNodeRuntime = async ({
     groupId: resolveNodeGroup(groupMap),
     groupMap,
   })
-  const outDirectoryRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
-  const compileDirectoryRemoteUrl = `${outDirectoryRemoteUrl}${compileId}/`
-  const importMapNormalized = normalizeImportMap(importMap, compileDirectoryRemoteUrl)
-
-  const resolveImportScoped = (specifier, importer) => {
-    if (specifier === GLOBAL_SPECIFIER) return specifier
-
-    if (isNativeNodeModuleBareSpecifier(specifier)) return specifier
-
-    return resolveImport({
-      specifier,
-      importer,
-      importMap: importMapNormalized,
-      defaultExtension: importDefaultExtension,
-    })
-  }
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
 
   const importFile = async (specifier) => {
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
       compileServerOrigin,
-      resolveImport: resolveImportScoped,
+      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
+      importMapFileRelativeUrl,
+      importDefaultExtension,
     })
     return makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
   }
@@ -70,9 +51,11 @@ export const createNodeRuntime = async ({
   ) => {
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
       compileServerOrigin,
-      resolveImport: resolveImportScoped,
+      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
+      importMapFileRelativeUrl,
+      importDefaultExtension,
       executionId,
     })
     try {
@@ -101,8 +84,7 @@ export const createNodeRuntime = async ({
   }
 
   return {
-    compileDirectoryRemoteUrl,
-    resolveImport: resolveImportScoped,
+    compileDirectoryRelativeUrl,
     importFile,
     executeFile,
   }

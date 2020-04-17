@@ -23,13 +23,13 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
     groupId: resolveBrowserGroup(groupMap),
     groupMap,
   })
-  const compileDirectoryRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/`
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
 
   const importFile = async (specifier) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
       outDirectoryRelativeUrl,
-      compileDirectoryRemoteUrl,
+      compileDirectoryRelativeUrl,
       importMapFileRelativeUrl,
       importDefaultExtension,
     })
@@ -53,7 +53,7 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
       executionId,
       compileServerOrigin,
       outDirectoryRelativeUrl,
-      compileDirectoryRemoteUrl,
+      compileDirectoryRelativeUrl,
       importMapFileRelativeUrl,
       importDefaultExtension,
     })
@@ -93,7 +93,7 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
   }
 
   return {
-    compileDirectoryRemoteUrl,
+    compileDirectoryRelativeUrl,
     importFile,
     executeFile,
   }

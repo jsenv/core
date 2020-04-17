@@ -10,14 +10,12 @@ const {
 
 /*
 TODOLIST:
-- mettre a jour createNodeRuntime pour qu'il aille chercher le bon importmap
+- utiliser onpopstate pour calculer relativeUrl
 
 - a définir qui gere event-source
 a priori compile server parce que sans lui on a rien.
 Et le serveur exploring c'est une app différente qui vient se brancher sur compile server
 donc il devrait pas avoir a implem event source lui meme.
-
-- utiliser onpopstate pour calculer relativeUrl
 
 - avoir une api pour lister les fichiers explorable
 pour ce point on pourrait considérer que fetch / renvoit un json avec le contenu du dossier

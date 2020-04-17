@@ -23,10 +23,10 @@ window.execute = async ({
   await fetchAndEvalUsingXHR(browserRuntimeCompiledFileRemoteUrl)
   const { __browserRuntime__ } = window
 
-  const { compileDirectoryRemoteUrl, executeFile } = __browserRuntime__.create({
+  const { compileDirectoryRelativeUrl, executeFile } = __browserRuntime__.create({
     compileServerOrigin,
   })
-  const compiledFileRemoteUrl = `${compileDirectoryRemoteUrl}${fileRelativeUrl}`
+  const compiledFileRemoteUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${fileRelativeUrl}`
 
   let errorTransform = (error) => error
   if (Error.captureStackTrace) {

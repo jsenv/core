@@ -22,7 +22,7 @@ export const execute = async ({
   //   throw valueRejected
   // })
 
-  const { compileDirectoryRemoteUrl, executeFile } = await nodeRuntime.create({
+  const { compileDirectoryRelativeUrl, executeFile } = await nodeRuntime.create({
     projectDirectoryUrl,
     compileServerOrigin,
     outDirectoryRelativeUrl,
@@ -32,7 +32,10 @@ export const execute = async ({
     projectDirectoryUrl,
   })
 
-  const compiledFileRemoteUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
+  const compiledFileRemoteUrl = resolveUrl(
+    fileRelativeUrl,
+    `${compileServerOrigin}/${compileDirectoryRelativeUrl}`,
+  )
   return executeFile(compiledFileRemoteUrl, {
     collectNamespace,
     collectCoverage,
