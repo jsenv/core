@@ -60,3 +60,46 @@ window.execute = async ({
     errorTransform,
   })
 }
+
+window.addEventListener(
+  "message",
+  (messageEvent) => {
+    const { data } = messageEvent
+
+    if (typeof data === "object" && data !== null) {
+      const { action, args } = data
+      if (action === "execute") {
+        perform(messageEvent, () => window.execute(...args), action)
+      } else {
+        console.log(`received unknown action ${action}`)
+      }
+    } else {
+      console.log(`received unknown message data: ${data}`)
+    }
+  },
+  false,
+)
+
+const perform = async (messageEvent, fn, action) => {
+  notify(messageEvent, `${action}-will-start`)
+
+  let value
+  let error
+  try {
+    value = await fn()
+    error = false
+  } catch (e) {
+    value = e
+    error = true
+  }
+
+  if (error) {
+    notify(messageEvent, `${action}-failure`, value)
+  } else {
+    notify(messageEvent, `${action}-completion`, value)
+  }
+}
+
+const notify = (messageEvent, code, value) => {
+  messageEvent.source.postMessage({ code, value }, messageEvent.origin)
+}

@@ -18,9 +18,9 @@ startExploring({
     [`./${testDirectoryRelativeUrl}**/*.main.js`]: true,
     [`./${testDirectoryRelativeUrl}**/.jsenv/**`]: false,
   },
-  protocol: "https",
+  protocol: "http",
   port: 3400,
   forcePort: true,
-  livereloading: true,
+  livereloading: false,
   keepProcessAlive: true,
 })

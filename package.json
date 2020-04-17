@@ -19,7 +19,8 @@
     ".": {
       "import": "./index.js",
       "require": "./dist/commonjs/main.cjs"
-    }
+    },
+    "./": "./"
   },
   "module": "index.js",
   "main": "dist/commonjs/main.cjs",
@@ -52,8 +53,7 @@
     "dist": "npm run generate-commonjs-bundle",
     "postinstall": "npm run generate-import-map && npm run install-git-hooks",
     "prepublishOnly": "node ./script/transform-package/remove-postinstall.js && npm run dist",
-    "postpublish": "node ./script/transform-package/restore-postinstall.js",
-    "git-hook-pre-commit": "npm run prettier-format-stage"
+    "postpublish": "node ./script/transform-package/restore-postinstall.js"
   },
   "dependencies": {
     "@babel/core": "7.9.0",

@@ -4,13 +4,9 @@
 // eslint-disable-next-line import/no-unresolved
 import groupMap from "/.jsenv/out/groupMap.json"
 // eslint-disable-next-line import/no-unresolved
-import importMap from "/.jsenv/out/importMap.json"
-// eslint-disable-next-line import/no-unresolved
 import env from "/.jsenv/out/env.json"
 
 import { uneval } from "@jsenv/uneval"
-import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
-import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
 // do not use memoize form @jsenv/util to avoid pulling @jsenv/util code into the browser bundle
 import { memoize } from "../../memoize.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
@@ -19,9 +15,8 @@ import { createBrowserSystem } from "./createBrowserSystem.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
 
-const GLOBAL_SPECIFIER = "global"
 const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
-const { outDirectoryRelativeUrl, importDefaultExtension } = env
+const { outDirectoryRelativeUrl, importMapFileRelativeUrl, importDefaultExtension } = env
 
 export const createBrowserRuntime = ({ compileServerOrigin }) => {
   const compileId = computeCompileIdFromGroupId({
@@ -30,27 +25,13 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
   })
   const compileDirectoryRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/`
 
-  // yes but it won't work for bundlep served dynamically
-  // where the compileId concerns the bundle
-  // it makes anything using @jsenv not working because
-  // they cannot find files related to jsenv
-  const importMapNormalized = normalizeImportMap(importMap, compileDirectoryRemoteUrl)
-
-  const resolveImportScoped = (specifier, importer) => {
-    if (specifier === GLOBAL_SPECIFIER) return specifier
-    return resolveImport({
-      specifier,
-      importer,
-      importMap: importMapNormalized,
-      defaultExtension: importDefaultExtension,
-    })
-  }
-
   const importFile = async (specifier) => {
     const browserSystem = await memoizedCreateBrowserSystem({
-      resolveImport: resolveImportScoped,
       compileServerOrigin,
       outDirectoryRelativeUrl,
+      compileDirectoryRemoteUrl,
+      importMapFileRelativeUrl,
+      importDefaultExtension,
     })
     return browserSystem.import(specifier)
   }
@@ -69,10 +50,12 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
     } = {},
   ) => {
     const browserSystem = await memoizedCreateBrowserSystem({
-      resolveImport: resolveImportScoped,
       executionId,
       compileServerOrigin,
       outDirectoryRelativeUrl,
+      compileDirectoryRemoteUrl,
+      importMapFileRelativeUrl,
+      importDefaultExtension,
     })
 
     let executionResult
@@ -111,7 +94,6 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
 
   return {
     compileDirectoryRemoteUrl,
-    resolveImportScoped,
     importFile,
     executeFile,
   }

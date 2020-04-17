@@ -20,6 +20,7 @@ export const serveCompiledJs = async ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerImportMap,
+  importMapFileRelativeUrl,
   importDefaultExtension,
 
   transformTopLevelAwait,
@@ -83,6 +84,15 @@ export const serveCompiledJs = async ({
   }
 
   const originalFileRelativeUrl = remaining
+  const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
+  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
+  const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl)
+
+  // send out/best/importMap.json untouched
+  if (originalFileRelativeUrl === importMapFileRelativeUrl) {
+    return serveFile(compiledFileUrl, { method, headers })
+  }
 
   // json, css, html etc does not need to be compiled
   // they are redirected to the source location that will be served as file
@@ -103,11 +113,6 @@ export const serveCompiledJs = async ({
       },
     }
   }
-
-  const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
-  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
-  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
-  const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl)
 
   if (compileId === COMPILE_ID_GLOBAL_BUNDLE || compileId === COMPILE_ID_COMMONJS_BUNDLE) {
     return serveBundle({

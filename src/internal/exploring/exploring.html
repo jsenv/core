@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <title>Explore</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <!-- <link rel="stylesheet" type="text/css" href="./explorer.css" /> -->
+  </head>
+
+  <body>
+    <iframe></iframe>
+    <script type="systemjs-importmap" src="${COMPILE_SERVER_IMPORT_MAP_SRC}"></script>
+    <script src="${SYSTEMJS_SCRIPT_SRC}"></script>
+    <script>
+      window.jsenv = {
+        iframe: document.querySelector("iframe"),
+        compileServerOrigin: "${compileServerOrigin}",
+        outDirectoryRelativeUrl: "${outDirectoryRelativeUrl}",
+        htmlFileRelativeUrl: "${htmlFileRelativeUrl}",
+        browserRuntimeFileRelativeUrl: "${browserRuntimeFileRelativeUrl}",
+        sourcemapMainFileRelativeUrl: "${sourcemapMainFileRelativeUrl}",
+        sourcemapMappingFileRelativeUrl: "${sourcemapMappingFileRelativeUrl}",
+      }
+      window.System.import("${JSENV_EXPLORING_FILE}")
+    </script>
+  </body>
+</html>

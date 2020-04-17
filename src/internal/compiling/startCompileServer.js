@@ -21,6 +21,7 @@ import {
   ensureEmptyDirectory,
   registerFileLifecycle,
 } from "@jsenv/util"
+import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { assertImportMapFileRelativeUrl, assertImportMapFileInsideProject } from "../argUtils.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
@@ -198,6 +199,12 @@ ${projectDirectoryUrl}`)
             return null
           },
           () => {
+            return serveBrowserScript(request, {
+              projectDirectoryUrl,
+              outDirectoryRelativeUrl,
+            })
+          },
+          () => {
             return serveCompiledJs({
               cancellationToken,
               logger,
@@ -205,6 +212,7 @@ ${projectDirectoryUrl}`)
               projectDirectoryUrl,
               outDirectoryRelativeUrl,
               compileServerImportMap: importMapForCompileServer,
+              importMapFileRelativeUrl,
               importDefaultExtension,
 
               transformTopLevelAwait,
@@ -252,25 +260,30 @@ ${projectDirectoryUrl}`)
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     importDefaultExtension,
+    importMapFileRelativeUrl,
   }
 
   const importMapToString = () => JSON.stringify(importMapForCompileServer, null, "  ")
   const groupMapToString = () => JSON.stringify(groupMap, null, "  ")
   const envToString = () => JSON.stringify(env, null, "  ")
 
-  const importMapOutFileUrl = resolveUrl("./importMap.json", outDirectoryUrl)
   const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
   const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
+  const importmapFiles = Object.keys(groupMap).map((compileId) => {
+    return resolveUrl("./importMap.json", `${outDirectoryUrl}${compileId}/`)
+  })
 
   await Promise.all([
-    writeFile(importMapOutFileUrl, importMapToString()),
     writeFile(groupMapOutFileUrl, groupMapToString()),
     writeFile(envOutFileUrl, envToString()),
+    ...importmapFiles.map((importmapFile) => writeFile(importmapFile, importMapToString())),
   ])
 
   if (!writeOnFilesystem) {
     compileServer.stoppedPromise.then(() => {
-      removeFileSystemNode(importMapOutFileUrl, { allowUseless: true })
+      importmapFiles.forEach((importmapFile) => {
+        removeFileSystemNode(importmapFile, { allowUseless: true })
+      })
       removeFileSystemNode(groupMapOutFileUrl, { allowUseless: true })
       removeFileSystemNode(envOutFileUrl)
     })
@@ -312,6 +325,7 @@ ${projectDirectoryUrl}`)
   return {
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
+    importMapFileRelativeUrl,
     ...compileServer,
     compileServerImportMap: importMapForCompileServer,
     compileServerGroupMap: groupMap,
@@ -327,6 +341,26 @@ const readPackage = (packagePath) => {
 
 export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
   toString: () => `package version changed`,
+}
+
+const serveBrowserScript = async (request, { projectDirectoryUrl, outDirectoryRelativeUrl }) => {
+  if (request.ressource === "/.jsenv/browser-script.js") {
+    const browserJsFileUrl = resolveUrl(
+      "./src/internal/browser-launcher/browser-js-file.js",
+      jsenvCoreDirectoryUrl,
+    )
+    const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
+    const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
+    const browserBundledJsFileRemoteUrl = `${request.origin}/${browserBundledJsFileRelativeUrl}`
+
+    return {
+      status: 307,
+      headers: {
+        location: browserBundledJsFileRemoteUrl,
+      },
+    }
+  }
+  return null
 }
 
 const serveProjectFiles = async ({
@@ -384,6 +418,11 @@ const generateImportMapForCompileServer = async ({
     includeImports: true,
     includeExports: true,
   })
+  const importmapForSelfImport = {
+    imports: {
+      "@jsenv/core/": `./${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}`,
+    },
+  }
   const importMapInternal = {
     imports: {
       ...(outDirectoryRelativeUrl === ".jsenv/out/"
@@ -408,10 +447,12 @@ const generateImportMapForCompileServer = async ({
     projectDirectoryUrl,
     importMapFileRelativeUrl,
   })
-  const importMap = [importMapForJsenvCore, importMapInternal, importMapForProject].reduce(
-    (previous, current) => composeTwoImportMaps(previous, current),
-    {},
-  )
+  const importMap = [
+    importMapForJsenvCore,
+    importmapForSelfImport,
+    importMapInternal,
+    importMapForProject,
+  ].reduce((previous, current) => composeTwoImportMaps(previous, current), {})
   return importMap
 }
 

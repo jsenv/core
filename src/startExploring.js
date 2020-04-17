@@ -11,14 +11,10 @@ import {
   urlIsInsideOf,
   urlToRelativeUrl,
   assertFilePresence,
-  writeFile,
 } from "@jsenv/util"
-import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
-import { createLogger } from "@jsenv/logger"
+import { startServer, firstService, createSSERoom } from "@jsenv/server"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
-import { getBrowserExecutionDynamicData } from "./internal/runtime/getBrowserExecutionDynamicData.js"
-import { serveExploringIndex } from "./internal/exploring/serveExploringIndex.js"
-import { serveBrowserSelfExecute } from "./internal/exploring/serveBrowserSelfExecute.js"
+import { serveExploring } from "./internal/exploring/serveExploring.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { jsenvHtmlFileUrl } from "./internal/jsenvHtmlFileUrl.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
@@ -58,8 +54,6 @@ export const startExploring = async ({
   forcePort = false,
 }) => {
   return catchCancellation(async () => {
-    const logger = createLogger({ logLevel })
-
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
@@ -81,7 +75,6 @@ export const startExploring = async ({
     )
 
     let livereloadServerSentEventService
-    let rawProjectFileRequestedCallback = () => {}
     let projectFileRequestedCallback = () => {}
 
     const compileServer = await startCompileServer({
@@ -246,20 +239,6 @@ export const startExploring = async ({
         }
       }
 
-      rawProjectFileRequestedCallback = ({ relativeUrl, request }) => {
-        const url = resolveUrl(relativeUrl, projectDirectoryUrl)
-
-        if (urlIsHtmlTemplate(url)) {
-          const executionId = new URL(url).searchParams.get("file")
-          if (executionId) {
-            dependencyTracker[executionId] = []
-          }
-        } else {
-          projectFileRequestedCallback({ relativeUrl, request })
-          projectFileSet.add(relativeUrl)
-        }
-      }
-
       livereloadServerSentEventService = ({ request: { ressource, headers } }) => {
         return getOrCreateRoomForRelativeUrl(ressource.slice(1)).connect(headers["last-event-id"])
       }
@@ -287,32 +266,7 @@ export const startExploring = async ({
       return new URL(url).pathname.slice(1) === htmlFileRelativeUrl
     }
 
-    const {
-      origin: compileServerOrigin,
-      compileServerImportMap,
-      outDirectoryRelativeUrl,
-      jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
-    } = compileServer
-
-    // dynamic data exists only to retrieve the compile server origin
-    // that can be dynamic
-    // otherwise the cached bundles would still target the previous compile server origin
-    const jsenvDirectoryUrl = resolveUrl(
-      compileServerJsenvDirectoryRelativeUrl,
-      projectDirectoryUrl,
-    )
-    const browserDynamicDataFileUrl = resolveUrl(
-      "./browser-execute-dynamic-data.json",
-      jsenvDirectoryUrl,
-    )
-    await writeFile(
-      browserDynamicDataFileUrl,
-      JSON.stringify(
-        getBrowserExecutionDynamicData({ projectDirectoryUrl, compileServerOrigin }),
-        null,
-        "  ",
-      ),
-    )
+    const { origin: compileServerOrigin, outDirectoryRelativeUrl } = compileServer
 
     const service = (request) =>
       firstService(
@@ -324,42 +278,13 @@ export const startExploring = async ({
           return null
         },
         () => {
-          if (request.ressource === "/") {
-            return serveExploringIndex({
-              projectDirectoryUrl,
-              htmlFileRelativeUrl,
-              explorableConfig,
-              request,
-            })
-          }
-          return null
-        },
-        () => {
-          return serveBrowserSelfExecute({
-            cancellationToken,
-            logger,
-
+          return serveExploring({
             projectDirectoryUrl,
-            jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
-            outDirectoryRelativeUrl,
             compileServerOrigin,
-            compileServerImportMap,
-            importDefaultExtension,
-
-            projectFileRequestedCallback,
-            request,
-            babelPluginMap,
-          })
-        },
-        () => {
-          const relativeUrl = request.ressource.slice(1)
-          const fileUrl = `${projectDirectoryUrl}${relativeUrl}`
-
-          rawProjectFileRequestedCallback({ relativeUrl, request })
-          return serveFile(fileUrl, {
-            method: request.method,
-            headers: request.headers,
-            cacheStrategy: "etag",
+            outDirectoryRelativeUrl,
+            compileServerGroupMap: compileServer.compileServerGroupMap,
+            htmlFileRelativeUrl,
+            importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
           })
         },
       )
