@@ -2,7 +2,10 @@
 // fallback to this polyfill (or even use an existing polyfill would be better)
 // https://github.com/github/fetch/blob/master/fetch.js
 
-export const fetchUsingXHR = async (url, { credentials = "same-origin", headers = {} } = {}) => {
+export const fetchUsingXHR = async (
+  url,
+  { method = "GET", credentials = "same-origin", headers = {}, body = null } = {},
+) => {
   const headersPromise = createPromiseAndHooks()
   const bodyPromise = createPromiseAndHooks()
 
@@ -53,7 +56,7 @@ export const fetchUsingXHR = async (url, { credentials = "same-origin", headers 
     }
   }
 
-  xhr.open("GET", url, true)
+  xhr.open(method, url, true)
   Object.keys(headers).forEach((key) => {
     xhr.setRequestHeader(key, headers[key])
   })
@@ -61,7 +64,7 @@ export const fetchUsingXHR = async (url, { credentials = "same-origin", headers 
   if ("responseType" in xhr && hasBlob) {
     xhr.responseType = "blob"
   }
-  xhr.send(null)
+  xhr.send(body)
 
   await headersPromise
 

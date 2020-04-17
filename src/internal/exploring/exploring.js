@@ -1,3 +1,6 @@
+import { memoize } from "../memoize.js"
+import { fetchUsingXHR } from "../fetchUsingXHR.js"
+
 const {
   iframe,
   compileServerOrigin,
@@ -6,27 +9,69 @@ const {
   browserRuntimeFileRelativeUrl,
   sourcemapMainFileRelativeUrl,
   sourcemapMappingFileRelativeUrl,
+
+  apiServerOrigin,
+  explorableConfig,
 } = window.jsenv
 
 /*
 TODOLIST:
-- utiliser onpopstate pour calculer relativeUrl
-
-- a définir qui gere event-source
-a priori compile server parce que sans lui on a rien.
-Et le serveur exploring c'est une app différente qui vient se brancher sur compile server
-donc il devrait pas avoir a implem event source lui meme.
-
-- avoir une api pour lister les fichiers explorable
-pour ce point on pourrait considérer que fetch / renvoit un json avec le contenu du dossier
-et que clientside on décide ce qui est explorable avec une config qu'on peut update quand on veut.
-Mais il manquerais le fait qu'on veut pas fetch tous les dossiers des le départ bref a voir
 
 - faire un certificat https avec un custom authority qu'on trust et voir si ça fix les soucis sour chrome
 
 */
 
-const fileRelativeUrl = "test/startExploring/livereload/livereload.main.js"
+const renderExplorable = async () => {
+  const response = await fetchUsingXHR(`${apiServerOrigin}/explorables`, {
+    method: "POST",
+    body: JSON.stringify(explorableConfig),
+  })
+  const files = await response.json()
+
+  const ul = document.querySelector("ul")
+  ul.innerHTML = files
+    .map((file) => {
+      return `<li><a href="/${file}">${file}</a></li>`
+    })
+    .join("")
+}
+renderExplorable()
+
+const renderExecution = async () => {
+  const fileRelativeUrl = document.location.pathname.slice(1)
+
+  if (fileRelativeUrl) {
+    document.title = `${fileRelativeUrl}`
+  }
+
+  await loadIframe()
+
+  const result = await performIframeAction("execute", {
+    fileRelativeUrl,
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+    browserRuntimeFileRelativeUrl,
+    sourcemapMainFileRelativeUrl,
+    sourcemapMappingFileRelativeUrl,
+    collectNamespace: true,
+    collectCoverage: false,
+    executionId: fileRelativeUrl,
+  })
+  if (result.status === "errored") {
+    // eslint-disable-next-line no-eval
+    const error = window.eval(result.exceptionSource)
+    console.log(`error during execution`, error)
+  } else {
+    console.log(`execution done`)
+  }
+}
+
+const loadIframe = memoize(() => {
+  return new Promise((resolve) => {
+    iframe.addEventListener("load", resolve, true)
+    iframe.src = `${compileServerOrigin}/${htmlFileRelativeUrl}`
+  })
+})
 
 const performIframeAction = (action, ...args) => {
   sendMessage({ action, args })
@@ -57,28 +102,7 @@ const sendMessage = (data) => {
   iframe.contentWindow.postMessage(data, compileServerOrigin)
 }
 
-iframe.addEventListener(
-  "load",
-  async () => {
-    const result = await performIframeAction("execute", {
-      fileRelativeUrl,
-      compileServerOrigin,
-      outDirectoryRelativeUrl,
-      browserRuntimeFileRelativeUrl,
-      sourcemapMainFileRelativeUrl,
-      sourcemapMappingFileRelativeUrl,
-      collectNamespace: true,
-      collectCoverage: false,
-      executionId: fileRelativeUrl,
-    })
-    if (result.status === "errored") {
-      // eslint-disable-next-line no-eval
-      const error = window.eval(result.exceptionSource)
-      console.log(`error during execution`, error)
-    } else {
-      console.log(`execution done`)
-    }
-  },
-  true,
-)
-iframe.src = `${compileServerOrigin}/${htmlFileRelativeUrl}`
+window.onpopstate = () => {
+  renderExecution()
+}
+renderExecution()

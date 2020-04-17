@@ -5,14 +5,20 @@ import {
   createCancellationTokenForProcess,
   metaMapToSpecifierMetaMap,
   normalizeSpecifierMetaMap,
-  urlToMeta,
+  collectFiles,
   registerDirectoryLifecycle,
   resolveUrl,
   urlIsInsideOf,
   urlToRelativeUrl,
   assertFilePresence,
 } from "@jsenv/util"
-import { startServer, firstService, createSSERoom } from "@jsenv/server"
+import {
+  startServer,
+  firstService,
+  jsenvPrivateKey,
+  jsenvCertificate,
+  createSSERoom,
+} from "@jsenv/server"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { serveExploring } from "./internal/exploring/serveExploring.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
@@ -21,8 +27,9 @@ import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
 export const startExploring = async ({
   cancellationToken = createCancellationTokenForProcess(),
-  logLevel,
-  compileServerLogLevel = logLevel,
+  logLevel = "info",
+  compileServerLogLevel = "warn",
+  apiServerLogLevel = "warn",
 
   htmlFileRelativeUrl,
   explorableConfig = jsenvExplorableConfig,
@@ -44,14 +51,13 @@ export const startExploring = async ({
   compileGroupCount = 2,
 
   keepProcessAlive = true,
-  cors = true,
   protocol = "https",
-  privateKey,
-  certificate,
+  privateKey = jsenvPrivateKey,
+  certificate = jsenvCertificate,
   ip = "127.0.0.1",
   port = 0,
   compileServerPort = 0, // random available port
-  forcePort = false,
+  apiServerPort = 0,
 }) => {
   return catchCancellation(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
@@ -76,42 +82,6 @@ export const startExploring = async ({
 
     let livereloadServerSentEventService
     let projectFileRequestedCallback = () => {}
-
-    const compileServer = await startCompileServer({
-      cancellationToken,
-      compileServerLogLevel,
-
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-      jsenvDirectoryClean,
-      importMapFileRelativeUrl,
-      importDefaultExtension,
-
-      compileGroupCount,
-      babelPluginMap,
-      convertMap,
-
-      cors,
-      compileServerProtocol: protocol,
-      compileServerPrivateKey: privateKey,
-      compileServerCertificate: certificate,
-      compileServerIp: ip,
-      compileServerPort,
-      projectFileRequestedCallback: (value) => {
-        // just to allow projectFileRequestedCallback to be redefined
-        projectFileRequestedCallback(value)
-      },
-      stopOnPackageVersionChange: true,
-      keepProcessAlive,
-    })
-
-    const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap({
-      explorable: explorableConfig,
-    })
-    const specifierMetaMapForExplorable = normalizeSpecifierMetaMap(
-      specifierMetaMapRelativeForExplorable,
-      projectDirectoryUrl,
-    )
 
     if (livereloading) {
       const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryUrl, {
@@ -172,21 +142,23 @@ export const startExploring = async ({
         return affectedRoomArray
       }
 
-      const trackDependency = ({ relativeUrl, executionId }) => {
-        if (executionId) {
-          if (dependencyTracker.hasOwnProperty(executionId)) {
-            const dependencyArray = dependencyTracker[executionId]
-            if (!dependencyArray.includes(relativeUrl)) {
-              dependencyArray.push(relativeUrl)
-            }
-          } else {
-            dependencyTracker[executionId] = [relativeUrl]
+      const trackExecutionDependency = (relativeUrl, executionId) => {
+        if (dependencyTracker.hasOwnProperty(executionId)) {
+          const dependencyArray = dependencyTracker[executionId]
+          if (!dependencyArray.includes(relativeUrl)) {
+            dependencyArray.push(relativeUrl)
           }
         } else {
-          Object.keys(dependencyTracker).forEach((executionId) => {
-            trackDependency({ relativeUrl, executionId })
-          })
+          dependencyTracker[executionId] = [relativeUrl]
         }
+      }
+
+      const trackUnknown = (relativeUrl) => {
+        // this file was requested but we don't know by which execution
+        // let's make it a dependency of every execution we know
+        Object.keys(dependencyTracker).forEach((executionId) => {
+          trackExecutionDependency(executionId, relativeUrl)
+        })
       }
 
       projectFileRequestedCallback = ({ relativeUrl, request }) => {
@@ -195,47 +167,29 @@ export const startExploring = async ({
         const { headers = {} } = request
 
         if ("x-jsenv-execution-id" in headers) {
-          const executionId = headers["x-jsenv-execution-id"]
-          trackDependency({ relativeUrl, executionId })
+          trackExecutionDependency(headers["x-jsenv-execution-id"], relativeUrl)
         } else if ("referer" in headers) {
           const { origin } = request
           const { referer } = headers
           if (referer === origin || urlIsInsideOf(referer, origin)) {
-            const refererRelativeUrl = urlIsHtmlTemplate(referer)
-              ? new URL(referer).searchParams.get("file")
-              : urlToRelativeUrl(referer, origin)
-            if (!refererRelativeUrl) return
-            const refererFileUrl = `${projectDirectoryUrl}${refererRelativeUrl}`
-
-            if (
-              urlToMeta({
-                url: refererFileUrl,
-                specifierMetaMap: specifierMetaMapForExplorable,
-              }).explorable
-            ) {
-              const executionId = refererRelativeUrl
-              trackDependency({
-                relativeUrl,
-                executionId,
-              })
-            } else {
+            const refererRelativeUrl = urlToRelativeUrl(referer, origin)
+            if (refererRelativeUrl) {
               Object.keys(dependencyTracker).forEach((executionId) => {
                 if (
                   executionId === refererRelativeUrl ||
                   dependencyTracker[executionId].includes(refererRelativeUrl)
                 ) {
-                  trackDependency({
-                    relativeUrl,
-                    executionId,
-                  })
+                  trackExecutionDependency(executionId, relativeUrl)
                 }
               })
+            } else {
+              trackUnknown(relativeUrl)
             }
           } else {
-            trackDependency({ relativeUrl })
+            trackUnknown(relativeUrl)
           }
         } else {
-          trackDependency({ relativeUrl })
+          trackUnknown(relativeUrl)
         }
       }
 
@@ -261,69 +215,176 @@ export const startExploring = async ({
       }
     }
 
-    const urlIsHtmlTemplate = (url) => {
-      // url.pathname to remove any query parameter
-      return new URL(url).pathname.slice(1) === htmlFileRelativeUrl
+    const mandatoryParamsForServerToCommunicate = {
+      protocol,
+      privateKey,
+      certificate,
+      ip,
+      cors: true,
     }
 
-    const { origin: compileServerOrigin, outDirectoryRelativeUrl } = compileServer
+    const corsParams = {
+      cors: true,
+      accessControlAllowRequestOrigin: true,
+      accessControlAllowRequestMethod: true,
+      accessControlAllowRequestHeaders: true,
+      accessControlAllowCredentials: true,
+    }
 
-    const service = (request) =>
-      firstService(
-        () => {
-          const { accept = "" } = request.headers
-          if (accept.includes("text/event-stream")) {
-            return livereloadServerSentEventService({ request })
-          }
-          return null
-        },
-        () => {
-          return serveExploring({
-            projectDirectoryUrl,
-            compileServerOrigin,
-            outDirectoryRelativeUrl,
-            compileServerGroupMap: compileServer.compileServerGroupMap,
-            htmlFileRelativeUrl,
-            importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
-          })
-        },
-      )
+    const compileServer = await startCompileServer({
+      cancellationToken,
+      compileServerLogLevel,
+
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryClean,
+      importMapFileRelativeUrl,
+      importDefaultExtension,
+
+      compileGroupCount,
+      babelPluginMap,
+      convertMap,
+
+      projectFileRequestedCallback: (value) => {
+        // just to allow projectFileRequestedCallback to be redefined
+        projectFileRequestedCallback(value)
+      },
+      stopOnPackageVersionChange: true,
+      keepProcessAlive,
+
+      compileServerProtocol: protocol,
+      compileServerPrivateKey: privateKey,
+      compileServerCertificate: certificate,
+      compileServerIp: ip,
+      compileServerPort,
+      ...corsParams,
+    })
+
+    const {
+      origin: compileServerOrigin,
+      outDirectoryRelativeUrl,
+      compileServerGroupMap,
+    } = compileServer
+    // to get a normalized importMapFileRelativeUrl
+    importMapFileRelativeUrl = compileServer.importMapFileRelativeUrl
+
+    const apiServer = await startServer({
+      cancellationToken,
+      logLevel: apiServerLogLevel,
+      serverName: "api server",
+      requestToResponse: (request) =>
+        firstService(
+          // eventsource
+          () => {
+            if (
+              request.ressource === "/eventsource" &&
+              request.headers &&
+              request.headers.accept.includes("text/event-stream")
+            ) {
+              return livereloadServerSentEventService(request)
+            }
+            return null
+          },
+          // list explorable files
+          async () => {
+            if (request.ressource === "/explorables" && request.method === "POST") {
+              const explorableConfig = JSON.parse(await readRequestBodyAsString(request.body))
+              const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap({
+                explorable: explorableConfig,
+              })
+              const specifierMetaMapForExplorable = normalizeSpecifierMetaMap(
+                specifierMetaMapRelativeForExplorable,
+                projectDirectoryUrl,
+              )
+              const matchingFileResultArray = await collectFiles({
+                directoryUrl: projectDirectoryUrl,
+                specifierMetaMap: specifierMetaMapForExplorable,
+                predicate: ({ explorable }) => explorable,
+              })
+              const explorableRelativeUrlArray = matchingFileResultArray.map(
+                ({ relativeUrl }) => relativeUrl,
+              )
+              const json = JSON.stringify(explorableRelativeUrlArray)
+              return {
+                status: 200,
+                headers: {
+                  "cache-control": "no-store",
+                  "content-type": "application/json",
+                  "content-length": Buffer.byteLength(json),
+                },
+                body: json,
+              }
+            }
+            return null
+          },
+        ),
+      sendInternalErrorStack: true,
+      keepProcessAlive,
+      port: apiServerPort,
+      ...mandatoryParamsForServerToCommunicate,
+      ...corsParams,
+    })
 
     const exploringServer = await startServer({
       cancellationToken,
       logLevel,
       serverName: "exploring server",
-      protocol,
-      privateKey,
-      certificate,
-      ip,
-      port,
-      forcePort,
+      requestToResponse: (request) => {
+        return serveExploring(request, {
+          projectDirectoryUrl,
+          compileServerOrigin,
+          outDirectoryRelativeUrl,
+          compileServerGroupMap,
+          htmlFileRelativeUrl,
+          importMapFileRelativeUrl,
+          apiServerOrigin: apiServer.origin,
+          explorableConfig,
+        })
+      },
       sendInternalErrorStack: true,
-      requestToResponse: service,
-      accessControlAllowRequestOrigin: true,
-      accessControlAllowRequestMethod: true,
-      accessControlAllowRequestHeaders: true,
-      accessControlAllowCredentials: true,
       keepProcessAlive,
+      port,
+      ...mandatoryParamsForServerToCommunicate,
     })
 
     compileServer.stoppedPromise.then(
       (reason) => {
         exploringServer.stop(reason)
+        apiServer.stop(reason)
       },
       () => {},
     )
     exploringServer.stoppedPromise.then((reason) => {
       stopExploringCancellationSource.cancel(reason)
     })
+    apiServer.stoppedPromise.then((reason) => {
+      stopExploringCancellationSource.cancel(reason)
+    })
 
     return {
       exploringServer,
       compileServer,
+      apiServer,
     }
   }).catch((e) => {
     process.exitCode = 1
     throw e
+  })
+}
+
+const readRequestBodyAsString = (requestBody) => {
+  return new Promise((resolve, reject) => {
+    const bufferArray = []
+    requestBody.subscribe({
+      error: reject,
+      next: (buffer) => {
+        bufferArray.push(buffer)
+      },
+      complete: () => {
+        const bodyAsBuffer = Buffer.concat(bufferArray)
+        const bodyAsString = bodyAsBuffer.toString()
+        resolve(bodyAsString)
+      },
+    })
   })
 }

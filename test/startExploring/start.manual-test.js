@@ -20,7 +20,6 @@ startExploring({
   },
   protocol: "http",
   port: 3400,
-  forcePort: true,
   livereloading: false,
   keepProcessAlive: true,
 })

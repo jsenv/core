@@ -7,20 +7,35 @@
   </head>
 
   <body>
-    <iframe></iframe>
-    <script type="systemjs-importmap" src="${COMPILE_SERVER_IMPORT_MAP_SRC}"></script>
-    <script src="${SYSTEMJS_SCRIPT_SRC}"></script>
+    <!-- jsenv exploring menu -->
+    <aside>
+      <h1>$PROJECT_DIRECTORY_URL</h1>
+      <p>List of path to explore:</p>
+      <ul></ul>
+    </aside>
+    <!-- execution context  -->
+    <main>
+      <iframe></iframe>
+    </main>
+
+    <script type="systemjs-importmap" src="$COMPILE_SERVER_IMPORT_MAP_SRC"></script>
+    <script src="$SYSTEMJS_SCRIPT_SRC"></script>
+    <!-- This script must be after html elements because it querySelector them -->
     <script>
       window.jsenv = {
         iframe: document.querySelector("iframe"),
-        compileServerOrigin: "${compileServerOrigin}",
-        outDirectoryRelativeUrl: "${outDirectoryRelativeUrl}",
-        htmlFileRelativeUrl: "${htmlFileRelativeUrl}",
-        browserRuntimeFileRelativeUrl: "${browserRuntimeFileRelativeUrl}",
-        sourcemapMainFileRelativeUrl: "${sourcemapMainFileRelativeUrl}",
-        sourcemapMappingFileRelativeUrl: "${sourcemapMappingFileRelativeUrl}",
+
+        compileServerOrigin: $COMPILE_SERVER_ORIGIN,
+        outDirectoryRelativeUrl: $OUT_DIRECTORY_RELATIVE_URL,
+        htmlFileRelativeUrl: $HTML_FILE_RELATIVE_URL,
+        browserRuntimeFileRelativeUrl: $BROWSER_RUNTIME_FILE_RELATIVE_URL,
+        sourcemapMainFileRelativeUrl: $SOURCEMAP_MAIN_FILE_RELATIVE_URL,
+        sourcemapMappingFileRelativeUrl: $SOURCEMAP_MAPPING_FILE_RELATIVE_URL,
+
+        apiServerOrigin: $API_SERVER_ORIGIN,
+        explorableConfig: $EXPLORABLE_CONFIG,
       }
-      window.System.import("${JSENV_EXPLORING_FILE}")
+      window.System.import($JSENV_EXPLORING_FILE)
     </script>
   </body>
 </html>
