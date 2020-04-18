@@ -154,7 +154,7 @@ ${projectDirectoryUrl}`)
       )
     }
     const originalProjectFileRequestedCallback = projectFileRequestedCallback
-    projectFileRequestedCallback = ({ relativeUrl, ...rest }) => {
+    projectFileRequestedCallback = (relativeUrl, ...rest) => {
       // I doubt an asset like .js.map will change
       // in theory a compilation asset should not change
       // if the source file did not change
@@ -164,7 +164,7 @@ ${projectDirectoryUrl}`)
       }
 
       if (projectFilePredicate(relativeUrl)) {
-        originalProjectFileRequestedCallback({ relativeUrl, ...rest })
+        originalProjectFileRequestedCallback(relativeUrl, ...rest)
       }
     }
   } else {
@@ -371,10 +371,7 @@ const serveProjectFiles = async ({
   const { ressource, method, headers } = request
   const relativeUrl = ressource.slice(1)
 
-  projectFileRequestedCallback({
-    relativeUrl,
-    request,
-  })
+  projectFileRequestedCallback(relativeUrl, request)
 
   const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
   const filePath = urlToFileSystemPath(fileUrl)

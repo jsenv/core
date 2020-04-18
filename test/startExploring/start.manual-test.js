@@ -11,7 +11,8 @@ const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}template.html`
 startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   logLevel: "info",
-  compileServerLogLevel: "info",
+  // compileServerLogLevel: "info",
+  trackingLogLevel: "debug",
   jsenvDirectoryRelativeUrl,
   htmlFileRelativeUrl,
   explorableConfig: {
@@ -20,6 +21,5 @@ startExploring({
   },
   protocol: "http",
   port: 3400,
-  livereloading: false,
   keepProcessAlive: true,
 })

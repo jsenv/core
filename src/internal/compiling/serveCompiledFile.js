@@ -65,16 +65,10 @@ export const serveCompiledFile = async ({
       compile,
     })
 
-    projectFileRequestedCallback({
-      relativeUrl: urlToRelativeUrl(originalFileUrl, projectDirectoryUrl),
-      request,
-    })
+    projectFileRequestedCallback(urlToRelativeUrl(originalFileUrl, projectDirectoryUrl), request)
     compileResult.sources.forEach((source) => {
       const sourceFileUrl = resolveUrl(source, `${compiledFileUrl}__asset__/`)
-      projectFileRequestedCallback({
-        relativeUrl: urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl),
-        request,
-      })
+      projectFileRequestedCallback(urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl), request)
     })
 
     const { contentType, compiledSource } = compileResult
@@ -129,10 +123,7 @@ export const serveCompiledFile = async ({
         fileSystemPathToUrl(error.data.filename),
         projectDirectoryUrl,
       )
-      projectFileRequestedCallback({
-        relativeUrl,
-        request,
-      })
+      projectFileRequestedCallback(relativeUrl, request)
       // on the correspondig file
       const json = JSON.stringify(error.data)
 

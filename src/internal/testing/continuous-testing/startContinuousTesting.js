@@ -65,7 +65,7 @@ export const startContinuousTesting = async ({
     }
 
     const projectFileSet = new Set()
-    const projectFileRequestedCallback = ({ relativeUrl, request }) => {
+    const projectFileRequestedCallback = (relativeUrl, request) => {
       projectFileSet.add(relativeUrl)
 
       const { headers = {} } = request

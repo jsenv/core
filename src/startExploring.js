@@ -12,6 +12,7 @@ import {
   urlToRelativeUrl,
   assertFilePresence,
 } from "@jsenv/util"
+import { createLogger } from "@jsenv/logger"
 import {
   startServer,
   firstService,
@@ -29,11 +30,11 @@ export const startExploring = async ({
   cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
-  apiServerLogLevel = "warn",
+  apiServerLogLevel = logLevel,
+  trackingLogLevel = "warn",
 
   htmlFileRelativeUrl,
   explorableConfig = jsenvExplorableConfig,
-  livereloading = false,
   watchConfig = {
     "./**/*": true,
     "./**/.git/": false,
@@ -60,6 +61,7 @@ export const startExploring = async ({
   apiServerPort = 0,
 }) => {
   return catchCancellation(async () => {
+    const trackingLogger = createLogger({ logLevel: trackingLogLevel })
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
@@ -80,138 +82,94 @@ export const startExploring = async ({
       stopExploringCancellationSource.token,
     )
 
-    let livereloadServerSentEventService
-    let projectFileRequestedCallback = () => {}
+    const roomSet = new Set()
+    const trackerSet = new Set()
+    const projectFileRequested = createCallbackList()
+    const projectFileUpdated = createCallbackList()
+    const projectFileRemoved = createCallbackList()
 
-    if (livereloading) {
-      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryUrl, {
-        watchDescription: {
-          ...watchConfig,
-          [compileServer.jsenvDirectoryRelativeUrl]: false,
-        },
-        updated: ({ relativeUrl }) => {
-          if (projectFileSet.has(relativeUrl)) {
-            projectFileUpdatedCallback(relativeUrl)
-          }
-        },
-        removed: ({ relativeUrl }) => {
-          if (projectFileSet.has(relativeUrl)) {
-            projectFileSet.delete(relativeUrl)
-            projectFileRemovedCallback(relativeUrl)
-          }
-        },
-        keepProcessAlive: false,
-        recursive: true,
+    const livereloadServerSentEventService = (request) => {
+      const { accept } = request.headers
+      if (!accept || !accept.includes("text/event-stream")) return null
+
+      const room = createSSERoom()
+      roomSet.add(room)
+      room.start()
+
+      const entryFileRelativeUrl = request.ressource.slice(1)
+      trackingLogger.info(`track ${entryFileRelativeUrl} for ${request.origin}`)
+      const disconnectRoomFromFileChanges = connectRoomWithFileChanges(room, entryFileRelativeUrl)
+
+      cancellationToken.register(room.stop)
+      // request.cancellationToken occurs when request is aborted
+      // maybe I should update @jsenv/server to occur also when request connection is closed
+      // https://nodejs.org/api/http.html#http_event_close_2
+      request.cancellationToken.register(() => {
+        trackingLogger.info(`stop tracking ${entryFileRelativeUrl} for ${request.origin}`)
+        disconnectRoomFromFileChanges()
+        roomSet.delete(room)
+        room.stop()
       })
-      cancellationToken.register(unregisterDirectoryLifecyle)
+      return room.connect(request.headers["last-event-id"])
+    }
 
-      const projectFileSet = new Set()
-      const roomMap = {}
-      const dependencyTracker = {}
+    const connectRoomWithFileChanges = (room, mainRelativeUrl) => {
+      // setTimeout(() => {
+      //   room.sendEvent({
+      //     type: "file-changed",
+      //     data: "whatever",
+      //   })
+      // }, 200)
 
-      const projectFileUpdatedCallback = (relativeUrl) => {
-        projectFileToAffectedRoomArray(relativeUrl).forEach((room) => {
+      const dependencySet = new Set()
+      // mainRelativeUrl and htmlFileRelativeUrl will be detected by projectFileRequestedCallback
+
+      const tracker = { mainRelativeUrl, dependencySet }
+      trackerSet.add(tracker)
+
+      const unregisterProjectFileRequestedCallback = projectFileRequested.register(
+        (relativeUrl, request) => {
+          const dependencyReport = reportDependency({
+            trackingLogger,
+            relativeUrl,
+            request,
+            mainRelativeUrl,
+            trackerSet,
+          })
+          if (dependencyReport.dependency === false) {
+            trackingLogger.debug(
+              `${relativeUrl} not a dependency of ${mainRelativeUrl} because ${dependencyReport.reason}`,
+            )
+          } else if (!dependencySet.has(relativeUrl)) {
+            trackingLogger.debug(
+              `${relativeUrl} is a dependency of ${mainRelativeUrl} because ${dependencyReport.reason}`,
+            )
+            dependencySet.add(relativeUrl)
+          }
+        },
+      )
+      const unregisterProjectFileUpdatedCallback = projectFileUpdated.register((relativeUrl) => {
+        if (dependencySet.has(relativeUrl)) {
           room.sendEvent({
             type: "file-changed",
             data: relativeUrl,
           })
-        })
-      }
-
-      const projectFileRemovedCallback = (relativeUrl) => {
-        projectFileToAffectedRoomArray(relativeUrl).forEach((room) => {
+        }
+      })
+      const unregisterProjectFileRemovedCallback = projectFileRemoved.register((relativeUrl) => {
+        if (dependencySet.has(relativeUrl)) {
           room.sendEvent({
             type: "file-removed",
             data: relativeUrl,
           })
-        })
-      }
-
-      const projectFileToAffectedRoomArray = (relativeUrl) => {
-        const affectedRoomArray = []
-        Object.keys(roomMap).forEach((mainRelativeUrl) => {
-          if (!dependencyTracker.hasOwnProperty(mainRelativeUrl)) return
-
-          if (
-            relativeUrl === mainRelativeUrl ||
-            dependencyTracker[mainRelativeUrl].includes(relativeUrl)
-          ) {
-            affectedRoomArray.push(roomMap[mainRelativeUrl])
-          }
-        })
-        return affectedRoomArray
-      }
-
-      const trackExecutionDependency = (relativeUrl, executionId) => {
-        if (dependencyTracker.hasOwnProperty(executionId)) {
-          const dependencyArray = dependencyTracker[executionId]
-          if (!dependencyArray.includes(relativeUrl)) {
-            dependencyArray.push(relativeUrl)
-          }
-        } else {
-          dependencyTracker[executionId] = [relativeUrl]
         }
-      }
+      })
 
-      const trackUnknown = (relativeUrl) => {
-        // this file was requested but we don't know by which execution
-        // let's make it a dependency of every execution we know
-        Object.keys(dependencyTracker).forEach((executionId) => {
-          trackExecutionDependency(executionId, relativeUrl)
-        })
-      }
-
-      projectFileRequestedCallback = ({ relativeUrl, request }) => {
-        projectFileSet.add(relativeUrl)
-
-        const { headers = {} } = request
-
-        if ("x-jsenv-execution-id" in headers) {
-          trackExecutionDependency(headers["x-jsenv-execution-id"], relativeUrl)
-        } else if ("referer" in headers) {
-          const { origin } = request
-          const { referer } = headers
-          if (referer === origin || urlIsInsideOf(referer, origin)) {
-            const refererRelativeUrl = urlToRelativeUrl(referer, origin)
-            if (refererRelativeUrl) {
-              Object.keys(dependencyTracker).forEach((executionId) => {
-                if (
-                  executionId === refererRelativeUrl ||
-                  dependencyTracker[executionId].includes(refererRelativeUrl)
-                ) {
-                  trackExecutionDependency(executionId, relativeUrl)
-                }
-              })
-            } else {
-              trackUnknown(relativeUrl)
-            }
-          } else {
-            trackUnknown(relativeUrl)
-          }
-        } else {
-          trackUnknown(relativeUrl)
-        }
-      }
-
-      livereloadServerSentEventService = ({ request: { ressource, headers } }) => {
-        return getOrCreateRoomForRelativeUrl(ressource.slice(1)).connect(headers["last-event-id"])
-      }
-
-      const getOrCreateRoomForRelativeUrl = (relativeUrl) => {
-        if (roomMap.hasOwnProperty(relativeUrl)) return roomMap[relativeUrl]
-
-        const room = createSSERoom()
-        room.start()
-        cancellationToken.register(room.stop)
-        roomMap[relativeUrl] = room
-        return room
-      }
-    } else {
-      const emptyRoom = createSSERoom()
-      emptyRoom.start()
-      cancellationToken.register(emptyRoom.stop)
-      livereloadServerSentEventService = () => {
-        return emptyRoom.connect()
+      return () => {
+        trackerSet.delete(tracker)
+        unregisterProjectFileRequestedCallback()
+        unregisterProjectFileUpdatedCallback()
+        unregisterProjectFileRemovedCallback()
       }
     }
 
@@ -245,10 +203,7 @@ export const startExploring = async ({
       babelPluginMap,
       convertMap,
 
-      projectFileRequestedCallback: (value) => {
-        // just to allow projectFileRequestedCallback to be redefined
-        projectFileRequestedCallback(value)
-      },
+      projectFileRequestedCallback: projectFileRequested.notify,
       stopOnPackageVersionChange: true,
       keepProcessAlive,
 
@@ -275,15 +230,11 @@ export const startExploring = async ({
       requestToResponse: (request) =>
         firstService(
           // eventsource
+          // this MUST be moved to exploring server instead
+          // otherwise client cannot reconnect when port changes
+          // after server is restarted
           () => {
-            if (
-              request.ressource === "/eventsource" &&
-              request.headers &&
-              request.headers.accept.includes("text/event-stream")
-            ) {
-              return livereloadServerSentEventService(request)
-            }
-            return null
+            return livereloadServerSentEventService(request)
           },
           // list explorable files
           async () => {
@@ -347,6 +298,22 @@ export const startExploring = async ({
       ...mandatoryParamsForServerToCommunicate,
     })
 
+    const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryUrl, {
+      watchDescription: {
+        ...watchConfig,
+        [compileServer.jsenvDirectoryRelativeUrl]: false,
+      },
+      updated: ({ relativeUrl }) => {
+        projectFileUpdated.notify(relativeUrl)
+      },
+      removed: ({ relativeUrl }) => {
+        projectFileRemoved.notify(relativeUrl)
+      },
+      keepProcessAlive: false,
+      recursive: true,
+    })
+    cancellationToken.register(unregisterDirectoryLifecyle)
+
     compileServer.stoppedPromise.then(
       (reason) => {
         exploringServer.stop(reason)
@@ -370,6 +337,80 @@ export const startExploring = async ({
     process.exitCode = 1
     throw e
   })
+}
+
+const createCallbackList = () => {
+  const callbackSet = new Set()
+
+  const register = (callback) => {
+    callbackSet.add(callback)
+    return () => {
+      callbackSet.delete(callback)
+    }
+  }
+
+  const notify = (...args) => {
+    callbackSet.forEach((callback) => {
+      callback(...args)
+    })
+  }
+
+  return {
+    register,
+    notify,
+  }
+}
+
+const reportDependency = ({ relativeUrl, mainRelativeUrl, request, trackerSet }) => {
+  if (relativeUrl === mainRelativeUrl) {
+    return {
+      dependency: true,
+      reason: "it's main",
+    }
+  }
+
+  if ("x-jsenv-execution-id" in request.headers) {
+    const executionId = request.headers["x-jsenv-execution-id"]
+    if (executionId === mainRelativeUrl) {
+      return {
+        dependency: true,
+        reason: "x-jsenv-execution-id request header",
+      }
+    }
+    return {
+      dependency: false,
+      reason: "x-jsenv-execution-id request header",
+    }
+  }
+
+  // search if the file importing this one is tracked as being a dependency of this main file
+  // in that case because the importer is a dependency the importee is also a dependency
+  if ("referer" in request.headers) {
+    const { origin } = request
+    const { referer } = request.headers
+    if (referer === origin || urlIsInsideOf(referer, origin)) {
+      const refererRelativeUrl = urlToRelativeUrl(referer, origin)
+      if (refererRelativeUrl) {
+        // eslint-disable-next-line no-unused-vars
+        for (const tracker of trackerSet) {
+          if (
+            tracker.mainRelativeUrl === mainRelativeUrl &&
+            tracker.dependencySet.has(refererRelativeUrl)
+          ) {
+            return {
+              dependency: true,
+              reason: "referer request header",
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    dependency: true,
+    reason: "it was requested",
+  }
 }
 
 const readRequestBodyAsString = (requestBody) => {

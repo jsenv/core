@@ -40,6 +40,12 @@ const renderExecution = async (fileRelativeUrl) => {
 
   await loadIframe()
 
+  // BEST SOLUTION:
+  // change the iframe src to add template.html?file=fileRelativeUrl
+  // then server can read request.origin to find out that file was requested by that iframe
+  // and assume it's a dependency for this file execution
+  // no need for x-jsenv-execution-id or stuff like that, rock solid
+
   const result = await performIframeAction("execute", {
     fileRelativeUrl,
     compileServerOrigin,
@@ -60,20 +66,8 @@ const renderExecution = async (fileRelativeUrl) => {
   }
 }
 
-const connectExecutionEventSource = () => {
-  /*
-  here we should connect only to a given fileExecution event source
-
-  and be notified only for this execution dependencies.
-  the execution id should helps us know which file are dependent from an execution right ?
-  or using referer. These strategies should be sufficient for the server
-  to track the correct dependencies.
-
-  Server should also refresh a given file dependencies when it's being re-executed right ?
-  Or better: create a room for this execution.
-  */
-
-  const eventSourceUrl = `${apiServerOrigin}/eventsource`
+const connectExecutionEventSource = (fileRelativeUrl) => {
+  const eventSourceUrl = `${apiServerOrigin}/${fileRelativeUrl}`
   const logEventSource = (message) => {
     console.log(
       `%ceventSource%c ${message}`,
@@ -85,17 +79,18 @@ const connectExecutionEventSource = () => {
   return connectEventSource(
     eventSourceUrl,
     {
-      "file-changed": ({ data }) => {
-        logEventSource(`${data} changed -> reload page`)
+      "file-changed": (event) => {
+        console.log(event)
+        logEventSource(`${event.data} changed -> reload iframe`)
         // mais lui ne devrait reload que l'iframe
         // et puis si un fichier change mais qu'on se fout de ce fichier on veut pas reload l'iframe
         // je pense qu'on a besoin
-        document.location.reload()
+        // document.location.reload()
       },
       "file-removed": ({ data }) => {
-        logEventSource(`${data} removed -> reload page`)
+        logEventSource(`${data} removed -> reload iframe`)
         // same here reload only the iframe
-        document.location.reload()
+        // document.location.reload()
       },
     },
     (connectionEvent) => {
