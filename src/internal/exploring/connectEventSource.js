@@ -4,7 +4,7 @@ const RECONNECT_ATTEMPT_MAX_DELAY = 3000
 export const connectEventSource = async (
   eventSourceUrl,
   events = {},
-  { onConnect = () => {}, onDisconnect = () => {} } = {},
+  connectionChangeCallback = () => {},
 ) => {
   const { EventSource } = window
 
@@ -21,6 +21,8 @@ export const connectEventSource = async (
   let close = () => {}
 
   const connect = async () => {
+    connectionChangeCallback(reconnecting ? "reconnecting" : "connecting")
+
     const eventSource = new EventSource(eventSourceUrl, {
       withCredentials: true,
     })
@@ -29,22 +31,15 @@ export const connectEventSource = async (
       eventSource.close()
       if (connected) {
         connected = false
-        onDisconnect()
+        connectionChangeCallback("disconnected")
       }
     }
 
     eventSource.onopen = () => {
       connected = true
-      onConnect({ isReconnection: reconnecting })
+      connectionChangeCallback(reconnecting ? "reconnected" : "connected")
       reconnecting = false
     }
-    Object.keys(events).forEach((eventName) => {
-      eventSource.addEventListener(eventName, (e) => {
-        if (e.origin === eventSourceOrigin) {
-          events[eventName](e)
-        }
-      })
-    })
     eventSource.onerror = () => {
       close()
 
@@ -60,6 +55,13 @@ export const connectEventSource = async (
         connect()
       }
     }
+    Object.keys(events).forEach((eventName) => {
+      eventSource.addEventListener(eventName, (e) => {
+        if (e.origin === eventSourceOrigin) {
+          events[eventName](e)
+        }
+      })
+    })
   }
   connect()
 

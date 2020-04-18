@@ -2,6 +2,7 @@ import { resolveUrl, readFile, urlToRelativeUrl } from "@jsenv/util"
 import { getBrowserExecutionDynamicData } from "../runtime/getBrowserExecutionDynamicData.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_OTHERWISE } from "../CONSTANTS.js"
+import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
 
 const EXPLORING_HTML_RELATIVE_URL = "src/internal/exploring/exploring.html"
 const EXPLORING_JS_RELATIVE_URL = "src/internal/exploring/exploring.js"
@@ -44,7 +45,7 @@ export const serveExploring = async (
     $COMPILE_SERVER_IMPORT_MAP_SRC: resolveUrl(importMapFileRelativeUrl, compileDirectoryUrl),
     $SYSTEMJS_SCRIPT_SRC: resolveUrl(SYSTEMJS_RELATIVE_URL, compileServerOrigin),
 
-    $PROJECT_DIRECTORY_URL: projectDirectoryUrl,
+    $PROJECT_DIRECTORY_URL: JSON.stringify(projectDirectoryUrl),
     $COMPILE_SERVER_ORIGIN: JSON.stringify(compileServerOrigin),
     $OUT_DIRECTORY_RELATIVE_URL: JSON.stringify(outDirectoryRelativeUrl),
     $HTML_FILE_RELATIVE_URL: JSON.stringify(htmlFileRelativeUrl),
@@ -58,10 +59,9 @@ export const serveExploring = async (
     $JSENV_EXPLORING_FILE: JSON.stringify(exploringFileCompiledUrl),
   }
   const body = Object.keys(replacements).reduce((previous, key) => {
-    const pattern = key
+    const regex = new RegExp(escapeRegexpSpecialCharacters(key), "g")
     const value = replacements[key]
-    // we should replace all
-    return previous.replace(pattern, value)
+    return previous.replace(regex, value)
   }, html)
 
   return {

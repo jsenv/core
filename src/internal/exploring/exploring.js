@@ -1,8 +1,11 @@
 import { memoize } from "../memoize.js"
 import { fetchUsingXHR } from "../fetchUsingXHR.js"
+import { connectEventSource } from "./connectEventSource.js"
 
 const {
   iframe,
+
+  projectDirectoryUrl,
   compileServerOrigin,
   outDirectoryRelativeUrl,
   htmlFileRelativeUrl,
@@ -21,28 +24,19 @@ TODOLIST:
 
 */
 
-const renderExplorable = async () => {
-  const response = await fetchUsingXHR(`${apiServerOrigin}/explorables`, {
-    method: "POST",
-    body: JSON.stringify(explorableConfig),
-  })
-  const files = await response.json()
-
-  const ul = document.querySelector("ul")
-  ul.innerHTML = files
-    .map((file) => {
-      return `<li><a href="/${file}">${file}</a></li>`
-    })
-    .join("")
-}
-renderExplorable()
-
-const renderExecution = async () => {
+const handleLocation = () => {
   const fileRelativeUrl = document.location.pathname.slice(1)
-
   if (fileRelativeUrl) {
-    document.title = `${fileRelativeUrl}`
+    renderExecution(fileRelativeUrl)
+  } else {
+    renderIndex()
   }
+}
+
+const renderExecution = async (fileRelativeUrl) => {
+  document.title = `${fileRelativeUrl}`
+
+  connectExecutionEventSource(fileRelativeUrl)
 
   await loadIframe()
 
@@ -64,6 +58,66 @@ const renderExecution = async () => {
   } else {
     console.log(`execution done`)
   }
+}
+
+const connectExecutionEventSource = () => {
+  /*
+  here we should connect only to a given fileExecution event source
+
+  and be notified only for this execution dependencies.
+  the execution id should helps us know which file are dependent from an execution right ?
+  or using referer. These strategies should be sufficient for the server
+  to track the correct dependencies.
+
+  Server should also refresh a given file dependencies when it's being re-executed right ?
+  Or better: create a room for this execution.
+  */
+
+  const eventSourceUrl = `${apiServerOrigin}/eventsource`
+  const logEventSource = (message) => {
+    console.log(
+      `%ceventSource%c ${message}`,
+      `background: #ffdc00; color: black; padding: 1px 3px; margin: 0 1px`,
+      "",
+    )
+  }
+
+  return connectEventSource(
+    eventSourceUrl,
+    {
+      "file-changed": ({ data }) => {
+        logEventSource(`${data} changed -> reload page`)
+        // mais lui ne devrait reload que l'iframe
+        // et puis si un fichier change mais qu'on se fout de ce fichier on veut pas reload l'iframe
+        // je pense qu'on a besoin
+        document.location.reload()
+      },
+      "file-removed": ({ data }) => {
+        logEventSource(`${data} removed -> reload page`)
+        // same here reload only the iframe
+        document.location.reload()
+      },
+    },
+    (connectionEvent) => {
+      if (connectionEvent === "connecting") {
+        logEventSource(`connecting to ${eventSourceUrl}`)
+      } else if (connectionEvent === "failed") {
+        logEventSource(`failed to connect to ${eventSourceUrl}`)
+      } else if (connectionEvent === "connected") {
+        logEventSource(`connected to ${eventSourceUrl}`)
+      } else if (connectionEvent === "disconnected") {
+        logEventSource(`disconnected from ${eventSourceUrl}`)
+      } else if (connectionEvent === "reconnecting") {
+        logEventSource(`connecting to ${eventSourceUrl}`)
+      } else if (connectionEvent === "reconnected") {
+        logEventSource(`reconnected to ${eventSourceUrl} -> reload page`)
+        // lui restart toute la page c'est logique je dirais
+        // au cas ou on est changé des params du serveur ?
+        // a piori pas fou je pense qu'il faudrais plutot se connecter
+        document.location.reload()
+      }
+    },
+  )
 }
 
 const loadIframe = memoize(() => {
@@ -102,7 +156,21 @@ const sendMessage = (data) => {
   iframe.contentWindow.postMessage(data, compileServerOrigin)
 }
 
-window.onpopstate = () => {
-  renderExecution()
+const renderIndex = async () => {
+  document.title = `${projectDirectoryUrl}`
+  document.querySelector("h1").innerHTML = projectDirectoryUrl
+
+  const response = await fetchUsingXHR(`${apiServerOrigin}/explorables`, {
+    method: "POST",
+    body: JSON.stringify(explorableConfig),
+  })
+  const files = await response.json()
+
+  const ul = document.querySelector("ul")
+  ul.innerHTML = files.map((file) => `<li><a href="/${file}">${file}</a></li>`).join("")
 }
-renderExecution()
+
+window.onpopstate = () => {
+  handleLocation()
+}
+handleLocation()
