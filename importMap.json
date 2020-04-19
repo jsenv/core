@@ -98,16 +98,6 @@
     "cuid": "./node_modules/cuid/index.js"
   },
   "scopes": {
-    "./node_modules/@babel/plugin-proposal-unicode-property-regex/node_modules/@babel/helper-create-regexp-features-plugin/": {
-      "@babel/helper-annotate-as-pure": "./node_modules/@babel/helper-annotate-as-pure/lib/index.js",
-      "@babel/helper-regex": "./node_modules/@babel/helper-regex/lib/index.js",
-      "regexpu-core": "./node_modules/regexpu-core/rewrite-pattern.js"
-    },
-    "./node_modules/@babel/helper-builder-react-jsx-experimental/node_modules/@babel/types/": {
-      "@babel/helper-validator-identifier": "./node_modules/@babel/helper-validator-identifier/lib/index.js",
-      "to-fast-properties": "./node_modules/to-fast-properties/index.js",
-      "lodash": "./node_modules/lodash/lodash.js"
-    },
     "./node_modules/@jsenv/core/node_modules/@babel/plugin-proposal-unicode-property-regex/": {
       "@babel/helper-create-regexp-features-plugin": "./node_modules/@babel/helper-create-regexp-features-plugin/lib/index.js"
     },
@@ -125,16 +115,6 @@
     "./node_modules/@jsenv/core/node_modules/@babel/plugin-transform-parameters/": {
       "@babel/helper-get-function-arity": "./node_modules/@babel/helper-get-function-arity/lib/index.js",
       "@babel/helper-call-delegate": "./node_modules/@babel/helper-call-delegate/lib/index.js"
-    },
-    "./node_modules/@babel/helper-builder-react-jsx/node_modules/@babel/types/": {
-      "@babel/helper-validator-identifier": "./node_modules/@babel/helper-validator-identifier/lib/index.js",
-      "to-fast-properties": "./node_modules/to-fast-properties/index.js",
-      "lodash": "./node_modules/lodash/lodash.js"
-    },
-    "./node_modules/@babel/helper-module-transforms/node_modules/@babel/types/": {
-      "@babel/helper-validator-identifier": "./node_modules/@babel/helper-validator-identifier/lib/index.js",
-      "to-fast-properties": "./node_modules/to-fast-properties/index.js",
-      "lodash": "./node_modules/lodash/lodash.js"
     },
     "./node_modules/@babel/helper-builder-binary-assignment-operator-visitor/": {
       "@babel/helper-explode-assignable-expression": "./node_modules/@babel/helper-explode-assignable-expression/lib/index.js",
@@ -174,11 +154,11 @@
       "ms": "./node_modules/ms/index.js"
     },
     "./node_modules/@babel/plugin-proposal-unicode-property-regex/": {
-      "@babel/helper-create-regexp-features-plugin": "./node_modules/@babel/plugin-proposal-unicode-property-regex/node_modules/@babel/helper-create-regexp-features-plugin/lib/index.js"
+      "@babel/helper-create-regexp-features-plugin": "./node_modules/@babel/helper-create-regexp-features-plugin/lib/index.js"
     },
     "./node_modules/@babel/helper-builder-react-jsx-experimental/": {
       "@babel/helper-annotate-as-pure": "./node_modules/@babel/helper-annotate-as-pure/lib/index.js",
-      "@babel/types": "./node_modules/@babel/helper-builder-react-jsx-experimental/node_modules/@babel/types/lib/index.js"
+      "@babel/types": "./node_modules/@babel/types/lib/index.js"
     },
     "./node_modules/@babel/helper-member-expression-to-functions/": {
       "@babel/types": "./node_modules/@babel/types/lib/index.js"
@@ -196,17 +176,6 @@
       "@babel/traverse": "./node_modules/@babel/traverse/lib/index.js",
       "@babel/types": "./node_modules/@babel/types/lib/index.js"
     },
-    "./node_modules/@babel/helpers/node_modules/@babel/traverse/": {
-      "@babel/helper-split-export-declaration": "./node_modules/@babel/helper-split-export-declaration/lib/index.js",
-      "@babel/helper-function-name": "./node_modules/@babel/helper-function-name/lib/index.js",
-      "@babel/code-frame": "./node_modules/@babel/code-frame/lib/index.js",
-      "@babel/generator": "./node_modules/@babel/generator/lib/index.js",
-      "@babel/parser": "./node_modules/@babel/parser/lib/index.js",
-      "@babel/types": "./node_modules/@babel/types/lib/index.js",
-      "globals": "./node_modules/globals/index.js",
-      "lodash": "./node_modules/lodash/lodash.js",
-      "debug": "./node_modules/debug/src/index.js"
-    },
     "./node_modules/level-sublevel/node_modules/level-fix-range/": {
       "clone": "./node_modules/clone/clone.js"
     },
@@ -221,11 +190,6 @@
       "@jsenv/import-map/": "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/",
       "@jsenv/import-map": "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/index.js"
     },
-    "./node_modules/@babel/core/node_modules/@babel/generator/": {
-      "@babel/types": "./node_modules/@babel/types/lib/index.js",
-      "lodash": "./node_modules/lodash/lodash.js",
-      "jsesc": "./node_modules/jsesc/jsesc.js"
-    },
     "./node_modules/@babel/plugin-transform-template-literals/": {
       "@babel/helper-annotate-as-pure": "./node_modules/@babel/helper-annotate-as-pure/lib/index.js"
     },
@@ -234,22 +198,6 @@
     },
     "./node_modules/eslint-plugin-react/node_modules/doctrine/": {
       "esutils": "./node_modules/esutils/lib/utils.js"
-    },
-    "./node_modules/@babel/core/node_modules/@babel/traverse/": {
-      "@babel/helper-split-export-declaration": "./node_modules/@babel/helper-split-export-declaration/lib/index.js",
-      "@babel/helper-function-name": "./node_modules/@babel/helper-function-name/lib/index.js",
-      "@babel/code-frame": "./node_modules/@babel/code-frame/lib/index.js",
-      "@babel/generator": "./node_modules/@babel/generator/lib/index.js",
-      "@babel/parser": "./node_modules/@babel/parser/lib/index.js",
-      "@babel/types": "./node_modules/@babel/types/lib/index.js",
-      "globals": "./node_modules/globals/index.js",
-      "lodash": "./node_modules/lodash/lodash.js",
-      "debug": "./node_modules/debug/src/index.js"
-    },
-    "./node_modules/@babel/helpers/node_modules/@babel/types/": {
-      "@babel/helper-validator-identifier": "./node_modules/@babel/helper-validator-identifier/lib/index.js",
-      "to-fast-properties": "./node_modules/to-fast-properties/index.js",
-      "lodash": "./node_modules/lodash/lodash.js"
     },
     "./node_modules/@babel/plugin-proposal-optional-chaining/": {
       "@babel/plugin-syntax-optional-chaining": "./node_modules/@babel/plugin-syntax-optional-chaining/lib/index.js"
@@ -295,11 +243,6 @@
     },
     "./node_modules/eslint-module-utils/node_modules/debug/": {
       "ms": "./node_modules/ms/index.js"
-    },
-    "./node_modules/@babel/core/node_modules/@babel/types/": {
-      "@babel/helper-validator-identifier": "./node_modules/@babel/helper-validator-identifier/lib/index.js",
-      "to-fast-properties": "./node_modules/to-fast-properties/index.js",
-      "lodash": "./node_modules/lodash/lodash.js"
     },
     "./node_modules/@babel/plugin-transform-block-scoping/": {
       "lodash": "./node_modules/lodash/lodash.js"
@@ -396,14 +339,14 @@
     },
     "./node_modules/@babel/helper-builder-react-jsx/": {
       "@babel/helper-annotate-as-pure": "./node_modules/@babel/helper-annotate-as-pure/lib/index.js",
-      "@babel/types": "./node_modules/@babel/helper-builder-react-jsx/node_modules/@babel/types/lib/index.js"
+      "@babel/types": "./node_modules/@babel/types/lib/index.js"
     },
     "./node_modules/@babel/helper-module-transforms/": {
       "@babel/helper-split-export-declaration": "./node_modules/@babel/helper-split-export-declaration/lib/index.js",
       "@babel/helper-replace-supers": "./node_modules/@babel/helper-replace-supers/lib/index.js",
       "@babel/helper-simple-access": "./node_modules/@babel/helper-simple-access/lib/index.js",
       "@babel/template": "./node_modules/@babel/template/lib/index.js",
-      "@babel/types": "./node_modules/@babel/helper-module-transforms/node_modules/@babel/types/lib/index.js",
+      "@babel/types": "./node_modules/@babel/types/lib/index.js",
       "lodash": "./node_modules/lodash/lodash.js"
     },
     "./node_modules/@babel/plugin-transform-classes/": {
@@ -417,7 +360,6 @@
     },
     "./node_modules/@jsenv/core/node_modules/rollup/": {
       "rollup/dist/": "./node_modules/@jsenv/core/node_modules/rollup/dist/",
-      "fsevents": "./node_modules/fsevents/fsevents.js",
       "rollup": "./node_modules/@jsenv/core/node_modules/rollup/dist/es/rollup.js"
     },
     "./node_modules/@jsenv/core/node_modules/terser/": {
@@ -435,9 +377,6 @@
       "is-fullwidth-code-point": "./node_modules/is-fullwidth-code-point/index.js",
       "emoji-regex": "./node_modules/emoji-regex/index.js",
       "strip-ansi": "./node_modules/strip-ansi/index.js"
-    },
-    "./node_modules/@babel/core/node_modules/json5/": {
-      "minimist": "./node_modules/minimist/index.js"
     },
     "./node_modules/@babel/helper-annotate-as-pure/": {
       "@babel/types": "./node_modules/@babel/types/lib/index.js"
@@ -630,7 +569,8 @@
       "@rollup/pluginutils": "./node_modules/@rollup/pluginutils/dist/index.es.js"
     },
     "./node_modules/@rollup/pluginutils/": {
-      "estree-walker": "./node_modules/estree-walker/src/estree-walker.js"
+      "estree-walker": "./node_modules/estree-walker/src/estree-walker.js",
+      "micromatch": "./node_modules/micromatch/index.js"
     },
     "./node_modules/eslint-module-utils/": {
       "pkg-dir": "./node_modules/pkg-dir/index.js",
@@ -710,8 +650,8 @@
       "jsesc": "./node_modules/jsesc/jsesc.js"
     },
     "./node_modules/@babel/highlight/": {
+      "@babel/helper-validator-identifier": "./node_modules/@babel/helper-validator-identifier/lib/index.js",
       "js-tokens": "./node_modules/js-tokens/index.js",
-      "esutils": "./node_modules/esutils/lib/utils.js",
       "chalk": "./node_modules/chalk/index.js"
     },
     "./node_modules/abort-controller/": {
@@ -812,11 +752,8 @@
     },
     "./node_modules/@babel/helpers/": {
       "@babel/template": "./node_modules/@babel/template/lib/index.js",
-      "@babel/traverse": "./node_modules/@babel/helpers/node_modules/@babel/traverse/lib/index.js",
-      "@babel/types": "./node_modules/@babel/helpers/node_modules/@babel/types/lib/index.js"
-    },
-    "./node_modules/@babel/runtime/": {
-      "regenerator-runtime": "./node_modules/@babel/runtime/node_modules/regenerator-runtime/runtime.js"
+      "@babel/traverse": "./node_modules/@babel/traverse/lib/index.js",
+      "@babel/types": "./node_modules/@babel/types/lib/index.js"
     },
     "./node_modules/@jsenv/inspect/": {
       "@jsenv/inspect": "./node_modules/@jsenv/inspect/index.js"
@@ -888,6 +825,9 @@
     },
     "./node_modules/supports-color/": {
       "has-flag": "./node_modules/supports-color/node_modules/has-flag/index.js"
+    },
+    "./node_modules/to-regex-range/": {
+      "is-number": "./node_modules/is-number/index.js"
     },
     "./node_modules/@jsenv/assert/": {
       "@jsenv/inspect": "./node_modules/@jsenv/inspect/index.js"
@@ -964,8 +904,8 @@
       "uuid": "./node_modules/uuid/index.js"
     },
     "./node_modules/@babel/types/": {
+      "@babel/helper-validator-identifier": "./node_modules/@babel/helper-validator-identifier/lib/index.js",
       "to-fast-properties": "./node_modules/to-fast-properties/index.js",
-      "esutils": "./node_modules/esutils/lib/utils.js",
       "lodash": "./node_modules/lodash/lodash.js"
     },
     "./node_modules/ansi-escapes/": {
@@ -1025,18 +965,18 @@
       "@babel/helper-module-transforms": "./node_modules/@babel/helper-module-transforms/lib/index.js",
       "convert-source-map": "./node_modules/convert-source-map/index.js",
       "@babel/code-frame": "./node_modules/@babel/code-frame/lib/index.js",
-      "@babel/generator": "./node_modules/@babel/core/node_modules/@babel/generator/lib/index.js",
+      "@babel/generator": "./node_modules/@babel/generator/lib/index.js",
       "@babel/template": "./node_modules/@babel/template/lib/index.js",
-      "@babel/traverse": "./node_modules/@babel/core/node_modules/@babel/traverse/lib/index.js",
-      "@babel/parser": "./node_modules/@babel/core/node_modules/@babel/parser/lib/index.js",
-      "@babel/types": "./node_modules/@babel/core/node_modules/@babel/types/lib/index.js",
+      "@babel/traverse": "./node_modules/@babel/traverse/lib/index.js",
+      "@babel/parser": "./node_modules/@babel/parser/lib/index.js",
+      "@babel/types": "./node_modules/@babel/types/lib/index.js",
       "source-map": "./node_modules/@babel/core/node_modules/source-map/source-map.js",
       "gensync": "./node_modules/gensync/index.js",
       "resolve": "./node_modules/resolve/index.js",
       "lodash": "./node_modules/lodash/lodash.js",
       "semver": "./node_modules/semver/semver.js",
       "debug": "./node_modules/debug/src/index.js",
-      "json5": "./node_modules/@babel/core/node_modules/json5/dist/index.mjs"
+      "json5": "./node_modules/json5/dist/index.mjs"
     },
     "./node_modules/@jsenv/core/": {
       "@babel/plugin-proposal-unicode-property-regex": "./node_modules/@jsenv/core/node_modules/@babel/plugin-proposal-unicode-property-regex/lib/index.js",
@@ -1156,6 +1096,9 @@
     "./node_modules/cli-cursor/": {
       "restore-cursor": "./node_modules/restore-cursor/index.js"
     },
+    "./node_modules/fill-range/": {
+      "to-regex-range": "./node_modules/to-regex-range/index.js"
+    },
     "./node_modules/flat-cache/": {
       "flatted": "./node_modules/flatted/esm/index.js",
       "rimraf": "./node_modules/flat-cache/node_modules/rimraf/rimraf.js",
@@ -1169,6 +1112,10 @@
     },
     "./node_modules/level-peek/": {
       "level-fix-range": "./node_modules/level-fix-range/index.js"
+    },
+    "./node_modules/micromatch/": {
+      "picomatch": "./node_modules/picomatch/index.js",
+      "braces": "./node_modules/braces/index.js"
     },
     "./node_modules/optionator/": {
       "fast-levenshtein": "./node_modules/fast-levenshtein/levenshtein.js",
@@ -1254,7 +1201,6 @@
       "is-promise": "./node_modules/is-promise/index.js"
     },
     "./node_modules/uglify-js/": {
-      "source-map": "./node_modules/uglify-js/node_modules/source-map/source-map.js",
       "commander": "./node_modules/commander/index.js"
     },
     "./node_modules/url-parse/": {
@@ -1340,7 +1286,7 @@
       "argv": "./node_modules/argv/index.js"
     },
     "./node_modules/esquery/": {
-      "estraverse": "./node_modules/estraverse/estraverse.js"
+      "estraverse": "./node_modules/esquery/node_modules/estraverse/estraverse.js"
     },
     "./node_modules/figures/": {
       "escape-string-regexp": "./node_modules/escape-string-regexp/index.js"
@@ -1386,6 +1332,9 @@
     "./node_modules/xregexp/": {
       "@babel/runtime-corejs3": "./node_modules/@babel/runtime-corejs3/index"
     },
+    "./node_modules/braces/": {
+      "fill-range": "./node_modules/fill-range/index.js"
+    },
     "./node_modules/des.js/": {
       "minimalistic-assert": "./node_modules/minimalistic-assert/index.js",
       "inherits": "./node_modules/inherits/inherits.js"
@@ -1412,7 +1361,7 @@
       "doctrine": "./node_modules/eslint/node_modules/doctrine/lib/doctrine.js",
       "inquirer": "./node_modules/inquirer/lib/inquirer.js",
       "progress": "./node_modules/progress/index.js",
-      "esquery": "./node_modules/esquery/esquery.js",
+      "esquery": "./node_modules/esquery/dist/esquery.esm.min.js",
       "esutils": "./node_modules/esutils/lib/utils.js",
       "globals": "./node_modules/eslint/node_modules/globals/index.js",
       "is-glob": "./node_modules/is-glob/index.js",
@@ -1440,7 +1389,7 @@
       "inherits": "./node_modules/inherits/inherits.js"
     },
     "./node_modules/mkdirp/": {
-      "minimist": "./node_modules/mkdirp/node_modules/minimist/index.js"
+      "minimist": "./node_modules/minimist/index.js"
     },
     "./node_modules/pbkdf2/": {
       "create-hash": "./node_modules/create-hash/index.js",
@@ -1451,9 +1400,6 @@
     },
     "./node_modules/rimraf/": {
       "glob": "./node_modules/glob/glob.js"
-    },
-    "./node_modules/rollup/": {
-      "fsevents": "./node_modules/fsevents/fsevents.js"
     },
     "./node_modules/sha.js/": {
       "safe-buffer": "./node_modules/safe-buffer/index.js",
@@ -1499,6 +1445,7 @@
       "mkdirp": "./node_modules/mkdirp/index.js"
     },
     "./node_modules/yauzl/": {
+      "buffer-crc32": "./node_modules/buffer-crc32/index.js",
       "fd-slicer": "./node_modules/fd-slicer/index.js"
     },
     "./node_modules/glob/": {
@@ -1521,6 +1468,7 @@
     },
     "./node_modules/ajv/": {
       "fast-json-stable-stringify": "./node_modules/fast-json-stable-stringify/index.js",
+      "opencollective-postinstall": "./node_modules/opencollective-postinstall/index.js",
       "json-schema-traverse": "./node_modules/json-schema-traverse/index.js",
       "fast-deep-equal": "./node_modules/fast-deep-equal/index.js",
       "uri-js": "./node_modules/uri-js/dist/es5/uri.all.js"

@@ -1,5 +1,6 @@
 const RECONNECT_ATTEMPT_MIN_DELAY = 100
 const RECONNECT_ATTEMPT_MAX_DELAY = 3000
+const GIVE_UP_AFTER_ATTEMPT = 10
 
 export const connectEventSource = async (
   eventSourceUrl,
@@ -44,6 +45,10 @@ export const connectEventSource = async (
       close()
 
       if (reconnecting) {
+        if (reconnectAttempt === GIVE_UP_AFTER_ATTEMPT) {
+          connectionChangeCallback("failed")
+          return
+        }
         timeoutId = setTimeout(
           connect,
           Math.min(RECONNECT_ATTEMPT_MIN_DELAY * reconnectAttempt, RECONNECT_ATTEMPT_MAX_DELAY),

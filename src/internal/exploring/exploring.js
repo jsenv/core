@@ -24,10 +24,18 @@ TODOLIST:
 
 */
 
-const renderToolbar = () => {
-  toolbarElement.innerHTML = `<a href="/">Back to index</a>`
+const toggleTooltip = () => {
+  document.querySelector(".tooltip").classList.toggle("tooltipVisible")
 }
-renderToolbar()
+
+const renderToolbar = (fileRelativeUrl) => {
+  if (fileRelativeUrl) {
+    document.querySelector(".stateIndicator").onclick = toggleTooltip
+    document.querySelector(".stateIndicator").style.display = ""
+  } else {
+    document.querySelector(".stateIndicator").style.display = "none"
+  }
+}
 
 const handleLocation = () => {
   const fileRelativeUrl = document.location.pathname.slice(1)
@@ -36,6 +44,7 @@ const handleLocation = () => {
   } else {
     renderIndex()
   }
+  renderToolbar(fileRelativeUrl)
 }
 
 const renderIndex = async () => {
@@ -54,13 +63,38 @@ const renderIndex = async () => {
 
 const renderExecution = async (fileRelativeUrl) => {
   document.title = `${fileRelativeUrl}`
-  mainElement.innerHTML = `<iframe><iframe>`
-
-  const iframe = mainElement.querySelector("iframe")
-  iframe.style.cssText += `border: none; width: 100%; height: 100%;`
-
   connectExecutionEventSource(fileRelativeUrl)
-  execute(fileRelativeUrl, { iframe })
+  execute(fileRelativeUrl)
+}
+
+const applyStateIndicator = (state) => {
+  const stateIndicator = document.getElementById("stateIndicatorCircle")
+  const stateIndicatorRing = document.getElementById("stateIndicatorRing")
+  const tooltiptext = document.querySelector(".tooltiptext")
+  const retryIcon = document.querySelector(".retryIcon")
+
+  // remove all classes before applying the right ones
+  stateIndicatorRing.classList.remove("loadingRing")
+  stateIndicator.classList.remove("loadingCircle", "redCircle", "greenCircle")
+  retryIcon.classList.remove("retryIconDisplayed")
+  tooltiptext.classList.remove("tooltiptextMoved")
+
+  if (state === "loading") {
+    stateIndicator.classList.add("loadingCircle")
+    stateIndicatorRing.classList.add("loadingRing")
+    tooltiptext.innerHTML = "Connecting to server..."
+  } else {
+    if (state === "success") {
+      stateIndicator.classList.add("greenCircle")
+      tooltiptext.innerHTML = "Server online"
+    } else if (state === "failure") {
+      stateIndicator.classList.add("redCircle")
+      tooltiptext.innerHTML = "Server offline"
+      tooltiptext.classList.add("tooltiptextMoved")
+      retryIcon.classList.add("retryIconDisplayed")
+      retryIcon.onclick = () => location.reload()
+    }
+  }
 }
 
 const connectExecutionEventSource = (fileRelativeUrl) => {
@@ -77,7 +111,6 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
     eventSourceUrl,
     {
       "file-changed": (event) => {
-        console.log(event)
         logEventSource(`${event.data} changed -> reload iframe`)
         execute(fileRelativeUrl)
       },
@@ -89,16 +122,22 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
     (connectionEvent) => {
       if (connectionEvent === "connecting") {
         logEventSource(`connecting to ${eventSourceUrl}`)
+        applyStateIndicator("loading")
       } else if (connectionEvent === "failed") {
         logEventSource(`failed to connect to ${eventSourceUrl}`)
+        applyStateIndicator("failure")
       } else if (connectionEvent === "connected") {
         logEventSource(`connected to ${eventSourceUrl}`)
+        applyStateIndicator("success")
       } else if (connectionEvent === "disconnected") {
         logEventSource(`disconnected from ${eventSourceUrl}`)
+        applyStateIndicator("failure")
       } else if (connectionEvent === "reconnecting") {
         logEventSource(`connecting to ${eventSourceUrl}`)
+        applyStateIndicator("loading")
       } else if (connectionEvent === "reconnected") {
         logEventSource(`reconnected to ${eventSourceUrl} -> reload page`)
+        applyStateIndicator("success")
         // need full reload (especially in case the server ports have changed)
         document.location.reload()
       }
@@ -106,7 +145,13 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
   )
 }
 
-const execute = async (fileRelativeUrl, { iframe }) => {
+const execute = async (fileRelativeUrl) => {
+  document.getElementById("loaderSvg").classList.add("animateLoader")
+
+  mainElement.innerHTML = ``
+  const iframe = document.createElement("iframe")
+  mainElement.appendChild(iframe)
+
   const iframeSrc = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
 
   await loadIframe(iframe, { iframeSrc })
@@ -129,6 +174,9 @@ const execute = async (fileRelativeUrl, { iframe }) => {
   } else {
     console.log(`execution done`)
   }
+  setTimeout(() => {
+    document.getElementById("loaderSvg").classList.remove("animateLoader")
+  }, 2000)
 }
 
 const loadIframe = (iframe, { iframeSrc }) => {
