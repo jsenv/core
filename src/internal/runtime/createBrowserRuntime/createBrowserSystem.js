@@ -28,7 +28,7 @@ export const createBrowserSystem = async ({
 
   const browserSystem = new window.System.constructor()
 
-  browserSystem.resolve = (specifier, importer) => {
+  const resolve = (specifier, importer) => {
     if (specifier === GLOBAL_SPECIFIER) return specifier
     return resolveImport({
       specifier,
@@ -37,6 +37,8 @@ export const createBrowserSystem = async ({
       defaultExtension: importDefaultExtension,
     })
   }
+
+  browserSystem.resolve = resolve
 
   browserSystem.instantiate = (url, importerUrl) => {
     if (url === GLOBAL_SPECIFIER) {
@@ -71,7 +73,7 @@ export const createBrowserSystem = async ({
   browserSystem.createContext = (importerUrl) => {
     return {
       url: importerUrl,
-      resolve: (specifier) => resolveImport(specifier, importerUrl),
+      resolve: (specifier) => resolve(specifier, importerUrl),
     }
   }
 

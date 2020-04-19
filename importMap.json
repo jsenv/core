@@ -149,6 +149,12 @@
       "@babel/helper-define-map": "./node_modules/@babel/helper-define-map/lib/index.js",
       "globals": "./node_modules/globals/index.js"
     },
+    "./node_modules/@jsenv/github-release-package/node_modules/@jsenv/server/": {
+      "abort-controller": "./node_modules/abort-controller/dist/abort-controller.js",
+      "@jsenv/server": "./node_modules/@jsenv/github-release-package/node_modules/@jsenv/server/index.js",
+      "node-fetch": "./node_modules/node-fetch/lib/index.mjs",
+      "kill-port": "./node_modules/kill-port/index.js"
+    },
     "./node_modules/@jsenv/core/node_modules/@jsenv/node-module-import-map/": {
       "@jsenv/node-module-import-map": "./node_modules/@jsenv/core/node_modules/@jsenv/node-module-import-map/index.js"
     },
@@ -280,6 +286,12 @@
     },
     "./node_modules/@babel/helper-split-export-declaration/": {
       "@babel/types": "./node_modules/@babel/types/lib/index.js"
+    },
+    "./node_modules/@jsenv/core/node_modules/@jsenv/server/": {
+      "abort-controller": "./node_modules/abort-controller/dist/abort-controller.js",
+      "@jsenv/server": "./node_modules/@jsenv/core/node_modules/@jsenv/server/index.js",
+      "node-fetch": "./node_modules/node-fetch/lib/index.mjs",
+      "kill-port": "./node_modules/kill-port/index.js"
     },
     "./node_modules/eslint-module-utils/node_modules/debug/": {
       "ms": "./node_modules/ms/index.js"
@@ -441,6 +453,9 @@
     },
     "./node_modules/@babel/helper-hoist-variables/": {
       "@babel/types": "./node_modules/@babel/types/lib/index.js"
+    },
+    "./node_modules/@jsenv/github-release-package/": {
+      "@jsenv/server": "./node_modules/@jsenv/github-release-package/node_modules/@jsenv/server/index.js"
     },
     "./node_modules/regenerate-unicode-properties/": {
       "regenerate": "./node_modules/regenerate/regenerate.js"
@@ -1039,6 +1054,7 @@
       "@jsenv/import-map": "./node_modules/@jsenv/core/node_modules/@jsenv/import-map/index.js",
       "istanbul-reports": "./node_modules/@jsenv/core/node_modules/istanbul-reports/index.js",
       "@babel/helpers": "./node_modules/@jsenv/core/node_modules/@babel/helpers/lib/index.js",
+      "@jsenv/server": "./node_modules/@jsenv/core/node_modules/@jsenv/server/index.js",
       "rollup/dist/": "./node_modules/@jsenv/core/node_modules/rollup/dist/",
       "@babel/core": "./node_modules/@jsenv/core/node_modules/@babel/core/lib/index.js",
       "rollup": "./node_modules/@jsenv/core/node_modules/rollup/dist/es/rollup.js",

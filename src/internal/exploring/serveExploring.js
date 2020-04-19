@@ -5,11 +5,13 @@ import { COMPILE_ID_OTHERWISE } from "../CONSTANTS.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
 
 const EXPLORING_HTML_RELATIVE_URL = "src/internal/exploring/exploring.html"
+const EXPLORING_CSS_RELATIVE_URL = "src/internal/exploring/exploring.css"
 const EXPLORING_JS_RELATIVE_URL = "src/internal/exploring/exploring.js"
 const SYSTEMJS_RELATIVE_URL = "src/internal/exploring/system.js"
 
 const exploringHtmlFileUrl = resolveUrl(EXPLORING_HTML_RELATIVE_URL, jsenvCoreDirectoryUrl)
 const exploringFileUrl = resolveUrl(EXPLORING_JS_RELATIVE_URL, jsenvCoreDirectoryUrl)
+const exploringCssFileUrl = resolveUrl(EXPLORING_CSS_RELATIVE_URL, jsenvCoreDirectoryUrl)
 
 export const serveExploring = async (
   request,
@@ -35,6 +37,8 @@ export const serveExploring = async (
   const compileDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/`
   const exploringFileCompiledUrl = resolveUrl(exploringFileRelativeUrl, compileDirectoryUrl)
 
+  const exploringCssRelativeUrl = urlToRelativeUrl(exploringCssFileUrl, projectDirectoryUrl)
+
   const {
     browserRuntimeFileRelativeUrl,
     sourcemapMainFileRelativeUrl,
@@ -42,6 +46,7 @@ export const serveExploring = async (
   } = getBrowserExecutionDynamicData({ projectDirectoryUrl, compileServerOrigin })
 
   const replacements = {
+    $STYLE_HREF: resolveUrl(exploringCssRelativeUrl, compileDirectoryUrl),
     $COMPILE_SERVER_IMPORT_MAP_SRC: resolveUrl(importMapFileRelativeUrl, compileDirectoryUrl),
     $SYSTEMJS_SCRIPT_SRC: resolveUrl(SYSTEMJS_RELATIVE_URL, compileServerOrigin),
 

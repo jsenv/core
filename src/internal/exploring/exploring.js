@@ -2,7 +2,8 @@ import { fetchUsingXHR } from "../fetchUsingXHR.js"
 import { connectEventSource } from "./connectEventSource.js"
 
 const {
-  iframe,
+  mainElement,
+  toolbarElement,
 
   projectDirectoryUrl,
   compileServerOrigin,
@@ -23,6 +24,11 @@ TODOLIST:
 
 */
 
+const renderToolbar = () => {
+  toolbarElement.innerHTML = `<a href="/">Back to index</a>`
+}
+renderToolbar()
+
 const handleLocation = () => {
   const fileRelativeUrl = document.location.pathname.slice(1)
   if (fileRelativeUrl) {
@@ -32,11 +38,29 @@ const handleLocation = () => {
   }
 }
 
+const renderIndex = async () => {
+  document.title = `${projectDirectoryUrl}`
+  mainElement.innerHTML = `<h1>${projectDirectoryUrl}</h1><ul></ul>`
+
+  const response = await fetchUsingXHR(`${apiServerOrigin}/explorables`, {
+    method: "POST",
+    body: JSON.stringify(explorableConfig),
+  })
+  const files = await response.json()
+
+  const ul = mainElement.querySelector("ul")
+  ul.innerHTML = files.map((file) => `<li><a href="/${file}">${file}</a></li>`).join("")
+}
+
 const renderExecution = async (fileRelativeUrl) => {
   document.title = `${fileRelativeUrl}`
+  mainElement.innerHTML = `<iframe><iframe>`
+
+  const iframe = mainElement.querySelector("iframe")
+  iframe.style.cssText += `border: none; width: 100%; height: 100%;`
 
   connectExecutionEventSource(fileRelativeUrl)
-  execute(fileRelativeUrl)
+  execute(fileRelativeUrl, { iframe })
 }
 
 const connectExecutionEventSource = (fileRelativeUrl) => {
@@ -82,10 +106,12 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
   )
 }
 
-const execute = async (fileRelativeUrl) => {
-  await loadIframe(fileRelativeUrl)
+const execute = async (fileRelativeUrl, { iframe }) => {
+  const iframeSrc = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
 
-  const result = await performIframeAction("execute", {
+  await loadIframe(iframe, { iframeSrc })
+
+  const result = await performIframeAction(iframe, "execute", {
     fileRelativeUrl,
     compileServerOrigin,
     outDirectoryRelativeUrl,
@@ -105,19 +131,19 @@ const execute = async (fileRelativeUrl) => {
   }
 }
 
-const loadIframe = (fileRelativeUrl) => {
+const loadIframe = (iframe, { iframeSrc }) => {
   return new Promise((resolve) => {
     const onload = () => {
       iframe.removeEventListener("load", onload, true)
       resolve()
     }
     iframe.addEventListener("load", onload, true)
-    iframe.src = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
+    iframe.src = iframeSrc
   })
 }
 
-const performIframeAction = (action, ...args) => {
-  sendMessage({ action, args })
+const performIframeAction = (iframe, action, ...args) => {
+  sendMessageToIframe(iframe, { action, args })
 
   return new Promise((resolve, reject) => {
     const onMessage = (messageEvent) => {
@@ -140,23 +166,8 @@ const performIframeAction = (action, ...args) => {
   })
 }
 
-const sendMessage = (data) => {
-  console.log(">", data)
+const sendMessageToIframe = (iframe, data) => {
   iframe.contentWindow.postMessage(data, compileServerOrigin)
-}
-
-const renderIndex = async () => {
-  document.title = `${projectDirectoryUrl}`
-  document.querySelector("h1").innerHTML = projectDirectoryUrl
-
-  const response = await fetchUsingXHR(`${apiServerOrigin}/explorables`, {
-    method: "POST",
-    body: JSON.stringify(explorableConfig),
-  })
-  const files = await response.json()
-
-  const ul = document.querySelector("ul")
-  ul.innerHTML = files.map((file) => `<li><a href="/${file}">${file}</a></li>`).join("")
 }
 
 window.onpopstate = () => {

@@ -32,7 +32,7 @@ export const createNodeSystem = async ({
 
   const nodeSystem = new global.System.constructor()
 
-  nodeSystem.resolve = (specifier, importer) => {
+  const resolve = (specifier, importer) => {
     if (specifier === GLOBAL_SPECIFIER) return specifier
 
     if (isNativeNodeModuleBareSpecifier(specifier)) return specifier
@@ -44,6 +44,8 @@ export const createNodeSystem = async ({
       defaultExtension: importDefaultExtension,
     })
   }
+
+  nodeSystem.resolve = resolve
 
   nodeSystem.instantiate = async (url, importerUrl) => {
     if (url === GLOBAL_SPECIFIER) {
@@ -99,15 +101,6 @@ export const createNodeSystem = async ({
 
   // https://github.com/systemjs/systemjs/blob/master/docs/hooks.md#createcontexturl---object
   nodeSystem.createContext = (url) => {
-    const resolve = (specifier) => {
-      const urlResolved = resolveImport(specifier, url)
-      return urlToOriginalUrl(urlResolved, {
-        projectDirectoryUrl,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-      })
-    }
-
     const originalUrl = urlToOriginalUrl(url, {
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
@@ -116,7 +109,14 @@ export const createNodeSystem = async ({
 
     return {
       url: originalUrl,
-      resolve,
+      resolve: (specifier) => {
+        const urlResolved = resolveImport(specifier, url)
+        return urlToOriginalUrl(urlResolved, {
+          projectDirectoryUrl,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+        })
+      },
     }
   }
 
