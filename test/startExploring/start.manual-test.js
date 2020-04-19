@@ -10,7 +10,7 @@ const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}template.html`
 
 startExploring({
   ...START_EXPLORING_TEST_PARAMS,
-  logLevel: "info",
+  logLevel: "warn",
   // compileServerLogLevel: "info",
   trackingLogLevel: "debug",
   jsenvDirectoryRelativeUrl,

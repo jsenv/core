@@ -100,7 +100,7 @@
     "@jsenv/logger": "3.3.1",
     "@jsenv/node-module-import-map": "11.1.1",
     "@jsenv/node-signals": "2.0.1",
-    "@jsenv/server": "2.2.0",
+    "@jsenv/server": "2.3.0",
     "@jsenv/uneval": "1.4.0",
     "@jsenv/util": "3.5.2",
     "@rollup/plugin-commonjs": "11.0.2",

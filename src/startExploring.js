@@ -19,6 +19,7 @@ import {
   jsenvPrivateKey,
   jsenvCertificate,
   createSSERoom,
+  readRequestBodyAsString
 } from "@jsenv/server"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { serveExploring } from "./internal/exploring/serveExploring.js"
@@ -30,7 +31,7 @@ export const startExploring = async ({
   cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
-  apiServerLogLevel = logLevel,
+  apiServerLogLevel = "warn",
   trackingLogLevel = "warn",
 
   htmlFileRelativeUrl,
@@ -97,7 +98,7 @@ export const startExploring = async ({
       room.start()
 
       const entryFileRelativeUrl = request.ressource.slice(1)
-      trackingLogger.info(`track ${entryFileRelativeUrl} for ${request.origin}`)
+      trackingLogger.info(`track ${entryFileRelativeUrl}`)
       const disconnectRoomFromFileChanges = connectRoomWithFileChanges(room, entryFileRelativeUrl)
 
       cancellationToken.register(room.stop)
@@ -105,7 +106,7 @@ export const startExploring = async ({
       // maybe I should update @jsenv/server to occur also when request connection is closed
       // https://nodejs.org/api/http.html#http_event_close_2
       request.cancellationToken.register(() => {
-        trackingLogger.info(`stop tracking ${entryFileRelativeUrl} for ${request.origin}`)
+        trackingLogger.info(`stop tracking ${entryFileRelativeUrl}`)
         disconnectRoomFromFileChanges()
         roomSet.delete(room)
         room.stop()
@@ -229,13 +230,6 @@ export const startExploring = async ({
       serverName: "api server",
       requestToResponse: (request) =>
         firstService(
-          // eventsource
-          // this MUST be moved to exploring server instead
-          // otherwise client cannot reconnect when port changes
-          // after server is restarted
-          () => {
-            return livereloadServerSentEventService(request)
-          },
           // list explorable files
           async () => {
             if (request.ressource === "/explorables" && request.method === "POST") {
@@ -280,18 +274,26 @@ export const startExploring = async ({
       cancellationToken,
       logLevel,
       serverName: "exploring server",
-      requestToResponse: (request) => {
-        return serveExploring(request, {
-          projectDirectoryUrl,
-          compileServerOrigin,
-          outDirectoryRelativeUrl,
-          compileServerGroupMap,
-          htmlFileRelativeUrl,
-          importMapFileRelativeUrl,
-          apiServerOrigin: apiServer.origin,
-          explorableConfig,
-        })
-      },
+      requestToResponse: (request) =>
+        firstService(
+          // eventsource
+          () => {
+            return livereloadServerSentEventService(request)
+          },
+          // exploring single page app
+          () => {
+            return serveExploring(request, {
+              projectDirectoryUrl,
+              compileServerOrigin,
+              outDirectoryRelativeUrl,
+              compileServerGroupMap,
+              htmlFileRelativeUrl,
+              importMapFileRelativeUrl,
+              apiServerOrigin: apiServer.origin,
+              explorableConfig,
+            })
+          },
+        ),
       sendInternalErrorStack: true,
       keepProcessAlive,
       port,
@@ -369,6 +371,13 @@ const reportDependency = ({ relativeUrl, mainRelativeUrl, request, trackerSet })
     }
   }
 
+  if (relativeUrlToMainRelativeUrl(relativeUrl) === mainRelativeUrl) {
+    return {
+      dependnecy: true,
+      reason: "it's html template",
+    }
+  }
+
   if ("x-jsenv-execution-id" in request.headers) {
     const executionId = request.headers["x-jsenv-execution-id"]
     if (executionId === mainRelativeUrl) {
@@ -383,24 +392,45 @@ const reportDependency = ({ relativeUrl, mainRelativeUrl, request, trackerSet })
     }
   }
 
-  // search if the file importing this one is tracked as being a dependency of this main file
-  // in that case because the importer is a dependency the importee is also a dependency
   if ("referer" in request.headers) {
     const { origin } = request
     const { referer } = request.headers
-    if (referer === origin || urlIsInsideOf(referer, origin)) {
-      const refererRelativeUrl = urlToRelativeUrl(referer, origin)
-      if (refererRelativeUrl) {
-        // eslint-disable-next-line no-unused-vars
-        for (const tracker of trackerSet) {
-          if (
-            tracker.mainRelativeUrl === mainRelativeUrl &&
-            tracker.dependencySet.has(refererRelativeUrl)
-          ) {
-            return {
-              dependency: true,
-              reason: "referer request header",
-            }
+    // referer is likely the exploringServer
+    if (referer !== origin && !urlIsInsideOf(referer, origin)) {
+      return {
+        dependency: false,
+        reason: "referer is an other origin",
+      }
+    }
+    // here we know the referer is inside compileServer
+    const refererRelativeUrl = urlToRelativeUrl(referer, origin)
+    if (refererRelativeUrl) {
+      const mainRelativeUrlCandidate = relativeUrlToMainRelativeUrl(refererRelativeUrl)
+      if (mainRelativeUrlCandidate) {
+        // referer looks like **/*.html?file=*
+        if (mainRelativeUrlCandidate === mainRelativeUrl) {
+          return {
+            dependency: true,
+            reason: "referer main file is the same",
+          }
+        }
+        return {
+          dependency: false,
+          reason: "referer main file is different",
+        }
+      }
+
+      // search if referer (file requesting this one) is tracked as being a dependency of main file
+      // in that case because the importer is a dependency the importee is also a dependency
+      // eslint-disable-next-line no-unused-vars
+      for (const tracker of trackerSet) {
+        if (
+          tracker.mainRelativeUrl === mainRelativeUrl &&
+          tracker.dependencySet.has(refererRelativeUrl)
+        ) {
+          return {
+            dependency: true,
+            reason: "referer is a dependency",
           }
         }
       }
@@ -413,19 +443,15 @@ const reportDependency = ({ relativeUrl, mainRelativeUrl, request, trackerSet })
   }
 }
 
-const readRequestBodyAsString = (requestBody) => {
-  return new Promise((resolve, reject) => {
-    const bufferArray = []
-    requestBody.subscribe({
-      error: reject,
-      next: (buffer) => {
-        bufferArray.push(buffer)
-      },
-      complete: () => {
-        const bodyAsBuffer = Buffer.concat(bufferArray)
-        const bodyAsString = bodyAsBuffer.toString()
-        resolve(bodyAsString)
-      },
-    })
-  })
+const relativeUrlToMainRelativeUrl = (relativeUrl) => {
+  const url = new URL(relativeUrl, "file:///directory/")
+  const { pathname } = url
+  if (!pathname.endsWith(`.html`)) {
+    return null
+  }
+  const { searchParams } = url
+  if (searchParams.has("file")) {
+    return searchParams.get("file")
+  }
+  return null
 }
