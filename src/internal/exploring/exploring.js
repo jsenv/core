@@ -38,18 +38,28 @@ const renderToolbar = (fileRelativeUrl) => {
 }
 
 const handleLocation = () => {
+  renderToolbar(fileRelativeUrl)
+
   const fileRelativeUrl = document.location.pathname.slice(1)
   if (fileRelativeUrl) {
     renderExecution(fileRelativeUrl)
   } else {
-    renderIndex()
+    renderConfigurationPage()
   }
-  renderToolbar(fileRelativeUrl)
 }
 
-const renderIndex = async () => {
+const renderConfigurationPage = async () => {
   document.title = `${projectDirectoryUrl}`
-  mainElement.innerHTML = `<h1>${projectDirectoryUrl}</h1><ul></ul>`
+  // it would be great to have a loading step in the html display at this point
+  mainElement.innerHTML = ""
+
+  const configurationPageElement = document
+    .querySelector(`[data-page="configuration"`)
+    .cloneNode(true)
+
+  // explorable section
+  const titleElement = configurationPageElement.querySelector("h2")
+  titleElement.innerHTML = projectDirectoryUrl
 
   const response = await fetchUsingXHR(`${apiServerOrigin}/explorables`, {
     method: "POST",
@@ -57,8 +67,20 @@ const renderIndex = async () => {
   })
   const files = await response.json()
 
-  const ul = mainElement.querySelector("ul")
+  const ul = configurationPageElement.querySelector("ul")
   ul.innerHTML = files.map((file) => `<li><a href="/${file}">${file}</a></li>`).join("")
+
+  // settings section
+  const toolbarInput = configurationPageElement.querySelector("#toggle-toolbar")
+  toolbarInput.onchange = () => {
+    if (toolbarInput.checked) {
+      toolbarElement.setAttribute("data-visible", "")
+    } else {
+      toolbarElement.removeAttribute("data-visible")
+    }
+  }
+
+  mainElement.appendChild(configurationPageElement)
 }
 
 const renderExecution = async (fileRelativeUrl) => {
@@ -83,17 +105,15 @@ const applyStateIndicator = (state) => {
     stateIndicator.classList.add("loadingCircle")
     stateIndicatorRing.classList.add("loadingRing")
     tooltiptext.innerHTML = "Connecting to server..."
-  } else {
-    if (state === "success") {
-      stateIndicator.classList.add("greenCircle")
-      tooltiptext.innerHTML = "Server online"
-    } else if (state === "failure") {
-      stateIndicator.classList.add("redCircle")
-      tooltiptext.innerHTML = "Server offline"
-      tooltiptext.classList.add("tooltiptextMoved")
-      retryIcon.classList.add("retryIconDisplayed")
-      retryIcon.onclick = () => location.reload()
-    }
+  } else if (state === "success") {
+    stateIndicator.classList.add("greenCircle")
+    tooltiptext.innerHTML = "Server online"
+  } else if (state === "failure") {
+    stateIndicator.classList.add("redCircle")
+    tooltiptext.innerHTML = "Server offline"
+    tooltiptext.classList.add("tooltiptextMoved")
+    retryIcon.classList.add("retryIconDisplayed")
+    retryIcon.onclick = () => document.location.reload()
   }
 }
 

@@ -1,0 +1,18 @@
+main article[data-page="configuration"] {
+  display: table;
+  width: 100%;
+}
+
+#explorables {
+  display: table-cell;
+  width: 49%;
+  padding-right: 1%;
+}
+
+#settings {
+  display: table-cell;
+  width: 49%;
+  padding-left: 1%;
+}
+
+/* TODO: media query too fallback on display block or table-row */

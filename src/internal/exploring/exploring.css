@@ -1,3 +1,6 @@
+@import "./footer.css";
+@import "./configuration.css";
+
 html,
 body {
   height: 100%;
@@ -11,6 +14,14 @@ body {
   width: 100%;
 }
 
+article {
+  display: none;
+}
+
+main article {
+  display: block;
+}
+
 main {
   height: 100%;
   bottom: 80px;
@@ -20,13 +31,6 @@ iframe {
   border: none;
   width: 100%;
   height: 100%;
-}
-
-/* Footer */
-footer {
-  display: table-row;
-  height: 40px;
-  background: #404040;
 }
 
 #jsenvLogoSvg {
