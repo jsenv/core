@@ -34,15 +34,13 @@ const closeToolbar = () => {
 
 const renderToolbar = (fileRelativeUrl) => {
   if (fileRelativeUrl) {
-    document.querySelector(".stateIndicator").onclick = toggleTooltip
-    document.querySelector("#closeToolbar").onclick = closeToolbar
+    document.querySelector("#button-state-indicator").onclick = toggleTooltip
+    document.querySelector("#button-close-toolbar").onclick = closeToolbar
 
-    document.querySelector(".stateIndicator").style.display = ""
-    document.querySelector(".jsenvLogo").style.display = "none"
+    document.querySelector("#button-state-indicator").style.display = ""
     document.querySelector(".fileName").innerHTML = fileRelativeUrl
   } else {
-    document.querySelector(".stateIndicator").style.display = "none"
-    document.querySelector(".jsenvLogo").style.display = "block"
+    document.querySelector("#button-state-indicator").style.display = "none"
   }
 }
 

@@ -4,6 +4,7 @@
 
 footer {
   display: table-row;
+  width: 100%;
   height: 40px;
   background: #404040;
   transition: transform;
@@ -20,8 +21,19 @@ footer a {
   display: inline-block;
 }
 
-.toolbarDiv {
-  float: left;
+footer {
+  display: table;
+}
+
+footer > * {
+  display: table-cell !important;
+  vertical-align: middle;
+}
+
+footer button {
+  background: none;
+  border: none;
+  height: 100%;
 }
 
 .jsenvLogo {
@@ -35,10 +47,10 @@ footer a {
 }
 
 .fileName {
-  max-width: 40vw;
+  display: inline-block;
+  max-width: 40em;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: block;
   color: #cecece;
   font-family: monospace;
   font-size: 15px;
@@ -50,15 +62,10 @@ footer a {
 /* bleu clair: #24C3B0 */
 /* orange: #FC9B1E */
 
-.toolbarEndDiv {
-  float: right;
-}
-
 #settingsIconSvg {
   fill: #cecece;
   width: 20px;
   height: 20px;
-  margin: 10px 5px;
 }
 
 #crossIconSvg {

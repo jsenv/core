@@ -15,19 +15,12 @@ body {
 
 body {
   width: 100%;
-}
-
-article {
-  display: none;
-}
-
-main article {
-  display: block;
+  display: table;
 }
 
 main {
   height: 100%;
-  bottom: 80px;
+  display: table-row;
 }
 
 iframe {

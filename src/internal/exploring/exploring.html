@@ -10,36 +10,16 @@
     <!-- exploring page -->
     <main></main>
 
-    <article data-page="configuration">
-      <section id="explorables">
-        <h2>Explorable files</h2>
-        <hr />
-        <nav>
-          <ul></ul>
-        </nav>
-      </section>
-      <section id="settings">
-        <h2>Settings</h2>
-        <hr />
-        <label>
-          <input id="toggle-toolbar" type="checkbox" />
-          Toolbar
-        </label>
-      </section>
-    </article>
-
-    <article data-page="execution"></article>
-
     <!-- exploring toolbar -->
     <footer>
-      <div class="jsenvLogo toolbarDiv">
+      <!-- <div class="jsenvLogo">
         <a href="/">
           <svg id="jsenvLogoSvg">
             <use xlink:href="#jsenvLogoSvgModel"></use>
           </svg>
         </a>
-      </div>
-      <div class="stateIndicator toolbarDiv actionBtn">
+      </div> -->
+      <button id="button-state-indicator">
         <div class="tooltip">
           <span class="tooltiptext">Unknown state</span>
           <svg id="retryIcon" class="retryIcon">
@@ -50,11 +30,11 @@
           <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
           <circle id="stateIndicatorRing" />
         </svg>
-      </div>
-      <div class="fileNameContainer toolbarDiv">
+      </button>
+      <div>
         <span class="fileName"></span>
       </div>
-      <div class="loader toolbarDiv actionBtn">
+      <div style="position: relative;">
         <svg id="loaderSvg" width="35px" height="35px">
           <use xlink:href="#loaderSvgModel"></use>
         </svg>
@@ -62,19 +42,40 @@
           <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
         </svg>
       </div>
-      <div class="toolbarEndDiv actionBtn" id="closeToolbar">
+      <div style="width: 100%;"></div>
+      <a href="/">
+        <svg id="settingsIconSvg" width="35px" height="35px">
+          <use xlink:href="#settingsIconSvgModel"></use>
+        </svg>
+      </a>
+      <button id="button-close-toolbar">
         <svg id="crossIconSvg" width="35px" height="35px">
           <use xlink:href="#crossIconSvgModel"></use>
         </svg>
-      </div>
-      <div class="toolbarEndDiv">
-        <a href="/">
-          <svg id="settingsIconSvg" width="35px" height="35px">
-            <use xlink:href="#settingsIconSvgModel"></use>
-          </svg>
-        </a>
-      </div>
+      </button>
     </footer>
+
+    <div style="display: none;">
+      <article data-page="configuration">
+        <section id="explorables">
+          <h2>Explorable files</h2>
+          <hr />
+          <nav>
+            <ul></ul>
+          </nav>
+        </section>
+        <section id="settings">
+          <h2>Settings</h2>
+          <hr />
+          <label>
+            <input id="toggle-toolbar" type="checkbox" />
+            Toolbar
+          </label>
+        </section>
+      </article>
+
+      <article data-page="execution"></article>
+    </div>
 
     <script type="systemjs-importmap" src="$COMPILE_SERVER_IMPORT_MAP_SRC"></script>
     <script src="$SYSTEMJS_SCRIPT_SRC"></script>
