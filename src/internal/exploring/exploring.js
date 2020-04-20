@@ -28,9 +28,15 @@ const toggleTooltip = () => {
   document.querySelector(".tooltip").classList.toggle("tooltipVisible")
 }
 
+const closeToolbar = () => {
+  toolbarElement.setAttribute("data-visible", "")
+}
+
 const renderToolbar = (fileRelativeUrl) => {
   if (fileRelativeUrl) {
     document.querySelector(".stateIndicator").onclick = toggleTooltip
+    document.querySelector("#closeToolbar").onclick = closeToolbar
+
     document.querySelector(".stateIndicator").style.display = ""
     document.querySelector(".jsenvLogo").style.display = "none"
     document.querySelector(".fileName").innerHTML = fileRelativeUrl

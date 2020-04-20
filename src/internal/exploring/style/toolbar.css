@@ -6,7 +6,7 @@ footer {
   display: table-row;
   height: 40px;
   background: #404040;
-  transition: transform, background;
+  transition: transform;
   transform: translate3d(0, 0, 0);
   transition-duration: 300ms;
 }
@@ -56,7 +56,18 @@ footer a {
 
 #settingsIconSvg {
   fill: #cecece;
-  width: 25px;
-  height: 25px;
-  margin: 7px;
+  width: 20px;
+  height: 20px;
+  margin: 10px 5px;
+}
+
+#crossIconSvg {
+  fill: #828282;
+  width: 18px;
+  height: 18px;
+  margin: 11px 10px;
+}
+
+.actionBtn:hover {
+  cursor: pointer;
 }

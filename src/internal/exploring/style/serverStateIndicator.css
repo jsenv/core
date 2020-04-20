@@ -2,10 +2,6 @@
   display: inline-block;
 }
 
-.stateIndicator:hover {
-  cursor: pointer;
-}
-
 #stateIndicatorSvg {
   height: 40px;
   width: 40px;
