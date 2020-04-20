@@ -61,8 +61,8 @@ const renderConfigurationPage = async () => {
     .cloneNode(true)
 
   // explorable section
-  const titleElement = configurationPageElement.querySelector("h2")
-  titleElement.innerHTML = projectDirectoryUrl
+  // const titleElement = configurationPageElement.querySelector("h2")
+  // titleElement.innerHTML = projectDirectoryUrl
 
   const response = await fetchUsingXHR(`${apiServerOrigin}/explorables`, {
     method: "POST",

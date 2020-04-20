@@ -1,6 +1,10 @@
 @import "./style/toolbar.css";
 @import "./style/configuration.css";
 
+* {
+  box-sizing: border-box;
+}
+
 html,
 body {
   height: 100%;
@@ -10,7 +14,6 @@ body {
 }
 
 body {
-  display: table;
   width: 100%;
 }
 

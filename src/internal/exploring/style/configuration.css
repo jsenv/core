@@ -3,16 +3,45 @@ main article[data-page="configuration"] {
   width: 100%;
 }
 
+h2 {
+  margin-top: 0px;
+}
+
 #explorables {
   display: table-cell;
-  width: 49%;
-  padding-right: 1%;
+  word-break: break-word;
+  width: 50%;
+  padding: 16px;
+  padding-right: 8px;
+}
+
+#explorables ul {
+  list-style-position: inside;
+  padding-left: 0;
 }
 
 #settings {
   display: table-cell;
-  width: 49%;
-  padding-left: 1%;
+  width: 50%;
+  padding: 16px;
+  padding-left: 8px;
 }
 
 /* TODO: media query too fallback on display block or table-row */
+
+@media screen and (max-width: 640px) {
+  #explorables,
+  #settings {
+    display: block;
+    width: 100%;
+    padding: 16px;
+  }
+
+  #explorables {
+    padding-bottom: 8px;
+  }
+
+  #settings {
+    padding-top: 8px;
+  }
+}
