@@ -32,15 +32,18 @@ const renderToolbar = (fileRelativeUrl) => {
   if (fileRelativeUrl) {
     document.querySelector(".stateIndicator").onclick = toggleTooltip
     document.querySelector(".stateIndicator").style.display = ""
+    document.querySelector(".jsenvLogo").style.display = "none"
+    document.querySelector(".fileName").innerHTML = fileRelativeUrl
   } else {
     document.querySelector(".stateIndicator").style.display = "none"
+    document.querySelector(".jsenvLogo").style.display = "block"
   }
 }
 
 const handleLocation = () => {
+  const fileRelativeUrl = document.location.pathname.slice(1)
   renderToolbar(fileRelativeUrl)
 
-  const fileRelativeUrl = document.location.pathname.slice(1)
   if (fileRelativeUrl) {
     renderExecution(fileRelativeUrl)
   } else {
@@ -166,6 +169,7 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
 }
 
 const execute = async (fileRelativeUrl) => {
+  document.getElementById("checkIconSvg").classList.remove("animateCheck")
   document.getElementById("loaderSvg").classList.add("animateLoader")
 
   mainElement.innerHTML = ``
@@ -196,6 +200,7 @@ const execute = async (fileRelativeUrl) => {
   }
   setTimeout(() => {
     document.getElementById("loaderSvg").classList.remove("animateLoader")
+    document.getElementById("checkIconSvg").classList.add("animateCheck")
   }, 2000)
 }
 

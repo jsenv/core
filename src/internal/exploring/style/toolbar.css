@@ -1,0 +1,62 @@
+@import "./tooltip.css";
+@import "./serverStateIndicator.css";
+@import "./fileExecutionIndicator.css";
+
+footer {
+  display: table-row;
+  height: 40px;
+  background: #404040;
+  transition: transform, background;
+  transform: translate3d(0, 0, 0);
+  transition-duration: 300ms;
+}
+
+footer[data-visible] {
+  transform: translate3d(0, 40px, 0);
+  transition-duration: 300ms;
+}
+
+footer a {
+  display: inline-block;
+}
+
+.toolbarDiv {
+  float: left;
+}
+
+.jsenvLogo {
+  display: none;
+}
+
+#jsenvLogoSvg {
+  width: 34px;
+  height: 34px;
+  margin: 3px 10px;
+}
+
+.fileName {
+  max-width: 40vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  color: #cecece;
+  font-family: monospace;
+  font-size: 15px;
+  margin: 10px;
+}
+
+/* noir foncé : #0c1215 */
+/* plus clair: #0C201E ou #1F262C*/
+/* bleu clair: #24C3B0 */
+/* orange: #FC9B1E */
+
+.toolbarEndDiv {
+  float: right;
+}
+
+#settingsIconSvg {
+  fill: #cecece;
+  width: 25px;
+  height: 25px;
+  margin: 7px;
+}

@@ -1,0 +1,60 @@
+.tooltip {
+  display: none;
+  width: 120px;
+  background-color: rgb(94, 94, 94);
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+  bottom: 120%;
+  /* margin-left: -40px; */
+  margin-left: 3px;
+  font-size: 14px;
+}
+
+.tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  /* left: 50%; */
+  left: 20px;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgb(94, 94, 94) transparent transparent transparent;
+}
+
+.tooltipVisible {
+  display: block;
+  animation: fadeIn ease 0.4s;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.tooltiptextMoved {
+  position: relative;
+  top: -3px;
+}
+
+.retryIcon {
+  display: none;
+  width: 17px;
+  height: 17px;
+  fill: white;
+  padding: 0 2px;
+  position: relative;
+  top: 1px;
+}
+
+.retryIconDisplayed {
+  display: inline-block;
+}
