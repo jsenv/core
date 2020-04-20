@@ -3,7 +3,6 @@ import { connectEventSource } from "./connectEventSource.js"
 
 const {
   mainElement,
-  toolbarElement,
 
   projectDirectoryUrl,
   compileServerOrigin,
@@ -29,7 +28,7 @@ const toggleTooltip = () => {
 }
 
 const closeToolbar = () => {
-  toolbarElement.setAttribute("data-visible", "")
+  document.body.setAttribute("toolbar-hidden", "")
 }
 
 const renderToolbar = (fileRelativeUrl) => {
@@ -81,9 +80,9 @@ const renderConfigurationPage = async () => {
   const toolbarInput = configurationPageElement.querySelector("#toggle-toolbar")
   toolbarInput.onchange = () => {
     if (toolbarInput.checked) {
-      toolbarElement.setAttribute("data-visible", "")
+      document.body.setAttribute("toolbar-hidden", "")
     } else {
-      toolbarElement.removeAttribute("data-visible")
+      document.body.removeAttribute("toolbar-hidden")
     }
   }
 

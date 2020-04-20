@@ -11,49 +11,51 @@
     <main></main>
 
     <!-- exploring toolbar -->
-    <footer>
-      <!-- <div class="jsenvLogo">
-        <a href="/">
-          <svg id="jsenvLogoSvg">
-            <use xlink:href="#jsenvLogoSvgModel"></use>
+    <div id="toolbar-container">
+      <div id="toolbar">
+        <!-- <div class="jsenvLogo">
+          <a href="/">
+            <svg id="jsenvLogoSvg">
+              <use xlink:href="#jsenvLogoSvgModel"></use>
+            </svg>
+          </a>
+        </div> -->
+        <button id="button-state-indicator">
+          <div class="tooltip">
+            <span class="tooltiptext">Unknown state</span>
+            <svg id="retryIcon" class="retryIcon">
+              <use xlink:href="#retryIconSvgModel"></use>
+            </svg>
+          </div>
+          <svg id="stateIndicatorSvg">
+            <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
+            <circle id="stateIndicatorRing" />
           </svg>
-        </a>
-      </div> -->
-      <button id="button-state-indicator">
-        <div class="tooltip">
-          <span class="tooltiptext">Unknown state</span>
-          <svg id="retryIcon" class="retryIcon">
-            <use xlink:href="#retryIconSvgModel"></use>
+        </button>
+        <div>
+          <span class="fileName"></span>
+        </div>
+        <div style="position: relative;">
+          <svg id="loaderSvg" width="35px" height="35px">
+            <use xlink:href="#loaderSvgModel"></use>
+          </svg>
+          <svg id="checkIconSvg" class="checkmark" viewBox="0 0 52 52">
+            <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
           </svg>
         </div>
-        <svg id="stateIndicatorSvg">
-          <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
-          <circle id="stateIndicatorRing" />
-        </svg>
-      </button>
-      <div>
-        <span class="fileName"></span>
+        <div style="width: 100%;"></div>
+        <a href="/">
+          <svg id="settingsIconSvg" width="35px" height="35px">
+            <use xlink:href="#settingsIconSvgModel"></use>
+          </svg>
+        </a>
+        <button id="button-close-toolbar">
+          <svg id="crossIconSvg" width="35px" height="35px">
+            <use xlink:href="#crossIconSvgModel"></use>
+          </svg>
+        </button>
       </div>
-      <div style="position: relative;">
-        <svg id="loaderSvg" width="35px" height="35px">
-          <use xlink:href="#loaderSvgModel"></use>
-        </svg>
-        <svg id="checkIconSvg" class="checkmark" viewBox="0 0 52 52">
-          <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
-        </svg>
-      </div>
-      <div style="width: 100%;"></div>
-      <a href="/">
-        <svg id="settingsIconSvg" width="35px" height="35px">
-          <use xlink:href="#settingsIconSvgModel"></use>
-        </svg>
-      </a>
-      <button id="button-close-toolbar">
-        <svg id="crossIconSvg" width="35px" height="35px">
-          <use xlink:href="#crossIconSvgModel"></use>
-        </svg>
-      </button>
-    </footer>
+    </div>
 
     <div style="display: none;">
       <article data-page="configuration">
@@ -83,7 +85,6 @@
     <script>
       window.jsenv = {
         mainElement: document.querySelector("main"),
-        toolbarElement: document.querySelector("footer"),
 
         projectDirectoryUrl: $PROJECT_DIRECTORY_URL,
         compileServerOrigin: $COMPILE_SERVER_ORIGIN,

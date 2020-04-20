@@ -15,12 +15,28 @@ body {
 
 body {
   width: 100%;
-  display: table;
 }
 
 main {
-  height: 100%;
-  display: table-row;
+  width: 100%;
+  padding-bottom: 40px;
+  transition-duration: 300ms;
+}
+
+#toolbar-container {
+  height: 40px;
+  position: fixed;
+  bottom: 0;
+  transition-duration: 300ms;
+}
+
+body[toolbar-hidden] main {
+  padding-bottom: 0;
+}
+
+body[toolbar-hidden] #toolbar-container {
+  height: 0;
+  overflow: hidden;
 }
 
 iframe {
