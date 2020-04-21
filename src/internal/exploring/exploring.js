@@ -28,7 +28,7 @@ const toggleTooltip = () => {
 }
 
 const closeToolbar = () => {
-  document.body.setAttribute("toolbar-hidden", "")
+  document.documentElement.removeAttribute("data-toolbar-visible")
 }
 
 const renderToolbar = (fileRelativeUrl) => {
@@ -80,9 +80,9 @@ const renderConfigurationPage = async () => {
   const toolbarInput = configurationPageElement.querySelector("#toggle-toolbar")
   toolbarInput.onchange = () => {
     if (toolbarInput.checked) {
-      document.body.setAttribute("toolbar-hidden", "")
+      document.documentElement.removeAttribute("data-toolbar-visible")
     } else {
-      document.body.removeAttribute("toolbar-hidden")
+      document.documentElement.setAttribute("data-toolbar-visible", "")
     }
   }
 
@@ -256,17 +256,17 @@ window.addEventListener("mousedown", (mousedownEvent) => {
   if (mousedownEvent.defaultPrevented) {
     return
   }
-  document.body.setAttribute("data-last-interaction", "mouse")
+  document.documentElement.setAttribute("data-last-interaction", "mouse")
 })
 window.addEventListener("touchstart", (touchstartEvent) => {
   if (touchstartEvent.defaultPrevented) {
     return
   }
-  document.body.setAttribute("data-last-interaction", "mouse")
+  document.documentElement.setAttribute("data-last-interaction", "mouse")
 })
 window.addEventListener("keydown", (keydownEvent) => {
   if (keydownEvent.defaultPrevented) {
     return
   }
-  document.body.setAttribute("data-last-interaction", "keyboard")
+  document.documentElement.setAttribute("data-last-interaction", "keyboard")
 })

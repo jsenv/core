@@ -19,24 +19,26 @@ body {
 
 main {
   width: 100%;
-  padding-bottom: 40px;
   transition-duration: 300ms;
 }
 
 #toolbar-container {
-  height: 40px;
+  height: 0;
   position: fixed;
   bottom: 0;
   transition-duration: 300ms;
 }
 
-body[toolbar-hidden] main {
-  padding-bottom: 0;
+html[data-toolbar-visible] #toolbar-container {
+  height: 40px;
 }
 
-body[toolbar-hidden] #toolbar-container {
-  height: 0;
-  overflow: hidden;
+html[data-toolbar-visible] main {
+  padding-bottom: 40px;
+}
+
+html[data-toolbar-visible] {
+  scroll-padding-bottom: 40px;
 }
 
 iframe {
@@ -50,8 +52,8 @@ iframe {
   outline: none;
 }
 
-body[data-last-interaction="keyboard"] #toolbar-container button:focus,
-body[data-last-interaction="keyboard"] #toolbar-container a:focus {
+html[data-last-interaction="keyboard"] #toolbar-container button:focus,
+html[data-last-interaction="keyboard"] #toolbar-container a:focus {
   outline: 2px dotted #7aacfe;
   /* outline: 2px dotted -webkit-focus-ring-color; */
   outline-offset: -2px;
