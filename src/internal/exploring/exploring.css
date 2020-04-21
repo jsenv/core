@@ -44,3 +44,15 @@ iframe {
   width: 100%;
   height: 100%;
 }
+
+#toolbar-container button:focus,
+#toolbar-container a:focus {
+  outline: none;
+}
+
+body[data-last-interaction="keyboard"] #toolbar-container button:focus,
+body[data-last-interaction="keyboard"] #toolbar-container a:focus {
+  outline: 2px dotted #7aacfe;
+  /* outline: 2px dotted -webkit-focus-ring-color; */
+  outline-offset: -2px;
+}

@@ -250,3 +250,23 @@ window.onpopstate = () => {
   handleLocation()
 }
 handleLocation()
+
+// handle data-last-interaction attr on body (focusring)
+window.addEventListener("mousedown", (mousedownEvent) => {
+  if (mousedownEvent.defaultPrevented) {
+    return
+  }
+  document.body.setAttribute("data-last-interaction", "mouse")
+})
+window.addEventListener("touchstart", (touchstartEvent) => {
+  if (touchstartEvent.defaultPrevented) {
+    return
+  }
+  document.body.setAttribute("data-last-interaction", "mouse")
+})
+window.addEventListener("keydown", (keydownEvent) => {
+  if (keydownEvent.defaultPrevented) {
+    return
+  }
+  document.body.setAttribute("data-last-interaction", "keyboard")
+})

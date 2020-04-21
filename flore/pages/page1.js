@@ -1,5 +1,7 @@
 document.body.innerHTML = `
-    <div style="    
+    <div><button>Top</button></div>
+    <a href="#foo">foo</a>
+    <div style="
         width: 300px;
         padding: 30px;
         border: 1px solid grey;
@@ -9,4 +11,7 @@ document.body.innerHTML = `
         Aenean dignissim pellentesque orci sed dignissim. Aenean a libero rutrum, commodo lorem sit amet, fringilla purus. Vivamus pharetra est ipsum, sed egestas ante aliquet vitae. Quisque efficitur tristique diam, quis molestie sem faucibus id. Mauris condimentum placerat tellus aliquet ultrices. Vivamus ex mauris, luctus sed ante eu, facilisis pharetra erat. Fusce nibh orci, volutpat et auctor eu, lobortis quis turpis. Sed consequat mattis risus eget efficitur. Proin viverra justo ac enim posuere, sed gravida urna dignissim. Curabitur viverra bibendum lorem eu pharetra. Interdum et malesuada fames ac ante ipsum primis in faucibus. Nulla pretium arcu id ipsum accumsan mollis ut ac libero. Donec non felis varius elit maximus pulvinar. Morbi aliquet blandit orci non maximus.
         Mauris porta volutpat diam, varius iaculis neque facilisis non. Duis id aliquam turpis. Nunc consequat, mauris ac aliquet tincidunt, ante erat ultrices purus, sit amet auctor mauris mauris eget urna. Aenean sed condimentum velit, id dignissim sem. Cras placerat suscipit dignissim. Integer nec lacus ornare, tempor augue at, faucibus magna. Morbi eu congue mi, feugiat sodales justo.
         Duis sit amet sodales odio. Integer vel pretium leo. Nullam efficitur risus ac sapien ultricies, nec commodo metus convallis. Etiam pellentesque, nulla sed elementum suscipit, odio arcu tempus elit, iaculis faucibus odio leo a dolor. Praesent tincidunt viverra ex, non laoreet dui egestas eu. Donec aliquam, turpis nec convallis aliquet, orci velit pretium nunc, ac pulvinar arcu mi non purus. Nam ultricies mollis interdum. Suspendisse pellentesque ipsum velit, et facilisis libero euismod sed.
-    </div>`
+    </div>
+    <div><button>Bottom</button></div>
+    <h5 id="foo">Foo title</h1>
+    `
