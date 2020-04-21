@@ -10,7 +10,7 @@ startExploring({
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   explorableConfig: {
-    [`./${testDirectoryRelativeUrl}**/pages/*.js`]: true,
+    [`./${testDirectoryRelativeUrl}**/pages/**/*.js`]: true,
     [`./${testDirectoryRelativeUrl}**/.jsenv/**`]: false,
   },
   protocol: "http",

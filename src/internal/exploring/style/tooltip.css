@@ -1,6 +1,5 @@
 .tooltip {
   display: none;
-  width: 120px;
   background-color: rgb(94, 94, 94);
   color: #fff;
   text-align: center;
@@ -9,8 +8,8 @@
   position: absolute;
   z-index: 1;
   bottom: 120%;
-  /* margin-left: -40px; */
   margin-left: 3px;
+  padding: 10px;
   font-size: 14px;
 }
 
@@ -18,7 +17,6 @@
   content: "";
   position: absolute;
   top: 100%;
-  /* left: 50%; */
   left: 20px;
   margin-left: -5px;
   border-width: 5px;

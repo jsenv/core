@@ -21,8 +21,8 @@
           </a>
         </div> -->
         <button id="button-state-indicator">
-          <div class="tooltip">
-            <span class="tooltiptext">Unknown state</span>
+          <div class="tooltip serverState">
+            <span class="tooltipTextServerState">Unknown state</span>
             <svg id="retryIcon" class="retryIcon">
               <use xlink:href="#retryIconSvgModel"></use>
             </svg>
@@ -32,17 +32,37 @@
             <circle id="stateIndicatorRing" />
           </svg>
         </button>
-        <div>
-          <span class="fileName"></span>
+        <div class="fileNameContainer">
+          <input type="text" class="fileName" value="" readonly />
         </div>
-        <div style="position: relative;">
-          <svg id="loaderSvg" width="35px" height="35px">
-            <use xlink:href="#loaderSvgModel"></use>
-          </svg>
-          <svg id="checkIconSvg" class="checkmark" viewBox="0 0 52 52">
-            <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
-          </svg>
-        </div>
+        <button id="button-execution-indicator">
+          <div class="tooltip fileExecution">
+            <span class="tooltipTextFileExecution">Unknown state</span>
+            <svg id="retryIcon" class="retryIcon">
+              <use xlink:href="#retryIconSvgModel"></use>
+            </svg>
+          </div>
+          <div style="position: relative;">
+            <svg id="loaderSvg" width="35px" height="35px">
+              <use xlink:href="#loaderSvgModel"></use>
+            </svg>
+            <svg id="checkIconSvg" class="checkmark" viewBox="0 0 52 52">
+              <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+            </svg>
+            <svg id="failIconSvg" class="failCross" viewBox="0 0 512 512">
+              <rect
+                id="cross_p1"
+                y="67.518"
+                transform="matrix(0.7071 0.7071 -0.7071 0.7071 255.9995 -106.0389)"
+              />
+              <rect
+                id="cross_p2"
+                y="67.519"
+                transform="matrix(0.7071 -0.7071 0.7071 0.7071 -106.039 256.0001)"
+              />
+            </svg>
+          </div>
+        </button>
         <div style="width: 100%;"></div>
         <a href="/">
           <svg id="settingsIconSvg" width="35px" height="35px">

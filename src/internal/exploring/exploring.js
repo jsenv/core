@@ -23,21 +23,36 @@ TODOLIST:
 
 */
 
-const toggleTooltip = () => {
-  document.querySelector(".tooltip").classList.toggle("tooltipVisible")
+const toggleTooltip = (name) => {
+  document.querySelector(`.${name}`).classList.toggle("tooltipVisible")
 }
 
 const closeToolbar = () => {
+  document.querySelector(".serverState").classList.remove("tooltipVisible")
+  document.querySelector(".fileExecution").classList.remove("tooltipVisible")
   document.documentElement.removeAttribute("data-toolbar-visible")
+}
+
+function resizeInput() {
+  if (this.value.length > 40) {
+    this.style.width = "40ch"
+  } else {
+    this.style.width = `${this.value.length}ch`
+  }
 }
 
 const renderToolbar = (fileRelativeUrl) => {
   if (fileRelativeUrl) {
-    document.querySelector("#button-state-indicator").onclick = toggleTooltip
+    document.querySelector("#button-state-indicator").onclick = () => toggleTooltip("serverState")
+    document.querySelector("#button-execution-indicator").onclick = () =>
+      toggleTooltip("fileExecution")
     document.querySelector("#button-close-toolbar").onclick = closeToolbar
 
     document.querySelector("#button-state-indicator").style.display = ""
-    document.querySelector(".fileName").innerHTML = fileRelativeUrl
+    document.querySelector(".fileName").value = fileRelativeUrl
+
+    var input = document.querySelector("input") // get the input element
+    resizeInput.call(input) // immediately call the function
   } else {
     document.querySelector("#button-state-indicator").style.display = "none"
   }
@@ -95,10 +110,10 @@ const renderExecution = async (fileRelativeUrl) => {
   execute(fileRelativeUrl)
 }
 
-const applyStateIndicator = (state) => {
+const applyServerStateIndicator = (state) => {
   const stateIndicator = document.getElementById("stateIndicatorCircle")
   const stateIndicatorRing = document.getElementById("stateIndicatorRing")
-  const tooltiptext = document.querySelector(".tooltiptext")
+  const tooltiptext = document.querySelector(".tooltipTextServerState")
   const retryIcon = document.querySelector(".retryIcon")
 
   // remove all classes before applying the right ones
@@ -148,22 +163,22 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
     (connectionEvent) => {
       if (connectionEvent === "connecting") {
         logEventSource(`connecting to ${eventSourceUrl}`)
-        applyStateIndicator("loading")
+        applyServerStateIndicator("loading")
       } else if (connectionEvent === "failed") {
         logEventSource(`failed to connect to ${eventSourceUrl}`)
-        applyStateIndicator("failure")
+        applyServerStateIndicator("failure")
       } else if (connectionEvent === "connected") {
         logEventSource(`connected to ${eventSourceUrl}`)
-        applyStateIndicator("success")
+        applyServerStateIndicator("success")
       } else if (connectionEvent === "disconnected") {
         logEventSource(`disconnected from ${eventSourceUrl}`)
-        applyStateIndicator("failure")
+        applyServerStateIndicator("failure")
       } else if (connectionEvent === "reconnecting") {
         logEventSource(`connecting to ${eventSourceUrl}`)
-        applyStateIndicator("loading")
+        applyServerStateIndicator("loading")
       } else if (connectionEvent === "reconnected") {
         logEventSource(`reconnected to ${eventSourceUrl} -> reload page`)
-        applyStateIndicator("success")
+        applyServerStateIndicator("success")
         // need full reload (especially in case the server ports have changed)
         document.location.reload()
       }
@@ -171,9 +186,32 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
   )
 }
 
+const applyFileExecutionIndicator = (state, duration) => {
+  const checkIcon = document.getElementById("checkIconSvg")
+  const crossIcon = document.getElementById("failIconSvg")
+  const loader = document.getElementById("loaderSvg")
+  const tooltiptext = document.querySelector(".tooltipTextFileExecution")
+
+  // remove all classes before applying the right ones
+  checkIcon.classList.remove("animateCheck")
+  crossIcon.classList.remove("animateCross")
+  loader.classList.remove("animateLoader")
+
+  if (state === "loading") {
+    loader.classList.add("animateLoader")
+    tooltiptext.innerHTML = "Executing..."
+  } else if (state === "success") {
+    checkIcon.classList.add("animateCheck")
+    tooltiptext.innerHTML = `Execution completed in ${duration}ms`
+  } else if (state === "failure") {
+    crossIcon.classList.add("animateCross")
+    tooltiptext.innerHTML = `Execution failed in ${duration}ms`
+  }
+}
+
 const execute = async (fileRelativeUrl) => {
-  document.getElementById("checkIconSvg").classList.remove("animateCheck")
-  document.getElementById("loaderSvg").classList.add("animateLoader")
+  const startTime = Date.now()
+  applyFileExecutionIndicator("loading")
 
   mainElement.innerHTML = ``
   const iframe = document.createElement("iframe")
@@ -194,17 +232,21 @@ const execute = async (fileRelativeUrl) => {
     collectCoverage: false,
     executionId: fileRelativeUrl,
   })
+  const endTime = Date.now()
+  const duration = endTime - startTime
   if (result.status === "errored") {
     // eslint-disable-next-line no-eval
     const error = window.eval(result.exceptionSource)
     console.log(`error during execution`, error)
+    setTimeout(() => {
+      applyFileExecutionIndicator("failure", duration)
+    }, 2000)
   } else {
     console.log(`execution done`)
+    setTimeout(() => {
+      applyFileExecutionIndicator("success", duration)
+    }, 2000)
   }
-  setTimeout(() => {
-    document.getElementById("loaderSvg").classList.remove("animateLoader")
-    document.getElementById("checkIconSvg").classList.add("animateCheck")
-  }, 2000)
 }
 
 const loadIframe = (iframe, { iframeSrc }) => {

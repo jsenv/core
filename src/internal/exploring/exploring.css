@@ -19,6 +19,9 @@ body {
 
 main {
   width: 100%;
+}
+
+iframe {
   transition-duration: 300ms;
 }
 
@@ -33,7 +36,7 @@ html[data-toolbar-visible] #toolbar-container {
   height: 40px;
 }
 
-html[data-toolbar-visible] main {
+html[data-toolbar-visible] iframe {
   padding-bottom: 40px;
 }
 

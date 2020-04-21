@@ -18,8 +18,7 @@
   background: none;
   border: none;
   height: 100%;
-  padding-top: 0;
-  padding-bottom: 0;
+  padding: 0;
 }
 
 #toolbar button:hover {
@@ -36,15 +35,26 @@
   margin: 3px 10px;
 }
 
+.fileNameContainer {
+  max-width: 40%;
+}
+
 .fileName {
-  display: inline-block;
-  max-width: 40em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #cecece;
+  width: 100%;
+  margin: 10px;
   font-family: monospace;
   font-size: 15px;
-  margin: 10px;
+  color: #cecece;
+  background: #404040;
+  border: transparent;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileName:focus {
+  outline: none;
+  border-bottom: 1px solid grey;
 }
 
 /* noir foncé : #0c1215 */
