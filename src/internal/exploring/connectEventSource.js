@@ -82,11 +82,9 @@ export const connectEventSource = async (
       pendingBackgroundReconnection.start({ notify: false })
     }
 
-    if (reconnectionOnError && !reconnectionFlag && failureReason === FAILURE_REASON_ERROR) {
-      reconnect({
-        reconnectionFlag: ON_ERROR_RECONNECTION_FLAG,
-      })
-    }
+    // important: keep this callback before reconnect
+    // otherwise user would be notified from connecting-> failure
+    // instead of failure -> connecting
 
     CONNECTION_FAILURE({
       failureConsequence,
@@ -95,6 +93,11 @@ export const connectEventSource = async (
       reconnectionFlag,
       ...rest,
     })
+    if (reconnectionOnError && !reconnectionFlag && failureReason === FAILURE_REASON_ERROR) {
+      reconnect({
+        reconnectionFlag: ON_ERROR_RECONNECTION_FLAG,
+      })
+    }
   }
 
   const connect = async ({ onsuccess, onfailure }) => {

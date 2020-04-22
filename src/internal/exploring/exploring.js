@@ -172,19 +172,28 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
       },
       CONNECTED: ({ reconnectionFlag, disconnect }) => {
         if (reconnectionFlag) {
-          logEventSource(`reconnected to ${eventSourceUrl}`)
+          logEventSource(`reconnected to ${eventSourceUrl} -> reload iframe`)
           applyStateIndicator("success", { disconnect })
+          // we have lost connection to the server, we might have missed some file changes
+          // let's re-execute the file
+          // TODO:
+          // It might be unexpected for the user if we re-execute the file when nothing has changed
+          // it might be better to show a message in the ui saying
+          // "Hey connection to the server was lost, what you see might not be the latest change
+          // consider re-executing the file to be sure you are seeing the latest changes"
+          // with a button to re-execute the file and an other to discard this message
+          execute(fileRelativeUrl)
         } else {
           logEventSource(`connected to ${eventSourceUrl}`)
           applyStateIndicator("success", { disconnect })
         }
       },
       reconnectionOnError: true,
-      reconnectionAllocatedMs: 2000, // 1000 * 45, // 45 seconds
+      reconnectionAllocatedMs: 1000 * 30, // 30 seconds
       reconnectionInterval: 1000, // 1 second
       backgroundReconnection: true,
       backgroundReconnectionAllocatedMs: 1000 * 60 * 60 * 24, // 24 hours
-      backgroundReconnectionInterval: 1000, // 1000 * 60 * 5, // 5 minutes
+      backgroundReconnectionInterval: 1000 * 60 * 5, // 5 minutes
     },
   )
 }
