@@ -169,15 +169,13 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
           logEventSource(`failed connection to ${eventSourceUrl}`)
         }
         if (failureConsequence === "renouncing" && failureReason === "script") {
-          logEventSource(`aborted connection to ${eventSourceUrl} aborted`)
+          logEventSource(`aborted connection to ${eventSourceUrl}`)
         }
         if (failureConsequence === "disconnection") {
           logEventSource(`disconnected from ${eventSourceUrl}`)
         }
         // make ui indicate the failure providing a way to reconnect manually
-        applyStateIndicator("failure", {
-          reconnect,
-        })
+        applyStateIndicator("failure", { reconnect })
       },
       CONNECTED: ({ reconnectionFlag, disconnect }) => {
         if (reconnectionFlag) {
@@ -194,11 +192,12 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
           applyStateIndicator("success", { disconnect })
         }
       },
-      reconnectionAllocatedMs: 1000 * 45, // 45 seconds
+      reconnectionOnError: true,
+      reconnectionAllocatedMs: 2000, // 1000 * 45, // 45 seconds
       reconnectionInterval: 1000, // 1 second
-      backgroundReconnection: false,
+      backgroundReconnection: true,
       backgroundReconnectionAllocatedMs: 1000 * 60 * 60 * 24, // 24 hours
-      backgroundReconnectionInterval: 1000 * 60 * 5, // 5 minutes
+      backgroundReconnectionInterval: 1000, // 1000 * 60 * 5, // 5 minutes
     },
   )
 }

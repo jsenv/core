@@ -2,6 +2,8 @@ const FAILURE_CONSEQUENCE_RENOUNCING = "renouncing"
 const FAILURE_CONSEQUENCE_DISCONNECTION = "disconnection"
 const FAILURE_REASON_ERROR = "error"
 const FAILURE_REASON_SCRIPT = "script"
+const BACKGROUND_RECONNECTION_FLAG = "background-reconnection"
+const ON_ERROR_RECONNECTION_FLAG = "on-error-reconnection"
 
 /* eslint-disable new-cap */
 export const connectEventSource = async (
@@ -12,11 +14,15 @@ export const connectEventSource = async (
     CONNECTION_FAILURE = () => {},
     CONNECTED = () => {},
     reconnectionOnError = false,
-    reconnectionAllocatedAttempt = Infinity,
+    reconnectionMaxAttempt = Infinity,
     reconnectionAllocatedMs = Infinity,
-    reconnectionInterval = 1000,
+    reconnectionInterval = 500,
+    // failure to reconnect starts a background attempt to reconnect
+    // it will not notify the attempt nor failure only if it succeeds
+    // any successful connection requested during the background reconnection cancels it
+    // if failed nothing else will be tried
     backgroundReconnection = false,
-    backgroundReconnectionAllocatedAttempt = Infinity,
+    backgroundReconnectionMaxAttempt = Infinity,
     backgroundReconnectionAllocatedMs = Infinity,
     backgroundReconnectionInterval = 1000,
   } = {},
@@ -27,12 +33,21 @@ export const connectEventSource = async (
   }
 
   const eventSourceOrigin = new URL(eventSourceUrl).origin
+  let pendingBackgroundReconnection
 
-  const notifyConnecting = (params) => {
-    CONNECTING(params)
+  const notifyConnecting = ({ reconnectionFlag, ...rest }) => {
+    if (pendingBackgroundReconnection && reconnectionFlag !== BACKGROUND_RECONNECTION_FLAG) {
+      pendingBackgroundReconnection.abort()
+      pendingBackgroundReconnection = undefined
+    }
+    CONNECTING({ reconnectionFlag, ...rest })
   }
-  const notifyConnected = (params) => {
-    CONNECTED(params)
+  const notifyConnected = ({ reconnectionFlag, ...rest }) => {
+    if (pendingBackgroundReconnection && reconnectionFlag !== BACKGROUND_RECONNECTION_FLAG) {
+      pendingBackgroundReconnection.abort()
+      pendingBackgroundReconnection = undefined
+    }
+    CONNECTED({ reconnectionFlag, ...rest })
   }
   const notifyFailure = ({
     failureConsequence,
@@ -41,21 +56,38 @@ export const connectEventSource = async (
     reconnectionFlag,
     ...rest
   }) => {
+    if (reconnectionFlag === BACKGROUND_RECONNECTION_FLAG) {
+      pendingBackgroundReconnection = undefined
+      return
+    }
+
+    if (pendingBackgroundReconnection && reconnectionFlag !== BACKGROUND_RECONNECTION_FLAG) {
+      pendingBackgroundReconnection.abort()
+      pendingBackgroundReconnection = undefined
+    }
+
+    // starts the background reconnection when reconnection fails
+    if (
+      backgroundReconnection &&
+      reconnectionFlag &&
+      reconnectionFlag !== BACKGROUND_RECONNECTION_FLAG
+    ) {
+      pendingBackgroundReconnection = reconnect({
+        reconnectionFlag: BACKGROUND_RECONNECTION_FLAG,
+        reconnectionAutoStart: false,
+        maxAttempt: backgroundReconnectionMaxAttempt,
+        allocatedMs: backgroundReconnectionAllocatedMs,
+        interval: backgroundReconnectionInterval,
+      })
+      pendingBackgroundReconnection.start({ notify: false })
+    }
+
     if (reconnectionOnError && !reconnectionFlag && failureReason === FAILURE_REASON_ERROR) {
       reconnect({
-        reconnectionFlag: "auto-reconnection",
-        reconnectionAllocatedAttempt,
-        reconnectionAllocatedMs,
-        reconnectionInterval,
+        reconnectionFlag: ON_ERROR_RECONNECTION_FLAG,
       })
     }
-    if (backgroundReconnection) {
-      reconnect({
-        reconnectionAllocatedAttempt: backgroundReconnectionAllocatedAttempt,
-        reconnectionAllocatedMs: backgroundReconnectionAllocatedMs,
-        reconnectionInterval: backgroundReconnectionInterval,
-      })
-    }
+
     CONNECTION_FAILURE({
       failureConsequence,
       failureReason,
@@ -131,22 +163,22 @@ export const connectEventSource = async (
     onfailure: ({ failureConsequence, failureReason }) => {
       const reconnect = ({
         reconnectionFlag = true,
-        allocatedAttempt = reconnectionAllocatedAttempt,
+        reconnectionAutoStart = true,
+        maxAttempt = reconnectionMaxAttempt,
         allocatedMs = reconnectionAllocatedMs,
         interval = reconnectionInterval,
       } = {}) => {
         const startTime = Date.now()
         let attemptCount = 1
         let attemptTimeout
-        let abortReconnection
+        let abortAttempt
 
         const attempt = () => {
-          abortReconnection = connect({
+          abortAttempt = connect({
             onsuccess: ({ disconnect }) => {
               notifyConnected({ reconnectionFlag, disconnect })
             },
             onfailure: ({ failureConsequence, failureReason }) => {
-              // the reconnection was a success but we got disconnected for some reason
               if (failureConsequence === FAILURE_CONSEQUENCE_DISCONNECTION) {
                 notifyFailure({
                   failureConsequence,
@@ -162,7 +194,7 @@ export const connectEventSource = async (
                 // tell outside how many time we tried
                 reconnectionAttemptCount: attemptCount,
                 // tell outside for how long we tried
-                reconnectAttemptDuration: consumedMs,
+                reconnectionAttemptDuration: consumedMs,
                 // give a way to retry
                 reconnect,
               }
@@ -177,10 +209,10 @@ export const connectEventSource = async (
                 return
               }
 
-              if (attemptCount >= allocatedAttempt) {
+              if (attemptCount >= maxAttempt) {
                 notifyFailure({
                   failureConsequence: FAILURE_CONSEQUENCE_RENOUNCING,
-                  failureReason: `could not connect after ${allocatedAttempt} attempt`,
+                  failureReason: `could not connect after ${maxAttempt} attempt`,
                   ...meta,
                 })
                 return
@@ -193,7 +225,7 @@ export const connectEventSource = async (
                 }, ms)
               }
 
-              if (allocatedMs !== Infinity && typeof allocatedMs === "number") {
+              if (allocatedMs && allocatedMs !== Infinity) {
                 const remainingMs = allocatedMs - consumedMs
                 if (remainingMs <= 0) {
                   notifyFailure({
@@ -211,14 +243,26 @@ export const connectEventSource = async (
           })
         }
 
-        attempt()
-        notifyConnecting({
-          reconnectionFlag,
-          abort: () => {
-            abortReconnection()
-            clearTimeout(attemptTimeout)
-          },
-        })
+        const abort = () => {
+          abortAttempt()
+          clearTimeout(attemptTimeout)
+        }
+
+        const start = ({ notify = true } = {}) => {
+          attempt()
+          if (notify) {
+            notifyConnecting({
+              reconnectionFlag,
+              abort,
+            })
+          }
+        }
+
+        if (reconnectionAutoStart) {
+          start()
+        }
+
+        return { start, abort }
       }
 
       notifyFailure({
