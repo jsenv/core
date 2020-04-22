@@ -157,11 +157,11 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
         logEventSource(`connecting to ${eventSourceUrl}`)
         applyStateIndicator("loading", { abort })
       },
-      CONNECTION_FAILURE: ({ failureConsequence, failureReason, reconnect }) => {
-        if (failureConsequence === "renouncing" && failureReason === "error") {
+      CONNECTION_FAILURE: ({ failureConsequence, reconnectionFlag, reconnect }) => {
+        if (failureConsequence === "renouncing" && reconnectionFlag) {
           logEventSource(`failed connection to ${eventSourceUrl}`)
         }
-        if (failureConsequence === "renouncing" && failureReason === "script") {
+        if (failureConsequence === "renouncing" && !reconnectionFlag) {
           logEventSource(`aborted connection to ${eventSourceUrl}`)
         }
         if (failureConsequence === "disconnection") {
@@ -189,11 +189,16 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
         }
       },
       reconnectionOnError: true,
-      reconnectionAllocatedMs: 1000 * 30, // 30 seconds
-      reconnectionInterval: 1000, // 1 second
+      reconnectionAllocatedMs: 1000 * 1, // 30 seconds
+      reconnectionIntervalCompute: () => 1000, // 1 second
       backgroundReconnection: true,
       backgroundReconnectionAllocatedMs: 1000 * 60 * 60 * 24, // 24 hours
-      backgroundReconnectionInterval: 1000 * 60 * 5, // 5 minutes
+      backgroundReconnectionIntervalCompute: (attemptCount) => {
+        return Math.min(
+          Math.pow(2, attemptCount) * 1000, // 1s, 2s, 4s, 8s, 16s, ...
+          1000 * 60 * 10, // 10 minutes
+        )
+      },
     },
   )
 }
