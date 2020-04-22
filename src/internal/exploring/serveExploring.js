@@ -1,5 +1,4 @@
 import { resolveUrl, readFile, urlToRelativeUrl } from "@jsenv/util"
-import { getBrowserExecutionDynamicData } from "../runtime/getBrowserExecutionDynamicData.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_OTHERWISE } from "../CONSTANTS.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
@@ -20,10 +19,7 @@ export const serveExploring = async (
     compileServerOrigin,
     outDirectoryRelativeUrl,
     compileServerGroupMap,
-    htmlFileRelativeUrl,
     importMapFileRelativeUrl,
-    apiServerOrigin,
-    explorableConfig,
   },
 ) => {
   const html = await readFile(exploringHtmlFileUrl)
@@ -39,28 +35,10 @@ export const serveExploring = async (
 
   const exploringCssRelativeUrl = urlToRelativeUrl(exploringCssFileUrl, projectDirectoryUrl)
 
-  const {
-    browserRuntimeFileRelativeUrl,
-    sourcemapMainFileRelativeUrl,
-    sourcemapMappingFileRelativeUrl,
-  } = getBrowserExecutionDynamicData({ projectDirectoryUrl, compileServerOrigin })
-
   const replacements = {
     $STYLE_HREF: resolveUrl(exploringCssRelativeUrl, compileDirectoryUrl),
     $COMPILE_SERVER_IMPORT_MAP_SRC: resolveUrl(importMapFileRelativeUrl, compileDirectoryUrl),
     $SYSTEMJS_SCRIPT_SRC: resolveUrl(SYSTEMJS_RELATIVE_URL, compileServerOrigin),
-
-    $PROJECT_DIRECTORY_URL: JSON.stringify(projectDirectoryUrl),
-    $COMPILE_SERVER_ORIGIN: JSON.stringify(compileServerOrigin),
-    $OUT_DIRECTORY_RELATIVE_URL: JSON.stringify(outDirectoryRelativeUrl),
-    $HTML_FILE_RELATIVE_URL: JSON.stringify(htmlFileRelativeUrl),
-    $BROWSER_RUNTIME_FILE_RELATIVE_URL: JSON.stringify(browserRuntimeFileRelativeUrl),
-    $SOURCEMAP_MAIN_FILE_RELATIVE_URL: JSON.stringify(sourcemapMainFileRelativeUrl),
-    $SOURCEMAP_MAPPING_FILE_RELATIVE_URL: JSON.stringify(sourcemapMappingFileRelativeUrl),
-
-    $API_SERVER_ORIGIN: JSON.stringify(apiServerOrigin),
-    $EXPLORABLE_CONFIG: JSON.stringify(explorableConfig),
-
     $JSENV_EXPLORING_FILE: JSON.stringify(exploringFileCompiledUrl),
   }
   const body = Object.keys(replacements).reduce((previous, key) => {

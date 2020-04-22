@@ -1,26 +1,15 @@
 import { fetchUsingXHR } from "../fetchUsingXHR.js"
 import { connectEventSource } from "./connectEventSource.js"
 
-const {
-  mainElement,
+const loadExploringConfig = async () => {
+  const exploringJsonResponse = await fetchUsingXHR("/exploring.json", {
+    headers: { "x-jsenv-exploring": "1" },
+  })
+  const exploringConfig = await exploringJsonResponse.json()
+  return exploringConfig
+}
 
-  projectDirectoryUrl,
-  compileServerOrigin,
-  outDirectoryRelativeUrl,
-  htmlFileRelativeUrl,
-  browserRuntimeFileRelativeUrl,
-  sourcemapMainFileRelativeUrl,
-  sourcemapMappingFileRelativeUrl,
-
-  explorableConfig,
-} = window.jsenv
-
-/*
-TODOLIST:
-
-- faire un certificat https avec un custom authority qu'on trust et voir si ça fix les soucis sour chrome
-
-*/
+const mainElement = document.querySelector("main")
 
 const toggleTooltip = (name) => {
   document.querySelector(`.${name}`).classList.toggle("tooltipVisible")
@@ -69,6 +58,8 @@ const handleLocation = () => {
 }
 
 const renderConfigurationPage = async () => {
+  const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig()
+
   document.title = `${projectDirectoryUrl}`
   // it would be great to have a loading step in the html display at this point
   mainElement.innerHTML = ""
@@ -81,7 +72,7 @@ const renderConfigurationPage = async () => {
   // const titleElement = configurationPageElement.querySelector("h2")
   // titleElement.innerHTML = projectDirectoryUrl
 
-  const response = await fetchUsingXHR(`./explorables`, {
+  const response = await fetchUsingXHR(`/explorables`, {
     method: "POST",
     body: JSON.stringify(explorableConfig),
     headers: {
@@ -181,14 +172,8 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
       },
       CONNECTED: ({ reconnectionFlag, disconnect }) => {
         if (reconnectionFlag) {
-          // maybe we should auto open the tooltip
-          // saying hey the server connection is back you should refresh
-          // with a refresh action and user could decide to manually refresh that would be better
-          // for the user experience in my opinion (otherwise it happens with zero control for user)
           logEventSource(`reconnected to ${eventSourceUrl}`)
           applyStateIndicator("success", { disconnect })
-          // need full reload (especially in case the server ports have changed)
-          // document.location.reload()
         } else {
           logEventSource(`connected to ${eventSourceUrl}`)
           applyStateIndicator("success", { disconnect })
@@ -235,21 +220,37 @@ const execute = async (fileRelativeUrl) => {
   const iframe = document.createElement("iframe")
   mainElement.appendChild(iframe)
 
-  const iframeSrc = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
-
-  await loadIframe(iframe, { iframeSrc })
-
-  const result = await performIframeAction(iframe, "execute", {
-    fileRelativeUrl,
+  const {
     compileServerOrigin,
+    htmlFileRelativeUrl,
     outDirectoryRelativeUrl,
     browserRuntimeFileRelativeUrl,
     sourcemapMainFileRelativeUrl,
     sourcemapMappingFileRelativeUrl,
-    collectNamespace: true,
-    collectCoverage: false,
-    executionId: fileRelativeUrl,
-  })
+  } = await loadExploringConfig()
+
+  const iframeSrc = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
+
+  await loadIframe(iframe, { iframeSrc })
+
+  const result = await performIframeAction(
+    iframe,
+    "execute",
+    [
+      {
+        fileRelativeUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
+        browserRuntimeFileRelativeUrl,
+        sourcemapMainFileRelativeUrl,
+        sourcemapMappingFileRelativeUrl,
+        collectNamespace: true,
+        collectCoverage: false,
+        executionId: fileRelativeUrl,
+      },
+    ],
+    { compileServerOrigin },
+  )
   const endTime = Date.now()
   const duration = endTime - startTime
   if (result.status === "errored") {
@@ -278,8 +279,8 @@ const loadIframe = (iframe, { iframeSrc }) => {
   })
 }
 
-const performIframeAction = (iframe, action, ...args) => {
-  sendMessageToIframe(iframe, { action, args })
+const performIframeAction = (iframe, action, args, { compileServerOrigin }) => {
+  sendMessageToIframe(iframe, { action, args }, { compileServerOrigin })
 
   return new Promise((resolve, reject) => {
     const onMessage = (messageEvent) => {
@@ -302,7 +303,7 @@ const performIframeAction = (iframe, action, ...args) => {
   })
 }
 
-const sendMessageToIframe = (iframe, data) => {
+const sendMessageToIframe = (iframe, data, { compileServerOrigin }) => {
   iframe.contentWindow.postMessage(data, compileServerOrigin)
 }
 

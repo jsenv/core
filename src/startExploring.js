@@ -22,6 +22,7 @@ import {
   readRequestBodyAsString,
 } from "@jsenv/server"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
+import { getBrowserExecutionDynamicData } from "./internal/runtime/getBrowserExecutionDynamicData.js"
 import { serveExploring } from "./internal/exploring/serveExploring.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { jsenvHtmlFileUrl } from "./internal/jsenvHtmlFileUrl.js"
@@ -228,9 +229,41 @@ export const startExploring = async ({
       serverName: "exploring server",
       requestToResponse: (request) =>
         firstService(
-          // eventsource
+          // get important info
           () => {
-            return livereloadServerSentEventService(request)
+            if (
+              request.ressource === "/exploring.json" &&
+              request.method === "GET" &&
+              "x-jsenv-exploring" in request.headers
+            ) {
+              const {
+                browserRuntimeFileRelativeUrl,
+                sourcemapMainFileRelativeUrl,
+                sourcemapMappingFileRelativeUrl,
+              } = getBrowserExecutionDynamicData({ projectDirectoryUrl, compileServerOrigin })
+
+              const data = {
+                projectDirectoryUrl,
+                compileServerOrigin,
+                outDirectoryRelativeUrl,
+                htmlFileRelativeUrl,
+                browserRuntimeFileRelativeUrl,
+                sourcemapMainFileRelativeUrl,
+                sourcemapMappingFileRelativeUrl,
+                explorableConfig,
+              }
+              const json = JSON.stringify(data)
+              return {
+                status: 200,
+                headers: {
+                  "cache-control": "no-store",
+                  "content-type": "application/json",
+                  "content-length": Buffer.byteLength(json),
+                },
+                body: json,
+              }
+            }
+            return null
           },
           // list explorable files
           async () => {
@@ -267,6 +300,10 @@ export const startExploring = async ({
               }
             }
             return null
+          },
+          // eventsource
+          () => {
+            return livereloadServerSentEventService(request)
           },
           // exploring single page app
           () => {
