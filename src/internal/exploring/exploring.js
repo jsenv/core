@@ -12,7 +12,6 @@ const {
   sourcemapMainFileRelativeUrl,
   sourcemapMappingFileRelativeUrl,
 
-  apiServerOrigin,
   explorableConfig,
 } = window.jsenv
 
@@ -82,9 +81,12 @@ const renderConfigurationPage = async () => {
   // const titleElement = configurationPageElement.querySelector("h2")
   // titleElement.innerHTML = projectDirectoryUrl
 
-  const response = await fetchUsingXHR(`${apiServerOrigin}/explorables`, {
+  const response = await fetchUsingXHR(`./explorables`, {
     method: "POST",
     body: JSON.stringify(explorableConfig),
+    headers: {
+      "x-jsenv-exploring": "1",
+    },
   })
   const files = await response.json()
 

@@ -19,7 +19,7 @@ import {
   jsenvPrivateKey,
   jsenvCertificate,
   createSSERoom,
-  readRequestBodyAsString
+  readRequestBodyAsString,
 } from "@jsenv/server"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { serveExploring } from "./internal/exploring/serveExploring.js"
@@ -31,7 +31,6 @@ export const startExploring = async ({
   cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
-  apiServerLogLevel = "warn",
   trackingLogLevel = "warn",
 
   htmlFileRelativeUrl,
@@ -59,7 +58,6 @@ export const startExploring = async ({
   ip = "127.0.0.1",
   port = 0,
   compileServerPort = 0, // random available port
-  apiServerPort = 0,
 }) => {
   return catchCancellation(async () => {
     const trackingLogger = createLogger({ logLevel: trackingLogLevel })
@@ -224,15 +222,23 @@ export const startExploring = async ({
     // to get a normalized importMapFileRelativeUrl
     importMapFileRelativeUrl = compileServer.importMapFileRelativeUrl
 
-    const apiServer = await startServer({
+    const exploringServer = await startServer({
       cancellationToken,
-      logLevel: apiServerLogLevel,
-      serverName: "api server",
+      logLevel,
+      serverName: "exploring server",
       requestToResponse: (request) =>
         firstService(
+          // eventsource
+          () => {
+            return livereloadServerSentEventService(request)
+          },
           // list explorable files
           async () => {
-            if (request.ressource === "/explorables" && request.method === "POST") {
+            if (
+              request.ressource === "/explorables" &&
+              request.method === "POST" &&
+              "x-jsenv-exploring" in request.headers
+            ) {
               const explorableConfig = JSON.parse(await readRequestBodyAsString(request.body))
               const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap({
                 explorable: explorableConfig,
@@ -262,24 +268,6 @@ export const startExploring = async ({
             }
             return null
           },
-        ),
-      sendInternalErrorStack: true,
-      keepProcessAlive,
-      port: apiServerPort,
-      ...mandatoryParamsForServerToCommunicate,
-      ...corsParams,
-    })
-
-    const exploringServer = await startServer({
-      cancellationToken,
-      logLevel,
-      serverName: "exploring server",
-      requestToResponse: (request) =>
-        firstService(
-          // eventsource
-          () => {
-            return livereloadServerSentEventService(request)
-          },
           // exploring single page app
           () => {
             return serveExploring(request, {
@@ -289,7 +277,6 @@ export const startExploring = async ({
               compileServerGroupMap,
               htmlFileRelativeUrl,
               importMapFileRelativeUrl,
-              apiServerOrigin: apiServer.origin,
               explorableConfig,
             })
           },
@@ -319,21 +306,16 @@ export const startExploring = async ({
     compileServer.stoppedPromise.then(
       (reason) => {
         exploringServer.stop(reason)
-        apiServer.stop(reason)
       },
       () => {},
     )
     exploringServer.stoppedPromise.then((reason) => {
       stopExploringCancellationSource.cancel(reason)
     })
-    apiServer.stoppedPromise.then((reason) => {
-      stopExploringCancellationSource.cancel(reason)
-    })
 
     return {
       exploringServer,
       compileServer,
-      apiServer,
     }
   }).catch((e) => {
     process.exitCode = 1
