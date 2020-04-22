@@ -66,11 +66,12 @@ export const connectEventSource = async (
       pendingBackgroundReconnection = undefined
     }
 
-    // starts the background reconnection when reconnection fails
+    // starts the background reconnection when reconnection fail byitself (reason !== SCRIPT)
     if (
       backgroundReconnection &&
       reconnectionFlag &&
-      reconnectionFlag !== BACKGROUND_RECONNECTION_FLAG
+      reconnectionFlag !== BACKGROUND_RECONNECTION_FLAG &&
+      failureReason !== FAILURE_REASON_SCRIPT
     ) {
       pendingBackgroundReconnection = reconnect({
         reconnectionFlag: BACKGROUND_RECONNECTION_FLAG,
@@ -85,7 +86,6 @@ export const connectEventSource = async (
     // important: keep this callback before reconnect
     // otherwise user would be notified from connecting-> failure
     // instead of failure -> connecting
-
     CONNECTION_FAILURE({
       failureConsequence,
       failureReason,
