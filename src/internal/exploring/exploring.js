@@ -110,7 +110,7 @@ const renderExecution = async (fileRelativeUrl) => {
   execute(fileRelativeUrl)
 }
 
-const applyServerStateIndicator = (state) => {
+const applyStateIndicator = (state, { abort, disconnect, reconnect }) => {
   const stateIndicator = document.getElementById("stateIndicatorCircle")
   const stateIndicatorRing = document.getElementById("stateIndicatorRing")
   const tooltiptext = document.querySelector(".tooltipTextServerState")
@@ -120,21 +120,20 @@ const applyServerStateIndicator = (state) => {
   stateIndicatorRing.classList.remove("loadingRing")
   stateIndicator.classList.remove("loadingCircle", "redCircle", "greenCircle")
   retryIcon.classList.remove("retryIconDisplayed")
-  tooltiptext.classList.remove("tooltiptextMoved")
 
   if (state === "loading") {
     stateIndicator.classList.add("loadingCircle")
     stateIndicatorRing.classList.add("loadingRing")
-    tooltiptext.innerHTML = "Connecting to server..."
+    tooltiptext.innerHTML = `Connecting to server... <a href="javascript:void(0);">cancel</a>`
+    tooltiptext.querySelector("a").onclick = abort
   } else if (state === "success") {
     stateIndicator.classList.add("greenCircle")
-    tooltiptext.innerHTML = "Server online"
+    tooltiptext.innerHTML = `Connected to server <a href="javascript:void(0);">disconnect</a>`
+    tooltiptext.querySelector("a").onclick = disconnect
   } else if (state === "failure") {
     stateIndicator.classList.add("redCircle")
-    tooltiptext.innerHTML = "Server offline"
-    tooltiptext.classList.add("tooltiptextMoved")
-    retryIcon.classList.add("retryIconDisplayed")
-    retryIcon.onclick = () => document.location.reload()
+    tooltiptext.innerHTML = `Disconnected from server <a href="javascript:void(0);">reconnect</a>`
+    tooltiptext.querySelector("a").onclick = reconnect
   }
 }
 
@@ -148,7 +147,7 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
     )
   }
 
-  return connectEventSource(
+  connectEventSource(
     eventSourceUrl,
     {
       "file-changed": (event) => {
@@ -160,28 +159,46 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
         execute(fileRelativeUrl)
       },
     },
-    (connectionEvent) => {
-      if (connectionEvent === "connecting") {
+    {
+      CONNECTING: ({ abort }) => {
         logEventSource(`connecting to ${eventSourceUrl}`)
-        applyServerStateIndicator("loading")
-      } else if (connectionEvent === "failed") {
-        logEventSource(`failed to connect to ${eventSourceUrl}`)
-        applyServerStateIndicator("failure")
-      } else if (connectionEvent === "connected") {
-        logEventSource(`connected to ${eventSourceUrl}`)
-        applyServerStateIndicator("success")
-      } else if (connectionEvent === "disconnected") {
-        logEventSource(`disconnected from ${eventSourceUrl}`)
-        applyServerStateIndicator("failure")
-      } else if (connectionEvent === "reconnecting") {
-        logEventSource(`connecting to ${eventSourceUrl}`)
-        applyServerStateIndicator("loading")
-      } else if (connectionEvent === "reconnected") {
-        logEventSource(`reconnected to ${eventSourceUrl} -> reload page`)
-        applyServerStateIndicator("success")
-        // need full reload (especially in case the server ports have changed)
-        document.location.reload()
-      }
+        applyStateIndicator("loading", { abort })
+      },
+      CONNECTION_FAILURE: ({ failureConsequence, failureReason, reconnect }) => {
+        if (failureConsequence === "renouncing" && failureReason === "error") {
+          logEventSource(`failed connection to ${eventSourceUrl}`)
+        }
+        if (failureConsequence === "renouncing" && failureReason === "script") {
+          logEventSource(`aborted connection to ${eventSourceUrl} aborted`)
+        }
+        if (failureConsequence === "disconnection") {
+          logEventSource(`disconnected from ${eventSourceUrl}`)
+        }
+        // make ui indicate the failure providing a way to reconnect manually
+        applyStateIndicator("failure", {
+          reconnect,
+        })
+      },
+      CONNECTED: ({ reconnectionFlag, disconnect }) => {
+        if (reconnectionFlag) {
+          // maybe we should auto open the tooltip
+          // saying hey the server connection is back you should refresh
+          // with a refresh action and user could decide to manually refresh that would be better
+          // for the user experience in my opinion (otherwise it happens with zero control for user)
+          logEventSource(`reconnected to ${eventSourceUrl}`)
+          applyStateIndicator("success", { disconnect })
+          // need full reload (especially in case the server ports have changed)
+          // document.location.reload()
+        } else {
+          logEventSource(`connected to ${eventSourceUrl}`)
+          applyStateIndicator("success", { disconnect })
+        }
+      },
+      reconnectionAllocatedMs: 1000 * 45, // 45 seconds
+      reconnectionInterval: 1000, // 1 second
+      backgroundReconnection: false,
+      backgroundReconnectionAllocatedMs: 1000 * 60 * 60 * 24, // 24 hours
+      backgroundReconnectionInterval: 1000 * 60 * 5, // 5 minutes
     },
   )
 }

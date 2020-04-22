@@ -15,5 +15,6 @@ startExploring({
   },
   protocol: "http",
   port: 3400,
+  compileServerPort: 3456,
   keepProcessAlive: true,
 })
