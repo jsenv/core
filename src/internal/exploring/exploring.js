@@ -1,6 +1,19 @@
 import { fetchUsingXHR } from "../fetchUsingXHR.js"
 import { connectEventSource } from "./connectEventSource.js"
 
+const jsenvLogger = {
+  log: (message) => {
+    // a nice yellow:ffdc00
+    const backgroundColor = "#F7931E" // jsenv logo color
+
+    console.log(
+      `%jsenv%c ${message}`,
+      `background: ${backgroundColor}; color: black; padding: 1px 3px; margin: 0 1px`,
+      "",
+    )
+  },
+}
+
 const loadExploringConfig = async () => {
   const exploringJsonResponse = await fetchUsingXHR("/exploring.json", {
     headers: { "x-jsenv-exploring": "1" },
@@ -103,7 +116,7 @@ const renderExecution = async (fileRelativeUrl) => {
   execute(fileRelativeUrl)
 }
 
-const applyStateIndicator = (state, { abort, disconnect, reconnect }) => {
+const applyStateIndicator = (state, { connect, abort, disconnect, reconnect }) => {
   const stateIndicator = document.getElementById("stateIndicatorCircle")
   const stateIndicatorRing = document.getElementById("stateIndicatorRing")
   const tooltiptext = document.querySelector(".tooltipTextServerState")
@@ -114,93 +127,92 @@ const applyStateIndicator = (state, { abort, disconnect, reconnect }) => {
   stateIndicator.classList.remove("loadingCircle", "redCircle", "greenCircle")
   retryIcon.classList.remove("retryIconDisplayed")
 
-  if (state === "loading") {
+  if (state === "off") {
+    tooltiptext.innerHTML = `Livereloading disabled <a href="javascript:void(0);">connect</a>`
+    tooltiptext.querySelector("a").onclick = connect
+  } else if (state === "connecting") {
     stateIndicator.classList.add("loadingCircle")
     stateIndicatorRing.classList.add("loadingRing")
-    tooltiptext.innerHTML = `Connecting to server... <a href="javascript:void(0);">cancel</a>`
+    tooltiptext.innerHTML = `Connecting to livereload event source... <a href="javascript:void(0);">cancel</a>`
     tooltiptext.querySelector("a").onclick = abort
-  } else if (state === "success") {
+  } else if (state === "connected") {
     stateIndicator.classList.add("greenCircle")
-    tooltiptext.innerHTML = `Connected to server <a href="javascript:void(0);">disconnect</a>`
+    tooltiptext.innerHTML = `Connected to livereload server <a href="javascript:void(0);">disconnect</a>`
     tooltiptext.querySelector("a").onclick = disconnect
-  } else if (state === "failure") {
+  } else if (state === "disconnected") {
     stateIndicator.classList.add("redCircle")
-    tooltiptext.innerHTML = `Disconnected from server <a href="javascript:void(0);">reconnect</a>`
+    tooltiptext.innerHTML = `Disconnected from livereload server <a href="javascript:void(0);">reconnect</a>`
     tooltiptext.querySelector("a").onclick = reconnect
   }
 }
 
 const connectExecutionEventSource = (fileRelativeUrl) => {
   const eventSourceUrl = `${window.origin}/${fileRelativeUrl}`
-  const logEventSource = (message) => {
-    console.log(
-      `%ceventSource%c ${message}`,
-      `background: #ffdc00; color: black; padding: 1px 3px; margin: 0 1px`,
-      "",
+
+  const connect = () => {
+    connectEventSource(
+      eventSourceUrl,
+      {
+        "file-changed": (event) => {
+          jsenvLogger.log(`${event.data} changed -> reload iframe`)
+          execute(fileRelativeUrl)
+        },
+        "file-removed": ({ data }) => {
+          jsenvLogger.log(`${data} removed -> reload iframe`)
+          execute(fileRelativeUrl)
+        },
+      },
+      {
+        CONNECTING: ({ abort }) => {
+          jsenvLogger.log(`connecting to ${eventSourceUrl}`)
+          applyStateIndicator("connecting", { abort })
+        },
+        CONNECTION_FAILURE: ({ failureConsequence, reconnectionFlag, reconnect }) => {
+          if (failureConsequence === "renouncing" && reconnectionFlag) {
+            jsenvLogger.log(`failed connection to ${eventSourceUrl}`)
+          }
+          if (failureConsequence === "renouncing" && !reconnectionFlag) {
+            jsenvLogger.log(`aborted connection to ${eventSourceUrl}`)
+          }
+          if (failureConsequence === "disconnection") {
+            jsenvLogger.log(`disconnected from ${eventSourceUrl}`)
+          }
+          // make ui indicate the failure providing a way to reconnect manually
+          applyStateIndicator("disconnected", { reconnect })
+        },
+        CONNECTED: ({ reconnectionFlag, disconnect }) => {
+          if (reconnectionFlag) {
+            jsenvLogger.log(`reconnected to ${eventSourceUrl} -> reload iframe`)
+            applyStateIndicator("connected", { disconnect })
+            // we have lost connection to the server, we might have missed some file changes
+            // let's re-execute the file
+            // TODO:
+            // It might be unexpected for the user if we re-execute the file when nothing has changed
+            // it might be better to show a message in the ui saying
+            // "Hey connection to the server was lost, what you see might not be the latest change
+            // consider re-executing the file to be sure you are seeing the latest changes"
+            // with a button to re-execute the file and an other to discard this message
+            execute(fileRelativeUrl)
+          } else {
+            jsenvLogger.log(`connected to ${eventSourceUrl}`)
+            applyStateIndicator("connected", { disconnect })
+          }
+        },
+        reconnectionOnError: true,
+        reconnectionAllocatedMs: 1000 * 1, // 30 seconds
+        reconnectionIntervalCompute: () => 1000, // 1 second
+        backgroundReconnection: true,
+        backgroundReconnectionAllocatedMs: 1000 * 60 * 60 * 24, // 24 hours
+        backgroundReconnectionIntervalCompute: (attemptCount) => {
+          return Math.min(
+            Math.pow(2, attemptCount) * 1000, // 1s, 2s, 4s, 8s, 16s, ...
+            1000 * 60 * 10, // 10 minutes
+          )
+        },
+      },
     )
   }
-
-  connectEventSource(
-    eventSourceUrl,
-    {
-      "file-changed": (event) => {
-        logEventSource(`${event.data} changed -> reload iframe`)
-        execute(fileRelativeUrl)
-      },
-      "file-removed": ({ data }) => {
-        logEventSource(`${data} removed -> reload iframe`)
-        execute(fileRelativeUrl)
-      },
-    },
-    {
-      CONNECTING: ({ abort }) => {
-        logEventSource(`connecting to ${eventSourceUrl}`)
-        applyStateIndicator("loading", { abort })
-      },
-      CONNECTION_FAILURE: ({ failureConsequence, reconnectionFlag, reconnect }) => {
-        if (failureConsequence === "renouncing" && reconnectionFlag) {
-          logEventSource(`failed connection to ${eventSourceUrl}`)
-        }
-        if (failureConsequence === "renouncing" && !reconnectionFlag) {
-          logEventSource(`aborted connection to ${eventSourceUrl}`)
-        }
-        if (failureConsequence === "disconnection") {
-          logEventSource(`disconnected from ${eventSourceUrl}`)
-        }
-        // make ui indicate the failure providing a way to reconnect manually
-        applyStateIndicator("failure", { reconnect })
-      },
-      CONNECTED: ({ reconnectionFlag, disconnect }) => {
-        if (reconnectionFlag) {
-          logEventSource(`reconnected to ${eventSourceUrl} -> reload iframe`)
-          applyStateIndicator("success", { disconnect })
-          // we have lost connection to the server, we might have missed some file changes
-          // let's re-execute the file
-          // TODO:
-          // It might be unexpected for the user if we re-execute the file when nothing has changed
-          // it might be better to show a message in the ui saying
-          // "Hey connection to the server was lost, what you see might not be the latest change
-          // consider re-executing the file to be sure you are seeing the latest changes"
-          // with a button to re-execute the file and an other to discard this message
-          execute(fileRelativeUrl)
-        } else {
-          logEventSource(`connected to ${eventSourceUrl}`)
-          applyStateIndicator("success", { disconnect })
-        }
-      },
-      reconnectionOnError: true,
-      reconnectionAllocatedMs: 1000 * 1, // 30 seconds
-      reconnectionIntervalCompute: () => 1000, // 1 second
-      backgroundReconnection: true,
-      backgroundReconnectionAllocatedMs: 1000 * 60 * 60 * 24, // 24 hours
-      backgroundReconnectionIntervalCompute: (attemptCount) => {
-        return Math.min(
-          Math.pow(2, attemptCount) * 1000, // 1s, 2s, 4s, 8s, 16s, ...
-          1000 * 60 * 10, // 10 minutes
-        )
-      },
-    },
-  )
+  connect()
 }
 
 const applyFileExecutionIndicator = (state, duration) => {
