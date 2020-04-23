@@ -223,6 +223,8 @@ export const startExploring = async ({
     // to get a normalized importMapFileRelativeUrl
     importMapFileRelativeUrl = compileServer.importMapFileRelativeUrl
 
+    // NOTE: if exploring server port is taken
+    // compileServer remains listening
     const exploringServer = await startServer({
       cancellationToken,
       logLevel,

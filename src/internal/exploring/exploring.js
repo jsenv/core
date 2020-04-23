@@ -1,6 +1,8 @@
 import { fetchUsingXHR } from "../fetchUsingXHR.js"
 import { connectEventSource } from "./connectEventSource.js"
 
+const PREFERENCE_LIVERELOADING = "livereloading"
+
 const jsenvLogger = {
   log: (message) => {
     // a nice yellow:ffdc00
@@ -12,6 +14,19 @@ const jsenvLogger = {
       "",
     )
   },
+}
+
+const writePreference = (name, value) => {
+  localStorage.setItem(name, JSON.stringify(value))
+}
+
+const readPreference = (name) => {
+  return localStorage.hasOwnProperty(name) ? JSON.parse(localStorage.getItem(name)) : undefined
+}
+
+const livereloadingIsEnabled = () => {
+  const pref = readPreference(PREFERENCE_LIVERELOADING)
+  return pref === undefined ? true : pref
 }
 
 const loadExploringConfig = async () => {
@@ -112,8 +127,15 @@ const renderConfigurationPage = async () => {
 
 const renderExecution = async (fileRelativeUrl) => {
   document.title = `${fileRelativeUrl}`
-  connectExecutionEventSource(fileRelativeUrl)
-  execute(fileRelativeUrl)
+
+  const livereloading = livereloadingIsEnabled()
+  const { connect } = createLivereloading(fileRelativeUrl)
+  if (livereloading) {
+    connect()
+  } else {
+    applyStateIndicator("off", { connect })
+    execute(fileRelativeUrl)
+  }
 }
 
 const applyStateIndicator = (state, { connect, abort, disconnect, reconnect }) => {
@@ -129,16 +151,25 @@ const applyStateIndicator = (state, { connect, abort, disconnect, reconnect }) =
 
   if (state === "off") {
     tooltiptext.innerHTML = `Livereloading disabled <a href="javascript:void(0);">connect</a>`
-    tooltiptext.querySelector("a").onclick = connect
+    tooltiptext.querySelector("a").onclick = () => {
+      writePreference(PREFERENCE_LIVERELOADING, true)
+      connect()
+    }
   } else if (state === "connecting") {
     stateIndicator.classList.add("loadingCircle")
     stateIndicatorRing.classList.add("loadingRing")
     tooltiptext.innerHTML = `Connecting to livereload event source... <a href="javascript:void(0);">cancel</a>`
-    tooltiptext.querySelector("a").onclick = abort
+    tooltiptext.querySelector("a").onclick = () => {
+      writePreference(PREFERENCE_LIVERELOADING, false)
+      abort()
+    }
   } else if (state === "connected") {
     stateIndicator.classList.add("greenCircle")
     tooltiptext.innerHTML = `Connected to livereload server <a href="javascript:void(0);">disconnect</a>`
-    tooltiptext.querySelector("a").onclick = disconnect
+    tooltiptext.querySelector("a").onclick = () => {
+      writePreference(PREFERENCE_LIVERELOADING, false)
+      disconnect()
+    }
   } else if (state === "disconnected") {
     stateIndicator.classList.add("redCircle")
     tooltiptext.innerHTML = `Disconnected from livereload server <a href="javascript:void(0);">reconnect</a>`
@@ -146,7 +177,7 @@ const applyStateIndicator = (state, { connect, abort, disconnect, reconnect }) =
   }
 }
 
-const connectExecutionEventSource = (fileRelativeUrl) => {
+const createLivereloading = (fileRelativeUrl) => {
   const eventSourceUrl = `${window.origin}/${fileRelativeUrl}`
 
   const connect = () => {
@@ -167,7 +198,12 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
           jsenvLogger.log(`connecting to ${eventSourceUrl}`)
           applyStateIndicator("connecting", { abort })
         },
-        CONNECTION_FAILURE: ({ failureConsequence, reconnectionFlag, reconnect }) => {
+        CONNECTION_FAILURE: ({
+          failureConsequence,
+          failureReason,
+          reconnectionFlag,
+          reconnect,
+        }) => {
           if (failureConsequence === "renouncing" && reconnectionFlag) {
             jsenvLogger.log(`failed connection to ${eventSourceUrl}`)
           }
@@ -177,26 +213,19 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
           if (failureConsequence === "disconnection") {
             jsenvLogger.log(`disconnected from ${eventSourceUrl}`)
           }
-          // make ui indicate the failure providing a way to reconnect manually
-          applyStateIndicator("disconnected", { reconnect })
-        },
-        CONNECTED: ({ reconnectionFlag, disconnect }) => {
-          if (reconnectionFlag) {
-            jsenvLogger.log(`reconnected to ${eventSourceUrl} -> reload iframe`)
-            applyStateIndicator("connected", { disconnect })
-            // we have lost connection to the server, we might have missed some file changes
-            // let's re-execute the file
-            // TODO:
-            // It might be unexpected for the user if we re-execute the file when nothing has changed
-            // it might be better to show a message in the ui saying
-            // "Hey connection to the server was lost, what you see might not be the latest change
-            // consider re-executing the file to be sure you are seeing the latest changes"
-            // with a button to re-execute the file and an other to discard this message
-            execute(fileRelativeUrl)
+          if (failureReason === "script") {
+            applyStateIndicator("off", { connect })
           } else {
-            jsenvLogger.log(`connected to ${eventSourceUrl}`)
-            applyStateIndicator("connected", { disconnect })
+            // make ui indicate the failure providing a way to reconnect manually
+            applyStateIndicator("disconnected", { reconnect })
           }
+        },
+        CONNECTED: ({ disconnect }) => {
+          applyStateIndicator("connected", { disconnect })
+          jsenvLogger.log(`connected to ${eventSourceUrl} -> reload iframe`)
+          // we have lost connection to the server, we might have missed some file changes
+          // let's re-execute the file
+          execute(fileRelativeUrl)
         },
         reconnectionOnError: true,
         reconnectionAllocatedMs: 1000 * 1, // 30 seconds
@@ -212,7 +241,8 @@ const connectExecutionEventSource = (fileRelativeUrl) => {
       },
     )
   }
-  connect()
+
+  return { connect }
 }
 
 const applyFileExecutionIndicator = (state, duration) => {
