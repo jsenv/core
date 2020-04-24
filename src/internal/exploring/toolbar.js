@@ -1,17 +1,29 @@
-const toolbarElement = document.querySelector("#toolbar")
-
-window.toolbar = {
-  element: toolbarElement,
-  show: showToolbar,
-  hide: hideToolbar,
-}
+import { toolbarVisibilityPreference } from "./preferences.js"
 
 export const renderToolbar = (fileRelativeUrl) => {
+  const toolbarVisible = toolbarVisibilityPreference.has()
+    ? toolbarVisibilityPreference.get()
+    : true
+
+  if (toolbarVisible) {
+    showToolbar()
+  } else {
+    hideToolbar()
+  }
+
+  const toolbarElement = document.querySelector("#toolbar")
+  window.toolbar = {
+    element: toolbarElement,
+    show: showToolbar,
+    hide: hideToolbar,
+  }
+
+  document.querySelector("#button-close-toolbar").onclick = hideToolbar
+
   if (fileRelativeUrl) {
     document.querySelector("#button-state-indicator").onclick = () => toggleTooltip("serverState")
     document.querySelector("#button-execution-indicator").onclick = () =>
       toggleTooltip("fileExecution")
-    document.querySelector("#button-close-toolbar").onclick = closeToolbar
 
     document.querySelector("#button-state-indicator").style.display = ""
     document.querySelector(".fileName").value = fileRelativeUrl
@@ -78,10 +90,14 @@ export const applyFileExecutionIndicator = (state, duration) => {
 
 export const showToolbar = () => {
   document.documentElement.setAttribute("data-toolbar-visible", "")
+  toolbarVisibilityPreference.set(true)
 }
 
 export const hideToolbar = () => {
+  document.querySelector(".serverState").classList.remove("tooltipVisible")
+  document.querySelector(".fileExecution").classList.remove("tooltipVisible")
   document.documentElement.removeAttribute("data-toolbar-visible")
+  toolbarVisibilityPreference.set(false)
 }
 
 const resizeInput = (input) => {
@@ -94,10 +110,4 @@ const resizeInput = (input) => {
 
 const toggleTooltip = (name) => {
   document.querySelector(`.${name}`).classList.toggle("tooltipVisible")
-}
-
-const closeToolbar = () => {
-  document.querySelector(".serverState").classList.remove("tooltipVisible")
-  document.querySelector(".fileExecution").classList.remove("tooltipVisible")
-  document.documentElement.removeAttribute("data-toolbar-visible")
 }

@@ -8,6 +8,8 @@ const createPreference = (name) => {
 
 export const livereloadingPreference = createPreference("livereloading")
 
+export const toolbarVisibilityPreference = createPreference("toolbar")
+
 const writePreference = (name, value) => {
   localStorage.setItem(name, JSON.stringify(value))
 }
