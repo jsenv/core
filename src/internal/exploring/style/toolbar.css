@@ -25,14 +25,10 @@
   cursor: pointer;
 }
 
-.jsenvLogo {
-  display: none;
-}
-
 #jsenvLogoSvg {
-  width: 34px;
-  height: 34px;
-  margin: 3px 10px;
+  width: 30px;
+  height: 30px;
+  margin: 0 10px;
 }
 
 .fileNameContainer {
@@ -61,6 +57,11 @@
 /* plus clair: #0C201E ou #1F262C*/
 /* bleu clair: #24C3B0 */
 /* orange: #FC9B1E */
+/* bleu foncé: #030713 */
+
+/* bleu turquoise: #0D7E83 */
+/* plus foncé: #076570 */
+/* blanc: #E7F2F3 */
 
 #settingsIconSvg {
   fill: #cecece;

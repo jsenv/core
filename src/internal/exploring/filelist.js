@@ -31,15 +31,5 @@ export const onNavigateFilelist = async () => {
   const ul = configurationPageElement.querySelector("ul")
   ul.innerHTML = files.map((file) => `<li><a href="/${file}">${file}</a></li>`).join("")
 
-  // settings section
-  const toolbarInput = configurationPageElement.querySelector("#toggle-toolbar")
-  toolbarInput.onchange = () => {
-    if (toolbarInput.checked) {
-      showToolbar()
-    } else {
-      hideToolbar()
-    }
-  }
-
   mainElement.appendChild(configurationPageElement)
 }

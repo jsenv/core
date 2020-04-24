@@ -45,10 +45,9 @@
 
 .retryIcon {
   display: none;
-  width: 17px;
+  width: 21px;
   height: 17px;
   fill: white;
-  padding: 0 2px;
   position: relative;
   top: 1px;
 }

@@ -1,47 +1,82 @@
 main article[data-page="configuration"] {
   display: table;
   width: 100%;
+  height: 100%;
+  background: #1f262c;
+  /* color: #E7F2F3; */
+  /* color: #24c3b0; */
+  color: #97a0a0;
 }
 
 h2 {
-  margin-top: 0px;
+  margin: 20px 0;
+  color: #24c3b0;
+  display: inline-block;
+}
+
+h3 {
+  font-weight: normal;
+  font-size: 15px;
+  color: #97a0a0;
+  margin: 20px 0;
+}
+
+label {
+  color: #24c3b0;
+  font-size: 14px;
+}
+
+section {
+  display: table-cell;
+  width: 50%;
+  padding: 25px;
 }
 
 #explorables {
-  display: table-cell;
   word-break: break-word;
-  width: 50%;
-  padding: 16px;
-  padding-right: 8px;
 }
 
 #explorables ul {
-  list-style-position: inside;
-  padding-left: 0;
+  padding: 0;
+  margin: 0;
+  overflow: auto;
+  max-height: 75vh;
 }
 
-#settings {
-  display: table-cell;
-  width: 50%;
-  padding: 16px;
-  padding-left: 8px;
+#explorables li {
+  list-style-type: none;
+  background: #204143;
+  margin: 10px 0;
+  padding: 2px 7px;
+}
+
+#explorables a {
+  color: #e7f2f3;
+  font-family: monospace;
+  text-decoration: unset;
+}
+
+/* icons */
+#fileIconSvgConfig {
+  margin-right: 20px;
+  width: 25px;
+  height: 25px;
+  position: relative;
+  top: 5px;
+}
+
+#fileIconSvgConfig {
+  stroke: none;
+  fill: #24c3b0;
 }
 
 /* TODO: media query too fallback on display block or table-row */
 
 @media screen and (max-width: 640px) {
-  #explorables,
-  #settings {
+  #explorables {
     display: block;
     width: 100%;
     padding: 16px;
-  }
-
-  #explorables {
     padding-bottom: 8px;
-  }
-
-  #settings {
-    padding-top: 8px;
   }
 }

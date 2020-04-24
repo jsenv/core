@@ -36,6 +36,7 @@ iframe {
 html[data-toolbar-visible] #toolbar {
   height: 40px;
   visibility: visible;
+  border-top: 1px solid #676767;
 }
 
 html[data-toolbar-visible] iframe {

@@ -29,6 +29,8 @@ export const renderToolbar = (fileRelativeUrl) => {
   }
 
   if (fileRelativeUrl) {
+    document.querySelector(".jsenvLogo").style.display = "none"
+
     document.querySelector("#button-state-indicator").onclick = () => toggleTooltip("serverState")
     document.querySelector("#button-state-indicator").style.display = ""
 
@@ -41,6 +43,7 @@ export const renderToolbar = (fileRelativeUrl) => {
       toggleTooltip("fileExecution")
     document.querySelector("#button-execution-indicator").style.display = ""
   } else {
+    document.querySelector(".jsenvLogo").style.display = ""
     document.querySelector("#button-state-indicator").style.display = "none"
     document.querySelector(".fileNameContainer").style.display = "none"
     document.querySelector("#button-execution-indicator").style.display = "none"
