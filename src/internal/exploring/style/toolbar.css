@@ -2,14 +2,14 @@
 @import "./serverStateIndicator.css";
 @import "./fileExecutionIndicator.css";
 
-#toolbar {
+#toolbar-wrapper {
   display: table;
   width: 100%;
   height: 100%;
   background: #404040;
 }
 
-#toolbar > * {
+#toolbar-wrapper > * {
   display: table-cell;
   vertical-align: middle;
 }

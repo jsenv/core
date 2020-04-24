@@ -25,14 +25,14 @@ iframe {
   transition-duration: 300ms;
 }
 
-#toolbar-container {
+#toolbar {
   height: 0;
   position: fixed;
   bottom: 0;
   transition-duration: 300ms;
 }
 
-html[data-toolbar-visible] #toolbar-container {
+html[data-toolbar-visible] #toolbar {
   height: 40px;
 }
 
@@ -50,13 +50,13 @@ iframe {
   height: 100%;
 }
 
-#toolbar-container button:focus,
-#toolbar-container a:focus {
+#toolbar button:focus,
+#toolbar a:focus {
   outline: none;
 }
 
-html[data-last-interaction="keyboard"] #toolbar-container button:focus,
-html[data-last-interaction="keyboard"] #toolbar-container a:focus {
+html[data-last-interaction="keyboard"] #toolbar button:focus,
+html[data-last-interaction="keyboard"] #toolbar a:focus {
   outline: 2px dotted #7aacfe;
   /* outline: 2px dotted -webkit-focus-ring-color; */
   outline-offset: -2px;

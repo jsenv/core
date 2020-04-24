@@ -68,8 +68,17 @@ window.addEventListener(
 
     if (typeof data === "object" && data !== null) {
       const { action, args } = data
-      if (action === "execute") {
-        perform(messageEvent, () => window.execute(...args), action)
+      if (action === "evaluate") {
+        const [functionSource, ...rest] = args
+        perform(
+          messageEvent,
+          () => {
+            // eslint-disable-next-line no-eval
+            const fn = window.eval(functionSource)
+            return fn(...rest)
+          },
+          action,
+        )
       } else {
         console.log(`received unknown action ${action}`)
       }
