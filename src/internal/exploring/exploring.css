@@ -27,6 +27,7 @@ iframe {
 
 #toolbar {
   height: 0;
+  visibility: hidden; /* ensure toolbar children are not focusable when hidden */
   position: fixed;
   bottom: 0;
   transition-duration: 300ms;
@@ -34,6 +35,7 @@ iframe {
 
 html[data-toolbar-visible] #toolbar {
   height: 40px;
+  visibility: visible;
 }
 
 html[data-toolbar-visible] iframe {

@@ -18,22 +18,36 @@ export const renderToolbar = (fileRelativeUrl) => {
     hide: hideToolbar,
   }
 
-  document.querySelector("#button-close-toolbar").onclick = hideToolbar
+  document.querySelector("#button-close-toolbar").onclick = () => {
+    // if user click enter or space quickly while closing toolbar
+    // it will cancel the closing
+    if (isVisible()) {
+      hideToolbar()
+    } else {
+      showToolbar()
+    }
+  }
 
   if (fileRelativeUrl) {
     document.querySelector("#button-state-indicator").onclick = () => toggleTooltip("serverState")
+    document.querySelector("#button-state-indicator").style.display = ""
+
+    const input = document.querySelector(".fileName")
+    input.value = fileRelativeUrl
+    resizeInput(input)
+    document.querySelector(".fileNameContainer").style.display = ""
+
     document.querySelector("#button-execution-indicator").onclick = () =>
       toggleTooltip("fileExecution")
-
-    document.querySelector("#button-state-indicator").style.display = ""
-    document.querySelector(".fileName").value = fileRelativeUrl
-
-    var input = document.querySelector("input") // get the input element
-    resizeInput(input) // immediately call the function
+    document.querySelector("#button-execution-indicator").style.display = ""
   } else {
     document.querySelector("#button-state-indicator").style.display = "none"
+    document.querySelector(".fileNameContainer").style.display = "none"
+    document.querySelector("#button-execution-indicator").style.display = "none"
   }
 }
+
+const isVisible = () => document.documentElement.hasAttribute("data-toolbar-visible")
 
 export const applyStateIndicator = (state, { connect, abort, disconnect, reconnect }) => {
   const stateIndicator = document.getElementById("stateIndicatorCircle")
@@ -89,11 +103,13 @@ export const applyFileExecutionIndicator = (state, duration) => {
 }
 
 export const showToolbar = () => {
+  document.querySelector("#toolbar").removeAttribute("tabIndex")
   document.documentElement.setAttribute("data-toolbar-visible", "")
   toolbarVisibilityPreference.set(true)
 }
 
 export const hideToolbar = () => {
+  document.querySelector("#toolbar").setAttribute("tabIndex", -1)
   document.querySelector(".serverState").classList.remove("tooltipVisible")
   document.querySelector(".fileExecution").classList.remove("tooltipVisible")
   document.documentElement.removeAttribute("data-toolbar-visible")
