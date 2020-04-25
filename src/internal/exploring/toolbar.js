@@ -45,7 +45,6 @@ export const renderToolbar = (fileRelativeUrl) => {
   } else {
     document.querySelector(".jsenvLogo").style.display = ""
     document.querySelector("#button-state-indicator").style.display = "none"
-    document.querySelector(".fileNameContainer").style.display = "none"
     document.querySelector("#button-execution-indicator").style.display = "none"
   }
 }

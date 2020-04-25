@@ -54,6 +54,7 @@ section {
   color: #e7f2f3;
   font-family: monospace;
   text-decoration: unset;
+  z-index: 1;
 }
 
 /* icons */
@@ -71,12 +72,3 @@ section {
 }
 
 /* TODO: media query too fallback on display block or table-row */
-
-@media screen and (max-width: 640px) {
-  #explorables {
-    display: block;
-    width: 100%;
-    padding: 16px;
-    padding-bottom: 8px;
-  }
-}
