@@ -1,12 +1,17 @@
 import { renderToolbar } from "./toolbar.js"
-import { onNavigateFileExecution } from "./file-execution.js"
-import { onNavigateFileList } from "./file-list.js"
+import { navigateFileList } from "./page-file-list.js"
+import { navigateFileExecution } from "./page-file-execution.js"
+
+const navigationCandidates = [navigateFileList, navigateFileExecution]
 
 export const installNavigation = () => {
   const pageContainer = document.querySelector("main")
 
   const defaultRoute = {
     url: "", // no url for this route it's an abstract route
+    navigation: {
+      backgroundColor: "white",
+    },
     page: {
       title: "", // no title,
       element: document.querySelector("[data-page=default]"),
@@ -16,10 +21,17 @@ export const installNavigation = () => {
   let currentRoute = defaultRoute
 
   const handleNavigation = async (event) => {
+    // always rerender toolbar
+    const fileRelativeUrl = document.location.pathname.slice(1)
+    renderToolbar(fileRelativeUrl)
+
     const nextRoute = {
       url: String(document.location),
       event,
     }
+
+    const navigation = firstNavigation(navigationCandidates, nextRoute)
+    nextRoute.navigation = navigation
 
     if (nextRoute.url === currentRoute.url) {
       // if the location does not change what does it means, for now I don't know
@@ -27,27 +39,21 @@ export const installNavigation = () => {
     if (currentRoute.page.onleave) {
       currentRoute.page.onleave(nextRoute)
     }
+
     // remove current page elements
     pageContainer.innerHTML = ""
+    // while page is loading we should make sure the new page background color will be transitionned
+    // once ready
 
-    const pagePromise = navigate(nextRoute.url)
-    const page = await pagePromise
+    // ici navigation peut définir un backgroundColor
+    // on sait alors qu'on passe d'un background a un autre
+    const page = await navigation.render()
     nextRoute.page = page
 
     if (page.element) {
       pageContainer.appendChild(page.element)
     }
     currentRoute = nextRoute
-  }
-
-  const navigate = () => {
-    const fileRelativeUrl = document.location.pathname.slice(1)
-    renderToolbar(fileRelativeUrl)
-
-    if (fileRelativeUrl) {
-      return onNavigateFileExecution({ pageContainer, fileRelativeUrl })
-    }
-    return onNavigateFileList({ pageContainer })
   }
 
   handleNavigation({
@@ -89,6 +95,20 @@ export const installNavigation = () => {
   return () => {
     document.removeEventListener("click", onclick)
   }
+}
+
+const firstNavigation = (navigationCandidates, ...args) => {
+  let i = 0
+  while (i < navigationCandidates.length) {
+    const navigationCandidate = navigationCandidates[i]
+    i++
+    const returnValue = navigationCandidate(...args)
+
+    if (returnValue !== null && typeof returnValue === "object") {
+      return returnValue
+    }
+  }
+  return null
 }
 
 const isClickToOpenTab = (clickEvent) => {

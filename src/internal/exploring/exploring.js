@@ -2,6 +2,11 @@ import { installNavigation } from "./navigation.js"
 
 installNavigation()
 
+// enable toolbar transition only after first render
+setTimeout(() => {
+  document.querySelector("#toolbar").style.transitionDuration = "300ms"
+})
+
 // handle data-last-interaction attr on html (focusring)
 window.addEventListener("mousedown", (mousedownEvent) => {
   if (mousedownEvent.defaultPrevented) {

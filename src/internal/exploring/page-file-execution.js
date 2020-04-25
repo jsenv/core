@@ -3,7 +3,19 @@ import { applyStateIndicator, applyFileExecutionIndicator } from "./toolbar.js"
 import { loadExploringConfig } from "./util.js"
 import { jsenvLogger } from "./jsenvLogger.js"
 
-export const onNavigateFileExecution = async ({ pageContainer, fileRelativeUrl }) => {
+export const navigateFileExecution = () => {
+  const fileRelativeUrl = document.location.pathname.slice(1)
+  if (!fileRelativeUrl) {
+    return null
+  }
+
+  return {
+    backgroundColor: "white",
+    render: () => renderFileExecution({ fileRelativeUrl }),
+  }
+}
+
+const renderFileExecution = ({ fileRelativeUrl }) => {
   window.page = {
     previousExecution: undefined,
     execution: undefined,
@@ -14,9 +26,16 @@ export const onNavigateFileExecution = async ({ pageContainer, fileRelativeUrl }
     reload: () => execute(fileRelativeUrl),
   }
 
+  let iframe = document.createElement("iframe")
+
   const execute = async (fileRelativeUrl) => {
     const startTime = Date.now()
-    const iframe = document.createElement("iframe")
+    if (window.page.previousExecution) {
+      const nextIframe = document.createElement("iframe")
+      iframe.parentNode.replaceChild(nextIframe, iframe)
+      iframe = nextIframe
+    }
+
     const execution = {
       status: "loading", // iframe loading
       iframe,
@@ -27,11 +46,6 @@ export const onNavigateFileExecution = async ({ pageContainer, fileRelativeUrl }
     window.page.execution = execution
 
     applyFileExecutionIndicator("loading")
-    if (window.page.previousExecution) {
-      pageContainer.replaceChild(iframe, window.page.previousExecution.iframe)
-    } else {
-      pageContainer.appendChild(iframe)
-    }
 
     const {
       compileServerOrigin,
@@ -120,6 +134,7 @@ export const onNavigateFileExecution = async ({ pageContainer, fileRelativeUrl }
 
   return {
     title: fileRelativeUrl,
+    element: iframe,
     onleave: () => {
       window.page = undefined
     },

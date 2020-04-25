@@ -1,7 +1,17 @@
 import { loadExploringConfig } from "./util.js"
 import { fetchUsingXHR } from "../fetchUsingXHR.js"
 
-export const onNavigateFileList = async () => {
+export const navigateFileList = () => {
+  if (document.location.pathname !== "/") {
+    return null
+  }
+
+  return {
+    render: renderFileList,
+  }
+}
+
+const renderFileList = async () => {
   const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig()
 
   const fileListElement = document.querySelector(`[data-page="file-list"`).cloneNode(true)
@@ -43,7 +53,7 @@ export const onNavigateFileList = async () => {
 
       // put the file name in the input in the toolbar
       const input = document.querySelector(".fileName")
-      input.value = url
+      input.value = href
       resizeInput(input)
 
       // hide the input for now
