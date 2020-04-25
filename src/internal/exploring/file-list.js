@@ -1,8 +1,6 @@
 import { loadExploringConfig } from "./util.js"
 import { fetchUsingXHR } from "../fetchUsingXHR.js"
 
-const mainElement = document.querySelector("main")
-
 const resizeInput = (input) => {
   if (input.value.length > 40) {
     input.style.width = "40ch"
@@ -11,7 +9,14 @@ const resizeInput = (input) => {
   }
 }
 
-const openFile = (aElement) => {
+const openFile = (clickEvent, aElement) => {
+  clickEvent.preventDefault()
+  // history.pushState a un moment
+  // ah mais par contre sur la navigation previous/next on aura pas l'animation
+  // on pourrais l'obtenir en détectant avec popstate
+  // en gros on pourrait mettre un listener pour dire si on navigue vers un fichier
+  // bref on verra
+
   // remove overflow X on body
   document.documentElement.style.overflow = "hidden"
 
@@ -26,9 +31,7 @@ const openFile = (aElement) => {
 
   // get positions of input in toolbar and aElement
   const inputPosition = fileInput.getBoundingClientRect()
-  console.log("inputPosition", inputPosition)
   const position = aElement.getBoundingClientRect()
-  console.log("position", position)
 
   // clone aElement and style it
   const copy = aElement.cloneNode(true)
@@ -68,23 +71,18 @@ const openFile = (aElement) => {
     fileInput.style.opacity = "1"
     copy.style.display = "none"
     document.documentElement.style.overflow = "unset"
+
+    // ça va supprimer le html de main
+    // et mettre en place le nouveau html
+    // faisons ça dans le setTimeout pour le moment
+    window.history.pushState({}, "", aElement.href)
   }, duration)
 }
 
-export const onNavigateFilelist = async () => {
+export const onNavigateFileList = async () => {
   const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig()
 
-  document.title = `${projectDirectoryUrl}`
-  // it would be great to have a loading step in the html display at this point
-  mainElement.innerHTML = ""
-
-  const configurationPageElement = document
-    .querySelector(`[data-page="configuration"`)
-    .cloneNode(true)
-
-  // explorable section
-  // const titleElement = configurationPageElement.querySelector("h2")
-  // titleElement.innerHTML = projectDirectoryUrl
+  const fileListElement = document.querySelector(`[data-page="file-list"`).cloneNode(true)
 
   const response = await fetchUsingXHR(`/explorables`, {
     method: "POST",
@@ -95,11 +93,14 @@ export const onNavigateFilelist = async () => {
   })
   const files = await response.json()
 
-  const ul = configurationPageElement.querySelector("ul")
-  ul.innerHTML = files.map((file) => `<li><a>${file}</a></li>`).join("")
+  const ul = fileListElement.querySelector("ul")
+  ul.innerHTML = files.map((file) => `<li><a href=${file}>${file}</a></li>`).join("")
   ul.querySelectorAll("a").forEach((aElement) => {
-    aElement.onclick = () => openFile(aElement)
+    aElement.onclick = (clickEvent) => openFile(clickEvent, aElement)
   })
 
-  mainElement.appendChild(configurationPageElement)
+  return {
+    title: projectDirectoryUrl,
+    element: fileListElement,
+  }
 }
