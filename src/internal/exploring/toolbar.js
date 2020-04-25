@@ -109,6 +109,7 @@ export const applyFileExecutionIndicator = (state, duration) => {
 }
 
 export const showToolbar = () => {
+  document.querySelector("#toolbarTrigger").classList.remove("toolbarTriggerVisible")
   document.querySelector("#toolbar").removeAttribute("tabIndex")
   document.documentElement.setAttribute("data-toolbar-visible", "")
   toolbarVisibilityPreference.set(true)
@@ -120,6 +121,41 @@ export const hideToolbar = () => {
   document.querySelector(".fileExecution").classList.remove("tooltipVisible")
   document.documentElement.removeAttribute("data-toolbar-visible")
   toolbarVisibilityPreference.set(false)
+
+  // toolbarTrigger: display and register onclick
+  const toolbarTrigger = document.querySelector("#toolbarTrigger")
+  toolbarTrigger.classList.add("toolbarTriggerVisible")
+  var timer
+  toolbarTrigger.onmouseover = () => {
+    timer = setTimeout(() => {
+      showJsenvLogo()
+    }, 500)
+  }
+  toolbarTrigger.onmouseout = () => {
+    clearTimeout(timer)
+  }
+}
+
+const showJsenvLogo = () => {
+  const toolbarTrigger = document.querySelector("#toolbarTrigger")
+  toolbarTrigger.classList.add("toolbarTriggerUp")
+  const jsenvLogo = document.querySelector("#jsenvLogo")
+  jsenvLogo.classList.add("jsenvLogoVisible")
+  // mouse leave to close
+  jsenvLogo.onmouseleave = () => {
+    console.log("mouseleave")
+    hideJsenvLogo()
+  }
+  // click inside to open toolbar
+  jsenvLogo.onclick = (event) => {
+    event.stopPropagation()
+    showToolbar()
+  }
+}
+
+const hideJsenvLogo = () => {
+  document.querySelector("#toolbarTrigger").classList.remove("toolbarTriggerUp")
+  document.querySelector("#jsenvLogo").classList.remove("jsenvLogoVisible")
 }
 
 const resizeInput = (input) => {
