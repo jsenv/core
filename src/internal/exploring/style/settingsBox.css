@@ -1,0 +1,60 @@
+.settingsBox {
+  display: none;
+  position: absolute;
+  bottom: 40px;
+  right: 0;
+  z-index: 1;
+  text-align: center;
+  padding: 10px 15px;
+  font-size: 14px;
+  color: #fff;
+  background-color: #030713;
+  border-radius: 5px 5px 0 0;
+  min-width: 250px;
+  min-height: 150px;
+}
+
+.settingsBoxVisible {
+  display: block;
+  animation: comeUp ease 0.3s;
+}
+
+@keyframes comeUp {
+  0% {
+    opacity: 0;
+    transform: translate(0, 90px);
+    z-index: -1;
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0);
+    z-index: -1;
+  }
+}
+
+h3 {
+  display: inline-block;
+  font-size: 20px;
+  margin: 10px 0;
+  color: #076570;
+}
+
+#settingsBoxIconSvg {
+  fill: none;
+  stroke: #076570;
+  stroke-width: 2;
+  margin-right: 10px;
+  width: 22px;
+  height: 22px;
+  position: relative;
+  top: 4px;
+}
+
+.settingsBoxContent {
+  text-align: left;
+  margin-top: 10px;
+}
+
+.settingsBoxItem {
+  margin: 10px 0;
+}

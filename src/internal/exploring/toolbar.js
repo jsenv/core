@@ -28,8 +28,10 @@ export const renderToolbar = (fileRelativeUrl) => {
     }
   }
 
+  document.querySelector("#button-toggle-settings").onclick = () => toggleSettingsBox()
+
   if (fileRelativeUrl) {
-    document.querySelector(".jsenvLogo").style.display = "none"
+    // document.querySelector(".jsenvLogo").style.display = "none"
 
     document.querySelector("#button-state-indicator").onclick = () => toggleTooltip("serverState")
     document.querySelector("#button-state-indicator").style.display = ""
@@ -43,9 +45,11 @@ export const renderToolbar = (fileRelativeUrl) => {
       toggleTooltip("fileExecution")
     document.querySelector("#button-execution-indicator").style.display = ""
   } else {
-    document.querySelector(".jsenvLogo").style.display = ""
+    // document.querySelector(".jsenvLogo").style.display = ""
     document.querySelector("#button-state-indicator").style.display = "none"
+    document.querySelector(".fileName").style.display = "none"
     document.querySelector("#button-execution-indicator").style.display = "none"
+    document.querySelector(".file-icon-wrapper").classList.add("iconToolbar-selected")
   }
 }
 
@@ -128,4 +132,9 @@ const resizeInput = (input) => {
 
 const toggleTooltip = (name) => {
   document.querySelector(`.${name}`).classList.toggle("tooltipVisible")
+}
+
+const toggleSettingsBox = () => {
+  document.querySelector(".settings-icon-wrapper").classList.toggle("iconToolbar-selected")
+  document.querySelector(".settingsBox").classList.toggle("settingsBoxVisible")
 }

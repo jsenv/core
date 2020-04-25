@@ -4,11 +4,9 @@
   color: #fff;
   text-align: center;
   border-radius: 6px;
-  padding: 5px 0;
   position: absolute;
   z-index: 1;
   bottom: 120%;
-  margin-left: 3px;
   padding: 10px;
   font-size: 14px;
 }

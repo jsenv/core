@@ -78,12 +78,10 @@ export const onNavigateFilelist = async () => {
   // it would be great to have a loading step in the html display at this point
   mainElement.innerHTML = ""
 
-  const configurationPageElement = document
-    .querySelector(`[data-page="configuration"`)
-    .cloneNode(true)
+  const fileListPageElement = document.querySelector(`[data-page="fileList"`).cloneNode(true)
 
   // explorable section
-  // const titleElement = configurationPageElement.querySelector("h2")
+  // const titleElement = fileListPageElement.querySelector("h2")
   // titleElement.innerHTML = projectDirectoryUrl
 
   const response = await fetchUsingXHR(`/explorables`, {
@@ -95,11 +93,11 @@ export const onNavigateFilelist = async () => {
   })
   const files = await response.json()
 
-  const ul = configurationPageElement.querySelector("ul")
-  ul.innerHTML = files.map((file) => `<li><a>${file}</a></li>`).join("")
-  ul.querySelectorAll("a").forEach((aElement) => {
-    aElement.onclick = () => openFile(aElement)
-  })
+  const ul = fileListPageElement.querySelector("ul")
+  ul.innerHTML = files.map((file) => `<li><a href="${file}">${file}</a></li>`).join("")
+  // ul.querySelectorAll("a").forEach((aElement) => {
+  //   aElement.onclick = () => openFile(aElement)
+  // })
 
-  mainElement.appendChild(configurationPageElement)
+  mainElement.appendChild(fileListPageElement)
 }
