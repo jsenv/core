@@ -15,25 +15,28 @@ export const installNavigation = () => {
 
   let currentRoute = defaultRoute
 
-  const handleLocation = async () => {
+  const handleNavigation = async (event) => {
     const nextRoute = {
       url: String(document.location),
+      event,
     }
 
     if (nextRoute.url === currentRoute.url) {
       // if the location does not change what does it means, for now I don't know
     }
     if (currentRoute.page.onleave) {
-      currentRoute.page.onleave()
+      currentRoute.page.onleave(nextRoute)
     }
-
-    pageContainer.removeChild(currentRoute.page.element)
+    // remove current page elements
+    pageContainer.innerHTML = ""
 
     const pagePromise = navigate(nextRoute.url)
     const page = await pagePromise
     nextRoute.page = page
 
-    pageContainer.appendChild(nextRoute.page.element)
+    if (page.element) {
+      pageContainer.appendChild(page.element)
+    }
     currentRoute = nextRoute
   }
 
@@ -42,14 +45,18 @@ export const installNavigation = () => {
     renderToolbar(fileRelativeUrl)
 
     if (fileRelativeUrl) {
-      return onNavigateFileExecution(fileRelativeUrl)
+      return onNavigateFileExecution({ pageContainer, fileRelativeUrl })
     }
-    return onNavigateFileList()
+    return onNavigateFileList({ pageContainer })
   }
 
-  handleLocation()
+  handleNavigation({
+    type: "load",
+  })
   window.onpopstate = () => {
-    handleLocation()
+    handleNavigation({
+      type: "popstate",
+    })
   }
 
   const onclick = (clickEvent) => {
@@ -75,8 +82,8 @@ export const installNavigation = () => {
     }
 
     clickEvent.preventDefault()
-    // ça ne trigger pas popstate :o
     window.history.pushState({}, "", aElement.href)
+    handleNavigation(clickEvent)
   }
   document.addEventListener("click", onclick)
   return () => {
