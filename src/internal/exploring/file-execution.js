@@ -3,20 +3,90 @@ import { applyStateIndicator, applyFileExecutionIndicator } from "./toolbar.js"
 import { loadExploringConfig } from "./util.js"
 import { jsenvLogger } from "./jsenvLogger.js"
 
-const mainElement = document.querySelector("main")
-
-export const onNavigatePage = (fileRelativeUrl) => {
+export const onNavigateFileExecution = async ({ pageContainer, fileRelativeUrl }) => {
   window.page = {
-    status: "loading",
+    previousExecution: undefined,
+    execution: undefined,
     evaluate: () => {
       throw new Error("cannot evaluate, page is not ready")
     },
-    executionResult: undefined,
     execute,
     reload: () => execute(fileRelativeUrl),
   }
 
-  document.title = `${fileRelativeUrl}`
+  const execute = async (fileRelativeUrl) => {
+    const startTime = Date.now()
+    const iframe = document.createElement("iframe")
+    const execution = {
+      status: "loading", // iframe loading
+      iframe,
+      startTime,
+      endTime: null,
+      result: null,
+    }
+    window.page.execution = execution
+
+    applyFileExecutionIndicator("loading")
+    if (window.page.previousExecution) {
+      pageContainer.replaceChild(iframe, window.page.previousExecution.iframe)
+    } else {
+      pageContainer.appendChild(iframe)
+    }
+
+    const {
+      compileServerOrigin,
+      htmlFileRelativeUrl,
+      outDirectoryRelativeUrl,
+      browserRuntimeFileRelativeUrl,
+      sourcemapMainFileRelativeUrl,
+      sourcemapMappingFileRelativeUrl,
+    } = await loadExploringConfig()
+
+    const iframeSrc = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
+    const iframePromise = loadIframe(iframe, { iframeSrc })
+
+    const evaluate = async (fn, ...args) => {
+      await iframePromise
+      args = [`(${fn.toString()})`, ...args]
+      return performIframeAction(iframe, "evaluate", args, {
+        compileServerOrigin,
+      })
+    }
+    window.page.evaluate = evaluate
+
+    execution.status = "executing"
+    const executionResult = await evaluate((param) => window.execute(param), {
+      fileRelativeUrl,
+      compileServerOrigin,
+      outDirectoryRelativeUrl,
+      browserRuntimeFileRelativeUrl,
+      sourcemapMainFileRelativeUrl,
+      sourcemapMappingFileRelativeUrl,
+      collectNamespace: true,
+      collectCoverage: false,
+      executionId: fileRelativeUrl,
+    })
+    execution.status = "executed"
+    if (executionResult.status === "errored") {
+      // eslint-disable-next-line no-eval
+      executionResult.error = window.eval(executionResult.exceptionSource)
+      delete executionResult.exceptionSource
+    }
+    execution.result = executionResult
+
+    const endTime = Date.now()
+    execution.endTime = endTime
+
+    const duration = execution.endTime - execution.startTime
+    if (executionResult.status === "errored") {
+      jsenvLogger.log(`error during execution`, executionResult.error)
+      applyFileExecutionIndicator("failure", duration)
+    } else {
+      applyFileExecutionIndicator("success", duration)
+    }
+
+    window.page.previousExecution = execution
+  }
 
   const connecting = connectLivereloading(fileRelativeUrl, {
     onFileChanged: () => {
@@ -48,73 +118,11 @@ export const onNavigatePage = (fileRelativeUrl) => {
     execute(fileRelativeUrl)
   }
 
-  return () => {
-    window.page = null
-  }
-}
-
-const execute = async (fileRelativeUrl) => {
-  applyFileExecutionIndicator("loading")
-  const startTime = Date.now()
-
-  mainElement.innerHTML = ``
-  const iframe = document.createElement("iframe")
-  mainElement.appendChild(iframe)
-  window.page.iframe = iframe
-
-  const {
-    compileServerOrigin,
-    htmlFileRelativeUrl,
-    outDirectoryRelativeUrl,
-    browserRuntimeFileRelativeUrl,
-    sourcemapMainFileRelativeUrl,
-    sourcemapMappingFileRelativeUrl,
-  } = await loadExploringConfig()
-
-  const iframeSrc = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
-  const iframePromise = loadIframe(iframe, { iframeSrc })
-
-  const evaluate = async (fn, ...args) => {
-    await iframePromise
-    args = [`(${fn.toString()})`, ...args]
-    return performIframeAction(iframe, "evaluate", args, {
-      compileServerOrigin,
-    })
-  }
-  window.page.evaluate = evaluate
-
-  window.page.status = "executing"
-  const executionResult = await evaluate((param) => window.execute(param), {
-    fileRelativeUrl,
-    compileServerOrigin,
-    outDirectoryRelativeUrl,
-    browserRuntimeFileRelativeUrl,
-    sourcemapMainFileRelativeUrl,
-    sourcemapMappingFileRelativeUrl,
-    collectNamespace: true,
-    collectCoverage: false,
-    executionId: fileRelativeUrl,
-  })
-  window.page.status = "executed"
-  if (executionResult.status === "errored") {
-    // eslint-disable-next-line no-eval
-    executionResult.error = window.eval(executionResult.exceptionSource)
-    delete executionResult.exceptionSource
-  }
-  window.page.executionResult = executionResult
-
-  const endTime = Date.now()
-  const duration = endTime - startTime
-  if (executionResult.status === "errored") {
-    console.log(`error during execution`, executionResult.error)
-    setTimeout(() => {
-      applyFileExecutionIndicator("failure", duration)
-    }, 2000)
-  } else {
-    console.log(`execution done`)
-    setTimeout(() => {
-      applyFileExecutionIndicator("success", duration)
-    }, 2000)
+  return {
+    title: fileRelativeUrl,
+    onleave: () => {
+      window.page = undefined
+    },
   }
 }
 
