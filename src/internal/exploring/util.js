@@ -1,7 +1,7 @@
-// import { fetchUsingXHR } from "../fetchUsingXHR.js"
+import { fetchUsingXHR } from "../fetchUsingXHR.js"
 
 export const loadExploringConfig = async () => {
-  const exploringJsonResponse = await fetchUrl("/exploring.json", {
+  const exploringJsonResponse = await fetchUsingXHR("/exploring.json", {
     headers: { "x-jsenv-exploring": "1" },
   })
   const exploringConfig = await exploringJsonResponse.json()
@@ -14,17 +14,6 @@ export const cancelPendingRequests = () => {
   controllers.forEach((controller) => {
     controller.abort()
   })
-}
-
-const fetchUrl = async (url, options = {}) => {
-  const controller = new AbortController()
-  const signal = controller.signal
-  controllers.push(controller)
-  const responsePromise = window.fetch(url, { ...options, signal })
-  const response = await responsePromise
-  const index = controllers.indexOf(controller)
-  controllers.splice(index, 1)
-  return response
 }
 
 export const animate = (node, keyframes, { cancellationToken, ...options } = {}) => {
