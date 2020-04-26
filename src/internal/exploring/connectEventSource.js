@@ -29,7 +29,7 @@ export const connectEventSource = async (
 ) => {
   const { EventSource } = window
   if (typeof EventSource !== "function") {
-    return
+    return () => {}
   }
 
   const eventSourceOrigin = new URL(eventSourceUrl).origin
@@ -102,6 +102,8 @@ export const connectEventSource = async (
     }
   }
 
+  let cancel = () => {}
+
   const connect = async ({ onsuccess, onfailure }) => {
     const eventSource = new EventSource(eventSourceUrl, {
       withCredentials: true,
@@ -111,7 +113,14 @@ export const connectEventSource = async (
     eventSource.onopen = () => {
       connected = true
 
+      cancel = () => {
+        eventSource.onerror = undefined
+        eventSource.close()
+      }
+
       eventSource.onerror = () => {
+        eventSource.onerror = undefined
+        cancel = () => {}
         connected = false
         eventSource.close()
         onfailure({
@@ -140,6 +149,11 @@ export const connectEventSource = async (
         failureConsequence: FAILURE_CONSEQUENCE_RENOUNCING,
         failureReason: FAILURE_REASON_ERROR,
       })
+    }
+    cancel = () => {
+      eventSource.onopen = undefined
+      eventSource.onerror = undefined
+      eventSource.close()
     }
     Object.keys(events).forEach((eventName) => {
       eventSource.addEventListener(eventName, (e) => {
@@ -226,6 +240,7 @@ export const connectEventSource = async (
 
               const retryIn = (ms) => {
                 attemptTimeout = delay(attempt, ms)
+                cancel = () => clearTimeout(attemptTimeout)
               }
 
               const interval = intervalCompute(attemptCount)
@@ -264,6 +279,7 @@ export const connectEventSource = async (
               })
             }
           }, interval)
+          cancel = () => clearTimeout(attemptTimeout)
         }
 
         if (reconnectionAutoStart) {
@@ -284,6 +300,8 @@ export const connectEventSource = async (
   notifyConnecting({
     abort: abortConnection,
   })
+
+  return cancel
 }
 
 const delay = (fn, ms) => {

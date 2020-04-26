@@ -1,144 +1,162 @@
-import { connectLivereloading } from "./livereloading.js"
+import { memoize } from "../memoize.js"
+import { createLivereloading } from "./livereloading.js"
 import { applyStateIndicator, applyFileExecutionIndicator } from "./toolbar.js"
 import { loadExploringConfig } from "./util.js"
 import { jsenvLogger } from "./jsenvLogger.js"
 
-export const navigateFileExecution = () => {
-  const fileRelativeUrl = document.location.pathname.slice(1)
-  if (!fileRelativeUrl) {
-    return null
-  }
+export const pageFileExecution = {
+  name: "file-execution",
+  match: () => {
+    const fileRelativeUrl = document.location.pathname.slice(1)
+    if (!fileRelativeUrl) {
+      return false
+    }
+    return true
+  },
 
-  return {
-    backgroundColor: "white",
-    render: () => renderFileExecution({ fileRelativeUrl }),
-  }
-}
+  navigate: async () => {
+    let pageLeft = false
+    const fileRelativeUrl = document.location.pathname.slice(1)
 
-const renderFileExecution = ({ fileRelativeUrl }) => {
-  window.page = {
-    previousExecution: undefined,
-    execution: undefined,
-    evaluate: () => {
-      throw new Error("cannot evaluate, page is not ready")
-    },
-    execute,
-    reload: () => execute(fileRelativeUrl),
-  }
-
-  let iframe = document.createElement("iframe")
-
-  const execute = async (fileRelativeUrl) => {
-    const startTime = Date.now()
-    if (window.page.previousExecution) {
-      const nextIframe = document.createElement("iframe")
-      iframe.parentNode.replaceChild(nextIframe, iframe)
-      iframe = nextIframe
+    window.page = {
+      previousExecution: undefined,
+      execution: undefined,
+      evaluate: () => {
+        throw new Error("cannot evaluate, page is not ready")
+      },
+      execute,
+      reload: () => execute(fileRelativeUrl),
     }
 
-    const execution = {
-      status: "loading", // iframe loading
-      iframe,
-      startTime,
-      endTime: null,
-      result: null,
-    }
-    window.page.execution = execution
+    let iframe = document.createElement("iframe")
 
-    applyFileExecutionIndicator("loading")
+    const execute = async (fileRelativeUrl) => {
+      if (pageLeft) return
 
-    const {
-      compileServerOrigin,
-      htmlFileRelativeUrl,
-      outDirectoryRelativeUrl,
-      browserRuntimeFileRelativeUrl,
-      sourcemapMainFileRelativeUrl,
-      sourcemapMappingFileRelativeUrl,
-    } = await loadExploringConfig()
+      const startTime = Date.now()
+      if (window.page.previousExecution) {
+        const nextIframe = document.createElement("iframe")
+        iframe.parentNode.replaceChild(nextIframe, iframe)
+        iframe = nextIframe
+      }
 
-    const iframeSrc = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
-    const iframePromise = loadIframe(iframe, { iframeSrc })
+      const execution = {
+        status: "loading", // iframe loading
+        iframe,
+        startTime,
+        endTime: null,
+        result: null,
+      }
+      window.page.execution = execution
 
-    const evaluate = async (fn, ...args) => {
-      await iframePromise
-      args = [`(${fn.toString()})`, ...args]
-      return performIframeAction(iframe, "evaluate", args, {
+      applyFileExecutionIndicator("loading")
+
+      const {
         compileServerOrigin,
+        htmlFileRelativeUrl,
+        outDirectoryRelativeUrl,
+        browserRuntimeFileRelativeUrl,
+        sourcemapMainFileRelativeUrl,
+        sourcemapMappingFileRelativeUrl,
+      } = await loadExploringConfig()
+      if (pageLeft) return
+
+      const iframeSrc = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
+      const loadIframeMemoized = memoize(loadIframe)
+
+      const evaluate = async (fn, ...args) => {
+        await loadIframeMemoized(iframe, { iframeSrc })
+        args = [`(${fn.toString()})`, ...args]
+        return performIframeAction(iframe, "evaluate", args, {
+          compileServerOrigin,
+        })
+      }
+      window.page.evaluate = evaluate
+
+      execution.status = "executing"
+      const executionResult = await evaluate((param) => window.execute(param), {
+        fileRelativeUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
+        browserRuntimeFileRelativeUrl,
+        sourcemapMainFileRelativeUrl,
+        sourcemapMappingFileRelativeUrl,
+        collectNamespace: true,
+        collectCoverage: false,
+        executionId: fileRelativeUrl,
       })
-    }
-    window.page.evaluate = evaluate
+      if (pageLeft) return
+      execution.status = "executed"
+      if (executionResult.status === "errored") {
+        // eslint-disable-next-line no-eval
+        executionResult.error = window.eval(executionResult.exceptionSource)
+        delete executionResult.exceptionSource
+      }
+      execution.result = executionResult
 
-    execution.status = "executing"
-    const executionResult = await evaluate((param) => window.execute(param), {
-      fileRelativeUrl,
-      compileServerOrigin,
-      outDirectoryRelativeUrl,
-      browserRuntimeFileRelativeUrl,
-      sourcemapMainFileRelativeUrl,
-      sourcemapMappingFileRelativeUrl,
-      collectNamespace: true,
-      collectCoverage: false,
-      executionId: fileRelativeUrl,
+      const endTime = Date.now()
+      execution.endTime = endTime
+
+      const duration = execution.endTime - execution.startTime
+      if (executionResult.status === "errored") {
+        jsenvLogger.log(`error during execution`, executionResult.error)
+        applyFileExecutionIndicator("failure", duration)
+      } else {
+        applyFileExecutionIndicator("success", duration)
+      }
+
+      window.page.previousExecution = execution
+    }
+
+    // on va plutot retourner un object genre isEnabled()
+    // (idéalement getState etc)
+    // et on fera if (!livereloading.isEnabled())
+    // on éxécute direct
+    // et il faudra un truc genre disconnect() qu'on pourra appeler n'importe quand
+    // (pour le cas ou on leave la page)
+    const livereloading = createLivereloading(fileRelativeUrl, {
+      onFileChanged: () => {
+        execute(fileRelativeUrl)
+      },
+      onFileRemoved: () => {
+        execute(fileRelativeUrl)
+      },
+      onConnecting: ({ abort }) => {
+        applyStateIndicator("connecting", { abort })
+      },
+      onAborted: ({ connect }) => {
+        applyStateIndicator("off", { connect })
+      },
+      onConnectionFailed: ({ reconnect }) => {
+        // make ui indicate the failure providing a way to reconnect manually
+        applyStateIndicator("disconnected", { reconnect })
+      },
+      onConnected: ({ disconnect }) => {
+        applyStateIndicator("connected", { disconnect })
+        // we have lost connection to the server, we might have missed some file changes
+        // let's re-execute the file
+        execute(fileRelativeUrl)
+      },
     })
-    execution.status = "executed"
-    if (executionResult.status === "errored") {
-      // eslint-disable-next-line no-eval
-      executionResult.error = window.eval(executionResult.exceptionSource)
-      delete executionResult.exceptionSource
-    }
-    execution.result = executionResult
-
-    const endTime = Date.now()
-    execution.endTime = endTime
-
-    const duration = execution.endTime - execution.startTime
-    if (executionResult.status === "errored") {
-      jsenvLogger.log(`error during execution`, executionResult.error)
-      applyFileExecutionIndicator("failure", duration)
+    if (livereloading.isEnabled()) {
+      livereloading.connect()
     } else {
-      applyFileExecutionIndicator("success", duration)
+      applyStateIndicator("off", { connect: livereloading.connect })
+      // if not connecting we don't wait for connection to be established before executing
+      // we execute immediatly (happen when livereloading is disabled)
+      execute(fileRelativeUrl)
     }
 
-    window.page.previousExecution = execution
-  }
-
-  const connecting = connectLivereloading(fileRelativeUrl, {
-    onFileChanged: () => {
-      execute(fileRelativeUrl)
-    },
-    onFileRemoved: () => {
-      execute(fileRelativeUrl)
-    },
-    onConnecting: ({ abort }) => {
-      applyStateIndicator("connecting", { abort })
-    },
-    onAborted: ({ connect }) => {
-      applyStateIndicator("off", { connect })
-    },
-    onConnectionFailed: ({ reconnect }) => {
-      // make ui indicate the failure providing a way to reconnect manually
-      applyStateIndicator("disconnected", { reconnect })
-    },
-    onConnected: ({ disconnect }) => {
-      applyStateIndicator("connected", { disconnect })
-      // we have lost connection to the server, we might have missed some file changes
-      // let's re-execute the file
-      execute(fileRelativeUrl)
-    },
-  })
-  // if not connecting we don't wait for connection to be established before executing
-  // we execute immediatly (happen when livereloading is disabled)
-  if (!connecting) {
-    execute(fileRelativeUrl)
-  }
-
-  return {
-    title: fileRelativeUrl,
-    element: iframe,
-    onleave: () => {
-      window.page = undefined
-    },
-  }
+    return {
+      title: fileRelativeUrl,
+      element: iframe,
+      onleave: () => {
+        pageLeft = true
+        window.page = undefined
+        livereloading.disconnect()
+      },
+    }
+  },
 }
 
 const loadIframe = (iframe, { iframeSrc }) => {

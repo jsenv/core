@@ -1,5 +1,8 @@
 import { installNavigation } from "./navigation.js"
 
+// notes:
+// - per tab localStorage
+
 installNavigation()
 
 // enable toolbar transition only after first render

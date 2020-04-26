@@ -2,16 +2,17 @@ import { connectEventSource } from "./connectEventSource.js"
 import { jsenvLogger } from "./jsenvLogger.js"
 import { livereloadingPreference } from "./preferences.js"
 
-export const connectLivereloading = (
+export const createLivereloading = (
   fileRelativeUrl,
   { onFileChanged, onFileRemoved, onConnecting, onAborted, onConnectionFailed, onConnected },
 ) => {
-  const livereloadingEnabled = livereloadingPreference.has() ? livereloadingPreference.get() : true
   const eventSourceUrl = `${window.origin}/${fileRelativeUrl}`
+
+  let cancel = () => {}
 
   const connect = () => {
     livereloadingPreference.set(true)
-    connectEventSource(
+    cancel = connectEventSource(
       eventSourceUrl,
       {
         "file-changed": ({ data }) => {
@@ -77,12 +78,16 @@ export const connectLivereloading = (
         },
       },
     )
+    return cancel
   }
 
-  if (livereloadingEnabled) {
-    connect()
-    return true
+  const isEnabled = () => {
+    return livereloadingPreference.has() ? livereloadingPreference.get() : true
   }
-  onAborted({ connect })
-  return false
+
+  return {
+    isEnabled,
+    connect,
+    disconnect: cancel,
+  }
 }
