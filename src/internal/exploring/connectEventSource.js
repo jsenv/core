@@ -240,7 +240,9 @@ export const connectEventSource = async (
 
               const retryIn = (ms) => {
                 attemptTimeout = delay(attempt, ms)
-                cancel = () => clearTimeout(attemptTimeout)
+                cancel = () => {
+                  clearTimeout(attemptTimeout)
+                }
               }
 
               const interval = intervalCompute(attemptCount)
@@ -279,7 +281,9 @@ export const connectEventSource = async (
               })
             }
           }, interval)
-          cancel = () => clearTimeout(attemptTimeout)
+          cancel = () => {
+            clearTimeout(attemptTimeout)
+          }
         }
 
         if (reconnectionAutoStart) {

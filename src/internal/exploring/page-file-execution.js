@@ -14,8 +14,7 @@ export const pageFileExecution = {
     return true
   },
 
-  navigate: async () => {
-    let pageLeft = false
+  navigate: async ({ cancellationToken }) => {
     const fileRelativeUrl = document.location.pathname.slice(1)
 
     window.page = {
@@ -27,12 +26,13 @@ export const pageFileExecution = {
       execute,
       reload: () => execute(fileRelativeUrl),
     }
+    cancellationToken.register(() => {
+      window.page = undefined
+    })
 
     let iframe = document.createElement("iframe")
 
     const execute = async (fileRelativeUrl) => {
-      if (pageLeft) return
-
       const startTime = Date.now()
       if (window.page.previousExecution) {
         const nextIframe = document.createElement("iframe")
@@ -59,7 +59,9 @@ export const pageFileExecution = {
         sourcemapMainFileRelativeUrl,
         sourcemapMappingFileRelativeUrl,
       } = await loadExploringConfig()
-      if (pageLeft) return
+      if (cancellationToken.cancellationRequested) {
+        return
+      }
 
       const iframeSrc = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
       const loadIframeMemoized = memoize(loadIframe)
@@ -85,7 +87,9 @@ export const pageFileExecution = {
         collectCoverage: false,
         executionId: fileRelativeUrl,
       })
-      if (pageLeft) return
+      if (cancellationToken.cancellationRequested) {
+        return
+      }
       execution.status = "executed"
       if (executionResult.status === "errored") {
         // eslint-disable-next-line no-eval
@@ -147,14 +151,13 @@ export const pageFileExecution = {
       execute(fileRelativeUrl)
     }
 
+    cancellationToken.register(() => {
+      livereloading.disconnect()
+    })
+
     return {
       title: fileRelativeUrl,
       element: iframe,
-      onleave: () => {
-        pageLeft = true
-        window.page = undefined
-        livereloading.disconnect()
-      },
     }
   },
 }

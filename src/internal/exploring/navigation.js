@@ -1,3 +1,5 @@
+import { createCancellationSource, isCancelError } from "@jsenv/cancellation"
+import { animate } from "./util.js"
 import { renderToolbar } from "./toolbar.js"
 import { pageFileList } from "./page-file-list.js"
 import { pageFileExecution } from "./page-file-execution.js"
@@ -6,11 +8,17 @@ const pageCandidates = [pageFileList, pageFileExecution]
 
 const LOADER_FADING_DURATION = 300
 
-const defaultPageResult = {
-  title: "", // no title,
-  element: document.querySelector("[data-page=default]"),
-  onleave: ({ page, pageLoader }) => {
-    pageLoader.style.backgroundColor = page === pageFileList ? "#1f262c" : "white"
+const defaultPage = {
+  name: "default",
+  naviguate: ({ cancellationToken }) => {
+    cancellationToken.register(({ reason }) => {
+      const { page, pageLoader } = reason
+      pageLoader.style.backgroundColor = page === pageFileList ? "#1f262c" : "white"
+    })
+    return {
+      title: document.title,
+      element: document.querySelector("[data-page=default]"),
+    }
   },
 }
 
@@ -18,35 +26,46 @@ const pageContainer = document.querySelector("#page")
 const pageLoader = document.querySelector("#page-loader")
 
 export const installNavigation = () => {
+  let navigationCancellationSource = createCancellationSource()
   const defaultRoute = {
     event: { type: "default" }, // there is no real event that lead to this route
     url: "", // no url for this route it's an abstract route
-    name: "default",
-    ...defaultPageResult,
+    page: defaultPage,
+    ...defaultPage,
+    ...defaultPage.naviguate({ cancellationToken: navigationCancellationSource.token }),
   }
-
   let currentRoute = defaultRoute
-  let currentNavigation
 
   const handleNavigation = async (event) => {
     // always rerender toolbar
     const fileRelativeUrl = document.location.pathname.slice(1)
     renderToolbar(fileRelativeUrl)
 
-    const nextRoute = getNextRoute(event)
+    const url = String(document.location)
+    const nextPage = pageCandidates.find(({ match }) => match({ url, event }))
+    const nextRoute = {
+      event,
+      url,
+      page: nextPage,
+      ...nextPage,
+    }
 
     if (nextRoute.url === currentRoute.url) {
       // if the location does not change what does it means, for now I don't know
       // let's just apply everything as usual (it will reload the page)
     }
 
-    if (currentNavigation) {
-      currentNavigation.cancel(nextRoute)
+    navigationCancellationSource.cancel({ ...nextRoute, pageLoader })
+    navigationCancellationSource = createCancellationSource()
+    const cancellationToken = navigationCancellationSource.token
+    try {
+      await navigate(currentRoute, nextRoute, {
+        cancellationToken,
+      })
+    } catch (e) {
+      if (isCancelError(e)) return
+      throw e
     }
-
-    currentNavigation = navigate(currentRoute, nextRoute)
-    await currentNavigation
-    currentNavigation = undefined
     currentRoute = nextRoute
   }
 
@@ -91,125 +110,66 @@ export const installNavigation = () => {
   }
 }
 
-const getNextRoute = (event) => {
-  const url = String(document.location)
-  const page = pageCandidates.find(({ match }) => match({ url, event }))
+const navigate = async (route, nextRoute, { cancellationToken }) => {
+  // while loading we will keep current page elements in the DOM
+  // so that the page dimensions are preserved
 
-  return {
-    event,
-    url,
-    ...page,
-  }
-}
-
-const navigate = async (route, nextRoute) => {
-  let canceled = false
-  const cancelCallbacks = []
-
-  const cancel = (...args) => {
-    if (canceled) return
-    console.log(`cancel navigation from ${route.name} to ${nextRoute.name}`)
-    canceled = true
-    cancelCallbacks.forEach((callback) => {
-      callback(...args)
-    })
-  }
-
-  const addCancelCallback = (callback) => {
-    cancelCallbacks.push(callback)
-  }
-
-  const promise = (async () => {
-    console.log(`leave ${route.name}`)
-    if (route.onleave) {
-      try {
-        route.onleave({ ...nextRoute, pageLoader })
-      } catch (e) {
-        console.error(`error in route.onleave: ${e.stack}`)
-      }
-    }
-
-    // while loading we will keep current page elements in the DOM
-    // so that the page dimensions are preserved
-
-    // make them able to interact using an absolute div on top of them
-    console.log("loader fade-in start")
-    pageLoader.style.display = "block"
-    pageLoader.style.pointerEvents = "auto"
-    const pageLoaderFadeinAnimation = pageLoader.animate(
-      [
-        {
-          opacity: 0,
-        },
-        {
-          opacity: 1,
-        },
-      ],
+  // make them able to interact using an absolute div on top of them
+  pageLoader.style.display = "block"
+  pageLoader.style.pointerEvents = "auto"
+  const pageLoaderFadeinAnimation = animate(
+    pageLoader,
+    [
       {
-        duration: LOADER_FADING_DURATION,
+        opacity: 0,
       },
-    )
-    addCancelCallback(() => {
-      pageLoaderFadeinAnimation.cancel()
-      pageContainer.style.visibility = "visible"
-    })
-    const pageLoaderFadeinFinished = animationToFinished(pageLoaderFadeinAnimation)
-    pageLoaderFadeinFinished.then(() => {
-      if (canceled) return
-      console.log(`loader fade-in end -> hide ${route.name} page elements`)
-      // hide current page elements (don't use display none to keep their influence on page dimensions)
-      pageContainer.style.visibility = "hidden"
-    })
-
-    console.log(`navigate to ${nextRoute.name}`)
-    const navigationResult = await nextRoute.navigate()
-    Object.assign(nextRoute, navigationResult)
-    console.log(`navigation to ${nextRoute.name} done`)
-    if (canceled) return
-
-    await pageLoaderFadeinFinished
-    if (canceled) return
-
-    // inject next page element
-    pageContainer.innerHTML = ""
-    if (nextRoute.element) {
-      pageContainer.appendChild(nextRoute.element)
-    }
-    console.log(`replace ${route.name} elements with ${nextRoute.name} page elements`)
-    pageContainer.style.visibility = "visible"
-    pageLoader.style.pointerEvents = "none"
-    console.log(`loader fadeout start`)
-    const pageLoaderFadeoutAnimation = pageLoader.animate(
-      [
-        {
-          opacity: 1,
-        },
-        {
-          opacity: 0,
-        },
-      ],
       {
-        duration: LOADER_FADING_DURATION,
+        opacity: 1,
       },
-    )
-    addCancelCallback(() => {
-      pageLoaderFadeoutAnimation.cancel()
-    })
-    const pageLoaderFadeoutFinished = animationToFinished(pageLoaderFadeoutAnimation)
-    pageLoaderFadeoutFinished.then(() => {
-      if (canceled) return
-      console.log(`loader fadeout done -> hide loader`)
-      pageLoader.style.display = "none"
-    })
-  })()
+    ],
+    {
+      cancellationToken,
+      duration: LOADER_FADING_DURATION,
+    },
+  )
+  pageLoaderFadeinAnimation.then(() => {
+    pageContainer.style.visibility = "hidden"
+  })
 
-  promise.cancel = cancel
-  return promise
-}
+  console.log(`navigate to ${nextRoute.name}`)
+  const navigationResult = await nextRoute.navigate({ cancellationToken })
+  Object.assign(nextRoute, navigationResult)
+  console.log(`navigation to ${nextRoute.name} done`)
+  await pageLoaderFadeinAnimation
+  if (cancellationToken.cancellationRequested) {
+    return
+  }
 
-const animationToFinished = (animation) => {
-  return new Promise((resolve) => {
-    animation.onfinish = resolve
+  // inject next page element
+  pageContainer.innerHTML = ""
+  if (nextRoute.element) {
+    pageContainer.appendChild(nextRoute.element)
+  }
+  console.log(`replace ${route.name} elements with ${nextRoute.name} page elements`)
+  pageContainer.style.visibility = "visible"
+  pageLoader.style.pointerEvents = "none"
+  const pageLoaderFadeoutAnimation = animate(
+    pageLoader,
+    [
+      {
+        opacity: 1,
+      },
+      {
+        opacity: 0,
+      },
+    ],
+    {
+      cancellationToken,
+      duration: LOADER_FADING_DURATION,
+    },
+  )
+  pageLoaderFadeoutAnimation.then(() => {
+    pageLoader.style.display = "none"
   })
 }
 

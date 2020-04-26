@@ -110,6 +110,7 @@ export const startExploring = async ({
         roomSet.delete(room)
         room.stop()
       })
+
       return room.connect(request.headers["last-event-id"])
     }
 
@@ -232,7 +233,7 @@ export const startExploring = async ({
       requestToResponse: (request) =>
         firstService(
           // get important info
-          () => {
+          async () => {
             if (
               request.ressource === "/exploring.json" &&
               request.method === "GET" &&
