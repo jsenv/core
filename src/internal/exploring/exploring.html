@@ -16,70 +16,105 @@
       </div>
       <div id="page-loader"></div>
     </main>
-
     <aside>
       <!-- toolbar -->
       <div id="toolbar">
         <div id="toolbar-wrapper">
-          <div class="jsenvLogo">
-            <svg id="jsenvLogoSvg">
-              <use xlink:href="#jsenvLogoSvgModel"></use>
-            </svg>
-          </div>
-          <button id="button-state-indicator">
-            <div class="tooltip serverState">
-              <span class="tooltipTextServerState">Unknown state</span>
-              <svg id="retryIcon" class="retryIcon">
-                <use xlink:href="#retryIconSvgModel"></use>
-              </svg>
-            </div>
-            <svg id="stateIndicatorSvg">
-              <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
-              <circle id="stateIndicatorRing" />
-            </svg>
-          </button>
-          <div class="fileNameContainer">
-            <input type="text" class="fileName" value="" readonly />
-          </div>
-          <button id="button-execution-indicator">
-            <div class="tooltip fileExecution">
-              <span class="tooltipTextFileExecution">Unknown state</span>
-              <svg id="retryIcon" class="retryIcon">
-                <use xlink:href="#retryIconSvgModel"></use>
-              </svg>
-            </div>
-            <div style="position: relative;">
-              <svg id="loaderSvg" width="35px" height="35px">
-                <use xlink:href="#loaderSvgModel"></use>
-              </svg>
-              <svg id="checkIconSvg" class="checkmark" viewBox="0 0 52 52">
-                <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
-              </svg>
-              <svg id="failIconSvg" class="failCross" viewBox="0 0 512 512">
-                <rect
-                  id="cross_p1"
-                  y="67.518"
-                  transform="matrix(0.7071 0.7071 -0.7071 0.7071 255.9995 -106.0389)"
-                />
-                <rect
-                  id="cross_p2"
-                  y="67.519"
-                  transform="matrix(0.7071 -0.7071 0.7071 0.7071 -106.039 256.0001)"
-                />
-              </svg>
-            </div>
-          </button>
-          <div style="width: 100%;"></div>
           <a href="/">
-            <svg id="settingsIconSvg" width="35px" height="35px">
-              <use xlink:href="#settingsIconSvgModel"></use>
-            </svg>
+            <div class="file-icon-wrapper iconToolbar-wrapper">
+              <svg id="fileIconSvg" class="iconToolbar" width="35px" height="35px">
+                <use xlink:href="#fileIconSvgModel"></use>
+              </svg>
+            </div>
           </a>
+          <div class="line"></div>
+          <div class="fileGroup">
+            <button id="button-state-indicator" class="fileGroupItem">
+              <div class="tooltip serverState">
+                <span class="tooltipTextServerState">Unknown state</span>
+                <svg id="retryIcon" class="retryIcon">
+                  <use xlink:href="#retryIconSvgModel"></use>
+                </svg>
+              </div>
+              <svg id="stateIndicatorSvg">
+                <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
+                <circle id="stateIndicatorRing" />
+              </svg>
+            </button>
+            <div class="fileNameContainer fileGroupItem">
+              <input type="text" class="fileName" value="" readonly />
+            </div>
+            <button id="button-execution-indicator" class="fileGroupItem">
+              <div class="tooltip fileExecution">
+                <span class="tooltipTextFileExecution">Unknown state</span>
+                <svg id="retryIcon" class="retryIcon">
+                  <use xlink:href="#retryIconSvgModel"></use>
+                </svg>
+              </div>
+              <div style="position: relative;">
+                <svg id="loaderSvg" width="35px" height="35px">
+                  <use xlink:href="#loaderSvgModel"></use>
+                </svg>
+                <svg id="checkIconSvg" class="checkmark" viewBox="0 0 52 52">
+                  <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+                </svg>
+                <svg id="failIconSvg" class="failCross" viewBox="0 0 512 512">
+                  <rect
+                    id="cross_p1"
+                    y="67.518"
+                    transform="matrix(0.7071 0.7071 -0.7071 0.7071 255.9995 -106.0389)"
+                  />
+                  <rect
+                    id="cross_p2"
+                    y="67.519"
+                    transform="matrix(0.7071 -0.7071 0.7071 0.7071 -106.039 256.0001)"
+                  />
+                </svg>
+              </div>
+            </button>
+          </div>
+          <div class="line"></div>
+          <div style="width: 100%;"></div>
+          <div class="line"></div>
+          <div>
+            <div class="settingsBox">
+              <svg id="settingsBoxIconSvg" width="35px" height="35px">
+                <use xlink:href="#settingsIconSvgModel"></use>
+              </svg>
+              <h3>Settings</h3>
+              <div class="settingsBoxContent">
+                <div class="settingsBoxItem">
+                  <input id="toggle-notifs" type="checkbox" />
+                  Notifications
+                </div>
+                <div class="settingsBoxItem">
+                  <input id="toggle-darkTheme" type="checkbox" />
+                  Light theme
+                </div>
+              </div>
+            </div>
+            <a id="button-toggle-settings">
+              <div class="settings-icon-wrapper iconToolbar-wrapper">
+                <svg id="settingsIconSvg" class="iconToolbar" width="35px" height="35px">
+                  <use xlink:href="#settingsIconSvgModel"></use>
+                </svg>
+              </div>
+            </a>
+          </div>
+          <div class="line"></div>
           <button id="button-close-toolbar">
-            <svg id="crossIconSvg" width="35px" height="35px">
+            <svg id="crossIconSvg" class="iconToolbar" width="35px" height="35px">
               <use xlink:href="#crossIconSvgModel"></use>
             </svg>
           </button>
+        </div>
+      </div>
+
+      <div id="toolbarTrigger">
+        <div id="jsenvLogo">
+          <svg id="jsenvLogoSvg">
+            <use xlink:href="#jsenvLogoSvgModel"></use>
+          </svg>
         </div>
       </div>
 
@@ -98,7 +133,7 @@
               <use xlink:href="#fileIconSvgModel"></use>
             </svg>
             <h2>Explorable files</h2>
-            <h3>Click on the file you want to execute</h3>
+            <h4>Click on the file you want to execute</h4>
             <nav>
               <ul></ul>
             </nav>

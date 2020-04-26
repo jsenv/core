@@ -1,6 +1,7 @@
 @import "./tooltip.css";
 @import "./serverStateIndicator.css";
 @import "./fileExecutionIndicator.css";
+@import "./settingsBox.css";
 
 #toolbar-wrapper {
   display: table;
@@ -25,10 +26,31 @@
   cursor: pointer;
 }
 
+#toolbar a:hover {
+  cursor: pointer;
+}
+
+.line {
+  min-width: 1px;
+  height: 100%;
+  background: #3a3a3a;
+}
+
 #jsenvLogoSvg {
   width: 30px;
   height: 30px;
   margin: 0 10px;
+}
+
+/* file name input & indicators */
+.fileGroup {
+  display: table !important;
+  background: rgba(31, 38, 44, 0.72);
+}
+
+.fileGroupItem {
+  display: table-cell;
+  vertical-align: middle;
 }
 
 .fileNameContainer {
@@ -41,7 +63,7 @@
   font-family: monospace;
   font-size: 15px;
   color: #cecece;
-  background: #404040;
+  background: transparent;
   border: transparent;
   display: inline-block;
   overflow: hidden;
@@ -53,25 +75,78 @@
   border-bottom: 1px solid grey;
 }
 
-/* noir foncé : #0c1215 */
-/* plus clair: #0C201E ou #1F262C*/
-/* bleu clair: #24C3B0 */
-/* orange: #FC9B1E */
-/* bleu foncé: #030713 */
-
-/* bleu turquoise: #0D7E83 */
-/* plus foncé: #076570 */
-/* blanc: #E7F2F3 */
-
+/* file and settings icons */
+#fileIconSvg,
 #settingsIconSvg {
   fill: #cecece;
   width: 20px;
-  height: 20px;
 }
 
+.iconToolbar {
+  margin: 0 30px;
+  height: 100%;
+}
+
+.iconToolbar-wrapper {
+  /* margin-bottom: 3px;
+  border-top: 1px solid transparent;
+  border-radius: 0 0 5px 5px; */
+  height: 100%;
+}
+
+.iconToolbar-selected {
+  /* box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.2), 0px 4px 5px 0px rgba(0, 0, 0, 0.14),
+    0px 1px 10px 0px rgba(0, 0, 0, 0.12); */
+}
+
+.iconToolbar-selected.file-icon-wrapper {
+  background: #1f262c;
+}
+
+.iconToolbar-selected.settings-icon-wrapper {
+  background: #030713;
+}
+
+/* close icon */
 #crossIconSvg {
   fill: #828282;
   width: 18px;
-  height: 18px;
-  margin: 11px 10px;
+}
+
+/* toolbarTrigger */
+#toolbarTrigger {
+  display: none;
+  overflow: hidden;
+  position: absolute;
+  bottom: 0;
+  right: 20px;
+  height: 10px;
+  width: 50px;
+  border-radius: 5px 5px 0 0;
+  border: 1px solid #00000026;
+  border-bottom: none;
+  box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.2);
+  transition: 600ms;
+}
+
+#toolbarTrigger:hover {
+  cursor: pointer;
+}
+
+#toolbarTrigger.toolbarTriggerVisible {
+  display: block;
+}
+
+#toolbarTrigger.toolbarTriggerUp {
+  height: 40px;
+  padding: 5px 0;
+}
+
+#jsenvLogo {
+  display: none;
+  transition: 600ms;
+}
+
+#jsenvLogo.jsenvLogoVisible {
+  display: block;
 }

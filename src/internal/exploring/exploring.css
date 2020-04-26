@@ -1,5 +1,5 @@
 @import "./style/toolbar.css";
-@import "./style/configuration.css";
+@import "./style/fileList.css";
 
 * {
   box-sizing: border-box;
@@ -45,7 +45,6 @@ iframe {
 html[data-toolbar-visible] #toolbar {
   height: 40px;
   visibility: visible;
-  border-top: 1px solid #676767;
 }
 
 html[data-toolbar-visible] iframe {
