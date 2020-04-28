@@ -1,11 +1,10 @@
+import { createCancellationToken } from "@jsenv/cancellation"
 import { memoize } from "../memoize.js"
 
-export const fetchUrl =
-  typeof window.fetch === "function" && typeof window.AbortController === "function"
-    ? fetchNative
-    : fetchPolyfill
-
-const fetchNative = async (url, { cancellationToken, ...options } = {}) => {
+const fetchNative = async (
+  url,
+  { cancellationToken = createCancellationToken(), ...options } = {},
+) => {
   const abortController = new AbortController()
 
   let cancelError
@@ -36,3 +35,8 @@ const fetchPolyfill = async (...args) => {
 }
 
 const loadPolyfill = memoize(() => import("../fetchUsingXHR.js"))
+
+export const fetchUrl =
+  typeof window.fetch === "function" && typeof window.AbortController === "function"
+    ? fetchNative
+    : fetchPolyfill
