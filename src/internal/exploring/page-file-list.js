@@ -1,5 +1,5 @@
 import { loadExploringConfig } from "./util.js"
-import { fetchUsingXHR } from "../fetchUsingXHR.js"
+import { fetchUrl } from "./fetching.js"
 
 export const pageFileList = {
   name: "file-list",
@@ -14,7 +14,7 @@ export const pageFileList = {
 
     const fileListElement = document.querySelector(`[data-page="file-list"`).cloneNode(true)
 
-    const response = await fetchUsingXHR(`/explorables`, {
+    const response = await fetchUrl(`/explorables`, {
       method: "POST",
       body: JSON.stringify(explorableConfig),
       headers: {

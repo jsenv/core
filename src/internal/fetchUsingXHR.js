@@ -1,10 +1,17 @@
+import { createCancellationToken } from "@jsenv/cancellation"
 // ideally we should do some window.fetch detection (ensuring it has cancellation) and accordingly
 // fallback to this polyfill (or even use an existing polyfill would be better)
 // https://github.com/github/fetch/blob/master/fetch.js
 
 export const fetchUsingXHR = async (
   url,
-  { method = "GET", credentials = "same-origin", headers = {}, body = null } = {},
+  {
+    cancellationToken = createCancellationToken(),
+    method = "GET",
+    credentials = "same-origin",
+    headers = {},
+    body = null,
+  } = {},
 ) => {
   const headersPromise = createPromiseAndHooks()
   const bodyPromise = createPromiseAndHooks()
@@ -43,6 +50,11 @@ export const fetchUsingXHR = async (
     cleanup()
     bodyPromise.resolve()
   }
+
+  cancellationToken.register((cancelError) => {
+    xhr.abort()
+    failure(cancelError)
+  })
 
   xhr.onreadystatechange = () => {
     // https://developer.mozilla.org/fr/docs/Web/API/XMLHttpRequest/readyState

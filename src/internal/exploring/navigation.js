@@ -1,5 +1,5 @@
 import { createCancellationSource, isCancelError } from "@jsenv/cancellation"
-import { animate } from "./util.js"
+import { animate } from "./animation.js"
 import { renderToolbar } from "./toolbar.js"
 import { pageFileList } from "./page-file-list.js"
 import { pageFileExecution } from "./page-file-execution.js"
