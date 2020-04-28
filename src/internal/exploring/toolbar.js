@@ -40,10 +40,12 @@ export const renderToolbar = (fileRelativeUrl) => {
     input.value = fileRelativeUrl
     resizeInput(input)
     document.querySelector(".fileNameContainer").style.display = ""
+    document.querySelector(".fileName").style.margin = "10px"
 
     document.querySelector("#button-execution-indicator").onclick = () =>
       toggleTooltip("fileExecution")
     document.querySelector("#button-execution-indicator").style.display = ""
+    document.querySelector(".file-icon-wrapper").classList.remove("iconToolbar-selected")
   } else {
     // document.querySelector(".jsenvLogo").style.display = ""
     document.querySelector("#button-state-indicator").style.display = "none"

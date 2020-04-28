@@ -48,7 +48,7 @@
   background: rgba(31, 38, 44, 0.72);
 }
 
-.fileGroupItem {
+.fileGroup > * {
   display: table-cell;
   vertical-align: middle;
 }
