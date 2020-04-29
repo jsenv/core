@@ -1,5 +1,5 @@
 import { createCancellationSource, isCancelError } from "@jsenv/cancellation"
-import { animate } from "./animation.js"
+import { fadeIn, fadeOut } from "./animation.js"
 import { renderToolbar } from "./toolbar.js"
 import { pageFileList } from "./page-file-list.js"
 import { pageFileExecution } from "./page-file-execution.js"
@@ -117,21 +117,10 @@ const navigate = async (route, nextRoute, { cancellationToken }) => {
   // make them able to interact using an absolute div on top of them
   pageLoader.style.display = "block"
   pageLoader.style.pointerEvents = "auto"
-  const pageLoaderFadeinAnimation = animate(
-    pageLoader,
-    [
-      {
-        opacity: 0,
-      },
-      {
-        opacity: 1,
-      },
-    ],
-    {
-      cancellationToken,
-      duration: LOADER_FADING_DURATION,
-    },
-  )
+  const pageLoaderFadeinAnimation = fadeIn(pageLoader, {
+    cancellationToken,
+    duration: LOADER_FADING_DURATION,
+  })
   pageLoaderFadeinAnimation.then(() => {
     pageContainer.style.visibility = "hidden"
   })
@@ -153,21 +142,10 @@ const navigate = async (route, nextRoute, { cancellationToken }) => {
   console.log(`replace ${route.name} elements with ${nextRoute.name} page elements`)
   pageContainer.style.visibility = "visible"
   pageLoader.style.pointerEvents = "none"
-  const pageLoaderFadeoutAnimation = animate(
-    pageLoader,
-    [
-      {
-        opacity: 1,
-      },
-      {
-        opacity: 0,
-      },
-    ],
-    {
-      cancellationToken,
-      duration: LOADER_FADING_DURATION,
-    },
-  )
+  const pageLoaderFadeoutAnimation = fadeOut(pageLoader, {
+    cancellationToken,
+    duration: LOADER_FADING_DURATION,
+  })
   pageLoaderFadeoutAnimation.then(() => {
     pageLoader.style.display = "none"
   })

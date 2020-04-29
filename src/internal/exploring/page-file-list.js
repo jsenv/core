@@ -1,4 +1,5 @@
 import { loadExploringConfig } from "./util.js"
+import { move } from "./animation.js"
 import { fetchUrl } from "./fetching.js"
 
 export const pageFileList = {
@@ -28,7 +29,7 @@ export const pageFileList = {
       .map((file) => `<li><a class="execution-link" href=${file}>${file}</a></li>`)
       .join("")
 
-    cancellationToken.register(({ reason }) => {
+    cancellationToken.register(async ({ reason }) => {
       const { event, url, pageLoader } = reason
       pageLoader.style.backgroundColor = "#1f262c"
 
@@ -46,80 +47,17 @@ export const pageFileList = {
       }
 
       // put the file name in the input in the toolbar
-      const input = document.querySelector(".fileName")
-      input.value = href
-      resizeInput(input)
-
-      // hide the input for now
       const fileInput = document.querySelector(".fileName")
+      fileInput.value = href
+      resizeInput(fileInput)
+      // hide the input during animation
       fileInput.style.opacity = "0"
-
-      const fromComputedStyle = window.getComputedStyle(aElement)
-      const toComputedStyle = window.getComputedStyle(fileInput)
-      // get positions of input in toolbar and aElement
-      const fromPosition = aElement.getBoundingClientRect()
-      const toPosition = fileInput.getBoundingClientRect()
-
-      // we'll do the animation in a div preventing overflow and pointer events
-      const div = document.createElement("div")
-      div.style.position = "absolute"
-      div.style.left = 0
-      div.style.top = 0
-      div.style.right = 0
-      div.style.bottom = 0
-      div.style.overflow = "hidden"
-      div.style.pointerEvents = "none"
-      // clone aElement and style it
-      const copy = aElement.cloneNode(true)
-      copy.style.position = "absolute"
-      copy.style.left = fromPosition.left
-      copy.style.top = fromPosition.top
-      copy.style.maxWidth = fromPosition.right - fromPosition.left
-      copy.style.overflow = "hidden"
-      copy.style.textOverflow = "ellipsis"
-      div.appendChild(copy)
-      document.body.appendChild(div)
-
-      const toLeft =
-        toPosition.left - fromPosition.left - (parseInt(fromComputedStyle.paddingLeft) || 0)
-      const toTop =
-        toPosition.top - fromPosition.top - (parseInt(fromComputedStyle.paddingTop) || 0)
-      // define final position of new element and the duration
-      const translate = `translate(${toLeft}px, ${toTop}px)`
-      const duration = 700
-
-      // animate new element
-      copy.animate(
-        [
-          {
-            transform: "translate(0px, 0px)",
-            backgroundColor: fromComputedStyle.backgroundColor,
-            color: fromComputedStyle.color,
-            fontSize: fromComputedStyle.fontSize,
-            height: fromPosition.bottom - fromPosition.top,
-            width: "100%",
-          },
-          {
-            transform: translate,
-            backgroundColor: toComputedStyle.backgroundColor,
-            color: toComputedStyle.color,
-            fontSize: toComputedStyle.fontSize,
-            height: toPosition.bottom - toPosition.top,
-            width: "40ch",
-          },
-        ],
-        {
-          duration,
-          fill: "forwards",
-          easing: "ease-in-out",
-        },
-      )
-
-      // after the animation is done, remove copy and show file input in toolbar
-      setTimeout(() => {
-        fileInput.style.opacity = "1"
-        div.parentNode.removeChild(div)
-      }, duration)
+      await move(aElement, fileInput, {
+        duration: 700,
+        fill: "forwards",
+        easing: "ease-in-out",
+      })
+      fileInput.style.opacity = "1"
     })
 
     return {
