@@ -31,25 +31,21 @@ export const renderToolbar = (fileRelativeUrl) => {
   document.querySelector("#button-toggle-settings").onclick = () => toggleSettingsBox()
 
   if (fileRelativeUrl) {
-    // document.querySelector(".jsenvLogo").style.display = "none"
-
     document.querySelector("#button-state-indicator").onclick = () => toggleTooltip("serverState")
     document.querySelector("#button-state-indicator").style.display = ""
 
     const input = document.querySelector(".fileName")
     input.value = fileRelativeUrl
     resizeInput(input)
-    document.querySelector(".fileNameContainer").style.display = ""
-    document.querySelector(".fileName").style.margin = "10px"
 
+    document.querySelector(".fileNameContainer").style.display = "table-cell"
     document.querySelector("#button-execution-indicator").onclick = () =>
       toggleTooltip("fileExecution")
     document.querySelector("#button-execution-indicator").style.display = ""
     document.querySelector(".file-icon-wrapper").classList.remove("iconToolbar-selected")
   } else {
-    // document.querySelector(".jsenvLogo").style.display = ""
+    document.querySelector(".fileNameContainer").style.display = "none"
     document.querySelector("#button-state-indicator").style.display = "none"
-    document.querySelector(".fileName").style.margin = "0"
     document.querySelector("#button-execution-indicator").style.display = "none"
     document.querySelector(".file-icon-wrapper").classList.add("iconToolbar-selected")
   }

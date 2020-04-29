@@ -43,23 +43,15 @@
 }
 
 /* file name input & indicators */
-.fileGroup {
-  display: table !important;
-  background: rgba(31, 38, 44, 0.72);
-}
-
-.fileGroup > * {
-  display: table-cell;
-  vertical-align: middle;
-}
-
 .fileNameContainer {
+  background: rgba(31, 38, 44, 0.72);
   max-width: 40%;
+  padding: 0 1.2em;
 }
 
 .fileName {
   width: 100%;
-  margin: 10px;
+  padding: 0px;
   font-family: monospace;
   font-size: 15px;
   color: #cecece;

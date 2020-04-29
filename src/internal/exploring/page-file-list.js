@@ -24,7 +24,9 @@ export const pageFileList = {
     const files = await response.json()
 
     const ul = fileListElement.querySelector("ul")
-    ul.innerHTML = files.map((file) => `<li><a href=${file}>${file}</a></li>`).join("")
+    ul.innerHTML = files
+      .map((file) => `<li><a class="execution-link" href=${file}>${file}</a></li>`)
+      .join("")
 
     cancellationToken.register(({ reason }) => {
       const { event, url, pageLoader } = reason
@@ -43,9 +45,6 @@ export const pageFileList = {
         return
       }
 
-      // remove overflow X on body
-      document.documentElement.style.overflow = "hidden"
-
       // put the file name in the input in the toolbar
       const input = document.querySelector(".fileName")
       input.value = href
@@ -55,41 +54,57 @@ export const pageFileList = {
       const fileInput = document.querySelector(".fileName")
       fileInput.style.opacity = "0"
 
+      const fromComputedStyle = window.getComputedStyle(aElement)
+      const toComputedStyle = window.getComputedStyle(fileInput)
       // get positions of input in toolbar and aElement
-      const inputPosition = fileInput.getBoundingClientRect()
-      const position = aElement.getBoundingClientRect()
+      const fromPosition = aElement.getBoundingClientRect()
+      const toPosition = fileInput.getBoundingClientRect()
 
+      // we'll do the animation in a div preventing overflow and pointer events
+      const div = document.createElement("div")
+      div.style.position = "absolute"
+      div.style.left = 0
+      div.style.top = 0
+      div.style.right = 0
+      div.style.bottom = 0
+      div.style.overflow = "hidden"
+      div.style.pointerEvents = "none"
       // clone aElement and style it
       const copy = aElement.cloneNode(true)
-      document.body.appendChild(copy)
       copy.style.position = "absolute"
-      copy.style.left = position.left
-      copy.style.top = position.top
+      copy.style.left = fromPosition.left
+      copy.style.top = fromPosition.top
+      copy.style.maxWidth = fromPosition.right - fromPosition.left
       copy.style.overflow = "hidden"
       copy.style.textOverflow = "ellipsis"
+      div.appendChild(copy)
+      document.body.appendChild(div)
 
+      const toLeft =
+        toPosition.left - fromPosition.left - (parseInt(fromComputedStyle.paddingLeft) || 0)
+      const toTop =
+        toPosition.top - fromPosition.top - (parseInt(fromComputedStyle.paddingTop) || 0)
       // define final position of new element and the duration
-      const translate = `translate(${inputPosition.left - position.left}px, ${
-        inputPosition.top - position.top + 2
-      }px)`
+      const translate = `translate(${toLeft}px, ${toTop}px)`
       const duration = 700
 
       // animate new element
       copy.animate(
         [
           {
-            transform: "translate(0px, 2px)",
-            color: "#e7f2f3",
-            fontSize: "13px",
-            height: "13px",
+            transform: "translate(0px, 0px)",
+            backgroundColor: fromComputedStyle.backgroundColor,
+            color: fromComputedStyle.color,
+            fontSize: fromComputedStyle.fontSize,
+            height: fromPosition.bottom - fromPosition.top,
             width: "100%",
           },
-          { width: "100%", offset: 0.9 },
           {
             transform: translate,
-            color: "#cecece",
-            fontSize: "15px",
-            height: "15px",
+            backgroundColor: toComputedStyle.backgroundColor,
+            color: toComputedStyle.color,
+            fontSize: toComputedStyle.fontSize,
+            height: toPosition.bottom - toPosition.top,
             width: "40ch",
           },
         ],
@@ -103,8 +118,7 @@ export const pageFileList = {
       // after the animation is done, remove copy and show file input in toolbar
       setTimeout(() => {
         fileInput.style.opacity = "1"
-        copy.parentNode.removeChild(copy)
-        document.documentElement.style.overflow = "unset"
+        div.parentNode.removeChild(div)
       }, duration)
     })
 

@@ -43,12 +43,17 @@ section {
 
 #explorables li {
   list-style-type: none;
-  background: #204143;
   margin: 10px 0;
-  padding: 2px 7px;
 }
 
-#explorables a {
+#explorables li .execution-link {
+  width: 100%;
+}
+
+.execution-link {
+  background: #204143;
+  padding: 2px 7px;
+  display: inline-block;
   color: #e7f2f3;
   font-family: monospace;
   text-decoration: unset;
