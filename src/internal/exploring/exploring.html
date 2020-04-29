@@ -63,20 +63,21 @@
           </div>
           <div class="line"></div>
           <div style="width: 100%;"></div>
-          <button id="button-state-indicator">
-            <div class="tooltip serverState">
-              <span class="tooltipTextServerState">Unknown state</span>
-              <svg id="retryIcon" class="retryIcon">
-                <use xlink:href="#retryIconSvgModel"></use>
+          <div>
+            <button id="button-state-indicator">
+              <div class="tooltip serverState">
+                <span class="tooltipTextServerState">Unknown state</span>
+                <svg id="retryIcon" class="retryIcon">
+                  <use xlink:href="#retryIconSvgModel"></use>
+                </svg>
+              </div>
+              <svg id="stateIndicatorSvg">
+                <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
+                <circle id="stateIndicatorRing" />
               </svg>
-            </div>
-            <svg id="stateIndicatorSvg">
-              <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
-              <circle id="stateIndicatorRing" />
-            </svg>
-          </button>
+            </button>
+          </div>
           <div class="line"></div>
-
           <div>
             <div class="settingsBox">
               <svg id="settingsBoxIconSvg" width="35px" height="35px">
@@ -103,11 +104,13 @@
             </a>
           </div>
           <div class="line"></div>
-          <button id="button-close-toolbar">
-            <svg id="crossIconSvg" class="iconToolbar" width="35px" height="35px">
-              <use xlink:href="#crossIconSvgModel"></use>
-            </svg>
-          </button>
+          <div>
+            <button id="button-close-toolbar">
+              <svg id="crossIconSvg" class="iconToolbar" width="35px" height="35px">
+                <use xlink:href="#crossIconSvgModel"></use>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 

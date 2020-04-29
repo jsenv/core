@@ -103,7 +103,7 @@ export const pageFileExecution = {
 
       const duration = execution.endTime - execution.startTime
       if (executionResult.status === "errored") {
-        jsenvLogger.log(`error during execution`, executionResult.error)
+        jsenvLogger.debug(`error during execution`, executionResult.error)
         applyFileExecutionIndicator("failure", duration)
       } else {
         applyFileExecutionIndicator("success", duration)
@@ -174,7 +174,7 @@ const loadIframe = (iframe, { iframeSrc }) => {
 }
 
 const performIframeAction = (iframe, action, args, { compileServerOrigin }) => {
-  jsenvLogger.log(`> ${action}`, args)
+  jsenvLogger.debug(`> ${action}`, args)
   sendMessageToIframe(iframe, { action, args }, { compileServerOrigin })
 
   return new Promise((resolve, reject) => {
@@ -185,7 +185,7 @@ const performIframeAction = (iframe, action, args, { compileServerOrigin }) => {
       if (typeof data !== "object" || data === null) return
 
       const { code, value } = data
-      jsenvLogger.log(`< ${code}`, value)
+      jsenvLogger.debug(`< ${code}`, value)
       if (code === `${action}-failure`) {
         window.removeEventListener("message", onMessage, false)
         reject(value)

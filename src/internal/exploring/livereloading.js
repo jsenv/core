@@ -17,17 +17,17 @@ export const createLivereloading = (
         eventSourceUrl,
         {
           "file-changed": ({ data }) => {
-            jsenvLogger.log(`${data} changed`)
+            jsenvLogger.debug(`${data} changed`)
             onFileChanged(data)
           },
           "file-removed": ({ data }) => {
-            jsenvLogger.log(`${data} removed`)
+            jsenvLogger.debug(`${data} removed`)
             onFileRemoved(data)
           },
         },
         {
           CONNECTING: ({ abort }) => {
-            jsenvLogger.log(`connecting to ${eventSourceUrl}`)
+            jsenvLogger.debug(`connecting to ${eventSourceUrl}`)
             onConnecting({
               abort: () => {
                 livereloadingPreference.set(false)
@@ -43,13 +43,13 @@ export const createLivereloading = (
           }) => {
             resolve(false)
             if (failureConsequence === "renouncing" && reconnectionFlag) {
-              jsenvLogger.log(`failed connection to ${eventSourceUrl}`)
+              jsenvLogger.debug(`failed connection to ${eventSourceUrl}`)
             }
             if (failureConsequence === "renouncing" && !reconnectionFlag) {
-              jsenvLogger.log(`aborted connection to ${eventSourceUrl}`)
+              jsenvLogger.debug(`aborted connection to ${eventSourceUrl}`)
             }
             if (failureConsequence === "disconnection") {
-              jsenvLogger.log(`disconnected from ${eventSourceUrl}`)
+              jsenvLogger.debug(`disconnected from ${eventSourceUrl}`)
             }
 
             if (failureReason === "script") {
@@ -60,7 +60,7 @@ export const createLivereloading = (
           },
           CONNECTED: ({ disconnect }) => {
             resolve(true)
-            jsenvLogger.log(`connected to ${eventSourceUrl}`)
+            jsenvLogger.debug(`connected to ${eventSourceUrl}`)
             onConnected({
               disconnect: () => {
                 livereloadingPreference.set(false)
