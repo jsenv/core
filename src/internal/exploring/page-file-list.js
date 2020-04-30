@@ -48,8 +48,6 @@ export const pageFileList = {
 
       // put the file name in the input in the toolbar
       const fileInput = document.querySelector(".fileName")
-      fileInput.value = href
-      resizeInput(fileInput)
       // hide the input during animation
       fileInput.style.opacity = "0"
       await move(aElement, fileInput, {
@@ -65,12 +63,4 @@ export const pageFileList = {
       element: fileListElement,
     }
   },
-}
-
-const resizeInput = (input) => {
-  if (input.value.length > 40) {
-    input.style.width = "40ch"
-  } else {
-    input.style.width = `${input.value.length}ch`
-  }
 }
