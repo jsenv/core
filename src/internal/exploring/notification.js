@@ -1,8 +1,18 @@
-// TODO: take into account notification preference
-// export a way to get/set this preference
-// add a notification when livereloading event source gets disconnected ?
+import { createPreference } from "./preferences.js"
+
+const notificationPreference = createPreference("notification")
+
+export const notificationAvailable = typeof window.Notification === "function"
+
+export const getNotificationPreference = () =>
+  notificationPreference.has() ? notificationPreference.get() : true
+
+export const setNotificationPreference = (value) => notificationPreference.set(value)
 
 export const notifyFileExecution = (execution, previousExecution) => {
+  const notificationEnabled = getNotificationPreference()
+  if (!notificationEnabled) return
+
   const { fileRelativeUrl } = execution
   const notificationOptions = {
     lang: "en",
@@ -40,8 +50,6 @@ export const notifyFileExecution = (execution, previousExecution) => {
     })
   }
 }
-
-const notificationAvailable = typeof window.Notification === "function"
 
 const notify = notificationAvailable
   ? async (title, { clickToFocus = false, clickToClose = false, ...options } = {}) => {

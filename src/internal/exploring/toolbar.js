@@ -1,4 +1,7 @@
-import { toolbarVisibilityPreference } from "./preferences.js"
+import { getNotificationPreference, setNotificationPreference } from "./notification.js"
+import { createPreference } from "./preferences.js"
+
+const toolbarVisibilityPreference = createPreference("toolbar")
 
 export const renderToolbar = (fileRelativeUrl) => {
   const toolbarVisible = toolbarVisibilityPreference.has()
@@ -29,6 +32,11 @@ export const renderToolbar = (fileRelativeUrl) => {
   }
 
   document.querySelector("#button-toggle-settings").onclick = () => toggleSettingsBox()
+  const notifCheckbox = document.querySelector("#toggle-notifs")
+  notifCheckbox.checked = getNotificationPreference()
+  notifCheckbox.onchange = () => {
+    setNotificationPreference(notifCheckbox.checked)
+  }
 
   if (fileRelativeUrl) {
     document.querySelector("#button-state-indicator").onclick = () => toggleTooltip("serverState")

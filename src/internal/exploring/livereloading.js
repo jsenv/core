@@ -1,6 +1,8 @@
 import { connectEventSource } from "./connectEventSource.js"
 import { jsenvLogger } from "./jsenvLogger.js"
-import { livereloadingPreference } from "./preferences.js"
+import { createPreference } from "./preferences.js"
+
+const livereloadingPreference = createPreference("livereloading")
 
 export const createLivereloading = (
   fileRelativeUrl,
