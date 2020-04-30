@@ -3,6 +3,7 @@ import { createLivereloading } from "./livereloading.js"
 import { applyStateIndicator, applyFileExecutionIndicator } from "./toolbar.js"
 import { loadExploringConfig } from "./util.js"
 import { jsenvLogger } from "./jsenvLogger.js"
+import { notifyFileExecution } from "./notification.js"
 
 export const pageFileExecution = {
   name: "file-execution",
@@ -41,6 +42,7 @@ export const pageFileExecution = {
       }
 
       const execution = {
+        fileRelativeUrl,
         status: "loading", // iframe loading
         iframe,
         startTime,
@@ -102,12 +104,15 @@ export const pageFileExecution = {
       execution.endTime = endTime
 
       const duration = execution.endTime - execution.startTime
+
+      const { previousExecution } = window.page
       if (executionResult.status === "errored") {
         jsenvLogger.debug(`error during execution`, executionResult.error)
         applyFileExecutionIndicator("failure", duration)
       } else {
         applyFileExecutionIndicator("success", duration)
       }
+      notifyFileExecution(execution, previousExecution)
 
       window.page.previousExecution = execution
     }
