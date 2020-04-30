@@ -3,8 +3,9 @@ import { fadeIn, fadeOut } from "./animation.js"
 import { renderToolbar } from "./toolbar.js"
 import { pageFileList } from "./page-file-list.js"
 import { pageFileExecution } from "./page-file-execution.js"
+import { pageErrorNavigation } from "./page-error-navigation.js"
 
-const pageCandidates = [pageFileList, pageFileExecution]
+const pageCandidates = [pageErrorNavigation, pageFileList, pageFileExecution]
 
 const LOADER_FADING_DURATION = 300
 
@@ -36,7 +37,7 @@ export const installNavigation = () => {
   }
   let currentRoute = defaultRoute
 
-  const handleNavigation = async (event) => {
+  const handleNavigationEvent = async (event) => {
     // always rerender toolbar
     const fileRelativeUrl = document.location.pathname.slice(1)
     renderToolbar(fileRelativeUrl)
@@ -50,30 +51,37 @@ export const installNavigation = () => {
       ...nextPage,
     }
 
-    if (nextRoute.url === currentRoute.url) {
-      // if the location does not change what does it means, for now I don't know
-      // let's just apply everything as usual (it will reload the page)
-    }
-
     navigationCancellationSource.cancel({ ...nextRoute, pageLoader })
     navigationCancellationSource = createCancellationSource()
     const cancellationToken = navigationCancellationSource.token
+
     try {
       await navigate(currentRoute, nextRoute, {
         cancellationToken,
       })
     } catch (e) {
       if (isCancelError(e)) return
-      throw e
+
+      // navigation error while navigating to error page
+      if (nextPage.name === "error-navigation") throw e
+
+      handleNavigationEvent({
+        type: "error-navigation",
+        data: {
+          route: nextRoute,
+          error: e,
+        },
+      })
+      return
     }
     currentRoute = nextRoute
   }
 
-  handleNavigation({
+  handleNavigationEvent({
     type: "load",
   })
   window.onpopstate = () => {
-    handleNavigation({
+    handleNavigationEvent({
       type: "popstate",
     })
   }
@@ -102,7 +110,7 @@ export const installNavigation = () => {
 
     clickEvent.preventDefault()
     window.history.pushState({}, "", aElement.href)
-    handleNavigation(clickEvent)
+    handleNavigationEvent(clickEvent)
   }
   document.addEventListener("click", onclick)
   return () => {
@@ -126,7 +134,7 @@ const navigate = async (route, nextRoute, { cancellationToken }) => {
   })
 
   console.log(`navigate to ${nextRoute.name}`)
-  const navigationResult = await nextRoute.navigate({ cancellationToken })
+  const navigationResult = await nextRoute.navigate({ ...nextRoute, cancellationToken })
   Object.assign(nextRoute, navigationResult)
   console.log(`navigation to ${nextRoute.name} done`)
   await pageLoaderFadeinAnimation
