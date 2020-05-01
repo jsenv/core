@@ -56,7 +56,8 @@ export const renderToolbar = (fileRelativeUrl) => {
   fileWidthBreakpoint.changed.listen(handleFileWidthBreakpoint)
 
   if (fileRelativeUrl) {
-    document.querySelector("#button-state-indicator").onclick = () => toggleTooltip("serverState")
+    const buttonStateIndicator = document.querySelector("#button-state-indicator")
+    buttonStateIndicator.onclick = () => toggleTooltip(buttonStateIndicator)
     document.querySelector("#button-state-indicator").style.display = ""
 
     const input = document.querySelector(".fileName")
@@ -64,9 +65,9 @@ export const renderToolbar = (fileRelativeUrl) => {
     resizeInput(input, fileWidthBreakpoint)
 
     document.querySelector(".fileNameContainer").style.display = "table-cell"
-    document.querySelector("#button-execution-indicator").onclick = () =>
-      toggleTooltip("fileExecution")
-    document.querySelector("#button-execution-indicator").style.display = ""
+    const buttonExecutionIndicator = document.querySelector("#button-execution-indicator")
+    buttonExecutionIndicator.onclick = () => toggleTooltip(buttonExecutionIndicator)
+    buttonExecutionIndicator.style.display = ""
     document.querySelector(".file-icon-wrapper").classList.remove("iconToolbar-selected")
   } else {
     document.querySelector(".fileNameContainer").style.display = "none"
@@ -122,54 +123,23 @@ const responsiveToolbar = (overflowMenuBreakpoint) => {
 const isVisible = () => document.documentElement.hasAttribute("data-toolbar-visible")
 
 export const applyStateIndicator = (state, { connect, abort, disconnect, reconnect }) => {
-  const stateIndicator = document.getElementById("stateIndicatorCircle")
-  const stateIndicatorRing = document.getElementById("stateIndicatorRing")
-  const tooltiptext = document.querySelector(".tooltipTextServerState")
+  const buttonStateIndicator = document.querySelector("#button-state-indicator")
+  const buttonVariant = buttonStateIndicator
+    .querySelector(`[data-livereload-variant="${state}"]`)
+    .cloneNode(true)
+  const variantContainer = buttonStateIndicator.querySelector("#button-current-variant")
 
-  // remove all classes before applying the right ones
-  stateIndicatorRing.classList.remove("loadingRing")
-  stateIndicator.classList.remove("loadingCircle", "redCircle", "greenCircle")
+  variantContainer.innerHTML = ""
+  variantContainer.appendChild(buttonVariant)
 
   if (state === "off") {
-    tooltiptext.innerHTML = `Livereloading disabled
-    <br /><div class="tooltipAction">
-      <svg id="powerIconSvg" class="tooltipIcon">
-        <use xlink:href="#powerIconSvgModel"></use>
-      </svg>      
-      <a href="javascript:void(0);">connect</a>
-    </div>`
-    tooltiptext.querySelector("a").onclick = connect
+    buttonVariant.querySelector("a").onclick = connect
   } else if (state === "connecting") {
-    stateIndicator.classList.add("loadingCircle")
-    stateIndicatorRing.classList.add("loadingRing")
-    tooltiptext.innerHTML = `Connecting to livereload event source...
-    <br /><div class="tooltipAction">
-      <svg id="powerOffIconSvg" class="tooltipIcon">
-        <use xlink:href="#powerOffIconSvgModel"></use>
-      </svg>
-      <a href="javascript:void(0);">cancel</a>
-    </div>`
-    tooltiptext.querySelector("a").onclick = abort
+    buttonVariant.querySelector("a").onclick = abort
   } else if (state === "connected") {
-    stateIndicator.classList.add("greenCircle")
-    tooltiptext.innerHTML = `Connected to livereload server
-    <br /><div class="tooltipAction">
-      <svg id="powerOffIconSvg" class="tooltipIcon">
-        <use xlink:href="#powerOffIconSvgModel"></use>
-      </svg>
-      <a href="javascript:void(0);">disconnect</a>
-    </div>`
-    tooltiptext.querySelector("a").onclick = disconnect
+    buttonVariant.querySelector("a").onclick = disconnect
   } else if (state === "disconnected") {
-    stateIndicator.classList.add("redCircle")
-    tooltiptext.innerHTML = `Disconnected from livereload server
-    <br /><div class="tooltipAction">
-      <svg id="powerIconSvg" class="tooltipIcon">
-        <use xlink:href="#powerIconSvgModel"></use>
-      </svg>      
-      <a href="javascript:void(0);">reconnect</a>
-    </div>`
-    tooltiptext.querySelector("a").onclick = reconnect
+    buttonVariant.querySelector("a").onclick = reconnect
   }
 }
 
@@ -254,8 +224,8 @@ export const resizeInput = (input, fileWidthBreakpoint) => {
   }
 }
 
-const toggleTooltip = (name) => {
-  document.querySelector(`.${name}`).classList.toggle("tooltipVisible")
+const toggleTooltip = (element) => {
+  element.querySelector(".tooltip").classList.toggle("tooltipVisible")
 }
 
 const toggleSettingsBox = () => {

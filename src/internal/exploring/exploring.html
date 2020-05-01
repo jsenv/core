@@ -69,13 +69,86 @@
 
           <div data-responsive-toolbar-element>
             <button id="button-state-indicator">
-              <div class="tooltip serverState">
-                <span class="tooltipTextServerState">Unknown state</span>
+              <div id="button-current-variant"></div>
+              <div style="display: none;">
+                <div data-livereload-variant="default">
+                  <div class="tooltip serverState">
+                    Unknown state
+                  </div>
+                  <svg id="stateIndicatorSvg">
+                    <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
+                  </svg>
+                </div>
+                <div data-livereload-variant="off">
+                  <div class="tooltip serverState">
+                    Livereloading disabled
+                    <br />
+                    <div class="tooltipAction">
+                      <a href="javascript:void(0);">
+                        <svg id="powerIconSvg" class="tooltipIcon">
+                          <use xlink:href="#powerIconSvgModel"></use>
+                        </svg>
+                        connect
+                      </a>
+                    </div>
+                  </div>
+                  <svg id="stateIndicatorSvg">
+                    <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
+                  </svg>
+                </div>
+                <div data-livereload-variant="connecting">
+                  <div class="tooltip serverState">
+                    Connecting to livereload event source...
+                    <br />
+                    <div class="tooltipAction">
+                      <a href="javascript:void(0);">
+                        <svg id="powerIconSvg" class="tooltipIcon">
+                          <use xlink:href="#powerIconSvgModel"></use>
+                        </svg>
+                        connect
+                      </a>
+                    </div>
+                  </div>
+                  <svg id="stateIndicatorSvg">
+                    <circle id="stateIndicatorCircle" class="stateIndicatorCircle loadingCircle" />
+                    <circle id="stateIndicatorRing" class="loadingRing" />
+                  </svg>
+                </div>
+                <div data-livereload-variant="connected">
+                  <div class="tooltip serverState">
+                    Connected to livereload server
+                    <br />
+                    <div class="tooltipAction">
+                      <a href="javascript:void(0);">
+                        <svg id="powerOffIconSvg" class="tooltipIcon">
+                          <use xlink:href="#powerOffIconSvgModel"></use>
+                        </svg>
+                        disconnect
+                      </a>
+                    </div>
+                  </div>
+                  <svg id="stateIndicatorSvg">
+                    <circle id="stateIndicatorCircle" class="stateIndicatorCircle greenCircle" />
+                  </svg>
+                </div>
+                <div data-livereload-variant="disconnected">
+                  <div class="tooltip serverState">
+                    Disconnected from livereload server
+                    <br />
+                    <div class="tooltipAction">
+                      <a href="javascript:void(0);">
+                        <svg id="powerIconSvg" class="tooltipIcon">
+                          <use xlink:href="#powerIconSvgModel"></use>
+                        </svg>
+                        reconnect
+                      </a>
+                    </div>
+                  </div>
+                  <svg id="stateIndicatorSvg">
+                    <circle id="stateIndicatorCircle" class="stateIndicatorCircle redCircle" />
+                  </svg>
+                </div>
               </div>
-              <svg id="stateIndicatorSvg">
-                <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
-                <circle id="stateIndicatorRing" />
-              </svg>
             </button>
           </div>
 
@@ -155,7 +228,7 @@
             <svg id="fileIconSvgConfig" width="35px" height="35px">
               <use xlink:href="#fileIconSvgModel"></use>
             </svg>
-            <h2>Explorable files in <span title="${directoryUrl}">${directoryName}</spans></h2>
+            <h2>Explorable files in <span title="${directoryUrl}">${directoryName}</span></h2>
             <h4>Click on the file you want to execute</h4>
             <nav>
               <ul></ul>
