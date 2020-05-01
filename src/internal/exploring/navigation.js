@@ -1,9 +1,9 @@
 import { createCancellationSource, isCancelError } from "@jsenv/cancellation"
 import { fadeIn, fadeOut } from "./animation.js"
 import { renderToolbar } from "./toolbar.js"
+import { pageErrorNavigation } from "./page-error-navigation/page-error-navigation.js"
 import { pageFileList } from "./page-file-list.js"
 import { pageFileExecution } from "./page-file-execution.js"
-import { pageErrorNavigation } from "./page-error-navigation.js"
 
 const pageCandidates = [pageErrorNavigation, pageFileList, pageFileExecution]
 

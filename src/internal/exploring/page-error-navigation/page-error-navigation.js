@@ -8,13 +8,13 @@ export const pageErrorNavigation = {
   navigate: async ({ event }) => {
     const element = document.querySelector(`[data-page="error-navigation"`).cloneNode(true)
 
-    element.innerHTML = `
-Error during navigation to ${event.data.route.name} page.
+    const title = element.querySelector("h1")
+    title.textContent = `Error during navigation to ${event.data.route.name} page.`
 
-<pre>
-${event.data.error.stack}
-</pre>
-`
+    const pre = element.querySelector("pre")
+    const { error } = event.data
+    pre.textContent = error.stack || error
+
     return {
       element,
     }
