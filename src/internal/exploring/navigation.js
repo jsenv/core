@@ -133,10 +133,8 @@ const navigate = async (route, nextRoute, { cancellationToken }) => {
     pageContainer.style.visibility = "hidden"
   })
 
-  console.log(`navigate to ${nextRoute.name}`)
   const navigationResult = await nextRoute.navigate({ ...nextRoute, cancellationToken })
   Object.assign(nextRoute, navigationResult)
-  console.log(`navigation to ${nextRoute.name} done`)
   await pageLoaderFadeinAnimation
   if (cancellationToken.cancellationRequested) {
     return
@@ -147,7 +145,6 @@ const navigate = async (route, nextRoute, { cancellationToken }) => {
   if (nextRoute.element) {
     pageContainer.appendChild(nextRoute.element)
   }
-  console.log(`replace ${route.name} elements with ${nextRoute.name} page elements`)
   pageContainer.style.visibility = "visible"
   pageLoader.style.pointerEvents = "none"
   const pageLoaderFadeoutAnimation = fadeOut(pageLoader, {
