@@ -70,17 +70,23 @@ export const createLivereloading = (
               },
             })
           },
-          reconnectionOnError: false,
-          reconnectionAllocatedMs: 1000 * 1, // 30 seconds
-          reconnectionIntervalCompute: () => 1000, // 1 second
-          backgroundReconnection: false,
-          backgroundReconnectionAllocatedMs: 1000 * 60 * 60 * 24, // 24 hours
-          backgroundReconnectionIntervalCompute: (attemptCount) => {
-            return Math.min(
-              Math.pow(2, attemptCount) * 1000, // 1s, 2s, 4s, 8s, 16s, ...
-              1000 * 60 * 10, // 10 minutes
-            )
+          connectionAttemptConfig: {
+            allocatedMs: 1000 * 30, // 30 seconds
+            intervalCompute: () => 1000, // 1 second
           },
+          backgroundReconnectionAttemptConfig: {
+            allocatedMs: 1000 * 60 * 60 * 24, // 24 hours
+            intervalCompute: (attemptCount) => {
+              return Math.min(
+                Math.pow(2, attemptCount) * 1000, // 1s, 2s, 4s, 8s, 16s, ...
+                1000 * 60 * 10, // 10 minutes
+              )
+            },
+          },
+          reconnectionOnError: true,
+          // this is cool but quite complex and might feel unexpected
+          // will certainly remove this
+          backgroundReconnection: false,
         },
       )
     })

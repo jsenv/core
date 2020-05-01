@@ -1,11 +1,17 @@
+const JSENV_LOG_ENABLED = false
+
 export const jsenvLogger = {
-  log: () => {
+  log: (...args) => {
     // prevent logs for now (do not mess with user logs)
-    // console.log(...prefixArgs(...args))
+    if (JSENV_LOG_ENABLED) {
+      console.log(...prefixArgs(...args))
+    }
   },
 
-  debug: () => {
-    // console.log(...prefixArgs(...args))
+  debug: (...args) => {
+    if (JSENV_LOG_ENABLED) {
+      console.log(...prefixArgs(...args))
+    }
   },
 }
 
