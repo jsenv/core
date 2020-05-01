@@ -1,6 +1,6 @@
-import { loadExploringConfig } from "./util.js"
-import { move } from "./animation.js"
-import { fetchUrl } from "./fetching.js"
+import { loadExploringConfig } from "../util/util.js"
+import { move } from "../util/animation.js"
+import { fetchUrl } from "../util/fetching.js"
 
 export const pageFileList = {
   name: "file-list",

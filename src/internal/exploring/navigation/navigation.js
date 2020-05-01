@@ -1,10 +1,10 @@
 import { createCancellationSource, isCancelError } from "@jsenv/cancellation"
-import { createPromiseAndHooks } from "./util.js"
-import { fadeIn, fadeOut } from "./animation.js"
-import { renderToolbar } from "./toolbar.js"
-import { pageErrorNavigation } from "./page-error-navigation/page-error-navigation.js"
-import { pageFileList } from "./page-file-list.js"
-import { pageFileExecution } from "./page-file-execution.js"
+import { createPromiseAndHooks } from "../util/util.js"
+import { fadeIn, fadeOut } from "../util/animation.js"
+import { renderToolbar } from "../toolbar/toolbar.js"
+import { pageErrorNavigation } from "../page-error-navigation/page-error-navigation.js"
+import { pageFileList } from "../page-file-list/page-file-list.js"
+import { pageFileExecution } from "../page-file-execution/page-file-execution.js"
 
 const pageCandidates = [pageErrorNavigation, pageFileList, pageFileExecution]
 

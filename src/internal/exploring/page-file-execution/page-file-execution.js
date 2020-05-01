@@ -1,10 +1,10 @@
 import { createCancellationSource, composeCancellationToken } from "@jsenv/cancellation"
-import { memoize } from "../memoize.js"
-import { createLivereloading } from "./livereloading.js"
-import { applyLivereloadIndicator, applyFileExecutionIndicator } from "./toolbar.js"
-import { loadExploringConfig } from "./util.js"
-import { jsenvLogger } from "./jsenvLogger.js"
-import { notifyFileExecution } from "./notification.js"
+import { memoize } from "../../memoize.js"
+import { createLivereloading } from "../livereloading/livereloading.js"
+import { applyLivereloadIndicator, applyFileExecutionIndicator } from "../toolbar/toolbar.js"
+import { loadExploringConfig } from "../util/util.js"
+import { jsenvLogger } from "../util/jsenvLogger.js"
+import { notifyFileExecution } from "../util/notification.js"
 
 export const pageFileExecution = {
   name: "file-execution",

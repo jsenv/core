@@ -1,6 +1,6 @@
-import { getNotificationPreference, setNotificationPreference } from "./notification.js"
-import { createPreference } from "./preferences.js"
-import { createHorizontalBreakpoint } from "./responsive.js"
+import { getNotificationPreference, setNotificationPreference } from "../util/notification.js"
+import { createPreference } from "../util/preferences.js"
+import { createHorizontalBreakpoint } from "../util/responsive.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
 

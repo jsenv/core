@@ -1,4 +1,4 @@
-import { installNavigation } from "./navigation.js"
+import { installNavigation } from "./navigation/navigation.js"
 
 installNavigation()
 

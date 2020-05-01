@@ -1,5 +1,5 @@
 import { createCancellationToken } from "@jsenv/cancellation"
-import { memoize } from "../memoize.js"
+import { memoize } from "../../memoize.js"
 
 const fetchNative = async (
   url,

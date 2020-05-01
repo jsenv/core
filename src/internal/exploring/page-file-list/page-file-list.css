@@ -57,7 +57,6 @@ section {
   color: #e7f2f3;
   font-family: monospace;
   text-decoration: unset;
-  z-index: 1;
 }
 
 /* icons */
@@ -73,5 +72,3 @@ section {
   stroke: none;
   fill: #24c3b0;
 }
-
-/* TODO: media query too fallback on display block or table-row */

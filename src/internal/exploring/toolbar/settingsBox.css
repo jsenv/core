@@ -3,7 +3,6 @@
   position: absolute;
   bottom: 40px;
   right: 0;
-  z-index: 1;
   text-align: center;
   padding: 10px 15px;
   font-size: 14px;
@@ -12,6 +11,7 @@
   border-radius: 5px 5px 0 0;
   min-width: 250px;
   min-height: 150px;
+  z-index: -1;
 }
 
 .settingsBox-visible {
@@ -23,12 +23,10 @@
   0% {
     opacity: 0;
     transform: translate(0, 90px);
-    z-index: -1;
   }
   100% {
     opacity: 1;
     transform: translate(0, 0);
-    z-index: -1;
   }
 }
 

@@ -1,6 +1,6 @@
+@import "./toolbar/toolbar.css";
 @import "./page-error-navigation/page-error-navigation.css";
-@import "./style/toolbar.css";
-@import "./style/fileList.css";
+@import "./page-file-list/page-file-list.css";
 
 * {
   box-sizing: border-box;
