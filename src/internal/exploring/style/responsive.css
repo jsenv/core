@@ -1,0 +1,68 @@
+#dotsIconSvg {
+  display: none;
+  fill: #cecece;
+  width: 25px;
+}
+
+#button-overflow-menu {
+  z-index: 3;
+  position: relative;
+  background: #404040;
+}
+
+#button-overflow-menu.active {
+  background: #030713;
+}
+
+#overflowMenu {
+  display: none;
+  position: absolute;
+  width: calc(100% - 45px);
+  height: 40px;
+  background: #404040;
+  border-bottom: 1px solid #282d32;
+}
+
+#overflowMenu > * {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+
+@media only screen and (max-width: 420px) {
+  #dotsIconSvg {
+    display: inline;
+  }
+  #overflowMenu.overflowMenu-visible {
+    display: table;
+    z-index: 2;
+    animation: slideIn ease 0.3s;
+  }
+  #overflowMenu.overflowMenu-removing {
+    display: table;
+    z-index: 2;
+    animation: slideOut ease 0.4s;
+  }
+}
+
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translate(100%, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes slideOut {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(100%, 0);
+  }
+}

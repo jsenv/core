@@ -9,13 +9,15 @@
   bottom: 120%;
   padding: 10px;
   font-size: 14px;
+  margin-left: -40px;
+  max-width: 160px;
 }
 
 .tooltip::after {
   content: "";
   position: absolute;
   top: 100%;
-  left: 20px;
+  left: 60px;
   margin-left: -5px;
   border-width: 5px;
   border-style: solid;
@@ -36,20 +38,8 @@
   }
 }
 
-.tooltiptextMoved {
-  position: relative;
-  top: -3px;
-}
-
-.retryIcon {
-  display: none;
-  width: 21px;
-  height: 17px;
+.iconTooltip {
   fill: white;
-  position: relative;
-  top: 1px;
-}
-
-.retryIconDisplayed {
-  display: inline-block;
+  width: 20px;
+  height: 17px;
 }

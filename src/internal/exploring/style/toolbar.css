@@ -2,6 +2,7 @@
 @import "./serverStateIndicator.css";
 @import "./fileExecutionIndicator.css";
 @import "./settingsBox.css";
+@import "./responsive.css";
 
 #toolbar-wrapper {
   display: table;
@@ -31,9 +32,9 @@
 }
 
 .line {
-  min-width: 1px;
+  /* min-width: 1px;
   height: 100%;
-  background: #3a3a3a;
+  background: #3c3939; */
 }
 
 #jsenvLogoSvg {
@@ -75,20 +76,16 @@
 }
 
 .iconToolbar {
-  margin: 0 30px;
-  height: 100%;
+  margin: 0 10px;
+  height: 40px;
+}
+
+.iconToolbar:hover {
+  fill: #909090 !important;
 }
 
 .iconToolbar-wrapper {
-  /* margin-bottom: 3px;
-  border-top: 1px solid transparent;
-  border-radius: 0 0 5px 5px; */
   height: 100%;
-}
-
-.iconToolbar-selected {
-  /* box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.2), 0px 4px 5px 0px rgba(0, 0, 0, 0.14),
-    0px 1px 10px 0px rgba(0, 0, 0, 0.12); */
 }
 
 .iconToolbar-selected.file-icon-wrapper {
@@ -101,11 +98,11 @@
 
 /* close icon */
 #crossIconSvg {
-  fill: #828282;
+  fill: #cecece;
   width: 18px;
 }
 
-/* toolbarTrigger */
+/* re-open toolbarTrigger */
 #toolbarTrigger {
   display: none;
   overflow: hidden;

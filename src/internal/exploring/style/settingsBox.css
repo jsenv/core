@@ -14,7 +14,7 @@
   min-height: 150px;
 }
 
-.settingsBoxVisible {
+.settingsBox-visible {
   display: block;
   animation: comeUp ease 0.3s;
 }

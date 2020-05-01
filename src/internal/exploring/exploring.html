@@ -22,25 +22,25 @@
     <aside>
       <!-- toolbar -->
       <div id="toolbar">
+        <div id="overflowMenu">
+          <div style="width: 100%;"></div>
+        </div>
         <div id="toolbar-wrapper">
-          <a href="/">
+          <a href="/" data-responsive-toolbar-element id="page-file-link">
             <div class="file-icon-wrapper iconToolbar-wrapper">
               <svg id="fileIconSvg" class="iconToolbar" width="35px" height="35px">
                 <use xlink:href="#fileIconSvgModel"></use>
               </svg>
             </div>
           </a>
-          <div class="line"></div>
           <div class="fileNameContainer">
             <input type="text" class="fileName" value="" dir="rtl" readonly />
           </div>
+
           <div>
             <button id="button-execution-indicator">
               <div class="tooltip fileExecution">
                 <span class="tooltipTextFileExecution">Unknown state</span>
-                <svg id="retryIcon" class="retryIcon">
-                  <use xlink:href="#retryIconSvgModel"></use>
-                </svg>
               </div>
               <div style="position: relative;">
                 <svg id="loaderSvg" width="35px" height="35px">
@@ -64,15 +64,13 @@
               </div>
             </button>
           </div>
-          <div class="line"></div>
+
           <div style="width: 100%;"></div>
-          <div>
+
+          <div data-responsive-toolbar-element>
             <button id="button-state-indicator">
               <div class="tooltip serverState">
                 <span class="tooltipTextServerState">Unknown state</span>
-                <svg id="retryIcon" class="retryIcon">
-                  <use xlink:href="#retryIconSvgModel"></use>
-                </svg>
               </div>
               <svg id="stateIndicatorSvg">
                 <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
@@ -80,8 +78,8 @@
               </svg>
             </button>
           </div>
-          <div class="line"></div>
-          <div>
+
+          <div data-responsive-toolbar-element>
             <div class="settingsBox">
               <svg id="settingsBoxIconSvg" width="35px" height="35px">
                 <use xlink:href="#settingsIconSvgModel"></use>
@@ -110,11 +108,18 @@
               </div>
             </a>
           </div>
-          <div class="line"></div>
-          <div>
+
+          <div data-responsive-toolbar-element>
             <button id="button-close-toolbar">
               <svg id="crossIconSvg" class="iconToolbar" width="35px" height="35px">
                 <use xlink:href="#crossIconSvgModel"></use>
+              </svg>
+            </button>
+          </div>
+          <div>
+            <button id="button-overflow-menu">
+              <svg id="dotsIconSvg" class="iconToolbar" width="35px" height="35px">
+                <use xlink:href="#dotsIconSvgModel"></use>
               </svg>
             </button>
           </div>
@@ -413,13 +418,6 @@
             </g>
           </g>
         </svg>
-        <!-- retry icon -->
-        <svg id="retryIconSvgModel" viewBox="0 0 24 24">
-          <path
-            d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
-          />
-          <path d="M0 0h24v24H0z" fill="none" />
-        </svg>
         <!-- settings icon -->
         <svg id="settingsIconSvgModel" viewBox="0 0 24 24">
           <path
@@ -438,6 +436,27 @@
           <path d="M0 0h24v24H0V0z" fill="none" />
           <path
             d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"
+          />
+        </svg>
+        <!-- 3 dots icon -->
+        <svg id="dotsIconSvgModel" viewBox="0 0 24 24">
+          <path d="M0 0h24v24H0V0z" fill="none" />
+          <path
+            d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
+          />
+        </svg>
+        <!-- power icon -->
+        <svg id="powerIconSvgModel" viewBox="0 0 24 24">
+          <path d="M0 0h24v24H0V0z" fill="none" />
+          <path
+            d="M16 9v4.66l-3.5 3.51V19h-1v-1.83L8 13.65V9h8m0-6h-2v4h-4V3H8v4h-.01C6.9 6.99 6 7.89 6 8.98v5.52L9.5 18v3h5v-3l3.5-3.51V9c0-1.1-.9-2-2-2V3z"
+          />
+        </svg>
+        <!-- power off icon -->
+        <svg id="powerOffIconSvgModel" viewBox="0 0 24 24">
+          <path d="M0 0h24v24H0V0z" fill="none" />
+          <path
+            d="M10 3H8v1.88l2 2zm6 6v3.88l1.8 1.8.2-.2V9c0-1.1-.9-2-2-2V3h-2v4h-3.88l2 2H16zM4.12 3.84L2.71 5.25 6 8.54v5.96L9.5 18v3h5v-3l.48-.48 4.47 4.47 1.41-1.41L4.12 3.84zm8.38 13.33V19h-1v-1.83L8 13.65v-3.11l5.57 5.57-1.07 1.06z"
           />
         </svg>
       </div>

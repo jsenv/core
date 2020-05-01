@@ -3,6 +3,9 @@ import { createPreference } from "./preferences.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
 
+const WINDOW_SMALL_WIDTH = 420
+const WINDOW_MEDIUM_WIDTH = 570
+
 export const renderToolbar = (fileRelativeUrl) => {
   const toolbarVisible = toolbarVisibilityPreference.has()
     ? toolbarVisibilityPreference.get()
@@ -21,6 +24,8 @@ export const renderToolbar = (fileRelativeUrl) => {
     hide: hideToolbar,
   }
 
+  document.querySelector("#button-toggle-settings").onclick = () => toggleSettingsBox()
+
   document.querySelector("#button-close-toolbar").onclick = () => {
     // if user click enter or space quickly while closing toolbar
     // it will cancel the closing
@@ -31,7 +36,10 @@ export const renderToolbar = (fileRelativeUrl) => {
     }
   }
 
+  document.querySelector("#button-overflow-menu").onclick = () => toggleOverflowMenu()
+
   document.querySelector("#button-toggle-settings").onclick = () => toggleSettingsBox()
+
   const notifCheckbox = document.querySelector("#toggle-notifs")
   notifCheckbox.checked = getNotificationPreference()
   notifCheckbox.onchange = () => {
@@ -57,6 +65,54 @@ export const renderToolbar = (fileRelativeUrl) => {
     document.querySelector("#button-execution-indicator").style.display = "none"
     document.querySelector(".file-icon-wrapper").classList.add("iconToolbar-selected")
   }
+
+  // apply responsive design if needed + add listener on resize screen
+  responsiveToolbar()
+  window.onresize = () => responsiveToolbar()
+}
+
+const responsiveToolbar = () => {
+  const size = document.documentElement.clientWidth
+  resizeInput(document.querySelector(".fileName"))
+
+  // close all tooltips in case it's open
+  document.querySelector(".serverState").classList.remove("tooltipVisible")
+  document.querySelector(".fileExecution").classList.remove("tooltipVisible")
+
+  // close settings box in case it's open
+  document.querySelector(".settings-icon-wrapper").classList.remove("iconToolbar-selected")
+  document.querySelector(".settingsBox").classList.remove("settingsBox-visible")
+
+  // unselect toggleOverflowMenu button in case it's selected
+  document.querySelector("#button-overflow-menu").classList.remove("active")
+
+  if (size < WINDOW_SMALL_WIDTH) {
+    // detect it becomes too small
+    document.body.style.backgroundColor = "yellow"
+    // move elements from toolbar to overflow menu
+    const responsiveToolbarElements = document.querySelectorAll("[data-responsive-toolbar-element]")
+    const overflowMenu = document.querySelector("#overflowMenu")
+    Array.from(responsiveToolbarElements).forEach((element) => {
+      overflowMenu.appendChild(element)
+    })
+  } else {
+    // detect it becomes too big
+    document.body.style.backgroundColor = "pink"
+    // close overflow menu in case it's open
+    closeOverflowMenu()
+
+    // move elements from overflow menu to toolbar
+    const responsiveToolbarElements = document.querySelectorAll("[data-responsive-toolbar-element]")
+
+    const toolbar = document.querySelector("#toolbar-wrapper")
+    Array.from(responsiveToolbarElements).forEach((element) => {
+      if (element.id === "page-file-link") {
+        toolbar.insertBefore(element, toolbar.firstElementChild)
+      } else {
+        toolbar.appendChild(element)
+      }
+    })
+  }
 }
 
 const isVisible = () => document.documentElement.hasAttribute("data-toolbar-visible")
@@ -65,15 +121,17 @@ export const applyStateIndicator = (state, { connect, abort, disconnect, reconne
   const stateIndicator = document.getElementById("stateIndicatorCircle")
   const stateIndicatorRing = document.getElementById("stateIndicatorRing")
   const tooltiptext = document.querySelector(".tooltipTextServerState")
-  const retryIcon = document.querySelector(".retryIcon")
 
   // remove all classes before applying the right ones
   stateIndicatorRing.classList.remove("loadingRing")
   stateIndicator.classList.remove("loadingCircle", "redCircle", "greenCircle")
-  retryIcon.classList.remove("retryIconDisplayed")
 
   if (state === "off") {
-    tooltiptext.innerHTML = `Livereloading disabled <a href="javascript:void(0);">connect</a>`
+    tooltiptext.innerHTML = `Livereloading disabled 
+    <svg id="powerIconSvg" class="iconTooltip">
+      <use xlink:href="#powerIconSvgModel"></use>
+    </svg>
+    <a href="javascript:void(0);">connect</a>`
     tooltiptext.querySelector("a").onclick = connect
   } else if (state === "connecting") {
     stateIndicator.classList.add("loadingCircle")
@@ -82,7 +140,11 @@ export const applyStateIndicator = (state, { connect, abort, disconnect, reconne
     tooltiptext.querySelector("a").onclick = abort
   } else if (state === "connected") {
     stateIndicator.classList.add("greenCircle")
-    tooltiptext.innerHTML = `Connected to livereload server <a href="javascript:void(0);">disconnect</a>`
+    tooltiptext.innerHTML = `Connected to livereload server
+    <div><svg id="powerOffIconSvg" class="iconTooltip">
+      <use xlink:href="#powerOffIconSvgModel"></use>
+    </svg>
+    <a href="javascript:void(0);">disconnect</a></div>`
     tooltiptext.querySelector("a").onclick = disconnect
   } else if (state === "disconnected") {
     stateIndicator.classList.add("redCircle")
@@ -149,7 +211,6 @@ const showJsenvLogo = () => {
   jsenvLogo.classList.add("jsenvLogoVisible")
   // mouse leave to close
   jsenvLogo.onmouseleave = () => {
-    console.log("mouseleave")
     hideJsenvLogo()
   }
   // click inside to open toolbar
@@ -164,9 +225,10 @@ const hideJsenvLogo = () => {
   document.querySelector("#jsenvLogo").classList.remove("jsenvLogoVisible")
 }
 
-const resizeInput = (input) => {
-  if (input.value.length > 40) {
-    input.style.width = "40ch"
+export const resizeInput = (input) => {
+  const size = document.documentElement.clientWidth < WINDOW_MEDIUM_WIDTH ? 20 : 40
+  if (input.value.length > size) {
+    input.style.width = `${size}ch`
   } else {
     input.style.width = `${input.value.length}ch`
   }
@@ -178,5 +240,26 @@ const toggleTooltip = (name) => {
 
 const toggleSettingsBox = () => {
   document.querySelector(".settings-icon-wrapper").classList.toggle("iconToolbar-selected")
-  document.querySelector(".settingsBox").classList.toggle("settingsBoxVisible")
+  document.querySelector(".settingsBox").classList.toggle("settingsBox-visible")
+}
+
+const toggleOverflowMenu = () => {
+  const overflowMenu = document.querySelector("#overflowMenu")
+  const buttonOverflowMenu = document.querySelector("#button-overflow-menu")
+  // if the menu is open
+  if (overflowMenu.classList.contains("overflowMenu-visible")) {
+    closeOverflowMenu()
+    buttonOverflowMenu.classList.remove("active")
+  } else {
+    overflowMenu.classList.add("overflowMenu-visible")
+    buttonOverflowMenu.classList.add("active")
+  }
+}
+
+const closeOverflowMenu = () => {
+  // document.querySelector("#overflowMenu").classList.add("overflowMenu-removing")
+  // setTimeout(() => {
+  document.querySelector("#overflowMenu").classList.remove("overflowMenu-visible")
+  //     document.querySelector("#overflowMenu").classList.remove("overflowMenu-removing")
+  //   }, 400)
 }
