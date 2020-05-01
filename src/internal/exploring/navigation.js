@@ -1,4 +1,5 @@
 import { createCancellationSource, isCancelError } from "@jsenv/cancellation"
+import { createPromiseAndHooks } from "./util.js"
 import { fadeIn, fadeOut } from "./animation.js"
 import { renderToolbar } from "./toolbar.js"
 import { pageErrorNavigation } from "./page-error-navigation/page-error-navigation.js"
@@ -56,7 +57,7 @@ export const installNavigation = () => {
     const cancellationToken = navigationCancellationSource.token
 
     try {
-      await navigate(currentRoute, nextRoute, {
+      await performNavigation(currentRoute, nextRoute, {
         cancellationToken,
       })
     } catch (e) {
@@ -118,7 +119,7 @@ export const installNavigation = () => {
   }
 }
 
-const navigate = async (route, nextRoute, { cancellationToken }) => {
+const performNavigation = async (route, nextRoute, { cancellationToken }) => {
   // while loading we will keep current page elements in the DOM
   // so that the page dimensions are preserved
 
@@ -133,7 +134,12 @@ const navigate = async (route, nextRoute, { cancellationToken }) => {
     pageContainer.style.visibility = "hidden"
   })
 
-  const navigationResult = await nextRoute.navigate({ ...nextRoute, cancellationToken })
+  const mountPromise = createPromiseAndHooks()
+  const navigationResult = await nextRoute.navigate({
+    ...nextRoute,
+    cancellationToken,
+    mountPromise,
+  })
   Object.assign(nextRoute, navigationResult)
   await pageLoaderFadeinAnimation
   if (cancellationToken.cancellationRequested) {
@@ -144,6 +150,10 @@ const navigate = async (route, nextRoute, { cancellationToken }) => {
   pageContainer.innerHTML = ""
   if (nextRoute.element) {
     pageContainer.appendChild(nextRoute.element)
+    mountPromise.resolve()
+    if (navigationResult.onmount) {
+      navigationResult.onmount()
+    }
   }
   pageContainer.style.visibility = "visible"
   pageLoader.style.pointerEvents = "none"

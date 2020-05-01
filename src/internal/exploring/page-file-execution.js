@@ -1,3 +1,4 @@
+import { createCancellationSource, composeCancellationToken } from "@jsenv/cancellation"
 import { memoize } from "../memoize.js"
 import { createLivereloading } from "./livereloading.js"
 import { applyStateIndicator, applyFileExecutionIndicator } from "./toolbar.js"
@@ -15,7 +16,7 @@ export const pageFileExecution = {
     return true
   },
 
-  navigate: async ({ cancellationToken }) => {
+  navigate: async ({ cancellationToken, mountPromise }) => {
     const fileRelativeUrl = document.location.pathname.slice(1)
 
     window.page = {
@@ -31,26 +32,43 @@ export const pageFileExecution = {
       window.page = undefined
     })
 
-    let iframe = document.createElement("iframe")
-
+    let previousExecution
+    let currentExecution
+    let executionPlaceholder = document.createElement("div")
     const execute = async (fileRelativeUrl) => {
-      const startTime = Date.now()
-      if (window.page.previousExecution) {
-        const nextIframe = document.createElement("iframe")
-        iframe.parentNode.replaceChild(nextIframe, iframe)
-        iframe = nextIframe
-      }
+      // we must wait for the page to be in the DOM because iframe will
+      // replace placeHolder element
+      await mountPromise
 
+      const startTime = Date.now()
+      const executionCancellationSource = createCancellationSource()
+      const executionCancellationToken = composeCancellationToken(
+        cancellationToken,
+        executionCancellationSource.token,
+      )
+      const iframe = document.createElement("iframe")
       const execution = {
+        cancel: executionCancellationSource.cancel,
         fileRelativeUrl,
-        status: "loading", // iframe loading
+        status: null,
         iframe,
         startTime,
         endTime: null,
         result: null,
       }
-      window.page.execution = execution
+      window.page.execution = execution // expose on window
+      if (currentExecution) {
+        // in case currentExecution is pending, cancel it
+        currentExecution.cancel("reload")
+        // ensure previous execution is properly cleaned
+        currentExecution.iframe.src = "about:blank"
+      }
+      currentExecution = execution
 
+      // behind loading there is these steps:
+      // - fetching exploring config
+      // - fetching iframe html (which contains browser-js-file.js)
+      execution.status = "loading"
       applyFileExecutionIndicator("loading")
 
       const {
@@ -60,23 +78,33 @@ export const pageFileExecution = {
         browserRuntimeFileRelativeUrl,
         sourcemapMainFileRelativeUrl,
         sourcemapMappingFileRelativeUrl,
-      } = await loadExploringConfig()
-      if (cancellationToken.cancellationRequested) {
+      } = await loadExploringConfig({ cancellationToken: executionCancellationToken })
+      if (executionCancellationToken.cancellationRequested) {
         return
       }
 
-      const iframeSrc = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
-      const loadIframeMemoized = memoize(loadIframe)
+      // memoize ensure iframe is lazyly loaded once
+      const loadIframe = memoize(() => {
+        const loadedPromise = iframeToLoaded(execution.iframe, {
+          cancellationToken: executionCancellationToken,
+        })
+        iframe.src = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
+        replaceElement(executionPlaceholder, iframe) // append iframe in the DOM at the proper location
+        executionPlaceholder = iframe // next execution will take place of previous one
+        return loadedPromise
+      })
 
       const evaluate = async (fn, ...args) => {
-        await loadIframeMemoized(iframe, { iframeSrc })
+        await loadIframe()
         args = [`(${fn.toString()})`, ...args]
-        return performIframeAction(iframe, "evaluate", args, {
+        return performIframeAction(execution.iframe, "evaluate", args, {
+          cancellationToken: executionCancellationToken,
           compileServerOrigin,
         })
       }
       window.page.evaluate = evaluate
 
+      // executing means fetching, parsing, executing file imports + file itself
       execution.status = "executing"
       const executionResult = await evaluate((param) => window.execute(param), {
         fileRelativeUrl,
@@ -88,8 +116,9 @@ export const pageFileExecution = {
         collectNamespace: true,
         collectCoverage: false,
         executionId: fileRelativeUrl,
+        errorExposureInConsole: true,
       })
-      if (cancellationToken.cancellationRequested) {
+      if (executionCancellationToken.cancellationRequested) {
         return
       }
       execution.status = "executed"
@@ -99,13 +128,10 @@ export const pageFileExecution = {
         delete executionResult.exceptionSource
       }
       execution.result = executionResult
-
       const endTime = Date.now()
       execution.endTime = endTime
 
       const duration = execution.endTime - execution.startTime
-
-      const { previousExecution } = window.page
       if (executionResult.status === "errored") {
         jsenvLogger.debug(`error during execution`, executionResult.error)
         applyFileExecutionIndicator("failure", duration)
@@ -114,15 +140,11 @@ export const pageFileExecution = {
       }
       notifyFileExecution(execution, previousExecution)
 
-      window.page.previousExecution = execution
+      previousExecution = execution
+      window.page.previousExecution = previousExecution
     }
 
-    // on va plutot retourner un object genre isEnabled()
-    // (idéalement getState etc)
-    // et on fera if (!livereloading.isEnabled())
-    // on éxécute direct
-    // et il faudra un truc genre disconnect() qu'on pourra appeler n'importe quand
-    // (pour le cas ou on leave la page)
+    // we need for the page to be in the DOM before doing this before
     const livereloading = createLivereloading(fileRelativeUrl, {
       onFileChanged: () => {
         execute(fileRelativeUrl)
@@ -162,23 +184,29 @@ export const pageFileExecution = {
 
     return {
       title: fileRelativeUrl,
-      element: iframe,
+      element: executionPlaceholder,
     }
   },
 }
 
-const loadIframe = (iframe, { iframeSrc }) => {
+const replaceElement = (elementToReplace, otherElement) => {
+  elementToReplace.parentNode.replaceChild(otherElement, elementToReplace)
+}
+
+const iframeToLoaded = (iframe, { cancellationToken }) => {
   return new Promise((resolve) => {
     const onload = () => {
       iframe.removeEventListener("load", onload, true)
       resolve()
     }
     iframe.addEventListener("load", onload, true)
-    iframe.src = iframeSrc
+    cancellationToken.register(() => {
+      iframe.removeEventListener("load", onload, true)
+    })
   })
 }
 
-const performIframeAction = (iframe, action, args, { compileServerOrigin }) => {
+const performIframeAction = (iframe, action, args, { cancellationToken, compileServerOrigin }) => {
   jsenvLogger.debug(`> ${action}`, args)
   sendMessageToIframe(iframe, { action, args }, { compileServerOrigin })
 
@@ -201,6 +229,9 @@ const performIframeAction = (iframe, action, args, { compileServerOrigin }) => {
     }
 
     window.addEventListener("message", onMessage, false)
+    cancellationToken.register(() => {
+      window.removeEventListener("message", onMessage, false)
+    })
   })
 }
 

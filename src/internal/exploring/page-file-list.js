@@ -11,7 +11,9 @@ export const pageFileList = {
     return true
   },
   navigate: async ({ cancellationToken }) => {
-    const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig()
+    const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig({
+      cancellationToken,
+    })
 
     const fileListElement = document.querySelector(`[data-page="file-list"`).cloneNode(true)
 
