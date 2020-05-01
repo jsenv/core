@@ -39,28 +39,52 @@
 
           <div>
             <button id="button-execution-indicator">
-              <div class="tooltip fileExecution">
-                <span class="tooltipTextFileExecution">Unknown state</span>
-              </div>
-              <div style="position: relative;">
-                <svg id="loaderSvg" width="35px" height="35px">
-                  <use xlink:href="#loaderSvgModel"></use>
-                </svg>
-                <svg id="checkIconSvg" class="checkmark" viewBox="0 0 52 52">
-                  <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
-                </svg>
-                <svg id="failIconSvg" class="failCross" viewBox="0 0 512 512">
-                  <rect
-                    id="cross_p1"
-                    y="67.518"
-                    transform="matrix(0.7071 0.7071 -0.7071 0.7071 255.9995 -106.0389)"
-                  />
-                  <rect
-                    id="cross_p2"
-                    y="67.519"
-                    transform="matrix(0.7071 -0.7071 0.7071 0.7071 -106.039 256.0001)"
-                  />
-                </svg>
+              <div data-variant-container></div>
+              <div style="display: none;">
+                <div data-variant="default">
+                  <div class="tooltip">
+                    Unknown state
+                  </div>
+                </div>
+                <div data-variant="loading">
+                  <div class="tooltip">
+                    Executing...
+                  </div>
+                  <div class="button-content">
+                    <svg id="loaderSvg" class="animateLoader">
+                      <use xlink:href="#loaderSvgModel"></use>
+                    </svg>
+                  </div>
+                </div>
+                <div data-variant="success">
+                  <div class="tooltip">
+                    Execution completed in X ms
+                  </div>
+                  <div class="button-content">
+                    <svg id="checkIconSvg" class="checkmark animateCheck" viewBox="0 0 52 52">
+                      <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+                    </svg>
+                  </div>
+                </div>
+                <div data-variant="failure">
+                  <div class="tooltip">
+                    Execution failed in X ms
+                  </div>
+                  <div class="button-content">
+                    <svg id="failIconSvg" class="failCross animateCross" viewBox="0 0 512 512">
+                      <rect
+                        id="cross_p1"
+                        y="67.518"
+                        transform="matrix(0.7071 0.7071 -0.7071 0.7071 255.9995 -106.0389)"
+                      />
+                      <rect
+                        id="cross_p2"
+                        y="67.519"
+                        transform="matrix(0.7071 -0.7071 0.7071 0.7071 -106.039 256.0001)"
+                      />
+                    </svg>
+                  </div>
+                </div>
               </div>
             </button>
           </div>
@@ -69,9 +93,9 @@
 
           <div data-responsive-toolbar-element>
             <button id="button-livereload-indicator">
-              <div id="button-current-variant"></div>
+              <div data-variant-container></div>
               <div style="display: none;">
-                <div data-livereload-variant="default">
+                <div data-variant="default">
                   <div class="tooltip serverState">
                     Unknown state
                   </div>
@@ -81,7 +105,7 @@
                     </svg>
                   </div>
                 </div>
-                <div data-livereload-variant="off">
+                <div data-variant="off">
                   <div class="tooltip serverState">
                     Livereloading disabled
                     <br />
@@ -100,7 +124,7 @@
                     </svg>
                   </div>
                 </div>
-                <div data-livereload-variant="connecting">
+                <div data-variant="connecting">
                   <div class="tooltip serverState">
                     Connecting to livereload server...
                     <br />
@@ -123,7 +147,7 @@
                     </svg>
                   </div>
                 </div>
-                <div data-livereload-variant="connected">
+                <div data-variant="connected">
                   <div class="tooltip serverState">
                     Connected to livereload server
                     <br />
@@ -142,7 +166,7 @@
                     </svg>
                   </div>
                 </div>
-                <div data-livereload-variant="disconnected">
+                <div data-variant="disconnected">
                   <div class="tooltip serverState">
                     Disconnected from livereload server
                     <br />

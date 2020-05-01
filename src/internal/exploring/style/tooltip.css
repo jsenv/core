@@ -11,6 +11,7 @@
   font-size: 14px;
   margin-left: -40px;
   max-width: 160px;
+  cursor: default;
 }
 
 .tooltip::after {

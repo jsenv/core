@@ -122,13 +122,15 @@ const responsiveToolbar = (overflowMenuBreakpoint) => {
 
 const isVisible = () => document.documentElement.hasAttribute("data-toolbar-visible")
 
-export const applyLivereloadIndicator = (state, { connect, abort, disconnect, reconnect }) => {
+export const applyLivereloadIndicator = (
+  state = "default",
+  { connect, abort, disconnect, reconnect } = {},
+) => {
   const buttonLivereloadIndicator = document.querySelector("#button-livereload-indicator")
   const buttonVariant = buttonLivereloadIndicator
-    .querySelector(`[data-livereload-variant="${state}"]`)
+    .querySelector(`[data-variant="${state}"]`)
     .cloneNode(true)
-  const variantContainer = buttonLivereloadIndicator.querySelector("#button-current-variant")
-
+  const variantContainer = buttonLivereloadIndicator.querySelector("[data-variant-container]")
   variantContainer.innerHTML = ""
   variantContainer.appendChild(buttonVariant)
 
@@ -149,26 +151,24 @@ export const applyLivereloadIndicator = (state, { connect, abort, disconnect, re
   }
 }
 
-export const applyFileExecutionIndicator = (state, duration) => {
-  const checkIcon = document.getElementById("checkIconSvg")
-  const crossIcon = document.getElementById("failIconSvg")
-  const loader = document.getElementById("loaderSvg")
-  const tooltiptext = document.querySelector(".tooltipTextFileExecution")
+export const applyFileExecutionIndicator = (state = "default", duration) => {
+  const buttonExecutionIndicator = document.querySelector("#button-execution-indicator")
+  const variant = buttonExecutionIndicator
+    .querySelector(`[data-variant="${state}"]`)
+    .cloneNode(true)
+  const variantContainer = buttonExecutionIndicator.querySelector("[data-variant-container]")
+  variantContainer.innerHTML = ""
+  variantContainer.appendChild(variant)
 
-  // remove all classes before applying the right ones
-  checkIcon.classList.remove("animateCheck")
-  crossIcon.classList.remove("animateCross")
-  loader.classList.remove("animateLoader")
+  buttonExecutionIndicator.querySelector(".button-content").onclick = () => {
+    toggleTooltip(buttonExecutionIndicator)
+  }
 
   if (state === "loading") {
-    loader.classList.add("animateLoader")
-    tooltiptext.innerHTML = "Executing..."
   } else if (state === "success") {
-    checkIcon.classList.add("animateCheck")
-    tooltiptext.innerHTML = `Execution completed in ${duration}ms`
+    document.querySelector(".tooltip").textContent = `Execution completed in ${duration}ms`
   } else if (state === "failure") {
-    crossIcon.classList.add("animateCross")
-    tooltiptext.innerHTML = `Execution failed in ${duration}ms`
+    document.querySelector(".tooltip").textContent = `Execution failed in ${duration}ms`
   }
 }
 

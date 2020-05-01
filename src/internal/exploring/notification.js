@@ -59,6 +59,14 @@ const notify = notificationAvailable
       if (permission === "granted") {
         const notification = new Notification(title, options)
         notification.onclick = () => {
+          // but if the user navigated inbetween
+          // focusing window will show something else
+          // in that case it could be great to do something
+          // maybe like showing a message saying this execution
+          // is no longer visible
+          // we could also navigauate to this file execution but
+          // there is no guarantee re-executing the file would give same output
+          // and it would also trigger an other notification
           if (clickToFocus) window.focus()
           if (clickToClose) notification.close()
         }

@@ -19,6 +19,8 @@ export const pageFileExecution = {
   navigate: async ({ cancellationToken, mountPromise }) => {
     const fileRelativeUrl = document.location.pathname.slice(1)
 
+    // reset file execution indicator ui
+    applyFileExecutionIndicator()
     window.page = {
       previousExecution: undefined,
       execution: undefined,
@@ -144,7 +146,8 @@ export const pageFileExecution = {
       window.page.previousExecution = previousExecution
     }
 
-    // we need for the page to be in the DOM before doing this before
+    // reset livereload indicator ui
+    applyLivereloadIndicator()
     const livereloading = createLivereloading(fileRelativeUrl, {
       onFileChanged: () => {
         execute(fileRelativeUrl)
