@@ -21,6 +21,7 @@ import {
   createSSERoom,
   readRequestBodyAsString,
 } from "@jsenv/server"
+import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { getBrowserExecutionDynamicData } from "./internal/runtime/getBrowserExecutionDynamicData.js"
 import { serveExploring } from "./internal/exploring/serveExploring.js"
@@ -247,6 +248,10 @@ export const startExploring = async ({
 
               const data = {
                 projectDirectoryUrl,
+                jsenvDirectoryRelativeUrl: urlToRelativeUrl(
+                  projectDirectoryUrl,
+                  jsenvCoreDirectoryUrl,
+                ),
                 compileServerOrigin,
                 outDirectoryRelativeUrl,
                 htmlFileRelativeUrl,

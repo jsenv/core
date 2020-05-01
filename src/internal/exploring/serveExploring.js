@@ -36,6 +36,8 @@ export const serveExploring = async (
   const exploringCssRelativeUrl = urlToRelativeUrl(exploringCssFileUrl, projectDirectoryUrl)
 
   const replacements = {
+    $COMPILE_SERVER_ORIGIN: compileServerOrigin,
+    $JSENV_DIRECTORY_RELATIVE_URL: urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl),
     $STYLE_HREF: resolveUrl(exploringCssRelativeUrl, compileDirectoryUrl),
     $COMPILE_SERVER_IMPORT_MAP_SRC: resolveUrl(importMapFileRelativeUrl, compileDirectoryUrl),
     $SYSTEMJS_SCRIPT_SRC: resolveUrl(SYSTEMJS_RELATIVE_URL, compileServerOrigin),

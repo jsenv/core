@@ -155,6 +155,9 @@ const performNavigation = async (route, nextRoute, { cancellationToken }) => {
       navigationResult.onmount()
     }
   }
+  if (nextRoute.title) {
+    document.title = nextRoute.title
+  }
   pageContainer.style.visibility = "visible"
   pageLoader.style.pointerEvents = "none"
   const pageLoaderFadeoutAnimation = fadeOut(pageLoader, {

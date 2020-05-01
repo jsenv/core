@@ -1,8 +1,11 @@
 <html>
   <head>
-    <title>Explore</title>
+    <title>Exploring</title>
     <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
+    <link
+      rel="icon"
+      href="$COMPILE_SERVER_ORIGIN$JSENV_DIRECTORY_RELATIVE_URL/src/internal/jsenv.png"
+    />
     <link rel="stylesheet" type="text/css" href="$STYLE_HREF" />
   </head>
 
@@ -147,7 +150,7 @@
             <svg id="fileIconSvgConfig" width="35px" height="35px">
               <use xlink:href="#fileIconSvgModel"></use>
             </svg>
-            <h2>Explorable files</h2>
+            <h2>Explorable files in <span title="${directoryUrl}">${directoryName}</spans></h2>
             <h4>Click on the file you want to execute</h4>
             <nav>
               <ul></ul>

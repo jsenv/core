@@ -16,10 +16,7 @@ export const notifyFileExecution = (execution, previousExecution) => {
   const { fileRelativeUrl } = execution
   const notificationOptions = {
     lang: "en",
-    // icon: put base64 jsenv icon there
-    // notification with the same tag are replaced
-    // we'll try to see what makes sense
-    // tag: fileRelativeUrl,
+    icon: getFaviconHref(),
     clickToFocus: true,
     clickToClose: true,
   }
@@ -49,6 +46,11 @@ export const notifyFileExecution = (execution, previousExecution) => {
       body: `${fileRelativeUrl} execution fixed.`,
     })
   }
+}
+
+const getFaviconHref = () => {
+  const link = document.querySelector('link[rel="icon"]')
+  return link ? link.href : undefined
 }
 
 const notify = notificationAvailable

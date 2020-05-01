@@ -14,8 +14,12 @@ export const pageFileList = {
     const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig({
       cancellationToken,
     })
-
+    const directoryName = directoryUrlToDirectoryName(projectDirectoryUrl)
     const fileListElement = document.querySelector(`[data-page="file-list"`).cloneNode(true)
+
+    const span = fileListElement.querySelector("h2 span")
+    span.title = projectDirectoryUrl
+    span.textContent = directoryName
 
     const response = await fetchUrl(`/explorables`, {
       method: "POST",
@@ -61,8 +65,19 @@ export const pageFileList = {
     })
 
     return {
-      title: projectDirectoryUrl,
+      title: "Explorable files",
       element: fileListElement,
     }
   },
+}
+
+const directoryUrlToDirectoryName = (directoryUrl) => {
+  const slashLastIndex = directoryUrl.lastIndexOf(
+    "/",
+    // ignore last slash
+    directoryUrl.length - 2,
+  )
+  if (slashLastIndex === -1) return ""
+
+  return directoryUrl.slice(slashLastIndex + 1)
 }
