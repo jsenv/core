@@ -38,8 +38,23 @@
   }
 }
 
-.iconTooltip {
+.tooltipAction {
+  display: inline-block;
+  border: 1px solid #a0a0a0;
+  border-radius: 3px;
+  padding: 3px 7px;
+  margin-top: 4px;
+}
+
+.tooltipAction a {
+  vertical-align: middle;
+  color: white;
+  text-decoration: none;
+}
+
+.tooltipIcon {
   fill: white;
   width: 20px;
-  height: 17px;
+  height: 20px;
+  vertical-align: middle;
 }

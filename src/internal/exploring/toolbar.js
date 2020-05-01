@@ -1,5 +1,6 @@
 import { getNotificationPreference, setNotificationPreference } from "./notification.js"
 import { createPreference } from "./preferences.js"
+import { createHorizontalBreakpoint } from "./responsive.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
 
@@ -46,13 +47,21 @@ export const renderToolbar = (fileRelativeUrl) => {
     setNotificationPreference(notifCheckbox.checked)
   }
 
+  // apply responsive design on fileInput if needed + add listener on resize screen
+  const fileWidthBreakpoint = createHorizontalBreakpoint(WINDOW_MEDIUM_WIDTH)
+  const handleFileWidthBreakpoint = () => {
+    resizeInput(document.querySelector(".fileName"), fileWidthBreakpoint)
+  }
+  handleFileWidthBreakpoint()
+  fileWidthBreakpoint.changed.listen(handleFileWidthBreakpoint)
+
   if (fileRelativeUrl) {
     document.querySelector("#button-state-indicator").onclick = () => toggleTooltip("serverState")
     document.querySelector("#button-state-indicator").style.display = ""
 
     const input = document.querySelector(".fileName")
     input.value = fileRelativeUrl
-    resizeInput(input)
+    resizeInput(input, fileWidthBreakpoint)
 
     document.querySelector(".fileNameContainer").style.display = "table-cell"
     document.querySelector("#button-execution-indicator").onclick = () =>
@@ -66,15 +75,16 @@ export const renderToolbar = (fileRelativeUrl) => {
     document.querySelector(".file-icon-wrapper").classList.add("iconToolbar-selected")
   }
 
-  // apply responsive design if needed + add listener on resize screen
-  responsiveToolbar()
-  window.onresize = () => responsiveToolbar()
+  // apply responsive design on toolbar icons if needed + add listener on resize screen
+  const overflowMenuBreakpoint = createHorizontalBreakpoint(WINDOW_SMALL_WIDTH)
+  const handleOverflowMenuBreakpoint = () => {
+    responsiveToolbar(overflowMenuBreakpoint)
+  }
+  handleOverflowMenuBreakpoint()
+  overflowMenuBreakpoint.changed.listen(handleOverflowMenuBreakpoint)
 }
 
-const responsiveToolbar = () => {
-  const size = document.documentElement.clientWidth
-  resizeInput(document.querySelector(".fileName"))
-
+const responsiveToolbar = (overflowMenuBreakpoint) => {
   // close all tooltips in case it's open
   document.querySelector(".serverState").classList.remove("tooltipVisible")
   document.querySelector(".fileExecution").classList.remove("tooltipVisible")
@@ -83,12 +93,7 @@ const responsiveToolbar = () => {
   document.querySelector(".settings-icon-wrapper").classList.remove("iconToolbar-selected")
   document.querySelector(".settingsBox").classList.remove("settingsBox-visible")
 
-  // unselect toggleOverflowMenu button in case it's selected
-  document.querySelector("#button-overflow-menu").classList.remove("active")
-
-  if (size < WINDOW_SMALL_WIDTH) {
-    // detect it becomes too small
-    document.body.style.backgroundColor = "yellow"
+  if (overflowMenuBreakpoint.isBelow()) {
     // move elements from toolbar to overflow menu
     const responsiveToolbarElements = document.querySelectorAll("[data-responsive-toolbar-element]")
     const overflowMenu = document.querySelector("#overflowMenu")
@@ -96,10 +101,9 @@ const responsiveToolbar = () => {
       overflowMenu.appendChild(element)
     })
   } else {
-    // detect it becomes too big
-    document.body.style.backgroundColor = "pink"
-    // close overflow menu in case it's open
+    // close overflow menu in case it's open & unselect toggleOverflowMenu button in case it's selected
     closeOverflowMenu()
+    document.querySelector("#button-overflow-menu").classList.remove("active")
 
     // move elements from overflow menu to toolbar
     const responsiveToolbarElements = document.querySelectorAll("[data-responsive-toolbar-element]")
@@ -127,28 +131,44 @@ export const applyStateIndicator = (state, { connect, abort, disconnect, reconne
   stateIndicator.classList.remove("loadingCircle", "redCircle", "greenCircle")
 
   if (state === "off") {
-    tooltiptext.innerHTML = `Livereloading disabled 
-    <svg id="powerIconSvg" class="iconTooltip">
-      <use xlink:href="#powerIconSvgModel"></use>
-    </svg>
-    <a href="javascript:void(0);">connect</a>`
+    tooltiptext.innerHTML = `Livereloading disabled
+    <br /><div class="tooltipAction">
+      <svg id="powerIconSvg" class="tooltipIcon">
+        <use xlink:href="#powerIconSvgModel"></use>
+      </svg>      
+      <a href="javascript:void(0);">connect</a>
+    </div>`
     tooltiptext.querySelector("a").onclick = connect
   } else if (state === "connecting") {
     stateIndicator.classList.add("loadingCircle")
     stateIndicatorRing.classList.add("loadingRing")
-    tooltiptext.innerHTML = `Connecting to livereload event source... <a href="javascript:void(0);">cancel</a>`
+    tooltiptext.innerHTML = `Connecting to livereload event source...
+    <br /><div class="tooltipAction">
+      <svg id="powerOffIconSvg" class="tooltipIcon">
+        <use xlink:href="#powerOffIconSvgModel"></use>
+      </svg>
+      <a href="javascript:void(0);">cancel</a>
+    </div>`
     tooltiptext.querySelector("a").onclick = abort
   } else if (state === "connected") {
     stateIndicator.classList.add("greenCircle")
     tooltiptext.innerHTML = `Connected to livereload server
-    <div><svg id="powerOffIconSvg" class="iconTooltip">
-      <use xlink:href="#powerOffIconSvgModel"></use>
-    </svg>
-    <a href="javascript:void(0);">disconnect</a></div>`
+    <br /><div class="tooltipAction">
+      <svg id="powerOffIconSvg" class="tooltipIcon">
+        <use xlink:href="#powerOffIconSvgModel"></use>
+      </svg>
+      <a href="javascript:void(0);">disconnect</a>
+    </div>`
     tooltiptext.querySelector("a").onclick = disconnect
   } else if (state === "disconnected") {
     stateIndicator.classList.add("redCircle")
-    tooltiptext.innerHTML = `Disconnected from livereload server <a href="javascript:void(0);">reconnect</a>`
+    tooltiptext.innerHTML = `Disconnected from livereload server
+    <br /><div class="tooltipAction">
+      <svg id="powerIconSvg" class="tooltipIcon">
+        <use xlink:href="#powerIconSvgModel"></use>
+      </svg>      
+      <a href="javascript:void(0);">reconnect</a>
+    </div>`
     tooltiptext.querySelector("a").onclick = reconnect
   }
 }
@@ -225,8 +245,8 @@ const hideJsenvLogo = () => {
   document.querySelector("#jsenvLogo").classList.remove("jsenvLogoVisible")
 }
 
-export const resizeInput = (input) => {
-  const size = document.documentElement.clientWidth < WINDOW_MEDIUM_WIDTH ? 20 : 40
+export const resizeInput = (input, fileWidthBreakpoint) => {
+  const size = fileWidthBreakpoint.isBelow() ? 20 : 40
   if (input.value.length > size) {
     input.style.width = `${size}ch`
   } else {
