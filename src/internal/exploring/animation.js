@@ -91,9 +91,11 @@ export const move = (fromNode, toNode, options) => {
         width: "100%",
       },
       {
+        offset: 0.9,
+        backgroundColor: fromComputedStyle.backgroundColor,
+      },
+      {
         transform: translate,
-        // TODO flore: transform backgroundColor very late (90%) to avoid text to become
-        // white over white
         backgroundColor: toComputedStyle.backgroundColor,
         color: toComputedStyle.color,
         fontSize: toComputedStyle.fontSize,
