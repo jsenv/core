@@ -56,9 +56,8 @@ export const renderToolbar = (fileRelativeUrl) => {
   fileWidthBreakpoint.changed.listen(handleFileWidthBreakpoint)
 
   if (fileRelativeUrl) {
-    const buttonStateIndicator = document.querySelector("#button-state-indicator")
-    buttonStateIndicator.onclick = () => toggleTooltip(buttonStateIndicator)
-    document.querySelector("#button-state-indicator").style.display = ""
+    const buttonStateIndicator = document.querySelector("#button-livereload-indicator")
+    buttonStateIndicator.style.display = ""
 
     const input = document.querySelector(".fileName")
     input.value = fileRelativeUrl
@@ -66,12 +65,13 @@ export const renderToolbar = (fileRelativeUrl) => {
 
     document.querySelector(".fileNameContainer").style.display = "table-cell"
     const buttonExecutionIndicator = document.querySelector("#button-execution-indicator")
-    buttonExecutionIndicator.onclick = () => toggleTooltip(buttonExecutionIndicator)
+    buttonExecutionIndicator.querySelector("svg").onclick = () =>
+      toggleTooltip(buttonExecutionIndicator)
     buttonExecutionIndicator.style.display = ""
     document.querySelector(".file-icon-wrapper").classList.remove("iconToolbar-selected")
   } else {
     document.querySelector(".fileNameContainer").style.display = "none"
-    document.querySelector("#button-state-indicator").style.display = "none"
+    document.querySelector("#button-livereload-indicator").style.display = "none"
     document.querySelector("#button-execution-indicator").style.display = "none"
     document.querySelector(".file-icon-wrapper").classList.add("iconToolbar-selected")
   }
@@ -87,8 +87,8 @@ export const renderToolbar = (fileRelativeUrl) => {
 
 const responsiveToolbar = (overflowMenuBreakpoint) => {
   // close all tooltips in case it's open
-  document.querySelector(".serverState").classList.remove("tooltipVisible")
-  document.querySelector(".fileExecution").classList.remove("tooltipVisible")
+  hideTooltip(document.querySelector("#button-livereload-indicator"))
+  hideTooltip(document.querySelector("#button-execution-indicator"))
 
   // close settings box in case it's open
   document.querySelector(".settings-icon-wrapper").classList.remove("iconToolbar-selected")
@@ -122,23 +122,29 @@ const responsiveToolbar = (overflowMenuBreakpoint) => {
 
 const isVisible = () => document.documentElement.hasAttribute("data-toolbar-visible")
 
-export const applyStateIndicator = (state, { connect, abort, disconnect, reconnect }) => {
-  const buttonStateIndicator = document.querySelector("#button-state-indicator")
-  const buttonVariant = buttonStateIndicator
+export const applyLivereloadIndicator = (state, { connect, abort, disconnect, reconnect }) => {
+  const buttonLivereloadIndicator = document.querySelector("#button-livereload-indicator")
+  const buttonVariant = buttonLivereloadIndicator
     .querySelector(`[data-livereload-variant="${state}"]`)
     .cloneNode(true)
-  const variantContainer = buttonStateIndicator.querySelector("#button-current-variant")
+  const variantContainer = buttonLivereloadIndicator.querySelector("#button-current-variant")
 
   variantContainer.innerHTML = ""
   variantContainer.appendChild(buttonVariant)
+
+  buttonLivereloadIndicator.querySelector(".button-content").onclick = () => {
+    toggleTooltip(buttonLivereloadIndicator)
+  }
 
   if (state === "off") {
     buttonVariant.querySelector("a").onclick = connect
   } else if (state === "connecting") {
     buttonVariant.querySelector("a").onclick = abort
   } else if (state === "connected") {
+    autoHideTooltip(buttonLivereloadIndicator)
     buttonVariant.querySelector("a").onclick = disconnect
   } else if (state === "disconnected") {
+    autoShowTooltip(buttonLivereloadIndicator)
     buttonVariant.querySelector("a").onclick = reconnect
   }
 }
@@ -175,8 +181,8 @@ export const showToolbar = () => {
 
 export const hideToolbar = () => {
   document.querySelector("#toolbar").setAttribute("tabIndex", -1)
-  document.querySelector(".serverState").classList.remove("tooltipVisible")
-  document.querySelector(".fileExecution").classList.remove("tooltipVisible")
+  hideTooltip(document.querySelector("#button-livereload-indicator"))
+  hideTooltip(document.querySelector("#button-execution-indicator"))
   document.documentElement.removeAttribute("data-toolbar-visible")
   toolbarVisibilityPreference.set(false)
 
@@ -225,7 +231,28 @@ export const resizeInput = (input, fileWidthBreakpoint) => {
 }
 
 const toggleTooltip = (element) => {
-  element.querySelector(".tooltip").classList.toggle("tooltipVisible")
+  if (element.hasAttribute("data-tooltip-visible")) {
+    hideTooltip(element)
+  } else {
+    showTooltip(element)
+  }
+}
+
+const hideTooltip = (element) => {
+  element.removeAttribute("data-tooltip-visible")
+  element.removeAttribute("data-tooltip-auto-visible")
+}
+
+const showTooltip = (element) => {
+  element.setAttribute("data-tooltip-visible", "")
+}
+
+const autoHideTooltip = (element) => {
+  element.removeAttribute("data-tooltip-auto-visible")
+}
+
+const autoShowTooltip = (element) => {
+  element.setAttribute("data-tooltip-auto-visible", "")
 }
 
 const toggleSettingsBox = () => {

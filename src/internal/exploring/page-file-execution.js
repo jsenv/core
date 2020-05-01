@@ -1,7 +1,7 @@
 import { createCancellationSource, composeCancellationToken } from "@jsenv/cancellation"
 import { memoize } from "../memoize.js"
 import { createLivereloading } from "./livereloading.js"
-import { applyStateIndicator, applyFileExecutionIndicator } from "./toolbar.js"
+import { applyLivereloadIndicator, applyFileExecutionIndicator } from "./toolbar.js"
 import { loadExploringConfig } from "./util.js"
 import { jsenvLogger } from "./jsenvLogger.js"
 import { notifyFileExecution } from "./notification.js"
@@ -153,17 +153,17 @@ export const pageFileExecution = {
         execute(fileRelativeUrl)
       },
       onConnecting: ({ abort }) => {
-        applyStateIndicator("connecting", { abort })
+        applyLivereloadIndicator("connecting", { abort })
       },
       onAborted: ({ connect }) => {
-        applyStateIndicator("off", { connect })
+        applyLivereloadIndicator("off", { connect })
       },
       onConnectionFailed: ({ reconnect }) => {
         // make ui indicate the failure providing a way to reconnect manually
-        applyStateIndicator("disconnected", { reconnect })
+        applyLivereloadIndicator("disconnected", { reconnect })
       },
       onConnected: ({ disconnect }) => {
-        applyStateIndicator("connected", { disconnect })
+        applyLivereloadIndicator("connected", { disconnect })
         // we have lost connection to the server, we might have missed some file changes
         // let's re-execute the file
         execute(fileRelativeUrl)
@@ -172,7 +172,7 @@ export const pageFileExecution = {
     if (livereloading.isEnabled()) {
       livereloading.connect()
     } else {
-      applyStateIndicator("off", { connect: livereloading.connect })
+      applyLivereloadIndicator("off", { connect: livereloading.connect })
       // if not connecting we don't wait for connection to be established before executing
       // we execute immediatly (happen when livereloading is disabled)
       execute(fileRelativeUrl)

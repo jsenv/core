@@ -24,7 +24,8 @@
   border-color: rgb(94, 94, 94) transparent transparent transparent;
 }
 
-.tooltipVisible {
+[data-tooltip-visible] .tooltip,
+[data-tooltip-auto-visible] .tooltip {
   display: block;
   animation: fadeIn ease 0.4s;
 }
@@ -43,7 +44,7 @@
   border: 1px solid #a0a0a0;
   border-radius: 3px;
   padding: 3px 7px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .tooltipAction a {
