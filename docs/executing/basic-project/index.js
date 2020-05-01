@@ -1,5 +1,5 @@
 import { getRuntimeName } from "./src/getRuntimeName.js"
 
 // eslint-disable-next-line no-debugger
-debugger
+// debugger
 console.log(getRuntimeName())

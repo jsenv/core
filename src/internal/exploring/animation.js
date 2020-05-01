@@ -87,7 +87,7 @@ export const move = (fromNode, toNode, options) => {
         backgroundColor: fromComputedStyle.backgroundColor,
         color: fromComputedStyle.color,
         fontSize: fromComputedStyle.fontSize,
-        height: fromPosition.bottom - fromPosition.top,
+        height: `${fromPosition.bottom - fromPosition.top}px`,
         width: "100%",
       },
       {
@@ -97,7 +97,7 @@ export const move = (fromNode, toNode, options) => {
         backgroundColor: toComputedStyle.backgroundColor,
         color: toComputedStyle.color,
         fontSize: toComputedStyle.fontSize,
-        height: toPosition.bottom - toPosition.top,
+        height: `${toPosition.bottom - toPosition.top}px`,
         width: toComputedStyle.width,
       },
     ],

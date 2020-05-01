@@ -9,13 +9,15 @@
   bottom: 120%;
   padding: 10px;
   font-size: 14px;
+  margin-left: -40px;
+  max-width: 160px;
 }
 
 .tooltip::after {
   content: "";
   position: absolute;
   top: 100%;
-  left: 20px;
+  left: 60px;
   margin-left: -5px;
   border-width: 5px;
   border-style: solid;
@@ -36,20 +38,23 @@
   }
 }
 
-.tooltiptextMoved {
-  position: relative;
-  top: -3px;
-}
-
-.retryIcon {
-  display: none;
-  width: 21px;
-  height: 17px;
-  fill: white;
-  position: relative;
-  top: 1px;
-}
-
-.retryIconDisplayed {
+.tooltipAction {
   display: inline-block;
+  border: 1px solid #a0a0a0;
+  border-radius: 3px;
+  padding: 3px 7px;
+  margin-top: 4px;
+}
+
+.tooltipAction a {
+  vertical-align: middle;
+  color: white;
+  text-decoration: none;
+}
+
+.tooltipIcon {
+  fill: white;
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
 }
