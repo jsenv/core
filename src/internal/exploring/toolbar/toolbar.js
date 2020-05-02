@@ -180,6 +180,9 @@ export const hideToolbar = () => {
     collapseToolbarTrigger()
   }
   toolbarTrigger.onclick = showToolbar
+  // toolbarTrigger is hidden by default to avoid being shown
+  // when toolbar is shown on page load, ensure it's visible once toolbar is hidden
+  removeForceHideElement(toolbarTrigger)
 }
 
 const expandToolbarTrigger = () => {
