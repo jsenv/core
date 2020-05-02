@@ -26,6 +26,7 @@ label {
 
 #explorables {
   word-break: break-word;
+  padding: 25px;
 }
 
 #explorables ul {

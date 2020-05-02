@@ -1,66 +1,50 @@
-#dotsIconSvg {
+#overflow-menu-button {
   display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  background: #404040;
+}
+
+#dotsIconSvg {
   fill: #cecece;
   width: 25px;
 }
 
-#button-overflow-menu {
-  position: relative;
-  background: #404040;
-}
-
-#button-overflow-menu.active {
-  background: #030713;
-}
-
-#overflowMenu {
-  display: none;
+#overflow-menu {
   position: absolute;
-  left: 0;
-  right: 45px;
-  height: 40px;
+  left: 100%;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
   background: #404040;
   border-bottom: 1px solid #282d32;
+  opacity: 0;
 }
 
-#overflowMenu > * {
+#overflow-menu[data-animate] {
+  transition-property: left, opacity;
+  transition-duration: 0.3s;
+}
+
+#overflow-menu > * {
   display: table-cell;
   vertical-align: middle;
   text-align: center;
 }
 
-@media only screen and (max-width: 420px) {
-  #dotsIconSvg {
-    display: inline;
-  }
-  #overflowMenu.overflowMenu-visible {
-    display: table;
-    animation: slideIn ease 0.3s;
-  }
-  #overflowMenu.overflowMenu-removing {
-    display: table;
-    animation: slideOut ease 0.4s;
-  }
+#toolbar[data-overflow-menu-enabled] #overflow-menu-button {
+  display: block;
 }
 
-@keyframes slideIn {
-  0% {
-    opacity: 0;
-    transform: translate(100%, 0);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(0, 0);
-  }
+#toolbar[data-overflow-menu-visible] #overflow-menu-button {
+  background: #030713;
 }
 
-@keyframes slideOut {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(100%, 0);
-  }
+#toolbar[data-overflow-menu-visible] #overflow-menu {
+  opacity: 1;
+  left: 0;
+  margin-left: -40px;
 }

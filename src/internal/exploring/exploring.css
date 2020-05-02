@@ -45,6 +45,7 @@ iframe {
   visibility: hidden; /* ensure toolbar children are not focusable when hidden */
   position: fixed;
   bottom: 0;
+  width: 100%;
 }
 
 html[data-toolbar-visible] #toolbar {
