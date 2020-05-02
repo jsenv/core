@@ -4,16 +4,16 @@ export const applyLivereloadIndicator = (
   state = "default",
   { connect, abort, disconnect, reconnect } = {},
 ) => {
-  const buttonLivereloadIndicator = document.querySelector("#button-livereload-indicator")
-  const buttonVariant = buttonLivereloadIndicator
+  const livereloadIndicator = document.querySelector("#livereload-indicator")
+  const buttonVariant = livereloadIndicator
     .querySelector(`[data-variant="${state}"]`)
     .cloneNode(true)
-  const variantContainer = buttonLivereloadIndicator.querySelector("[data-variant-container]")
+  const variantContainer = livereloadIndicator.querySelector("[data-variant-container]")
   variantContainer.innerHTML = ""
   variantContainer.appendChild(buttonVariant)
 
-  buttonLivereloadIndicator.querySelector(".button-content").onclick = () => {
-    toggleTooltip(buttonLivereloadIndicator)
+  livereloadIndicator.querySelector(".button-content").onclick = () => {
+    toggleTooltip(livereloadIndicator)
   }
 
   if (state === "off") {
@@ -21,10 +21,10 @@ export const applyLivereloadIndicator = (
   } else if (state === "connecting") {
     buttonVariant.querySelector("a").onclick = abort
   } else if (state === "connected") {
-    removeAutoShowTooltip(buttonLivereloadIndicator)
+    removeAutoShowTooltip(livereloadIndicator)
     buttonVariant.querySelector("a").onclick = disconnect
   } else if (state === "disconnected") {
-    autoShowTooltip(buttonLivereloadIndicator)
+    autoShowTooltip(livereloadIndicator)
     buttonVariant.querySelector("a").onclick = reconnect
   }
 }

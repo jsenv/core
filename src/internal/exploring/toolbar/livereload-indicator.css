@@ -1,4 +1,4 @@
-#button-livereload-indicator .button-content svg {
+#livereload-indicator .button-content svg {
   height: 40px;
   width: 40px;
 }
@@ -16,6 +16,7 @@
 }
 
 .livereload-circle[data-variant="connecting"] {
+  fill: #cecece;
   animation: wink 1.2s ease-out infinite;
   transform-origin: center;
 }

@@ -97,7 +97,7 @@
   background: rgba(31, 38, 44, 0.72);
 }
 
-#settings[data-active] .toolbar-section-content {
+#settings[data-active] .button-content {
   background: #030713;
 }
 

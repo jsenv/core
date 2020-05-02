@@ -26,7 +26,7 @@ export const renderToolbar = (fileRelativeUrl) => {
     hide: hideToolbar,
   }
 
-  document.querySelector("#settings-button").onclick = () => toggleSettingsBox()
+  document.querySelector("#settings .button-content").onclick = () => toggleSettingsBox()
 
   document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar()
 
@@ -55,11 +55,11 @@ export const renderToolbar = (fileRelativeUrl) => {
     activateToolbarSection(document.querySelector("#file"))
     deactivateToolbarSection(document.querySelector("#file-list-link"))
     removeForceHideElement(document.querySelector("#file"))
-    removeForceHideElement(document.querySelector("#button-livereload-indicator"))
+    removeForceHideElement(document.querySelector("#livereload-indicator"))
     removeForceHideElement(document.querySelector("#execution-indicator"))
   } else {
     forceHideElement(document.querySelector("#file"))
-    forceHideElement(document.querySelector("#button-livereload-indicator"))
+    forceHideElement(document.querySelector("#livereload-indicator"))
     forceHideElement(document.querySelector("#execution-indicator"))
     deactivateToolbarSection(document.querySelector("#file"))
     activateToolbarSection(document.querySelector("#file-list-link"))
@@ -91,12 +91,12 @@ const deactivateToolbarSection = (element) => {
 }
 
 const toolbarSectionIsActive = (element) => {
-  element.hasAttribute("data-active")
+  return element.hasAttribute("data-active")
 }
 
 const responsiveToolbar = (overflowMenuBreakpoint) => {
   // close all tooltips in case it's open
-  hideTooltip(document.querySelector("#button-livereload-indicator"))
+  hideTooltip(document.querySelector("#livereload-indicator"))
   hideTooltip(document.querySelector("#execution-indicator"))
 
   // close settings box in case it's open
@@ -149,8 +149,8 @@ export const showToolbar = () => {
 
 export const hideToolbar = () => {
   document.querySelector("#toolbar").setAttribute("tabIndex", -1)
-  hideTooltip(document.querySelector("#button-livereload-indicator"))
-  hideTooltip(document.querySelector("#button-execution-indicator"))
+  hideTooltip(document.querySelector("#livereload-indicator"))
+  hideTooltip(document.querySelector("#execution-indicator"))
   document.documentElement.removeAttribute("data-toolbar-visible")
   toolbarVisibilityPreference.set(false)
 
