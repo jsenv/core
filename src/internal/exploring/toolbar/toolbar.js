@@ -40,7 +40,7 @@ export const renderToolbar = (fileRelativeUrl) => {
     setNotificationPreference(notifCheckbox.checked)
   }
 
-  const input = document.querySelector(".fileName")
+  const input = document.querySelector("#file-input")
 
   // apply responsive design on fileInput if needed + add listener on resize screen
   const fileWidthBreakpoint = createHorizontalBreakpoint(WINDOW_MEDIUM_WIDTH)
@@ -58,12 +58,12 @@ export const renderToolbar = (fileRelativeUrl) => {
     buttonExecutionIndicator.querySelector("svg").onclick = () =>
       toggleTooltip(buttonExecutionIndicator)
 
-    removeForceHideElement(document.querySelector(".fileNameContainer"))
+    removeForceHideElement(document.querySelector("#file"))
     removeForceHideElement(document.querySelector("#button-livereload-indicator"))
     removeForceHideElement(document.querySelector("#button-execution-indicator"))
     document.querySelector(".file-icon-wrapper").classList.remove("iconToolbar-selected")
   } else {
-    forceHideElement(document.querySelector(".fileNameContainer"))
+    forceHideElement(document.querySelector("#file"))
     forceHideElement(document.querySelector("#button-livereload-indicator"))
     forceHideElement(document.querySelector("#button-execution-indicator"))
     document.querySelector(".file-icon-wrapper").classList.add("iconToolbar-selected")

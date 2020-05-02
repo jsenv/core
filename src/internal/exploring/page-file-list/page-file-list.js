@@ -53,7 +53,7 @@ export const pageFileList = {
       }
 
       // put the file name in the input in the toolbar
-      const fileInput = document.querySelector(".fileName")
+      const fileInput = document.querySelector("#file-input")
       // hide the input during animation
       fileInput.style.opacity = "0"
       await move(aElement, fileInput, {
