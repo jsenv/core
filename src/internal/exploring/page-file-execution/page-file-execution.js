@@ -1,7 +1,8 @@
 import { createCancellationSource, composeCancellationToken } from "@jsenv/cancellation"
 import { memoize } from "../../memoize.js"
 import { createLivereloading } from "../livereloading/livereloading.js"
-import { applyLivereloadIndicator, applyFileExecutionIndicator } from "../toolbar/toolbar.js"
+import { applyLivereloadIndicator } from "../toolbar/livereload-indicator.js"
+import { applyExecutionIndicator } from "../toolbar/execution-indicator.js"
 import { loadExploringConfig } from "../util/util.js"
 import { jsenvLogger } from "../util/jsenvLogger.js"
 import { notifyFileExecution } from "../util/notification.js"
@@ -20,7 +21,7 @@ export const pageFileExecution = {
     const fileRelativeUrl = document.location.pathname.slice(1)
 
     // reset file execution indicator ui
-    applyFileExecutionIndicator()
+    applyExecutionIndicator()
     window.page = {
       previousExecution: undefined,
       execution: undefined,
@@ -71,7 +72,7 @@ export const pageFileExecution = {
       // - fetching exploring config
       // - fetching iframe html (which contains browser-js-file.js)
       execution.status = "loading"
-      applyFileExecutionIndicator("loading")
+      applyExecutionIndicator("loading")
 
       const {
         compileServerOrigin,
@@ -136,9 +137,9 @@ export const pageFileExecution = {
       const duration = execution.endTime - execution.startTime
       if (executionResult.status === "errored") {
         jsenvLogger.debug(`error during execution`, executionResult.error)
-        applyFileExecutionIndicator("failure", duration)
+        applyExecutionIndicator("failure", duration)
       } else {
-        applyFileExecutionIndicator("success", duration)
+        applyExecutionIndicator("success", duration)
       }
       notifyFileExecution(execution, previousExecution)
 

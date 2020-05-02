@@ -1,31 +1,38 @@
-#stateIndicatorSvg {
+#button-livereload-indicator svg {
   height: 40px;
   width: 40px;
 }
 
-.stateIndicatorCircle {
+.livereload-circle {
   cx: 20;
   cy: 20;
   r: 5;
   stroke: black;
   stroke-width: 0;
+}
+
+.livereload-circle[data-variant="off"] {
   fill: #cecece;
 }
 
-.greenCircle {
-  fill: green;
-}
-
-.redCircle {
-  fill: #cc0000;
-}
-
-.loadingCircle {
+.livereload-circle[data-variant="connecting"] {
   animation: wink 1.2s ease-out infinite;
   transform-origin: center;
 }
 
-.loadingRing {
+@keyframes wink {
+  0% {
+    opacity: 0;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.livereload-ring {
   cx: 20;
   cy: 20;
   r: 13;
@@ -50,14 +57,10 @@
   }
 }
 
-@keyframes wink {
-  0% {
-    opacity: 0;
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
+.livereload-circle[data-variant="connected"] {
+  fill: green;
+}
+
+.livereload-circle[data-variant="disconnected"] {
+  fill: #cc0000;
 }

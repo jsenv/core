@@ -96,17 +96,17 @@
               <div data-variant-container></div>
               <div style="display: none;">
                 <div data-variant="default">
-                  <div class="tooltip serverState">
+                  <div class="tooltip">
                     Unknown state
                   </div>
                   <div class="button-content">
-                    <svg id="stateIndicatorSvg">
-                      <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
+                    <svg>
+                      <circle class="livereload-circle" />
                     </svg>
                   </div>
                 </div>
                 <div data-variant="off">
-                  <div class="tooltip serverState">
+                  <div class="tooltip">
                     Livereloading disabled
                     <br />
                     <div class="tooltipAction">
@@ -119,13 +119,13 @@
                     </div>
                   </div>
                   <div class="button-content">
-                    <svg id="stateIndicatorSvg">
-                      <circle id="stateIndicatorCircle" class="stateIndicatorCircle" />
+                    <svg>
+                      <circle class="livereload-circle" data-variant="off" />
                     </svg>
                   </div>
                 </div>
                 <div data-variant="connecting">
-                  <div class="tooltip serverState">
+                  <div class="tooltip">
                     Connecting to livereload server...
                     <br />
                     <div class="tooltipAction">
@@ -138,17 +138,14 @@
                     </div>
                   </div>
                   <div class="button-content">
-                    <svg id="stateIndicatorSvg">
-                      <circle
-                        id="stateIndicatorCircle"
-                        class="stateIndicatorCircle loadingCircle"
-                      />
-                      <circle id="stateIndicatorRing" class="loadingRing" />
+                    <svg>
+                      <circle class="livereload-circle" data-variant="connecting" />
+                      <circle class="livereload-ring" />
                     </svg>
                   </div>
                 </div>
                 <div data-variant="connected">
-                  <div class="tooltip serverState">
+                  <div class="tooltip">
                     Connected to livereload server
                     <br />
                     <div class="tooltipAction">
@@ -161,13 +158,13 @@
                     </div>
                   </div>
                   <div class="button-content">
-                    <svg id="stateIndicatorSvg">
-                      <circle id="stateIndicatorCircle" class="stateIndicatorCircle greenCircle" />
+                    <svg>
+                      <circle class="livereload-circle" data-variant="connected" />
                     </svg>
                   </div>
                 </div>
                 <div data-variant="disconnected">
-                  <div class="tooltip serverState">
+                  <div class="tooltip">
                     Disconnected from livereload server
                     <br />
                     <div class="tooltipAction">
@@ -180,8 +177,8 @@
                     </div>
                   </div>
                   <div class="button-content">
-                    <svg id="stateIndicatorSvg">
-                      <circle id="stateIndicatorCircle" class="stateIndicatorCircle redCircle" />
+                    <svg>
+                      <circle class="livereload-circle" data-variant="disconnected" />
                     </svg>
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 import { getNotificationPreference, setNotificationPreference } from "../util/notification.js"
 import { createPreference } from "../util/preferences.js"
 import { createHorizontalBreakpoint } from "../util/responsive.js"
+import { toggleTooltip, hideTooltip } from "./tooltip.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
 
@@ -27,15 +28,7 @@ export const renderToolbar = (fileRelativeUrl) => {
 
   document.querySelector("#button-toggle-settings").onclick = () => toggleSettingsBox()
 
-  document.querySelector("#button-close-toolbar").onclick = () => {
-    // if user click enter or space quickly while closing toolbar
-    // it will cancel the closing
-    if (isVisible()) {
-      hideToolbar()
-    } else {
-      showToolbar()
-    }
-  }
+  document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar()
 
   document.querySelector("#button-overflow-menu").onclick = () => toggleOverflowMenu()
 
@@ -47,32 +40,32 @@ export const renderToolbar = (fileRelativeUrl) => {
     setNotificationPreference(notifCheckbox.checked)
   }
 
+  const input = document.querySelector(".fileName")
+
   // apply responsive design on fileInput if needed + add listener on resize screen
   const fileWidthBreakpoint = createHorizontalBreakpoint(WINDOW_MEDIUM_WIDTH)
   const handleFileWidthBreakpoint = () => {
-    resizeInput(document.querySelector(".fileName"), fileWidthBreakpoint)
+    resizeInput(input, fileWidthBreakpoint)
   }
   handleFileWidthBreakpoint()
   fileWidthBreakpoint.changed.listen(handleFileWidthBreakpoint)
 
   if (fileRelativeUrl) {
-    const buttonStateIndicator = document.querySelector("#button-livereload-indicator")
-    buttonStateIndicator.style.display = ""
-
-    const input = document.querySelector(".fileName")
     input.value = fileRelativeUrl
     resizeInput(input, fileWidthBreakpoint)
 
-    document.querySelector(".fileNameContainer").style.display = "table-cell"
     const buttonExecutionIndicator = document.querySelector("#button-execution-indicator")
     buttonExecutionIndicator.querySelector("svg").onclick = () =>
       toggleTooltip(buttonExecutionIndicator)
-    buttonExecutionIndicator.style.display = ""
+
+    removeForceHideElement(document.querySelector(".fileNameContainer"))
+    removeForceHideElement(document.querySelector("#button-livereload-indicator"))
+    removeForceHideElement(document.querySelector("#button-execution-indicator"))
     document.querySelector(".file-icon-wrapper").classList.remove("iconToolbar-selected")
   } else {
-    document.querySelector(".fileNameContainer").style.display = "none"
-    document.querySelector("#button-livereload-indicator").style.display = "none"
-    document.querySelector("#button-execution-indicator").style.display = "none"
+    forceHideElement(document.querySelector(".fileNameContainer"))
+    forceHideElement(document.querySelector("#button-livereload-indicator"))
+    forceHideElement(document.querySelector("#button-execution-indicator"))
     document.querySelector(".file-icon-wrapper").classList.add("iconToolbar-selected")
   }
 
@@ -83,6 +76,14 @@ export const renderToolbar = (fileRelativeUrl) => {
   }
   handleOverflowMenuBreakpoint()
   overflowMenuBreakpoint.changed.listen(handleOverflowMenuBreakpoint)
+}
+
+const forceHideElement = (element) => {
+  element.setAttribute("data-force-hide", "")
+}
+
+const removeForceHideElement = (element) => {
+  element.removeAttribute("data-force-hide")
 }
 
 const responsiveToolbar = (overflowMenuBreakpoint) => {
@@ -122,53 +123,13 @@ const responsiveToolbar = (overflowMenuBreakpoint) => {
 
 const isVisible = () => document.documentElement.hasAttribute("data-toolbar-visible")
 
-export const applyLivereloadIndicator = (
-  state = "default",
-  { connect, abort, disconnect, reconnect } = {},
-) => {
-  const buttonLivereloadIndicator = document.querySelector("#button-livereload-indicator")
-  const buttonVariant = buttonLivereloadIndicator
-    .querySelector(`[data-variant="${state}"]`)
-    .cloneNode(true)
-  const variantContainer = buttonLivereloadIndicator.querySelector("[data-variant-container]")
-  variantContainer.innerHTML = ""
-  variantContainer.appendChild(buttonVariant)
-
-  buttonLivereloadIndicator.querySelector(".button-content").onclick = () => {
-    toggleTooltip(buttonLivereloadIndicator)
-  }
-
-  if (state === "off") {
-    buttonVariant.querySelector("a").onclick = connect
-  } else if (state === "connecting") {
-    buttonVariant.querySelector("a").onclick = abort
-  } else if (state === "connected") {
-    autoHideTooltip(buttonLivereloadIndicator)
-    buttonVariant.querySelector("a").onclick = disconnect
-  } else if (state === "disconnected") {
-    autoShowTooltip(buttonLivereloadIndicator)
-    buttonVariant.querySelector("a").onclick = reconnect
-  }
-}
-
-export const applyFileExecutionIndicator = (state = "default", duration) => {
-  const buttonExecutionIndicator = document.querySelector("#button-execution-indicator")
-  const variant = buttonExecutionIndicator
-    .querySelector(`[data-variant="${state}"]`)
-    .cloneNode(true)
-  const variantContainer = buttonExecutionIndicator.querySelector("[data-variant-container]")
-  variantContainer.innerHTML = ""
-  variantContainer.appendChild(variant)
-
-  buttonExecutionIndicator.querySelector(".button-content").onclick = () => {
-    toggleTooltip(buttonExecutionIndicator)
-  }
-
-  if (state === "loading") {
-  } else if (state === "success") {
-    document.querySelector(".tooltip").textContent = `Execution completed in ${duration}ms`
-  } else if (state === "failure") {
-    document.querySelector(".tooltip").textContent = `Execution failed in ${duration}ms`
+const toogleToolbar = () => {
+  // if user click enter or space quickly while closing toolbar
+  // it will cancel the closing
+  if (isVisible()) {
+    hideToolbar()
+  } else {
+    showToolbar()
   }
 }
 
@@ -221,38 +182,13 @@ const hideJsenvLogo = () => {
   document.querySelector("#jsenvLogo").classList.remove("jsenvLogoVisible")
 }
 
-export const resizeInput = (input, fileWidthBreakpoint) => {
+const resizeInput = (input, fileWidthBreakpoint) => {
   const size = fileWidthBreakpoint.isBelow() ? 20 : 40
   if (input.value.length > size) {
     input.style.width = `${size}ch`
   } else {
     input.style.width = `${input.value.length}ch`
   }
-}
-
-const toggleTooltip = (element) => {
-  if (element.hasAttribute("data-tooltip-visible")) {
-    hideTooltip(element)
-  } else {
-    showTooltip(element)
-  }
-}
-
-const hideTooltip = (element) => {
-  element.removeAttribute("data-tooltip-visible")
-  element.removeAttribute("data-tooltip-auto-visible")
-}
-
-const showTooltip = (element) => {
-  element.setAttribute("data-tooltip-visible", "")
-}
-
-const autoHideTooltip = (element) => {
-  element.removeAttribute("data-tooltip-auto-visible")
-}
-
-const autoShowTooltip = (element) => {
-  element.setAttribute("data-tooltip-auto-visible", "")
 }
 
 const toggleSettingsBox = () => {
@@ -274,9 +210,5 @@ const toggleOverflowMenu = () => {
 }
 
 const closeOverflowMenu = () => {
-  // document.querySelector("#overflowMenu").classList.add("overflowMenu-removing")
-  // setTimeout(() => {
   document.querySelector("#overflowMenu").classList.remove("overflowMenu-visible")
-  //     document.querySelector("#overflowMenu").classList.remove("overflowMenu-removing")
-  //   }, 400)
 }

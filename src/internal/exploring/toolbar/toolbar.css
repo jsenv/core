@@ -1,8 +1,8 @@
 @import "./tooltip.css";
-@import "./serverStateIndicator.css";
-@import "./fileExecutionIndicator.css";
+@import "./execution-indicator.css";
+@import "./livereload-indicator.css";
 @import "./settingsBox.css";
-@import "./responsive.css";
+@import "./overflow-menu.css";
 
 #toolbar-wrapper {
   display: table;
