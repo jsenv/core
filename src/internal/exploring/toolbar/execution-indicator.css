@@ -1,8 +1,5 @@
-.loader {
-  position: relative;
-}
-
-#loaderSvg {
+/* Loader icon */
+#loader-icon {
   width: 20px;
   height: 20px;
   margin: 10px;
@@ -10,7 +7,10 @@
   color: #cecece;
   opacity: 0;
 }
-
+#loader-icon.animate {
+  transform-origin: center;
+  animation: rotateLoader 1s linear infinite;
+}
 @keyframes rotateLoader {
   0% {
     transform: scaleX(-1) rotate(360deg);
@@ -24,54 +24,40 @@
     opacity: 1;
   }
 }
-.animateLoader {
-  transform-origin: center;
-  animation: rotateLoader 1s linear infinite;
-}
 
-/* check Icon */
-#checkIconSvg {
+/* Check icon */
+#check-icon {
   width: 25px;
   height: 25px;
   margin: 7px;
-}
-
-.checkmark {
   opacity: 0;
   stroke-width: 5;
 }
-
-.animateCheck {
+#check-icon.animate {
   opacity: 1;
 }
-
-.animateCheck path {
+#check-icon.animate path {
   transform-origin: 50% 50%;
   stroke-dasharray: 48;
   stroke-dashoffset: 48;
   animation: stroke 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;
   stroke: green;
 }
-
 @keyframes stroke {
   100% {
     stroke-dashoffset: 0;
   }
 }
 
-/* cross Icon */
-#failIconSvg {
+/* Cross icon */
+#cross-icon {
   width: 20px;
   height: 20px;
   margin: 10px;
-}
-
-.failCross {
   opacity: 0;
   stroke-width: 5;
 }
-
-.failCross rect {
+#cross-icon rect {
   x: 239.397;
   rx: 17;
   ry: 17;
@@ -79,18 +65,15 @@
   height: 0;
   fill: #d74640;
 }
-
-.animateCross {
+#cross-icon.animate {
   opacity: 1;
 }
-
-.animateCross #cross_p1 {
+#cross-icon.animate #cross_p1 {
   animation: draw 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
-.animateCross #cross_p2 {
+#cross-icon.animate #cross_p2 {
   animation: draw 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards 0.2s;
 }
-
 @keyframes draw {
   100% {
     height: 376.964;
