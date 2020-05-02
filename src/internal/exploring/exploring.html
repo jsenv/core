@@ -186,18 +186,20 @@
 
           <section id="settings" data-responsive-toolbar-element>
             <div id="settings-box">
-              <svg id="settingsBoxIconSvg" width="35px" height="35px">
-                <use xlink:href="#settingsIconSvgModel"></use>
-              </svg>
-              <h3>Settings</h3>
-              <div class="settingsBoxContent">
-                <div class="settingsBoxItem">
+              <div id="settings-box-header">
+                <svg class="settings-icon" width="35px" height="35px">
+                  <use xlink:href="#settingsIconSvgModel"></use>
+                </svg>
+                <h3>Settings</h3>
+              </div>
+              <div id="settings-box-body">
+                <div class="settings-box-item">
                   <label>
                     <input id="toggle-notifs" type="checkbox" />
                     Notifications
                   </label>
                 </div>
-                <div class="settingsBoxItem">
+                <div class="settings-box-item">
                   <label>
                     <input id="toggle-darkTheme" type="checkbox" />
                     Light theme
@@ -206,7 +208,7 @@
               </div>
             </div>
             <a class="button-content toolbar-icon-wrapper">
-              <svg id="settingsIconSvg" class="iconToolbar" width="35px" height="35px">
+              <svg class="settings-icon iconToolbar" class="iconToolbar" width="35px" height="35px">
                 <use xlink:href="#settingsIconSvgModel"></use>
               </svg>
             </a>
@@ -237,9 +239,9 @@
       </div>
 
       <div id="toolbar-trigger">
-          <svg id="jsenvLogoSvg">
-            <use xlink:href="#jsenvLogoSvgModel"></use>
-          </svg>
+        <svg id="jsenvLogoSvg">
+          <use xlink:href="#jsenvLogoSvgModel"></use>
+        </svg>
       </div>
 
       <script type="systemjs-importmap" src="$COMPILE_SERVER_IMPORT_MAP_SRC"></script>

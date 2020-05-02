@@ -30,14 +30,7 @@
   }
 }
 
-h3 {
-  display: inline-block;
-  font-size: 20px;
-  margin: 10px 0;
-  color: #076570;
-}
-
-#settingsBoxIconSvg {
+#settings-box-header .settings-icon {
   fill: none;
   stroke: #076570;
   stroke-width: 2;
@@ -48,11 +41,18 @@ h3 {
   top: 4px;
 }
 
-.settingsBoxContent {
+#settings-box h3 {
+  display: inline-block;
+  font-size: 20px;
+  margin: 10px 0;
+  color: #076570;
+}
+
+#settings-box-body {
   text-align: left;
   margin-top: 10px;
 }
 
-.settingsBoxItem {
+.settings-box-item {
   margin: 10px 0;
 }

@@ -1,7 +1,7 @@
 @import "./tooltip.css";
 @import "./execution-indicator.css";
 @import "./livereload-indicator.css";
-@import "./settingsBox.css";
+@import "./settings.css";
 @import "./overflow-menu.css";
 
 #toolbar-wrapper {
@@ -57,7 +57,7 @@
 
 /* file and settings icons */
 #fileIconSvg,
-#settingsIconSvg {
+.settings-icon {
   fill: #cecece;
   width: 20px;
 }
