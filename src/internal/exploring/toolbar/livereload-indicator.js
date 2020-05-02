@@ -12,7 +12,7 @@ export const applyLivereloadIndicator = (
   variantContainer.innerHTML = ""
   variantContainer.appendChild(buttonVariant)
 
-  livereloadIndicator.querySelector(".button-content").onclick = () => {
+  livereloadIndicator.querySelector("button").onclick = () => {
     toggleTooltip(livereloadIndicator)
   }
 

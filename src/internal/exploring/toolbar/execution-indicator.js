@@ -7,7 +7,7 @@ export const applyExecutionIndicator = (state = "default", duration) => {
   variantContainer.innerHTML = ""
   variantContainer.appendChild(variant)
 
-  executionIndicator.querySelector(".button-content").onclick = () => {
+  executionIndicator.querySelector("button").onclick = () => {
     toggleTooltip(executionIndicator)
   }
 

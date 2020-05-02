@@ -13,6 +13,7 @@
 }
 
 #overflow-menu {
+  visibility: hidden; /* disable keyboard navigation */
   position: absolute;
   left: 100%;
   top: 0;
@@ -42,7 +43,12 @@
   background: #030713;
 }
 
+#toolbar[data-overflow-menu-enabled][data-overflow-menu-visible] #toolbar-wrapper {
+  visibility: hidden; /* disable keyboard navigation */
+}
+
 #toolbar[data-overflow-menu-visible] #overflow-menu {
+  visibility: visible; /* restore keyboard navigation */
   opacity: 1;
   left: 0;
   margin-left: -40px;

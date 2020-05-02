@@ -26,7 +26,7 @@ export const renderToolbar = (fileRelativeUrl) => {
     hide: hideToolbar,
   }
 
-  document.querySelector("#settings .button-content").onclick = () => toggleSettingsBox()
+  document.querySelector("#settings button").onclick = () => toggleSettingsBox()
 
   document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar()
 
@@ -163,9 +163,19 @@ export const hideToolbar = () => {
   const toolbarTrigger = document.querySelector("#toolbar-trigger")
   var timer
   toolbarTrigger.onmouseenter = () => {
+    toolbarTrigger.setAttribute("data-animate", "")
     timer = setTimeout(expandToolbarTrigger, 500)
   }
   toolbarTrigger.onmouseleave = () => {
+    clearTimeout(timer)
+    collapseToolbarTrigger()
+  }
+  toolbarTrigger.onfocus = () => {
+    toolbarTrigger.removeAttribute("data-animate")
+    expandToolbarTrigger()
+  }
+  toolbarTrigger.onblur = () => {
+    toolbarTrigger.removeAttribute("data-animate")
     clearTimeout(timer)
     collapseToolbarTrigger()
   }

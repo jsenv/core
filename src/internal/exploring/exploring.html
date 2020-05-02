@@ -36,7 +36,7 @@
           </section>
 
           <section id="execution-indicator">
-            <button>
+            <div>
               <div data-variant-container></div>
               <div style="display: none;">
                 <div data-variant="default">
@@ -48,27 +48,27 @@
                   <div class="tooltip">
                     Executing...
                   </div>
-                  <div class="button-content">
+                  <button>
                     <svg id="loader-icon" class="animate">
                       <use xlink:href="#loaderSvgModel"></use>
                     </svg>
-                  </div>
+                  </button>
                 </div>
                 <div data-variant="success">
                   <div class="tooltip">
                     Execution completed in X ms
                   </div>
-                  <div class="button-content">
+                  <button>
                     <svg id="check-icon" class="animate" viewBox="0 0 52 52">
                       <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
                     </svg>
-                  </div>
+                  </button>
                 </div>
                 <div data-variant="failure">
                   <div class="tooltip">
                     Execution failed in X ms
                   </div>
-                  <div class="button-content">
+                  <button>
                     <svg id="cross-icon" class="animate" viewBox="0 0 512 512">
                       <rect
                         id="cross_p1"
@@ -81,27 +81,27 @@
                         transform="matrix(0.7071 -0.7071 0.7071 0.7071 -106.039 256.0001)"
                       />
                     </svg>
-                  </div>
+                  </button>
                 </div>
               </div>
-            </button>
+            </div>
           </section>
 
           <div style="width: 100%;"></div>
 
           <section id="livereload-indicator" data-responsive-toolbar-element>
-            <button>
+            <div>
               <div data-variant-container></div>
               <div style="display: none;">
                 <div data-variant="default">
                   <div class="tooltip">
                     Unknown state
                   </div>
-                  <div class="button-content">
+                  <button>
                     <svg>
                       <circle class="livereload-circle" />
                     </svg>
-                  </div>
+                  </button>
                 </div>
                 <div data-variant="off">
                   <div class="tooltip">
@@ -116,11 +116,11 @@
                       </a>
                     </div>
                   </div>
-                  <div class="button-content">
+                  <button>
                     <svg>
                       <circle class="livereload-circle" data-variant="off" />
                     </svg>
-                  </div>
+                  </button>
                 </div>
                 <div data-variant="connecting">
                   <div class="tooltip">
@@ -135,12 +135,12 @@
                       </a>
                     </div>
                   </div>
-                  <div class="button-content">
+                  <button>
                     <svg>
                       <circle class="livereload-circle" data-variant="connecting" />
                       <circle class="livereload-ring" />
                     </svg>
-                  </div>
+                  </button>
                 </div>
                 <div data-variant="connected">
                   <div class="tooltip">
@@ -155,11 +155,11 @@
                       </a>
                     </div>
                   </div>
-                  <div class="button-content">
+                  <button>
                     <svg>
                       <circle class="livereload-circle" data-variant="connected" />
                     </svg>
-                  </div>
+                  </button>
                 </div>
                 <div data-variant="disconnected">
                   <div class="tooltip">
@@ -174,11 +174,11 @@
                       </a>
                     </div>
                   </div>
-                  <div class="button-content">
+                  <button>
                     <svg>
                       <circle class="livereload-circle" data-variant="disconnected" />
                     </svg>
-                  </div>
+                  </button>
                 </div>
               </div>
             </button>
@@ -207,11 +207,11 @@
                 </div>
               </div>
             </div>
-            <a class="button-content toolbar-icon-wrapper">
+            <button class="toolbar-icon-wrapper">
               <svg class="settings-icon iconToolbar" class="iconToolbar" width="35px" height="35px">
                 <use xlink:href="#settingsIconSvgModel"></use>
               </svg>
-            </a>
+            </button>
           </section>
 
           <section id="close" data-responsive-toolbar-element>
@@ -238,11 +238,11 @@
         </div>
       </div>
 
-      <div id="toolbar-trigger">
+      <button id="toolbar-trigger">
         <svg id="jsenvLogoSvg">
           <use xlink:href="#jsenvLogoSvgModel"></use>
         </svg>
-      </div>
+      </button>
 
       <script type="systemjs-importmap" src="$COMPILE_SERVER_IMPORT_MAP_SRC"></script>
       <script src="$SYSTEMJS_SCRIPT_SRC"></script>
