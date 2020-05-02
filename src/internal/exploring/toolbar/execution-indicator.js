@@ -1,26 +1,22 @@
 import { toggleTooltip } from "./tooltip.js"
 
 export const applyExecutionIndicator = (state = "default", duration) => {
-  const buttonExecutionIndicator = document.querySelector("#button-execution-indicator")
-  const variant = buttonExecutionIndicator
-    .querySelector(`[data-variant="${state}"]`)
-    .cloneNode(true)
-  const variantContainer = buttonExecutionIndicator.querySelector("[data-variant-container]")
+  const executionIndicator = document.querySelector("#execution-indicator")
+  const variant = executionIndicator.querySelector(`[data-variant="${state}"]`).cloneNode(true)
+  const variantContainer = executionIndicator.querySelector("[data-variant-container]")
   variantContainer.innerHTML = ""
   variantContainer.appendChild(variant)
 
-  buttonExecutionIndicator.querySelector(".button-content").onclick = () => {
-    toggleTooltip(buttonExecutionIndicator)
+  executionIndicator.querySelector(".button-content").onclick = () => {
+    toggleTooltip(executionIndicator)
   }
 
   if (state === "loading") {
   } else if (state === "success") {
-    buttonExecutionIndicator.querySelector(
+    executionIndicator.querySelector(
       ".tooltip",
     ).textContent = `Execution completed in ${duration}ms`
   } else if (state === "failure") {
-    buttonExecutionIndicator.querySelector(
-      ".tooltip",
-    ).textContent = `Execution failed in ${duration}ms`
+    executionIndicator.querySelector(".tooltip").textContent = `Execution failed in ${duration}ms`
   }
 }

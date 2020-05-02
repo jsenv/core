@@ -1,4 +1,4 @@
-.settingsBox {
+#settings-box {
   display: none;
   position: absolute;
   bottom: 40px;
@@ -14,7 +14,7 @@
   z-index: -1;
 }
 
-.settingsBox-visible {
+[data-active] #settings-box {
   display: block;
   animation: comeUp ease 0.3s;
 }

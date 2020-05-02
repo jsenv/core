@@ -26,13 +26,11 @@ export const renderToolbar = (fileRelativeUrl) => {
     hide: hideToolbar,
   }
 
-  document.querySelector("#button-toggle-settings").onclick = () => toggleSettingsBox()
+  document.querySelector("#settings-button").onclick = () => toggleSettingsBox()
 
   document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar()
 
   document.querySelector("#button-overflow-menu").onclick = () => toggleOverflowMenu()
-
-  document.querySelector("#button-toggle-settings").onclick = () => toggleSettingsBox()
 
   const notifCheckbox = document.querySelector("#toggle-notifs")
   notifCheckbox.checked = getNotificationPreference()
@@ -54,19 +52,17 @@ export const renderToolbar = (fileRelativeUrl) => {
     input.value = fileRelativeUrl
     resizeInput(input, fileWidthBreakpoint)
 
-    const buttonExecutionIndicator = document.querySelector("#button-execution-indicator")
-    buttonExecutionIndicator.querySelector("svg").onclick = () =>
-      toggleTooltip(buttonExecutionIndicator)
-
+    activateToolbarSection(document.querySelector("#file"))
+    deactivateToolbarSection(document.querySelector("#file-list-link"))
     removeForceHideElement(document.querySelector("#file"))
     removeForceHideElement(document.querySelector("#button-livereload-indicator"))
-    removeForceHideElement(document.querySelector("#button-execution-indicator"))
-    document.querySelector(".file-icon-wrapper").classList.remove("iconToolbar-selected")
+    removeForceHideElement(document.querySelector("#execution-indicator"))
   } else {
     forceHideElement(document.querySelector("#file"))
     forceHideElement(document.querySelector("#button-livereload-indicator"))
-    forceHideElement(document.querySelector("#button-execution-indicator"))
-    document.querySelector(".file-icon-wrapper").classList.add("iconToolbar-selected")
+    forceHideElement(document.querySelector("#execution-indicator"))
+    deactivateToolbarSection(document.querySelector("#file"))
+    activateToolbarSection(document.querySelector("#file-list-link"))
   }
 
   // apply responsive design on toolbar icons if needed + add listener on resize screen
@@ -86,14 +82,25 @@ const removeForceHideElement = (element) => {
   element.removeAttribute("data-force-hide")
 }
 
+const activateToolbarSection = (element) => {
+  element.setAttribute("data-active", "")
+}
+
+const deactivateToolbarSection = (element) => {
+  element.removeAttribute("data-active")
+}
+
+const toolbarSectionIsActive = (element) => {
+  element.hasAttribute("data-active")
+}
+
 const responsiveToolbar = (overflowMenuBreakpoint) => {
   // close all tooltips in case it's open
   hideTooltip(document.querySelector("#button-livereload-indicator"))
-  hideTooltip(document.querySelector("#button-execution-indicator"))
+  hideTooltip(document.querySelector("#execution-indicator"))
 
   // close settings box in case it's open
-  document.querySelector(".settings-icon-wrapper").classList.remove("iconToolbar-selected")
-  document.querySelector(".settingsBox").classList.remove("settingsBox-visible")
+  deactivateToolbarSection(document.querySelector("#settings"))
 
   if (overflowMenuBreakpoint.isBelow()) {
     // move elements from toolbar to overflow menu
@@ -105,14 +112,14 @@ const responsiveToolbar = (overflowMenuBreakpoint) => {
   } else {
     // close overflow menu in case it's open & unselect toggleOverflowMenu button in case it's selected
     closeOverflowMenu()
-    document.querySelector("#button-overflow-menu").classList.remove("active")
+    deactivateToolbarSection(document.querySelector("#button-overflow-menu"))
 
     // move elements from overflow menu to toolbar
     const responsiveToolbarElements = document.querySelectorAll("[data-responsive-toolbar-element]")
 
     const toolbar = document.querySelector("#toolbar-wrapper")
     Array.from(responsiveToolbarElements).forEach((element) => {
-      if (element.id === "page-file-link") {
+      if (element.id === "file-list-link") {
         toolbar.insertBefore(element, toolbar.firstElementChild)
       } else {
         toolbar.appendChild(element)
@@ -121,12 +128,12 @@ const responsiveToolbar = (overflowMenuBreakpoint) => {
   }
 }
 
-const isVisible = () => document.documentElement.hasAttribute("data-toolbar-visible")
+const toolbarIsVisible = () => document.documentElement.hasAttribute("data-toolbar-visible")
 
 const toogleToolbar = () => {
   // if user click enter or space quickly while closing toolbar
   // it will cancel the closing
-  if (isVisible()) {
+  if (toolbarIsVisible()) {
     hideToolbar()
   } else {
     showToolbar()
@@ -192,8 +199,12 @@ const resizeInput = (input, fileWidthBreakpoint) => {
 }
 
 const toggleSettingsBox = () => {
-  document.querySelector(".settings-icon-wrapper").classList.toggle("iconToolbar-selected")
-  document.querySelector(".settingsBox").classList.toggle("settingsBox-visible")
+  const settings = document.querySelector(`#settings`)
+  if (toolbarSectionIsActive(settings)) {
+    deactivateToolbarSection(settings)
+  } else {
+    activateToolbarSection(settings)
+  }
 }
 
 const toggleOverflowMenu = () => {

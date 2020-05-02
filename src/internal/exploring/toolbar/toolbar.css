@@ -45,7 +45,6 @@
 
 /* file name input & indicators */
 #file {
-  background: rgba(31, 38, 44, 0.72);
   max-width: 40%;
   padding: 0 1.2em;
 }
@@ -76,7 +75,6 @@
 }
 
 .iconToolbar {
-  margin: 0 10px;
   height: 40px;
 }
 
@@ -84,15 +82,22 @@
   fill: #909090 !important;
 }
 
-.iconToolbar-wrapper {
+.toolbar-icon-wrapper {
   height: 100%;
+  text-align: center;
+  width: 40px;
+  display: inline-block;
 }
 
-.iconToolbar-selected.file-icon-wrapper {
+#file-list-link[data-active] a {
   background: #1f262c;
 }
 
-.iconToolbar-selected.settings-icon-wrapper {
+#file[data-active] {
+  background: rgba(31, 38, 44, 0.72);
+}
+
+#settings[data-active] .toolbar-section-content {
   background: #030713;
 }
 

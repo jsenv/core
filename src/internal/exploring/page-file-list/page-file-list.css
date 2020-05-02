@@ -24,12 +24,6 @@ label {
   font-size: 14px;
 }
 
-section {
-  display: table-cell;
-  width: 50%;
-  padding: 25px;
-}
-
 #explorables {
   word-break: break-word;
 }

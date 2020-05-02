@@ -26,19 +26,20 @@
           <div style="width: 100%;"></div>
         </div>
         <div id="toolbar-wrapper">
-          <a href="/" data-responsive-toolbar-element id="page-file-link">
-            <div class="file-icon-wrapper iconToolbar-wrapper">
+          <section id="file-list-link" data-responsive-toolbar-element>
+            <a class="toolbar-icon-wrapper" href="/">
               <svg id="fileIconSvg" class="iconToolbar" width="35px" height="35px">
                 <use xlink:href="#fileIconSvgModel"></use>
               </svg>
-            </div>
-          </a>
-          <div id="file">
-            <input type="text" id="file-input" value="" dir="rtl" readonly />
-          </div>
+            </a>
+          </section>
 
-          <div>
-            <button id="button-execution-indicator">
+          <section id="file">
+            <input type="text" id="file-input" value="" dir="rtl" readonly />
+          </section>
+
+          <section id="execution-indicator">
+            <button>
               <div data-variant-container></div>
               <div style="display: none;">
                 <div data-variant="default">
@@ -87,11 +88,11 @@
                 </div>
               </div>
             </button>
-          </div>
+          </section>
 
           <div style="width: 100%;"></div>
 
-          <div data-responsive-toolbar-element>
+          <section id="livereload-indicator" data-responsive-toolbar-element>
             <button id="button-livereload-indicator">
               <div data-variant-container></div>
               <div style="display: none;">
@@ -184,10 +185,10 @@
                 </div>
               </div>
             </button>
-          </div>
+          </section>
 
-          <div data-responsive-toolbar-element>
-            <div class="settingsBox">
+          <section id="settings" data-responsive-toolbar-element>
+            <div id="settings-box">
               <svg id="settingsBoxIconSvg" width="35px" height="35px">
                 <use xlink:href="#settingsIconSvgModel"></use>
               </svg>
@@ -207,29 +208,30 @@
                 </div>
               </div>
             </div>
-            <a id="button-toggle-settings">
-              <div class="settings-icon-wrapper iconToolbar-wrapper">
-                <svg id="settingsIconSvg" class="iconToolbar" width="35px" height="35px">
-                  <use xlink:href="#settingsIconSvgModel"></use>
+            <a id="settings-button" class="button-content toolbar-icon-wrapper">
+              <svg id="settingsIconSvg" class="iconToolbar" width="35px" height="35px">
+                <use xlink:href="#settingsIconSvgModel"></use>
+              </svg>
+            </a>
+          </section>
+
+          <section id="close" data-responsive-toolbar-element>
+            <button id="button-close-toolbar">
+              <div class="toolbar-icon-wrapper">
+                <svg id="crossIconSvg" class="iconToolbar" width="35px" height="35px">
+                  <use xlink:href="#crossIconSvgModel"></use>
                 </svg>
               </div>
-            </a>
-          </div>
-
-          <div data-responsive-toolbar-element>
-            <button id="button-close-toolbar">
-              <svg id="crossIconSvg" class="iconToolbar" width="35px" height="35px">
-                <use xlink:href="#crossIconSvgModel"></use>
-              </svg>
             </button>
-          </div>
-          <div>
+          </section>
+
+          <section id="overflow">
             <button id="button-overflow-menu">
               <svg id="dotsIconSvg" class="iconToolbar" width="35px" height="35px">
                 <use xlink:href="#dotsIconSvgModel"></use>
               </svg>
             </button>
-          </div>
+          </section>
         </div>
       </div>
 
