@@ -31,18 +31,6 @@
   cursor: pointer;
 }
 
-.line {
-  /* min-width: 1px;
-  height: 100%;
-  background: #3c3939; */
-}
-
-#jsenvLogoSvg {
-  width: 30px;
-  height: 30px;
-  margin: 0 10px;
-}
-
 /* file name input & indicators */
 #file {
   max-width: 40%;
@@ -107,15 +95,16 @@
   width: 18px;
 }
 
-/* re-open toolbarTrigger */
-#toolbarTrigger {
-  display: none;
+/* re-open toolbar-trigger */
+#toolbar-trigger {
+  display: block;
   overflow: hidden;
   position: absolute;
-  bottom: 0;
+  bottom: -30px;
   right: 20px;
-  height: 10px;
-  width: 50px;
+  height: 40px;
+  width: 40px;
+  padding: 5px;
   border-radius: 5px 5px 0 0;
   border: 1px solid #00000026;
   border-bottom: none;
@@ -123,24 +112,29 @@
   transition: 600ms;
 }
 
-#toolbarTrigger:hover {
-  cursor: pointer;
-}
-
-#toolbarTrigger.toolbarTriggerVisible {
-  display: block;
-}
-
-#toolbarTrigger.toolbarTriggerUp {
-  height: 40px;
-  padding: 5px 0;
-}
-
-#jsenvLogo {
-  display: none;
+#toolbar-trigger #jsenvLogoSvg {
+  width: 30px;
+  height: 30px;
+  opacity: 0;
   transition: 600ms;
 }
 
-#jsenvLogo.jsenvLogoVisible {
-  display: block;
+html[data-toolbar-visible] #toolbar-trigger {
+  display: none;
 }
+
+#toolbar-trigger:hover {
+  cursor: pointer;
+}
+
+#toolbar-trigger[data-expanded] {
+  bottom: 0;
+}
+
+#toolbar-trigger[data-expanded] #jsenvLogoSvg {
+  opacity: 1;
+}
+
+/* #jsenvLogo {
+  transition: 600ms;
+} */

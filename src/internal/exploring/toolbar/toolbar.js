@@ -147,7 +147,6 @@ const toogleToolbar = () => {
 }
 
 export const showToolbar = () => {
-  document.querySelector("#toolbarTrigger").classList.remove("toolbarTriggerVisible")
   document.querySelector("#toolbar").removeAttribute("tabIndex")
   document.documentElement.setAttribute("data-toolbar-visible", "")
   toolbarVisibilityPreference.set(true)
@@ -161,38 +160,26 @@ export const hideToolbar = () => {
   toolbarVisibilityPreference.set(false)
 
   // toolbarTrigger: display and register onclick
-  const toolbarTrigger = document.querySelector("#toolbarTrigger")
-  toolbarTrigger.classList.add("toolbarTriggerVisible")
+  const toolbarTrigger = document.querySelector("#toolbar-trigger")
   var timer
-  toolbarTrigger.onmouseover = () => {
-    timer = setTimeout(() => {
-      showJsenvLogo()
-    }, 500)
+  toolbarTrigger.onmouseenter = () => {
+    timer = setTimeout(expandToolbarTrigger, 500)
   }
-  toolbarTrigger.onmouseout = () => {
+  toolbarTrigger.onmouseleave = () => {
     clearTimeout(timer)
+    collapseToolbarTrigger()
   }
+  toolbarTrigger.onclick = showToolbar
 }
 
-const showJsenvLogo = () => {
-  const toolbarTrigger = document.querySelector("#toolbarTrigger")
-  toolbarTrigger.classList.add("toolbarTriggerUp")
-  const jsenvLogo = document.querySelector("#jsenvLogo")
-  jsenvLogo.classList.add("jsenvLogoVisible")
-  // mouse leave to close
-  jsenvLogo.onmouseleave = () => {
-    hideJsenvLogo()
-  }
-  // click inside to open toolbar
-  jsenvLogo.onclick = (event) => {
-    event.stopPropagation()
-    showToolbar()
-  }
+const expandToolbarTrigger = () => {
+  const toolbarTrigger = document.querySelector("#toolbar-trigger")
+  toolbarTrigger.setAttribute("data-expanded", "")
 }
 
-const hideJsenvLogo = () => {
-  document.querySelector("#toolbarTrigger").classList.remove("toolbarTriggerUp")
-  document.querySelector("#jsenvLogo").classList.remove("jsenvLogoVisible")
+const collapseToolbarTrigger = () => {
+  const toolbarTrigger = document.querySelector("#toolbar-trigger")
+  toolbarTrigger.removeAttribute("data-expanded", "")
 }
 
 const resizeInput = (input, fileWidthBreakpoint) => {
