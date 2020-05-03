@@ -114,7 +114,7 @@ export const createNodeSystem = async ({
     return {
       url: originalUrl,
       resolve: (specifier) => {
-        const urlResolved = resolveImport(specifier, url)
+        const urlResolved = resolve(specifier, url)
         return urlToOriginalUrl(urlResolved, {
           projectDirectoryUrl,
           outDirectoryRelativeUrl,

@@ -38,7 +38,7 @@ const expected = {
   status: "completed",
   namespace: {
     basic: `${jsenvCoreDirectoryUrl}${testDirectoryRelativePath}file.js`,
-    remapped: `${jsenvCoreDirectoryUrl}bar.js`,
+    remapped: `${jsenvCoreDirectoryUrl}${testDirectoryRelativePath}bar.js`,
   },
 }
 assert({ actual, expected })
