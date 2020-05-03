@@ -1,14 +1,18 @@
+@import "./light-theme.css";
 @import "./tooltip.css";
 @import "./execution-indicator.css";
 @import "./livereload-indicator.css";
 @import "./settings.css";
 @import "./overflow-menu.css";
 
+#toolbar {
+  background: #404040;
+}
+
 #toolbar-wrapper {
   display: table;
   width: 100%;
   height: 100%;
-  background: #404040;
 }
 
 #toolbar-wrapper > * {
@@ -58,12 +62,12 @@
 /* file and settings icons */
 #fileIconSvg,
 .settings-icon {
-  fill: #cecece;
   width: 20px;
 }
 
 .iconToolbar {
   height: 40px;
+  fill: #cecece;
 }
 
 .iconToolbar:hover {
@@ -91,7 +95,6 @@
 
 /* close icon */
 #crossIconSvg {
-  fill: #cecece;
   width: 18px;
 }
 

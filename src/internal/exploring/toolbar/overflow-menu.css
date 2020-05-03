@@ -8,7 +8,6 @@
 }
 
 #dotsIconSvg {
-  fill: #cecece;
   width: 25px;
 }
 
@@ -52,4 +51,8 @@
   opacity: 1;
   left: 0;
   margin-left: -40px;
+}
+
+#toolbar[data-overflow-menu-enabled] #settings-box {
+  right: -40px;
 }

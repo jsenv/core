@@ -21,7 +21,7 @@
     </main>
     <aside>
       <!-- toolbar -->
-      <div id="toolbar">
+      <div id="toolbar" data-theme="dark">
         <div id="toolbar-wrapper">
           <section id="file-list-link" data-responsive-toolbar-element>
             <a class="toolbar-icon-wrapper" href="/">
@@ -194,20 +194,49 @@
               </div>
               <div id="settings-box-body">
                 <div class="settings-box-item">
-                  <label>
-                    <input id="toggle-notifs" type="checkbox" />
-                    Notifications
-                  </label>
+                  <div class="category-title">
+                    Notifications:
+                  </div>
+                  <div class="category-subtitle">
+                    Send system notification when a file execution fails or is fixed
+                  </div>
+                  <div class="category-choices">
+                    <div id="notif-on">
+                      <label>
+                        <input type="radio" id="notif-on-radio" name="notif" value="notif-on" />
+                        Enabled
+                      </label>
+                    </div>
+                    <div id="notif-off">
+                      <label>
+                        <input type="radio" id="notif-off-radio" name="notif" value="notif-off" />
+                        Disabled
+                      </label>
+                    </div>
+                  </div>
                 </div>
                 <div class="settings-box-item">
-                  <label>
-                    <input id="toggle-darkTheme" type="checkbox" />
-                    Light theme
-                  </label>
+                  <div class="category-title">
+                    Toolbar theme:
+                  </div>
+                  <div class="category-choices">
+                    <div id="dark-theme">
+                      <label>
+                        <input type="radio" id="dark-theme-radio" name="theme" value="dark" />
+                        Dark
+                      </label>
+                    </div>
+                    <div id="light-theme">
+                      <label>
+                        <input type="radio" id="light-theme-radio" name="theme" value="light" />
+                        Light
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-            <button class="toolbar-icon-wrapper">
+            <button id="settings-button" class="toolbar-icon-wrapper">
               <svg class="settings-icon iconToolbar" class="iconToolbar" width="35px" height="35px">
                 <use xlink:href="#settingsIconSvgModel"></use>
               </svg>

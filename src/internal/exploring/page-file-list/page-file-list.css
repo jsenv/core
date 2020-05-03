@@ -8,7 +8,7 @@ article[data-page="file-list"] {
 
 h2 {
   margin: 20px 0;
-  color: #24c3b0;
+  color: #24b1b0;
   display: inline-block;
 }
 
@@ -17,11 +17,6 @@ h4 {
   font-size: 15px;
   color: #97a0a0;
   margin: 20px 0;
-}
-
-label {
-  color: #24c3b0;
-  font-size: 14px;
 }
 
 #explorables {
@@ -65,5 +60,5 @@ label {
 
 #fileIconSvgConfig {
   stroke: none;
-  fill: #24c3b0;
+  fill: #24b1b0;
 }

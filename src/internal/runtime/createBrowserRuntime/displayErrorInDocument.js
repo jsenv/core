@@ -23,7 +23,7 @@ export const displayErrorInDocument = (error) => {
 
     .jsenv-console pre[data-theme="dark"] {
       background: transparent;
-      border: 1px solid black
+      border: 1px solid black;
     }
 
     .jsenv-console pre[data-theme="light"] {

@@ -1,4 +1,16 @@
-import { getNotificationPreference, setNotificationPreference } from "../util/notification.js"
+import {
+  getNotificationPreference,
+  setNotificationPreference,
+  NOTIF_ON,
+  NOTIF_OFF,
+} from "../util/notification.js"
+import {
+  getThemePreference,
+  setThemePreference,
+  applyToolbarTheme,
+  DARK_THEME,
+  LIGHT_THEME,
+} from "../util/toolbarTheme.js"
 import { createPreference } from "../util/preferences.js"
 import { createHorizontalBreakpoint } from "../util/responsive.js"
 import { hideTooltip } from "./tooltip.js"
@@ -26,21 +38,33 @@ export const renderToolbar = (fileRelativeUrl) => {
     hide: hideToolbar,
   }
 
-  document.querySelector("#settings button").onclick = () => toggleSettingsBox()
+  // settings
+  document.querySelector("#settings-button").onclick = () => toggleSettingsBox()
+  // settings: notification
+  const notifOnRadio = document.querySelector("#notif-on-radio")
+  const notifOffRadio = document.querySelector("#notif-off-radio")
+  notifOnRadio.checked = getNotificationPreference() === NOTIF_ON
+  notifOffRadio.checked = getNotificationPreference() === NOTIF_OFF
+  notifOnRadio.onclick = () => setNotificationPreference(NOTIF_ON)
+  notifOffRadio.onclick = () => setNotificationPreference(NOTIF_OFF)
 
+  // settings: theme
+  const darkThemeRadio = document.querySelector("#dark-theme-radio")
+  const lightThemeRadio = document.querySelector("#light-theme-radio")
+  darkThemeRadio.checked = getThemePreference() === DARK_THEME
+  lightThemeRadio.checked = getThemePreference() === LIGHT_THEME
+  darkThemeRadio.onclick = () => setThemePreference(DARK_THEME)
+  lightThemeRadio.onclick = () => setThemePreference(LIGHT_THEME)
+  applyToolbarTheme()
+
+  // close button
   document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar()
 
+  // overflow menu
   document.querySelector("#overflow-menu-button").onclick = () => toggleOverflowMenu()
 
-  const notifCheckbox = document.querySelector("#toggle-notifs")
-  notifCheckbox.checked = getNotificationPreference()
-  notifCheckbox.onchange = () => {
-    setNotificationPreference(notifCheckbox.checked)
-  }
-
-  const input = document.querySelector("#file-input")
-
   // apply responsive design on fileInput if needed + add listener on resize screen
+  const input = document.querySelector("#file-input")
   const fileWidthBreakpoint = createHorizontalBreakpoint(WINDOW_MEDIUM_WIDTH)
   const handleFileWidthBreakpoint = () => {
     resizeInput(input, fileWidthBreakpoint)

@@ -1,0 +1,73 @@
+/* general */
+#toolbar[data-theme="light"] {
+  background: #dfe4e7;
+}
+
+/* icons */
+#toolbar[data-theme="light"] .iconToolbar {
+  fill: #404040;
+}
+#toolbar[data-theme="light"] .iconToolbar:hover {
+  fill: #757575 !important;
+}
+#toolbar[data-theme="light"] #file-list-link[data-active] .iconToolbar {
+  fill: #dfe4e7;
+}
+#toolbar[data-theme="light"] #loader-icon {
+  color: #404040;
+}
+#toolbar[data-theme="light"] .livereload-circle[data-variant="off"] {
+  fill: #757575;
+}
+#toolbar[data-theme="light"] .livereload-circle[data-variant="connecting"] {
+  fill: #717171;
+}
+#toolbar[data-theme="light"] .livereload-ring {
+  stroke: rgba(138, 136, 136, 0.46);
+}
+
+/* settings */
+#toolbar[data-theme="light"] #settings-box {
+  background: #9bbfda;
+}
+#toolbar[data-theme="light"] .settings-box-item {
+  background: #bad3e6;
+}
+#toolbar[data-theme="light"] #settings[data-active] button {
+  background: #9bbfda;
+}
+#toolbar[data-theme="light"] label {
+  color: #002e33;
+}
+
+/* file input */
+#toolbar[data-theme="light"] #file[data-active] {
+  background: rgba(129, 177, 214, 0.72);
+}
+#toolbar[data-theme="light"] #file-input {
+  color: #076570;
+}
+
+/* tooltips */
+#toolbar[data-theme="light"] .tooltip {
+  background-color: rgb(138, 145, 154);
+  color: #fff;
+}
+#toolbar[data-theme="light"] .tooltipAction {
+  border-color: #fff;
+}
+
+#toolbar[data-theme="light"] .tooltip::after {
+  border-color: rgb(138, 145, 154) transparent transparent transparent;
+}
+
+/* overflow menu */
+#toolbar[data-theme="light"] #overflow-menu-button {
+  background: #dfe4e7;
+}
+#toolbar[data-theme="light"][data-overflow-menu-visible] #overflow-menu-button {
+  background: #a5a9ad;
+}
+#toolbar[data-theme="light"] #overflow-menu {
+  background: #dfe4e7;
+}

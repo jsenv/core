@@ -4,7 +4,7 @@
   bottom: 40px;
   right: 0;
   text-align: center;
-  padding: 10px 15px;
+  padding: 15px 10px;
   font-size: 14px;
   color: #fff;
   background-color: #030713;
@@ -30,6 +30,16 @@
   }
 }
 
+#settings-box-body {
+  text-align: left;
+}
+
+.settings-box-item {
+  margin: 13px 0;
+  padding: 15px 20px;
+  background: #0c111b;
+}
+
 #settings-box-header .settings-icon {
   fill: none;
   stroke: #076570;
@@ -48,11 +58,22 @@
   color: #076570;
 }
 
-#settings-box-body {
-  text-align: left;
-  margin-top: 10px;
+label {
+  color: #24b1b0;
+  font-size: 14px;
+  padding-bottom: 3px;
+  display: block;
 }
 
-.settings-box-item {
-  margin: 10px 0;
+#settings-box .category-title {
+  margin-bottom: 8px;
+  color: #076570;
+  font-size: 17px;
+}
+
+#settings-box .category-subtitle {
+  margin-bottom: 15px;
+  color: #848282;
+  font-size: 14px;
+  max-width: 220px;
 }
