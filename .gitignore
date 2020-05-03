@@ -8,8 +8,8 @@
 /docs/**/package-lock.json
 /docs/**/yarn.lock
 /node_modules/
+/test-manual/**/.jsenv/
 /jsconfig.json
 /package-lock.json
 /secrets.json
 /yarn.lock
-/flore/.jsenv/
