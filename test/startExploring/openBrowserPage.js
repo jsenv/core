@@ -36,12 +36,16 @@ export const openBrowserPage = async (
   await page.goto(url)
   await page.waitFor(
     /* istanbul ignore next */
-    () => Boolean(window.__executionResult__),
+    () => {
+      if (!window.page) return false
+      if (!window.page.execution) return false
+      return Boolean(window.page.execution.result)
+    },
   )
 
   const executionResult = await page.evaluate(
     /* istanbul ignore next */
-    () => window.__executionResult__,
+    () => window.page.execution.result,
   )
 
   if (executionResult.status === "errored") {

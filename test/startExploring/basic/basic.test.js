@@ -22,12 +22,12 @@ const { exploringServer } = await startExploring({
   htmlFileRelativeUrl,
 })
 const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  `${exploringServer.origin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
+  `${exploringServer.origin}/${fileRelativeUrl}`,
+  // { headless: false }
 )
 const actual = { pageLogs, pageErrors, executionResult }
 const expected = {
   pageLogs: [
-    actual.pageLogs[0], // eventSource connected log
     { type: "log", text: "42" },
     { type: "log", text: "bar" },
   ],

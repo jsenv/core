@@ -26,17 +26,11 @@ const {
   pageLogs,
   pageErrors,
   executionResult,
-} = await openBrowserPage(
-  `${exploringServer.origin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
-  { headless: true },
-)
+} = await openBrowserPage(`${exploringServer.origin}/${fileRelativeUrl}`, { headless: true })
 {
   const actual = { pageLogs, pageErrors, executionResult }
   const expected = {
-    pageLogs: [
-      actual.pageLogs[0], // eventSource connected log
-      { type: "error", text: "JSHandle@error" },
-    ],
+    pageLogs: [{ type: "error", text: "JSHandle@error" }],
     pageErrors: [],
     executionResult: {
       status: "errored",

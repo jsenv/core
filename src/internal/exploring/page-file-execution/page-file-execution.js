@@ -128,7 +128,6 @@ export const pageFileExecution = {
       if (executionResult.status === "errored") {
         // eslint-disable-next-line no-eval
         executionResult.error = window.eval(executionResult.exceptionSource)
-        delete executionResult.exceptionSource
       }
       execution.result = executionResult
       const endTime = Date.now()
