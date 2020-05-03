@@ -11,6 +11,6 @@
 /src/**/system.js
 /test/**/.jsenv/
 /test/**/dist/
-/test/**/syntax-error.js
-/test/**/syntax-error.main.js
+/**/syntax-error.js
+/**/syntax-error.main.js
 !.eslintrc.js
