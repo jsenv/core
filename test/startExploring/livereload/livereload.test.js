@@ -29,7 +29,7 @@ const { exploringServer } = await startExploring({
   livereloading: true,
 })
 const { browser, page, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  `${exploringServer.origin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
+  `${exploringServer.origin}/${fileRelativeUrl}`,
   {
     headless: true,
   },
@@ -37,10 +37,7 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
 {
   const actual = { pageLogs, pageErrors, executionResult }
   const expected = {
-    pageLogs: [
-      // this is the log saying "livereloading connected to"
-      actual.pageLogs[0],
-    ],
+    pageLogs: [],
     pageErrors: [],
     executionResult: {
       status: "completed",
@@ -52,8 +49,12 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
 {
   await writeFileSystemNodeModificationTime(filePath, Date.now())
   await new Promise((resolve) => setTimeout(resolve, 1000))
-  await page.waitFor(() => Boolean(window.__executionResult__))
-  const afterReloadExecutionResult = await page.evaluate(() => window.__executionResult__)
+  await page.waitFor(() => {
+    if (!window.page) return false
+    if (!window.page.execution) return false
+    return Boolean(window.page.execution.result)
+  })
+  const afterReloadExecutionResult = await page.evaluate(() => window.page.execution.result)
   const actual = afterReloadExecutionResult.namespace
   const expected = {
     default: 43,
