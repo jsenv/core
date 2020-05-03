@@ -1,4 +1,4 @@
-export default function(obj, descs) {
+export default function (obj, descs) {
   // eslint-disable-next-line guard-for-in
   for (var key in descs) {
     var desc = descs[key]

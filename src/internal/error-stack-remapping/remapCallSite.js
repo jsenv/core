@@ -192,9 +192,9 @@ const remapEvalOrigin = async (origin, { resolveFile, urlToSourcemapConsumer, on
       urlToSourcemapConsumer,
       onFailure,
     })
-    return `eval at ${topLevelEvalMatch[1]} (${originalPosition.source}:${
-      originalPosition.line
-    }:${originalPosition.column + 1})`
+    return `eval at ${topLevelEvalMatch[1]} (${originalPosition.source}:${originalPosition.line}:${
+      originalPosition.column + 1
+    })`
   }
 
   // Parse nested eval() calls using recursion

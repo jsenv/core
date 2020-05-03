@@ -1,4 +1,4 @@
-export default function(iterable) {
+export default function (iterable) {
   var method
   if (typeof Symbol !== "undefined") {
     if (Symbol.asyncIterator) {

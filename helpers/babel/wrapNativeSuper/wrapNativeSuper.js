@@ -5,7 +5,7 @@ import construct from "../construct/construct.js"
 
 var _cache = typeof Map === "function" ? new Map() : undefined
 
-export default function(Class) {
+export default function (Class) {
   if (Class === null || !isNativeFunction(Class)) return Class
   if (typeof Class !== "function") {
     throw new TypeError("Super expression must either be null or a function")

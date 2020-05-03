@@ -31,13 +31,13 @@ export default function _decorate(
   return api.runClassFinishers(r.F, decorated.finishers)
 }
 
-var _getDecoratorsApi = function() {
+var _getDecoratorsApi = function () {
   var api = {
     elementsDefinitionOrder: [["method"], ["field"]],
     // InitializeInstanceElements
     initializeInstanceElements(/* ::<C>*/ O /* : C */, elements /* : ElementDescriptor[] */) {
-      ;["method", "field"].forEach(function(kind) {
-        elements.forEach(function(element /* : ElementDescriptor */) {
+      ;["method", "field"].forEach(function (kind) {
+        elements.forEach(function (element /* : ElementDescriptor */) {
           if (element.kind === kind && element.placement === "own") {
             this.defineClassElement(O, element)
           }
@@ -47,8 +47,8 @@ var _getDecoratorsApi = function() {
     // InitializeClassElements
     initializeClassElements(/* ::<C>*/ F /* : Class<C> */, elements /* : ElementDescriptor[] */) {
       var proto = F.prototype
-      ;["method", "field"].forEach(function(kind) {
-        elements.forEach(function(element /* : ElementDescriptor */) {
+      ;["method", "field"].forEach(function (kind) {
+        elements.forEach(function (element /* : ElementDescriptor */) {
           var placement = element.placement
           if (element.kind === kind && (placement === "static" || placement === "prototype")) {
             var receiver = placement === "static" ? F : proto
@@ -86,10 +86,10 @@ var _getDecoratorsApi = function() {
         prototype: [],
         own: [],
       }
-      elements.forEach(function(element /* : ElementDescriptor */) {
+      elements.forEach(function (element /* : ElementDescriptor */) {
         this.addElementPlacement(element, placements)
       }, this)
-      elements.forEach(function(element /* : ElementDescriptor */) {
+      elements.forEach(function (element /* : ElementDescriptor */) {
         if (!_hasDecorators(element)) return newElements.push(element)
         var elementFinishersExtras /* : ElementFinishersExtras */ = this.decorateElement(
           element,
@@ -198,7 +198,7 @@ var _getDecoratorsApi = function() {
     // ToElementDescriptors
     toElementDescriptors(elementObjects /* : ElementObject[] */) /* : ElementDescriptor[] */ {
       if (elementObjects === undefined) return
-      return toArray(elementObjects).map(function(elementObject) {
+      return toArray(elementObjects).map(function (elementObject) {
         var element = this.toElementDescriptor(elementObject)
         this.disallowProperty(elementObject, "finisher", "An element descriptor")
         this.disallowProperty(elementObject, "extras", "An element descriptor")
@@ -210,18 +210,22 @@ var _getDecoratorsApi = function() {
       var kind = String(elementObject.kind)
       if (kind !== "method" && kind !== "field") {
         throw new TypeError(
-          `${'An element descriptor\'s .kind property must be either "method" or' +
+          `${
+            'An element descriptor\'s .kind property must be either "method" or' +
             ' "field", but a decorator created an element descriptor with' +
-            ' .kind "'}${kind}"`,
+            ' .kind "'
+          }${kind}"`,
         )
       }
       var key = toPropertyKey(elementObject.key)
       var placement = String(elementObject.placement)
       if (placement !== "static" && placement !== "prototype" && placement !== "own") {
         throw new TypeError(
-          `${'An element descriptor\'s .placement property must be one of "static",' +
+          `${
+            'An element descriptor\'s .placement property must be one of "static",' +
             ' "prototype" or "own", but a decorator created an element descriptor' +
-            ' with .placement "'}${placement}"`,
+            ' with .placement "'
+          }${placement}"`,
         )
       }
       var descriptor /* : PropertyDescriptor */ = elementObject.descriptor
@@ -263,8 +267,10 @@ var _getDecoratorsApi = function() {
       var kind = String(obj.kind)
       if (kind !== "class") {
         throw new TypeError(
-          `${'A class descriptor\'s .kind property must be "class", but a decorator' +
-            ' created a class descriptor with .kind "'}${kind}"`,
+          `${
+            'A class descriptor\'s .kind property must be "class", but a decorator' +
+            ' created a class descriptor with .kind "'
+          }${kind}"`,
         )
       }
       this.disallowProperty(obj, "key", "A class descriptor")
@@ -299,7 +305,7 @@ var _getDecoratorsApi = function() {
       }
     },
   }
-  _getDecoratorsApi = function() {
+  _getDecoratorsApi = function () {
     return api
   }
   return api
@@ -344,7 +350,7 @@ function _coalesceGetterSetter(element /* : ElementDescriptor */, other /* : Ele
 // CoalesceClassElements
 function _coalesceClassElements(elements /* : ElementDescriptor[] */) /* : ElementDescriptor[] */ {
   var newElements /* : ElementDescriptor[] */ = []
-  var isSameElement = function(other /* : ElementDescriptor */) /* : boolean */ {
+  var isSameElement = function (other /* : ElementDescriptor */) /* : boolean */ {
     return (
       other.kind === "method" && other.key === element.key && other.placement === element.placement
     )
@@ -362,8 +368,10 @@ function _coalesceClassElements(elements /* : ElementDescriptor[] */) /* : Eleme
         if (_hasDecorators(element)) {
           if (_hasDecorators(other)) {
             throw new ReferenceError(
-              `${"Decorators can't be placed on different accessors with for " +
-                "the same property ("}${element.key}).`,
+              `${
+                "Decorators can't be placed on different accessors with for " +
+                "the same property ("
+              }${element.key}).`,
             )
           }
           other.decorators = element.decorators

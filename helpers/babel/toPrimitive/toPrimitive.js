@@ -1,4 +1,4 @@
-export default function(input, hint /* : "default" | "string" | "number" | void */) {
+export default function (input, hint /* : "default" | "string" | "number" | void */) {
   if (typeof input !== "object" || input === null) return input
   var prim = input[Symbol.toPrimitive]
   if (prim !== undefined) {

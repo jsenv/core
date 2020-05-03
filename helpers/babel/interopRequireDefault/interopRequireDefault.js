@@ -1,3 +1,3 @@
-export default function(obj) {
+export default function (obj) {
   return obj && obj.__esModule ? obj : { default: obj }
 }

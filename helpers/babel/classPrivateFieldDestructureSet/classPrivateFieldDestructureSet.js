@@ -1,4 +1,4 @@
-export default function(receiver, privateMap) {
+export default function (receiver, privateMap) {
   if (!privateMap.has(receiver)) {
     throw new TypeError("attempted to set private field on non-instance")
   }

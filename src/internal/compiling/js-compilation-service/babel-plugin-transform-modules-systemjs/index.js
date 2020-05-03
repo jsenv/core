@@ -201,7 +201,7 @@ export default declare((api, options) => {
 
           function pushModule(source, key, specifiers) {
             let module
-            modules.forEach(function(m) {
+            modules.forEach(function (m) {
               if (m.key === source) {
                 module = m
               }
@@ -341,7 +341,7 @@ export default declare((api, options) => {
             }
           }
 
-          modules.forEach(function(specifiers) {
+          modules.forEach(function (specifiers) {
             let setterBody = []
             const target = path.scope.generateUid(specifiers.key)
 

@@ -1,4 +1,4 @@
-export default function(receiver, classConstructor, descriptor, value) {
+export default function (receiver, classConstructor, descriptor, value) {
   if (receiver !== classConstructor) {
     throw new TypeError("Private static access of wrong provenance")
   }

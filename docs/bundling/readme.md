@@ -77,9 +77,9 @@ Things to know about bundle using systemjs format:
 Here is the generated bundle using systemjs format for the [file structure](#File-structure)
 
 ```js
-System.register([], function(exports) {
+System.register([], function (exports) {
   return {
-    execute: function() {
+    execute: function () {
       exports("default", 42)
     },
   }
@@ -113,7 +113,7 @@ Things to know about bundle using global format:
 Here is the generated bundle using global format for the [file structure](#File-structure)
 
 ```js
-var __whatever__ = (function() {
+var __whatever__ = (function () {
   return 42
 })()
 //# sourceMappingURL=./main.js.map
@@ -335,15 +335,15 @@ If `externalImportSpecifiers` contains `foo` the generated bundle will keep that
 - For bundle using `systemjs` format
 
   ```js
-  System.register(["foo"], function(exports) {
+  System.register(["foo"], function (exports) {
     var answer
     return {
       setters: [
-        function(module) {
+        function (module) {
           answer = module.answer
         },
       ],
-      execute: function() {
+      execute: function () {
         exports("ask", function ask() {
           return answer
         })
@@ -363,7 +363,7 @@ If `externalImportSpecifiers` contains `foo` the generated bundle will keep that
 - For bundle using `global` format:
 
   ```js
-  ;(function(exports, foo) {
+  ;(function (exports, foo) {
     var ask = function ask() {
       return foo.answer
     }

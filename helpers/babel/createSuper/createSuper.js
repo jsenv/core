@@ -3,7 +3,7 @@ import isNativeReflectConstruct from "../isNativeReflectConstruct/isNativeReflec
 import possibleConstructorReturn from "../possibleConstructorReturn/possibleConstructorReturn.js"
 
 export default function _createSuper(Derived) {
-  return function() {
+  return function () {
     var Super = getPrototypeOf(Derived)
     var result
     if (isNativeReflectConstruct()) {

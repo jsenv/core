@@ -1,5 +1,5 @@
 var REACT_ELEMENT_TYPE
-export default function(type, props, key, children) {
+export default function (type, props, key, children) {
   if (!REACT_ELEMENT_TYPE) {
     REACT_ELEMENT_TYPE =
       (typeof Symbol === "function" && Symbol.for && Symbol.for("react.element")) || 0xeac7

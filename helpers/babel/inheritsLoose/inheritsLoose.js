@@ -1,4 +1,4 @@
-export default function(subClass, superClass) {
+export default function (subClass, superClass) {
   subClass.prototype = Object.create(superClass.prototype)
   subClass.prototype.constructor = subClass
   // eslint-disable-next-line no-proto

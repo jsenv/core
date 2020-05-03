@@ -1,4 +1,4 @@
-export default function(receiver, privateMap) {
+export default function (receiver, privateMap) {
   var descriptor = privateMap.get(receiver)
   if (!descriptor) {
     throw new TypeError("attempted to get private field on non-instance")

@@ -3,7 +3,7 @@ import iterableToArrayLimitLoose from "../iterableToArrayLimitLoose/iterableToAr
 import unsupportedIterableToArray from "../unsupportedIterableToArray/unsupportedIterableToArray.js"
 import nonIterableRest from "../nonIterableRest/nonIterableRest.js"
 
-export default function(arr, i) {
+export default function (arr, i) {
   return (
     arrayWithHoles(arr) ||
     iterableToArrayLimitLoose(arr, i) ||

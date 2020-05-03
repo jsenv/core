@@ -4,7 +4,7 @@ function AsyncGenerator(gen) {
   var front
   var back
   function send(key, arg) {
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
       var request = {
         key,
         arg,
@@ -26,14 +26,14 @@ function AsyncGenerator(gen) {
       var value = result.value
       var wrappedAwait = value instanceof AwaitValue
       Promise.resolve(wrappedAwait ? value.wrapped : value).then(
-        function(arg) {
+        function (arg) {
           if (wrappedAwait) {
             resume(key === "return" ? "return" : "next", arg)
             return
           }
           settle(result.done ? "return" : "normal", arg)
         },
-        function(err) {
+        function (err) {
           resume("throw", err)
         },
       )
@@ -67,17 +67,17 @@ function AsyncGenerator(gen) {
   }
 }
 if (typeof Symbol === "function" && Symbol.asyncIterator) {
-  AsyncGenerator.prototype[Symbol.asyncIterator] = function() {
+  AsyncGenerator.prototype[Symbol.asyncIterator] = function () {
     return this
   }
 }
-AsyncGenerator.prototype.next = function(arg) {
+AsyncGenerator.prototype.next = function (arg) {
   return this._invoke("next", arg)
 }
-AsyncGenerator.prototype.throw = function(arg) {
+AsyncGenerator.prototype.throw = function (arg) {
   return this._invoke("throw", arg)
 }
-AsyncGenerator.prototype.return = function(arg) {
+AsyncGenerator.prototype.return = function (arg) {
   return this._invoke("return", arg)
 }
 

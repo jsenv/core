@@ -6,7 +6,7 @@ export default function createForOfIteratorHelperLoose(o) {
   if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) {
     // Fallback for engines without symbol support
     if (Array.isArray(o) || (o = unsupportedIterableToArray(o)))
-      return function() {
+      return function () {
         if (i >= o.length) return { done: true }
         return { done: false, value: o[i++] }
       }

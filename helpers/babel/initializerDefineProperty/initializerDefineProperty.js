@@ -1,4 +1,4 @@
-export default function(target, property, descriptor, context) {
+export default function (target, property, descriptor, context) {
   if (!descriptor) return
   Object.defineProperty(target, property, {
     enumerable: descriptor.enumerable,

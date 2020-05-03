@@ -1,4 +1,4 @@
-export default function(strings, raw) {
+export default function (strings, raw) {
   if (!raw) {
     raw = strings.slice(0)
   }

@@ -10,7 +10,7 @@ export default function createForOfIteratorHelper(o) {
     // Fallback for engines without symbol support
     if (Array.isArray(o) || (o = unsupportedIterableToArray(o))) {
       var i = 0
-      var F = function() {}
+      var F = function () {}
       return {
         s: F,
         n() {

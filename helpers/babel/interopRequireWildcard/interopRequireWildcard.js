@@ -1,6 +1,6 @@
 var cache = typeof WeakMap === "function" ? new WeakMap() : null
 
-export default function(obj) {
+export default function (obj) {
   if (obj && obj.__esModule) {
     return obj
   }

@@ -7,7 +7,7 @@ export default function _applyDecoratedDescriptor(
   context,
 ) {
   var desc = {}
-  Object.keys(descriptor).forEach(function(key) {
+  Object.keys(descriptor).forEach(function (key) {
     desc[key] = descriptor[key]
   })
   desc.enumerable = Boolean(desc.enumerable)
@@ -18,7 +18,7 @@ export default function _applyDecoratedDescriptor(
   desc = decorators
     .slice()
     .reverse()
-    .reduce(function(desc, decorator) {
+    .reduce(function (desc, decorator) {
       return decorator(target, property, desc) || desc
     }, desc)
   if (context && desc.initializer !== void 0) {
