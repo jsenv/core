@@ -34,14 +34,27 @@ export const openBrowserPage = async (
   }
 
   await page.goto(url)
-  await page.waitFor(
-    /* istanbul ignore next */
-    () => {
-      if (!window.page) return false
-      if (!window.page.execution) return false
-      return Boolean(window.page.execution.result)
-    },
-  )
+
+  let removeErrorListener
+  const errorPromise = new Promise((resolve, reject) => {
+    page.on("pageerror", reject)
+    removeErrorListener = () => {
+      page.removeListener("pageerror", reject)
+    }
+  })
+
+  await Promise.race([
+    page.waitFor(
+      /* istanbul ignore next */
+      () => {
+        if (!window.page) return false
+        if (!window.page.execution) return false
+        return Boolean(window.page.execution.result)
+      },
+    ),
+    errorPromise,
+  ])
+  removeErrorListener()
 
   const executionResult = await page.evaluate(
     /* istanbul ignore next */

@@ -109,18 +109,26 @@ export const pageFileExecution = {
 
       // executing means fetching, parsing, executing file imports + file itself
       execution.status = "executing"
-      const executionResult = await evaluate((param) => window.execute(param), {
-        fileRelativeUrl,
-        compileServerOrigin,
-        outDirectoryRelativeUrl,
-        browserRuntimeFileRelativeUrl,
-        sourcemapMainFileRelativeUrl,
-        sourcemapMappingFileRelativeUrl,
-        collectNamespace: true,
-        collectCoverage: false,
-        executionId: fileRelativeUrl,
-        errorExposureInConsole: true,
-      })
+      const executionResult = await evaluate(
+        // disable coverage for this line because it will be executed
+        // in an other context where the coverage global variable will not exists
+        /* istanbul ignore next */
+        (param) => {
+          return window.execute(param)
+        },
+        {
+          fileRelativeUrl,
+          compileServerOrigin,
+          outDirectoryRelativeUrl,
+          browserRuntimeFileRelativeUrl,
+          sourcemapMainFileRelativeUrl,
+          sourcemapMappingFileRelativeUrl,
+          collectNamespace: true,
+          collectCoverage: false,
+          executionId: fileRelativeUrl,
+          errorExposureInConsole: true,
+        },
+      )
       if (executionCancellationToken.cancellationRequested) {
         return
       }

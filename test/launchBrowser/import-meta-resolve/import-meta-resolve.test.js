@@ -40,7 +40,7 @@ const expected = {
   status: "completed",
   namespace: {
     basic: `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}file.js`,
-    remapped: `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/bar.js`,
+    remapped: `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}bar.js`,
   },
 }
 assert({ actual, expected })
