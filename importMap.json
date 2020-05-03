@@ -244,6 +244,11 @@
     "./node_modules/eslint-module-utils/node_modules/debug/": {
       "ms": "./node_modules/ms/index.js"
     },
+    "./node_modules/hash-base/node_modules/readable-stream/": {
+      "string_decoder": "./node_modules/string_decoder/lib/string_decoder.js",
+      "util-deprecate": "./node_modules/util-deprecate/node.js",
+      "inherits": "./node_modules/inherits/inherits.js"
+    },
     "./node_modules/@babel/plugin-transform-block-scoping/": {
       "lodash": "./node_modules/lodash/lodash.js"
     },
@@ -360,6 +365,7 @@
     },
     "./node_modules/@jsenv/core/node_modules/rollup/": {
       "rollup/dist/": "./node_modules/@jsenv/core/node_modules/rollup/dist/",
+      "fsevents": "./node_modules/fsevents/fsevents.js",
       "rollup": "./node_modules/@jsenv/core/node_modules/rollup/dist/es/rollup.js"
     },
     "./node_modules/@jsenv/core/node_modules/terser/": {
@@ -570,7 +576,7 @@
     },
     "./node_modules/@rollup/pluginutils/": {
       "estree-walker": "./node_modules/estree-walker/src/estree-walker.js",
-      "micromatch": "./node_modules/micromatch/index.js"
+      "picomatch": "./node_modules/picomatch/index.js"
     },
     "./node_modules/eslint-module-utils/": {
       "pkg-dir": "./node_modules/pkg-dir/index.js",
@@ -825,9 +831,6 @@
     },
     "./node_modules/supports-color/": {
       "has-flag": "./node_modules/supports-color/node_modules/has-flag/index.js"
-    },
-    "./node_modules/to-regex-range/": {
-      "is-number": "./node_modules/is-number/index.js"
     },
     "./node_modules/@jsenv/assert/": {
       "@jsenv/inspect": "./node_modules/@jsenv/inspect/index.js"
@@ -1096,9 +1099,6 @@
     "./node_modules/cli-cursor/": {
       "restore-cursor": "./node_modules/restore-cursor/index.js"
     },
-    "./node_modules/fill-range/": {
-      "to-regex-range": "./node_modules/to-regex-range/index.js"
-    },
     "./node_modules/flat-cache/": {
       "flatted": "./node_modules/flatted/esm/index.js",
       "rimraf": "./node_modules/flat-cache/node_modules/rimraf/rimraf.js",
@@ -1112,10 +1112,6 @@
     },
     "./node_modules/level-peek/": {
       "level-fix-range": "./node_modules/level-fix-range/index.js"
-    },
-    "./node_modules/micromatch/": {
-      "picomatch": "./node_modules/picomatch/index.js",
-      "braces": "./node_modules/braces/index.js"
     },
     "./node_modules/optionator/": {
       "fast-levenshtein": "./node_modules/fast-levenshtein/levenshtein.js",
@@ -1172,7 +1168,8 @@
       "pend": "./node_modules/pend/index.js"
     },
     "./node_modules/hash-base/": {
-      "safe-buffer": "./node_modules/safe-buffer/index.js",
+      "readable-stream": "./node_modules/hash-base/node_modules/readable-stream/readable.js",
+      "safe-buffer": "./node_modules/hash-base/node_modules/safe-buffer/index.js",
       "inherits": "./node_modules/inherits/inherits.js"
     },
     "./node_modules/hmac-drbg/": {
@@ -1196,9 +1193,6 @@
     "./node_modules/ripemd160/": {
       "hash-base": "./node_modules/hash-base/index.js",
       "inherits": "./node_modules/inherits/inherits.js"
-    },
-    "./node_modules/run-async/": {
-      "is-promise": "./node_modules/is-promise/index.js"
     },
     "./node_modules/uglify-js/": {
       "commander": "./node_modules/commander/index.js"
@@ -1332,9 +1326,6 @@
     "./node_modules/xregexp/": {
       "@babel/runtime-corejs3": "./node_modules/@babel/runtime-corejs3/index"
     },
-    "./node_modules/braces/": {
-      "fill-range": "./node_modules/fill-range/index.js"
-    },
     "./node_modules/des.js/": {
       "minimalistic-assert": "./node_modules/minimalistic-assert/index.js",
       "inherits": "./node_modules/inherits/inherits.js"
@@ -1383,6 +1374,9 @@
       "acorn-jsx": "./node_modules/acorn-jsx/index.js",
       "acorn": "./node_modules/espree/node_modules/acorn/dist/acorn.mjs"
     },
+    "./node_modules/is-wsl/": {
+      "is-docker": "./node_modules/is-docker/index.js"
+    },
     "./node_modules/md5.js/": {
       "safe-buffer": "./node_modules/safe-buffer/index.js",
       "hash-base": "./node_modules/hash-base/index.js",
@@ -1400,6 +1394,9 @@
     },
     "./node_modules/rimraf/": {
       "glob": "./node_modules/glob/glob.js"
+    },
+    "./node_modules/rollup/": {
+      "fsevents": "./node_modules/fsevents/fsevents.js"
     },
     "./node_modules/sha.js/": {
       "safe-buffer": "./node_modules/safe-buffer/index.js",
@@ -1468,7 +1465,6 @@
     },
     "./node_modules/ajv/": {
       "fast-json-stable-stringify": "./node_modules/fast-json-stable-stringify/index.js",
-      "opencollective-postinstall": "./node_modules/opencollective-postinstall/index.js",
       "json-schema-traverse": "./node_modules/json-schema-traverse/index.js",
       "fast-deep-equal": "./node_modules/fast-deep-equal/index.js",
       "uri-js": "./node_modules/uri-js/dist/es5/uri.all.js"
