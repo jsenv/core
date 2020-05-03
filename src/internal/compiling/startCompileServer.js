@@ -270,7 +270,7 @@ ${projectDirectoryUrl}`)
   const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
   const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
   const importmapFiles = Object.keys(groupMap).map((compileId) => {
-    return resolveUrl("./importMap.json", `${outDirectoryUrl}${compileId}/`)
+    return resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`)
   })
 
   await Promise.all([
