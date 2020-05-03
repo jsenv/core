@@ -25,10 +25,14 @@ export const createNodeSystem = async ({
     throw new Error(`global.System is undefined`)
   }
 
-  const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
-  const importmapFileResponse = await fetchUrl(importmapFileUrl)
-  const importmap = await importmapFileResponse.json()
-  const importmapNormalized = normalizeImportMap(importmap, importmapFileUrl)
+  let importMap
+  if (importMapFileRelativeUrl) {
+    const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
+    const importmapFileResponse = await fetchUrl(importmapFileUrl)
+    const importmap = await importmapFileResponse.json()
+    const importmapNormalized = normalizeImportMap(importmap, importmapFileUrl)
+    importMap = importmapNormalized
+  }
 
   const nodeSystem = new global.System.constructor()
 
@@ -40,7 +44,7 @@ export const createNodeSystem = async ({
     return resolveImport({
       specifier,
       importer,
-      importMap: importmapNormalized,
+      importMap,
       defaultExtension: importDefaultExtension,
     })
   }

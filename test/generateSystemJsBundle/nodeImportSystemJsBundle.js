@@ -1,4 +1,3 @@
-import { resolveImport } from "@jsenv/import-map"
 import { resolveDirectoryUrl, resolveUrl } from "@jsenv/util"
 import { createNodeSystem } from "../../src/internal/runtime/createNodeRuntime/createNodeSystem.js"
 
@@ -9,11 +8,7 @@ export const nodeImportSystemJsBundle = async ({
 }) => {
   const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
   const mainFileUrl = resolveUrl(mainRelativeUrl, testDirectoryUrl)
-  const nodeSystem = createNodeSystem({
-    resolveImport: (specifier, importer) => {
-      return resolveImport({ specifier, importer })
-    },
-  })
+  const nodeSystem = await createNodeSystem()
   const namespace = await nodeSystem.import(mainFileUrl)
 
   return {
