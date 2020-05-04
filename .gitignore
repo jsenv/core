@@ -9,6 +9,7 @@
 /docs/**/yarn.lock
 /node_modules/
 /test-manual/**/.jsenv/
+/importMap.json
 /jsconfig.json
 /package-lock.json
 /secrets.json

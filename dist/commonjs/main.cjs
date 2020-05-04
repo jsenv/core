@@ -29,6 +29,21 @@ const url = filenameContainsBackSlashes ? `file:///${__filename.replace(/\\/g, "
 
 const require$1 = module$1.createRequire(url);
 
+/**
+
+minimalBabelPluginArray exists so that jsenv support latest js syntax by default.
+Otherwise users have to explicitely enable those syntax when they use it.
+
+*/
+
+const syntaxDynamicImport = require$1("@babel/plugin-syntax-dynamic-import");
+
+const syntaxImportMeta = require$1("@babel/plugin-syntax-import-meta");
+
+const syntaxNumericSeparator = require$1("@babel/plugin-syntax-numeric-separator");
+
+const minimalBabelPluginArray = [syntaxDynamicImport, syntaxImportMeta, syntaxNumericSeparator];
+
 /* eslint-disable */
 
 const {
@@ -527,7 +542,7 @@ const {
   list
 } = require$1("@babel/helpers");
 
-const babelHelperNameInsideJsenvCoreArray = ["applyDecoratedDescriptor", "arrayWithHoles", "arrayWithoutHoles", "assertThisInitialized", "AsyncGenerator", "asyncGeneratorDelegate", "asyncIterator", "asyncToGenerator", "awaitAsyncGenerator", "AwaitValue", "classCallCheck", "classNameTDZError", "classPrivateFieldDestructureSet", "classPrivateFieldGet", "classPrivateFieldLooseBase", "classPrivateFieldLooseKey", "classPrivateFieldSet", "classPrivateMethodGet", "classPrivateMethodSet", "classStaticPrivateFieldSpecGet", "classStaticPrivateFieldSpecSet", "classStaticPrivateMethodGet", "classStaticPrivateMethodSet", "construct", "createClass", "decorate", "defaults", "defineEnumerableProperties", "defineProperty", "extends", "get", "getPrototypeOf", "inherits", "inheritsLoose", "initializerDefineProperty", "initializerWarningHelper", "instanceof", "interopRequireDefault", "interopRequireWildcard", "isNativeFunction", "iterableToArray", "iterableToArrayLimit", "iterableToArrayLimitLoose", "jsx", "newArrowCheck", "nonIterableRest", "nonIterableSpread", "objectDestructuringEmpty", "objectSpread", "objectSpread2", "objectWithoutProperties", "objectWithoutPropertiesLoose", "possibleConstructorReturn", "readOnlyError", "set", "setPrototypeOf", "skipFirstGeneratorNext", "slicedToArray", "slicedToArrayLoose", "superPropBase", "taggedTemplateLiteral", "taggedTemplateLiteralLoose", "tdz", "temporalRef", "temporalUndefined", "toArray", "toConsumableArray", "toPrimitive", "toPropertyKey", "typeof", "wrapAsyncGenerator", "wrapNativeSuper", "wrapRegExp"];
+const babelHelperNameInsideJsenvCoreArray = ["applyDecoratedDescriptor", "arrayLikeToArray", "arrayWithHoles", "arrayWithoutHoles", "assertThisInitialized", "AsyncGenerator", "asyncGeneratorDelegate", "asyncIterator", "asyncToGenerator", "awaitAsyncGenerator", "AwaitValue", "classCallCheck", "classNameTDZError", "classPrivateFieldDestructureSet", "classPrivateFieldGet", "classPrivateFieldLooseBase", "classPrivateFieldLooseKey", "classPrivateFieldSet", "classPrivateMethodGet", "classPrivateMethodSet", "classStaticPrivateFieldSpecGet", "classStaticPrivateFieldSpecSet", "classStaticPrivateMethodGet", "classStaticPrivateMethodSet", "construct", "createClass", "createForOfIterableHelper", "createForOfIterableHelperLoose", "createSuper", "decorate", "defaults", "defineEnumerableProperties", "defineProperty", "extends", "get", "getPrototypeOf", "inherits", "inheritsLoose", "initializerDefineProperty", "initializerWarningHelper", "instanceof", "interopRequireDefault", "interopRequireWildcard", "isNativeFunction", "isNativeReflectConstruct", "iterableToArray", "iterableToArrayLimit", "iterableToArrayLimitLoose", "jsx", "newArrowCheck", "nonIterableRest", "nonIterableSpread", "objectDestructuringEmpty", "objectSpread", "objectSpread2", "objectWithoutProperties", "objectWithoutPropertiesLoose", "possibleConstructorReturn", "readOnlyError", "set", "setPrototypeOf", "skipFirstGeneratorNext", "slicedToArray", "slicedToArrayLoose", "superPropBase", "taggedTemplateLiteral", "taggedTemplateLiteralLoose", "tdz", "temporalRef", "temporalUndefined", "toArray", "toConsumableArray", "toPrimitive", "toPropertyKey", "typeof", "unsupportedIterableToArray", "wrapAsyncGenerator", "wrapNativeSuper", "wrapRegExp"];
 const babelHelperScope = "@jsenv/core/helpers/babel/"; // maybe we can put back / in front of .jsenv here because we will
 // "redirect" or at least transform everything inside .jsenv
 // not only everything inside .dist
@@ -607,11 +622,6 @@ const {
   transformFromAstAsync
 } = require$1("@babel/core");
 
-const syntaxDynamicImport = require$1("@babel/plugin-syntax-dynamic-import");
-
-const syntaxImportMeta = require$1("@babel/plugin-syntax-import-meta");
-
-const defaultBabelPluginArray = [syntaxDynamicImport, syntaxImportMeta];
 const jsenvTransform = async ({
   inputCode,
   inputPath,
@@ -686,7 +696,7 @@ const jsenvTransform = async ({
       ast: inputAst,
       code: inputCode,
       options: { ...options,
-        plugins: [...defaultBabelPluginArray, ...babelPluginArrayWithoutAsync, [transformModulesSystemJs, {
+        plugins: [...minimalBabelPluginArray, ...babelPluginArrayWithoutAsync, [transformModulesSystemJs, {
           topLevelAwait: transformTopLevelAwait
         }]]
       }
@@ -703,7 +713,7 @@ const jsenvTransform = async ({
         // https://github.com/babel/babel/blob/eac4c5bc17133c2857f2c94c1a6a8643e3b547a7/packages/babel-core/src/transformation/file/generate.js#L57
         // https://github.com/babel/babel/blob/090c364a90fe73d36a30707fc612ce037bdbbb24/packages/babel-core/src/transformation/file/merge-map.js#L6s
         inputSourceMap: result.map,
-        plugins: [...defaultBabelPluginArray, babelPluginMap[asyncPluginName]]
+        plugins: [...minimalBabelPluginArray, babelPluginMap[asyncPluginName]]
       }
     });
     return { ...result,
@@ -714,7 +724,7 @@ const jsenvTransform = async ({
     };
   }
 
-  const babelPluginArray = [...defaultBabelPluginArray, ...Object.keys(babelPluginMap).map(babelPluginName => babelPluginMap[babelPluginName]), ...(transformModuleIntoSystemFormat ? [[transformModulesSystemJs, {
+  const babelPluginArray = [...minimalBabelPluginArray, ...Object.keys(babelPluginMap).map(babelPluginName => babelPluginMap[babelPluginName]), ...(transformModuleIntoSystemFormat ? [[transformModulesSystemJs, {
     topLevelAwait: transformTopLevelAwait
   }]] : [])];
   const result = await babelTransform({
@@ -1157,6 +1167,10 @@ const assertProjectDirectoryExists = ({
 const assertImportMapFileRelativeUrl = ({
   importMapFileRelativeUrl
 }) => {
+  if (importMapFileRelativeUrl === "") {
+    throw new TypeError(`importMapFileRelativeUrl is an empty string`);
+  }
+
   if (typeof importMapFileRelativeUrl !== "string") {
     throw new TypeError(`importMapFileRelativeUrl must be a string, received ${importMapFileRelativeUrl}`);
   }
@@ -1174,6 +1188,13 @@ ${projectDirectoryUrl}`);
   }
 };
 
+const COMPILE_ID_BEST = "best";
+const COMPILE_ID_OTHERWISE = "otherwise";
+const COMPILE_ID_GLOBAL_BUNDLE = "otherwise-global-bundle";
+const COMPILE_ID_GLOBAL_BUNDLE_FILES = "otherwise-global-bundle-files";
+const COMPILE_ID_COMMONJS_BUNDLE = "otherwise-commonjs-bundle";
+const COMPILE_ID_COMMONJS_BUNDLE_FILES = "otherwise-commonjs-bundle-files";
+
 let jsenvCoreDirectoryUrl;
 
 if (typeof __filename === "string") {
@@ -1183,13 +1204,6 @@ if (typeof __filename === "string") {
   jsenvCoreDirectoryUrl = util.resolveUrl( // get ride of src/internal/jsenvCoreDirectoryUrl.js
   "../../", url);
 }
-
-const COMPILE_ID_BEST = "best";
-const COMPILE_ID_OTHERWISE = "otherwise";
-const COMPILE_ID_GLOBAL_BUNDLE = "otherwise-global-bundle";
-const COMPILE_ID_GLOBAL_BUNDLE_FILES = "otherwise-global-bundle-files";
-const COMPILE_ID_COMMONJS_BUNDLE = "otherwise-commonjs-bundle";
-const COMPILE_ID_COMMONJS_BUNDLE_FILES = "otherwise-commonjs-bundle-files";
 
 const valueToVersion = value => {
   if (typeof value === "number") {
@@ -1296,23 +1310,38 @@ const findHighestVersion = (...values) => {
 
 // copied from
 // https://github.com/babel/babel/blob/master/packages/babel-compat-data/data/plugins.json#L1
+// now moved at https://github.com/babel/babel/blob/548cb3ee89552ffc08ee5625b084bd33f8107530/packages/babel-compat-data/data/plugins.json#L1
 // Because this is an hidden implementation detail of @babel/preset-env
 // it could be deprecated or moved anytime.
 // For that reason it makes more sens to have it inlined here
 // than importing it from an undocumented location.
 // Ideally it would be documented or a separate module
 const jsenvBabelPluginCompatMap = {
+  "proposal-numeric-separator": {
+    chrome: "75",
+    edge: "79",
+    firefox: "70",
+    safari: "13",
+    node: "12.5",
+    ios: "13",
+    opera: "62",
+    electron: "6.1"
+  },
   "proposal-nullish-coalescing-operator": {
     chrome: "80",
+    edge: "80",
     firefox: "72",
-    safari: "tp",
-    opera: "67"
+    safari: "13.1",
+    opera: "67",
+    electron: "8.1"
   },
   "proposal-optional-chaining": {
     chrome: "80",
+    edge: "80",
     firefox: "74",
-    safari: "tp",
-    opera: "67"
+    safari: "13.1",
+    opera: "67",
+    electron: "8.1"
   },
   "proposal-json-strings": {
     chrome: "66",
@@ -1389,8 +1418,7 @@ const jsenvBabelPluginCompatMap = {
     electron: "3.1"
   },
   // copy of transform-async-to-generator
-  // this is not in the babel-preset-env repo
-  // but we need this
+  // so that async is not transpiled when supported
   "transform-async-to-promises": {
     chrome: "55",
     edge: "15",
@@ -2154,9 +2182,13 @@ const jsenvNodeVersionScoreMap = {
 
 const proposalJSONStrings = require$1("@babel/plugin-proposal-json-strings");
 
+const proposalNumericSeparator = require$1("@babel/plugin-proposal-numeric-separator");
+
 const proposalObjectRestSpread = require$1("@babel/plugin-proposal-object-rest-spread");
 
 const proposalOptionalCatchBinding = require$1("@babel/plugin-proposal-optional-catch-binding");
+
+const proposalOptionalChaining = require$1("@babel/plugin-proposal-optional-chaining");
 
 const proposalUnicodePropertyRegex = require$1("@babel/plugin-proposal-unicode-property-regex");
 
@@ -2211,10 +2243,12 @@ const transformTypeOfSymbol = require$1("@babel/plugin-transform-typeof-symbol")
 const transformUnicodeRegex = require$1("@babel/plugin-transform-unicode-regex");
 
 const jsenvBabelPluginMap = {
+  "proposal-numeric-separator": [proposalNumericSeparator],
+  "proposal-json-strings": [proposalJSONStrings],
   "proposal-object-rest-spread": [proposalObjectRestSpread],
   "proposal-optional-catch-binding": [proposalOptionalCatchBinding],
+  "proposal-optional-chaining": [proposalOptionalChaining],
   "proposal-unicode-property-regex": [proposalUnicodePropertyRegex],
-  "proposal-json-strings": [proposalJSONStrings],
   "syntax-object-rest-spread": [syntaxObjectRestSpread],
   "syntax-optional-catch-binding": [syntaxOptionalCatchBinding],
   "transform-async-to-promises": [transformAsyncToPromises],
@@ -2614,6 +2648,11 @@ const readMeta = async ({
     return metaJsonObject;
   } catch (error) {
     if (error && error.code === "ENOENT") {
+      logger.debug(`no meta.json.
+--- meta.json path ---
+${util.urlToFileSystemPath(metaJsonFileUrl)}
+--- compiled file ---
+${util.urlToFileSystemPath(compiledFileUrl)}`);
       return null;
     }
 
@@ -2632,7 +2671,7 @@ const readMeta = async ({
 const createCacheSyntaxErrorMessage = ({
   syntaxError,
   metaJsonFileUrl
-}) => `cache syntax error
+}) => `meta.json syntax error.
 --- syntax error stack ---
 ${syntaxError.stack}
 --- meta.json path ---
@@ -2646,12 +2685,17 @@ const validateMeta = async ({
   ifModifiedSinceDate
 }) => {
   const compiledFileValidation = await validateCompiledFile({
-    logger,
     compiledFileUrl,
     ifEtagMatch,
     ifModifiedSinceDate
   });
-  if (!compiledFileValidation.valid) return compiledFileValidation;
+
+  if (!compiledFileValidation.valid) {
+    logger.debug(`${util.urlToFileSystemPath(compiledFileUrl)} modified (${compiledFileValidation.code})`);
+    return compiledFileValidation;
+  }
+
+  logger.debug(`${util.urlToFileSystemPath(compiledFileUrl)} not modified`);
 
   if (meta.sources.length === 0) {
     logger.warn(`meta.sources is empty, cache considered as invalid by precaution`);
@@ -2662,22 +2706,31 @@ const validateMeta = async ({
   }
 
   const [sourcesValidations, assetValidations] = await Promise.all([validateSources({
-    logger,
     meta,
     compiledFileUrl
   }), validateAssets({
-    logger,
     meta,
     compiledFileUrl
   })]);
   const invalidSourceValidation = sourcesValidations.find(({
     valid
   }) => !valid);
-  if (invalidSourceValidation) return invalidSourceValidation;
+
+  if (invalidSourceValidation) {
+    logger.debug(`${util.urlToFileSystemPath(invalidSourceValidation.data.sourceFileUrl)} source modified (${invalidSourceValidation.code})`);
+    return invalidSourceValidation;
+  }
+
   const invalidAssetValidation = assetValidations.find(({
     valid
   }) => !valid);
-  if (invalidAssetValidation) return invalidAssetValidation;
+
+  if (invalidAssetValidation) {
+    logger.debug(`${util.urlToFileSystemPath(invalidAssetValidation.data.assetFileUrl)} asset modified (${invalidAssetValidation.code})`);
+    return invalidAssetValidation;
+  }
+
+  logger.debug(`${util.urlToFileSystemPath(compiledFileUrl)} cache is valid`);
   const compiledSource = compiledFileValidation.data.compiledSource;
   const sourcesContent = sourcesValidations.map(({
     data
@@ -2696,7 +2749,6 @@ const validateMeta = async ({
 };
 
 const validateCompiledFile = async ({
-  logger,
   compiledFileUrl,
   ifEtagMatch,
   ifModifiedSinceDate
@@ -2708,7 +2760,6 @@ const validateCompiledFile = async ({
       const compiledEtag = util.bufferToEtag(Buffer.from(compiledSource));
 
       if (ifEtagMatch !== compiledEtag) {
-        logger.debug(`etag changed for ${util.urlToFileSystemPath(compiledFileUrl)}`);
         return {
           code: "COMPILED_FILE_ETAG_MISMATCH",
           valid: false,
@@ -2724,7 +2775,6 @@ const validateCompiledFile = async ({
       const compiledMtime = await util.readFileSystemNodeModificationTime(compiledFileUrl);
 
       if (ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)) {
-        logger.debug(`mtime changed for ${util.urlToFileSystemPath(compiledFileUrl)}`);
         return {
           code: "COMPILED_FILE_MTIME_OUTDATED",
           valid: false,
@@ -2744,7 +2794,6 @@ const validateCompiledFile = async ({
     };
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.debug(`compiled file not found at ${util.urlToFileSystemPath(compiledFileUrl)}`);
       return {
         code: "COMPILED_FILE_NOT_FOUND",
         valid: false,
@@ -2759,12 +2808,10 @@ const validateCompiledFile = async ({
 };
 
 const validateSources = ({
-  logger,
   meta,
   compiledFileUrl
 }) => {
   return Promise.all(meta.sources.map((source, index) => validateSource({
-    logger,
     compiledFileUrl,
     source,
     eTag: meta.sourcesEtag[index]
@@ -2772,7 +2819,6 @@ const validateSources = ({
 };
 
 const validateSource = async ({
-  logger,
   compiledFileUrl,
   source,
   eTag
@@ -2787,7 +2833,6 @@ const validateSource = async ({
     const sourceETag = util.bufferToEtag(Buffer.from(sourceContent));
 
     if (sourceETag !== eTag) {
-      logger.debug(`etag changed for ${util.urlToFileSystemPath(sourceFileUrl)}`);
       return {
         code: "SOURCE_ETAG_MISMATCH",
         valid: false,
@@ -2816,7 +2861,6 @@ const validateSource = async ({
       // which are not truly on the filesystem
       // (IN theory the above happens only for convertCommonJsWithRollup because jsenv
       // always have a concrete file especially to avoid that kind of thing)
-      logger.warn(`source not found at ${sourceFileUrl}`);
       return {
         code: "SOURCE_NOT_FOUND",
         valid: false,
@@ -2833,18 +2877,15 @@ const validateSource = async ({
 };
 
 const validateAssets = ({
-  logger,
   compiledFileUrl,
   meta
 }) => Promise.all(meta.assets.map((asset, index) => validateAsset({
-  logger,
   asset,
   compiledFileUrl,
   eTag: meta.assetsEtag[index]
 })));
 
 const validateAsset = async ({
-  logger,
   asset,
   compiledFileUrl,
   eTag
@@ -2859,7 +2900,6 @@ const validateAsset = async ({
     const assetContentETag = util.bufferToEtag(Buffer.from(assetContent));
 
     if (eTag !== assetContentETag) {
-      logger.debug(`etag changed for ${util.urlToFileSystemPath(assetFileUrl)}`);
       return {
         code: "ASSET_ETAG_MISMATCH",
         valid: false,
@@ -2881,7 +2921,6 @@ const validateAsset = async ({
     };
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.debug(`asset not found at ${util.urlToFileSystemPath(assetFileUrl)}`);
       return {
         code: "ASSET_FILE_NOT_FOUND",
         valid: false,
@@ -3314,16 +3353,14 @@ const serveCompiledFile = async ({
   } = request;
   let ifEtagMatch;
 
-  if (cacheWithETag) {
-    if ("if-none-match" in headers) {
-      ifEtagMatch = headers["if-none-match"];
-    }
+  if (cacheWithETag && "if-none-match" in headers) {
+    ifEtagMatch = headers["if-none-match"];
   }
 
   const cacheWithMtime = writeOnFilesystem && compileCacheStrategy === "mtime";
   let ifModifiedSinceDate;
 
-  if (cacheWithMtime) {
+  if (cacheWithMtime && "if-modified-since" in headers) {
     const ifModifiedSince = headers["if-modified-since"];
 
     try {
@@ -3338,7 +3375,6 @@ const serveCompiledFile = async ({
 
   try {
     const {
-      meta,
       compileResult,
       compileResultStatus
     } = await getOrGenerateCompiledFile({
@@ -3354,16 +3390,10 @@ const serveCompiledFile = async ({
       cacheInterProcessLocking: serverCompileCacheInterProcessLocking,
       compile
     });
-    projectFileRequestedCallback({
-      relativeUrl: util.urlToRelativeUrl(originalFileUrl, projectDirectoryUrl),
-      request
-    });
+    projectFileRequestedCallback(util.urlToRelativeUrl(originalFileUrl, projectDirectoryUrl), request);
     compileResult.sources.forEach(source => {
       const sourceFileUrl = util.resolveUrl(source, `${compiledFileUrl}__asset__/`);
-      projectFileRequestedCallback({
-        relativeUrl: util.urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl),
-        request
-      });
+      projectFileRequestedCallback(util.urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl), request);
     });
     const {
       contentType,
@@ -3400,7 +3430,7 @@ const serveCompiledFile = async ({
         headers: {
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
-          "last-modified": new Date(meta.lastModifiedMs).toUTCString()
+          "last-modified": new Date(await util.readFileSystemNodeModificationTime(compiledFileUrl)).toUTCString()
         },
         body: compiledSource
       };
@@ -3410,18 +3440,14 @@ const serveCompiledFile = async ({
       status: 200,
       headers: {
         "content-length": Buffer.byteLength(compiledSource),
-        "content-type": contentType,
-        "cache-control": "no-store"
+        "content-type": contentType
       },
       body: compiledSource
     };
   } catch (error) {
     if (error && error.code === "PARSE_ERROR") {
       const relativeUrl = util.urlToRelativeUrl(util.fileSystemPathToUrl(error.data.filename), projectDirectoryUrl);
-      projectFileRequestedCallback({
-        relativeUrl,
-        request
-      }); // on the correspondig file
+      projectFileRequestedCallback(relativeUrl, request); // on the correspondig file
 
       const json = JSON.stringify(error.data);
       return {
@@ -3448,15 +3474,33 @@ const serveCompiledFile = async ({
 
 https.globalAgent.options.rejectUnauthorized = false;
 const fetchUrl = async (url, {
-  simplified = true,
+  simplified = false,
   ignoreHttpsError = true,
   ...rest
 } = {}) => {
-  return server.fetchUrl(url, {
+  const response = await server.fetchUrl(url, {
     simplified,
     ignoreHttpsError,
     ...rest
   });
+  return {
+    url: response.url,
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseToHeaders(response),
+    text: response.text.bind(response),
+    json: response.json.bind(response),
+    blob: response.blob.bind(response),
+    arrayBuffer: response.arrayBuffer.bind(response)
+  };
+};
+
+const responseToHeaders = response => {
+  const headers = {};
+  response.headers.forEach((value, name) => {
+    headers[name] = value;
+  });
+  return headers;
 };
 
 const validateResponseStatusIsOk = ({
@@ -3482,6 +3526,16 @@ ${url}`
 };
 
 const responseStatusIsOk = responseStatus => responseStatus >= 200 && responseStatus < 300;
+
+// https://github.com/browserify/resolve/blob/a09a2e7f16273970be4639313c83b913daea15d7/lib/core.json#L1
+// https://nodejs.org/api/modules.html#modules_module_builtinmodules
+// https://stackoverflow.com/a/35825896
+// https://github.com/browserify/resolve/blob/master/lib/core.json#L1
+const NATIVE_NODE_MODULE_SPECIFIER_ARRAY = ["assert", "async_hooks", "buffer_ieee754", "buffer", "child_process", "cluster", "console", "constants", "crypto", "_debugger", "dgram", "dns", "domain", "events", "freelist", "fs", "fs/promises", "_http_agent", "_http_client", "_http_common", "_http_incoming", "_http_outgoing", "_http_server", "http", "http2", "https", "inspector", "_linklist", "module", "net", "node-inspect/lib/_inspect", "node-inspect/lib/internal/inspect_client", "node-inspect/lib/internal/inspect_repl", "os", "path", "perf_hooks", "process", "punycode", "querystring", "readline", "repl", "smalloc", "_stream_duplex", "_stream_transform", "_stream_wrap", "_stream_passthrough", "_stream_readable", "_stream_writable", "stream", "string_decoder", "sys", "timers", "_tls_common", "_tls_legacy", "_tls_wrap", "tls", "trace_events", "tty", "url", "util", "v8/tools/arguments", "v8/tools/codemap", "v8/tools/consarray", "v8/tools/csvparser", "v8/tools/logreader", "v8/tools/profile_view", "v8/tools/splaytree", "v8", "vm", "worker_threads", "zlib", // global is special
+"global"];
+const isBareSpecifierForNativeNodeModule = specifier => {
+  return NATIVE_NODE_MODULE_SPECIFIER_ARRAY.includes(specifier);
+};
 
 const fetchSourcemap = async ({
   cancellationToken,
@@ -3514,11 +3568,12 @@ const fetchSourcemap = async ({
     logger.warn(`unexpected response for sourcemap file:
 ${okValidation.message}`);
     return null;
-  } // in theory we should also check response content-type
-  // not really important
+  } // in theory we should also check sourcemapResponse content-type is correctly set
+  // but not really important.
 
 
-  return generateSourcemapFromString(sourcemapResponse.body, {
+  const sourcemapBodyAsText = await sourcemapResponse.text();
+  return generateSourcemapFromString(sourcemapBodyAsText, {
     logger,
     sourcemapUrl,
     moduleUrl
@@ -3598,6 +3653,31 @@ const minifyCss = (cssString, options) => {
 };
 
 /* eslint-disable import/max-dependencies */
+/**
+
+A word about bundler choosing to return an absolute url for import like
+
+import styleFileUrl from "./style.css"
+import iconFileUrl from "./icon.png"
+
+Bundler choose to return an url so that you can still access your bundled files.
+In a structure like this one I would rather choose to keep target asset with "/directory/icon.png"
+
+dist/
+  esmodule/
+    index.js
+directory/
+  icon.png
+
+Considering it's possible to target original file from bundled files (using import starting with '/'),
+Jsenv bundle do not emit any asset file.
+
+Using import to import something else than a JavaScript file convert it to
+a JavaScript module with an export default of that file content as text.
+Non textual files (png, jpg, video) are converted to base64 text.
+
+*/
+
 const createJsenvRollupPlugin = async ({
   cancellationToken,
   logger,
@@ -3608,6 +3688,9 @@ const createJsenvRollupPlugin = async ({
   compileServerOrigin,
   compileServerImportMap,
   importDefaultExtension,
+  externalImportSpecifiers,
+  node,
+  browser,
   babelPluginMap,
   format,
   minify,
@@ -3625,9 +3708,31 @@ const createJsenvRollupPlugin = async ({
   const compileDirectoryRemoteUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, compileServerOrigin);
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`;
   const importMap$1 = importMap.normalizeImportMap(compileServerImportMap, compileDirectoryRemoteUrl);
+
+  const nativeModulePredicate = specifier => {
+    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true; // for now browser have no native module
+    // and we don't know how we will handle that
+
+    if (browser) return false;
+    return false;
+  };
+
   const jsenvRollupPlugin = {
     name: "jsenv",
     resolveId: (specifier, importer = compileDirectoryRemoteUrl) => {
+      if (nativeModulePredicate(specifier)) {
+        logger.debug(`${specifier} is native module -> marked as external`);
+        return false;
+      }
+
+      if (externalImportSpecifiers.includes(specifier)) {
+        logger.debug(`${specifier} verifies externalImportSpecifiers  -> marked as external`);
+        return {
+          id: specifier,
+          external: true
+        };
+      }
+
       if (util.isFileSystemPath(importer)) {
         importer = util.fileSystemPathToUrl(importer);
       }
@@ -3784,68 +3889,64 @@ const createJsenvRollupPlugin = async ({
   };
 
   const loadModule = async moduleUrl => {
-    const {
-      responseUrl,
-      contentType,
-      content
-    } = await getModule(moduleUrl);
+    const moduleResponse = await fetchModule(moduleUrl);
+    const contentType = moduleResponse.headers["content-type"] || "";
+    const moduleText = await moduleResponse.text();
+    const commonData = {
+      responseUrl: moduleResponse.url,
+      contentRaw: moduleText
+    }; // keep this in sync with module-registration.js
 
-    if (contentType === "application/javascript") {
-      const map = await fetchSourcemap({
-        cancellationToken,
-        logger,
-        moduleUrl,
-        moduleContent: content
-      });
-      return {
-        responseUrl,
-        contentRaw: content,
-        content,
-        map
+    if (contentType === "application/javascript" || contentType === "text/javascript") {
+      return { ...commonData,
+        content: moduleText,
+        map: await fetchSourcemap({
+          cancellationToken,
+          logger,
+          moduleUrl,
+          moduleContent: moduleText
+        })
       };
     }
 
     if (contentType === "application/json") {
-      return {
-        responseUrl,
-        contentRaw: content,
-        content: jsonToJavascript(content)
+      return { ...commonData,
+        content: jsonToJavascript(moduleText)
       };
     }
 
     if (contentType === "text/html") {
-      return {
-        responseUrl,
-        contentRaw: content,
-        content: htmlToJavascript(content)
+      return { ...commonData,
+        content: htmlToJavascript(moduleText)
       };
     }
 
     if (contentType === "text/css") {
-      return {
-        responseUrl,
-        contentRaw: content,
-        content: cssToJavascript(content)
+      return { ...commonData,
+        content: cssToJavascript(moduleText)
       };
     }
 
-    if (!contentType.startsWith("text/")) {
-      logger.warn(`unexpected content-type for module.
+    if (contentType === "image/svg+xml") {
+      return { ...commonData,
+        content: svgToJavaScript(moduleText)
+      };
+    }
+
+    if (contentType.startsWith("text/")) {
+      return { ...commonData,
+        content: textToJavascript(moduleText)
+      };
+    }
+
+    logger.debug(`Using base64 to bundle module because of its content-type.
 --- content-type ---
 ${contentType}
---- expected content-types ---
-"application/javascript"
-"application/json"
-"text/*"
 --- module url ---
-${moduleUrl}`);
-    } // fallback to text
+${moduleUrl}`); // fallback to base64 text
 
-
-    return {
-      responseUrl,
-      contentRaw: content,
-      content: textToJavascript(content)
+    return { ...commonData,
+      content: textToJavascript(Buffer.from(moduleText).toString("base64"))
     };
   };
 
@@ -3872,11 +3973,16 @@ ${moduleUrl}`);
     return `export default ${JSON.stringify(cssString)}`;
   };
 
+  const svgToJavaScript = svgString => {
+    // could also benefit of minification https://github.com/svg/svgo
+    return `export default ${JSON.stringify(svgString)}`;
+  };
+
   const textToJavascript = textString => {
     return `export default ${JSON.stringify(textString)}`;
   };
 
-  const getModule = async moduleUrl => {
+  const fetchModule = async moduleUrl => {
     const response = await fetchUrl(moduleUrl, {
       cancellationToken,
       ignoreHttpsError: true
@@ -3887,11 +3993,7 @@ ${moduleUrl}`);
       throw new Error(okValidation.message);
     }
 
-    return {
-      responseUrl: response.url,
-      contentType: response.headers["content-type"],
-      content: response.body
-    };
+    return response;
   };
 
   return {
@@ -3975,16 +4077,6 @@ const transformAsyncInsertedByRollup = async ({
   }));
 };
 
-// https://github.com/browserify/resolve/blob/a09a2e7f16273970be4639313c83b913daea15d7/lib/core.json#L1
-// https://nodejs.org/api/modules.html#modules_module_builtinmodules
-// https://stackoverflow.com/a/35825896
-// https://github.com/browserify/resolve/blob/master/lib/core.json#L1
-const NATIVE_NODE_MODULE_SPECIFIER_ARRAY = ["assert", "async_hooks", "buffer_ieee754", "buffer", "child_process", "cluster", "console", "constants", "crypto", "_debugger", "dgram", "dns", "domain", "events", "freelist", "fs", "fs/promises", "_http_agent", "_http_client", "_http_common", "_http_incoming", "_http_outgoing", "_http_server", "http", "http2", "https", "inspector", "_linklist", "module", "net", "node-inspect/lib/_inspect", "node-inspect/lib/internal/inspect_client", "node-inspect/lib/internal/inspect_repl", "os", "path", "perf_hooks", "process", "punycode", "querystring", "readline", "repl", "smalloc", "_stream_duplex", "_stream_transform", "_stream_wrap", "_stream_passthrough", "_stream_readable", "_stream_writable", "stream", "string_decoder", "sys", "timers", "_tls_common", "_tls_legacy", "_tls_wrap", "tls", "trace_events", "tty", "url", "util", "v8/tools/arguments", "v8/tools/codemap", "v8/tools/consarray", "v8/tools/csvparser", "v8/tools/logreader", "v8/tools/profile_view", "v8/tools/splaytree", "v8", "vm", "worker_threads", "zlib", // global is special
-"global"];
-const isBareSpecifierForNativeNodeModule = specifier => {
-  return NATIVE_NODE_MODULE_SPECIFIER_ARRAY.includes(specifier);
-};
-
 const generateBundleUsingRollup = async ({
   cancellationToken,
   logger,
@@ -4023,6 +4115,9 @@ const generateBundleUsingRollup = async ({
     compileServerOrigin,
     compileServerImportMap,
     importDefaultExtension,
+    externalImportSpecifiers,
+    node,
+    browser,
     babelPluginMap,
     format,
     minify,
@@ -4031,37 +4126,13 @@ const generateBundleUsingRollup = async ({
     minifyHtmlOptions,
     manifestFile
   });
-
-  const nativeModulePredicate = specifier => {
-    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true; // for now browser have no native module
-    // and we don't know how we will handle that
-
-    if (browser) return false;
-    return false;
-  };
-
-  const external = id => {
-    if (externalImportSpecifiers.includes(id)) {
-      return true;
-    }
-
-    if (nativeModulePredicate(id)) {
-      return true;
-    }
-
-    return false;
-  };
-
   const rollupBundle = await useRollup({
     cancellationToken,
     logger,
     entryPointMap,
     jsenvRollupPlugin,
     format,
-    formatInputOptions: {
-      external,
-      ...formatInputOptions
-    },
+    formatInputOptions,
     formatOutputOptions,
     bundleDirectoryUrl,
     sourcemapExcludeSources,
@@ -4325,6 +4396,7 @@ const serveBundle = async ({
   compileServerImportMap,
   importDefaultExtension,
   externalImportSpecifiers = [],
+  compileCacheStrategy,
   format,
   formatOutputOptions = {},
   node = format === "commonjs",
@@ -4379,6 +4451,7 @@ const serveBundle = async ({
     compiledFileUrl,
     writeOnFilesystem: true,
     useFilesystemAsCache: true,
+    compileCacheStrategy,
     projectFileRequestedCallback,
     compile,
     request
@@ -4391,6 +4464,7 @@ const serveCompiledJs = async ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerImportMap,
+  importMapFileRelativeUrl,
   importDefaultExtension,
   transformTopLevelAwait,
   transformModuleIntoSystemFormat,
@@ -4400,7 +4474,8 @@ const serveCompiledJs = async ({
   request,
   projectFileRequestedCallback,
   useFilesystemAsCache,
-  writeOnFilesystem
+  writeOnFilesystem,
+  compileCacheStrategy
 }) => {
   const {
     origin,
@@ -4448,7 +4523,18 @@ const serveCompiledJs = async ({
     return null;
   }
 
-  const originalFileRelativeUrl = remaining; // json, css, html etc does not need to be compiled
+  const originalFileRelativeUrl = remaining;
+  const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`;
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`;
+  const compileDirectoryUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl);
+  const compiledFileUrl = util.resolveUrl(originalFileRelativeUrl, compileDirectoryUrl); // send out/best/importMap.json untouched
+
+  if (originalFileRelativeUrl === importMapFileRelativeUrl) {
+    return server.serveFile(compiledFileUrl, {
+      method,
+      headers
+    });
+  } // json, css, html etc does not need to be compiled
   // they are redirected to the source location that will be served as file
   // ptet qu'on devrait pas parce que
   // on pourrait vouloir minifier ce résultat (mais bon ça osef disons)
@@ -4458,6 +4544,7 @@ const serveCompiledJs = async ({
   // sinon on track le export default
   // mais ça ça vient plutot du bundle
   // qui doit gérer content/contentRaw
+
 
   const contentType = server.urlToContentType(requestUrl);
 
@@ -4469,11 +4556,6 @@ const serveCompiledJs = async ({
       }
     };
   }
-
-  const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`;
-  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`;
-  const compileDirectoryUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl);
-  const compiledFileUrl = util.resolveUrl(originalFileRelativeUrl, compileDirectoryUrl);
 
   if (compileId === COMPILE_ID_GLOBAL_BUNDLE || compileId === COMPILE_ID_COMMONJS_BUNDLE) {
     return serveBundle({
@@ -4501,6 +4583,7 @@ const serveCompiledJs = async ({
     compiledFileUrl,
     writeOnFilesystem,
     useFilesystemAsCache,
+    compileCacheStrategy,
     projectFileRequestedCallback,
     request,
     compile: async () => {
@@ -4598,6 +4681,7 @@ const startCompileServer = async ({
   outDirectoryName = "out",
   writeOnFilesystem = true,
   useFilesystemAsCache = true,
+  compileCacheStrategy = "etag",
   importMapFileRelativeUrl = "importMap.json",
   importDefaultExtension,
   env = {},
@@ -4705,10 +4789,7 @@ ${projectDirectoryUrl}`);
 
     const originalProjectFileRequestedCallback = projectFileRequestedCallback;
 
-    projectFileRequestedCallback = ({
-      relativeUrl,
-      ...rest
-    }) => {
+    projectFileRequestedCallback = (relativeUrl, ...rest) => {
       // I doubt an asset like .js.map will change
       // in theory a compilation asset should not change
       // if the source file did not change
@@ -4718,10 +4799,7 @@ ${projectDirectoryUrl}`);
       }
 
       if (projectFilePredicate(relativeUrl)) {
-        originalProjectFileRequestedCallback({
-          relativeUrl,
-          ...rest
-        });
+        originalProjectFileRequestedCallback(relativeUrl, ...rest);
       }
     };
   } else {
@@ -4758,12 +4836,18 @@ ${projectDirectoryUrl}`);
 
         return null;
       }, () => {
+        return serveBrowserScript(request, {
+          projectDirectoryUrl,
+          outDirectoryRelativeUrl
+        });
+      }, () => {
         return serveCompiledJs({
           cancellationToken,
           logger: logger$1,
           projectDirectoryUrl,
           outDirectoryRelativeUrl,
           compileServerImportMap: importMapForCompileServer,
+          importMapFileRelativeUrl,
           importDefaultExtension,
           transformTopLevelAwait,
           transformModuleIntoSystemFormat,
@@ -4773,7 +4857,8 @@ ${projectDirectoryUrl}`);
           request,
           projectFileRequestedCallback,
           useFilesystemAsCache,
-          writeOnFilesystem
+          writeOnFilesystem,
+          compileCacheStrategy
         });
       }, () => {
         return serveProjectFiles({
@@ -4798,7 +4883,8 @@ ${projectDirectoryUrl}`);
   env = { ...env,
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
-    importDefaultExtension
+    importDefaultExtension,
+    importMapFileRelativeUrl
   };
 
   const importMapToString = () => JSON.stringify(importMapForCompileServer, null, "  ");
@@ -4807,15 +4893,19 @@ ${projectDirectoryUrl}`);
 
   const envToString = () => JSON.stringify(env, null, "  ");
 
-  const importMapOutFileUrl = util.resolveUrl("./importMap.json", outDirectoryUrl);
   const groupMapOutFileUrl = util.resolveUrl("./groupMap.json", outDirectoryUrl);
   const envOutFileUrl = util.resolveUrl("./env.json", outDirectoryUrl);
-  await Promise.all([util.writeFile(importMapOutFileUrl, importMapToString()), util.writeFile(groupMapOutFileUrl, groupMapToString()), util.writeFile(envOutFileUrl, envToString())]);
+  const importmapFiles = Object.keys(groupMap).map(compileId => {
+    return util.resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`);
+  });
+  await Promise.all([util.writeFile(groupMapOutFileUrl, groupMapToString()), util.writeFile(envOutFileUrl, envToString()), ...importmapFiles.map(importmapFile => util.writeFile(importmapFile, importMapToString()))]);
 
   if (!writeOnFilesystem) {
     compileServer.stoppedPromise.then(() => {
-      util.removeFileSystemNode(importMapOutFileUrl, {
-        allowUseless: true
+      importmapFiles.forEach(importmapFile => {
+        util.removeFileSystemNode(importmapFile, {
+          allowUseless: true
+        });
       });
       util.removeFileSystemNode(groupMapOutFileUrl, {
         allowUseless: true
@@ -4858,6 +4948,7 @@ ${projectDirectoryUrl}`);
   return {
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
+    importMapFileRelativeUrl,
     ...compileServer,
     compileServerImportMap: importMapForCompileServer,
     compileServerGroupMap: groupMap
@@ -4875,6 +4966,26 @@ const STOP_REASON_PACKAGE_VERSION_CHANGED = {
   toString: () => `package version changed`
 };
 
+const serveBrowserScript = async (request, {
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl
+}) => {
+  if (request.ressource === "/.jsenv/browser-script.js") {
+    const browserJsFileUrl = util.resolveUrl("./src/internal/browser-launcher/browser-js-file.js", jsenvCoreDirectoryUrl);
+    const browserjsFileRelativeUrl = util.urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl);
+    const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`;
+    const browserBundledJsFileRemoteUrl = `${request.origin}/${browserBundledJsFileRelativeUrl}`;
+    return {
+      status: 307,
+      headers: {
+        location: browserBundledJsFileRemoteUrl
+      }
+    };
+  }
+
+  return null;
+};
+
 const serveProjectFiles = async ({
   projectDirectoryUrl,
   request,
@@ -4886,10 +4997,7 @@ const serveProjectFiles = async ({
     headers
   } = request;
   const relativeUrl = ressource.slice(1);
-  projectFileRequestedCallback({
-    relativeUrl,
-    request
-  });
+  projectFileRequestedCallback(relativeUrl, request);
   const fileUrl = util.resolveUrl(relativeUrl, projectDirectoryUrl);
   const filePath = util.urlToFileSystemPath(fileUrl);
   const responsePromise = server.serveFile(filePath, {
@@ -4931,6 +5039,11 @@ const generateImportMapForCompileServer = async ({
     includeImports: true,
     includeExports: true
   });
+  const importmapForSelfImport = {
+    imports: {
+      "@jsenv/core/": `./${util.urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}`
+    }
+  };
   const importMapInternal = {
     imports: { ...(outDirectoryRelativeUrl === ".jsenv/out/" ? {} : {
         "/.jsenv/out/": `./${outDirectoryRelativeUrl}`
@@ -4950,7 +5063,7 @@ const generateImportMapForCompileServer = async ({
     projectDirectoryUrl,
     importMapFileRelativeUrl
   });
-  const importMap$1 = [importMapForJsenvCore, importMapInternal, importMapForProject].reduce((previous, current) => importMap.composeTwoImportMaps(previous, current), {});
+  const importMap$1 = [importMapForJsenvCore, importmapForSelfImport, importMapInternal, importMapForProject].reduce((previous, current) => importMap.composeTwoImportMaps(previous, current), {});
   return importMap$1;
 };
 
@@ -5356,7 +5469,11 @@ ${error.stack}`);
       } = executionResult;
 
       if (status === "errored") {
-        logger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
+        // debug log level because this error happens during execution
+        // there is no need to log it.
+        // the code will know the execution errored because it receives
+        // an errored execution result
+        logger.debug(`${fileRelativeUrl} ${runtime}: error ${TIMING_DURING_EXECUTION}.
 --- error stack ---
 ${executionResult.error.stack}`);
         return createErroredExecutionResult(executionResult, rest);
@@ -5474,10 +5591,10 @@ const execute = async ({
   mirrorConsole = true,
   stopAfterExecute = false,
   gracefulStopAllocatedMs,
-  updateProcessExitCode = true,
+  ignoreError = false,
   ...rest
 }) => {
-  return util.catchCancellation(async () => {
+  const executionPromise = util.catchCancellation(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({
       projectDirectoryUrl
     });
@@ -5497,7 +5614,8 @@ const execute = async ({
 
     const {
       outDirectoryRelativeUrl,
-      origin: compileServerOrigin
+      origin: compileServerOrigin,
+      stop
     } = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
@@ -5515,7 +5633,7 @@ const execute = async ({
       convertMap,
       compileGroupCount
     });
-    return launchAndExecute({
+    const result = await launchAndExecute({
       cancellationToken,
       executionLogLevel,
       fileRelativeUrl,
@@ -5530,25 +5648,38 @@ const execute = async ({
       gracefulStopAllocatedMs,
       ...rest
     });
-  }).then(result => {
-    if (result.status === "errored") {
-      // unexpected execution error
-      // -> update process.exitCode by default
-      // (we can disable this for testing)
-      if (updateProcessExitCode) {
-        process.exitCode = 1;
-      }
-
-      throw result.error;
-    }
-
+    stop("execution-done");
     return result;
-  }, e => {
+  }).catch(e => {
     // unexpected internal error
-    // -> always updates process.exitCode
+    // -> always updates process.exitCode because we can't trust unhandled rejection
+    // to do this
     process.exitCode = 1;
     throw e;
   });
+
+  if (ignoreError) {
+    return executionPromise;
+  }
+
+  const result = await executionPromise;
+
+  if (result.status === "errored") {
+    /*
+    Warning: when node launched with --unhandled-rejections=strict, despites
+    this promise being rejected by throw result.error node will compltely ignore it.
+     The error can be logged by doing
+    ```js
+    process.setUncaughtExceptionCaptureCallback((error) => {
+      console.error(error.stack)
+    })
+    ```
+    But it feels like a hack.
+    */
+    throw result.error;
+  }
+
+  return result;
 };
 
 const {
@@ -5717,10 +5848,6 @@ const {
 
 const createEmptyCoverage = relativeUrl => createFileCoverage$1(relativeUrl).toJSON();
 
-const syntaxDynamicImport$1 = require$1("@babel/plugin-syntax-dynamic-import");
-
-const syntaxImportMeta$1 = require$1("@babel/plugin-syntax-import-meta");
-
 const {
   transformAsync: transformAsync$1
 } = require$1("@babel/core");
@@ -5751,7 +5878,7 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
         parserOpts: {
           allowAwaitOutsideFunction: true
         },
-        plugins: [syntaxDynamicImport$1, syntaxImportMeta$1, ...Object.keys(babelPluginMap).map(babelPluginName => babelPluginMap[babelPluginName]), createInstrumentBabelPlugin({
+        plugins: [...minimalBabelPluginArray, ...Object.keys(babelPluginMap).map(babelPluginName => babelPluginMap[babelPluginName]), createInstrumentBabelPlugin({
           predicate: () => true
         })]
       })
@@ -5886,11 +6013,23 @@ const stringWidth = require$1("string-width");
 const writeLog = (string, {
   stream = process.stdout
 } = {}) => {
-  stream.write(`${string}
-`);
+  string = `${string}
+`;
+  stream.write(string);
+  const consoleModified = spyConsoleModification();
+
+  const moveCursorToLineAbove = () => {
+    readline.moveCursor(stream, 0, -1);
+  };
+
+  const clearCursorLine = () => {
+    readline.clearLine(stream, 0);
+  };
+
   const remove = util.memoize(() => {
     const {
-      columns = 80
+      columns = 80,
+      rows = 24
     } = stream;
     const logLines = string.split(/\r\n|\r|\n/);
     let visualLineCount = 0;
@@ -5899,11 +6038,25 @@ const writeLog = (string, {
       visualLineCount += width === 0 ? 1 : Math.ceil(width / columns);
     });
 
-    while (visualLineCount--) {
-      readline.cursorTo(stream, 0);
-      readline.clearLine(stream, 0);
-      readline.moveCursor(stream, 0, -1);
+    if (visualLineCount > rows) {
+      // the whole log cannot be cleared because it's vertically to long
+      // (longer than terminal height)
+      // readline.moveCursor cannot move cursor higher than screen height
+      // it means we would only clear the visible part of the log
+      // better keep the log untouched
+      return;
     }
+
+    while (visualLineCount--) {
+      clearCursorLine();
+
+      if (visualLineCount > 0) {
+        moveCursorToLineAbove();
+      }
+    } // an other version of the while above could the code below
+    // readline.moveCursor(stream, 0, -visualLineCount)
+    // readline.clearScreenDown(stream)
+
   });
   let updated = false;
 
@@ -5914,7 +6067,7 @@ const writeLog = (string, {
 
     updated = true;
 
-    {
+    if (!consoleModified()) {
       remove();
     }
 
@@ -5928,6 +6081,39 @@ const writeLog = (string, {
     update
   };
 }; // maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
+// the problem with listening data on stdout
+// is that node.js will later throw error if stream gets closed
+// while something listening data on it
+
+const spyConsoleModification = () => {
+  const {
+    stdout,
+    stderr
+  } = process;
+  const originalStdoutWrite = stdout.write;
+  const originalStdErrWrite = stderr.write;
+  let modified = false;
+
+  stdout.write = (chunk, encoding, callback) => {
+    modified = true;
+    return originalStdoutWrite.call(stdout, chunk, encoding, callback);
+  };
+
+  stderr.write = (chunk, encoding, callback) => {
+    modified = true;
+    return originalStdErrWrite.call(stderr, chunk, encoding, callback);
+  };
+
+  const uninstall = () => {
+    stdout.write = originalStdoutWrite;
+    stderr.write = originalStdErrWrite;
+  };
+
+  return () => {
+    uninstall();
+    return modified;
+  };
+};
 
 const cross = "☓"; // "\u2613"
 
@@ -6311,7 +6497,7 @@ ${fileRelativeUrl}`));
           wordWrap: false
         });
 
-        if (previousExecutionLog && completedExecutionLogMerging && previousExecutionResult && previousExecutionResult.status === "completed" && executionResult.status === "completed") {
+        if (previousExecutionLog && completedExecutionLogMerging && previousExecutionResult && previousExecutionResult.status === "completed" && (previousExecutionResult.consoleCalls ? previousExecutionResult.consoleCalls.length === 0 : true) && executionResult.status === "completed") {
           previousExecutionLog = previousExecutionLog.update(log);
         } else {
           previousExecutionLog = writeLog(log);
@@ -7088,14 +7274,18 @@ const generateEsModuleBundle = ({
 const generateGlobalBundle = async ({
   bundleDirectoryRelativeUrl = "./dist/global",
   globalName,
+  globals = {},
   browser = true,
   ...rest
 }) => generateBundle({
   format: "global",
   browser,
-  formatOutputOptions: globalName ? {
-    name: globalName
-  } : {},
+  formatOutputOptions: {
+    globals,
+    ...(globalName ? {
+      name: globalName
+    } : {})
+  },
   bundleDirectoryRelativeUrl,
   compileGroupCount: 1,
   ...rest
@@ -7699,13 +7889,24 @@ const launchBrowser = async (browserName, {
   const browserClass = playwright[browserName];
   const launchOperation = cancellation.createStoppableOperation({
     cancellationToken,
-    start: () => browserClass.launch({ ...options,
-      // let's handle them to close properly browser, remove listener
-      // and so on, instead of relying on puppetter
-      handleSIGINT: false,
-      handleSIGTERM: false,
-      handleSIGHUP: false
-    }),
+    start: async () => {
+      try {
+        const result = await browserClass.launch({ ...options,
+          // let's handle them to close properly browser, remove listener
+          // and so on, instead of relying on puppetter
+          handleSIGINT: false,
+          handleSIGTERM: false,
+          handleSIGHUP: false
+        });
+        return result;
+      } catch (e) {
+        if (cancellationToken.cancellationRequested && isTargetClosedError(e)) {
+          return e;
+        }
+
+        throw e;
+      }
+    },
     stop: async browser => {
       await browser.close();
 
@@ -7796,11 +7997,7 @@ const browserToRuntimeHooks = (browser, {
       try {
         await browserContext.close();
       } catch (e) {
-        if (e.message.match(/^Protocol error \(.*?\): Target closed/)) {
-          return;
-        }
-
-        if (e.message.match(/^Protocol error \(.*?\): Browser has been closed/)) {
+        if (isTargetClosedError(e)) {
           return;
         }
 
@@ -7850,6 +8047,18 @@ const browserToRuntimeHooks = (browser, {
     registerConsoleCallback,
     executeFile
   };
+};
+
+const isTargetClosedError = error => {
+  if (error.message.match(/^Protocol error \(.*?\): Target closed/)) {
+    return true;
+  }
+
+  if (error.message.match(/^Protocol error \(.*?\): Browser has been closed/)) {
+    return true;
+  }
+
+  return false;
 };
 
 const supportsDynamicImport = util.memoize(async () => {
@@ -8551,196 +8760,64 @@ const evalSource$2 = (code, href) => {
   return script.runInThisContext();
 };
 
-const serveExploringIndex = async ({
+const EXPLORING_HTML_RELATIVE_URL = "src/internal/exploring/exploring.html";
+const EXPLORING_CSS_RELATIVE_URL = "src/internal/exploring/exploring.css";
+const EXPLORING_JS_RELATIVE_URL = "src/internal/exploring/exploring.js";
+const SYSTEMJS_RELATIVE_URL = "src/internal/exploring/system.js";
+const exploringHtmlFileUrl = util.resolveUrl(EXPLORING_HTML_RELATIVE_URL, jsenvCoreDirectoryUrl);
+const exploringFileUrl = util.resolveUrl(EXPLORING_JS_RELATIVE_URL, jsenvCoreDirectoryUrl);
+const exploringCssFileUrl = util.resolveUrl(EXPLORING_CSS_RELATIVE_URL, jsenvCoreDirectoryUrl);
+const serveExploring = async (request, {
   projectDirectoryUrl,
-  htmlFileRelativeUrl,
-  explorableConfig
+  compileServerOrigin,
+  outDirectoryRelativeUrl,
+  compileServerGroupMap,
+  importMapFileRelativeUrl
 }) => {
-  const specifierMetaMap = util.metaMapToSpecifierMetaMap({
-    explorable: explorableConfig
-  });
-  const matchingFileResultArray = await util.collectFiles({
-    directoryUrl: projectDirectoryUrl,
-    specifierMetaMap,
-    predicate: ({
-      explorable
-    }) => explorable
-  });
-  const explorableRelativeUrlArray = matchingFileResultArray.map(({
-    relativeUrl
-  }) => relativeUrl);
-  const html = getBrowsingIndexPageHTML({
-    projectDirectoryUrl,
-    htmlFileRelativeUrl,
-    explorableRelativeUrlArray
-  });
+  const html = await util.readFile(exploringHtmlFileUrl);
+  const exploringFileRelativeUrl = util.urlToRelativeUrl(exploringFileUrl, projectDirectoryUrl); // use worst compileId to be sure it's compatible
+
+  const compileId = COMPILE_ID_OTHERWISE in compileServerGroupMap ? COMPILE_ID_OTHERWISE : getLastKey(compileServerGroupMap);
+  const compileDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/`;
+  const exploringFileCompiledUrl = util.resolveUrl(exploringFileRelativeUrl, compileDirectoryUrl);
+  const exploringCssRelativeUrl = util.urlToRelativeUrl(exploringCssFileUrl, projectDirectoryUrl);
+  const replacements = {
+    $COMPILE_SERVER_ORIGIN: compileServerOrigin,
+    $JSENV_DIRECTORY_RELATIVE_URL: util.urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl),
+    $STYLE_HREF: util.resolveUrl(exploringCssRelativeUrl, compileDirectoryUrl),
+    $COMPILE_SERVER_IMPORT_MAP_SRC: util.resolveUrl(importMapFileRelativeUrl, compileDirectoryUrl),
+    $SYSTEMJS_SCRIPT_SRC: util.resolveUrl(SYSTEMJS_RELATIVE_URL, compileServerOrigin),
+    $JSENV_EXPLORING_FILE: JSON.stringify(exploringFileCompiledUrl)
+  };
+  const body = Object.keys(replacements).reduce((previous, key) => {
+    const regex = new RegExp(escapeRegexpSpecialCharacters(key), "g");
+    const value = replacements[key];
+    return previous.replace(regex, value);
+  }, html);
   return {
     status: 200,
     headers: {
       "cache-control": "no-store",
       "content-type": "text/html",
-      "content-length": Buffer.byteLength(html)
+      "content-length": Buffer.byteLength(body)
     },
-    body: html
+    body
   };
 };
 
-const getBrowsingIndexPageHTML = ({
-  projectDirectoryUrl,
-  htmlFileRelativeUrl,
-  explorableRelativeUrlArray
-}) => {
-  return `<!doctype html>
-
-  <head>
-    <title>Exploring ${projectDirectoryUrl}</title>
-    <meta charset="utf-8" />
-  </head>
-
-  <body>
-    <main>
-      <h1>${projectDirectoryUrl}</h1>
-      <p>List of path to explore: </p>
-      <ul>
-        ${explorableRelativeUrlArray.map(relativeUrl => `<li><a href="${htmlFileRelativeUrl}?file=${relativeUrl}">${relativeUrl}</a></li>`).join("")}
-      </ul>
-    </main>
-  </body>
-  </html>`;
-};
-
-const serveBrowserSelfExecute = async ({
-  cancellationToken,
-  logger,
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  outDirectoryRelativeUrl,
-  compileServerOrigin,
-  compileServerImportMap,
-  importDefaultExtension,
-  projectFileRequestedCallback,
-  request,
-  babelPluginMap
-}) => {
-  const browserSelfExecuteTemplateFileUrl = util.resolveUrl("./src/internal/exploring/browserSelfExecuteTemplate.js", jsenvCoreDirectoryUrl);
-  const browserSelfExecuteDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}browser-self-execute/`;
-  const browserSelfExecuteDirectoryRemoteUrl = util.resolveDirectoryUrl(browserSelfExecuteDirectoryRelativeUrl, request.origin);
-  return server.firstService(() => {
-    const {
-      ressource,
-      headers,
-      origin
-    } = request; // "/.jsenv/browser-script.js" is written inside htmlFile
-
-    if (ressource === "/.jsenv/browser-script.js") {
-      if (!headers.referer) {
-        return {
-          status: 400,
-          statusText: `referer missing in request headers`
-        };
-      }
-
-      let url;
-
-      try {
-        url = new URL(headers.referer);
-      } catch (e) {
-        return {
-          status: 400,
-          statusText: `unexpected referer in request headers, must be an url and received ${headers.referer}`
-        };
-      }
-
-      const file = url.searchParams.get("file");
-
-      if (stringHasConcecutiveSlashes(file)) {
-        return {
-          status: 400,
-          statusText: `unexpected file in query string parameters, it contains consecutive slashes ${file}`
-        };
-      }
-
-      const browserSelfExecuteCompiledFileRemoteUrl = `${origin}/${browserSelfExecuteDirectoryRelativeUrl}${file}`;
-      return {
-        status: 307,
-        headers: {
-          location: browserSelfExecuteCompiledFileRemoteUrl,
-          vary: "referer"
-        }
-      };
-    }
-
-    return null;
-  }, () => {
-    const {
-      origin,
-      ressource,
-      method,
-      headers
-    } = request;
-    const requestUrl = `${origin}${ressource}`;
-
-    if (urlIsAsset(requestUrl)) {
-      return server.serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
-        method,
-        headers
-      });
-    }
-
-    if (requestUrl.startsWith(browserSelfExecuteDirectoryRemoteUrl)) {
-      const originalFileUrl = browserSelfExecuteTemplateFileUrl;
-      const compiledFileUrl = `${projectDirectoryUrl}${ressource.slice(1)}`;
-      return serveBundle({
-        cancellationToken,
-        logger,
-        projectDirectoryUrl,
-        originalFileUrl,
-        compiledFileUrl,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        compileServerImportMap,
-        importDefaultExtension,
-        format: "global",
-        projectFileRequestedCallback,
-        request,
-        babelPluginMap
-      });
-    }
-
-    return null;
-  });
-};
-
-const stringHasConcecutiveSlashes = string => {
-  let previousCharIsSlash = 0;
-  let i = 0;
-
-  while (i < string.length) {
-    const char = string[i];
-    i++;
-
-    if (char === "/") {
-      if (previousCharIsSlash) {
-        return true;
-      }
-
-      previousCharIsSlash = true;
-    } else {
-      previousCharIsSlash = false;
-    }
-  }
-
-  return false;
+const getLastKey = object => {
+  const keys = Object.keys(object);
+  return keys[keys.length - 1];
 };
 
 /* eslint-disable import/max-dependencies */
 const startExploring = async ({
   cancellationToken = util.createCancellationTokenForProcess(),
-  logLevel,
-  compileServerLogLevel = logLevel,
+  logLevel = "info",
+  compileServerLogLevel = "warn",
+  trackingLogLevel = "warn",
   htmlFileRelativeUrl,
   explorableConfig = jsenvExplorableConfig,
-  livereloading = false,
   watchConfig = {
     "./**/*": true,
     "./**/.git/": false,
@@ -8755,19 +8832,17 @@ const startExploring = async ({
   convertMap,
   compileGroupCount = 2,
   keepProcessAlive = true,
-  cors = true,
   protocol = "https",
-  privateKey,
-  certificate,
+  privateKey = server.jsenvPrivateKey,
+  certificate = server.jsenvCertificate,
   ip = "127.0.0.1",
   port = 0,
-  compileServerPort = 0,
-  // random available port
-  forcePort = false
+  compileServerPort = 0 // random available port
+
 }) => {
   return util.catchCancellation(async () => {
-    const logger$1 = logger.createLogger({
-      logLevel
+    const trackingLogger = logger.createLogger({
+      logLevel: trackingLogLevel
     });
     projectDirectoryUrl = assertProjectDirectoryUrl({
       projectDirectoryUrl
@@ -8782,21 +8857,110 @@ const startExploring = async ({
       throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`);
     }
 
-    const htmlFileUrl = util.resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl);
+    const htmlFileUrl = util.resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl); // normalize htmlFileRelativeUrl
+
+    htmlFileRelativeUrl = util.urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl);
     await util.assertFilePresence(htmlFileUrl);
     const stopExploringCancellationSource = cancellation.createCancellationSource();
     cancellationToken = cancellation.composeCancellationToken(cancellationToken, stopExploringCancellationSource.token);
+    const roomSet = new Set();
+    const trackerSet = new Set();
+    const projectFileRequested = createCallbackList();
+    const projectFileUpdated = createCallbackList();
+    const projectFileRemoved = createCallbackList();
 
-    let livereloadServerSentEventService = () => {
-      return {
-        status: 204
+    const livereloadServerSentEventService = request => {
+      const {
+        accept
+      } = request.headers;
+      if (!accept || !accept.includes("text/event-stream")) return null;
+      const room = server.createSSERoom();
+      roomSet.add(room);
+      room.start();
+      const entryFileRelativeUrl = request.ressource.slice(1);
+      trackingLogger.info(`track ${entryFileRelativeUrl}`);
+      const disconnectRoomFromFileChanges = connectRoomWithFileChanges(room, entryFileRelativeUrl);
+      cancellationToken.register(room.stop); // request.cancellationToken occurs when request is aborted
+      // maybe I should update @jsenv/server to occur also when request connection is closed
+      // https://nodejs.org/api/http.html#http_event_close_2
+
+      request.cancellationToken.register(() => {
+        trackingLogger.info(`stop tracking ${entryFileRelativeUrl}`);
+        disconnectRoomFromFileChanges();
+        roomSet.delete(room);
+        room.stop();
+      });
+      return room.connect(request.headers["last-event-id"]);
+    };
+
+    const connectRoomWithFileChanges = (room, mainRelativeUrl) => {
+      // setTimeout(() => {
+      //   room.sendEvent({
+      //     type: "file-changed",
+      //     data: "whatever",
+      //   })
+      // }, 200)
+      const dependencySet = new Set(); // mainRelativeUrl and htmlFileRelativeUrl will be detected by projectFileRequestedCallback
+
+      const tracker = {
+        mainRelativeUrl,
+        dependencySet
+      };
+      trackerSet.add(tracker);
+      const unregisterProjectFileRequestedCallback = projectFileRequested.register((relativeUrl, request) => {
+        const dependencyReport = reportDependency({
+          trackingLogger,
+          relativeUrl,
+          request,
+          mainRelativeUrl,
+          trackerSet
+        });
+
+        if (dependencyReport.dependency === false) {
+          trackingLogger.debug(`${relativeUrl} not a dependency of ${mainRelativeUrl} because ${dependencyReport.reason}`);
+        } else if (!dependencySet.has(relativeUrl)) {
+          trackingLogger.debug(`${relativeUrl} is a dependency of ${mainRelativeUrl} because ${dependencyReport.reason}`);
+          dependencySet.add(relativeUrl);
+        }
+      });
+      const unregisterProjectFileUpdatedCallback = projectFileUpdated.register(relativeUrl => {
+        if (dependencySet.has(relativeUrl)) {
+          room.sendEvent({
+            type: "file-changed",
+            data: relativeUrl
+          });
+        }
+      });
+      const unregisterProjectFileRemovedCallback = projectFileRemoved.register(relativeUrl => {
+        if (dependencySet.has(relativeUrl)) {
+          room.sendEvent({
+            type: "file-removed",
+            data: relativeUrl
+          });
+        }
+      });
+      return () => {
+        trackerSet.delete(tracker);
+        unregisterProjectFileRequestedCallback();
+        unregisterProjectFileUpdatedCallback();
+        unregisterProjectFileRemovedCallback();
       };
     };
 
-    let rawProjectFileRequestedCallback = () => {};
-
-    let projectFileRequestedCallback = () => {};
-
+    const mandatoryParamsForServerToCommunicate = {
+      protocol,
+      privateKey,
+      certificate,
+      ip,
+      cors: true
+    };
+    const corsParams = {
+      cors: true,
+      accessControlAllowRequestOrigin: true,
+      accessControlAllowRequestMethod: true,
+      accessControlAllowRequestHeaders: true,
+      accessControlAllowCredentials: true
+    };
     const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
@@ -8808,287 +8972,133 @@ const startExploring = async ({
       compileGroupCount,
       babelPluginMap,
       convertMap,
-      cors,
+      projectFileRequestedCallback: projectFileRequested.notify,
+      stopOnPackageVersionChange: true,
+      keepProcessAlive,
       compileServerProtocol: protocol,
       compileServerPrivateKey: privateKey,
       compileServerCertificate: certificate,
       compileServerIp: ip,
       compileServerPort,
-      projectFileRequestedCallback: value => {
-        // just to allow projectFileRequestedCallback to be redefined
-        projectFileRequestedCallback(value);
-      },
-      stopOnPackageVersionChange: true,
-      keepProcessAlive
+      ...corsParams
     });
-    const specifierMetaMapRelativeForExplorable = util.metaMapToSpecifierMetaMap({
-      explorable: explorableConfig
-    });
-    const specifierMetaMapForExplorable = util.normalizeSpecifierMetaMap(specifierMetaMapRelativeForExplorable, projectDirectoryUrl);
-
-    if (livereloading) {
-      const unregisterDirectoryLifecyle = util.registerDirectoryLifecycle(projectDirectoryUrl, {
-        watchDescription: { ...watchConfig,
-          [compileServer.jsenvDirectoryRelativeUrl]: false
-        },
-        updated: ({
-          relativeUrl
-        }) => {
-          if (projectFileSet.has(relativeUrl)) {
-            projectFileUpdatedCallback(relativeUrl);
-          }
-        },
-        removed: ({
-          relativeUrl
-        }) => {
-          if (projectFileSet.has(relativeUrl)) {
-            projectFileSet.delete(relativeUrl);
-            projectFileRemovedCallback(relativeUrl);
-          }
-        },
-        keepProcessAlive: false,
-        recursive: true
-      });
-      cancellationToken.register(unregisterDirectoryLifecyle);
-      const projectFileSet = new Set();
-      const roomMap = {};
-      const dependencyTracker = {};
-
-      const projectFileUpdatedCallback = relativeUrl => {
-        projectFileToAffectedRoomArray(relativeUrl).forEach(room => {
-          room.sendEvent({
-            type: "file-changed",
-            data: relativeUrl
-          });
-        });
-      };
-
-      const projectFileRemovedCallback = relativeUrl => {
-        projectFileToAffectedRoomArray(relativeUrl).forEach(room => {
-          room.sendEvent({
-            type: "file-removed",
-            data: relativeUrl
-          });
-        });
-      };
-
-      const projectFileToAffectedRoomArray = relativeUrl => {
-        const affectedRoomArray = [];
-        Object.keys(roomMap).forEach(mainRelativeUrl => {
-          if (!dependencyTracker.hasOwnProperty(mainRelativeUrl)) return;
-
-          if (relativeUrl === mainRelativeUrl || dependencyTracker[mainRelativeUrl].includes(relativeUrl)) {
-            affectedRoomArray.push(roomMap[mainRelativeUrl]);
-          }
-        });
-        return affectedRoomArray;
-      };
-
-      const trackDependency = ({
-        relativeUrl,
-        executionId
-      }) => {
-        if (executionId) {
-          // quand on voit main on marque tout ce qui existe actuallement
-          // comme plus dépendant ?
-          // mais si ce qui était la
-          if (dependencyTracker.hasOwnProperty(executionId)) {
-            const dependencyArray = dependencyTracker[executionId];
-
-            if (!dependencyArray.includes(dependencyTracker)) {
-              dependencyArray.push(relativeUrl);
-            }
-          } else {
-            dependencyTracker[executionId] = [relativeUrl];
-          }
-        } else {
-          Object.keys(dependencyTracker).forEach(executionId => {
-            trackDependency({
-              relativeUrl,
-              executionId
-            });
-          });
-        }
-      };
-
-      projectFileRequestedCallback = ({
-        relativeUrl,
-        request
-      }) => {
-        projectFileSet.add(relativeUrl);
-        const {
-          headers = {}
-        } = request;
-
-        if ("x-jsenv-execution-id" in headers) {
-          const executionId = headers["x-jsenv-execution-id"];
-          trackDependency({
-            relativeUrl,
-            executionId
-          });
-        } else if ("referer" in headers) {
-          const {
-            origin
-          } = request;
-          const {
-            referer
-          } = headers;
-
-          if (referer === origin || util.urlIsInsideOf(referer, origin)) {
-            const refererRelativeUrl = util.urlToRelativeUrl(referer, origin);
-            const refererFileUrl = `${projectDirectoryUrl}${refererRelativeUrl}`;
-
-            if (util.urlToMeta({
-              url: refererFileUrl,
-              specifierMetaMap: specifierMetaMapForExplorable
-            }).explorable) {
-              const executionId = refererRelativeUrl;
-              trackDependency({
-                relativeUrl,
-                executionId
-              });
-            } else {
-              Object.keys(dependencyTracker).forEach(executionId => {
-                if (executionId === refererRelativeUrl || dependencyTracker[executionId].includes(refererRelativeUrl)) {
-                  trackDependency({
-                    relativeUrl,
-                    executionId
-                  });
-                }
-              });
-            }
-          } else {
-            trackDependency({
-              relativeUrl
-            });
-          }
-        } else {
-          trackDependency({
-            relativeUrl
-          });
-        }
-      };
-
-      rawProjectFileRequestedCallback = ({
-        relativeUrl,
-        request
-      }) => {
-        // when it's the html file used to execute the files
-        if (relativeUrl === htmlFileRelativeUrl) {
-          dependencyTracker[relativeUrl] = [];
-        } else {
-          projectFileRequestedCallback({
-            relativeUrl,
-            request
-          });
-          projectFileSet.add(relativeUrl);
-        }
-      };
-
-      livereloadServerSentEventService = ({
-        request: {
-          ressource,
-          headers
-        }
-      }) => {
-        return getOrCreateRoomForRelativeUrl(ressource.slice(1)).connect(headers["last-event-id"]);
-      };
-
-      const getOrCreateRoomForRelativeUrl = relativeUrl => {
-        if (roomMap.hasOwnProperty(relativeUrl)) return roomMap[relativeUrl];
-        const room = server.createSSERoom();
-        room.start();
-        cancellationToken.register(room.stop);
-        roomMap[relativeUrl] = room;
-        return room;
-      };
-    }
-
     const {
       origin: compileServerOrigin,
-      compileServerImportMap,
       outDirectoryRelativeUrl,
-      jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl
-    } = compileServer; // dynamic data exists only to retrieve the compile server origin
-    // that can be dynamic
-    // otherwise the cached bundles would still target the previous compile server origin
+      compileServerGroupMap
+    } = compileServer; // to get a normalized importMapFileRelativeUrl
 
-    const jsenvDirectoryUrl = util.resolveUrl(compileServerJsenvDirectoryRelativeUrl, projectDirectoryUrl);
-    const browserDynamicDataFileUrl = util.resolveUrl("./browser-execute-dynamic-data.json", jsenvDirectoryUrl);
-    await util.writeFile(browserDynamicDataFileUrl, JSON.stringify(getBrowserExecutionDynamicData({
-      projectDirectoryUrl,
-      compileServerOrigin
-    }), null, "  "));
-
-    const service = request => server.firstService(() => {
-      const {
-        accept = ""
-      } = request.headers;
-
-      if (accept.includes("text/event-stream")) {
-        return livereloadServerSentEventService({
-          request
-        });
-      }
-
-      return null;
-    }, () => {
-      if (request.ressource === "/") {
-        return serveExploringIndex({
-          projectDirectoryUrl,
-          htmlFileRelativeUrl,
-          explorableConfig,
-          request
-        });
-      }
-
-      return null;
-    }, () => {
-      return serveBrowserSelfExecute({
-        cancellationToken,
-        logger: logger$1,
-        projectDirectoryUrl,
-        jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        compileServerImportMap,
-        importDefaultExtension,
-        projectFileRequestedCallback,
-        request,
-        babelPluginMap
-      });
-    }, () => {
-      const relativeUrl = request.ressource.slice(1);
-      const fileUrl = `${projectDirectoryUrl}${relativeUrl}`;
-      rawProjectFileRequestedCallback({
-        relativeUrl,
-        request
-      });
-      return server.serveFile(fileUrl, {
-        method: request.method,
-        headers: request.headers,
-        cacheStrategy: "etag"
-      });
-    });
+    importMapFileRelativeUrl = compileServer.importMapFileRelativeUrl; // NOTE: if exploring server port is taken
+    // compileServer remains listening
 
     const exploringServer = await server.startServer({
       cancellationToken,
       logLevel,
       serverName: "exploring server",
-      protocol,
-      privateKey,
-      certificate,
-      ip,
-      port,
-      forcePort,
+      requestToResponse: request => server.firstService( // get important info
+      async () => {
+        if (request.ressource === "/exploring.json" && request.method === "GET" && "x-jsenv-exploring" in request.headers) {
+          const {
+            browserRuntimeFileRelativeUrl,
+            sourcemapMainFileRelativeUrl,
+            sourcemapMappingFileRelativeUrl
+          } = getBrowserExecutionDynamicData({
+            projectDirectoryUrl,
+            compileServerOrigin
+          });
+          const data = {
+            projectDirectoryUrl,
+            jsenvDirectoryRelativeUrl: util.urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl),
+            compileServerOrigin,
+            outDirectoryRelativeUrl,
+            htmlFileRelativeUrl,
+            browserRuntimeFileRelativeUrl,
+            sourcemapMainFileRelativeUrl,
+            sourcemapMappingFileRelativeUrl,
+            explorableConfig
+          };
+          const json = JSON.stringify(data);
+          return {
+            status: 200,
+            headers: {
+              "cache-control": "no-store",
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(json)
+            },
+            body: json
+          };
+        }
+
+        return null;
+      }, // list explorable files
+      async () => {
+        if (request.ressource === "/explorables" && request.method === "POST" && "x-jsenv-exploring" in request.headers) {
+          const explorableConfig = JSON.parse(await server.readRequestBodyAsString(request.body));
+          const specifierMetaMapRelativeForExplorable = util.metaMapToSpecifierMetaMap({
+            explorable: explorableConfig
+          });
+          const specifierMetaMapForExplorable = util.normalizeSpecifierMetaMap(specifierMetaMapRelativeForExplorable, projectDirectoryUrl);
+          const matchingFileResultArray = await util.collectFiles({
+            directoryUrl: projectDirectoryUrl,
+            specifierMetaMap: specifierMetaMapForExplorable,
+            predicate: ({
+              explorable
+            }) => explorable
+          });
+          const explorableRelativeUrlArray = matchingFileResultArray.map(({
+            relativeUrl
+          }) => relativeUrl);
+          const json = JSON.stringify(explorableRelativeUrlArray);
+          return {
+            status: 200,
+            headers: {
+              "cache-control": "no-store",
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(json)
+            },
+            body: json
+          };
+        }
+
+        return null;
+      }, // eventsource
+      () => {
+        return livereloadServerSentEventService(request);
+      }, // exploring single page app
+      () => {
+        return serveExploring(request, {
+          projectDirectoryUrl,
+          compileServerOrigin,
+          outDirectoryRelativeUrl,
+          compileServerGroupMap,
+          htmlFileRelativeUrl,
+          importMapFileRelativeUrl,
+          explorableConfig
+        });
+      }),
       sendInternalErrorStack: true,
-      requestToResponse: service,
-      accessControlAllowRequestOrigin: true,
-      accessControlAllowRequestMethod: true,
-      accessControlAllowRequestHeaders: true,
-      accessControlAllowCredentials: true,
-      keepProcessAlive
+      keepProcessAlive,
+      port,
+      ...mandatoryParamsForServerToCommunicate
     });
+    const unregisterDirectoryLifecyle = util.registerDirectoryLifecycle(projectDirectoryUrl, {
+      watchDescription: { ...watchConfig,
+        [compileServer.jsenvDirectoryRelativeUrl]: false
+      },
+      updated: ({
+        relativeUrl
+      }) => {
+        projectFileUpdated.notify(relativeUrl);
+      },
+      removed: ({
+        relativeUrl
+      }) => {
+        projectFileRemoved.notify(relativeUrl);
+      },
+      keepProcessAlive: false,
+      recursive: true
+    });
+    cancellationToken.register(unregisterDirectoryLifecyle);
     compileServer.stoppedPromise.then(reason => {
       exploringServer.stop(reason);
     }, () => {});
@@ -9103,6 +9113,141 @@ const startExploring = async ({
     process.exitCode = 1;
     throw e;
   });
+};
+
+const createCallbackList = () => {
+  const callbackSet = new Set();
+
+  const register = callback => {
+    callbackSet.add(callback);
+    return () => {
+      callbackSet.delete(callback);
+    };
+  };
+
+  const notify = (...args) => {
+    callbackSet.forEach(callback => {
+      callback(...args);
+    });
+  };
+
+  return {
+    register,
+    notify
+  };
+};
+
+const reportDependency = ({
+  relativeUrl,
+  mainRelativeUrl,
+  request,
+  trackerSet
+}) => {
+  if (relativeUrl === mainRelativeUrl) {
+    return {
+      dependency: true,
+      reason: "it's main"
+    };
+  }
+
+  if (relativeUrlToMainRelativeUrl(relativeUrl) === mainRelativeUrl) {
+    return {
+      dependnecy: true,
+      reason: "it's html template"
+    };
+  }
+
+  if ("x-jsenv-execution-id" in request.headers) {
+    const executionId = request.headers["x-jsenv-execution-id"];
+
+    if (executionId === mainRelativeUrl) {
+      return {
+        dependency: true,
+        reason: "x-jsenv-execution-id request header"
+      };
+    }
+
+    return {
+      dependency: false,
+      reason: "x-jsenv-execution-id request header"
+    };
+  }
+
+  if ("referer" in request.headers) {
+    const {
+      origin
+    } = request;
+    const {
+      referer
+    } = request.headers; // referer is likely the exploringServer
+
+    if (referer !== origin && !util.urlIsInsideOf(referer, origin)) {
+      return {
+        dependency: false,
+        reason: "referer is an other origin"
+      };
+    } // here we know the referer is inside compileServer
+
+
+    const refererRelativeUrl = util.urlToRelativeUrl(referer, origin);
+
+    if (refererRelativeUrl) {
+      const mainRelativeUrlCandidate = relativeUrlToMainRelativeUrl(refererRelativeUrl);
+
+      if (mainRelativeUrlCandidate) {
+        // referer looks like **/*.html?file=*
+        if (mainRelativeUrlCandidate === mainRelativeUrl) {
+          return {
+            dependency: true,
+            reason: "referer main file is the same"
+          };
+        }
+
+        return {
+          dependency: false,
+          reason: "referer main file is different"
+        };
+      } // search if referer (file requesting this one) is tracked as being a dependency of main file
+      // in that case because the importer is a dependency the importee is also a dependency
+      // eslint-disable-next-line no-unused-vars
+
+
+      for (const tracker of trackerSet) {
+        if (tracker.mainRelativeUrl === mainRelativeUrl && tracker.dependencySet.has(refererRelativeUrl)) {
+          return {
+            dependency: true,
+            reason: "referer is a dependency"
+          };
+        }
+      }
+    }
+  }
+
+  return {
+    dependency: true,
+    reason: "it was requested"
+  };
+};
+
+const relativeUrlToMainRelativeUrl = relativeUrl => {
+  const url = new URL(relativeUrl, "file:///directory/");
+  const {
+    pathname
+  } = url;
+
+  if (!pathname.endsWith(`.html`)) {
+    return null;
+  }
+
+  const {
+    searchParams
+  } = url;
+
+  if (searchParams.has("file")) {
+    return searchParams.get("file");
+  }
+
+  return null;
 };
 
 exports.convertCommonJsWithBabel = convertCommonJsWithBabel;
