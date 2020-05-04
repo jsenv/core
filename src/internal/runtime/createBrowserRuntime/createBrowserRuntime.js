@@ -41,6 +41,7 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
     {
       collectCoverage,
       collectNamespace,
+      transferableNamespace = false,
       errorExposureInConsole = true,
       errorExposureInNotification = false,
       errorExposureInDocument = true,
@@ -60,10 +61,18 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
 
     let executionResult
     try {
-      const namespace = await browserSystem.import(specifier)
+      let namespace = await browserSystem.import(specifier)
+      if (collectNamespace) {
+        if (transferableNamespace) {
+          namespace = makeNamespaceTransferable(namespace)
+        }
+      } else {
+        namespace = undefined
+      }
+
       executionResult = {
         status: "completed",
-        namespace: collectNamespace ? namespace : undefined,
+        namespace,
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }
     } catch (error) {
@@ -98,6 +107,82 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
     executeFile,
   }
 }
+
+const makeNamespaceTransferable = (namespace) => {
+  const transferableNamespace = {}
+  Object.keys(namespace).forEach((key) => {
+    const value = namespace[key]
+    if (isTransferable(namespace[key])) {
+      transferableNamespace[key] = value
+    }
+  })
+  return transferableNamespace
+}
+
+// https://stackoverflow.com/a/32673910/2634179
+const isTransferable = (value) => {
+  const seenArray = []
+  const visit = () => {
+    if (typeof value === "function") return false
+
+    if (typeof value === "symbol") return false
+
+    if (value === null) return false
+
+    if (typeof value === "object") {
+      const constructorName = value.constructor.namespace
+
+      if (supportedTypes.includes(constructorName)) {
+        return true
+      }
+
+      const maybe = maybeTypes.includes(constructorName)
+      if (maybe) {
+        const visited = seenArray.includes(value)
+        if (visited) {
+          // we don't really know until we are done visiting the object
+          // implementing it properly means waiting for the recursion to be done
+          // let's just
+          return true
+        }
+        seenArray.push(value)
+
+        if (constructorName === "Array" || constructorName === "Object") {
+          return Object.keys(value).every((key) => isTransferable(value[key]))
+        }
+        if (constructorName === "Map") {
+          return (
+            [...value.keys()].every(isTransferable) && [...value.values()].every(isTransferable)
+          )
+        }
+        if (constructorName === "Set") {
+          return [...value.keys()].every(isTransferable)
+        }
+      }
+
+      // Error, DOM Node and others
+      return false
+    }
+    return true
+  }
+
+  return visit(value)
+}
+
+const supportedTypes = [
+  "Boolean",
+  "Number",
+  "String",
+  "Date",
+  "RegExp",
+  "Blob",
+  "FileList",
+  "ImageData",
+  "ImageBitmap",
+  "ArrayBuffer",
+]
+
+const maybeTypes = ["Array", "Object", "Map", "Set"]
 
 const unevalException = (value) => {
   return uneval(value)

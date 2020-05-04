@@ -124,6 +124,7 @@ export const pageFileExecution = {
           sourcemapMainFileRelativeUrl,
           sourcemapMappingFileRelativeUrl,
           collectNamespace: true,
+          transferableNamespace: true,
           collectCoverage: false,
           executionId: fileRelativeUrl,
           errorExposureInConsole: true,
@@ -227,13 +228,15 @@ const performIframeAction = (iframe, action, args, { cancellationToken, compileS
       if (origin !== compileServerOrigin) return
       const { data } = messageEvent
       if (typeof data !== "object" || data === null) return
+      if (data.action !== action) return
 
-      const { code, value } = data
-      jsenvLogger.debug(`< ${code}`, value)
-      if (code === `${action}-failure`) {
+      const { state, value } = data
+      jsenvLogger.debug(`< ${action} ${state}`, value)
+
+      if (state === `failure`) {
         window.removeEventListener("message", onMessage, false)
         reject(value)
-      } else if (code === `${action}-completion`) {
+      } else if (state === `completion`) {
         window.removeEventListener("message", onMessage, false)
         resolve(value)
       }

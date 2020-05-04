@@ -9,6 +9,7 @@ window.execute = async ({
   sourcemapMappingFileRelativeUrl,
   compileServerOrigin,
   collectNamespace,
+  transferableNamespace,
   collectCoverage,
   executionId,
   // do not log in the console
@@ -52,6 +53,7 @@ window.execute = async ({
 
   return executeFile(compiledFileRemoteUrl, {
     collectNamespace,
+    transferableNamespace,
     collectCoverage,
     executionId,
     errorExposureInConsole,
@@ -90,7 +92,7 @@ window.addEventListener(
 )
 
 const perform = async (messageEvent, fn, action) => {
-  notify(messageEvent, `${action}-will-start`)
+  notifyAction(messageEvent, action, "will-start")
 
   let value
   let error
@@ -103,12 +105,37 @@ const perform = async (messageEvent, fn, action) => {
   }
 
   if (error) {
-    notify(messageEvent, `${action}-failure`, value)
+    notifyAction(messageEvent, action, "failure", value)
   } else {
-    notify(messageEvent, `${action}-completion`, value)
+    notifyAction(messageEvent, action, "completion", value)
   }
 }
 
-const notify = (messageEvent, code, value) => {
-  messageEvent.source.postMessage({ code, value }, messageEvent.origin)
+const notifyAction = (messageEvent, action, state, value) => {
+  try {
+    messageEvent.source.postMessage(
+      {
+        action,
+        state,
+        value,
+      },
+      messageEvent.origin,
+    )
+  } catch (e) {
+    if (e.code !== DOMException.DATA_CLONE_ERR) {
+      throw e
+    }
+
+    // value cannot be serialized, give up sending it
+    messageEvent.source.postMessage(
+      {
+        action,
+        state,
+        cloneError: {
+          stack: e.stack,
+        },
+      },
+      messageEvent.origin,
+    )
+  }
 }
