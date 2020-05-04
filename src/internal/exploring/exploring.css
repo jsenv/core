@@ -22,11 +22,22 @@ main {
   position: relative;
 }
 
-main #page {
-  min-height: calc(100vh - 40px);
+main #page,
+main #page > * {
+  min-height: 100vh;
 }
 
-main #page > * {
+html[data-toolbar-visible] main {
+  padding-bottom: 40px;
+}
+
+html[data-toolbar-visible] main #page > * {
+  min-height: calc(100vh - 40px);
+  transition-duration: 400ms;
+  transition-property: min-height;
+}
+
+html[data-toolbar-visible] main #page {
   min-height: calc(100vh - 40px);
 }
 
@@ -68,10 +79,6 @@ aside[data-animate] #toolbar {
 
 html[data-toolbar-visible] aside {
   height: 40px;
-}
-
-html[data-toolbar-visible] main {
-  padding-bottom: 40px;
 }
 
 html[data-toolbar-visible] {
