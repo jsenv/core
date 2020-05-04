@@ -1,7 +1,4 @@
 article[data-page="file-list"] {
-  display: table;
-  width: 100%;
-  height: 100%;
   background: #1f262c;
   color: #97a0a0;
 }
@@ -32,7 +29,7 @@ h4 {
   padding: 0;
   margin: 0;
   overflow: auto;
-  max-height: 75vh;
+  max-height: 75vh; /* find a better way to make it responsive ? */
 }
 
 #explorables li {
