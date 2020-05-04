@@ -36,24 +36,39 @@ main {
   bottom: 0;
 }
 
-iframe {
-  transition-duration: 300ms;
-}
-
-#toolbar {
+aside {
   height: 0;
-  visibility: hidden; /* ensure toolbar children are not focusable when hidden */
   position: fixed;
   bottom: 0;
   width: 100%;
 }
 
-html[data-toolbar-visible] #toolbar {
-  height: 40px;
+aside #toolbar {
+  visibility: hidden; /* ensure toolbar children are not focusable when hidden */
+}
+
+html[data-toolbar-visible] aside #toolbar {
   visibility: visible;
 }
 
-html[data-toolbar-visible] #page {
+main {
+  transition-duration: 300ms;
+}
+
+aside[data-animate],
+/*
+it's important to put a transition duration of 300ms on toolbar too
+so that visibility: hidden wait to the transition to be done
+ */
+aside[data-animate] #toolbar {
+  transition-duration: 300ms;
+}
+
+html[data-toolbar-visible] aside {
+  height: 40px;
+}
+
+html[data-toolbar-visible] main {
   padding-bottom: 40px;
 }
 
@@ -61,19 +76,19 @@ html[data-toolbar-visible] {
   scroll-padding-bottom: 40px;
 }
 
-iframe {
+main iframe {
   border: none;
   width: 100%;
   height: 100%;
 }
 
-#toolbar button:focus,
-#toolbar a:focus {
+aside button:focus,
+aside a:focus {
   outline: none;
 }
 
-html[data-last-interaction="keyboard"] #toolbar button:focus,
-html[data-last-interaction="keyboard"] #toolbar a:focus {
+html[data-last-interaction="keyboard"] aside button:focus,
+html[data-last-interaction="keyboard"] aside a:focus {
   outline: 2px dotted #7aacfe;
   /* outline: 2px dotted -webkit-focus-ring-color; */
   outline-offset: -2px;
