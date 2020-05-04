@@ -4,9 +4,6 @@
 }
 
 .livereload-circle {
-  cx: 20;
-  cy: 20;
-  r: 5;
   stroke: black;
   stroke-width: 0;
 }
@@ -34,9 +31,6 @@
 }
 
 .livereload-ring {
-  cx: 20;
-  cy: 20;
-  r: 13;
   stroke: rgba(206, 206, 206, 0.46);
   stroke-width: 4;
   fill: transparent;
