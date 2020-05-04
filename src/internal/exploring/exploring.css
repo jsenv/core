@@ -53,7 +53,7 @@ html[data-toolbar-visible] #toolbar {
   visibility: visible;
 }
 
-html[data-toolbar-visible] iframe {
+html[data-toolbar-visible] #page {
   padding-bottom: 40px;
 }
 
