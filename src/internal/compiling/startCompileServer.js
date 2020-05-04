@@ -429,13 +429,9 @@ const generateImportMapForCompileServer = async ({
           }),
       // in case importMapFileRelativeUrl is not the default
       // redirect /importMap.json to the proper location
-      // well fuck it won't be compiled to something
-      // with this approach
       ...(importMapFileRelativeUrl === "importMap.json"
         ? {}
         : {
-            // but it means importMap.json is not
-            // gonna hit compile server
             "/importMap.json": `./${importMapFileRelativeUrl}`,
           }),
     },

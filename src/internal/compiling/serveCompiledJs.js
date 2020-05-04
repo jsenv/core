@@ -91,6 +91,18 @@ export const serveCompiledJs = async ({
 
   // send out/best/importMap.json untouched
   if (originalFileRelativeUrl === importMapFileRelativeUrl) {
+    if (
+      compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES ||
+      compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES
+    ) {
+      const otherwiseImportmapFileUrl = resolveUrl(
+        originalFileRelativeUrl,
+        `${projectDirectoryUrl}${outDirectoryRelativeUrl}otherwise/`,
+      )
+      // for otherwise-commonjs-bundle, server did not write importMap.json
+      // let's just return otherwise/importMapFileRelativeUrl
+      return serveFile(otherwiseImportmapFileUrl, { method, headers })
+    }
     return serveFile(compiledFileUrl, { method, headers })
   }
 
