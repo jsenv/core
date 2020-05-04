@@ -54,7 +54,7 @@ export const startExploring = async ({
   compileGroupCount = 2,
 
   keepProcessAlive = true,
-  protocol = "https",
+  protocol = "http",
   privateKey = jsenvPrivateKey,
   certificate = jsenvCertificate,
   ip = "127.0.0.1",
