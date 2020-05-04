@@ -39,6 +39,7 @@ h4 {
 
 #explorables li .execution-link {
   width: 100%;
+  word-break: break-all;
 }
 
 .execution-link {

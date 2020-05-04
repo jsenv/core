@@ -12,6 +12,15 @@ export const getNotificationPreference = () =>
 
 export const setNotificationPreference = (value) => notificationPreference.set(value)
 
+export const registerNotifications = () => {
+  const notifOnRadio = document.querySelector("#notif-on-radio")
+  const notifOffRadio = document.querySelector("#notif-off-radio")
+  notifOnRadio.checked = getNotificationPreference() === NOTIF_ON
+  notifOffRadio.checked = getNotificationPreference() === NOTIF_OFF
+  notifOnRadio.onclick = () => setNotificationPreference(NOTIF_ON)
+  notifOffRadio.onclick = () => setNotificationPreference(NOTIF_OFF)
+}
+
 export const notifyFileExecution = (execution, previousExecution) => {
   const notificationEnabled = getNotificationPreference() === NOTIF_ON
   if (!notificationEnabled) return

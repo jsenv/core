@@ -42,7 +42,7 @@
 
 #settings-box-header .settings-icon {
   fill: none;
-  stroke: #076570;
+  stroke: #24b1b0;
   stroke-width: 2;
   margin-right: 10px;
   width: 22px;
@@ -55,25 +55,32 @@
   display: inline-block;
   font-size: 20px;
   margin: 10px 0;
-  color: #076570;
+  color: #24b1b0;
 }
 
 label {
-  color: #24b1b0;
+  color: #a9a8a8;
   font-size: 14px;
   padding-bottom: 3px;
   display: block;
 }
 
 #settings-box .category-title {
-  margin-bottom: 8px;
-  color: #076570;
-  font-size: 17px;
+  margin-bottom: 12px;
+  color: #24b1b0;
+  font-size: 18px;
+  display: inline-block;
+}
+
+#settings-box .category-title svg {
+  fill: #24b1b0;
+  vertical-align: top;
+  margin-right: 5px;
 }
 
 #settings-box .category-subtitle {
   margin-bottom: 15px;
-  color: #848282;
+  color: #a9a8a8;
   font-size: 14px;
   max-width: 220px;
 }

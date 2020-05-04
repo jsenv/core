@@ -1,16 +1,5 @@
-import {
-  getNotificationPreference,
-  setNotificationPreference,
-  NOTIF_ON,
-  NOTIF_OFF,
-} from "../util/notification.js"
-import {
-  getThemePreference,
-  setThemePreference,
-  applyToolbarTheme,
-  DARK_THEME,
-  LIGHT_THEME,
-} from "../util/toolbarTheme.js"
+import { registerNotifications } from "../util/notification.js"
+import { registerToolbarTheme } from "../util/toolbarTheme.js"
 import { createPreference } from "../util/preferences.js"
 import { createHorizontalBreakpoint } from "../util/responsive.js"
 import { hideTooltip } from "./tooltip.js"
@@ -40,22 +29,8 @@ export const renderToolbar = (fileRelativeUrl) => {
 
   // settings
   document.querySelector("#settings-button").onclick = () => toggleSettingsBox()
-  // settings: notification
-  const notifOnRadio = document.querySelector("#notif-on-radio")
-  const notifOffRadio = document.querySelector("#notif-off-radio")
-  notifOnRadio.checked = getNotificationPreference() === NOTIF_ON
-  notifOffRadio.checked = getNotificationPreference() === NOTIF_OFF
-  notifOnRadio.onclick = () => setNotificationPreference(NOTIF_ON)
-  notifOffRadio.onclick = () => setNotificationPreference(NOTIF_OFF)
-
-  // settings: theme
-  const darkThemeRadio = document.querySelector("#dark-theme-radio")
-  const lightThemeRadio = document.querySelector("#light-theme-radio")
-  darkThemeRadio.checked = getThemePreference() === DARK_THEME
-  lightThemeRadio.checked = getThemePreference() === LIGHT_THEME
-  darkThemeRadio.onclick = () => setThemePreference(DARK_THEME)
-  lightThemeRadio.onclick = () => setThemePreference(LIGHT_THEME)
-  applyToolbarTheme()
+  registerNotifications()
+  registerToolbarTheme()
 
   // close button
   document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar()

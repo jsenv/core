@@ -213,7 +213,10 @@
               <div id="settings-box-body">
                 <div class="settings-box-item">
                   <div class="category-title">
-                    Notifications:
+                    <svg width="20px" height="20px">
+                      <use xlink:href="#notifIconSvgModel"></use>
+                    </svg>
+                    Notifications
                   </div>
                   <div class="category-subtitle">
                     Send system notification when a file execution fails or is fixed
@@ -235,7 +238,10 @@
                 </div>
                 <div class="settings-box-item">
                   <div class="category-title">
-                    Toolbar theme:
+                    <svg width="20px" height="20px" id="paletteIconSvg">
+                      <use xlink:href="#paletteIconSvgModel"></use>
+                    </svg>
+                    Toolbar theme
                   </div>
                   <div class="category-choices">
                     <div id="dark-theme">
@@ -248,6 +254,12 @@
                       <label>
                         <input type="radio" id="light-theme-radio" name="theme" value="light" />
                         Light
+                      </label>
+                    </div>
+                    <div id="jsenv-theme">
+                      <label>
+                        <input type="radio" id="jsenv-theme-radio" name="theme" value="jsenv" />
+                        jsenv
                       </label>
                     </div>
                   </div>
@@ -615,6 +627,19 @@
           <path
             d="M10 3H8v1.88l2 2zm6 6v3.88l1.8 1.8.2-.2V9c0-1.1-.9-2-2-2V3h-2v4h-3.88l2 2H16zM4.12 3.84L2.71 5.25 6 8.54v5.96L9.5 18v3h5v-3l.48-.48 4.47 4.47 1.41-1.41L4.12 3.84zm8.38 13.33V19h-1v-1.83L8 13.65v-3.11l5.57 5.57-1.07 1.06z"
           />
+        </svg>
+        <!-- notif icon -->
+        <svg id="notifIconSvgModel" viewBox="0 0 24 24">
+          <path
+            d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
+          />
+        </svg>
+        <!-- palette icon -->
+        <svg id="paletteIconSvgModel" viewBox="0 0 24 24">
+          <path
+            d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
+          />
+          <path d="M0 0h24v24H0z" fill="none" />
         </svg>
       </div>
     </aside>

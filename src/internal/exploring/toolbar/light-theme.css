@@ -13,6 +13,8 @@
 #toolbar[data-theme="light"] #file-list-link[data-active] .iconToolbar {
   fill: #dfe4e7;
 }
+
+/* loaders */
 #toolbar[data-theme="light"] #loader-icon {
   color: #404040;
 }
@@ -27,14 +29,25 @@
 }
 
 /* settings */
-#toolbar[data-theme="light"] #settings-box {
+#toolbar[data-theme="light"] #settings-box,
+#toolbar[data-theme="light"] #settings[data-active] button {
   background: #9bbfda;
 }
 #toolbar[data-theme="light"] .settings-box-item {
   background: #bad3e6;
 }
-#toolbar[data-theme="light"] #settings[data-active] button {
-  background: #9bbfda;
+#toolbar[data-theme="light"] #settings-box-header .settings-icon {
+  stroke: #076570;
+}
+#toolbar[data-theme="light"] #settings-box h3,
+#toolbar[data-theme="light"] #settings-box .category-title {
+  color: #076570;
+}
+#toolbar[data-theme="light"] #settings-box .category-title svg {
+  fill: #076570;
+}
+#toolbar[data-theme="light"] #settings-box .category-subtitle {
+  color: #848282;
 }
 #toolbar[data-theme="light"] label {
   color: #002e33;
@@ -56,7 +69,6 @@
 #toolbar[data-theme="light"] .tooltipAction {
   border-color: #fff;
 }
-
 #toolbar[data-theme="light"] .tooltip::after {
   border-color: rgb(138, 145, 154) transparent transparent transparent;
 }
