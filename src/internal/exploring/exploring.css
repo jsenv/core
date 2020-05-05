@@ -37,6 +37,14 @@ main {
   flex-grow: 1;
 }
 
+html[data-route="file-execution"] main {
+  /*
+  prevent scrollbar on windows due to iframe min-height:100%
+  creating a 1px scrollbar
+  */
+  overflow: hidden;
+}
+
 main > * {
   min-height: 100%;
 }

@@ -76,6 +76,7 @@ export const installNavigation = () => {
       return
     }
     currentRoute = nextRoute
+    document.documentElement.setAttribute("data-route", nextRoute.name)
   }
 
   handleNavigationEvent({
