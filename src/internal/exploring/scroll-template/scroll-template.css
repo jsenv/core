@@ -4,8 +4,8 @@ body {
 }
 
 main {
-  background: yellow;
-  min-height: 100%;
+  background: pink;
+  height: 100%;
   padding-bottom: 0;
 }
 
@@ -19,17 +19,24 @@ footer {
 }
 
 main,
+#page,
 footer {
   transition-duration: 300ms;
 }
 
 html[data-toolbar-visible] main {
-  padding-bottom: 40px;
-  min-height: calc(100vh - 40px);
+  height: calc(100vh - 40px);
 }
-
+html[data-toolbar-visible] #page {
+  padding-bottom: 40px;
+}
 html[data-toolbar-visible] footer {
   height: 40px;
+}
+
+#page {
+  min-height: 100%;
+  background: yellow;
 }
 
 #page-content {
