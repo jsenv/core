@@ -2,43 +2,96 @@
 @import "./page-error-navigation/page-error-navigation.css";
 @import "./page-file-list/page-file-list.css";
 
+/* reset stuff */
 * {
   box-sizing: border-box;
-}
-
-[data-force-hide] {
-  display: none !important;
 }
 
 html,
 body {
   margin: 0;
   padding: 0;
+}
+
+/* global utils */
+[data-force-hide] {
+  display: none !important;
+}
+
+html {
   font-family: arial, sans;
 }
 
+/* structure */
 main {
-  /* to ensure page loader takes the whole height */
-  position: relative;
+  position: relative; /* to ensure page loader takes the whole height */
+  min-height: 100vh;
+  padding-bottom: 0;
 }
 
-main #page,
 main #page > * {
   min-height: 100vh;
 }
 
+footer {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 0;
+}
+
+#toolbar {
+  visibility: hidden; /* ensure toolbar children are not focusable when hidden */
+}
+
+html[data-toolbar-visible] {
+  scroll-padding-bottom: 40px;
+}
+
 html[data-toolbar-visible] main {
   padding-bottom: 40px;
+  min-height: calc(100vh - 40px);
 }
 
-html[data-toolbar-visible] main #page > * {
+html[data-toolbar-visible] #page > * {
   min-height: calc(100vh - 40px);
-  transition-duration: 400ms;
+}
+
+html[data-toolbar-visible] footer {
+  height: 40px;
+}
+
+html[data-toolbar-visible] #toolbar {
+  visibility: visible;
+}
+
+html[data-toolbar-animation] main {
+  transition-property: padding-bottom, min-height;
+  transition-duration: 3000ms;
+}
+
+html[data-toolbar-animation] main #page > * {
   transition-property: min-height;
+  transition-duration: 3000ms;
 }
 
-html[data-toolbar-visible] main #page {
-  min-height: calc(100vh - 40px);
+html[data-toolbar-animation] footer {
+  transition-property: height;
+  transition-duration: 3000ms;
+}
+
+html[data-toolbar-animation] #toolbar {
+  transition-property: visibility;
+  transition-duration: 3000ms;
+  /*
+  it's important to put a transition duration of 300ms on toolbar too
+  so that visibility: hidden wait to the transition to be done
+  */
+}
+
+#toolbar[data-animate] {
+  /* animate theme switch */
+  transition-duration: 300ms;
 }
 
 #page-loader {
@@ -49,54 +102,18 @@ html[data-toolbar-visible] main #page {
   bottom: 0;
 }
 
-aside {
-  height: 0;
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-}
-
-aside #toolbar {
-  visibility: hidden; /* ensure toolbar children are not focusable when hidden */
-}
-
-html[data-toolbar-visible] aside #toolbar {
-  visibility: visible;
-}
-
-main {
-  transition-duration: 300ms;
-}
-
-aside[data-animate],
-/*
-it's important to put a transition duration of 300ms on toolbar too
-so that visibility: hidden wait to the transition to be done
- */
-aside[data-animate] #toolbar {
-  transition-duration: 300ms;
-}
-
-html[data-toolbar-visible] aside {
-  height: 40px;
-}
-
-html[data-toolbar-visible] {
-  scroll-padding-bottom: 40px;
-}
-
 main iframe {
   border: none;
   width: 100%;
 }
 
-aside button:focus,
-aside a:focus {
+footer button:focus,
+footer a:focus {
   outline: none;
 }
 
-html[data-last-interaction="keyboard"] aside button:focus,
-html[data-last-interaction="keyboard"] aside a:focus {
+html[data-last-interaction="keyboard"] footer button:focus,
+html[data-last-interaction="keyboard"] footer a:focus {
   outline: 2px dotted #7aacfe;
   /* outline: 2px dotted -webkit-focus-ring-color; */
   outline-offset: -2px;

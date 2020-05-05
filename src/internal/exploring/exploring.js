@@ -4,7 +4,8 @@ installNavigation()
 
 // enable toolbar transition only after first render
 setTimeout(() => {
-  document.querySelector("aside").setAttribute("data-animate", "")
+  document.documentElement.setAttribute("data-toolbar-animation", "")
+  document.querySelector("footer").setAttribute("data-animate", "")
 })
 
 // handle data-last-interaction attr on html (focusring)
