@@ -14,7 +14,7 @@ const animateNative = (node, keyframes, { cancellationToken, ...options } = {}) 
   })
 }
 
-export const canUseAnimation = () => false && typeof HTMLElement.prototype.animate === "function"
+export const canUseAnimation = () => typeof HTMLElement.prototype.animate === "function"
 
 export const animateElement = canUseAnimation() ? animateNative : animateFallback
 
