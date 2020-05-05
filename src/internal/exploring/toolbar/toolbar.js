@@ -1,6 +1,7 @@
 import { registerNotifications } from "../util/notification.js"
 import { registerToolbarTheme } from "../util/toolbarTheme.js"
 import { createPreference } from "../util/preferences.js"
+import { animateElement } from "../util/animation.js"
 import { createHorizontalBreakpoint } from "../util/responsive.js"
 import { hideTooltip } from "./tooltip.js"
 
@@ -15,9 +16,9 @@ export const renderToolbar = (fileRelativeUrl) => {
     : true
 
   if (toolbarVisible) {
-    showToolbar()
+    showToolbar({ animate: true })
   } else {
-    hideToolbar()
+    hideToolbar({ animate: true })
   }
 
   const toolbarElement = document.querySelector("#toolbar")
@@ -145,18 +146,57 @@ const toogleToolbar = () => {
   }
 }
 
-export const showToolbar = () => {
-  document.querySelector("#toolbar").removeAttribute("tabIndex")
+export const showToolbar = ({ animate = true } = {}) => {
   document.documentElement.setAttribute("data-toolbar-visible", "")
+
+  const main = document.querySelector("main")
+  const footer = document.querySelector("footer")
+  const page = document.querySelector("#page article")
+  if (animate) {
+    animateElement(main, [{ paddingBottom: 0 }, { paddingBottom: "40px" }], {
+      fill: "forwards",
+      duration: 500,
+    })
+    if (page) {
+      animateElement(main, [{ minHeight: "100vh" }, { minHeight: "calc(100vh - 40px)" }], {
+        fill: "forwards",
+        duration: 500,
+      })
+    }
+    animateElement(footer, [{ height: 0 }, { height: "40px" }], {
+      fill: "forwards",
+      duration: 500,
+    })
+  }
+
   toolbarVisibilityPreference.set(true)
 }
 
-export const hideToolbar = () => {
-  document.querySelector("#toolbar").setAttribute("tabIndex", -1)
+export const hideToolbar = ({ animate = true } = {}) => {
   hideTooltip(document.querySelector("#livereload-indicator"))
   hideTooltip(document.querySelector("#execution-indicator"))
   document.documentElement.removeAttribute("data-toolbar-visible")
   toolbarVisibilityPreference.set(false)
+
+  const main = document.querySelector("main")
+  const footer = document.querySelector("footer")
+  const page = document.querySelector("#page article")
+  if (animate) {
+    animateElement(main, [{ paddingBottom: "40px" }, { paddingBottom: 0 }], {
+      fill: "forwards",
+      duration: 500,
+    })
+    if (page) {
+      animateElement(main, [{ minHeight: "calc(100vh - 40px)" }, { minHeight: "100vh" }], {
+        fill: "forwards",
+        duration: 500,
+      })
+    }
+    animateElement(footer, [{ height: "40px" }, { height: 0 }], {
+      fill: "forwards",
+      duration: 500,
+    })
+  }
 
   // toolbarTrigger: display and register onclick
   const toolbarTrigger = document.querySelector("#toolbar-trigger")

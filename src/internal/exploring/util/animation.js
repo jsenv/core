@@ -14,11 +14,11 @@ const animateNative = (node, keyframes, { cancellationToken, ...options } = {}) 
   })
 }
 
-export const animate =
+export const animateElement =
   typeof HTMLElement.prototype.animate === "function" ? animateNative : animateFallback
 
 export const fadeIn = (node, options) =>
-  animate(
+  animateElement(
     node,
     [
       {
@@ -32,7 +32,7 @@ export const fadeIn = (node, options) =>
   )
 
 export const fadeOut = (node, options) =>
-  animate(
+  animateElement(
     node,
     [
       {
@@ -79,7 +79,7 @@ export const move = (fromNode, toNode, options) => {
   const translate = `translate(${left}px, ${top}px)`
 
   // animate new element
-  return animate(
+  return animateElement(
     copy,
     [
       {
