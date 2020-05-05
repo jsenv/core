@@ -1,7 +1,6 @@
 import { registerNotifications } from "../util/notification.js"
 import { registerToolbarTheme } from "../util/toolbarTheme.js"
 import { createPreference } from "../util/preferences.js"
-import { animateElement } from "../util/animation.js"
 import { createHorizontalBreakpoint } from "../util/responsive.js"
 import { hideTooltip } from "./tooltip.js"
 
@@ -16,9 +15,9 @@ export const renderToolbar = (fileRelativeUrl) => {
     : true
 
   if (toolbarVisible) {
-    showToolbar()
+    showToolbar({ animate: false })
   } else {
-    hideToolbar()
+    hideToolbar({ animate: false })
   }
 
   const toolbarElement = document.querySelector("#toolbar")
@@ -146,58 +145,26 @@ const toogleToolbar = () => {
   }
 }
 
-export const showToolbar = ({ animate = false } = {}) => {
-  document.documentElement.setAttribute("data-toolbar-visible", "")
-
-  const main = document.querySelector("main")
-  const footer = document.querySelector("footer")
-  const page = document.querySelector("#page>*:first-child")
-  if (animate) {
-    animateElement(main, [{ paddingBottom: 0 }, { paddingBottom: "40px" }], {
-      fill: "both",
-      duration: 500,
-    })
-    if (page) {
-      animateElement(page, [{ minHeight: "100vh" }, { minHeight: "calc(100vh - 40px)" }], {
-        fill: "both",
-        duration: 500,
-      })
-    }
-    animateElement(footer, [{ height: 0 }, { height: "40px" }], {
-      fill: "both",
-      duration: 500,
-    })
-  }
-
+export const showToolbar = ({ animate = true } = {}) => {
   toolbarVisibilityPreference.set(true)
+  if (animate) {
+    document.documentElement.setAttribute("data-toolbar-animation", "")
+  } else {
+    document.documentElement.removeAttribute("data-toolbar-animation")
+  }
+  document.documentElement.setAttribute("data-toolbar-visible", "")
 }
 
-export const hideToolbar = ({ animate = false } = {}) => {
+export const hideToolbar = ({ animate = true } = {}) => {
   hideTooltip(document.querySelector("#livereload-indicator"))
   hideTooltip(document.querySelector("#execution-indicator"))
-  document.documentElement.removeAttribute("data-toolbar-visible")
   toolbarVisibilityPreference.set(false)
-
-  const main = document.querySelector("main")
-  const footer = document.querySelector("footer")
-  const page = document.querySelector("#page >*:first-child")
   if (animate) {
-    animateElement(main, [{ paddingBottom: "40px" }, { paddingBottom: 0 }], {
-      fill: "both",
-      duration: 500,
-    })
-    if (page) {
-      console.log(page)
-      animateElement(page, [{ minHeight: "calc(100vh - 40px)" }, { minHeight: "100vh" }], {
-        fill: "both",
-        duration: 500,
-      })
-    }
-    animateElement(footer, [{ height: "40px" }, { height: 0 }], {
-      fill: "both",
-      duration: 500,
-    })
+    document.documentElement.setAttribute("data-toolbar-animation", "")
+  } else {
+    document.documentElement.removeAttribute("data-toolbar-animation")
   }
+  document.documentElement.removeAttribute("data-toolbar-visible")
 
   // toolbarTrigger: display and register onclick
   const toolbarTrigger = document.querySelector("#toolbar-trigger")

@@ -14,8 +14,9 @@ const animateNative = (node, keyframes, { cancellationToken, ...options } = {}) 
   })
 }
 
-export const animateElement =
-  typeof HTMLElement.prototype.animate === "function" ? animateNative : animateFallback
+export const canUseAnimation = () => false && typeof HTMLElement.prototype.animate === "function"
+
+export const animateElement = canUseAnimation() ? animateNative : animateFallback
 
 export const fadeIn = (node, options) =>
   animateElement(
@@ -106,5 +107,135 @@ export const move = (fromNode, toNode, options) => {
     options,
   ).then(() => {
     div.parentNode.removeChild(div)
+  })
+}
+
+// the whole point of this toolbar animation wass to flight a visual imperfection when it's done by css transition.
+// This imperfection is a white line sometimes flickering at the bottom of the page.
+// It got fixed by removing the usage of calc(100vh - 40px)
+// It was hapenning in chrome, safari but not inside Firefox
+// I assume it's because Firefox does not read parent element min-height while
+// chrome use it to compute min-height: 100%
+export const createToolbarAnimation = () => {
+  const collapsedState = {
+    "#page": { paddingBottom: 0 },
+    "footer": { height: 0 },
+    "#toolbar": { visibility: "hidden" },
+  }
+  const expandedState = {
+    "#page": { paddingBottom: "40px" },
+    "footer": { height: "40px" },
+    "#toolbar": { visibility: "visible" },
+  }
+  const expandTransition = transit(collapsedState, expandedState, { duration: 300 })
+
+  const expand = () => {
+    expandTransition.play()
+  }
+
+  const collapse = () => {
+    expandTransition.reverse()
+  }
+
+  return { expand, collapse }
+}
+
+const transit = (
+  fromState,
+  toState,
+  { commitStyles = true, fill = "both", duration = 300 } = {},
+) => {
+  const steps = []
+  Object.keys(fromState).forEach((selector) => {
+    const fromStyles = {}
+    const toStyles = {}
+    const element = document.querySelector(selector)
+
+    const keyframes = []
+    const fromProperties = fromState[selector]
+    const toProperties = toState[selector]
+    Object.keys(fromProperties).forEach((propertyName) => {
+      const from = fromProperties[propertyName]
+      const to = toProperties[propertyName]
+      fromStyles[propertyName] = from
+      toStyles[propertyName] = to
+      keyframes.push(
+        {
+          [propertyName]: from,
+        },
+        {
+          [propertyName]: to,
+        },
+      )
+    })
+
+    let animation
+    if (canUseAnimation()) {
+      const effect = new KeyframeEffect(element, keyframes, { fill, duration })
+      animation = new Animation(effect)
+    } else {
+      animation = {
+        playbackRate: 1,
+        play: () => {
+          animation.onfinish()
+        },
+        reverse: () => {
+          animation.playbackRate = -1
+          animation.onfinish()
+        },
+        onfinish: () => {},
+      }
+    }
+
+    steps.push({
+      element,
+      animation,
+      fromStyles,
+      toStyles,
+    })
+  })
+
+  const play = async () => {
+    await Promise.all(
+      steps.map(({ animation, element, toStyles }) => {
+        return new Promise((resolve) => {
+          animation.onfinish = () => {
+            if (commitStyles) {
+              setStyles(element, toStyles)
+            }
+            resolve()
+          }
+          if (animation.playbackRate === -1) {
+            animation.reverse()
+          } else {
+            animation.play()
+          }
+        })
+      }),
+    )
+  }
+
+  const reverse = async () => {
+    await Promise.all(
+      steps.map(({ animation, element, fromStyles }) => {
+        return new Promise((resolve) => {
+          animation.onfinish = () => {
+            if (commitStyles) {
+              setStyles(element, fromStyles)
+            }
+            resolve()
+          }
+          animation.reverse()
+        })
+      }),
+    )
+  }
+
+  return { play, reverse }
+}
+
+const setStyles = (element, styles) => {
+  Object.keys(styles).forEach((styleName) => {
+    element.style[styleName] = styles[styleName]
   })
 }

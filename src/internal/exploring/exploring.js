@@ -4,7 +4,6 @@ installNavigation()
 
 // enable toolbar transition only after first render
 setTimeout(() => {
-  document.documentElement.setAttribute("data-toolbar-animation", "")
   document.querySelector("footer").setAttribute("data-animate", "")
 })
 
