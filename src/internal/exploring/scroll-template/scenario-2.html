@@ -1,0 +1,32 @@
+<html data-toolbar-visible>
+  <head>
+    <title>Scenario 2</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="./scroll-template.css" />
+  </head>
+
+  <body>
+    <main>
+      <button id="toggle">Toggle toolbar</button>
+      <script>
+        document.getElementById("toggle").onclick = () => {
+          const html = document.documentElement
+          if (html.hasAttribute("data-toolbar-visible")) {
+            html.removeAttribute("data-toolbar-visible")
+          } else {
+            html.setAttribute("data-toolbar-visible", "")
+          }
+        }
+      </script>
+      <div id="page-container">
+        <div id="page-content" style="height: 100vh;">
+          Page content top
+          <div id="page-bottom">Page content bottom</div>
+        </div>
+      </div>
+    </main>
+    <aside>
+      <div style="height: 40px; background: orange;">Toolbar content</div>
+    </aside>
+  </body>
+</html>

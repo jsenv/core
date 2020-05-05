@@ -1,0 +1,58 @@
+body {
+  padding: 0;
+  margin: 0;
+}
+
+main {
+  padding-bottom: 0;
+}
+
+#toggle {
+  position: fixed;
+  z-index: 1;
+  right: 0;
+  top: 0;
+}
+
+main #page-container {
+  min-height: 100vh;
+  background: yellow;
+}
+
+main #page-content {
+  background: green;
+  position: relative;
+}
+
+main #page-bottom {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+}
+
+aside {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  background: blue;
+  height: 0;
+  width: 100%;
+}
+
+main,
+aside,
+main #page-container {
+  transition-duration: 300ms;
+}
+
+html[data-toolbar-visible] #page-container {
+  min-height: calc(100vh - 40px);
+}
+
+html[data-toolbar-visible] main {
+  padding-bottom: 40px;
+}
+
+html[data-toolbar-visible] aside {
+  height: 40px;
+}
