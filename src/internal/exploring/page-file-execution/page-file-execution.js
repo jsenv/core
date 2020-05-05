@@ -1,4 +1,8 @@
-import { createCancellationSource, composeCancellationToken } from "@jsenv/cancellation"
+import {
+  createCancellationSource,
+  composeCancellationToken,
+  isCancelError,
+} from "@jsenv/cancellation"
 import { memoize } from "../../memoize.js"
 import { createLivereloading } from "../livereloading/livereloading.js"
 import { applyLivereloadIndicator } from "../toolbar/livereload-indicator.js"
@@ -38,7 +42,19 @@ export const pageFileExecution = {
     let previousExecution
     let currentExecution
     let executionPlaceholder = document.createElement("div")
+
     const execute = async (fileRelativeUrl) => {
+      try {
+        return await performExecution(fileRelativeUrl)
+      } catch (e) {
+        if (isCancelError(e)) {
+          return e
+        }
+        throw e
+      }
+    }
+
+    const performExecution = async (fileRelativeUrl) => {
       // we must wait for the page to be in the DOM because iframe will
       // replace placeHolder element
       await mountPromise
