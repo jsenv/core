@@ -4,33 +4,12 @@ body {
 }
 
 main {
+  background: yellow;
+  min-height: 100%;
   padding-bottom: 0;
 }
 
-#toggle {
-  position: fixed;
-  z-index: 1;
-  right: 0;
-  top: 0;
-}
-
-main #page-container {
-  min-height: 100vh;
-  background: yellow;
-}
-
-main #page-content {
-  background: green;
-  position: relative;
-}
-
-main #page-bottom {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-}
-
-aside {
+footer {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -40,19 +19,33 @@ aside {
 }
 
 main,
-aside,
-main #page-container {
+footer {
   transition-duration: 300ms;
-}
-
-html[data-toolbar-visible] #page-container {
-  min-height: calc(100vh - 40px);
 }
 
 html[data-toolbar-visible] main {
   padding-bottom: 40px;
+  min-height: calc(100vh - 40px);
 }
 
-html[data-toolbar-visible] aside {
+html[data-toolbar-visible] footer {
   height: 40px;
+}
+
+#page-content {
+  background: green;
+  position: relative;
+}
+
+#page-bottom {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+}
+
+#toggle {
+  position: fixed;
+  z-index: 1;
+  right: 0;
+  top: 0;
 }
