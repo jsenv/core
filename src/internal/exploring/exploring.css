@@ -25,70 +25,69 @@ html {
 /* structure */
 main {
   position: relative; /* to ensure page loader takes the whole height */
-  /* min-height: 100vh; */
-  /* padding-bottom: 0; */
+  height: 100%;
 }
 
-main #page > * {
-  min-height: 100vh;
+#page,
+#page > * {
+  min-height: 100%;
 }
 
 footer {
   position: fixed;
   bottom: 0;
   width: 100%;
+  height: 0;
 }
 
 #toolbar {
-  /* visibility: hidden; */
   /* ensure toolbar children are not focusable when hidden */
+  visibility: hidden;
 }
 
 html[data-toolbar-visible] {
   scroll-padding-bottom: 40px;
 }
 
-/* html[data-toolbar-visible] main {
-  padding-bottom: 40px;
-  min-height: calc(100vh - 40px);
+html[data-toolbar-visible] main {
+  height: calc(100vh - 40px);
 }
-*/
 
-/* html[data-toolbar-visible] #page > * {
-  min-height: calc(100vh - 40px);
+html[data-toolbar-visible] #page {
+  padding-bottom: 40px;
 }
 
 html[data-toolbar-visible] footer {
   height: 40px;
-} */
+}
 
-/* html[data-toolbar-visible] #toolbar {
+html[data-toolbar-visible] #toolbar {
   visibility: visible;
 }
 
 html[data-toolbar-animation] main {
-  transition-property: padding-bottom, min-height;
-  transition-duration: 2000ms;
+  transition-property: height;
+  transition-duration: 3000ms;
 }
 
-html[data-toolbar-animation] main #page > * {
-  transition-property: min-height;
-  transition-duration: 2000ms;
+html[data-toolbar-animation] #page {
+  transition-property: padding-bottom;
+  transition-duration: 3000ms;
 }
 
 html[data-toolbar-animation] footer {
   transition-property: height;
-  transition-duration: 2000ms;
+  transition-duration: 3000ms;
 }
 
 html[data-toolbar-animation] #toolbar {
   transition-property: visibility;
-  transition-duration: 2000ms;
-} */
+  transition-duration: 3000ms;
+}
 
-/* #toolbar[data-animate] {
+#toolbar[data-animate] {
   transition-duration: 300ms;
-} */
+}
 
 #page-loader {
   position: absolute;
@@ -101,6 +100,7 @@ html[data-toolbar-animation] #toolbar {
 main iframe {
   border: none;
   width: 100%;
+  height: 100%;
 }
 
 footer button:focus,
