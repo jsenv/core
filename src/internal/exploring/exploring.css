@@ -1,3 +1,4 @@
+@import "./navigation/navigation.css";
 @import "./toolbar/toolbar.css";
 @import "./page-error-navigation/page-error-navigation.css";
 @import "./page-file-list/page-file-list.css";
@@ -47,14 +48,6 @@ html[data-route="file-execution"] main {
 
 main > * {
   min-height: 100%;
-}
-
-#page-loader {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
 }
 
 main > iframe {

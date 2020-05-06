@@ -1,0 +1,10 @@
+#page-loader {
+  visibility: hidden;
+  position: fixed; /* position fixed in case there is scrollbar the loader remains visible */
+  display: block;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: auto; /* prevent interacting with page that is being navigated away */
+}

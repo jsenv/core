@@ -1,14 +1,12 @@
 import { createCancellationSource, isCancelError } from "@jsenv/cancellation"
 import { createPromiseAndHooks } from "../util/util.js"
-import { fadeIn, fadeOut } from "../util/animation.js"
+import { transit } from "../util/animation.js"
 import { renderToolbar } from "../toolbar/toolbar.js"
 import { pageErrorNavigation } from "../page-error-navigation/page-error-navigation.js"
 import { pageFileList } from "../page-file-list/page-file-list.js"
 import { pageFileExecution } from "../page-file-execution/page-file-execution.js"
 
 const pageCandidates = [pageErrorNavigation, pageFileList, pageFileExecution]
-
-const LOADER_FADING_DURATION = 300
 
 const defaultPage = {
   name: "default",
@@ -26,6 +24,17 @@ const defaultPage = {
 
 const pageContainer = document.querySelector("#page")
 const pageLoader = document.querySelector("#page-loader")
+const pageLoaderFading = transit(
+  {
+    "#page-loader": { visibility: "hidden", opacity: 0 },
+    "#page": { visibility: "visible" },
+  },
+  {
+    "#page-loader": { visibility: "visible", opacity: 1 },
+    "#page": { visibility: "hidden" },
+  },
+  { duration: 300 },
+)
 
 export const installNavigation = () => {
   let navigationCancellationSource = createCancellationSource()
@@ -121,20 +130,13 @@ export const installNavigation = () => {
 }
 
 const performNavigation = async (route, nextRoute, { cancellationToken }) => {
+  // the only issue with css transition is that when navigation is very fast
+  // the opacity transition might feel broken, to be tested
+
   // while loading we will keep current page elements in the DOM
   // so that the page dimensions are preserved
-
-  // make them able to interact using an absolute div on top of them
-  pageLoader.style.display = "block"
-  pageLoader.style.pointerEvents = "auto"
-  const pageLoaderFadeinAnimation = fadeIn(pageLoader, {
-    cancellationToken,
-    duration: LOADER_FADING_DURATION,
-  })
-  pageLoaderFadeinAnimation.then(() => {
-    pageContainer.style.visibility = "hidden"
-  })
-
+  document.documentElement.setAttribute("data-route-leaving", "")
+  const fadeinPromise = pageLoaderFading.play()
   const mountPromise = createPromiseAndHooks()
   const navigationResult = await nextRoute.navigate({
     ...nextRoute,
@@ -142,10 +144,12 @@ const performNavigation = async (route, nextRoute, { cancellationToken }) => {
     mountPromise,
   })
   Object.assign(nextRoute, navigationResult)
-  await pageLoaderFadeinAnimation
+  document.documentElement.removeAttribute("data-route-leaving")
   if (cancellationToken.cancellationRequested) {
+    pageLoaderFading.reverse()
     return
   }
+  await fadeinPromise
 
   // inject next page element
   pageContainer.innerHTML = ""
@@ -159,15 +163,8 @@ const performNavigation = async (route, nextRoute, { cancellationToken }) => {
   if (nextRoute.title) {
     document.title = nextRoute.title
   }
-  pageContainer.style.visibility = "visible"
-  pageLoader.style.pointerEvents = "none"
-  const pageLoaderFadeoutAnimation = fadeOut(pageLoader, {
-    cancellationToken,
-    duration: LOADER_FADING_DURATION,
-  })
-  pageLoaderFadeoutAnimation.then(() => {
-    pageLoader.style.display = "none"
-  })
+
+  pageLoaderFading.reverse()
 }
 
 const isClickToOpenTab = (clickEvent) => {

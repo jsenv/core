@@ -140,7 +140,7 @@ export const createToolbarAnimation = () => {
   return { expand, collapse }
 }
 
-const transit = (
+export const transit = (
   fromState,
   toState,
   { commitStyles = true, fill = "both", duration = 300 } = {},
@@ -159,15 +159,8 @@ const transit = (
       const to = toProperties[propertyName]
       fromStyles[propertyName] = from
       toStyles[propertyName] = to
-      keyframes.push(
-        {
-          [propertyName]: from,
-        },
-        {
-          [propertyName]: to,
-        },
-      )
     })
+    keyframes.push(fromStyles, toStyles)
 
     let animation
     if (canUseAnimation()) {
