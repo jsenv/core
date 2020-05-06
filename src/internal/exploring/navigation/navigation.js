@@ -1,5 +1,9 @@
-import { createCancellationSource, isCancelError } from "@jsenv/cancellation"
-import { createPromiseAndHooks } from "../util/util.js"
+import {
+  createCancellationSource,
+  isCancelError,
+  composeCancellationToken,
+} from "@jsenv/cancellation"
+import { moveElement } from "../util/util.js"
 import { transit } from "../util/animation.js"
 import { renderToolbar } from "../toolbar/toolbar.js"
 import { pageErrorNavigation } from "../page-error-navigation/page-error-navigation.js"
@@ -10,28 +14,43 @@ const pageCandidates = [pageErrorNavigation, pageFileList, pageFileExecution]
 
 const defaultPage = {
   name: "default",
-  naviguate: ({ cancellationToken }) => {
-    cancellationToken.register(({ reason }) => {
-      const { page, pageLoader } = reason
-      pageLoader.style.backgroundColor = page === pageFileList ? "#1f262c" : "white"
-    })
+  navigate: ({ navigationCancellationToken }) => {
+    // cancellationToken.register(({ reason }) => {
+    //   const { page, pageLoader } = reason
+    //   pageLoader.style.backgroundColor = page === pageFileList ? "#1f262c" : "white"
+    // })
     return {
       title: document.title,
-      element: document.querySelector("[data-page=default]"),
+      load: () => {
+        return {
+          pageElement: document.querySelector("[data-page=default]"),
+        }
+      },
     }
   },
 }
 
 const pageContainer = document.querySelector("#page")
+const nextPageContainer = document.querySelector("#next-page")
 const pageLoader = document.querySelector("#page-loader")
-const pageLoaderFading = transit(
+const pageLoaderFadein = transit(
   {
     "#page-loader": { visibility: "hidden", opacity: 0 },
-    "#page": { visibility: "visible" },
   },
   {
-    "#page-loader": { visibility: "visible", opacity: 1 },
-    "#page": { visibility: "hidden" },
+    "#page-loader": { visibility: "visible", opacity: 0.2 },
+  },
+  { duration: 300 },
+)
+// we should also animate eventual page size transition
+// (if the page becomes bigger smaller, the height of #page changes)
+// if so let's handle in a separate transition for now
+const pageContainerFadeout = transit(
+  {
+    "#page": { opacity: 1 },
+  },
+  {
+    "#page": { opacity: 0 },
   },
   { duration: 300 },
 )
@@ -43,7 +62,7 @@ export const installNavigation = () => {
     url: "", // no url for this route it's an abstract route
     page: defaultPage,
     ...defaultPage,
-    ...defaultPage.naviguate({ cancellationToken: navigationCancellationSource.token }),
+    ...defaultPage.navigate({ cancellationToken: navigationCancellationSource.token }),
   }
   let currentRoute = defaultRoute
 
@@ -63,11 +82,11 @@ export const installNavigation = () => {
 
     navigationCancellationSource.cancel({ ...nextRoute, pageLoader })
     navigationCancellationSource = createCancellationSource()
-    const cancellationToken = navigationCancellationSource.token
+    const navigationCancellationToken = navigationCancellationSource.token
 
     try {
       await performNavigation(currentRoute, nextRoute, {
-        cancellationToken,
+        navigationCancellationToken,
       })
     } catch (e) {
       if (isCancelError(e)) return
@@ -129,42 +148,82 @@ export const installNavigation = () => {
   }
 }
 
-const performNavigation = async (route, nextRoute, { cancellationToken }) => {
-  // the only issue with css transition is that when navigation is very fast
-  // the opacity transition might feel broken, to be tested
+const performNavigation = async (route, nextRoute, { navigationCancellationToken }) => {
+  let fadeinPromise = pageLoaderFadein.play()
+  let page
+  let loadAttempt
+  let previousPageCleanupElementAfterRemove = () => {}
+  const loadPage = async ({ reloadFlag } = {}) => {
+    if (loadAttempt) {
+      loadAttempt.cancel({ reloadFlag })
+    }
+    const loadCancellationSource = createCancellationSource()
+    const loadCancellationToken = composeCancellationToken(
+      navigationCancellationToken,
+      loadCancellationSource.token,
+    )
+    loadAttempt = {
+      cancel: loadCancellationSource.cancel,
+    }
+    const {
+      pageElement,
+      mutatePageElementBeforeDisplay,
+      cleanupPageElementAfterRemove = () => {},
+    } = await page.load({
+      loadCancellationToken,
+    })
+    if (loadCancellationToken.cancellationRequested) {
+      return
+    }
 
-  // while loading we will keep current page elements in the DOM
-  // so that the page dimensions are preserved
-  document.documentElement.setAttribute("data-route-leaving", "")
-  const fadeinPromise = pageLoaderFading.play()
-  const mountPromise = createPromiseAndHooks()
-  const navigationResult = await nextRoute.navigate({
+    // replace current page with new page
+    nextPageContainer.appendChild(pageElement)
+    if (mutatePageElementBeforeDisplay) {
+      await mutatePageElementBeforeDisplay()
+    }
+    // remove loader because it's no longer needed
+    pageLoaderFadein.reverse()
+    if (loadCancellationToken.cancellationRequested) {
+      return
+    }
+    // fadeout current page
+    await pageContainerFadeout.play()
+    if (loadCancellationToken.cancellationRequested) {
+      pageContainerFadeout.reverse()
+      return
+    }
+    // replace current page with new page
+    pageContainer.innerHTML = ""
+    previousPageCleanupElementAfterRemove()
+    moveElement(pageElement, nextPageContainer, pageContainer)
+    previousPageCleanupElementAfterRemove = cleanupPageElementAfterRemove
+    // fadein new page
+    pageContainerFadeout.reverse()
+  }
+
+  const reloadPage = ({ reloadFlag = true } = {}) => {
+    fadeinPromise = pageLoaderFadein.play()
+    return loadPage({
+      reloadFlag,
+    })
+  }
+
+  page = await nextRoute.navigate({
     ...nextRoute,
-    cancellationToken,
-    mountPromise,
+    navigationCancellationToken,
+    reloadPage,
   })
-  Object.assign(nextRoute, navigationResult)
-  document.documentElement.removeAttribute("data-route-leaving")
-  if (cancellationToken.cancellationRequested) {
-    pageLoaderFading.reverse()
+
+  if (navigationCancellationToken.cancellationRequested) {
+    pageLoaderFadein.reverse()
     return
   }
   await fadeinPromise
 
-  // inject next page element
-  pageContainer.innerHTML = ""
-  if (nextRoute.element) {
-    pageContainer.appendChild(nextRoute.element)
-    mountPromise.resolve()
-    if (navigationResult.onmount) {
-      navigationResult.onmount()
-    }
+  if (page.title) {
+    document.title = page.title
   }
-  if (nextRoute.title) {
-    document.title = nextRoute.title
-  }
-
-  pageLoaderFading.reverse()
+  await loadPage()
 }
 
 const isClickToOpenTab = (clickEvent) => {

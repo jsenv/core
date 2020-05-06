@@ -66,9 +66,9 @@ export const move = (fromNode, toNode, options) => {
   // clone node and style it
   const copy = fromNode.cloneNode(true)
   copy.style.position = "absolute"
-  copy.style.left = fromPosition.left
-  copy.style.top = fromPosition.top
-  copy.style.maxWidth = fromPosition.right - fromPosition.left
+  copy.style.left = `${fromPosition.left}px`
+  copy.style.top = `${fromPosition.top}px`
+  copy.style.maxWidth = `${fromPosition.right - fromPosition.left}px`
   copy.style.overflow = toComputedStyle.overflow
   copy.style.textOverflow = toComputedStyle.textOverflow
   div.appendChild(copy)

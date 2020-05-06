@@ -18,6 +18,12 @@
       <article data-page="default"></article>
     </main>
     <div id="page-loader"></div>
+    <div id="next-page" style="display: none;">
+      <!--
+      here page element will appended to the DOM waiting for current page leave animation to be done
+      (also waiting for eventual mutatePageElementBeforeDispay hook resolution)
+      -->
+    </div>
     <footer>
       <!-- toolbar -->
       <div id="toolbar" data-theme="dark">
