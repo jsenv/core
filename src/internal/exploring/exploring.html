@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="dark">
   <head>
     <title>Exploring</title>
     <meta charset="utf-8" />
@@ -26,7 +26,7 @@
     </div>
     <footer>
       <!-- toolbar -->
-      <div id="toolbar" data-theme="dark">
+      <div id="toolbar">
         <div id="toolbar-wrapper">
           <section id="file-list-link" data-responsive-toolbar-element>
             <a class="toolbar-icon-wrapper" href="/">
@@ -243,6 +243,41 @@
                 </div>
                 <div class="settings-box-item">
                   <div class="category-title">
+                    <svg width="20px" height="20px">
+                      <use xlink:href="#movieIconSvgModel"></use>
+                    </svg>
+                    Animations
+                  </div>
+                  <div class="category-subtitle">
+                    Play animations and transitions.
+                  </div>
+                  <div class="category-choices">
+                    <div id="animation-on">
+                      <label>
+                        <input
+                          type="radio"
+                          id="animation-on-radio"
+                          name="animation"
+                          value="animation-on"
+                        />
+                        Enabled
+                      </label>
+                    </div>
+                    <div id="animation-off">
+                      <label>
+                        <input
+                          type="radio"
+                          id="animation-off-radio"
+                          name="animation"
+                          value="animation-off"
+                        />
+                        Disabled
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-box-item">
+                  <div class="category-title">
                     <svg width="20px" height="20px" id="paletteIconSvg">
                       <use xlink:href="#paletteIconSvgModel"></use>
                     </svg>
@@ -326,11 +361,13 @@
 
         <article data-page="file-list">
           <section id="explorables">
-            <svg id="fileIconSvgConfig" width="35px" height="35px">
-              <use xlink:href="#fileIconSvgModel"></use>
-            </svg>
-            <h2>Explorable files in <span title="${directoryUrl}">${directoryName}</span></h2>
-            <h4>Click on the file you want to execute</h4>
+            <div id="explorables-header">
+              <svg id="fileIconSvgConfig" width="35px" height="35px">
+                <use xlink:href="#fileIconSvgModel"></use>
+              </svg>
+              <h2>Explorable files in <span title="${directoryUrl}">${directoryName}</span></h2>
+              <h4>Click on the file you want to execute</h4>
+            </div>
             <nav>
               <ul></ul>
             </nav>
@@ -643,6 +680,13 @@
         <svg id="paletteIconSvgModel" viewBox="0 0 24 24">
           <path
             d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
+          />
+          <path d="M0 0h24v24H0z" fill="none" />
+        </svg>
+        <!-- movie icon -->
+        <svg id="movieIconSvgModel" viewBox="0 0 24 24">
+          <path
+            d="M18 3v2h-2V3H8v2H6V3H4v18h2v-2h2v2h8v-2h2v2h2V3h-2zM8 17H6v-2h2v2zm0-4H6v-2h2v2zm0-4H6V7h2v2zm10 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"
           />
           <path d="M0 0h24v24H0z" fill="none" />
         </svg>

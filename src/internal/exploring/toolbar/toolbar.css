@@ -10,6 +10,7 @@
 
 #toolbar {
   background: #404040;
+  height: 100%;
 }
 
 #toolbar-wrapper {
@@ -106,15 +107,16 @@
   display: block;
   overflow: hidden;
   position: absolute;
-  bottom: -30px;
+  bottom: -32px;
   right: 20px;
   height: 40px;
   width: 40px;
   padding: 0;
   border-radius: 5px 5px 0 0;
-  border: 1px solid #00000026;
+  border: 1px solid rgba(0, 0, 0, 0.33);
   border-bottom: none;
-  box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
+  background: transparent;
 }
 
 #toolbar-trigger[data-animate] {

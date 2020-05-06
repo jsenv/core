@@ -18,7 +18,15 @@ h4 {
 
 #explorables {
   word-break: break-word;
+}
+
+#explorables #explorables-header {
   padding: 25px;
+  padding-bottom: 5px;
+  width: 100%;
+  background: #1f262c;
+  position: sticky;
+  top: 0;
 }
 
 #explorables h2 span {
@@ -26,10 +34,8 @@ h4 {
 }
 
 #explorables ul {
-  padding: 0;
+  padding: 0px 25px 10px 25px;
   margin: 0;
-  overflow: auto;
-  max-height: 75vh; /* find a better way to make it responsive ? */
 }
 
 #explorables li {
