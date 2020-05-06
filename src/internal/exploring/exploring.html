@@ -320,11 +320,13 @@
 
         <article data-page="file-list">
           <section id="explorables">
-            <svg id="fileIconSvgConfig" width="35px" height="35px">
-              <use xlink:href="#fileIconSvgModel"></use>
-            </svg>
-            <h2>Explorable files in <span title="${directoryUrl}">${directoryName}</span></h2>
-            <h4>Click on the file you want to execute</h4>
+            <div id="explorabled-header">
+              <svg id="fileIconSvgConfig" width="35px" height="35px">
+                <use xlink:href="#fileIconSvgModel"></use>
+              </svg>
+              <h2>Explorable files in <span title="${directoryUrl}">${directoryName}</span></h2>
+              <h4>Click on the file you want to execute</h4>
+            </div>
             <nav>
               <ul></ul>
             </nav>
