@@ -16,7 +16,7 @@ export const setThemePreference = (value) => {
 export const applyToolbarTheme = () => {
   const toolbarTheme = getThemePreference()
   if (!toolbarTheme) return
-  document.querySelector("#toolbar").setAttribute("data-theme", toolbarTheme)
+  document.querySelector("html").setAttribute("data-theme", toolbarTheme)
 }
 
 export const registerToolbarTheme = () => {

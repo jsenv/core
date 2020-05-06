@@ -1,74 +1,80 @@
 /* icons */
-#toolbar[data-theme="jsenv"] .iconToolbar {
+html[data-theme="jsenv"] .iconToolbar {
   fill: #de5600;
 }
-#toolbar[data-theme="jsenv"] .iconToolbar:hover {
+html[data-theme="jsenv"] .iconToolbar:hover {
   fill: #9a5300 !important;
 }
 
 /* loaders */
-#toolbar[data-theme="jsenv"] #loader-icon {
+html[data-theme="jsenv"] #loader-icon {
   color: #404040;
 }
-#toolbar[data-theme="jsenv"] .livereload-circle[data-variant="off"] {
+html[data-theme="jsenv"] .livereload-circle[data-variant="off"] {
   fill: #757575;
 }
-#toolbar[data-theme="jsenv"] .livereload-circle[data-variant="connecting"] {
+html[data-theme="jsenv"] .livereload-circle[data-variant="connecting"] {
   fill: #717171;
 }
-#toolbar[data-theme="jsenv"] .livereload-ring {
+html[data-theme="jsenv"] .livereload-ring {
   stroke: rgba(138, 136, 136, 0.46);
 }
 
 /* settings */
-#toolbar[data-theme="jsenv"] #settings-box,
-#toolbar[data-theme="jsenv"] #settings[data-active] button {
+html[data-theme="jsenv"] #settings-box,
+html[data-theme="jsenv"] #settings[data-active] button {
   background: #f7931e;
 }
-#toolbar[data-theme="jsenv"] .settings-box-item {
+html[data-theme="jsenv"] .settings-box-item {
   background: #ffa641;
 }
-#toolbar[data-theme="jsenv"] #settings-box-header .settings-icon {
+html[data-theme="jsenv"] #settings-box-header .settings-icon {
   stroke: #076570;
 }
-#toolbar[data-theme="jsenv"] #settings-box h3,
-#toolbar[data-theme="jsenv"] #settings-box .category-title {
+html[data-theme="jsenv"] #settings-box h3,
+html[data-theme="jsenv"] #settings-box .category-title {
   color: #076570;
 }
-#toolbar[data-theme="jsenv"] #settings-box .category-title svg {
+html[data-theme="jsenv"] #settings-box .category-title svg {
   fill: #076570;
 }
-#toolbar[data-theme="jsenv"] #settings-box .category-subtitle {
+html[data-theme="jsenv"] #settings-box .category-subtitle {
   color: #848282;
 }
-#toolbar[data-theme="jsenv"] label {
+html[data-theme="jsenv"] label {
   color: #002e33;
 }
 
 /* file input */
-#toolbar[data-theme="jsenv"] #file[data-active] {
+html[data-theme="jsenv"] #file[data-active] {
   background: rgba(222, 86, 0, 0.7);
 }
 
 /* tooltips */
-#toolbar[data-theme="jsenv"] .tooltip {
+html[data-theme="jsenv"] .tooltip {
   background-color: #ffd390;
   color: #884900;
 }
-#toolbar[data-theme="jsenv"] .tooltipAction {
+html[data-theme="jsenv"] .tooltipAction {
   border-color: #884900;
 }
-#toolbar[data-theme="jsenv"] .tooltipAction a {
+html[data-theme="jsenv"] .tooltipAction a {
   color: #884900;
 }
-#toolbar[data-theme="jsenv"] .tooltipIcon {
+html[data-theme="jsenv"] .tooltipIcon {
   fill: #884900;
 }
-#toolbar[data-theme="jsenv"] .tooltip::after {
+html[data-theme="jsenv"] .tooltip::after {
   border-color: #ffd390 transparent transparent transparent;
 }
 
-/* overflow menu */
-#toolbar[data-theme="jsenv"][data-overflow-menu-visible] #overflow-menu-button {
-  background: #076570;
+/*  page file list */
+html[data-theme="jsenv"] h2 {
+  color: orange;
+}
+html[data-theme="jsenv"] #fileIconSvgConfig {
+  fill: orange;
+}
+html[data-theme="jsenv"] #explorables h2 span {
+  color: #24b1b0;
 }
