@@ -1,120 +1,65 @@
-import {
-  createCancellationSource,
-  isCancelError,
-  composeCancellationToken,
-} from "@jsenv/cancellation"
-import { moveElement } from "../util/util.js"
-import { transit } from "../util/animation.js"
+import { fadeIn, transit } from "../util/animation.js"
 import { renderToolbar } from "../toolbar/toolbar.js"
-import { pageErrorNavigation } from "../page-error-navigation/page-error-navigation.js"
-import { pageFileList } from "../page-file-list/page-file-list.js"
-import { pageFileExecution } from "../page-file-execution/page-file-execution.js"
-
-const pageCandidates = [pageErrorNavigation, pageFileList, pageFileExecution]
-
-const defaultPage = {
-  name: "default",
-  navigate: ({ navigationCancellationToken }) => {
-    // cancellationToken.register(({ reason }) => {
-    //   const { page, pageLoader } = reason
-    //   pageLoader.style.backgroundColor = page === pageFileList ? "#1f262c" : "white"
-    // })
-    return {
-      title: document.title,
-      load: () => {
-        return {
-          pageElement: document.querySelector("[data-page=default]"),
-        }
-      },
-    }
-  },
-}
-
-const pageContainer = document.querySelector("#page")
-const nextPageContainer = document.querySelector("#next-page")
-const pageLoader = document.querySelector("#page-loader")
-const pageLoaderFadein = transit(
-  {
-    "#page-loader": { visibility: "hidden", opacity: 0 },
-  },
-  {
-    "#page-loader": { visibility: "visible", opacity: 0.2 },
-  },
-  { duration: 300 },
-)
-// we should also animate eventual page size transition
-// (if the page becomes bigger smaller, the height of #page changes)
-// if so let's handle in a separate transition for now
-const pageContainerFadeout = transit(
-  {
-    "#page": { opacity: 1 },
-  },
-  {
-    "#page": { opacity: 0 },
-  },
-  { duration: 300 },
-)
+import { errorNavigationRoute } from "../page-error-navigation/page-error-navigation.js"
+import { fileListRoute } from "../page-file-list/page-file-list.js"
+import { fileExecutionRoute } from "../page-file-execution/page-file-execution.js"
+import { createRouter } from "./router.js"
 
 export const installNavigation = () => {
-  let navigationCancellationSource = createCancellationSource()
-  const defaultRoute = {
-    event: { type: "default" }, // there is no real event that lead to this route
-    url: "", // no url for this route it's an abstract route
-    page: defaultPage,
-    ...defaultPage,
-    ...defaultPage.navigate({ cancellationToken: navigationCancellationSource.token }),
-  }
-  let currentRoute = defaultRoute
+  const pageContainer = document.querySelector("#page")
+  // const pageLoader = document.querySelector("#page-loader")
+  const pageLoaderFadein = transit(
+    {
+      "#page-loader": { visibility: "hidden", opacity: 0 },
+    },
+    {
+      "#page-loader": { visibility: "visible", opacity: 0.2 },
+    },
+    { duration: 300 },
+  )
+  const routes = [fileListRoute, fileExecutionRoute]
+  const router = createRouter(routes, {
+    errorRoute: errorNavigationRoute,
+    onstart: (navigation) => {
+      pageLoaderFadein.play()
 
-  const handleNavigationEvent = async (event) => {
-    // always rerender toolbar
-    const fileRelativeUrl = document.location.pathname.slice(1)
-    renderToolbar(fileRelativeUrl)
+      // every navigation must render toolbar
+      // this function is synchronous it's just ui
+      renderToolbar(new URL(navigation.destinationUrl).pathname.slice(1), navigation)
+    },
+    oncancel: () => {
+      pageLoaderFadein.reverse()
+    },
+    onerror: (navigation, error) => {
+      pageLoaderFadein.reverse()
+      throw error
+    },
+    addPageView: async (
+      { title, element, mutateElementBeforeDisplay = () => {} },
+      currentPageView,
+    ) => {
+      if (title) {
+        document.title = title
+      }
+      element.style.display = "none"
+      pageContainer.appendChild(element)
+      await mutateElementBeforeDisplay()
+      // if everything is super fast it might be better to wait for pageLoader fade in to be done
+      // before doing the loader fadeout but this is to be checked
+      // await fadeinPromise
+      pageLoaderFadein.reverse()
 
-    const url = String(document.location)
-    const nextPage = pageCandidates.find(({ match }) => match({ url, event }))
-    const nextRoute = {
-      event,
-      url,
-      page: nextPage,
-      ...nextPage,
-    }
-
-    navigationCancellationSource.cancel({ ...nextRoute, pageLoader })
-    navigationCancellationSource = createCancellationSource()
-    const navigationCancellationToken = navigationCancellationSource.token
-
-    try {
-      await performNavigation(currentRoute, nextRoute, {
-        navigationCancellationToken,
-      })
-    } catch (e) {
-      if (isCancelError(e)) return
-
-      // navigation error while navigating to error page
-      if (nextPage.name === "error-navigation") throw e
-
-      handleNavigationEvent({
-        type: "error-navigation",
-        data: {
-          route: nextRoute,
-          error: e,
-        },
-      })
-      return
-    }
-    currentRoute = nextRoute
-    document.documentElement.setAttribute("data-route", nextRoute.name)
-  }
-
-  handleNavigationEvent({
-    type: "load",
+      currentPageView.element.style.position = "absolute"
+      element.style.position = "relative"
+      element.style.display = "block"
+      const elementFadein = fadeIn(element, { duration: 300 })
+      await elementFadein
+    },
+    removePageView: ({ element, onPageViewRemoved = () => {} }) => {
+      pageContainer.removeChild(element)
+      onPageViewRemoved()
+    },
   })
-  window.onpopstate = () => {
-    handleNavigationEvent({
-      type: "popstate",
-    })
-  }
 
   const onclick = (clickEvent) => {
     if (clickEvent.defaultPrevented) {
@@ -139,91 +84,20 @@ export const installNavigation = () => {
     }
 
     clickEvent.preventDefault()
-    window.history.pushState({}, "", aElement.href)
-    handleNavigationEvent(clickEvent)
+    router.navigateToUrl(aElement.href, {}, clickEvent)
   }
   document.addEventListener("click", onclick)
+
+  // if we cancel this navigation we will just show the default page
+  // which is a blank page
+  // and reloading the page is the only wait to get this to happen again
+  // moreover this function is what we want to call
+  // inside file-execution page when we want to re-execute
+  router.loadCurrentUrl()
+
   return () => {
     document.removeEventListener("click", onclick)
   }
-}
-
-const performNavigation = async (route, nextRoute, { navigationCancellationToken }) => {
-  let fadeinPromise = pageLoaderFadein.play()
-  let page
-  let loadAttempt
-  let previousPageCleanupElementAfterRemove = () => {}
-  const loadPage = async ({ reloadFlag } = {}) => {
-    if (loadAttempt) {
-      loadAttempt.cancel({ reloadFlag })
-    }
-    const loadCancellationSource = createCancellationSource()
-    const loadCancellationToken = composeCancellationToken(
-      navigationCancellationToken,
-      loadCancellationSource.token,
-    )
-    loadAttempt = {
-      cancel: loadCancellationSource.cancel,
-    }
-    const {
-      pageElement,
-      mutatePageElementBeforeDisplay,
-      cleanupPageElementAfterRemove = () => {},
-    } = await page.load({
-      loadCancellationToken,
-    })
-    if (loadCancellationToken.cancellationRequested) {
-      return
-    }
-
-    // replace current page with new page
-    nextPageContainer.appendChild(pageElement)
-    if (mutatePageElementBeforeDisplay) {
-      await mutatePageElementBeforeDisplay()
-    }
-    // remove loader because it's no longer needed
-    pageLoaderFadein.reverse()
-    if (loadCancellationToken.cancellationRequested) {
-      return
-    }
-    // fadeout current page
-    await pageContainerFadeout.play()
-    if (loadCancellationToken.cancellationRequested) {
-      pageContainerFadeout.reverse()
-      return
-    }
-    // replace current page with new page
-    pageContainer.innerHTML = ""
-    previousPageCleanupElementAfterRemove()
-    moveElement(pageElement, nextPageContainer, pageContainer)
-    previousPageCleanupElementAfterRemove = cleanupPageElementAfterRemove
-    // fadein new page
-    pageContainerFadeout.reverse()
-  }
-
-  const reloadPage = ({ reloadFlag = true } = {}) => {
-    fadeinPromise = pageLoaderFadein.play()
-    return loadPage({
-      reloadFlag,
-    })
-  }
-
-  page = await nextRoute.navigate({
-    ...nextRoute,
-    navigationCancellationToken,
-    reloadPage,
-  })
-
-  if (navigationCancellationToken.cancellationRequested) {
-    pageLoaderFadein.reverse()
-    return
-  }
-  await fadeinPromise
-
-  if (page.title) {
-    document.title = page.title
-  }
-  await loadPage()
 }
 
 const isClickToOpenTab = (clickEvent) => {

@@ -33,6 +33,21 @@ When navigate function throw, onerror(navigation, error) is called.
 When navigation is cancelled (by you or because an other navigation cancels it)
 oncancel(navigation, cancelError) is called.
 
+const route = {
+  name: String (optional),
+  match: url => Boolean,
+  enter: async ({ cancellationToken, reloadPage }) => {
+    const page = {
+      title,
+      load: async () => {
+        const pageView = any
+        return pageView
+      }
+    }
+    return page
+  }
+}
+
 See alo:
 https://stackoverflow.com/questions/28028297/js-window-history-delete-a-state
 https://developer.mozilla.org/en-US/docs/Web/API/History
@@ -41,13 +56,17 @@ https://developer.mozilla.org/en-US/docs/Web/API/History
 import { createCancellationSource, isCancelError } from "@jsenv/cancellation"
 
 export const createRouter = (
-  navigate,
+  routes,
   {
+    fallbackRoute,
+    errorRoute,
     onstart = () => {},
     oncancel = () => {},
-    onfail = (navigation, error) => {
+    onerror = (navigation, error) => {
       throw error
     },
+    addPageView,
+    removePageView,
     oncomplete = () => {},
   },
 ) => {
@@ -62,6 +81,8 @@ export const createRouter = (
   let applicationHistoryState = initialHistoryState
   let applicationUrl = initialUrl
   let currentNavigation
+  let currentPage
+  let currentPageView
 
   const createNavigation = ({
     type,
@@ -141,11 +162,11 @@ export const createRouter = (
 
       if (currentNavigation) {
         // this allow a navigate() call to know we don't care anymore about its result
-        currentNavigation.cancel(`navigating to ${destinationUrl}`)
+        currentNavigation.cancel(navigation)
       }
       currentNavigation = navigation
 
-      // replace an history entry (initial navigation)
+      // replace an history entry (initial navigation or reload)
       if (type === "replace") {
         windowHistory.replaceState(
           { position: browserHistoryPosition, state: browserHistoryState },
@@ -153,7 +174,7 @@ export const createRouter = (
           destinationUrl,
         )
       }
-      // create immediatly a new entry in the history (clik on a link)
+      // create immediatly a new entry in the history (click on a link)
       else if (type === "push") {
         windowHistory.pushState(
           { position: browserHistoryPosition, state: browserHistoryState },
@@ -165,31 +186,84 @@ export const createRouter = (
       else if (type === "restore") {
         if (browserHistoryPosition === applicationHistoryPosition) {
           // (should happen only when cancelling navigation induced by popstate)
-          return
+          return undefined
         }
       }
 
       onstart(navigation)
 
-      let page
-      try {
-        cancellationToken.throwIfRequested() // can happen if onstart calls cancel right away
-        page = await navigate(navigation)
+      const loadPage = async (page) => {
+        const nextPageView = await page.load()
+
+        // if we have a nextPageView but it's no longer needed line below will throw
+        // and navigation will be canceled, nextPageView will be ignored
         cancellationToken.throwIfRequested()
-      } catch (navigationError) {
-        if (isCancelError(navigationError)) {
-          oncancel(navigation, navigationError)
-          return
+
+        await addPageView(nextPageView)
+
+        // at this point we put nextPageView in the DOM but it's no longer needed
+        // let's remove it from the DOM and throw to cancel the navigation
+        if (cancellationToken.cancellationRequested) {
+          removePageView(nextPageView)
+          cancellationToken.throwIfRequested()
+          return undefined
         }
-        status = "failed"
-        onfail(navigation, navigationError)
-        return
+
+        // remove currentPageView from the DOM and return nextPageView
+        // which will become the currentPageView
+        removePageView(currentPageView)
+        return nextPageView
+      }
+
+      const loadRoute = async (route, ...args) => {
+        return route.enter(navigation, ...args)
+      }
+
+      const callLoadingErrorRouteOnError = async (fn) => {
+        try {
+          cancellationToken.throwIfRequested()
+          const page = await fn()
+          cancellationToken.throwIfRequested()
+          return page
+        } catch (error) {
+          if (isCancelError(error)) {
+            return oncancel(navigation, error)
+          }
+          try {
+            const errorPage = await loadRoute(errorRoute, error)
+            cancellationToken.throwIfRequested()
+            return errorPage
+          } catch (internalError) {
+            if (isCancelError(internalError)) {
+              return oncancel(navigation, internalError)
+            }
+            // error while trying to load error route
+            // by default we will throw because it's an unexpected internal error.
+            status = "errored"
+            return onerror(navigation, internalError)
+          }
+        }
+      }
+
+      // si c'est un replace et qu'on a déja une page on fait direct page.load
+      if (type === "replace" && currentPage) {
+        currentPageView = await callLoadingErrorRouteOnError(() => {
+          return loadPage(currentPage)
+        })
+      } else {
+        currentPageView = await callLoadingErrorRouteOnError(async () => {
+          const routeMatching =
+            routes.find((route) => route.match(navigation.destinationUrl)) || fallbackRoute
+          currentPage = await loadRoute(routeMatching)
+          cancellationToken.throwIfRequested()
+          return loadPage(currentPage)
+        })
       }
       status = "completed"
       applicationHistoryPosition = browserHistoryPosition
       applicationHistoryState = browserHistoryState
       applicationUrl = browserUrl
-      oncomplete(navigation, page)
+      return oncomplete(navigation, currentPageView)
     }
 
     navigation.start = start
@@ -197,13 +271,13 @@ export const createRouter = (
     return navigation
   }
 
-  const launchCurrentUrl = () => {
+  const loadCurrentUrl = (navigationEvent = { type: "initial-navigation" }) => {
     const navigation = createNavigation({
       type: "replace",
-      event: { type: "initial-navigation" },
-      destinationHistoryPosition: initialHistoryPosition,
-      destinationHistoryState: initialHistoryState,
-      destinationUrl: initialUrl,
+      event: navigationEvent,
+      destinationHistoryPosition: applicationHistoryPosition,
+      destinationHistoryState: applicationHistoryState,
+      destinationUrl: applicationUrl,
     })
     return navigation.start()
   }
@@ -248,7 +322,7 @@ export const createRouter = (
   }
 
   return {
-    launchCurrentUrl,
+    loadCurrentUrl,
     navigateToUrl,
   }
 }

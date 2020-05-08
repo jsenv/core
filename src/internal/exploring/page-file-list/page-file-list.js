@@ -2,26 +2,25 @@ import { loadExploringConfig } from "../util/util.js"
 import { move } from "../util/animation.js"
 import { fetchUrl } from "../util/fetching.js"
 
-export const pageFileList = {
+export const fileListRoute = {
   name: "file-list",
-  match: () => {
-    if (document.location.pathname !== "/") {
-      return false
-    }
-    return true
+
+  match: (url) => {
+    return new URL(url).pathname === "/"
   },
-  navigate: async () => {
+
+  enter: async ({ cancellationToken }) => {
     return {
       title: "Explorable files",
-      load: async ({ loadCancellationToken }) => {
+      load: async () => {
         const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig({
-          cancellationToken: loadCancellationToken,
+          cancellationToken,
         })
         const directoryName = directoryUrlToDirectoryName(projectDirectoryUrl)
         const fileListElement = document.querySelector(`[data-page="file-list"`).cloneNode(true)
         return {
-          pageElement: fileListElement,
-          mutatePageElementBeforeDisplay: async () => {
+          element: fileListElement,
+          mutateElementBeforeDisplay: async () => {
             const span = fileListElement.querySelector("h2 span")
             span.title = projectDirectoryUrl
             span.textContent = directoryName
@@ -40,13 +39,8 @@ export const pageFileList = {
               .map((file) => `<li><a class="execution-link" href=${file}>${file}</a></li>`)
               .join("")
 
-            loadCancellationToken.register(async ({ reason }) => {
-              const {
-                event,
-                url,
-                // pageLoader
-              } = reason
-              //  pageLoader.style.backgroundColor = "#1f262c"
+            cancellationToken.register(async ({ reason }) => {
+              const { event, destinationUrl } = reason
 
               // only if we leave this page because of a click
               // (we could also do the animation on history.back() or history.forward())
@@ -55,7 +49,7 @@ export const pageFileList = {
                 return
               }
 
-              const href = new URL(url).pathname.slice(1)
+              const href = new URL(destinationUrl).pathname.slice(1)
               const aElement = document.querySelector(`a[href="${href}"]`)
               if (!aElement) {
                 return

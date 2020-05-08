@@ -7,17 +7,19 @@ import { loadExploringConfig, createPromiseAndHooks } from "../util/util.js"
 import { jsenvLogger } from "../util/jsenvLogger.js"
 import { notifyFileExecution } from "../util/notification.js"
 
-export const pageFileExecution = {
+export const fileExecutionRoute = {
   name: "file-execution",
-  match: () => {
-    const fileRelativeUrl = document.location.pathname.slice(1)
-    if (!fileRelativeUrl) {
-      return false
-    }
-    return true
+
+  match: (url) => {
+    return new URL(url).pathname !== "/"
   },
 
-  navigate: async ({ navigationCancellationToken, reloadPage }) => {
+  enter: async ({ navigationCancellationToken, reloadPage }) => {
+    // TODO: update this to match the new api with router
+    // to reload the page we must do router.loadCurrentUrl()
+    // I think it can be trigerred by history.go(0) (assuming it trigger popstate and we handle it correctly)
+    // otherwise we must have this function available somewhere
+
     let connectedOnce = false
     const firstConnectionPromise = createPromiseAndHooks()
     const fileRelativeUrl = document.location.pathname.slice(1)
