@@ -199,7 +199,7 @@ export const createRouter = (
         // and navigation will be canceled, nextPageView will be ignored
         cancellationToken.throwIfRequested()
 
-        await addPageView(nextPageView)
+        await addPageView(nextPageView, currentPageView, navigation)
 
         // at this point we put nextPageView in the DOM but it's no longer needed
         // let's remove it from the DOM and throw to cancel the navigation

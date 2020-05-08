@@ -14,24 +14,23 @@ export const fileExecutionRoute = {
     return new URL(url).pathname !== "/"
   },
 
-  enter: async ({ navigationCancellationToken, reloadPage }) => {
-    // TODO: update this to match the new api with router
-    // to reload the page we must do router.loadCurrentUrl()
-    // I think it can be trigerred by history.go(0) (assuming it trigger popstate and we handle it correctly)
-    // otherwise we must have this function available somewhere
+  enter: async ({ cancellationToken, destinationUrl }, router) => {
+    const reload = () => {
+      router.loadCurrentUrl()
+    }
 
     let connectedOnce = false
     const firstConnectionPromise = createPromiseAndHooks()
-    const fileRelativeUrl = document.location.pathname.slice(1)
+    const fileRelativeUrl = new URL(destinationUrl).pathname.slice(1)
 
     // reset livereload indicator ui
     applyLivereloadIndicator()
     const livereloading = createLivereloading(fileRelativeUrl, {
       onFileChanged: () => {
-        reloadPage()
+        reload()
       },
       onFileRemoved: () => {
-        reloadPage()
+        reload()
       },
       onConnecting: ({ abort }) => {
         applyLivereloadIndicator("connecting", { abort })
@@ -48,14 +47,14 @@ export const fileExecutionRoute = {
         if (connectedOnce) {
           // we have lost connection to the server, we might have missed some file changes
           // let's re-execute the file
-          reloadPage()
+          reload()
         } else {
           connectedOnce = true
           firstConnectionPromise.resolve()
         }
       },
     })
-    navigationCancellationToken.register(() => {
+    cancellationToken.register(() => {
       livereloading.disconnect()
     })
 
@@ -76,7 +75,7 @@ export const fileExecutionRoute = {
       // execute,
       // reload: () => execute(fileRelativeUrl),
     }
-    navigationCancellationToken.register(() => {
+    cancellationToken.register(() => {
       window.file = undefined
     })
 
@@ -84,17 +83,12 @@ export const fileExecutionRoute = {
 
     return {
       title: fileRelativeUrl,
-      load: async ({
-        // ce token est cancel lorsque on navige hors de cette page
-        // il est aussi cancel si on reload pendant qu'on load
-        loadCancellationToken,
-        // isReloadFlag
-      }) => {
+      load: async ({ loadCancellationToken }) => {
         const iframe = document.createElement("iframe")
 
         return {
-          pageElement: iframe,
-          mutatePageElementBeforeDisplay: async () => {
+          element: iframe,
+          mutateElementBeforeDisplay: async () => {
             applyExecutionIndicator() // reset file execution indicator ui
 
             await firstConnectionPromise
@@ -107,6 +101,7 @@ export const fileExecutionRoute = {
               result: null,
             }
             await loadAndExecute(pendingExecution, { cancellationToken: loadCancellationToken })
+
             const execution = pendingExecution
             const previousExecution = latestExecution
             latestExecution = execution
@@ -122,7 +117,9 @@ export const fileExecutionRoute = {
             }
             notifyFileExecution(execution, previousExecution)
           },
-          cleanupPageElementAfterRemove: () => {
+          onPageViewRemoved: () => {
+            // be sure the iframe src is reset to avoid eventual memory leak
+            // if it was unproperly garbage collected or something
             iframe.src = "about:blank"
           },
         }
@@ -205,9 +202,6 @@ const performLoadAndExecute = async (execution, { cancellationToken }) => {
       errorExposureInConsole: true,
     },
   )
-  if (cancellationToken.cancellationRequested) {
-    return
-  }
   execution.status = "executed"
   if (executionResult.status === "errored") {
     // eslint-disable-next-line no-eval

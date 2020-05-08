@@ -1,3 +1,25 @@
+/*
+
+TODO:
+
+- faire deux fois router.loadCurrentUrl()
+le deuxieme doit cancel le load de la pageView
+mais ne doit pas cancel la navigation a proprement parler
+en gros on a un routeCancellationToken (on change de route)
+et un pageLoadCancellationToken (on a plus besoin de load la page)
+  et celui ci est cancel si on change de route of course
+
+- on a pas de currentPageView par défaut
+on ne sait donc pas comment faire la transition
+pour la page initiale
+il faudrait ptet le passer a createRouter en lui filant la page par défaut
+
+- dans router.js test what happens with history.go(0)
+if it trigger popstate ensure we behave corretly
+otherwise if it's just location.reload() we got nothing to do
+
+*/
+
 import { fadeIn, transit } from "../util/animation.js"
 import { renderToolbar } from "../toolbar/toolbar.js"
 import { errorNavigationRoute } from "../page-error-navigation/page-error-navigation.js"
@@ -34,10 +56,9 @@ export const installNavigation = () => {
       pageLoaderFadein.reverse()
       throw error
     },
-    addPageView: async (
-      { title, element, mutateElementBeforeDisplay = () => {} },
-      currentPageView,
-    ) => {
+    addPageView: async (pageView, currentPageView, { cancellationToken }) => {
+      const { title, element, mutateElementBeforeDisplay = () => {} } = pageView
+
       if (title) {
         document.title = title
       }
@@ -48,6 +69,13 @@ export const installNavigation = () => {
       // before doing the loader fadeout but this is to be checked
       // await fadeinPromise
       pageLoaderFadein.reverse()
+
+      // if we got cancelled during mutateElementBeforeDisplay
+      // no need to perform the DOM changes and the animation the element
+      // will be removed anyway
+      if (cancellationToken.cancellationRequested) {
+        return
+      }
 
       currentPageView.element.style.position = "absolute"
       element.style.position = "relative"

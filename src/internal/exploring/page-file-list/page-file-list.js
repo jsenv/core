@@ -9,12 +9,12 @@ export const fileListRoute = {
     return new URL(url).pathname === "/"
   },
 
-  enter: async ({ cancellationToken }) => {
+  enter: async () => {
     return {
       title: "Explorable files",
-      load: async () => {
+      load: async ({ loadCancellationToken }) => {
         const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig({
-          cancellationToken,
+          cancellationToken: loadCancellationToken,
         })
         const directoryName = directoryUrlToDirectoryName(projectDirectoryUrl)
         const fileListElement = document.querySelector(`[data-page="file-list"`).cloneNode(true)
@@ -39,7 +39,7 @@ export const fileListRoute = {
               .map((file) => `<li><a class="execution-link" href=${file}>${file}</a></li>`)
               .join("")
 
-            cancellationToken.register(async ({ reason }) => {
+            loadCancellationToken.register(async ({ reason }) => {
               const { event, destinationUrl } = reason
 
               // only if we leave this page because of a click
