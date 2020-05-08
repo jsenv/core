@@ -160,12 +160,6 @@ export const createRouter = (
       browserHistoryState = destinationHistoryState
       browserUrl = destinationUrl
 
-      if (currentNavigation) {
-        // this allow a navigate() call to know we don't care anymore about its result
-        currentNavigation.cancel(navigation)
-      }
-      currentNavigation = navigation
-
       // replace an history entry (initial navigation or reload)
       if (type === "replace") {
         windowHistory.replaceState(
@@ -186,11 +180,10 @@ export const createRouter = (
       else if (type === "restore") {
         if (browserHistoryPosition === applicationHistoryPosition) {
           // (should happen only when cancelling navigation induced by popstate)
+          currentNavigation = navigation
           return undefined
         }
       }
-
-      onstart(navigation)
 
       const loadPage = async (page) => {
         const nextPageView = await page.load()
@@ -245,6 +238,33 @@ export const createRouter = (
         }
       }
 
+      if (currentNavigation) {
+        /*
+        on doit renommer tout ça
+        y'a navigationCancellationToken -> on abandonne la navigation completement
+        et pageLoadCancellationToken -> on abandonne le chargement de la page
+        mais on reste sur la meme route (on reload)
+        donc si on est ici par un loadCurrentUrl on cancel que pageLoadCancellationToken
+        et sinon on cancel la navigation
+        mais en fait chaque navigation a son propre cancellationToken
+
+        je suppose qu'on pourrait réutiliser le cancellationToken de la navigation
+        précédente dans le cas dans loadCurrentUrl
+        et ne pas le cancel ?
+        et comme ça currentNavigation.cancel va cancel l'ancienne et la nouvelle
+        tout ça se passe vraiment dans le type === 'replace' && currentPage en gros
+
+        sauf qu'on veut cancel la nav précédente si on fait popstate sur le truc courant ?
+        le return undefined va empécher currentNavigation = navigation
+        ce qui est pas fou
+        */
+
+        // this allow a navigate() call to know we don't care anymore about its result
+        currentNavigation.cancel(navigation)
+      }
+      currentNavigation = navigation
+
+      onstart(navigation)
       // si c'est un replace et qu'on a déja une page on fait direct page.load
       if (type === "replace" && currentPage) {
         currentPageView = await callLoadingErrorRouteOnError(() => {
