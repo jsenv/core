@@ -13,6 +13,11 @@ export const errorNavigationRoute = {
     return {
       // title: "Error", // Keep the original error title ?
       element,
+      onactive: () => {
+        setTimeout(() => {
+          throw navigation.error
+        })
+      },
     }
   },
 }

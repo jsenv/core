@@ -82,6 +82,9 @@ export const installNavigation = () => {
       element.style.display = "block"
       const elementFadein = fadeIn(element, { duration: 300 })
       await elementFadein
+      if (page.onactive) {
+        page.onactive()
+      }
     },
     leave: ({ element, onleave = () => {} }, reason) => {
       pageContainer.removeChild(element)
