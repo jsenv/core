@@ -10,13 +10,13 @@ export const installBrowserErrorStackRemapping = (options = {}) =>
       // we read response test before anything because once memoized fetch
       // gets annoying preventing you to read
       // body multiple times, even using response.clone()
-      // const text = await response.text()
+      const text = await response.text()
       return {
         status: response.status,
         url: response.url,
         statusText: response.statusText,
         headers: responseToHeaders(response),
-        text: response.text.bind(response),
+        text: () => text,
         json: response.json.bind(response),
         blob: response.blob.bind(response),
         arrayBuffer: response.arrayBuffer.bind(response),
