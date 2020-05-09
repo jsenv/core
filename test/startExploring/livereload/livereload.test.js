@@ -50,11 +50,11 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
   await writeFileSystemNodeModificationTime(filePath, Date.now())
   await new Promise((resolve) => setTimeout(resolve, 1000))
   await page.waitFor(() => {
-    if (!window.page) return false
-    if (!window.page.execution) return false
-    return Boolean(window.page.execution.result)
+    if (!window.file) return false
+    if (!window.file.execution) return false
+    return Boolean(window.file.execution.result)
   })
-  const afterReloadExecutionResult = await page.evaluate(() => window.page.execution.result)
+  const afterReloadExecutionResult = await page.evaluate(() => window.file.execution.result)
   const actual = afterReloadExecutionResult.namespace
   const expected = {
     default: 43,

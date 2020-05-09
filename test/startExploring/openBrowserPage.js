@@ -47,9 +47,9 @@ export const openBrowserPage = async (
     page.waitFor(
       /* istanbul ignore next */
       () => {
-        if (!window.page) return false
-        if (!window.page.execution) return false
-        return Boolean(window.page.execution.result)
+        if (!window.file) return false
+        if (!window.file.execution) return false
+        return Boolean(window.file.execution.result)
       },
     ),
     errorPromise,
@@ -58,7 +58,7 @@ export const openBrowserPage = async (
 
   const executionResult = await page.evaluate(
     /* istanbul ignore next */
-    () => window.page.execution.result,
+    () => window.file.execution.result,
   )
 
   if (executionResult.status === "errored") {
