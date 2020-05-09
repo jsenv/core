@@ -191,26 +191,22 @@ export const createRouter = (
           },
         }
 
-        let setupStepEnabled = true
         if (currentRouteActivationAttempt) {
-          if (currentRouteActivationAttempt.isActivating()) {
-            currentRouteActivationAttempt.cancelActivation(navigation)
-          } else if (currentRouteActivationAttempt.isInstalling()) {
+          if (currentRouteActivationAttempt.isInstalling()) {
             currentRouteActivationAttempt.cancelInstallation(navigation)
-            if (navigation.isReload) {
-              setupStepEnabled = false
-            }
+          } else if (!navigation.isReload && currentRouteActivationAttempt.isActivating()) {
+            currentRouteActivationAttempt.cancelActivation(navigation)
           }
         }
         currentRouteActivationAttempt = routeActivationAttempt
 
         const sharedParams = {
           navigation,
-          reload: loadCurrentUrl,
+          reload: (event = { type: "reload" }) => loadCurrentUrl(event),
           activePage,
         }
 
-        if (setupStepEnabled && navigation.route.setup) {
+        if (!navigation.isReload && navigation.route.setup) {
           step = "setup"
           await navigation.route.setup({
             ...sharedParams,
@@ -245,6 +241,7 @@ export const createRouter = (
         if (activePage) {
           leave(activePage, navigation)
         }
+        activeRoute = navigation.route
         activePage = page
         step = "done"
         currentRouteActivationAttempt = undefined
