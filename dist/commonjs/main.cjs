@@ -542,7 +542,7 @@ const {
   list
 } = require$1("@babel/helpers");
 
-const babelHelperNameInsideJsenvCoreArray = ["applyDecoratedDescriptor", "arrayLikeToArray", "arrayWithHoles", "arrayWithoutHoles", "assertThisInitialized", "AsyncGenerator", "asyncGeneratorDelegate", "asyncIterator", "asyncToGenerator", "awaitAsyncGenerator", "AwaitValue", "classCallCheck", "classNameTDZError", "classPrivateFieldDestructureSet", "classPrivateFieldGet", "classPrivateFieldLooseBase", "classPrivateFieldLooseKey", "classPrivateFieldSet", "classPrivateMethodGet", "classPrivateMethodSet", "classStaticPrivateFieldSpecGet", "classStaticPrivateFieldSpecSet", "classStaticPrivateMethodGet", "classStaticPrivateMethodSet", "construct", "createClass", "createForOfIterableHelper", "createForOfIterableHelperLoose", "createSuper", "decorate", "defaults", "defineEnumerableProperties", "defineProperty", "extends", "get", "getPrototypeOf", "inherits", "inheritsLoose", "initializerDefineProperty", "initializerWarningHelper", "instanceof", "interopRequireDefault", "interopRequireWildcard", "isNativeFunction", "isNativeReflectConstruct", "iterableToArray", "iterableToArrayLimit", "iterableToArrayLimitLoose", "jsx", "newArrowCheck", "nonIterableRest", "nonIterableSpread", "objectDestructuringEmpty", "objectSpread", "objectSpread2", "objectWithoutProperties", "objectWithoutPropertiesLoose", "possibleConstructorReturn", "readOnlyError", "set", "setPrototypeOf", "skipFirstGeneratorNext", "slicedToArray", "slicedToArrayLoose", "superPropBase", "taggedTemplateLiteral", "taggedTemplateLiteralLoose", "tdz", "temporalRef", "temporalUndefined", "toArray", "toConsumableArray", "toPrimitive", "toPropertyKey", "typeof", "unsupportedIterableToArray", "wrapAsyncGenerator", "wrapNativeSuper", "wrapRegExp"];
+const babelHelperNameInsideJsenvCoreArray = ["applyDecoratedDescriptor", "arrayLikeToArray", "arrayWithHoles", "arrayWithoutHoles", "assertThisInitialized", "AsyncGenerator", "asyncGeneratorDelegate", "asyncIterator", "asyncToGenerator", "awaitAsyncGenerator", "AwaitValue", "classCallCheck", "classNameTDZError", "classPrivateFieldDestructureSet", "classPrivateFieldGet", "classPrivateFieldLooseBase", "classPrivateFieldLooseKey", "classPrivateFieldSet", "classPrivateMethodGet", "classPrivateMethodSet", "classStaticPrivateFieldSpecGet", "classStaticPrivateFieldSpecSet", "classStaticPrivateMethodGet", "classStaticPrivateMethodSet", "construct", "createClass", "createForOfIteratorHelper", "createForOfIteratorHelperLoose", "createSuper", "decorate", "defaults", "defineEnumerableProperties", "defineProperty", "extends", "get", "getPrototypeOf", "inherits", "inheritsLoose", "initializerDefineProperty", "initializerWarningHelper", "instanceof", "interopRequireDefault", "interopRequireWildcard", "isNativeFunction", "isNativeReflectConstruct", "iterableToArray", "iterableToArrayLimit", "iterableToArrayLimitLoose", "jsx", "newArrowCheck", "nonIterableRest", "nonIterableSpread", "objectDestructuringEmpty", "objectSpread", "objectSpread2", "objectWithoutProperties", "objectWithoutPropertiesLoose", "possibleConstructorReturn", "readOnlyError", "set", "setPrototypeOf", "skipFirstGeneratorNext", "slicedToArray", "slicedToArrayLoose", "superPropBase", "taggedTemplateLiteral", "taggedTemplateLiteralLoose", "tdz", "temporalRef", "temporalUndefined", "toArray", "toConsumableArray", "toPrimitive", "toPropertyKey", "typeof", "unsupportedIterableToArray", "wrapAsyncGenerator", "wrapNativeSuper", "wrapRegExp"];
 const babelHelperScope = "@jsenv/core/helpers/babel/"; // maybe we can put back / in front of .jsenv here because we will
 // "redirect" or at least transform everything inside .jsenv
 // not only everything inside .dist
@@ -4530,6 +4530,16 @@ const serveCompiledJs = async ({
   const compiledFileUrl = util.resolveUrl(originalFileRelativeUrl, compileDirectoryUrl); // send out/best/importMap.json untouched
 
   if (originalFileRelativeUrl === importMapFileRelativeUrl) {
+    if (compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES || compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES) {
+      const otherwiseImportmapFileUrl = util.resolveUrl(originalFileRelativeUrl, `${projectDirectoryUrl}${outDirectoryRelativeUrl}otherwise/`); // for otherwise-commonjs-bundle, server did not write importMap.json
+      // let's just return otherwise/importMapFileRelativeUrl
+
+      return server.serveFile(otherwiseImportmapFileUrl, {
+        method,
+        headers
+      });
+    }
+
     return server.serveFile(compiledFileUrl, {
       method,
       headers
@@ -5050,11 +5060,7 @@ const generateImportMapForCompileServer = async ({
       }),
       // in case importMapFileRelativeUrl is not the default
       // redirect /importMap.json to the proper location
-      // well fuck it won't be compiled to something
-      // with this approach
       ...(importMapFileRelativeUrl === "importMap.json" ? {} : {
-        // but it means importMap.json is not
-        // gonna hit compile server
         "/importMap.json": `./${importMapFileRelativeUrl}`
       })
     }
@@ -8764,9 +8770,6 @@ const EXPLORING_HTML_RELATIVE_URL = "src/internal/exploring/exploring.html";
 const EXPLORING_CSS_RELATIVE_URL = "src/internal/exploring/exploring.css";
 const EXPLORING_JS_RELATIVE_URL = "src/internal/exploring/exploring.js";
 const SYSTEMJS_RELATIVE_URL = "src/internal/exploring/system.js";
-const exploringHtmlFileUrl = util.resolveUrl(EXPLORING_HTML_RELATIVE_URL, jsenvCoreDirectoryUrl);
-const exploringFileUrl = util.resolveUrl(EXPLORING_JS_RELATIVE_URL, jsenvCoreDirectoryUrl);
-const exploringCssFileUrl = util.resolveUrl(EXPLORING_CSS_RELATIVE_URL, jsenvCoreDirectoryUrl);
 const serveExploring = async (request, {
   projectDirectoryUrl,
   compileServerOrigin,
@@ -8774,20 +8777,22 @@ const serveExploring = async (request, {
   compileServerGroupMap,
   importMapFileRelativeUrl
 }) => {
-  const html = await util.readFile(exploringHtmlFileUrl);
-  const exploringFileRelativeUrl = util.urlToRelativeUrl(exploringFileUrl, projectDirectoryUrl); // use worst compileId to be sure it's compatible
+  const exploringHtmlFileUrl = util.resolveUrl(EXPLORING_HTML_RELATIVE_URL, jsenvCoreDirectoryUrl);
+  const html = await util.readFile(exploringHtmlFileUrl); // use worst compileId to be sure it's compatible
 
   const compileId = COMPILE_ID_OTHERWISE in compileServerGroupMap ? COMPILE_ID_OTHERWISE : getLastKey(compileServerGroupMap);
   const compileDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/`;
-  const exploringFileCompiledUrl = util.resolveUrl(exploringFileRelativeUrl, compileDirectoryUrl);
-  const exploringCssRelativeUrl = util.urlToRelativeUrl(exploringCssFileUrl, projectDirectoryUrl);
+  const jsenvDirectoryRelativeUrl = util.urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl);
+  const exploringCssProjectRelativeUrl = jsenvRelativeUrlToProjectRelativeUrl(EXPLORING_CSS_RELATIVE_URL, projectDirectoryUrl);
+  const systemJsProjectRelativeUrl = jsenvRelativeUrlToProjectRelativeUrl(SYSTEMJS_RELATIVE_URL, projectDirectoryUrl);
+  const exploringJsProjectRelativeUrl = jsenvRelativeUrlToProjectRelativeUrl(EXPLORING_JS_RELATIVE_URL, projectDirectoryUrl);
   const replacements = {
     $COMPILE_SERVER_ORIGIN: compileServerOrigin,
-    $JSENV_DIRECTORY_RELATIVE_URL: util.urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl),
-    $STYLE_HREF: util.resolveUrl(exploringCssRelativeUrl, compileDirectoryUrl),
+    $JSENV_DIRECTORY_RELATIVE_URL: jsenvDirectoryRelativeUrl,
+    $STYLE_HREF: util.resolveUrl(exploringCssProjectRelativeUrl, compileDirectoryUrl),
     $COMPILE_SERVER_IMPORT_MAP_SRC: util.resolveUrl(importMapFileRelativeUrl, compileDirectoryUrl),
-    $SYSTEMJS_SCRIPT_SRC: util.resolveUrl(SYSTEMJS_RELATIVE_URL, compileServerOrigin),
-    $JSENV_EXPLORING_FILE: JSON.stringify(exploringFileCompiledUrl)
+    $SYSTEMJS_SCRIPT_SRC: util.resolveUrl(systemJsProjectRelativeUrl, compileServerOrigin),
+    $JSENV_EXPLORING_FILE: JSON.stringify(util.resolveUrl(exploringJsProjectRelativeUrl, compileDirectoryUrl))
   };
   const body = Object.keys(replacements).reduce((previous, key) => {
     const regex = new RegExp(escapeRegexpSpecialCharacters(key), "g");
@@ -8808,6 +8813,12 @@ const serveExploring = async (request, {
 const getLastKey = object => {
   const keys = Object.keys(object);
   return keys[keys.length - 1];
+};
+
+const jsenvRelativeUrlToProjectRelativeUrl = (jsenvRelativeUrl, projectDirectoryUrl) => {
+  const fileUrl = util.resolveUrl(jsenvRelativeUrl, jsenvCoreDirectoryUrl);
+  const projectRelativeUrl = util.urlToRelativeUrl(fileUrl, projectDirectoryUrl);
+  return projectRelativeUrl;
 };
 
 /* eslint-disable import/max-dependencies */
@@ -8832,7 +8843,7 @@ const startExploring = async ({
   convertMap,
   compileGroupCount = 2,
   keepProcessAlive = true,
-  protocol = "https",
+  protocol = "http",
   privateKey = server.jsenvPrivateKey,
   certificate = server.jsenvCertificate,
   ip = "127.0.0.1",
