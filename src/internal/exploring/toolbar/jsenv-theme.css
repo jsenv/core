@@ -31,6 +31,9 @@ html[data-theme="jsenv"] .settings-box-item {
 html[data-theme="jsenv"] #settings-box-header .settings-icon {
   stroke: #076570;
 }
+html[data-theme="jsenv"] #button-close-settings {
+  fill: #076570;
+}
 html[data-theme="jsenv"] #settings-box h3,
 html[data-theme="jsenv"] #settings-box .category-title {
   color: #076570;
@@ -39,10 +42,18 @@ html[data-theme="jsenv"] #settings-box .category-title svg {
   fill: #076570;
 }
 html[data-theme="jsenv"] #settings-box .category-subtitle {
-  color: #848282;
+  color: #076570;
 }
 html[data-theme="jsenv"] label {
   color: #002e33;
+}
+html[data-theme="jsenv"] input:checked + .slider,
+html[data-theme="jsenv"] .switch input:checked + .slider:before {
+  background-color: #de5600;
+}
+html[data-theme="jsenv"] .switch .slider,
+html[data-theme="jsenv"] .switch .slider:before {
+  background-color: grey;
 }
 
 /* file input */

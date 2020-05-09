@@ -204,6 +204,11 @@
           <section id="settings" data-responsive-toolbar-element>
             <div id="settings-box">
               <div id="settings-box-header">
+                <button id="button-close-settings">
+                  <svg id="crossIconSvg" class="" width="18px" height="18px">
+                    <use xlink:href="#crossIconSvgModel"></use>
+                  </svg>
+                </button>
                 <svg class="settings-icon" width="35px" height="35px">
                   <use xlink:href="#settingsIconSvgModel"></use>
                 </svg>
@@ -217,22 +222,12 @@
                     </svg>
                     Notifications
                   </div>
+                  <label class="switch">
+                    <input id="toggle-notifs" type="checkbox" />
+                    <div class="slider"></div>
+                  </label>
                   <div class="category-subtitle">
-                    Send system notification when a file execution fails or is fixed
-                  </div>
-                  <div class="category-choices">
-                    <div id="notif-on">
-                      <label>
-                        <input type="radio" id="notif-on-radio" name="notif" value="notif-on" />
-                        Enabled
-                      </label>
-                    </div>
-                    <div id="notif-off">
-                      <label>
-                        <input type="radio" id="notif-off-radio" name="notif" value="notif-off" />
-                        Disabled
-                      </label>
-                    </div>
+                    Send system notification when a file execution fails or is fixed.
                   </div>
                 </div>
                 <div class="settings-box-item">
@@ -242,32 +237,12 @@
                     </svg>
                     Animations
                   </div>
+                  <label class="switch">
+                    <input id="toggle-notifs" type="checkbox" />
+                    <div class="slider"></div>
+                  </label>
                   <div class="category-subtitle">
                     Play animations and transitions.
-                  </div>
-                  <div class="category-choices">
-                    <div id="animation-on">
-                      <label>
-                        <input
-                          type="radio"
-                          id="animation-on-radio"
-                          name="animation"
-                          value="animation-on"
-                        />
-                        Enabled
-                      </label>
-                    </div>
-                    <div id="animation-off">
-                      <label>
-                        <input
-                          type="radio"
-                          id="animation-off-radio"
-                          name="animation"
-                          value="animation-off"
-                        />
-                        Disabled
-                      </label>
-                    </div>
                   </div>
                 </div>
                 <div class="settings-box-item">

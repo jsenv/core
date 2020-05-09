@@ -4,7 +4,7 @@
   bottom: 40px;
   right: 0;
   text-align: center;
-  padding: 15px 10px;
+  padding: 17px;
   font-size: 14px;
   color: #fff;
   background-color: #030713;
@@ -35,8 +35,8 @@
 }
 
 .settings-box-item {
-  margin: 13px 0;
-  padding: 12px 12px;
+  margin-top: 13px;
+  padding: 15px;
   background: #0c111b;
 }
 
@@ -58,6 +58,15 @@
   color: #24b1b0;
 }
 
+#button-close-settings {
+  float: right;
+  fill: #24b1b0;
+}
+
+#button-close-settings:hover {
+  opacity: 0.6;
+}
+
 label {
   color: #a9a8a8;
   font-size: 14px;
@@ -66,10 +75,11 @@ label {
 }
 
 #settings-box .category-title {
-  margin-bottom: 12px;
   color: #24b1b0;
   font-size: 16px;
   display: inline-block;
+  margin-bottom: 15px;
+  margin-top: 4px;
 }
 
 #settings-box .category-title svg {
@@ -81,8 +91,55 @@ label {
 }
 
 #settings-box .category-subtitle {
-  margin-bottom: 15px;
   color: #a9a8a8;
   font-size: 14px;
-  max-width: 290px;
+  max-width: 220px;
+}
+
+/* checkbox switch */
+.switch {
+  position: relative;
+  float: right;
+  width: 30px;
+  height: 6px;
+  padding: 0;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch input:checked + .slider {
+  background-color: #24b1b0;
+}
+.switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #4c4c4c;
+  transition: 0.4s;
+  border-radius: 2px;
+  font-size: 12px;
+  padding-top: 4px;
+  margin-top: 10px;
+}
+.switch input:checked + .slider:before {
+  transform: translateX(16px);
+  background-color: #24b1b0;
+}
+.switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 6px;
+  width: 6px;
+  left: 0px;
+  top: -5px;
+  background-color: #4c4c4c;
+  color: #030713;
+  transition: 0.4s;
+  border-radius: 2px;
+  padding: 4px;
 }

@@ -29,6 +29,7 @@ export const renderToolbar = (fileRelativeUrl) => {
 
   // settings
   document.querySelector("#settings-button").onclick = () => toggleSettingsBox()
+  document.querySelector("#button-close-settings").onclick = () => toggleSettingsBox()
   registerNotifications()
   registerToolbarTheme()
 

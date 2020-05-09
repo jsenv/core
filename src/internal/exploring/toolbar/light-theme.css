@@ -36,6 +36,9 @@ html[data-theme="light"] .settings-box-item {
 html[data-theme="light"] #settings-box-header .settings-icon {
   stroke: #076570;
 }
+html[data-theme="light"] #button-close-settings {
+  fill: #076570;
+}
 html[data-theme="light"] #settings-box h3,
 html[data-theme="light"] #settings-box .category-title {
   color: #076570;
@@ -48,6 +51,14 @@ html[data-theme="light"] #settings-box .category-subtitle {
 }
 html[data-theme="light"] label {
   color: #002e33;
+}
+html[data-theme="light"] input:checked + .slider,
+html[data-theme="light"] .switch input:checked + .slider:before {
+  background-color: #076570;
+}
+html[data-theme="light"] .switch .slider,
+html[data-theme="light"] .switch .slider:before {
+  background-color: grey;
 }
 
 /* file input */

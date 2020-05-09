@@ -1,28 +1,24 @@
 import { createPreference } from "./preferences.js"
 
-export const NOTIF_ON = "on"
-export const NOTIF_OFF = "off"
-
 const notificationPreference = createPreference("notification")
 
 export const notificationAvailable = typeof window.Notification === "function"
 
 export const getNotificationPreference = () =>
-  notificationPreference.has() ? notificationPreference.get() : NOTIF_ON
+  notificationPreference.has() ? notificationPreference.get() : true
 
 export const setNotificationPreference = (value) => notificationPreference.set(value)
 
 export const registerNotifications = () => {
-  const notifOnRadio = document.querySelector("#notif-on-radio")
-  const notifOffRadio = document.querySelector("#notif-off-radio")
-  notifOnRadio.checked = getNotificationPreference() === NOTIF_ON
-  notifOffRadio.checked = getNotificationPreference() === NOTIF_OFF
-  notifOnRadio.onclick = () => setNotificationPreference(NOTIF_ON)
-  notifOffRadio.onclick = () => setNotificationPreference(NOTIF_OFF)
+  const notifCheckbox = document.querySelector("#toggle-notifs")
+  notifCheckbox.checked = getNotificationPreference()
+  notifCheckbox.onchange = () => {
+    setNotificationPreference(notifCheckbox.checked)
+  }
 }
 
 export const notifyFileExecution = (execution, previousExecution) => {
-  const notificationEnabled = getNotificationPreference() === NOTIF_ON
+  const notificationEnabled = getNotificationPreference()
   if (!notificationEnabled) return
 
   const { fileRelativeUrl } = execution
