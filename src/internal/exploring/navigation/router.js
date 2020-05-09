@@ -73,8 +73,10 @@ export const createRouter = (
   },
 ) => {
   const windowHistory = window.history
-  const initialHistoryPosition = windowHistory.length
-  const initialHistoryState = windowHistory.state
+  const initialHistoryPosition = windowHistory.state
+    ? windowHistory.state.position
+    : window.history.length
+  const initialHistoryState = windowHistory.state ? windowHistory.state.state : null
   const initialUrl = document.location.href
   let browserHistoryPosition = initialHistoryPosition
   let browserHistoryState = initialHistoryState
