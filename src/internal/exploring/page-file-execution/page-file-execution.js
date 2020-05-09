@@ -1,4 +1,3 @@
-import { isCancelError } from "@jsenv/cancellation"
 import { memoize } from "../../memoize.js"
 import { createLivereloading } from "../livereloading/livereloading.js"
 import { applyLivereloadIndicator } from "../toolbar/livereload-indicator.js"
@@ -15,8 +14,8 @@ export const fileExecutionRoute = {
   },
 
   // setup cancellationToken canceled only when leaving the page
-  setup: ({ cancellationToken, navigation, reload }) => {
-    const fileRelativeUrl = new URL(navigation.destinationUrl).pathname.slice(1)
+  setup: ({ routeCancellationToken, destinationUrl, reload }) => {
+    const fileRelativeUrl = new URL(destinationUrl).pathname.slice(1)
     const firstConnectionPromise = createPromiseAndHooks()
 
     window.file = {
@@ -28,7 +27,7 @@ export const fileExecutionRoute = {
       // execute,
       // reload: () => execute(fileRelativeUrl),
     }
-    cancellationToken.register(() => {
+    routeCancellationToken.register(() => {
       window.file = undefined
     })
 
@@ -65,7 +64,7 @@ export const fileExecutionRoute = {
         }
       },
     })
-    cancellationToken.register(() => {
+    routeCancellationToken.register(() => {
       livereloading.disconnect()
     })
 
@@ -79,8 +78,8 @@ export const fileExecutionRoute = {
     return firstConnectionPromise
   },
 
-  load: async ({ cancellationToken, navigation, activePage }) => {
-    const fileRelativeUrl = new URL(navigation.destinationUrl).pathname.slice(1)
+  load: async ({ pageCancellationToken, destinationUrl, activePage }) => {
+    const fileRelativeUrl = new URL(destinationUrl).pathname.slice(1)
     const iframe = document.createElement("iframe")
     const page = {
       title: fileRelativeUrl,
@@ -97,7 +96,9 @@ export const fileExecutionRoute = {
           endTime: null,
           result: null,
         }
-        await loadAndExecute(pendingExecution, { cancellationToken })
+        await loadAndExecute(pendingExecution, {
+          cancellationToken: pageCancellationToken,
+        })
 
         const execution = pendingExecution
         const previousExecution = activePage ? activePage.execution : undefined

@@ -58,7 +58,7 @@ export const installNavigation = () => {
       pageLoaderFadein.reverse()
       throw error
     },
-    enter: async (page, { cancellationToken, activePage }) => {
+    enter: async (page, { pageCancellationToken, activePage }) => {
       const { title, element, mutateElementBeforeDisplay = () => {} } = page
 
       element.style.display = "none"
@@ -72,7 +72,7 @@ export const installNavigation = () => {
       // if we got cancelled during mutateElementBeforeDisplay
       // no need to perform the DOM changes and the animation the element
       // will be removed anyway
-      if (cancellationToken.cancellationRequested) {
+      if (pageCancellationToken.cancellationRequested) {
         return
       }
 

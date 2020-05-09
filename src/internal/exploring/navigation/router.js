@@ -84,7 +84,10 @@ export const createRouter = (
   let applicationHistoryPosition = initialHistoryPosition
   let applicationHistoryState = initialHistoryState
   let applicationUrl = initialUrl
-  let currentRouteActivationAttempt
+  let currentRouteCancellationSource
+  let currentPageCancellationSource
+  let activeRouteCancellationSource
+  let activePageCancellationSource
   let activeRoute
 
   const createNavigation = ({
@@ -96,14 +99,27 @@ export const createRouter = (
   }) => {
     const externalCancellationSource = createCancellationSource()
     const externalCancellationToken = externalCancellationSource.token
+    const routeCancellationSource = createCancellationSource()
+    const routeCancellationToken = composeCancellationToken(
+      externalCancellationToken,
+      routeCancellationSource.token,
+    )
+    const pageCancellationSource = createCancellationSource()
+    const pageCancellationToken = composeCancellationToken(
+      routeCancellationToken,
+      pageCancellationSource.token,
+    )
 
     const navigation = {
       status: "",
+      routeCancellationToken,
+      pageCancellationToken,
       cancel: (reason) => {
         navigation.status = "canceled"
         navigation.cancelReason = reason
         externalCancellationSource.cancel(navigation)
       },
+      reload: (event = { type: "reload" }) => loadCurrentUrl(event),
       event,
       activePage,
       currentHistoryPosition: applicationHistoryPosition,
@@ -168,86 +184,57 @@ export const createRouter = (
       }
 
       const activateRoute = async (navigation) => {
-        externalCancellationToken.throwIfRequested()
-
-        const activationCancellationSource = createCancellationSource()
-        const activationCancellationToken = composeCancellationToken(
-          externalCancellationToken,
-          activationCancellationSource.token,
-        )
-        const installCancellationSource = createCancellationSource()
-        const installCancellationToken = composeCancellationToken(
-          activationCancellationToken,
-          installCancellationSource.token,
-        )
-        let step
-        const routeActivationAttempt = {
-          isActivating: () => step !== "done",
-          isInstalling: () => step === "load" || step === "enter" || step === "replace",
-          cancelActivation: (reason) => {
-            activationCancellationSource.cancel(reason)
-          },
-          cancelInstallation: (reason) => {
-            installCancellationSource.cancel(reason)
-          },
-        }
-        navigation.cancellationToken = installCancellationToken
         onstart(navigation)
+        routeCancellationToken.throwIfRequested() // in case external cancellation happens
 
-        if (currentRouteActivationAttempt) {
-          if (currentRouteActivationAttempt.isInstalling()) {
-            currentRouteActivationAttempt.cancelInstallation(navigation)
-          } else if (!navigation.isReload && currentRouteActivationAttempt.isActivating()) {
-            currentRouteActivationAttempt.cancelActivation(navigation)
-          }
+        if (currentRouteCancellationSource && !navigation.isReload) {
+          currentRouteCancellationSource.cancel(navigation)
         }
-        currentRouteActivationAttempt = routeActivationAttempt
-
-        const sharedParams = {
-          navigation,
-          reload: (event = { type: "reload" }) => loadCurrentUrl(event),
-          activePage,
+        if (currentPageCancellationSource) {
+          currentPageCancellationSource.cancel(navigation)
         }
 
         if (!navigation.isReload && navigation.route.setup) {
-          step = "setup"
-          await navigation.route.setup({
-            ...sharedParams,
-            cancellationToken: activationCancellationToken,
-          })
-          activationCancellationToken.throwIfRequested()
+          currentRouteCancellationSource = routeCancellationSource
+          await navigation.route.setup(navigation)
+          routeCancellationToken.throwIfRequested()
         }
 
-        step = "load"
-        const page = await navigation.route.load({
-          ...sharedParams,
-          cancellationToken: installCancellationToken,
-        })
-        installCancellationToken.throwIfRequested()
+        currentPageCancellationSource = pageCancellationSource
+        const page = await navigation.route.load(navigation)
+        routeCancellationToken.throwIfRequested()
 
-        step = "enter"
-        await enter(page, {
-          ...sharedParams,
-          cancellationToken: installCancellationToken,
-        })
+        await enter(page, navigation)
         // at this point we put page in the DOM but it's no longer needed
         // let's remove it from the DOM and throw to cancel the navigation
         try {
-          installCancellationToken.throwIfRequested()
+          routeCancellationToken.throwIfRequested()
         } catch (cancelError) {
           leave(page, cancelError.reason)
           throw cancelError
         }
 
-        step = "replace"
         // remove currentPage from the DOM
         if (activePage) {
           leave(activePage, navigation)
         }
+
         activeRoute = navigation.route
         activePage = page
-        step = "done"
-        currentRouteActivationAttempt = undefined
+        navigation.activePage = activePage
+        currentRouteCancellationSource = undefined
+        currentPageCancellationSource = undefined
+
+        if (activeRouteCancellationSource) {
+          if (navigation.isReload) {
+            activePageCancellationSource.cancel(navigation)
+          } else {
+            activeRouteCancellationSource.cancel(navigation)
+          }
+        }
+        activeRouteCancellationSource = routeCancellationSource
+        activePageCancellationSource = pageCancellationSource
+
         return page
       }
 
