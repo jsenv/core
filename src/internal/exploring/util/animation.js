@@ -66,9 +66,9 @@ export const move = (fromNode, toNode, options) => {
   // clone node and style it
   const copy = fromNode.cloneNode(true)
   copy.style.position = "absolute"
-  copy.style.left = fromPosition.left
-  copy.style.top = fromPosition.top
-  copy.style.maxWidth = fromPosition.right - fromPosition.left
+  copy.style.left = `${fromPosition.left}px`
+  copy.style.top = `${fromPosition.top}px`
+  copy.style.maxWidth = `${fromPosition.right - fromPosition.left}px`
   copy.style.overflow = toComputedStyle.overflow
   copy.style.textOverflow = toComputedStyle.textOverflow
   div.appendChild(copy)
@@ -94,6 +94,7 @@ export const move = (fromNode, toNode, options) => {
       {
         offset: 0.9,
         backgroundColor: fromComputedStyle.backgroundColor,
+        color: fromComputedStyle.color,
       },
       {
         transform: translate,
@@ -140,7 +141,7 @@ export const createToolbarAnimation = () => {
   return { expand, collapse }
 }
 
-const transit = (
+export const transit = (
   fromState,
   toState,
   { commitStyles = true, fill = "both", duration = 300 } = {},
@@ -159,15 +160,8 @@ const transit = (
       const to = toProperties[propertyName]
       fromStyles[propertyName] = from
       toStyles[propertyName] = to
-      keyframes.push(
-        {
-          [propertyName]: from,
-        },
-        {
-          [propertyName]: to,
-        },
-      )
     })
+    keyframes.push(fromStyles, toStyles)
 
     let animation
     if (canUseAnimation()) {

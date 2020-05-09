@@ -1,22 +1,23 @@
-export const pageErrorNavigation = {
+export const errorNavigationRoute = {
   name: "error-navigation",
 
-  match: ({ event }) => {
-    return event.type === "error-navigation"
-  },
-
-  navigate: async ({ event }) => {
+  load: ({ navigation }) => {
     const element = document.querySelector(`[data-page="error-navigation"`).cloneNode(true)
 
     const title = element.querySelector("h1")
-    title.textContent = `Error during navigation to ${event.data.route.name} page.`
+    title.textContent = `Error during navigation to ${navigation.destinationUrl}.`
 
     const pre = element.querySelector("pre")
-    const { error } = event.data
-    pre.textContent = error.stack || error
+    pre.textContent = navigation.error.stack || navigation.error
 
     return {
+      // title: "Error", // Keep the original error title ?
       element,
+      onactive: () => {
+        setTimeout(() => {
+          throw navigation.error
+        })
+      },
     }
   },
 }

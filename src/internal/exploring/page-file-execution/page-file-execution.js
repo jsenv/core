@@ -1,184 +1,46 @@
-import {
-  createCancellationSource,
-  composeCancellationToken,
-  isCancelError,
-} from "@jsenv/cancellation"
 import { memoize } from "../../memoize.js"
 import { createLivereloading } from "../livereloading/livereloading.js"
 import { applyLivereloadIndicator } from "../toolbar/livereload-indicator.js"
 import { applyExecutionIndicator } from "../toolbar/execution-indicator.js"
-import { loadExploringConfig } from "../util/util.js"
+import { loadExploringConfig, createPromiseAndHooks } from "../util/util.js"
 import { jsenvLogger } from "../util/jsenvLogger.js"
 import { notifyFileExecution } from "../util/notification.js"
 
-export const pageFileExecution = {
+export const fileExecutionRoute = {
   name: "file-execution",
-  match: () => {
-    const fileRelativeUrl = document.location.pathname.slice(1)
-    if (!fileRelativeUrl) {
-      return false
-    }
-    return true
+
+  match: (url) => {
+    return new URL(url).pathname !== "/"
   },
 
-  navigate: async ({ cancellationToken, mountPromise }) => {
-    const fileRelativeUrl = document.location.pathname.slice(1)
+  // setup cancellationToken canceled only when leaving the page
+  setup: ({ routeCancellationToken, destinationUrl, reload }) => {
+    const fileRelativeUrl = new URL(destinationUrl).pathname.slice(1)
+    const firstConnectionPromise = createPromiseAndHooks()
 
-    // reset file execution indicator ui
-    applyExecutionIndicator()
-    window.page = {
+    window.file = {
       previousExecution: undefined,
       execution: undefined,
       evaluate: () => {
         throw new Error("cannot evaluate, page is not ready")
       },
-      execute,
-      reload: () => execute(fileRelativeUrl),
+      // execute,
+      // reload: () => execute(fileRelativeUrl),
     }
-    cancellationToken.register(() => {
-      window.page = undefined
+    routeCancellationToken.register(() => {
+      window.file = undefined
     })
-
-    let previousExecution
-    let currentExecution
-    let executionPlaceholder = document.createElement("div")
-
-    const execute = async (fileRelativeUrl) => {
-      try {
-        return await performExecution(fileRelativeUrl)
-      } catch (e) {
-        if (isCancelError(e)) {
-          return e
-        }
-        throw e
-      }
-    }
-
-    const performExecution = async (fileRelativeUrl) => {
-      // we must wait for the page to be in the DOM because iframe will
-      // replace placeHolder element
-      await mountPromise
-
-      const startTime = Date.now()
-      const executionCancellationSource = createCancellationSource()
-      const executionCancellationToken = composeCancellationToken(
-        cancellationToken,
-        executionCancellationSource.token,
-      )
-      const iframe = document.createElement("iframe")
-      const execution = {
-        cancel: executionCancellationSource.cancel,
-        fileRelativeUrl,
-        status: null,
-        iframe,
-        startTime,
-        endTime: null,
-        result: null,
-      }
-      window.page.execution = execution // expose on window
-      if (currentExecution) {
-        // in case currentExecution is pending, cancel it
-        currentExecution.cancel("reload")
-        // ensure previous execution is properly cleaned
-        currentExecution.iframe.src = "about:blank"
-      }
-      currentExecution = execution
-
-      // behind loading there is these steps:
-      // - fetching exploring config
-      // - fetching iframe html (which contains browser-js-file.js)
-      execution.status = "loading"
-      applyExecutionIndicator("loading")
-
-      const {
-        compileServerOrigin,
-        htmlFileRelativeUrl,
-        outDirectoryRelativeUrl,
-        browserRuntimeFileRelativeUrl,
-        sourcemapMainFileRelativeUrl,
-        sourcemapMappingFileRelativeUrl,
-      } = await loadExploringConfig({ cancellationToken: executionCancellationToken })
-      if (executionCancellationToken.cancellationRequested) {
-        return
-      }
-
-      // memoize ensure iframe is lazyly loaded once
-      const loadIframe = memoize(() => {
-        const loadedPromise = iframeToLoaded(execution.iframe, {
-          cancellationToken: executionCancellationToken,
-        })
-        iframe.src = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`
-        replaceElement(executionPlaceholder, iframe) // append iframe in the DOM at the proper location
-        executionPlaceholder = iframe // next execution will take place of previous one
-        return loadedPromise
-      })
-
-      const evaluate = async (fn, ...args) => {
-        await loadIframe()
-        args = [`(${fn.toString()})`, ...args]
-        return performIframeAction(execution.iframe, "evaluate", args, {
-          cancellationToken: executionCancellationToken,
-          compileServerOrigin,
-        })
-      }
-      window.page.evaluate = evaluate
-
-      // executing means fetching, parsing, executing file imports + file itself
-      execution.status = "executing"
-      const executionResult = await evaluate(
-        // disable coverage for this line because it will be executed
-        // in an other context where the coverage global variable will not exists
-        /* istanbul ignore next */
-        (param) => {
-          return window.execute(param)
-        },
-        {
-          fileRelativeUrl,
-          compileServerOrigin,
-          outDirectoryRelativeUrl,
-          browserRuntimeFileRelativeUrl,
-          sourcemapMainFileRelativeUrl,
-          sourcemapMappingFileRelativeUrl,
-          collectNamespace: true,
-          transferableNamespace: true,
-          collectCoverage: false,
-          executionId: fileRelativeUrl,
-          errorExposureInConsole: true,
-        },
-      )
-      if (executionCancellationToken.cancellationRequested) {
-        return
-      }
-      execution.status = "executed"
-      if (executionResult.status === "errored") {
-        // eslint-disable-next-line no-eval
-        executionResult.error = window.eval(executionResult.exceptionSource)
-      }
-      execution.result = executionResult
-      const endTime = Date.now()
-      execution.endTime = endTime
-
-      const duration = execution.endTime - execution.startTime
-      if (executionResult.status === "errored") {
-        jsenvLogger.debug(`error during execution`, executionResult.error)
-        applyExecutionIndicator("failure", duration)
-      } else {
-        applyExecutionIndicator("success", duration)
-      }
-      notifyFileExecution(execution, previousExecution)
-
-      previousExecution = execution
-      window.page.previousExecution = previousExecution
-    }
 
     // reset livereload indicator ui
     applyLivereloadIndicator()
+
+    let connectedOnce = false
     const livereloading = createLivereloading(fileRelativeUrl, {
       onFileChanged: () => {
-        execute(fileRelativeUrl)
+        reload()
       },
       onFileRemoved: () => {
-        execute(fileRelativeUrl)
+        reload()
       },
       onConnecting: ({ abort }) => {
         applyLivereloadIndicator("connecting", { abort })
@@ -192,33 +54,153 @@ export const pageFileExecution = {
       },
       onConnected: ({ disconnect }) => {
         applyLivereloadIndicator("connected", { disconnect })
-        // we have lost connection to the server, we might have missed some file changes
-        // let's re-execute the file
-        execute(fileRelativeUrl)
+        if (connectedOnce) {
+          // we have lost connection to the server, we might have missed some file changes
+          // let's re-execute the file
+          reload()
+        } else {
+          connectedOnce = true
+          firstConnectionPromise.resolve()
+        }
       },
     })
+    routeCancellationToken.register(() => {
+      livereloading.disconnect()
+    })
+
     if (livereloading.isEnabled()) {
       livereloading.connect()
     } else {
       applyLivereloadIndicator("off", { connect: livereloading.connect })
-      // if not connecting we don't wait for connection to be established before executing
-      // we execute immediatly (happen when livereloading is disabled)
-      execute(fileRelativeUrl)
+      connectedOnce = true
+      firstConnectionPromise.resolve()
     }
+    return firstConnectionPromise
+  },
 
-    cancellationToken.register(() => {
-      livereloading.disconnect()
-    })
-
-    return {
+  load: async ({ pageCancellationToken, destinationUrl, activePage }) => {
+    const fileRelativeUrl = new URL(destinationUrl).pathname.slice(1)
+    const iframe = document.createElement("iframe")
+    const page = {
       title: fileRelativeUrl,
-      element: executionPlaceholder,
+      element: iframe,
+      execution: undefined,
+      mutateElementBeforeDisplay: async () => {
+        applyExecutionIndicator() // reset file execution indicator ui
+
+        const pendingExecution = {
+          fileRelativeUrl,
+          status: null,
+          iframe,
+          startTime: null,
+          endTime: null,
+          result: null,
+        }
+        await loadAndExecute(pendingExecution, {
+          cancellationToken: pageCancellationToken,
+        })
+
+        const execution = pendingExecution
+        const previousExecution = activePage ? activePage.execution : undefined
+        window.file.previousExecution = previousExecution
+        window.file.execution = execution
+
+        const duration = execution.endTime - execution.startTime
+        if (execution.result.status === "errored") {
+          jsenvLogger.debug(`error during execution`, execution.result.error)
+          applyExecutionIndicator("failure", duration)
+        } else {
+          applyExecutionIndicator("success", duration)
+        }
+        notifyFileExecution(execution, previousExecution)
+        page.execution = execution
+      },
+      onleave: () => {
+        // be sure the iframe src is reset to avoid eventual memory leak
+        // if it was unproperly garbage collected or something
+        iframe.src = "about:blank"
+      },
     }
+
+    return page
   },
 }
 
-const replaceElement = (elementToReplace, otherElement) => {
-  elementToReplace.parentNode.replaceChild(otherElement, elementToReplace)
+const loadAndExecute = async (execution, { cancellationToken }) => {
+  return performLoadAndExecute(execution, { cancellationToken })
+}
+
+const performLoadAndExecute = async (execution, { cancellationToken }) => {
+  const startTime = Date.now()
+  execution.startTime = startTime
+
+  // behind loading there is these steps:
+  // - fetching exploring config
+  // - fetching iframe html (which contains browser-js-file.js)
+  execution.status = "loading"
+  applyExecutionIndicator("loading")
+
+  const {
+    compileServerOrigin,
+    htmlFileRelativeUrl,
+    outDirectoryRelativeUrl,
+    browserRuntimeFileRelativeUrl,
+    sourcemapMainFileRelativeUrl,
+    sourcemapMappingFileRelativeUrl,
+  } = await loadExploringConfig({ cancellationToken })
+  if (cancellationToken.cancellationRequested) {
+    return
+  }
+
+  // memoize ensure iframe is lazyly loaded once
+  const loadIframe = memoize(() => {
+    const loadedPromise = iframeToLoaded(execution.iframe, {
+      cancellationToken,
+    })
+    execution.iframe.src = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${execution.fileRelativeUrl}`
+    return loadedPromise
+  })
+
+  const evaluate = async (fn, ...args) => {
+    await loadIframe()
+    args = [`(${fn.toString()})`, ...args]
+    return performIframeAction(execution.iframe, "evaluate", args, {
+      cancellationToken,
+      compileServerOrigin,
+    })
+  }
+
+  // executing means fetching, parsing, executing file imports + file itself
+  execution.status = "executing"
+  const executionResult = await evaluate(
+    // disable coverage for this line because it will be executed
+    // in an other context where the coverage global variable will not exists
+    /* istanbul ignore next */
+    (param) => {
+      return window.execute(param)
+    },
+    {
+      fileRelativeUrl: execution.fileRelativeUrl,
+      compileServerOrigin,
+      outDirectoryRelativeUrl,
+      browserRuntimeFileRelativeUrl,
+      sourcemapMainFileRelativeUrl,
+      sourcemapMappingFileRelativeUrl,
+      collectNamespace: true,
+      transferableNamespace: true,
+      collectCoverage: false,
+      executionId: execution.fileRelativeUrl,
+      errorExposureInConsole: true,
+    },
+  )
+  execution.status = "executed"
+  if (executionResult.status === "errored") {
+    // eslint-disable-next-line no-eval
+    executionResult.error = window.eval(executionResult.exceptionSource)
+  }
+  execution.result = executionResult
+  const endTime = Date.now()
+  execution.endTime = endTime
 }
 
 const iframeToLoaded = (iframe, { cancellationToken }) => {

@@ -16,6 +16,11 @@
       <!-- a default page -->
       <!-- so that we will transit from this html element to the active page when page loads -->
       <article data-page="default"></article>
+
+      <!--
+      here page element will appended to the DOM waiting for current page leave animation to be done
+      (also waiting for eventual mutatePageElementBeforeDispay hook resolution)
+      -->
     </main>
     <div id="page-loader"></div>
     <footer>

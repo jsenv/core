@@ -1,92 +1,103 @@
-import { createCancellationSource, isCancelError } from "@jsenv/cancellation"
-import { createPromiseAndHooks } from "../util/util.js"
-import { fadeIn, fadeOut } from "../util/animation.js"
+/*
+
+TODO:
+
+- on a pas de activePage par défaut
+on ne sait donc pas comment faire la transition
+pour la page initiale
+il faudrait ptet le passer a createRouter en lui filant la page par défaut
+
+- dans router.js test what happens with history.go(0)
+if it trigger popstate ensure we behave corretly
+otherwise if it's just location.reload() we got nothing to do
+
+*/
+
+import { fadeIn, fadeOut, transit } from "../util/animation.js"
 import { renderToolbar } from "../toolbar/toolbar.js"
-import { pageErrorNavigation } from "../page-error-navigation/page-error-navigation.js"
-import { pageFileList } from "../page-file-list/page-file-list.js"
-import { pageFileExecution } from "../page-file-execution/page-file-execution.js"
-
-const pageCandidates = [pageErrorNavigation, pageFileList, pageFileExecution]
-
-const LOADER_FADING_DURATION = 300
-
-const defaultPage = {
-  name: "default",
-  naviguate: ({ cancellationToken }) => {
-    cancellationToken.register(({ reason }) => {
-      const { page, pageLoader } = reason
-      pageLoader.style.backgroundColor = page === pageFileList ? "#1f262c" : "white"
-    })
-    return {
-      title: document.title,
-      element: document.querySelector("[data-page=default]"),
-    }
-  },
-}
-
-const pageContainer = document.querySelector("#page")
-const pageLoader = document.querySelector("#page-loader")
+import { errorNavigationRoute } from "../page-error-navigation/page-error-navigation.js"
+import { fileListRoute } from "../page-file-list/page-file-list.js"
+import { fileExecutionRoute } from "../page-file-execution/page-file-execution.js"
+import { createRouter } from "./router.js"
 
 export const installNavigation = () => {
-  let navigationCancellationSource = createCancellationSource()
-  const defaultRoute = {
-    event: { type: "default" }, // there is no real event that lead to this route
-    url: "", // no url for this route it's an abstract route
-    page: defaultPage,
-    ...defaultPage,
-    ...defaultPage.naviguate({ cancellationToken: navigationCancellationSource.token }),
-  }
-  let currentRoute = defaultRoute
+  const pageContainer = document.querySelector("#page")
+  // const pageLoader = document.querySelector("#page-loader")
+  const pageLoaderFadein = transit(
+    {
+      "#page-loader": { visibility: "hidden", opacity: 0 },
+    },
+    {
+      "#page-loader": { visibility: "visible", opacity: 0.4 },
+    },
+    { duration: 300 },
+  )
+  const routes = [fileListRoute, fileExecutionRoute]
+  let fadeinPromise
+  const router = createRouter(routes, {
+    activePage: {
+      title: document.title,
+      element: document.querySelector('[data-page="default"]'),
+    },
+    errorRoute: errorNavigationRoute,
+    onstart: (navigation) => {
+      fadeinPromise = pageLoaderFadein.play()
 
-  const handleNavigationEvent = async (event) => {
-    // always rerender toolbar
-    const fileRelativeUrl = document.location.pathname.slice(1)
-    renderToolbar(fileRelativeUrl)
+      // every navigation must render toolbar
+      // this function is synchronous it's just ui
+      renderToolbar(new URL(navigation.destinationUrl).pathname.slice(1), navigation)
 
-    const url = String(document.location)
-    const nextPage = pageCandidates.find(({ match }) => match({ url, event }))
-    const nextRoute = {
-      event,
-      url,
-      page: nextPage,
-      ...nextPage,
-    }
+      if (navigation.activePage && navigation.activePage.onleavestart) {
+        navigation.activePage.onleavestart(navigation)
+      }
+    },
+    oncancel: () => {
+      pageLoaderFadein.reverse()
+    },
+    onerror: (navigation, error) => {
+      pageLoaderFadein.reverse()
+      throw error
+    },
+    enter: async (page, { pageCancellationToken, activePage }) => {
+      const { title, element, mutateElementBeforeDisplay = () => {} } = page
 
-    navigationCancellationSource.cancel({ ...nextRoute, pageLoader })
-    navigationCancellationSource = createCancellationSource()
-    const cancellationToken = navigationCancellationSource.token
+      element.style.display = "none"
+      pageContainer.appendChild(element)
+      await mutateElementBeforeDisplay()
+      // if everything is super fast it might be better to wait for pageLoader fade in to be done
+      // before doing the loader fadeout but this is to be checked
+      await fadeinPromise
+      pageLoaderFadein.reverse()
 
-    try {
-      await performNavigation(currentRoute, nextRoute, {
-        cancellationToken,
-      })
-    } catch (e) {
-      if (isCancelError(e)) return
+      // if we got cancelled during mutateElementBeforeDisplay
+      // no need to perform the DOM changes and the animation the element
+      // will be removed anyway
+      if (pageCancellationToken.cancellationRequested) {
+        return
+      }
 
-      // navigation error while navigating to error page
-      if (nextPage.name === "error-navigation") throw e
-
-      handleNavigationEvent({
-        type: "error-navigation",
-        data: {
-          route: nextRoute,
-          error: e,
-        },
-      })
-      return
-    }
-    currentRoute = nextRoute
-    document.documentElement.setAttribute("data-route", nextRoute.name)
-  }
-
-  handleNavigationEvent({
-    type: "load",
+      if (title) {
+        document.title = title
+      }
+      if (activePage) {
+        activePage.element.style.position = "absolute"
+      }
+      // if new page is smaller active page can be interacted because pageloader is fadedout
+      element.style.position = "relative"
+      element.style.display = "block"
+      // ptet si on faisant fadeout en meme temps la page derriere ce serait mieux ?
+      const elementFadein = fadeIn(element, { duration: 300 })
+      const activeElementFadeout = fadeOut(activePage.element, { duration: 300 })
+      await Promise.all([elementFadein, activeElementFadeout])
+      if (page.onactive) {
+        page.onactive()
+      }
+    },
+    leave: ({ element, onbeforeleaveend = () => {} }, reason) => {
+      onbeforeleaveend(reason)
+      pageContainer.removeChild(element)
+    },
   })
-  window.onpopstate = () => {
-    handleNavigationEvent({
-      type: "popstate",
-    })
-  }
 
   const onclick = (clickEvent) => {
     if (clickEvent.defaultPrevented) {
@@ -111,63 +122,20 @@ export const installNavigation = () => {
     }
 
     clickEvent.preventDefault()
-    window.history.pushState({}, "", aElement.href)
-    handleNavigationEvent(clickEvent)
+    router.navigateToUrl(aElement.href, {}, clickEvent)
   }
   document.addEventListener("click", onclick)
+
+  // if we cancel this navigation we will just show the default page
+  // which is a blank page
+  // and reloading the page is the only wait to get this to happen again
+  // moreover this function is what we want to call
+  // inside file-execution page when we want to re-execute
+  router.loadCurrentUrl()
+
   return () => {
     document.removeEventListener("click", onclick)
   }
-}
-
-const performNavigation = async (route, nextRoute, { cancellationToken }) => {
-  // while loading we will keep current page elements in the DOM
-  // so that the page dimensions are preserved
-
-  // make them able to interact using an absolute div on top of them
-  pageLoader.style.display = "block"
-  pageLoader.style.pointerEvents = "auto"
-  const pageLoaderFadeinAnimation = fadeIn(pageLoader, {
-    cancellationToken,
-    duration: LOADER_FADING_DURATION,
-  })
-  pageLoaderFadeinAnimation.then(() => {
-    pageContainer.style.visibility = "hidden"
-  })
-
-  const mountPromise = createPromiseAndHooks()
-  const navigationResult = await nextRoute.navigate({
-    ...nextRoute,
-    cancellationToken,
-    mountPromise,
-  })
-  Object.assign(nextRoute, navigationResult)
-  await pageLoaderFadeinAnimation
-  if (cancellationToken.cancellationRequested) {
-    return
-  }
-
-  // inject next page element
-  pageContainer.innerHTML = ""
-  if (nextRoute.element) {
-    pageContainer.appendChild(nextRoute.element)
-    mountPromise.resolve()
-    if (navigationResult.onmount) {
-      navigationResult.onmount()
-    }
-  }
-  if (nextRoute.title) {
-    document.title = nextRoute.title
-  }
-  pageContainer.style.visibility = "visible"
-  pageLoader.style.pointerEvents = "none"
-  const pageLoaderFadeoutAnimation = fadeOut(pageLoader, {
-    cancellationToken,
-    duration: LOADER_FADING_DURATION,
-  })
-  pageLoaderFadeoutAnimation.then(() => {
-    pageLoader.style.display = "none"
-  })
 }
 
 const isClickToOpenTab = (clickEvent) => {
