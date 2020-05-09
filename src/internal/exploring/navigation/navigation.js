@@ -13,7 +13,7 @@ otherwise if it's just location.reload() we got nothing to do
 
 */
 
-import { fadeIn, transit } from "../util/animation.js"
+import { fadeIn, fadeOut, transit } from "../util/animation.js"
 import { renderToolbar } from "../toolbar/toolbar.js"
 import { errorNavigationRoute } from "../page-error-navigation/page-error-navigation.js"
 import { fileListRoute } from "../page-file-list/page-file-list.js"
@@ -46,6 +46,10 @@ export const installNavigation = () => {
       // every navigation must render toolbar
       // this function is synchronous it's just ui
       renderToolbar(new URL(navigation.destinationUrl).pathname.slice(1), navigation)
+
+      if (navigation.activePage && navigation.activePage.onleavestart) {
+        navigation.activePage.onleavestart(navigation)
+      }
     },
     oncancel: () => {
       pageLoaderFadein.reverse()
@@ -78,17 +82,20 @@ export const installNavigation = () => {
       if (activePage) {
         activePage.element.style.position = "absolute"
       }
+      // if new page is smaller active page can be interacted because pageloader is fadedout
       element.style.position = "relative"
       element.style.display = "block"
+      // ptet si on faisant fadeout en meme temps la page derriere ce serait mieux ?
       const elementFadein = fadeIn(element, { duration: 300 })
-      await elementFadein
+      const activeElementFadeout = fadeOut(activePage.element, { duration: 300 })
+      await Promise.all([elementFadein, activeElementFadeout])
       if (page.onactive) {
         page.onactive()
       }
     },
-    leave: ({ element, onleave = () => {} }, reason) => {
+    leave: ({ element, onbeforeleaveend = () => {} }, reason) => {
+      onbeforeleaveend(reason)
       pageContainer.removeChild(element)
-      onleave(reason)
     },
   })
 

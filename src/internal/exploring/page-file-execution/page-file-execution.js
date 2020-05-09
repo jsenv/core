@@ -126,14 +126,7 @@ export const fileExecutionRoute = {
 }
 
 const loadAndExecute = async (execution, { cancellationToken }) => {
-  try {
-    return await performLoadAndExecute(execution, { cancellationToken })
-  } catch (e) {
-    if (isCancelError(e)) {
-      return e
-    }
-    throw e
-  }
+  return performLoadAndExecute(execution, { cancellationToken })
 }
 
 const performLoadAndExecute = async (execution, { cancellationToken }) => {

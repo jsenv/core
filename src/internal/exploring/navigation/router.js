@@ -105,6 +105,7 @@ export const createRouter = (
         externalCancellationSource.cancel(navigation)
       },
       event,
+      activePage,
       currentHistoryPosition: applicationHistoryPosition,
       currentHistoryState: applicationHistoryState,
       currentUrl: applicationUrl,
@@ -187,9 +188,11 @@ export const createRouter = (
             activationCancellationSource.cancel(reason)
           },
           cancelInstallation: (reason) => {
-            installCancellationToken.cancel(reason)
+            installCancellationSource.cancel(reason)
           },
         }
+        navigation.cancellationToken = installCancellationToken
+        onstart(navigation)
 
         if (currentRouteActivationAttempt) {
           if (currentRouteActivationAttempt.isInstalling()) {
@@ -268,7 +271,6 @@ export const createRouter = (
         navigation.isReload = false
       }
 
-      onstart(navigation)
       try {
         await activateRoute(navigation)
       } catch (error) {

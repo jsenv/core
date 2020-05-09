@@ -16,7 +16,7 @@ export const fileListRoute = {
     const directoryName = directoryUrlToDirectoryName(projectDirectoryUrl)
     const fileListElement = document.querySelector(`[data-page="file-list"`).cloneNode(true)
     return {
-      title: '"Explorable files',
+      title: "Explorable files",
       element: fileListElement,
       mutateElementBeforeDisplay: async () => {
         const span = fileListElement.querySelector("h2 span")
@@ -37,7 +37,11 @@ export const fileListRoute = {
           .map((file) => `<li><a class="execution-link" href=${file}>${file}</a></li>`)
           .join("")
       },
-      onleave: async ({ event, destinationUrl }) => {
+      onleavestart: async ({ cancellationToken, event, destinationUrl }) => {
+        // a better version would start this animation
+        // when page is about to be left
+        // and would revert or cancel the animation if that navigation is being canceled
+
         // only if we leave this page because of a click
         // (we could also do the animation on history.back() or history.forward())
         // for now let's ignore
@@ -55,10 +59,12 @@ export const fileListRoute = {
         const fileInput = document.querySelector("#file-input")
         // hide the input during animation
         fileInput.style.opacity = "0"
+
         await move(aElement, fileInput, {
           duration: 700,
           fill: "forwards",
           easing: "ease-in-out",
+          cancellationToken,
         })
         fileInput.style.opacity = "1"
       },
