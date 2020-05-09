@@ -5,7 +5,7 @@ const FAILURE_REASON_SCRIPT = "script"
 const ON_ERROR_RECONNECTION_FLAG = "on-error-reconnection"
 
 /* eslint-disable new-cap */
-export const connectEventSource = async (
+export const connectEventSource = (
   eventSourceUrl,
   events = {},
   {
