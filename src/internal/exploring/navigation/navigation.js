@@ -2,14 +2,7 @@
 
 TODO:
 
-- faire deux fois router.loadCurrentUrl()
-le deuxieme doit cancel le load de la pageView
-mais ne doit pas cancel la navigation a proprement parler
-en gros on a un routeCancellationToken (on change de route)
-et un pageLoadCancellationToken (on a plus besoin de load la page)
-  et celui ci est cancel si on change de route of course
-
-- on a pas de currentPageView par défaut
+- on a pas de activePage par défaut
 on ne sait donc pas comment faire la transition
 pour la page initiale
 il faudrait ptet le passer a createRouter en lui filant la page par défaut
@@ -35,15 +28,20 @@ export const installNavigation = () => {
       "#page-loader": { visibility: "hidden", opacity: 0 },
     },
     {
-      "#page-loader": { visibility: "visible", opacity: 0.2 },
+      "#page-loader": { visibility: "visible", opacity: 0.4 },
     },
     { duration: 300 },
   )
   const routes = [fileListRoute, fileExecutionRoute]
+  let fadeinPromise
   const router = createRouter(routes, {
+    activePage: {
+      title: document.title,
+      element: document.querySelector('[data-page="default"]'),
+    },
     errorRoute: errorNavigationRoute,
     onstart: (navigation) => {
-      pageLoaderFadein.play()
+      fadeinPromise = pageLoaderFadein.play()
 
       // every navigation must render toolbar
       // this function is synchronous it's just ui
@@ -64,7 +62,7 @@ export const installNavigation = () => {
       await mutateElementBeforeDisplay()
       // if everything is super fast it might be better to wait for pageLoader fade in to be done
       // before doing the loader fadeout but this is to be checked
-      // await fadeinPromise
+      await fadeinPromise
       pageLoaderFadein.reverse()
 
       // if we got cancelled during mutateElementBeforeDisplay
@@ -77,7 +75,9 @@ export const installNavigation = () => {
       if (title) {
         document.title = title
       }
-      activePage.element.style.position = "absolute"
+      if (activePage) {
+        activePage.element.style.position = "absolute"
+      }
       element.style.position = "relative"
       element.style.display = "block"
       const elementFadein = fadeIn(element, { duration: 300 })

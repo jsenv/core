@@ -59,6 +59,7 @@ import {
 export const createRouter = (
   routes,
   {
+    activePage,
     fallbackRoute,
     errorRoute,
     onstart = () => {},
@@ -83,7 +84,6 @@ export const createRouter = (
   let applicationUrl = initialUrl
   let currentRouteActivationAttempt
   let activeRoute
-  let activePage
 
   const createNavigation = ({
     type,
@@ -208,13 +208,13 @@ export const createRouter = (
           activePage,
         }
 
-        if (setupStepEnabled) {
+        if (setupStepEnabled && navigation.route.setup) {
           step = "setup"
           await navigation.route.setup({
             ...sharedParams,
-            cancellationToken: activationCancellationSource,
+            cancellationToken: activationCancellationToken,
           })
-          activationCancellationSource.throwIfRequested()
+          activationCancellationToken.throwIfRequested()
         }
 
         step = "load"
@@ -240,7 +240,9 @@ export const createRouter = (
 
         step = "replace"
         // remove currentPage from the DOM
-        leave(activePage, navigation)
+        if (activePage) {
+          leave(activePage, navigation)
+        }
         activePage = page
         step = "done"
         currentRouteActivationAttempt = undefined

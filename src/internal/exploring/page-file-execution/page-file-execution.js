@@ -79,8 +79,6 @@ export const fileExecutionRoute = {
     return firstConnectionPromise
   },
 
-  // load cancellationToken canceled when leading or reloading the page
-  // TODO: pass router as second argument to load and expose currentPage
   load: async ({ cancellationToken, navigation, activePage }) => {
     const fileRelativeUrl = new URL(navigation.destinationUrl).pathname.slice(1)
     const iframe = document.createElement("iframe")
