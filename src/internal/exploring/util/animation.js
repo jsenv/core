@@ -94,6 +94,7 @@ export const move = (fromNode, toNode, options) => {
       {
         offset: 0.9,
         backgroundColor: fromComputedStyle.backgroundColor,
+        color: fromComputedStyle.color,
       },
       {
         transform: translate,

@@ -14,17 +14,28 @@ export const fileExecutionRoute = {
     return new URL(url).pathname !== "/"
   },
 
-  enter: async ({ cancellationToken, destinationUrl }, router) => {
-    const reload = () => {
-      router.loadCurrentUrl()
-    }
-
-    let connectedOnce = false
+  // setup cancellationToken canceled only when leaving the page
+  setup: ({ cancellationToken, navigation, reload }) => {
+    const fileRelativeUrl = new URL(navigation.destinationUrl).pathname.slice(1)
     const firstConnectionPromise = createPromiseAndHooks()
-    const fileRelativeUrl = new URL(destinationUrl).pathname.slice(1)
+
+    window.file = {
+      previousExecution: undefined,
+      execution: undefined,
+      evaluate: () => {
+        throw new Error("cannot evaluate, page is not ready")
+      },
+      // execute,
+      // reload: () => execute(fileRelativeUrl),
+    }
+    cancellationToken.register(() => {
+      window.file = undefined
+    })
 
     // reset livereload indicator ui
     applyLivereloadIndicator()
+
+    let connectedOnce = false
     const livereloading = createLivereloading(fileRelativeUrl, {
       onFileChanged: () => {
         reload()
@@ -65,66 +76,54 @@ export const fileExecutionRoute = {
       connectedOnce = true
       firstConnectionPromise.resolve()
     }
+    return firstConnectionPromise
+  },
 
-    window.file = {
-      previousExecution: undefined,
-      execution: undefined,
-      evaluate: () => {
-        throw new Error("cannot evaluate, page is not ready")
-      },
-      // execute,
-      // reload: () => execute(fileRelativeUrl),
-    }
-    cancellationToken.register(() => {
-      window.file = undefined
-    })
-
-    let latestExecution
-
-    return {
+  // load cancellationToken canceled when leading or reloading the page
+  // TODO: pass router as second argument to load and expose currentPage
+  load: async ({ cancellationToken, navigation, activePage }) => {
+    const fileRelativeUrl = new URL(navigation.destinationUrl).pathname.slice(1)
+    const iframe = document.createElement("iframe")
+    const page = {
       title: fileRelativeUrl,
-      load: async ({ loadCancellationToken }) => {
-        const iframe = document.createElement("iframe")
+      element: iframe,
+      execution: undefined,
+      mutateElementBeforeDisplay: async () => {
+        applyExecutionIndicator() // reset file execution indicator ui
 
-        return {
-          element: iframe,
-          mutateElementBeforeDisplay: async () => {
-            applyExecutionIndicator() // reset file execution indicator ui
-
-            await firstConnectionPromise
-            const pendingExecution = {
-              fileRelativeUrl,
-              status: null,
-              iframe,
-              startTime: null,
-              endTime: null,
-              result: null,
-            }
-            await loadAndExecute(pendingExecution, { cancellationToken: loadCancellationToken })
-
-            const execution = pendingExecution
-            const previousExecution = latestExecution
-            latestExecution = execution
-            window.file.previousExecution = previousExecution
-            window.file.execution = execution
-
-            const duration = execution.endTime - execution.startTime
-            if (execution.result.status === "errored") {
-              jsenvLogger.debug(`error during execution`, execution.result.error)
-              applyExecutionIndicator("failure", duration)
-            } else {
-              applyExecutionIndicator("success", duration)
-            }
-            notifyFileExecution(execution, previousExecution)
-          },
-          onPageViewRemoved: () => {
-            // be sure the iframe src is reset to avoid eventual memory leak
-            // if it was unproperly garbage collected or something
-            iframe.src = "about:blank"
-          },
+        const pendingExecution = {
+          fileRelativeUrl,
+          status: null,
+          iframe,
+          startTime: null,
+          endTime: null,
+          result: null,
         }
+        await loadAndExecute(pendingExecution, { cancellationToken })
+
+        const execution = pendingExecution
+        const previousExecution = activePage ? activePage.execution : undefined
+        window.file.previousExecution = previousExecution
+        window.file.execution = execution
+
+        const duration = execution.endTime - execution.startTime
+        if (execution.result.status === "errored") {
+          jsenvLogger.debug(`error during execution`, execution.result.error)
+          applyExecutionIndicator("failure", duration)
+        } else {
+          applyExecutionIndicator("success", duration)
+        }
+        notifyFileExecution(execution, previousExecution)
+        page.execution = execution
+      },
+      onleave: () => {
+        // be sure the iframe src is reset to avoid eventual memory leak
+        // if it was unproperly garbage collected or something
+        iframe.src = "about:blank"
       },
     }
+
+    return page
   },
 }
 

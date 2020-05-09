@@ -36,14 +36,11 @@ oncancel(navigation, cancelError) is called.
 const route = {
   name: String (optional),
   match: url => Boolean,
-  enter: async ({ cancellationToken, reloadPage }) => {
-    const page = {
-      title,
-      load: async () => {
-        const pageView = any
-        return pageView
-      }
-    }
+  setup: async ({ cancellationToken }, { reload }) => {
+
+  },
+  load: async ({ cancellationToken }, { reload, activePage }) => {
+    const page = any
     return page
   }
 }
@@ -53,7 +50,11 @@ https://stackoverflow.com/questions/28028297/js-window-history-delete-a-state
 https://developer.mozilla.org/en-US/docs/Web/API/History
 */
 
-import { createCancellationSource, isCancelError } from "@jsenv/cancellation"
+import {
+  createCancellationSource,
+  composeCancellationToken,
+  isCancelError,
+} from "@jsenv/cancellation"
 
 export const createRouter = (
   routes,
@@ -65,8 +66,8 @@ export const createRouter = (
     onerror = (navigation, error) => {
       throw error
     },
-    addPageView,
-    removePageView,
+    enter,
+    leave,
     oncomplete = () => {},
   },
 ) => {
@@ -80,9 +81,9 @@ export const createRouter = (
   let applicationHistoryPosition = initialHistoryPosition
   let applicationHistoryState = initialHistoryState
   let applicationUrl = initialUrl
-  let currentNavigation
-  let currentPage
-  let currentPageView
+  let currentRouteActivationAttempt
+  let activeRoute
+  let activePage
 
   const createNavigation = ({
     type,
@@ -91,41 +92,16 @@ export const createRouter = (
     destinationHistoryPosition,
     destinationHistoryState,
   }) => {
-    let status = ""
-    const navigationCancellationSource = createCancellationSource()
-    const cancellationToken = navigationCancellationSource.token
-
-    const cancel = (reason) => {
-      if (status === "canceled") {
-        return
-      }
-
-      /**
-      Cancelling a pending navigation induced by popstate means we need to resync
-      browser history with the application state
-
-      Cancelling a pending navigation induced by a click on a link means we need to resync
-      browser history with the application state
-
-      Cancelling a pending navigation that aimes to replace browser history has no impact
-      on browser history it's already in sync with application state
-      */
-      if (status === "started") {
-        const movement = applicationHistoryPosition - browserHistoryPosition
-        if (movement) {
-          windowHistory.go(movement)
-        }
-      }
-
-      status = "canceled"
-      // cancel is always possible even after complete/fail
-      // because it is used to clean up things
-      navigationCancellationSource.cancel(reason)
-    }
+    const externalCancellationSource = createCancellationSource()
+    const externalCancellationToken = externalCancellationSource.token
 
     const navigation = {
-      cancellationToken,
-      cancel,
+      status: "",
+      cancel: (reason) => {
+        navigation.status = "canceled"
+        navigation.cancelReason = reason
+        externalCancellationSource.cancel(navigation)
+      },
       event,
       currentHistoryPosition: applicationHistoryPosition,
       currentHistoryState: applicationHistoryState,
@@ -155,7 +131,7 @@ export const createRouter = (
       with browser
       */
 
-      status = "started"
+      navigation.status = "started"
       browserHistoryPosition = destinationHistoryPosition
       browserHistoryState = destinationHistoryState
       browserUrl = destinationUrl
@@ -179,111 +155,149 @@ export const createRouter = (
       // restoring an history entry (popstate)
       else if (type === "restore") {
         if (browserHistoryPosition === applicationHistoryPosition) {
+          navigation.status = "completed"
+          applicationHistoryPosition = browserHistoryPosition
+          applicationHistoryState = browserHistoryState
+          applicationUrl = browserUrl
           // (should happen only when cancelling navigation induced by popstate)
-          currentNavigation = navigation
           return undefined
         }
       }
 
-      const loadPage = async (page) => {
-        const nextPageView = await page.load()
+      const activateRoute = async (navigation) => {
+        externalCancellationToken.throwIfRequested()
 
-        // if we have a nextPageView but it's no longer needed line below will throw
-        // and navigation will be canceled, nextPageView will be ignored
-        cancellationToken.throwIfRequested()
-
-        await addPageView(nextPageView, currentPageView, navigation)
-
-        // at this point we put nextPageView in the DOM but it's no longer needed
-        // let's remove it from the DOM and throw to cancel the navigation
-        if (cancellationToken.cancellationRequested) {
-          removePageView(nextPageView)
-          cancellationToken.throwIfRequested()
-          return undefined
+        const activationCancellationSource = createCancellationSource()
+        const activationCancellationToken = composeCancellationToken(
+          externalCancellationToken,
+          activationCancellationSource.token,
+        )
+        const installCancellationSource = createCancellationSource()
+        const installCancellationToken = composeCancellationToken(
+          activationCancellationToken,
+          installCancellationSource.token,
+        )
+        let step
+        const routeActivationAttempt = {
+          isActivating: () => step !== "done",
+          isInstalling: () => step === "load" || step === "enter" || step === "replace",
+          cancelActivation: (reason) => {
+            activationCancellationSource.cancel(reason)
+          },
+          cancelInstallation: (reason) => {
+            installCancellationToken.cancel(reason)
+          },
         }
 
-        // remove currentPageView from the DOM and return nextPageView
-        // which will become the currentPageView
-        removePageView(currentPageView)
-        return nextPageView
-      }
-
-      const loadRoute = async (route, ...args) => {
-        return route.enter(navigation, ...args)
-      }
-
-      const callLoadingErrorRouteOnError = async (fn) => {
-        try {
-          cancellationToken.throwIfRequested()
-          const page = await fn()
-          cancellationToken.throwIfRequested()
-          return page
-        } catch (error) {
-          if (isCancelError(error)) {
-            return oncancel(navigation, error)
-          }
-          try {
-            const errorPage = await loadRoute(errorRoute, error)
-            cancellationToken.throwIfRequested()
-            return errorPage
-          } catch (internalError) {
-            if (isCancelError(internalError)) {
-              return oncancel(navigation, internalError)
+        let setupStepEnabled = true
+        if (currentRouteActivationAttempt) {
+          if (currentRouteActivationAttempt.isActivating()) {
+            currentRouteActivationAttempt.cancelActivation(navigation)
+          } else if (currentRouteActivationAttempt.isInstalling()) {
+            currentRouteActivationAttempt.cancelInstallation(navigation)
+            if (navigation.isReload) {
+              setupStepEnabled = false
             }
-            // error while trying to load error route
-            // by default we will throw because it's an unexpected internal error.
-            status = "errored"
-            return onerror(navigation, internalError)
           }
         }
+        currentRouteActivationAttempt = routeActivationAttempt
+
+        const sharedParams = {
+          navigation,
+          reload: loadCurrentUrl,
+          activePage,
+        }
+
+        if (setupStepEnabled) {
+          step = "setup"
+          await navigation.route.setup({
+            ...sharedParams,
+            cancellationToken: activationCancellationSource,
+          })
+          activationCancellationSource.throwIfRequested()
+        }
+
+        step = "load"
+        const page = await navigation.route.load({
+          ...sharedParams,
+          cancellationToken: installCancellationToken,
+        })
+        installCancellationToken.throwIfRequested()
+
+        step = "enter"
+        await enter(page, {
+          ...sharedParams,
+          cancellationToken: installCancellationToken,
+        })
+        // at this point we put page in the DOM but it's no longer needed
+        // let's remove it from the DOM and throw to cancel the navigation
+        try {
+          installCancellationToken.throwIfRequested()
+        } catch (cancelError) {
+          leave(page, cancelError.reason)
+          throw cancelError
+        }
+
+        step = "replace"
+        // remove currentPage from the DOM
+        leave(activePage, navigation)
+        activePage = page
+        step = "done"
+        currentRouteActivationAttempt = undefined
+        return page
       }
 
-      if (currentNavigation) {
-        /*
-        on doit renommer tout ça
-        y'a navigationCancellationToken -> on abandonne la navigation completement
-        et pageLoadCancellationToken -> on abandonne le chargement de la page
-        mais on reste sur la meme route (on reload)
-        donc si on est ici par un loadCurrentUrl on cancel que pageLoadCancellationToken
-        et sinon on cancel la navigation
-        mais en fait chaque navigation a son propre cancellationToken
-
-        je suppose qu'on pourrait réutiliser le cancellationToken de la navigation
-        précédente dans le cas dans loadCurrentUrl
-        et ne pas le cancel ?
-        et comme ça currentNavigation.cancel va cancel l'ancienne et la nouvelle
-        tout ça se passe vraiment dans le type === 'replace' && currentPage en gros
-
-        sauf qu'on veut cancel la nav précédente si on fait popstate sur le truc courant ?
-        le return undefined va empécher currentNavigation = navigation
-        ce qui est pas fou
-        */
-
-        // this allow a navigate() call to know we don't care anymore about its result
-        currentNavigation.cancel(navigation)
+      const handleCancel = (cancelError) => {
+        navigation.status = "canceled"
+        navigation.cancelError = cancelError
+        const movement = applicationHistoryPosition - browserHistoryPosition
+        if (movement) {
+          windowHistory.go(movement)
+        }
+        return oncancel(navigation)
       }
-      currentNavigation = navigation
+
+      if (type === "replace" && activeRoute) {
+        navigation.route = activeRoute
+        navigation.isReload = true
+      } else {
+        navigation.route =
+          routes.find((route) => route.match(navigation.destinationUrl, navigation)) ||
+          fallbackRoute
+        navigation.isReload = false
+      }
 
       onstart(navigation)
-      // si c'est un replace et qu'on a déja une page on fait direct page.load
-      if (type === "replace" && currentPage) {
-        currentPageView = await callLoadingErrorRouteOnError(() => {
-          return loadPage(currentPage)
-        })
-      } else {
-        currentPageView = await callLoadingErrorRouteOnError(async () => {
-          const routeMatching =
-            routes.find((route) => route.match(navigation.destinationUrl)) || fallbackRoute
-          currentPage = await loadRoute(routeMatching)
-          cancellationToken.throwIfRequested()
-          return loadPage(currentPage)
-        })
+      try {
+        await activateRoute(navigation)
+      } catch (error) {
+        if (isCancelError(error)) {
+          return handleCancel(error)
+        }
+        try {
+          navigation.status = "errored"
+          navigation.error = error
+          navigation.route = errorRoute
+          await activateRoute(navigation)
+        } catch (internalError) {
+          if (isCancelError(internalError)) {
+            return handleCancel(internalError)
+          }
+          // error while trying to load error route
+          // by default we will throw because it's an unexpected internal error.
+          navigation.status = "errored"
+          navigation.originalError = error
+          navigation.error = internalError
+          return onerror(navigation)
+        }
       }
-      status = "completed"
+      navigation.status = "completed"
+      navigation.page = activePage
       applicationHistoryPosition = browserHistoryPosition
       applicationHistoryState = browserHistoryState
       applicationUrl = browserUrl
-      return oncomplete(navigation, currentPageView)
+
+      return oncomplete(navigation)
     }
 
     navigation.start = start
@@ -340,6 +354,11 @@ export const createRouter = (
     })
     popstateNavigation.start()
   }
+
+  // we could imagine exporting a router.activateRoute
+  // that would skip the match part
+  // we could have in the ui a page that does not match the browser url
+  // just because we can (also might be useful for unit test)
 
   return {
     loadCurrentUrl,

@@ -56,12 +56,9 @@ export const installNavigation = () => {
       pageLoaderFadein.reverse()
       throw error
     },
-    addPageView: async (pageView, currentPageView, { cancellationToken }) => {
-      const { title, element, mutateElementBeforeDisplay = () => {} } = pageView
+    enter: async (page, { cancellationToken, activePage }) => {
+      const { title, element, mutateElementBeforeDisplay = () => {} } = page
 
-      if (title) {
-        document.title = title
-      }
       element.style.display = "none"
       pageContainer.appendChild(element)
       await mutateElementBeforeDisplay()
@@ -77,15 +74,18 @@ export const installNavigation = () => {
         return
       }
 
-      currentPageView.element.style.position = "absolute"
+      if (title) {
+        document.title = title
+      }
+      activePage.element.style.position = "absolute"
       element.style.position = "relative"
       element.style.display = "block"
       const elementFadein = fadeIn(element, { duration: 300 })
       await elementFadein
     },
-    removePageView: ({ element, onPageViewRemoved = () => {} }) => {
+    leave: ({ element, onleave = () => {} }, reason) => {
       pageContainer.removeChild(element)
-      onPageViewRemoved()
+      onleave(reason)
     },
   })
 

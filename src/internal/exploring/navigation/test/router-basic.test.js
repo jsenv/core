@@ -15,38 +15,35 @@ const pagePromise = new Promise((resolve) => {
   resolveActual = resolve
 })
 const initialUrl = document.location.href
-const router = createRouter(
-  ({ destinationUrl }) => {
-    if (destinationUrl === initialUrl) {
-      return "initial"
+const initialRoute = {
+  match: (url) => url === initialUrl,
+  load: () => "initial",
+}
+const ARoute = { match: (url) => new URL(url).pathname === "/A", load: () => "A" }
+const BRoute = {
+  match: (url) => new URL(url).pathname === "/B",
+  load: () => "B",
+}
+const router = createRouter([initialRoute, ARoute, BRoute], {
+  onstart: ({ route, cancel }) => {
+    if (route === BRoute) {
+      cancel()
     }
-    const pathname = new URL(destinationUrl).pathname
-    if (pathname === "/A") {
-      return "A"
+  },
+  oncomplete: ({ page }) => {
+    if (page === "initial") {
+      router.navigateToUrl("/A")
     }
-    return "B"
+    if (page === "A") {
+      if (firsPageAVisit) {
+        firsPageAVisit = false
+        router.navigateToUrl("/B")
+      } else {
+        resolveActual(page)
+      }
+    }
   },
-  {
-    onstart: ({ destinationUrl, cancel }) => {
-      if (new URL(destinationUrl).pathname === "/B") {
-        cancel()
-      }
-    },
-    oncomplete: (navigation, { page }) => {
-      if (page === "initial") {
-        router.navigateToUrl("/A")
-      }
-      if (page === "A") {
-        if (firsPageAVisit) {
-          firsPageAVisit = false
-          router.navigateToUrl("/B")
-        } else {
-          resolveActual(page)
-        }
-      }
-    },
-  },
-)
+})
 
 router.launchCurrentUrl()
 
