@@ -61,6 +61,16 @@ const getFaviconHref = () => {
   return link ? link.href : undefined
 }
 
+/* TODO: ne pas oublier que dans firefox
+
+La permission de notification ne peut être demandée que depuis un gestionnaire d’évènements généré
+par l’utilisateur et en cours d’exécution.
+
+Donc en gros depuis le bouton qui active les notifications.
+Et dans firefox il faudrait donc jouer avec le checkbox.onclick pour obtenir cette authorisation
+
+*/
+
 const notify = notificationAvailable
   ? async (title, { clickToFocus = false, clickToClose = false, ...options } = {}) => {
       const permission = await requestPermission()
