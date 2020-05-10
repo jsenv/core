@@ -64,8 +64,8 @@ export const createRouter = (
     errorRoute,
     onstart = () => {},
     oncancel = () => {},
-    onerror = (navigation, error) => {
-      throw error
+    onerror = (navigation) => {
+      throw navigation.error
     },
     enter,
     leave,
@@ -262,9 +262,13 @@ export const createRouter = (
         if (isCancelError(error)) {
           return handleCancel(error)
         }
+        navigation.status = "errored"
+        navigation.error = error
+        if (!errorRoute) {
+          return onerror(navigation)
+        }
+
         try {
-          navigation.status = "errored"
-          navigation.error = error
           navigation.route = errorRoute
           await activateRoute(navigation)
         } catch (internalError) {
@@ -273,7 +277,6 @@ export const createRouter = (
           }
           // error while trying to load error route
           // by default we will throw because it's an unexpected internal error.
-          navigation.status = "errored"
           navigation.originalError = error
           navigation.error = internalError
           return onerror(navigation)
