@@ -10,9 +10,9 @@ import { assert } from "@jsenv/assert"
 import { createRouter } from "../router.js"
 
 let firsPageAVisit = true
-let resolveActual
-const pagePromise = new Promise((resolve) => {
-  resolveActual = resolve
+let resolveNavigation
+const navigationPromise = new Promise((resolve) => {
+  resolveNavigation = resolve
 })
 const initialUrl = document.location.href
 const initialRoute = {
@@ -28,6 +28,7 @@ const router = createRouter([initialRoute, ARoute, BRoute], {
   onstart: ({ route, cancel }) => {
     if (route === BRoute) {
       cancel()
+      setTimeout(resolveNavigation, 100)
     }
   },
   oncomplete: ({ page }) => {
@@ -38,21 +39,14 @@ const router = createRouter([initialRoute, ARoute, BRoute], {
       if (firsPageAVisit) {
         firsPageAVisit = false
         router.navigateToUrl("/B")
-      } else {
-        resolveActual(page)
       }
     }
   },
 })
 
-router.launchCurrentUrl()
+router.loadCurrentUrl()
 
-const actual = {
-  page: await pagePromise,
-  url: document.location.href,
-}
-const expected = {
-  page: "initial",
-  url: initialUrl,
-}
+await navigationPromise
+const actual = document.location.href
+const expected = new URL("/A", document.location).href
 assert({ actual, expected })

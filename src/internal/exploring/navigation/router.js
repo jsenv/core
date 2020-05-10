@@ -67,8 +67,8 @@ export const createRouter = (
     onerror = (navigation) => {
       throw navigation.error
     },
-    enter,
-    leave,
+    enter = () => {},
+    leave = () => {},
     oncomplete = () => {},
   },
 ) => {
