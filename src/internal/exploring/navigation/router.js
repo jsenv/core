@@ -20,7 +20,7 @@ This file hooks itself into window.popstate and provide two function
 This function should be called asap and will perform the initial page navigation.
 Meaning navigate gets called with currentHistoryEntry being undefined
 
-- navigateToUrl(url, state, event)
+- navigateToUrl(url, event)
 
 This function should be called to politely ask to perform a navigation to the given url
 after navigationEvent occured (a click on a <a href> for instance).
@@ -48,6 +48,28 @@ const route = {
 See alo:
 https://stackoverflow.com/questions/28028297/js-window-history-delete-a-state
 https://developer.mozilla.org/en-US/docs/Web/API/History
+
+Alors imaginons qu'un page a deux état:
+un avec un contenu ouvert, l'autre avec un contenu fermé
+la page devrait alors avoir la possibilité de dire hey je suis ouverte
+ou hey je suis fermée et qu'on fasse
+pushState('expanded')
+pushState('collapsed')
+et que la page soit rerender sans transition
+mais alors il faut que la page devienne capable de dire hey a cette url c'est moi le boss
+(et éventuellement pour des sous urls mais ignorons ça pour le moment)
+
+autrement dit ce module s'est trop concentré sur le cas particulier de jsenv exploring
+ou 1 url = 1 state (et state est null)
+
+alors qu'on voudrait pouvoir avoir 1 url = X state
+mais cela suppose des changements ici que je ne souhaite pas faire pour le moment puisque
+ça convient tres bien a jsenv exploring.
+
+on renommerais ceci en historyNavigation
+le but étant en vérité juste de se brancher
+sur history.go() et de fournir au user un moyen
+de naviguer entre des états de l'appli
 */
 
 import {
@@ -317,14 +339,12 @@ export const createRouter = (
     return navigation.start()
   }
 
-  // note for later: the url don't have to change
-  // you might want to add a state to the current url
-  const navigateToUrl = async (destinationUrl, destinationHistoryState, navigationEvent) => {
+  const navigateToUrl = async (destinationUrl, navigationEvent) => {
     const navigation = createNavigation({
       type: "push",
       event: navigationEvent,
       destinationHistoryPosition: applicationHistoryPosition + 1,
-      destinationHistoryState,
+      destinationHistoryState: {},
       destinationUrl: new URL(destinationUrl, document.location).href,
     })
     return navigation.start()

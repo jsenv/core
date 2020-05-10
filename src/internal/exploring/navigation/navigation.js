@@ -133,7 +133,7 @@ export const installNavigation = () => {
     }
 
     clickEvent.preventDefault()
-    router.navigateToUrl(aElement.href, {}, clickEvent)
+    router.navigateToUrl(aElement.href, clickEvent)
   }
   document.addEventListener("click", onclick)
 
