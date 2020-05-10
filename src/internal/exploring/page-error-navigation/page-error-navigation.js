@@ -10,14 +10,13 @@ export const errorNavigationRoute = {
     const pre = element.querySelector("pre")
     pre.textContent = navigation.error.stack || navigation.error
 
+    setTimeout(() => {
+      throw navigation.error
+    })
+
     return {
       // title: "Error", // Keep the original error title ?
       element,
-      onactive: () => {
-        setTimeout(() => {
-          throw navigation.error
-        })
-      },
     }
   },
 }

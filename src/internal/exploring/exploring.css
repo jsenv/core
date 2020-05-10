@@ -2,6 +2,7 @@
 @import "./toolbar/toolbar.css";
 @import "./page-error-navigation/page-error-navigation.css";
 @import "./page-file-list/page-file-list.css";
+@import "./page-file-execution/page-file-execution.css";
 
 /* reset stuff */
 * {
@@ -38,16 +39,9 @@ main {
   flex-grow: 1;
 }
 
-html[data-route="file-execution"] main {
-  /*
-  prevent scrollbar on windows due to iframe min-height:100%
-  creating a 1px scrollbar
-  */
-  overflow: hidden;
-}
-
 main > * {
   min-height: 100%;
+  min-width: 100%;
 }
 
 main > iframe {

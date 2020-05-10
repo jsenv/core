@@ -112,11 +112,21 @@ const makeNamespaceTransferable = (namespace) => {
   const transferableNamespace = {}
   Object.keys(namespace).forEach((key) => {
     const value = namespace[key]
-    if (isTransferable(namespace[key])) {
-      transferableNamespace[key] = value
-    }
+    transferableNamespace[key] = isTransferable(value) ? value : hideNonTransferableValue(value)
   })
   return transferableNamespace
+}
+
+const hideNonTransferableValue = (value) => {
+  if (typeof value === "function") {
+    return `[[HIDDEN: ${value.name} function cannot be transfered]]`
+  }
+
+  if (typeof value === "symbol") {
+    return `[[HIDDEN: symbol function cannot be transfered]]`
+  }
+
+  return `[[HIDDEN: ${value.constructor ? value.constructor.name : "object"} cannot be transfered]]`
 }
 
 // https://stackoverflow.com/a/32673910/2634179

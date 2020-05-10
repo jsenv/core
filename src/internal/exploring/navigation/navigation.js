@@ -13,6 +13,7 @@ otherwise if it's just location.reload() we got nothing to do
 
 */
 
+import { setStyles } from "../util/dom.js"
 import { fadeIn, fadeOut, transit } from "../util/animation.js"
 import { renderToolbar } from "../toolbar/toolbar.js"
 import { errorNavigationRoute } from "../page-error-navigation/page-error-navigation.js"
@@ -33,7 +34,6 @@ export const installNavigation = () => {
     { duration: 300 },
   )
   const routes = [fileListRoute, fileExecutionRoute]
-  let fadeinPromise
   const router = createRouter(routes, {
     activePage: {
       title: document.title,
@@ -41,7 +41,7 @@ export const installNavigation = () => {
     },
     errorRoute: errorNavigationRoute,
     onstart: (navigation) => {
-      fadeinPromise = pageLoaderFadein.play()
+      pageLoaderFadein.play()
 
       // every navigation must render toolbar
       // this function is synchronous it's just ui
@@ -58,44 +58,51 @@ export const installNavigation = () => {
       pageLoaderFadein.reverse()
       throw error
     },
-    enter: async (page, { pageCancellationToken, activePage }) => {
-      const { title, element, mutateElementBeforeDisplay = () => {} } = page
+    enter: async (page, { pageCancellationToken }) => {
+      const { effect, title, element, mutateElementBeforeDisplay = () => {} } = page
 
       element.style.display = "none"
+      element.style.position = "relative"
       pageContainer.appendChild(element)
       await mutateElementBeforeDisplay()
-      // if everything is super fast it might be better to wait for pageLoader fade in to be done
-      // before doing the loader fadeout but this is to be checked
-      await fadeinPromise
+      // if mutateElementBeforeDisplay and things before it were super fast
+      // wait for pageLoader fade in to be done before doing the loader fadeout
+      // await fadeinPromise
       pageLoaderFadein.reverse()
-
-      // if we got cancelled during mutateElementBeforeDisplay
-      // no need to perform the DOM changes and the animation the element
-      // will be removed anyway
       if (pageCancellationToken.cancellationRequested) {
+        element.parentNode.removeChild(element)
         return
       }
 
+      if (effect) {
+        pageCancellationToken.register(effect())
+      }
       if (title) {
         document.title = title
       }
-      if (activePage) {
-        activePage.element.style.position = "absolute"
-      }
-      // if new page is smaller active page can be interacted because pageloader is fadedout
-      element.style.position = "relative"
+
+      // show this new page, transition will be handled by leave
       element.style.display = "block"
-      // ptet si on faisant fadeout en meme temps la page derriere ce serait mieux ?
-      const elementFadein = fadeIn(element, { duration: 300 })
-      const activeElementFadeout = fadeOut(activePage.element, { duration: 300 })
-      await Promise.all([elementFadein, activeElementFadeout])
-      if (page.onactive) {
-        page.onactive()
-      }
     },
-    leave: ({ element, onbeforeleaveend = () => {} }, reason) => {
-      onbeforeleaveend(reason)
-      pageContainer.removeChild(element)
+    leave: async (page, { pageCancellationToken, activePage }) => {
+      const pageElement = page.element
+      const activePageElement = activePage.element
+
+      // if new page is smaller active page can be interacted because pageloader is fadedout ?
+      setStyles(pageElement, {
+        position: "absolute",
+      })
+      const pageElementFadeout = fadeOut(pageElement, {
+        cancellationToken: pageCancellationToken,
+        duration: 300,
+      })
+      const activePageElementFadein = fadeIn(activePageElement, {
+        cancellationToken: pageCancellationToken,
+        duration: 300,
+      })
+      await Promise.all([pageElementFadeout, activePageElementFadein])
+
+      pageElement.parentNode.removeChild(pageElement)
     },
   })
 

@@ -1,3 +1,5 @@
+import { setStyles } from "./dom.js"
+
 const animateFallback = () => {
   return Promise.resolve()
 }
@@ -226,10 +228,4 @@ export const transit = (
   }
 
   return { play, reverse }
-}
-
-const setStyles = (element, styles) => {
-  Object.keys(styles).forEach((styleName) => {
-    element.style[styleName] = styles[styleName]
-  })
 }

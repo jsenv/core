@@ -15,6 +15,11 @@ export const fileExecutionRoute = {
 
   // setup cancellationToken canceled only when leaving the page
   setup: ({ routeCancellationToken, destinationUrl, reload }) => {
+    // reset livereload indicator ui
+    applyLivereloadIndicator()
+    // reset file execution indicator ui
+    applyExecutionIndicator()
+
     const fileRelativeUrl = new URL(destinationUrl).pathname.slice(1)
     const firstConnectionPromise = createPromiseAndHooks()
 
@@ -24,15 +29,14 @@ export const fileExecutionRoute = {
       evaluate: () => {
         throw new Error("cannot evaluate, page is not ready")
       },
-      // execute,
-      // reload: () => execute(fileRelativeUrl),
+      execute: () => {
+        throw new Error("cannot execute, page is not ready")
+      },
+      reload,
     }
     routeCancellationToken.register(() => {
       window.file = undefined
     })
-
-    // reset livereload indicator ui
-    applyLivereloadIndicator()
 
     let connectedOnce = false
     const livereloading = createLivereloading(fileRelativeUrl, {
@@ -85,6 +89,12 @@ export const fileExecutionRoute = {
       title: fileRelativeUrl,
       element: iframe,
       execution: undefined,
+      effect: () => {
+        document.documentElement.setAttribute("data-page-execution", "")
+        return () => {
+          document.documentElement.removeAttribute("data-page-execution")
+        }
+      },
       mutateElementBeforeDisplay: async () => {
         applyExecutionIndicator() // reset file execution indicator ui
 
@@ -127,10 +137,6 @@ export const fileExecutionRoute = {
 }
 
 const loadAndExecute = async (execution, { cancellationToken }) => {
-  return performLoadAndExecute(execution, { cancellationToken })
-}
-
-const performLoadAndExecute = async (execution, { cancellationToken }) => {
   const startTime = Date.now()
   execution.startTime = startTime
 
@@ -169,6 +175,7 @@ const performLoadAndExecute = async (execution, { cancellationToken }) => {
       compileServerOrigin,
     })
   }
+  window.file.evaluate = evaluate
 
   // executing means fetching, parsing, executing file imports + file itself
   execution.status = "executing"

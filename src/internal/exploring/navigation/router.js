@@ -207,20 +207,14 @@ export const createRouter = (
         await enter(page, navigation)
         // at this point we put page in the DOM but it's no longer needed
         // let's remove it from the DOM and throw to cancel the navigation
-        try {
-          routeCancellationToken.throwIfRequested()
-        } catch (cancelError) {
-          leave(page, cancelError.reason)
-          throw cancelError
-        }
+        routeCancellationToken.throwIfRequested()
 
         // remove currentPage from the DOM
-        if (activePage) {
-          leave(activePage, navigation)
-        }
+        const pageLeft = activePage
 
         activeRoute = navigation.route
         activePage = page
+        navigation.page = page
         navigation.activePage = activePage
         currentRouteCancellationSource = undefined
         currentPageCancellationSource = undefined
@@ -234,6 +228,10 @@ export const createRouter = (
         }
         activeRouteCancellationSource = routeCancellationSource
         activePageCancellationSource = pageCancellationSource
+
+        if (pageLeft) {
+          leave(pageLeft, navigation)
+        }
 
         return page
       }
@@ -282,7 +280,6 @@ export const createRouter = (
         }
       }
       navigation.status = "completed"
-      navigation.page = activePage
       applicationHistoryPosition = browserHistoryPosition
       applicationHistoryState = browserHistoryState
       applicationUrl = browserUrl

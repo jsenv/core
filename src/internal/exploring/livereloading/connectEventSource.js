@@ -161,8 +161,6 @@ export const connectEventSource = (
             connectionAttempt.start()
           }
 
-          console.log("failure", { failureConsequence, failureReason, maxAttempt, allocatedMs })
-
           if (failureConsequence === FAILURE_CONSEQUENCE_DISCONNECTION) {
             notifyFailure({
               failureConsequence,
@@ -248,7 +246,16 @@ export const connectEventSource = (
   const connectionAttempt = connect(connectionAttemptConfig)
   connectionAttempt.start()
 
-  return cancel
+  const disconnect = () => {
+    cancel()
+  }
+
+  window.addEventListener(`beforeunload`, disconnect)
+
+  return () => {
+    window.removeEventListener(`beforeunload`, disconnect)
+    disconnect()
+  }
 }
 
 const delay = (fn, ms) => {
