@@ -39,6 +39,9 @@ export const installNavigation = () => {
     activePage: {
       title: document.title,
       element: document.querySelector('[data-page="default"]'),
+      // ça serais bien sa voir vers quoi on va comme ça
+      // on pourrait mettre un background black si on va vers la page d'index
+      // bref pour plus tard ça
     },
     errorRoute: errorNavigationRoute,
     onstart: (navigation) => {

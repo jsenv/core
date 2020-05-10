@@ -75,7 +75,7 @@ export const createRouter = (
   const windowHistory = window.history
   const initialHistoryPosition = windowHistory.state
     ? windowHistory.state.position
-    : window.history.length
+    : window.history.length - 1
   const initialHistoryState = windowHistory.state ? windowHistory.state.state : null
   const initialUrl = document.location.href
   let browserHistoryPosition = initialHistoryPosition
@@ -89,6 +89,9 @@ export const createRouter = (
   let activeRouteCancellationSource
   let activePageCancellationSource
   let activeRoute
+
+  console.log(`initial browser history ${browserHistoryPosition} at ${browserUrl}`)
+  console.log(`initial application state ${applicationHistoryPosition} at ${applicationUrl}`)
 
   const createNavigation = ({
     type,
@@ -157,6 +160,7 @@ export const createRouter = (
 
       // replace an history entry (initial navigation or reload)
       if (type === "replace") {
+        console.log(`replace browser history entry ${browserHistoryPosition} at ${browserUrl}`)
         windowHistory.replaceState(
           { position: browserHistoryPosition, state: browserHistoryState },
           "",
@@ -165,6 +169,7 @@ export const createRouter = (
       }
       // create immediatly a new entry in the history (click on a link)
       else if (type === "push") {
+        console.log(`add browser history entry ${browserHistoryPosition} at ${browserUrl}`)
         windowHistory.pushState(
           { position: browserHistoryPosition, state: browserHistoryState },
           "",
@@ -173,8 +178,12 @@ export const createRouter = (
       }
       // restoring an history entry (popstate)
       else if (type === "restore") {
+        console.log(
+          `browser wants to restore ${browserHistoryPosition} at ${browserUrl} and application is on ${applicationHistoryPosition} at ${applicationUrl}`,
+        )
         if (browserHistoryPosition === applicationHistoryPosition) {
-          navigation.status = "completed"
+          console.log(`no need to restore ${browserHistoryPosition}, application is already on it`)
+          navigation.status = "ignored"
           applicationHistoryPosition = browserHistoryPosition
           applicationHistoryState = browserHistoryState
           applicationUrl = browserUrl
@@ -240,6 +249,9 @@ export const createRouter = (
         navigation.status = "canceled"
         navigation.cancelError = cancelError
         const movement = applicationHistoryPosition - browserHistoryPosition
+        console.log(
+          `navigation canceled browser is at ${browserHistoryPosition}, application at ${applicationHistoryPosition}`,
+        )
         if (movement) {
           windowHistory.go(movement)
         }
@@ -282,6 +294,9 @@ export const createRouter = (
           return onerror(navigation)
         }
       }
+      if (navigation.status === "ignored") {
+        return undefined
+      }
       navigation.status = "completed"
       applicationHistoryPosition = browserHistoryPosition
       applicationHistoryState = browserHistoryState
@@ -306,14 +321,15 @@ export const createRouter = (
     return navigation.start()
   }
 
+  // note for later: the url don't have to change
+  // you might want to add a state to the current url
   const navigateToUrl = async (destinationUrl, destinationHistoryState, navigationEvent) => {
-    destinationUrl = new URL(destinationUrl, document.location).href // resolve relative urls
     const navigation = createNavigation({
       type: "push",
       event: navigationEvent,
       destinationHistoryPosition: applicationHistoryPosition + 1,
       destinationHistoryState,
-      destinationUrl,
+      destinationUrl: new URL(destinationUrl, document.location).href,
     })
     return navigation.start()
   }
