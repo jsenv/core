@@ -61,8 +61,8 @@ export const installNavigation = () => {
     enter: async (page, { pageCancellationToken }) => {
       const { effect, title, element, mutateElementBeforeDisplay = () => {} } = page
 
-      element.style.display = "none"
-      element.style.position = "relative"
+      const redisplay = setStyles(element, { display: "none" })
+      element.style.position = "relative" /* pourquoi faire déja ? */
       pageContainer.appendChild(element)
       await mutateElementBeforeDisplay()
       // if mutateElementBeforeDisplay and things before it were super fast
@@ -82,7 +82,7 @@ export const installNavigation = () => {
       }
 
       // show this new page, transition will be handled by leave
-      element.style.display = "block"
+      redisplay()
     },
     leave: async (page, { pageCancellationToken, activePage }) => {
       const pageElement = page.element
