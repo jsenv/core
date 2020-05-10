@@ -163,7 +163,15 @@ const loadAndExecute = async (execution, { cancellationToken }) => {
     const loadedPromise = iframeToLoaded(execution.iframe, {
       cancellationToken,
     })
-    execution.iframe.src = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${execution.fileRelativeUrl}`
+    /**
+    DON'T USE iframe.src it would create
+    an entry in the browser history (firefox only)
+    instead use iframe location replace which avoid creating a browser history
+    */
+    execution.iframe.contentWindow.location.replace(
+      `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${execution.fileRelativeUrl}`,
+    )
+
     return loadedPromise
   })
 

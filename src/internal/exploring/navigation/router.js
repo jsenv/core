@@ -90,9 +90,6 @@ export const createRouter = (
   let activePageCancellationSource
   let activeRoute
 
-  console.log(`initial browser history ${browserHistoryPosition} at ${browserUrl}`)
-  console.log(`initial application state ${applicationHistoryPosition} at ${applicationUrl}`)
-
   const createNavigation = ({
     type,
     event,
@@ -169,7 +166,6 @@ export const createRouter = (
       }
       // create immediatly a new entry in the history (click on a link)
       else if (type === "push") {
-        console.log(`add browser history entry ${browserHistoryPosition} at ${browserUrl}`)
         windowHistory.pushState(
           { position: browserHistoryPosition, state: browserHistoryState },
           "",

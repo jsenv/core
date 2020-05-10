@@ -1,12 +1,5 @@
 /*
 
-TODO:
-
-- on a pas de activePage par défaut
-on ne sait donc pas comment faire la transition
-pour la page initiale
-il faudrait ptet le passer a createRouter en lui filant la page par défaut
-
 - dans router.js test what happens with history.go(0)
 if it trigger popstate ensure we behave corretly
 otherwise if it's just location.reload() we got nothing to do
