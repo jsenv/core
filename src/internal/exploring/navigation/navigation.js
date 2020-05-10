@@ -34,6 +34,7 @@ export const installNavigation = () => {
     { duration: 300 },
   )
   const routes = [fileListRoute, fileExecutionRoute]
+  let pageLoaderFadeinPromise
   const router = createRouter(routes, {
     activePage: {
       title: document.title,
@@ -41,7 +42,7 @@ export const installNavigation = () => {
     },
     errorRoute: errorNavigationRoute,
     onstart: (navigation) => {
-      pageLoaderFadein.play()
+      pageLoaderFadeinPromise = pageLoaderFadein.play()
 
       // every navigation must render toolbar
       // this function is synchronous it's just ui
@@ -62,13 +63,11 @@ export const installNavigation = () => {
       const { effect, title, element, mutateElementBeforeDisplay = () => {} } = page
 
       const redisplay = setStyles(element, { display: "none" })
-      element.style.position = "relative" /* pourquoi faire déja ? */
       pageContainer.appendChild(element)
       await mutateElementBeforeDisplay()
       // if mutateElementBeforeDisplay and things before it were super fast
       // wait for pageLoader fade in to be done before doing the loader fadeout
-      // await fadeinPromise
-      pageLoaderFadein.reverse()
+
       if (pageCancellationToken.cancellationRequested) {
         element.parentNode.removeChild(element)
         return
@@ -91,6 +90,14 @@ export const installNavigation = () => {
       // if new page is smaller active page can be interacted because pageloader is fadedout ?
       setStyles(pageElement, {
         position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        top: 0,
+      })
+      activePageElement.style.position = "relative" // to be sure it's above page element
+      pageLoaderFadeinPromise.then(() => {
+        pageLoaderFadein.reverse()
       })
       const pageElementFadeout = fadeOut(pageElement, {
         cancellationToken: pageCancellationToken,
@@ -100,6 +107,7 @@ export const installNavigation = () => {
         cancellationToken: pageCancellationToken,
         duration: 300,
       })
+
       await Promise.all([pageElementFadeout, activePageElementFadein])
 
       pageElement.parentNode.removeChild(pageElement)
