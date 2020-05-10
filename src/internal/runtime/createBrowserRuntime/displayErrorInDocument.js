@@ -56,7 +56,14 @@ const errorToHTML = (error) => {
   let html
 
   if (error && error instanceof Error) {
-    html = error.stack
+    //  stackTrace formatted by V8
+    if (Error.captureStackTrace) {
+      html = error.stack
+    } else {
+      // other stack trace such as firefox do not contain error.message
+      html = `${error.message}
+  ${error.stack}`
+    }
   } else if (typeof error === "string") {
     html = error
   } else {
