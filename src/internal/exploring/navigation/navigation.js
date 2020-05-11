@@ -9,6 +9,7 @@ otherwise if it's just location.reload() we got nothing to do
 import { setStyles } from "../util/dom.js"
 import { fadeIn, fadeOut, transit } from "../util/animation.js"
 import { renderToolbar } from "../toolbar/toolbar.js"
+import { getAnimationPreference } from "../toolbar/toolbar-animation.js"
 import { errorNavigationRoute } from "../page-error-navigation/page-error-navigation.js"
 import { fileListRoute } from "../page-file-list/page-file-list.js"
 import { fileExecutionRoute } from "../page-file-execution/page-file-execution.js"
@@ -36,7 +37,9 @@ export const installNavigation = () => {
     activePage,
     errorRoute: errorNavigationRoute,
     onstart: (navigation) => {
-      pageLoaderFadeinPromise = pageLoaderFadein.play()
+      if (getAnimationPreference()) {
+        pageLoaderFadeinPromise = pageLoaderFadein.play()
+      }
 
       // every navigation must render toolbar
       // this function is synchronous it's just ui
@@ -47,10 +50,14 @@ export const installNavigation = () => {
       }
     },
     oncancel: () => {
-      pageLoaderFadein.reverse()
+      if (getAnimationPreference()) {
+        pageLoaderFadein.reverse()
+      }
     },
     onerror: (navigation, error) => {
-      pageLoaderFadein.reverse()
+      if (getAnimationPreference()) {
+        pageLoaderFadein.reverse()
+      }
       throw error
     },
     enter: async (page, { pageCancellationToken }) => {
@@ -90,16 +97,18 @@ export const installNavigation = () => {
         top: 0,
       })
       activePageElement.style.position = "relative" // to be sure it's above page element
-      pageLoaderFadeinPromise.then(() => {
-        pageLoaderFadein.reverse()
-      })
+      if (getAnimationPreference()) {
+        pageLoaderFadeinPromise.then(() => {
+          pageLoaderFadein.reverse()
+        })
+      }
       const pageElementFadeout = fadeOut(pageElement, {
         cancellationToken: pageCancellationToken,
-        duration: 300,
+        duration: getAnimationPreference() ? 300 : 0,
       })
       const activePageElementFadein = fadeIn(activePageElement, {
         cancellationToken: pageCancellationToken,
-        duration: 300,
+        duration: getAnimationPreference() ? 300 : 0,
       })
 
       await Promise.all([pageElementFadeout, activePageElementFadein])

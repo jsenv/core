@@ -1,4 +1,5 @@
 import { loadExploringConfig } from "../util/util.js"
+import { getAnimationPreference } from "../toolbar/toolbar-animation.js"
 import { move } from "../util/animation.js"
 import { fetchUrl } from "../util/fetching.js"
 
@@ -48,6 +49,10 @@ export const fileListRoute = {
         const href = new URL(destinationUrl).pathname.slice(1)
         const aElement = document.querySelector(`a[href="${href}"]`)
         if (!aElement) {
+          return
+        }
+
+        if (!getAnimationPreference()) {
           return
         }
 

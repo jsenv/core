@@ -110,3 +110,8 @@ html[data-last-interaction="keyboard"] footer a:focus {
   /* outline: 2px dotted -webkit-focus-ring-color; */
   outline-offset: -2px;
 }
+
+html[data-animation-disabled] * {
+  transition: none !important;
+  animation-duration: 0s !important;
+}
