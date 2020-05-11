@@ -77,10 +77,12 @@ import {
   composeCancellationToken,
   isCancelError,
 } from "@jsenv/cancellation"
+import { createLogger } from "@jsenv/logger"
 
 export const createRouter = (
   routes,
   {
+    logLevel = "warn",
     activePage,
     fallbackRoute,
     errorRoute,
@@ -94,6 +96,7 @@ export const createRouter = (
     oncomplete = () => {},
   },
 ) => {
+  const logger = createLogger({ logLevel })
   const windowHistory = window.history
   const initialHistoryPosition = windowHistory.state
     ? windowHistory.state.position
@@ -179,7 +182,7 @@ export const createRouter = (
 
       // replace an history entry (initial navigation or reload)
       if (type === "replace") {
-        console.log(`replace browser history entry ${browserHistoryPosition} at ${browserUrl}`)
+        logger.debug(`replace browser history entry ${browserHistoryPosition} at ${browserUrl}`)
         windowHistory.replaceState(
           { position: browserHistoryPosition, state: browserHistoryState },
           "",
@@ -196,11 +199,11 @@ export const createRouter = (
       }
       // restoring an history entry (popstate)
       else if (type === "restore") {
-        console.log(
+        logger.debug(
           `browser wants to restore ${browserHistoryPosition} at ${browserUrl} and application is on ${applicationHistoryPosition} at ${applicationUrl}`,
         )
         if (browserHistoryPosition === applicationHistoryPosition) {
-          console.log(`no need to restore ${browserHistoryPosition}, application is already on it`)
+          logger.debug(`no need to restore ${browserHistoryPosition}, application is already on it`)
           navigation.status = "ignored"
           applicationHistoryPosition = browserHistoryPosition
           applicationHistoryState = browserHistoryState
@@ -267,7 +270,7 @@ export const createRouter = (
         navigation.status = "canceled"
         navigation.cancelError = cancelError
         const movement = applicationHistoryPosition - browserHistoryPosition
-        console.log(
+        logger.debug(
           `navigation canceled browser is at ${browserHistoryPosition}, application at ${applicationHistoryPosition}`,
         )
         if (movement) {
