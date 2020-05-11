@@ -27,15 +27,13 @@ export const installNavigation = () => {
     { duration: 300 },
   )
   const routes = [fileListRoute, fileExecutionRoute]
+  const activePage = {
+    title: document.title,
+    element: document.querySelector('[data-page="default"]'),
+  }
   let pageLoaderFadeinPromise
   const router = createRouter(routes, {
-    activePage: {
-      title: document.title,
-      element: document.querySelector('[data-page="default"]'),
-      // ça serais bien sa voir vers quoi on va comme ça
-      // on pourrait mettre un background black si on va vers la page d'index
-      // bref pour plus tard ça
-    },
+    activePage,
     errorRoute: errorNavigationRoute,
     onstart: (navigation) => {
       pageLoaderFadeinPromise = pageLoaderFadein.play()

@@ -52,13 +52,13 @@ html[data-theme="light"] #settings-box .category-subtitle {
 html[data-theme="light"] label {
   color: #002e33;
 }
-html[data-theme="light"] input:checked + .slider,
-html[data-theme="light"] .switch input:checked + .slider:before {
-  background-color: #076570;
-}
-html[data-theme="light"] .switch .slider,
-html[data-theme="light"] .switch .slider:before {
+html[data-theme="light"] .switch input + * .slider,
+html[data-theme="light"] .switch input + * .square {
   background-color: grey;
+}
+html[data-theme="light"] .switch input:checked + * .slider,
+html[data-theme="light"] .switch input:checked + * .square {
+  background-color: #076570;
 }
 
 /* file input */
