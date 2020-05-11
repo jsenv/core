@@ -9,11 +9,23 @@ export const getNotificationPreference = () =>
 
 export const setNotificationPreference = (value) => notificationPreference.set(value)
 
+const arrayOfOpenedNotifications = []
 export const registerNotifications = () => {
   const notifCheckbox = document.querySelector("#toggle-notifs")
   notifCheckbox.checked = getNotificationPreference()
   notifCheckbox.onchange = () => {
     setNotificationPreference(notifCheckbox.checked)
+    if (notifCheckbox.checked) {
+      // request permission early
+      // especially useful on firefox where you can request permission
+      // only inside a user generated event such as this onchange handler
+      requestPermission()
+    } else {
+      // slice because arrayOfOpenedNotifications can be mutated while looping
+      arrayOfOpenedNotifications.slice().forEach((notification) => {
+        notification.close()
+      })
+    }
   }
 }
 
@@ -61,21 +73,12 @@ const getFaviconHref = () => {
   return link ? link.href : undefined
 }
 
-/* TODO: ne pas oublier que dans firefox
-
-La permission de notification ne peut être demandée que depuis un gestionnaire d’évènements généré
-par l’utilisateur et en cours d’exécution.
-
-Donc en gros depuis le bouton qui active les notifications.
-Et dans firefox il faudrait donc jouer avec le checkbox.onclick pour obtenir cette authorisation
-
-*/
-
 const notify = notificationAvailable
   ? async (title, { clickToFocus = false, clickToClose = false, ...options } = {}) => {
       const permission = await requestPermission()
       if (permission === "granted") {
         const notification = new Notification(title, options)
+        arrayOfOpenedNotifications.push(notification)
         notification.onclick = () => {
           // but if the user navigated inbetween
           // focusing window will show something else
@@ -88,15 +91,25 @@ const notify = notificationAvailable
           if (clickToFocus) window.focus()
           if (clickToClose) notification.close()
         }
+        notification.onclose = () => {
+          const index = arrayOfOpenedNotifications.indexOf(notification)
+          if (index > -1) {
+            arrayOfOpenedNotifications.splice(index, 1)
+          }
+        }
         return notification
       }
       return null
     }
   : () => {}
 
+let permissionPromise
 const requestPermission = notificationAvailable
   ? async () => {
-      const permission = await Notification.requestPermission()
+      if (permissionPromise) return permissionPromise
+      permissionPromise = Notification.requestPermission()
+      const permission = await permissionPromise
+      permissionPromise = undefined
       return permission
     }
   : () => Promise.resolve("denied")
