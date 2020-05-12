@@ -85,6 +85,7 @@ export const fileExecutionRoute = {
   load: async ({ pageCancellationToken, destinationUrl, activePage }) => {
     const fileRelativeUrl = new URL(destinationUrl).pathname.slice(1)
     const iframe = document.createElement("iframe")
+    iframe.setAttribute("tabindex", -1) // prevent tabbing until loaded
     const page = {
       title: fileRelativeUrl,
       element: iframe,
@@ -159,7 +160,7 @@ const loadAndExecute = async (execution, { cancellationToken }) => {
   }
 
   // memoize ensure iframe is lazyly loaded once
-  const loadIframe = memoize(() => {
+  const loadIframe = memoize(async () => {
     const loadedPromise = iframeToLoaded(execution.iframe, {
       cancellationToken,
     })
@@ -172,11 +173,14 @@ const loadAndExecute = async (execution, { cancellationToken }) => {
       `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${execution.fileRelativeUrl}`,
     )
 
+    await loadedPromise
+    execution.iframe.removeAttribute("tabindex")
     return loadedPromise
   })
 
   const evaluate = async (fn, ...args) => {
     await loadIframe()
+
     args = [`(${fn.toString()})`, ...args]
     return performIframeAction(execution.iframe, "evaluate", args, {
       cancellationToken,

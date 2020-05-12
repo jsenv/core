@@ -8,6 +8,7 @@ export const renderToolbarTheme = () => {
   const theme = getThemePreference()
   const checkbox = document.querySelector("#checkbox-dark-theme")
   checkbox.checked = theme === DARK_THEME
+  setTheme(theme)
   checkbox.onchange = () => {
     if (checkbox.checked) {
       setThemePreference(DARK_THEME)

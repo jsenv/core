@@ -140,6 +140,12 @@ label {
   position: relative;
   width: 100%;
   height: 100%;
+
+  /* It's important to have a border (event transparent)
+To be able to apply an outline to this element later*/
+  border-width: 1px;
+  border-color: transparent;
+  border-style: solid;
 }
 .switch input:checked + * .slider {
   background-color: #24b1b0;
@@ -147,9 +153,4 @@ label {
 .switch input:checked + * .square {
   transform: translateX(1.6em);
   background-color: #24b1b0;
-}
-html[data-last-interaction="keyboard"] .switch input:focus + * {
-  outline: 2px dotted #7aacfe;
-  /* outline: 2px dotted -webkit-focus-ring-color; */
-  outline-offset: -2px;
 }
