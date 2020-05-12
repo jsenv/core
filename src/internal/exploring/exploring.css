@@ -151,4 +151,5 @@ Because for some element we set the focus outline on a div which would not match
 html[data-animation-disabled] * {
   transition: none !important;
   animation-duration: 0s !important;
+  animation-delay: 0s !important;
 }
