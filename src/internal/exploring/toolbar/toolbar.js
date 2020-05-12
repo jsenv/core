@@ -1,8 +1,8 @@
 import { registerNotifications } from "../util/notification.js"
-import { registerToolbarTheme } from "../util/toolbarTheme.js"
 import { createPreference } from "../util/preferences.js"
 import { createHorizontalBreakpoint } from "../util/responsive.js"
 import { hideTooltip } from "./tooltip.js"
+import { renderToolbarTheme } from "./toolbar-theme.js"
 import { renderToolbarAnimation } from "./toolbar-animation.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
@@ -33,7 +33,7 @@ export const renderToolbar = (fileRelativeUrl) => {
   document.querySelector("#button-close-settings").onclick = () => toggleSettingsBox()
   registerNotifications()
   renderToolbarAnimation()
-  registerToolbarTheme()
+  renderToolbarTheme()
 
   // close button
   document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar()

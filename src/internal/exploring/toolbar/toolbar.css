@@ -6,7 +6,6 @@
 
 /* toolbar themes */
 @import "./light-theme.css";
-@import "./jsenv-theme.css";
 
 #toolbar {
   background: #404040;
