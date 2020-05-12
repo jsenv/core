@@ -76,13 +76,14 @@ import {
   createCancellationSource,
   composeCancellationToken,
   isCancelError,
+  createOperation,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 
 export const createRouter = (
   routes,
   {
-    logLevel = "warn",
+    logLevel = "debug",
     activePage,
     fallbackRoute,
     errorRoute,
@@ -191,6 +192,7 @@ export const createRouter = (
       }
       // create immediatly a new entry in the history (click on a link)
       else if (type === "push") {
+        logger.debug(`add browser history entry ${browserHistoryPosition} at ${browserUrl}`)
         windowHistory.pushState(
           { position: browserHistoryPosition, state: browserHistoryState },
           "",
@@ -209,35 +211,42 @@ export const createRouter = (
           applicationHistoryState = browserHistoryState
           applicationUrl = browserUrl
           // (should happen only when cancelling navigation induced by popstate)
+          // attention ceci a pour effet
           return undefined
         }
       }
 
       const activateRoute = async (navigation) => {
         onstart(navigation)
-        routeCancellationToken.throwIfRequested() // in case external cancellation happens
+        routeCancellationToken.throwIfRequested() // in case external cancellation happens during onstart
 
         if (currentRouteCancellationSource && !navigation.isReload) {
+          logger.debug("cancelling current page")
           currentRouteCancellationSource.cancel(navigation)
         }
         if (currentPageCancellationSource) {
+          logger.debug("cancelling current route")
           currentPageCancellationSource.cancel(navigation)
         }
 
         if (!navigation.isReload && navigation.route.setup) {
           currentRouteCancellationSource = routeCancellationSource
-          await navigation.route.setup(navigation)
-          routeCancellationToken.throwIfRequested()
+          await createOperation({
+            cancellationToken: routeCancellationToken,
+            start: () => navigation.route.setup(navigation),
+          })
         }
 
         currentPageCancellationSource = pageCancellationSource
-        const page = await navigation.route.load(navigation)
-        routeCancellationToken.throwIfRequested()
+        const page = await createOperation({
+          cancellationToken: pageCancellationToken,
+          start: () => navigation.route.load(navigation),
+        })
 
-        await enter(page, navigation)
-        // at this point we put page in the DOM but it's no longer needed
-        // let's remove it from the DOM and throw to cancel the navigation
-        routeCancellationToken.throwIfRequested()
+        await createOperation({
+          cancellationToken: pageCancellationToken,
+          start: () => enter(page, navigation),
+        })
 
         // remove currentPage from the DOM
         const pageLeft = activePage
@@ -251,8 +260,10 @@ export const createRouter = (
 
         if (activeRouteCancellationSource) {
           if (navigation.isReload) {
+            logger.debug("cancelling active page")
             activePageCancellationSource.cancel(navigation)
           } else {
+            logger.debug("cancelling active route")
             activeRouteCancellationSource.cancel(navigation)
           }
         }

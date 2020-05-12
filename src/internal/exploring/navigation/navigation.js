@@ -18,12 +18,18 @@ import { createRouter } from "./router.js"
 export const installNavigation = () => {
   const pageContainer = document.querySelector("#page")
   // const pageLoader = document.querySelector("#page-loader")
-  const pageLoaderFadein = transit(
+  const pageLoaderFading = transit(
     {
-      "#page-loader": { visibility: "hidden", opacity: 0 },
+      "#page-loader": {
+        visibility: "hidden",
+        opacity: 0,
+      },
     },
     {
-      "#page-loader": { visibility: "visible", opacity: 0.4 },
+      "#page-loader": {
+        visibility: "visible",
+        opacity: 0.4,
+      },
     },
     { duration: 300 },
   )
@@ -37,26 +43,43 @@ export const installNavigation = () => {
     activePage,
     errorRoute: errorNavigationRoute,
     onstart: (navigation) => {
-      if (getAnimationPreference()) {
-        pageLoaderFadeinPromise = pageLoaderFadein.play()
+      pageLoaderFadeinPromise = pageLoaderFading.play()
+      if (!getAnimationPreference()) {
+        pageLoaderFading.finish()
       }
+      document.querySelector("#page-loader a").onclick = navigation.cancel
 
       // every navigation must render toolbar
       // this function is synchronous it's just ui
       renderToolbar(new URL(navigation.destinationUrl).pathname.slice(1), navigation)
 
-      if (navigation.activePage && navigation.activePage.onleavestart) {
-        navigation.activePage.onleavestart(navigation)
+      if (navigation.activePage) {
+        addBlurFilter(navigation.activePage.element)
+        if (navigation.activePage.onleavestart) {
+          navigation.activePage.onleavestart(navigation)
+        }
       }
     },
-    oncancel: () => {
-      if (getAnimationPreference()) {
-        pageLoaderFadein.reverse()
+    oncancel: (navigation) => {
+      // every navigation must render toolbar
+      // this function is synchronous it's just ui
+      renderToolbar(new URL(navigation.destinationUrl).pathname.slice(1), navigation)
+
+      pageLoaderFading.reverse()
+      if (!getAnimationPreference()) {
+        pageLoaderFading.finish()
+      }
+      if (navigation.activePage) {
+        removeBlurFilter(navigation.activePage.element)
       }
     },
     onerror: (navigation, error) => {
-      if (getAnimationPreference()) {
-        pageLoaderFadein.reverse()
+      pageLoaderFading.reverse()
+      if (!getAnimationPreference()) {
+        pageLoaderFading.finish()
+      }
+      if (navigation.activePage) {
+        removeBlurFilter(navigation.activePage.element)
       }
       throw error
     },
@@ -97,11 +120,14 @@ export const installNavigation = () => {
         top: 0,
       })
       activePageElement.style.position = "relative" // to be sure it's above page element
-      if (getAnimationPreference()) {
-        pageLoaderFadeinPromise.then(() => {
-          pageLoaderFadein.reverse()
-        })
-      }
+
+      pageLoaderFadeinPromise.then(() => {
+        pageLoaderFading.reverse()
+        if (!getAnimationPreference()) {
+          pageLoaderFading.finish()
+        }
+      })
+
       const pageElementFadeout = fadeOut(pageElement, {
         cancellationToken: pageCancellationToken,
         duration: getAnimationPreference() ? 300 : 0,
@@ -154,6 +180,27 @@ export const installNavigation = () => {
   return () => {
     document.removeEventListener("click", onclick)
   }
+}
+
+const addBlurFilter = (element) => {
+  /**
+  see https://codepen.io/tigt/post/fixing-the-white-glow-in-the-css-blur-filter
+    <filter id="better-blur" x="0" y="0" width="1" height="1">
+  <feGaussianBlur stdDeviation="[radius radius]" result="blurred"/>
+
+  <feMorphology in="blurred" operator="dilate" radius="[radius radius]" result="expanded"/>
+
+  <feMerge>
+    <feMergeNode in="expanded"/>
+    <feMergeNode in="blurred"/>
+  </feMerge>
+</filter>
+    */
+  element.style.filter = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='a' x='0' y='0' width='1' height='1'%3E%3CfeGaussianBlur stdDeviation='4' result='b'/%3E%3CfeMorphology operator='dilate' radius='4'/%3E %3CfeMerge%3E%3CfeMergeNode/%3E%3CfeMergeNode in='b'/%3E%3C/feMerge%3E%3C/filter%3E%3C/svg%3E#a")`
+}
+
+const removeBlurFilter = (element) => {
+  element.style.filter = "none"
 }
 
 const isClickToOpenTab = (clickEvent) => {
