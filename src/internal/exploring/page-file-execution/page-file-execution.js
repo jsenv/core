@@ -83,6 +83,7 @@ export const fileExecutionRoute = {
   },
 
   load: async ({ pageCancellationToken, destinationUrl, activePage }) => {
+    // await new Promise(() => {})
     const fileRelativeUrl = new URL(destinationUrl).pathname.slice(1)
     const iframe = document.createElement("iframe")
     iframe.setAttribute("tabindex", -1) // prevent tabbing until loaded

@@ -239,12 +239,12 @@ export const createRouter = (
 
         currentPageCancellationSource = pageCancellationSource
         const page = await createOperation({
-          cancellationToken: pageCancellationToken,
+          cancellationToken: routeCancellationToken,
           start: () => navigation.route.load(navigation),
         })
 
         await createOperation({
-          cancellationToken: pageCancellationToken,
+          cancellationToken: routeCancellationToken,
           start: () => enter(page, navigation),
         })
 

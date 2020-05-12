@@ -11,6 +11,7 @@ export const fileListRoute = {
   },
 
   load: async ({ pageCancellationToken }) => {
+    // await new Promise(() => {})
     const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig({
       cancellationToken: pageCancellationToken,
     })

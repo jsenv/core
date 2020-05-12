@@ -23,7 +23,7 @@
       -->
     </main>
     <div id="page-loader">
-      <div id="page-loader-box" style="display:none">
+      <div id="page-loader-box" style="display: none;">
         <div>
           <svg id="loader-icon" data-animate>
             <use xlink:href="#loaderSvgModel"></use>
@@ -363,6 +363,20 @@
 
       <!-- svg templates -->
       <div class="svgModels" style="display: none;">
+        <!--  see https://codepen.io/tigt/post/fixing-the-white-glow-in-the-css-blur-filter -->
+        <svg>
+          <defs>
+            <filter id="better-blur" x="0" y="0" width="1" height="1">
+              <feGaussianBlur stdDeviation="5" result="blurred" />
+
+              <feMerge>
+                <feMergeNode in="SourceGraphic" />
+                <feMergeNode in="blurred" />
+              </feMerge>
+            </filter>
+          </defs>
+        </svg>
+
         <!-- loader -->
         <svg
           id="loaderSvgModel"

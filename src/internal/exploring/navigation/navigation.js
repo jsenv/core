@@ -183,20 +183,7 @@ export const installNavigation = () => {
 }
 
 const addBlurFilter = (element) => {
-  /**
-  see https://codepen.io/tigt/post/fixing-the-white-glow-in-the-css-blur-filter
-    <filter id="better-blur" x="0" y="0" width="1" height="1">
-  <feGaussianBlur stdDeviation="[radius radius]" result="blurred"/>
-
-  <feMorphology in="blurred" operator="dilate" radius="[radius radius]" result="expanded"/>
-
-  <feMerge>
-    <feMergeNode in="expanded"/>
-    <feMergeNode in="blurred"/>
-  </feMerge>
-</filter>
-    */
-  element.style.filter = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='a' x='0' y='0' width='1' height='1'%3E%3CfeGaussianBlur stdDeviation='4' result='b'/%3E%3CfeMorphology operator='dilate' radius='4'/%3E %3CfeMerge%3E%3CfeMergeNode/%3E%3CfeMergeNode in='b'/%3E%3C/feMerge%3E%3C/filter%3E%3C/svg%3E#a")`
+  element.style.filter = `url(#better-blur)`
 }
 
 const removeBlurFilter = (element) => {
