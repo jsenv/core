@@ -179,6 +179,7 @@ export const transit = (
           animation.playbackRate = -1
           animation.onfinish()
         },
+        finish: () => {},
         onfinish: () => {},
       }
     }
@@ -227,5 +228,11 @@ export const transit = (
     )
   }
 
-  return { play, reverse }
+  const finish = async () => {
+    steps.forEach(({ animation }) => {
+      animation.finish()
+    })
+  }
+
+  return { play, reverse, finish }
 }

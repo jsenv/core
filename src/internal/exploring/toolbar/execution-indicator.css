@@ -9,7 +9,7 @@
 }
 #loader-icon[data-animate] {
   transform-origin: center;
-  animation: rotateLoader 1s linear infinite;
+  animation: rotateLoader 1s linear infinite !important;
 }
 @keyframes rotateLoader {
   0% {
