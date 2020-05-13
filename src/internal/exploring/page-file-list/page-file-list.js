@@ -6,21 +6,25 @@ import { fetchUrl } from "../util/fetching.js"
 export const fileListRoute = {
   name: "file-list",
 
-  match: (url) => {
+  match: ({ url }) => {
     return new URL(url).pathname === "/"
   },
 
-  load: async ({ pageCancellationToken }) => {
+  activate: async ({ cancellationToken }) => {
     // await new Promise(() => {})
-    const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig({
-      cancellationToken: pageCancellationToken,
-    })
-    const directoryName = directoryUrlToDirectoryName(projectDirectoryUrl)
-    const fileListElement = document.querySelector(`[data-page="file-list"`).cloneNode(true)
+    const fileListElement = document
+      .querySelector(`#page-templates [data-page="file-list"`)
+      .cloneNode(true)
     return {
       title: "Explorable files",
+
       element: fileListElement,
-      mutateElementBeforeDisplay: async () => {
+
+      prepareEntrance: async () => {
+        const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig({
+          cancellationToken,
+        })
+        const directoryName = directoryUrlToDirectoryName(projectDirectoryUrl)
         const span = fileListElement.querySelector("h2 span")
         span.title = projectDirectoryUrl
         span.textContent = directoryName
@@ -39,7 +43,8 @@ export const fileListRoute = {
           .map((file) => `<li><a class="execution-link" href=${file}>${file}</a></li>`)
           .join("")
       },
-      onleavestart: async ({ routeCancellationToken, event, destinationUrl }) => {
+
+      animateLeaving: async ({ cancellationToken, event, url }) => {
         // only if we leave this page because of a click
         // (we could also do the animation on history.back() or history.forward())
         // for now let's ignore
@@ -47,7 +52,7 @@ export const fileListRoute = {
           return
         }
 
-        const href = new URL(destinationUrl).pathname.slice(1)
+        const href = new URL(url).pathname.slice(1)
         const aElement = document.querySelector(`a[href="${href}"]`)
         if (!aElement) {
           return
@@ -61,14 +66,11 @@ export const fileListRoute = {
         const fileInput = document.querySelector("#file-input")
         // hide the input during animation
         fileInput.style.opacity = "0"
-        routeCancellationToken.register(() => {
-          fileInput.style.opacity = "1"
-        })
         await move(aElement, fileInput, {
           duration: 700,
           fill: "forwards",
           easing: "ease-in-out",
-          cancellationToken: routeCancellationToken,
+          cancellationToken,
         })
         fileInput.style.opacity = "1"
       },

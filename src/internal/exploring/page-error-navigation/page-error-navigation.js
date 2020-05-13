@@ -2,7 +2,9 @@ export const errorNavigationRoute = {
   name: "error-navigation",
 
   load: ({ navigation }) => {
-    const element = document.querySelector(`[data-page="error-navigation"`).cloneNode(true)
+    const element = document
+      .querySelector(`#page-templates [data-page="error-navigation"`)
+      .cloneNode(true)
 
     const title = element.querySelector("h1")
     title.textContent = `Error during navigation to ${navigation.destinationUrl}.`

@@ -4,6 +4,10 @@ import { createPreference } from "../util/preferences.js"
 
 const livereloadingPreference = createPreference("livereloading")
 
+export const getLivereloadingPreference = () => {
+  return livereloadingPreference.has() ? livereloadingPreference.get() : true
+}
+
 export const createLivereloading = (
   fileRelativeUrl,
   { onFileChanged, onFileRemoved, onConnecting, onAborted, onConnectionFailed, onConnected },
@@ -92,12 +96,7 @@ export const createLivereloading = (
     })
   }
 
-  const isEnabled = () => {
-    return livereloadingPreference.has() ? livereloadingPreference.get() : true
-  }
-
   return {
-    isEnabled,
     connect,
     disconnect: () => cancel(),
   }

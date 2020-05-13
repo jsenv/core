@@ -1,11 +1,3 @@
-/*
-
-- dans router.js test what happens with history.go(0)
-if it trigger popstate ensure we behave corretly
-otherwise if it's just location.reload() we got nothing to do
-
-*/
-
 import { setStyles } from "../util/dom.js"
 import { fadeIn, fadeOut, transit } from "../util/animation.js"
 import { renderToolbar } from "../toolbar/toolbar.js"
@@ -13,135 +5,179 @@ import { getAnimationPreference } from "../toolbar/toolbar-animation.js"
 import { errorNavigationRoute } from "../page-error-navigation/page-error-navigation.js"
 import { fileListRoute } from "../page-file-list/page-file-list.js"
 import { fileExecutionRoute } from "../page-file-execution/page-file-execution.js"
-import { createRouter } from "./router.js"
+import { createApplicationHistory } from "./application-history.js"
 
 export const installNavigation = () => {
   const pageContainer = document.querySelector("#page")
-  // const pageLoader = document.querySelector("#page-loader")
   const pageLoaderFading = transit(
     {
       "#page-loader": {
         visibility: "hidden",
-        opacity: 0,
+        background: "rgba(0,0,0,0)",
       },
     },
     {
       "#page-loader": {
         visibility: "visible",
-        opacity: 0.4,
+        background: "rgba(0,0,0,0.4)",
       },
     },
     { duration: 300 },
   )
-  const routes = [fileListRoute, fileExecutionRoute]
-  const activePage = {
+  const defaultActivePage = {
     title: document.title,
     element: document.querySelector('[data-page="default"]'),
   }
   let pageLoaderFadeinPromise
-  const router = createRouter(routes, {
-    activePage,
-    errorRoute: errorNavigationRoute,
-    onstart: (navigation) => {
-      pageLoaderFadeinPromise = pageLoaderFading.play()
-      if (!getAnimationPreference()) {
-        pageLoaderFading.finish()
-      }
-      document.querySelector("#page-loader a").onclick = navigation.cancel
 
-      // every navigation must render toolbar
-      // this function is synchronous it's just ui
-      renderToolbar(new URL(navigation.destinationUrl).pathname.slice(1), navigation)
-
-      if (navigation.activePage) {
-        addBlurFilter(navigation.activePage.element)
-        if (navigation.activePage.onleavestart) {
-          navigation.activePage.onleavestart(navigation)
-        }
-      }
+  const applicationHistory = createApplicationHistory([fileListRoute, fileExecutionRoute], {
+    activePage: defaultActivePage,
+    errorService: errorNavigationRoute,
+    onstart: (attempt) => {
+      // attention! si rendertoolbar se connecte a l'event source il faut
+      // qu'il switch de connection si le fichier change
+      // et qu'il ne se déco/reco pas si on appel 2 fois la fonction sur le mem fichier
+      renderToolbar(attempt)
+      preparePageDeactivation(attempt)
     },
-    oncancel: (navigation) => {
-      // every navigation must render toolbar
-      // this function is synchronous it's just ui
-      renderToolbar(new URL(navigation.destinationUrl).pathname.slice(1), navigation)
-
-      pageLoaderFading.reverse()
-      if (!getAnimationPreference()) {
-        pageLoaderFading.finish()
-      }
-      if (navigation.activePage) {
-        removeBlurFilter(navigation.activePage.element)
-      }
+    oncancel: (attempt) => {
+      renderToolbar(attempt.activeAttempt || attempt)
+      reactivatePage(attempt)
     },
-    onerror: (navigation, error) => {
-      pageLoaderFading.reverse()
-      if (!getAnimationPreference()) {
-        pageLoaderFading.finish()
-      }
-      if (navigation.activePage) {
-        removeBlurFilter(navigation.activePage.element)
-      }
+    onerror: (attempt, error) => {
+      // maybe we should somehow rerender toolbar to some state because
+      // the error might have put it into a incorrect state
+      reactivatePage(attempt)
       throw error
     },
-    enter: async (page, { pageCancellationToken }) => {
-      const { effect, title, element, mutateElementBeforeDisplay = () => {} } = page
-
-      const redisplay = setStyles(element, { display: "none" })
-      pageContainer.appendChild(element)
-      await mutateElementBeforeDisplay()
-      // if mutateElementBeforeDisplay and things before it were super fast
-      // wait for pageLoader fade in to be done before doing the loader fadeout
-
-      if (pageCancellationToken.cancellationRequested) {
-        element.parentNode.removeChild(element)
+    activatePage: async (attempt, page) => {
+      await preparePageActivation(attempt, page)
+      if (attempt.cancellationToken.cancellationRequested) {
         return
       }
-
-      if (effect) {
-        pageCancellationToken.register(effect())
-      }
-      if (title) {
-        document.title = title
-      }
-
-      // show this new page, transition will be handled by leave
-      redisplay()
-    },
-    leave: async (page, { pageCancellationToken, activePage }) => {
-      const pageElement = page.element
-      const activePageElement = activePage.element
-
-      // if new page is smaller active page can be interacted because pageloader is fadedout ?
-      setStyles(pageElement, {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        top: 0,
-      })
-      activePageElement.style.position = "relative" // to be sure it's above page element
-
-      pageLoaderFadeinPromise.then(() => {
-        pageLoaderFading.reverse()
-        if (!getAnimationPreference()) {
-          pageLoaderFading.finish()
+      animatePageReplacement(attempt, page).then(() => {
+        if (attempt.cancellationToken.cancellationRequested) {
+          return
         }
+        deactivatePage(attempt)
       })
-
-      const pageElementFadeout = fadeOut(pageElement, {
-        cancellationToken: pageCancellationToken,
-        duration: getAnimationPreference() ? 300 : 0,
-      })
-      const activePageElementFadein = fadeIn(activePageElement, {
-        cancellationToken: pageCancellationToken,
-        duration: getAnimationPreference() ? 300 : 0,
-      })
-
-      await Promise.all([pageElementFadeout, activePageElementFadein])
-
-      pageElement.parentNode.removeChild(pageElement)
     },
   })
+
+  const startLoadingNewPage = (attempt) => {
+    pageLoaderFadeinPromise = pageLoaderFading.play()
+    if (!getAnimationPreference()) {
+      pageLoaderFading.finish()
+    }
+    // TODO: ça marche pas si c'est la premiere page, faudrait que si
+    document.querySelector("#page-loader a").onclick = (clickEvent) => {
+      return attempt.cancel(clickEvent)
+    }
+  }
+
+  const stopsLoadingNewPage = () => {
+    pageLoaderFading.reverse()
+    if (!getAnimationPreference()) {
+      pageLoaderFading.finish()
+    }
+  }
+
+  const preparePageDeactivation = async (attempt) => {
+    // TODO: faire apparaitre page loader box apres un petit laps de temps
+    // et vérifier qu'on peut cancel
+
+    const { activePage } = attempt
+    console.log(
+      `prepare deactivate ${attempt.browserHistoryEntry.position} for element`,
+      activePage.element,
+    )
+    startLoadingNewPage(attempt)
+    addBlurFilter(activePage.element)
+
+    const { animateLeaving = () => {} } = activePage
+    animateLeaving(attempt)
+  }
+
+  const reactivatePage = (attempt) => {
+    const { activePage } = attempt
+    console.log(
+      `reactivate ${attempt.browserHistoryEntry.position} for element`,
+      activePage.element,
+    )
+    stopsLoadingNewPage()
+    removeBlurFilter(activePage.element)
+  }
+
+  const preparePageActivation = async (
+    { cancellationToken, browserHistoryEntry },
+    { title, element, prepareEntrance = () => {}, effect = () => {} },
+  ) => {
+    console.log(`prepare activating ${browserHistoryEntry.position} for element`, element)
+    setStyles(element, { display: "none" })
+    pageContainer.appendChild(element)
+
+    await prepareEntrance()
+
+    if (cancellationToken.cancellationRequested) {
+      element.parentNode.removeChild(element)
+      return
+    }
+
+    const cancelEffect = effect()
+    if (typeof cancelEffect === "function") {
+      cancellationToken.register(cancelEffect)
+    }
+
+    if (title) {
+      document.title = title
+    }
+  }
+
+  const animatePageReplacement = async ({ cancellationToken, activePage }, newPage) => {
+    pageLoaderFadeinPromise.then(() => {
+      stopsLoadingNewPage()
+    })
+
+    const currentPageElement = activePage.element
+    const newPageElement = newPage.element
+
+    // if new page is smaller active page can be interacted because pageloader is fadedout ?
+    setStyles(currentPageElement, {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      top: 0,
+    })
+    setStyles(newPageElement, {
+      position: "relative", // to be sure it's above page element
+      display: "block",
+    })
+
+    const currentPageElementFadeout = fadeOut(currentPageElement, {
+      cancellationToken,
+      duration: getAnimationPreference() ? 300 : 0,
+    })
+    const newPageElementFadein = fadeIn(newPageElement, {
+      cancellationToken,
+      duration: getAnimationPreference() ? 300 : 0,
+    })
+
+    return Promise.all([currentPageElementFadeout, newPageElementFadein])
+  }
+
+  const deactivatePage = (attempt) => {
+    const { activePage } = attempt
+    console.log(
+      `deactivate ${attempt.browserHistoryEntry.position} for element`,
+      activePage.element,
+    )
+    const activePageElement = activePage.element
+    activePageElement.parentNode.removeChild(activePageElement)
+
+    const { onceleft = () => {} } = activePage
+    onceleft()
+  }
 
   const onclick = (clickEvent) => {
     if (clickEvent.defaultPrevented) {
@@ -166,16 +202,11 @@ export const installNavigation = () => {
     }
 
     clickEvent.preventDefault()
-    router.navigateToUrl(aElement.href, clickEvent)
+    applicationHistory.pushState(null, aElement.href, clickEvent)
   }
   document.addEventListener("click", onclick)
 
-  // if we cancel this navigation we will just show the default page
-  // which is a blank page
-  // and reloading the page is the only wait to get this to happen again
-  // moreover this function is what we want to call
-  // inside file-execution page when we want to re-execute
-  router.loadCurrentUrl()
+  applicationHistory.replaceState()
 
   return () => {
     document.removeEventListener("click", onclick)

@@ -1,28 +1,19 @@
 import { memoize } from "../../memoize.js"
-import { createLivereloading } from "../livereloading/livereloading.js"
-import { applyLivereloadIndicator } from "../toolbar/livereload-indicator.js"
 import { applyExecutionIndicator } from "../toolbar/execution-indicator.js"
-import { loadExploringConfig, createPromiseAndHooks } from "../util/util.js"
+import { waitLivereloadReady } from "../toolbar/toolbar-livereloading.js"
+import { loadExploringConfig } from "../util/util.js"
 import { jsenvLogger } from "../util/jsenvLogger.js"
 import { notifyFileExecution } from "../util/notification.js"
 
 export const fileExecutionRoute = {
   name: "file-execution",
 
-  match: (url) => {
+  match: ({ url }) => {
     return new URL(url).pathname !== "/"
   },
 
-  // setup cancellationToken canceled only when leaving the page
-  setup: ({ routeCancellationToken, destinationUrl, reload }) => {
-    // reset livereload indicator ui
-    applyLivereloadIndicator()
-    // reset file execution indicator ui
-    applyExecutionIndicator()
-
-    const fileRelativeUrl = new URL(destinationUrl).pathname.slice(1)
-    const firstConnectionPromise = createPromiseAndHooks()
-
+  activate: async ({ cancellationToken, url, activePage }) => {
+    await new Promise(() => {})
     window.file = {
       previousExecution: undefined,
       execution: undefined,
@@ -32,72 +23,23 @@ export const fileExecutionRoute = {
       execute: () => {
         throw new Error("cannot execute, page is not ready")
       },
-      reload,
     }
-    routeCancellationToken.register(() => {
+    cancellationToken.register(() => {
       window.file = undefined
     })
 
-    let connectedOnce = false
-    const livereloading = createLivereloading(fileRelativeUrl, {
-      onFileChanged: () => {
-        reload()
-      },
-      onFileRemoved: () => {
-        reload()
-      },
-      onConnecting: ({ abort }) => {
-        applyLivereloadIndicator("connecting", { abort })
-      },
-      onAborted: ({ connect }) => {
-        applyLivereloadIndicator("off", { connect })
-      },
-      onConnectionFailed: ({ reconnect }) => {
-        // make ui indicate the failure providing a way to reconnect manually
-        applyLivereloadIndicator("disconnected", { reconnect })
-      },
-      onConnected: ({ disconnect }) => {
-        applyLivereloadIndicator("connected", { disconnect })
-        if (connectedOnce) {
-          // we have lost connection to the server, we might have missed some file changes
-          // let's re-execute the file
-          reload()
-        } else {
-          connectedOnce = true
-          firstConnectionPromise.resolve()
-        }
-      },
-    })
-    routeCancellationToken.register(() => {
-      livereloading.disconnect()
-    })
-
-    if (livereloading.isEnabled()) {
-      livereloading.connect()
-    } else {
-      applyLivereloadIndicator("off", { connect: livereloading.connect })
-      connectedOnce = true
-      firstConnectionPromise.resolve()
-    }
-    return firstConnectionPromise
-  },
-
-  load: async ({ pageCancellationToken, destinationUrl, activePage }) => {
     // await new Promise(() => {})
-    const fileRelativeUrl = new URL(destinationUrl).pathname.slice(1)
+    const fileRelativeUrl = new URL(url).pathname.slice(1)
     const iframe = document.createElement("iframe")
     iframe.setAttribute("tabindex", -1) // prevent tabbing until loaded
     const page = {
       title: fileRelativeUrl,
+
       element: iframe,
+
       execution: undefined,
-      effect: () => {
-        document.documentElement.setAttribute("data-page-execution", "")
-        return () => {
-          document.documentElement.removeAttribute("data-page-execution")
-        }
-      },
-      mutateElementBeforeDisplay: async () => {
+
+      prepareEntrance: async () => {
         applyExecutionIndicator() // reset file execution indicator ui
 
         const pendingExecution = {
@@ -109,7 +51,7 @@ export const fileExecutionRoute = {
           result: null,
         }
         await loadAndExecute(pendingExecution, {
-          cancellationToken: pageCancellationToken,
+          cancellationToken,
         })
 
         const execution = pendingExecution
@@ -127,7 +69,15 @@ export const fileExecutionRoute = {
         notifyFileExecution(execution, previousExecution)
         page.execution = execution
       },
-      onleave: () => {
+
+      effect: () => {
+        document.documentElement.setAttribute("data-page-execution", "")
+        return () => {
+          document.documentElement.removeAttribute("data-page-execution")
+        }
+      },
+
+      onceleft: () => {
         // be sure the iframe src is reset to avoid eventual memory leak
         // if it was unproperly garbage collected or something
         iframe.src = "about:blank"
@@ -180,6 +130,7 @@ const loadAndExecute = async (execution, { cancellationToken }) => {
   })
 
   const evaluate = async (fn, ...args) => {
+    await waitLivereloadReady()
     await loadIframe()
 
     args = [`(${fn.toString()})`, ...args]

@@ -4,13 +4,17 @@ import { createHorizontalBreakpoint } from "../util/responsive.js"
 import { hideTooltip } from "./tooltip.js"
 import { renderToolbarTheme } from "./toolbar-theme.js"
 import { renderToolbarAnimation } from "./toolbar-animation.js"
+import { applyExecutionIndicator } from "./execution-indicator.js"
+import { connectLivereload, disconnectLivereload } from "./toolbar-livereloading.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
 
 const WINDOW_SMALL_WIDTH = 420
 const WINDOW_MEDIUM_WIDTH = 570
 
-export const renderToolbar = (fileRelativeUrl) => {
+export const renderToolbar = (attempt) => {
+  const fileRelativeUrl = new URL(attempt.url).pathname.slice(1)
+
   const toolbarVisible = toolbarVisibilityPreference.has()
     ? toolbarVisibilityPreference.get()
     : true
@@ -51,8 +55,13 @@ export const renderToolbar = (fileRelativeUrl) => {
   fileWidthBreakpoint.changed.listen(handleFileWidthBreakpoint)
 
   if (fileRelativeUrl) {
+    connectLivereload(attempt)
+
     input.value = fileRelativeUrl
     resizeInput(input, fileWidthBreakpoint)
+
+    // reset file execution indicator ui
+    applyExecutionIndicator()
 
     activateToolbarSection(document.querySelector("#file"))
     deactivateToolbarSection(document.querySelector("#file-list-link"))
@@ -60,6 +69,7 @@ export const renderToolbar = (fileRelativeUrl) => {
     removeForceHideElement(document.querySelector("#livereload-indicator"))
     removeForceHideElement(document.querySelector("#execution-indicator"))
   } else {
+    disconnectLivereload()
     forceHideElement(document.querySelector("#file"))
     forceHideElement(document.querySelector("#livereload-indicator"))
     forceHideElement(document.querySelector("#execution-indicator"))
