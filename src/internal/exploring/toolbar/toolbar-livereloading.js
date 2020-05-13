@@ -4,12 +4,16 @@ import { createPromiseAndHooks } from "../util/util.js"
 
 let livereloadConnection
 let livereloadReadyPromise
+let livereloadFile
 
 export const connectLivereload = ({ url, replaceState }) => {
   const fileRelativeUrl = new URL(url).pathname.slice(1)
+  if (livereloadFile === fileRelativeUrl) {
+    return
+  }
+
   // reset livereload indicator ui
   applyLivereloadIndicator()
-
   livereloadReadyPromise = createPromiseAndHooks()
 
   let connectedOnce = false
@@ -50,11 +54,11 @@ export const connectLivereload = ({ url, replaceState }) => {
     connectedOnce = true
     livereloadReadyPromise.resolve()
   }
-  return livereloadReadyPromise
 }
 
 export const disconnectLivereload = () => {
   if (livereloadConnection) {
+    livereloadFile = undefined
     livereloadConnection.disconnect()
     livereloadConnection = undefined
   }

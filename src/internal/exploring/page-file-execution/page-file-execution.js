@@ -8,12 +8,10 @@ import { notifyFileExecution } from "../util/notification.js"
 export const fileExecutionRoute = {
   name: "file-execution",
 
-  match: ({ url }) => {
-    return new URL(url).pathname !== "/"
-  },
+  match: ({ url }) => new URL(url).pathname !== "/",
 
   activate: async ({ cancellationToken, url, activePage }) => {
-    await new Promise(() => {})
+    // await new Promise(() => {})
     window.file = {
       previousExecution: undefined,
       execution: undefined,
@@ -28,7 +26,6 @@ export const fileExecutionRoute = {
       window.file = undefined
     })
 
-    // await new Promise(() => {})
     const fileRelativeUrl = new URL(url).pathname.slice(1)
     const iframe = document.createElement("iframe")
     iframe.setAttribute("tabindex", -1) // prevent tabbing until loaded

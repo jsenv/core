@@ -18,6 +18,18 @@
   margin-top: 100px;
   background: grey;
   border-radius: 0.2em;
+  visibility: hidden;
+  opacity: 0;
+}
+
+#page-loader-box[data-animate] {
+  transition-property: opacity, visibility;
+  transition-duration: 1200ms;
+}
+
+#page-loader-box[data-visible] {
+  visibility: visible;
+  opacity: 1;
 }
 
 #page-loader-box svg {

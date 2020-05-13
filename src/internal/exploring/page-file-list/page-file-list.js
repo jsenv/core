@@ -6,9 +6,7 @@ import { fetchUrl } from "../util/fetching.js"
 export const fileListRoute = {
   name: "file-list",
 
-  match: ({ url }) => {
-    return new URL(url).pathname === "/"
-  },
+  match: ({ url }) => new URL(url).pathname === "/",
 
   activate: async ({ cancellationToken }) => {
     // await new Promise(() => {})

@@ -9,6 +9,7 @@ import { createApplicationHistory } from "./application-history.js"
 
 export const installNavigation = () => {
   const pageContainer = document.querySelector("#page")
+  const loaderBox = document.querySelector("#page-loader-box")
   const pageLoaderFading = transit(
     {
       "#page-loader": {
@@ -64,15 +65,35 @@ export const installNavigation = () => {
     },
   })
 
+  let loaderBoxTimeout
+
+  const startShowLoaderTimeout = () => {
+    loaderBoxTimeout = setTimeout(showLoader, 2000)
+  }
+  const stopShowLoaderTimeout = () => {
+    clearTimeout(loaderBoxTimeout)
+  }
+  const showLoader = () => {
+    loaderBox.setAttribute("data-visible", "")
+  }
+  const hideLoader = () => {
+    loaderBox.removeAttribute("data-animate")
+    loaderBox.removeAttribute("data-visible")
+  }
+
   const startLoadingNewPage = (attempt) => {
     pageLoaderFadeinPromise = pageLoaderFading.play()
     if (!getAnimationPreference()) {
       pageLoaderFading.finish()
     }
-    // TODO: ça marche pas si c'est la premiere page, faudrait que si
     document.querySelector("#page-loader a").onclick = (clickEvent) => {
       return attempt.cancel(clickEvent)
     }
+    hideLoader()
+    attempt.cancellationToken.register(() => {
+      hideLoader()
+    })
+    startShowLoaderTimeout()
   }
 
   const stopsLoadingNewPage = () => {
@@ -83,14 +104,7 @@ export const installNavigation = () => {
   }
 
   const preparePageDeactivation = async (attempt) => {
-    // TODO: faire apparaitre page loader box apres un petit laps de temps
-    // et vérifier qu'on peut cancel
-
     const { activePage } = attempt
-    console.log(
-      `prepare deactivate ${attempt.browserHistoryEntry.position} for element`,
-      activePage.element,
-    )
     startLoadingNewPage(attempt)
     addBlurFilter(activePage.element)
 
@@ -100,19 +114,14 @@ export const installNavigation = () => {
 
   const reactivatePage = (attempt) => {
     const { activePage } = attempt
-    console.log(
-      `reactivate ${attempt.browserHistoryEntry.position} for element`,
-      activePage.element,
-    )
     stopsLoadingNewPage()
     removeBlurFilter(activePage.element)
   }
 
   const preparePageActivation = async (
-    { cancellationToken, browserHistoryEntry },
+    { cancellationToken },
     { title, element, prepareEntrance = () => {}, effect = () => {} },
   ) => {
-    console.log(`prepare activating ${browserHistoryEntry.position} for element`, element)
     setStyles(element, { display: "none" })
     pageContainer.appendChild(element)
 
@@ -122,6 +131,9 @@ export const installNavigation = () => {
       element.parentNode.removeChild(element)
       return
     }
+
+    stopShowLoaderTimeout()
+    hideLoader()
 
     const cancelEffect = effect()
     if (typeof cancelEffect === "function") {
@@ -168,10 +180,6 @@ export const installNavigation = () => {
 
   const deactivatePage = (attempt) => {
     const { activePage } = attempt
-    console.log(
-      `deactivate ${attempt.browserHistoryEntry.position} for element`,
-      activePage.element,
-    )
     const activePageElement = activePage.element
     activePageElement.parentNode.removeChild(activePageElement)
 
