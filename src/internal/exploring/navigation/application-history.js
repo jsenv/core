@@ -130,8 +130,7 @@ export const createApplicationHistory = (
       return page
     }
 
-    const service =
-      services.find((service) => service.match(browserHistoryEntry)) || fallbackService
+    let service = services.find((service) => service.match(browserHistoryEntry)) || fallbackService
     /*
       We don't use page.onstatechange anywhere
       the idea is that not everything should show the page loader when it occurs.
@@ -160,6 +159,7 @@ export const createApplicationHistory = (
         cancelReason = e.reason
       } else if (errorService) {
         try {
+          service = errorService
           page = await activeService(errorService)
         } catch (errorServiceError) {
           if (isCancelError(errorServiceError)) {
@@ -211,6 +211,7 @@ export const createApplicationHistory = (
       activeAttempt.cancel(attempt)
     }
     activeAttempt = attempt
+    activeService = service
     const previousPage = activePage
     activePage = page
     if (status === "errored") {

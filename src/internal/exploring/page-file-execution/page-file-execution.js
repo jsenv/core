@@ -22,8 +22,10 @@ export const fileExecutionRoute = {
         throw new Error("cannot execute, page is not ready")
       },
     }
-    cancellationToken.register(() => {
-      window.file = undefined
+    cancellationToken.register(({ reason }) => {
+      if (!reason.activeService || reason.activeService !== fileExecutionRoute) {
+        window.file = undefined
+      }
     })
 
     const fileRelativeUrl = new URL(url).pathname.slice(1)
