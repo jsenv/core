@@ -11,6 +11,7 @@ export const connectLivereload = ({ url, replaceState }) => {
   if (livereloadFile === fileRelativeUrl) {
     return
   }
+  livereloadFile = fileRelativeUrl
 
   // reset livereload indicator ui
   applyLivereloadIndicator()
@@ -57,8 +58,8 @@ export const connectLivereload = ({ url, replaceState }) => {
 }
 
 export const disconnectLivereload = () => {
+  livereloadFile = undefined
   if (livereloadConnection) {
-    livereloadFile = undefined
     livereloadConnection.disconnect()
     livereloadConnection = undefined
   }

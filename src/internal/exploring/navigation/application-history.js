@@ -4,7 +4,7 @@ import { createLogger } from "@jsenv/logger"
 export const createApplicationHistory = (
   services,
   {
-    logLevel = "debug",
+    logLevel = "warn",
     activePage,
     fallbackService = {
       activate: () => {},
@@ -81,6 +81,9 @@ export const createApplicationHistory = (
       url: browserHistoryEntry.url,
       cancel: attemptCancellationSource.cancel,
       cancellationToken,
+      getState,
+      replaceState,
+      pushState,
     }
     let status = "pending"
     let cancelReason
@@ -118,13 +121,7 @@ export const createApplicationHistory = (
     const activateService = async (service) => {
       const page = await createOperation({
         cancellationToken,
-        start: async () =>
-          service.activate({
-            ...attempt,
-            getState,
-            replaceState,
-            pushState,
-          }),
+        start: async () => service.activate(attempt),
       })
       await createOperation({
         cancellationToken,

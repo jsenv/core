@@ -119,6 +119,10 @@ html[data-last-interaction="keyboard"] .switch input:focus + * {
   outline-style: auto;
 }
 
+html[data-last-interaction="keyboard"] .switch input:focus + * {
+  outline-color: rgb(0, 150, 255);
+}
+
 /*
 Don't try to replace @-moz-document url-prefix() this by
 

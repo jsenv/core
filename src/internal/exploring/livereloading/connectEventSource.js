@@ -63,7 +63,7 @@ export const connectEventSource = (
 
   let cancel = () => {}
 
-  const attemptConnection = async ({ onsuccess, onfailure }) => {
+  const attemptConnection = ({ onsuccess, onfailure }) => {
     const eventSource = new EventSource(eventSourceUrl, {
       withCredentials: true,
     })
@@ -143,7 +143,7 @@ export const connectEventSource = (
     const startTime = Date.now()
     let attemptCount = 0
     let attemptTimeout
-    let abortAttempt
+    let abortAttempt = () => {}
 
     const attempt = () => {
       attemptCount++

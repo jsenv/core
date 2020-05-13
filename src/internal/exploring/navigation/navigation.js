@@ -66,19 +66,16 @@ export const installNavigation = () => {
   })
 
   let loaderBoxTimeout
-
-  const startShowLoaderTimeout = () => {
-    loaderBoxTimeout = setTimeout(showLoader, 2000)
-  }
-  const stopShowLoaderTimeout = () => {
-    clearTimeout(loaderBoxTimeout)
-  }
-  const showLoader = () => {
-    loaderBox.setAttribute("data-visible", "")
+  const prepareShowingLoader = () => {
+    loaderBoxTimeout = setTimeout(() => {
+      loaderBox.setAttribute("data-animate")
+      loaderBox.setAttribute("data-visible", "")
+    }, 2000)
   }
   const hideLoader = () => {
     loaderBox.removeAttribute("data-animate")
     loaderBox.removeAttribute("data-visible")
+    clearTimeout(loaderBoxTimeout)
   }
 
   const startLoadingNewPage = (attempt) => {
@@ -93,7 +90,7 @@ export const installNavigation = () => {
     attempt.cancellationToken.register(() => {
       hideLoader()
     })
-    startShowLoaderTimeout()
+    prepareShowingLoader()
   }
 
   const stopsLoadingNewPage = () => {
@@ -115,6 +112,7 @@ export const installNavigation = () => {
   const reactivatePage = (attempt) => {
     const { activePage } = attempt
     stopsLoadingNewPage()
+    hideLoader()
     removeBlurFilter(activePage.element)
   }
 
@@ -132,7 +130,6 @@ export const installNavigation = () => {
       return
     }
 
-    stopShowLoaderTimeout()
     hideLoader()
 
     const cancelEffect = effect()
