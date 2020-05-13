@@ -4,10 +4,12 @@ This test verifies that a navigation to initial page works.
 Then that navigating to page A works.
 Then that navigating to page B can be canceled and that doing history.back goes to initial page.
 
+TODO: rewrite this for application history
+
 */
 
 import { assert } from "@jsenv/assert"
-import { createRouter } from "../router.js"
+import { createApplicationHistory } from "../application-history.js"
 
 let firsPageAVisit = true
 let resolveNavigation
@@ -16,15 +18,18 @@ const navigationPromise = new Promise((resolve) => {
 })
 const initialUrl = document.location.href
 const initialRoute = {
-  match: (url) => url === initialUrl,
-  load: () => "initial",
+  match: ({ url }) => url === initialUrl,
+  activate: () => "initial",
 }
-const ARoute = { match: (url) => new URL(url).pathname === "/A", load: () => "A" }
+const ARoute = {
+  match: ({ url }) => new URL(url).pathname === "/A",
+  activate: () => "A",
+}
 const BRoute = {
-  match: (url) => new URL(url).pathname === "/B",
-  load: () => "B",
+  match: ({ url }) => new URL(url).pathname === "/B",
+  activate: () => "B",
 }
-const router = createRouter([initialRoute, ARoute, BRoute], {
+const appHistory = createApplicationHistory([initialRoute, ARoute, BRoute], {
   onstart: ({ route, cancel }) => {
     if (route === BRoute) {
       cancel()
@@ -33,18 +38,18 @@ const router = createRouter([initialRoute, ARoute, BRoute], {
   },
   oncomplete: ({ page }) => {
     if (page === "initial") {
-      router.navigateToUrl("/A")
+      appHistory.pushState(null, "/A")
     }
     if (page === "A") {
       if (firsPageAVisit) {
         firsPageAVisit = false
-        router.navigateToUrl("/B")
+        appHistory.pushState(null, "/B")
       }
     }
   },
 })
 
-router.loadCurrentUrl()
+appHistory.replaceState()
 
 await navigationPromise
 const actual = document.location.href
