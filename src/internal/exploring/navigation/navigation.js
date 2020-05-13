@@ -68,7 +68,7 @@ export const installNavigation = () => {
   let loaderBoxTimeout
   const prepareShowingLoader = () => {
     loaderBoxTimeout = setTimeout(() => {
-      loaderBox.setAttribute("data-animate")
+      loaderBox.setAttribute("data-animate", "")
       loaderBox.setAttribute("data-visible", "")
     }, 2000)
   }
