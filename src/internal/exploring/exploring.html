@@ -25,11 +25,11 @@
     <div id="page-loader">
       <div id="page-loader-box">
         <div>
-          <svg id="loader-icon" data-animate>
+          <svg id="page-loader-icon" data-animate>
             <use xlink:href="#loaderSvgModel"></use>
           </svg>
         </div>
-        <div style="padding: 1em;">
+        <div>
           <a style="color: black;" href="javascript:void(0);">Cancel</a>
         </div>
       </div>
@@ -363,7 +363,12 @@
 
       <!-- svg templates -->
       <div class="svgModels" style="display: none;">
-        <!--  see https://codepen.io/tigt/post/fixing-the-white-glow-in-the-css-blur-filter -->
+        <!-- see
+        https://codepen.io/tigt/post/fixing-the-white-glow-in-the-css-blur-filter
+        https://stackoverflow.com/questions/46906819/edge-detection-in-svg-filter
+        https://github.com/msurguy/background-blur/issues/5
+        https://tympanus.net/codrops/2019/01/22/svg-filter-effects-outline-text-with-femorphology/
+        -->
         <svg>
           <defs>
             <filter id="better-blur" x="0" y="0" width="1" height="1">
