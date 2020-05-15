@@ -28,7 +28,7 @@ export const serveExploring = async (
       : getLastKey(compileServerGroupMap)
   const compileDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/`
 
-  const jsenvDirectoryRelativeUrl = urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl)
+  const jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)
   const exploringCssProjectRelativeUrl = jsenvRelativeUrlToProjectRelativeUrl(
     EXPLORING_CSS_RELATIVE_URL,
     projectDirectoryUrl,

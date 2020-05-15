@@ -16,7 +16,7 @@ export const readProjectImportMap = async ({ projectDirectoryUrl, importMapFileR
   const jsenvCoreRelativeUrlForJsenvProject =
     projectDirectoryUrl === jsenvCoreDirectoryUrl
       ? "./"
-      : urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)
+      : `./${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}`
 
   const importsForJsenvCore = {
     [jsenvCoreImportKey]: jsenvCoreRelativeUrlForJsenvProject,
