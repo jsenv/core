@@ -29,7 +29,7 @@ export const createNodeSystem = async ({
   if (importMapFileRelativeUrl) {
     const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
     const importmapFileResponse = await fetchUrl(importmapFileUrl)
-    const importmap = await importmapFileResponse.json()
+    const importmap = importmapFileResponse.status === 404 ? {} : await importmapFileResponse.json()
     const importmapNormalized = normalizeImportMap(importmap, importmapFileUrl)
     importMap = importmapNormalized
   }

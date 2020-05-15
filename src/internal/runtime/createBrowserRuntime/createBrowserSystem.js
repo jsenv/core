@@ -23,7 +23,7 @@ export const createBrowserSystem = async ({
 
   const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
   const importmapFileResponse = await fetchUsingXHR(importmapFileUrl)
-  const importmap = await importmapFileResponse.json()
+  const importmap = importmapFileResponse.status === 404 ? {} : await importmapFileResponse.json()
   const importmapNormalized = normalizeImportMap(importmap, importmapFileUrl)
 
   const browserSystem = new window.System.constructor()

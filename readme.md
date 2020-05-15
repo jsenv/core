@@ -12,7 +12,7 @@ Execute JavaScript on multiple environments for testing.
 - [Presentation](#Presentation)
 - [Installation](#Installation)
 - [Configuration](#Configuration)
-  - [jsenv.config.js](#jsenv.config.js)
+  - [jsenv.config.js](#jsenvconfigjs)
   - [CommonJS](#CommonJS)
   - [React](#React)
   - [TypeScript](#TypeScript)
