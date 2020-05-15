@@ -21,3 +21,10 @@ export const setStyles = (element, styles) => {
     restoreStyles.forEach((restore) => restore())
   }
 }
+
+export const getDocumentScroll = () => {
+  return {
+    x: document.documentElement.scrollLeft,
+    y: document.documentElement.scrollTop,
+  }
+}

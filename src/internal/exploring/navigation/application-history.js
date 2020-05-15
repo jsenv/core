@@ -1,5 +1,6 @@
 import { createCancellationSource, createOperation, isCancelError } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
+import { getDocumentScroll } from "../util/dom.js"
 
 export const createApplicationHistory = (
   services,
@@ -21,10 +22,12 @@ export const createApplicationHistory = (
 ) => {
   const logger = createLogger({ logLevel })
   const browserHistory = window.history
+  browserHistory.scrollRestoration = "manual"
   const firstHistoryEntry = browserHistory.state
     ? browserHistoryStateToHistoryEntry(browserHistory.state)
     : {
         position: browserHistory.length - 1,
+        scroll: getDocumentScroll(),
         state: null,
         url: document.location.href,
       }
@@ -41,8 +44,11 @@ export const createApplicationHistory = (
   const getState = () => browserHistoryEntry.state
 
   const pushState = (state, url = document.location.href, event) => {
+    browserHistoryEntry.scroll = getDocumentScroll()
+    browserHistory.replaceState(historyEntryToBrowserHistoryState(browserHistoryEntry), "")
     browserHistoryEntry = {
       position: browserHistoryEntry.position + 1,
+      scroll: browserHistoryEntry.scroll,
       state,
       url,
     }
@@ -54,6 +60,7 @@ export const createApplicationHistory = (
   const replaceState = (state, url = document.location.href, event) => {
     browserHistoryEntry = {
       position: browserHistoryEntry.position,
+      scroll: getDocumentScroll(),
       state,
       url,
     }
@@ -241,17 +248,19 @@ const attemptToString = ({ browserHistoryEntry }) => {
   return `${browserHistoryEntry.position} ${browserHistoryEntry.url}`
 }
 
-const browserHistoryStateToHistoryEntry = ({ position, state }) => {
+const browserHistoryStateToHistoryEntry = ({ position, scroll, state }) => {
   return {
     position,
+    scroll,
     state,
     url: document.location.href,
   }
 }
 
-const historyEntryToBrowserHistoryState = ({ position, state }) => {
+const historyEntryToBrowserHistoryState = ({ position, scroll, state }) => {
   return {
     position,
+    scroll,
     state,
   }
 }

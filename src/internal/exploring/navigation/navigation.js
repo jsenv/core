@@ -142,7 +142,10 @@ export const installNavigation = () => {
     }
   }
 
-  const animatePageReplacement = async ({ cancellationToken, activePage }, newPage) => {
+  const animatePageReplacement = async (
+    { cancellationToken, activePage, browserHistoryEntry },
+    newPage,
+  ) => {
     pageLoaderFadeinPromise.then(() => {
       stopsLoadingNewPage()
     })
@@ -150,20 +153,18 @@ export const installNavigation = () => {
     const currentPageElement = activePage.element
     const newPageElement = newPage.element
 
-    // if new page is smaller active page can be interacted because pageloader is fadedout ?
     setStyles(currentPageElement, {
       position: "absolute",
-      left: 0,
-      right: 0,
-      top: 0,
-      height: `${document.documentElement.scrollHeight}px`,
-      width: `${document.documentElement.scrollWidth}px`,
+      left: `${0}px`,
+      top: `${0}px`,
     })
     setStyles(newPageElement, {
       position: "relative", // to be sure it's above page element
       display: "block",
     })
-
+    setTimeout(() => {
+      window.scrollTo(browserHistoryEntry.scroll.x, browserHistoryEntry.scroll.y)
+    })
     const currentPageElementFadeout = fadeOut(currentPageElement, {
       cancellationToken,
       duration: getAnimationPreference() ? 300 : 0,
