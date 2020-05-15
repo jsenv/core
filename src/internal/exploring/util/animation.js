@@ -60,16 +60,21 @@ export const move = (fromNode, toNode, options) => {
   div.style.position = "absolute"
   div.style.left = 0
   div.style.top = 0
-  div.style.right = 0
-  div.style.bottom = 0
+  div.style.width = `${document.documentElement.scrollWidth}px`
+  div.style.height = `${document.documentElement.scrollHeight}px`
   div.style.overflow = "hidden"
   div.style.pointerEvents = "none"
+
+  const documentScroll = {
+    left: window.pageXOffset || document.documentElement.scrollLeft,
+    top: window.pageYOffset || document.documentElement.scrollTop,
+  }
 
   // clone node and style it
   const copy = fromNode.cloneNode(true)
   copy.style.position = "absolute"
-  copy.style.left = `${fromPosition.left}px`
-  copy.style.top = `${fromPosition.top}px`
+  copy.style.left = `${documentScroll.left + fromPosition.left}px`
+  copy.style.top = `${documentScroll.top + fromPosition.top}px`
   copy.style.maxWidth = `${fromPosition.right - fromPosition.left}px`
   copy.style.overflow = toComputedStyle.overflow
   copy.style.textOverflow = toComputedStyle.textOverflow
