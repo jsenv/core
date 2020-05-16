@@ -361,6 +361,20 @@
         <article data-page="file-execution"></article>
       </div>
 
+      <!-- svg filter (must not be hidden or won't show in firefox) -->
+      <svg>
+        <defs>
+          <filter id="better-blur" x="0" y="0" width="1" height="1">
+            <feGaussianBlur stdDeviation="5" result="blurred" />
+
+            <feMerge>
+              <feMergeNode in="SourceGraphic" />
+              <feMergeNode in="blurred" />
+            </feMerge>
+          </filter>
+        </defs>
+      </svg>
+
       <!-- svg templates -->
       <div class="svgModels" style="display: none;">
         <!-- see
@@ -369,18 +383,6 @@
         https://github.com/msurguy/background-blur/issues/5
         https://tympanus.net/codrops/2019/01/22/svg-filter-effects-outline-text-with-femorphology/
         -->
-        <svg>
-          <defs>
-            <filter id="better-blur" x="0" y="0" width="1" height="1">
-              <feGaussianBlur stdDeviation="5" result="blurred" />
-
-              <feMerge>
-                <feMergeNode in="SourceGraphic" />
-                <feMergeNode in="blurred" />
-              </feMerge>
-            </filter>
-          </defs>
-        </svg>
 
         <!-- loader -->
         <svg

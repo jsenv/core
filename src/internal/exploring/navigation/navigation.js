@@ -153,10 +153,13 @@ export const installNavigation = () => {
     const currentPageElement = activePage.element
     const newPageElement = newPage.element
 
+    const pageContainerRect = currentPageElement.getBoundingClientRect()
     setStyles(currentPageElement, {
       position: "absolute",
       left: `${0}px`,
       top: `${0}px`,
+      height: `${pageContainerRect.height}px`,
+      width: `${pageContainerRect.width}px`,
     })
     setStyles(newPageElement, {
       position: "relative", // to be sure it's above page element
