@@ -49,7 +49,7 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
 {
   await writeFileSystemNodeModificationTime(filePath, Date.now())
   await new Promise((resolve) => setTimeout(resolve, 1000))
-  await page.waitFor(() => {
+  await page.waitForFunction(() => {
     if (!window.file) return false
     if (!window.file.execution) return false
     return Boolean(window.file.execution.result)
