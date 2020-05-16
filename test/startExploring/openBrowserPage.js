@@ -44,7 +44,7 @@ export const openBrowserPage = async (
   })
 
   await Promise.race([
-    page.waitFor(
+    page.waitForFunction(
       /* istanbul ignore next */
       () => {
         if (!window.file) return false
