@@ -125,10 +125,10 @@ export const createApplicationHistory = (
       return attempt
     }
 
-    const activateService = async (service) => {
+    const activateService = async (service, ...args) => {
       const page = await createOperation({
         cancellationToken,
-        start: async () => service.activate(attempt),
+        start: () => service.activate(attempt, ...args),
       })
       await createOperation({
         cancellationToken,
@@ -167,7 +167,7 @@ export const createApplicationHistory = (
       } else if (errorService) {
         try {
           service = errorService
-          page = await activeService(errorService)
+          page = await activateService(errorService, e)
         } catch (errorServiceError) {
           if (isCancelError(errorServiceError)) {
             status = "canceled"

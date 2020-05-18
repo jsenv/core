@@ -2,7 +2,7 @@ import { setStyles } from "../util/dom.js"
 import { fadeIn, fadeOut, transit } from "../util/animation.js"
 import { renderToolbar } from "../toolbar/toolbar.js"
 import { getAnimationPreference } from "../toolbar/toolbar-animation.js"
-import { errorNavigationRoute } from "../page-error-navigation/page-error-navigation.js"
+import { pageErrorNavigation } from "../page-error-navigation/page-error-navigation.js"
 import { fileListRoute } from "../page-file-list/page-file-list.js"
 import { fileExecutionRoute } from "../page-file-execution/page-file-execution.js"
 import { createApplicationHistory } from "./application-history.js"
@@ -33,7 +33,7 @@ export const installNavigation = () => {
 
   const applicationHistory = createApplicationHistory([fileListRoute, fileExecutionRoute], {
     activePage: defaultActivePage,
-    errorService: errorNavigationRoute,
+    errorService: pageErrorNavigation,
     onstart: (attempt) => {
       // attention! si rendertoolbar se connecte a l'event source il faut
       // qu'il switch de connection si le fichier change

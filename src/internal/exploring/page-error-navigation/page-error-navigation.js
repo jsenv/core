@@ -1,19 +1,19 @@
-export const errorNavigationRoute = {
+export const pageErrorNavigation = {
   name: "error-navigation",
 
-  load: ({ navigation }) => {
+  activate: ({ url }, error) => {
     const element = document
       .querySelector(`#page-templates [data-page="error-navigation"`)
       .cloneNode(true)
 
     const title = element.querySelector("h1")
-    title.textContent = `Error during navigation to ${navigation.destinationUrl}.`
+    title.textContent = `Error during navigation to ${url}`
 
     const pre = element.querySelector("pre")
-    pre.textContent = navigation.error.stack || navigation.error
+    pre.textContent = error.stack || error
 
     setTimeout(() => {
-      throw navigation.error
+      throw error
     })
 
     return {
