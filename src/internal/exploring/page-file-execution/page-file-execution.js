@@ -2,6 +2,7 @@ import { memoize } from "../../memoize.js"
 import { applyExecutionIndicator } from "../toolbar/execution-indicator.js"
 import { waitLivereloadReady } from "../toolbar/toolbar-livereloading.js"
 import { loadExploringConfig } from "../util/util.js"
+import { setAttributes } from "../util/dom.js"
 import { jsenvLogger } from "../util/jsenvLogger.js"
 import { notifyFileExecution } from "../util/notification.js"
 
@@ -30,7 +31,15 @@ export const fileExecutionRoute = {
 
     const fileRelativeUrl = new URL(url).pathname.slice(1)
     const iframe = document.createElement("iframe")
-    iframe.setAttribute("tabindex", -1) // prevent tabbing until loaded
+    setAttributes(iframe, {
+      tabindex: -1, // prevent tabbing until loaded
+      sandbox:
+        "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
+      allow:
+        "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
+      allowtransparency: true,
+      allowpaymentrequest: true,
+    })
     const page = {
       title: fileRelativeUrl,
 

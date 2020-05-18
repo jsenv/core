@@ -22,6 +22,12 @@ export const setStyles = (element, styles) => {
   }
 }
 
+export const setAttributes = (element, attributes) => {
+  Object.keys(attributes).forEach((name) => {
+    element.setAttribute(name, attributes[name])
+  })
+}
+
 export const getDocumentScroll = () => {
   return {
     x: document.documentElement.scrollLeft,
