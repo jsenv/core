@@ -82,10 +82,10 @@ window.addEventListener(
           action,
         )
       } else {
-        console.log(`received unknown action ${action}`)
+        // console.log(`received unknown message data:`, data)
       }
     } else {
-      console.log(`received unknown message data: ${data}`)
+      // console.log(`received unknown message data`, data)
     }
   },
   false,
