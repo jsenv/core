@@ -119,12 +119,17 @@ const loadAndExecute = async (execution, { cancellationToken }) => {
     an entry in the browser history (firefox only)
     instead use iframe location replace which avoid creating a browser history
     */
-    execution.iframe.contentWindow.location.replace(
-      `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${execution.fileRelativeUrl}`,
-    )
+    const { iframe } = execution
+    const iframeSrc = `${compileServerOrigin}/${htmlFileRelativeUrl}?file=${execution.fileRelativeUrl}`
+    // iframe.contentWindow.location.replace(iframeSrc)
+    const { parentNode } = iframe
+    parentNode.removeChild(iframe)
+    iframe.setAttribute("src", iframeSrc)
+    parentNode.appendChild(iframe)
 
     await loadedPromise
-    execution.iframe.removeAttribute("tabindex")
+    iframe.removeAttribute("tabindex")
+
     return loadedPromise
   })
 
