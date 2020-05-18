@@ -24,6 +24,7 @@ import {
 import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { assertImportMapFileRelativeUrl, assertImportMapFileInsideProject } from "../argUtils.js"
+import { createReplaceExpressionsBabelPlugin } from "../babel-plugin-replace-expressions.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
@@ -54,6 +55,12 @@ export const startCompileServer = async ({
   importDefaultExtension,
 
   env = {},
+  processEnvNodeEnv = process.env.NODE_ENV,
+  replaceProcessEnvNodeEnv = true,
+  replaceGlobalObject = false,
+  replaceGlobalFilename = false,
+  replaceGlobalDirname = false,
+  replaceMap = {},
 
   babelPluginMap = jsenvBabelPluginMap,
   convertMap = {},
@@ -116,6 +123,20 @@ ${projectDirectoryUrl}`)
   const outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
 
   const logger = createLogger({ logLevel: compileServerLogLevel })
+
+  babelPluginMap = {
+    "replace-expressions": createReplaceExpressionsBabelPlugin({
+      replaceMap: {
+        ...(replaceProcessEnvNodeEnv ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` } : {}),
+        ...(replaceGlobalObject ? { global: "globalThis" } : {}),
+        ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
+        ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
+        ...replaceMap,
+      },
+      allowConflictingReplacements: true,
+    }),
+    ...babelPluginMap,
+  }
 
   const groupMap = generateGroupMap({
     babelPluginMap,
@@ -483,3 +504,7 @@ const cleanOutDirectoryIfObsolete = async ({ logger, outDirectoryUrl, outDirecto
 
   await writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "))
 }
+
+const __filenameReplacement = `import.meta.url.slice('file:///'.length)`
+
+const __dirnameReplacement = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`
