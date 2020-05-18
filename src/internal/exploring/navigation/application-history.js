@@ -20,6 +20,7 @@ export const createApplicationHistory = (
     oncomplete = () => {},
   },
 ) => {
+  let id = 0
   const logger = createLogger({ logLevel })
   const browserHistory = window.history
   browserHistory.scrollRestoration = "manual"
@@ -72,18 +73,24 @@ export const createApplicationHistory = (
   let currentAttempt
   const canceledByCurrentAttempt = (value) => value === currentAttempt
 
+  const canceledByActiveAttempt = (value) => value === activeAttempt
+
   let activeAttempt
   let activeService
   const synchronizeApplication = async (event) => {
     // attempt to synchronize application history entry with browser history entry
     const attemptCancellationSource = createCancellationSource()
     const cancellationToken = attemptCancellationSource.token
+    let service = services.find((service) => service.match(browserHistoryEntry)) || fallbackService
     const attempt = {
+      id: id++,
       event,
       browserHistoryEntry,
+      toString: () => attemptToString(attempt),
       applicationHistoryEntry,
       activeAttempt,
       activeService,
+      service,
       activePage,
       url: browserHistoryEntry.url,
       cancel: attemptCancellationSource.cancel,
@@ -93,7 +100,7 @@ export const createApplicationHistory = (
       pushState,
     }
     let status = "pending"
-    let cancelReason
+    //  let cancelReason
     let error
     let page
 
@@ -101,9 +108,7 @@ export const createApplicationHistory = (
     currentAttempt = attempt
     if (previousCurrentAttempt) {
       logger.debug(
-        `cancel attempt to go to ${attemptToString(
-          previousCurrentAttempt,
-        )} because of ${attemptToString(attempt)}`,
+        `cancel ${attemptToString(previousCurrentAttempt)} because of ${attemptToString(attempt)}`,
       )
       previousCurrentAttempt.cancel(attempt)
     }
@@ -137,7 +142,6 @@ export const createApplicationHistory = (
       return page
     }
 
-    let service = services.find((service) => service.match(browserHistoryEntry)) || fallbackService
     /*
       We don't use page.onstatechange anywhere
       the idea is that not everything should show the page loader when it occurs.
@@ -156,14 +160,35 @@ export const createApplicationHistory = (
     //   activePage.onstatechange()
     // }
 
-    onstart(attempt)
+    // call oncancel immediatly otherwise it might be called to late
+    // (because we wait for promise rejection to throw )
+    const { unregister } = cancellationToken.register(({ reason }) => {
+      if (canceledByCurrentAttempt(reason)) {
+        // do not do history.go because
+        // we have canceled the current attempt
+        // by creating a new one
+        // the history conceptually looks like [A, Bcancelled, C]
+        // B was not handled by let's go to C immediatly
+      } else {
+        const movement = applicationHistoryEntry.position - attempt.browserHistoryEntry.position
 
+        if (movement) {
+          logger.debug(`${attemptToString(attempt)} canceled -> history.go(${movement})`)
+          browserHistory.go(movement)
+        } else {
+          logger.debug(`${attemptToString(attempt)} canceled`)
+        }
+      }
+      oncancel(attempt, reason)
+    })
+
+    onstart(attempt)
     try {
       page = await activateService(service)
     } catch (e) {
       if (isCancelError(e)) {
         status = "canceled"
-        cancelReason = e.reason
+        // cancelReason = e.reason
       } else if (errorService) {
         try {
           service = errorService
@@ -171,7 +196,7 @@ export const createApplicationHistory = (
         } catch (errorServiceError) {
           if (isCancelError(errorServiceError)) {
             status = "canceled"
-            cancelReason = e.reason
+            // cancelReason = e.reason
           } else {
             errorServiceError.originalError = e
             status = "errored"
@@ -184,26 +209,9 @@ export const createApplicationHistory = (
     if (attempt === currentAttempt) {
       currentAttempt = undefined
     }
+    unregister()
 
     if (status === "canceled") {
-      if (canceledByCurrentAttempt(cancelReason)) {
-        // do not do history.go because
-        // we have canceled the current attempt
-        // by creating a new one
-        // the history conceptually looks like [A, Bcancelled, C]
-        // B was not handled by let's go to C immediatly
-      } else {
-        const movement =
-          attempt.applicationHistoryEntry.position - attempt.browserHistoryEntry.position
-
-        if (movement) {
-          logger.debug(`${attemptToString(attempt)} canceled -> history.go(${movement})`)
-          browserHistory.go(movement)
-        } else {
-          logger.debug(`${attemptToString(attempt)} canceled`)
-        }
-      }
-      oncancel(attempt, cancelReason)
       return attempt
     }
 
@@ -211,13 +219,14 @@ export const createApplicationHistory = (
     // here we know the application is in sync with browser
     // otherwise attempt would have been canceled
     applicationHistoryEntry = browserHistoryEntry
-    if (activeAttempt) {
-      logger.debug(
-        `cleanup ${attemptToString(activeAttempt)} because of ${attemptToString(attempt)}`,
-      )
-      activeAttempt.cancel(attempt)
-    }
+    const previousActiveAttempt = activeAttempt
     activeAttempt = attempt
+    if (previousActiveAttempt) {
+      logger.debug(
+        `cleanup ${attemptToString(previousActiveAttempt)} because of ${attemptToString(attempt)}`,
+      )
+      previousActiveAttempt.cancel(attempt)
+    }
     activeService = service
     const previousPage = activePage
     activePage = page
@@ -241,11 +250,12 @@ export const createApplicationHistory = (
     pushState,
     replaceState,
     canceledByCurrentAttempt,
+    canceledByActiveAttempt,
   }
 }
 
-const attemptToString = ({ browserHistoryEntry }) => {
-  return `${browserHistoryEntry.position} ${browserHistoryEntry.url}`
+const attemptToString = ({ id, browserHistoryEntry }) => {
+  return `#${id}: ${browserHistoryEntry.position}(${browserHistoryEntry.url})`
 }
 
 const browserHistoryStateToHistoryEntry = ({ position, scroll, state }) => {

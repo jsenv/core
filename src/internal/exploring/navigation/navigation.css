@@ -7,8 +7,16 @@
   top: 0;
   bottom: 0;
   pointer-events: auto; /* prevent interacting with page that is being navigated away */
-  background: black;
+  background-color: rgba(0, 0, 0, 0);
   text-align: center;
+
+  transition-property: background-color, visibility;
+  transition-duration: 300ms;
+}
+
+#page-loader[data-visible] {
+  visibility: visible;
+  background-color: rgba(0, 0, 0, 0.4);
 }
 
 #page-loader-box {

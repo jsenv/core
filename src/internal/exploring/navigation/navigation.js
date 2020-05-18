@@ -1,5 +1,6 @@
+import { createLogger } from "@jsenv/logger"
 import { setStyles } from "../util/dom.js"
-import { fadeIn, fadeOut, transit } from "../util/animation.js"
+import { fadeIn, fadeOut } from "../util/animation.js"
 import { renderToolbar } from "../toolbar/toolbar.js"
 import { getAnimationPreference } from "../toolbar/toolbar-animation.js"
 import { pageErrorNavigation } from "../page-error-navigation/page-error-navigation.js"
@@ -8,60 +9,41 @@ import { fileExecutionRoute } from "../page-file-execution/page-file-execution.j
 import { createApplicationHistory } from "./application-history.js"
 
 export const installNavigation = () => {
+  const logger = createLogger({ logLevel: "warn" })
   const pageContainer = document.querySelector("#page")
   const loaderBox = document.querySelector("#page-loader-box")
-  const pageLoaderFading = transit(
-    {
-      "#page-loader": {
-        visibility: "hidden",
-        background: "rgba(0,0,0,0)",
-      },
-    },
-    {
-      "#page-loader": {
-        visibility: "visible",
-        background: "rgba(0,0,0,0.4)",
-      },
-    },
-    { duration: 300 },
-  )
+  const pageLoader = document.querySelector("#page-loader")
+
   const defaultActivePage = {
     title: document.title,
     element: document.querySelector('[data-page="default"]'),
   }
-  let pageLoaderFadeinPromise
+  let pageActivation
 
   const applicationHistory = createApplicationHistory([fileListRoute, fileExecutionRoute], {
     activePage: defaultActivePage,
     errorService: pageErrorNavigation,
     onstart: (attempt) => {
-      // attention! si rendertoolbar se connecte a l'event source il faut
-      // qu'il switch de connection si le fichier change
-      // et qu'il ne se déco/reco pas si on appel 2 fois la fonction sur le mem fichier
       renderToolbar(attempt)
+      logger.debug(`${attempt} started: show page loader + add blur filter`)
       preparePageDeactivation(attempt)
     },
-    oncancel: (attempt) => {
+    oncancel: (attempt, reason) => {
       renderToolbar(attempt.activeAttempt || attempt)
+      logger.debug(`${attempt} canceled by ${reason} hide page loader + remove blur filter`)
       reactivatePage(attempt)
     },
     onerror: (attempt, error) => {
       // maybe we should somehow rerender toolbar to some state because
       // the error might have put it into a incorrect state
+      logger.debug(`${attempt} error: hide page loader + remove blur filter`)
       reactivatePage(attempt)
       throw error
     },
     activatePage: async (attempt, page) => {
+      pageActivation = page
       await preparePageActivation(attempt, page)
-      if (attempt.cancellationToken.cancellationRequested) {
-        return
-      }
-      animatePageReplacement(attempt, page).then(() => {
-        if (attempt.cancellationToken.cancellationRequested) {
-          return
-        }
-        deactivatePage(attempt)
-      })
+      pageActivation = undefined
     },
   })
 
@@ -79,10 +61,7 @@ export const installNavigation = () => {
   }
 
   const startLoadingNewPage = (attempt) => {
-    pageLoaderFadeinPromise = pageLoaderFading.play()
-    if (!getAnimationPreference()) {
-      pageLoaderFading.finish()
-    }
+    pageLoader.setAttribute("data-visible", "")
     document.querySelector("#page-loader a").onclick = (clickEvent) => {
       return attempt.cancel(clickEvent)
     }
@@ -94,10 +73,7 @@ export const installNavigation = () => {
   }
 
   const stopsLoadingNewPage = () => {
-    pageLoaderFading.reverse()
-    if (!getAnimationPreference()) {
-      pageLoaderFading.finish()
-    }
+    pageLoader.removeAttribute("data-visible")
   }
 
   const preparePageDeactivation = async (attempt) => {
@@ -110,45 +86,53 @@ export const installNavigation = () => {
   }
 
   const reactivatePage = (attempt) => {
+    if (pageActivation) {
+      pageContainer.removeChild(pageActivation.element)
+      pageActivation = undefined
+    }
+
     const { activePage } = attempt
     stopsLoadingNewPage()
     hideLoader()
     removeBlurFilter(activePage.element)
   }
 
-  const preparePageActivation = async (
-    { cancellationToken },
-    { title, element, prepareEntrance = () => {}, effect = () => {} },
-  ) => {
+  const preparePageActivation = async (attempt, page) => {
+    const { title, element, prepareEntrance = () => {}, effect = () => {} } = page
+
+    logger.debug(`${attempt} page preparation: append hidden element`)
     setStyles(element, { display: "none" })
     pageContainer.appendChild(element)
 
     await prepareEntrance()
 
-    if (cancellationToken.cancellationRequested) {
-      element.parentNode.removeChild(element)
+    if (attempt.cancellationToken.cancellationRequested) {
       return
     }
 
+    logger.debug(`${attempt} page preparation done: animate replacement`)
     hideLoader()
 
     const cancelEffect = effect()
     if (typeof cancelEffect === "function") {
-      cancellationToken.register(cancelEffect)
+      attempt.cancellationToken.register(cancelEffect)
     }
 
     if (title) {
       document.title = title
     }
+
+    animatePageReplacement(attempt, page).then(() => {
+      logger.debug(`page replacement animation done: deactivate previous page`)
+      deactivatePage(attempt)
+    })
   }
 
   const animatePageReplacement = async (
     { cancellationToken, activePage, browserHistoryEntry },
     newPage,
   ) => {
-    pageLoaderFadeinPromise.then(() => {
-      stopsLoadingNewPage()
-    })
+    stopsLoadingNewPage() // ideally should be delayed until pageLoaderFadeIn is done
 
     const currentPageElement = activePage.element
     const newPageElement = newPage.element

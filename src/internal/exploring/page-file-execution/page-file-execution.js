@@ -33,10 +33,8 @@ export const fileExecutionRoute = {
     const iframe = document.createElement("iframe")
     setAttributes(iframe, {
       tabindex: -1, // prevent tabbing until loaded
-      sandbox:
-        "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
-      allow:
-        "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
+      // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
+      // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
       allowtransparency: true,
       allowpaymentrequest: true,
     })
