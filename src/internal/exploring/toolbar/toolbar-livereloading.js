@@ -13,6 +13,11 @@ export const connectLivereload = ({ url, replaceState }) => {
   }
   livereloadFile = fileRelativeUrl
 
+  const reloadPage = () => {
+    console.clear()
+    replaceState()
+  }
+
   // reset livereload indicator ui
   applyLivereloadIndicator()
   livereloadReadyPromise = createPromiseAndHooks()
@@ -20,10 +25,10 @@ export const connectLivereload = ({ url, replaceState }) => {
   let connectedOnce = false
   livereloadConnection = createLivereloading(fileRelativeUrl, {
     onFileChanged: () => {
-      replaceState()
+      reloadPage()
     },
     onFileRemoved: () => {
-      replaceState()
+      reloadPage()
     },
     onConnecting: ({ abort }) => {
       applyLivereloadIndicator("connecting", { abort })
@@ -40,7 +45,7 @@ export const connectLivereload = ({ url, replaceState }) => {
       if (connectedOnce) {
         // we have lost connection to the server, we might have missed some file changes
         // let's re-execute the file
-        replaceState()
+        reloadPage()
       } else {
         connectedOnce = true
         livereloadReadyPromise.resolve()
