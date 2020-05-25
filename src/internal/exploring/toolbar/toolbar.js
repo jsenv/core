@@ -2,6 +2,7 @@ import { registerNotifications } from "../util/notification.js"
 import { createPreference } from "../util/preferences.js"
 import { createHorizontalBreakpoint } from "../util/responsive.js"
 import { hideTooltip } from "./tooltip.js"
+import { renderToolbarReload } from "./toolbar-reload.js"
 import { renderToolbarTheme } from "./toolbar-theme.js"
 import { renderToolbarAnimation } from "./toolbar-animation.js"
 import { applyExecutionIndicator } from "./execution-indicator.js"
@@ -35,6 +36,7 @@ export const renderToolbar = (attempt) => {
   // settings
   document.querySelector("#settings-button").onclick = () => toggleSettingsBox()
   document.querySelector("#button-close-settings").onclick = () => toggleSettingsBox()
+  renderToolbarReload()
   registerNotifications()
   renderToolbarAnimation()
   renderToolbarTheme()

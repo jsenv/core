@@ -1,6 +1,7 @@
 import { getLivereloadingPreference, createLivereloading } from "../livereloading/livereloading.js"
 import { applyLivereloadIndicator } from "./livereload-indicator.js"
 import { createPromiseAndHooks } from "../util/util.js"
+import { getReloadPreference } from "./toolbar-reload.js"
 
 let livereloadConnection
 let livereloadReadyPromise
@@ -14,8 +15,12 @@ export const connectLivereload = ({ url, replaceState }) => {
   livereloadFile = fileRelativeUrl
 
   const reloadPage = () => {
-    console.clear()
-    replaceState()
+    if (getReloadPreference() === "document") {
+      document.location.reload(true)
+    } else {
+      console.clear()
+      replaceState()
+    }
   }
 
   // reset livereload indicator ui
