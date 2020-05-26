@@ -281,9 +281,11 @@ export const startExploring = async ({
               "x-jsenv-exploring" in request.headers
             ) {
               const explorableConfig = JSON.parse(await readRequestBodyAsString(request.body))
-              const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap({
-                explorable: explorableConfig,
+              const metaMap = {}
+              Object.keys(explorableConfig).forEach((key) => {
+                metaMap[key] = explorableConfig[key]
               })
+              const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap(metaMap)
               const specifierMetaMapForExplorable = normalizeSpecifierMetaMap(
                 specifierMetaMapRelativeForExplorable,
                 projectDirectoryUrl,
@@ -291,12 +293,13 @@ export const startExploring = async ({
               const matchingFileResultArray = await collectFiles({
                 directoryUrl: projectDirectoryUrl,
                 specifierMetaMap: specifierMetaMapForExplorable,
-                predicate: ({ explorable }) => explorable,
+                predicate: (meta) => Object.keys(meta).some((key) => Boolean(meta[key])),
               })
-              const explorableRelativeUrlArray = matchingFileResultArray.map(
-                ({ relativeUrl }) => relativeUrl,
-              )
-              const json = JSON.stringify(explorableRelativeUrlArray)
+              const explorableFiles = matchingFileResultArray.map(({ relativeUrl, meta }) => ({
+                relativeUrl,
+                meta,
+              }))
+              const json = JSON.stringify(explorableFiles)
               return {
                 status: 200,
                 headers: {
@@ -320,9 +323,7 @@ export const startExploring = async ({
               compileServerOrigin,
               outDirectoryRelativeUrl,
               compileServerGroupMap,
-              htmlFileRelativeUrl,
               importMapFileRelativeUrl,
-              explorableConfig,
             })
           },
         ),

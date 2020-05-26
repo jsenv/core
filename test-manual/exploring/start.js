@@ -10,8 +10,10 @@ startExploring({
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   explorableConfig: {
-    [`./${testDirectoryRelativeUrl}**/pages/**/*.js`]: true,
-    [`./${testDirectoryRelativeUrl}**/.jsenv/**`]: false,
+    source: {
+      [`./${testDirectoryRelativeUrl}**/pages/**/*.js`]: true,
+      [`./${testDirectoryRelativeUrl}**/.jsenv/**`]: false,
+    },
   },
   protocol: "http",
   port: 3400,

@@ -2,6 +2,9 @@ import { loadExploringConfig } from "../util/util.js"
 import { getAnimationPreference } from "../toolbar/toolbar-animation.js"
 import { move } from "../util/animation.js"
 import { fetchUrl } from "../util/fetching.js"
+import { createPreference } from "../util/preferences.js"
+
+const groupPreference = createPreference("group")
 
 export const fileListRoute = {
   name: "file-list",
@@ -22,6 +25,7 @@ export const fileListRoute = {
         const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig({
           cancellationToken,
         })
+
         const directoryName = directoryUrlToDirectoryName(projectDirectoryUrl)
         const span = fileListElement.querySelector("h2 span")
         span.title = projectDirectoryUrl
@@ -36,10 +40,67 @@ export const fileListRoute = {
         })
         const files = await response.json()
 
+        const h4 = fileListElement.querySelector("h4")
+
         const ul = fileListElement.querySelector("ul")
         ul.innerHTML = files
-          .map((file) => `<li><a class="execution-link" href=${file}>${file}</a></li>`)
+          .map(
+            (file) =>
+              `<li><a class="execution-link" href=${file.relativeUrl}>${file.relativeUrl}</a></li>`,
+          )
           .join("")
+
+        const groupFieldset = document.querySelector("#filter-group-set")
+        const groupNames = ["all", ...Object.keys(explorableConfig)]
+        groupFieldset.innerHTML = groupNames
+          .map(
+            (key) => `<label data-contains-hidden-input>
+  <input type="radio" name="filter-group" value="${key}"/>
+  <span>${key}</span>
+</label>`,
+          )
+          .join("")
+
+        const currentGroup = groupPreference.has() ? groupPreference.get() : groupNames[0]
+        Array.from(groupFieldset.querySelectorAll("input")).forEach((inputRadio) => {
+          inputRadio.checked = inputRadio.value === currentGroup
+          inputRadio.onchange = () => {
+            if (inputRadio.checked) {
+              enableGroup(inputRadio.value)
+            }
+          }
+        })
+
+        const enableGroup = (groupName) => {
+          const arrayOfElementToShow = []
+          const arrayOfElementToHide = []
+          files.forEach((file) => {
+            const fileLink = document.querySelector(`a[href="${file.relativeUrl}"]`)
+            const fileLi = fileLink.parentNode
+            if (groupName === "all" || file.meta[groupName]) {
+              arrayOfElementToShow.push(fileLi)
+            } else {
+              arrayOfElementToHide.push(fileLi)
+            }
+          })
+          arrayOfElementToShow.forEach((element) => {
+            element.removeAttribute("data-force-hide")
+          })
+          arrayOfElementToHide.forEach((element) => {
+            element.setAttribute("data-force-hide", "")
+          })
+
+          h4.innerHTML =
+            arrayOfElementToShow.length === 0
+              ? `No file found.
+              Config for this section: <pre>${JSON.stringify(
+                explorableConfig[groupName],
+                null,
+                "  ",
+              )}</pre>`
+              : `${arrayOfElementToShow.length} files found. Click on the one you want to execute`
+        }
+        enableGroup(currentGroup)
       },
 
       animateLeaving: async ({ cancellationToken, event, url }) => {

@@ -122,8 +122,10 @@ import { startExploring } from "@jsenv/core"
 startExploring({
   projectDirectoryUrl: "file:///Users/you/project/",
   explorableConfig: {
-    "./src/**/*.js": true,
-    "./src/whatever/**/*.js": false,
+    source: {
+      "./src/**/*.js": true,
+      "./src/whatever/**/*.js": false,
+    },
   },
 })
 ```
@@ -140,7 +142,7 @@ When you change a parameter don't forget to restart the server.
 
 `explorableConfig` parameter is an object used to configure what files are explorable in your project. This is an optional parameter with a default value configured to match jsenv file structure. The exact value can be found in [src/jsenvExplorableConfig.js](../../src/jsenvExplorableConfig.js).
 
-This parameter must be an object where keys are relative or absolute urls. These urls are allowed to contain `*` and `**` that will be used for pattern matching as documented in https://github.com/jsenv/jsenv-url-meta#pattern-matching-behaviour
+This parameter must be an object compose of other object where keys are relative or absolute urls. These urls are allowed to contain `*` and `**` that will be used for pattern matching as documented in https://github.com/jsenv/jsenv-url-meta#pattern-matching-behaviour
 
 ## htmlFileRelativeUrl
 
