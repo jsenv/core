@@ -66,6 +66,7 @@ export const fileListRoute = {
           inputRadio.checked = inputRadio.value === currentGroup
           inputRadio.onchange = () => {
             if (inputRadio.checked) {
+              groupPreference.set(inputRadio.value)
               enableGroup(inputRadio.value)
             }
           }
