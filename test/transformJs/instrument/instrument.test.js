@@ -2,7 +2,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
-import { createInstrumentBabelPlugin } from "../../../src/internal/executing/coverage/createInstrumentBabelPlugin.js"
+import { babelPluginInstrument } from "../../../src/internal/executing/coverage/babel-plugin-instrument.js"
 import { transformJs } from "../../../src/internal/compiling/js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "../../../src/internal/compiling/js-compilation-service/transformResultToCompilationResult.js"
 import { TRANSFORM_JS_TEST_PARAMS, TRANSFORM_RESULT_TEST_PARAMS } from "../TEST_PARAMS.js"
@@ -22,7 +22,7 @@ const transformResult = await transformJs({
   url: originalFileUrl,
   babelPluginMap: {
     ...TRANSFORM_RESULT_TEST_PARAMS.babelPluginMap,
-    "transform-instrument": [createInstrumentBabelPlugin()],
+    "transform-instrument": [babelPluginInstrument, { projectDirectoryUrl: jsenvCoreDirectoryUrl }],
   },
 })
 const actual = await transformResultToCompilationResult(transformResult, {

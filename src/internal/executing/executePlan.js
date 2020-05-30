@@ -1,10 +1,4 @@
-import {
-  resolveUrl,
-  metaMapToSpecifierMetaMap,
-  normalizeSpecifierMetaMap,
-  urlToMeta,
-} from "@jsenv/util"
-import { createInstrumentBabelPlugin } from "./coverage/createInstrumentBabelPlugin.js"
+import { babelPluginInstrument } from "./coverage/babel-plugin-instrument.js"
 import { generateExecutionSteps } from "./generateExecutionSteps.js"
 import { startCompileServerForExecutingPlan } from "./startCompileServerForExecutingPlan.js"
 import { executeConcurrently } from "./executeConcurrently.js"
@@ -46,25 +40,9 @@ export const executePlan = async ({
   ...rest
 } = {}) => {
   if (coverage) {
-    const specifierMetaMapForCover = normalizeSpecifierMetaMap(
-      metaMapToSpecifierMetaMap({
-        cover: coverageConfig,
-      }),
-      projectDirectoryUrl,
-    )
-
     babelPluginMap = {
       ...babelPluginMap,
-      "transform-instrument": [
-        createInstrumentBabelPlugin({
-          predicate: ({ relativeUrl }) => {
-            return urlToMeta({
-              url: resolveUrl(relativeUrl, projectDirectoryUrl),
-              specifierMetaMap: specifierMetaMapForCover,
-            }).cover
-          },
-        }),
-      ],
+      "transform-instrument": [babelPluginInstrument, { projectDirectoryUrl, coverageConfig }],
     }
   }
 
@@ -95,8 +73,6 @@ export const executePlan = async ({
       babelPluginMap,
       convertMap,
       compileGroupCount,
-
-      coverageConfig,
     }),
   ])
 

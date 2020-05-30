@@ -2,7 +2,7 @@ import { createOperation } from "@jsenv/cancellation"
 import { resolveUrl, urlToFileSystemPath, readFile } from "@jsenv/util"
 import { require } from "../../require.js"
 import { minimalBabelPluginArray } from "../../minimalBabelPluginArray.js"
-import { createInstrumentBabelPlugin } from "./createInstrumentBabelPlugin.js"
+import { babelPluginInstrument } from "./babel-plugin-instrument.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
 const { transformAsync } = require("@babel/core")
@@ -38,7 +38,7 @@ export const relativeUrlToEmptyCoverage = async (
             ...Object.keys(babelPluginMap).map(
               (babelPluginName) => babelPluginMap[babelPluginName],
             ),
-            createInstrumentBabelPlugin({ predicate: () => true }),
+            [babelPluginInstrument, { projectDirectoryUrl }],
           ],
         }),
     })
