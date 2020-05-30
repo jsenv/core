@@ -3,7 +3,7 @@ import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
 export const GENERATE_COMMONJS_BUNDLE_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  jsenvCoreDirectoryClean: true,
+  jsenvDirectoryClean: true,
   bundleDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
   logLevel: "warn",
