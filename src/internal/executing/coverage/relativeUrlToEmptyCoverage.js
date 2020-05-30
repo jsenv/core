@@ -2,7 +2,7 @@ import { createOperation } from "@jsenv/cancellation"
 import { resolveUrl, urlToFileSystemPath, readFile } from "@jsenv/util"
 import { require } from "../../require.js"
 import { minimalBabelPluginArray } from "../../minimalBabelPluginArray.js"
-import { createInstrumentBabelPlugin } from "./createInstrumentBabelPlugin.js"
+import { babelPluginInstrument } from "./babel-plugin-instrument.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
 const { transformAsync } = require("@babel/core")
@@ -17,9 +17,13 @@ export const relativeUrlToEmptyCoverage = async (
     start: () => readFile(fileUrl),
   })
 
-  // we must compile to get the coverage object
-  // without evaluating the file because it would increment coverage
-  // and execute code that can be doing anything
+  const plugins = [...minimalBabelPluginArray]
+  Object.keys(babelPluginMap).forEach((babelPluginName) => {
+    if (babelPluginName !== "transform-instrument") {
+      plugins.push(babelPluginMap[babelPluginName])
+    }
+  })
+  plugins.push([babelPluginInstrument, { projectDirectoryUrl }])
 
   try {
     const { metadata } = await createOperation({
@@ -33,13 +37,7 @@ export const relativeUrlToEmptyCoverage = async (
           parserOpts: {
             allowAwaitOutsideFunction: true,
           },
-          plugins: [
-            ...minimalBabelPluginArray,
-            ...Object.keys(babelPluginMap).map(
-              (babelPluginName) => babelPluginMap[babelPluginName],
-            ),
-            createInstrumentBabelPlugin({ predicate: () => true }),
-          ],
+          plugins,
         }),
     })
 

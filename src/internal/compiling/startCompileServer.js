@@ -87,8 +87,6 @@ export const startCompileServer = async ({
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
   runtimeAlwaysInsideRuntimeScoreMap = false,
-
-  coverageConfig,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
@@ -150,7 +148,6 @@ ${projectDirectoryUrl}`)
     babelPluginMap,
     convertMap,
     groupMap,
-    coverageConfig,
   }
   if (jsenvDirectoryClean) {
     logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`)
@@ -159,6 +156,7 @@ ${projectDirectoryUrl}`)
   if (useFilesystemAsCache) {
     await cleanOutDirectoryIfObsolete({
       logger,
+      cleanWarning: !jsenvDirectoryClean,
       outDirectoryUrl,
       outDirectoryMeta,
     })
@@ -470,7 +468,12 @@ const generateImportMapForCompileServer = async ({
   return importMap
 }
 
-const cleanOutDirectoryIfObsolete = async ({ logger, outDirectoryUrl, outDirectoryMeta }) => {
+const cleanOutDirectoryIfObsolete = async ({
+  logger,
+  cleanWarning = true,
+  outDirectoryUrl,
+  outDirectoryMeta,
+}) => {
   const jsenvCorePackageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
   const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
   const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
@@ -494,12 +497,19 @@ const cleanOutDirectoryIfObsolete = async ({ logger, outDirectoryUrl, outDirecto
     }
   }
 
-  if (
-    previousOutDirectoryMeta !== null &&
-    JSON.stringify(previousOutDirectoryMeta) !== JSON.stringify(outDirectoryMeta)
-  ) {
-    logger.info(`clean out directory at ${urlToFileSystemPath(outDirectoryUrl)}`)
-    await ensureEmptyDirectory(outDirectoryUrl)
+  if (previousOutDirectoryMeta !== null) {
+    const previousMetaString = JSON.stringify(previousOutDirectoryMeta, null, "  ")
+    const metaString = JSON.stringify(outDirectoryMeta, null, "  ")
+    if (previousMetaString !== metaString) {
+      if (cleanWarning) {
+        logger.warn(`clean out directory at ${urlToFileSystemPath(outDirectoryUrl)}
+--- previous global cache meta ---
+${previousMetaString}
+--- global cache meta ---
+${metaString}`)
+      }
+      await ensureEmptyDirectory(outDirectoryUrl)
+    }
   }
 
   await writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "))
