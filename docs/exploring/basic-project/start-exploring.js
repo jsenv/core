@@ -4,7 +4,9 @@ import { startExploring } from "@jsenv/core"
 startExploring({
   projectDirectoryUrl: new URL("./", import.meta.url),
   explorableConfig: {
-    "./src/*.js": true,
+    source: {
+      "./src/*.js": true,
+    },
   },
   port: 3456,
   livereloading: true,

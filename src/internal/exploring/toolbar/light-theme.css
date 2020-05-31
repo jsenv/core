@@ -104,9 +104,16 @@ html[data-theme="light"] #explorables h2 span {
   color: #ff8d00;
 }
 html[data-theme="light"] article[data-page="file-list"],
-html[data-theme="light"] #explorables #explorables-header,
 html[data-theme="light"] #file-list-link[data-active] a {
   background: #bbd5ea;
+}
+html[data-theme="light"] #explorables fieldset input:checked + * {
+  color: #ff8d00;
+  background: #bbd5ea;
+}
+html[data-theme="light"] #explorables #explorables-header,
+html[data-theme="light"] #explorables fieldset label input + * {
+  background: #ddf0ff;
 }
 html[data-theme="light"] .execution-link {
   background: #ddf0ff;

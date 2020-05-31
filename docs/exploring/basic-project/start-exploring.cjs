@@ -5,7 +5,9 @@ const { startExploring } = require("@jsenv/core")
 startExploring({
   projectDirectoryUrl: __dirname,
   explorableConfig: {
-    "./src/*.js": true,
+    source: {
+      "./src/*.js": true,
+    },
   },
   port: 3456,
   livereloading: true,

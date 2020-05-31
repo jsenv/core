@@ -238,11 +238,11 @@
                 <h3>Settings</h3>
               </div>
               <div id="settings-box-body">
-              <div class="settings-box-item">
+                <div class="settings-box-item">
                   <div class="category-title">
                     Reload
                   </div>
-                  <label class="switch">
+                  <label class="switch" data-contains-hidden-input>
                     <input id="toggle-reload" type="checkbox" />
                     <div>
                       <div class="slider"></div>
@@ -260,7 +260,7 @@
                     </svg>
                     Notifications
                   </div>
-                  <label class="switch">
+                  <label class="switch" data-contains-hidden-input>
                     <input id="toggle-notifs" type="checkbox" />
                     <div>
                       <div class="slider"></div>
@@ -278,7 +278,7 @@
                     </svg>
                     Animations
                   </div>
-                  <label class="switch">
+                  <label class="switch" data-contains-hidden-input>
                     <input id="toggle-anims" type="checkbox" />
                     <div>
                       <div class="slider"></div>
@@ -296,7 +296,7 @@
                     </svg>
                     Dark mode
                   </div>
-                  <label class="switch">
+                  <label class="switch" data-contains-hidden-input>
                     <input id="checkbox-dark-theme" type="checkbox" />
                     <div>
                       <div class="slider"></div>
@@ -366,8 +366,19 @@
                 <use xlink:href="#fileIconSvgModel"></use>
               </svg>
               <h2>Explorable files in <span title="${directoryUrl}">${directoryName}</span></h2>
-              <h4>Click on the file you want to execute</h4>
+              <div class="menu-wrapper">
+                <fieldset id="filter-group-set" class="menu"></fieldset>
+              </div>
+              <div class="paddles">
+                <button class="left-paddle paddle hidden">
+                  <
+                </button>
+                <button class="right-paddle paddle">
+                  >
+                </button>
+              </div>
             </div>
+            <h4>${message}</h4>
             <nav>
               <ul></ul>
             </nav>

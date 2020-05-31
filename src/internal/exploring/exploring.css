@@ -103,12 +103,12 @@ html[data-toolbar-animation] #toolbar {
 button:focus,
 a:focus,
 input:focus,
-.switch input:focus + * {
+*[data-contains-hidden-input] input:focus + * {
   outline-style: none;
   outline-offset: -2px;
 }
 
-.switch input:focus + * {
+*[data-contains-hidden-input] input:focus + * {
   outline-width: 4px;
   outline-offset: -2px;
 }
@@ -116,11 +116,11 @@ input:focus,
 html[data-last-interaction="keyboard"] button:focus,
 html[data-last-interaction="keyboard"] a:focus,
 html[data-last-interaction="keyboard"] input:focus,
-html[data-last-interaction="keyboard"] .switch input:focus + * {
+html[data-last-interaction="keyboard"] *[data-contains-hidden-input] input:focus + * {
   outline-style: auto;
 }
 
-html[data-last-interaction="keyboard"] .switch input:focus + * {
+html[data-last-interaction="keyboard"] *[data-contains-hidden-input] input:focus + * {
   outline-color: rgb(0, 150, 255);
 }
 
@@ -137,7 +137,7 @@ Because for some element we set the focus outline on a div which would not match
   html[data-last-interaction="keyboard"] button:focus,
   html[data-last-interaction="keyboard"] a:focus,
   html[data-last-interaction="keyboard"] input:focus,
-  html[data-last-interaction="keyboard"] .switch input:focus + * {
+  html[data-last-interaction="keyboard"] *[data-input-customized] input:focus + * {
     outline-width: 2px;
     outline-offset: 0;
     outline-style: solid;
