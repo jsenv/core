@@ -24,7 +24,7 @@ import {
 import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { assertImportMapFileRelativeUrl, assertImportMapFileInsideProject } from "../argUtils.js"
-import { createReplaceExpressionsBabelPlugin } from "../babel-plugin-replace-expressions.js"
+import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
@@ -123,16 +123,21 @@ ${projectDirectoryUrl}`)
   const logger = createLogger({ logLevel: compileServerLogLevel })
 
   babelPluginMap = {
-    "replace-expressions": createReplaceExpressionsBabelPlugin({
-      replaceMap: {
-        ...(replaceProcessEnvNodeEnv ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` } : {}),
-        ...(replaceGlobalObject ? { global: "globalThis" } : {}),
-        ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
-        ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
-        ...replaceMap,
+    "transform-replace-expressions": [
+      babelPluginReplaceExpressions,
+      {
+        replaceMap: {
+          ...(replaceProcessEnvNodeEnv
+            ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` }
+            : {}),
+          ...(replaceGlobalObject ? { global: "globalThis" } : {}),
+          ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
+          ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
+          ...replaceMap,
+        },
+        allowConflictingReplacements: true,
       },
-      allowConflictingReplacements: true,
-    }),
+    ],
     ...babelPluginMap,
   }
 

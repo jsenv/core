@@ -1,6 +1,6 @@
 import { require } from "./internal/require.js"
 import { transformJs } from "./internal/compiling/js-compilation-service/transformJs.js"
-import { createReplaceExpressionsBabelPlugin } from "./internal/babel-plugin-replace-expressions.js"
+import { babelPluginReplaceExpressions } from "./internal/babel-plugin-replace-expressions.js"
 
 const transformCommonJs = require("babel-plugin-transform-commonjs")
 
@@ -23,7 +23,8 @@ export const convertCommonJsWithBabel = async ({
     babelPluginMap: {
       "transform-commonjs": [transformCommonJs],
       "transform-replace-expressions": [
-        createReplaceExpressionsBabelPlugin({
+        babelPluginReplaceExpressions,
+        {
           replaceMap: {
             ...(replaceProcessEnvNodeEnv
               ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` }
@@ -33,7 +34,7 @@ export const convertCommonJsWithBabel = async ({
             ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
             ...replaceMap,
           },
-        }),
+        },
       ],
     },
     transformModuleIntoSystemFormat: false,
