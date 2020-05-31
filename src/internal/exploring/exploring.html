@@ -366,9 +366,19 @@
                 <use xlink:href="#fileIconSvgModel"></use>
               </svg>
               <h2>Explorable files in <span title="${directoryUrl}">${directoryName}</span></h2>
-              <fieldset id="filter-group-set"></fieldset>
-              <h4>${message}</h4>
+              <div class="menu-wrapper">
+                <fieldset id="filter-group-set" class="menu"></fieldset>
+              </div>
+              <div class="paddles">
+                <button class="left-paddle paddle hidden">
+                  <
+                </button>
+                <button class="right-paddle paddle">
+                  >
+                </button>
+              </div>
             </div>
+            <h4>${message}</h4>
             <nav>
               <ul></ul>
             </nav>

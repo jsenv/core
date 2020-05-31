@@ -13,8 +13,7 @@ h4 {
   font-weight: normal;
   font-size: 15px;
   color: #97a0a0;
-  margin: 10px 0;
-  margin-bottom: 0;
+  padding: 0 25px;
 }
 
 #explorables {
@@ -23,9 +22,9 @@ h4 {
 
 #explorables #explorables-header {
   padding: 25px;
-  padding-bottom: 15px;
+  padding-bottom: 0;
   width: 100%;
-  background: #1f262c;
+  background-color: #204143;
   position: sticky;
   top: 0;
 }
@@ -102,6 +101,46 @@ h4 {
 }
 
 #explorables fieldset input:checked + * {
-  background-color: orange;
-  color: white;
+  color: orange;
+  background: #1f262c;
+}
+
+/* scrolable menu */
+.menu-wrapper {
+  position: relative;
+  max-width: 100%;
+  margin-top: 25px;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  transition: 300ms;
+}
+.menu {
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.menu .item {
+  display: inline-block;
+  height: 100%;
+  padding: 1em;
+  box-sizing: border-box;
+}
+.paddle {
+  position: absolute;
+  height: 36px;
+  bottom: 0;
+  border: none;
+  background: #24b1b0;
+  color: #1f262c;
+}
+.left-paddle {
+  left: 0;
+}
+.right-paddle {
+  right: 0;
+}
+.hidden {
+  display: none;
 }

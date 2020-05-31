@@ -149,6 +149,7 @@ export const installNavigation = () => {
       position: "relative", // to be sure it's above page element
       display: "block",
     })
+    if (newPage.onDisplay) newPage.onDisplay()
     setTimeout(() => {
       window.scrollTo(browserHistoryEntry.scroll.x, browserHistoryEntry.scroll.y)
     })
