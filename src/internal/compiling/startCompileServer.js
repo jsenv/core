@@ -69,7 +69,7 @@ export const startCompileServer = async ({
   compileServerProtocol = "https",
   compileServerPrivateKey,
   compileServerCertificate,
-  compileServerIp = "127.0.0.1",
+  compileServerIp = "0.0.0.0",
   compileServerPort = 0,
   keepProcessAlive = false,
   stopOnPackageVersionChange = false,

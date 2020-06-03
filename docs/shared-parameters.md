@@ -118,7 +118,7 @@ This parameter only adds an extension on extensionless import, it cannot try dif
 
 # compileServerIp
 
-`compileServerIp` parameter is a string controlling the ip jsenv compile server will listen to. This parameter is optional with a default value of `"127.0.0.1"`. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#ip.
+`compileServerIp` parameter is a string controlling the ip jsenv compile server will listen to. This parameter is optional with a default value of `"0.0.0.0"`. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#ip.
 
 # compileServerPort
 
