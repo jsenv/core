@@ -64,7 +64,9 @@ See [testing](./docs/testing/readme.md) documentation for more.
 npm install --save-dev @jsenv/core
 ```
 
-`@jsenv/core` is tested on Mac, Windows, Linux on Node.js 13.7.0 and 12.8.0. Other operating systems and Node.js versions are not tested.
+`@jsenv/core` is tested on Mac, Windows, Linux on Node.js 13.12.0. Other operating systems and Node.js versions are not tested.
+
+> Jsenv should be compatible with node 12.8.0 but it's no longer guaranteed.
 
 # Configuration
 
