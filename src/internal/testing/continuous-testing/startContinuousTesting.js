@@ -7,12 +7,12 @@ import {
 import { createLogger } from "@jsenv/logger"
 import {
   createCancellationTokenForProcess,
-  catchCancellation,
   urlIsInsideOf,
   urlToRelativeUrl,
   urlToFileSystemPath,
   registerDirectoryLifecycle,
 } from "@jsenv/util"
+import { wrapExternalFunctionExecution } from "../../wrapExternalFunctionExecution.js"
 import { require } from "../../require.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "../../argUtils.js"
 import { generateExecutionSteps } from "../../executing/generateExecutionSteps.js"
@@ -53,7 +53,7 @@ export const startContinuousTesting = async ({
   collectNamespace = false,
   systemNotification = true,
 }) => {
-  return catchCancellation(async () => {
+  return wrapExternalFunctionExecution(async () => {
     const logger = createLogger({ logLevel })
 
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
@@ -388,9 +388,6 @@ export const startContinuousTesting = async ({
       logger.info(`test execution will restart automatically`)
     }
     await getNextTestingResult(actionRequiredPromise)
-  }).catch((e) => {
-    process.exitCode = 1
-    throw e
   })
 }
 

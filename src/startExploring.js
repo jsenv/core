@@ -1,7 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { composeCancellationToken, createCancellationSource } from "@jsenv/cancellation"
 import {
-  catchCancellation,
   createCancellationTokenForProcess,
   metaMapToSpecifierMetaMap,
   normalizeSpecifierMetaMap,
@@ -21,6 +20,7 @@ import {
   createSSERoom,
   readRequestBodyAsString,
 } from "@jsenv/server"
+import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { getBrowserExecutionDynamicData } from "./internal/runtime/getBrowserExecutionDynamicData.js"
@@ -61,7 +61,7 @@ export const startExploring = async ({
   port = 0,
   compileServerPort = 0, // random available port
 }) => {
-  return catchCancellation(async () => {
+  return wrapExternalFunctionExecution(async () => {
     const trackingLogger = createLogger({ logLevel: trackingLogLevel })
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
@@ -363,9 +363,6 @@ export const startExploring = async ({
       exploringServer,
       compileServer,
     }
-  }).catch((e) => {
-    process.exitCode = 1
-    throw e
   })
 }
 

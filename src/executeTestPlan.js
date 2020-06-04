@@ -1,5 +1,4 @@
 import {
-  catchCancellation,
   createCancellationTokenForProcess,
   metaMapToSpecifierMetaMap,
   normalizeSpecifierMetaMap,
@@ -10,6 +9,7 @@ import {
   resolveUrl,
 } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
+import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { executePlan } from "./internal/executing/executePlan.js"
 import { executionIsPassed } from "./internal/executing/executionIsPassed.js"
@@ -69,7 +69,7 @@ export const executeTestPlan = async ({
   // but we need something angostic that just forward the params hence using ...rest
   ...rest
 }) => {
-  return catchCancellation(async () => {
+  return wrapExternalFunctionExecution(async () => {
     const logger = createLogger({ logLevel })
 
     cancellationToken.register((cancelError) => {
@@ -203,8 +203,5 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
     await Promise.all(promises)
 
     return result
-  }).catch((e) => {
-    process.exitCode = 1
-    throw e
   })
 }

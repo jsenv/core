@@ -1,4 +1,5 @@
-import { catchCancellation, createCancellationTokenForProcess } from "@jsenv/util"
+import { createCancellationTokenForProcess } from "@jsenv/util"
+import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
@@ -32,7 +33,7 @@ export const execute = async ({
   ignoreError = false,
   ...rest
 }) => {
-  const executionPromise = catchCancellation(async () => {
+  const executionPromise = wrapExternalFunctionExecution(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
@@ -87,12 +88,6 @@ export const execute = async ({
     stop("execution-done")
 
     return result
-  }).catch((e) => {
-    // unexpected internal error
-    // -> always updates process.exitCode because we can't trust unhandled rejection
-    // to do this
-    process.exitCode = 1
-    throw e
   })
 
   if (ignoreError) {

@@ -6,9 +6,9 @@ import {
   urlToRelativeUrl,
   assertFilePresence,
   ensureEmptyDirectory,
-  catchCancellation,
   createCancellationTokenForProcess,
 } from "@jsenv/util"
+import { wrapExternalFunctionExecution } from "../wrapExternalFunctionExecution.js"
 import { COMPILE_ID_OTHERWISE } from "../CONSTANTS.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "../argUtils.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
@@ -76,7 +76,7 @@ export const generateBundle = async ({
 
   ...rest
 }) => {
-  return catchCancellation(async () => {
+  return wrapExternalFunctionExecution(async () => {
     logger = logger || createLogger({ logLevel })
 
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
@@ -232,9 +232,6 @@ export const generateBundle = async ({
         manifestFile,
       }),
     ])
-  }).catch((e) => {
-    process.exitCode = 1
-    throw e
   })
 }
 
