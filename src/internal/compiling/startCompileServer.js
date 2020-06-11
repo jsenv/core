@@ -507,11 +507,7 @@ const cleanOutDirectoryIfObsolete = async ({
     const metaString = JSON.stringify(outDirectoryMeta, null, "  ")
     if (previousMetaString !== metaString) {
       if (cleanWarning) {
-        logger.warn(`clean out directory at ${urlToFileSystemPath(outDirectoryUrl)}
---- previous global cache meta ---
-${previousMetaString}
---- global cache meta ---
-${metaString}`)
+        logger.warn(`clean out directory at ${urlToFileSystemPath(outDirectoryUrl)}`)
       }
       await ensureEmptyDirectory(outDirectoryUrl)
     }
