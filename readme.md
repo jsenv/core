@@ -29,11 +29,11 @@ It focuses on executing many JavaSripts files in parallel and report how it goes
 
 It's main strength are:
 
-- Can execute any JavaScript file (standard, jsx, typescript, ...)
+- Rely on standard JavaScript
 - Can execute file in browsers (chromium, firefox, webkit)
 - Can execute file in Node.js
+- Can be configured to run jsx, typescript and more
 - Can generate coverage from all file executions
-- Rely on standard JavaScript (nothing new to learn)
 - Rely on top level await to test asynchronous code
 
 # Example
