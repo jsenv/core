@@ -10,6 +10,7 @@ Execute JavaScript on multiple environments for testing.
 # Table of contents
 
 - [Presentation](#Presentation)
+- [Example](#Example)
 - [Installation](#Installation)
 - [Configuration](#Configuration)
   - [jsenv.config.js](#jsenvconfigjs)
@@ -20,7 +21,22 @@ Execute JavaScript on multiple environments for testing.
 
 # Presentation
 
-`@jsenv/core` is above all a testing library. It executes your tests on a browser, nodejs or both and can generate the combined coverage from all executions.
+`@jsenv/core` is a test runner.
+
+![test execution terminal screenshot](./docs/testing/main-example-terminal-screenshot.png)
+
+It focuses on executing many JavaSripts files in parallel and report how it goes.
+
+It's main strength are:
+
+- Can execute any JavaScript file (standard, jsx, typescript, ...)
+- Can execute file in browsers (chromium, firefox, webkit)
+- Can execute file in Node.js
+- Can generate coverage from all file executions
+- Rely on standard JavaScript (nothing new to learn)
+- Rely on top level await to test asynchronous code
+
+# Example
 
 > In reality you would never test `Math.max`, the code below is testing it to show an example unrelated to a specific codebase.
 
@@ -52,6 +68,10 @@ executeTestPlan({
     },
   },
 })
+```
+
+```console
+node ./execute-test-plan.js
 ```
 
 ![test execution terminal screenshot](./docs/testing/main-example-terminal-screenshot.png)
