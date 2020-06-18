@@ -16,7 +16,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.js`
 
-await generateSystemJsBundle({
+const bundle = await generateSystemJsBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
@@ -32,3 +32,18 @@ const expected = {
   default: 42,
 }
 assert({ actual, expected })
+
+// ensure file hash does not change when runned twice
+{
+  const secondBundle = await generateSystemJsBundle({
+    ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    bundleDirectoryRelativeUrl,
+    entryPointMap: {
+      main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+    },
+  })
+  const actual = secondBundle.rollupBundle.output[1].fileName
+  const expected = bundle.rollupBundle.output[1].fileName
+  assert({ actual, expected })
+}

@@ -46,6 +46,8 @@ Non textual files (png, jpg, video) are converted to base64 text.
 
 */
 
+const STATIC_COMPILE_SERVER_AUTHORITY = "//jsenv.com"
+
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
   logger,
@@ -76,9 +78,18 @@ export const createJsenvRollupPlugin = async ({
 }) => {
   const moduleContentMap = {}
   const redirectionMap = {}
+
+  // use a fake and predictable compile server origin
+  // because rollup will check the dependencies url
+  // when computing the file hash
+  // see https://github.com/rollup/rollup/blob/d6131378f9481a442aeaa6d4e608faf3303366dc/src/Chunk.ts#L795
+  // this way file hash remains the same when file content does not change
+  const fakeCompileServerOrigin = String(
+    new URL(STATIC_COMPILE_SERVER_AUTHORITY, compileServerOrigin),
+  ).slice(0, -1)
   const compileDirectoryRemoteUrl = resolveDirectoryUrl(
     compileDirectoryRelativeUrl,
-    compileServerOrigin,
+    fakeCompileServerOrigin,
   )
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
   const importMap = normalizeImportMap(compileServerImportMap, compileDirectoryRemoteUrl)
@@ -125,15 +136,22 @@ export const createJsenvRollupPlugin = async ({
     // },
 
     load: async (url) => {
-      logger.debug(`loads ${url}`)
-      const { responseUrl, contentRaw, content, map } = await loadModule(url)
+      let realUrl
+      if (url.startsWith(fakeCompileServerOrigin)) {
+        realUrl = `${compileServerOrigin}${url.slice(fakeCompileServerOrigin.length)}`
+      } else {
+        realUrl = url
+      }
+
+      logger.debug(`loads ${realUrl}`)
+      const { responseUrl, contentRaw, content, map } = await loadModule(realUrl)
 
       saveModuleContent(responseUrl, {
         content,
         contentRaw,
       })
       // handle redirection
-      if (responseUrl !== url) {
+      if (responseUrl !== realUrl) {
         saveModuleContent(url, {
           content,
           contentRaw,
@@ -156,6 +174,22 @@ export const createJsenvRollupPlugin = async ({
       const bundleSourcemapFileUrl = resolveUrl(`./${chunkId}.map`, bundleDirectoryUrl)
 
       // options.sourcemapFile = bundleSourcemapFileUrl
+
+      options.sourcemapPathTransform = (relativePath) => {
+        const url = relativePathToUrl(relativePath)
+
+        if (url.startsWith(fakeCompileServerOrigin)) {
+          const relativeUrl = url.slice(`${fakeCompileServerOrigin}/`.length)
+          const fileUrl = `${projectDirectoryUrl}${relativeUrl}`
+          relativePath = urlToRelativeUrl(fileUrl, bundleSourcemapFileUrl)
+          return relativePath
+        }
+        if (url.startsWith(projectDirectoryUrl)) {
+          return relativePath
+        }
+
+        return url
+      }
 
       const relativePathToUrl = (relativePath) => {
         const rollupUrl = resolveUrl(relativePath, bundleSourcemapFileUrl)
@@ -180,21 +214,6 @@ export const createJsenvRollupPlugin = async ({
         return url
       }
 
-      options.sourcemapPathTransform = (relativePath) => {
-        const url = relativePathToUrl(relativePath)
-
-        if (url.startsWith(compileServerOrigin)) {
-          const relativeUrl = url.slice(`${compileServerOrigin}/`.length)
-          const fileUrl = `${projectDirectoryUrl}${relativeUrl}`
-          relativePath = urlToRelativeUrl(fileUrl, bundleSourcemapFileUrl)
-          return relativePath
-        }
-        if (url.startsWith(projectDirectoryUrl)) {
-          return relativePath
-        }
-
-        return url
-      }
       return options
     },
 
@@ -252,7 +271,10 @@ export const createJsenvRollupPlugin = async ({
 
   const saveModuleContent = (moduleUrl, value) => {
     moduleContentMap[
-      potentialServerUrlToUrl(moduleUrl, { compileServerOrigin, projectDirectoryUrl })
+      potentialServerUrlToUrl(moduleUrl, {
+        compileServerOrigin,
+        projectDirectoryUrl,
+      })
     ] = value
   }
 
