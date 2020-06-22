@@ -283,11 +283,21 @@ export const startExploring = async ({
               const explorableConfig = JSON.parse(await readRequestBodyAsString(request.body))
               const metaMap = {}
               Object.keys(explorableConfig).forEach((key) => {
-                metaMap[key] = explorableConfig[key]
+                metaMap[key] = {
+                  ...explorableConfig[key],
+                  [outDirectoryRelativeUrl]: false,
+                }
               })
               const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap(metaMap)
+
               const specifierMetaMapForExplorable = normalizeSpecifierMetaMap(
-                specifierMetaMapRelativeForExplorable,
+                {
+                  ...specifierMetaMapRelativeForExplorable,
+                  // ensure outDirectoryRelativeUrl is last
+                  // so that it forces not explorable files
+                  [outDirectoryRelativeUrl]:
+                    specifierMetaMapRelativeForExplorable[outDirectoryRelativeUrl],
+                },
                 projectDirectoryUrl,
               )
               const matchingFileResultArray = await collectFiles({
