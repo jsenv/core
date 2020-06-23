@@ -119,6 +119,7 @@
     "istanbul-lib-report": "3.0.0",
     "istanbul-reports": "3.0.2",
     "node-notifier": "7.0.1",
+    "parse5": "6.0.0",
     "playwright-core": "1.0.2",
     "proper-lockfile": "4.1.1",
     "regenerator-runtime": "0.13.5",

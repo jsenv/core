@@ -195,89 +195,88 @@ ${projectDirectoryUrl}`)
     projectFileRequestedCallback = () => {}
   }
 
-  const [compileServer, importMapForCompileServer] = await Promise.all([
-    startServer({
-      cancellationToken,
-      logLevel: compileServerLogLevel,
-      serverName: "compile server",
+  const importMapForCompileServer = await generateImportMapForCompileServer({
+    logger,
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    importMapFileRelativeUrl,
+  })
 
-      protocol: compileServerProtocol,
-      privateKey: compileServerPrivateKey,
-      certificate: compileServerCertificate,
-      ip: compileServerIp,
-      port: compileServerPort,
-      sendInternalErrorStack: true,
-      requestToResponse: (request) => {
-        return firstService(
-          () => {
-            const { origin, ressource, method, headers } = request
-            const requestUrl = `${origin}${ressource}`
-            // serve asset files directly
-            if (urlIsAsset(requestUrl)) {
-              const fileUrl = resolveUrl(ressource.slice(1), projectDirectoryUrl)
-              return serveFile(fileUrl, {
-                method,
-                headers,
-              })
-            }
-            return null
-          },
-          () => {
-            return serveBrowserScript(request, {
-              projectDirectoryUrl,
-              outDirectoryRelativeUrl,
+  const compileServer = await startServer({
+    cancellationToken,
+    logLevel: compileServerLogLevel,
+    serverName: "compile server",
+
+    protocol: compileServerProtocol,
+    privateKey: compileServerPrivateKey,
+    certificate: compileServerCertificate,
+    ip: compileServerIp,
+    port: compileServerPort,
+    sendInternalErrorStack: true,
+    requestToResponse: (request) => {
+      return firstService(
+        () => {
+          const { origin, ressource, method, headers } = request
+          const requestUrl = `${origin}${ressource}`
+          // serve asset files directly
+          if (urlIsAsset(requestUrl)) {
+            const fileUrl = resolveUrl(ressource.slice(1), projectDirectoryUrl)
+            return serveFile(fileUrl, {
+              method,
+              headers,
             })
-          },
-          () => {
-            return serveCompiledJs({
-              cancellationToken,
-              logger,
+          }
+          return null
+        },
+        () => {
+          return serveBrowserScript(request, {
+            projectDirectoryUrl,
+            outDirectoryRelativeUrl,
+          })
+        },
+        () => {
+          return serveCompiledJs({
+            cancellationToken,
+            logger,
 
-              projectDirectoryUrl,
-              outDirectoryRelativeUrl,
-              compileServerImportMap: importMapForCompileServer,
-              importMapFileRelativeUrl,
-              importDefaultExtension,
+            projectDirectoryUrl,
+            outDirectoryRelativeUrl,
+            compileServerImportMap: importMapForCompileServer,
+            importMapFileRelativeUrl,
+            importDefaultExtension,
 
-              transformTopLevelAwait,
-              transformModuleIntoSystemFormat,
-              babelPluginMap,
-              groupMap,
-              convertMap,
+            transformTopLevelAwait,
+            transformModuleIntoSystemFormat,
+            babelPluginMap,
+            groupMap,
+            convertMap,
 
-              request,
-              projectFileRequestedCallback,
-              useFilesystemAsCache,
-              writeOnFilesystem,
-              compileCacheStrategy,
-            })
-          },
-          () => {
-            return serveProjectFiles({
-              projectDirectoryUrl,
-              request,
-              projectFileRequestedCallback,
-            })
-          },
-        )
-      },
-      accessControlAllowRequestOrigin: true,
-      accessControlAllowRequestMethod: true,
-      accessControlAllowRequestHeaders: true,
-      accessControlAllowedRequestHeaders: [
-        ...jsenvAccessControlAllowedHeaders,
-        "x-jsenv-execution-id",
-      ],
-      accessControlAllowCredentials: true,
-      keepProcessAlive,
-    }),
-    generateImportMapForCompileServer({
-      logger,
-      projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-      importMapFileRelativeUrl,
-    }),
-  ])
+            request,
+            projectFileRequestedCallback,
+            useFilesystemAsCache,
+            writeOnFilesystem,
+            compileCacheStrategy,
+          })
+        },
+        () => {
+          return serveProjectFiles({
+            projectDirectoryUrl,
+            request,
+            projectFileRequestedCallback,
+          })
+        },
+      )
+    },
+    accessControlAllowRequestOrigin: true,
+    accessControlAllowRequestMethod: true,
+    accessControlAllowRequestHeaders: true,
+    accessControlAllowedRequestHeaders: [
+      ...jsenvAccessControlAllowedHeaders,
+      "x-jsenv-execution-id",
+    ],
+    accessControlAllowCredentials: true,
+    keepProcessAlive,
+  })
 
   env = {
     ...env,

@@ -1,5 +1,5 @@
 import { urlToContentType, serveFile } from "@jsenv/server"
-import { resolveUrl, resolveDirectoryUrl, readFile } from "@jsenv/util"
+import { resolveUrl, resolveDirectoryUrl, readFile, urlToRelativeUrl } from "@jsenv/util"
 import {
   COMPILE_ID_OTHERWISE,
   COMPILE_ID_GLOBAL_BUNDLE,
@@ -12,6 +12,9 @@ import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
 import { serveBundle } from "./serveBundle.js"
+import { require } from "../require.js"
+
+const parse5 = require("parse5")
 
 export const serveCompiledJs = async ({
   cancellationToken,
@@ -45,9 +48,9 @@ export const serveCompiledJs = async ({
 
   const afterOutDirectory = requestUrl.slice(outDirectoryRemoteUrl.length)
 
-  // serve files inside /.dist/* directly without compilation
-  // this is just to allow some files to be written inside .dist and read directly
-  // if asked by the client
+  // serve files inside /.jsenv/out/* directly without compilation
+  // this is just to allow some files to be written inside outDirectory and read directly
+  // if asked by the client (such as env.json, groupMap.json, meta.json)
   if (!afterOutDirectory.includes("/") || afterOutDirectory[0] === "/") {
     return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
       method,
@@ -57,6 +60,8 @@ export const serveCompiledJs = async ({
 
   const parts = afterOutDirectory.split("/")
   const compileId = parts[0]
+  const remaining = parts.slice(1).join("/")
+  const contentType = urlToContentType(requestUrl)
   // no compileId, we don't know what to compile (not supposed so happen)
   if (compileId === "") {
     return null
@@ -77,7 +82,6 @@ export const serveCompiledJs = async ({
     }
   }
 
-  const remaining = parts.slice(1).join("/")
   // nothing after compileId, we don't know what to compile (not supposed to happen)
   if (remaining === "") {
     return null
@@ -106,114 +110,178 @@ export const serveCompiledJs = async ({
     return serveFile(compiledFileUrl, { method, headers })
   }
 
-  // json, css, html etc does not need to be compiled
-  // they are redirected to the source location that will be served as file
-  // ptet qu'on devrait pas parce que
-  // on pourrait vouloir minifier ce résultat (mais bon ça osef disons)
-  // par contre on voudrait ptet avoir le bon concept
-  // (quon a dans transformResultToCompilationResult)
-  // pour tracker la bonne source avec le bon etag
-  // sinon on track le export default
-  // mais ça ça vient plutot du bundle
-  // qui doit gérer content/contentRaw
-  const contentType = urlToContentType(requestUrl)
-  if (contentType !== "application/javascript") {
-    return {
-      status: 307,
-      headers: {
-        location: resolveUrl(originalFileRelativeUrl, origin),
-      },
-    }
-  }
+  if (contentType === "application/javascript") {
+    if (compileId === COMPILE_ID_GLOBAL_BUNDLE || compileId === COMPILE_ID_COMMONJS_BUNDLE) {
+      return serveBundle({
+        cancellationToken,
+        logger,
 
-  if (compileId === COMPILE_ID_GLOBAL_BUNDLE || compileId === COMPILE_ID_COMMONJS_BUNDLE) {
-    return serveBundle({
+        projectDirectoryUrl,
+        originalFileUrl,
+        compiledFileUrl,
+        outDirectoryRelativeUrl,
+        compileServerOrigin: request.origin,
+        compileServerImportMap,
+        importDefaultExtension,
+
+        babelPluginMap,
+        projectFileRequestedCallback,
+        request,
+        format: compileId === COMPILE_ID_GLOBAL_BUNDLE ? "global" : "commonjs",
+      })
+    }
+
+    return serveCompiledFile({
       cancellationToken,
       logger,
 
       projectDirectoryUrl,
       originalFileUrl,
       compiledFileUrl,
-      outDirectoryRelativeUrl,
-      compileServerOrigin: request.origin,
-      compileServerImportMap,
-      importDefaultExtension,
 
-      babelPluginMap,
+      writeOnFilesystem,
+      useFilesystemAsCache,
+      compileCacheStrategy,
       projectFileRequestedCallback,
       request,
-      format: compileId === COMPILE_ID_GLOBAL_BUNDLE ? "global" : "commonjs",
+      compile: async () => {
+        const code = await readFile(originalFileUrl)
+        const transformResult = await transformJs({
+          projectDirectoryUrl,
+          code,
+          url: originalFileUrl,
+          urlAfterTransform: compiledFileUrl,
+          babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
+          convertMap,
+          transformTopLevelAwait,
+          transformModuleIntoSystemFormat: compileIdIsForBundleFiles(compileId)
+            ? // we are compiling for rollup, do not transform into systemjs format
+              false
+            : transformModuleIntoSystemFormat,
+        })
+        const sourcemapFileUrl = `${compiledFileUrl}.map`
+
+        return transformResultToCompilationResult(transformResult, {
+          projectDirectoryUrl,
+          originalFileContent: code,
+          originalFileUrl,
+          compiledFileUrl,
+          sourcemapFileUrl,
+          remapMethod: writeOnFilesystem ? "comment" : "inline",
+        })
+      },
     })
   }
 
-  return serveCompiledFile({
-    cancellationToken,
-    logger,
+  if (contentType === "text/html") {
+    return serveCompiledFile({
+      cancellationToken,
+      logger,
 
-    projectDirectoryUrl,
-    originalFileUrl,
-    compiledFileUrl,
+      projectDirectoryUrl,
+      originalFileUrl,
+      compiledFileUrl,
 
-    writeOnFilesystem,
-    useFilesystemAsCache,
-    compileCacheStrategy,
-    projectFileRequestedCallback,
-    request,
-    compile: async () => {
-      const code = await readFile(originalFileUrl)
+      writeOnFilesystem,
+      useFilesystemAsCache,
+      compileCacheStrategy,
+      projectFileRequestedCallback,
+      request,
 
-      let compiledIdForGroupMap
-      let babelPluginMapForGroupMap
-      if (
-        compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES ||
-        compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES
-      ) {
-        compiledIdForGroupMap = getWorstCompileId(groupMap)
-        // we are compiling for rollup, do not transform into systemjs format
-        transformModuleIntoSystemFormat = false
-        babelPluginMapForGroupMap = createBabePluginMapForBundle({
-          format: compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES ? "global" : "commonjs",
-        })
-      } else {
-        compiledIdForGroupMap = compileId
-        babelPluginMapForGroupMap = {}
-      }
+      compile: async () => {
+        const htmlBeforeCompilation = await readFile(originalFileUrl)
+        // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
+        const document = parse5.parse(htmlBeforeCompilation)
 
-      const groupBabelPluginMap = {}
-      groupMap[compiledIdForGroupMap].babelPluginRequiredNameArray.forEach(
-        (babelPluginRequiredName) => {
-          if (babelPluginRequiredName in babelPluginMap) {
-            groupBabelPluginMap[babelPluginRequiredName] = babelPluginMap[babelPluginRequiredName]
+        const visitDocument = (fn) => {
+          const visitNode = (node) => {
+            fn(node)
+            const { childNodes } = node
+            if (childNodes) {
+              let i = 0
+              while (i < childNodes.length) {
+                visitNode(childNodes[i++])
+              }
+            }
           }
-        },
-      )
+          visitNode(document)
+        }
 
-      const transformResult = await transformJs({
-        projectDirectoryUrl,
-        code,
-        url: originalFileUrl,
-        urlAfterTransform: compiledFileUrl,
-        babelPluginMap: {
-          ...groupBabelPluginMap,
-          ...babelPluginMapForGroupMap,
-        },
-        convertMap,
-        transformTopLevelAwait,
-        transformModuleIntoSystemFormat,
-      })
+        // il faut aussi absolument que ces scripts charge le fichier
+        // browserRunTime
+        // idéalement on insere ça dans la balise head mais le mieux c'est encore que ce soit présent
+        // dans le fichier html ?
+        visitDocument((node) => {
+          if (node.nodeName !== "script") {
+            return
+          }
 
-      const sourcemapFileUrl = `${compiledFileUrl}.map`
+          const attributes = node.attrs
+          const typeAttributeIndex = attributes.findIndex((attr) => attr.name === "type")
+          if (typeAttributeIndex === -1) {
+            return
+          }
 
-      return transformResultToCompilationResult(transformResult, {
-        projectDirectoryUrl,
-        originalFileContent: code,
-        originalFileUrl,
-        compiledFileUrl,
-        sourcemapFileUrl,
-        remapMethod: writeOnFilesystem ? "comment" : "inline",
-      })
+          const typeAttribute = attributes[typeAttributeIndex]
+          const typeAttributeValue = typeAttribute.value
+          if (typeAttributeValue !== "module") {
+            return
+          }
+
+          const srcAttributeIndex = attributes.findIndex((attr) => attr.name === "src")
+          if (srcAttributeIndex > -1) {
+            const srcAttribute = attributes[srcAttributeIndex]
+            const srcAttributeValue = srcAttribute.value
+
+            // replace script content with something that would import that script
+            node.childNodes = [
+              { nodeName: "#text", value: `alert(${JSON.stringify(srcAttributeValue)})` },
+            ]
+            // remove src attribute
+            attributes.splice(attributes.indexOf(srcAttribute), 1)
+            // remove type attribute
+            attributes.splice(attributes.indexOf(typeAttribute), 1)
+            return
+          }
+
+          const firstChild = node.childNodes[0]
+          if (firstChild && firstChild.nodeName === "#text") {
+            const scriptContent = firstChild.value
+
+            // replace with something that executes the file directly (is it possible with Systemjs?)
+            firstChild.value = `alert(${JSON.stringify(scriptContent)})`
+            // remove type attribute
+            attributes.splice(attributes.indexOf(typeAttribute), 1)
+          }
+        })
+
+        // https://github.com/systemjs/systemjs/blob/d37f7cade33bb965ccfbd8e1a065e7c5db80a800/src/features/script-load.js#L61
+        const htmlAfterCompilation = parse5.serialize(document)
+        return {
+          compiledSource: htmlAfterCompilation,
+          contentType: "text/html",
+          sources: [urlToRelativeUrl(originalFileUrl, `${compiledFileUrl}__asset__/meta.json`)],
+          sourcesContent: [htmlBeforeCompilation],
+          assets: [],
+          assetsContent: [],
+        }
+      },
+    })
+  }
+
+  // json, css etc does not need to be compiled, they are redirected to their source version that will be served as file
+  return {
+    status: 307,
+    headers: {
+      location: resolveUrl(originalFileRelativeUrl, origin),
     },
-  })
+  }
+}
+
+const compileIdIsForBundleFiles = (compileId) => {
+  return (
+    compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES || compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES
+  )
 }
 
 const getWorstCompileId = (groupMap) => {
@@ -221,4 +289,32 @@ const getWorstCompileId = (groupMap) => {
     return COMPILE_ID_OTHERWISE
   }
   return Object.keys(groupMap)[Object.keys(groupMap).length - 1]
+}
+
+const compileIdToBabelPluginMap = (compileId, { babelPluginMap, groupMap }) => {
+  let compiledIdForGroupMap
+  let babelPluginMapForGroupMap
+  if (compileIdIsForBundleFiles(compileId)) {
+    compiledIdForGroupMap = getWorstCompileId(groupMap)
+    babelPluginMapForGroupMap = createBabePluginMapForBundle({
+      format: compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES ? "global" : "commonjs",
+    })
+  } else {
+    compiledIdForGroupMap = compileId
+    babelPluginMapForGroupMap = {}
+  }
+
+  const groupBabelPluginMap = {}
+  groupMap[compiledIdForGroupMap].babelPluginRequiredNameArray.forEach(
+    (babelPluginRequiredName) => {
+      if (babelPluginRequiredName in babelPluginMap) {
+        groupBabelPluginMap[babelPluginRequiredName] = babelPluginMap[babelPluginRequiredName]
+      }
+    },
+  )
+
+  return {
+    ...groupBabelPluginMap,
+    ...babelPluginMapForGroupMap,
+  }
 }
