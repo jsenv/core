@@ -8,7 +8,7 @@ import {
 } from "@jsenv/util"
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
 
-export const serveCompiledFile = async ({
+export const compileFile = async ({
   // cancellatioToken,
   logger,
 

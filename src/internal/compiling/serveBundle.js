@@ -3,7 +3,7 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { COMPILE_ID_GLOBAL_BUNDLE_FILES, COMPILE_ID_COMMONJS_BUNDLE_FILES } from "../CONSTANTS.js"
 import { generateBundleUsingRollup } from "../bundling/generateBundleUsingRollup.js"
 import { bundleToCompilationResult } from "../bundling/bundleToCompilationResult.js"
-import { serveCompiledFile } from "./serveCompiledFile.js"
+import { compileFile } from "./compileFile.js"
 
 export const serveBundle = async ({
   cancellationToken,
@@ -72,7 +72,7 @@ export const serveBundle = async ({
     })
   }
 
-  return serveCompiledFile({
+  return compileFile({
     logger,
     projectDirectoryUrl,
     originalFileUrl,

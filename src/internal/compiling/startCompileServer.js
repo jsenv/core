@@ -399,6 +399,7 @@ const serveBrowserScript = async (request, { projectDirectoryUrl, outDirectoryRe
       },
     }
   }
+
   return null
 }
 

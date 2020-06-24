@@ -10,7 +10,7 @@ import {
 import { createBabePluginMapForBundle } from "../bundling/createBabePluginMapForBundle.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
-import { serveCompiledFile } from "./serveCompiledFile.js"
+import { compileFile } from "./compileFile.js"
 import { serveBundle } from "./serveBundle.js"
 import { compileHtml } from "./compileHtml.js"
 
@@ -129,7 +129,7 @@ export const serveCompiledJs = async ({
       })
     }
 
-    return serveCompiledFile({
+    return compileFile({
       cancellationToken,
       logger,
 
@@ -172,7 +172,7 @@ export const serveCompiledJs = async ({
   }
 
   if (contentType === "text/html") {
-    return serveCompiledFile({
+    return compileFile({
       cancellationToken,
       logger,
 
@@ -188,7 +188,14 @@ export const serveCompiledJs = async ({
 
       compile: async () => {
         const htmlBeforeCompilation = await readFile(originalFileUrl)
-        const { htmlAfterCompilation } = await compileHtml(htmlBeforeCompilation)
+        // ok l'url de ce script c'est ./ et ensuite il faut le otherwise global bundle
+        const { htmlAfterCompilation } = await compileHtml(htmlBeforeCompilation, {
+          headScripts: [
+            {
+              src: "",
+            },
+          ],
+        })
 
         return {
           compiledSource: htmlAfterCompilation,
