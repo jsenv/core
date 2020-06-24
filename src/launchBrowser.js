@@ -9,8 +9,7 @@ import { fetchUrl } from "./internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "./internal/validateResponseStatusIsOk.js"
 import { trackPageToNotify } from "./internal/browser-launcher/trackPageToNotify.js"
 import { createSharing } from "./internal/browser-launcher/createSharing.js"
-import { startBrowserServer } from "./internal/browser-launcher/startBrowserServer.js"
-import { evaluateImportExecution } from "./internal/browser-launcher/evaluateImportExecution.js"
+import { evaluateFileExecution } from "./internal/browser-launcher/evaluateFileExecution.js"
 
 const playwright = require("playwright-core")
 
@@ -22,7 +21,6 @@ export const launchChromium = async ({
   browserServerLogLevel,
 
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
   compileServerOrigin,
 
   headless = true,
@@ -93,7 +91,6 @@ export const launchChromium = async ({
       browserServerLogLevel,
 
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
   }
@@ -113,7 +110,6 @@ export const launchFirefox = async ({
   browserServerLogLevel,
 
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
   compileServerOrigin,
 
   headless = true,
@@ -154,7 +150,6 @@ export const launchFirefox = async ({
       browserServerLogLevel,
 
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
   }
@@ -174,7 +169,6 @@ export const launchWebkit = async ({
   browserServerLogLevel,
 
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
   compileServerOrigin,
 
   headless = true,
@@ -215,7 +209,7 @@ export const launchWebkit = async ({
       browserServerLogLevel,
 
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
+
       compileServerOrigin,
     }),
   }
@@ -277,17 +271,13 @@ const launchBrowser = async (
   return launchOperation
 }
 
-const browserServerSharing = createSharing()
-
 const browserToRuntimeHooks = (
   browser,
   {
     cancellationToken,
     ressourceTracker,
-    browserServerLogLevel,
 
     projectDirectoryUrl,
-    outDirectoryRelativeUrl,
     compileServerOrigin,
   },
 ) => {
@@ -309,7 +299,6 @@ const browserToRuntimeHooks = (
   const executeFile = async (
     fileRelativeUrl,
     {
-      htmlFileRelativeUrl,
       collectNamespace,
       collectCoverage,
       executionId,
@@ -318,25 +307,6 @@ const browserToRuntimeHooks = (
       ignoreHTTPSErrors = true,
     },
   ) => {
-    const sharingToken = browserServerSharing.getSharingToken()
-    if (!sharingToken.isUsed()) {
-      const browserServerPromise = startBrowserServer({
-        cancellationToken,
-        logLevel: browserServerLogLevel,
-
-        projectDirectoryUrl,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-      })
-      sharingToken.setSharedValue(browserServerPromise, async () => {
-        const server = await browserServerPromise
-        await server.stop()
-      })
-    }
-    const [browserServerPromise, stopUsingServer] = sharingToken.useSharedValue()
-    ressourceTracker.registerCleanupCallback(stopUsingServer)
-    const executionServer = await browserServerPromise
-
     // open a tab to execute to the file
     const browserContext = await browser.newContext({ ignoreHTTPSErrors })
     const page = await browserContext.newPage()
@@ -365,15 +335,11 @@ const browserToRuntimeHooks = (
     })
     ressourceTracker.registerCleanupCallback(stopTrackingToNotify)
     // import the file
-    return evaluateImportExecution({
+    return evaluateFileExecution(fileRelativeUrl, {
       cancellationToken,
 
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-      htmlFileRelativeUrl,
-      fileRelativeUrl,
       compileServerOrigin,
-      executionServerOrigin: executionServer.origin,
 
       page,
 
