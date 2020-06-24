@@ -13,3 +13,5 @@ startCompileServer({
   compileServerPort: 3456,
   keepProcessAlive: true,
 })
+
+// test-manual/exploring-2/.jsenv/out/otherwise/test-manual/exploring-2/basic/basic.html

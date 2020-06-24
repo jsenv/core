@@ -56,6 +56,16 @@ const objectToHtmlAttributes = (object) => {
 }
 
 const polyfillModuleScripts = (document) => {
+  /*
+  <script type="module" src="*" /> are going to be inlined
+  <script type="module">** </script> are going to be transformed to import a file so that we can transform the script content.
+
+  but we don't want that a script with an src to be considered as an inline script after it was inlined.
+
+  For that reason we perform mutation in the end
+  */
+  const mutations = []
+
   visitDocument(document, (node) => {
     if (node.nodeName !== "script") {
       return
@@ -88,7 +98,9 @@ const polyfillModuleScripts = (document) => {
         ...script.attrs,
         ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
       ]
-      replaceNode(node, script)
+      mutations.push(() => {
+        replaceNode(node, script)
+      })
       return
     }
 
@@ -103,10 +115,14 @@ const polyfillModuleScripts = (document) => {
         ...script.attrs,
         ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
       ]
-      replaceNode(node, script)
+      mutations.push(() => {
+        replaceNode(node, script)
+      })
       return
     }
   })
+
+  mutations.forEach((fn) => fn())
 }
 
 const parseHtmlAsSingleElement = (html) => {

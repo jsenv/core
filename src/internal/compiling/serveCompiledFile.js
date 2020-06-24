@@ -20,6 +20,7 @@ export const serveCompiledFile = async ({
 
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
+  browserBundledJsFileRelativeUrl,
   compileServerImportMap,
   importMapFileRelativeUrl,
   importDefaultExtension,
@@ -188,11 +189,10 @@ export const serveCompiledFile = async ({
 
       compile: async () => {
         const htmlBeforeCompilation = await readFile(originalFileUrl)
-        // ok l'url de ce script c'est ./ et ensuite il faut le otherwise global bundle
         const { htmlAfterCompilation } = await compileHtml(htmlBeforeCompilation, {
           headScripts: [
             {
-              src: "",
+              src: `/${browserBundledJsFileRelativeUrl}`,
             },
           ],
         })

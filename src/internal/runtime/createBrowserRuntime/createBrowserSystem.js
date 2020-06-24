@@ -19,7 +19,7 @@ export const createBrowserSystem = ({
 
   const browserSystem = new window.System.constructor()
 
-  const resolve = (specifier, importer) => {
+  const resolve = (specifier, importer = document.location.href) => {
     if (specifier === GLOBAL_SPECIFIER) return specifier
     return resolveImport({
       specifier,

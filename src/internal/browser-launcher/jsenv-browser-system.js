@@ -11,7 +11,7 @@ const getBrowserRuntime = memoize(async () => {
   })
   const { outDirectoryRelativeUrl } = await compileServerInfoResponse.json()
   const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
-  const afterOutDirectory = document.location.pathname.slice(outDirectoryUrl.length)
+  const afterOutDirectory = document.location.href.slice(outDirectoryUrl.length)
   const parts = afterOutDirectory.split("/")
   const compileId = parts[0]
   // const remaining = parts.slice(1).join("/")

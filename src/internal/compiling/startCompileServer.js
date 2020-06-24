@@ -202,6 +202,13 @@ ${projectDirectoryUrl}`)
     importMapFileRelativeUrl,
   })
 
+  const browserJsFileUrl = resolveUrl(
+    "./src/internal/browser-launcher/jsenv-browser-system.js",
+    jsenvCoreDirectoryUrl,
+  )
+  const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
+  const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
+
   const compileServer = await startServer({
     cancellationToken,
     logLevel: compileServerLogLevel,
@@ -232,6 +239,7 @@ ${projectDirectoryUrl}`)
           return serveBrowserScript(request, {
             projectDirectoryUrl,
             outDirectoryRelativeUrl,
+            browserBundledJsFileRelativeUrl,
           })
         },
         () => {
@@ -241,6 +249,7 @@ ${projectDirectoryUrl}`)
 
             projectDirectoryUrl,
             outDirectoryRelativeUrl,
+            browserBundledJsFileRelativeUrl,
             compileServerImportMap: importMapForCompileServer,
             importMapFileRelativeUrl,
             importDefaultExtension,
@@ -366,7 +375,10 @@ export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
   toString: () => `package version changed`,
 }
 
-const serveBrowserScript = async (request, { projectDirectoryUrl, outDirectoryRelativeUrl }) => {
+const serveBrowserScript = async (
+  request,
+  { browserBundledJsFileRelativeUrl, outDirectoryRelativeUrl },
+) => {
   if (request.headers["x-jsenv-exploring"]) {
     const body = JSON.stringify({
       outDirectoryRelativeUrl,
@@ -384,12 +396,6 @@ const serveBrowserScript = async (request, { projectDirectoryUrl, outDirectoryRe
   }
 
   if (request.ressource === "/.jsenv/browser-script.js") {
-    const browserJsFileUrl = resolveUrl(
-      "./src/internal/browser-launcher/jsenv-browser-system.js",
-      jsenvCoreDirectoryUrl,
-    )
-    const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
-    const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
     const browserBundledJsFileRemoteUrl = `${request.origin}/${browserBundledJsFileRelativeUrl}`
 
     return {

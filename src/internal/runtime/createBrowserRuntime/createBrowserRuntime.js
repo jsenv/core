@@ -6,6 +6,8 @@ import { createBrowserSystem } from "./createBrowserSystem.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
 import { fetchUsingXHR } from "../../fetchUsingXHR.js"
+import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
+import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 
 const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
 
@@ -14,7 +16,7 @@ export const createBrowserRuntime = async ({
   outDirectoryRelativeUrl,
   compileId,
 }) => {
-  const outDirectoryUrl = `${compileServerOrigin}${outDirectoryRelativeUrl}`
+  const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
   const envUrl = String(new URL("env.json", outDirectoryUrl))
   const [compileIdValue, { importMapFileRelativeUrl, importDefaultExtension }] = await Promise.all([
     compileId || decideCompileId({ outDirectoryUrl }),
@@ -115,11 +117,7 @@ export const createBrowserRuntime = async ({
 
 const decideCompileId = async ({ outDirectoryUrl }) => {
   const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
-  const [{ computeCompileIdFromGroupId }, { resolveBrowserGroup }, groupMap] = await Promise.all([
-    import("../computeCompileIdFromGroupId.js"),
-    import("../resolveBrowserGroup.js"),
-    fetchJson(groupMapUrl),
-  ])
+  const [groupMap] = await Promise.all([fetchJson(groupMapUrl)])
 
   const compileId = computeCompileIdFromGroupId({
     groupId: resolveBrowserGroup(groupMap),
