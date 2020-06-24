@@ -1,3 +1,36 @@
+/**
+
+TODO:
+
+- launchBrowser must now work with html files instead of js
+
+{
+  [urlOfScriptA]: {
+    status,
+    error,
+    namespace,
+    coverage,
+  },
+  [urlOfScriptB]: { }
+  // and so on
+}
+
+et donc décider comment on récupere ces infos:
+const result = await browserPage.waitFor(() => window.__jsenv__.htmlExecutionResult)
+
+- voir comment on va gérer ça dans exploring mais a priori exploring se simplifie
+puisqu'il s'agit juste d'ouvrir une page html compilé par compile serveur
+
+- handle inline scripts in compileHtml.js
+
+- mettre livereload dans compile server au lieu d'avoir une interface pour que exploring l'implémente
+(mais ça suppose que livereload se fait quoi qu'il arrive alors que ça peut etre couteux)
+a voir... (ça permettrais possiblement d'avoir du livereload sur des bundles chose qu'on a pas du tout pour le moment)
+
+- restaurer error stack dans jsenv-browser-system.js (comme browser-js-file)
+
+*/
+
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { startCompileServer } from "../../src/internal/compiling/startCompileServer.js"
 import { jsenvCoreDirectoryUrl } from "../../src/internal/jsenvCoreDirectoryUrl.js"

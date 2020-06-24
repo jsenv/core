@@ -2,6 +2,54 @@ import { createBrowserRuntime } from "../runtime/createBrowserRuntime/createBrow
 import { fetchUsingXHR } from "../fetchUsingXHR.js"
 import { memoize } from "../memoize.js"
 
+const readyPromise = new Promise((resolve) => {
+  if (document.readyState === "complete") {
+    resolve()
+  } else {
+    const loadCallback = () => {
+      window.removeEventListener("load", loadCallback)
+      resolve()
+    }
+    window.addEventListener("load", loadCallback)
+  }
+})
+
+const fileExecutionMap = {}
+
+const executionResultPromise = readyPromise.then(async () => {
+  const executionResult = {}
+  const fileExecutionResultPromises = []
+  Object.keys(fileExecutionMap).forEach((key) => {
+    executionResult[key] = null // to get always same order for Object.keys(executionResult)
+    const fileExecutionResultPromise = fileExecutionMap[key]
+    fileExecutionResultPromises.push(fileExecutionResultPromise)
+    fileExecutionResultPromise.then((fileExecutionResult) => {
+      executionResult[key] = fileExecutionResult
+    })
+  })
+  await Promise.all(fileExecutionResultPromises)
+  return executionResult
+})
+
+const importFile = async (specifier) => {
+  // si on a déja importer ce fichier ??
+  // if (specifier in fileExecutionMap) {
+
+  // }
+
+  const fileExecutionResultPromise = (async () => {
+    const browserRuntime = await getBrowserRuntime()
+    const executionResult = await browserRuntime.executeFile(specifier, {
+      collectCoverage: true,
+      collectNamespace: true,
+    })
+    return executionResult
+  })()
+
+  fileExecutionMap[specifier] = fileExecutionResultPromise
+  return fileExecutionResultPromise
+}
+
 const getBrowserRuntime = memoize(async () => {
   const compileServerOrigin = document.location.origin
   const compileServerInfoResponse = await fetchUsingXHR(compileServerOrigin, {
@@ -25,8 +73,6 @@ const getBrowserRuntime = memoize(async () => {
 })
 
 window.__jsenv__ = {
-  importFile: async (specifier) => {
-    const browserRuntime = await getBrowserRuntime()
-    return browserRuntime.importFile(specifier)
-  },
+  executionResultPromise,
+  importFile,
 }
