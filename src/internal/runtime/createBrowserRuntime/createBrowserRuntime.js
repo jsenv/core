@@ -1,37 +1,46 @@
-/* eslint-disable import/max-dependencies */
-
-// we might want to reuse fetchUrl approach used by nodeRuntime
-// eslint-disable-next-line import/no-unresolved
-import groupMap from "/.jsenv/out/groupMap.json"
-// eslint-disable-next-line import/no-unresolved
-import env from "/.jsenv/out/env.json"
-
+import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { uneval } from "@jsenv/uneval"
-// do not use memoize form @jsenv/util to avoid pulling @jsenv/util code into the browser bundle
+// do not use memoize from @jsenv/util to avoid pulling @jsenv/util code into the browser bundle
 import { memoize } from "../../memoize.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 import { createBrowserSystem } from "./createBrowserSystem.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
+import { fetchUsingXHR } from "../../fetchUsingXHR.js"
 
 const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
-const { outDirectoryRelativeUrl, importMapFileRelativeUrl, importDefaultExtension } = env
 
-export const createBrowserRuntime = ({ compileServerOrigin }) => {
+export const createBrowserRuntime = async ({ compileServerOrigin, outDirectoryRelativeUrl }) => {
+  const outDirectoryUrl = `${compileServerOrigin}${outDirectoryRelativeUrl}`
+  const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
+  const envUrl = String(new URL("env.json", outDirectoryUrl))
+  const [groupMap, { importMapFileRelativeUrl, importDefaultExtension }] = await Promise.all([
+    fetchJson(groupMapUrl),
+    fetchJson(envUrl),
+  ])
   const compileId = computeCompileIdFromGroupId({
     groupId: resolveBrowserGroup(groupMap),
     groupMap,
   })
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
 
+  let importMap
+  if (importMapFileRelativeUrl) {
+    const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
+    const importmapFileResponse = await fetchSource(importmapFileUrl)
+    const importmapRaw =
+      importmapFileResponse.status === 404 ? {} : await importmapFileResponse.json()
+    importMap = normalizeImportMap(importmapRaw, importmapFileUrl)
+  }
+
   const importFile = async (specifier) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
       outDirectoryRelativeUrl,
-      compileDirectoryRelativeUrl,
-      importMapFileRelativeUrl,
+      importMap,
       importDefaultExtension,
+      fetchSource,
     })
     return browserSystem.import(specifier)
   }
@@ -47,16 +56,14 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
       errorExposureInDocument = true,
       executionExposureOnWindow = false,
       errorTransform = (error) => error,
-      executionId,
     } = {},
   ) => {
     const browserSystem = await memoizedCreateBrowserSystem({
-      executionId,
       compileServerOrigin,
       outDirectoryRelativeUrl,
-      compileDirectoryRelativeUrl,
-      importMapFileRelativeUrl,
+      importMap,
       importDefaultExtension,
+      fetchSource,
     })
 
     let executionResult
@@ -106,6 +113,21 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
     importFile,
     executeFile,
   }
+}
+
+const fetchSource = (url, { executionId } = {}) => {
+  return fetchUsingXHR(url, {
+    credentials: "include",
+    headers: {
+      ...(executionId ? { "x-jsenv-execution-id": executionId } : {}),
+    },
+  })
+}
+
+const fetchJson = async (url) => {
+  const response = await fetchSource(url)
+  const json = await response.json()
+  return json
 }
 
 const makeNamespaceTransferable = (namespace) => {

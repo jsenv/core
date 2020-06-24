@@ -24,8 +24,9 @@ window.execute = async ({
   await fetchAndEvalUsingXHR(browserRuntimeCompiledFileRemoteUrl)
   const { __browserRuntime__ } = window
 
-  const { compileDirectoryRelativeUrl, executeFile } = __browserRuntime__.create({
+  const { compileDirectoryRelativeUrl, executeFile } = await __browserRuntime__.create({
     compileServerOrigin,
+    outDirectoryRelativeUrl,
   })
   const compiledFileRemoteUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${fileRelativeUrl}`
 

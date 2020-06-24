@@ -17,11 +17,6 @@ export const execute = async ({
   // it avoids seeing error in runtime logs during testing
   errorExposureInConsole = false,
 }) => {
-  // should we ignore cancellation error ?
-  // process.once("unhandledRejection", (valueRejected) => {
-  //   throw valueRejected
-  // })
-
   const { compileDirectoryRelativeUrl, executeFile } = await nodeRuntime.create({
     projectDirectoryUrl,
     compileServerOrigin,
