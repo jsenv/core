@@ -3,7 +3,7 @@ import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
 import { require } from "../require.js"
 
-export const evaluateFileExecution = async (
+export const executeHtmlFile = async (
   fileRelativeUrl,
   {
     cancellationToken,

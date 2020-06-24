@@ -9,7 +9,7 @@ import { fetchUrl } from "./internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "./internal/validateResponseStatusIsOk.js"
 import { trackPageToNotify } from "./internal/browser-launcher/trackPageToNotify.js"
 import { createSharing } from "./internal/browser-launcher/createSharing.js"
-import { evaluateFileExecution } from "./internal/browser-launcher/evaluateFileExecution.js"
+import { executeHtmlFile } from "./internal/browser-launcher/executeHtmlFile.js"
 
 const playwright = require("playwright-core")
 
@@ -333,8 +333,7 @@ const browserToRuntimeHooks = (
       },
     })
     ressourceTracker.registerCleanupCallback(stopTrackingToNotify)
-    // import the file
-    return evaluateFileExecution(fileRelativeUrl, {
+    return executeHtmlFile(fileRelativeUrl, {
       cancellationToken,
 
       projectDirectoryUrl,
