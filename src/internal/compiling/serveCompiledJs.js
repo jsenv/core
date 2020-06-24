@@ -1,5 +1,5 @@
 import { urlToContentType, serveFile } from "@jsenv/server"
-import { resolveUrl, resolveDirectoryUrl, readFile } from "@jsenv/util"
+import { resolveUrl, resolveDirectoryUrl, readFile, urlToRelativeUrl } from "@jsenv/util"
 import {
   COMPILE_ID_OTHERWISE,
   COMPILE_ID_GLOBAL_BUNDLE,
@@ -186,7 +186,19 @@ export const serveCompiledJs = async ({
       projectFileRequestedCallback,
       request,
 
-      compile: () => compileHtml(originalFileUrl, { compiledFileUrl }),
+      compile: async () => {
+        const htmlBeforeCompilation = await readFile(originalFileUrl)
+        const { htmlAfterCompilation } = await compileHtml(htmlBeforeCompilation)
+
+        return {
+          compiledSource: htmlAfterCompilation,
+          contentType: "text/html",
+          sources: [urlToRelativeUrl(originalFileUrl, `${compiledFileUrl}__asset__/meta.json`)],
+          sourcesContent: [htmlBeforeCompilation],
+          assets: [],
+          assetsContent: [],
+        }
+      },
     })
   }
 

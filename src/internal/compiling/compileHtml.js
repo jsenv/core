@@ -4,31 +4,58 @@
 
 TODO:
 
-what happens if html is badly formatted
-what when there is no head tag
-be sure it works as babel parse error
-
-enforce a script in html head tag loading jsenv browser system
-
 inline javascript should create an external file (the name would be hash of script content)
 that external file should also be compiled (babel transformed)
 and that would be outputed as an html asset
 
 */
-import { readFile, urlToRelativeUrl } from "@jsenv/util"
+
 import { require } from "../require.js"
 
 const parse5 = require("parse5")
 
-export const compileHtml = async (originalFileUrl, { compiledFileUrl }) => {
-  const htmlBeforeCompilation = await readFile(originalFileUrl)
+export const compileHtml = async (htmlBeforeCompilation, { headScripts = [] } = {}) => {
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
   const document = parse5.parse(htmlBeforeCompilation)
+  injectHeadScripts(document, headScripts)
+  polyfillModuleScripts(document)
+  const htmlAfterCompilation = parse5.serialize(document)
+  return {
+    htmlAfterCompilation,
+  }
+}
 
-  // il faut aussi absolument que ces scripts charge le fichier pour avoir acces a jsenv.importFile
-  // idéalement on insere ça dans la balise head mais le mieux c'est encore que ce soit présent
-  // dans le fichier html ?
+const injectHeadScripts = (document, headScripts) => {
+  const headScriptHtml = headScripts.reduce((previous, script) => {
+    const scriptAttributes = objectToHtmlAttributes(script)
+    return `${previous}<script ${scriptAttributes}></script>
+      `
+  }, "")
+  const fragment = parse5.parseFragment(headScriptHtml)
 
+  const htmlNode = document.childNodes[0]
+  const headNode = htmlNode.childNodes[0]
+  const headChildNodes = headNode.childNodes
+  const firstScriptChildIndex = headChildNodes.findIndex((node) => node.nodeName === "script")
+  if (firstScriptChildIndex > -1) {
+    headNode.childNodes = [
+      ...headChildNodes.slice(0, firstScriptChildIndex),
+      ...fragment.childNodes,
+      ...headChildNodes.slice(firstScriptChildIndex),
+    ]
+  } else {
+    // prefer append (so that any first child being text remains and indentation is safe)
+    headNode.childNodes = [...headChildNodes, ...fragment.childNodes]
+  }
+}
+
+const objectToHtmlAttributes = (object) => {
+  return Object.keys(object)
+    .map((key) => `${key}=${JSON.stringify(object[key])}`)
+    .join(" ")
+}
+
+const polyfillModuleScripts = (document) => {
   visitDocument(document, (node) => {
     if (node.nodeName !== "script") {
       return
@@ -51,40 +78,47 @@ export const compileHtml = async (originalFileUrl, { compiledFileUrl }) => {
       const srcAttribute = attributes[srcAttributeIndex]
       const srcAttributeValue = srcAttribute.value
 
-      node.childNodes = [
-        {
-          nodeName: "#text",
-          value: `window.__jsenv__.importFile(${JSON.stringify(srcAttributeValue)})`,
-        },
+      const script = parseHtmlAsSingleElement(
+        `<script>
+      window.__jsenv__.importFile(${JSON.stringify(srcAttributeValue)})
+    </script>`,
+      )
+      // inherit script attributes (except src and type)
+      script.attrs = [
+        ...script.attrs,
+        ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
       ]
-
-      // remove src attribute
-      attributes.splice(attributes.indexOf(srcAttribute), 1)
-      // remove type attribute
-      attributes.splice(attributes.indexOf(typeAttribute), 1)
+      replaceNode(node, script)
       return
     }
 
     const firstChild = node.childNodes[0]
     if (firstChild && firstChild.nodeName === "#text") {
-      const scriptContent = firstChild.value
-
-      // replace with something that executes the file directly (is it possible with Systemjs?)
-      firstChild.value = `alert(${JSON.stringify(scriptContent)})`
-      // remove type attribute
-      attributes.splice(attributes.indexOf(typeAttribute), 1)
+      const scriptText = firstChild.value
+      const script = parseHtmlAsSingleElement(`<script>
+  alert(${JSON.stringify(scriptText)})
+</script>`)
+      // inherit script attributes (except src and type)
+      script.attrs = [
+        ...script.attrs,
+        ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
+      ]
+      replaceNode(node, script)
+      return
     }
   })
+}
 
-  const htmlAfterCompilation = parse5.serialize(document)
-  return {
-    compiledSource: htmlAfterCompilation,
-    contentType: "text/html",
-    sources: [urlToRelativeUrl(originalFileUrl, `${compiledFileUrl}__asset__/meta.json`)],
-    sourcesContent: [htmlBeforeCompilation],
-    assets: [],
-    assetsContent: [],
-  }
+const parseHtmlAsSingleElement = (html) => {
+  const fragment = parse5.parseFragment(html)
+  return fragment.childNodes[0]
+}
+
+const replaceNode = (node, newNode) => {
+  const { parentNode } = node
+  const parentNodeChildNodes = parentNode.childNodes
+  const nodeIndex = parentNodeChildNodes.indexOf(node)
+  parentNodeChildNodes[nodeIndex] = newNode
 }
 
 const visitDocument = (document, fn) => {
