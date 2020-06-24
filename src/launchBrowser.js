@@ -301,7 +301,6 @@ const browserToRuntimeHooks = (
     {
       collectNamespace,
       collectCoverage,
-      executionId,
       errorStackRemapping = true,
       // because we use a self signed certificate
       ignoreHTTPSErrors = true,
@@ -345,7 +344,6 @@ const browserToRuntimeHooks = (
 
       collectNamespace,
       collectCoverage,
-      executionId,
       errorStackRemapping,
     })
   }

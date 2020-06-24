@@ -15,7 +15,34 @@ export const createBrowserRuntime = async ({
   compileServerOrigin,
   outDirectoryRelativeUrl,
   compileId,
+  htmlFileRelativeUrl,
 }) => {
+  const decideCompileId = async ({ outDirectoryUrl }) => {
+    const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
+    const [groupMap] = await Promise.all([fetchJson(groupMapUrl)])
+
+    const compileId = computeCompileIdFromGroupId({
+      groupId: resolveBrowserGroup(groupMap),
+      groupMap,
+    })
+    return compileId
+  }
+
+  const fetchSource = (url) => {
+    return fetchUsingXHR(url, {
+      credentials: "include",
+      headers: {
+        ...(htmlFileRelativeUrl ? { "x-jsenv-execution-id": htmlFileRelativeUrl } : {}),
+      },
+    })
+  }
+
+  const fetchJson = async (url) => {
+    const response = await fetchSource(url)
+    const json = await response.json()
+    return json
+  }
+
   const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
   const envUrl = String(new URL("env.json", outDirectoryUrl))
   const [compileIdValue, { importMapFileRelativeUrl, importDefaultExtension }] = await Promise.all([
@@ -113,32 +140,6 @@ export const createBrowserRuntime = async ({
     importFile,
     executeFile,
   }
-}
-
-const decideCompileId = async ({ outDirectoryUrl }) => {
-  const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
-  const [groupMap] = await Promise.all([fetchJson(groupMapUrl)])
-
-  const compileId = computeCompileIdFromGroupId({
-    groupId: resolveBrowserGroup(groupMap),
-    groupMap,
-  })
-  return compileId
-}
-
-const fetchSource = (url, { executionId } = {}) => {
-  return fetchUsingXHR(url, {
-    credentials: "include",
-    headers: {
-      ...(executionId ? { "x-jsenv-execution-id": executionId } : {}),
-    },
-  })
-}
-
-const fetchJson = async (url) => {
-  const response = await fetchSource(url)
-  const json = await response.json()
-  return json
 }
 
 const makeNamespaceTransferable = (namespace) => {

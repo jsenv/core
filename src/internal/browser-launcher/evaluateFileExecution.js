@@ -15,7 +15,6 @@ export const evaluateFileExecution = async (
 
     collectNamespace,
     collectCoverage,
-    executionId,
     errorStackRemapping,
     executionExposureOnWindow,
   },
@@ -39,11 +38,12 @@ export const evaluateFileExecution = async (
   console.log({
     // ces trucs la sont des sortes d'option qu'on pourrait activer en faisant
     // window.__jsenv__.scriptExecutionOptions.errorStackRemapping = true
+    // mais bon je vois pas trop comment faire
+    // la encore je mettrais bien ces options pour le serveur
     errorStackRemapping,
     executionExposureOnWindow,
     collectNamespace,
     collectCoverage,
-    executionId,
 
     // ça serais bien de le savoir on pourrait mettre
     // cette info dans le truc qui demande au server le outDirectoryRelativeUrl
