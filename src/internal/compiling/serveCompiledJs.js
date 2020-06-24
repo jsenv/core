@@ -1,5 +1,5 @@
 import { urlToContentType, serveFile } from "@jsenv/server"
-import { resolveUrl, resolveDirectoryUrl, readFile, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, resolveDirectoryUrl, readFile } from "@jsenv/util"
 import {
   COMPILE_ID_OTHERWISE,
   COMPILE_ID_GLOBAL_BUNDLE,
@@ -12,9 +12,7 @@ import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
 import { serveBundle } from "./serveBundle.js"
-import { require } from "../require.js"
-
-const parse5 = require("parse5")
+import { compileHtml } from "./compileHtml.js"
 
 export const serveCompiledJs = async ({
   cancellationToken,
@@ -188,84 +186,7 @@ export const serveCompiledJs = async ({
       projectFileRequestedCallback,
       request,
 
-      compile: async () => {
-        const htmlBeforeCompilation = await readFile(originalFileUrl)
-        // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
-        const document = parse5.parse(htmlBeforeCompilation)
-
-        const visitDocument = (fn) => {
-          const visitNode = (node) => {
-            fn(node)
-            const { childNodes } = node
-            if (childNodes) {
-              let i = 0
-              while (i < childNodes.length) {
-                visitNode(childNodes[i++])
-              }
-            }
-          }
-          visitNode(document)
-        }
-
-        // il faut aussi absolument que ces scripts charge le fichier
-        // browserRunTime
-        // idéalement on insere ça dans la balise head mais le mieux c'est encore que ce soit présent
-        // dans le fichier html ?
-        visitDocument((node) => {
-          if (node.nodeName !== "script") {
-            return
-          }
-
-          const attributes = node.attrs
-          const typeAttributeIndex = attributes.findIndex((attr) => attr.name === "type")
-          if (typeAttributeIndex === -1) {
-            return
-          }
-
-          const typeAttribute = attributes[typeAttributeIndex]
-          const typeAttributeValue = typeAttribute.value
-          if (typeAttributeValue !== "module") {
-            return
-          }
-
-          const srcAttributeIndex = attributes.findIndex((attr) => attr.name === "src")
-          if (srcAttributeIndex > -1) {
-            const srcAttribute = attributes[srcAttributeIndex]
-            const srcAttributeValue = srcAttribute.value
-
-            // replace script content with something that would import that script
-            node.childNodes = [
-              { nodeName: "#text", value: `alert(${JSON.stringify(srcAttributeValue)})` },
-            ]
-            // remove src attribute
-            attributes.splice(attributes.indexOf(srcAttribute), 1)
-            // remove type attribute
-            attributes.splice(attributes.indexOf(typeAttribute), 1)
-            return
-          }
-
-          const firstChild = node.childNodes[0]
-          if (firstChild && firstChild.nodeName === "#text") {
-            const scriptContent = firstChild.value
-
-            // replace with something that executes the file directly (is it possible with Systemjs?)
-            firstChild.value = `alert(${JSON.stringify(scriptContent)})`
-            // remove type attribute
-            attributes.splice(attributes.indexOf(typeAttribute), 1)
-          }
-        })
-
-        // https://github.com/systemjs/systemjs/blob/d37f7cade33bb965ccfbd8e1a065e7c5db80a800/src/features/script-load.js#L61
-        const htmlAfterCompilation = parse5.serialize(document)
-        return {
-          compiledSource: htmlAfterCompilation,
-          contentType: "text/html",
-          sources: [urlToRelativeUrl(originalFileUrl, `${compiledFileUrl}__asset__/meta.json`)],
-          sourcesContent: [htmlBeforeCompilation],
-          assets: [],
-          assetsContent: [],
-        }
-      },
+      compile: () => compileHtml(originalFileUrl, { compiledFileUrl }),
     })
   }
 
