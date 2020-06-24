@@ -31,7 +31,7 @@ import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
 import { readProjectImportMap } from "./readProjectImportMap.js"
-import { serveCompiledJs } from "./serveCompiledJs.js"
+import { serveCompiledFile } from "./serveCompiledFile.js"
 import { urlIsAsset } from "./urlIsAsset.js"
 
 export const startCompileServer = async ({
@@ -235,7 +235,7 @@ ${projectDirectoryUrl}`)
           })
         },
         () => {
-          return serveCompiledJs({
+          return serveCompiledFile({
             cancellationToken,
             logger,
 

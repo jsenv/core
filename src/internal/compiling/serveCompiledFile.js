@@ -14,7 +14,7 @@ import { compileFile } from "./compileFile.js"
 import { serveBundle } from "./serveBundle.js"
 import { compileHtml } from "./compileHtml.js"
 
-export const serveCompiledJs = async ({
+export const serveCompiledFile = async ({
   cancellationToken,
   logger,
 
