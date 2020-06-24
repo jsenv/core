@@ -2,8 +2,6 @@ import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { uneval } from "@jsenv/uneval"
 // do not use memoize from @jsenv/util to avoid pulling @jsenv/util code into the browser bundle
 import { memoize } from "../../memoize.js"
-import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
-import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 import { createBrowserSystem } from "./createBrowserSystem.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
@@ -11,19 +9,19 @@ import { fetchUsingXHR } from "../../fetchUsingXHR.js"
 
 const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
 
-export const createBrowserRuntime = async ({ compileServerOrigin, outDirectoryRelativeUrl }) => {
+export const createBrowserRuntime = async ({
+  compileServerOrigin,
+  outDirectoryRelativeUrl,
+  compileId,
+}) => {
   const outDirectoryUrl = `${compileServerOrigin}${outDirectoryRelativeUrl}`
-  const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
   const envUrl = String(new URL("env.json", outDirectoryUrl))
-  const [groupMap, { importMapFileRelativeUrl, importDefaultExtension }] = await Promise.all([
-    fetchJson(groupMapUrl),
+  const [compileIdValue, { importMapFileRelativeUrl, importDefaultExtension }] = await Promise.all([
+    compileId || decideCompileId({ outDirectoryUrl }),
     fetchJson(envUrl),
   ])
-  const compileId = computeCompileIdFromGroupId({
-    groupId: resolveBrowserGroup(groupMap),
-    groupMap,
-  })
-  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
+
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileIdValue}/`
 
   let importMap
   if (importMapFileRelativeUrl) {
@@ -113,6 +111,21 @@ export const createBrowserRuntime = async ({ compileServerOrigin, outDirectoryRe
     importFile,
     executeFile,
   }
+}
+
+const decideCompileId = async ({ outDirectoryUrl }) => {
+  const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
+  const [{ computeCompileIdFromGroupId }, { resolveBrowserGroup }, groupMap] = await Promise.all([
+    import("../computeCompileIdFromGroupId.js"),
+    import("../resolveBrowserGroup.js"),
+    fetchJson(groupMapUrl),
+  ])
+
+  const compileId = computeCompileIdFromGroupId({
+    groupId: resolveBrowserGroup(groupMap),
+    groupMap,
+  })
+  return compileId
 }
 
 const fetchSource = (url, { executionId } = {}) => {

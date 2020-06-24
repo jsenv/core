@@ -367,9 +367,25 @@ export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
 }
 
 const serveBrowserScript = async (request, { projectDirectoryUrl, outDirectoryRelativeUrl }) => {
+  if (request.headers["x-jsenv-exploring"]) {
+    const body = JSON.stringify({
+      outDirectoryRelativeUrl,
+    })
+
+    return {
+      status: 200,
+      headers: {
+        "cache-control": "no-store",
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(body),
+      },
+      body,
+    }
+  }
+
   if (request.ressource === "/.jsenv/browser-script.js") {
     const browserJsFileUrl = resolveUrl(
-      "./src/internal/browser-launcher/browser-js-file.js",
+      "./src/internal/browser-launcher/jsenv-browser-system.js",
       jsenvCoreDirectoryUrl,
     )
     const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
