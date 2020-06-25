@@ -1,27 +1,24 @@
 /**
 
-- https://github.com/systemjs/systemjs/blob/d37f7cade33bb965ccfbd8e1a065e7c5db80a800/src/features/script-load.js#L61
-
-TODO:
-
-inline javascript should create an external file (the name would be hash of script content)
-that external file should also be compiled (babel transformed)
-and that would be outputed as an html asset
-
 */
 
+import { createHash } from "crypto"
 import { require } from "../require.js"
 
 const parse5 = require("parse5")
 
-export const compileHtml = async (htmlBeforeCompilation, { headScripts = [] } = {}) => {
+export const compileHtml = (
+  htmlBeforeCompilation,
+  { headScripts = [], generateInlineScriptSrc = ({ hash }) => `${hash}.js` } = {},
+) => {
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
   const document = parse5.parse(htmlBeforeCompilation)
   injectHeadScripts(document, headScripts)
-  polyfillModuleScripts(document)
+  const scriptsExternalized = polyfillModuleScripts(document, { generateInlineScriptSrc })
   const htmlAfterCompilation = parse5.serialize(document)
   return {
     htmlAfterCompilation,
+    scriptsExternalized,
   }
 }
 
@@ -55,7 +52,7 @@ const objectToHtmlAttributes = (object) => {
     .join(" ")
 }
 
-const polyfillModuleScripts = (document) => {
+const polyfillModuleScripts = (document, { generateInlineScriptSrc }) => {
   /*
   <script type="module" src="*" /> are going to be inlined
   <script type="module">** </script> are going to be transformed to import a file so that we can transform the script content.
@@ -65,6 +62,7 @@ const polyfillModuleScripts = (document) => {
   For that reason we perform mutation in the end
   */
   const mutations = []
+  const scriptsExternalized = {}
 
   visitDocument(document, (node) => {
     if (node.nodeName !== "script") {
@@ -88,17 +86,13 @@ const polyfillModuleScripts = (document) => {
       const srcAttribute = attributes[srcAttributeIndex]
       const srcAttributeValue = srcAttribute.value
 
-      const script = parseHtmlAsSingleElement(
-        `<script>
-      window.__jsenv__.importFile(${JSON.stringify(srcAttributeValue)})
-    </script>`,
-      )
-      // inherit script attributes (except src and type)
-      script.attrs = [
-        ...script.attrs,
-        ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
-      ]
       mutations.push(() => {
+        const script = parseHtmlAsSingleElement(generateScriptForJsenv(srcAttributeValue))
+        // inherit script attributes (except src and type)
+        script.attrs = [
+          ...script.attrs,
+          ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
+        ]
         replaceNode(node, script)
       })
       return
@@ -107,22 +101,38 @@ const polyfillModuleScripts = (document) => {
     const firstChild = node.childNodes[0]
     if (firstChild && firstChild.nodeName === "#text") {
       const scriptText = firstChild.value
-      const script = parseHtmlAsSingleElement(`<script>
-  alert(${JSON.stringify(scriptText)})
-</script>`)
-      // inherit script attributes (except src and type)
-      script.attrs = [
-        ...script.attrs,
-        ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
-      ]
       mutations.push(() => {
+        const hash = createScriptContentHash(scriptText)
+        const src = generateInlineScriptSrc({ hash })
+        const script = parseHtmlAsSingleElement(generateScriptForJsenv(src))
+        // inherit script attributes (except src and type)
+        script.attrs = [
+          ...script.attrs,
+          ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
+        ]
         replaceNode(node, script)
+
+        scriptsExternalized[src] = scriptText
       })
       return
     }
   })
 
   mutations.forEach((fn) => fn())
+
+  return scriptsExternalized
+}
+
+const generateScriptForJsenv = (src) => {
+  return `<script>
+      window.__jsenv__.importFile(${JSON.stringify(src)})
+    </script>`
+}
+
+const createScriptContentHash = (content) => {
+  const hash = createHash("sha256")
+  hash.update(content)
+  return hash.digest("hex").slice(0, 8)
 }
 
 const parseHtmlAsSingleElement = (html) => {

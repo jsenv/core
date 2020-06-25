@@ -1,3 +1,4 @@
+import { basename } from "path"
 import { urlToContentType, serveFile } from "@jsenv/server"
 import { resolveUrl, resolveDirectoryUrl, readFile, urlToRelativeUrl } from "@jsenv/util"
 import {
@@ -189,21 +190,41 @@ export const serveCompiledFile = async ({
 
       compile: async () => {
         const htmlBeforeCompilation = await readFile(originalFileUrl)
-        const { htmlAfterCompilation } = await compileHtml(htmlBeforeCompilation, {
+
+        const assetDirectoryRelativeUrl = urlToRelativeUrl(
+          originalFileUrl,
+          `${compiledFileUrl}__asset__/`,
+        )
+
+        const { htmlAfterCompilation, scriptsExternalized } = compileHtml(htmlBeforeCompilation, {
           headScripts: [
             {
               src: `/${browserBundledJsFileRelativeUrl}`,
             },
           ],
+          generateInlineScriptSrc: (hash) =>
+            `./${assetDirectoryRelativeUrl}${basename(originalFileUrl)}.${hash}.js`,
         })
+
+        const assets = []
+        const assetsContent = []
+        await Promise.all(
+          Object.keys(scriptsExternalized).map(async (key) => {
+            const scriptBeforeCompilation = scriptsExternalized[key]
+            const scriptAfterCompilation = await scriptBeforeCompilation
+
+            assets.push(key)
+            assetsContent.push(scriptAfterCompilation)
+          }),
+        )
 
         return {
           compiledSource: htmlAfterCompilation,
           contentType: "text/html",
-          sources: [urlToRelativeUrl(originalFileUrl, `${compiledFileUrl}__asset__/meta.json`)],
+          sources: [`${assetDirectoryRelativeUrl}/meta.json`],
           sourcesContent: [htmlBeforeCompilation],
-          assets: [],
-          assetsContent: [],
+          assets,
+          assetsContent,
         }
       },
     })

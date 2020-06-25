@@ -2,26 +2,10 @@
 
 TODO:
 
-- launchBrowser must now work with html files instead of js
-
-{
-  [urlOfScriptA]: {
-    status,
-    error,
-    namespace,
-    coverage,
-  },
-  [urlOfScriptB]: { }
-  // and so on
-}
-
-et donc décider comment on récupere ces infos:
-const result = await browserPage.waitFor(() => window.__jsenv__.htmlExecutionResult)
+- handle inline scripts in compileHtml.js
 
 - voir comment on va gérer ça dans exploring mais a priori exploring se simplifie
 puisqu'il s'agit juste d'ouvrir une page html compilé par compile serveur
-
-- handle inline scripts in compileHtml.js
 
 - mettre livereload dans compile server au lieu d'avoir une interface pour que exploring l'implémente
 (mais ça suppose que livereload se fait quoi qu'il arrive alors que ça peut etre couteux)
