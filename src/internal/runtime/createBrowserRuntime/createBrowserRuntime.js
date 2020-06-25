@@ -75,7 +75,6 @@ export const createBrowserRuntime = async ({
   const executeFile = async (
     specifier,
     {
-      collectCoverage,
       transferableNamespace = false,
       errorExposureInConsole = true,
       errorExposureInNotification = false,
@@ -103,7 +102,7 @@ export const createBrowserRuntime = async ({
       executionResult = {
         status: "completed",
         namespace,
-        coverageMap: collectCoverage ? readCoverage() : undefined,
+        coverageMap: readCoverage(),
       }
     } catch (error) {
       let transformedError
@@ -120,7 +119,7 @@ export const createBrowserRuntime = async ({
       executionResult = {
         status: "errored",
         exceptionSource: unevalException(transformedError),
-        coverageMap: collectCoverage ? readCoverage() : undefined,
+        coverageMap: readCoverage(),
       }
     }
 

@@ -9,7 +9,6 @@ window.execute = async ({
   sourcemapMappingFileRelativeUrl,
   compileServerOrigin,
   transferableNamespace,
-  collectCoverage,
   executionId,
   // do not log in the console
   // because error handling becomes responsability
@@ -53,7 +52,6 @@ window.execute = async ({
 
   return executeFile(compiledFileRemoteUrl, {
     transferableNamespace,
-    collectCoverage,
     executionId,
     errorExposureInConsole,
     errorExposureInNotification,

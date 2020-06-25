@@ -50,7 +50,7 @@ export const createNodeRuntime = async ({
 
   const executeFile = async (
     specifier,
-    { collectCoverage, errorExposureInConsole = true, errorTransform = (error) => error } = {},
+    { errorExposureInConsole = true, errorTransform = (error) => error } = {},
   ) => {
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
@@ -65,7 +65,7 @@ export const createNodeRuntime = async ({
       return {
         status: "completed",
         namespace,
-        coverageMap: collectCoverage ? readCoverage() : undefined,
+        coverageMap: readCoverage(),
       }
     } catch (error) {
       let transformedError
@@ -80,7 +80,7 @@ export const createNodeRuntime = async ({
       return {
         status: "errored",
         exceptionSource: unevalException(transformedError),
-        coverageMap: collectCoverage ? readCoverage() : undefined,
+        coverageMap: readCoverage(),
       }
     }
   }

@@ -8,7 +8,6 @@ export const execute = async ({
   compileServerOrigin,
   outDirectoryRelativeUrl,
 
-  collectCoverage,
   executionId,
   // do not log in the console
   // because error handling becomes responsability
@@ -31,7 +30,6 @@ export const execute = async ({
     `${compileServerOrigin}/${compileDirectoryRelativeUrl}`,
   )
   return executeFile(compiledFileRemoteUrl, {
-    collectCoverage,
     executionId,
     errorTransform: async (error) => {
       // code can throw something else than an error
