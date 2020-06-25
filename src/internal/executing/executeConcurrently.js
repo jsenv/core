@@ -57,7 +57,6 @@ export const executeConcurrently = async (
     captureConsole: true,
     collectRuntimeName: true,
     collectRuntimeVersion: true,
-    collectNamespace: false,
     collectCoverage: coverage,
 
     mainFileNotFoundCallback: ({ fileRelativeUrl }) => {
@@ -112,7 +111,6 @@ ${fileRelativeUrl}`),
         collectRuntimeName,
         collectRuntimeVersion,
         collectCoverage,
-        collectNamespace,
 
         mainFileNotFoundCallback,
         beforeExecutionCallback,
@@ -158,7 +156,6 @@ ${fileRelativeUrl}`),
         executionId,
         fileRelativeUrl,
         collectCoverage,
-        collectNamespace,
 
         ...rest,
       })

@@ -33,7 +33,6 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       outDirectoryRelativeUrl,
     }),
-  collectNamespace: false,
   runtimeDisconnectCallback: (argValue) => {
     disconnectCallbackArg = argValue
   },

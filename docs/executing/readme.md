@@ -268,7 +268,7 @@ const { error } = await execute({
 
 ## namespace
 
-`namespace` is an object containing exports of the executed file. It is returned only when `collectNamespace` is enabled.
+`namespace` is an object containing exports of the executed file.
 
 ```js
 import { execute } from "@jsenv/core"
@@ -276,7 +276,6 @@ import { execute } from "@jsenv/core"
 const { namespace } = await execute({
   projectDirectoryUrl: __dirname,
   fileRelativeUrl: "./index.js",
-  collectNamespace: true, // without this namespace is undefined
 })
 ```
 

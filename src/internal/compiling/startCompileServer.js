@@ -20,6 +20,7 @@ import {
   removeFileSystemNode,
   ensureEmptyDirectory,
   registerFileLifecycle,
+  fileSystemPathToUrl,
 } from "@jsenv/util"
 import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
@@ -33,6 +34,7 @@ import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
 import { readProjectImportMap } from "./readProjectImportMap.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
 import { urlIsAsset } from "./urlIsAsset.js"
+import { require } from "../require.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -87,6 +89,8 @@ export const startCompileServer = async ({
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
   runtimeAlwaysInsideRuntimeScoreMap = false,
+
+  // errorStackRemapping,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
@@ -209,6 +213,16 @@ ${projectDirectoryUrl}`)
   const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
   const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
 
+  const sourcemapMainFileUrl = fileSystemPathToUrl(require.resolve("source-map/dist/source-map.js"))
+  const sourcemapMappingFileUrl = fileSystemPathToUrl(
+    require.resolve("source-map/lib/mappings.wasm"),
+  )
+  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl)
+  const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
+    sourcemapMappingFileUrl,
+    projectDirectoryUrl,
+  )
+
   const compileServer = await startServer({
     cancellationToken,
     logLevel: compileServerLogLevel,
@@ -240,6 +254,8 @@ ${projectDirectoryUrl}`)
             projectDirectoryUrl,
             outDirectoryRelativeUrl,
             browserBundledJsFileRelativeUrl,
+            sourcemapMainFileRelativeUrl,
+            sourcemapMappingFileRelativeUrl,
           })
         },
         () => {

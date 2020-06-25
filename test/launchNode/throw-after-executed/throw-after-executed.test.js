@@ -33,7 +33,6 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
-  collectNamespace: false,
   runtimeErrorCallback: (value) => {
     errorCallbackArgValue = value
   },

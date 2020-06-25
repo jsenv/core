@@ -24,7 +24,6 @@
       - [allocatedMs](#allocatedMs)
       - [measureDuration](#measureDuration)
       - [captureConsole](#captureConsole)
-      - [collectNamespace](#collectNamespace)
       - [collectCoverage](#collectCoverage)
       - [logSuccess](#logSuccess)
   - [executionDefaultOptions](#executionDefaultOptions)
@@ -343,12 +342,6 @@ When true `startMs`, `endMs` properties are availabe on every execution result i
 A boolean controlling if console logs are captured during file execution and reported back. This parameter is optional with a default value of true.
 
 When true `consoleCalls` property is availabe on every execution result inside [testPlanReport](#testPlanReport)
-
-#### collectNamespace
-
-A boolean controlling if file exports are collected and reported back. This parameter is optional with a default value of false.
-
-When true `namespace` property is availabe on every execution result inside [testPlanReport](#testPlanReport)
 
 #### collectCoverage
 

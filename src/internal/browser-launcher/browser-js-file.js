@@ -8,7 +8,6 @@ window.execute = async ({
   sourcemapMainFileRelativeUrl,
   sourcemapMappingFileRelativeUrl,
   compileServerOrigin,
-  collectNamespace,
   transferableNamespace,
   collectCoverage,
   executionId,
@@ -53,7 +52,6 @@ window.execute = async ({
   }
 
   return executeFile(compiledFileRemoteUrl, {
-    collectNamespace,
     transferableNamespace,
     collectCoverage,
     executionId,

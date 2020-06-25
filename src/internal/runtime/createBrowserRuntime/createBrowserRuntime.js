@@ -76,7 +76,6 @@ export const createBrowserRuntime = async ({
     specifier,
     {
       collectCoverage,
-      collectNamespace,
       transferableNamespace = false,
       errorExposureInConsole = true,
       errorExposureInNotification = false,
@@ -96,12 +95,9 @@ export const createBrowserRuntime = async ({
     let executionResult
     try {
       let namespace = await browserSystem.import(specifier)
-      if (collectNamespace) {
-        if (transferableNamespace) {
-          namespace = makeNamespaceTransferable(namespace)
-        }
-      } else {
-        namespace = undefined
+
+      if (transferableNamespace) {
+        namespace = makeNamespaceTransferable(namespace)
       }
 
       executionResult = {

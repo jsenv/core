@@ -168,7 +168,6 @@ const loadAndExecute = async (execution, { cancellationToken }) => {
       browserRuntimeFileRelativeUrl,
       sourcemapMainFileRelativeUrl,
       sourcemapMappingFileRelativeUrl,
-      collectNamespace: true,
       transferableNamespace: true,
       collectCoverage: false,
       executionId: execution.fileRelativeUrl,

@@ -299,9 +299,6 @@ const browserToRuntimeHooks = (
   const executeFile = async (
     fileRelativeUrl,
     {
-      collectNamespace,
-      collectCoverage,
-      errorStackRemapping = true,
       // because we use a self signed certificate
       ignoreHTTPSErrors = true,
     },
@@ -340,10 +337,6 @@ const browserToRuntimeHooks = (
       compileServerOrigin,
 
       page,
-
-      collectNamespace,
-      collectCoverage,
-      errorStackRemapping,
     })
   }
 

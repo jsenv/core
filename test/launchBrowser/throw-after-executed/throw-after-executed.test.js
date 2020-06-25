@@ -41,7 +41,6 @@ const actual = await launchAndExecute({
     errorCallbackArg = argValue
     cancel("error") // kill chromium browser to let process end
   },
-  collectNamespace: false,
 })
 
 const expected = {

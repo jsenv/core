@@ -50,12 +50,7 @@ export const createNodeRuntime = async ({
 
   const executeFile = async (
     specifier,
-    {
-      collectCoverage,
-      collectNamespace,
-      errorExposureInConsole = true,
-      errorTransform = (error) => error,
-    } = {},
+    { collectCoverage, errorExposureInConsole = true, errorTransform = (error) => error } = {},
   ) => {
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
@@ -69,7 +64,7 @@ export const createNodeRuntime = async ({
       const namespace = await makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
       return {
         status: "completed",
-        namespace: collectNamespace ? namespace : undefined,
+        namespace,
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }
     } catch (error) {

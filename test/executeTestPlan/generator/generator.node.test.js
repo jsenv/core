@@ -12,7 +12,6 @@ const testPlan = {
   [fileRelativeUrl]: {
     node: {
       launch: launchNode,
-      collectNamespace: false,
     },
   },
 }

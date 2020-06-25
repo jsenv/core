@@ -8,7 +8,6 @@ export const EXECUTE_TEST_PARAMS = {
   jsenvDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
   executionDefaultOptions: {
-    collectNamespace: true,
     measureDuration: false,
     captureConsole: false,
   },

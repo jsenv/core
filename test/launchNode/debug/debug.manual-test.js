@@ -35,7 +35,6 @@ import {
       }),
     fileRelativeUrl,
     mirrorConsole: true,
-    collectNamespace: false,
   })
   const expected = {
     status: "completed",

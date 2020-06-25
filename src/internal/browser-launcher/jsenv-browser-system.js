@@ -39,10 +39,7 @@ const importFile = async (specifier) => {
 
   const fileExecutionResultPromise = (async () => {
     const browserRuntime = await getBrowserRuntime()
-    const executionResult = await browserRuntime.executeFile(specifier, {
-      collectCoverage: true,
-      collectNamespace: true,
-    })
+    const executionResult = await browserRuntime.executeFile(specifier, {})
     return executionResult
   })()
 

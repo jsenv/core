@@ -388,13 +388,10 @@ const createErroredExecutionResult = ({ error, coverageMap }, { collectCoverage 
   }
 }
 
-const createCompletedExecutionResult = (
-  { namespace, coverageMap },
-  { collectNamespace, collectCoverage },
-) => {
+const createCompletedExecutionResult = ({ namespace, coverageMap }, { collectCoverage }) => {
   return {
     status: "completed",
-    ...(collectNamespace ? { namespace: normalizeNamespace(namespace) } : {}),
+    namespace: normalizeNamespace(namespace),
     ...(collectCoverage ? { coverageMap } : {}),
   }
 }

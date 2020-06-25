@@ -32,7 +32,6 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
-  collectNamespace: false,
 })
 const expected = {
   status: "completed",

@@ -19,7 +19,6 @@ const actual = await execute({
   launch: launchChromium,
   stopAfterExecute: true,
   fileRelativeUrl,
-  collectNamespace: true,
 })
 const expected = {
   status: "completed",

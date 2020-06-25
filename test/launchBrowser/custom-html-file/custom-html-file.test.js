@@ -37,7 +37,6 @@ await Promise.all(
           // headless: false,
         }),
       // stopAfterExecute: false,
-      collectNamespace: true,
       htmlFileRelativeUrl,
     })
     const expected = {

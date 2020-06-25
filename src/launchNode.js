@@ -216,10 +216,7 @@ export const launchNode = async ({
     return killChildProcess({ signal: GRACEFUL_STOP_SIGNAL })
   }
 
-  const executeFile = async (
-    fileRelativeUrl,
-    { collectNamespace, collectCoverage, executionId },
-  ) => {
+  const executeFile = async (fileRelativeUrl, { collectCoverage, executionId }) => {
     const execute = async () => {
       return new Promise(async (resolve, reject) => {
         onceProcessMessage(childProcess, "evaluate-result", ({ status, value }) => {
@@ -239,7 +236,6 @@ ${value}`)
           fileRelativeUrl,
           compileServerOrigin,
 
-          collectNamespace,
           collectCoverage,
           executionId,
           remap,

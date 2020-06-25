@@ -34,7 +34,6 @@ await Promise.all(
           outDirectoryRelativeUrl,
           compileServerOrigin,
         }),
-      collectNamespace: true,
     })
     const expected = {
       status: "completed",
