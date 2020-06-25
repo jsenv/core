@@ -1,3 +1,4 @@
+/* eslint-disable import/max-dependencies */
 import { basename } from "path"
 import { urlToContentType, serveFile } from "@jsenv/server"
 import { resolveUrl, resolveDirectoryUrl, readFile, urlToRelativeUrl } from "@jsenv/util"
@@ -14,6 +15,7 @@ import { transformResultToCompilationResult } from "./js-compilation-service/tra
 import { compileFile } from "./compileFile.js"
 import { serveBundle } from "./serveBundle.js"
 import { compileHtml } from "./compileHtml.js"
+import { appendSourceMappingAsExternalUrl } from "../sourceMappingURLUtils.js"
 
 export const serveCompiledFile = async ({
   cancellationToken,
@@ -191,10 +193,7 @@ export const serveCompiledFile = async ({
       compile: async () => {
         const htmlBeforeCompilation = await readFile(originalFileUrl)
 
-        const assetDirectoryRelativeUrl = urlToRelativeUrl(
-          originalFileUrl,
-          `${compiledFileUrl}__asset__/`,
-        )
+        const assetDirectoryName = `${basename(compiledFileUrl)}__asset__`
 
         const { htmlAfterCompilation, scriptsExternalized } = compileHtml(htmlBeforeCompilation, {
           headScripts: [
@@ -202,26 +201,49 @@ export const serveCompiledFile = async ({
               src: `/${browserBundledJsFileRelativeUrl}`,
             },
           ],
-          generateInlineScriptSrc: (hash) =>
-            `./${assetDirectoryRelativeUrl}${basename(originalFileUrl)}.${hash}.js`,
+          generateInlineScriptSrc: ({ hash }) => `./${assetDirectoryName}/${hash}.js`,
         })
 
-        const assets = []
-        const assetsContent = []
+        let assets = []
+        let assetsContent = []
         await Promise.all(
           Object.keys(scriptsExternalized).map(async (key) => {
-            const scriptBeforeCompilation = scriptsExternalized[key]
-            const scriptAfterCompilation = await scriptBeforeCompilation
+            const scriptBasename = basename(key)
+            const scriptOriginalFileUrl = `${originalFileUrl}.${scriptBasename}`
+            const scriptAfterTransformFileUrl = `${compiledFileUrl}.${scriptBasename}`
 
-            assets.push(key)
-            assetsContent.push(scriptAfterCompilation)
+            const scriptBeforeCompilation = scriptsExternalized[key]
+            const scriptTransformResult = await transformJs({
+              projectDirectoryUrl,
+              code: scriptBeforeCompilation,
+              url: scriptOriginalFileUrl,
+              urlAfterTransform: scriptAfterTransformFileUrl,
+              babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
+              convertMap,
+              transformTopLevelAwait,
+              transformModuleIntoSystemFormat: true,
+            })
+            const sourcemapFileUrl = resolveUrl(`${key}.map`, compiledFileUrl)
+
+            let { code, map } = scriptTransformResult
+            const sourcemapFileRelativePathForModule = urlToRelativeUrl(
+              sourcemapFileUrl,
+              `${compiledFileUrl}__asset__/`,
+            )
+            code = appendSourceMappingAsExternalUrl(code, sourcemapFileRelativePathForModule)
+            const sourcemapFileRelativePathForAsset = urlToRelativeUrl(
+              sourcemapFileUrl,
+              `${compiledFileUrl}__asset__/`,
+            )
+            assets = [...assets, scriptBasename, sourcemapFileRelativePathForAsset]
+            assetsContent = [...assetsContent, code, JSON.stringify(map, null, "  ")]
           }),
         )
 
         return {
           compiledSource: htmlAfterCompilation,
           contentType: "text/html",
-          sources: [`${assetDirectoryRelativeUrl}/meta.json`],
+          sources: [`${assetDirectoryName}/meta.json`],
           sourcesContent: [htmlBeforeCompilation],
           assets,
           assetsContent,

@@ -9,7 +9,7 @@ const parse5 = require("parse5")
 
 export const compileHtml = (
   htmlBeforeCompilation,
-  { headScripts = [], generateInlineScriptSrc = ({ hash }) => `${hash}.js` } = {},
+  { headScripts = [], generateInlineScriptSrc = ({ hash }) => `./${hash}.js` } = {},
 ) => {
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
   const document = parse5.parse(htmlBeforeCompilation)

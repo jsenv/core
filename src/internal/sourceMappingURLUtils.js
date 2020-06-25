@@ -1,5 +1,12 @@
-export const writeSourceMappingURL = (source, location) => `${source}
+export const appendSourceMappingAsBase64Url = (source, map) => {
+  const mapAsBase64 = Buffer.from(JSON.stringify(map)).toString("base64")
+  return writeSourceMappingURL(source, `data:application/json;charset=utf-8;base64,${mapAsBase64}`)
+}
+
+const writeSourceMappingURL = (source, location) => `${source}
 ${"//#"} sourceMappingURL=${location}`
+
+export const appendSourceMappingAsExternalUrl = writeSourceMappingURL
 
 export const updateSourceMappingURL = (source, callback) => {
   const sourceMappingUrlRegExp = /\/\/# ?sourceMappingURL=([^\s'"]+)/g
