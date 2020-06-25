@@ -11,48 +11,57 @@ import {
   LAUNCH_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
-const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `${testDirectoryname}.js`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-  ...START_COMPILE_SERVER_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-})
+// eslint-disable-next-line import/newline-after-import
+;(async () => {
+  const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+  const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+  const testDirectoryname = basename(testDirectoryRelativeUrl)
+  const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
+  const filename = `${testDirectoryname}.html`
+  const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+  const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
+    ...START_COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+  })
 
-await Promise.all(
-  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
-    const actual = await launchAndExecute({
-      ...EXECUTION_TEST_PARAMS,
-      launch: (options) =>
-        launchBrowser({
-          ...LAUNCH_TEST_PARAMS,
-          ...options,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-          // headless: false,
-        }),
-      fileRelativeUrl,
-      captureConsole: true,
-      stopAfterExecute: true,
-    })
-    const expected = {
-      status: "completed",
-      consoleCalls: [
-        {
-          type: "log",
-          text: `foo
-`,
+  await Promise.all(
+    [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
+      const actual = await launchAndExecute({
+        ...EXECUTION_TEST_PARAMS,
+        launch: (options) =>
+          launchBrowser({
+            ...LAUNCH_TEST_PARAMS,
+            ...options,
+            outDirectoryRelativeUrl,
+            compileServerOrigin,
+            // headless: false,
+          }),
+        fileRelativeUrl,
+        captureConsole: true,
+        stopAfterExecute: true,
+      })
+      const expected = {
+        status: "completed",
+        namespace: {
+          "./log.js": {
+            status: "completed",
+            namespace: {},
+          },
         },
-        {
-          type: "log",
-          text: `bar
+        consoleCalls: [
+          {
+            type: "log",
+            text: `foo
 `,
-        },
-      ],
-    }
-    assert({ actual, expected })
-  }),
-)
+          },
+          {
+            type: "log",
+            text: `bar
+`,
+          },
+        ],
+      }
+      assert({ actual, expected })
+    }),
+  )
+})()

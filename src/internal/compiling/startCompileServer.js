@@ -89,8 +89,6 @@ export const startCompileServer = async ({
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
   runtimeAlwaysInsideRuntimeScoreMap = false,
-
-  // errorStackRemapping,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
@@ -251,9 +249,8 @@ ${projectDirectoryUrl}`)
         },
         () => {
           return serveBrowserScript(request, {
-            projectDirectoryUrl,
-            outDirectoryRelativeUrl,
             browserBundledJsFileRelativeUrl,
+            outDirectoryRelativeUrl,
             sourcemapMainFileRelativeUrl,
             sourcemapMappingFileRelativeUrl,
           })
@@ -393,11 +390,19 @@ export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
 
 const serveBrowserScript = async (
   request,
-  { browserBundledJsFileRelativeUrl, outDirectoryRelativeUrl },
+  {
+    browserBundledJsFileRelativeUrl,
+    outDirectoryRelativeUrl,
+    sourcemapMainFileRelativeUrl,
+    sourcemapMappingFileRelativeUrl,
+  },
 ) => {
   if (request.headers["x-jsenv-exploring"]) {
     const body = JSON.stringify({
       outDirectoryRelativeUrl,
+      errorStackRemapping: true,
+      sourcemapMainFileRelativeUrl,
+      sourcemapMappingFileRelativeUrl,
     })
 
     return {

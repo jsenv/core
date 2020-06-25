@@ -5,12 +5,14 @@ import { composeCoverageMap } from "../executing/coverage/composeCoverageMap.js"
 
 export const executeHtmlFile = async (
   fileRelativeUrl,
-  { cancellationToken, projectDirectoryUrl, compileServerOrigin, page },
+  { cancellationToken, projectDirectoryUrl, outDirectoryRelativeUrl, compileServerOrigin, page },
 ) => {
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
   await assertFilePresence(fileUrl) // maybe we should also ensure it's an html file
 
-  const fileClientUrl = resolveUrl(fileRelativeUrl, compileServerOrigin)
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}otherwise/`
+  const compileDirectoryRemoteUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
+  const fileClientUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
   await page.goto(fileClientUrl)
 
   let executionResult
@@ -37,7 +39,7 @@ export const executeHtmlFile = async (
 
   const coverageMap = composeCoverageMap(
     ...Object.keys(executionResult).map((fileRelativeUrl) => {
-      return executionResult[fileRelativeUrl].coverageMap
+      return executionResult[fileRelativeUrl].coverageMap || {}
     }),
   )
 

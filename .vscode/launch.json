@@ -45,6 +45,7 @@
         "node_modules/@dmail/cancellation/**",
         "node_modules/@rollup/**",
         "node_modules/playwright/**",
+        "node_modules/playwright-core/**",
         "<node_internals>/**"
       ]
     },
@@ -75,6 +76,7 @@
         "node_modules/@jsenv/cancellation/**",
         "node_modules/@rollup/**",
         "node_modules/playwright/**",
+        "node_modules/playwright-core/**",
         "node_modules/rollup/**",
         "src/internal/supportsDynamicImport.js",
         "src/internal/dynamicImportSource.js",

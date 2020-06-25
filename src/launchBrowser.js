@@ -21,6 +21,7 @@ export const launchChromium = async ({
   browserServerLogLevel,
 
   projectDirectoryUrl,
+  outDirectoryRelativeUrl,
   compileServerOrigin,
 
   headless = true,
@@ -91,6 +92,7 @@ export const launchChromium = async ({
       browserServerLogLevel,
 
       projectDirectoryUrl,
+      outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
   }
@@ -110,6 +112,7 @@ export const launchFirefox = async ({
   browserServerLogLevel,
 
   projectDirectoryUrl,
+  outDirectoryRelativeUrl,
   compileServerOrigin,
 
   headless = true,
@@ -150,6 +153,7 @@ export const launchFirefox = async ({
       browserServerLogLevel,
 
       projectDirectoryUrl,
+      outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
   }
@@ -169,6 +173,7 @@ export const launchWebkit = async ({
   browserServerLogLevel,
 
   projectDirectoryUrl,
+  outDirectoryRelativeUrl,
   compileServerOrigin,
 
   headless = true,
@@ -209,7 +214,7 @@ export const launchWebkit = async ({
       browserServerLogLevel,
 
       projectDirectoryUrl,
-
+      outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
   }
@@ -278,6 +283,7 @@ const browserToRuntimeHooks = (
     ressourceTracker,
 
     projectDirectoryUrl,
+    outDirectoryRelativeUrl,
     compileServerOrigin,
   },
 ) => {
@@ -334,6 +340,7 @@ const browserToRuntimeHooks = (
       cancellationToken,
 
       projectDirectoryUrl,
+      outDirectoryRelativeUrl,
       compileServerOrigin,
 
       page,
