@@ -1,6 +1,7 @@
 import { resolveUrl, assertFilePresence } from "@jsenv/util"
 import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
+import { composeCoverageMap } from "../executing/coverage/composeCoverageMap.js"
 
 export const executeHtmlFile = async (
   fileRelativeUrl,
@@ -12,35 +13,14 @@ export const executeHtmlFile = async (
   const fileClientUrl = resolveUrl(fileRelativeUrl, compileServerOrigin)
   await page.goto(fileClientUrl)
 
+  let executionResult
   try {
-    const executionResult = await page.evaluate(
+    executionResult = await page.evaluate(
       /* istanbul ignore next */
       () => {
         return window.__jsenv__.executionResultPromise
       },
     )
-
-    // executionResult c'est un objet contenant l'éxecution de chaque fichier
-    // il faut encore compose les coverage
-    // et décider si l'ensemble est fail ou pas en prenant la premier dont le status est errored
-    // on retournera {status, error coverageMap} ou { status, namespace: executionResult, coverageMap} en fonction
-
-    const { status } = executionResult
-    if (status === "errored") {
-      const { exceptionSource, coverageMap } = executionResult
-      return {
-        status,
-        error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
-        coverageMap,
-      }
-    }
-
-    const { namespace, coverageMap } = executionResult
-    return {
-      status,
-      namespace,
-      coverageMap,
-    }
   } catch (e) {
     // if browser is closed due to cancellation
     // before it is able to finish evaluate we can safely ignore
@@ -53,6 +33,33 @@ export const executeHtmlFile = async (
     }
 
     throw e
+  }
+
+  const coverageMap = composeCoverageMap(
+    ...Object.keys(executionResult).map((fileRelativeUrl) => {
+      return executionResult[fileRelativeUrl].coverageMap
+    }),
+  )
+
+  const fileErrored = Object.keys(executionResult).find((fileRelativeUrl) => {
+    const fileExecutionResult = executionResult[fileRelativeUrl]
+    return fileExecutionResult.status === "errored"
+  })
+
+  if (fileErrored) {
+    const { exceptionSource } = executionResult[fileErrored]
+    return {
+      status: "errored",
+      error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
+      namespace: executionResult,
+      coverageMap,
+    }
+  }
+
+  return {
+    status: "completed",
+    namespace: executionResult,
+    coverageMap,
   }
 }
 
