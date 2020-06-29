@@ -94,15 +94,21 @@ export const startCompileServer = async ({
   },
   livereloadLogLevel = "info",
 }) => {
-  ;({ importMapFileRelativeUrl } = assertAndNormalizeArguments({
+  assertArguments({
     projectDirectoryUrl,
     importMapFileRelativeUrl,
     jsenvDirectoryRelativeUrl,
-  }))
+    outDirectoryName,
+  })
 
+  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
   const outDirectoryUrl = resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl)
   const outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
+  // normalization
+  importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
+  jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl)
+
   const logger = createLogger({ logLevel: compileServerLogLevel })
   babelPluginMap = {
     "transform-replace-expressions": [
@@ -146,7 +152,10 @@ export const startCompileServer = async ({
     groupMap,
   })
 
-  const { projectFileRequestedCallback } = await setupServerSentEventsForLivereload({
+  const {
+    projectFileRequestedCallback,
+    trackMainAndDependencies,
+  } = await setupServerSentEventsForLivereload({
     cancellationToken,
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
@@ -161,7 +170,10 @@ export const startCompileServer = async ({
   const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
   const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
 
-  const serveSSEForLivereload = createSSEForLivereloadService({ cancellationToken })
+  const serveSSEForLivereload = createSSEForLivereloadService({
+    cancellationToken,
+    trackMainAndDependencies,
+  })
   const serveAssetFile = createAssetFileService({ projectDirectoryUrl })
   const serveBrowserScript = createBrowserScriptService({
     projectDirectoryUrl,
@@ -190,7 +202,10 @@ export const startCompileServer = async ({
     writeOnFilesystem,
     compileCacheStrategy,
   })
-  const serveProjectFile = createProjectFileService({ projectDirectoryUrl })
+  const serveProjectFile = createProjectFileService({
+    projectDirectoryUrl,
+    projectFileRequestedCallback,
+  })
 
   const compileServer = await startServer({
     cancellationToken,
@@ -251,7 +266,7 @@ export const startCompileServer = async ({
   }
 }
 
-const assertAndNormalizeArguments = ({
+const assertArguments = ({
   projectDirectoryUrl,
   importMapFileRelativeUrl,
   jsenvDirectoryRelativeUrl,
@@ -264,8 +279,6 @@ const assertAndNormalizeArguments = ({
   assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
   const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
-  // importMapFileRelativeUrl normalization
-  importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
 
   if (typeof jsenvDirectoryRelativeUrl !== "string") {
     throw new TypeError(
@@ -273,8 +286,7 @@ const assertAndNormalizeArguments = ({
     )
   }
   const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
-  // jsenvDirectoryRelativeUrl normalization
-  jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl)
+
   if (!jsenvDirectoryUrl.startsWith(projectDirectoryUrl)) {
     throw new TypeError(`jsenv directory must be inside project directory
 --- jsenv directory url ---
@@ -286,8 +298,6 @@ ${projectDirectoryUrl}`)
   if (typeof outDirectoryName !== "string") {
     throw new TypeError(`outDirectoryName must be a string. got ${outDirectoryName}`)
   }
-
-  return { importMapFileRelativeUrl }
 }
 
 /**

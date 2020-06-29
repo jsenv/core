@@ -17,7 +17,7 @@ import { serveBundle } from "./serveBundle.js"
 import { compileHtml } from "./compileHtml.js"
 import { appendSourceMappingAsExternalUrl } from "../sourceMappingURLUtils.js"
 
-export const createCompiledFileService = async ({
+export const createCompiledFileService = ({
   cancellationToken,
   logger,
 

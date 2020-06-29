@@ -5,10 +5,6 @@ TODO:
 - voir comment on va gérer ça dans exploring mais a priori exploring se simplifie
 puisqu'il s'agit juste d'ouvrir une page html compilé par compile serveur
 
-- mettre livereload dans compile server au lieu d'avoir une interface pour que exploring l'implémente
-(mais ça suppose que livereload se fait quoi qu'il arrive alors que ça peut etre couteux)
-a voir... (ça permettrais possiblement d'avoir du livereload sur des bundles chose qu'on a pas du tout pour le moment)
-
 - restaurer error stack dans jsenv-browser-system.js (comme browser-js-file)
 
 */
