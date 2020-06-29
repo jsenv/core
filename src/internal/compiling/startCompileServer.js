@@ -8,6 +8,7 @@ import {
   startServer,
   firstService,
   serveFile,
+  createSSERoom,
 } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
 import {
@@ -160,6 +161,7 @@ export const startCompileServer = async ({
   const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
   const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
 
+  const serveSSEForLivereload = createSSEForLivereloadService({ cancellationToken })
   const serveAssetFile = createAssetFileService({ projectDirectoryUrl })
   const serveBrowserScript = createBrowserScriptService({
     projectDirectoryUrl,
@@ -203,6 +205,7 @@ export const startCompileServer = async ({
     sendInternalErrorStack: true,
     requestToResponse: (request) =>
       firstService(
+        () => serveSSEForLivereload(request),
         () => serveAssetFile(request),
         () => serveBrowserScript(request),
         () => serveCompiledFile(request),
@@ -434,7 +437,7 @@ const setupServerSentEventsForLivereload = ({
   jsenvDirectoryRelativeUrl,
   livereloadLogLevel,
   livereloadWatchConfig,
-  historyLimit = 100,
+  historyLimit = 1000,
 }) => {
   const livereloadLogger = createLogger({ logLevel: livereloadLogLevel })
   const trackerMap = new Map()
@@ -480,7 +483,7 @@ const setupServerSentEventsForLivereload = ({
   }
 
   // each time a file is requested for the first time
-  // it's dependencySet is computed
+  // its dependencySet is computed
   // each time a file is modified, it's dependencySet is deleted
   projectFileRequested.register((mainRelativeUrl) => {
     const dependencySet = getDependencySet(mainRelativeUrl)
@@ -640,6 +643,46 @@ const setupServerSentEventsForLivereload = ({
   }
 
   return { projectFileRequestedCallback, trackMainAndDependencies }
+}
+
+const createSSEForLivereloadService = ({ cancellationToken, trackMainAndDependencies }) => {
+  return (request) => {
+    const { accept } = request.headers
+    if (!accept || !accept.includes("text/event-stream")) {
+      return null
+    }
+
+    const room = createSSERoom()
+    room.start()
+
+    const fileRelativeUrl = request.ressource.slice(1)
+    const stopTracking = trackMainAndDependencies(fileRelativeUrl, {
+      modified: ({ id, relativeUrl }) => {
+        room.sendEvent({
+          id,
+          type: "file-changed",
+          data: relativeUrl,
+        })
+      },
+      removed: ({ id, relativeUrl }) => {
+        room.sendEvent({
+          id,
+          type: "file-removed",
+          data: relativeUrl,
+        })
+      },
+      lastEventId: request.headers["last-event-id"],
+    })
+
+    cancellationToken.register(room.stop)
+    // request.cancellationToken occurs when request is aborted or closed
+    request.cancellationToken.register(() => {
+      stopTracking()
+      room.stop()
+    })
+
+    return room.connect()
+  }
 }
 
 const createAssetFileService = ({ projectDirectoryUrl }) => {
