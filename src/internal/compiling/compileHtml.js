@@ -30,7 +30,7 @@ const injectHeadScripts = (document, headScripts) => {
   }, "")
   const fragment = parse5.parseFragment(headScriptHtml)
 
-  const htmlNode = document.childNodes[0]
+  const htmlNode = document.childNodes.find((node) => node.nodeName === "html")
   const headNode = htmlNode.childNodes[0]
   const headChildNodes = headNode.childNodes
   const firstScriptChildIndex = headChildNodes.findIndex((node) => node.nodeName === "script")

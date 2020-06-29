@@ -93,6 +93,7 @@ export const startCompileServer = async ({
     "./**/node_modules/": false,
   },
   livereloadLogLevel = "info",
+  serveCustom = () => null,
 }) => {
   assertArguments({
     projectDirectoryUrl,
@@ -220,6 +221,7 @@ export const startCompileServer = async ({
     sendInternalErrorStack: true,
     requestToResponse: (request) =>
       firstService(
+        () => serveCustom(request),
         () => serveSSEForLivereload(request),
         () => serveAssetFile(request),
         () => serveBrowserScript(request),
@@ -835,7 +837,13 @@ const installStopOnPackageVersionChange = (
   const jsenvCoreDirectoryUrl = resolveUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
   const packageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
   const packageFilePath = urlToFileSystemPath(packageFileUrl)
-  const packageVersion = readPackage(packageFilePath).version
+  let packageVersion
+
+  try {
+    packageVersion = readPackage(packageFilePath).version
+  } catch (e) {
+    if (e.code === "ENOENT") return
+  }
 
   const checkPackageVersion = () => {
     let packageObject
