@@ -22,6 +22,7 @@ import {
   registerFileLifecycle,
   fileSystemPathToUrl,
   registerDirectoryLifecycle,
+  urlIsInsideOf,
 } from "@jsenv/util"
 import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
@@ -84,6 +85,13 @@ export const startCompileServer = async ({
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
   runtimeAlwaysInsideRuntimeScoreMap = false,
+
+  livereloadWatchConfig = {
+    "./**/*": true,
+    "./**/.git/": false,
+    "./**/node_modules/": false,
+  },
+  livereloadLogLevel = "info",
 }) => {
   ;({ importMapFileRelativeUrl } = assertAndNormalizeArguments({
     projectDirectoryUrl,
@@ -137,7 +145,13 @@ export const startCompileServer = async ({
     groupMap,
   })
 
-  const { projectFileRequestedCallback } = await setupLivereloading()
+  const { projectFileRequestedCallback } = await setupServerSentEventsForLivereload({
+    cancellationToken,
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    livereloadLogLevel,
+    livereloadWatchConfig,
+  })
 
   const browserJsFileUrl = resolveUrl(
     "./src/internal/browser-launcher/jsenv-browser-system.js",
@@ -393,17 +407,42 @@ const setupOutDirectory = async (
   }
 }
 
-const setupLivereloading = (
-  compileServer,
-  { cancellationToken, projectDirectoryUrl, watchConfig },
-) => {
-  // const roomSet = new Set()
-  // const trackerSet = new Set()
-  // const projectFileRequested = createCallbackList()
-  const projectFileUpdated = createCallbackList()
+// eslint-disable-next-line valid-jsdoc
+/**
+ * We need to get two things:
+ * { projectFileRequestedCallback, trackMainAndDependencies }
+ *
+ * projectFileRequestedCallback
+ * This function will be called by the compile server every time a file inside projectDirectory
+ * is requested so that we can build up the dependency tree of any file
+ *
+ * trackMainAndDependencies
+ * This function is meant to be used to implement server sent events in order for a client to know
+ * when a given file or any of its dependencies changes in order to implement livereloading.
+ * At any time this function can be called with (mainRelativeUrl, { modified, removed, lastEventId })
+ * modified is called
+ *  - immediatly if lastEventId is passed and mainRelativeUrl or any of its dependencies have
+ *  changed since that event (last change is passed to modified if their is more than one change)
+ *  - when mainRelativeUrl or any of its dependencies is modified
+ * removed is called
+ *  - with same spec as modified but when a file is deleted from the filesystem instead of modified
+ *
+ */
+const setupServerSentEventsForLivereload = ({
+  cancellationToken,
+  projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
+  livereloadLogLevel,
+  livereloadWatchConfig,
+  historyLimit = 100,
+}) => {
+  const livereloadLogger = createLogger({ logLevel: livereloadLogLevel })
+  const trackerMap = new Map()
+  const projectFileRequested = createCallbackList()
+  const projectFileModified = createCallbackList()
   const projectFileRemoved = createCallbackList()
 
-  const projectFileRequestedCallback = (relativeUrl) => {
+  const projectFileRequestedCallback = (relativeUrl, request) => {
     // I doubt an asset like .js.map will change
     // in theory a compilation asset should not change
     // if the source file did not change
@@ -411,14 +450,16 @@ const setupLivereloading = (
     if (urlIsAsset(`${projectDirectoryUrl}${relativeUrl}`)) {
       return
     }
+
+    projectFileRequested.notify(relativeUrl, request)
   }
   const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryUrl, {
     watchDescription: {
-      ...watchConfig,
-      [compileServer.jsenvDirectoryRelativeUrl]: false,
+      ...livereloadWatchConfig,
+      [jsenvDirectoryRelativeUrl]: false,
     },
     updated: ({ relativeUrl }) => {
-      projectFileUpdated.notify(relativeUrl)
+      projectFileModified.notify(relativeUrl)
     },
     removed: ({ relativeUrl }) => {
       projectFileRemoved.notify(relativeUrl)
@@ -428,7 +469,177 @@ const setupLivereloading = (
   })
   cancellationToken.register(unregisterDirectoryLifecyle)
 
-  return { projectFileRequestedCallback }
+  const getDependencySet = (mainRelativeUrl) => {
+    if (trackerMap.has(mainRelativeUrl)) {
+      return trackerMap.get(mainRelativeUrl)
+    }
+    const dependencySet = new Set()
+    dependencySet.add(mainRelativeUrl)
+    trackerMap.set(mainRelativeUrl, dependencySet)
+    return dependencySet
+  }
+
+  // each time a file is requested for the first time
+  // it's dependencySet is computed
+  // each time a file is modified, it's dependencySet is deleted
+  projectFileRequested.register((mainRelativeUrl) => {
+    const dependencySet = getDependencySet(mainRelativeUrl)
+
+    const unregisterDependencyRequested = projectFileRequested.register((relativeUrl, request) => {
+      if (dependencySet.has(relativeUrl)) {
+        return
+      }
+
+      const dependencyReport = reportDependency(relativeUrl, mainRelativeUrl, request)
+      if (dependencyReport.dependency === false) {
+        livereloadLogger.debug(
+          `${relativeUrl} not a dependency of ${mainRelativeUrl} because ${dependencyReport.reason}`,
+        )
+        return
+      }
+
+      livereloadLogger.debug(
+        `${relativeUrl} is a dependency of ${mainRelativeUrl} because ${dependencyReport.reason}`,
+      )
+      dependencySet.add(relativeUrl)
+    })
+    const unregisterMainModified = projectFileModified.register((relativeUrl) => {
+      if (relativeUrl === mainRelativeUrl) {
+        unregisterDependencyRequested()
+        unregisterMainModified()
+        unregisterMainRemoved()
+        trackerMap.delete(mainRelativeUrl)
+      }
+    })
+    const unregisterMainRemoved = projectFileRemoved.register((relativeUrl) => {
+      if (relativeUrl === mainRelativeUrl) {
+        unregisterDependencyRequested()
+        unregisterMainModified()
+        unregisterMainRemoved()
+        trackerMap.delete(mainRelativeUrl)
+      }
+    })
+  })
+
+  // if serverLastEventId grows too fast we could use
+  // `${fileRelativeUrl}-${numberOfMsSinceServerStarted}` instead
+  let serverLastEventId = 0
+  const events = []
+  const rememberEvent = (event) => {
+    events.push(event)
+
+    if (events.length >= historyLimit) {
+      events.shift()
+    }
+  }
+
+  const trackMainAndDependencies = (mainRelativeUrl, { modified, removed, lastEventId }) => {
+    livereloadLogger.info(`track ${mainRelativeUrl} and its dependencies`)
+    const dependencySet = getDependencySet(mainRelativeUrl)
+
+    // don't forget to avoid passing this id to event room connect method
+    // because we have "reimplemented" event history there
+    if (lastEventId) {
+      const eventIndex = events.findIndex((event) => event.id === lastEventId)
+      const eventsSinceLastEvent = eventIndex === -1 ? [] : events.slice(eventIndex)
+      const lastEvent = eventsSinceLastEvent
+        .reverse()
+        .find((event) => dependencySet.has(event.relativeUrl))
+      if (lastEvent) {
+        if (lastEvent.type === "modified") {
+          modified(lastEvent)
+        } else {
+          removed(lastEvent)
+        }
+      }
+    }
+
+    const unregisterModified = projectFileModified.register((relativeUrl) => {
+      if (dependencySet.has(relativeUrl)) {
+        const modifiedEvent = {
+          id: serverLastEventId++,
+          type: "modified",
+          relativeUrl,
+        }
+        rememberEvent(modifiedEvent)
+        modified(modifiedEvent)
+      }
+    })
+    const unregisterDeleted = projectFileRemoved.register((relativeUrl) => {
+      if (dependencySet.has(relativeUrl)) {
+        const removedEvent = {
+          id: serverLastEventId++,
+          type: "removed",
+          relativeUrl,
+        }
+        rememberEvent(removedEvent)
+        removed(removedEvent)
+      }
+    })
+
+    return () => {
+      livereloadLogger.info(`stop tracking ${mainRelativeUrl} and its dependencies.`)
+      unregisterModified()
+      unregisterDeleted()
+    }
+  }
+
+  const reportDependency = (relativeUrl, mainRelativeUrl, request) => {
+    if (relativeUrl === mainRelativeUrl) {
+      return {
+        dependency: true,
+        reason: "it's main",
+      }
+    }
+
+    if ("x-jsenv-execution-id" in request.headers) {
+      const executionId = request.headers["x-jsenv-execution-id"]
+      if (executionId === mainRelativeUrl) {
+        return {
+          dependency: true,
+          reason: "x-jsenv-execution-id request header",
+        }
+      }
+      return {
+        dependency: false,
+        reason: "x-jsenv-execution-id request header",
+      }
+    }
+
+    if ("referer" in request.headers) {
+      const { origin } = request
+      const { referer } = request.headers
+      // referer is likely the exploringServer
+      if (referer !== origin && !urlIsInsideOf(referer, origin)) {
+        return {
+          dependency: false,
+          reason: "referer is an other origin",
+        }
+      }
+      // here we know the referer is inside compileServer
+      const refererRelativeUrl = urlToRelativeUrl(referer, origin)
+      if (refererRelativeUrl) {
+        // search if referer (file requesting this one) is tracked as being a dependency of main file
+        // in that case because the importer is a dependency the importee is also a dependency
+        // eslint-disable-next-line no-unused-vars
+        for (const tracker of trackerMap) {
+          if (tracker[0] === mainRelativeUrl && tracker[1].has(refererRelativeUrl)) {
+            return {
+              dependency: true,
+              reason: "referer is a dependency",
+            }
+          }
+        }
+      }
+    }
+
+    return {
+      dependency: true,
+      reason: "it was requested",
+    }
+  }
+
+  return { projectFileRequestedCallback, trackMainAndDependencies }
 }
 
 const createAssetFileService = ({ projectDirectoryUrl }) => {
