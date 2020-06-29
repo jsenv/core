@@ -2,11 +2,6 @@
 
 TODO:
 
-- handle inline scripts in compileHtml.js
-
--> ne pas oublier de tester le coverage pour un script inline
-(mais en vrai on s'en fous un peu si c'est le point d'entré ou qu'il est inline on veut pas le cover)
-
 - voir comment on va gérer ça dans exploring mais a priori exploring se simplifie
 puisqu'il s'agit juste d'ouvrir une page html compilé par compile serveur
 
