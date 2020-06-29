@@ -1,8 +1,5 @@
-@import "./navigation/navigation.css";
-@import "./toolbar/toolbar.css";
-@import "./page-error-navigation/page-error-navigation.css";
+
 @import "./page-file-list/page-file-list.css";
-@import "./page-file-execution/page-file-execution.css";
 
 /* reset stuff */
 * {
@@ -45,59 +42,6 @@ main {
 main > * {
   min-width: 100%;
   flex: 1;
-}
-
-main > iframe {
-  border: none;
-  width: 100%;
-  height: 100%;
-}
-
-footer {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  height: 0;
-}
-
-#toolbar {
-  /* ensure toolbar children are not focusable when hidden */
-  visibility: hidden;
-}
-
-html[data-toolbar-visible] {
-  scroll-padding-bottom: 40px;
-}
-
-html[data-toolbar-visible] #page {
-  padding-bottom: 40px;
-}
-
-html[data-toolbar-visible] footer {
-  height: 40px;
-}
-
-html[data-toolbar-visible] #toolbar {
-  visibility: visible;
-}
-
-html[data-toolbar-animation] #page {
-  transition-property: padding-bottom;
-  transition-duration: 300ms;
-}
-
-html[data-toolbar-animation] footer {
-  transition-property: height;
-  transition-duration: 300ms;
-}
-
-html[data-toolbar-animation] #toolbar {
-  transition-property: visibility;
-  transition-duration: 300ms;
-}
-
-#toolbar[data-animate] {
-  transition-duration: 300ms;
 }
 
 button:focus,
@@ -151,10 +95,4 @@ Because for some element we set the focus outline on a div which would not match
 }
 ::-moz-focus-inner {
   border: 0;
-}
-
-html[data-animation-disabled] * {
-  transition: none !important;
-  animation-duration: 0s !important;
-  animation-delay: 0s !important;
 }

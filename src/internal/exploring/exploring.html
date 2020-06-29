@@ -9,6 +9,34 @@
   </head>
 
   <body>
+    <main></main>
+    <div style="display: none;">
+      <article data-page="file-list">
+        <section id="explorables">
+          <div id="explorables-header">
+            <svg id="fileIconSvgConfig" width="35px" height="35px">
+              <use xlink:href="#fileIconSvgModel"></use>
+            </svg>
+            <h2>Explorable files in <span title="${directoryUrl}">${directoryName}</span></h2>
+            <div class="menu-wrapper">
+              <fieldset id="filter-group-set" class="menu"></fieldset>
+            </div>
+            <div class="paddles">
+              <button class="left-paddle paddle hidden">
+                <
+              </button>
+              <button class="right-paddle paddle">
+                >
+              </button>
+            </div>
+          </div>
+          <h4>${message}</h4>
+          <nav>
+            <ul></ul>
+          </nav>
+        </section>
+      </article>
+    </div>
     <script type="module" src="./exploring.js"></script>
   </body>
 </html>

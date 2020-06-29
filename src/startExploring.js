@@ -167,6 +167,7 @@ const createExplorableListAsJsonService = ({ projectDirectoryUrl, outDirectoryRe
       const metaMap = {}
       Object.keys(explorableConfig).forEach((key) => {
         metaMap[key] = {
+          ["**/.jsenv/"]: false, // temporary (in theory) to avoid visting .jsenv directory in jsenv itself
           ...explorableConfig[key],
           [outDirectoryRelativeUrl]: false,
         }
