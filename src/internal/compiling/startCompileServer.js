@@ -21,6 +21,7 @@ import {
   ensureEmptyDirectory,
   registerFileLifecycle,
   fileSystemPathToUrl,
+  registerDirectoryLifecycle,
 } from "@jsenv/util"
 import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
@@ -31,10 +32,11 @@ import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
-import { readProjectImportMap } from "./readProjectImportMap.js"
-import { serveCompiledFile } from "./serveCompiledFile.js"
-import { urlIsAsset } from "./urlIsAsset.js"
 import { require } from "../require.js"
+import { createCallbackList } from "../createCallbackList.js"
+import { readProjectImportMap } from "./readProjectImportMap.js"
+import { createCompiledFileService } from "./createCompiledFileService.js"
+import { urlIsAsset } from "./urlIsAsset.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -76,19 +78,167 @@ export const startCompileServer = async ({
   keepProcessAlive = false,
   stopOnPackageVersionChange = false,
 
-  // this callback will be called each time a projectFile was
-  // used to respond to a request
-  // each time an execution needs a project file this callback
-  // will be called.
-  projectFileRequestedCallback = undefined,
-  projectFilePredicate = () => true,
-
   // remaining options are complex or private
   compileGroupCount = 1,
   babelCompatMap = jsenvBabelPluginCompatMap,
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
   runtimeAlwaysInsideRuntimeScoreMap = false,
+}) => {
+  ;({ importMapFileRelativeUrl } = assertAndNormalizeArguments({
+    projectDirectoryUrl,
+    importMapFileRelativeUrl,
+    jsenvDirectoryRelativeUrl,
+  }))
+
+  const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
+  const outDirectoryUrl = resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl)
+  const outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
+  const logger = createLogger({ logLevel: compileServerLogLevel })
+  babelPluginMap = {
+    "transform-replace-expressions": [
+      babelPluginReplaceExpressions,
+      {
+        replaceMap: {
+          ...(replaceProcessEnvNodeEnv
+            ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` }
+            : {}),
+          ...(replaceGlobalObject ? { global: "globalThis" } : {}),
+          ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
+          ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
+          ...replaceMap,
+        },
+        allowConflictingReplacements: true,
+      },
+    ],
+    ...babelPluginMap,
+  }
+  const groupMap = generateGroupMap({
+    babelPluginMap,
+    babelCompatMap,
+    runtimeScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
+    groupCount: compileGroupCount,
+    runtimeAlwaysInsideRuntimeScoreMap,
+  })
+  const importMapForCompileServer = await generateImportMapForCompileServer({
+    logger,
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    importMapFileRelativeUrl,
+  })
+
+  await setupOutDirectory(outDirectoryUrl, {
+    logger,
+    jsenvDirectoryUrl,
+    jsenvDirectoryClean,
+    useFilesystemAsCache,
+    babelPluginMap,
+    convertMap,
+    groupMap,
+  })
+
+  const { projectFileRequestedCallback } = await setupLivereloading()
+
+  const browserJsFileUrl = resolveUrl(
+    "./src/internal/browser-launcher/jsenv-browser-system.js",
+    jsenvCoreDirectoryUrl,
+  )
+  const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
+  const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
+
+  const serveAssetFile = createAssetFileService({ projectDirectoryUrl })
+  const serveBrowserScript = createBrowserScriptService({
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    browserBundledJsFileRelativeUrl,
+  })
+  const serveCompiledFile = createCompiledFileService({
+    cancellationToken,
+    logger,
+
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    browserBundledJsFileRelativeUrl,
+    compileServerImportMap: importMapForCompileServer,
+    importMapFileRelativeUrl,
+    importDefaultExtension,
+
+    transformTopLevelAwait,
+    transformModuleIntoSystemFormat,
+    babelPluginMap,
+    groupMap,
+    convertMap,
+
+    projectFileRequestedCallback,
+    useFilesystemAsCache,
+    writeOnFilesystem,
+    compileCacheStrategy,
+  })
+  const serveProjectFile = createProjectFileService({ projectDirectoryUrl })
+
+  const compileServer = await startServer({
+    cancellationToken,
+    logLevel: compileServerLogLevel,
+    serverName: "compile server",
+
+    protocol: compileServerProtocol,
+    privateKey: compileServerPrivateKey,
+    certificate: compileServerCertificate,
+    ip: compileServerIp,
+    port: compileServerPort,
+    sendInternalErrorStack: true,
+    requestToResponse: (request) =>
+      firstService(
+        () => serveAssetFile(request),
+        () => serveBrowserScript(request),
+        () => serveCompiledFile(request),
+        () => serveProjectFile(request),
+      ),
+    accessControlAllowRequestOrigin: true,
+    accessControlAllowRequestMethod: true,
+    accessControlAllowRequestHeaders: true,
+    accessControlAllowedRequestHeaders: [
+      ...jsenvAccessControlAllowedHeaders,
+      "x-jsenv-execution-id",
+    ],
+    accessControlAllowCredentials: true,
+    keepProcessAlive,
+  })
+
+  await installOutFiles(compileServer, {
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
+    importDefaultExtension,
+    importMapFileRelativeUrl,
+    importMapForCompileServer,
+    groupMap,
+    env,
+    writeOnFilesystem,
+  })
+
+  if (stopOnPackageVersionChange) {
+    installStopOnPackageVersionChange(compileServer, {
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+    })
+  }
+
+  return {
+    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
+    importMapFileRelativeUrl,
+    ...compileServer,
+    compileServerImportMap: importMapForCompileServer,
+    compileServerGroupMap: groupMap,
+  }
+}
+
+const assertAndNormalizeArguments = ({
+  projectDirectoryUrl,
+  importMapFileRelativeUrl,
+  jsenvDirectoryRelativeUrl,
+  outDirectoryName,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
@@ -119,336 +269,8 @@ ${projectDirectoryUrl}`)
   if (typeof outDirectoryName !== "string") {
     throw new TypeError(`outDirectoryName must be a string. got ${outDirectoryName}`)
   }
-  const outDirectoryUrl = resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl)
-  const outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
 
-  const logger = createLogger({ logLevel: compileServerLogLevel })
-
-  babelPluginMap = {
-    "transform-replace-expressions": [
-      babelPluginReplaceExpressions,
-      {
-        replaceMap: {
-          ...(replaceProcessEnvNodeEnv
-            ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` }
-            : {}),
-          ...(replaceGlobalObject ? { global: "globalThis" } : {}),
-          ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
-          ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
-          ...replaceMap,
-        },
-        allowConflictingReplacements: true,
-      },
-    ],
-    ...babelPluginMap,
-  }
-
-  const groupMap = generateGroupMap({
-    babelPluginMap,
-    babelCompatMap,
-    runtimeScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
-    groupCount: compileGroupCount,
-    runtimeAlwaysInsideRuntimeScoreMap,
-  })
-
-  const outDirectoryMeta = {
-    babelPluginMap,
-    convertMap,
-    groupMap,
-  }
-  if (jsenvDirectoryClean) {
-    logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`)
-    await ensureEmptyDirectory(jsenvDirectoryUrl)
-  }
-  if (useFilesystemAsCache) {
-    await cleanOutDirectoryIfObsolete({
-      logger,
-      cleanWarning: !jsenvDirectoryClean,
-      outDirectoryUrl,
-      outDirectoryMeta,
-    })
-  }
-
-  const packageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
-  const packageFilePath = urlToFileSystemPath(packageFileUrl)
-  const packageVersion = readPackage(packageFilePath).version
-
-  if (projectFileRequestedCallback) {
-    if (typeof projectFileRequestedCallback !== "function") {
-      throw new TypeError(
-        `projectFileRequestedCallback must be a function, got ${projectFileRequestedCallback}`,
-      )
-    }
-    const originalProjectFileRequestedCallback = projectFileRequestedCallback
-    projectFileRequestedCallback = (relativeUrl, ...rest) => {
-      // I doubt an asset like .js.map will change
-      // in theory a compilation asset should not change
-      // if the source file did not change
-      // so we can avoid watching compilation asset
-      if (urlIsAsset(`${projectDirectoryUrl}${relativeUrl}`)) {
-        return
-      }
-
-      if (projectFilePredicate(relativeUrl)) {
-        originalProjectFileRequestedCallback(relativeUrl, ...rest)
-      }
-    }
-  } else {
-    projectFileRequestedCallback = () => {}
-  }
-
-  const importMapForCompileServer = await generateImportMapForCompileServer({
-    logger,
-    projectDirectoryUrl,
-    outDirectoryRelativeUrl,
-    importMapFileRelativeUrl,
-  })
-
-  const browserJsFileUrl = resolveUrl(
-    "./src/internal/browser-launcher/jsenv-browser-system.js",
-    jsenvCoreDirectoryUrl,
-  )
-  const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
-  const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
-
-  const sourcemapMainFileUrl = fileSystemPathToUrl(require.resolve("source-map/dist/source-map.js"))
-  const sourcemapMappingFileUrl = fileSystemPathToUrl(
-    require.resolve("source-map/lib/mappings.wasm"),
-  )
-  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl)
-  const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
-    sourcemapMappingFileUrl,
-    projectDirectoryUrl,
-  )
-
-  const compileServer = await startServer({
-    cancellationToken,
-    logLevel: compileServerLogLevel,
-    serverName: "compile server",
-
-    protocol: compileServerProtocol,
-    privateKey: compileServerPrivateKey,
-    certificate: compileServerCertificate,
-    ip: compileServerIp,
-    port: compileServerPort,
-    sendInternalErrorStack: true,
-    requestToResponse: (request) => {
-      return firstService(
-        () => {
-          const { origin, ressource, method, headers } = request
-          const requestUrl = `${origin}${ressource}`
-          // serve asset files directly
-          if (urlIsAsset(requestUrl)) {
-            const fileUrl = resolveUrl(ressource.slice(1), projectDirectoryUrl)
-            return serveFile(fileUrl, {
-              method,
-              headers,
-            })
-          }
-          return null
-        },
-        () => {
-          return serveBrowserScript(request, {
-            browserBundledJsFileRelativeUrl,
-            outDirectoryRelativeUrl,
-            sourcemapMainFileRelativeUrl,
-            sourcemapMappingFileRelativeUrl,
-          })
-        },
-        () => {
-          return serveCompiledFile({
-            cancellationToken,
-            logger,
-
-            projectDirectoryUrl,
-            outDirectoryRelativeUrl,
-            browserBundledJsFileRelativeUrl,
-            compileServerImportMap: importMapForCompileServer,
-            importMapFileRelativeUrl,
-            importDefaultExtension,
-
-            transformTopLevelAwait,
-            transformModuleIntoSystemFormat,
-            babelPluginMap,
-            groupMap,
-            convertMap,
-
-            request,
-            projectFileRequestedCallback,
-            useFilesystemAsCache,
-            writeOnFilesystem,
-            compileCacheStrategy,
-          })
-        },
-        () => {
-          return serveProjectFiles({
-            projectDirectoryUrl,
-            request,
-            projectFileRequestedCallback,
-          })
-        },
-      )
-    },
-    accessControlAllowRequestOrigin: true,
-    accessControlAllowRequestMethod: true,
-    accessControlAllowRequestHeaders: true,
-    accessControlAllowedRequestHeaders: [
-      ...jsenvAccessControlAllowedHeaders,
-      "x-jsenv-execution-id",
-    ],
-    accessControlAllowCredentials: true,
-    keepProcessAlive,
-  })
-
-  env = {
-    ...env,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    importDefaultExtension,
-    importMapFileRelativeUrl,
-  }
-
-  const importMapToString = () => JSON.stringify(importMapForCompileServer, null, "  ")
-  const groupMapToString = () => JSON.stringify(groupMap, null, "  ")
-  const envToString = () => JSON.stringify(env, null, "  ")
-
-  const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
-  const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
-  const importmapFiles = Object.keys(groupMap).map((compileId) => {
-    return resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`)
-  })
-
-  await Promise.all([
-    writeFile(groupMapOutFileUrl, groupMapToString()),
-    writeFile(envOutFileUrl, envToString()),
-    ...importmapFiles.map((importmapFile) => writeFile(importmapFile, importMapToString())),
-  ])
-
-  if (!writeOnFilesystem) {
-    compileServer.stoppedPromise.then(() => {
-      importmapFiles.forEach((importmapFile) => {
-        removeFileSystemNode(importmapFile, { allowUseless: true })
-      })
-      removeFileSystemNode(groupMapOutFileUrl, { allowUseless: true })
-      removeFileSystemNode(envOutFileUrl)
-    })
-  }
-
-  if (stopOnPackageVersionChange) {
-    const checkPackageVersion = () => {
-      let packageObject
-      try {
-        packageObject = readPackage(packageFilePath)
-      } catch (e) {
-        // package json deleted ? not a problem
-        // let's wait for it to show back
-        if (e.code === "ENOENT") return
-        // package.json malformed ? not a problem
-        // let's wait for use to fix it or filesystem to finish writing the file
-        if (e.name === "SyntaxError") return
-        throw e
-      }
-
-      if (packageVersion !== packageObject.version) {
-        compileServer.stop(STOP_REASON_PACKAGE_VERSION_CHANGED)
-      }
-    }
-
-    const unregister = registerFileLifecycle(packageFilePath, {
-      added: checkPackageVersion,
-      updated: checkPackageVersion,
-      keepProcessAlive: false,
-    })
-    compileServer.stoppedPromise.then(
-      () => {
-        unregister()
-      },
-      () => {},
-    )
-  }
-
-  return {
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    importMapFileRelativeUrl,
-    ...compileServer,
-    compileServerImportMap: importMapForCompileServer,
-    compileServerGroupMap: groupMap,
-  }
-}
-
-const readPackage = (packagePath) => {
-  const buffer = readFileSync(packagePath)
-  const string = String(buffer)
-  const packageObject = JSON.parse(string)
-  return packageObject
-}
-
-export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
-  toString: () => `package version changed`,
-}
-
-const serveBrowserScript = async (
-  request,
-  {
-    browserBundledJsFileRelativeUrl,
-    outDirectoryRelativeUrl,
-    sourcemapMainFileRelativeUrl,
-    sourcemapMappingFileRelativeUrl,
-  },
-) => {
-  if (request.headers["x-jsenv-exploring"]) {
-    const body = JSON.stringify({
-      outDirectoryRelativeUrl,
-      errorStackRemapping: true,
-      sourcemapMainFileRelativeUrl,
-      sourcemapMappingFileRelativeUrl,
-    })
-
-    return {
-      status: 200,
-      headers: {
-        "cache-control": "no-store",
-        "content-type": "application/json",
-        "content-length": Buffer.byteLength(body),
-      },
-      body,
-    }
-  }
-
-  if (request.ressource === "/.jsenv/browser-script.js") {
-    const browserBundledJsFileRemoteUrl = `${request.origin}/${browserBundledJsFileRelativeUrl}`
-
-    return {
-      status: 307,
-      headers: {
-        location: browserBundledJsFileRemoteUrl,
-      },
-    }
-  }
-
-  return null
-}
-
-const serveProjectFiles = async ({
-  projectDirectoryUrl,
-  request,
-  projectFileRequestedCallback,
-}) => {
-  const { ressource, method, headers } = request
-  const relativeUrl = ressource.slice(1)
-
-  projectFileRequestedCallback(relativeUrl, request)
-
-  const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
-  const filePath = urlToFileSystemPath(fileUrl)
-
-  const responsePromise = serveFile(filePath, {
-    method,
-    headers,
-  })
-
-  return responsePromise
+  return { importMapFileRelativeUrl }
 }
 
 /**
@@ -516,47 +338,282 @@ const generateImportMapForCompileServer = async ({
   return importMap
 }
 
-const cleanOutDirectoryIfObsolete = async ({
-  logger,
-  cleanWarning = true,
+const setupOutDirectory = async (
   outDirectoryUrl,
-  outDirectoryMeta,
-}) => {
-  const jsenvCorePackageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
-  const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
-  const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
+  {
+    logger,
+    jsenvDirectoryClean,
+    jsenvDirectoryUrl,
+    useFilesystemAsCache,
+    babelPluginMap,
+    convertMap,
+    groupMap,
+  },
+) => {
+  if (jsenvDirectoryClean) {
+    logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`)
+    await ensureEmptyDirectory(jsenvDirectoryUrl)
+  }
+  if (useFilesystemAsCache) {
+    const jsenvCorePackageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
+    const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
+    const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
+    const outDirectoryMeta = {
+      jsenvCorePackageVersion,
+      babelPluginMap,
+      convertMap,
+      groupMap,
+    }
+    const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
 
-  outDirectoryMeta = {
-    ...outDirectoryMeta,
-    jsenvCorePackageVersion,
+    let previousOutDirectoryMeta
+    try {
+      const source = await readFile(metaFileUrl)
+      previousOutDirectoryMeta = JSON.parse(source)
+    } catch (e) {
+      if (e && e.code === "ENOENT") {
+        previousOutDirectoryMeta = null
+      } else {
+        throw e
+      }
+    }
+
+    if (previousOutDirectoryMeta !== null) {
+      const previousMetaString = JSON.stringify(previousOutDirectoryMeta, null, "  ")
+      const metaString = JSON.stringify(outDirectoryMeta, null, "  ")
+      if (previousMetaString !== metaString) {
+        if (!jsenvDirectoryClean) {
+          logger.warn(`clean out directory at ${urlToFileSystemPath(outDirectoryUrl)}`)
+        }
+        await ensureEmptyDirectory(outDirectoryUrl)
+      }
+    }
+
+    await writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "))
+  }
+}
+
+const setupLivereloading = (
+  compileServer,
+  { cancellationToken, projectDirectoryUrl, watchConfig },
+) => {
+  // const roomSet = new Set()
+  // const trackerSet = new Set()
+  // const projectFileRequested = createCallbackList()
+  const projectFileUpdated = createCallbackList()
+  const projectFileRemoved = createCallbackList()
+
+  const projectFileRequestedCallback = (relativeUrl) => {
+    // I doubt an asset like .js.map will change
+    // in theory a compilation asset should not change
+    // if the source file did not change
+    // so we can avoid watching compilation asset
+    if (urlIsAsset(`${projectDirectoryUrl}${relativeUrl}`)) {
+      return
+    }
+  }
+  const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryUrl, {
+    watchDescription: {
+      ...watchConfig,
+      [compileServer.jsenvDirectoryRelativeUrl]: false,
+    },
+    updated: ({ relativeUrl }) => {
+      projectFileUpdated.notify(relativeUrl)
+    },
+    removed: ({ relativeUrl }) => {
+      projectFileRemoved.notify(relativeUrl)
+    },
+    keepProcessAlive: false,
+    recursive: true,
+  })
+  cancellationToken.register(unregisterDirectoryLifecyle)
+
+  return { projectFileRequestedCallback }
+}
+
+const createAssetFileService = ({ projectDirectoryUrl }) => {
+  return (request) => {
+    const { origin, ressource, method, headers } = request
+    const requestUrl = `${origin}${ressource}`
+    if (urlIsAsset(requestUrl)) {
+      return serveFile(resolveUrl(ressource.slice(1), projectDirectoryUrl), {
+        method,
+        headers,
+      })
+    }
+    return null
+  }
+}
+
+const createBrowserScriptService = ({
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+  browserBundledJsFileRelativeUrl,
+}) => {
+  const sourcemapMainFileUrl = fileSystemPathToUrl(require.resolve("source-map/dist/source-map.js"))
+  const sourcemapMappingFileUrl = fileSystemPathToUrl(
+    require.resolve("source-map/lib/mappings.wasm"),
+  )
+  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl)
+  const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
+    sourcemapMappingFileUrl,
+    projectDirectoryUrl,
+  )
+
+  return (request) => {
+    if (request.headers["x-jsenv-exploring"]) {
+      const body = JSON.stringify({
+        outDirectoryRelativeUrl,
+        errorStackRemapping: true,
+        sourcemapMainFileRelativeUrl,
+        sourcemapMappingFileRelativeUrl,
+      })
+
+      return {
+        status: 200,
+        headers: {
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(body),
+        },
+        body,
+      }
+    }
+
+    if (request.ressource === "/.jsenv/browser-script.js") {
+      const browserBundledJsFileRemoteUrl = `${request.origin}/${browserBundledJsFileRelativeUrl}`
+
+      return {
+        status: 307,
+        headers: {
+          location: browserBundledJsFileRemoteUrl,
+        },
+      }
+    }
+
+    return null
+  }
+}
+
+const createProjectFileService = ({ projectDirectoryUrl, projectFileRequestedCallback }) => {
+  return (request) => {
+    const { ressource, method, headers } = request
+    const relativeUrl = ressource.slice(1)
+    projectFileRequestedCallback(relativeUrl, request)
+
+    const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
+    const filePath = urlToFileSystemPath(fileUrl)
+
+    const responsePromise = serveFile(filePath, {
+      method,
+      headers,
+    })
+
+    return responsePromise
+  }
+}
+
+const installOutFiles = async (
+  compileServer,
+  {
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
+    importDefaultExtension,
+    importMapFileRelativeUrl,
+    importMapForCompileServer,
+    groupMap,
+    env,
+    writeOnFilesystem,
+  },
+) => {
+  const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
+
+  env = {
+    ...env,
+    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
+    importDefaultExtension,
+    importMapFileRelativeUrl,
   }
 
-  const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
+  const importMapToString = () => JSON.stringify(importMapForCompileServer, null, "  ")
+  const groupMapToString = () => JSON.stringify(groupMap, null, "  ")
+  const envToString = () => JSON.stringify(env, null, "  ")
 
-  let previousOutDirectoryMeta
-  try {
-    const source = await readFile(metaFileUrl)
-    previousOutDirectoryMeta = JSON.parse(source)
-  } catch (e) {
-    if (e && e.code === "ENOENT") {
-      previousOutDirectoryMeta = null
-    } else {
+  const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
+  const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
+  const importmapFiles = Object.keys(groupMap).map((compileId) => {
+    return resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`)
+  })
+
+  await Promise.all([
+    writeFile(groupMapOutFileUrl, groupMapToString()),
+    writeFile(envOutFileUrl, envToString()),
+    ...importmapFiles.map((importmapFile) => writeFile(importmapFile, importMapToString())),
+  ])
+
+  if (!writeOnFilesystem) {
+    compileServer.stoppedPromise.then(() => {
+      importmapFiles.forEach((importmapFile) => {
+        removeFileSystemNode(importmapFile, { allowUseless: true })
+      })
+      removeFileSystemNode(groupMapOutFileUrl, { allowUseless: true })
+      removeFileSystemNode(envOutFileUrl)
+    })
+  }
+}
+
+const installStopOnPackageVersionChange = (
+  compileServer,
+  { projectDirectoryUrl, jsenvDirectoryRelativeUrl },
+) => {
+  const jsenvCoreDirectoryUrl = resolveUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
+  const packageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
+  const packageFilePath = urlToFileSystemPath(packageFileUrl)
+  const packageVersion = readPackage(packageFilePath).version
+
+  const checkPackageVersion = () => {
+    let packageObject
+    try {
+      packageObject = readPackage(packageFilePath)
+    } catch (e) {
+      // package json deleted ? not a problem
+      // let's wait for it to show back
+      if (e.code === "ENOENT") return
+      // package.json malformed ? not a problem
+      // let's wait for use to fix it or filesystem to finish writing the file
+      if (e.name === "SyntaxError") return
       throw e
     }
-  }
 
-  if (previousOutDirectoryMeta !== null) {
-    const previousMetaString = JSON.stringify(previousOutDirectoryMeta, null, "  ")
-    const metaString = JSON.stringify(outDirectoryMeta, null, "  ")
-    if (previousMetaString !== metaString) {
-      if (cleanWarning) {
-        logger.warn(`clean out directory at ${urlToFileSystemPath(outDirectoryUrl)}`)
-      }
-      await ensureEmptyDirectory(outDirectoryUrl)
+    if (packageVersion !== packageObject.version) {
+      compileServer.stop(STOP_REASON_PACKAGE_VERSION_CHANGED)
     }
   }
 
-  await writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "))
+  const unregister = registerFileLifecycle(packageFilePath, {
+    added: checkPackageVersion,
+    updated: checkPackageVersion,
+    keepProcessAlive: false,
+  })
+  compileServer.stoppedPromise.then(
+    () => {
+      unregister()
+    },
+    () => {},
+  )
+}
+
+const readPackage = (packagePath) => {
+  const buffer = readFileSync(packagePath)
+  const string = String(buffer)
+  const packageObject = JSON.parse(string)
+  return packageObject
+}
+
+export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
+  toString: () => `package version changed`,
 }
 
 const __filenameReplacement = `import.meta.url.slice('file:///'.length)`
