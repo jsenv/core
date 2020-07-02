@@ -158,6 +158,7 @@ export const startCompileServer = async ({
     cancellationToken,
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
     livereloadLogLevel,
     livereloadWatchConfig,
   })
@@ -171,6 +172,7 @@ export const startCompileServer = async ({
 
   const serveSSEForLivereload = createSSEForLivereloadService({
     cancellationToken,
+    outDirectoryRelativeUrl,
     trackMainAndDependencies,
   })
   const serveAssetFile = createAssetFileService({ projectDirectoryUrl })
@@ -449,6 +451,7 @@ const setupServerSentEventsForLivereload = ({
   cancellationToken,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
+  outDirectoryRelativeUrl,
   livereloadLogLevel,
   livereloadWatchConfig,
   historyLimit = 1000,
@@ -500,6 +503,11 @@ const setupServerSentEventsForLivereload = ({
   // its dependencySet is computed
   // each time a file is modified, it's dependencySet is deleted
   projectFileRequested.register((mainRelativeUrl) => {
+    // this is true for a browser but not for Node.js
+    // but without this we track every possible file dependencies
+    // to be checked
+    // if (!mainRelativeUrl.endsWith(".html")) return
+
     const dependencySet = getDependencySet(mainRelativeUrl)
 
     const unregisterDependencyRequested = projectFileRequested.register((relativeUrl, request) => {
@@ -522,6 +530,9 @@ const setupServerSentEventsForLivereload = ({
     })
     const unregisterMainModified = projectFileModified.register((relativeUrl) => {
       if (relativeUrl === mainRelativeUrl) {
+        // this assume client will livereload when a file is modified
+        // otherwise the dependencies for this file will never be updated
+        // as they won't be requested
         unregisterDependencyRequested()
         unregisterMainModified()
         unregisterMainRemoved()
@@ -634,7 +645,10 @@ const setupServerSentEventsForLivereload = ({
         }
       }
       // here we know the referer is inside compileServer
-      const refererRelativeUrl = urlToRelativeUrl(referer, origin)
+      const refererRelativeUrl = urlToOriginalRelativeUrl(
+        referer,
+        resolveUrl(outDirectoryRelativeUrl, request.origin),
+      )
       if (refererRelativeUrl) {
         // search if referer (file requesting this one) is tracked as being a dependency of main file
         // in that case because the importer is a dependency the importee is also a dependency
@@ -659,7 +673,11 @@ const setupServerSentEventsForLivereload = ({
   return { projectFileRequestedCallback, trackMainAndDependencies }
 }
 
-const createSSEForLivereloadService = ({ cancellationToken, trackMainAndDependencies }) => {
+const createSSEForLivereloadService = ({
+  cancellationToken,
+  outDirectoryRelativeUrl,
+  trackMainAndDependencies,
+}) => {
   return (request) => {
     const { accept } = request.headers
     if (!accept || !accept.includes("text/event-stream")) {
@@ -669,7 +687,11 @@ const createSSEForLivereloadService = ({ cancellationToken, trackMainAndDependen
     const room = createSSERoom()
     room.start()
 
-    const fileRelativeUrl = request.ressource.slice(1)
+    const fileRelativeUrl = urlToOriginalRelativeUrl(
+      resolveUrl(request.ressource, request.origin),
+      resolveUrl(outDirectoryRelativeUrl, request.origin),
+    )
+
     const stopTracking = trackMainAndDependencies(fileRelativeUrl, {
       modified: ({ id, relativeUrl }) => {
         room.sendEvent({
@@ -697,6 +719,15 @@ const createSSEForLivereloadService = ({ cancellationToken, trackMainAndDependen
 
     return room.connect()
   }
+}
+
+const urlToOriginalRelativeUrl = (url, outDirectoryRemoteUrl) => {
+  if (urlIsInsideOf(url, outDirectoryRemoteUrl)) {
+    const afterCompileDirectory = urlToRelativeUrl(url, outDirectoryRemoteUrl)
+    const fileRelativeUrl = afterCompileDirectory.slice(afterCompileDirectory.indexOf("/") + 1)
+    return fileRelativeUrl
+  }
+  return new URL(url).pathname.slice(1)
 }
 
 const createAssetFileService = ({ projectDirectoryUrl }) => {
