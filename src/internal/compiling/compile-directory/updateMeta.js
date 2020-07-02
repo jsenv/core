@@ -15,29 +15,29 @@ export const updateMeta = async ({
   const { compiledSource, contentType, assets, assetsContent } = compileResult
   let { sources, sourcesContent } = compileResult
 
-  // ensure source that does not leads to concrete files are not capable to invalidate the cache
-  const sourceExists = await Promise.all(
-    sources.map(async (source) => {
-      const sourceFileUrl = resolveSourceFileUrl({ source, compiledFileUrl })
-      const sourceStats = await readFileSystemNodeStat(sourceFileUrl, { nullIfNotFound: true })
-      if (sourceStats === null) {
-        // this can lead to cache never invalidated by itself
-        // it's a very important warning
-        logger.warn(`a source file cannot be found -> excluded from meta.sources & meta.sourcesEtag.
+  const promises = []
+  if (isNew || isUpdated) {
+    // ensure source that does not leads to concrete files are not capable to invalidate the cache
+    const sourceExists = await Promise.all(
+      sources.map(async (source) => {
+        const sourceFileUrl = resolveSourceFileUrl({ source, compiledFileUrl })
+        const sourceStats = await readFileSystemNodeStat(sourceFileUrl, { nullIfNotFound: true })
+        if (sourceStats === null) {
+          // this can lead to cache never invalidated by itself
+          // it's a very important warning
+          logger.warn(`a source file cannot be found -> excluded from meta.sources & meta.sourcesEtag.
 --- source ---
 ${source}
 -- source url ---
 ${sourceFileUrl}`)
-        return false
-      }
-      return true
-    }),
-  )
-  sources = sources.filter((source, index) => sourceExists[index])
-  sourcesContent = sourcesContent.filter((sourceContent, index) => sourceExists[index])
+          return false
+        }
+        return true
+      }),
+    )
+    sources = sources.filter((source, index) => sourceExists[index])
+    sourcesContent = sourcesContent.filter((sourceContent, index) => sourceExists[index])
 
-  const promises = []
-  if (isNew || isUpdated) {
     const { writeCompiledSourceFile = true, writeAssetsFile = true } = compileResult
 
     if (writeCompiledSourceFile) {
