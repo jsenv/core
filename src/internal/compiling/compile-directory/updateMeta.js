@@ -23,8 +23,11 @@ export const updateMeta = async ({
       if (sourceStats === null) {
         // this can lead to cache never invalidated by itself
         // it's a very important warning
-        logger.warn(`a source file cannot be found ${sourceFileUrl}.
--> excluding it from meta.sources & meta.sourcesEtag`)
+        logger.warn(`a source file cannot be found -> excluded from meta.sources & meta.sourcesEtag.
+--- source ---
+${source}
+-- source url ---
+${sourceFileUrl}`)
         return false
       }
       return true

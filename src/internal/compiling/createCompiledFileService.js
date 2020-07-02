@@ -248,7 +248,7 @@ export const createCompiledFileService = ({
           return {
             compiledSource: htmlAfterCompilation,
             contentType: "text/html",
-            sources: [`${assetDirectoryName}/meta.json`],
+            sources: [urlToRelativeUrl(originalFileUrl, `${compiledFileUrl}__asset__/`)],
             sourcesContent: [htmlBeforeCompilation],
             assets,
             assetsContent,
