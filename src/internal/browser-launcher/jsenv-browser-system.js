@@ -1,5 +1,7 @@
 import { createBrowserRuntime } from "../runtime/createBrowserRuntime/createBrowserRuntime.js"
+import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
 import { fetchUsingXHR } from "../fetchUsingXHR.js"
+import { fetchAndEvalUsingXHR } from "../fetchAndEvalUsingXHR.js"
 import { memoize } from "../memoize.js"
 
 const readyPromise = new Promise((resolve) => {
@@ -49,12 +51,13 @@ const importFile = async (specifier) => {
 
 const getBrowserRuntime = memoize(async () => {
   const compileServerOrigin = document.location.origin
-  const compileServerInfoResponse = await fetchUsingXHR(compileServerOrigin, {
+  const exploringInfoResponse = await fetchUsingXHR(compileServerOrigin, {
     headers: {
       "x-jsenv-exploring": true,
     },
   })
-  const { outDirectoryRelativeUrl } = await compileServerInfoResponse.json()
+  const exploringData = await exploringInfoResponse.json()
+  const { outDirectoryRelativeUrl } = exploringData
   const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
   const afterOutDirectory = document.location.href.slice(outDirectoryUrl.length)
   const parts = afterOutDirectory.split("/")
@@ -68,6 +71,34 @@ const getBrowserRuntime = memoize(async () => {
     compileId,
     htmlFileRelativeUrl,
   })
+
+  if (Error.captureStackTrace) {
+    const { sourcemapMainFileRelativeUrl, sourcemapMappingFileRelativeUrl } = exploringData
+
+    await fetchAndEvalUsingXHR(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
+    const { SourceMapConsumer } = window.sourceMap
+    SourceMapConsumer.initialize({
+      "lib/mappings.wasm": `${compileServerOrigin}/${sourcemapMappingFileRelativeUrl}`,
+    })
+    const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
+      SourceMapConsumer,
+    })
+
+    const errorTransform = async (error) => {
+      // code can throw something else than an error
+      // in that case return it unchanged
+      if (!error || !(error instanceof Error)) return error
+      const originalStack = await getErrorOriginalStackString(error)
+      error.stack = originalStack
+      return error
+    }
+
+    const executeFile = browserRuntime.executeFile
+    browserRuntime.executeFile = (file, options = {}) => {
+      return executeFile(file, { errorTransform, ...options })
+    }
+  }
+
   return browserRuntime
 })
 

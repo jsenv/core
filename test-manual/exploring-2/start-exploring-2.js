@@ -2,11 +2,6 @@
 
 TODO:
 
-- voir comment on va gérer ça dans exploring mais a priori exploring se simplifie
-puisqu'il s'agit juste d'ouvrir une page html compilé par compile serveur
-
-- restaurer error stack dans jsenv-browser-system.js (comme browser-js-file)
-
 */
 
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"

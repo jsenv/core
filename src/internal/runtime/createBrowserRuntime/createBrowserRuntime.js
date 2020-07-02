@@ -52,6 +52,8 @@ export const createBrowserRuntime = async ({
 
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileIdValue}/`
 
+  // if there is an importmap in the document we should use it instead of fetching like this.
+  // systemjs style with systemjs-importmap
   let importMap
   if (importMapFileRelativeUrl) {
     const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
