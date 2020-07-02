@@ -1,5 +1,6 @@
 import { extname, basename } from "path"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, urlIsInsideOf } from "@jsenv/util"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_GLOBAL_BUNDLE_FILES, COMPILE_ID_COMMONJS_BUNDLE_FILES } from "../CONSTANTS.js"
 import { generateBundleUsingRollup } from "../bundling/generateBundleUsingRollup.js"
 import { bundleToCompilationResult } from "../bundling/bundleToCompilationResult.js"
@@ -72,6 +73,11 @@ export const serveBundle = async ({
     })
   }
 
+  const isJenvInternalFile = urlIsInsideOf(
+    originalFileUrl,
+    resolveUrl("./src/internal/", jsenvCoreDirectoryUrl),
+  )
+
   return compileFile({
     logger,
     projectDirectoryUrl,
@@ -83,5 +89,7 @@ export const serveBundle = async ({
     projectFileRequestedCallback,
     compile,
     request,
+    compileCacheSourcesValidation: !isJenvInternalFile,
+    compileCacheAssetsValidation: !isJenvInternalFile,
   })
 }

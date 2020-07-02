@@ -23,6 +23,8 @@ export const compileFile = async ({
   compileCacheStrategy = "etag",
   serverCompileCacheHitTracking = false,
   serverCompileCacheInterProcessLocking = false,
+  compileCacheSourcesValidation,
+  compileCacheAssetsValidation,
 }) => {
   if (writeOnFilesystem && compileCacheStrategy !== "etag" && compileCacheStrategy !== "mtime") {
     throw new Error(`compileCacheStrategy must be etag or mtime , got ${compileCacheStrategy}`)
@@ -62,6 +64,8 @@ export const compileFile = async ({
       useFilesystemAsCache,
       cacheHitTracking: serverCompileCacheHitTracking,
       cacheInterProcessLocking: serverCompileCacheInterProcessLocking,
+      compileCacheSourcesValidation,
+      compileCacheAssetsValidation,
       compile,
     })
 

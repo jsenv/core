@@ -12,6 +12,8 @@ export const validateMeta = async ({
   compiledFileUrl,
   ifEtagMatch,
   ifModifiedSinceDate,
+  compileCacheSourcesValidation = true,
+  compileCacheAssetsValidation = true,
 }) => {
   const compiledFileValidation = await validateCompiledFile({
     compiledFileUrl,
@@ -35,14 +37,18 @@ export const validateMeta = async ({
   }
 
   const [sourcesValidations, assetValidations] = await Promise.all([
-    validateSources({
-      meta,
-      compiledFileUrl,
-    }),
-    validateAssets({
-      meta,
-      compiledFileUrl,
-    }),
+    compileCacheSourcesValidation
+      ? validateSources({
+          meta,
+          compiledFileUrl,
+        })
+      : [],
+    compileCacheAssetsValidation
+      ? validateAssets({
+          meta,
+          compiledFileUrl,
+        })
+      : [],
   ])
   const invalidSourceValidation = sourcesValidations.find(({ valid }) => !valid)
   if (invalidSourceValidation) {

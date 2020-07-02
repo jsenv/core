@@ -20,6 +20,8 @@ export const getOrGenerateCompiledFile = async ({
   useFilesystemAsCache,
   cacheHitTracking = false,
   cacheInterProcessLocking = false,
+  compileCacheSourcesValidation,
+  compileCacheAssetsValidation,
   ifEtagMatch,
   ifModifiedSinceDate,
   compile,
@@ -60,6 +62,8 @@ ${projectDirectoryUrl}`)
         ifEtagMatch,
         ifModifiedSinceDate,
         useFilesystemAsCache,
+        compileCacheSourcesValidation,
+        compileCacheAssetsValidation,
         logger,
       })
 
@@ -95,6 +99,8 @@ const computeCompileReport = async ({
   ifEtagMatch,
   ifModifiedSinceDate,
   useFilesystemAsCache,
+  compileCacheSourcesValidation,
+  compileCacheAssetsValidation,
   logger,
 }) => {
   const meta = useFilesystemAsCache
@@ -124,6 +130,8 @@ const computeCompileReport = async ({
     compiledFileUrl,
     ifEtagMatch,
     ifModifiedSinceDate,
+    compileCacheSourcesValidation,
+    compileCacheAssetsValidation,
   })
   if (!metaValidation.valid) {
     const compileResult = await callCompile({
