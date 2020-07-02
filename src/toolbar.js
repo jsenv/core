@@ -1,2 +1,1 @@
-// eslint-disable-next-line no-alert
-window.alert("toolbar")
+console.log("toolbar")

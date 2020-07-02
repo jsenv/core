@@ -15,7 +15,7 @@ const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `${testDirectoryBasename}.js`
+const filename = `${testDirectoryBasename}.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,

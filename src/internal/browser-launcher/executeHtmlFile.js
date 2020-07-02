@@ -1,3 +1,4 @@
+import { extname } from "path"
 import { resolveUrl, assertFilePresence } from "@jsenv/util"
 import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
@@ -8,7 +9,11 @@ export const executeHtmlFile = async (
   { cancellationToken, projectDirectoryUrl, outDirectoryRelativeUrl, compileServerOrigin, page },
 ) => {
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
-  await assertFilePresence(fileUrl) // maybe we should also ensure it's an html file
+  if (extname(fileUrl) !== ".html") {
+    throw new Error(`the file to execute must use .html extension, received ${fileRelativeUrl}.`)
+  }
+
+  await assertFilePresence(fileUrl)
 
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}otherwise/`
   const compileDirectoryRemoteUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
