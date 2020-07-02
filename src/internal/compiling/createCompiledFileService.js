@@ -9,6 +9,7 @@ import {
   COMPILE_ID_COMMONJS_BUNDLE,
   COMPILE_ID_COMMONJS_BUNDLE_FILES,
 } from "../CONSTANTS.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { createBabePluginMapForBundle } from "../bundling/createBabePluginMapForBundle.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
@@ -16,6 +17,8 @@ import { compileFile } from "./compileFile.js"
 import { serveBundle } from "./serveBundle.js"
 import { compileHtml } from "./compileHtml.js"
 import { appendSourceMappingAsExternalUrl } from "../sourceMappingURLUtils.js"
+
+const jsenvToolbarHtmlFileUrl = resolveUrl("./src/toolbar.html", jsenvCoreDirectoryUrl)
 
 export const createCompiledFileService = ({
   cancellationToken,
@@ -204,7 +207,10 @@ export const createCompiledFileService = ({
               {
                 src: `/${browserBundledJsFileRelativeUrl}`,
               },
-              ...headScripts,
+              // todo: this is dirty because it means
+              // compile server is aware of exploring and jsenv toolbar
+              // instead this should be moved to startExploring
+              ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : headScripts),
             ],
             generateInlineScriptSrc: ({ hash }) => `./${assetDirectoryName}/${hash}.js`,
           })

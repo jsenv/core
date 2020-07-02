@@ -76,8 +76,15 @@ const injectHeadScripts = (document, headScripts) => {
 
 const objectToHtmlAttributes = (object) => {
   return Object.keys(object)
-    .map((key) => `${key}=${JSON.stringify(object[key])}`)
+    .map((key) => `${key}=${valueToHtmlAttributeValue(object[key])}`)
     .join(" ")
+}
+
+const valueToHtmlAttributeValue = (value) => {
+  if (typeof value === "string") {
+    return JSON.stringify(value)
+  }
+  return `"${JSON.stringify(value)}"`
 }
 
 const polyfillModuleScripts = (document, { generateInlineScriptSrc }) => {

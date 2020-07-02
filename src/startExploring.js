@@ -41,7 +41,16 @@ export const startExploring = async ({
       accessControlAllowCredentials: true,
       stopOnPackageVersionChange: true,
       compileGroupCount: 2,
-      headScripts: [...(toolbar ? [{ type: "module", src: "@jsenv/core/src/toolbar.js" }] : [])],
+      headScripts: [
+        ...(toolbar
+          ? [
+              {
+                type: "module",
+                src: "@jsenv/core/src/toolbar.js",
+              },
+            ]
+          : []),
+      ],
       serveCustom: (request) =>
         firstService(
           () => serveIndex(request),
