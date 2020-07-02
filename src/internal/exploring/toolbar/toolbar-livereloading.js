@@ -1,4 +1,7 @@
-import { getLivereloadingPreference, createLivereloading } from "../livereloading/livereloading.js"
+import {
+  getLivereloadingPreference,
+  createLivereloading,
+} from "../../toolbar/livereloading/livereloading.js"
 import { applyLivereloadIndicator } from "./livereload-indicator.js"
 import { createPromiseAndHooks } from "../util/util.js"
 import { getReloadPreference } from "./toolbar-reload.js"
