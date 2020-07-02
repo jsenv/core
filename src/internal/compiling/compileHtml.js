@@ -1,5 +1,11 @@
 /**
 
+An important concern here:
+
+All script type="module" will be converted to inline script.
+These inline script execution order is non predictible it depends
+which one is being done first
+
 */
 
 import { createHash } from "crypto"
@@ -9,12 +15,17 @@ const parse5 = require("parse5")
 
 export const compileHtml = (
   htmlBeforeCompilation,
-  { headScripts = [], generateInlineScriptSrc = ({ hash }) => `./${hash}.js` } = {},
+  {
+    headScripts = [],
+    // resolveScriptSrc = (src) => src,
+    generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
+  } = {},
 ) => {
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
   const document = parse5.parse(htmlBeforeCompilation)
   injectHeadScripts(document, headScripts)
   const scriptsExternalized = polyfillModuleScripts(document, { generateInlineScriptSrc })
+  // resolveScripts(document, resolveScriptSrc)
   const htmlAfterCompilation = parse5.serialize(document)
   return {
     htmlAfterCompilation,
@@ -47,12 +58,19 @@ const injectHeadScripts = (document, headScripts) => {
   if (firstScriptChildIndex > -1) {
     headNode.childNodes = [
       ...headChildNodes.slice(0, firstScriptChildIndex),
-      ...fragment.childNodes,
+      ...fragment.childNodes.map((child) => {
+        return { ...child, parentNode: headNode }
+      }),
       ...headChildNodes.slice(firstScriptChildIndex),
     ]
   } else {
     // prefer append (so that any first child being text remains and indentation is safe)
-    headNode.childNodes = [...headChildNodes, ...fragment.childNodes]
+    headNode.childNodes = [
+      ...headChildNodes,
+      ...fragment.childNodes.map((child) => {
+        return { ...child, parentNode: headNode }
+      }),
+    ]
   }
 }
 
@@ -130,6 +148,23 @@ const polyfillModuleScripts = (document, { generateInlineScriptSrc }) => {
 
   return scriptsExternalized
 }
+
+// const resolveScripts = (document, resolveScriptSrc) => {
+//   visitDocument(document, (node) => {
+//     if (node.nodeName !== "script") {
+//       return
+//     }
+
+//     const attributes = node.attrs
+//     const srcAttribute = getAttributeByName(attributes, "src")
+//     if (!srcAttribute) {
+//       return
+//     }
+
+//     const srcAttributeValue = srcAttribute.value
+//     srcAttribute.value = resolveScriptSrc(srcAttributeValue)
+//   })
+// }
 
 const getAttributeByName = (attributes, attributeName) =>
   attributes.find((attr) => attr.name === attributeName)

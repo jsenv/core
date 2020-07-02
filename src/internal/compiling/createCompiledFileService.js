@@ -201,10 +201,10 @@ export const createCompiledFileService = ({
 
           const { htmlAfterCompilation, scriptsExternalized } = compileHtml(htmlBeforeCompilation, {
             headScripts: [
-              ...headScripts,
               {
                 src: `/${browserBundledJsFileRelativeUrl}`,
               },
+              ...headScripts,
             ],
             generateInlineScriptSrc: ({ hash }) => `./${assetDirectoryName}/${hash}.js`,
           })

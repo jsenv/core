@@ -41,9 +41,7 @@ export const startExploring = async ({
       accessControlAllowCredentials: true,
       stopOnPackageVersionChange: true,
       compileGroupCount: 2,
-      // we should not append the toolbar script if already there (jsenv exploring html file)
-      // or to allow an html page to inject it with options
-      headScripts: [...(toolbar ? [{ src: "./" }] : [])],
+      headScripts: [...(toolbar ? [{ type: "module", src: "@jsenv/core/src/toolbar.js" }] : [])],
       serveCustom: (request) =>
         firstService(
           () => serveIndex(request),

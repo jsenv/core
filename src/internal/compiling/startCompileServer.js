@@ -134,7 +134,7 @@ export const startCompileServer = async ({
     groupCount: compileGroupCount,
     runtimeAlwaysInsideRuntimeScoreMap,
   })
-  const importMapForCompileServer = await generateImportMapForCompileServer({
+  const compileServerImportMap = await generateImportMapForCompileServer({
     logger,
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
@@ -186,7 +186,7 @@ export const startCompileServer = async ({
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
     browserBundledJsFileRelativeUrl,
-    compileServerImportMap: importMapForCompileServer,
+    compileServerImportMap,
     importMapFileRelativeUrl,
     importDefaultExtension,
 
@@ -244,7 +244,7 @@ export const startCompileServer = async ({
     outDirectoryRelativeUrl,
     importDefaultExtension,
     importMapFileRelativeUrl,
-    importMapForCompileServer,
+    compileServerImportMap,
     groupMap,
     env,
     writeOnFilesystem,
@@ -262,7 +262,7 @@ export const startCompileServer = async ({
     outDirectoryRelativeUrl,
     importMapFileRelativeUrl,
     ...compileServer,
-    compileServerImportMap: importMapForCompileServer,
+    compileServerImportMap,
     compileServerGroupMap: groupMap,
   }
 }
@@ -337,6 +337,9 @@ const generateImportMapForCompileServer = async ({
       "@jsenv/core/": `./${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}`,
     },
   }
+
+  // lorsque /.jsenv/out n'est pas la ou on l'attends
+  // il faut alors faire un scope /.jsenv/out/ qui dit hey
   const importMapInternal = {
     imports: {
       ...(outDirectoryRelativeUrl === ".jsenv/out/"
@@ -786,7 +789,7 @@ const installOutFiles = async (
     outDirectoryRelativeUrl,
     importDefaultExtension,
     importMapFileRelativeUrl,
-    importMapForCompileServer,
+    compileServerImportMap,
     groupMap,
     env,
     writeOnFilesystem,
@@ -802,7 +805,7 @@ const installOutFiles = async (
     importMapFileRelativeUrl,
   }
 
-  const importMapToString = () => JSON.stringify(importMapForCompileServer, null, "  ")
+  const importMapToString = () => JSON.stringify(compileServerImportMap, null, "  ")
   const groupMapToString = () => JSON.stringify(groupMap, null, "  ")
   const envToString = () => JSON.stringify(env, null, "  ")
 
