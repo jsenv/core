@@ -1,20 +1,40 @@
+import { resolveBrowserGroup } from "../runtime/resolveBrowserGroup.js"
+import { computeCompileIdFromGroupId } from "../runtime/computeCompileIdFromGroupId.js"
 import { fetchUrl } from "./util/fetching.js"
 import { loadExploringConfig } from "./util/util.js"
 import { createPreference } from "./util/preferences.js"
 import { startJavaScriptAnimation } from "./util/animation.js"
 
+const fetchJSON = async (url, options) => {
+  const response = await fetchUrl(url, options)
+  const json = await response.json()
+  return json
+}
+
 const groupPreference = createPreference("group")
 
-const { projectDirectoryUrl, explorableConfig } = await loadExploringConfig({})
+const {
+  projectDirectoryUrl,
+  explorableConfig,
+  outDirectoryRelativeUrl,
+} = await loadExploringConfig({})
 
-const response = await fetchUrl(`/explorables`, {
+const files = await fetchJSON(`/explorables`, {
   method: "POST",
   body: JSON.stringify(explorableConfig),
   headers: {
     "x-jsenv-exploring": "1",
   },
 })
-const files = await response.json()
+
+const compileServerOrigin = document.location.origin
+const outDirectoryUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin))
+const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
+const groupMap = await fetchJSON(groupMapUrl)
+const compileId = computeCompileIdFromGroupId({
+  groupId: resolveBrowserGroup(groupMap),
+  groupMap,
+})
 
 const renderHtml = () => {
   const fileListElement = document.querySelector(`[data-page="file-list"]`).cloneNode(true)
@@ -25,13 +45,19 @@ const renderHtml = () => {
 
   const h4 = fileListElement.querySelector("h4")
 
-  // ici le lien va dépendre du compileId qu'on doit décider
-
   const ul = fileListElement.querySelector("ul")
   ul.innerHTML = files
     .map(
       (file) =>
-        `<li><a class="execution-link" href=${file.relativeUrl}>${file.relativeUrl}</a></li>`,
+        `<li>
+          <a
+            class="execution-link"
+            data-relative-url=${file.relativeUrl}
+            href=${relativeUrlToCompiledUrl(file.relativeUrl)}
+          >
+            ${file.relativeUrl}
+          </a>
+        </li>`,
     )
     .join("")
 
@@ -61,7 +87,7 @@ const renderHtml = () => {
     const arrayOfElementToShow = []
     const arrayOfElementToHide = []
     files.forEach((file) => {
-      const fileLink = fileListElement.querySelector(`a[href="${file.relativeUrl}"]`)
+      const fileLink = fileListElement.querySelector(`a[data-relative-url="${file.relativeUrl}"]`)
       const fileLi = fileLink.parentNode
       if (file.meta[groupName]) {
         arrayOfElementToShow.push(fileLi)
@@ -90,6 +116,10 @@ const renderHtml = () => {
 
   document.querySelector("main").appendChild(fileListElement)
   makeMenuScrollable()
+}
+
+const relativeUrlToCompiledUrl = (relativeUrl) => {
+  return `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${relativeUrl}`
 }
 
 const makeMenuScrollable = () => {

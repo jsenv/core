@@ -19,6 +19,11 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 
 startExploring({
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  explorableConfig: {
+    source: {
+      [`./${testDirectoryRelativeUrl}**/*.html`]: true,
+    },
+  },
   jsenvDirectoryRelativeUrl,
   compileServerProtocol: "http",
   compileServerPort: 3456,
