@@ -19,6 +19,7 @@ export const startExploring = async ({
   cancellationToken = createCancellationTokenForProcess(),
   explorableConfig = jsenvExplorableConfig,
   projectDirectoryUrl,
+  toolbar = true,
   ...rest
 }) => {
   return wrapExternalFunctionExecution(async () => {
@@ -40,6 +41,9 @@ export const startExploring = async ({
       accessControlAllowCredentials: true,
       stopOnPackageVersionChange: true,
       compileGroupCount: 2,
+      // we should not append the toolbar script if already there (jsenv exploring html file)
+      // or to allow an html page to inject it with options
+      headScripts: [...(toolbar ? [{ src: "./" }] : [])],
       serveCustom: (request) =>
         firstService(
           () => serveIndex(request),

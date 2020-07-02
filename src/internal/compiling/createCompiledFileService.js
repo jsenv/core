@@ -33,6 +33,7 @@ export const createCompiledFileService = ({
   babelPluginMap,
   groupMap,
   convertMap,
+  headScripts,
 
   projectFileRequestedCallback,
   useFilesystemAsCache,
@@ -200,6 +201,7 @@ export const createCompiledFileService = ({
 
           const { htmlAfterCompilation, scriptsExternalized } = compileHtml(htmlBeforeCompilation, {
             headScripts: [
+              ...headScripts,
               {
                 src: `/${browserBundledJsFileRelativeUrl}`,
               },

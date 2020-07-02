@@ -44,11 +44,9 @@ export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
   compileServerLogLevel,
 
-  // js compile options
-  transformTopLevelAwait = true,
-  transformModuleIntoSystemFormat = true,
-
   projectDirectoryUrl,
+  importMapFileRelativeUrl = "importMap.json",
+  importDefaultExtension,
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
@@ -57,9 +55,9 @@ export const startCompileServer = async ({
   useFilesystemAsCache = true,
   compileCacheStrategy = "etag",
 
-  importMapFileRelativeUrl = "importMap.json",
-  importDefaultExtension,
-
+  // js compile options
+  transformTopLevelAwait = true,
+  transformModuleIntoSystemFormat = true,
   env = {},
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceProcessEnvNodeEnv = true,
@@ -67,7 +65,6 @@ export const startCompileServer = async ({
   replaceGlobalFilename = false,
   replaceGlobalDirname = false,
   replaceMap = {},
-
   babelPluginMap = jsenvBabelPluginMap,
   convertMap = {},
 
@@ -94,6 +91,7 @@ export const startCompileServer = async ({
   },
   livereloadLogLevel = "info",
   serveCustom = () => null,
+  headScripts = [],
 }) => {
   assertArguments({
     projectDirectoryUrl,
@@ -197,6 +195,7 @@ export const startCompileServer = async ({
     babelPluginMap,
     groupMap,
     convertMap,
+    headScripts,
 
     projectFileRequestedCallback,
     useFilesystemAsCache,
