@@ -25,6 +25,29 @@ import { compileHtml } from "./compileHtml.js"
   assert({ actual, expected })
 }
 
+// don't inject script already there
+{
+  const htmlBeforeCompilation = `
+  <html>
+    <head>
+      <meta charset="utf8" />
+      <script src="foo.js"></script>
+    </head>
+    <body></body>
+  </html>`
+  const { htmlAfterCompilation } = compileHtml(htmlBeforeCompilation, {
+    headScripts: [{ src: "foo.js" }],
+  })
+  const actual = htmlAfterCompilation
+  const expected = `<html><head>
+      <meta charset="utf8">
+      <script src="foo.js"></script>
+    </head>
+    <body>
+  </body></html>`
+  assert({ actual, expected })
+}
+
 // transform external module script inside body
 {
   const htmlBeforeCompilation = `

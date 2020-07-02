@@ -23,16 +23,26 @@ export const compileHtml = (
 }
 
 const injectHeadScripts = (document, headScripts) => {
-  const headScriptHtml = headScripts.reduce((previous, script) => {
+  const htmlNode = document.childNodes.find((node) => node.nodeName === "html")
+  const headNode = htmlNode.childNodes[0]
+  const headChildNodes = headNode.childNodes
+
+  const headScriptsToInject = headScripts.filter((script) => {
+    return !headChildNodes.some((node) => {
+      if (node.nodeName !== "script") return false
+      const srcAttribute = getAttributeByName(node.attrs, "src")
+      if (!srcAttribute) return false
+      return srcAttribute.value === script.src
+    })
+  })
+
+  const headScriptHtml = headScriptsToInject.reduce((previous, script) => {
     const scriptAttributes = objectToHtmlAttributes(script)
     return `${previous}<script ${scriptAttributes}></script>
       `
   }, "")
   const fragment = parse5.parseFragment(headScriptHtml)
 
-  const htmlNode = document.childNodes.find((node) => node.nodeName === "html")
-  const headNode = htmlNode.childNodes[0]
-  const headChildNodes = headNode.childNodes
   const firstScriptChildIndex = headChildNodes.findIndex((node) => node.nodeName === "script")
   if (firstScriptChildIndex > -1) {
     headNode.childNodes = [
@@ -70,20 +80,18 @@ const polyfillModuleScripts = (document, { generateInlineScriptSrc }) => {
     }
 
     const attributes = node.attrs
-    const typeAttributeIndex = attributes.findIndex((attr) => attr.name === "type")
-    if (typeAttributeIndex === -1) {
+    const typeAttribute = getAttributeByName(attributes, "type")
+    if (!typeAttribute) {
       return
     }
 
-    const typeAttribute = attributes[typeAttributeIndex]
     const typeAttributeValue = typeAttribute.value
     if (typeAttributeValue !== "module") {
       return
     }
 
-    const srcAttributeIndex = attributes.findIndex((attr) => attr.name === "src")
-    if (srcAttributeIndex > -1) {
-      const srcAttribute = attributes[srcAttributeIndex]
+    const srcAttribute = getAttributeByName(attributes, "src")
+    if (srcAttribute) {
       const srcAttributeValue = srcAttribute.value
 
       mutations.push(() => {
@@ -122,6 +130,9 @@ const polyfillModuleScripts = (document, { generateInlineScriptSrc }) => {
 
   return scriptsExternalized
 }
+
+const getAttributeByName = (attributes, attributeName) =>
+  attributes.find((attr) => attr.name === attributeName)
 
 const generateScriptForJsenv = (src) => {
   return `<script>
