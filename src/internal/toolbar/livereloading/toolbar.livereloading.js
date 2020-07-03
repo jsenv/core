@@ -43,7 +43,7 @@ const connectLivereload = (executedFileRelativeUrl) => {
       if (connectedOnce) {
         // we have lost connection to the server, we might have missed some file changes
         // let's re-execute the file
-        reloadPage()
+        // reloadPage()
       } else {
         connectedOnce = true
         livereloadReadyPromise.resolve()
