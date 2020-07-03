@@ -27,6 +27,118 @@ const injectToolbar = async () => {
   await iframeLoadedPromise
   iframe.removeAttribute("tabindex")
 
+  const listenToolbarIframeEvent = (event, fn) => {
+    window.addEventListener(
+      "message",
+      (messageEvent) => {
+        const { data } = messageEvent
+        if (typeof data !== "object") return
+        const { jsenv } = data
+        if (!jsenv) return
+        const { type } = data
+        if (type !== event) return
+        fn(data.value)
+      },
+      false,
+    )
+  }
+
+  listenToolbarIframeEvent("toolbar-visibility-change", (visible) => {
+    if (visible) {
+      hideToolbarTrigger()
+    } else {
+      showToolbarTrigger()
+    }
+  })
+
+  const div = document.createElement("div")
+  const jsenvLogoSvgSrc = new URL("./internal/toolbar/jsenv-logo.svg", import.meta.url)
+  div.innerHTML = `
+<div id="jsenv-toolbar-trigger">
+  <svg id="jsenv-toolbar-trigger-icon">
+    <use xlink:href="${jsenvLogoSvgSrc}#jsenv-logo"></use>
+  </svg>
+  <style>
+    #jsenv-toolbar-trigger {
+      display: block;
+      overflow: hidden;
+      position: absolute;
+      bottom: -32px;
+      right: 20px;
+      height: 40px;
+      width: 40px;
+      padding: 0;
+      border-radius: 5px 5px 0 0;
+      border: 1px solid rgba(0, 0, 0, 0.33);
+      border-bottom: none;
+      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
+      background: transparent;
+      text-align: center;
+      transition: 600ms;
+    }
+
+    #jsenv-toolbar-trigger:hover {
+      cursor: pointer;
+    }
+
+    #jsenv-toolbar-trigger[data-expanded] {
+      bottom: 0;
+    }
+
+    #jsenv-toolbar-trigger-icon {
+      width: 35px;
+      height: 35px;
+      opacity: 0;
+      transition: 600ms;
+    }
+
+    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {
+      opacity: 1;
+    }
+  </style>
+</div>`
+  const toolbarTrigger = div.firstElementChild
+  iframe.parentNode.appendChild(toolbarTrigger)
+
+  let timer
+  toolbarTrigger.onmouseenter = () => {
+    toolbarTrigger.setAttribute("data-animate", "")
+    timer = setTimeout(expandToolbarTrigger, 500)
+  }
+  toolbarTrigger.onmouseleave = () => {
+    clearTimeout(timer)
+    collapseToolbarTrigger()
+  }
+  toolbarTrigger.onfocus = () => {
+    toolbarTrigger.removeAttribute("data-animate")
+    expandToolbarTrigger()
+  }
+  toolbarTrigger.onblur = () => {
+    toolbarTrigger.removeAttribute("data-animate")
+    clearTimeout(timer)
+    collapseToolbarTrigger()
+  }
+  toolbarTrigger.onclick = () => {
+    window.__jsenv__.toolbar.show()
+  }
+
+  const showToolbarTrigger = () => {
+    toolbarTrigger.style.display = "block"
+  }
+
+  const hideToolbarTrigger = () => {
+    toolbarTrigger.style.display = "none"
+  }
+
+  const expandToolbarTrigger = () => {
+    toolbarTrigger.setAttribute("data-expanded", "")
+  }
+
+  const collapseToolbarTrigger = () => {
+    toolbarTrigger.removeAttribute("data-expanded", "")
+  }
+  hideToolbarTrigger()
+
   return iframe
 }
 
@@ -62,40 +174,3 @@ const iframeToLoadedPromise = (iframe) => {
 }
 
 injectToolbar()
-
-// this toolbar trigger should not be in there
-// cause the iframe is now hidden with height of 0
-// toolbarTrigger: display and register onclick
-//     const toolbarTrigger = document.querySelector("#toolbar-trigger")
-//     var timer
-//     toolbarTrigger.onmouseenter = () => {
-//       toolbarTrigger.setAttribute("data-animate", "")
-//       timer = setTimeout(expandToolbarTrigger, 500)
-//     }
-//     toolbarTrigger.onmouseleave = () => {
-//       clearTimeout(timer)
-//       collapseToolbarTrigger()
-//     }
-//     toolbarTrigger.onfocus = () => {
-//       toolbarTrigger.removeAttribute("data-animate")
-//       expandToolbarTrigger()
-//     }
-//     toolbarTrigger.onblur = () => {
-//       toolbarTrigger.removeAttribute("data-animate")
-//       clearTimeout(timer)
-//       collapseToolbarTrigger()
-//     }
-//     toolbarTrigger.onclick = showToolbar
-//     // toolbarTrigger is hidden by default to avoid being shown
-//     // when toolbar is shown on page load, ensure it's visible once toolbar is hidden
-//     removeForceHideElement(toolbarTrigger)
-
-//     const expandToolbarTrigger = () => {
-//   const toolbarTrigger = document.querySelector("#toolbar-trigger")
-//   toolbarTrigger.setAttribute("data-expanded", "")
-// }
-
-// const collapseToolbarTrigger = () => {
-//   const toolbarTrigger = document.querySelector("#toolbar-trigger")
-//   toolbarTrigger.removeAttribute("data-expanded", "")
-// }

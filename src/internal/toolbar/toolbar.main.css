@@ -39,8 +39,9 @@ html {
 #toolbar {
   position: fixed;
   bottom: 0;
-  background: #404040;
   height: 40px;
+  width: 100%;
+  background: #404040;
 }
 
 #toolbar-wrapper {

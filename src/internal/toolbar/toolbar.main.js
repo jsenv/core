@@ -34,7 +34,7 @@ const renderToolbar = async () => {
     toolbar: {
       element: toolbarElement,
       show: showToolbar,
-      hide: () => (hideToolbar ? hideToolbar() : undefined),
+      hide: () => hideToolbar(),
     },
   })
 
@@ -86,7 +86,11 @@ const toogleToolbar = () => {
 
 const toolbarIsVisible = () => document.documentElement.hasAttribute("data-toolbar-visible")
 
-let hideToolbar
+let hideToolbar = () => {
+  // toolbar hidden by default, nothing to do to hide it by default
+  sendEventToParent("toolbar-visibility-change", false)
+}
+
 // (by the way it might be cool to have the toolbar auto show when)
 // it has something to say (being disconnected from livereload server)
 const showToolbar = ({ animate = true } = {}) => {
@@ -97,6 +101,8 @@ const showToolbar = ({ animate = true } = {}) => {
     document.documentElement.removeAttribute("data-toolbar-animation")
   }
   document.documentElement.setAttribute("data-toolbar-visible", "")
+
+  sendEventToParent("toolbar-visibility-change", true)
 
   const toolbarIframe = getToolbarIframe()
   const toolbarIframeParent = toolbarIframe.parentNode
@@ -128,6 +134,7 @@ const showToolbar = ({ animate = true } = {}) => {
       document.documentElement.removeAttribute("data-toolbar-animation")
     }
     document.documentElement.removeAttribute("data-toolbar-visible")
+    sendEventToParent("toolbar-visibility-change", false)
   }
 }
 
@@ -138,6 +145,17 @@ const urlToOriginalRelativeUrl = (url, outDirectoryRemoteUrl) => {
     return fileRelativeUrl
   }
   return new URL(url).pathname.slice(1)
+}
+
+const sendEventToParent = (type, value) => {
+  window.parent.postMessage(
+    {
+      jsenv: true,
+      type,
+      value,
+    },
+    "*",
+  )
 }
 
 renderToolbar()
