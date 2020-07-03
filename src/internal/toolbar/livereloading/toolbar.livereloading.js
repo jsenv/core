@@ -3,21 +3,15 @@ import { createPromiseAndHooks } from "../util/util.js"
 import { toggleTooltip, removeAutoShowTooltip, autoShowTooltip } from "../tooltip/tooltip.js"
 import { getLivereloadingPreference, createLivereloading } from "./livereloading.js"
 
-export const renderToolbarLivereload = () => {
+export const renderToolbarLivereload = ({ executedFileRelativeUrl }) => {
   removeForceHideElement(document.querySelector("#livereload-indicator"))
+  connectLivereload(executedFileRelativeUrl)
 }
 
 let livereloadConnection
 let livereloadReadyPromise
-let livereloadFile
 
-export const connectLivereload = ({ url }) => {
-  const fileRelativeUrl = new URL(url).pathname.slice(1)
-  if (livereloadFile === fileRelativeUrl) {
-    return
-  }
-  livereloadFile = fileRelativeUrl
-
+const connectLivereload = (executedFileRelativeUrl) => {
   const reloadPage = () => {
     document.location.reload(true)
   }
@@ -27,7 +21,7 @@ export const connectLivereload = ({ url }) => {
   livereloadReadyPromise = createPromiseAndHooks()
 
   let connectedOnce = false
-  livereloadConnection = createLivereloading(fileRelativeUrl, {
+  livereloadConnection = createLivereloading(executedFileRelativeUrl, {
     onFileChanged: () => {
       reloadPage()
     },
@@ -67,7 +61,6 @@ export const connectLivereload = ({ url }) => {
 }
 
 export const disconnectLivereload = () => {
-  livereloadFile = undefined
   if (livereloadConnection) {
     livereloadConnection.disconnect()
     livereloadConnection = undefined

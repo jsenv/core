@@ -10,7 +10,7 @@ import { renderToolbarSettings } from "./settings/toolbar.settings.js"
 import { renderToolbarTheme } from "./theme/toolbar.theme.js"
 import { renderToolbarAnimation } from "./animation/toolbar.animation.js"
 import { renderExecutionInToolbar } from "./execution/toolbar.execution.js"
-import { connectLivereload } from "./livereloading/toolbar.livereloading.js"
+import { renderToolbarLivereload } from "./livereloading/toolbar.livereloading.js"
 import { makeToolbarResponsive } from "./responsive/toolbar.responsive.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
@@ -54,8 +54,8 @@ const renderToolbar = async () => {
   renderToolbarAnimation()
   renderToolbarTheme()
   renderExecutionInToolbar({ executedFileRelativeUrl })
-  connectLivereload()
   deactivateToolbarSection(document.querySelector("#file-list-link"))
+  renderToolbarLivereload({ executedFileRelativeUrl })
 
   // } else {
   //   disconnectLivereload()
