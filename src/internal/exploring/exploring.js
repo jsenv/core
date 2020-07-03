@@ -1,9 +1,9 @@
 import { resolveBrowserGroup } from "../runtime/resolveBrowserGroup.js"
 import { computeCompileIdFromGroupId } from "../runtime/computeCompileIdFromGroupId.js"
-import { fetchUrl } from "./util/fetching.js"
-import { loadExploringConfig } from "./util/util.js"
-import { createPreference } from "./util/preferences.js"
-import { startJavaScriptAnimation } from "./util/animation.js"
+import { fetchUrl } from "../toolbar/util/fetching.js"
+import { loadExploringConfig } from "../toolbar/util/util.js"
+import { createPreference } from "../toolbar/util/preferences.js"
+import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
 
 const fetchJSON = async (url, options) => {
   const response = await fetchUrl(url, options)

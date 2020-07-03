@@ -1,6 +1,6 @@
 import { connectEventSource } from "./connectEventSource.js"
-import { jsenvLogger } from "../../exploring/util/jsenvLogger.js"
-import { createPreference } from "../../exploring/util/preferences.js"
+import { jsenvLogger } from "../util/jsenvLogger.js"
+import { createPreference } from "../util/preferences.js"
 
 const livereloadingPreference = createPreference("livereloading")
 

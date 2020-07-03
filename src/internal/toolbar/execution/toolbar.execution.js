@@ -1,4 +1,7 @@
-import { toggleTooltip } from "./tooltip.js"
+import { toggleTooltip } from "../tooltip/tooltip.js"
+
+// to know the execution duration, something as below
+// window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart
 
 export const applyExecutionIndicator = (state = "default", duration) => {
   const executionIndicator = document.querySelector("#execution-indicator")

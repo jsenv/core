@@ -1,20 +1,28 @@
-import { registerNotifications } from "../util/notification.js"
-import { createPreference } from "../util/preferences.js"
-import { createHorizontalBreakpoint } from "../util/responsive.js"
-import { hideTooltip } from "./tooltip.js"
-import { renderToolbarReload } from "./toolbar-reload.js"
-import { renderToolbarTheme } from "./toolbar-theme.js"
-import { renderToolbarAnimation } from "./toolbar-animation.js"
-import { applyExecutionIndicator } from "./execution-indicator.js"
-import { connectLivereload, disconnectLivereload } from "./toolbar-livereloading.js"
+import { registerNotifications } from "./util/notification.js"
+import { createPreference } from "./util/preferences.js"
+import { createHorizontalBreakpoint } from "./util/responsive.js"
+import { hideTooltip } from "./tooltip/tooltip.js"
+import {
+  forceHideElement,
+  removeForceHideElement,
+  toolbarSectionIsActive,
+  activateToolbarSection,
+  deactivateToolbarSection,
+} from "./util/dom.js"
+import { renderToolbarTheme } from "./theme/toolbar.theme.js"
+import { renderToolbarAnimation } from "./animation/toolbar.animation.js"
+import { applyExecutionIndicator } from "./execution/toolbar.execution.js"
+import { connectLivereload, disconnectLivereload } from "./livereloading/toolbar.livereloading.js"
+import { makeToolbarResponsive } from "./responsive/toolbar.responsive.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
 
-const WINDOW_SMALL_WIDTH = 420
 const WINDOW_MEDIUM_WIDTH = 570
 
-export const renderToolbar = (attempt) => {
-  const fileRelativeUrl = new URL(attempt.url).pathname.slice(1)
+const renderToolbar = () => {
+  makeToolbarResponsive()
+
+  const fileRelativeUrl = new URL(window.parent.document.location).pathname.slice(1)
 
   const toolbarVisible = toolbarVisibilityPreference.has()
     ? toolbarVisibilityPreference.get()
@@ -27,25 +35,23 @@ export const renderToolbar = (attempt) => {
   }
 
   const toolbarElement = document.querySelector("#toolbar")
-  window.toolbar = {
-    element: toolbarElement,
-    show: showToolbar,
-    hide: hideToolbar,
-  }
+  exposeOnParentWindow({
+    toolbar: {
+      element: toolbarElement,
+      show: showToolbar,
+      hide: hideToolbar,
+    },
+  })
 
   // settings
   document.querySelector("#settings-button").onclick = () => toggleSettingsBox()
   document.querySelector("#button-close-settings").onclick = () => toggleSettingsBox()
-  renderToolbarReload()
   registerNotifications()
   renderToolbarAnimation()
   renderToolbarTheme()
 
   // close button
   document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar()
-
-  // overflow menu
-  document.querySelector("#overflow-menu-button").onclick = () => toggleOverflowMenu()
 
   // apply responsive design on fileInput if needed + add listener on resize screen
   const input = document.querySelector("#file-input")
@@ -56,8 +62,9 @@ export const renderToolbar = (attempt) => {
   handleFileWidthBreakpoint()
   fileWidthBreakpoint.changed.listen(handleFileWidthBreakpoint)
 
+  // ça ça va changer je sais pas encore comment
   if (fileRelativeUrl) {
-    connectLivereload(attempt)
+    connectLivereload()
 
     input.value = fileRelativeUrl
     resizeInput(input, fileWidthBreakpoint)
@@ -80,75 +87,15 @@ export const renderToolbar = (attempt) => {
   }
 }
 
-let moves = []
-
-const responsiveToolbar = (overflowMenuBreakpoint) => {
-  // close all tooltips in case opened
-  hideTooltip(document.querySelector("#livereload-indicator"))
-  hideTooltip(document.querySelector("#execution-indicator"))
-  // close settings box in case opened
-  deactivateToolbarSection(document.querySelector("#settings"))
-
-  if (overflowMenuBreakpoint.isBelow()) {
-    enableOverflow()
-  } else {
-    disableOverflow()
+const exposeOnParentWindow = (object) => {
+  let { __jsenv__ } = window.parent
+  if (!__jsenv__) {
+    __jsenv__ = {}
+    window.parent.__jsenv__ = {}
   }
+
+  Object.assign(__jsenv__, object)
 }
-
-const enableOverflow = () => {
-  // move elements from toolbar to overflow menu
-  const responsiveToolbarElements = document.querySelectorAll("[data-responsive-toolbar-element]")
-  const overflowMenu = document.querySelector("#overflow-menu")
-
-  // keep a placeholder element to know where to move them back
-  moves = Array.from(responsiveToolbarElements).map((element) => {
-    const placeholder = document.createElement("div")
-    placeholder.style.display = "none"
-    placeholder.setAttribute("data-placeholder", "")
-    element.parentNode.replaceChild(placeholder, element)
-    overflowMenu.appendChild(element)
-    return { element, placeholder }
-  })
-
-  document.querySelector("#toolbar").setAttribute("data-overflow-menu-enabled", "")
-  removeForceHideElement(document.querySelector("#overflow-menu-button"))
-}
-
-const disableOverflow = () => {
-  // close overflow menu in case it's open & unselect toggleOverflowMenu button in case it's selected
-  hideOverflowMenu()
-  deactivateToolbarSection(document.querySelector("#overflow-menu"))
-  moves.forEach(({ element, placeholder }) => {
-    placeholder.parentNode.replaceChild(element, placeholder)
-  })
-  moves = []
-
-  document.querySelector("#toolbar").removeAttribute("data-overflow-menu-enabled")
-  forceHideElement(document.querySelector("#overflow-menu-button"))
-}
-
-const forceHideElement = (element) => {
-  element.setAttribute("data-force-hide", "")
-}
-
-const removeForceHideElement = (element) => {
-  element.removeAttribute("data-force-hide")
-}
-
-const activateToolbarSection = (element) => {
-  element.setAttribute("data-active", "")
-}
-
-const deactivateToolbarSection = (element) => {
-  element.removeAttribute("data-active")
-}
-
-const toolbarSectionIsActive = (element) => {
-  return element.hasAttribute("data-active")
-}
-
-const toolbarIsVisible = () => document.documentElement.hasAttribute("data-toolbar-visible")
 
 const toogleToolbar = () => {
   // if user click enter or space quickly while closing toolbar
@@ -159,6 +106,8 @@ const toogleToolbar = () => {
     showToolbar()
   }
 }
+
+const toolbarIsVisible = () => document.documentElement.hasAttribute("data-toolbar-visible")
 
 export const showToolbar = ({ animate = true } = {}) => {
   toolbarVisibilityPreference.set(true)
@@ -235,36 +184,4 @@ const toggleSettingsBox = () => {
   }
 }
 
-const overflowMenuIsVisible = () => {
-  const toolbar = document.querySelector("#toolbar")
-  return toolbar.hasAttribute("data-overflow-menu-visible")
-}
-
-const showOverflowMenu = () => {
-  const toolbar = document.querySelector("#toolbar")
-  document.querySelector("#overflow-menu").setAttribute("data-animate", "")
-  toolbar.setAttribute("data-overflow-menu-visible", "")
-}
-
-const hideOverflowMenu = () => {
-  const toolbar = document.querySelector("#toolbar")
-  toolbar.removeAttribute("data-overflow-menu-visible")
-  document.querySelector("#overflow-menu").removeAttribute("data-animate")
-}
-
-const toggleOverflowMenu = () => {
-  if (overflowMenuIsVisible()) {
-    hideOverflowMenu()
-  } else {
-    showOverflowMenu()
-  }
-}
-
-// apply responsive design on toolbar icons if needed + add listener on resize screen
-// ideally we should listen breakpoint once, for now restore toolbar
-const overflowMenuBreakpoint = createHorizontalBreakpoint(WINDOW_SMALL_WIDTH)
-const handleOverflowMenuBreakpoint = () => {
-  responsiveToolbar(overflowMenuBreakpoint)
-}
-handleOverflowMenuBreakpoint()
-overflowMenuBreakpoint.changed.listen(handleOverflowMenuBreakpoint)
+renderToolbar()
