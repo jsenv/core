@@ -2,6 +2,7 @@
 import { urlIsInsideOf } from "@jsenv/util/src/urlIsInsideOf.js"
 import { urlToRelativeUrl } from "@jsenv/util/src/urlToRelativeUrl.js"
 import { loadExploringConfig } from "./util/util.js"
+import { renderBackToListInToolbar } from "./backtolist/toolbar.backtolist.js"
 import { removeForceHideElement, deactivateToolbarSection } from "./util/dom.js"
 import { registerNotifications } from "./util/notification.js"
 import { createPreference } from "./util/preferences.js"
@@ -47,8 +48,7 @@ const renderToolbar = async () => {
     hideToolbar({ animate: false })
   }
 
-  // close button
-  document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar()
+  renderBackToListInToolbar()
 
   registerNotifications()
   makeToolbarResponsive()
@@ -56,17 +56,11 @@ const renderToolbar = async () => {
   renderToolbarAnimation()
   renderToolbarTheme()
   renderExecutionInToolbar({ executedFileRelativeUrl })
+  // this might become active but we need to detect this somehow
   deactivateToolbarSection(document.querySelector("#file-list-link"))
   renderToolbarLivereload({ executedFileRelativeUrl })
 
-  // } else {
-  //   disconnectLivereload()
-  //   forceHideElement(document.querySelector("#file"))
-  //   forceHideElement(document.querySelector("#livereload-indicator"))
-  //   forceHideElement(document.querySelector("#execution-indicator"))
-  //   deactivateToolbarSection(document.querySelector("#file"))
-  //   activateToolbarSection(document.querySelector("#file-list-link"))
-  // }
+  document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar()
 }
 
 const exposeOnParentWindow = (object) => {

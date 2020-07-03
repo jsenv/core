@@ -18,7 +18,10 @@ import { serveBundle } from "./serveBundle.js"
 import { compileHtml } from "./compileHtml.js"
 import { appendSourceMappingAsExternalUrl } from "../sourceMappingURLUtils.js"
 
-const jsenvToolbarHtmlFileUrl = resolveUrl("./src/toolbar.html", jsenvCoreDirectoryUrl)
+const jsenvToolbarHtmlFileUrl = resolveUrl(
+  "./src/internal/toolbar/toolbar.html",
+  jsenvCoreDirectoryUrl,
+)
 
 export const createCompiledFileService = ({
   cancellationToken,

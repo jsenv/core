@@ -21,7 +21,7 @@ const injectToolbar = async () => {
   })
   const iframeLoadedPromise = iframeToLoadedPromise(iframe)
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
-  iframe.setAttribute("src", new URL("./toolbar.html", import.meta.url))
+  iframe.setAttribute("src", new URL("./internal/toolbar/toolbar.html", import.meta.url))
   placeholder.parentNode.replaceChild(iframe, placeholder)
 
   await iframeLoadedPromise
