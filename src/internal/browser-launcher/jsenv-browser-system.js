@@ -4,6 +4,16 @@ import { fetchUsingXHR } from "../fetchUsingXHR.js"
 import { fetchAndEvalUsingXHR } from "../fetchAndEvalUsingXHR.js"
 import { memoize } from "../memoize.js"
 
+const getNavigationStartTime = () => {
+  try {
+    return performance.timing.navigationStart
+  } catch (e) {
+    return Date.now()
+  }
+}
+
+const navigationStartTime = getNavigationStartTime()
+
 const readyPromise = new Promise((resolve) => {
   if (document.readyState === "complete") {
     resolve()
@@ -19,18 +29,28 @@ const readyPromise = new Promise((resolve) => {
 const fileExecutionMap = {}
 
 const executionResultPromise = readyPromise.then(async () => {
-  const executionResult = {}
+  const fileExecutionMap = {}
   const fileExecutionResultPromises = []
+  let status = "completed"
   Object.keys(fileExecutionMap).forEach((key) => {
-    executionResult[key] = null // to get always same order for Object.keys(executionResult)
+    fileExecutionMap[key] = null // to get always same order for Object.keys(executionResult)
     const fileExecutionResultPromise = fileExecutionMap[key]
     fileExecutionResultPromises.push(fileExecutionResultPromise)
     fileExecutionResultPromise.then((fileExecutionResult) => {
-      executionResult[key] = fileExecutionResult
+      fileExecutionMap[key] = fileExecutionResult
+      if (fileExecutionResult.status === "errored") {
+        status = "errored"
+      }
     })
   })
   await Promise.all(fileExecutionResultPromises)
-  return executionResult
+
+  return {
+    status,
+    startTime: navigationStartTime,
+    endTime: Date.now(),
+    fileExecutionMap,
+  }
 })
 
 const importFile = async (specifier) => {

@@ -1,4 +1,7 @@
 /* eslint-disable import/max-dependencies */
+import { urlIsInsideOf } from "@jsenv/util/src/urlIsInsideOf.js"
+import { urlToRelativeUrl } from "@jsenv/util/src/urlToRelativeUrl.js"
+import { loadExploringConfig } from "./util/util.js"
 import { removeForceHideElement, deactivateToolbarSection } from "./util/dom.js"
 import { registerNotifications } from "./util/notification.js"
 import { createPreference } from "./util/preferences.js"
@@ -12,7 +15,17 @@ import { makeToolbarResponsive } from "./responsive/toolbar.responsive.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
 
-const renderToolbar = () => {
+const renderToolbar = async () => {
+  const executedFileCompiledUrl = window.parent.location.href
+  const compileServerOrigin = window.parent.location.origin
+  const exploringConfig = await loadExploringConfig()
+  const { outDirectoryRelativeUrl } = exploringConfig
+  const outDirectoryRemoteUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin))
+  const executedFileRelativeUrl = urlToOriginalRelativeUrl(
+    executedFileCompiledUrl,
+    outDirectoryRemoteUrl,
+  )
+
   const toolbarElement = document.querySelector("#toolbar")
   exposeOnParentWindow({
     toolbar: {
@@ -40,7 +53,7 @@ const renderToolbar = () => {
   renderToolbarSettings()
   renderToolbarAnimation()
   renderToolbarTheme()
-  renderExecutionInToolbar()
+  renderExecutionInToolbar({ executedFileRelativeUrl })
   connectLivereload()
   deactivateToolbarSection(document.querySelector("#file-list-link"))
 
@@ -131,6 +144,15 @@ const expandToolbarTrigger = () => {
 const collapseToolbarTrigger = () => {
   const toolbarTrigger = document.querySelector("#toolbar-trigger")
   toolbarTrigger.removeAttribute("data-expanded", "")
+}
+
+const urlToOriginalRelativeUrl = (url, outDirectoryRemoteUrl) => {
+  if (urlIsInsideOf(url, outDirectoryRemoteUrl)) {
+    const afterCompileDirectory = urlToRelativeUrl(url, outDirectoryRemoteUrl)
+    const fileRelativeUrl = afterCompileDirectory.slice(afterCompileDirectory.indexOf("/") + 1)
+    return fileRelativeUrl
+  }
+  return new URL(url).pathname.slice(1)
 }
 
 renderToolbar()

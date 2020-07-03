@@ -1,5 +1,11 @@
 <html>
-  <head></head>
+  <head>
+    <title>Jsenv toolbar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" type="text/css" href="./internal/toolbar/toolbar.main.css" />
+  </head>
   <body>
     <!-- toolbar -->
     <div id="toolbar">
@@ -25,7 +31,7 @@
                   Unknown state
                 </div>
               </div>
-              <div data-variant="loading">
+              <div data-variant="running">
                 <div class="tooltip">
                   Executing...
                 </div>
@@ -35,7 +41,7 @@
                   </svg>
                 </button>
               </div>
-              <div data-variant="success">
+              <div data-variant="completed">
                 <div class="tooltip">
                   Execution completed in X ms
                 </div>
@@ -45,7 +51,7 @@
                   </svg>
                 </button>
               </div>
-              <div data-variant="failure">
+              <div data-variant="errored">
                 <div class="tooltip">
                   Execution failed in X ms
                 </div>

@@ -2,14 +2,9 @@ import { removeForceHideElement, activateToolbarSection } from "../util/dom.js"
 import { createHorizontalBreakpoint } from "../util/responsive.js"
 import { toggleTooltip } from "../tooltip/tooltip.js"
 
-// to know the execution duration, something as below
-// window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart
-
 const WINDOW_MEDIUM_WIDTH = 570
 
-export const renderExecutionInToolbar = () => {
-  const fileRelativeUrl = new URL(window.parent.document.location).pathname.slice(1)
-
+export const renderExecutionInToolbar = ({ executedFileRelativeUrl }) => {
   // reset file execution indicator ui
   applyExecutionIndicator()
   removeForceHideElement(document.querySelector("#execution-indicator"))
@@ -22,35 +17,39 @@ export const renderExecutionInToolbar = () => {
   }
   handleFileWidthBreakpoint()
   fileWidthBreakpoint.changed.listen(handleFileWidthBreakpoint)
-  input.value = fileRelativeUrl
+  input.value = executedFileRelativeUrl
   resizeInput(input, fileWidthBreakpoint)
 
   activateToolbarSection(document.querySelector("#file"))
   removeForceHideElement(document.querySelector("#file"))
+
+  window.parent.__jsenv__.executionResultPromise.then(({ status, startTime, endTime }) => {
+    applyExecutionIndicator({ status, startTime, endTime })
+  })
 }
 
-const applyExecutionIndicator = (state = "default", duration) => {
+const applyExecutionIndicator = ({ status = "running", startTime, endTime } = {}) => {
   const executionIndicator = document.querySelector("#execution-indicator")
-  const variant = executionIndicator.querySelector(`[data-variant="${state}"]`).cloneNode(true)
+  const variant = executionIndicator.querySelector(`[data-variant="${status}"]`).cloneNode(true)
   const variantContainer = executionIndicator.querySelector("[data-variant-container]")
   variantContainer.innerHTML = ""
   variantContainer.appendChild(variant)
 
   executionIndicator.querySelector("button").onclick = () => toggleTooltip(executionIndicator)
-  executionIndicator.querySelector(".tooltip").textContent = computeText({ state, duration })
+  executionIndicator.querySelector(".tooltip").textContent = computeText({
+    status,
+    startTime,
+    endTime,
+  })
 }
 
-const computeText = ({ state, duration }) => {
-  if (state === "loading") {
-    return ""
+const computeText = ({ status, startTime, endTime }) => {
+  if (status === "completed") {
+    return `Execution completed in ${endTime - startTime}ms`
   }
 
-  if (state === "success") {
-    return `Execution completed in ${duration}ms`
-  }
-
-  if (state === "failure") {
-    return `Execution failed in ${duration}ms`
+  if (status === "errored") {
+    return `Execution failed in ${endTime - startTime}ms`
   }
 
   return ""
