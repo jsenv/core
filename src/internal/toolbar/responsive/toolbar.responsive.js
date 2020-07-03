@@ -66,7 +66,7 @@ const disableOverflow = () => {
   forceHideElement(document.querySelector("#overflow-menu-button"))
 }
 
-export const toggleOverflowMenu = () => {
+const toggleOverflowMenu = () => {
   if (overflowMenuIsVisible()) {
     hideOverflowMenu()
   } else {

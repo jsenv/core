@@ -1,0 +1,52 @@
+button:focus,
+a:focus,
+input:focus,
+*[data-contains-hidden-input] input:focus + * {
+  outline-style: none;
+  outline-offset: -2px;
+}
+
+*[data-contains-hidden-input] input:focus + * {
+  outline-width: 4px;
+  outline-offset: -2px;
+}
+
+html[data-last-interaction="keyboard"] button:focus,
+html[data-last-interaction="keyboard"] a:focus,
+html[data-last-interaction="keyboard"] input:focus,
+html[data-last-interaction="keyboard"] *[data-contains-hidden-input] input:focus + * {
+  outline-style: auto;
+}
+
+html[data-last-interaction="keyboard"] *[data-contains-hidden-input] input:focus + * {
+  outline-color: rgb(0, 150, 255);
+}
+
+/*
+Don't try to replace @-moz-document url-prefix() this by
+
+-moz-outline or -moz-outline-color
+Because firefox would take into account outline instead of -moz-outline
+
+:moz-focus-ring
+Because for some element we set the focus outline on a div which would not match :focusring
+*/
+@-moz-document url-prefix() {
+  html[data-last-interaction="keyboard"] button:focus,
+  html[data-last-interaction="keyboard"] a:focus,
+  html[data-last-interaction="keyboard"] input:focus,
+  html[data-last-interaction="keyboard"] *[data-input-customized] input:focus + * {
+    outline-width: 2px;
+    outline-offset: 0;
+    outline-style: solid;
+    /*
+    force a blue color for firefox otherwise
+    it uses outline-color: inherit
+    making it unpredictible and sometimes hard to see
+    */
+    outline-color: rgb(0, 150, 255);
+  }
+}
+::-moz-focus-inner {
+  border: 0;
+}

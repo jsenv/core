@@ -10,6 +10,11 @@ export const renderToolbarAnimation = () => {
     onPreferenceChange(animCheckbox.checked)
   }
   onPreferenceChange()
+
+  // enable toolbar transition only after first render
+  setTimeout(() => {
+    document.querySelector("#toolbar").setAttribute("data-animate", "")
+  })
 }
 
 const onPreferenceChange = (value = getAnimationPreference()) => {
@@ -20,10 +25,9 @@ const onPreferenceChange = (value = getAnimationPreference()) => {
   }
 }
 
-export const getAnimationPreference = () =>
-  animationPreference.has() ? animationPreference.get() : true
+const getAnimationPreference = () => (animationPreference.has() ? animationPreference.get() : true)
 
-export const setAnimationPreference = (value) => animationPreference.set(value)
+const setAnimationPreference = (value) => animationPreference.set(value)
 
 const enableAnimation = () => {
   document.documentElement.removeAttribute("data-animation-disabled")

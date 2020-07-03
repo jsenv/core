@@ -1,6 +1,11 @@
+import { removeForceHideElement } from "../util/dom.js"
 import { createPromiseAndHooks } from "../util/util.js"
 import { toggleTooltip, removeAutoShowTooltip, autoShowTooltip } from "../tooltip/tooltip.js"
 import { getLivereloadingPreference, createLivereloading } from "./livereloading.js"
+
+export const renderToolbarLivereload = () => {
+  removeForceHideElement(document.querySelector("#livereload-indicator"))
+}
 
 let livereloadConnection
 let livereloadReadyPromise

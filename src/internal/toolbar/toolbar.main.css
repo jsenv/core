@@ -1,11 +1,29 @@
-@import "./tooltip.css";
-@import "./execution-indicator.css";
-@import "./livereload-indicator.css";
-@import "./settings.css";
-@import "./overflow-menu.css";
+@import "./execution/execution.css";
+@import "./focus/focus.css";
+@import "./livereloading/livereloading.css";
+@import "./responsive/overflow-menu.css";
+@import "./settings/settings.css";
+@import "./theme/light-theme.css";
+@import "./tooltip/tooltip.css";
 
-/* toolbar themes */
-@import "./light-theme.css";
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* global utils */
+[data-force-hide] {
+  display: none !important;
+}
+
+html {
+  font-family: arial, sans;
+}
 
 #toolbar {
   background: #404040;
