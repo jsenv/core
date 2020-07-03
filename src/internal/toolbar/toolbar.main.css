@@ -1,3 +1,4 @@
+@import "./animation/animation.css";
 @import "./execution/execution.css";
 @import "./focus/focus.css";
 @import "./livereloading/livereloading.css";

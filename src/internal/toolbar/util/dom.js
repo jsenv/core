@@ -33,7 +33,7 @@ const disableIframeOverflowOnParentWindow = () => {
   }
 }
 
-const getToolbarIframe = () => {
+export const getToolbarIframe = () => {
   const iframes = Array.from(window.parent.document.querySelectorAll("iframe"))
   return iframes.find((iframe) => iframe.contentWindow === window)
 }

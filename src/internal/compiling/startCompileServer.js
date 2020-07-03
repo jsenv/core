@@ -499,16 +499,13 @@ const setupServerSentEventsForLivereload = ({
     return dependencySet
   }
 
-  // each time a file is requested for the first time
-  // its dependencySet is computed
-  // each time a file is modified, it's dependencySet is deleted
+  // each time a file is requested for the first time its dependencySet is computed
   projectFileRequested.register((mainRelativeUrl) => {
-    // this is true for a browser but not for Node.js
-    // but without this we track every possible file dependencies
-    // to be checked
-    // if (!mainRelativeUrl.endsWith(".html")) return
-
-    const dependencySet = getDependencySet(mainRelativeUrl)
+    // when a file is requested, always rebuild its dependency in case it has changed
+    // since the last time it was requested
+    const dependencySet = new Set()
+    dependencySet.add(mainRelativeUrl)
+    trackerMap.set(mainRelativeUrl, dependencySet)
 
     const unregisterDependencyRequested = projectFileRequested.register((relativeUrl, request) => {
       if (dependencySet.has(relativeUrl)) {
@@ -528,21 +525,9 @@ const setupServerSentEventsForLivereload = ({
       )
       dependencySet.add(relativeUrl)
     })
-    const unregisterMainModified = projectFileModified.register((relativeUrl) => {
-      if (relativeUrl === mainRelativeUrl) {
-        // this assume client will livereload when a file is modified
-        // otherwise the dependencies for this file will never be updated
-        // as they won't be requested
-        unregisterDependencyRequested()
-        unregisterMainModified()
-        unregisterMainRemoved()
-        trackerMap.delete(mainRelativeUrl)
-      }
-    })
     const unregisterMainRemoved = projectFileRemoved.register((relativeUrl) => {
       if (relativeUrl === mainRelativeUrl) {
         unregisterDependencyRequested()
-        unregisterMainModified()
         unregisterMainRemoved()
         trackerMap.delete(mainRelativeUrl)
       }
@@ -562,7 +547,7 @@ const setupServerSentEventsForLivereload = ({
   }
 
   const trackMainAndDependencies = (mainRelativeUrl, { modified, removed, lastEventId }) => {
-    livereloadLogger.info(`track ${mainRelativeUrl} and its dependencies`)
+    livereloadLogger.debug(`track ${mainRelativeUrl} and its dependencies`)
     const dependencySet = getDependencySet(mainRelativeUrl)
 
     // don't forget to avoid passing this id to event room connect method
@@ -606,7 +591,7 @@ const setupServerSentEventsForLivereload = ({
     })
 
     return () => {
-      livereloadLogger.info(`stop tracking ${mainRelativeUrl} and its dependencies.`)
+      livereloadLogger.debug(`stop tracking ${mainRelativeUrl} and its dependencies.`)
       unregisterModified()
       unregisterDeleted()
     }

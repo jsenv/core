@@ -27,15 +27,6 @@ const injectToolbar = async () => {
   await iframeLoadedPromise
   iframe.removeAttribute("tabindex")
 
-  // l'idée maintenant va etre de pouvoir communiquer entre
-  // ici et la toolbar (a priori peu de chose, juste pour savoir quand elle est open/closed)
-  // et ajuster le site en fonction
-
-  // ça il faudra le faire seulement a certain moment
-  // on va recevoir un toolbarOpenRequest, toolbarCloseRequest
-  // ou alors toolbarWillOpen bref et on est responsable d'adapter le site ici
-  showToolbar(iframe)
-
   return iframe
 }
 
@@ -72,22 +63,39 @@ const iframeToLoadedPromise = (iframe) => {
 
 injectToolbar()
 
-const showToolbar = (iframe) => {
-  // maybe we should use js animation here because we would not conflict with css
-  const restoreBodyStyles = setStyles(document.body, {
-    "scroll-padding-bottom": "40px", // same hre we should add 40px
-    "transition-property": "padding-bottom",
-    "transition-duration": "300ms",
-    "padding-bottom": "40px", // if there is already one we should add 40px
-  })
-  const restoreIframeStyles = setStyles(iframe, {
-    "height": "40px",
-    "visibility": "visible",
-    "transition-property": "height, visibility",
-    "transition-duration": "300ms",
-  })
-  return () => {
-    restoreBodyStyles()
-    restoreIframeStyles()
-  }
-}
+// this toolbar trigger should not be in there
+// cause the iframe is now hidden with height of 0
+// toolbarTrigger: display and register onclick
+//     const toolbarTrigger = document.querySelector("#toolbar-trigger")
+//     var timer
+//     toolbarTrigger.onmouseenter = () => {
+//       toolbarTrigger.setAttribute("data-animate", "")
+//       timer = setTimeout(expandToolbarTrigger, 500)
+//     }
+//     toolbarTrigger.onmouseleave = () => {
+//       clearTimeout(timer)
+//       collapseToolbarTrigger()
+//     }
+//     toolbarTrigger.onfocus = () => {
+//       toolbarTrigger.removeAttribute("data-animate")
+//       expandToolbarTrigger()
+//     }
+//     toolbarTrigger.onblur = () => {
+//       toolbarTrigger.removeAttribute("data-animate")
+//       clearTimeout(timer)
+//       collapseToolbarTrigger()
+//     }
+//     toolbarTrigger.onclick = showToolbar
+//     // toolbarTrigger is hidden by default to avoid being shown
+//     // when toolbar is shown on page load, ensure it's visible once toolbar is hidden
+//     removeForceHideElement(toolbarTrigger)
+
+//     const expandToolbarTrigger = () => {
+//   const toolbarTrigger = document.querySelector("#toolbar-trigger")
+//   toolbarTrigger.setAttribute("data-expanded", "")
+// }
+
+// const collapseToolbarTrigger = () => {
+//   const toolbarTrigger = document.querySelector("#toolbar-trigger")
+//   toolbarTrigger.removeAttribute("data-expanded", "")
+// }

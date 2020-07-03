@@ -6,7 +6,7 @@ import { memoize } from "../memoize.js"
 
 const getNavigationStartTime = () => {
   try {
-    return performance.timing.navigationStart
+    return window.performance.timing.navigationStart
   } catch (e) {
     return Date.now()
   }
