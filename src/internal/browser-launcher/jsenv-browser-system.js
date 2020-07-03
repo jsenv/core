@@ -1,7 +1,7 @@
 import { createBrowserRuntime } from "../runtime/createBrowserRuntime/createBrowserRuntime.js"
 import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
-import { fetchUsingXHR } from "../fetchUsingXHR.js"
-import { fetchAndEvalUsingXHR } from "../fetchAndEvalUsingXHR.js"
+import { fetchUrl } from "../fetch-browser.js"
+import { fetchAndEvalUsingFetch } from "../fetchAndEvalUsingFetch.js"
 import { memoize } from "../memoize.js"
 
 const getNavigationStartTime = () => {
@@ -71,7 +71,7 @@ const importFile = async (specifier) => {
 
 const getBrowserRuntime = memoize(async () => {
   const compileServerOrigin = document.location.origin
-  const exploringInfoResponse = await fetchUsingXHR(compileServerOrigin, {
+  const exploringInfoResponse = await fetchUrl(compileServerOrigin, {
     headers: {
       "x-jsenv-exploring": true,
     },
@@ -95,7 +95,7 @@ const getBrowserRuntime = memoize(async () => {
   if (Error.captureStackTrace) {
     const { sourcemapMainFileRelativeUrl, sourcemapMappingFileRelativeUrl } = exploringData
 
-    await fetchAndEvalUsingXHR(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
+    await fetchAndEvalUsingFetch(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
     const { SourceMapConsumer } = window.sourceMap
     SourceMapConsumer.initialize({
       "lib/mappings.wasm": `${compileServerOrigin}/${sourcemapMappingFileRelativeUrl}`,

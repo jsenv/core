@@ -1,5 +1,5 @@
 import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
-import { fetchAndEvalUsingXHR } from "../fetchAndEvalUsingXHR.js"
+import { fetchAndEvalUsingFetch } from "../fetchAndEvalUsingFetch.js"
 
 window.execute = async ({
   outDirectoryRelativeUrl,
@@ -19,7 +19,7 @@ window.execute = async ({
   errorExposureInDocument = true,
 }) => {
   const browserRuntimeCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/${browserRuntimeFileRelativeUrl}`
-  await fetchAndEvalUsingXHR(browserRuntimeCompiledFileRemoteUrl)
+  await fetchAndEvalUsingFetch(browserRuntimeCompiledFileRemoteUrl)
   const { __browserRuntime__ } = window
 
   const { compileDirectoryRelativeUrl, executeFile } = await __browserRuntime__.create({
@@ -30,7 +30,7 @@ window.execute = async ({
 
   let errorTransform = (error) => error
   if (Error.captureStackTrace) {
-    await fetchAndEvalUsingXHR(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
+    await fetchAndEvalUsingFetch(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
     const { SourceMapConsumer } = window.sourceMap
     SourceMapConsumer.initialize({
       "lib/mappings.wasm": `${compileServerOrigin}/${sourcemapMappingFileRelativeUrl}`,

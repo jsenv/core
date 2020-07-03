@@ -5,7 +5,7 @@ import { memoize } from "../../memoize.js"
 import { createBrowserSystem } from "./createBrowserSystem.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
-import { fetchUsingXHR } from "../../fetchUsingXHR.js"
+import { fetchUrl } from "../../fetch-browser.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 
@@ -29,7 +29,7 @@ export const createBrowserRuntime = async ({
   }
 
   const fetchSource = (url) => {
-    return fetchUsingXHR(url, {
+    return fetchUrl(url, {
       credentials: "include",
       headers: {
         ...(htmlFileRelativeUrl ? { "x-jsenv-execution-id": htmlFileRelativeUrl } : {}),

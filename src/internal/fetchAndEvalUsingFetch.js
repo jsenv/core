@@ -1,7 +1,7 @@
-import { fetchUsingXHR } from "./fetchUsingXHR.js"
+import { fetchUrl } from "./fetch-browser.js"
 
-export const fetchAndEvalUsingXHR = async (url) => {
-  const response = await fetchUsingXHR(url)
+export const fetchAndEvalUsingFetch = async (url) => {
+  const response = await fetchUrl(url)
 
   if (response.status >= 200 && response.status <= 299) {
     const text = await response.text()

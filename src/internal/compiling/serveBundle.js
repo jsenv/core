@@ -73,6 +73,8 @@ export const serveBundle = async ({
     })
   }
 
+  // might want to put this to false while working on jsenv
+  // to that cache gets verified
   const isJenvInternalFile = urlIsInsideOf(
     originalFileUrl,
     resolveUrl("./src/internal/", jsenvCoreDirectoryUrl),
