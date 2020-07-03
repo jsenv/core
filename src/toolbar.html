@@ -12,8 +12,11 @@
       <div id="toolbar-wrapper">
         <section id="file-list-link" data-responsive-toolbar-element>
           <a class="toolbar-icon-wrapper" href="/">
-            <svg id="fileIconSvg" class="iconToolbar" width="35px" height="35px">
-              <use xlink:href="#fileIconSvgModel"></use>
+            <svg id="fileIconSvg" class="iconToolbar" viewBox="0 0 24 24" width="35" height="35">
+              <path d="M0 0h24v24H0V0z" fill="none" />
+              <path
+                d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"
+              />
             </svg>
           </a>
         </section>
@@ -314,44 +317,6 @@
       </svg>
     </button>
 
-    <!-- page templates -->
-    <div id="page-templates" style="display: none;">
-      <article data-page="default"></article>
-
-      <article data-page="error-navigation">
-        <h1>Error occured</h1>
-        <pre></pre>
-      </article>
-
-      <article data-page="file-list">
-        <section id="explorables">
-          <div id="explorables-header">
-            <svg id="fileIconSvgConfig" width="35px" height="35px">
-              <use xlink:href="#fileIconSvgModel"></use>
-            </svg>
-            <h2>Explorable files in <span title="${directoryUrl}">${directoryName}</span></h2>
-            <div class="menu-wrapper">
-              <fieldset id="filter-group-set" class="menu"></fieldset>
-            </div>
-            <div class="paddles">
-              <button class="left-paddle paddle hidden">
-                <
-              </button>
-              <button class="right-paddle paddle">
-                >
-              </button>
-            </div>
-          </div>
-          <h4>${message}</h4>
-          <nav>
-            <ul></ul>
-          </nav>
-        </section>
-      </article>
-
-      <article data-page="file-execution"></article>
-    </div>
-
     <!-- svg filter (must not be hidden or won't show in firefox) -->
     <svg>
       <defs>
@@ -637,13 +602,6 @@
           d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
         />
         <path d="M0 0h24v24H0z" fill="none" />
-      </svg>
-      <!-- file icon -->
-      <svg id="fileIconSvgModel" viewBox="0 0 24 24">
-        <path d="M0 0h24v24H0V0z" fill="none" />
-        <path
-          d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"
-        />
       </svg>
       <!-- 3 dots icon -->
       <svg id="dotsIconSvgModel" viewBox="0 0 24 24">
