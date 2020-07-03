@@ -1,3 +1,43 @@
+export const updateIframeOverflowOnParentWindow = () => {
+  const aTooltipIsOpened =
+    document.querySelector("[data-tooltip-visible]") ||
+    document.querySelector("[data-tooltip-auto-visible]")
+  const settingsAreOpened = document.querySelector("#settings[data-active]")
+
+  if (aTooltipIsOpened || settingsAreOpened) {
+    enableIframeOverflowOnParentWindow()
+  } else {
+    disableIframeOverflowOnParentWindow()
+  }
+}
+
+const enableIframeOverflowOnParentWindow = () => {
+  const iframe = getToolbarIframe()
+  const transitionDuration = iframe.style.transitionDuration
+  setStyles(iframe, { "height": "100%", "transition-duration": "0ms" })
+  if (transitionDuration) {
+    setTimeout(() => {
+      setStyles(iframe, { "transition-duration": transitionDuration })
+    })
+  }
+}
+
+const disableIframeOverflowOnParentWindow = () => {
+  const iframe = getToolbarIframe()
+  const transitionDuration = iframe.style.transitionDuration
+  setStyles(iframe, { "height": "40px", "transition-duration": "0ms" })
+  if (transitionDuration) {
+    setTimeout(() => {
+      setStyles(iframe, { "transition-duration": transitionDuration })
+    })
+  }
+}
+
+const getToolbarIframe = () => {
+  const iframes = Array.from(window.parent.document.querySelectorAll("iframe"))
+  return iframes.find((iframe) => iframe.contentWindow === window)
+}
+
 export const forceHideElement = (element) => {
   element.setAttribute("data-force-hide", "")
 }

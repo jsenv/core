@@ -2,6 +2,7 @@ import {
   toolbarSectionIsActive,
   deactivateToolbarSection,
   activateToolbarSection,
+  updateIframeOverflowOnParentWindow,
 } from "../util/dom.js"
 
 export const renderToolbarSettings = () => {
@@ -13,7 +14,9 @@ const toggleSettingsBox = () => {
   const settings = document.querySelector(`#settings`)
   if (toolbarSectionIsActive(settings)) {
     deactivateToolbarSection(settings)
+    updateIframeOverflowOnParentWindow()
   } else {
     activateToolbarSection(settings)
+    updateIframeOverflowOnParentWindow()
   }
 }

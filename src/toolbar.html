@@ -7,6 +7,7 @@
     <link rel="stylesheet" type="text/css" href="./internal/toolbar/toolbar.main.css" />
   </head>
   <body>
+    <div id="toolbar-overlay"></div>
     <!-- toolbar -->
     <div id="toolbar">
       <div id="toolbar-wrapper">
@@ -214,21 +215,6 @@
             <div id="settings-box-body">
               <div class="settings-box-item">
                 <div class="category-title">
-                  Reload
-                </div>
-                <label class="switch" data-contains-hidden-input>
-                  <input id="toggle-reload" type="checkbox" />
-                  <div>
-                    <div class="slider"></div>
-                    <div class="square"></div>
-                  </div>
-                </label>
-                <div class="category-subtitle">
-                  Reload whole document on file change.
-                </div>
-              </div>
-              <div class="settings-box-item">
-                <div class="category-title">
                   <svg width="20px" height="20px">
                     <use xlink:href="#notifIconSvgModel"></use>
                   </svg>
@@ -242,7 +228,7 @@
                   </div>
                 </label>
                 <div class="category-subtitle">
-                  Send system notification when a file execution fails or is fixed.
+                  Send system notification when execution fails or is fixed.
                 </div>
               </div>
               <div class="settings-box-item">

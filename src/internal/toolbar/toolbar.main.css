@@ -16,18 +16,30 @@ body {
   padding: 0;
 }
 
+html {
+  font-family: arial, sans;
+}
+
 /* global utils */
 [data-force-hide] {
   display: none !important;
 }
 
-html {
-  font-family: arial, sans;
+#toolbar-overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  filter: url(#better-blur);
+  background-color: rgba(0, 0, 0, 0.2);
 }
 
 #toolbar {
+  position: fixed;
+  bottom: 0;
   background: #404040;
-  height: 100%;
+  height: 40px;
 }
 
 #toolbar-wrapper {

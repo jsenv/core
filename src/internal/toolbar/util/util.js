@@ -1,7 +1,7 @@
 import { isCancelError } from "@jsenv/cancellation"
 import { fetchUrl } from "./fetching.js"
 
-export const loadExploringConfig = async ({ cancellationToken }) => {
+export const loadExploringConfig = async ({ cancellationToken } = {}) => {
   try {
     const exploringJsonResponse = await fetchUrl("/exploring.json", {
       headers: { "x-jsenv-exploring": "1" },

@@ -17,7 +17,7 @@ const {
   projectDirectoryUrl,
   explorableConfig,
   outDirectoryRelativeUrl,
-} = await loadExploringConfig({})
+} = await loadExploringConfig()
 
 const files = await fetchJSON(`/explorables`, {
   method: "POST",

@@ -18,6 +18,8 @@ const toolbarVisibilityPreference = createPreference("toolbar")
 const renderToolbar = async () => {
   const executedFileCompiledUrl = window.parent.location.href
   const compileServerOrigin = window.parent.location.origin
+  // this should not block the whole toolbar rendering + interactivity
+  // (but this is not the main reason it feels lagish)
   const exploringConfig = await loadExploringConfig()
   const { outDirectoryRelativeUrl } = exploringConfig
   const outDirectoryRemoteUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin))
