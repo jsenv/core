@@ -30,8 +30,9 @@ export const compileFile = async ({
     throw new Error(`compileCacheStrategy must be etag or mtime , got ${compileCacheStrategy}`)
   }
 
-  const cacheWithETag = writeOnFilesystem && compileCacheStrategy === "etag"
   const { headers = {} } = request
+  const clientCacheDisabled = headers["cache-control"] === "no-cache"
+  const cacheWithETag = writeOnFilesystem && compileCacheStrategy === "etag"
 
   let ifEtagMatch
   if (cacheWithETag && "if-none-match" in headers) {
@@ -78,7 +79,7 @@ export const compileFile = async ({
 
     const { contentType, compiledSource } = compileResult
 
-    if (cacheWithETag) {
+    if (cacheWithETag && !clientCacheDisabled) {
       if (ifEtagMatch && compileResultStatus === "cached") {
         return {
           status: 304,
@@ -97,7 +98,7 @@ export const compileFile = async ({
       }
     }
 
-    if (cacheWithMtime) {
+    if (cacheWithMtime && !clientCacheDisabled) {
       if (ifModifiedSinceDate && compileResultStatus === "cached") {
         return {
           status: 304,
