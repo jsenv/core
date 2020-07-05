@@ -215,10 +215,13 @@ export const startCompileServer = async ({
     serverName: "compile server",
 
     protocol: compileServerProtocol,
+    http2: compileServerProtocol === "https",
+    redirectHttpToHttps: compileServerProtocol === "https",
     privateKey: compileServerPrivateKey,
     certificate: compileServerCertificate,
     ip: compileServerIp,
     port: compileServerPort,
+    sendServerTiming: true,
     sendInternalErrorStack: true,
     requestToResponse: (request) =>
       firstService(

@@ -1,5 +1,6 @@
 import { urlToFileSystemPath, ensureParentDirectories } from "@jsenv/util"
 import { require } from "../../require.js"
+import { measureFunctionDuration } from "../../measureFunctionDuration.js"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
 import { updateMeta } from "./updateMeta.js"
@@ -53,9 +54,12 @@ ${projectDirectoryUrl}`)
     throw new TypeError(`compile must be a function, got ${compile}`)
   }
 
+  const lockStartTime = Date.now()
   return startAsap(
     async () => {
-      const { meta, compileResult, compileResultStatus } = await computeCompileReport({
+      const lockEndTime = Date.now()
+      const lockStepTime = lockEndTime - lockStartTime
+      const { meta, compileResult, compileResultStatus, timing } = await computeCompileReport({
         originalFileUrl,
         compiledFileUrl,
         compile,
@@ -67,21 +71,30 @@ ${projectDirectoryUrl}`)
         logger,
       })
 
+      const cacheWriteTiming = {}
       if (writeOnFilesystem) {
-        await updateMeta({
-          logger,
-          meta,
-          compileResult,
-          compileResultStatus,
-          compiledFileUrl,
-          cacheHitTracking,
-        })
+        const [cacheWriteTime] = await measureFunctionDuration(() =>
+          updateMeta({
+            logger,
+            meta,
+            compileResult,
+            compileResultStatus,
+            compiledFileUrl,
+            cacheHitTracking,
+          }),
+        )
+        cacheWriteTiming["cache write"] = cacheWriteTime
       }
 
       return {
         meta,
         compileResult,
         compileResultStatus,
+        timing: {
+          lock: lockStepTime,
+          ...timing,
+          ...cacheWriteTiming,
+        },
       }
     },
     {
@@ -103,24 +116,34 @@ const computeCompileReport = async ({
   compileCacheAssetsValidation,
   logger,
 }) => {
-  const meta = useFilesystemAsCache
-    ? await readMeta({
+  const [cacheReadTime, meta] = await measureFunctionDuration(async () => {
+    if (useFilesystemAsCache) {
+      return readMeta({
         logger,
         compiledFileUrl,
       })
-    : null
+    }
+    return null
+  })
 
   if (!meta) {
-    const compileResult = await callCompile({
-      logger,
-      originalFileUrl,
-      compile,
-    })
+    const [compileStepTime, compileResult] = await measureFunctionDuration(() =>
+      callCompile({
+        logger,
+        originalFileUrl,
+        compile,
+      }),
+    )
 
     return {
       meta: null,
       compileResult,
       compileResultStatus: "created",
+      timing: {
+        "cache read": cacheReadTime,
+        "cache validation": 0,
+        "compile": compileStepTime,
+      },
     }
   }
 
@@ -133,16 +156,24 @@ const computeCompileReport = async ({
     compileCacheSourcesValidation,
     compileCacheAssetsValidation,
   })
+
   if (!metaValidation.valid) {
-    const compileResult = await callCompile({
-      logger,
-      originalFileUrl,
-      compile,
-    })
+    const [compileStepTime, compileResult] = await measureFunctionDuration(() =>
+      callCompile({
+        logger,
+        originalFileUrl,
+        compile,
+      }),
+    )
     return {
       meta,
       compileResult,
       compileResultStatus: "updated",
+      timing: {
+        "cache read": cacheReadTime,
+        ...metaValidation.timing,
+        "compile": compileStepTime,
+      },
     }
   }
 
@@ -159,6 +190,11 @@ const computeCompileReport = async ({
       assetsContent,
     },
     compileResultStatus: "cached",
+    timing: {
+      "cache read": cacheReadTime,
+      ...metaValidation.timing,
+      "compile": 0,
+    },
   }
 }
 

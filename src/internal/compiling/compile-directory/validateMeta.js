@@ -4,6 +4,7 @@ import {
   readFileSystemNodeModificationTime,
   bufferToEtag,
 } from "@jsenv/util"
+import { measureFunctionDuration } from "../../measureFunctionDuration.js"
 import { resolveAssetFileUrl, resolveSourceFileUrl } from "./locaters.js"
 
 export const validateMeta = async ({
@@ -15,16 +16,26 @@ export const validateMeta = async ({
   compileCacheSourcesValidation = true,
   compileCacheAssetsValidation = true,
 }) => {
-  const compiledFileValidation = await validateCompiledFile({
-    compiledFileUrl,
-    ifEtagMatch,
-    ifModifiedSinceDate,
-  })
+  const [compiledFileValidationTime, compiledFileValidation] = await measureFunctionDuration(() =>
+    validateCompiledFile({
+      compiledFileUrl,
+      ifEtagMatch,
+      ifModifiedSinceDate,
+    }),
+  )
+
+  const compiledFileValidationTiming = {
+    "cache compiled file validation": compiledFileValidationTime,
+  }
+
   if (!compiledFileValidation.valid) {
     logger.debug(
       `${urlToFileSystemPath(compiledFileUrl)} modified (${compiledFileValidation.code})`,
     )
-    return compiledFileValidation
+    return {
+      ...compiledFileValidation,
+      timing: compiledFileValidationTiming,
+    }
   }
   logger.debug(`${urlToFileSystemPath(compiledFileUrl)} not modified`)
 
@@ -33,23 +44,38 @@ export const validateMeta = async ({
     return {
       code: "SOURCES_EMPTY",
       valid: false,
+      timing: compiledFileValidationTiming,
     }
   }
 
-  const [sourcesValidations, assetValidations] = await Promise.all([
-    compileCacheSourcesValidation
-      ? validateSources({
-          meta,
-          compiledFileUrl,
-        })
-      : [],
-    compileCacheAssetsValidation
-      ? validateAssets({
-          meta,
-          compiledFileUrl,
-        })
-      : [],
+  const [
+    [sourcesValidationsTime, sourcesValidations],
+    [assetsValidationTime, assetValidations],
+  ] = await Promise.all([
+    measureFunctionDuration(() =>
+      compileCacheSourcesValidation
+        ? validateSources({
+            meta,
+            compiledFileUrl,
+          })
+        : [],
+    ),
+    measureFunctionDuration(() =>
+      compileCacheAssetsValidation
+        ? validateAssets({
+            meta,
+            compiledFileUrl,
+          })
+        : [],
+    ),
   ])
+  const sourcesValidationTiming = {
+    "cache sources validation": sourcesValidationsTime,
+  }
+  const assetsValidationTiming = {
+    "cache assets validation": assetsValidationTime,
+  }
+
   const invalidSourceValidation = sourcesValidations.find(({ valid }) => !valid)
   if (invalidSourceValidation) {
     logger.debug(
@@ -57,7 +83,14 @@ export const validateMeta = async ({
         invalidSourceValidation.code
       })`,
     )
-    return invalidSourceValidation
+    return {
+      ...invalidSourceValidation,
+      timing: {
+        ...compiledFileValidationTiming,
+        ...sourcesValidationTiming,
+        ...assetsValidationTiming,
+      },
+    }
   }
   const invalidAssetValidation = assetValidations.find(({ valid }) => !valid)
   if (invalidAssetValidation) {
@@ -66,7 +99,14 @@ export const validateMeta = async ({
         invalidAssetValidation.code
       })`,
     )
-    return invalidAssetValidation
+    return {
+      ...invalidAssetValidation,
+      timing: {
+        ...compiledFileValidationTiming,
+        ...sourcesValidationTiming,
+        ...assetsValidationTiming,
+      },
+    }
   }
   logger.debug(`${urlToFileSystemPath(compiledFileUrl)} cache is valid`)
 
@@ -80,6 +120,11 @@ export const validateMeta = async ({
       compiledSource,
       sourcesContent,
       assetsContent,
+    },
+    timing: {
+      ...compiledFileValidationTiming,
+      ...sourcesValidationTiming,
+      ...assetsValidationTiming,
     },
   }
 }

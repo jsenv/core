@@ -18,7 +18,7 @@ startExploring({
     },
   },
   jsenvDirectoryRelativeUrl,
-  compileServerProtocol: "http",
+  compileServerProtocol: "https",
   compileServerPort: 3456,
   keepProcessAlive: true,
   jsenvDirectoryClean: true,

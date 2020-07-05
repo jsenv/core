@@ -53,7 +53,7 @@ export const compileFile = async ({
   }
 
   try {
-    const { compileResult, compileResultStatus } = await getOrGenerateCompiledFile({
+    const { compileResult, compileResultStatus, timing } = await getOrGenerateCompiledFile({
       logger,
       projectDirectoryUrl,
       originalFileUrl,
@@ -68,6 +68,7 @@ export const compileFile = async ({
       compileCacheAssetsValidation,
       compile,
     })
+    const serverTimingResponseHeaders = timingToServerTimingResponseHeaders(timing)
 
     projectFileRequestedCallback(urlToRelativeUrl(originalFileUrl, projectDirectoryUrl), request)
     compileResult.sources.forEach((source) => {
@@ -81,6 +82,7 @@ export const compileFile = async ({
       if (ifEtagMatch && compileResultStatus === "cached") {
         return {
           status: 304,
+          headers: serverTimingResponseHeaders,
         }
       }
       return {
@@ -89,6 +91,7 @@ export const compileFile = async ({
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
           "eTag": bufferToEtag(Buffer.from(compiledSource)),
+          ...serverTimingResponseHeaders,
         },
         body: compiledSource,
       }
@@ -98,6 +101,7 @@ export const compileFile = async ({
       if (ifModifiedSinceDate && compileResultStatus === "cached") {
         return {
           status: 304,
+          headers: serverTimingResponseHeaders,
         }
       }
       return {
@@ -108,6 +112,7 @@ export const compileFile = async ({
           "last-modified": new Date(
             await readFileSystemNodeModificationTime(compiledFileUrl),
           ).toUTCString(),
+          ...serverTimingResponseHeaders,
         },
         body: compiledSource,
       }
@@ -118,6 +123,7 @@ export const compileFile = async ({
       headers: {
         "content-length": Buffer.byteLength(compiledSource),
         "content-type": contentType,
+        ...serverTimingResponseHeaders,
       },
       body: compiledSource,
     }
@@ -151,4 +157,15 @@ export const compileFile = async ({
 
     return convertFileSystemErrorToResponseProperties(error)
   }
+}
+
+const timingToServerTimingResponseHeaders = (timing) => {
+  const serverTimingValue = Object.keys(timing)
+    .map((key) => {
+      const time = timing[key]
+      return `${key.replace(/ /g, "_")};desc=${JSON.stringify(key)};dur=${time}`
+    })
+    .join(", ")
+
+  return { "server-timing": serverTimingValue }
 }
