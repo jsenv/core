@@ -23,6 +23,8 @@ startExploring({
   keepProcessAlive: true,
   jsenvDirectoryClean: true,
   stopOnPackageVersionChange: false,
+  // useFilesystemAsCache: false,
+  // writeOnFileSystem: false,
 })
 
 // /test-manual/exploring-2/.jsenv/out/otherwise/test-manual/exploring-2/basic/basic.html

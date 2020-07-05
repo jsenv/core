@@ -1,6 +1,7 @@
 import { urlToFileSystemPath, ensureParentDirectories } from "@jsenv/util"
 import { require } from "../../require.js"
 import { measureFunctionDuration } from "../../measureFunctionDuration.js"
+import { readFileContent } from "./fs-optimized-for-cache.js"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
 import { updateMeta } from "./updateMeta.js"
@@ -209,7 +210,7 @@ const callCompile = async ({ logger, originalFileUrl, compile }) => {
     contentType,
     compiledSource,
     ...rest
-  } = await compile()
+  } = await compile(compile.length ? await readFileContent(originalFileUrl) : undefined)
 
   if (typeof contentType !== "string") {
     throw new TypeError(`compile must return a contentType string, got ${contentType}`)

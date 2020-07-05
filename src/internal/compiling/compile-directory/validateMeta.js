@@ -1,10 +1,6 @@
-import {
-  urlToFileSystemPath,
-  readFile,
-  readFileSystemNodeModificationTime,
-  bufferToEtag,
-} from "@jsenv/util"
+import { urlToFileSystemPath, readFileSystemNodeModificationTime, bufferToEtag } from "@jsenv/util"
 import { measureFunctionDuration } from "../../measureFunctionDuration.js"
+import { readFileContent } from "./fs-optimized-for-cache.js"
 import { resolveAssetFileUrl, resolveSourceFileUrl } from "./locaters.js"
 
 export const validateMeta = async ({
@@ -131,7 +127,7 @@ export const validateMeta = async ({
 
 const validateCompiledFile = async ({ compiledFileUrl, ifEtagMatch, ifModifiedSinceDate }) => {
   try {
-    const compiledSource = await readFile(compiledFileUrl)
+    const compiledSource = await readFileContent(compiledFileUrl)
 
     if (ifEtagMatch) {
       const compiledEtag = bufferToEtag(Buffer.from(compiledSource))
@@ -190,7 +186,7 @@ const validateSource = async ({ compiledFileUrl, source, eTag }) => {
   })
 
   try {
-    const sourceContent = await readFile(sourceFileUrl)
+    const sourceContent = await readFileContent(sourceFileUrl)
     const sourceETag = bufferToEtag(Buffer.from(sourceContent))
 
     if (sourceETag !== eTag) {
@@ -252,7 +248,7 @@ const validateAsset = async ({ asset, compiledFileUrl, eTag }) => {
   })
 
   try {
-    const assetContent = await readFile(assetFileUrl)
+    const assetContent = await readFileContent(assetFileUrl)
     const assetContentETag = bufferToEtag(Buffer.from(assetContent))
 
     if (eTag !== assetContentETag) {

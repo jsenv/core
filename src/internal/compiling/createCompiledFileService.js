@@ -1,7 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { basename } from "path"
 import { urlToContentType, serveFile } from "@jsenv/server"
-import { resolveUrl, resolveDirectoryUrl, readFile, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import {
   COMPILE_ID_OTHERWISE,
   COMPILE_ID_GLOBAL_BUNDLE,
@@ -156,11 +156,10 @@ export const createCompiledFileService = ({
         compileCacheStrategy,
         projectFileRequestedCallback,
         request,
-        compile: async () => {
-          const code = await readFile(originalFileUrl)
+        compile: async (originalFileContent) => {
           const transformResult = await transformJs({
             projectDirectoryUrl,
-            code,
+            code: originalFileContent,
             url: originalFileUrl,
             urlAfterTransform: compiledFileUrl,
             babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
@@ -175,7 +174,7 @@ export const createCompiledFileService = ({
 
           return transformResultToCompilationResult(transformResult, {
             projectDirectoryUrl,
-            originalFileContent: code,
+            originalFileContent,
             originalFileUrl,
             compiledFileUrl,
             sourcemapFileUrl,
@@ -200,9 +199,7 @@ export const createCompiledFileService = ({
         projectFileRequestedCallback,
         request,
 
-        compile: async () => {
-          const htmlBeforeCompilation = await readFile(originalFileUrl)
-
+        compile: async (htmlBeforeCompilation) => {
           const assetDirectoryName = `${basename(compiledFileUrl)}__asset__`
 
           const { htmlAfterCompilation, scriptsExternalized } = compileHtml(htmlBeforeCompilation, {
