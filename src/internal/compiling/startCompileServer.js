@@ -222,6 +222,7 @@ export const startCompileServer = async ({
     ip: compileServerIp,
     port: compileServerPort,
     sendServerTiming: true,
+    nagle: false,
     sendInternalErrorStack: true,
     requestToResponse: (request) =>
       firstService(
