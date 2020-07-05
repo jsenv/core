@@ -140,7 +140,6 @@ const createExploringDataService = ({
         sourcemapMappingFileRelativeUrl,
       } = getBrowserExecutionDynamicData({
         projectDirectoryUrl,
-        compileServerOrigin: request.origin,
       })
 
       const data = {

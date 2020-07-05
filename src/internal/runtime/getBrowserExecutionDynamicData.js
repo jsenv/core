@@ -2,7 +2,7 @@ import { urlToRelativeUrl, fileSystemPathToUrl } from "@jsenv/util"
 import { require } from "../require.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
-export const getBrowserExecutionDynamicData = ({ projectDirectoryUrl, compileServerOrigin }) => {
+export const getBrowserExecutionDynamicData = ({ projectDirectoryUrl }) => {
   const browserRuntimeFileRelativeUrl =
     projectDirectoryUrl === jsenvCoreDirectoryUrl
       ? "src/browserRuntime.js"
@@ -22,6 +22,5 @@ export const getBrowserExecutionDynamicData = ({ projectDirectoryUrl, compileSer
     browserRuntimeFileRelativeUrl,
     sourcemapMainFileRelativeUrl,
     sourcemapMappingFileRelativeUrl,
-    compileServerOrigin,
   }
 }

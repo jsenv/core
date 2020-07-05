@@ -3,7 +3,7 @@ import { fetchUsingXHR } from "./fetchUsingXHR.js"
 
 const fetchNative = async (
   url,
-  { cancellationToken = createCancellationToken(), ...options } = {},
+  { cancellationToken = createCancellationToken(), mode = "cors", ...options } = {},
 ) => {
   const abortController = new AbortController()
 
@@ -17,6 +17,7 @@ const fetchNative = async (
   try {
     response = await window.fetch(url, {
       signal: abortController.signal,
+      mode,
       ...options,
     })
   } catch (e) {
