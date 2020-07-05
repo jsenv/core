@@ -6,9 +6,9 @@ import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
-  firstService,
   serveFile,
   createSSERoom,
+  firstServiceWithTiming,
 } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
 import {
@@ -90,7 +90,7 @@ export const startCompileServer = async ({
     "./**/node_modules/": false,
   },
   livereloadLogLevel = "info",
-  serveCustom = () => null,
+  customServices = {},
   headScripts = [],
 }) => {
   assertArguments({
@@ -224,15 +224,14 @@ export const startCompileServer = async ({
     sendServerTiming: true,
     nagle: false,
     sendInternalErrorStack: true,
-    requestToResponse: (request) =>
-      firstService(
-        () => serveCustom(request),
-        () => serveSSEForLivereload(request),
-        () => serveAssetFile(request),
-        () => serveBrowserScript(request),
-        () => serveCompiledFile(request),
-        () => serveProjectFile(request),
-      ),
+    requestToResponse: firstServiceWithTiming({
+      ...customServices,
+      "service:livereload sse": serveSSEForLivereload,
+      "service:asset files": serveAssetFile,
+      "service:browser script": serveBrowserScript,
+      "service:compiled files": serveCompiledFile,
+      "service:project files": serveProjectFile,
+    }),
     accessControlAllowRequestOrigin: true,
     accessControlAllowRequestMethod: true,
     accessControlAllowRequestHeaders: true,
@@ -727,7 +726,6 @@ const createAssetFileService = ({ projectDirectoryUrl }) => {
       return serveFile(resolveUrl(ressource.slice(1), projectDirectoryUrl), {
         method,
         headers,
-        sendServerTiming: true,
       })
     }
     return null
@@ -796,7 +794,6 @@ const createProjectFileService = ({ projectDirectoryUrl, projectFileRequestedCal
     const responsePromise = serveFile(filePath, {
       method,
       headers,
-      sendServerTiming: true,
     })
 
     return responsePromise

@@ -6,7 +6,7 @@ import {
   urlToRelativeUrl,
   resolveUrl,
 } from "@jsenv/util"
-import { firstService, readRequestBodyAsString } from "@jsenv/server"
+import { readRequestBodyAsString } from "@jsenv/server"
 import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
 import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
@@ -51,12 +51,11 @@ export const startExploring = async ({
             ]
           : []),
       ],
-      serveCustom: (request) =>
-        firstService(
-          () => serveIndex(request),
-          () => serveExploringData(request),
-          () => serveExplorableListAsJson(request),
-        ),
+      customServices: {
+        "service:index": (request) => serveIndex(request),
+        "service:exploring-data": (request) => serveExploringData(request),
+        "service:explorables": (request) => serveExplorableListAsJson(request),
+      },
       ...rest,
     })
 
