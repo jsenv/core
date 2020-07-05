@@ -1,5 +1,15 @@
 /**
 
+I think the sometimes poor perf of compile server comes from this:
+
+node.js is overhelmed by things to do
+in that context it takes the opportunity to delay promise resolution
+and a promise might take 50/100ms to resolve (or more)
+
+consequently a dumb request ends up taking 600ms when it would take 50ms
+
+- node ./test-manual/exploring-2/start-exploring-2.js
+
 */
 
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
@@ -26,5 +36,3 @@ startExploring({
   // useFilesystemAsCache: false,
   // writeOnFileSystem: false,
 })
-
-// /test-manual/exploring-2/.jsenv/out/otherwise/test-manual/exploring-2/basic/basic.html

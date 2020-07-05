@@ -64,6 +64,7 @@ export const createCompiledFileService = ({
       return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
         method,
         headers,
+        sendServerTiming: true,
       })
     }
 
@@ -117,9 +118,9 @@ export const createCompiledFileService = ({
         )
         // for otherwise-commonjs-bundle, server did not write importMap.json
         // let's just return otherwise/importMapFileRelativeUrl
-        return serveFile(otherwiseImportmapFileUrl, { method, headers })
+        return serveFile(otherwiseImportmapFileUrl, { method, headers, sendServerTiming: true })
       }
-      return serveFile(compiledFileUrl, { method, headers })
+      return serveFile(compiledFileUrl, { method, headers, sendServerTiming: true })
     }
 
     if (contentType === "application/javascript") {
