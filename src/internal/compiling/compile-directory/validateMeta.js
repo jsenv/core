@@ -1,5 +1,5 @@
 import { urlToFileSystemPath, readFileSystemNodeModificationTime, bufferToEtag } from "@jsenv/util"
-import { measureFunctionDuration } from "../../measureFunctionDuration.js"
+import { timeFunction } from "@jsenv/server"
 import { readFileContent } from "./fs-optimized-for-cache.js"
 import { resolveAssetFileUrl, resolveSourceFileUrl } from "./locaters.js"
 
@@ -12,17 +12,15 @@ export const validateMeta = async ({
   compileCacheSourcesValidation = true,
   compileCacheAssetsValidation = true,
 }) => {
-  const [compiledFileValidationTime, compiledFileValidation] = await measureFunctionDuration(() =>
-    validateCompiledFile({
-      compiledFileUrl,
-      ifEtagMatch,
-      ifModifiedSinceDate,
-    }),
+  const [compiledFileValidationTiming, compiledFileValidation] = await timeFunction(
+    "cache compiled file validation",
+    () =>
+      validateCompiledFile({
+        compiledFileUrl,
+        ifEtagMatch,
+        ifModifiedSinceDate,
+      }),
   )
-
-  const compiledFileValidationTiming = {
-    "cache compiled file validation": compiledFileValidationTime,
-  }
 
   if (!compiledFileValidation.valid) {
     logger.debug(
@@ -45,10 +43,10 @@ export const validateMeta = async ({
   }
 
   const [
-    [sourcesValidationsTime, sourcesValidations],
-    [assetsValidationTime, assetValidations],
+    [sourcesValidationTiming, sourcesValidations],
+    [assetsValidationTiming, assetValidations],
   ] = await Promise.all([
-    measureFunctionDuration(() =>
+    timeFunction("cache sources validation", () =>
       compileCacheSourcesValidation
         ? validateSources({
             meta,
@@ -56,7 +54,7 @@ export const validateMeta = async ({
           })
         : [],
     ),
-    measureFunctionDuration(() =>
+    timeFunction("cache assets validation", () =>
       compileCacheAssetsValidation
         ? validateAssets({
             meta,
@@ -65,12 +63,6 @@ export const validateMeta = async ({
         : [],
     ),
   ])
-  const sourcesValidationTiming = {
-    "cache sources validation": sourcesValidationsTime,
-  }
-  const assetsValidationTiming = {
-    "cache assets validation": assetsValidationTime,
-  }
 
   const invalidSourceValidation = sourcesValidations.find(({ valid }) => !valid)
   if (invalidSourceValidation) {
