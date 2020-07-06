@@ -2,6 +2,7 @@
 import { urlIsInsideOf } from "@jsenv/util/src/urlIsInsideOf.js"
 import { urlToRelativeUrl } from "@jsenv/util/src/urlToRelativeUrl.js"
 import { loadExploringConfig } from "./util/util.js"
+import "./focus/toolbar.focus.js"
 import { renderBackToListInToolbar } from "./backtolist/toolbar.backtolist.js"
 import { getToolbarIframe, deactivateToolbarSection, setStyles } from "./util/dom.js"
 import { registerNotifications } from "./util/notification.js"
