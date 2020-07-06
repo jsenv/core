@@ -13,6 +13,7 @@ const injectToolbar = async () => {
   setStyles(iframe, {
     position: "fixed",
     bottom: 0,
+    left: 0,
     width: "100%",
     height: 0,
     /* ensure toolbar children are not focusable when hidden */

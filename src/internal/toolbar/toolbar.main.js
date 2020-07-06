@@ -6,8 +6,8 @@ import { renderBackToListInToolbar } from "./backtolist/toolbar.backtolist.js"
 import { getToolbarIframe, deactivateToolbarSection, setStyles } from "./util/dom.js"
 import { registerNotifications } from "./util/notification.js"
 import { createPreference } from "./util/preferences.js"
-import { hideTooltip } from "./tooltip/tooltip.js"
-import { renderToolbarSettings } from "./settings/toolbar.settings.js"
+import { hideTooltip, hideAllTooltip } from "./tooltip/tooltip.js"
+import { renderToolbarSettings, hideSettings } from "./settings/toolbar.settings.js"
 import { renderToolbarTheme } from "./theme/toolbar.theme.js"
 import { renderToolbarAnimation } from "./animation/toolbar.animation.js"
 import { renderExecutionInToolbar } from "./execution/toolbar.execution.js"
@@ -29,6 +29,12 @@ const renderToolbar = async () => {
     outDirectoryRemoteUrl,
   )
 
+  const toolbarOverlay = document.querySelector("#toolbar-overlay")
+  toolbarOverlay.onclick = () => {
+    hideAllTooltip()
+    hideSettings()
+  }
+
   const toolbarElement = document.querySelector("#toolbar")
   exposeOnParentWindow({
     toolbar: {
@@ -48,7 +54,10 @@ const renderToolbar = async () => {
     hideToolbar({ animate: false })
   }
 
-  renderBackToListInToolbar()
+  renderBackToListInToolbar({
+    outDirectoryRelativeUrl,
+    exploringHtmlFileRelativeUrl: exploringConfig.exploringHtmlFileRelativeUrl,
+  })
 
   registerNotifications()
   makeToolbarResponsive()

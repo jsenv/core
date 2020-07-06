@@ -4,7 +4,6 @@ import {
   normalizeSpecifierMetaMap,
   collectFiles,
   urlToRelativeUrl,
-  resolveUrl,
 } from "@jsenv/util"
 import { readRequestBodyAsString } from "@jsenv/server"
 import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
@@ -14,6 +13,7 @@ import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./inter
 import { getBrowserExecutionDynamicData } from "./internal/runtime/getBrowserExecutionDynamicData.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
+import { exploringHtmlFileUrl } from "./internal/jsenvInternalFiles.js"
 
 export const startExploring = async ({
   cancellationToken = createCancellationTokenForProcess(),
@@ -90,11 +90,7 @@ const createIndexService = ({
   compileServerGroupMap,
 }) => {
   // redirect / to for @jsenv/core/src/exploring.html
-  const exploringIndexFileUrl = resolveUrl(
-    "./src/internal/exploring/exploring.html",
-    jsenvCoreDirectoryUrl,
-  )
-  const exploringIndexFileRelativeUrl = urlToRelativeUrl(exploringIndexFileUrl, projectDirectoryUrl)
+  const exploringIndexFileRelativeUrl = urlToRelativeUrl(exploringHtmlFileUrl, projectDirectoryUrl)
   // use worst compileId to be sure it's compatible
   const compileId =
     COMPILE_ID_OTHERWISE in compileServerGroupMap
@@ -149,6 +145,7 @@ const createExploringDataService = ({
         sourcemapMainFileRelativeUrl,
         sourcemapMappingFileRelativeUrl,
         explorableConfig,
+        exploringHtmlFileRelativeUrl: urlToRelativeUrl(exploringHtmlFileUrl, projectDirectoryUrl),
       }
       const json = JSON.stringify(data)
       return {

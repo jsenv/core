@@ -28,3 +28,10 @@ export const removeAutoShowTooltip = (element) => {
   element.removeAttribute("data-tooltip-auto-visible")
   updateIframeOverflowOnParentWindow()
 }
+
+export const hideAllTooltip = () => {
+  const elementsWithTooltip = Array.from(document.querySelectorAll("[data-tooltip-visible]"))
+  elementsWithTooltip.forEach((elementWithTooltip) => {
+    hideTooltip(elementWithTooltip)
+  })
+}

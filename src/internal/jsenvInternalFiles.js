@@ -15,3 +15,8 @@ export const jsenvHtmlFileUrl = resolveUrl(
   "./src/internal/jsenv-html-file.html",
   jsenvCoreDirectoryUrl,
 )
+
+export const exploringHtmlFileUrl = resolveUrl(
+  "./src/internal/exploring/exploring.html",
+  jsenvCoreDirectoryUrl,
+)

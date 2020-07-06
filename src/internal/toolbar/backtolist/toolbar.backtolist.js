@@ -1,9 +1,10 @@
-export const renderBackToListInToolbar = () => {
-  // sauf que ce ne sera pas toujours ça
-  // c'est plutot quelque chose en dur qu'on récup du serveur je pense
-  const href = window.parent.location.href
+export const renderBackToListInToolbar = ({
+  outDirectoryRelativeUrl,
+  exploringHtmlFileRelativeUrl,
+}) => {
+  const exploringHtmlFileUrl = `/${outDirectoryRelativeUrl}otherwise/${exploringHtmlFileRelativeUrl}`
 
-  document.querySelector("#file-list-link a").href = href
+  document.querySelector("#file-list-link a").href = exploringHtmlFileUrl
   document.querySelector("#file-list-link a").onclick = (clickEvent) => {
     if (clickEvent.defaultPrevented) {
       return
@@ -13,7 +14,7 @@ export const renderBackToListInToolbar = () => {
       return
     }
 
-    window.parent.location.href = href
+    window.parent.location.href = exploringHtmlFileUrl
   }
 }
 
