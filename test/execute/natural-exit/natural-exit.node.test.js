@@ -23,6 +23,7 @@ let nodeRuntimeHooks
   })
   const expected = {
     status: "completed",
+    namespace: {},
   }
   assert({ actual, expected })
 }

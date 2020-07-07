@@ -7,7 +7,7 @@ import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}react.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}react.html`
 
 const actual = await execute({
   ...EXECUTE_TEST_PARAMS,
@@ -23,7 +23,12 @@ const actual = await execute({
 const expected = {
   status: "completed",
   namespace: {
-    default: "object",
+    "./react.js": {
+      status: "completed",
+      namespace: {
+        default: "object",
+      },
+    },
   },
 }
 assert({ actual, expected })
