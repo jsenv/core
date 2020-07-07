@@ -1,5 +1,4 @@
-
-@import "./page-file-list/page-file-list.css";
+@import "../toolbar/focus/focus.css";
 
 /* reset stuff */
 * {
@@ -12,20 +11,9 @@ body {
   padding: 0;
 }
 
-/* global utils */
-[data-force-hide] {
-  display: none !important;
-}
-
 html {
   font-family: arial, sans;
 }
-
-/* structure */
-/* html,
-body {
-  height: 100%;
-} */
 
 body {
   display: flex;
@@ -44,55 +32,149 @@ main > * {
   flex: 1;
 }
 
-button:focus,
-a:focus,
-input:focus,
-*[data-contains-hidden-input] input:focus + * {
-  outline-style: none;
-  outline-offset: -2px;
+article[data-page="file-list"] {
+  background: #1f262c;
+  color: #97a0a0;
 }
 
-*[data-contains-hidden-input] input:focus + * {
-  outline-width: 4px;
-  outline-offset: -2px;
+h2 {
+  margin: 20px 0;
+  color: #24b1b0;
+  display: inline-block;
 }
 
-html[data-last-interaction="keyboard"] button:focus,
-html[data-last-interaction="keyboard"] a:focus,
-html[data-last-interaction="keyboard"] input:focus,
-html[data-last-interaction="keyboard"] *[data-contains-hidden-input] input:focus + * {
-  outline-style: auto;
+h4 {
+  font-weight: normal;
+  font-size: 15px;
+  color: #97a0a0;
+  padding: 0 25px;
 }
 
-html[data-last-interaction="keyboard"] *[data-contains-hidden-input] input:focus + * {
-  outline-color: rgb(0, 150, 255);
+#explorables {
+  word-break: break-word;
 }
 
-/*
-Don't try to replace @-moz-document url-prefix() this by
-
--moz-outline or -moz-outline-color
-Because firefox would take into account outline instead of -moz-outline
-
-:moz-focus-ring
-Because for some element we set the focus outline on a div which would not match :focusring
-*/
-@-moz-document url-prefix() {
-  html[data-last-interaction="keyboard"] button:focus,
-  html[data-last-interaction="keyboard"] a:focus,
-  html[data-last-interaction="keyboard"] input:focus,
-  html[data-last-interaction="keyboard"] *[data-input-customized] input:focus + * {
-    outline-width: 2px;
-    outline-offset: 0;
-    outline-style: solid;
-    /*
-    force a blue color for firefox otherwise
-    it uses outline-color: inherit
-    making it unpredictible and sometimes hard to see
-    */
-    outline-color: rgb(0, 150, 255);
-  }
+#explorables #explorables-header {
+  padding: 25px;
+  padding-bottom: 0;
+  width: 100%;
+  background-color: #204143;
+  position: sticky;
+  top: 0;
 }
-::-moz-focus-inner {
-  border: 0;
+
+#explorables h2 span {
+  color: orange;
+}
+
+#explorables ul {
+  padding: 0px 25px 25px 25px;
+  margin: 0;
+}
+
+#explorables li {
+  list-style-type: none;
+  margin: 10px 0;
+}
+
+#explorables li:first-child {
+  margin-top: 0;
+}
+
+#explorables li .execution-link {
+  width: 100%;
+  word-break: break-all;
+}
+
+.execution-link {
+  background: #204143;
+  padding: 2px 7px;
+  display: inline-block;
+  color: #e7f2f3;
+  font-family: monospace;
+  text-decoration: unset;
+}
+
+/* icons */
+#fileIconSvgConfig {
+  margin-right: 20px;
+  width: 25px;
+  height: 25px;
+  position: relative;
+  top: 5px;
+}
+
+#fileIconSvgConfig {
+  stroke: none;
+  fill: #24b1b0;
+}
+
+#explorables fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+#explorables fieldset label {
+  display: inline-block;
+  padding: 0;
+}
+
+#explorables fieldset input {
+  opacity: 0;
+  position: absolute;
+}
+
+#explorables fieldset label input + * {
+  display: block;
+  padding: 0.7em 1em;
+  background-color: #204143;
+  border-radius: 0.1em;
+  min-width: 8em;
+  text-align: center;
+}
+
+#explorables fieldset input:checked + * {
+  color: orange;
+  background: #1f262c;
+}
+
+/* scrolable menu */
+.menu-wrapper {
+  position: relative;
+  max-width: 100%;
+  margin-top: 25px;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  transition: 300ms;
+}
+.menu {
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.menu .item {
+  display: inline-block;
+  height: 100%;
+  padding: 1em;
+  box-sizing: border-box;
+}
+.paddle {
+  position: absolute;
+  height: 36px;
+  bottom: 0;
+  border: none;
+  background: #24b1b0;
+  color: #1f262c;
+}
+.left-paddle {
+  left: 0;
+}
+.right-paddle {
+  right: 0;
+}
+.hidden {
+  display: none;
 }
