@@ -89,8 +89,8 @@ export const startCompileServer = async ({
   runtimeAlwaysInsideRuntimeScoreMap = false,
 
   livereloadWatchConfig = {
-    "./**/*": true,
-    "./**/.git/": false,
+    "./**": true,
+    "./.*/": true, // any folder starting with a dot is ignored (includes .git for instance)
     "./**/node_modules/": false,
   },
   livereloadLogLevel = "info",
