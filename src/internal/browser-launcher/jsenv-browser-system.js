@@ -29,15 +29,15 @@ const readyPromise = new Promise((resolve) => {
 const fileExecutionMap = {}
 
 const executionResultPromise = readyPromise.then(async () => {
-  const fileExecutionMap = {}
+  const fileExecutionResultMap = {}
   const fileExecutionResultPromises = []
   let status = "completed"
   Object.keys(fileExecutionMap).forEach((key) => {
-    fileExecutionMap[key] = null // to get always same order for Object.keys(executionResult)
+    fileExecutionResultMap[key] = null // to get always same order for Object.keys(executionResult)
     const fileExecutionResultPromise = fileExecutionMap[key]
     fileExecutionResultPromises.push(fileExecutionResultPromise)
     fileExecutionResultPromise.then((fileExecutionResult) => {
-      fileExecutionMap[key] = fileExecutionResult
+      fileExecutionResultMap[key] = fileExecutionResult
       if (fileExecutionResult.status === "errored") {
         status = "errored"
       }
@@ -49,11 +49,11 @@ const executionResultPromise = readyPromise.then(async () => {
     status,
     startTime: navigationStartTime,
     endTime: Date.now(),
-    fileExecutionMap,
+    fileExecutionResultMap,
   }
 })
 
-const importFile = async (specifier) => {
+const importFile = (specifier) => {
   // si on a déja importer ce fichier ??
   // if (specifier in fileExecutionMap) {
 

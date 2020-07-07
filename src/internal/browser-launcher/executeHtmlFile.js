@@ -42,32 +42,32 @@ export const executeHtmlFile = async (
     throw e
   }
 
-  const { fileExecutionMap } = executionResult
+  const { fileExecutionResultMap } = executionResult
 
   const coverageMap = composeCoverageMap(
-    ...Object.keys(fileExecutionMap).map((fileRelativeUrl) => {
-      return fileExecutionMap[fileRelativeUrl].coverageMap || {}
+    ...Object.keys(fileExecutionResultMap).map((fileRelativeUrl) => {
+      return fileExecutionResultMap[fileRelativeUrl].coverageMap || {}
     }),
   )
 
-  const fileErrored = Object.keys(fileExecutionMap).find((fileRelativeUrl) => {
-    const fileExecutionResult = fileExecutionMap[fileRelativeUrl]
+  const fileErrored = Object.keys(fileExecutionResultMap).find((fileRelativeUrl) => {
+    const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
     return fileExecutionResult.status === "errored"
   })
 
   if (fileErrored) {
-    const { exceptionSource } = fileExecutionMap[fileErrored]
+    const { exceptionSource } = fileExecutionResultMap[fileErrored]
     return {
       status: "errored",
       error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
-      namespace: fileExecutionMap,
+      namespace: fileExecutionResultMap,
       coverageMap,
     }
   }
 
   return {
     status: "completed",
-    namespace: fileExecutionMap,
+    namespace: fileExecutionResultMap,
     coverageMap,
   }
 }
