@@ -14,8 +14,8 @@ https://medium.com/netscape/async-iterators-these-promises-are-killing-my-perfor
 https://stackoverflow.com/questions/32363198/slow-response-to-resolved-promise-node-js
 https://softwareengineering.stackexchange.com/questions/278778/why-are-native-es6-promises-slower-and-more-memory-intensive-than-bluebird
 
-- node --heap-prof ./test-manual/exploring-2/start-exploring-2.js
-- node ./test-manual/exploring-2/start-exploring-2.js
+- node --heap-prof ./test-manual/exploring/start-exploring-2.js
+- node ./test-manual/exploring/start-exploring-2.js
 
 */
 
