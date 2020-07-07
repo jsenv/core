@@ -13,7 +13,7 @@ let livereloadReadyPromise
 
 const connectLivereload = (executedFileRelativeUrl) => {
   const reloadPage = () => {
-    // window.parent.location.reload(true)
+    window.parent.location.reload(true)
   }
 
   // reset livereload indicator ui

@@ -1,4 +1,4 @@
-import { urlToFileSystemPath, readFileSystemNodeStat, bufferToEtag } from "@jsenv/util"
+import { urlToFileSystemPath, bufferToEtag } from "@jsenv/util"
 import { writeFileContent, testFilePresence } from "./fs-optimized-for-cache.js"
 import { resolveSourceFileUrl, resolveMetaJsonFileUrl, resolveAssetFileUrl } from "./locaters.js"
 
