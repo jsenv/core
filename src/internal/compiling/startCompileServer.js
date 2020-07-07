@@ -95,6 +95,7 @@ export const startCompileServer = async ({
   },
   livereloadLogLevel = "info",
   customServices = {},
+  livereloadSSE = false,
   headScripts = [],
 }) => {
   assertArguments({
@@ -157,20 +158,31 @@ export const startCompileServer = async ({
 
   const serverStopCancellationSource = createCancellationSource()
 
-  const {
-    projectFileRequestedCallback,
-    trackMainAndDependencies,
-  } = await setupServerSentEventsForLivereload({
-    cancellationToken: composeCancellationToken(
+  let projectFileRequestedCallback = () => {}
+  if (livereloadSSE) {
+    const sseSetup = setupServerSentEventsForLivereload({
+      cancellationToken: composeCancellationToken(
+        cancellationToken,
+        serverStopCancellationSource.token,
+      ),
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      outDirectoryRelativeUrl,
+      livereloadLogLevel,
+      livereloadWatchConfig,
+    })
+
+    projectFileRequestedCallback = sseSetup.projectFileRequestedCallback
+    const serveSSEForLivereload = createSSEForLivereloadService({
       cancellationToken,
-      serverStopCancellationSource.token,
-    ),
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    livereloadLogLevel,
-    livereloadWatchConfig,
-  })
+      outDirectoryRelativeUrl,
+      trackMainAndDependencies: sseSetup.trackMainAndDependencies,
+    })
+    customServices = {
+      ...customServices,
+      "service:livereload sse": serveSSEForLivereload,
+    }
+  }
 
   const browserJsFileUrl = resolveUrl(
     "./src/internal/browser-launcher/jsenv-browser-system.js",
@@ -179,11 +191,6 @@ export const startCompileServer = async ({
   const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
   const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
 
-  const serveSSEForLivereload = createSSEForLivereloadService({
-    cancellationToken,
-    outDirectoryRelativeUrl,
-    trackMainAndDependencies,
-  })
   const serveAssetFile = createAssetFileService({ projectDirectoryUrl })
   const serveBrowserScript = createBrowserScriptService({
     projectDirectoryUrl,
@@ -235,7 +242,6 @@ export const startCompileServer = async ({
     sendInternalErrorStack: true,
     requestToResponse: firstServiceWithTiming({
       ...customServices,
-      "service:livereload sse": serveSSEForLivereload,
       "service:asset files": serveAssetFile,
       "service:browser script": serveBrowserScript,
       "service:compiled files": serveCompiledFile,

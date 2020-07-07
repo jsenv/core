@@ -35,6 +35,7 @@ export const startExploring = async ({
       projectDirectoryUrl,
       keepProcessAlive: true,
       cors: true,
+      livereloadSSE: true,
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,
