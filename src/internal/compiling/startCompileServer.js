@@ -572,8 +572,9 @@ const setupServerSentEventsForLivereload = ({
 
     const unregisterModified = projectFileModified.register((relativeUrl) => {
       if (dependencySet.has(relativeUrl)) {
+        serverLastEventId++
         const modifiedEvent = {
-          id: serverLastEventId++,
+          id: serverLastEventId,
           type: "modified",
           relativeUrl,
         }
@@ -583,8 +584,9 @@ const setupServerSentEventsForLivereload = ({
     })
     const unregisterDeleted = projectFileRemoved.register((relativeUrl) => {
       if (dependencySet.has(relativeUrl)) {
+        serverLastEventId++
         const removedEvent = {
-          id: serverLastEventId++,
+          id: serverLastEventId,
           type: "removed",
           relativeUrl,
         }
@@ -672,7 +674,7 @@ const createSSEForLivereloadService = ({
       return null
     }
 
-    const room = createSSERoom()
+    const room = createSSERoom({ retryDuration: 2000 })
     room.start()
 
     const fileRelativeUrl = urlToOriginalRelativeUrl(

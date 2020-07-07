@@ -10,7 +10,14 @@ export const getLivereloadingPreference = () => {
 
 export const createLivereloading = (
   fileRelativeUrl,
-  { onFileChanged, onFileRemoved, onConnecting, onAborted, onConnectionFailed, onConnected },
+  {
+    onFileChanged,
+    onFileRemoved,
+    onConnecting,
+    onConnectionCancelled,
+    onConnectionFailed,
+    onConnected,
+  },
 ) => {
   const eventSourceUrl = `${window.origin}/${fileRelativeUrl}`
 
@@ -32,65 +39,37 @@ export const createLivereloading = (
           },
         },
         {
-          CONNECTING: ({ abort }) => {
+          connecting: ({ cancel }) => {
             jsenvLogger.debug(`connecting to ${eventSourceUrl}`)
             onConnecting({
-              abort: () => {
+              cancel: () => {
                 livereloadingPreference.set(false)
-                abort()
+                cancel()
               },
             })
           },
-          CONNECTION_FAILURE: ({
-            failureConsequence,
-            failureReason,
-            reconnectionFlag,
-            reconnect,
-          }) => {
-            resolve(false)
-            if (failureConsequence === "renouncing" && reconnectionFlag) {
-              jsenvLogger.debug(`failed connection to ${eventSourceUrl}`)
-            }
-            if (failureConsequence === "renouncing" && !reconnectionFlag) {
-              jsenvLogger.debug(`aborted connection to ${eventSourceUrl}`)
-            }
-            if (failureConsequence === "disconnection") {
-              jsenvLogger.debug(`disconnected from ${eventSourceUrl}`)
-            }
-
-            if (failureReason === "script") {
-              onAborted({ connect })
-            } else {
-              onConnectionFailed({ reconnect })
-            }
-          },
-          CONNECTED: ({ disconnect }) => {
-            resolve(true)
+          connected: ({ cancel }) => {
             jsenvLogger.debug(`connected to ${eventSourceUrl}`)
+            resolve(true)
             onConnected({
-              disconnect: () => {
+              cancel: () => {
                 livereloadingPreference.set(false)
-                disconnect()
+                cancel()
               },
             })
           },
-          connectionAttemptConfig: {
-            allocatedMs: 1000 * 30, // 30 seconds
-            intervalCompute: () => 1000, // 1 second
+          cancelled: ({ connect }) => {
+            jsenvLogger.debug(`disconnected from ${eventSourceUrl}`)
+            resolve(false)
+            onConnectionCancelled({ connect })
           },
-          backgroundReconnectionAttemptConfig: {
-            allocatedMs: 1000 * 60 * 60 * 24, // 24 hours
-            intervalCompute: (attemptCount) => {
-              return Math.min(
-                Math.pow(2, attemptCount) * 1000, // 1s, 2s, 4s, 8s, 16s, ...
-                1000 * 60 * 10, // 10 minutes
-              )
-            },
+          failed: ({ connect }) => {
+            jsenvLogger.debug(`disconnected from ${eventSourceUrl}`)
+            resolve(false)
+            onConnectionFailed({ connect })
           },
-          reconnectionOnError: true,
-          // this is cool but quite complex and might feel unexpected
-          // will certainly remove this
-          backgroundReconnection: false,
+          retryMaxAttempt: Infinity,
+          retryAllocatedMs: 20 * 1000,
         },
       )
     })

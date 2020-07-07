@@ -13,14 +13,13 @@ let livereloadReadyPromise
 
 const connectLivereload = (executedFileRelativeUrl) => {
   const reloadPage = () => {
-    window.parent.location.reload(true)
+    // window.parent.location.reload(true)
   }
 
   // reset livereload indicator ui
   applyLivereloadIndicator()
   livereloadReadyPromise = createPromiseAndHooks()
 
-  let connectedOnce = false
   livereloadConnection = createLivereloading(executedFileRelativeUrl, {
     onFileChanged: () => {
       reloadPage()
@@ -28,26 +27,19 @@ const connectLivereload = (executedFileRelativeUrl) => {
     onFileRemoved: () => {
       reloadPage()
     },
-    onConnecting: ({ abort }) => {
-      applyLivereloadIndicator("connecting", { abort })
+    onConnecting: ({ cancel }) => {
+      applyLivereloadIndicator("connecting", { abort: cancel })
     },
-    onAborted: ({ connect }) => {
+    onConnectionCancelled: ({ connect }) => {
       applyLivereloadIndicator("off", { connect })
     },
-    onConnectionFailed: ({ reconnect }) => {
+    onConnectionFailed: ({ connect }) => {
       // make ui indicate the failure providing a way to reconnect manually
-      applyLivereloadIndicator("disconnected", { reconnect })
+      applyLivereloadIndicator("disconnected", { reconnect: connect })
     },
-    onConnected: ({ disconnect }) => {
-      applyLivereloadIndicator("connected", { disconnect })
-      if (connectedOnce) {
-        // we have lost connection to the server, we might have missed some file changes
-        // let's re-execute the file
-        // reloadPage()
-      } else {
-        connectedOnce = true
-        livereloadReadyPromise.resolve()
-      }
+    onConnected: ({ cancel }) => {
+      applyLivereloadIndicator("connected", { disconnect: cancel })
+      livereloadReadyPromise.resolve()
     },
   })
 
@@ -55,7 +47,6 @@ const connectLivereload = (executedFileRelativeUrl) => {
     livereloadConnection.connect()
   } else {
     applyLivereloadIndicator("off", { connect: livereloadConnection.connect })
-    connectedOnce = true
     livereloadReadyPromise.resolve()
   }
 }
@@ -74,26 +65,31 @@ const applyLivereloadIndicator = (
   { connect, abort, disconnect, reconnect } = {},
 ) => {
   const livereloadIndicator = document.querySelector("#livereload-indicator")
-  const buttonVariant = livereloadIndicator
-    .querySelector(`[data-variant="${state}"]`)
-    .cloneNode(true)
   const variantContainer = livereloadIndicator.querySelector("[data-variant-container]")
-  variantContainer.innerHTML = ""
-  variantContainer.appendChild(buttonVariant)
+  const currentVariant = variantContainer.querySelector(`[data-variant="${state}"]`)
+
+  let variant
+  if (currentVariant) {
+    variant = currentVariant
+  } else {
+    variant = livereloadIndicator.querySelector(`[data-variant="${state}"]`).cloneNode(true)
+    variantContainer.innerHTML = ""
+    variantContainer.appendChild(variant)
+  }
 
   livereloadIndicator.querySelector("button").onclick = () => {
     toggleTooltip(livereloadIndicator)
   }
 
   if (state === "off") {
-    buttonVariant.querySelector("a").onclick = connect
+    variant.querySelector("a").onclick = connect
   } else if (state === "connecting") {
-    buttonVariant.querySelector("a").onclick = abort
+    variant.querySelector("a").onclick = abort
   } else if (state === "connected") {
     removeAutoShowTooltip(livereloadIndicator)
-    buttonVariant.querySelector("a").onclick = disconnect
+    variant.querySelector("a").onclick = disconnect
   } else if (state === "disconnected") {
     autoShowTooltip(livereloadIndicator)
-    buttonVariant.querySelector("a").onclick = reconnect
+    variant.querySelector("a").onclick = reconnect
   }
 }
