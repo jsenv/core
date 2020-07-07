@@ -1,6 +1,10 @@
 /* eslint-disable import/max-dependencies */
 import { readFileSync } from "fs"
-import { createCancellationToken } from "@jsenv/cancellation"
+import {
+  createCancellationToken,
+  createCancellationSource,
+  composeCancellationToken,
+} from "@jsenv/cancellation"
 import { composeTwoImportMaps } from "@jsenv/import-map"
 import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
 import {
@@ -151,11 +155,16 @@ export const startCompileServer = async ({
     groupMap,
   })
 
+  const serverStopCancellationSource = createCancellationSource()
+
   const {
     projectFileRequestedCallback,
     trackMainAndDependencies,
   } = await setupServerSentEventsForLivereload({
-    cancellationToken,
+    cancellationToken: composeCancellationToken(
+      cancellationToken,
+      serverStopCancellationSource.token,
+    ),
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
@@ -242,6 +251,8 @@ export const startCompileServer = async ({
     accessControlAllowCredentials: true,
     keepProcessAlive,
   })
+
+  compileServer.stoppedPromise.then(serverStopCancellationSource.cancel)
 
   await installOutFiles(compileServer, {
     projectDirectoryUrl,
