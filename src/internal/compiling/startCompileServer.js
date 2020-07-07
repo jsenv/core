@@ -514,6 +514,13 @@ const setupServerSentEventsForLivereload = ({
 
   // each time a file is requested for the first time its dependencySet is computed
   projectFileRequested.register((mainRelativeUrl) => {
+    // for now node use case of livereloading + node.js
+    // and for browsers only html file can be main files
+    // this avoid collecting dependencies of non html files that will never be used
+    if (!mainRelativeUrl.endsWith(".html")) {
+      return
+    }
+
     // when a file is requested, always rebuild its dependency in case it has changed
     // since the last time it was requested
     const dependencySet = new Set()
