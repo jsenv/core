@@ -457,7 +457,6 @@ const setupServerSentEventsForLivereload = ({
   outDirectoryRelativeUrl,
   livereloadLogLevel,
   livereloadWatchConfig,
-  historyLimit = 1000,
 }) => {
   const livereloadLogger = createLogger({ logLevel: livereloadLogLevel })
   const trackerMap = new Map()
@@ -537,61 +536,19 @@ const setupServerSentEventsForLivereload = ({
     })
   })
 
-  // if serverLastEventId grows too fast we could use
-  // `${fileRelativeUrl}-${numberOfMsSinceServerStarted}` instead
-  let serverLastEventId = 0
-  const events = []
-  const rememberEvent = (event) => {
-    events.push(event)
-
-    if (events.length >= historyLimit) {
-      events.shift()
-    }
-  }
-
-  const trackMainAndDependencies = (mainRelativeUrl, { modified, removed, lastEventId }) => {
+  const trackMainAndDependencies = (mainRelativeUrl, { modified, removed }) => {
     livereloadLogger.debug(`track ${mainRelativeUrl} and its dependencies`)
-    const dependencySet = getDependencySet(mainRelativeUrl)
-
-    // don't forget to avoid passing this id to event room connect method
-    // because we have "reimplemented" event history there
-    if (lastEventId) {
-      const eventIndex = events.findIndex((event) => event.id === lastEventId)
-      const eventsSinceLastEvent = eventIndex === -1 ? [] : events.slice(eventIndex)
-      const lastEvent = eventsSinceLastEvent
-        .reverse()
-        .find((event) => dependencySet.has(event.relativeUrl))
-      if (lastEvent) {
-        if (lastEvent.type === "modified") {
-          modified(lastEvent)
-        } else {
-          removed(lastEvent)
-        }
-      }
-    }
 
     const unregisterModified = projectFileModified.register((relativeUrl) => {
+      const dependencySet = getDependencySet(mainRelativeUrl)
       if (dependencySet.has(relativeUrl)) {
-        serverLastEventId++
-        const modifiedEvent = {
-          id: serverLastEventId,
-          type: "modified",
-          relativeUrl,
-        }
-        rememberEvent(modifiedEvent)
-        modified(modifiedEvent)
+        modified(relativeUrl)
       }
     })
     const unregisterDeleted = projectFileRemoved.register((relativeUrl) => {
+      const dependencySet = getDependencySet(mainRelativeUrl)
       if (dependencySet.has(relativeUrl)) {
-        serverLastEventId++
-        const removedEvent = {
-          id: serverLastEventId,
-          type: "removed",
-          relativeUrl,
-        }
-        rememberEvent(removedEvent)
-        removed(removedEvent)
+        removed(relativeUrl)
       }
     })
 
@@ -668,46 +625,60 @@ const createSSEForLivereloadService = ({
   outDirectoryRelativeUrl,
   trackMainAndDependencies,
 }) => {
+  const cache = []
+  const sseRoomLimit = 100
+  const getOrCreateSSERoom = (mainFileRelativeUrl) => {
+    const cacheEntry = cache.find(
+      (cacheEntryCandidate) => cacheEntryCandidate.mainFileRelativeUrl === mainFileRelativeUrl,
+    )
+    if (cacheEntry) {
+      return cacheEntry.sseRoom
+    }
+
+    const sseRoom = createSSERoom({
+      retryDuration: 2000,
+      historyLength: 100,
+      welcomeEvent: true,
+    })
+
+    // each time something is modified or removed we send event to the room
+    const stopTracking = trackMainAndDependencies(mainFileRelativeUrl, {
+      modified: (relativeUrl) => {
+        sseRoom.sendEvent({ type: "file-modified", data: relativeUrl })
+      },
+      removed: (relativeUrl) => {
+        sseRoom.sendEvent({ type: "file-removed", data: relativeUrl })
+      },
+    })
+
+    sseRoom.start()
+    cancellationToken.register(() => {
+      sseRoom.stop()
+      stopTracking()
+    })
+    cache.push({ mainFileRelativeUrl, sseRoom })
+    if (cache.length >= sseRoomLimit) {
+      cache.shift()
+    }
+    return sseRoom
+  }
+
   return (request) => {
     const { accept } = request.headers
     if (!accept || !accept.includes("text/event-stream")) {
       return null
     }
 
-    const room = createSSERoom({ retryDuration: 2000 })
-    room.start()
-
     const fileRelativeUrl = urlToOriginalRelativeUrl(
       resolveUrl(request.ressource, request.origin),
       resolveUrl(outDirectoryRelativeUrl, request.origin),
     )
 
-    const stopTracking = trackMainAndDependencies(fileRelativeUrl, {
-      modified: ({ id, relativeUrl }) => {
-        room.sendEvent({
-          id,
-          type: "file-changed",
-          data: relativeUrl,
-        })
-      },
-      removed: ({ id, relativeUrl }) => {
-        room.sendEvent({
-          id,
-          type: "file-removed",
-          data: relativeUrl,
-        })
-      },
-      lastEventId: request.headers["last-event-id"],
-    })
-
-    cancellationToken.register(room.stop)
-    // request.cancellationToken occurs when request is aborted or closed
-    request.cancellationToken.register(() => {
-      stopTracking()
-      room.stop()
-    })
-
-    return room.connect()
+    const room = getOrCreateSSERoom(fileRelativeUrl)
+    return room.connect(
+      request.headers["last-event-id"] ||
+        new URL(request.ressource, request.origin).searchParams.get("last-event-id"),
+    )
   }
 }
 

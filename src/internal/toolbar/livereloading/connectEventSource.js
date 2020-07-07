@@ -21,8 +21,15 @@ export const connectEventSource = (
   // depending on connectionStatus
   let cancelCurrentConnection = () => {}
 
-  const attemptConnection = () => {
-    const eventSource = new EventSource(eventSourceUrl, {
+  let lastEventId
+  const reconnect = () => {
+    attemptConnection(
+      lastEventId ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId) : eventSourceUrl,
+    )
+  }
+
+  const attemptConnection = (url) => {
+    const eventSource = new EventSource(url, {
       withCredentials: true,
     })
 
@@ -35,7 +42,7 @@ export const connectEventSource = (
       connectionStatus = "aborted"
       eventSource.onerror = undefined
       eventSource.close()
-      cancelled({ connect: attemptConnection })
+      cancelled({ connect: reconnect })
     }
     cancelCurrentConnection = abort
     connecting({ cancel: abort })
@@ -50,7 +57,7 @@ export const connectEventSource = (
         connectionStatus = "disconnected"
         eventSource.onerror = undefined
         eventSource.close()
-        cancelled({ connect: attemptConnection })
+        cancelled({ connect: reconnect })
       }
       cancelCurrentConnection = disconnect
       connected({ cancel: disconnect })
@@ -69,9 +76,9 @@ export const connectEventSource = (
               return
             }
             connectionStatus = "disabled"
-            cancelled({ connect: attemptConnection })
+            cancelled({ connect: reconnect })
           },
-          connect: attemptConnection,
+          connect: reconnect,
         })
       }
 
@@ -111,13 +118,23 @@ export const connectEventSource = (
     Object.keys(events).forEach((eventName) => {
       eventSource.addEventListener(eventName, (e) => {
         if (e.origin === eventSourceOrigin) {
+          if (e.lastEventId) {
+            lastEventId = e.lastEventId
+          }
           events[eventName](e)
         }
       })
     })
+    if (!events.hasOwnProperty("welcome")) {
+      eventSource.addEventListener("welcome", (e) => {
+        if (e.origin === eventSourceOrigin && e.lastEventId) {
+          lastEventId = e.lastEventId
+        }
+      })
+    }
   }
 
-  attemptConnection()
+  attemptConnection(eventSourceUrl)
   const disconnect = () => {
     cancelCurrentConnection()
   }
@@ -127,4 +144,13 @@ export const connectEventSource = (
     window.removeEventListener(`beforeunload`, disconnect)
     disconnect()
   }
+}
+
+const addLastEventIdIntoUrlSearchParams = (url, lastEventId) => {
+  if (url.indexOf("?") === -1) {
+    url += "?"
+  } else {
+    url += "&"
+  }
+  return `${url}last-event-id=${encodeURIComponent(lastEventId)}`
 }

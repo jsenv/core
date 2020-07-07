@@ -21,7 +21,7 @@ const connectLivereload = (executedFileRelativeUrl) => {
   livereloadReadyPromise = createPromiseAndHooks()
 
   livereloadConnection = createLivereloading(executedFileRelativeUrl, {
-    onFileChanged: () => {
+    onFileModified: () => {
       reloadPage()
     },
     onFileRemoved: () => {

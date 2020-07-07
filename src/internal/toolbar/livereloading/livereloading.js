@@ -11,7 +11,7 @@ export const getLivereloadingPreference = () => {
 export const createLivereloading = (
   fileRelativeUrl,
   {
-    onFileChanged,
+    onFileModified,
     onFileRemoved,
     onConnecting,
     onConnectionCancelled,
@@ -29,9 +29,9 @@ export const createLivereloading = (
       cancel = connectEventSource(
         eventSourceUrl,
         {
-          "file-changed": ({ data }) => {
-            jsenvLogger.debug(`${data} changed`)
-            onFileChanged(data)
+          "file-modified": ({ data }) => {
+            jsenvLogger.debug(`${data} modified`)
+            onFileModified(data)
           },
           "file-removed": ({ data }) => {
             jsenvLogger.debug(`${data} removed`)
