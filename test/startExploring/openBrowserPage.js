@@ -43,23 +43,16 @@ export const openBrowserPage = async (
     }
   })
 
-  await Promise.race([
-    page.waitForFunction(
+  const executionResult = await Promise.race([
+    page.evaluate(
       /* istanbul ignore next */
       () => {
-        if (!window.file) return false
-        if (!window.file.execution) return false
-        return Boolean(window.file.execution.result)
+        return window.__jsenv__.executionResultPromise
       },
     ),
     errorPromise,
   ])
   removeErrorListener()
-
-  const executionResult = await page.evaluate(
-    /* istanbul ignore next */
-    () => window.file.execution.result,
-  )
 
   if (executionResult.status === "errored") {
     executionResult.error = evalSource(executionResult.exceptionSource)

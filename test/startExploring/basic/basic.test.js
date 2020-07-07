@@ -10,20 +10,16 @@ const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.main.js`
+const filename = `${testDirectoryname}.main.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const parentDirectoryUrl = resolveUrl("../", testDirectoryUrl)
-const parentDirectoryRelativeUrl = urlToRelativeUrl(parentDirectoryUrl, jsenvCoreDirectoryUrl)
-const htmlFileRelativeUrl = `${parentDirectoryRelativeUrl}template.html`
 
-const { exploringServer } = await startExploring({
+const exploringServer = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  htmlFileRelativeUrl,
 })
 const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  `${exploringServer.origin}/${fileRelativeUrl}`,
-  // { headless: false }
+  `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
+  // { headless: false },
 )
 const actual = { pageLogs, pageErrors, executionResult }
 const expected = {
@@ -34,7 +30,18 @@ const expected = {
   pageErrors: [],
   executionResult: {
     status: "completed",
-    namespace: { default: 42 },
+    startTime: actual.executionResult.startTime,
+    endTime: actual.executionResult.endTime,
+    fileExecutionResultMap: {
+      "@jsenv/core/src/toolbar.js": {
+        status: "completed",
+        namespace: {},
+      },
+      "./basic.main.js": {
+        status: "completed",
+        namespace: { default: 42 },
+      },
+    },
   },
 }
 assert({ actual, expected })
