@@ -8,14 +8,14 @@ import {
 } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { startExploring } from "../../../index.js"
-import { openBrowserPage } from "../openBrowserPage.js"
+import { openBrowserPage, getHtmlExecutionResult } from "../openBrowserPage.js"
 import { START_EXPLORING_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.main.js`
+const filename = `${testDirectoryname}.main.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const filePath = urlToFileSystemPath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
 
@@ -27,7 +27,7 @@ const exploringServer = await startExploring({
 const { browser, page, pageLogs, pageErrors, executionResult } = await openBrowserPage(
   `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
   {
-    headless: true,
+    // headless: false,
   },
 )
 {
@@ -54,14 +54,11 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
   assert({ actual, expected })
 }
 {
-  await writeFileSystemNodeModificationTime(filePath, Date.now())
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-  const afterReloadExecutionResult = await page.evaluate(
-    /* istanbul ignore next */
-    () => {
-      return window.__jsenv__.executionResultPromise
-    },
-  )
+  await new Promise((resolve) => setTimeout(resolve, 4000)) // give time to the toolbar to connect to SSE
+  const navigationPromise = page.waitForNavigation()
+  writeFileSystemNodeModificationTime(filePath, Date.now())
+  await navigationPromise
+  const afterReloadExecutionResult = await getHtmlExecutionResult(page)
   const actual = afterReloadExecutionResult.fileExecutionResultMap["./livereload.main.js"].namespace
   const expected = {
     default: 43,
