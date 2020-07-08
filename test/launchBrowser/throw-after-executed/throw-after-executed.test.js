@@ -45,6 +45,12 @@ const actual = await launchAndExecute({
 
 const expected = {
   status: "completed",
+  namespace: {
+    "./throw-after-executed.js": {
+      status: "completed",
+      namespace: {},
+    },
+  },
 }
 assert({ actual, expected })
 

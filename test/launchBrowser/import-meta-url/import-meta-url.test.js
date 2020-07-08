@@ -15,8 +15,9 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `${testDirectoryBasename}.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const htmlFilename = `${testDirectoryBasename}.html`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryBasename}.js`
 const compileId = "otherwise"
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
@@ -28,7 +29,7 @@ await Promise.all(
   [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
     const actual = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
-      fileRelativeUrl,
+      fileRelativeUrl: htmlFileRelativeUrl,
       launch: (options) =>
         launchBrowser({
           ...LAUNCH_TEST_PARAMS,

@@ -34,7 +34,7 @@ await Promise.all(
           ...options,
           outDirectoryRelativeUrl,
           compileServerOrigin,
-          headless: false,
+          // headless: false,
         }),
       captureConsole: true,
     })

@@ -15,8 +15,9 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `${testDirectoryname}.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const htmlFilename = `${testDirectoryname}.html`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
+const importerFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
 const compileId = "otherwise"
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
@@ -34,7 +35,7 @@ await Promise.all(
     const result = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
       executionLogLevel: "off",
-      fileRelativeUrl,
+      fileRelativeUrl: htmlFileRelativeUrl,
       launch: (options) =>
         launchBrowser({
           ...LAUNCH_TEST_PARAMS,
@@ -51,7 +52,7 @@ await Promise.all(
       status: "errored",
       errorMessage: `Module file cannot be found.
 --- import declared in ---
-${fileRelativeUrl}
+${importerFileRelativeUrl}
 --- file ---
 ${importedFileRelativeUrl}
 --- file url ---

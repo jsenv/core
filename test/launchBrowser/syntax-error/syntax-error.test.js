@@ -15,17 +15,18 @@ const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const htmlFilename = `${testDirectoryname}.html`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
 const compileId = "otherwise"
-const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
-const filePath = urlToFileSystemPath(fileUrl)
+const importedFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
+const importedFileUrl = resolveUrl(importedFileRelativeUrl, jsenvCoreDirectoryUrl)
+const importedFilePath = urlToFileSystemPath(importedFileUrl)
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   compileGroupCount: 1,
 })
-const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
+const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
 
 await Promise.all(
   [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
@@ -39,7 +40,7 @@ await Promise.all(
           outDirectoryRelativeUrl,
           compileServerOrigin,
         }),
-      fileRelativeUrl,
+      fileRelativeUrl: htmlFileRelativeUrl,
     })
     const actual = {
       status: result.status,
@@ -50,24 +51,24 @@ await Promise.all(
       status: "errored",
       errorMessage: `Module file cannot be parsed.
 --- parsing error message ---
-${filePath}: Unexpected token (1:17)
+${importedFilePath}: Unexpected token (1:17)
 
 > 1 | const browser = (
     |                  ^
 --- file ---
-${fileRelativeUrl}
+${importedFileRelativeUrl}
 --- file url ---
 ${compiledFileUrl}`,
       errorParsingErrror: {
-        message: `${filePath}: Unexpected token (1:17)
+        message: `${importedFilePath}: Unexpected token (1:17)
 
 > 1 | const browser = (
     |                  ^`,
-        messageHTML: `${filePath}: Unexpected token (1:17)
+        messageHTML: `${importedFilePath}: Unexpected token (1:17)
 
 > 1 | const browser = (
     |                  ^`,
-        filename: filePath,
+        filename: importedFilePath,
         lineNumber: 1,
         columnNumber: 17,
       },

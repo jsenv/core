@@ -36,7 +36,7 @@ const actual = await launchAndExecute({
 const expected = {
   status: "completed",
   namespace: {
-    "./jsx-extensions.js": {
+    "./jsx-extension.js": {
       status: "completed",
       namespace: {
         default: 42,

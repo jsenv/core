@@ -40,8 +40,8 @@ const expected = {
   status: "completed",
   namespace: {
     "./import-meta-resolve.js": {
+      status: "completed",
       namespace: {
-        status: "completed",
         basic: `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}file.js`,
         remapped: `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}bar.js`,
       },
