@@ -48,11 +48,10 @@ const startTestServer = ({ testDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "https",
-    requestToResponse: (request) =>
-      firstService(
-        () => serveSystemJS({ request }),
-        () => serveTestDirectory({ testDirectoryUrl, request }),
-      ),
+    requestToResponse: firstService(
+      (request) => serveSystemJS({ request }),
+      (request) => serveTestDirectory({ testDirectoryUrl, request }),
+    ),
   })
 }
 

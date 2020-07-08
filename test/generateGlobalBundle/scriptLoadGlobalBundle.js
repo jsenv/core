@@ -43,11 +43,10 @@ const startTestServer = ({ bundleDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "https",
-    requestToResponse: (request) =>
-      firstService(
-        () => serveIndexPage({ request }),
-        () => serveBundleDirectory({ bundleDirectoryUrl, request }),
-      ),
+    requestToResponse: firstService(
+      (request) => serveIndexPage({ request }),
+      (request) => serveBundleDirectory({ bundleDirectoryUrl, request }),
+    ),
   })
 }
 
