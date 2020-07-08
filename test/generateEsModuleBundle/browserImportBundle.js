@@ -9,12 +9,14 @@ export const browserImportBundle = async ({
   bundleDirectoryRelativeUrl,
   mainRelativeUrl,
   namespaceProperty = "default",
+  headless = true,
+  stopAfterImport = true,
 }) => {
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
     startTestServer({ bundleDirectoryUrl }),
     chromium.launch({
-      // headless: false,
+      headless,
       // handleSIGINT: false,
       // handleSIGTERM: false,
       // handleSIGHUP: false,
@@ -37,8 +39,10 @@ export const browserImportBundle = async ({
       serverOrigin: server.origin,
     }
   } finally {
-    browser.close()
-    server.stop()
+    if (stopAfterImport) {
+      browser.close()
+      server.stop()
+    }
   }
 }
 
@@ -46,11 +50,10 @@ const startTestServer = ({ bundleDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "https",
-    requestToResponse: (request) =>
-      firstService(
-        () => serveIndexPage({ request }),
-        () => serveBundleDirectory({ bundleDirectoryUrl, request }),
-      ),
+    requestToResponse: firstService(
+      (request) => serveIndexPage({ request }),
+      (request) => serveBundleDirectory({ bundleDirectoryUrl, request }),
+    ),
   })
 }
 
