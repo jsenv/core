@@ -117,16 +117,23 @@ export const launchAndExecute = async ({
   }
 
   if (inheritCoverage) {
-    const savedCollectCoverage = collectCoverage
+    const collectCoverageSaved = collectCoverage
     collectCoverage = true
     executionResultTransformer = composeTransformer(
       executionResultTransformer,
       (executionResult) => {
         const { coverageMap, ...rest } = executionResult
-        // ensure the coverage of the launched stuff
-        // is accounted as coverage for this
+        // ensure the coverage of the executed file is taken into account
         global.__coverage__ = composeCoverageMap(global.__coverage__ || {}, coverageMap || {})
-        return savedCollectCoverage ? executionResult : rest
+        if (collectCoverageSaved) {
+          return executionResult
+        }
+        if (fileRelativeUrl.endsWith('.html')) {
+          Object.keys(rest.namespace).forEach((file) => {
+            delete rest.namespace[file].coverageMap
+          })
+        }
+        return rest
       },
     )
   }
