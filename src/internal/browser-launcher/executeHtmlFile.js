@@ -68,14 +68,14 @@ export const executeHtmlFile = async (
       status: "errored",
       error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
       namespace: fileExecutionResultMap,
-      ...(collectCoverage ? { coverage: generateCoverageForPage(fileExecutionResultMap) } : {}),
+      ...(collectCoverage ? { coverageMap: generateCoverageForPage(fileExecutionResultMap) } : {}),
     }
   }
 
   return {
     status: "completed",
     namespace: fileExecutionResultMap,
-    ...(collectCoverage ? { coverage: generateCoverageForPage(fileExecutionResultMap) } : {}),
+    ...(collectCoverage ? { coverageMap: generateCoverageForPage(fileExecutionResultMap) } : {}),
   }
 }
 

@@ -13,15 +13,10 @@ import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}use-file.js`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}coverage-basic.html`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}coverage-basic.js`
 const testPlan = {
-  [fileRelativeUrl]: {
-    node: {
-      launch: launchNode,
-    },
-    node2: {
-      launch: launchNode,
-    },
+  [htmlFileRelativeUrl]: {
     chromium: {
       launch: launchChromium,
     },
@@ -30,6 +25,14 @@ const testPlan = {
     },
     webkit: {
       launch: launchWebkit,
+    },
+  },
+  [fileRelativeUrl]: {
+    node: {
+      launch: launchNode,
+    },
+    node2: {
+      launch: launchNode,
     },
   },
 }
