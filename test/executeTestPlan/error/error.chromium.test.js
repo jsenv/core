@@ -7,11 +7,15 @@ import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}file.spec.js`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}file.spec.html`
 const testPlan = {
-  [fileRelativeUrl]: {
+  [htmlFileRelativeUrl]: {
     chromium: {
-      launch: launchChromium,
+      launch: (params) =>
+        launchChromium({
+          ...params,
+          // headless: false
+        }),
       captureConsole: true,
     },
   },
@@ -21,6 +25,7 @@ const actual = await executeTestPlan({
   jsenvDirectoryRelativeUrl,
   testPlan,
   executionLogLevel: "off",
+  // stopAfterExecute: false,
 })
 const expected = {
   summary: {
@@ -33,13 +38,13 @@ const expected = {
     endMs: actual.summary.endMs,
   },
   report: {
-    [fileRelativeUrl]: {
+    [htmlFileRelativeUrl]: {
       chromium: {
         status: "errored",
         error: new Error(`ask() should return 42, got 40`),
-        consoleCalls: [],
+        consoleCalls: actual.report[htmlFileRelativeUrl].chromium.consoleCalls,
         runtimeName: "chromium",
-        runtimeVersion: actual.report[fileRelativeUrl].chromium.runtimeVersion,
+        runtimeVersion: assert.any(String),
       },
     },
   },

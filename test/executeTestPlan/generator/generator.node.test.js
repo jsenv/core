@@ -35,6 +35,7 @@ const expected = {
     [fileRelativeUrl]: {
       node: {
         status: "completed",
+        namespace: {},
         runtimeName: "node",
         runtimeVersion: actual.report[fileRelativeUrl].node.runtimeVersion,
       },

@@ -36,6 +36,7 @@
     "test-js-transform": "node ./script/test/test-js-transform.js",
     "test-compile-server": "node ./script/test/test-compile-server.js",
     "test-execute": "node ./script/test/test-execute.js",
+    "test-execute-test-plan": "node ./script/test/test-execute-test-plan.js",
     "test-exploring": "node ./script/test/test-exploring.js",
     "test-commonjs-bundling": "node ./script/test/test-commonjs-bundling.js",
     "test-global-bundling": "node ./script/test/test-global-bundling.js",
