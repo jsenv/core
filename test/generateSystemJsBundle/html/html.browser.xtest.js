@@ -1,3 +1,17 @@
+/**
+
+Here the idea is to test that
+
+import htmlText from "./file.html"
+
+works properly inside a bundle but let's keep this in a grey area for now.
+-> meaning no documentation nor official support for this
+
+Inside jsenv it would work ok (but html being transformed could be unexpected)
+but in production you would get 404 on jsenv-browser-system.js.
+
+*/
+
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"

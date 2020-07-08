@@ -19,7 +19,10 @@ const testPlan = {
 
 const actual = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
-  logLevel: "info",
+  // put logLevel: "info" to see usual logs about how execution goes
+  // here I put "warn" to avoid seeing read things when tests executes
+  // otherwise we might things something is wrong
+  logLevel: "warn",
   jsenvDirectoryRelativeUrl,
   testPlan,
   compileGroupCount: 1,

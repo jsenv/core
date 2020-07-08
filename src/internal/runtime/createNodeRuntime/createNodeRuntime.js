@@ -3,6 +3,7 @@ import { uneval } from "@jsenv/uneval"
 // do not use memoize from @jsenv/util to avoid pulling @jsenv/util code into the node bundle
 import { memoize } from "../../memoize.js"
 import { fetchUrl } from "../../fetchUrl.js"
+import { fetchSource } from "./fetchSource.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveNodeGroup } from "../resolveNodeGroup.js"
 import { createNodeSystem } from "./createNodeSystem.js"
@@ -90,15 +91,6 @@ export const createNodeRuntime = async ({
     importFile,
     executeFile,
   }
-}
-
-const fetchSource = (url, { executionId } = {}) => {
-  return fetchUrl(url, {
-    ignoreHttpsError: true,
-    headers: {
-      ...(executionId ? { "x-jsenv-execution-id": executionId } : {}),
-    },
-  })
 }
 
 const importJson = async (url) => {
