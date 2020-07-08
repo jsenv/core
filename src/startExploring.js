@@ -20,6 +20,7 @@ export const startExploring = async ({
   explorableConfig = jsenvExplorableConfig,
   projectDirectoryUrl,
   toolbar = true,
+  livereloading = true,
   ...rest
 }) => {
   return wrapExternalFunctionExecution(async () => {
@@ -35,7 +36,7 @@ export const startExploring = async ({
       projectDirectoryUrl,
       keepProcessAlive: true,
       cors: true,
-      livereloadSSE: true,
+      livereloadSSE: livereloading,
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,

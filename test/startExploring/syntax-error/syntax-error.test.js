@@ -27,7 +27,7 @@ const compiledImportedFileUrl = `${exploringServer.origin}/${exploringServer.out
 const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
   compiledHtmlFileUrl,
   {
-    headless: false,
+    // headless: false,
   },
 )
 
@@ -80,4 +80,4 @@ const expected = {
   },
 }
 assert({ actual, expected })
-// browser.close()
+browser.close()

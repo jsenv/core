@@ -10,23 +10,19 @@ const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.main.js`
+const filename = `${testDirectoryname}.main.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const parentDirectoryUrl = resolveUrl("../", testDirectoryUrl)
-const parentDirectoryRelativeUrl = urlToRelativeUrl(parentDirectoryUrl, jsenvCoreDirectoryUrl)
-const htmlFileRelativeUrl = `${parentDirectoryRelativeUrl}template.html`
+const compileId = "best"
 
-const { exploringServer, compileServer } = await startExploring({
+const exploringServer = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  htmlFileRelativeUrl,
 })
-const {
-  browser,
-  pageLogs,
-  pageErrors,
-  executionResult,
-} = await openBrowserPage(`${exploringServer.origin}/${fileRelativeUrl}`, { headless: true })
+const compiledFileUrl = `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
+
+const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(compiledFileUrl, {
+  headless: true,
+})
 {
   const actual = { pageLogs, pageErrors, executionResult }
   const expected = {
@@ -34,6 +30,18 @@ const {
     pageErrors: [],
     executionResult: {
       status: "errored",
+      startTime: assert.any(Number),
+      endTime: assert.any(Number),
+      fileExecutionResultMap: {
+        "@jsenv/core/src/toolbar.js": {
+          status: "completed",
+          namespace: {},
+        },
+        "./throw.main.js": {
+          status: "errored",
+          exceptionSource: assert.any(String),
+        },
+      },
       error: new Error("error"),
     },
   }
@@ -42,8 +50,8 @@ const {
 {
   const stack = executionResult.error.stack
   const expected = `Error: error
-  at triggerError (${compileServer.origin}/test/startExploring/throw/trigger-error.js:2:9)
-  at Object.triggerError (${compileServer.origin}/test/startExploring/throw/throw.main.js:3:1)`
+  at triggerError (${exploringServer.origin}/test/startExploring/throw/trigger-error.js:2:9)
+  at Object.triggerError (${exploringServer.origin}/test/startExploring/throw/throw.main.js:3:1)`
   const actual = stack.slice(0, expected.length)
   assert({ actual, expected })
 }
