@@ -6,7 +6,14 @@ import { composeCoverageMap } from "../executing/coverage/composeCoverageMap.js"
 
 export const executeHtmlFile = async (
   fileRelativeUrl,
-  { cancellationToken, projectDirectoryUrl, outDirectoryRelativeUrl, compileServerOrigin, page },
+  {
+    cancellationToken,
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    compileServerOrigin,
+    page,
+    collectCoverage,
+  },
 ) => {
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
   if (extname(fileUrl) !== ".html") {
@@ -44,16 +51,16 @@ export const executeHtmlFile = async (
 
   const { fileExecutionResultMap } = executionResult
 
-  const coverageMap = composeCoverageMap(
-    ...Object.keys(fileExecutionResultMap).map((fileRelativeUrl) => {
-      return fileExecutionResultMap[fileRelativeUrl].coverageMap || {}
-    }),
-  )
-
   const fileErrored = Object.keys(fileExecutionResultMap).find((fileRelativeUrl) => {
     const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
     return fileExecutionResult.status === "errored"
   })
+
+  if (!collectCoverage) {
+    Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
+      delete fileExecutionResultMap[fileRelativeUrl].coverageMap
+    })
+  }
 
   if (fileErrored) {
     const { exceptionSource } = fileExecutionResultMap[fileErrored]
@@ -61,15 +68,24 @@ export const executeHtmlFile = async (
       status: "errored",
       error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
       namespace: fileExecutionResultMap,
-      coverageMap,
+      ...(collectCoverage ? { coverage: generateCoverageForPage(fileExecutionResultMap) } : {}),
     }
   }
 
   return {
     status: "completed",
     namespace: fileExecutionResultMap,
-    coverageMap,
+    ...(collectCoverage ? { coverage: generateCoverageForPage(fileExecutionResultMap) } : {}),
   }
+}
+
+const generateCoverageForPage = (fileExecutionResultMap) => {
+  const coverageMap = composeCoverageMap(
+    ...Object.keys(fileExecutionResultMap).map((fileRelativeUrl) => {
+      return fileExecutionResultMap[fileRelativeUrl].coverageMap || {}
+    }),
+  )
+  return coverageMap
 }
 
 const evalException = (exceptionSource, { projectDirectoryUrl, compileServerOrigin }) => {

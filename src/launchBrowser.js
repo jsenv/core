@@ -306,6 +306,7 @@ const browserToRuntimeHooks = (
     fileRelativeUrl,
     {
       // because we use a self signed certificate
+      collectCoverage,
       ignoreHTTPSErrors = true,
     },
   ) => {
@@ -344,6 +345,7 @@ const browserToRuntimeHooks = (
       compileServerOrigin,
 
       page,
+      collectCoverage
     })
   }
 
