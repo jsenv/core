@@ -38,7 +38,7 @@ const expectedParsingErrorMessage = `${importedFilePath}: Unexpected token (1:17
     |                  ^`
 const expectedParsingError = {
   message: expectedParsingErrorMessage,
-  messageHTML: expectedParsingErrorMessage,
+  messageHTML: assert.any(String),
   filename: importedFilePath,
   lineNumber: 1,
   columnNumber: 17,

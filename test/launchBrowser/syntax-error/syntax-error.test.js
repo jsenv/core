@@ -64,10 +64,7 @@ ${compiledFileUrl}`,
 
 > 1 | const browser = (
     |                  ^`,
-        messageHTML: `${importedFilePath}: Unexpected token (1:17)
-
-> 1 | const browser = (
-    |                  ^`,
+        messageHTML: assert.any(String),
         filename: importedFilePath,
         lineNumber: 1,
         columnNumber: 17,
