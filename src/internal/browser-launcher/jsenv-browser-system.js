@@ -32,6 +32,7 @@ const executionResultPromise = readyPromise.then(async () => {
   const fileExecutionResultMap = {}
   const fileExecutionResultPromises = []
   let status = "completed"
+  let exceptionSource = ""
   Object.keys(fileExecutionMap).forEach((key) => {
     fileExecutionResultMap[key] = null // to get always same order for Object.keys(executionResult)
     const fileExecutionResultPromise = fileExecutionMap[key]
@@ -40,6 +41,7 @@ const executionResultPromise = readyPromise.then(async () => {
       fileExecutionResultMap[key] = fileExecutionResult
       if (fileExecutionResult.status === "errored") {
         status = "errored"
+        exceptionSource = fileExecutionResult.exceptionSource
       }
     })
   })
@@ -47,6 +49,7 @@ const executionResultPromise = readyPromise.then(async () => {
 
   return {
     status,
+    ...(status === "errored" ? { exceptionSource } : {}),
     startTime: navigationStartTime,
     endTime: Date.now(),
     fileExecutionResultMap,

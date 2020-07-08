@@ -10,34 +10,36 @@ const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.main.js`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const htmlFilename = `${testDirectoryname}.main.html`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
+const importedFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.main.js`
+const importedFileUrl = resolveUrl(importedFileRelativeUrl, jsenvCoreDirectoryUrl)
+const importedFilePath = urlToFileSystemPath(importedFileUrl)
 const compileId = `best`
-const filePath = urlToFileSystemPath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
-const parentDirectoryUrl = resolveUrl("../", testDirectoryUrl)
-const parentDirectoryRelativeUrl = urlToRelativeUrl(parentDirectoryUrl, jsenvCoreDirectoryUrl)
-const htmlFileRelativeUrl = `${parentDirectoryRelativeUrl}template.html`
 
-const { exploringServer, compileServer } = await startExploring({
+const exploringServer = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  htmlFileRelativeUrl,
 })
+const compiledHtmlFileUrl = `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}${compileId}/${htmlFileRelativeUrl}`
+const compiledImportedFileUrl = `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
+
 const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  `${exploringServer.origin}/${fileRelativeUrl}`,
-  // { headless: false }
+  compiledHtmlFileUrl,
+  {
+    headless: false,
+  },
 )
-const compiledFileUrl = `${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
 
 const actual = { pageLogs, pageErrors, executionResult }
-const expectedParsingErrorMessage = `${filePath}: Unexpected token (1:17)
+const expectedParsingErrorMessage = `${importedFilePath}: Unexpected token (1:17)
 
 > 1 | const browser = (
     |                  ^`
 const expectedParsingError = {
   message: expectedParsingErrorMessage,
   messageHTML: expectedParsingErrorMessage,
-  filename: filePath,
+  filename: importedFilePath,
   lineNumber: 1,
   columnNumber: 17,
 }
@@ -45,9 +47,9 @@ const expectedError = new Error(`Module file cannot be parsed.
 --- parsing error message ---
 ${expectedParsingError.message}
 --- file ---
-${fileRelativeUrl}
+${importedFileRelativeUrl}
 --- file url ---
-${compiledFileUrl}`)
+${compiledImportedFileUrl}`)
 Object.assign(expectedError, {
   parsingError: expectedParsingError,
 })
@@ -55,15 +57,27 @@ const expected = {
   pageLogs: [
     {
       type: "error",
-      text: "Failed to load resource: the server responded with a status of 500 (parse error)",
+      text: "Failed to load resource: the server responded with a status of 500 ()",
     },
     { type: "error", text: "JSHandle@error" },
   ],
   pageErrors: [],
   executionResult: {
     status: "errored",
+    startTime: assert.any(Number),
+    endTime: assert.any(Number),
+    fileExecutionResultMap: {
+      "@jsenv/core/src/toolbar.js": {
+        status: "completed",
+        namespace: {},
+      },
+      "./syntax-error.main.js": {
+        status: "errored",
+        exceptionSource: assert.any(String),
+      },
+    },
     error: expectedError,
   },
 }
 assert({ actual, expected })
-browser.close()
+// browser.close()
