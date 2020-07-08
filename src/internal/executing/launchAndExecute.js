@@ -128,7 +128,7 @@ export const launchAndExecute = async ({
         if (collectCoverageSaved) {
           return executionResult
         }
-        if (fileRelativeUrl.endsWith('.html')) {
+        if (fileRelativeUrl.endsWith(".html") && rest.namespace) {
           Object.keys(rest.namespace).forEach((file) => {
             delete rest.namespace[file].coverageMap
           })
