@@ -36,5 +36,8 @@ const actual = await launchAndExecute({
 })
 const expected = {
   status: "completed",
+  namespace: {
+    default: 1000000000000,
+  },
 }
 assert({ actual, expected })
