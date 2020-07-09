@@ -5,6 +5,10 @@
   box-sizing: border-box;
 }
 
+[data-force-hide] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
