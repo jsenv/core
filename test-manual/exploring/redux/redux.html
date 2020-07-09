@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import { createStore, compose } from "redux"
+
+      const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose
+      const enhancer = composeEnhancers()
+      const initialState = { message: "hello world" }
+
+      const store = createStore(
+        (state = initialState) => {
+          return state
+        },
+        { message: "hello world" },
+        enhancer,
+      )
+      window.store = store
+    </script>
+  </body>
+</html>

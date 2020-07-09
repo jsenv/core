@@ -1,37 +1,75 @@
-/* eslint-disable import/max-dependencies */
-
-// we might want to reuse fetchUrl approach used by nodeRuntime
-// eslint-disable-next-line import/no-unresolved
-import groupMap from "/.jsenv/out/groupMap.json"
-// eslint-disable-next-line import/no-unresolved
-import env from "/.jsenv/out/env.json"
-
+import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { uneval } from "@jsenv/uneval"
-// do not use memoize form @jsenv/util to avoid pulling @jsenv/util code into the browser bundle
+// do not use memoize from @jsenv/util to avoid pulling @jsenv/util code into the browser bundle
 import { memoize } from "../../memoize.js"
-import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
-import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 import { createBrowserSystem } from "./createBrowserSystem.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
+import { fetchUrl } from "../../fetch-browser.js"
+import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
+import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 
 const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
-const { outDirectoryRelativeUrl, importMapFileRelativeUrl, importDefaultExtension } = env
 
-export const createBrowserRuntime = ({ compileServerOrigin }) => {
-  const compileId = computeCompileIdFromGroupId({
-    groupId: resolveBrowserGroup(groupMap),
-    groupMap,
-  })
-  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
+export const createBrowserRuntime = async ({
+  compileServerOrigin,
+  outDirectoryRelativeUrl,
+  compileId,
+  htmlFileRelativeUrl,
+}) => {
+  const decideCompileId = async ({ outDirectoryUrl }) => {
+    const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
+    const [groupMap] = await Promise.all([fetchJson(groupMapUrl)])
+
+    const compileId = computeCompileIdFromGroupId({
+      groupId: resolveBrowserGroup(groupMap),
+      groupMap,
+    })
+    return compileId
+  }
+
+  const fetchSource = (url) => {
+    return fetchUrl(url, {
+      credentials: "include",
+      headers: {
+        ...(htmlFileRelativeUrl ? { "x-jsenv-execution-id": htmlFileRelativeUrl } : {}),
+      },
+    })
+  }
+
+  const fetchJson = async (url) => {
+    const response = await fetchSource(url)
+    const json = await response.json()
+    return json
+  }
+
+  const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
+  const envUrl = String(new URL("env.json", outDirectoryUrl))
+  const [compileIdValue, { importMapFileRelativeUrl, importDefaultExtension }] = await Promise.all([
+    compileId || decideCompileId({ outDirectoryUrl }),
+    fetchJson(envUrl),
+  ])
+
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileIdValue}/`
+
+  // if there is an importmap in the document we should use it instead of fetching like this.
+  // systemjs style with systemjs-importmap
+  let importMap
+  if (importMapFileRelativeUrl) {
+    const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
+    const importmapFileResponse = await fetchSource(importmapFileUrl)
+    const importmapRaw =
+      importmapFileResponse.status === 404 ? {} : await importmapFileResponse.json()
+    importMap = normalizeImportMap(importmapRaw, importmapFileUrl)
+  }
 
   const importFile = async (specifier) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
       outDirectoryRelativeUrl,
-      compileDirectoryRelativeUrl,
-      importMapFileRelativeUrl,
+      importMap,
       importDefaultExtension,
+      fetchSource,
     })
     return browserSystem.import(specifier)
   }
@@ -39,41 +77,34 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
   const executeFile = async (
     specifier,
     {
-      collectCoverage,
-      collectNamespace,
       transferableNamespace = false,
       errorExposureInConsole = true,
       errorExposureInNotification = false,
       errorExposureInDocument = true,
       executionExposureOnWindow = false,
       errorTransform = (error) => error,
-      executionId,
     } = {},
   ) => {
     const browserSystem = await memoizedCreateBrowserSystem({
-      executionId,
       compileServerOrigin,
       outDirectoryRelativeUrl,
-      compileDirectoryRelativeUrl,
-      importMapFileRelativeUrl,
+      importMap,
       importDefaultExtension,
+      fetchSource,
     })
 
     let executionResult
     try {
       let namespace = await browserSystem.import(specifier)
-      if (collectNamespace) {
-        if (transferableNamespace) {
-          namespace = makeNamespaceTransferable(namespace)
-        }
-      } else {
-        namespace = undefined
+
+      if (transferableNamespace) {
+        namespace = makeNamespaceTransferable(namespace)
       }
 
       executionResult = {
         status: "completed",
         namespace,
-        coverageMap: collectCoverage ? readCoverage() : undefined,
+        coverageMap: readCoverage(),
       }
     } catch (error) {
       let transformedError
@@ -90,7 +121,7 @@ export const createBrowserRuntime = ({ compileServerOrigin }) => {
       executionResult = {
         status: "errored",
         exceptionSource: unevalException(transformedError),
-        coverageMap: collectCoverage ? readCoverage() : undefined,
+        coverageMap: readCoverage(),
       }
     }
 

@@ -16,7 +16,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const filename = `${testDirectoryBasename}.js`
+const filename = `${testDirectoryBasename}.html`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
@@ -41,11 +41,16 @@ const actual = await launchAndExecute({
     errorCallbackArg = argValue
     cancel("error") // kill chromium browser to let process end
   },
-  collectNamespace: false,
 })
 
 const expected = {
   status: "completed",
+  namespace: {
+    "./throw-after-executed.js": {
+      status: "completed",
+      namespace: {},
+    },
+  },
 }
 assert({ actual, expected })
 

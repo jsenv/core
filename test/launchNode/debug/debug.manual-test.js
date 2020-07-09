@@ -11,34 +11,30 @@ import {
   LAUNCH_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
-// eslint-disable-next-line import/newline-after-import
-;(async () => {
-  const testDirectoryUrl = resolveUrl("./", import.meta.url)
-  const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-  const testDirectoryBasename = basename(testDirectoryRelativeUrl)
-  const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-  const filename = `${testDirectoryBasename}.js`
-  const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-  const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-    ...START_COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-  })
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryBasename = basename(testDirectoryRelativeUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+const filename = `${testDirectoryBasename}.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
+  ...START_COMPILE_SERVER_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
+})
 
-  const actual = await launchAndExecute({
-    ...EXECUTE_TEST_PARAMS,
-    launch: (options) =>
-      launchNode({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-      }),
-    fileRelativeUrl,
-    mirrorConsole: true,
-    collectNamespace: false,
-  })
-  const expected = {
-    status: "completed",
-  }
-  assert({ actual, expected })
-})()
+const actual = await launchAndExecute({
+  ...EXECUTE_TEST_PARAMS,
+  launch: (options) =>
+    launchNode({
+      ...LAUNCH_TEST_PARAMS,
+      ...options,
+      outDirectoryRelativeUrl,
+      compileServerOrigin,
+    }),
+  fileRelativeUrl,
+  mirrorConsole: true,
+})
+const expected = {
+  status: "completed",
+}
+assert({ actual, expected })

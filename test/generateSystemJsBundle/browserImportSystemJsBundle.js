@@ -2,7 +2,7 @@ import { startServer, firstService, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl, readFile } from "@jsenv/util"
 import { require } from "../../src/internal/require.js"
 
-const { chromium } = require("playwright-core")
+const { chromium } = require("playwright-chromium")
 
 const SYSTEM_PATH = require.resolve("systemjs/dist/system.js")
 
@@ -48,11 +48,10 @@ const startTestServer = ({ testDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "https",
-    requestToResponse: (request) =>
-      firstService(
-        () => serveSystemJS({ request }),
-        () => serveTestDirectory({ testDirectoryUrl, request }),
-      ),
+    requestToResponse: firstService(
+      (request) => serveSystemJS({ request }),
+      (request) => serveTestDirectory({ testDirectoryUrl, request }),
+    ),
   })
 }
 

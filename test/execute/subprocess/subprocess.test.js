@@ -18,5 +18,6 @@ const actual = await execute({
 })
 const expected = {
   status: "completed",
+  namespace: {},
 }
 assert({ actual, expected })

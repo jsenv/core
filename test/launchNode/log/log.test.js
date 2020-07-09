@@ -34,7 +34,6 @@ const { status, consoleCalls } = await launchAndExecute({
       compileServerOrigin,
     }),
   captureConsole: true,
-  collectNamespace: false,
 })
 
 {

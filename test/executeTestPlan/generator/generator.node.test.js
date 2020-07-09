@@ -12,7 +12,6 @@ const testPlan = {
   [fileRelativeUrl]: {
     node: {
       launch: launchNode,
-      collectNamespace: false,
     },
   },
 }
@@ -36,6 +35,7 @@ const expected = {
     [fileRelativeUrl]: {
       node: {
         status: "completed",
+        namespace: {},
         runtimeName: "node",
         runtimeVersion: actual.report[fileRelativeUrl].node.runtimeVersion,
       },

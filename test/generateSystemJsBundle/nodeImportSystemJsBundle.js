@@ -1,5 +1,6 @@
 import { resolveDirectoryUrl, resolveUrl } from "@jsenv/util"
 import { createNodeSystem } from "../../src/internal/runtime/createNodeRuntime/createNodeSystem.js"
+import { fetchSource } from "../../src/internal/runtime/createNodeRuntime/fetchSource.js"
 
 export const nodeImportSystemJsBundle = async ({
   projectDirectoryUrl,
@@ -8,7 +9,9 @@ export const nodeImportSystemJsBundle = async ({
 }) => {
   const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
   const mainFileUrl = resolveUrl(mainRelativeUrl, testDirectoryUrl)
-  const nodeSystem = await createNodeSystem()
+  const nodeSystem = await createNodeSystem({
+    fetchSource,
+  })
   const namespace = await nodeSystem.import(mainFileUrl)
 
   return {

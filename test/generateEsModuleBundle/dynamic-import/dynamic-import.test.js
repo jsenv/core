@@ -31,6 +31,8 @@ await generateEsModuleBundle({
   const { value: actual } = await browserImportBundle({
     ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
+    // headless: false,
+    // stopAfterImport: false,
   })
   const expected = 42
   assert({ actual, expected })

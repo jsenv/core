@@ -1,9 +1,9 @@
 export const jsenvExplorableConfig = {
   source: {
-    "./index.js": true,
-    "./src/**/*.js": true,
+    "./*.html": true,
+    "./src/**/*.html": true,
   },
   test: {
-    "./test/**/*.js": true,
+    "./test/**/*.html": true,
   },
 }

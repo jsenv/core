@@ -5,17 +5,21 @@ import { executeTestPlan, launchNode, launchChromium } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}import-syntax-error.html`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}import-syntax-error.js`
 const { coverageMap: actual } = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
   executionLogLevel: "off",
   jsenvDirectoryRelativeUrl,
   testPlan: {
-    [`${testDirectoryRelativePath}import-syntax-error.js`]: {
+    [htmlFileRelativeUrl]: {
       chromium: {
         launch: launchChromium,
       },
+    },
+    [fileRelativeUrl]: {
       node: {
         launch: launchNode,
       },
@@ -23,12 +27,12 @@ const { coverageMap: actual } = await executeTestPlan({
   },
   coverage: true,
   coverageConfig: {
-    [`${testDirectoryRelativePath}syntax-error.js`]: true,
+    [`${testDirectoryRelativeUrl}syntax-error.js`]: true,
   },
 })
 const expected = {
-  [`${testDirectoryRelativePath}syntax-error.js`]: {
-    ...actual[`${testDirectoryRelativePath}syntax-error.js`],
+  [`${testDirectoryRelativeUrl}syntax-error.js`]: {
+    ...actual[`${testDirectoryRelativeUrl}syntax-error.js`],
     s: {},
   },
 }

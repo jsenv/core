@@ -13,8 +13,10 @@ import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 const transformReactJSX = require("@babel/plugin-transform-react-jsx")
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}import-jsx.html`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}import-jsx.js`
 const { coverageMap: actual } = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -25,23 +27,25 @@ const { coverageMap: actual } = await executeTestPlan({
     "./node_modules/react/index.js": convertCommonJsWithRollup,
   },
   testPlan: {
-    [`${testDirectoryRelativePath}import-jsx.js`]: {
-      node: {
-        launch: launchNode,
-      },
+    [htmlFileRelativeUrl]: {
       chromium: {
         launch: launchChromium,
+      },
+    },
+    [fileRelativeUrl]: {
+      node: {
+        launch: launchNode,
       },
     },
   },
   coverage: true,
   coverageConfig: {
-    [`${testDirectoryRelativePath}file.jsx`]: true,
+    [`${testDirectoryRelativeUrl}file.jsx`]: true,
   },
 })
 const expected = {
-  [`${testDirectoryRelativePath}file.jsx`]: {
-    ...actual[`${testDirectoryRelativePath}file.jsx`],
+  [`${testDirectoryRelativeUrl}file.jsx`]: {
+    ...actual[`${testDirectoryRelativeUrl}file.jsx`],
     s: { 0: 2, 1: 2 },
   },
 }

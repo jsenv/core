@@ -53,10 +53,7 @@ expectedError.parsingError = {
 
 > 1 | const node = (
     |               ^`,
-  messageHTML: `${filePath}: Unexpected token (1:14)
-
-> 1 | const node = (
-    |               ^`,
+  messageHTML: assert.any(String),
   filename: filePath,
   lineNumber: 1,
   columnNumber: 14,

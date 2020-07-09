@@ -8,8 +8,6 @@ export const execute = async ({
   compileServerOrigin,
   outDirectoryRelativeUrl,
 
-  collectNamespace,
-  collectCoverage,
   executionId,
   // do not log in the console
   // because error handling becomes responsability
@@ -17,11 +15,6 @@ export const execute = async ({
   // it avoids seeing error in runtime logs during testing
   errorExposureInConsole = false,
 }) => {
-  // should we ignore cancellation error ?
-  // process.once("unhandledRejection", (valueRejected) => {
-  //   throw valueRejected
-  // })
-
   const { compileDirectoryRelativeUrl, executeFile } = await nodeRuntime.create({
     projectDirectoryUrl,
     compileServerOrigin,
@@ -37,8 +30,6 @@ export const execute = async ({
     `${compileServerOrigin}/${compileDirectoryRelativeUrl}`,
   )
   return executeFile(compiledFileRemoteUrl, {
-    collectNamespace,
-    collectCoverage,
     executionId,
     errorTransform: async (error) => {
       // code can throw something else than an error

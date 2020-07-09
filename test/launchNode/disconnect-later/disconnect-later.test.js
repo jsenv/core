@@ -33,13 +33,15 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       outDirectoryRelativeUrl,
     }),
-  collectNamespace: false,
   runtimeDisconnectCallback: (argValue) => {
     disconnectCallbackArg = argValue
   },
 })
 const expected = {
   status: "completed",
+  namespace: {
+    output: {},
+  },
 }
 assert({ actual, expected })
 

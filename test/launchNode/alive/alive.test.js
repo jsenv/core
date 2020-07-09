@@ -33,9 +33,11 @@ const actual = await launchAndExecute({
       compileServerOrigin,
     }),
   stopAfterExecute: true,
-  collectNamespace: false,
 })
 const expected = {
   status: "completed",
+  namespace: {
+    output: {},
+  },
 }
 assert({ actual, expected })

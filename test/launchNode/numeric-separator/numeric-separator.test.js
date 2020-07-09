@@ -33,9 +33,11 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
-  collectNamespace: false,
 })
 const expected = {
   status: "completed",
+  namespace: {
+    default: 1000000000000,
+  },
 }
 assert({ actual, expected })

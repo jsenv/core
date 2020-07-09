@@ -1,6 +1,6 @@
 import { fetchUrl } from "../../fetchUrl.js"
 
-export const fetchSource = ({ url, executionId }) => {
+export const fetchSource = (url, { executionId } = {}) => {
   return fetchUrl(url, {
     ignoreHttpsError: true,
     headers: {

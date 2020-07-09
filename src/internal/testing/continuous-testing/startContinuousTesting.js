@@ -50,7 +50,6 @@ export const startContinuousTesting = async ({
   captureConsole = true,
   measureDuration = true,
   measureTotalDuration = false,
-  collectNamespace = false,
   systemNotification = true,
 }) => {
   return wrapExternalFunctionExecution(async () => {
@@ -263,7 +262,6 @@ export const startContinuousTesting = async ({
             captureConsole,
             measureDuration,
             measureTotalDuration,
-            collectNamespace,
             afterEachExecutionCallback: ({ executionId }) => {
               // only once an execution is done,
               // we update its dependencyArray
@@ -363,7 +361,6 @@ export const startContinuousTesting = async ({
       captureConsole,
       measureDuration,
       measureTotalDuration,
-      collectNamespace,
       // we can realize a file is removed when we want to execute it
       // it's not a big problem, let's just call projectFileRemovedCallback
       // it can happen because fs.watch is not notified when a file is removed

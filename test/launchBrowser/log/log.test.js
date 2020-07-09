@@ -15,7 +15,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `${testDirectoryname}.js`
+const filename = `${testDirectoryname}.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
@@ -36,11 +36,16 @@ await Promise.all(
         }),
       fileRelativeUrl,
       captureConsole: true,
-      collectNamespace: false,
       stopAfterExecute: true,
     })
     const expected = {
       status: "completed",
+      namespace: {
+        "./log.js": {
+          status: "completed",
+          namespace: {},
+        },
+      },
       consoleCalls: [
         {
           type: "log",

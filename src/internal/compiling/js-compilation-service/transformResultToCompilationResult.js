@@ -4,7 +4,10 @@ import {
   startsWithWindowsDriveLetter,
   windowsFilePathToUrl,
 } from "../../filePathUtils.js"
-import { writeSourceMappingURL } from "../../sourceMappingURLUtils.js"
+import {
+  appendSourceMappingAsBase64Url,
+  appendSourceMappingAsExternalUrl,
+} from "../../sourceMappingURLUtils.js"
 
 const isWindows = process.platform === "win32"
 
@@ -99,14 +102,10 @@ export const transformResultToCompilationResult = async (
     delete map.sourceRoot
 
     if (remapMethod === "inline") {
-      const mapAsBase64 = Buffer.from(JSON.stringify(map)).toString("base64")
-      output = writeSourceMappingURL(
-        output,
-        `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
-      )
+      output = appendSourceMappingAsBase64Url(output, map)
     } else if (remapMethod === "comment") {
       const sourcemapFileRelativePathForModule = urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl)
-      output = writeSourceMappingURL(output, sourcemapFileRelativePathForModule)
+      output = appendSourceMappingAsExternalUrl(output, sourcemapFileRelativePathForModule)
       const sourcemapFileRelativePathForAsset = urlToRelativeUrl(
         sourcemapFileUrl,
         `${compiledFileUrl}__asset__/`,

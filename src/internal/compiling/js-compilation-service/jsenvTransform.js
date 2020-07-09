@@ -156,7 +156,7 @@ const babelTransform = async ({ ast, code, options }) => {
     if (error && error.code === "BABEL_PARSE_ERROR") {
       const message = error.message
       throw createParseError({
-        message,
+        message: message.replace(ansiRegex, ""),
         messageHTML: ansiToHTML(message),
         filename: options.filename,
         lineNumber: error.loc.line,
@@ -166,6 +166,12 @@ const babelTransform = async ({ ast, code, options }) => {
     throw error
   }
 }
+
+const pattern = [
+  "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
+  "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))",
+].join("|")
+const ansiRegex = new RegExp(pattern, "g")
 
 const createParseError = (data) => {
   const { message } = data

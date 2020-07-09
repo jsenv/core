@@ -1,7 +1,9 @@
+import { normalizeImportMap } from "@jsenv/import-map"
 import { uneval } from "@jsenv/uneval"
-// do not use memoize form @jsenv/util to avoid pulling @jsenv/util code into the node bundle
+// do not use memoize from @jsenv/util to avoid pulling @jsenv/util code into the node bundle
 import { memoize } from "../../memoize.js"
 import { fetchUrl } from "../../fetchUrl.js"
+import { fetchSource } from "./fetchSource.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveNodeGroup } from "../resolveNodeGroup.js"
 import { createNodeSystem } from "./createNodeSystem.js"
@@ -20,50 +22,51 @@ export const createNodeRuntime = async ({
     importJson(groupMapUrl),
     importJson(envUrl),
   ])
-
   const compileId = computeCompileIdFromGroupId({
     groupId: resolveNodeGroup(groupMap),
     groupMap,
   })
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
 
+  let importMap
+  if (importMapFileRelativeUrl) {
+    const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
+    const importmapFileResponse = await fetchUrl(importmapFileUrl)
+    const importmap = importmapFileResponse.status === 404 ? {} : await importmapFileResponse.json()
+    const importmapNormalized = normalizeImportMap(importmap, importmapFileUrl)
+    importMap = importmapNormalized
+  }
+
   const importFile = async (specifier) => {
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
       compileServerOrigin,
       outDirectoryRelativeUrl,
-      compileDirectoryRelativeUrl,
-      importMapFileRelativeUrl,
+      importMap,
       importDefaultExtension,
+      fetchSource,
     })
     return makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
   }
 
   const executeFile = async (
     specifier,
-    {
-      collectCoverage,
-      collectNamespace,
-      executionId,
-      errorExposureInConsole = true,
-      errorTransform = (error) => error,
-    } = {},
+    { errorExposureInConsole = true, errorTransform = (error) => error } = {},
   ) => {
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
       compileServerOrigin,
       outDirectoryRelativeUrl,
-      compileDirectoryRelativeUrl,
-      importMapFileRelativeUrl,
+      importMap,
       importDefaultExtension,
-      executionId,
+      fetchSource,
     })
     try {
       const namespace = await makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
       return {
         status: "completed",
-        namespace: collectNamespace ? namespace : undefined,
-        coverageMap: collectCoverage ? readCoverage() : undefined,
+        namespace,
+        coverageMap: readCoverage(),
       }
     } catch (error) {
       let transformedError
@@ -78,7 +81,7 @@ export const createNodeRuntime = async ({
       return {
         status: "errored",
         exceptionSource: unevalException(transformedError),
-        coverageMap: collectCoverage ? readCoverage() : undefined,
+        coverageMap: readCoverage(),
       }
     }
   }
@@ -91,7 +94,7 @@ export const createNodeRuntime = async ({
 }
 
 const importJson = async (url) => {
-  const response = await fetchUrl(url)
+  const response = await fetchSource(url)
   const object = await response.json()
   return object
 }

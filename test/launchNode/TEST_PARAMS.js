@@ -12,7 +12,6 @@ export const START_COMPILE_SERVER_TEST_PARAMS = {
 
 export const EXECUTE_TEST_PARAMS = {
   executionLogLevel: "warn",
-  collectNamespace: true,
   inheritCoverage: coverageIsEnabled(),
 }
 

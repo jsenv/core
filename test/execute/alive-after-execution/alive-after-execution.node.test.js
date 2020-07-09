@@ -26,6 +26,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}alive-after-execution.js`
     })
     const expected = {
       status: "completed",
+      namespace: {},
     }
     assert({ actual, expected })
   }
@@ -63,6 +64,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}alive-after-execution.js`
     })
     const expected = {
       status: "completed",
+      namespace: {},
     }
     assert({ actual, expected })
   }

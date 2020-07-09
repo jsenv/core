@@ -15,7 +15,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `${testDirectoryname}.js`
+const filename = `${testDirectoryname}.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
@@ -39,7 +39,12 @@ const actual = await launchAndExecute({
 const expected = {
   status: "completed",
   namespace: {
-    default: 42,
+    "./tab.js": {
+      status: "completed",
+      namespace: {
+        default: 42,
+      },
+    },
   },
 }
 assert({ actual, expected })

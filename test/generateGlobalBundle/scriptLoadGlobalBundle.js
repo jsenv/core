@@ -2,7 +2,7 @@ import { startServer, firstService, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
 import { require } from "../../src/internal/require.js"
 
-const { chromium } = require("playwright-core")
+const { chromium } = require("playwright-chromium")
 
 export const scriptLoadGlobalBundle = async ({
   projectDirectoryUrl,
@@ -43,11 +43,10 @@ const startTestServer = ({ bundleDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "https",
-    requestToResponse: (request) =>
-      firstService(
-        () => serveIndexPage({ request }),
-        () => serveBundleDirectory({ bundleDirectoryUrl, request }),
-      ),
+    requestToResponse: firstService(
+      (request) => serveIndexPage({ request }),
+      (request) => serveBundleDirectory({ bundleDirectoryUrl, request }),
+    ),
   })
 }
 

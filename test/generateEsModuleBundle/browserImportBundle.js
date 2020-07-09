@@ -2,19 +2,21 @@ import { startServer, firstService, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
 import { require } from "../../src/internal/require.js"
 
-const { chromium } = require("playwright-core")
+const { chromium } = require("playwright-chromium")
 
 export const browserImportBundle = async ({
   projectDirectoryUrl,
   bundleDirectoryRelativeUrl,
   mainRelativeUrl,
   namespaceProperty = "default",
+  headless = true,
+  stopAfterImport = true,
 }) => {
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
     startTestServer({ bundleDirectoryUrl }),
     chromium.launch({
-      // headless: false,
+      headless,
       // handleSIGINT: false,
       // handleSIGTERM: false,
       // handleSIGHUP: false,
@@ -37,8 +39,10 @@ export const browserImportBundle = async ({
       serverOrigin: server.origin,
     }
   } finally {
-    browser.close()
-    server.stop()
+    if (stopAfterImport) {
+      browser.close()
+      server.stop()
+    }
   }
 }
 
@@ -46,11 +50,10 @@ const startTestServer = ({ bundleDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "https",
-    requestToResponse: (request) =>
-      firstService(
-        () => serveIndexPage({ request }),
-        () => serveBundleDirectory({ bundleDirectoryUrl, request }),
-      ),
+    requestToResponse: firstService(
+      (request) => serveIndexPage({ request }),
+      (request) => serveBundleDirectory({ bundleDirectoryUrl, request }),
+    ),
   })
 }
 

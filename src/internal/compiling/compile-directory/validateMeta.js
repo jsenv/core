@@ -1,9 +1,6 @@
-import {
-  urlToFileSystemPath,
-  readFile,
-  readFileSystemNodeModificationTime,
-  bufferToEtag,
-} from "@jsenv/util"
+import { urlToFileSystemPath, readFileSystemNodeModificationTime, bufferToEtag } from "@jsenv/util"
+import { timeFunction } from "@jsenv/server"
+import { readFileContent } from "./fs-optimized-for-cache.js"
 import { resolveAssetFileUrl, resolveSourceFileUrl } from "./locaters.js"
 
 export const validateMeta = async ({
@@ -12,17 +9,27 @@ export const validateMeta = async ({
   compiledFileUrl,
   ifEtagMatch,
   ifModifiedSinceDate,
+  compileCacheSourcesValidation = true,
+  compileCacheAssetsValidation = true,
 }) => {
-  const compiledFileValidation = await validateCompiledFile({
-    compiledFileUrl,
-    ifEtagMatch,
-    ifModifiedSinceDate,
-  })
+  const [compiledFileValidationTiming, compiledFileValidation] = await timeFunction(
+    "cache compiled file validation",
+    () =>
+      validateCompiledFile({
+        compiledFileUrl,
+        ifEtagMatch,
+        ifModifiedSinceDate,
+      }),
+  )
+
   if (!compiledFileValidation.valid) {
     logger.debug(
       `${urlToFileSystemPath(compiledFileUrl)} modified (${compiledFileValidation.code})`,
     )
-    return compiledFileValidation
+    return {
+      ...compiledFileValidation,
+      timing: compiledFileValidationTiming,
+    }
   }
   logger.debug(`${urlToFileSystemPath(compiledFileUrl)} not modified`)
 
@@ -31,19 +38,32 @@ export const validateMeta = async ({
     return {
       code: "SOURCES_EMPTY",
       valid: false,
+      timing: compiledFileValidationTiming,
     }
   }
 
-  const [sourcesValidations, assetValidations] = await Promise.all([
-    validateSources({
-      meta,
-      compiledFileUrl,
-    }),
-    validateAssets({
-      meta,
-      compiledFileUrl,
-    }),
+  const [
+    [sourcesValidationTiming, sourcesValidations],
+    [assetsValidationTiming, assetValidations],
+  ] = await Promise.all([
+    timeFunction("cache sources validation", () =>
+      compileCacheSourcesValidation
+        ? validateSources({
+            meta,
+            compiledFileUrl,
+          })
+        : [],
+    ),
+    timeFunction("cache assets validation", () =>
+      compileCacheAssetsValidation
+        ? validateAssets({
+            meta,
+            compiledFileUrl,
+          })
+        : [],
+    ),
   ])
+
   const invalidSourceValidation = sourcesValidations.find(({ valid }) => !valid)
   if (invalidSourceValidation) {
     logger.debug(
@@ -51,7 +71,14 @@ export const validateMeta = async ({
         invalidSourceValidation.code
       })`,
     )
-    return invalidSourceValidation
+    return {
+      ...invalidSourceValidation,
+      timing: {
+        ...compiledFileValidationTiming,
+        ...sourcesValidationTiming,
+        ...assetsValidationTiming,
+      },
+    }
   }
   const invalidAssetValidation = assetValidations.find(({ valid }) => !valid)
   if (invalidAssetValidation) {
@@ -60,7 +87,14 @@ export const validateMeta = async ({
         invalidAssetValidation.code
       })`,
     )
-    return invalidAssetValidation
+    return {
+      ...invalidAssetValidation,
+      timing: {
+        ...compiledFileValidationTiming,
+        ...sourcesValidationTiming,
+        ...assetsValidationTiming,
+      },
+    }
   }
   logger.debug(`${urlToFileSystemPath(compiledFileUrl)} cache is valid`)
 
@@ -75,12 +109,17 @@ export const validateMeta = async ({
       sourcesContent,
       assetsContent,
     },
+    timing: {
+      ...compiledFileValidationTiming,
+      ...sourcesValidationTiming,
+      ...assetsValidationTiming,
+    },
   }
 }
 
 const validateCompiledFile = async ({ compiledFileUrl, ifEtagMatch, ifModifiedSinceDate }) => {
   try {
-    const compiledSource = await readFile(compiledFileUrl)
+    const compiledSource = await readFileContent(compiledFileUrl)
 
     if (ifEtagMatch) {
       const compiledEtag = bufferToEtag(Buffer.from(compiledSource))
@@ -139,7 +178,7 @@ const validateSource = async ({ compiledFileUrl, source, eTag }) => {
   })
 
   try {
-    const sourceContent = await readFile(sourceFileUrl)
+    const sourceContent = await readFileContent(sourceFileUrl)
     const sourceETag = bufferToEtag(Buffer.from(sourceContent))
 
     if (sourceETag !== eTag) {
@@ -201,7 +240,7 @@ const validateAsset = async ({ asset, compiledFileUrl, eTag }) => {
   })
 
   try {
-    const assetContent = await readFile(assetFileUrl)
+    const assetContent = await readFileContent(assetFileUrl)
     const assetContentETag = bufferToEtag(Buffer.from(assetContent))
 
     if (eTag !== assetContentETag) {

@@ -1,39 +1,30 @@
-import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
 import "../s.js"
 import { valueInstall } from "../valueInstall.js"
 import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
-import { fetchUsingXHR } from "../../fetchUsingXHR.js"
-import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
 
 const GLOBAL_SPECIFIER = "global"
 
-export const createBrowserSystem = async ({
-  executionId,
+export const createBrowserSystem = ({
   compileServerOrigin,
   outDirectoryRelativeUrl,
-  compileDirectoryRelativeUrl,
-  importMapFileRelativeUrl,
+  importMap,
   importDefaultExtension,
+  fetchSource,
 }) => {
   if (typeof window.System === "undefined") {
     throw new Error(`window.System is undefined`)
   }
 
-  const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
-  const importmapFileResponse = await fetchUsingXHR(importmapFileUrl)
-  const importmap = importmapFileResponse.status === 404 ? {} : await importmapFileResponse.json()
-  const importmapNormalized = normalizeImportMap(importmap, importmapFileUrl)
-
   const browserSystem = new window.System.constructor()
 
-  const resolve = (specifier, importer) => {
+  const resolve = (specifier, importer = document.location.href) => {
     if (specifier === GLOBAL_SPECIFIER) return specifier
     return resolveImport({
       specifier,
       importer,
-      importMap: importmapNormalized,
+      importMap,
       defaultExtension: importDefaultExtension,
     })
   }
@@ -64,7 +55,6 @@ export const createBrowserSystem = async ({
 
         return browserSystem.getRegister()
       },
-      executionId,
       compileServerOrigin,
       outDirectoryRelativeUrl,
     })

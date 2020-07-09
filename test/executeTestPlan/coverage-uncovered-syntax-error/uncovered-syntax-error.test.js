@@ -5,9 +5,9 @@ import { executeTestPlan } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativePath}syntax-error.js`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}syntax-error.js`
 const { coverageMap: actual } = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
   executionLogLevel: "off",

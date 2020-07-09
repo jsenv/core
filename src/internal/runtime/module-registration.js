@@ -32,14 +32,11 @@ export const fromUrl = async ({
   importerUrl,
   fetchSource,
   instantiateJavaScript,
-  executionId,
   compileServerOrigin,
   outDirectoryRelativeUrl,
 }) => {
-  const moduleResponse = await fetchSource({
-    url,
+  const moduleResponse = await fetchSource(url, {
     importerUrl,
-    executionId,
   })
 
   if (moduleResponse.status === 404) {

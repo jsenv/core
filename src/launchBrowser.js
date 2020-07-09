@@ -9,10 +9,7 @@ import { fetchUrl } from "./internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "./internal/validateResponseStatusIsOk.js"
 import { trackPageToNotify } from "./internal/browser-launcher/trackPageToNotify.js"
 import { createSharing } from "./internal/browser-launcher/createSharing.js"
-import { startBrowserServer } from "./internal/browser-launcher/startBrowserServer.js"
-import { evaluateImportExecution } from "./internal/browser-launcher/evaluateImportExecution.js"
-
-const playwright = require("playwright-core")
+import { executeHtmlFile } from "./internal/browser-launcher/executeHtmlFile.js"
 
 const chromiumSharing = createSharing()
 
@@ -231,7 +228,8 @@ const launchBrowser = async (
   browserName,
   { cancellationToken, ressourceTracker, options, stopOnExit },
 ) => {
-  const browserClass = playwright[browserName]
+  // eslint-disable-next-line import/no-dynamic-require
+  const browserClass = require(`playwright-${browserName}`)[browserName]
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
@@ -239,7 +237,7 @@ const launchBrowser = async (
         const result = await browserClass.launch({
           ...options,
           // let's handle them to close properly browser, remove listener
-          // and so on, instead of relying on puppetter
+          // and so on, instead of relying on playwright
           handleSIGINT: false,
           handleSIGTERM: false,
           handleSIGHUP: false,
@@ -277,14 +275,11 @@ const launchBrowser = async (
   return launchOperation
 }
 
-const browserServerSharing = createSharing()
-
 const browserToRuntimeHooks = (
   browser,
   {
     cancellationToken,
     ressourceTracker,
-    browserServerLogLevel,
 
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
@@ -309,34 +304,11 @@ const browserToRuntimeHooks = (
   const executeFile = async (
     fileRelativeUrl,
     {
-      htmlFileRelativeUrl,
-      collectNamespace,
-      collectCoverage,
-      executionId,
-      errorStackRemapping = true,
       // because we use a self signed certificate
+      collectCoverage,
       ignoreHTTPSErrors = true,
     },
   ) => {
-    const sharingToken = browserServerSharing.getSharingToken()
-    if (!sharingToken.isUsed()) {
-      const browserServerPromise = startBrowserServer({
-        cancellationToken,
-        logLevel: browserServerLogLevel,
-
-        projectDirectoryUrl,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-      })
-      sharingToken.setSharedValue(browserServerPromise, async () => {
-        const server = await browserServerPromise
-        await server.stop()
-      })
-    }
-    const [browserServerPromise, stopUsingServer] = sharingToken.useSharedValue()
-    ressourceTracker.registerCleanupCallback(stopUsingServer)
-    const executionServer = await browserServerPromise
-
     // open a tab to execute to the file
     const browserContext = await browser.newContext({ ignoreHTTPSErrors })
     const page = await browserContext.newPage()
@@ -364,23 +336,15 @@ const browserToRuntimeHooks = (
       },
     })
     ressourceTracker.registerCleanupCallback(stopTrackingToNotify)
-    // import the file
-    return evaluateImportExecution({
+    return executeHtmlFile(fileRelativeUrl, {
       cancellationToken,
 
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
-      htmlFileRelativeUrl,
-      fileRelativeUrl,
       compileServerOrigin,
-      executionServerOrigin: executionServer.origin,
 
       page,
-
-      collectNamespace,
       collectCoverage,
-      executionId,
-      errorStackRemapping,
     })
   }
 

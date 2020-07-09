@@ -33,13 +33,13 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
-  collectNamespace: false,
   runtimeErrorCallback: (value) => {
     errorCallbackArgValue = value
   },
 })
 const expected = {
   status: "completed",
+  namespace: {},
 }
 assert({ actual, expected })
 

@@ -1,5 +1,7 @@
 import { urlToFileSystemPath, ensureParentDirectories } from "@jsenv/util"
+import { timeStart, timeFunction } from "@jsenv/server"
 import { require } from "../../require.js"
+import { readFileContent } from "./fs-optimized-for-cache.js"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
 import { updateMeta } from "./updateMeta.js"
@@ -20,6 +22,8 @@ export const getOrGenerateCompiledFile = async ({
   useFilesystemAsCache,
   cacheHitTracking = false,
   cacheInterProcessLocking = false,
+  compileCacheSourcesValidation,
+  compileCacheAssetsValidation,
   ifEtagMatch,
   ifModifiedSinceDate,
   compile,
@@ -51,33 +55,46 @@ ${projectDirectoryUrl}`)
     throw new TypeError(`compile must be a function, got ${compile}`)
   }
 
+  const lockTimeEnd = timeStart("lock")
   return startAsap(
     async () => {
-      const { meta, compileResult, compileResultStatus } = await computeCompileReport({
+      const lockTiming = lockTimeEnd()
+      const { meta, compileResult, compileResultStatus, timing } = await computeCompileReport({
         originalFileUrl,
         compiledFileUrl,
         compile,
         ifEtagMatch,
         ifModifiedSinceDate,
         useFilesystemAsCache,
+        compileCacheSourcesValidation,
+        compileCacheAssetsValidation,
         logger,
       })
 
+      let cacheWriteTiming = {}
       if (writeOnFilesystem) {
-        await updateMeta({
-          logger,
-          meta,
-          compileResult,
-          compileResultStatus,
-          compiledFileUrl,
-          cacheHitTracking,
-        })
+        const result = await timeFunction("cache write", () =>
+          updateMeta({
+            logger,
+            meta,
+            compileResult,
+            compileResultStatus,
+            compiledFileUrl,
+            cacheHitTracking,
+          }),
+        )
+        cacheWriteTiming = result[0]
       }
 
       return {
         meta,
         compileResult,
         compileResultStatus,
+        timing: {
+          ...lockTiming,
+          ...timing,
+          ...cacheWriteTiming,
+        },
       }
     },
     {
@@ -95,26 +112,37 @@ const computeCompileReport = async ({
   ifEtagMatch,
   ifModifiedSinceDate,
   useFilesystemAsCache,
+  compileCacheSourcesValidation,
+  compileCacheAssetsValidation,
   logger,
 }) => {
-  const meta = useFilesystemAsCache
-    ? await readMeta({
+  const [cacheReadTiming, meta] = await timeFunction("cache read", async () => {
+    if (useFilesystemAsCache) {
+      return readMeta({
         logger,
         compiledFileUrl,
       })
-    : null
+    }
+    return null
+  })
 
   if (!meta) {
-    const compileResult = await callCompile({
-      logger,
-      originalFileUrl,
-      compile,
-    })
+    const [compileTiming, compileResult] = await timeFunction("compile", () =>
+      callCompile({
+        logger,
+        originalFileUrl,
+        compile,
+      }),
+    )
 
     return {
       meta: null,
       compileResult,
       compileResultStatus: "created",
+      timing: {
+        ...cacheReadTiming,
+        ...compileTiming,
+      },
     }
   }
 
@@ -124,17 +152,27 @@ const computeCompileReport = async ({
     compiledFileUrl,
     ifEtagMatch,
     ifModifiedSinceDate,
+    compileCacheSourcesValidation,
+    compileCacheAssetsValidation,
   })
+
   if (!metaValidation.valid) {
-    const compileResult = await callCompile({
-      logger,
-      originalFileUrl,
-      compile,
-    })
+    const [compileTiming, compileResult] = await timeFunction("compile", () =>
+      callCompile({
+        logger,
+        originalFileUrl,
+        compile,
+      }),
+    )
     return {
       meta,
       compileResult,
       compileResultStatus: "updated",
+      timing: {
+        ...cacheReadTiming,
+        ...metaValidation.timing,
+        ...compileTiming,
+      },
     }
   }
 
@@ -151,6 +189,10 @@ const computeCompileReport = async ({
       assetsContent,
     },
     compileResultStatus: "cached",
+    timing: {
+      ...cacheReadTiming,
+      ...metaValidation.timing,
+    },
   }
 }
 
@@ -165,7 +207,7 @@ const callCompile = async ({ logger, originalFileUrl, compile }) => {
     contentType,
     compiledSource,
     ...rest
-  } = await compile()
+  } = await compile(compile.length ? await readFileContent(originalFileUrl) : undefined)
 
   if (typeof contentType !== "string") {
     throw new TypeError(`compile must return a contentType string, got ${contentType}`)

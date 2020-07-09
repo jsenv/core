@@ -1,0 +1,323 @@
+<html>
+  <head>
+    <title>Jsenv toolbar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" type="text/css" href="./toolbar.main.css" />
+  </head>
+  <body>
+    <div id="toolbar-overlay"></div>
+    <!-- toolbar -->
+    <div id="toolbar">
+      <div id="toolbar-wrapper">
+        <section id="file-list-link" data-responsive-toolbar-element>
+          <a class="toolbar-icon-wrapper" href="">
+            <svg id="fileIconSvg" class="iconToolbar" viewBox="0 0 24 24" width="35" height="35">
+              <path d="M0 0h24v24H0V0z" fill="none" />
+              <path
+                d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"
+              />
+            </svg>
+          </a>
+        </section>
+
+        <section id="file">
+          <input type="text" id="file-input" value="" dir="rtl" tabindex="-1" readonly />
+        </section>
+
+        <section id="execution-indicator">
+          <div>
+            <div data-variant-container></div>
+            <div style="display: none;">
+              <div data-variant="default">
+                <div class="tooltip">
+                  Unknown state
+                </div>
+              </div>
+              <div data-variant="running">
+                <div class="tooltip">
+                  Executing...
+                </div>
+                <button>
+                  <svg id="loader-icon" data-animate>
+                    <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
+                  </svg>
+                </button>
+              </div>
+              <div data-variant="completed">
+                <div class="tooltip">
+                  Execution completed in X ms
+                </div>
+                <button>
+                  <svg id="check-icon" data-animate viewBox="0 0 52 52">
+                    <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+                  </svg>
+                </button>
+              </div>
+              <div data-variant="errored">
+                <div class="tooltip">
+                  Execution failed in X ms
+                </div>
+                <button>
+                  <svg id="cross-icon" data-animate viewBox="0 0 512 512">
+                    <rect
+                      id="cross_p1"
+                      x="239.397"
+                      y="67.518"
+                      rx="17"
+                      ry="17"
+                      transform="matrix(0.7071 0.7071 -0.7071 0.7071 255.9995 -106.0389)"
+                    />
+                    <rect
+                      id="cross_p2"
+                      x="239.397"
+                      y="67.519"
+                      rx="17"
+                      ry="17"
+                      transform="matrix(0.7071 -0.7071 0.7071 0.7071 -106.039 256.0001)"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div style="width: 100%;"></div>
+
+        <section id="livereload-indicator" data-responsive-toolbar-element>
+          <div>
+            <div data-variant-container></div>
+            <div style="display: none;">
+              <div data-variant="default">
+                <div class="tooltip">
+                  Unknown state
+                </div>
+                <button>
+                  <svg>
+                    <circle class="livereload-circle" cx="20" cy="20" r="5" />
+                  </svg>
+                </button>
+              </div>
+              <div data-variant="off">
+                <div class="tooltip">
+                  Livereloading disabled
+                  <br />
+                  <div class="tooltipAction">
+                    <a href="javascript:void(0);">
+                      <svg id="powerIconSvg" class="tooltipIcon">
+                        <use xlink:href="./livereloading/toolbar-power-icon.svg#toolbar-power-icon"></use>
+                      </svg>
+                      connect
+                    </a>
+                  </div>
+                </div>
+                <button>
+                  <svg>
+                    <circle class="livereload-circle" data-variant="off" cx="20" cy="20" r="5" />
+                  </svg>
+                </button>
+              </div>
+              <div data-variant="connecting">
+                <div class="tooltip">
+                  Connecting to livereload server...
+                  <br />
+                  <div class="tooltipAction">
+                    <a href="javascript:void(0);">
+                      <svg id="powerOffIconSvg" class="tooltipIcon">
+                        <use xlink:href="./livereloading/toolbar-power-off-icon.svg#toolbar-power-off-icon"></use>
+                      </svg>
+                      cancel
+                    </a>
+                  </div>
+                </div>
+                <button>
+                  <svg>
+                    <circle
+                      class="livereload-circle"
+                      data-variant="connecting"
+                      cx="20"
+                      cy="20"
+                      r="5"
+                    />
+                    <circle class="livereload-ring" cx="20" cy="20" r="13" />
+                  </svg>
+                </button>
+              </div>
+              <div data-variant="connected">
+                <div class="tooltip">
+                  Connected to livereload server
+                  <br />
+                  <div class="tooltipAction">
+                    <a href="javascript:void(0);">
+                      <svg id="powerOffIconSvg" class="tooltipIcon">
+                        <use xlink:href="./livereloading/toolbar-power-off-icon.svg#toolbar-power-off-icon"></use>
+                      </svg>
+                      disconnect
+                    </a>
+                  </div>
+                </div>
+                <button>
+                  <svg>
+                    <circle
+                      class="livereload-circle"
+                      data-variant="connected"
+                      cx="20"
+                      cy="20"
+                      r="5"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div data-variant="disconnected">
+                <div class="tooltip">
+                  Disconnected from livereload server
+                  <br />
+                  <div class="tooltipAction">
+                    <a href="javascript:void(0);">
+                      <svg id="powerIconSvg" class="tooltipIcon">
+                        <use xlink:href="./livereloading/toolbar-power-icon.svg#toolbar-power-icon"></use>
+                      </svg>
+                      reconnect
+                    </a>
+                  </div>
+                </div>
+                <button>
+                  <svg>
+                    <circle
+                      class="livereload-circle"
+                      data-variant="disconnected"
+                      cx="20"
+                      cy="20"
+                      r="5"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="settings" data-responsive-toolbar-element>
+          <div id="settings-box">
+            <div id="settings-box-header">
+              <button id="button-close-settings">
+                <svg id="crossIconSvg" class="" width="18px" height="18px">
+                  <use xlink:href="./toolbar-cross-icon.svg#toolbar-cross-icon"></use>
+                </svg>
+              </button>
+              <svg class="settings-icon" width="35px" height="35px">
+                <use xlink:href="./settings/toolbar-settings-icon.svg#toolbar-settings-icon"></use>
+              </svg>
+              <h3>Settings</h3>
+            </div>
+            <div id="settings-box-body">
+              <div class="settings-box-item">
+                <div class="category-title">
+                  <svg width="20px" height="20px">
+                    <use xlink:href="./toolbar-notif-icon.svg#toolbar-notif-icon"></use>
+                  </svg>
+                  Notifications
+                </div>
+                <label class="switch" data-contains-hidden-input>
+                  <input id="toggle-notifs" type="checkbox" />
+                  <div>
+                    <div class="slider"></div>
+                    <div class="square"></div>
+                  </div>
+                </label>
+                <div class="category-subtitle">
+                  Send system notification when execution fails or is fixed.
+                </div>
+              </div>
+              <div class="settings-box-item">
+                <div class="category-title">
+                  <svg width="20px" height="20px">
+                    <use xlink:href="./animation/toolbar-movie-icon.svg#toolbar-movie-icon"></use>
+                  </svg>
+                  Animations
+                </div>
+                <label class="switch" data-contains-hidden-input>
+                  <input id="toggle-anims" type="checkbox" />
+                  <div>
+                    <div class="slider"></div>
+                    <div class="square"></div>
+                  </div>
+                </label>
+                <div class="category-subtitle">
+                  Play toolbar animations and transitions.
+                </div>
+              </div>
+              <div class="settings-box-item">
+                <div class="category-title">
+                  <svg width="20px" height="20px" id="paletteIconSvg">
+                    <use xlink:href="./theme/toolbar-palette-icon.svg#toolbar-palette-icon"></use>
+                  </svg>
+                  Dark mode
+                </div>
+                <label class="switch" data-contains-hidden-input>
+                  <input id="checkbox-dark-theme" type="checkbox" />
+                  <div>
+                    <div class="slider"></div>
+                    <div class="square"></div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+          <button id="settings-button" class="toolbar-icon-wrapper">
+            <svg class="settings-icon iconToolbar" class="iconToolbar" width="35px" height="35px">
+              <use xlink:href="./settings/toolbar-settings-icon.svg#toolbar-settings-icon"></use>
+            </svg>
+          </button>
+        </section>
+
+        <section id="close" data-responsive-toolbar-element>
+          <button id="button-close-toolbar">
+            <div class="toolbar-icon-wrapper">
+              <svg id="crossIconSvg" class="iconToolbar" width="35px" height="35px">
+                <use xlink:href="./toolbar-cross-icon.svg#toolbar-cross-icon"></use>
+              </svg>
+            </div>
+          </button>
+        </section>
+      </div>
+
+      <div id="overflow-menu">
+        <div style="width: 100%;"></div>
+      </div>
+
+      <div id="overflow-menu-button">
+        <button class="toolbar-icon-wrapper">
+          <svg id="dotsIconSvg" class="iconToolbar" width="35px" height="35px">
+            <use xlink:href="./responsive/toolbar-dots-icon.svg#toolbar-dots-icon"></use>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- svg filter
+    must not be hidden or won't show in firefox)
+    see also:
+      https://codepen.io/tigt/post/fixing-the-white-glow-in-the-css-blur-filter
+      https://stackoverflow.com/questions/46906819/edge-detection-in-svg-filter
+      https://github.com/msurguy/background-blur/issues/5
+      https://tympanus.net/codrops/2019/01/22/svg-filter-effects-outline-text-with-femorphology/
+    -->
+    <svg>
+      <defs>
+        <filter id="better-blur" x="0" y="0" width="1" height="1">
+          <feGaussianBlur stdDeviation="5" result="blurred" />
+
+          <feMerge>
+            <feMergeNode in="SourceGraphic" />
+            <feMergeNode in="blurred" />
+          </feMerge>
+        </filter>
+      </defs>
+    </svg>
+
+    <script type="module" src="./toolbar.main.js"></script>
+  </body>
+</html>

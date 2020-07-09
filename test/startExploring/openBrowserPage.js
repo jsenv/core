@@ -3,7 +3,7 @@ import { composeCoverageMap } from "../../src/internal/executing/coverage/compos
 import { evalSource } from "../../src/internal/runtime/createNodeRuntime/evalSource.js"
 import { coverageIsEnabled } from "../coverageIsEnabled.js"
 
-const { chromium } = require("playwright-core")
+const { chromium } = require("playwright-chromium")
 
 export const openBrowserPage = async (
   url,
@@ -43,23 +43,8 @@ export const openBrowserPage = async (
     }
   })
 
-  await Promise.race([
-    page.waitForFunction(
-      /* istanbul ignore next */
-      () => {
-        if (!window.file) return false
-        if (!window.file.execution) return false
-        return Boolean(window.file.execution.result)
-      },
-    ),
-    errorPromise,
-  ])
+  const executionResult = await Promise.race([getHtmlExecutionResult(page), errorPromise])
   removeErrorListener()
-
-  const executionResult = await page.evaluate(
-    /* istanbul ignore next */
-    () => window.file.execution.result,
-  )
 
   if (executionResult.status === "errored") {
     executionResult.error = evalSource(executionResult.exceptionSource)
@@ -70,6 +55,11 @@ export const openBrowserPage = async (
     const { coverageMap } = executionResult
     global.__coverage__ = composeCoverageMap(global.__coverage__ || {}, coverageMap || {})
     delete executionResult.coverageMap
+    const { fileExecutionResultMap } = executionResult
+    Object.keys(fileExecutionResultMap).forEach((file) => {
+      const fileExecutionResult = fileExecutionResultMap[file]
+      delete fileExecutionResult.coverageMap
+    })
   }
 
   return {
@@ -79,4 +69,17 @@ export const openBrowserPage = async (
     pageLogs,
     executionResult,
   }
+}
+
+export const getHtmlExecutionResult = async (page) => {
+  // await page.waitForFunction(() => {
+  //   /* istanbul ignore next */
+  //   return Boolean(window.__jsenv__)
+  // })
+  return page.evaluate(
+    /* istanbul ignore next */
+    () => {
+      return window.__jsenv__.executionResultPromise
+    },
+  )
 }

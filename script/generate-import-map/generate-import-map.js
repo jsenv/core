@@ -5,4 +5,5 @@ generateImportMapForProjectPackage({
   ...jsenvConfig,
   importMapFile: true,
   jsConfigFile: true,
+  selfImport: true,
 })

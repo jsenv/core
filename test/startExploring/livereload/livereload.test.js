@@ -8,30 +8,26 @@ import {
 } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { startExploring } from "../../../index.js"
-import { openBrowserPage } from "../openBrowserPage.js"
+import { openBrowserPage, getHtmlExecutionResult } from "../openBrowserPage.js"
 import { START_EXPLORING_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.main.js`
+const filename = `${testDirectoryname}.main.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const filePath = urlToFileSystemPath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
-const parentDirectoryUrl = resolveUrl("../", testDirectoryUrl)
-const parentDirectoryRelativeUrl = urlToRelativeUrl(parentDirectoryUrl, jsenvCoreDirectoryUrl)
-const htmlFileRelativeUrl = `${parentDirectoryRelativeUrl}template.html`
 
-const { exploringServer } = await startExploring({
+const exploringServer = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  htmlFileRelativeUrl,
   livereloading: true,
 })
 const { browser, page, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  `${exploringServer.origin}/${fileRelativeUrl}`,
+  `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
   {
-    headless: true,
+    // headless: false,
   },
 )
 {
@@ -41,21 +37,29 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
     pageErrors: [],
     executionResult: {
       status: "completed",
-      namespace: { default: 42 },
+      startTime: assert.any(Number),
+      endTime: assert.any(Number),
+      fileExecutionResultMap: {
+        "@jsenv/core/src/toolbar.js": {
+          status: "completed",
+          namespace: {},
+        },
+        "./livereload.main.js": {
+          status: "completed",
+          namespace: { default: 42 },
+        },
+      },
     },
   }
   assert({ actual, expected })
 }
 {
-  await writeFileSystemNodeModificationTime(filePath, Date.now())
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-  await page.waitForFunction(() => {
-    if (!window.file) return false
-    if (!window.file.execution) return false
-    return Boolean(window.file.execution.result)
-  })
-  const afterReloadExecutionResult = await page.evaluate(() => window.file.execution.result)
-  const actual = afterReloadExecutionResult.namespace
+  await new Promise((resolve) => setTimeout(resolve, 10000)) // give time to the toolbar to connect to SSE
+  const navigationPromise = page.waitForNavigation()
+  writeFileSystemNodeModificationTime(filePath, Date.now())
+  await navigationPromise
+  const afterReloadExecutionResult = await getHtmlExecutionResult(page)
+  const actual = afterReloadExecutionResult.fileExecutionResultMap["./livereload.main.js"].namespace
   const expected = {
     default: 43,
   }

@@ -1,5 +1,5 @@
 import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
-import { fetchAndEvalUsingXHR } from "../fetchAndEvalUsingXHR.js"
+import { fetchAndEvalUsingFetch } from "../fetchAndEvalUsingFetch.js"
 
 window.execute = async ({
   outDirectoryRelativeUrl,
@@ -8,9 +8,7 @@ window.execute = async ({
   sourcemapMainFileRelativeUrl,
   sourcemapMappingFileRelativeUrl,
   compileServerOrigin,
-  collectNamespace,
   transferableNamespace,
-  collectCoverage,
   executionId,
   // do not log in the console
   // because error handling becomes responsability
@@ -21,17 +19,18 @@ window.execute = async ({
   errorExposureInDocument = true,
 }) => {
   const browserRuntimeCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/${browserRuntimeFileRelativeUrl}`
-  await fetchAndEvalUsingXHR(browserRuntimeCompiledFileRemoteUrl)
+  await fetchAndEvalUsingFetch(browserRuntimeCompiledFileRemoteUrl)
   const { __browserRuntime__ } = window
 
-  const { compileDirectoryRelativeUrl, executeFile } = __browserRuntime__.create({
+  const { compileDirectoryRelativeUrl, executeFile } = await __browserRuntime__.create({
     compileServerOrigin,
+    outDirectoryRelativeUrl,
   })
   const compiledFileRemoteUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${fileRelativeUrl}`
 
   let errorTransform = (error) => error
   if (Error.captureStackTrace) {
-    await fetchAndEvalUsingXHR(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
+    await fetchAndEvalUsingFetch(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
     const { SourceMapConsumer } = window.sourceMap
     SourceMapConsumer.initialize({
       "lib/mappings.wasm": `${compileServerOrigin}/${sourcemapMappingFileRelativeUrl}`,
@@ -52,9 +51,7 @@ window.execute = async ({
   }
 
   return executeFile(compiledFileRemoteUrl, {
-    collectNamespace,
     transferableNamespace,
-    collectCoverage,
     executionId,
     errorExposureInConsole,
     errorExposureInNotification,

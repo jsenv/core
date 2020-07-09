@@ -15,7 +15,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `${testDirectoryBasename}.js`
+const filename = `${testDirectoryBasename}.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const compileId = "otherwise"
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
@@ -39,8 +39,13 @@ const actual = await launchAndExecute({
 const expected = {
   status: "completed",
   namespace: {
-    basic: `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}file.js`,
-    remapped: `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}bar.js`,
+    "./import-meta-resolve.js": {
+      status: "completed",
+      namespace: {
+        basic: `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}file.js`,
+        remapped: `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}bar.js`,
+      },
+    },
   },
 }
 assert({ actual, expected })
