@@ -7,19 +7,20 @@ executeTestPlan({
     "test/**/*.test.js": {
       node: {
         launch: launchNode,
+        allocatedMs: 50 * 1000,
       },
     },
     "test/execute/basic/file.chromium.test.js": {
       node: {
         launch: launchNode,
-        allocatedMs: 1000 * 60,
+        allocatedMs: 80 * 1000,
       },
     },
     "test/startExploring/**/*.test.js": {
       node: {
         launch: launchNode,
         // allocate more time (60s) for these tests, they can be long
-        allocatedMs: 1000 * 60,
+        allocatedMs: 80 * 1000,
       },
     },
   },
