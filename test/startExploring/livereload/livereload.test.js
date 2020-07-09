@@ -54,7 +54,7 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
   assert({ actual, expected })
 }
 {
-  await new Promise((resolve) => setTimeout(resolve, 4000)) // give time to the toolbar to connect to SSE
+  await new Promise((resolve) => setTimeout(resolve, 6000)) // give time to the toolbar to connect to SSE
   const navigationPromise = page.waitForNavigation()
   writeFileSystemNodeModificationTime(filePath, Date.now())
   await navigationPromise
