@@ -11,8 +11,6 @@ import { trackPageToNotify } from "./internal/browser-launcher/trackPageToNotify
 import { createSharing } from "./internal/browser-launcher/createSharing.js"
 import { executeHtmlFile } from "./internal/browser-launcher/executeHtmlFile.js"
 
-const playwright = require("playwright-core")
-
 const chromiumSharing = createSharing()
 
 export const launchChromium = async ({
@@ -230,7 +228,8 @@ const launchBrowser = async (
   browserName,
   { cancellationToken, ressourceTracker, options, stopOnExit },
 ) => {
-  const browserClass = playwright[browserName]
+  // eslint-disable-next-line import/no-dynamic-require
+  const browserClass = require(`playwright-${browserName}`)[browserName]
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
@@ -238,7 +237,7 @@ const launchBrowser = async (
         const result = await browserClass.launch({
           ...options,
           // let's handle them to close properly browser, remove listener
-          // and so on, instead of relying on puppetter
+          // and so on, instead of relying on playwright
           handleSIGINT: false,
           handleSIGTERM: false,
           handleSIGHUP: false,
@@ -345,7 +344,7 @@ const browserToRuntimeHooks = (
       compileServerOrigin,
 
       page,
-      collectCoverage
+      collectCoverage,
     })
   }
 
