@@ -3,10 +3,12 @@ import isNativeReflectConstruct from "../isNativeReflectConstruct/isNativeReflec
 import possibleConstructorReturn from "../possibleConstructorReturn/possibleConstructorReturn.js"
 
 export default function _createSuper(Derived) {
+  var hasNativeReflectConstruct = isNativeReflectConstruct()
+
   return function () {
     var Super = getPrototypeOf(Derived)
     var result
-    if (isNativeReflectConstruct()) {
+    if (hasNativeReflectConstruct) {
       // NOTE: This doesn't work if this.__proto__.constructor has been modified.
       var NewTarget = getPrototypeOf(this).constructor
       // eslint-disable-next-line prefer-rest-params

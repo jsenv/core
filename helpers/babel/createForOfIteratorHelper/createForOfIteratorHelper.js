@@ -5,10 +5,16 @@ import unsupportedIterableToArray from "../unsupportedIterableToArray/unsupporte
 // n: next
 // e: error (called whenever something throws)
 // f: finish (always called at the end)
-export default function createForOfIteratorHelper(o) {
+export default function createForOfIteratorHelper(o, allowArrayLike) {
+  var it
   if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) {
     // Fallback for engines without symbol support
-    if (Array.isArray(o) || (o = unsupportedIterableToArray(o))) {
+    if (
+      Array.isArray(o) ||
+      (it = unsupportedIterableToArray(o)) ||
+      (allowArrayLike && o && typeof o.length === "number")
+    ) {
+      if (it) o = it
       var i = 0
       var F = function () {}
       return {
@@ -27,7 +33,6 @@ export default function createForOfIteratorHelper(o) {
       "Invalid attempt to iterate non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.",
     )
   }
-  var it
   var normalCompletion = true
   var didErr = false
   var err
