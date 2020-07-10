@@ -74,13 +74,13 @@ const importFile = (specifier) => {
 
 const getBrowserRuntime = memoize(async () => {
   const compileServerOrigin = document.location.origin
-  const exploringInfoResponse = await fetchUrl(compileServerOrigin, {
+  const compileMetaResponse = await fetchUrl(`${compileServerOrigin}/.jsenv/compile-meta.json`, {
     headers: {
-      "x-jsenv-exploring": true,
+      "x-jsenv": true,
     },
   })
-  const exploringData = await exploringInfoResponse.json()
-  const { outDirectoryRelativeUrl } = exploringData
+  const compileMeta = await compileMetaResponse.json()
+  const { outDirectoryRelativeUrl, errorStackRemapping } = compileMeta
   const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
   const afterOutDirectory = document.location.href.slice(outDirectoryUrl.length)
   const parts = afterOutDirectory.split("/")
@@ -95,8 +95,8 @@ const getBrowserRuntime = memoize(async () => {
     htmlFileRelativeUrl,
   })
 
-  if (Error.captureStackTrace) {
-    const { sourcemapMainFileRelativeUrl, sourcemapMappingFileRelativeUrl } = exploringData
+  if (errorStackRemapping && Error.captureStackTrace) {
+    const { sourcemapMainFileRelativeUrl, sourcemapMappingFileRelativeUrl } = compileMeta
 
     await fetchAndEvalUsingFetch(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
     const { SourceMapConsumer } = window.sourceMap

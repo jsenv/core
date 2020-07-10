@@ -41,7 +41,11 @@ import { createCallbackList } from "../createCallbackList.js"
 import { readProjectImportMap } from "./readProjectImportMap.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
 import { urlIsAsset } from "./urlIsAsset.js"
-import { sourcemapMainFileUrl, sourcemapMappingFileUrl, browserJsFileUrl } from "../jsenvInternalFiles.js"
+import {
+  sourcemapMainFileUrl,
+  sourcemapMappingFileUrl,
+  browserJsFileUrl,
+} from "../jsenvInternalFiles.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -736,7 +740,11 @@ const createBrowserScriptService = ({
   )
 
   return (request) => {
-    if (request.headers["x-jsenv-exploring"]) {
+    if (
+      request.method === "GET" &&
+      request.ressource === "/.jsenv/compile-meta.json" &&
+      request.headers["x-jsenv"]
+    ) {
       const body = JSON.stringify({
         outDirectoryRelativeUrl,
         errorStackRemapping: true,
