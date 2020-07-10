@@ -25,7 +25,6 @@ import {
   removeFileSystemNode,
   ensureEmptyDirectory,
   registerFileLifecycle,
-  fileSystemPathToUrl,
   registerDirectoryLifecycle,
   urlIsInsideOf,
 } from "@jsenv/util"
@@ -38,11 +37,11 @@ import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
-import { require } from "../require.js"
 import { createCallbackList } from "../createCallbackList.js"
 import { readProjectImportMap } from "./readProjectImportMap.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
 import { urlIsAsset } from "./urlIsAsset.js"
+import { sourcemapMainFileUrl, sourcemapMappingFileUrl, browserJsFileUrl } from "../jsenvInternalFiles.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -184,10 +183,6 @@ export const startCompileServer = async ({
     }
   }
 
-  const browserJsFileUrl = resolveUrl(
-    "./src/internal/browser-launcher/jsenv-browser-system.js",
-    jsenvCoreDirectoryUrl,
-  )
   const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
   const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
 
@@ -734,10 +729,6 @@ const createBrowserScriptService = ({
   outDirectoryRelativeUrl,
   browserBundledJsFileRelativeUrl,
 }) => {
-  const sourcemapMainFileUrl = fileSystemPathToUrl(require.resolve("source-map/dist/source-map.js"))
-  const sourcemapMappingFileUrl = fileSystemPathToUrl(
-    require.resolve("source-map/lib/mappings.wasm"),
-  )
   const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl)
   const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
     sourcemapMappingFileUrl,

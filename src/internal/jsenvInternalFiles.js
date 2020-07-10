@@ -1,4 +1,5 @@
-import { resolveUrl } from "@jsenv/util"
+import { resolveUrl, fileSystemPathToUrl } from "@jsenv/util"
+import { require } from "./require.js"
 import { jsenvCoreDirectoryUrl } from "./jsenvCoreDirectoryUrl.js"
 
 export const nodeJsFileUrl = resolveUrl(
@@ -19,4 +20,12 @@ export const jsenvHtmlFileUrl = resolveUrl(
 export const exploringHtmlFileUrl = resolveUrl(
   "./src/internal/exploring/exploring.html",
   jsenvCoreDirectoryUrl,
+)
+
+export const sourcemapMainFileUrl = fileSystemPathToUrl(
+  require.resolve("source-map/dist/source-map.js"),
+)
+
+export const sourcemapMappingFileUrl = fileSystemPathToUrl(
+  require.resolve("source-map/lib/mappings.wasm"),
 )

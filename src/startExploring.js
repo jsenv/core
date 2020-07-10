@@ -10,10 +10,13 @@ import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
 import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
-import { getBrowserExecutionDynamicData } from "./internal/runtime/getBrowserExecutionDynamicData.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
-import { exploringHtmlFileUrl } from "./internal/jsenvInternalFiles.js"
+import {
+  exploringHtmlFileUrl,
+  sourcemapMainFileUrl,
+  sourcemapMappingFileUrl,
+} from "./internal/jsenvInternalFiles.js"
 
 export const startExploring = async ({
   cancellationToken = createCancellationTokenForProcess(),
@@ -131,21 +134,15 @@ const createExploringDataService = ({
       request.method === "GET" &&
       "x-jsenv-exploring" in request.headers
     ) {
-      const {
-        browserRuntimeFileRelativeUrl,
-        sourcemapMainFileRelativeUrl,
-        sourcemapMappingFileRelativeUrl,
-      } = getBrowserExecutionDynamicData({
-        projectDirectoryUrl,
-      })
-
       const data = {
         projectDirectoryUrl,
         jsenvDirectoryRelativeUrl: urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl),
         outDirectoryRelativeUrl,
-        browserRuntimeFileRelativeUrl,
-        sourcemapMainFileRelativeUrl,
-        sourcemapMappingFileRelativeUrl,
+        sourcemapMainFileRelativeUrl: urlToRelativeUrl(sourcemapMainFileUrl, jsenvCoreDirectoryUrl),
+        sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
+          sourcemapMappingFileUrl,
+          jsenvCoreDirectoryUrl,
+        ),
         explorableConfig,
         exploringHtmlFileRelativeUrl: urlToRelativeUrl(exploringHtmlFileUrl, projectDirectoryUrl),
       }
