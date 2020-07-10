@@ -12,6 +12,8 @@ import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./inter
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 import {
+  exploringRedirectorHtmlFileUrl,
+  exploringRedirectorJsFileUrl,
   exploringHtmlFileUrl,
   sourcemapMainFileUrl,
   sourcemapMappingFileUrl,
@@ -94,23 +96,37 @@ const createIndexService = ({
   outDirectoryRelativeUrl,
   compileServerGroupMap,
 }) => {
-  // redirect / to for @jsenv/core/src/exploring.html
-  const exploringIndexFileRelativeUrl = urlToRelativeUrl(exploringHtmlFileUrl, projectDirectoryUrl)
+  const exploringRedirectorHtmlFileRelativeUrl = urlToRelativeUrl(
+    exploringRedirectorHtmlFileUrl,
+    projectDirectoryUrl,
+  )
+  const exploringRedirectorJsFileRelativeUrl = urlToRelativeUrl(
+    exploringRedirectorJsFileUrl,
+    projectDirectoryUrl,
+  )
   // use worst compileId to be sure it's compatible
-  const compileId =
+  const worstCompileId =
     COMPILE_ID_OTHERWISE in compileServerGroupMap
       ? COMPILE_ID_OTHERWISE
       : getLastKey(compileServerGroupMap)
-  const exploringIndexCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/${exploringIndexFileRelativeUrl}`
+  const exploringRedirectorJsCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${worstCompileId}/${exploringRedirectorJsFileRelativeUrl}`
 
   return (request) => {
     if (request.ressource === "/") {
-      const exploringIndexFileRemoteUrl = `${request.origin}/${exploringIndexCompiledFileRelativeUrl}`
-
+      const exploringRedirectorHtmlFileUrl = `${request.origin}/${exploringRedirectorHtmlFileRelativeUrl}`
       return {
         status: 307,
         headers: {
-          location: exploringIndexFileRemoteUrl,
+          location: exploringRedirectorHtmlFileUrl,
+        },
+      }
+    }
+    if (request.ressource === "/.jsenv/exploring.redirector.js") {
+      const exploringRedirectorJsCompiledFileUrl = `${request.origin}/${exploringRedirectorJsCompiledFileRelativeUrl}`
+      return {
+        status: 307,
+        headers: {
+          location: exploringRedirectorJsCompiledFileUrl,
         },
       }
     }

@@ -17,6 +17,16 @@ export const jsenvHtmlFileUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 
+export const exploringRedirectorHtmlFileUrl = resolveUrl(
+  "./src/internal/exploring/exploring.redirector.html",
+  jsenvCoreDirectoryUrl,
+)
+
+export const exploringRedirectorJsFileUrl = resolveUrl(
+  "./src/internal/exploring/exploring.redirector.js",
+  jsenvCoreDirectoryUrl,
+)
+
 export const exploringHtmlFileUrl = resolveUrl(
   "./src/internal/exploring/exploring.html",
   jsenvCoreDirectoryUrl,
