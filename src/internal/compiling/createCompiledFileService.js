@@ -9,7 +9,7 @@ import {
   COMPILE_ID_COMMONJS_BUNDLE,
   COMPILE_ID_COMMONJS_BUNDLE_FILES,
 } from "../CONSTANTS.js"
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import { jsenvToolbarHtmlFileUrl } from "../jsenvInternalFiles.js"
 import { createBabePluginMapForBundle } from "../bundling/createBabePluginMapForBundle.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
@@ -17,11 +17,6 @@ import { compileFile } from "./compileFile.js"
 import { serveBundle } from "./serveBundle.js"
 import { compileHtml } from "./compileHtml.js"
 import { appendSourceMappingAsExternalUrl } from "../sourceMappingURLUtils.js"
-
-const jsenvToolbarHtmlFileUrl = resolveUrl(
-  "./src/internal/toolbar/toolbar.html",
-  jsenvCoreDirectoryUrl,
-)
 
 export const createCompiledFileService = ({
   cancellationToken,
