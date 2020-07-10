@@ -5,7 +5,7 @@ import {
   collectFiles,
   urlToRelativeUrl,
 } from "@jsenv/util"
-import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
+import { COMPILE_ID_GLOBAL_BUNDLE } from "./internal/CONSTANTS.js"
 import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
@@ -68,13 +68,11 @@ export const startExploring = async ({
     const {
       // importMapFileRelativeUrl,
       outDirectoryRelativeUrl,
-      compileServerGroupMap,
     } = compileServer
 
     serveIndex = createIndexService({
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
-      compileServerGroupMap,
     })
     serveExploringData = createExploringDataService({
       projectDirectoryUrl,
@@ -91,11 +89,7 @@ export const startExploring = async ({
   })
 }
 
-const createIndexService = ({
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  compileServerGroupMap,
-}) => {
+const createIndexService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) => {
   const exploringRedirectorHtmlFileRelativeUrl = urlToRelativeUrl(
     exploringRedirectorHtmlFileUrl,
     projectDirectoryUrl,
@@ -104,12 +98,7 @@ const createIndexService = ({
     exploringRedirectorJsFileUrl,
     projectDirectoryUrl,
   )
-  // use worst compileId to be sure it's compatible
-  const worstCompileId =
-    COMPILE_ID_OTHERWISE in compileServerGroupMap
-      ? COMPILE_ID_OTHERWISE
-      : getLastKey(compileServerGroupMap)
-  const exploringRedirectorJsCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${worstCompileId}/${exploringRedirectorJsFileRelativeUrl}`
+  const exploringRedirectorJsCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${exploringRedirectorJsFileRelativeUrl}`
 
   return (request) => {
     if (request.ressource === "/") {
@@ -132,11 +121,6 @@ const createIndexService = ({
     }
     return null
   }
-}
-
-const getLastKey = (object) => {
-  const keys = Object.keys(object)
-  return keys[keys.length - 1]
 }
 
 const createExploringDataService = ({
