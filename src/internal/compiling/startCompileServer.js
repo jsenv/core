@@ -135,7 +135,7 @@ export const startCompileServer = async ({
     ],
     ...babelPluginMap,
   }
-  const groupMap = generateGroupMap({
+  const compileServerGroupMap = generateGroupMap({
     babelPluginMap,
     babelCompatMap,
     runtimeScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
@@ -156,7 +156,7 @@ export const startCompileServer = async ({
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
-    groupMap,
+    compileServerGroupMap,
   })
 
   const serverStopCancellationSource = createCancellationSource()
@@ -210,7 +210,7 @@ export const startCompileServer = async ({
     transformTopLevelAwait,
     transformModuleIntoSystemFormat,
     babelPluginMap,
-    groupMap,
+    groupMap: compileServerGroupMap,
     convertMap,
     headScripts,
 
@@ -266,7 +266,7 @@ export const startCompileServer = async ({
     importDefaultExtension,
     importMapFileRelativeUrl,
     compileServerImportMap,
-    groupMap,
+    compileServerGroupMap,
     env,
     writeOnFilesystem,
   })
@@ -284,7 +284,7 @@ export const startCompileServer = async ({
     importMapFileRelativeUrl,
     ...compileServer,
     compileServerImportMap,
-    compileServerGroupMap: groupMap,
+    compileServerGroupMap,
   }
 }
 
@@ -399,7 +399,7 @@ const setupOutDirectory = async (
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
-    groupMap,
+    compileServerGroupMap,
   },
 ) => {
   if (jsenvDirectoryClean) {
@@ -414,7 +414,7 @@ const setupOutDirectory = async (
       jsenvCorePackageVersion,
       babelPluginMap,
       convertMap,
-      groupMap,
+      compileServerGroupMap,
     }
     const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
 
@@ -805,7 +805,7 @@ const installOutFiles = async (
     importDefaultExtension,
     importMapFileRelativeUrl,
     compileServerImportMap,
-    groupMap,
+    compileServerGroupMap,
     env,
     writeOnFilesystem,
   },
@@ -821,12 +821,12 @@ const installOutFiles = async (
   }
 
   const importMapToString = () => JSON.stringify(compileServerImportMap, null, "  ")
-  const groupMapToString = () => JSON.stringify(groupMap, null, "  ")
+  const groupMapToString = () => JSON.stringify(compileServerGroupMap, null, "  ")
   const envToString = () => JSON.stringify(env, null, "  ")
 
   const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
   const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
-  const importmapFiles = Object.keys(groupMap).map((compileId) => {
+  const importmapFiles = Object.keys(compileServerGroupMap).map((compileId) => {
     return resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`)
   })
 
