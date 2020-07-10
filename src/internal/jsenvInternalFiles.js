@@ -40,6 +40,11 @@ export const sourcemapMappingFileUrl = fileSystemPathToUrl(
   require.resolve("source-map/lib/mappings.wasm"),
 )
 
+export const jsenvToolbarJsFileUrl = resolveUrl(
+  "./src/internal/toolbar/toolbar.js",
+  jsenvCoreDirectoryUrl,
+)
+
 export const jsenvToolbarHtmlFileUrl = resolveUrl(
   "./src/internal/toolbar/toolbar.html",
   jsenvCoreDirectoryUrl,
