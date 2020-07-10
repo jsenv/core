@@ -6,8 +6,6 @@ import { createBrowserSystem } from "./createBrowserSystem.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
 import { fetchUrl } from "../../fetch-browser.js"
-import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
-import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 
 const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
 
@@ -17,17 +15,6 @@ export const createBrowserRuntime = async ({
   compileId,
   htmlFileRelativeUrl,
 }) => {
-  const decideCompileId = async ({ outDirectoryUrl }) => {
-    const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
-    const [groupMap] = await Promise.all([fetchJson(groupMapUrl)])
-
-    const compileId = computeCompileIdFromGroupId({
-      groupId: resolveBrowserGroup(groupMap),
-      groupMap,
-    })
-    return compileId
-  }
-
   const fetchSource = (url) => {
     return fetchUrl(url, {
       credentials: "include",
@@ -45,12 +32,9 @@ export const createBrowserRuntime = async ({
 
   const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
   const envUrl = String(new URL("env.json", outDirectoryUrl))
-  const [compileIdValue, { importMapFileRelativeUrl, importDefaultExtension }] = await Promise.all([
-    compileId || decideCompileId({ outDirectoryUrl }),
-    fetchJson(envUrl),
-  ])
+  const { importMapFileRelativeUrl, importDefaultExtension } = await fetchJson(envUrl)
 
-  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileIdValue}/`
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
 
   // if there is an importmap in the document we should use it instead of fetching like this.
   // systemjs style with systemjs-importmap
