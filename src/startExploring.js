@@ -130,9 +130,9 @@ const createExploringDataService = ({
 }) => {
   return (request) => {
     if (
-      request.ressource === "/exploring.json" &&
+      request.ressource === "/.jsenv/exploring.json" &&
       request.method === "GET" &&
-      "x-jsenv-exploring" in request.headers
+      "x-jsenv" in request.headers
     ) {
       const data = {
         projectDirectoryUrl,
@@ -168,9 +168,9 @@ const createExplorableListAsJsonService = ({
 }) => {
   return async (request) => {
     if (
-      request.ressource === "/explorables" &&
+      request.ressource === "/.jsenv/explorables.json" &&
       request.method === "GET" &&
-      "x-jsenv-exploring" in request.headers
+      "x-jsenv" in request.headers
     ) {
       const metaMap = {}
       Object.keys(explorableConfig).forEach((key) => {

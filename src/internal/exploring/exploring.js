@@ -19,10 +19,10 @@ const {
   outDirectoryRelativeUrl,
 } = await loadExploringConfig()
 
-const files = await fetchJSON(`/explorables`, {
+const files = await fetchJSON(`/.jsenv/explorables.json`, {
   method: "GET",
   headers: {
-    "x-jsenv-exploring": "1",
+    "x-jsenv": "1",
   },
 })
 

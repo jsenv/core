@@ -3,8 +3,8 @@ import { fetchUrl } from "./fetching.js"
 
 export const loadExploringConfig = async ({ cancellationToken } = {}) => {
   try {
-    const exploringJsonResponse = await fetchUrl("/exploring.json", {
-      headers: { "x-jsenv-exploring": "1" },
+    const exploringJsonResponse = await fetchUrl("/.jsenv/exploring.json", {
+      headers: { "x-jsenv": "1" },
       cancellationToken,
     })
     const exploringConfig = await exploringJsonResponse.json()

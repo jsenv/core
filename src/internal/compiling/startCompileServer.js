@@ -743,7 +743,7 @@ const createBrowserScriptService = ({
     if (
       request.method === "GET" &&
       request.ressource === "/.jsenv/compile-meta.json" &&
-      request.headers["x-jsenv"]
+      "x-jsenv" in request.headers
     ) {
       const body = JSON.stringify({
         outDirectoryRelativeUrl,
