@@ -20,8 +20,7 @@ const {
 } = await loadExploringConfig()
 
 const files = await fetchJSON(`/explorables`, {
-  method: "POST",
-  body: JSON.stringify(explorableConfig),
+  method: "GET",
   headers: {
     "x-jsenv-exploring": "1",
   },

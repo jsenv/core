@@ -5,7 +5,6 @@ import {
   collectFiles,
   urlToRelativeUrl,
 } from "@jsenv/util"
-import { readRequestBodyAsString } from "@jsenv/server"
 import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
 import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
@@ -77,12 +76,13 @@ export const startExploring = async ({
     })
     serveExploringData = createExploringDataService({
       projectDirectoryUrl,
-      explorableConfig,
       outDirectoryRelativeUrl,
+      explorableConfig,
     })
     serveExplorableListAsJson = createExplorableListAsJsonService({
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
+      explorableConfig,
     })
 
     return compileServer
@@ -125,8 +125,8 @@ const getLastKey = (object) => {
 
 const createExploringDataService = ({
   projectDirectoryUrl,
-  explorableConfig,
   outDirectoryRelativeUrl,
+  explorableConfig,
 }) => {
   return (request) => {
     if (
@@ -136,15 +136,15 @@ const createExploringDataService = ({
     ) {
       const data = {
         projectDirectoryUrl,
-        jsenvDirectoryRelativeUrl: urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl),
         outDirectoryRelativeUrl,
+        jsenvDirectoryRelativeUrl: urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl),
+        exploringHtmlFileRelativeUrl: urlToRelativeUrl(exploringHtmlFileUrl, projectDirectoryUrl),
         sourcemapMainFileRelativeUrl: urlToRelativeUrl(sourcemapMainFileUrl, jsenvCoreDirectoryUrl),
         sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
           sourcemapMappingFileUrl,
           jsenvCoreDirectoryUrl,
         ),
         explorableConfig,
-        exploringHtmlFileRelativeUrl: urlToRelativeUrl(exploringHtmlFileUrl, projectDirectoryUrl),
       }
       const json = JSON.stringify(data)
       return {
@@ -161,14 +161,17 @@ const createExploringDataService = ({
   }
 }
 
-const createExplorableListAsJsonService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) => {
+const createExplorableListAsJsonService = ({
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+  explorableConfig,
+}) => {
   return async (request) => {
     if (
       request.ressource === "/explorables" &&
-      request.method === "POST" &&
+      request.method === "GET" &&
       "x-jsenv-exploring" in request.headers
     ) {
-      const explorableConfig = JSON.parse(await readRequestBodyAsString(request.body))
       const metaMap = {}
       Object.keys(explorableConfig).forEach((key) => {
         metaMap[key] = {
