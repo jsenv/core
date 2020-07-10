@@ -5,10 +5,10 @@ import { fetchExploringJson } from "../exploring/fetchExploringJson.js"
 import "./focus/toolbar.focus.js"
 import { renderBackToListInToolbar } from "./backtolist/toolbar.backtolist.js"
 import { getToolbarIframe, deactivateToolbarSection, setStyles } from "./util/dom.js"
-import { registerNotifications } from "./util/notification.js"
 import { createPreference } from "./util/preferences.js"
 import { hideTooltip, hideAllTooltip } from "./tooltip/tooltip.js"
 import { renderToolbarSettings, hideSettings } from "./settings/toolbar.settings.js"
+import { renderToolbarNotification } from "./notification/toolbar.notification.js"
 import { renderToolbarTheme } from "./theme/toolbar.theme.js"
 import { renderToolbarAnimation } from "./animation/toolbar.animation.js"
 import { renderExecutionInToolbar } from "./execution/toolbar.execution.js"
@@ -59,7 +59,7 @@ const renderToolbar = async () => {
     exploringHtmlFileRelativeUrl: exploringConfig.exploringHtmlFileRelativeUrl,
   })
 
-  registerNotifications()
+  renderToolbarNotification()
   makeToolbarResponsive()
   renderToolbarSettings()
   renderToolbarAnimation()
