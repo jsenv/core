@@ -49,3 +49,8 @@ export const jsenvToolbarHtmlFileUrl = resolveUrl(
   "./src/internal/toolbar/toolbar.html",
   jsenvCoreDirectoryUrl,
 )
+
+export const jsenvToolbarMainJsFileUrl = resolveUrl(
+  "./src/internal/toolbar/toolbar.main.js",
+  jsenvCoreDirectoryUrl,
+)

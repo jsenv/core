@@ -17,6 +17,7 @@ import {
   exploringHtmlFileUrl,
   sourcemapMainFileUrl,
   sourcemapMappingFileUrl,
+  jsenvToolbarMainJsFileUrl,
 } from "./internal/jsenvInternalFiles.js"
 
 export const startExploring = async ({
@@ -31,7 +32,7 @@ export const startExploring = async ({
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-    let serveIndex
+    let redirectFiles
     let serveExploringData
     let serveExplorableListAsJson
 
@@ -58,7 +59,7 @@ export const startExploring = async ({
           : []),
       ],
       customServices: {
-        "service:index": (request) => serveIndex(request),
+        "service:exploring-redirect": (request) => redirectFiles(request),
         "service:exploring-data": (request) => serveExploringData(request),
         "service:explorables": (request) => serveExplorableListAsJson(request),
       },
@@ -70,7 +71,7 @@ export const startExploring = async ({
       outDirectoryRelativeUrl,
     } = compileServer
 
-    serveIndex = createIndexService({
+    redirectFiles = createRedirectFilesService({
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
     })
@@ -89,7 +90,7 @@ export const startExploring = async ({
   })
 }
 
-const createIndexService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) => {
+const createRedirectFilesService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) => {
   const exploringRedirectorHtmlFileRelativeUrl = urlToRelativeUrl(
     exploringRedirectorHtmlFileUrl,
     projectDirectoryUrl,
@@ -100,6 +101,12 @@ const createIndexService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) =>
   )
   const exploringRedirectorJsCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${exploringRedirectorJsFileRelativeUrl}`
 
+  const toolbarMainJsFileRelativeUrl = urlToRelativeUrl(
+    jsenvToolbarMainJsFileUrl,
+    projectDirectoryUrl,
+  )
+  const toolbarMainJsCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${toolbarMainJsFileRelativeUrl}`
+
   return (request) => {
     if (request.ressource === "/") {
       const exploringRedirectorHtmlFileUrl = `${request.origin}/${exploringRedirectorHtmlFileRelativeUrl}`
@@ -107,6 +114,15 @@ const createIndexService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) =>
         status: 307,
         headers: {
           location: exploringRedirectorHtmlFileUrl,
+        },
+      }
+    }
+    if (request.ressource === "/.jsenv/toolbar.main.js") {
+      const toolbarMainJsCompiledFileUrl = `${request.origin}/${toolbarMainJsCompiledFileRelativeUrl}`
+      return {
+        status: 307,
+        headers: {
+          location: toolbarMainJsCompiledFileUrl,
         },
       }
     }
@@ -119,6 +135,7 @@ const createIndexService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) =>
         },
       }
     }
+
     return null
   }
 }

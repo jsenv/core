@@ -336,23 +336,6 @@
     module approach wil be faster because
     no compilation will be necessary
     -->
-    <script id="jsenv-toolbar">
-      const jsenvToolbarHtmlFileRelativeUrl = "src/internal/toolbar/toolbar.html"
-      const compileDirectoryUrl = String(window.location.href).slice(
-        0,
-        -jsenvToolbarHtmlFileRelativeUrl.length,
-      )
-      const outDirectoryUrl = compileDirectoryUrl.slice(
-        0,
-        compileDirectoryUrl.lastIndexOf("/", compileDirectoryUrl.length - 2) + 1,
-      )
-      const toolbarScriptSrc = `${outDirectoryUrl}otherwise-global-bundle/src/internal/toolbar/toolbar.main.js`
-
-      const currentScript = document.querySelector("#jsenv-toolbar")
-      const toolbarScript = document.createElement("script")
-      toolbarScript.src = toolbarScriptSrc
-      // currentScript.parentNode.replaceChild(toolbarScript, currentScript)
-      currentScript.parentNode.insertBefore(toolbarScript, currentScript.nextSibling)
-    </script>
+    <script src="/.jsenv/toolbar.main.js"></script>
   </body>
 </html>
