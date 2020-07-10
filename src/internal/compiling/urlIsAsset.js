@@ -22,5 +22,7 @@ export const urlIsAsset = (url) => {
   // of https://github.com/microsoft/vscode-chrome-debug-core/issues/544
   if (url.endsWith(".map")) return true
 
+  if (url.match(/\.+.html\.+\.js/)) return true
+
   return url.match(/[^\/]+__asset__\/.+$/)
 }

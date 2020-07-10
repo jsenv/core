@@ -215,6 +215,14 @@ export const createCompiledFileService = ({
           await Promise.all(
             Object.keys(scriptsExternalized).map(async (key) => {
               const scriptBasename = basename(key)
+              const scriptName = `${basename(originalFileUrl)}.${scriptBasename}`
+              // TODO
+              // to ensure script can still resolve its dependencies
+              // it must be put as a sibling of the generated html file
+              // it means asset must controls where they will be written
+              // to do that I must update other parts of the code where
+              // assets are not controlling this, they must now do it instead
+              // of just specifying a relative url
               const scriptOriginalFileUrl = `${originalFileUrl}.${scriptBasename}`
               const scriptAfterTransformFileUrl = `${compiledFileUrl}.${scriptBasename}`
 
@@ -241,7 +249,7 @@ export const createCompiledFileService = ({
                 sourcemapFileUrl,
                 `${compiledFileUrl}__asset__/`,
               )
-              assets = [...assets, scriptBasename, sourcemapFileRelativePathForAsset]
+              assets = [...assets, scriptName, sourcemapFileRelativePathForAsset]
               assetsContent = [...assetsContent, code, JSON.stringify(map, null, "  ")]
             }),
           )
@@ -249,7 +257,7 @@ export const createCompiledFileService = ({
           return {
             compiledSource: htmlAfterCompilation,
             contentType: "text/html",
-            sources: [urlToRelativeUrl(originalFileUrl, `${compiledFileUrl}__asset__/`)],
+            sources: [urlToRelativeUrl(originalFileUrl, compiledFileUrl)],
             sourcesContent: [htmlBeforeCompilation],
             assets,
             assetsContent,
