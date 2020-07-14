@@ -12,6 +12,7 @@ const injectToolbar = async () => {
   })
   setStyles(iframe, {
     position: "fixed",
+    zIndex: 1000,
     bottom: 0,
     left: 0,
     width: "100%",
@@ -63,7 +64,8 @@ const injectToolbar = async () => {
     #jsenv-toolbar-trigger {
       display: block;
       overflow: hidden;
-      position: absolute;
+      position: fixed;
+      z-index: 1000;
       bottom: -32px;
       right: 20px;
       height: 40px;
