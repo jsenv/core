@@ -15,7 +15,7 @@ export const generateCompiledFileAssetUrl = (compiledFileUrl, assetName) => {
   return `${compiledFileUrl}__asset__${assetName}`
 }
 
-const pathnameToBasename = (pathname) => {
+export const pathnameToBasename = (pathname) => {
   const slashLastIndex = pathname.lastIndexOf("/")
   if (slashLastIndex === -1) {
     return pathname

@@ -45,23 +45,14 @@ await Promise.all(
     const expected = {
       status: "completed",
       namespace: {
-        "./log.js": {
+        "./script-inline.html__asset__foo.js": {
           status: "completed",
-          namespace: {},
+          namespace: {
+            default: 42,
+          },
         },
       },
-      consoleCalls: [
-        {
-          type: "log",
-          text: `foo
-`,
-        },
-        {
-          type: "log",
-          text: `bar
-`,
-        },
-      ],
+      consoleCalls: [],
     }
     assert({ actual, expected })
   }),

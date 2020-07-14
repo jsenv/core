@@ -135,8 +135,12 @@ const polyfillModuleScripts = (document, { generateInlineScriptSrc }) => {
     if (firstChild && firstChild.nodeName === "#text") {
       const scriptText = firstChild.value
       mutations.push(() => {
+        const idAttribute = getAttributeByName(attributes, "id")
         const hash = createScriptContentHash(scriptText)
-        const src = generateInlineScriptSrc({ hash })
+        const src = generateInlineScriptSrc({
+          hash,
+          id: idAttribute ? idAttribute.value : undefined,
+        })
         const script = parseHtmlAsSingleElement(generateScriptForJsenv(src))
         // inherit script attributes (except src and type)
         script.attrs = [
