@@ -23,11 +23,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 })
 
 await Promise.all(
-  [
-    launchChromium,
-    // launchFirefox,
-    // launchWebkit
-  ].map(async (launchBrowser) => {
+  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
     const actual = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
       launch: (options) =>
@@ -36,11 +32,11 @@ await Promise.all(
           ...options,
           outDirectoryRelativeUrl,
           compileServerOrigin,
-          headless: false,
+          // headless: false,
         }),
       fileRelativeUrl,
       captureConsole: true,
-      stopAfterExecute: false,
+      // stopAfterExecute: false,
     })
     const expected = {
       status: "completed",

@@ -1,5 +1,4 @@
 /* eslint-disable import/max-dependencies */
-import { basename } from "path"
 import { urlToContentType, serveFile } from "@jsenv/server"
 import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import {
