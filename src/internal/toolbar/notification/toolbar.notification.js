@@ -1,16 +1,9 @@
-import { createPreference } from "./preferences.js"
+import { createPreference } from "../util/preferences.js"
 
 const notificationPreference = createPreference("notification")
 
-export const notificationAvailable = typeof window.Notification === "function"
-
-export const getNotificationPreference = () =>
-  notificationPreference.has() ? notificationPreference.get() : true
-
-export const setNotificationPreference = (value) => notificationPreference.set(value)
-
 const arrayOfOpenedNotifications = []
-export const registerNotifications = () => {
+export const renderToolbarNotification = () => {
   const notifCheckbox = document.querySelector("#toggle-notifs")
   notifCheckbox.checked = getNotificationPreference()
   notifCheckbox.onchange = () => {
@@ -29,11 +22,10 @@ export const registerNotifications = () => {
   }
 }
 
-export const notifyFileExecution = (execution, previousExecution) => {
+export const notifyExecutionResult = (executedFileRelativeUrl, execution, previousExecution) => {
   const notificationEnabled = getNotificationPreference()
   if (!notificationEnabled) return
 
-  const { fileRelativeUrl } = execution
   const notificationOptions = {
     lang: "en",
     icon: getFaviconHref(),
@@ -41,32 +33,39 @@ export const notifyFileExecution = (execution, previousExecution) => {
     clickToClose: true,
   }
 
-  if (execution.result.status === "errored") {
+  if (execution.status === "errored") {
     if (previousExecution) {
-      if (previousExecution.result.status === "completed") {
+      if (previousExecution.status === "completed") {
         notify("Broken", {
           ...notificationOptions,
-          body: `${fileRelativeUrl} execution now failing.`,
+          body: `${executedFileRelativeUrl} execution now failing.`,
         })
       } else {
         notify("Still failing", {
           ...notificationOptions,
-          body: `${fileRelativeUrl} execution still failing.`,
+          body: `${executedFileRelativeUrl} execution still failing.`,
         })
       }
     } else {
       notify("Failing", {
         ...notificationOptions,
-        body: `${fileRelativeUrl} execution failed.`,
+        body: `${executedFileRelativeUrl} execution failed.`,
       })
     }
-  } else if (previousExecution && previousExecution.result.status === "errored") {
+  } else if (previousExecution && previousExecution.status === "errored") {
     notify("Fixed", {
       ...notificationOptions,
-      body: `${fileRelativeUrl} execution fixed.`,
+      body: `${executedFileRelativeUrl} execution fixed.`,
     })
   }
 }
+
+const notificationAvailable = typeof window.Notification === "function"
+
+const getNotificationPreference = () =>
+  notificationPreference.has() ? notificationPreference.get() : true
+
+const setNotificationPreference = (value) => notificationPreference.set(value)
 
 const getFaviconHref = () => {
   const link = document.querySelector('link[rel="icon"]')

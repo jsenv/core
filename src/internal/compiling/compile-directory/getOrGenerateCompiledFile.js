@@ -5,7 +5,7 @@ import { readFileContent } from "./fs-optimized-for-cache.js"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
 import { updateMeta } from "./updateMeta.js"
-import { resolveMetaJsonFileUrl } from "./locaters.js"
+import { getMetaJsonFileUrl } from "./compile-asset.js"
 import { createLockRegistry } from "./createLockRegistry.js"
 
 const { lockForRessource } = createLockRegistry()
@@ -228,7 +228,7 @@ const callCompile = async ({ logger, originalFileUrl, compile }) => {
 }
 
 const startAsap = async (fn, { logger, compiledFileUrl, cacheInterProcessLocking }) => {
-  const metaJsonFileUrl = resolveMetaJsonFileUrl({ compiledFileUrl })
+  const metaJsonFileUrl = getMetaJsonFileUrl(compiledFileUrl)
   const metaJsonFilePath = urlToFileSystemPath(metaJsonFileUrl)
 
   logger.debug(`lock ${metaJsonFilePath}`)

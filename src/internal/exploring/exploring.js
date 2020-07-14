@@ -1,7 +1,7 @@
 import { resolveBrowserGroup } from "../runtime/resolveBrowserGroup.js"
 import { computeCompileIdFromGroupId } from "../runtime/computeCompileIdFromGroupId.js"
 import { fetchUrl } from "../toolbar/util/fetching.js"
-import { loadExploringConfig } from "../toolbar/util/util.js"
+import { fetchExploringJson } from "./fetchExploringJson.js"
 import { createPreference } from "../toolbar/util/preferences.js"
 import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
 
@@ -17,13 +17,12 @@ const {
   projectDirectoryUrl,
   explorableConfig,
   outDirectoryRelativeUrl,
-} = await loadExploringConfig()
+} = await fetchExploringJson()
 
-const files = await fetchJSON(`/explorables`, {
-  method: "POST",
-  body: JSON.stringify(explorableConfig),
+const files = await fetchJSON(`/.jsenv/explorables.json`, {
+  method: "GET",
   headers: {
-    "x-jsenv-exploring": "1",
+    "x-jsenv": "1",
   },
 })
 

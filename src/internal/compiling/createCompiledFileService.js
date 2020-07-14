@@ -1,5 +1,4 @@
 /* eslint-disable import/max-dependencies */
-import { basename } from "path"
 import { urlToContentType, serveFile } from "@jsenv/server"
 import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import {
@@ -9,7 +8,7 @@ import {
   COMPILE_ID_COMMONJS_BUNDLE,
   COMPILE_ID_COMMONJS_BUNDLE_FILES,
 } from "../CONSTANTS.js"
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import { jsenvToolbarHtmlFileUrl } from "../jsenvInternalFiles.js"
 import { createBabePluginMapForBundle } from "../bundling/createBabePluginMapForBundle.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
@@ -17,11 +16,7 @@ import { compileFile } from "./compileFile.js"
 import { serveBundle } from "./serveBundle.js"
 import { compileHtml } from "./compileHtml.js"
 import { appendSourceMappingAsExternalUrl } from "../sourceMappingURLUtils.js"
-
-const jsenvToolbarHtmlFileUrl = resolveUrl(
-  "./src/internal/toolbar/toolbar.html",
-  jsenvCoreDirectoryUrl,
-)
+import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
 export const createCompiledFileService = ({
   cancellationToken,
@@ -200,8 +195,6 @@ export const createCompiledFileService = ({
         request,
 
         compile: async (htmlBeforeCompilation) => {
-          const assetDirectoryName = `${basename(compiledFileUrl)}__asset__`
-
           const { htmlAfterCompilation, scriptsExternalized } = compileHtml(htmlBeforeCompilation, {
             headScripts: [
               {
@@ -212,18 +205,25 @@ export const createCompiledFileService = ({
               // instead this should be moved to startExploring
               ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : headScripts),
             ],
-            generateInlineScriptSrc: ({ hash }) => `./${assetDirectoryName}/${hash}.js`,
+            generateInlineScriptSrc: ({ id, hash }) => {
+              const scriptAssetUrl = generateCompiledFileAssetUrl(
+                compiledFileUrl,
+                id ? `${id}.js` : `${hash}.js`,
+              )
+              return `./${urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`
+            },
           })
 
           let assets = []
           let assetsContent = []
           await Promise.all(
-            Object.keys(scriptsExternalized).map(async (key) => {
-              const scriptBasename = basename(key)
-              const scriptOriginalFileUrl = `${originalFileUrl}.${scriptBasename}`
-              const scriptAfterTransformFileUrl = `${compiledFileUrl}.${scriptBasename}`
+            Object.keys(scriptsExternalized).map(async (scriptSrc) => {
+              const scriptAssetUrl = resolveUrl(scriptSrc, compiledFileUrl)
+              const scriptBasename = urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)
+              const scriptOriginalFileUrl = resolveUrl(scriptBasename, originalFileUrl)
+              const scriptAfterTransformFileUrl = resolveUrl(scriptBasename, compiledFileUrl)
 
-              const scriptBeforeCompilation = scriptsExternalized[key]
+              const scriptBeforeCompilation = scriptsExternalized[scriptSrc]
               const scriptTransformResult = await transformJs({
                 projectDirectoryUrl,
                 code: scriptBeforeCompilation,
@@ -234,19 +234,18 @@ export const createCompiledFileService = ({
                 transformTopLevelAwait,
                 transformModuleIntoSystemFormat: true,
               })
-              const sourcemapFileUrl = resolveUrl(`${key}.map`, compiledFileUrl)
+              const sourcemapFileUrl = resolveUrl(
+                `${scriptBasename}.map`,
+                scriptAfterTransformFileUrl,
+              )
 
               let { code, map } = scriptTransformResult
               const sourcemapFileRelativePathForModule = urlToRelativeUrl(
                 sourcemapFileUrl,
-                `${compiledFileUrl}__asset__/`,
+                compiledFileUrl,
               )
               code = appendSourceMappingAsExternalUrl(code, sourcemapFileRelativePathForModule)
-              const sourcemapFileRelativePathForAsset = urlToRelativeUrl(
-                sourcemapFileUrl,
-                `${compiledFileUrl}__asset__/`,
-              )
-              assets = [...assets, scriptBasename, sourcemapFileRelativePathForAsset]
+              assets = [...assets, scriptAssetUrl, sourcemapFileUrl]
               assetsContent = [...assetsContent, code, JSON.stringify(map, null, "  ")]
             }),
           )
@@ -254,7 +253,7 @@ export const createCompiledFileService = ({
           return {
             compiledSource: htmlAfterCompilation,
             contentType: "text/html",
-            sources: [urlToRelativeUrl(originalFileUrl, `${compiledFileUrl}__asset__/`)],
+            sources: [originalFileUrl],
             sourcesContent: [htmlBeforeCompilation],
             assets,
             assetsContent,

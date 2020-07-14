@@ -1,11 +1,9 @@
 import { urlToFileSystemPath } from "@jsenv/util"
-import { resolveMetaJsonFileUrl } from "./locaters.js"
+import { getMetaJsonFileUrl } from "./compile-asset.js"
 import { readFileContent } from "./fs-optimized-for-cache.js"
 
 export const readMeta = async ({ logger, compiledFileUrl }) => {
-  const metaJsonFileUrl = resolveMetaJsonFileUrl({
-    compiledFileUrl,
-  })
+  const metaJsonFileUrl = getMetaJsonFileUrl(compiledFileUrl)
 
   try {
     const metaJsonString = await readFileContent(metaJsonFileUrl)

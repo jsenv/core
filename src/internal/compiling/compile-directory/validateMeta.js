@@ -1,7 +1,12 @@
-import { urlToFileSystemPath, readFileSystemNodeModificationTime, bufferToEtag } from "@jsenv/util"
+import {
+  resolveUrl,
+  urlToFileSystemPath,
+  readFileSystemNodeModificationTime,
+  bufferToEtag,
+} from "@jsenv/util"
 import { timeFunction } from "@jsenv/server"
 import { readFileContent } from "./fs-optimized-for-cache.js"
-import { resolveAssetFileUrl, resolveSourceFileUrl } from "./locaters.js"
+import { getMetaJsonFileUrl } from "./compile-asset.js"
 
 export const validateMeta = async ({
   logger,
@@ -172,10 +177,8 @@ const validateSources = ({ meta, compiledFileUrl }) => {
 }
 
 const validateSource = async ({ compiledFileUrl, source, eTag }) => {
-  const sourceFileUrl = resolveSourceFileUrl({
-    source,
-    compiledFileUrl,
-  })
+  const metaJsonFileUrl = getMetaJsonFileUrl(compiledFileUrl)
+  const sourceFileUrl = resolveUrl(source, metaJsonFileUrl)
 
   try {
     const sourceContent = await readFileContent(sourceFileUrl)
@@ -234,10 +237,8 @@ const validateAssets = ({ compiledFileUrl, meta }) =>
   )
 
 const validateAsset = async ({ asset, compiledFileUrl, eTag }) => {
-  const assetFileUrl = resolveAssetFileUrl({
-    compiledFileUrl,
-    asset,
-  })
+  const metaJsonFileUrl = getMetaJsonFileUrl(compiledFileUrl)
+  const assetFileUrl = resolveUrl(asset, metaJsonFileUrl)
 
   try {
     const assetContent = await readFileContent(assetFileUrl)

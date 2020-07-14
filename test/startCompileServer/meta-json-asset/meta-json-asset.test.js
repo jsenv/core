@@ -20,7 +20,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
 await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
-const response = await fetchUrl(`${fileServerUrl}__asset__/meta.json`, { ignoreHttpsError: true })
+const response = await fetchUrl(`${fileServerUrl}__asset__meta.json`, { ignoreHttpsError: true })
 const body = await response.json()
 const actual = {
   status: response.status,
@@ -34,11 +34,11 @@ const expected = {
   contentType: "application/json",
   body: {
     contentType: "application/javascript",
-    sources: [`../../../../../../../${filename}`],
+    sources: [`../../../../../../${filename}`],
     sourcesEtag:
       // it fails on windows because windows got \r\n and etag differs
       process.platform === "win32" ? actual.body.sourcesEtag : ['"7c-b5QcrFoIrKrXSr5F415m5RCd6uY"'],
-    assets: [`../${filename}.map`],
+    assets: [`${filename}.map`],
     assetsEtag: ['"f0-bxeoZF9Aw0804N/SDnLk8R1QdGY"'],
     createdMs: actual.body.createdMs,
     lastModifiedMs: actual.body.lastModifiedMs,

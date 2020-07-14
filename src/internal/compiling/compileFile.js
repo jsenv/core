@@ -72,7 +72,7 @@ export const compileFile = async ({
 
     projectFileRequestedCallback(urlToRelativeUrl(originalFileUrl, projectDirectoryUrl), request)
     compileResult.sources.forEach((source) => {
-      const sourceFileUrl = resolveUrl(source, `${compiledFileUrl}__asset__/`)
+      const sourceFileUrl = resolveUrl(source, compiledFileUrl)
       projectFileRequestedCallback(urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl), request)
     })
 

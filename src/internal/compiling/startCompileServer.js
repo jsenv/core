@@ -25,7 +25,6 @@ import {
   removeFileSystemNode,
   ensureEmptyDirectory,
   registerFileLifecycle,
-  fileSystemPathToUrl,
   registerDirectoryLifecycle,
   urlIsInsideOf,
 } from "@jsenv/util"
@@ -38,11 +37,15 @@ import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
-import { require } from "../require.js"
 import { createCallbackList } from "../createCallbackList.js"
 import { readProjectImportMap } from "./readProjectImportMap.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
-import { urlIsAsset } from "./urlIsAsset.js"
+import { urlIsAsset } from "./compile-directory/compile-asset.js"
+import {
+  sourcemapMainFileUrl,
+  sourcemapMappingFileUrl,
+  browserJsFileUrl,
+} from "../jsenvInternalFiles.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -132,7 +135,7 @@ export const startCompileServer = async ({
     ],
     ...babelPluginMap,
   }
-  const groupMap = generateGroupMap({
+  const compileServerGroupMap = generateGroupMap({
     babelPluginMap,
     babelCompatMap,
     runtimeScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
@@ -153,7 +156,7 @@ export const startCompileServer = async ({
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
-    groupMap,
+    compileServerGroupMap,
   })
 
   const serverStopCancellationSource = createCancellationSource()
@@ -184,10 +187,6 @@ export const startCompileServer = async ({
     }
   }
 
-  const browserJsFileUrl = resolveUrl(
-    "./src/internal/browser-launcher/jsenv-browser-system.js",
-    jsenvCoreDirectoryUrl,
-  )
   const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
   const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
 
@@ -211,7 +210,7 @@ export const startCompileServer = async ({
     transformTopLevelAwait,
     transformModuleIntoSystemFormat,
     babelPluginMap,
-    groupMap,
+    groupMap: compileServerGroupMap,
     convertMap,
     headScripts,
 
@@ -267,7 +266,7 @@ export const startCompileServer = async ({
     importDefaultExtension,
     importMapFileRelativeUrl,
     compileServerImportMap,
-    groupMap,
+    compileServerGroupMap,
     env,
     writeOnFilesystem,
   })
@@ -285,7 +284,7 @@ export const startCompileServer = async ({
     importMapFileRelativeUrl,
     ...compileServer,
     compileServerImportMap,
-    compileServerGroupMap: groupMap,
+    compileServerGroupMap,
   }
 }
 
@@ -400,7 +399,7 @@ const setupOutDirectory = async (
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
-    groupMap,
+    compileServerGroupMap,
   },
 ) => {
   if (jsenvDirectoryClean) {
@@ -415,7 +414,7 @@ const setupOutDirectory = async (
       jsenvCorePackageVersion,
       babelPluginMap,
       convertMap,
-      groupMap,
+      compileServerGroupMap,
     }
     const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
 
@@ -734,10 +733,6 @@ const createBrowserScriptService = ({
   outDirectoryRelativeUrl,
   browserBundledJsFileRelativeUrl,
 }) => {
-  const sourcemapMainFileUrl = fileSystemPathToUrl(require.resolve("source-map/dist/source-map.js"))
-  const sourcemapMappingFileUrl = fileSystemPathToUrl(
-    require.resolve("source-map/lib/mappings.wasm"),
-  )
   const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl)
   const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
     sourcemapMappingFileUrl,
@@ -745,7 +740,11 @@ const createBrowserScriptService = ({
   )
 
   return (request) => {
-    if (request.headers["x-jsenv-exploring"]) {
+    if (
+      request.method === "GET" &&
+      request.ressource === "/.jsenv/compile-meta.json" &&
+      "x-jsenv" in request.headers
+    ) {
       const body = JSON.stringify({
         outDirectoryRelativeUrl,
         errorStackRemapping: true,
@@ -806,7 +805,7 @@ const installOutFiles = async (
     importDefaultExtension,
     importMapFileRelativeUrl,
     compileServerImportMap,
-    groupMap,
+    compileServerGroupMap,
     env,
     writeOnFilesystem,
   },
@@ -822,12 +821,12 @@ const installOutFiles = async (
   }
 
   const importMapToString = () => JSON.stringify(compileServerImportMap, null, "  ")
-  const groupMapToString = () => JSON.stringify(groupMap, null, "  ")
+  const groupMapToString = () => JSON.stringify(compileServerGroupMap, null, "  ")
   const envToString = () => JSON.stringify(env, null, "  ")
 
   const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
   const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
-  const importmapFiles = Object.keys(groupMap).map((compileId) => {
+  const importmapFiles = Object.keys(compileServerGroupMap).map((compileId) => {
     return resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`)
   })
 

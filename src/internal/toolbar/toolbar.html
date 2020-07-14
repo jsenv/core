@@ -107,7 +107,9 @@
                   <div class="tooltipAction">
                     <a href="javascript:void(0);">
                       <svg id="powerIconSvg" class="tooltipIcon">
-                        <use xlink:href="./livereloading/toolbar-power-icon.svg#toolbar-power-icon"></use>
+                        <use
+                          xlink:href="./livereloading/toolbar-power-icon.svg#toolbar-power-icon"
+                        ></use>
                       </svg>
                       connect
                     </a>
@@ -126,7 +128,9 @@
                   <div class="tooltipAction">
                     <a href="javascript:void(0);">
                       <svg id="powerOffIconSvg" class="tooltipIcon">
-                        <use xlink:href="./livereloading/toolbar-power-off-icon.svg#toolbar-power-off-icon"></use>
+                        <use
+                          xlink:href="./livereloading/toolbar-power-off-icon.svg#toolbar-power-off-icon"
+                        ></use>
                       </svg>
                       cancel
                     </a>
@@ -152,7 +156,9 @@
                   <div class="tooltipAction">
                     <a href="javascript:void(0);">
                       <svg id="powerOffIconSvg" class="tooltipIcon">
-                        <use xlink:href="./livereloading/toolbar-power-off-icon.svg#toolbar-power-off-icon"></use>
+                        <use
+                          xlink:href="./livereloading/toolbar-power-off-icon.svg#toolbar-power-off-icon"
+                        ></use>
                       </svg>
                       disconnect
                     </a>
@@ -177,7 +183,9 @@
                   <div class="tooltipAction">
                     <a href="javascript:void(0);">
                       <svg id="powerIconSvg" class="tooltipIcon">
-                        <use xlink:href="./livereloading/toolbar-power-icon.svg#toolbar-power-icon"></use>
+                        <use
+                          xlink:href="./livereloading/toolbar-power-icon.svg#toolbar-power-icon"
+                        ></use>
                       </svg>
                       reconnect
                     </a>
@@ -318,6 +326,16 @@
       </defs>
     </svg>
 
+    <!--
     <script type="module" src="./toolbar.main.js"></script>
+    The script type module approach works too but
+    is slower than having a bundle.
+    Because this will impact every page using jsenv let's
+    use the fatest solution for now.
+    The day browser support import maps the script
+    module approach wil be faster because
+    no compilation will be necessary
+    -->
+    <script src="/.jsenv/toolbar.main.js"></script>
   </body>
 </html>

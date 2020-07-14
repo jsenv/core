@@ -86,7 +86,7 @@ npm install --save-dev @jsenv/core
 
 `@jsenv/core` is tested on Mac, Windows, Linux on Node.js 13.12.0. Other operating systems and Node.js versions are not tested.
 
-> Jsenv should be compatible with node 12.8.0 but it's no longer guaranteed.
+> Jsenv should be compatible with node 12.8 and above but it's no longer guaranteed.
 
 # Configuration
 
@@ -98,11 +98,11 @@ Jsenv can be configured to be compatible with non-standard JavaScript. For insta
 
 ## jsenv.config.js
 
-We recommend regroup Jsenv configuration in a `jsenv.config.js` file at the root of your working directory.
+We recommend to regroup Jsenv configuration in a `jsenv.config.js` file at the root of your working directory.
 
-To get a better idea check [jsenv.config.js](./jsenv.config.js). This file is just imported by [script/test/test.js](./script/test/test.js).
+To get a better idea see [jsenv.config.js](./jsenv.config.js). The file is imported by [script/test/test.js](./script/test/test.js). This technic uses simple and standard import export. It helps to see jsenv custom configuration quickly and share it between files.
 
-This pattern is used by all jsenv packages and is a delight to work with. That being said it's only a recommendation, you can organize your files as you want.
+That being said it's only a recommendation. Jsenv do not enforce any specific file structure.
 
 ## CommonJS
 
@@ -171,7 +171,7 @@ See also
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
 - [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
 
-# Advanced features
+# Advanced usage
 
 `@jsenv/core` can execute standard JavaScript and be configured to run non-standard JavaScript. This can be reused for more than executing test files:
 

@@ -8,6 +8,7 @@ import {
   appendSourceMappingAsBase64Url,
   appendSourceMappingAsExternalUrl,
 } from "../../sourceMappingURLUtils.js"
+import { generateCompiledFileAssetUrl } from "../compile-directory/compile-asset.js"
 
 const isWindows = process.platform === "win32"
 
@@ -44,15 +45,13 @@ export const transformResultToCompilationResult = async (
   const assets = []
   const assetsContent = []
 
-  const metaJsonFileUrl = `${compiledFileUrl}__asset__/meta.json`
-
   let output = code
   if (remap && map) {
     if (map.sources.length === 0) {
       // may happen in some cases where babel returns a wrong sourcemap
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
-      sources.push(urlToRelativeUrl(originalFileUrl, metaJsonFileUrl))
+      sources.push(originalFileUrl)
       sourcesContent.push(originalFileContent)
     } else {
       await Promise.all(
@@ -78,7 +77,7 @@ export const transformResultToCompilationResult = async (
           }
 
           map.sources[index] = urlToRelativeUrl(sourceFileUrl, sourcemapFileUrl)
-          sources[index] = urlToRelativeUrl(sourceFileUrl, metaJsonFileUrl)
+          sources[index] = sourceFileUrl
 
           if (map.sourcesContent && map.sourcesContent[index]) {
             sourcesContent[index] = map.sourcesContent[index]
@@ -106,21 +105,18 @@ export const transformResultToCompilationResult = async (
     } else if (remapMethod === "comment") {
       const sourcemapFileRelativePathForModule = urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl)
       output = appendSourceMappingAsExternalUrl(output, sourcemapFileRelativePathForModule)
-      const sourcemapFileRelativePathForAsset = urlToRelativeUrl(
-        sourcemapFileUrl,
-        `${compiledFileUrl}__asset__/`,
-      )
-      assets.push(sourcemapFileRelativePathForAsset)
+      assets.push(sourcemapFileUrl)
       assetsContent.push(stringifyMap(map))
     }
   } else {
-    sources.push(urlToRelativeUrl(originalFileUrl, metaJsonFileUrl))
+    sources.push(originalFileUrl)
     sourcesContent.push(originalFileContent)
   }
 
   const { coverage } = metadata
   if (coverage) {
-    assets.push(`coverage.json`)
+    const coverageAssetFileUrl = generateCompiledFileAssetUrl(compiledFileUrl, "coverage.json")
+    assets.push(coverageAssetFileUrl)
     assetsContent.push(stringifyCoverage(coverage))
   }
 

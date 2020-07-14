@@ -5,15 +5,20 @@ import {
   collectFiles,
   urlToRelativeUrl,
 } from "@jsenv/util"
-import { readRequestBodyAsString } from "@jsenv/server"
-import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
+import { COMPILE_ID_GLOBAL_BUNDLE } from "./internal/CONSTANTS.js"
 import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
-import { getBrowserExecutionDynamicData } from "./internal/runtime/getBrowserExecutionDynamicData.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
-import { exploringHtmlFileUrl } from "./internal/jsenvInternalFiles.js"
+import {
+  exploringRedirectorHtmlFileUrl,
+  exploringRedirectorJsFileUrl,
+  exploringHtmlFileUrl,
+  sourcemapMainFileUrl,
+  sourcemapMappingFileUrl,
+  jsenvToolbarMainJsFileUrl,
+} from "./internal/jsenvInternalFiles.js"
 
 export const startExploring = async ({
   cancellationToken = createCancellationTokenForProcess(),
@@ -27,7 +32,7 @@ export const startExploring = async ({
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-    let serveIndex
+    let redirectFiles
     let serveExploringData
     let serveExplorableListAsJson
 
@@ -54,7 +59,7 @@ export const startExploring = async ({
           : []),
       ],
       customServices: {
-        "service:index": (request) => serveIndex(request),
+        "service:exploring-redirect": (request) => redirectFiles(request),
         "service:exploring-data": (request) => serveExploringData(request),
         "service:explorables": (request) => serveExplorableListAsJson(request),
       },
@@ -64,90 +69,99 @@ export const startExploring = async ({
     const {
       // importMapFileRelativeUrl,
       outDirectoryRelativeUrl,
-      compileServerGroupMap,
     } = compileServer
 
-    serveIndex = createIndexService({
+    redirectFiles = createRedirectFilesService({
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
-      compileServerGroupMap,
     })
     serveExploringData = createExploringDataService({
       projectDirectoryUrl,
-      explorableConfig,
       outDirectoryRelativeUrl,
+      explorableConfig,
     })
     serveExplorableListAsJson = createExplorableListAsJsonService({
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
+      explorableConfig,
     })
 
     return compileServer
   })
 }
 
-const createIndexService = ({
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  compileServerGroupMap,
-}) => {
-  // redirect / to for @jsenv/core/src/exploring.html
-  const exploringIndexFileRelativeUrl = urlToRelativeUrl(exploringHtmlFileUrl, projectDirectoryUrl)
-  // use worst compileId to be sure it's compatible
-  const compileId =
-    COMPILE_ID_OTHERWISE in compileServerGroupMap
-      ? COMPILE_ID_OTHERWISE
-      : getLastKey(compileServerGroupMap)
-  const exploringIndexCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/${exploringIndexFileRelativeUrl}`
+const createRedirectFilesService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) => {
+  const exploringRedirectorHtmlFileRelativeUrl = urlToRelativeUrl(
+    exploringRedirectorHtmlFileUrl,
+    projectDirectoryUrl,
+  )
+  const exploringRedirectorJsFileRelativeUrl = urlToRelativeUrl(
+    exploringRedirectorJsFileUrl,
+    projectDirectoryUrl,
+  )
+  const exploringRedirectorJsCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${exploringRedirectorJsFileRelativeUrl}`
+
+  const toolbarMainJsFileRelativeUrl = urlToRelativeUrl(
+    jsenvToolbarMainJsFileUrl,
+    projectDirectoryUrl,
+  )
+  const toolbarMainJsCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${toolbarMainJsFileRelativeUrl}`
 
   return (request) => {
     if (request.ressource === "/") {
-      const exploringIndexFileRemoteUrl = `${request.origin}/${exploringIndexCompiledFileRelativeUrl}`
-
+      const exploringRedirectorHtmlFileUrl = `${request.origin}/${exploringRedirectorHtmlFileRelativeUrl}`
       return {
         status: 307,
         headers: {
-          location: exploringIndexFileRemoteUrl,
+          location: exploringRedirectorHtmlFileUrl,
         },
       }
     }
+    if (request.ressource === "/.jsenv/toolbar.main.js") {
+      const toolbarMainJsCompiledFileUrl = `${request.origin}/${toolbarMainJsCompiledFileRelativeUrl}`
+      return {
+        status: 307,
+        headers: {
+          location: toolbarMainJsCompiledFileUrl,
+        },
+      }
+    }
+    if (request.ressource === "/.jsenv/exploring.redirector.js") {
+      const exploringRedirectorJsCompiledFileUrl = `${request.origin}/${exploringRedirectorJsCompiledFileRelativeUrl}`
+      return {
+        status: 307,
+        headers: {
+          location: exploringRedirectorJsCompiledFileUrl,
+        },
+      }
+    }
+
     return null
   }
 }
 
-const getLastKey = (object) => {
-  const keys = Object.keys(object)
-  return keys[keys.length - 1]
-}
-
 const createExploringDataService = ({
   projectDirectoryUrl,
-  explorableConfig,
   outDirectoryRelativeUrl,
+  explorableConfig,
 }) => {
   return (request) => {
     if (
-      request.ressource === "/exploring.json" &&
+      request.ressource === "/.jsenv/exploring.json" &&
       request.method === "GET" &&
-      "x-jsenv-exploring" in request.headers
+      "x-jsenv" in request.headers
     ) {
-      const {
-        browserRuntimeFileRelativeUrl,
-        sourcemapMainFileRelativeUrl,
-        sourcemapMappingFileRelativeUrl,
-      } = getBrowserExecutionDynamicData({
-        projectDirectoryUrl,
-      })
-
       const data = {
         projectDirectoryUrl,
-        jsenvDirectoryRelativeUrl: urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl),
         outDirectoryRelativeUrl,
-        browserRuntimeFileRelativeUrl,
-        sourcemapMainFileRelativeUrl,
-        sourcemapMappingFileRelativeUrl,
-        explorableConfig,
+        jsenvDirectoryRelativeUrl: urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl),
         exploringHtmlFileRelativeUrl: urlToRelativeUrl(exploringHtmlFileUrl, projectDirectoryUrl),
+        sourcemapMainFileRelativeUrl: urlToRelativeUrl(sourcemapMainFileUrl, jsenvCoreDirectoryUrl),
+        sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
+          sourcemapMappingFileUrl,
+          jsenvCoreDirectoryUrl,
+        ),
+        explorableConfig,
       }
       const json = JSON.stringify(data)
       return {
@@ -164,14 +178,17 @@ const createExploringDataService = ({
   }
 }
 
-const createExplorableListAsJsonService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) => {
+const createExplorableListAsJsonService = ({
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+  explorableConfig,
+}) => {
   return async (request) => {
     if (
-      request.ressource === "/explorables" &&
-      request.method === "POST" &&
-      "x-jsenv-exploring" in request.headers
+      request.ressource === "/.jsenv/explorables.json" &&
+      request.method === "GET" &&
+      "x-jsenv" in request.headers
     ) {
-      const explorableConfig = JSON.parse(await readRequestBodyAsString(request.body))
       const metaMap = {}
       Object.keys(explorableConfig).forEach((key) => {
         metaMap[key] = {

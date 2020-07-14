@@ -1,6 +1,7 @@
 import { removeForceHideElement, activateToolbarSection } from "../util/dom.js"
 import { createHorizontalBreakpoint } from "../util/responsive.js"
 import { toggleTooltip } from "../tooltip/tooltip.js"
+import { notifyExecutionResult } from "../notification/toolbar.notification.js"
 
 const WINDOW_MEDIUM_WIDTH = 570
 
@@ -24,7 +25,16 @@ export const renderExecutionInToolbar = ({ executedFileRelativeUrl }) => {
   removeForceHideElement(document.querySelector("#file"))
 
   window.parent.__jsenv__.executionResultPromise.then(({ status, startTime, endTime }) => {
-    applyExecutionIndicator({ status, startTime, endTime })
+    const execution = { status, startTime, endTime }
+    applyExecutionIndicator(execution)
+
+    const executionStorageKey = executedFileRelativeUrl
+    const previousExecution = sessionStorage.hasOwnProperty(executionStorageKey)
+      ? JSON.parse(sessionStorage.getItem(executionStorageKey))
+      : undefined
+    notifyExecutionResult(executedFileRelativeUrl, execution, previousExecution)
+
+    sessionStorage.setItem(executedFileRelativeUrl, JSON.stringify(execution))
   })
 }
 
