@@ -81,20 +81,20 @@ const babelPluginMap = jsenvBabelPluginMap
     assert({ actual, expected })
   }
   {
-    const metaFileUrl = `${compiledFileUrl}__asset__/meta.json`
+    const metaFileUrl = `${compiledFileUrl}__asset__meta.json`
     const actual = JSON.parse(await readFile(metaFileUrl))
     const expected = {
       contentType: "application/javascript",
-      sources: ["../out/groupMap.json", "../../file.cjs"],
+      sources: ["out/groupMap.json", "../file.cjs"],
       sourcesEtag: [
         bufferToEtag(
-          readFileSync(urlToFileSystemPath(resolveUrl("../out/groupMap.json", metaFileUrl))),
+          readFileSync(urlToFileSystemPath(resolveUrl("out/groupMap.json", metaFileUrl))),
         ),
-        bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../../file.cjs", metaFileUrl)))),
+        bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../file.cjs", metaFileUrl)))),
       ],
-      assets: ["../file.cjs.map"],
+      assets: ["file.cjs.map"],
       assetsEtag: [
-        bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../file.cjs.map", metaFileUrl)))),
+        bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("file.cjs.map", metaFileUrl)))),
       ],
       createdMs: actual.createdMs,
       lastModifiedMs: actual.lastModifiedMs,

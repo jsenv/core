@@ -35,9 +35,8 @@ export const bundleToCompilationResult = (
         return
       }
 
-      const relativeUrl = urlToRelativeUrl(moduleUrl, `${compiledFileUrl}__asset__/meta.json`)
-      if (!sources.includes(relativeUrl)) {
-        sources.push(relativeUrl)
+      if (!sources.includes(moduleUrl)) {
+        sources.push(moduleUrl)
         sourcesContent.push(dependencyMap[moduleUrl].contentRaw)
       }
     })
@@ -53,7 +52,7 @@ export const bundleToCompilationResult = (
   })
   // mainChunk.sourcemap.file = fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl)
   trackDependencies(mainChunk.dependencyMap)
-  assets.push(urlToRelativeUrl(sourcemapFileUrl, `${compiledFileUrl}__asset__/`))
+  assets.push(sourcemapFileUrl)
   assetsContent.push(JSON.stringify(mainChunk.sourcemap, null, "  "))
 
   rollupBundle.output.slice(1).forEach((rollupChunk) => {
@@ -64,9 +63,9 @@ export const bundleToCompilationResult = (
       sourcemapFileUrl: resolveUrl(rollupChunk.map.file, compiledFileUrl),
     })
     trackDependencies(chunk.dependencyMap)
-    assets.push(chunkFileName)
+    assets.push(resolveUrl(chunkFileName), compiledFileUrl)
     assetsContent.push(chunk.content)
-    assets.push(`${rollupChunk.fileName}.map`)
+    assets.push(resolveUrl(`${rollupChunk.fileName}.map`, compiledFileUrl))
     assetsContent.push(JSON.stringify(chunk.sourcemap, null, "  "))
   })
 

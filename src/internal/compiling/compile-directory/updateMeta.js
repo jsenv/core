@@ -1,6 +1,6 @@
-import { urlToFileSystemPath, bufferToEtag } from "@jsenv/util"
+import { urlToRelativeUrl, urlToFileSystemPath, bufferToEtag } from "@jsenv/util"
 import { writeFileContent, testFilePresence } from "./fs-optimized-for-cache.js"
-import { resolveSourceFileUrl, resolveMetaJsonFileUrl, resolveAssetFileUrl } from "./locaters.js"
+import { getMetaJsonFileUrl } from "./compile-asset.js"
 
 export const updateMeta = async ({
   logger,
@@ -20,8 +20,7 @@ export const updateMeta = async ({
   if (isNew || isUpdated) {
     // ensure source that does not leads to concrete files are not capable to invalidate the cache
     const sourceExists = await Promise.all(
-      sources.map(async (source) => {
-        const sourceFileUrl = resolveSourceFileUrl({ source, compiledFileUrl })
+      sources.map(async (sourceFileUrl) => {
         const sourceFileExists = await testFilePresence(sourceFileUrl)
         if (sourceFileExists) {
           return true
@@ -30,8 +29,6 @@ export const updateMeta = async ({
         // it's a very important warning
         logger.warn(`a source file cannot be found -> excluded from meta.sources & meta.sourcesEtag.
 --- source ---
-${source}
--- source url ---
 ${sourceFileUrl}`)
         return false
       }),
@@ -52,11 +49,7 @@ ${sourceFileUrl}`)
 
     if (writeAssetsFile) {
       promises.push(
-        ...assets.map((asset, index) => {
-          const assetFileUrl = resolveAssetFileUrl({
-            compiledFileUrl,
-            asset,
-          })
+        ...assets.map((assetFileUrl, index) => {
           logger.debug(`write compiled file asset at ${urlToFileSystemPath(assetFileUrl)}`)
           return writeFileContent(assetFileUrl, assetsContent[index], {
             fileLikelyNotFound: isNew,
@@ -66,59 +59,44 @@ ${sourceFileUrl}`)
     }
   }
 
+  const metaJsonFileUrl = getMetaJsonFileUrl(compiledFileUrl)
+
   if (isNew || isUpdated || (isCached && cacheHitTracking)) {
     let latestMeta
+
+    const sourceAndAssetProps = {
+      sources: sources.map((source) => urlToRelativeUrl(source, metaJsonFileUrl)),
+      sourcesEtag: sourcesContent.map((sourceContent) => bufferToEtag(Buffer.from(sourceContent))),
+      assets: assets.map((asset) => urlToRelativeUrl(asset, metaJsonFileUrl)),
+      assetsEtag: assetsContent.map((assetContent) => bufferToEtag(Buffer.from(assetContent))),
+    }
 
     if (isNew) {
       latestMeta = {
         contentType,
-        sources,
-        sourcesEtag: sourcesContent.map((sourceContent) =>
-          bufferToEtag(Buffer.from(sourceContent)),
-        ),
-        assets,
-        assetsEtag: assetsContent.map((assetContent) => bufferToEtag(Buffer.from(assetContent))),
+        ...sourceAndAssetProps,
         createdMs: Number(Date.now()),
         lastModifiedMs: Number(Date.now()),
-        ...(cacheHitTracking
-          ? {
-              matchCount: 1,
-              lastMatchMs: Number(Date.now()),
-            }
-          : {}),
       }
     } else if (isUpdated) {
       latestMeta = {
         ...meta,
-        sources,
-        sourcesEtag: sourcesContent.map((sourceContent) =>
-          bufferToEtag(Buffer.from(sourceContent)),
-        ),
-        assets,
-        assetsEtag: assetsContent.map((assetContent) => bufferToEtag(Buffer.from(assetContent))),
+        ...sourceAndAssetProps,
         lastModifiedMs: Number(Date.now()),
-        ...(cacheHitTracking
-          ? {
-              matchCount: meta.matchCount + 1,
-              lastMatchMs: Number(Date.now()),
-            }
-          : {}),
       }
     } else {
       latestMeta = {
         ...meta,
-        ...(cacheHitTracking
-          ? {
-              matchCount: meta.matchCount + 1,
-              lastMatchMs: Number(Date.now()),
-            }
-          : {}),
       }
     }
 
-    const metaJsonFileUrl = resolveMetaJsonFileUrl({
-      compiledFileUrl,
-    })
+    if (cacheHitTracking) {
+      latestMeta = {
+        ...latestMeta,
+        matchCount: 1,
+        lastMatchMs: Number(Date.now()),
+      }
+    }
 
     logger.debug(`write compiled file meta at ${urlToFileSystemPath(metaJsonFileUrl)}`)
     promises.push(

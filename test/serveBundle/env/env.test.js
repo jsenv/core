@@ -81,8 +81,8 @@ const response = await serveBundle({
   assert({ actual, expected })
 }
 {
-  const metaFileUrl = `${compiledFileUrl}__asset__/meta.json`
-  const actual = JSON.parse(await readFile(`${compiledFileUrl}__asset__/meta.json`))
+  const metaFileUrl = `${compiledFileUrl}__asset__meta.json`
+  const actual = JSON.parse(await readFile(`${compiledFileUrl}__asset__meta.json`))
   const expected = {
     contentType: "application/javascript",
     sources: ["../out/env.json", "../../file.cjs"],

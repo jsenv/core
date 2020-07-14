@@ -40,7 +40,7 @@ import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
 import { createCallbackList } from "../createCallbackList.js"
 import { readProjectImportMap } from "./readProjectImportMap.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
-import { urlIsAsset } from "./urlIsAsset.js"
+import { urlIsAsset } from "./compile-directory/compile-asset.js"
 import {
   sourcemapMainFileUrl,
   sourcemapMappingFileUrl,

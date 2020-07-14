@@ -171,7 +171,7 @@ See also
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
 - [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
 
-# Advanced features
+# Advanced usage
 
 `@jsenv/core` can execute standard JavaScript and be configured to run non-standard JavaScript. This can be reused for more than executing test files:
 
