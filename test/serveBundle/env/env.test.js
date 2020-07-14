@@ -38,6 +38,8 @@ const {
   },
 })
 const ressource = `/${outDirectoryRelativeUrl}file.cjs`
+const metaFileUrl = `${compiledFileUrl}__asset__meta.json`
+const envFileUrl = resolveUrl("out/env.json", metaFileUrl)
 
 const response = await serveBundle({
   cancellationToken: createCancellationToken(),
@@ -81,18 +83,16 @@ const response = await serveBundle({
   assert({ actual, expected })
 }
 {
-  const metaFileUrl = `${compiledFileUrl}__asset__meta.json`
-  const envFileUrl = resolveUrl("out/env.json", metaFileUrl)
   const sourcemapFileUrl = resolveUrl("file.cjs.map", metaFileUrl)
   const actual = JSON.parse(await readFile(`${compiledFileUrl}__asset__meta.json`))
   const expected = {
     contentType: "application/javascript",
-    sources: [envFileUrl, compiledFileUrl],
+    sources: ["out/env.json", "../file.cjs"],
     sourcesEtag: [
       bufferToEtag(readFileSync(urlToFileSystemPath(envFileUrl))),
-      bufferToEtag(readFileSync(urlToFileSystemPath(compiledFileUrl))),
+      bufferToEtag(readFileSync(urlToFileSystemPath(originalFileUrl))),
     ],
-    assets: [sourcemapFileUrl],
+    assets: ["file.cjs.map"],
     assetsEtag: [bufferToEtag(readFileSync(urlToFileSystemPath(sourcemapFileUrl)))],
     createdMs: actual.createdMs,
     lastModifiedMs: actual.lastModifiedMs,
