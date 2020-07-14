@@ -98,11 +98,11 @@ Jsenv can be configured to be compatible with non-standard JavaScript. For insta
 
 ## jsenv.config.js
 
-We recommend to regroup Jsenv configuration in a `jsenv.config.js` file at the root of your working directory.
+We recommend to regroup configuration in a `jsenv.config.js` file at the root of your working directory.
 
-To get a better idea see [jsenv.config.js](./jsenv.config.js). The file is imported by [script/test/test.js](./script/test/test.js). This technic uses simple and standard import export. It helps to see jsenv custom configuration quickly and share it between files.
+To get a better idea see [jsenv.config.js](./jsenv.config.js). The file is imported by [script/test/test.js](https://github.com/jsenv/jsenv-core/blob/e44e362241e8e2142010322cb4552983b3bc9744/script/test/test.js#L2) and configuration is passed [using spread operator](https://github.com/jsenv/jsenv-core/blob/e44e362241e8e2142010322cb4552983b3bc9744/script/test/test.js#L5). This technic helps to see jsenv custom configuration quickly and share it between files.
 
-That being said it's only a recommendation. Jsenv do not enforce any specific file structure.
+That being said it's only a recommendation. There is nothing enforcing or checking the presence of `jsenv.config.js`.
 
 ## CommonJS
 
