@@ -30,9 +30,9 @@ const actual = await transformResultToCompilationResult(transformResult, {
 const expected = {
   compiledSource: actual.compiledSource,
   contentType: "application/javascript",
-  sources: [`../../../${filename}`],
+  sources: [originalFileUrl],
   sourcesContent: [originalFileContent],
-  assets: [`../${filename}.map`],
+  assets: [sourcemapFileUrl],
   assetsContent: [actual.assetsContent[0]],
 }
 assert({ actual, expected })

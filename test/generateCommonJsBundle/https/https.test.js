@@ -45,10 +45,14 @@ const bundle = await generateCommonJsBundle({
     main: `./${testDirectoryRelativeUrl}${mainFilename}`,
   },
 })
+const sourcemapFileUrl = resolveUrl(
+  `${bundleDirectoryRelativeUrl}main.cjs.map`,
+  jsenvCoreDirectoryUrl,
+)
 const compilationResult = bundleToCompilationResult(bundle, {
   projectDirectoryUrl: testDirectoryUrl,
   compiledFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.cjs`, jsenvCoreDirectoryUrl),
-  sourcemapFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.cjs.map`, jsenvCoreDirectoryUrl),
+  sourcemapFileUrl,
 })
 {
   const actual = compilationResult
@@ -57,13 +61,13 @@ const compilationResult = bundleToCompilationResult(bundle, {
     compiledSource: actual.compiledSource,
     sources: [],
     sourcesContent: [],
-    assets: ["../main.cjs.map"],
+    assets: [sourcemapFileUrl],
     assetsContent: [actual.assetsContent[0]],
   }
   assert({ actual, expected })
 }
 {
-  const actual = JSON.parse(actual.assetsContent[0])
+  const actual = JSON.parse(compilationResult.assetsContent[0])
   const expected = {
     version: actual.version,
     file: "main.cjs",
