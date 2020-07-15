@@ -32,18 +32,25 @@ export const createBrowserRuntime = async ({
 
   const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
   const envUrl = String(new URL("env.json", outDirectoryUrl))
-  const { importMapFileRelativeUrl, importDefaultExtension } = await fetchJson(envUrl)
+  const { importDefaultExtension } = await fetchJson(envUrl)
 
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
 
   // if there is an importmap in the document we should use it instead of fetching like this.
   // systemjs style with systemjs-importmap
+  const importmapScript = document.querySelector(`script[type="jsenv-importmap"]`)
   let importMap
-  if (importMapFileRelativeUrl) {
-    const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
-    const importmapFileResponse = await fetchSource(importmapFileUrl)
-    const importmapRaw =
-      importmapFileResponse.status === 404 ? {} : await importmapFileResponse.json()
+  if (importmapScript) {
+    let importmapRaw
+    let importmapFileUrl
+    if (importmapScript.src) {
+      importmapFileUrl = importmapScript.src
+      const importmapFileResponse = await fetchSource(importmapFileUrl)
+      importmapRaw = importmapFileResponse.status === 404 ? {} : await importmapFileResponse.json()
+    } else {
+      importmapFileUrl = document.location.href
+      importmapRaw = JSON.parse(importmapScript.textContent) || {}
+    }
     importMap = normalizeImportMap(importmapRaw, importmapFileUrl)
   }
 

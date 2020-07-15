@@ -16,16 +16,25 @@ const parse5 = require("parse5")
 export const compileHtml = (
   htmlBeforeCompilation,
   {
-    headScripts = [],
+    scriptManipulations = [],
+    replaceModuleScripts = true,
+    replaceImportmapScript = true,
     // resolveScriptSrc = (src) => src,
     generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
   } = {},
 ) => {
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
   const document = parse5.parse(htmlBeforeCompilation)
-  injectHeadScripts(document, headScripts)
-  const scriptsExternalized = polyfillModuleScripts(document, { generateInlineScriptSrc })
+
+  manipulateScripts(document, scriptManipulations)
+
+  const scriptsExternalized = polyfillScripts(document, {
+    replaceModuleScripts,
+    replaceImportmapScript,
+    generateInlineScriptSrc,
+  })
   // resolveScripts(document, resolveScriptSrc)
+
   const htmlAfterCompilation = parse5.serialize(document)
   return {
     htmlAfterCompilation,
@@ -33,45 +42,93 @@ export const compileHtml = (
   }
 }
 
-const injectHeadScripts = (document, headScripts) => {
+const manipulateScripts = (document, scriptManipulations) => {
   const htmlNode = document.childNodes.find((node) => node.nodeName === "html")
   const headNode = htmlNode.childNodes[0]
-  const headChildNodes = headNode.childNodes
+  const bodyNode = htmlNode.childNodes[1]
 
-  const headScriptsToInject = headScripts.filter((script) => {
-    return !headChildNodes.some((node) => {
-      if (node.nodeName !== "script") return false
-      const srcAttribute = getAttributeByName(node.attrs, "src")
-      if (!srcAttribute) return false
-      return srcAttribute.value === script.src
-    })
+  const scriptsToPreprendInHead = []
+
+  scriptManipulations.forEach(({ replaceExisting = false, ...script }) => {
+    const scriptExistingInHead = findExistingScript(headNode, script)
+    if (scriptExistingInHead) {
+      if (replaceExisting) {
+        replaceNode(scriptExistingInHead, scriptToNode(script))
+      }
+      return
+    }
+
+    const scriptExistingInBody = findExistingScript(bodyNode, script)
+    if (scriptExistingInBody) {
+      if (replaceExisting) {
+        replaceNode(scriptExistingInBody, scriptToNode(script))
+      }
+      return
+    }
+
+    scriptsToPreprendInHead.push(script)
   })
 
-  const headScriptHtml = headScriptsToInject.reduce((previous, script) => {
+  const headScriptsFragment = scriptsToFragment(scriptsToPreprendInHead)
+  insertFragmentBefore(
+    headNode,
+    headScriptsFragment,
+    findChild(headNode, (node) => node.nodeName === "script"),
+  )
+}
+
+const insertFragmentBefore = (node, fragment, childNode) => {
+  const { childNodes = [] } = node
+
+  if (childNode) {
+    const childNodeIndex = childNodes.indexOf(childNode)
+    node.childNodes = [
+      ...childNodes.slice(0, childNodeIndex),
+      ...fragment.childNodes.map((child) => {
+        return { ...child, parentNode: node }
+      }),
+      ...childNodes.slice(childNodeIndex),
+    ]
+  } else {
+    node.childNodes = [
+      ...childNodes,
+      ...fragment.childNodes.map((child) => {
+        return { ...child, parentNode: node }
+      }),
+    ]
+  }
+}
+
+const scriptToNode = (script) => {
+  return scriptsToFragment([script]).childNodes[0]
+}
+
+const scriptsToFragment = (scripts) => {
+  const html = scripts.reduce((previous, script) => {
     const scriptAttributes = objectToHtmlAttributes(script)
     return `${previous}<script ${scriptAttributes}></script>
       `
   }, "")
-  const fragment = parse5.parseFragment(headScriptHtml)
+  const fragment = parse5.parseFragment(html)
+  return fragment
+}
 
-  const firstScriptChildIndex = headChildNodes.findIndex((node) => node.nodeName === "script")
-  if (firstScriptChildIndex > -1) {
-    headNode.childNodes = [
-      ...headChildNodes.slice(0, firstScriptChildIndex),
-      ...fragment.childNodes.map((child) => {
-        return { ...child, parentNode: headNode }
-      }),
-      ...headChildNodes.slice(firstScriptChildIndex),
-    ]
-  } else {
-    // prefer append (so that any first child being text remains and indentation is safe)
-    headNode.childNodes = [
-      ...headChildNodes,
-      ...fragment.childNodes.map((child) => {
-        return { ...child, parentNode: headNode }
-      }),
-    ]
+const findExistingScript = (node, script) =>
+  findChild(node, (childNode) => {
+    return childNode.nodeName === "script" && sameScript(childNode, script)
+  })
+
+const findChild = ({ childNodes = [] }, predicate) => childNodes.find(predicate)
+
+const sameScript = (node, { type = "text/javascript", src }) => {
+  const nodeType = getAttributeValue(node, "type") || "text/javascript"
+  const nodeSrc = getAttributeValue(node, "src")
+
+  if (type === "importmap") {
+    return nodeType === type
   }
+
+  return nodeType === type && nodeSrc === src
 }
 
 const objectToHtmlAttributes = (object) => {
@@ -87,7 +144,10 @@ const valueToHtmlAttributeValue = (value) => {
   return `"${JSON.stringify(value)}"`
 }
 
-const polyfillModuleScripts = (document, { generateInlineScriptSrc }) => {
+const polyfillScripts = (
+  document,
+  { replaceModuleScripts, replaceImportmapScript, generateInlineScriptSrc },
+) => {
   /*
   <script type="module" src="*" /> are going to be inlined
   <script type="module">** </script> are going to be transformed to import a file so that we can transform the script content.
@@ -105,53 +165,50 @@ const polyfillModuleScripts = (document, { generateInlineScriptSrc }) => {
     }
 
     const attributes = node.attrs
-    const typeAttribute = getAttributeByName(attributes, "type")
-    if (!typeAttribute) {
-      return
-    }
+    const nodeType = getAttributeValue(node, "type")
 
-    const typeAttributeValue = typeAttribute.value
-    if (typeAttributeValue !== "module") {
-      return
-    }
-
-    const srcAttribute = getAttributeByName(attributes, "src")
-    if (srcAttribute) {
-      const srcAttributeValue = srcAttribute.value
-
-      mutations.push(() => {
-        const script = parseHtmlAsSingleElement(generateScriptForJsenv(srcAttributeValue))
-        // inherit script attributes (except src and type)
-        script.attrs = [
-          ...script.attrs,
-          ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
-        ]
-        replaceNode(node, script)
-      })
-      return
-    }
-
-    const firstChild = node.childNodes[0]
-    if (firstChild && firstChild.nodeName === "#text") {
-      const scriptText = firstChild.value
-      mutations.push(() => {
-        const idAttribute = getAttributeByName(attributes, "id")
-        const hash = createScriptContentHash(scriptText)
-        const src = generateInlineScriptSrc({
-          hash,
-          id: idAttribute ? idAttribute.value : undefined,
+    if (replaceModuleScripts && nodeType === "module") {
+      const nodeSrc = getAttributeValue(node, "src")
+      if (nodeSrc) {
+        mutations.push(() => {
+          const script = parseHtmlAsSingleElement(generateScriptForJsenv(nodeSrc))
+          // inherit script attributes (except src and type)
+          script.attrs = [
+            ...script.attrs,
+            ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
+          ]
+          replaceNode(node, script)
         })
-        const script = parseHtmlAsSingleElement(generateScriptForJsenv(src))
-        // inherit script attributes (except src and type)
-        script.attrs = [
-          ...script.attrs,
-          ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
-        ]
-        replaceNode(node, script)
+        return
+      }
 
-        scriptsExternalized[src] = scriptText
-      })
-      return
+      const firstChild = node.childNodes[0]
+      if (firstChild && firstChild.nodeName === "#text") {
+        const scriptText = firstChild.value
+        mutations.push(() => {
+          const nodeId = getAttributeValue(node, "id")
+          const hash = createScriptContentHash(scriptText)
+          const src = generateInlineScriptSrc({
+            hash,
+            id: nodeId,
+          })
+          const script = parseHtmlAsSingleElement(generateScriptForJsenv(src))
+          // inherit script attributes (except src and type)
+          script.attrs = [
+            ...script.attrs,
+            ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
+          ]
+          replaceNode(node, script)
+
+          scriptsExternalized[src] = scriptText
+        })
+        return
+      }
+    }
+
+    if (replaceImportmapScript && nodeType === "importmap") {
+      const typeAttribute = getAttributeByName(node.attrs, "type")
+      typeAttribute.value = "jsenv-importmap"
     }
   })
 
@@ -176,6 +233,11 @@ const polyfillModuleScripts = (document, { generateInlineScriptSrc }) => {
 //     srcAttribute.value = resolveScriptSrc(srcAttributeValue)
 //   })
 // }
+
+const getAttributeValue = (node, attributeName) => {
+  const attribute = getAttributeByName(node.attrs, attributeName)
+  return attribute ? attribute.value : undefined
+}
 
 const getAttributeByName = (attributes, attributeName) =>
   attributes.find((attr) => attr.name === attributeName)

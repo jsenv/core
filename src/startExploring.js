@@ -48,7 +48,7 @@ export const startExploring = async ({
       accessControlAllowCredentials: true,
       stopOnPackageVersionChange: true,
       compileGroupCount: 2,
-      headScripts: [
+      scriptManipulations: [
         ...(toolbar
           ? [
               {

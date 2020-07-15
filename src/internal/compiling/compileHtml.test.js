@@ -12,7 +12,7 @@ import { compileHtml } from "./compileHtml.js"
     <body></body>
   </html>`
   const { htmlAfterCompilation } = compileHtml(htmlBeforeCompilation, {
-    headScripts: [{ src: "bar.js", async: true }],
+    scriptManipulations: [{ src: "bar.js", async: true }],
   })
   const actual = htmlAfterCompilation
   const expected = `<html><head>
@@ -36,7 +36,7 @@ import { compileHtml } from "./compileHtml.js"
     <body></body>
   </html>`
   const { htmlAfterCompilation } = compileHtml(htmlBeforeCompilation, {
-    headScripts: [{ src: "foo.js" }],
+    scriptManipulations: [{ src: "foo.js" }],
   })
   const actual = htmlAfterCompilation
   const expected = `<html><head>
