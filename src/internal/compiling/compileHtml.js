@@ -18,18 +18,22 @@ export const compileHtml = (
   {
     headScripts = [],
     replaceModuleScripts = true,
+    replaceImportmapScript = true,
     // resolveScriptSrc = (src) => src,
     generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
   } = {},
 ) => {
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
   const document = parse5.parse(htmlBeforeCompilation)
+
   injectHeadScripts(document, headScripts)
-  let scriptsExternalized = {}
-  if (replaceModuleScripts) {
-    scriptsExternalized = polyfillModuleScripts(document, { generateInlineScriptSrc })
-    // resolveScripts(document, resolveScriptSrc)
-  }
+
+  const scriptsExternalized = polyfillScripts(document, {
+    replaceModuleScripts,
+    replaceImportmapScript,
+    generateInlineScriptSrc,
+  })
+  // resolveScripts(document, resolveScriptSrc)
 
   const htmlAfterCompilation = parse5.serialize(document)
   return {
@@ -44,12 +48,8 @@ const injectHeadScripts = (document, headScripts) => {
   const headChildNodes = headNode.childNodes
 
   const headScriptsToInject = headScripts.filter((script) => {
-    return !headChildNodes.some((node) => {
-      if (node.nodeName !== "script") return false
-      const srcAttribute = getAttributeByName(node.attrs, "src")
-      if (!srcAttribute) return false
-      return srcAttribute.value === script.src
-    })
+    const existingScript = findExistingScript(headNode, script)
+    return !existingScript
   })
 
   const headScriptHtml = headScriptsToInject.reduce((previous, script) => {
@@ -79,6 +79,26 @@ const injectHeadScripts = (document, headScripts) => {
   }
 }
 
+const findExistingScript = (node, script) => {
+  return node.childNodes.find((childNode) => {
+    return childNode.nodeName === "script" && sameScript(childNode, script)
+  })
+}
+
+const sameScript = (node, { type = "text/javascript", src }) => {
+  const nodeType = getAttributeValue(node, "type") || "text/javascript"
+  const nodeSrc = getAttributeValue(node, "src")
+
+  if (type === "importmap") {
+    if (nodeSrc !== src) {
+      console.warn(`importmap src should be ${src}, found ${nodeSrc} instead`)
+    }
+    return nodeType === type
+  }
+
+  return nodeType === type && nodeSrc === src
+}
+
 const objectToHtmlAttributes = (object) => {
   return Object.keys(object)
     .map((key) => `${key}=${valueToHtmlAttributeValue(object[key])}`)
@@ -92,7 +112,10 @@ const valueToHtmlAttributeValue = (value) => {
   return `"${JSON.stringify(value)}"`
 }
 
-const polyfillModuleScripts = (document, { generateInlineScriptSrc }) => {
+const polyfillScripts = (
+  document,
+  { replaceModuleScripts, replaceImportmapScript, generateInlineScriptSrc },
+) => {
   /*
   <script type="module" src="*" /> are going to be inlined
   <script type="module">** </script> are going to be transformed to import a file so that we can transform the script content.
@@ -110,53 +133,50 @@ const polyfillModuleScripts = (document, { generateInlineScriptSrc }) => {
     }
 
     const attributes = node.attrs
-    const typeAttribute = getAttributeByName(attributes, "type")
-    if (!typeAttribute) {
-      return
-    }
+    const nodeType = getAttributeValue(node, "type")
 
-    const typeAttributeValue = typeAttribute.value
-    if (typeAttributeValue !== "module") {
-      return
-    }
-
-    const srcAttribute = getAttributeByName(attributes, "src")
-    if (srcAttribute) {
-      const srcAttributeValue = srcAttribute.value
-
-      mutations.push(() => {
-        const script = parseHtmlAsSingleElement(generateScriptForJsenv(srcAttributeValue))
-        // inherit script attributes (except src and type)
-        script.attrs = [
-          ...script.attrs,
-          ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
-        ]
-        replaceNode(node, script)
-      })
-      return
-    }
-
-    const firstChild = node.childNodes[0]
-    if (firstChild && firstChild.nodeName === "#text") {
-      const scriptText = firstChild.value
-      mutations.push(() => {
-        const idAttribute = getAttributeByName(attributes, "id")
-        const hash = createScriptContentHash(scriptText)
-        const src = generateInlineScriptSrc({
-          hash,
-          id: idAttribute ? idAttribute.value : undefined,
+    if (replaceModuleScripts && nodeType === "module") {
+      const nodeSrc = getAttributeValue(node, "src")
+      if (nodeSrc) {
+        mutations.push(() => {
+          const script = parseHtmlAsSingleElement(generateScriptForJsenv(nodeSrc))
+          // inherit script attributes (except src and type)
+          script.attrs = [
+            ...script.attrs,
+            ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
+          ]
+          replaceNode(node, script)
         })
-        const script = parseHtmlAsSingleElement(generateScriptForJsenv(src))
-        // inherit script attributes (except src and type)
-        script.attrs = [
-          ...script.attrs,
-          ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
-        ]
-        replaceNode(node, script)
+        return
+      }
 
-        scriptsExternalized[src] = scriptText
-      })
-      return
+      const firstChild = node.childNodes[0]
+      if (firstChild && firstChild.nodeName === "#text") {
+        const scriptText = firstChild.value
+        mutations.push(() => {
+          const nodeId = getAttributeValue(node, "id")
+          const hash = createScriptContentHash(scriptText)
+          const src = generateInlineScriptSrc({
+            hash,
+            id: nodeId,
+          })
+          const script = parseHtmlAsSingleElement(generateScriptForJsenv(src))
+          // inherit script attributes (except src and type)
+          script.attrs = [
+            ...script.attrs,
+            ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
+          ]
+          replaceNode(node, script)
+
+          scriptsExternalized[src] = scriptText
+        })
+        return
+      }
+    }
+
+    if (replaceImportmapScript && nodeType === "importmap") {
+      const typeAttribute = getAttributeByName(node.attrs, "type")
+      typeAttribute.value = "jsenv-importmap"
     }
   })
 
@@ -181,6 +201,11 @@ const polyfillModuleScripts = (document, { generateInlineScriptSrc }) => {
 //     srcAttribute.value = resolveScriptSrc(srcAttributeValue)
 //   })
 // }
+
+const getAttributeValue = (node, attributeName) => {
+  const attribute = getAttributeByName(node.attrs, attributeName)
+  return attribute ? attribute.value : undefined
+}
 
 const getAttributeByName = (attributes, attributeName) =>
   attributes.find((attr) => attr.name === attributeName)

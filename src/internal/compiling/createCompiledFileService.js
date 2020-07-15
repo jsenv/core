@@ -198,6 +198,10 @@ export const createCompiledFileService = ({
           const { htmlAfterCompilation, scriptsExternalized } = compileHtml(htmlBeforeCompilation, {
             headScripts: [
               {
+                type: "importmap",
+                src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
+              },
+              {
                 src: `/${browserBundledJsFileRelativeUrl}`,
               },
               // todo: this is dirty because it means

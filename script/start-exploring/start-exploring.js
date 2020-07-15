@@ -4,7 +4,7 @@ import * as jsenvConfig from "../../jsenv.config.js"
 startExploring({
   ...jsenvConfig,
   babelPluginMap: {},
-  port: 3456,
+  compileServerPort: 3456,
   explorableConfig: {
     source: {
       "./index.js": false,
