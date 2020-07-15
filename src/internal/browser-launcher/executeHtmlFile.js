@@ -25,7 +25,7 @@ export const executeHtmlFile = async (
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}otherwise/`
   const compileDirectoryRemoteUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
   const fileClientUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
-  await page.goto(fileClientUrl)
+  await page.goto(fileClientUrl, { timeout: 0 })
 
   let executionResult
   try {
