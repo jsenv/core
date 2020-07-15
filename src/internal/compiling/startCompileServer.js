@@ -99,7 +99,7 @@ export const startCompileServer = async ({
   livereloadLogLevel = "info",
   customServices = {},
   livereloadSSE = false,
-  headScripts = [],
+  scriptManipulations = [],
 }) => {
   assertArguments({
     projectDirectoryUrl,
@@ -212,7 +212,7 @@ export const startCompileServer = async ({
     babelPluginMap,
     groupMap: compileServerGroupMap,
     convertMap,
-    headScripts,
+    scriptManipulations,
 
     projectFileRequestedCallback,
     useFilesystemAsCache,

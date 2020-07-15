@@ -16,7 +16,7 @@ const parse5 = require("parse5")
 export const compileHtml = (
   htmlBeforeCompilation,
   {
-    headScripts = [],
+    scriptManipulations = [],
     replaceModuleScripts = true,
     replaceImportmapScript = true,
     // resolveScriptSrc = (src) => src,
@@ -26,7 +26,7 @@ export const compileHtml = (
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
   const document = parse5.parse(htmlBeforeCompilation)
 
-  injectHeadScripts(document, headScripts)
+  manipulateScripts(document, scriptManipulations)
 
   const scriptsExternalized = polyfillScripts(document, {
     replaceModuleScripts,
@@ -42,57 +42,81 @@ export const compileHtml = (
   }
 }
 
-const injectHeadScripts = (document, headScripts) => {
+const manipulateScripts = (document, scriptManipulations) => {
   const htmlNode = document.childNodes.find((node) => node.nodeName === "html")
   const headNode = htmlNode.childNodes[0]
-  const headChildNodes = headNode.childNodes
+  const bodyNode = htmlNode.childNodes[1]
 
-  const headScriptsToInject = headScripts.filter((script) => {
-    const existingScript = findExistingScript(headNode, script)
-    return !existingScript
+  const scriptsToPreprendInHead = []
+
+  scriptManipulations.forEach(({ onConflict = () => {}, ...script }) => {
+    const scriptExistingInHead = findExistingScript(headNode, script)
+    if (scriptExistingInHead) {
+      onConflict(scriptExistingInHead, script)
+      return
+    }
+
+    const scriptExistingInBody = findExistingScript(bodyNode, script)
+    if (scriptExistingInBody) {
+      onConflict(scriptExistingInBody, script)
+      return
+    }
+
+    scriptsToPreprendInHead.push(script)
   })
 
-  const headScriptHtml = headScriptsToInject.reduce((previous, script) => {
-    const scriptAttributes = objectToHtmlAttributes(script)
-    return `${previous}<script ${scriptAttributes}></script>
-      `
-  }, "")
-  const fragment = parse5.parseFragment(headScriptHtml)
+  const headScriptsFragment = scriptsToFragment(scriptsToPreprendInHead)
+  insertFragmentBefore(
+    headNode,
+    headScriptsFragment,
+    findChild(headNode, (node) => node.nodeName === "script"),
+  )
+}
 
-  const firstScriptChildIndex = headChildNodes.findIndex((node) => node.nodeName === "script")
-  if (firstScriptChildIndex > -1) {
-    headNode.childNodes = [
-      ...headChildNodes.slice(0, firstScriptChildIndex),
+const insertFragmentBefore = (node, fragment, childNode) => {
+  const { childNodes = [] } = node
+
+  if (childNode) {
+    const childNodeIndex = childNodes.indexOf(childNode)
+    node.childNodes = [
+      ...childNodes.slice(0, childNodeIndex),
       ...fragment.childNodes.map((child) => {
-        return { ...child, parentNode: headNode }
+        return { ...child, parentNode: node }
       }),
-      ...headChildNodes.slice(firstScriptChildIndex),
+      ...childNodes.slice(childNodeIndex),
     ]
   } else {
-    // prefer append (so that any first child being text remains and indentation is safe)
-    headNode.childNodes = [
-      ...headChildNodes,
+    node.childNodes = [
+      ...childNodes,
       ...fragment.childNodes.map((child) => {
-        return { ...child, parentNode: headNode }
+        return { ...child, parentNode: node }
       }),
     ]
   }
 }
 
-const findExistingScript = (node, script) => {
-  return node.childNodes.find((childNode) => {
+const scriptsToFragment = (scripts) => {
+  const html = scripts.reduce((previous, script) => {
+    const scriptAttributes = objectToHtmlAttributes(script)
+    return `${previous}<script ${scriptAttributes}></script>
+      `
+  }, "")
+  const fragment = parse5.parseFragment(html)
+  return fragment
+}
+
+const findExistingScript = (node, script) =>
+  findChild(node, (childNode) => {
     return childNode.nodeName === "script" && sameScript(childNode, script)
   })
-}
+
+const findChild = ({ childNodes = [] }, predicate) => childNodes.find(predicate)
 
 const sameScript = (node, { type = "text/javascript", src }) => {
   const nodeType = getAttributeValue(node, "type") || "text/javascript"
   const nodeSrc = getAttributeValue(node, "src")
 
   if (type === "importmap") {
-    if (nodeSrc !== src) {
-      console.warn(`importmap src should be ${src}, found ${nodeSrc} instead`)
-    }
     return nodeType === type
   }
 

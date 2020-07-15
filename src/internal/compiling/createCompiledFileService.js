@@ -34,7 +34,7 @@ export const createCompiledFileService = ({
   babelPluginMap,
   groupMap,
   convertMap,
-  headScripts,
+  scriptManipulations,
 
   projectFileRequestedCallback,
   useFilesystemAsCache,
@@ -196,8 +196,13 @@ export const createCompiledFileService = ({
 
         compile: async (htmlBeforeCompilation) => {
           const { htmlAfterCompilation, scriptsExternalized } = compileHtml(htmlBeforeCompilation, {
-            headScripts: [
+            scriptManipulations: [
               {
+                onConflict: (existingImportmapScript, importmapScript) => {
+                  // when html file already contains an importmap script tag
+                  // its src is replaced to target the importmap used for compiled files
+                  existingImportmapScript.src = importmapScript.src
+                },
                 type: "importmap",
                 src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
               },
@@ -207,7 +212,7 @@ export const createCompiledFileService = ({
               // todo: this is dirty because it means
               // compile server is aware of exploring and jsenv toolbar
               // instead this should be moved to startExploring
-              ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : headScripts),
+              ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptManipulations),
             ],
             generateInlineScriptSrc: ({ id, hash }) => {
               const scriptAssetUrl = generateCompiledFileAssetUrl(
