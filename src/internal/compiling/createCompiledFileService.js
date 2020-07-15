@@ -198,11 +198,9 @@ export const createCompiledFileService = ({
           const { htmlAfterCompilation, scriptsExternalized } = compileHtml(htmlBeforeCompilation, {
             scriptManipulations: [
               {
-                onConflict: (existingImportmapScript, importmapScript) => {
-                  // when html file already contains an importmap script tag
-                  // its src is replaced to target the importmap used for compiled files
-                  existingImportmapScript.src = importmapScript.src
-                },
+                // when html file already contains an importmap script tag
+                // its src is replaced to target the importmap used for compiled files
+                replaceExisting: true,
                 type: "importmap",
                 src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
               },

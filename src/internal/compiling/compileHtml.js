@@ -49,16 +49,20 @@ const manipulateScripts = (document, scriptManipulations) => {
 
   const scriptsToPreprendInHead = []
 
-  scriptManipulations.forEach(({ onConflict = () => {}, ...script }) => {
+  scriptManipulations.forEach(({ replaceExisting = false, ...script }) => {
     const scriptExistingInHead = findExistingScript(headNode, script)
     if (scriptExistingInHead) {
-      onConflict(scriptExistingInHead, script)
+      if (replaceExisting) {
+        replaceNode(scriptExistingInHead, scriptToNode(script))
+      }
       return
     }
 
     const scriptExistingInBody = findExistingScript(bodyNode, script)
     if (scriptExistingInBody) {
-      onConflict(scriptExistingInBody, script)
+      if (replaceExisting) {
+        replaceNode(scriptExistingInBody, scriptToNode(script))
+      }
       return
     }
 
@@ -93,6 +97,10 @@ const insertFragmentBefore = (node, fragment, childNode) => {
       }),
     ]
   }
+}
+
+const scriptToNode = (script) => {
+  return scriptsToFragment([script]).childNodes[0]
 }
 
 const scriptsToFragment = (scripts) => {
