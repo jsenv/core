@@ -12,7 +12,7 @@ export const executePlan = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
-  importMapFileUrl,
+  importMapFileRelativeUrl,
   importDefaultExtension,
 
   compileServerProtocol,
@@ -61,7 +61,7 @@ export const executePlan = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      importMapFileUrl,
+      importMapFileRelativeUrl,
       importDefaultExtension,
 
       compileServerProtocol,
@@ -84,7 +84,7 @@ export const executePlan = async ({
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
     compileServerOrigin,
-    importMapFileUrl,
+    importMapFileRelativeUrl,
     importDefaultExtension,
 
     babelPluginMap,
