@@ -1,4 +1,4 @@
-/* global require */
+/* global require, __dirname */
 const { createEslintConfig } = require("@jsenv/eslint-config")
 
 const config = createEslintConfig({
