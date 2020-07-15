@@ -30,4 +30,5 @@ executeTestPlan({
       },
     },
   },
+  concurrencyLimit: 1,
 })
