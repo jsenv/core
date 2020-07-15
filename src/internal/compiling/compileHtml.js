@@ -17,6 +17,7 @@ export const compileHtml = (
   htmlBeforeCompilation,
   {
     headScripts = [],
+    replaceModuleScripts = true,
     // resolveScriptSrc = (src) => src,
     generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
   } = {},
@@ -24,8 +25,12 @@ export const compileHtml = (
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
   const document = parse5.parse(htmlBeforeCompilation)
   injectHeadScripts(document, headScripts)
-  const scriptsExternalized = polyfillModuleScripts(document, { generateInlineScriptSrc })
-  // resolveScripts(document, resolveScriptSrc)
+  let scriptsExternalized = {}
+  if (replaceModuleScripts) {
+    scriptsExternalized = polyfillModuleScripts(document, { generateInlineScriptSrc })
+    // resolveScripts(document, resolveScriptSrc)
+  }
+
   const htmlAfterCompilation = parse5.serialize(document)
   return {
     htmlAfterCompilation,

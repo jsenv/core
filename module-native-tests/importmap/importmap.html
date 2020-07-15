@@ -1,0 +1,52 @@
+<html>
+  <head></head>
+
+  <body>
+    <script>
+      const supportsImportmap = async () => {
+        // jsenv-import-map-feature-detection
+        const specifier = jsToTextUrl(`export default false`)
+
+        const importMap = {
+          imports: {
+            [specifier]: jsToTextUrl(`export default true`),
+          },
+        }
+
+        const importmapScript = document.createElement("script")
+        importmapScript.type = "importmap"
+        importmapScript.textContent = JSON.stringify(importMap, null, "  ")
+        insertAfter(importmapScript)
+
+        const scriptModule = document.createElement("script")
+        scriptModule.type = "module"
+        scriptModule.src = jsToTextUrl(`import supported from "${specifier}"
+      window.__jsenv__importmap_supported = supported`)
+
+        return new Promise((resolve) => {
+          scriptModule.onload = () => {
+            const supported = window.__jsenv__importmap_supported
+            delete window.__jsenv__importmap_supported
+            resolve(supported)
+          }
+          scriptModule.onerror = () => {
+            resolve(false)
+          }
+          insertAfter(scriptModule)
+        })
+      }
+
+      const jsToTextUrl = (js) => {
+        return `data:text/javascript;base64,${window.btoa(js)}`
+      }
+
+      const insertAfter = (element) => {
+        document.body.appendChild(element)
+      }
+
+      supportsImportmap().then((has) => {
+        console.log(has)
+      })
+    </script>
+  </body>
+</html>
