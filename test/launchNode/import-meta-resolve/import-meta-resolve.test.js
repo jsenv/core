@@ -20,7 +20,7 @@ const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  importMapFileRelativeUrl: `${testDirectoryRelativePath}importMap.json`,
+  importMapFileRelativeUrl: `${testDirectoryRelativePath}test.importmap`,
 })
 
 const actual = await launchAndExecute({

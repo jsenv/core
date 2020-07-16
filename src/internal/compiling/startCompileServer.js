@@ -52,7 +52,7 @@ export const startCompileServer = async ({
   compileServerLogLevel,
 
   projectDirectoryUrl,
-  importMapFileRelativeUrl = "importMap.json",
+  importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
@@ -365,13 +365,6 @@ const generateImportMapForCompileServer = async ({
         ? {}
         : {
             "/.jsenv/out/": `./${outDirectoryRelativeUrl}`,
-          }),
-      // in case importMapFileRelativeUrl is not the default
-      // redirect /importMap.json to the proper location
-      ...(importMapFileRelativeUrl === "importMap.json"
-        ? {}
-        : {
-            "/importMap.json": `./${importMapFileRelativeUrl}`,
           }),
     },
   }

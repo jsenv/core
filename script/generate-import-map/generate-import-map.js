@@ -12,7 +12,6 @@ generateImportMapForProject(
   ],
   {
     projectDirectoryUrl,
-    importMapFileRelativeUrl: "./importMap.json",
     jsConfigFile: true,
   },
 )

@@ -21,7 +21,7 @@ const compileId = "otherwise"
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  importMapFileRelativeUrl: `${testDirectoryRelativeUrl}importMap.json`,
+  importMapFileRelativeUrl: `${testDirectoryRelativeUrl}test.importmap`,
   compileGroupCount: 1, // ensure compileId always otherwise
 })
 
