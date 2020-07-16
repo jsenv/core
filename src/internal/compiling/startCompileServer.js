@@ -6,7 +6,7 @@ import {
   composeCancellationToken,
 } from "@jsenv/cancellation"
 import { composeTwoImportMaps } from "@jsenv/import-map"
-import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
+import { getImportMapFromNodeModules } from "@jsenv/node-module-import-map"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -143,7 +143,7 @@ export const startCompileServer = async ({
     runtimeAlwaysInsideRuntimeScoreMap,
   })
   const compileServerImportMap = await generateImportMapForCompileServer({
-    logger,
+    logLevel: compileServerLogLevel,
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
     importMapFileRelativeUrl,
@@ -341,17 +341,15 @@ ${projectDirectoryUrl}`)
  * @jsenv/core/helpers/regenerator-runtime/regenerator-runtime.js
  */
 const generateImportMapForCompileServer = async ({
-  logger,
+  logLevel,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   importMapFileRelativeUrl,
 }) => {
-  const importMapForJsenvCore = await generateImportMapForPackage({
-    logger,
+  const importMapForJsenvCore = await getImportMapFromNodeModules({
+    logLevel,
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
     rootProjectDirectoryUrl: projectDirectoryUrl,
-    includeImports: true,
-    includeExports: true,
   })
   const importmapForSelfImport = {
     imports: {
