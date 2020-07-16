@@ -19,6 +19,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   ...COMPILE_SERVER_TEST_PARAMS,
   compileServerLogLevel: "error",
   projectDirectoryUrl: testDirectoryUrl,
+  importMapFileRelativeUrl: "./test.importmap",
   jsenvDirectoryClean: true,
   babelPluginMap,
   env: {

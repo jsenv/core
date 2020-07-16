@@ -9,6 +9,5 @@
 /src/**/system.js
 /**/syntax-error.js
 /**/syntax-error.main.js
-/importMap.json
 /jsconfig.json
 /package-lock.json

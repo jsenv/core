@@ -20,7 +20,7 @@ await generateSystemJsBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
-  importMapFileRelativeUrl: `${testDirectoryRelativeUrl}importMap.json`,
+  importMapFileRelativeUrl: `${testDirectoryRelativeUrl}test.importmap`,
   entryPointMap: {
     main: `./${testDirectoryRelativeUrl}${mainFilename}`,
   },

@@ -80,7 +80,7 @@ const convertMap = {
 
 # importMapFileRelativeUrl
 
-`importMapFileRelativeUrl` parameter is a string representing a relative url to a file containing import map. This parameter is optional with a default value of `"./importMap.json"`. This file becomes mandatory as soon as you use an import that is not explicitely targeting a file like:
+`importMapFileRelativeUrl` parameter is a string representing a relative url to a file containing import map. This parameter is optional with a default value of `"./import-map.importmap"`. This file becomes mandatory as soon as you use an import that is not explicitely targeting a file like:
 
 ```js
 import whatever from "foo"

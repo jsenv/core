@@ -106,7 +106,7 @@ const response = await serveBundle({
     whatever: 42,
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
-    importMapFileRelativeUrl: "importMap.json",
+    importMapFileRelativeUrl: "import-map.importmap",
   }
   assert({ actual, expected })
 }
