@@ -1,8 +1,8 @@
 # Troubleshooting
 
-# importMap.json not found
+# import-map.importmap not found
 
-This file presence becomes madatory if you use use `import.meta` in your codebase. Just put an `importMap.json` with `{}` inside if you don't use importmap and want to get rid of this error.
+This file presence becomes madatory if you use use `import.meta` in your codebase. Just put an `import-map.importmap` with `{}` inside if you don't use importmap and want to get rid of this error.
 
 # unmapped bare specifier
 

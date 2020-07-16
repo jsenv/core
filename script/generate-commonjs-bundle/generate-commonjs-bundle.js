@@ -5,7 +5,7 @@ generateCommonJsBundleForNode({
   ...jsenvConfig,
   // importmap file presence is mandatory to build jsenv bundle to commonsj format
   // this is because jsenv source files contains import.meta occurences
-  // and in that case importmap.json becomes mandatory in case import.meta.resolve() is used.
+  // and in that case .importmap file becomes mandatory in case import.meta.resolve() is used.
   // In reality import.meta.resolve() is not yet specified and can be achieved
   // using new URL('./file.css', import.meta.url)
   // even if, of course, importmap are ignored in that case.

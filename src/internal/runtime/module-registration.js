@@ -92,7 +92,7 @@ ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelative
     )
   }
 
-  if (contentType === "application/json") {
+  if (contentType === "application/json" || contentType === "application/importmap+json") {
     const bodyAsJson = await moduleResponse.json()
     return fromFunctionReturningNamespace(
       () => {

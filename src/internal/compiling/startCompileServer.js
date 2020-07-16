@@ -325,16 +325,12 @@ ${projectDirectoryUrl}`)
 /**
  * generateImportMapForCompileServer allows the following:
  *
- * import importMap from '/.jsenv/importMap.json'
- *
- * returns jsenv internal importMap and
- *
- * import importMap from '/importMap.json'
+ * import importMap from '/jsenv.importmap'
  *
  * returns the project importMap.
  * Note that if importMap file does not exists an empty object is returned.
  * Note that if project uses a custom importMapFileRelativeUrl jsenv internal import map
- * remaps '/importMap.json' to the real importMap
+ * remaps '/jsenv.importmap' to the real importMap
  *
  * This pattern exists so that jsenv can resolve some dynamically injected import such as
  *
@@ -366,6 +362,7 @@ const generateImportMapForCompileServer = async ({
         : {
             "/.jsenv/out/": `./${outDirectoryRelativeUrl}`,
           }),
+      "/jsenv.importmap": `./${importMapFileRelativeUrl}`,
     },
   }
   const importMapForProject = await readProjectImportMap({

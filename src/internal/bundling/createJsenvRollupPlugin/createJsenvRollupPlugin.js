@@ -316,7 +316,7 @@ export const createJsenvRollupPlugin = async ({
       }
     }
 
-    if (contentType === "application/json") {
+    if (contentType === "application/json" || contentType === "application/importmap+json") {
       return {
         ...commonData,
         content: jsonToJavascript(moduleText),

@@ -100,7 +100,7 @@ export const createCompiledFileService = ({
     )
     const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl)
 
-    // send out/best/importMap.json untouched
+    // send out/best/*.importmap untouched
     if (originalFileRelativeUrl === importMapFileRelativeUrl) {
       if (
         compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES ||
@@ -110,7 +110,7 @@ export const createCompiledFileService = ({
           originalFileRelativeUrl,
           `${projectDirectoryUrl}${outDirectoryRelativeUrl}otherwise/`,
         )
-        // for otherwise-commonjs-bundle, server did not write importMap.json
+        // for otherwise-commonjs-bundle, server did not write *.importmap
         // let's just return otherwise/importMapFileRelativeUrl
         return serveFile(otherwiseImportmapFileUrl, { method, headers })
       }
