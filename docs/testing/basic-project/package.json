@@ -7,11 +7,11 @@
     "node": ">=13.7.0"
   },
   "scripts": {
-    "test": "node --no-warnings ./execute-test-plan.cjs",
-    "test-with-coverage": "node --no-warnings ./execute-test-plan.cjs --coverage"
+    "test": "node ./execute-test-plan.js",
+    "test-with-coverage": "node ./execute-test-plan.js --coverage"
   },
   "devDependencies": {
-    "@jsenv/core": "12.1.0-alpha.6",
-    "playwright-chromium": "0.11.1"
+    "@jsenv/core": "14.0.0-alpha.13",
+    "playwright-chromium": "1.2.1"
   }
 }

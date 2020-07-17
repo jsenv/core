@@ -50,6 +50,21 @@ if (actual !== expected) {
 }
 ```
 
+`Math.max.test.html`
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <script type="module" src="./Math.max.test.js"></script>
+  </body>
+</html>
+```
+
 `execute-test-plan.js`
 
 ```js
@@ -58,10 +73,12 @@ import { executeTestPlan, launchNode, launchChromiumTab } from "@jsenv/core"
 executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "./**/*.test.js": {
+    "./**/*.test.html": {
       chromium: {
         launch: launchChromiumTab,
       },
+    },
+    "./**/*.test.js": {
       node: {
         launch: launchNode,
       },
@@ -84,7 +101,7 @@ See [testing](./docs/testing/readme.md) documentation for more.
 npm install --save-dev @jsenv/core
 ```
 
-`@jsenv/core` is tested on Mac, Windows, Linux on Node.js 13.12.0. Other operating systems and Node.js versions are not tested.
+`@jsenv/core` is tested on Mac, Windows, Linux on Node.js 14.5.0. Other operating systems and Node.js versions are not tested.
 
 > Jsenv should be compatible with node 12.8 and above but it's no longer guaranteed.
 

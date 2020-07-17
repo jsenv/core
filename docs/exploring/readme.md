@@ -1,3 +1,5 @@
+> This documentation is outdated, it needs to be updated
+
 # Table of contents
 
 - [Exploring presentation](#Exploring-presentation)
@@ -74,16 +76,15 @@ node -v
   node ./start-exploring.cjs
   ```
 
-A first server will start. This one is used by the whole jsenv project.<br />
-A second server will start. That's the one we're interested in right now. The url `http://127.0.0.1:3456` is logged in your terminal.<br />
+When exploring server starts `http://localhost:3456` is logged in your terminal.
 
-Once server is started you can navigate to `http://127.0.0.1:3456` and you will see an html page listing the files you can explore.
+Once server is started you can navigate to `http://localhost:3456` and you will see an html page listing the files you can explore.
 
 ![exploring chome screenshot](./exploring-chrome-screenshot.png)
 
-- If you go to `http://127.0.0.1:3456/src/hello.js` page displays `Hello world`.
+- If you go to `src/hello.js` page displays `Hello world`.
   It shows that if your file execution renders something, you can see the effect in your browser.
-- If you go to `http://127.0.0.1:3456/src/text.js` nothing special will happen because `/src/text.js` is just a module with an export default.<br />
+- If you go to `src/text.js` nothing special will happen because `src/text.js` is just a module with an export default.<br />
   It shows that even if your file do not render anything, you still can use this functionnality to debug your file.
 
 Now you have seen a basic example it's time to integrate it in your own project.
@@ -217,9 +218,9 @@ To avoid duplication some parameter are linked to a generic documentation.
 
 Using the return value is an advanced use case, in theory you should not need this.
 
-`startExploring` return signature is `{ exploringServer, compileServer }`.
+`startExploring` return signature is `exploringServer`.
 
-`exploringServer` and `compileServer` are server created by `@jsenv/server`. You can read the `@jsenv/server` documentation on the return value to see the shape of these objects.
+`exploringServer` is created by `@jsenv/server`. You can read the `@jsenv/server` documentation on the return value to see the shape of these objects.
 https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#startServer-return-value.
 
 Code below shows how you might use return value.
@@ -227,10 +228,9 @@ Code below shows how you might use return value.
 ```js
 import { startExploring } from "@jsenv/core"
 
-const { exploringServer, compileServer } = await startExploring({
+const exploringServer = await startExploring({
   projectDirectoryUrl: new URL("./", import.meta.url),
 })
 
 exploringServer.stop()
-compileServer.stop()
 ```

@@ -82,6 +82,8 @@ npm install
 node ./execute-test-plan.js
 ```
 
+> You need node 13+
+
 It will execute all your tests.
 
 ![basic project test execution terminal screenshot](./basic-project-terminal-screenshot.png)
