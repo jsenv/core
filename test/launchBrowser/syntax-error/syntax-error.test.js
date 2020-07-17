@@ -5,6 +5,7 @@ import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryU
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
 import { launchChromium, launchFirefox, launchWebkit } from "../../../index.js"
+import { launchBrowsers } from "../launchBrowsers.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTION_TEST_PARAMS,
@@ -28,28 +29,27 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 })
 const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
 
-await Promise.all(
-  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
-    const result = await launchAndExecute({
-      ...EXECUTION_TEST_PARAMS,
-      executionLogLevel: "off",
-      launch: (options) =>
-        launchBrowser({
-          ...LAUNCH_TEST_PARAMS,
-          ...options,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-        }),
-      fileRelativeUrl: htmlFileRelativeUrl,
-    })
-    const actual = {
-      status: result.status,
-      errorMessage: result.error.message,
-      errorParsingErrror: result.error.parsingError,
-    }
-    const expected = {
-      status: "errored",
-      errorMessage: `Module file cannot be parsed.
+await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
+  const result = await launchAndExecute({
+    ...EXECUTION_TEST_PARAMS,
+    executionLogLevel: "off",
+    launch: (options) =>
+      launchBrowser({
+        ...LAUNCH_TEST_PARAMS,
+        ...options,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+      }),
+    fileRelativeUrl: htmlFileRelativeUrl,
+  })
+  const actual = {
+    status: result.status,
+    errorMessage: result.error.message,
+    errorParsingErrror: result.error.parsingError,
+  }
+  const expected = {
+    status: "errored",
+    errorMessage: `Module file cannot be parsed.
 --- parsing error message ---
 ${importedFilePath}: Unexpected token (1:17)
 
@@ -59,17 +59,16 @@ ${importedFilePath}: Unexpected token (1:17)
 ${importedFileRelativeUrl}
 --- file url ---
 ${compiledFileUrl}`,
-      errorParsingErrror: {
-        message: `${importedFilePath}: Unexpected token (1:17)
+    errorParsingErrror: {
+      message: `${importedFilePath}: Unexpected token (1:17)
 
 > 1 | const browser = (
     |                  ^`,
-        messageHTML: assert.any(String),
-        filename: importedFilePath,
-        lineNumber: 1,
-        columnNumber: 17,
-      },
-    }
-    assert({ actual, expected })
-  }),
-)
+      messageHTML: assert.any(String),
+      filename: importedFilePath,
+      lineNumber: 1,
+      columnNumber: 17,
+    },
+  }
+  assert({ actual, expected })
+})

@@ -5,6 +5,7 @@ import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryU
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
 import { launchChromium, launchFirefox, launchWebkit } from "../../../index.js"
+import { launchBrowsers } from "../launchBrowsers.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTION_TEST_PARAMS,
@@ -22,37 +23,35 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 
-await Promise.all(
-  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
-    const result = await launchAndExecute({
-      ...EXECUTION_TEST_PARAMS,
-      executionLogLevel: "off",
-      fileRelativeUrl,
-      launch: (options) =>
-        launchBrowser({
-          ...LAUNCH_TEST_PARAMS,
-          ...options,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-          // headless: false,
-        }),
-      captureConsole: true,
-    })
-    const actual = {
-      status: result.status,
-      errorMessage: result.error.message,
-    }
-    const expected = {
-      status: "errored",
-      errorMessage: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
-    }
+await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
+  const result = await launchAndExecute({
+    ...EXECUTION_TEST_PARAMS,
+    executionLogLevel: "off",
+    fileRelativeUrl,
+    launch: (options) =>
+      launchBrowser({
+        ...LAUNCH_TEST_PARAMS,
+        ...options,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+        // headless: false,
+      }),
+    captureConsole: true,
+  })
+  const actual = {
+    status: result.status,
+    errorMessage: result.error.message,
+  }
+  const expected = {
+    status: "errored",
+    errorMessage: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
+  }
+  assert({ actual, expected })
+  {
+    const actual = result.consoleCalls.some(({ text }) =>
+      text.includes("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
+    )
+    const expected = false
     assert({ actual, expected })
-    {
-      const actual = result.consoleCalls.some(({ text }) =>
-        text.includes("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
-      )
-      const expected = false
-      assert({ actual, expected })
-    }
-  }),
-)
+  }
+})

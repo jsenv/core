@@ -5,6 +5,7 @@ import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryU
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
 import { launchChromium, launchFirefox, launchWebkit } from "../../../index.js"
+import { launchBrowsers } from "../launchBrowsers.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTION_TEST_PARAMS,
@@ -22,42 +23,40 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 
-await Promise.all(
-  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
-    const result = await launchAndExecute({
-      ...EXECUTION_TEST_PARAMS,
-      // sets executionLogLevel to off to avoid seeing an expected error in logs
-      executionLogLevel: "off",
-      // stopAfterExecute: false,
-      fileRelativeUrl,
-      launch: (options) =>
-        launchBrowser({
-          ...LAUNCH_TEST_PARAMS,
-          ...options,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-          // headless: false,
-        }),
-      captureConsole: true,
-      mirrorConsole: true,
-    })
+await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
+  const result = await launchAndExecute({
+    ...EXECUTION_TEST_PARAMS,
+    // sets executionLogLevel to off to avoid seeing an expected error in logs
+    executionLogLevel: "off",
+    // stopAfterExecute: false,
+    fileRelativeUrl,
+    launch: (options) =>
+      launchBrowser({
+        ...LAUNCH_TEST_PARAMS,
+        ...options,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+        // headless: false,
+      }),
+    captureConsole: true,
+    mirrorConsole: true,
+  })
 
-    const stack = result.error.stack
+  const stack = result.error.stack
 
-    if (launchBrowser === launchChromium) {
-      const expected = `Error: error
+  if (launchBrowser === launchChromium) {
+    const expected = `Error: error
   at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
   at Object.triggerError (${testDirectoryUrl}error-stack.js:3:1)`
-      const actual = stack.slice(0, expected.length)
-      assert({ actual, expected })
-    } else if (launchBrowser === launchFirefox) {
-      const expected = `Error: error`
-      const actual = stack.slice(0, expected.length)
-      assert({ actual, expected })
-    } else {
-      const actual = typeof stack
-      const expected = `string`
-      assert({ actual, expected })
-    }
-  }),
-)
+    const actual = stack.slice(0, expected.length)
+    assert({ actual, expected })
+  } else if (launchBrowser === launchFirefox) {
+    const expected = `Error: error`
+    const actual = stack.slice(0, expected.length)
+    assert({ actual, expected })
+  } else {
+    const actual = typeof stack
+    const expected = `string`
+    assert({ actual, expected })
+  }
+})

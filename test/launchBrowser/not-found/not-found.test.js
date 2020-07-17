@@ -5,6 +5,7 @@ import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryU
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
 import { launchChromium, launchFirefox, launchWebkit } from "../../../index.js"
+import { launchBrowsers } from "../launchBrowsers.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTION_TEST_PARAMS,
@@ -30,34 +31,32 @@ const importedFileUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 
-await Promise.all(
-  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
-    const result = await launchAndExecute({
-      ...EXECUTION_TEST_PARAMS,
-      executionLogLevel: "off",
-      fileRelativeUrl: htmlFileRelativeUrl,
-      launch: (options) =>
-        launchBrowser({
-          ...LAUNCH_TEST_PARAMS,
-          ...options,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-        }),
-    })
-    const actual = {
-      status: result.status,
-      errorMessage: result.error.message,
-    }
-    const expected = {
-      status: "errored",
-      errorMessage: `Module file cannot be found.
+await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
+  const result = await launchAndExecute({
+    ...EXECUTION_TEST_PARAMS,
+    executionLogLevel: "off",
+    fileRelativeUrl: htmlFileRelativeUrl,
+    launch: (options) =>
+      launchBrowser({
+        ...LAUNCH_TEST_PARAMS,
+        ...options,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+      }),
+  })
+  const actual = {
+    status: result.status,
+    errorMessage: result.error.message,
+  }
+  const expected = {
+    status: "errored",
+    errorMessage: `Module file cannot be found.
 --- import declared in ---
 ${importerFileRelativeUrl}
 --- file ---
 ${importedFileRelativeUrl}
 --- file url ---
 ${importedFileUrl}`,
-    }
-    assert({ actual, expected })
-  }),
-)
+  }
+  assert({ actual, expected })
+})

@@ -5,6 +5,7 @@ import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryU
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
 import { launchChromium, launchFirefox, launchWebkit } from "../../../index.js"
+import { launchBrowsers } from "../launchBrowsers.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTION_TEST_PARAMS,
@@ -25,32 +26,30 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 const pngFileContent = await readFile(resolveUrl("./jsenv.png", import.meta.url))
 const pngBase64 = Buffer.from(pngFileContent).toString("base64")
 
-await Promise.all(
-  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
-    const actual = await launchAndExecute({
-      ...EXECUTION_TEST_PARAMS,
-      fileRelativeUrl,
-      // stopAfterExecute: false,
-      launch: (options) =>
-        launchBrowser({
-          ...LAUNCH_TEST_PARAMS,
-          ...options,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-          // headless: false,
-        }),
-    })
-    const expected = {
-      status: "completed",
-      namespace: {
-        "./png.js": {
-          status: "completed",
-          namespace: {
-            default: pngBase64,
-          },
+await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
+  const actual = await launchAndExecute({
+    ...EXECUTION_TEST_PARAMS,
+    fileRelativeUrl,
+    // stopAfterExecute: false,
+    launch: (options) =>
+      launchBrowser({
+        ...LAUNCH_TEST_PARAMS,
+        ...options,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+        // headless: false,
+      }),
+  })
+  const expected = {
+    status: "completed",
+    namespace: {
+      "./png.js": {
+        status: "completed",
+        namespace: {
+          default: pngBase64,
         },
       },
-    }
-    assert({ actual, expected })
-  }),
-)
+    },
+  }
+  assert({ actual, expected })
+})

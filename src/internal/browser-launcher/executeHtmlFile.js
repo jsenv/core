@@ -32,6 +32,8 @@ export const executeHtmlFile = async (
     () => {
       return Boolean(window.__jsenv__)
     },
+    [],
+    { timeout: 0 },
   )
 
   let executionResult
