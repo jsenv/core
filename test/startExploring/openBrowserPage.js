@@ -72,10 +72,12 @@ export const openBrowserPage = async (
 }
 
 export const getHtmlExecutionResult = async (page) => {
-  await page.waitForFunction(() => {
+  await page.waitForFunction(
     /* istanbul ignore next */
-    return Boolean(window.__jsenv__)
-  })
+    () => {
+      return Boolean(window.__jsenv__)
+    },
+  )
 
   return page.evaluate(
     /* istanbul ignore next */

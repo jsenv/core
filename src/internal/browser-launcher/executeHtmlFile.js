@@ -27,10 +27,12 @@ export const executeHtmlFile = async (
   const fileClientUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
   await page.goto(fileClientUrl, { timeout: 0 })
 
-  await page.waitForFunction(() => {
+  await page.waitForFunction(
     /* istanbul ignore next */
-    return Boolean(window.__jsenv__)
-  })
+    () => {
+      return Boolean(window.__jsenv__)
+    },
+  )
 
   let executionResult
   try {
