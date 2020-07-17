@@ -346,6 +346,7 @@ const generateImportMapForCompileServer = async ({
     logLevel,
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
     rootProjectDirectoryUrl: projectDirectoryUrl,
+    projectPackageDevDependenciesIncluded: false
   })
   const importmapForSelfImport = {
     imports: {
