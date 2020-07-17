@@ -251,16 +251,18 @@ const launchBrowser = async (
       }
     },
     stop: async (browser) => {
+      const disconnected = browser.isConnected()
+        ? new Promise((resolve) => {
+            const disconnectedCallback = () => {
+              browser.removeListener("disconnected", disconnectedCallback)
+              resolve()
+            }
+            browser.on("disconnected", disconnectedCallback)
+          })
+        : Promise.resolve()
+
       await browser.close()
-      if (browser.isConnected()) {
-        await new Promise((resolve) => {
-          const disconnectedCallback = () => {
-            browser.removeListener("disconnected", disconnectedCallback)
-            resolve()
-          }
-          browser.on("disconnected", disconnectedCallback)
-        })
-      }
+      await disconnected
     },
   })
   ressourceTracker.registerCleanupCallback(launchOperation.stop)
