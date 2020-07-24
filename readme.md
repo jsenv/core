@@ -11,6 +11,8 @@ Execute JavaScript on multiple environments for testing.
 
 - [Presentation](#Presentation)
 - [Example](#Example)
+  - [Executing tests](#Executing-tests)
+  - [Writing tests](#Writing-tests)
 - [Installation](#Installation)
 - [Configuration](#Configuration)
   - [jsenv.config.js](#jsenvconfigjs)
@@ -23,7 +25,7 @@ Execute JavaScript on multiple environments for testing.
 
 `@jsenv/core` is a test runner. It focuses on executing many JavaSripts files in parallel and report how it goes.
 
-![test execution terminal screenshot](./docs/testing/main-example-terminal-screenshot.png)
+![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
 
 It's main strength are:
 
@@ -35,6 +37,8 @@ It's main strength are:
 - Rely on top level await to test asynchronous code
 
 # Example
+
+For the example let's start with one test file.
 
 > In reality you would never test `Math.max`, the code below is testing it to show an example unrelated to a specific codebase.
 
@@ -63,6 +67,10 @@ if (actual !== expected) {
 </html>
 ```
 
+## Executing tests
+
+Let's create a script that will execute `Math.max.test.html` in chromium and firefox.
+
 `execute-test-plan.js`
 
 ```js
@@ -87,9 +95,78 @@ executeTestPlan({
 node ./execute-test-plan.js
 ```
 
-![test execution terminal screenshot](./docs/testing/main-example-terminal-screenshot.png)
+![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
 
-See [testing](./docs/testing/readme.md) documentation for more.
+As shown by the logs jsenv has launched chromium and firefox and executed `Math.max.test.html`. Check [testing](./docs/testing/readme.md) documentation for more information.
+
+## Writing tests
+
+jsenv is more than a test runner, it also provide a dev environment to execute and or debug files one by one. It is very useful to write tests, either for the first time or when a test needs to be updated.
+
+Let's create a script starting this environment.
+
+`start-exploring.js`
+
+```js
+import { startExploring } from "@jsenv/core"
+
+startExploring({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  explorableConfig: {
+    source: {
+      "**/*.html": true,
+    },
+  },
+  compileServerPort: 3456,
+  livereloading: true,
+})
+```
+
+```console
+node ./start-exploring.js
+```
+
+![exploring command terminal screenshot](./docs/main/main-example-exploring-terminal.png)
+
+When you open that url in a browser you will a page called see jsenv exploring index
+
+![jsenv exploring index page screenshot](./docs/main/main-example-exploring-index.png)
+
+If you click `Math.max.test.html`, your file will be executed in the browser
+
+![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
+
+Then if you update `Math.max.test.js` to make it fail
+
+```diff
+- const expected = 4
++ const expected = 3
+```
+
+The browser will livereload the page and display the failure.
+
+![test file failing page screenshot](./docs/main/main-example-exploring-failing.png)
+
+There is also a system notification displayed.
+
+![test file failing notification screenshot](./docs/main/main-example-failing-notif.png)
+
+If you revert you changes
+
+```diff
+- const expected = 3
++ const expected = 4
+```
+
+Browser livereloads again and you can see error is gone.
+
+![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
+
+There is also a system notification displayed.
+
+![test file fixed notification screenshot](./docs/main/main-example-fixed-notif.png)
+
+Check [exploring](./docs/exploring/readme.md) documentation for more information.
 
 # Installation
 

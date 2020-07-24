@@ -227,7 +227,6 @@ export const startCompileServer = async ({
   const compileServer = await startServer({
     cancellationToken,
     logLevel: compileServerLogLevel,
-    serverName: "compile server",
 
     protocol: compileServerProtocol,
     http2: compileServerProtocol === "https",
@@ -346,7 +345,7 @@ const generateImportMapForCompileServer = async ({
     logLevel,
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
     rootProjectDirectoryUrl: projectDirectoryUrl,
-    projectPackageDevDependenciesIncluded: false
+    projectPackageDevDependenciesIncluded: false,
   })
   const importmapForSelfImport = {
     imports: {

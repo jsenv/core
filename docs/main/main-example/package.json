@@ -10,7 +10,7 @@
     "test": "node ./execute-test-plan.js"
   },
   "devDependencies": {
-    "@jsenv/core": "14.0.0-alpha.13",
+    "@jsenv/core": "14.0.0-alpha.14",
     "playwright-chromium": "1.2.1",
     "playwright-firefox": "1.2.1"
   }
