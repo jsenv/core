@@ -21,17 +21,15 @@ Execute JavaScript on multiple environments for testing.
 
 # Presentation
 
-`@jsenv/core` is a test runner.
+`@jsenv/core` is a test runner. It focuses on executing many JavaSripts files in parallel and report how it goes.
 
 ![test execution terminal screenshot](./docs/testing/main-example-terminal-screenshot.png)
 
-It focuses on executing many JavaSripts files in parallel and report how it goes.
-
 It's main strength are:
 
-- Rely on standard JavaScript
 - Can execute file in browsers (chromium, firefox, webkit)
 - Can execute file in Node.js
+- Easy to debug single test file
 - Can be configured to run jsx, typescript and more
 - Can generate coverage from all file executions
 - Rely on top level await to test asynchronous code
@@ -68,7 +66,7 @@ if (actual !== expected) {
 `execute-test-plan.js`
 
 ```js
-import { executeTestPlan, launchNode, launchChromiumTab } from "@jsenv/core"
+import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
 
 executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),
@@ -77,10 +75,8 @@ executeTestPlan({
       chromium: {
         launch: launchChromiumTab,
       },
-    },
-    "./**/*.test.js": {
-      node: {
-        launch: launchNode,
+      firefox: {
+        launch: launchFirefoxTab,
       },
     },
   },
