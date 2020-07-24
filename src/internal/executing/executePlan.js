@@ -3,42 +3,44 @@ import { generateExecutionSteps } from "./generateExecutionSteps.js"
 import { startCompileServerForExecutingPlan } from "./startCompileServerForExecutingPlan.js"
 import { executeConcurrently } from "./executeConcurrently.js"
 
-export const executePlan = async ({
-  cancellationToken,
-  compileServerLogLevel,
-  logger,
-  executionLogLevel,
-
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  jsenvDirectoryClean,
-  importMapFileRelativeUrl,
-  importDefaultExtension,
-
-  compileServerProtocol,
-  compileServerPrivateKey,
-  compileServerCertificate,
-  compileServerIp,
-  compileServerPort,
-  babelPluginMap,
-  convertMap,
-  compileGroupCount,
-
+export const executePlan = async (
   plan,
-  concurrencyLimit,
-  executionDefaultOptions,
-  stopAfterExecute,
-  completedExecutionLogMerging,
-  completedExecutionLogAbbreviation,
-  logSummary,
+  {
+    cancellationToken,
+    compileServerLogLevel,
+    logger,
+    executionLogLevel,
 
-  // coverage parameters
-  coverage,
-  coverageConfig,
-  coverageIncludeMissing,
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    jsenvDirectoryClean,
+    importMapFileRelativeUrl,
+    importDefaultExtension,
 
-  ...rest
-} = {}) => {
+    compileServerProtocol,
+    compileServerPrivateKey,
+    compileServerCertificate,
+    compileServerIp,
+    compileServerPort,
+    babelPluginMap,
+    convertMap,
+    compileGroupCount,
+
+    concurrencyLimit,
+    executionDefaultOptions,
+    stopAfterExecute,
+    completedExecutionLogMerging,
+    completedExecutionLogAbbreviation,
+    logSummary,
+
+    // coverage parameters
+    coverage,
+    coverageConfig,
+    coverageIncludeMissing,
+
+    ...rest
+  } = {},
+) => {
   if (coverage) {
     babelPluginMap = {
       ...babelPluginMap,
@@ -46,35 +48,41 @@ export const executePlan = async ({
     }
   }
 
-  const [
-    executionSteps,
-    { origin: compileServerOrigin, outDirectoryRelativeUrl, stop },
-  ] = await Promise.all([
-    generateExecutionSteps(plan, {
+  const {
+    origin: compileServerOrigin,
+    outDirectoryRelativeUrl,
+    stop,
+  } = await startCompileServerForExecutingPlan({
+    cancellationToken,
+    compileServerLogLevel,
+
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    jsenvDirectoryClean,
+    importMapFileRelativeUrl,
+    importDefaultExtension,
+
+    compileServerProtocol,
+    compileServerPrivateKey,
+    compileServerCertificate,
+    compileServerIp,
+    compileServerPort,
+    keepProcessAlive: true, // to be sure it stays alive
+    babelPluginMap,
+    convertMap,
+    compileGroupCount,
+  })
+
+  const executionSteps = await generateExecutionSteps(
+    {
+      ...plan,
+      [outDirectoryRelativeUrl]: null,
+    },
+    {
       cancellationToken,
       projectDirectoryUrl,
-    }),
-    startCompileServerForExecutingPlan({
-      cancellationToken,
-      compileServerLogLevel,
-
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-      jsenvDirectoryClean,
-      importMapFileRelativeUrl,
-      importDefaultExtension,
-
-      compileServerProtocol,
-      compileServerPrivateKey,
-      compileServerCertificate,
-      compileServerIp,
-      compileServerPort,
-      keepProcessAlive: true, // to be sure it stays alive
-      babelPluginMap,
-      convertMap,
-      compileGroupCount,
-    }),
-  ])
+    },
+  )
 
   const executionResult = await executeConcurrently(executionSteps, {
     cancellationToken,

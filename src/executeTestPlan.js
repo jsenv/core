@@ -128,7 +128,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       }
     }
 
-    const result = await executePlan({
+    const result = await executePlan(testPlan, {
       cancellationToken,
       compileServerLogLevel,
       logger,
@@ -149,7 +149,6 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       convertMap,
       compileGroupCount,
 
-      plan: testPlan,
       concurrencyLimit,
       executionDefaultOptions,
       stopAfterExecute,
