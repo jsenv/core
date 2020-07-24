@@ -261,6 +261,10 @@ const launchBrowser = async (
           })
         : Promise.resolve()
 
+      // for some reason without this 100ms timeout
+      // browser.close() never resolves (playwright does not like something)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       await browser.close()
       await disconnected
     },

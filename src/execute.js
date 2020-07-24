@@ -85,7 +85,7 @@ export const execute = async ({
       ...rest,
     })
 
-    stop("execution-done")
+    stop("single-execution-done")
 
     return result
   })

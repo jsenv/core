@@ -248,7 +248,7 @@ const computeExecutionResult = async ({
       runtimeStartedCallback({ name: value.name, version: value.version })
       return value
     },
-    stop: async ({ runtimeName, runtimeVersion, gracefulStop, stop }, reason) => {
+    stop: async ({ name: runtimeName, version: runtimeVersion, gracefulStop, stop }, reason) => {
       const runtime = `${runtimeName}/${runtimeVersion}`
 
       // external code can cancel using cancellationToken at any time.
@@ -295,10 +295,10 @@ const computeExecutionResult = async ({
         stoppedGracefully = false
       }
 
-      runtimeStoppedCallback({ stoppedGracefully })
       logger.debug(
         `${fileRelativeUrl} ${runtime}: runtime stopped${stoppedGracefully ? " gracefully" : ""}`,
       )
+      runtimeStoppedCallback({ stoppedGracefully })
     },
   })
 
