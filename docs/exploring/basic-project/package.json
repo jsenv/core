@@ -7,9 +7,9 @@
     "node": ">=12.8.0"
   },
   "scripts": {
-    "start-exploring": "node --no-warnings ./start-exploring.js"
+    "start-exploring": "node ./start-exploring.js"
   },
   "devDependencies": {
-    "@jsenv/core": "12.1.0-alpha.6"
+    "@jsenv/core": "14.0.0-alpha.14"
   }
 }

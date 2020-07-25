@@ -23,34 +23,22 @@ Execute JavaScript on multiple environments for testing.
 
 # Presentation
 
-`@jsenv/core` is a test runner. It focuses on executing many JavaSripts files in parallel and report how it goes.
+`@jsenv/core` is a test runner. It focuses on executing many files in parallel and report how it goes.
 
 ![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
 
 It's main strength are:
 
-- Can execute file in browsers (chromium, firefox, webkit)
-- Can execute file in Node.js
-- Easy to debug single test file
+- Can execute html files in browsers (chromium, firefox, webkit)
+- Can execute js files in Node.js
+- Easy to debug single file
 - Can be configured to run jsx, typescript and more
-- Can generate coverage from all file executions
+- Can generate coverage from all executions
 - Rely on top level await to test asynchronous code
 
 # Example
 
-For the example let's start with one test file.
-
-> In reality you would never test `Math.max`, the code below is testing it to show an example unrelated to a specific codebase.
-
-`Math.max.test.js`
-
-```js
-const actual = Math.max(2, 4)
-const expected = 4
-if (actual !== expected) {
-  throw new Error(`Math.max(2, 4) should return ${expected}, got ${actual}`)
-}
-```
+> In order to show code unrelated to a specific codebase the example below is testing `Math.max`. In reality you wouldn't test `Math.max`.
 
 `Math.max.test.html`
 
@@ -62,7 +50,13 @@ if (actual !== expected) {
     <link rel="icon" href="data:," />
   </head>
   <body>
-    <script type="module" src="./Math.max.test.js"></script>
+    <script type="module">
+      const actual = Math.max(2, 4)
+      const expected = 4
+      if (actual !== expected) {
+        throw new Error(`Math.max(2, 4) should return ${expected}, got ${actual}`)
+      }
+    </script>
   </body>
 </html>
 ```
@@ -79,7 +73,7 @@ import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/cor
 executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "./**/*.test.html": {
+    "**/*.test.html": {
       chromium: {
         launch: launchChromiumTab,
       },
@@ -97,13 +91,11 @@ node ./execute-test-plan.js
 
 ![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
 
-As shown by the logs jsenv has launched chromium and firefox and executed `Math.max.test.html`. Check [testing](./docs/testing/readme.md) documentation for more information.
+As shown by the logs jsenv has launched chromium and firefox and executed `Math.max.test.html`. Check [testing](./docs/testing/readme.md) for detailed documentation around `executeTestPlan`.
 
 ## Writing tests
 
-jsenv is more than a test runner, it also provide a dev environment to execute and or debug files one by one. It is very useful to write tests, either for the first time or when a test needs to be updated.
-
-Let's create a script starting this environment.
+Jsenv also helps to write tests. Either for the first time or when it needs to be updated. This section gives a short overview of what it is.
 
 `start-exploring.js`
 
@@ -128,26 +120,28 @@ node ./start-exploring.js
 
 ![exploring command terminal screenshot](./docs/main/main-example-exploring-terminal.png)
 
-When you open that url in a browser you will a page called see jsenv exploring index
+When you open that url in a browser, a page called jsenv exploring index is shown.
 
 ![jsenv exploring index page screenshot](./docs/main/main-example-exploring-index.png)
 
-If you click `Math.max.test.html`, your file will be executed in the browser
+You can click a file to execute it inside the browser. Clicking `Math.max.test.html` loads an other page visible in the following image.
 
 ![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
 
-Then if you update `Math.max.test.js` to make it fail
+As shown in the image above there is an empty blank page. It's because executing `Math.max.test.html` displays nothing on the page and execution did not throw. You can ignore the black toolbar at the bottom of the page for now. This toolbar is documented later.
+
+If you update `Math.max.test.html` to make it fail
 
 ```diff
 - const expected = 4
 + const expected = 3
 ```
 
-The browser will livereload the page and display the failure.
+The browser page is reloaded. Now page displays the failure.
 
 ![test file failing page screenshot](./docs/main/main-example-exploring-failing.png)
 
-There is also a system notification displayed.
+Jsenv also uses [Notification API](https://developer.mozilla.org/en-US/docs/Web/API/Notification) to display a system notification.
 
 ![test file failing notification screenshot](./docs/main/main-example-failing-notif.png)
 
@@ -162,7 +156,7 @@ Browser livereloads again and you can see error is gone.
 
 ![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
 
-There is also a system notification displayed.
+Together with a system notification.
 
 ![test file fixed notification screenshot](./docs/main/main-example-fixed-notif.png)
 
@@ -176,15 +170,13 @@ npm install --save-dev @jsenv/core
 
 `@jsenv/core` is tested on Mac, Windows, Linux on Node.js 14.5.0. Other operating systems and Node.js versions are not tested.
 
-> Jsenv should be compatible with node 12.8 and above but it's no longer guaranteed.
-
 # Configuration
 
 Jsenv can execute standard JavaScript without additional configuration. It means Jsenv support [JavaScript Modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules), destructuring, optional chaining and so on by default.
 
 Jsenv can be configured to be compatible with non-standard JavaScript. For instance using [CommonJS modules](https://code-trotter.com/web/understand-the-different-javascript-modules-formats/#commonjs-cjs), [JSX](https://reactjs.org/docs/introducing-jsx.html) or [TypeScript](https://www.typescriptlang.org).
 
-> Keep in mind one of your dependency may use non-standard JavaScript.
+> Keep in mind one of your dependency may use non-standard JavaScript. For instance react uses CommonJS modules.
 
 ## jsenv.config.js
 
@@ -241,7 +233,7 @@ See also
 
 ## TypeScript
 
-TypeScript is a subset of JavaScript, it requires some configuration if you use it. The following `jsenv.config.js` enable TypeScript.
+TypeScript needs some configuration if you use it. The following `jsenv.config.js` enable TypeScript.
 
 ```js
 import { createRequire } from "module"
@@ -266,10 +258,10 @@ See also
 `@jsenv/core` can execute standard JavaScript and be configured to run non-standard JavaScript. This can be reused for more than executing test files:
 
 - [Exploring](./docs/exploring/readme.md):
-  Start a development server to execute any file, comes with livereloading without configuration.
+  Start a development server to execute html files, comes with livereloading and jsenv toolbar.
 
 - [Executing](./docs/executing/readme.md):
-  Execute one JavaScript file in a browser or Node.js, can be used to debug within VS Code.
+  Execute html file in a browser or js file in Node.js, can be used to debug within VS Code.
 
 - [Bundling](./docs/bundling/readme.md):
   Generate bundles compatible with browsers and Node.js.

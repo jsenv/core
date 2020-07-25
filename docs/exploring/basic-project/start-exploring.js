@@ -5,9 +5,13 @@ startExploring({
   projectDirectoryUrl: new URL("./", import.meta.url),
   explorableConfig: {
     source: {
-      "./src/*.js": true,
+      "*.html": true,
+      "src/**/*.html": true,
+    },
+    test: {
+      "test/**/*.html": true,
     },
   },
-  port: 3456,
+  compileServerPort: 3456,
   livereloading: true,
 })
