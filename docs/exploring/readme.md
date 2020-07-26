@@ -115,8 +115,8 @@ startExploring({
   projectDirectoryUrl: "file:///Users/you/project/",
   explorableConfig: {
     source: {
-      "./src/**/*.js": true,
-      "./src/whatever/**/*.js": false,
+      "src/**/*.html": true,
+      "src/whatever/**/*.html": false,
     },
   },
 })
@@ -143,7 +143,7 @@ For instance you might want to have a tab for source files and one for test file
 
 ## livereloading
 
-`livereloading` parameter is a boolean controlling if the browser will auto reload when a file is saved. This is an optional parameter disabled by default.
+`livereloading` parameter is a boolean controlling if the browser will auto reload when a file is saved. This is an optional parameter enabled by default.
 
 Note that any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file load assets such as image or css these asset files will also trigger livereloading when saved.
 
@@ -187,15 +187,15 @@ This component display the file being executed. Useful to have it visible to rem
 
 This component is an icon representing the html file execution state. The icon can be clicked to get more information as shown in the images below.
 
-- executing
+- executing: html file assets and imports are being loaded, parsed and executed.
 
   ![execution indicator running state screenshot](./execution-variant-running.png)
 
-- failed
+- failed: a script with type module in the html file has thrown an error.
 
   ![execution indicator failed state screenshot](./execution-variant-failed.png)
 
-- completed
+- completed: html file execution is done without error.
 
   ![execution indicator completed state screenshot](./execution-variant-completed.png)
 
@@ -203,29 +203,21 @@ This component is an icon representing the html file execution state. The icon c
 
 This component is an icon representing the livereload connection state. The icon can be clicked to get more information. Each information tooltip comes with an action to control livereload connection. Useful to disable livereload temporarily for instance.
 
-- connecting
+- connecting: You should rarely see this in practice because connection is almost instant.
 
   ![livereload indicator connecting screenshot](./livereload-connecting.png)
 
-  > You should rarely see this in practice because connection is almost instant.
-
-- connected
+- connected: Exploring server works correctly and livereload is fully functionnal.
 
   ![livereload indicator connected screenshot](./livereload-connected.png)
 
-  > Exploring server works correctly and livereload is fully functionnal.
-
-- disabled
+- disabled: Happens after you click disconnect button
 
   ![livereload indicator disabled screenshot](./livereload-off.png)
 
-  > Happens only after you click disconnect button
-
-- disconnected
+- disconnected: Exploring server is down. Livereload will not work. You should check the terminal where exploring server was started.
 
   ![livereload indicator disconnected screenshot](./livereload-disconnected.png)
-
-  > Means exploring server is down. Livereload will not work. You should check the terminal where exploring server was started.
 
 ### settings button
 
@@ -233,17 +225,23 @@ This component is a button opening a setting panel when clicked.
 
 ![settings panel screenshot](./settings.png)
 
-Notifications and Animations are already explained in the image.
+- Notification: Show a notification when file execution fails, is still failing or is fixed.
 
-Dark more toggle allows to keep a good constrast between the toolbar and the website behind it. It switches toolbar theme from dark to light or light to dark.
+- Animation: Enable or disable toolbar animation
+
+- Dark mode: Toogle between dark theme and light theme. Use this to keep a good contract between the toolbar and the website behind it.
+
+Each setting is saved in the browser localStorage.
 
 ### close button
 
-This button closes the toolbar to keep only the website. It does not disable the toolbar it is just hidden and toolbar can be shown back using a discrete box at the bottom right.
+This button closes the toolbar to keep only the website. It does not disable the toolbar that is just hidden and can be shown back using a discrete box at the bottom right.
 
 ![toolbar discrete box screenshot](./toolbar-trigger.png)
 
 > You can also execute `window.__jsenv__.toolbar.show()` for the same effect
+
+> When you close toolbar this information is kept in browser localStorage to keep it hidden.
 
 ## Server parameters
 

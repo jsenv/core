@@ -128,7 +128,7 @@ You can click a file to execute it inside the browser. Clicking `Math.max.test.h
 
 ![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
 
-As shown in the image above there is an empty blank page. It's because executing `Math.max.test.html` displays nothing on the page and execution did not throw. You can ignore the black toolbar at the bottom of the page for now. This toolbar is documented later.
+As shown in the image above there is an empty blank page. It's because executing `Math.max.test.html` displays nothing on the page and execution did not throw. You can ignore the black toolbar at the bottom of the page for now, it is documented later.
 
 If you update `Math.max.test.html` to make it fail
 
