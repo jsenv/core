@@ -229,7 +229,7 @@ This component is a button opening a setting panel when clicked.
 
 - Animation: Enable or disable toolbar animation
 
-- Dark mode: Toogle between dark theme and light theme. Use this to keep a good contract between the toolbar and the website behind it.
+- Dark mode: Toogle between dark theme and light theme. Use this to keep a good contrast between the toolbar and the website behind it.
 
 Each setting is saved in the browser localStorage.
 
