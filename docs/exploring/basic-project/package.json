@@ -4,7 +4,7 @@
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=12.8.0"
+    "node": ">=13.0.0"
   },
   "scripts": {
     "start-exploring": "node ./start-exploring.js"
