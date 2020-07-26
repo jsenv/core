@@ -30,5 +30,11 @@ executeTestPlan({
       },
     },
   },
-  concurrencyLimit: 1,
+  coverageConfig: {
+    "./index.js": true,
+    "./src/**/*.js": true,
+    "./src/**/continuous-testing/": false,
+    "./**/*.test.*": false,
+    "./**/test/": false,
+  },
 })

@@ -17,7 +17,7 @@ import { require } from "../../require.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "../../argUtils.js"
 import { generateExecutionSteps } from "../../executing/generateExecutionSteps.js"
 import { executeConcurrently } from "../../executing/executeConcurrently.js"
-import { startCompileServerForExecutingPlan } from "../../executing/startCompileServerForExecutingPlan.js"
+import { startCompileServer } from "../../compiling/startCompileServer.js"
 import { relativeUrlToExecutionSteps } from "./relativeUrlToExecutionSteps.js"
 import { showContinuousTestingNotification } from "./showContinuousTestingNotification.js"
 import { createRemoveLog, createRunLog } from "./continous-testing-logs.js"
@@ -90,12 +90,9 @@ export const startContinuousTesting = async ({
       }
     }
 
-    const {
-      origin: compileServerOrigin,
-      outDirectoryRelativeUrl,
-    } = await startCompileServerForExecutingPlan({
+    const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
       cancellationToken,
-      logLevel: "off",
+      logLevel: "warn",
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
