@@ -27,8 +27,7 @@
 
 # Execute concrete example
 
-This part helps you to setup a project on your machine to create scripts capable to execute any file inside chromium or node.js.<br />
-You can also reuse the project file structure to understand how to integrate jsenv to execute your files.
+This part helps you to setup a project on your machine to create scripts capable to execute html files inside chromium and js files inside node.js. You can also reuse the project file structure to understand how to integrate jsenv to execute your files.
 
 ## 1 - Setup basic project
 

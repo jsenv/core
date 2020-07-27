@@ -19,7 +19,7 @@ Execute JavaScript on multiple environments for testing.
   - [CommonJS](#CommonJS)
   - [React](#React)
   - [TypeScript](#TypeScript)
-- [Advanced features](#Advanced-features)
+- [API](#API)
 
 # Presentation
 
@@ -27,12 +27,12 @@ Execute JavaScript on multiple environments for testing.
 
 ![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
 
-It's main strength are:
+It's main characteristics are:
 
 - Can execute html files in browsers (chromium, firefox, webkit)
 - Can execute js files in Node.js
 - Easy to debug single file
-- Can be configured to run jsx, typescript and more
+- Framework agnostic: can be configured to run jsx, typescript and more.
 - Can generate coverage from all executions
 - Rely on top level await to test asynchronous code
 
@@ -95,7 +95,9 @@ As shown by the logs jsenv has launched chromium and firefox and executed `Math.
 
 ## Writing tests
 
-Jsenv also helps to write tests. Either for the first time or when it needs to be updated. This section gives a short overview of what it is.
+Jsenv also helps to write tests using a development server to execute test in isolation and one at a time. It comes with livereloading and a toolbar.
+
+The following script would start such server.
 
 `start-exploring.js`
 
@@ -160,8 +162,6 @@ Together with a system notification.
 
 ![test file fixed notification screenshot](./docs/main/main-example-fixed-notif.png)
 
-Check [exploring](./docs/exploring/readme.md) documentation for more information.
-
 # Installation
 
 ```console
@@ -172,9 +172,11 @@ npm install --save-dev @jsenv/core
 
 # Configuration
 
-Jsenv can execute standard JavaScript without additional configuration. It means Jsenv support [JavaScript Modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules), destructuring, optional chaining and so on by default.
+Jsenv can execute standard JavaScript and be configured to run non-standard JavaScript.
 
-Jsenv can be configured to be compatible with non-standard JavaScript. For instance using [CommonJS modules](https://code-trotter.com/web/understand-the-different-javascript-modules-formats/#commonjs-cjs), [JSX](https://reactjs.org/docs/introducing-jsx.html) or [TypeScript](https://www.typescriptlang.org).
+Jsenv support standard JavaScript by default: [JavaScript Modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules), destructuring, optional chaining and so on.
+
+Jsenv can be configured to execute non-standard JavaScript. For instance using [CommonJS modules](https://code-trotter.com/web/understand-the-different-javascript-modules-formats/#commonjs-cjs), [JSX](https://reactjs.org/docs/introducing-jsx.html) or [TypeScript](https://www.typescriptlang.org).
 
 > Keep in mind one of your dependency may use non-standard JavaScript. For instance react uses CommonJS modules.
 
@@ -253,15 +255,20 @@ See also
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
 - [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
 
-# Advanced usage
+# API
 
-`@jsenv/core` can execute standard JavaScript and be configured to run non-standard JavaScript. This can be reused for more than executing test files:
+- [Testing](./docs/testing/readme.md)
 
-- [Exploring](./docs/exploring/readme.md):
+  Executing many files in parallel and report how it goes.
+
+- [Exploring](./docs/exploring/readme.md)
+
   Start a development server to execute html files, comes with livereloading and jsenv toolbar.
 
-- [Executing](./docs/executing/readme.md):
+- [Executing](./docs/executing/readme.md)
+
   Execute html file in a browser or js file in Node.js, can be used to debug within VS Code.
 
-- [Bundling](./docs/bundling/readme.md):
+- [Bundling](./docs/bundling/readme.md)
+
   Generate bundles compatible with browsers and Node.js.

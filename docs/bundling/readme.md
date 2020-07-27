@@ -179,7 +179,7 @@ npm install
 This project contains 3 files that will generate bundle when executed. To generate a bundle you can execute the corresponding file with node.
 
 ```console
-node ./generate-systemjs-bundle.cjs
+node ./generate-systemjs-bundle.js
 ```
 
 Or you can use the preconfigured script from package.json.
