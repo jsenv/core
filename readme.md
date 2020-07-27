@@ -20,6 +20,7 @@ Execute JavaScript on multiple environments for testing.
   - [React](#React)
   - [TypeScript](#TypeScript)
 - [API](#API)
+- [See also](#See-also)
 
 # Presentation
 
@@ -272,3 +273,7 @@ See also
 - [Bundling](./docs/bundling/readme.md)
 
   Generate bundles compatible with browsers and Node.js.
+
+# See also
+
+- [@jsenv/assert](https://github.com/jsenv/jsenv-assert): Test anything using one assertion.
