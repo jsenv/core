@@ -6,6 +6,7 @@ export const generateCommonJsBundle = ({
   bundleDirectoryRelativeUrl = "./dist/commonjs",
   cjsExtension = true,
   node = true,
+  formatOutputOptions = {},
   ...rest
 }) =>
   generateBundle({
@@ -13,6 +14,7 @@ export const generateCommonJsBundle = ({
     bundleDirectoryRelativeUrl,
     node,
     formatOutputOptions: {
+      ...formatOutputOptions,
       ...(cjsExtension
         ? {
             // by default it's [name].js
