@@ -28,7 +28,8 @@ import {
   registerDirectoryLifecycle,
   urlIsInsideOf,
 } from "@jsenv/util"
-import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
+import { COMPILE_ID_GLOBAL_BUNDLE, COMPILE_ID_COMMONJS_BUNDLE } from "../CONSTANTS.js"
+import { fetchUrl } from "../fetchUrl.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { assertImportMapFileRelativeUrl, assertImportMapFileInsideProject } from "../argUtils.js"
 import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
@@ -45,6 +46,7 @@ import {
   sourcemapMainFileUrl,
   sourcemapMappingFileUrl,
   browserJsFileUrl,
+  nodeJsFileUrl,
 } from "../jsenvInternalFiles.js"
 
 export const startCompileServer = async ({
@@ -100,6 +102,9 @@ export const startCompileServer = async ({
   customServices = {},
   livereloadSSE = false,
   scriptManipulations = [],
+
+  browserInternalFileAnticipation = false,
+  nodeInternalFileAnticipation = false,
 }) => {
   assertArguments({
     projectDirectoryUrl,
@@ -275,6 +280,28 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
     })
+  }
+
+  const internalFilesToPing = []
+  if (browserInternalFileAnticipation) {
+    const browserJsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
+    internalFilesToPing.push(
+      `${compileServer.origin}/${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserJsFileRelativeUrl}`,
+    )
+  }
+  if (nodeInternalFileAnticipation) {
+    const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl)
+    internalFilesToPing.push(
+      `${compileServer.origin}/${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`,
+    )
+  }
+  if (internalFilesToPing.length) {
+    logger.info(`preparing jsenv internal files (${internalFilesToPing.length})...`)
+    await internalFilesToPing.reduce(async (previous, internalFileUrl) => {
+      await previous
+      logger.debug(`ping internal file at ${internalFileUrl} to have it in filesystem cache`)
+      return fetchUrl(internalFileUrl, { ignoreHttpsError: true })
+    }, Promise.resolve())
   }
 
   return {

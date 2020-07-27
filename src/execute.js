@@ -64,6 +64,12 @@ export const execute = async ({
         babelPluginMap,
         convertMap,
         compileGroupCount,
+
+        browserInternalFileAnticipation: fileRelativeUrl.endsWith(".html"),
+        nodeInternalFileAnticipation:
+          fileRelativeUrl.endsWith(".js") ||
+          fileRelativeUrl.endsWith(".jsx") ||
+          fileRelativeUrl.endsWith(".ts"),
       },
     )
 

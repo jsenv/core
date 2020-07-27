@@ -1,8 +1,4 @@
-import { urlToRelativeUrl } from "@jsenv/util"
-import { fetchUrl } from "../fetchUrl.js"
-import { COMPILE_ID_GLOBAL_BUNDLE, COMPILE_ID_COMMONJS_BUNDLE } from "../CONSTANTS.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
-import { browserJsFileUrl, nodeJsFileUrl } from "../jsenvInternalFiles.js"
 import { babelPluginInstrument } from "./coverage/babel-plugin-instrument.js"
 import { generateExecutionSteps } from "./generateExecutionSteps.js"
 import { executeConcurrently } from "./executeConcurrently.js"
@@ -71,34 +67,12 @@ export const executePlan = async (
     babelPluginMap,
     convertMap,
     compileGroupCount,
+
+    browserInternalFileAnticipation: Object.keys(plan).some((key) => key.endsWith(".html")),
+    nodeInternalFileAnticipation: Object.keys(plan).some(
+      (key) => key.endsWith(".js") || key.endsWith(".jsx") || key.endsWith(".ts"),
+    ),
   })
-
-  const internalFilesToPing = []
-  const browserRuntimeAnticipatedGeneration = Object.keys(plan).some((key) => key.endsWith(".html"))
-  if (browserRuntimeAnticipatedGeneration) {
-    const browserJsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
-    internalFilesToPing.push(
-      `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserJsFileRelativeUrl}`,
-    )
-  }
-  const nodeRuntimeAnticipatedGeneration = Object.keys(plan).some(
-    (key) => key.endsWith(".js") || key.endsWith(".jsx") || key.endsWith(".ts"),
-  )
-  if (nodeRuntimeAnticipatedGeneration) {
-    const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl)
-    internalFilesToPing.push(
-      `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`,
-    )
-  }
-
-  if (internalFilesToPing.length) {
-    logger.info(`preparing jsenv internal files (${internalFilesToPing.length})...`)
-    await internalFilesToPing.reduce(async (previous, internalFileUrl) => {
-      await previous
-      logger.debug(`ping internal file at ${internalFileUrl} to have it in filesystem cache`)
-      return fetchUrl(internalFileUrl, { ignoreHttpsError: true })
-    }, Promise.resolve())
-  }
 
   const executionSteps = await generateExecutionSteps(
     {
