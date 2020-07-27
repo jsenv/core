@@ -276,4 +276,5 @@ See also
 
 # See also
 
+- [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05): A medium article to write simpler tests introducing jsenv as test runner.
 - [@jsenv/assert](https://github.com/jsenv/jsenv-assert): Test anything using one assertion.
