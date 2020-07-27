@@ -11,11 +11,8 @@ I don't get what server is waiting for.
 The unpredictible nature of this bug associated to being windows only makes it hard to fix.
 
 For now let's launch browser in sequence on windows.
-
-UPDATE: let's try again now that compile server
-pre-generates internal files
 */
-const launchInSequence = false // process.platform === "win32"
+const launchInSequence = process.platform === "win32"
 
 export const launchBrowsers = (launchers, fn) => {
   if (launchInSequence) {
