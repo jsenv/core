@@ -17,8 +17,10 @@ const EVALUATION_STATUS_OK = "evaluation-ok"
 
 // https://nodejs.org/api/process.html#process_signal_events
 const SIGINT_SIGNAL_NUMBER = 2
+const SIGABORT_SIGNAL_NUMBER = 6
 const SIGTERM_SIGNAL_NUMBER = 15
 const SIGINT_EXIT_CODE = 128 + SIGINT_SIGNAL_NUMBER
+const SIGABORT_EXIT_CODE = 128 + SIGABORT_SIGNAL_NUMBER
 const SIGTERM_EXIT_CODE = 128 + SIGTERM_SIGNAL_NUMBER
 // http://man7.org/linux/man-pages/man7/signal.7.html
 // https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
@@ -122,8 +124,14 @@ export const launchNode = async ({
   const registerErrorCallback = (callback) => {
     errorCallbackArray.push(callback)
   }
+  let killing = false
   installProcessErrorListener(childProcess, (error) => {
     if (!childProcess.connected && error.code === "ERR_IPC_DISCONNECTED") {
+      return
+    }
+    // on windows killProcessTree uses taskkill which seems to kill the process
+    // with an exitCode of 1
+    if (process.platform === "win32" && killing && error.exitCode === 1) {
       return
     }
     errorCallbackArray.forEach((callback) => {
@@ -161,6 +169,7 @@ export const launchNode = async ({
   }
 
   const killChildProcess = async ({ signal }) => {
+    killing = true
     logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`)
 
     await new Promise((resolve) => {
@@ -370,7 +379,13 @@ const installProcessErrorListener = (childProcess, callback) => {
   // process.exit(1) in child process or process.exitCode = 1 + process.exit()
   // means there was an error even if we don't know exactly what.
   const removeExitListener = onceProcessEvent(childProcess, "exit", (code) => {
-    if (code !== null && code !== 0 && code !== SIGINT_EXIT_CODE && code !== SIGTERM_EXIT_CODE) {
+    if (
+      code !== null &&
+      code !== 0 &&
+      code !== SIGINT_EXIT_CODE &&
+      code !== SIGTERM_EXIT_CODE &&
+      code !== SIGABORT_EXIT_CODE
+    ) {
       removeErrorListener()
       callback(createExitWithFailureCodeError(code))
     }
@@ -387,7 +402,9 @@ const createExitWithFailureCodeError = (code) => {
       `child exited with 12: forked child wanted to use a non available port for debug`,
     )
   }
-  return new Error(`child exited with ${code}`)
+  const error = new Error(`child exited with ${code}`)
+  error.exitCode = code
+  return error
 }
 
 const onceProcessMessage = (childProcess, type, callback) => {
