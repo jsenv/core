@@ -26,6 +26,7 @@ export const startExploring = async ({
   projectDirectoryUrl,
   toolbar = true,
   livereloading = true,
+  browserInternalFileAnticipation = true,
   ...rest
 }) => {
   return wrapExternalFunctionExecution(async () => {
@@ -63,6 +64,7 @@ export const startExploring = async ({
         "service:exploring-data": (request) => serveExploringData(request),
         "service:explorables": (request) => serveExplorableListAsJson(request),
       },
+      browserInternalFileAnticipation,
       ...rest,
     })
 
