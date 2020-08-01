@@ -494,6 +494,7 @@ const setupServerSentEventsForLivereload = ({
   const projectFileRequested = createCallbackList()
   const projectFileModified = createCallbackList()
   const projectFileRemoved = createCallbackList()
+  const projectFileAdded = createCallbackList()
 
   const projectFileRequestedCallback = (relativeUrl, request) => {
     // I doubt an asset like .js.map will change
@@ -516,6 +517,9 @@ const setupServerSentEventsForLivereload = ({
     },
     removed: ({ relativeUrl }) => {
       projectFileRemoved.notify(relativeUrl)
+    },
+    added: ({ relativeUrl }) => {
+      projectFileAdded.notify(relativeUrl)
     },
     keepProcessAlive: false,
     recursive: true,
@@ -574,7 +578,7 @@ const setupServerSentEventsForLivereload = ({
     })
   })
 
-  const trackMainAndDependencies = (mainRelativeUrl, { modified, removed }) => {
+  const trackMainAndDependencies = (mainRelativeUrl, { modified, removed, added }) => {
     livereloadLogger.debug(`track ${mainRelativeUrl} and its dependencies`)
 
     const unregisterModified = projectFileModified.register((relativeUrl) => {
@@ -583,17 +587,24 @@ const setupServerSentEventsForLivereload = ({
         modified(relativeUrl)
       }
     })
-    const unregisterDeleted = projectFileRemoved.register((relativeUrl) => {
+    const unregisterRemoved = projectFileRemoved.register((relativeUrl) => {
       const dependencySet = getDependencySet(mainRelativeUrl)
       if (dependencySet.has(relativeUrl)) {
         removed(relativeUrl)
+      }
+    })
+    const unregisterAdded = projectFileAdded.register((relativeUrl) => {
+      const dependencySet = getDependencySet(mainRelativeUrl)
+      if (dependencySet.has(relativeUrl)) {
+        added(relativeUrl)
       }
     })
 
     return () => {
       livereloadLogger.debug(`stop tracking ${mainRelativeUrl} and its dependencies.`)
       unregisterModified()
-      unregisterDeleted()
+      unregisterRemoved()
+      unregisterAdded()
     }
   }
 
@@ -686,6 +697,9 @@ const createSSEForLivereloadService = ({
       },
       removed: (relativeUrl) => {
         sseRoom.sendEvent({ type: "file-removed", data: relativeUrl })
+      },
+      added: (relativeUrl) => {
+        sseRoom.sendEvent({ type: "file-added", data: relativeUrl })
       },
     })
 
