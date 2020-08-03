@@ -1,6 +1,23 @@
-#server-indicator button svg {
-  height: 40px;
+#eventsource-indicator button {
+  position: relative;
+}
+
+#eventsource-indicator .event-source-livereload {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  margin: 4px;
+  left: 0;
+  top: 0;
+}
+
+.event-source-livereload[data-variant="enabled"] {
+  color: green;
+}
+
+#eventsource-indicator .event-source-icon {
   width: 40px;
+  height: 40px;
 }
 
 .eventsource-circle {
@@ -56,6 +73,6 @@
   fill: green;
 }
 
-.eventsource-circle[data-variant="disconnected"] {
+.eventsource-circle[data-variant="failed"] {
   fill: #cc0000;
 }

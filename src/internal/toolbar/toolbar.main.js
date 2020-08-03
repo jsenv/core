@@ -134,7 +134,7 @@ const showToolbar = ({ animate = true } = {}) => {
     restoreToolbarIframeParentStyles()
     restoreToolbarIframeStyles()
 
-    hideTooltip(document.querySelector("#server-indicator"))
+    hideTooltip(document.querySelector("#eventsource-indicator"))
     hideTooltip(document.querySelector("#execution-indicator"))
     toolbarVisibilityPreference.set(false)
     if (animate) {

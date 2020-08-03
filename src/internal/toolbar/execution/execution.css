@@ -5,9 +5,9 @@
   margin: 10px;
   transform: scaleX(-1);
   color: #cecece;
-  opacity: 0;
 }
 #loader-icon[data-animate] {
+  opacity: 0;
   transform-origin: center;
   animation: rotateLoader 1s linear infinite !important;
 }

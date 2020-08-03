@@ -1,6 +1,7 @@
 import { removeForceHideElement } from "../util/dom.js"
 import { createPromiseAndHooks } from "../util/util.js"
 import { createPreference } from "../util/preferences.js"
+import { enableVariant } from "../variant/variant.js"
 
 import { toggleTooltip, removeAutoShowTooltip, autoShowTooltip } from "../tooltip/tooltip.js"
 import { connectCompileServerEventSource } from "./connectCompileServerEventSource.js"
@@ -8,61 +9,81 @@ import { connectCompileServerEventSource } from "./connectCompileServerEventSour
 const livereloadingPreference = createPreference("livereloading")
 
 export const initToolbarEventSource = ({ executedFileRelativeUrl }) => {
-  removeForceHideElement(document.querySelector("#server-indicator"))
+  removeForceHideElement(document.querySelector("#eventsource-indicator"))
   connectEventSource(executedFileRelativeUrl)
+
+  const livereloadCheckbox = document.querySelector("#toggle-livereload")
+  livereloadCheckbox.checked = getLivereloadingPreference()
+  livereloadCheckbox.onchange = () => {
+    livereloadingPreference.set(livereloadCheckbox.checked)
+    updateEventSourceIndicator()
+  }
+  updateEventSourceIndicator()
 }
 
+const changes = []
+let eventSourceState = "default"
+let eventSourceHooks = {}
 let eventSourceConnection
 let connectionReadyPromise
 
 const connectEventSource = (executedFileRelativeUrl) => {
-  const reloadPage = () => {
-    window.parent.location.reload(true)
-  }
-
-  // reset livereload indicator ui
-  applyServerIndicator()
+  updateEventSourceIndicator()
   connectionReadyPromise = createPromiseAndHooks()
 
   eventSourceConnection = connectCompileServerEventSource(executedFileRelativeUrl, {
-    onFileModified: () => {
-      // here also update livereload indicator to indicate a file
-      // was modified
-      if (getLivereloadingPreference()) {
+    onFileModified: (file) => {
+      changes.push({ type: "modified", file })
+      updateEventSourceIndicator()
+      const livereloadingEnabled = getLivereloadingPreference()
+      if (livereloadingEnabled) {
         reloadPage()
       }
     },
-    onFileRemoved: () => {
-      // here also update livereload indicator to indicate a file
-      // was removed
-      if (getLivereloadingPreference()) {
+    onFileRemoved: (file) => {
+      changes.push({ type: "removed", file })
+      updateEventSourceIndicator()
+      const livereloadingEnabled = getLivereloadingPreference()
+      if (livereloadingEnabled) {
         reloadPage()
       }
     },
-    onFileAdded: () => {
-      // here also update livereload indicator to indicate a file
-      // was added
-      if (getLivereloadingPreference()) {
+    onFileAdded: (file) => {
+      changes.push({ type: "added", file })
+      updateEventSourceIndicator()
+      const livereloadingEnabled = getLivereloadingPreference()
+      if (livereloadingEnabled) {
         reloadPage()
       }
     },
     onConnecting: ({ cancel }) => {
-      applyServerIndicator("connecting", { abort: cancel })
+      eventSourceState = "connecting"
+      eventSourceHooks = { abort: cancel }
+      updateEventSourceIndicator()
     },
     onConnectionCancelled: ({ connect }) => {
-      applyServerIndicator("disabled", { connect })
+      eventSourceState = "disabled"
+      eventSourceHooks = { connect }
+      updateEventSourceIndicator()
     },
     onConnectionFailed: ({ connect }) => {
-      // make ui indicate the failure providing a way to reconnect manually
-      applyServerIndicator("failed", { reconnect: connect })
+      eventSourceState = "failed"
+      eventSourceHooks = { reconnect: connect }
+      updateEventSourceIndicator()
     },
     onConnected: ({ cancel }) => {
-      applyServerIndicator("connected", { disconnect: cancel })
+      eventSourceState = "connected"
+      eventSourceHooks = { disconnect: cancel }
+      updateEventSourceIndicator()
       connectionReadyPromise.resolve()
     },
   })
 
   eventSourceConnection.connect()
+}
+
+const reloadPage = () => {
+  window.parent.location.reload(true)
 }
 
 const getLivereloadingPreference = () => {
@@ -78,36 +99,70 @@ export const disconnectEventSource = () => {
 
 export const waitEventSourceReady = () => connectionReadyPromise
 
-const applyServerIndicator = (
-  state = "default",
-  { connect, abort, disconnect, reconnect } = {},
-) => {
-  const serverIndicator = document.querySelector("#server-indicator")
-  const variantContainer = serverIndicator.querySelector("[data-variant-container]")
-  const currentVariant = variantContainer.querySelector(`[data-variant="${state}"]`)
+const updateEventSourceIndicator = () => {
+  const { connect, abort, reconnect } = eventSourceHooks
 
-  let variant
-  if (currentVariant) {
-    variant = currentVariant
-  } else {
-    variant = serverIndicator.querySelector(`[data-variant="${state}"]`).cloneNode(true)
-    variantContainer.innerHTML = ""
-    variantContainer.appendChild(variant)
+  const eventSourceIndicator = document.querySelector("#eventsource-indicator")
+  enableVariant(eventSourceIndicator, {
+    eventsource: eventSourceState,
+    livereload: getLivereloadingPreference() ? "on" : "off",
+    changes: changes.length ? "yes" : "no",
+  })
+
+  const variantNode = document.querySelector("#eventsource-indicator > [data-when-active]")
+  variantNode.querySelector("button").onclick = () => {
+    toggleTooltip(eventSourceIndicator)
   }
 
-  serverIndicator.querySelector("button").onclick = () => {
-    toggleTooltip(serverIndicator)
+  if (eventSourceState === "disabled") {
+    variantNode.querySelector("a").onclick = connect
+  } else if (eventSourceState === "connecting") {
+    variantNode.querySelector("a").onclick = abort
+  } else if (eventSourceState === "connected") {
+    removeAutoShowTooltip(eventSourceIndicator)
+    if (changes.length) {
+      const message = variantNode.querySelector(".eventsource-changes-message")
+      message.innerHTML = changesToMessage(changes)
+      variantNode.querySelector(".eventsource-reload-link").onclick = reloadPage
+    }
+  } else if (eventSourceState === "failed") {
+    autoShowTooltip(eventSourceIndicator)
+    variantNode.querySelector("a").onclick = reconnect
+  }
+}
+
+const changesToMessage = (changes) => {
+  const added = []
+  const modified = []
+  const removed = []
+
+  changes.reverse().forEach(({ type, file }) => {
+    if (added.includes(file)) return
+    if (modified.includes(file)) return
+    if (removed.includes(file)) return
+
+    if (type === "added") {
+      added.push(file)
+      return
+    }
+    if (type === "modified") {
+      modified.push(file)
+      return
+    }
+    removed.push(file)
+  })
+
+  let message = ""
+
+  if (added.length) {
+    message += `${added.length} ${added.length > 1 ? "files" : "file"} added`
+  }
+  if (modified.length) {
+    message += `${modified.length} ${modified.length > 1 ? "files" : "file"} modified`
+  }
+  if (removed.length) {
+    message += `${removed.length} ${removed.length > 1 ? "files" : "file"} removed`
   }
 
-  if (state === "disabled") {
-    variant.querySelector("a").onclick = connect
-  } else if (state === "connecting") {
-    variant.querySelector("a").onclick = abort
-  } else if (state === "connected") {
-    removeAutoShowTooltip(serverIndicator)
-    variant.querySelector("a").onclick = disconnect
-  } else if (state === "failed") {
-    autoShowTooltip(serverIndicator)
-    variant.querySelector("a").onclick = reconnect
-  }
+  return message
 }

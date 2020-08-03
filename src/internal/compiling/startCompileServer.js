@@ -314,6 +314,18 @@ export const startCompileServer = async ({
   }
 }
 
+export const computeOutDirectoryRelativeUrl = ({
+  projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl = ".jsenv",
+  outDirectoryName = "out",
+}) => {
+  const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
+  const outDirectoryUrl = resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl)
+  const outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
+
+  return outDirectoryRelativeUrl
+}
+
 const assertArguments = ({
   projectDirectoryUrl,
   importMapFileRelativeUrl,

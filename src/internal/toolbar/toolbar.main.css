@@ -6,6 +6,7 @@
 @import "./settings/settings.css";
 @import "./theme/light-theme.css";
 @import "./tooltip/tooltip.css";
+@import "./variant/variant.css";
 
 * {
   box-sizing: border-box;
@@ -102,6 +103,7 @@ html {
 .iconToolbar {
   height: 40px;
   fill: #cecece;
+  color: #cecece;
 }
 
 .iconToolbar:hover {
