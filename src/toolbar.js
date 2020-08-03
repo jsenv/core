@@ -1,5 +1,8 @@
 import { setAttributes, setStyles } from "./internal/toolbar/util/dom.js"
 
+// immediatly connects to livereloading source
+// but reload only if needed
+
 const injectToolbar = async () => {
   const placeholder = getToolbarPlaceholder()
 
@@ -176,4 +179,8 @@ const iframeToLoadedPromise = (iframe) => {
   })
 }
 
-injectToolbar()
+if (document.readyState === "complete") {
+  injectToolbar()
+} else {
+  window.addEventListener("load", injectToolbar)
+}

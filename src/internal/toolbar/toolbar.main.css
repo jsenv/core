@@ -1,7 +1,7 @@
 @import "./animation/animation.css";
 @import "./execution/execution.css";
 @import "./focus/focus.css";
-@import "./livereloading/livereloading.css";
+@import "./eventsource/eventsource.css";
 @import "./responsive/overflow-menu.css";
 @import "./settings/settings.css";
 @import "./theme/light-theme.css";

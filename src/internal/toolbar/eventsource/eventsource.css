@@ -1,18 +1,18 @@
-#livereload-indicator button svg {
+#server-indicator button svg {
   height: 40px;
   width: 40px;
 }
 
-.livereload-circle {
+.eventsource-circle {
   stroke: black;
   stroke-width: 0;
 }
 
-.livereload-circle[data-variant="off"] {
+.eventsource-circle[data-variant="off"] {
   fill: #cecece;
 }
 
-.livereload-circle[data-variant="connecting"] {
+.eventsource-circle[data-variant="connecting"] {
   fill: #cecece;
   animation: wink 1.2s ease-out infinite;
   transform-origin: center;
@@ -30,7 +30,7 @@
   }
 }
 
-.livereload-ring {
+.eventsource-ring {
   stroke: rgba(206, 206, 206, 0.46);
   stroke-width: 4;
   fill: transparent;
@@ -52,10 +52,10 @@
   }
 }
 
-.livereload-circle[data-variant="connected"] {
+.eventsource-circle[data-variant="connected"] {
   fill: green;
 }
 
-.livereload-circle[data-variant="disconnected"] {
+.eventsource-circle[data-variant="disconnected"] {
   fill: #cc0000;
 }
