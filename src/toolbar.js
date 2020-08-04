@@ -1,5 +1,14 @@
 import { setAttributes, setStyles } from "./internal/toolbar/util/dom.js"
 
+/*
+We must connect to livereload server asap so that if a file is modified
+while page is loading we are notified of it.
+
+Otherwise it's possible that a file is loaded and used by browser then its modified before
+livereload connection is established.
+
+When toolbar is loaded it will open an other connection to server sent events and close this one.
+*/
 const connectLivereload = () => {
   const { EventSource } = window
   if (typeof EventSource !== "function") {

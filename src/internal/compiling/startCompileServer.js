@@ -548,55 +548,6 @@ const setupServerSentEventsForLivereload = ({
     return dependencySet
   }
 
-  /**
-
-  the reason why sometimes livereloading does not happen:
-
-  1. js file modified (state A)
-  2. browser reloads
-  3. browser request html file (dependency set becomes empty)
-  4. browser request js file -> recognized as dependency
-  5. js file modified (state B)
-  6. client connects to livereload
-
-  At this stage browser has loaded and executed js file on state A
-  File was modified for state B before browser could connect to livereload
-  state B is the current state but browser shows state A
-
-  the correct fix for that would be to connect to livereload events before doing anything else
-  but jsenv toolbar is injected as a script type module
-  (it means the script is non blocking even if in head tag)
-
-  moreover it loads an html page which loads the toolbar script
-  all this is non blocking and delay the moment browser gets
-  connected to event source
-
-  several ideas:
-
-  - put a blocking script tag in main page head to together with toolbar injection
-    :( need yet an other script to inject in recente browsers using uncompiled files
-
-  - make toolbar a regular script tag instead of module
-    :( cannot hope for using type="module" in recent browsers
-
-  - whenever browser request html page send a cookie to keep track of files until the browser
-  connects to livereload
-    :( hack, ugly
-
-  - first line of toolbar should be to inject a regular script tag (or just connect to event source)
-  while the toolbar script is loading we could still miss livereload events
-  but that's only one file, should be very fast
-
-    :) type module friendly
-    :) no hack
-    :( have to share the livereload connection logic between src/toolbar.js
-    and src/internal/toolbar/toolbar.main.js
-    But I could use a basic connection in src/toolbar.js with the most simple implem
-    and keep the nice integration in toolbar later (and kill the connection from the main page)
-
-
-  */
-
   // each time a file is requested for the first time its dependencySet is computed
   projectFileRequested.register((mainRelativeUrl) => {
     // for now node use case of livereloading + node.js
