@@ -1,4 +1,5 @@
 import { removeForceHideElement, activateToolbarSection } from "../util/dom.js"
+import { enableVariant } from "../variant/variant.js"
 import { createHorizontalBreakpoint } from "../util/responsive.js"
 import { toggleTooltip } from "../tooltip/tooltip.js"
 import { notifyExecutionResult } from "../notification/toolbar.notification.js"
@@ -40,13 +41,11 @@ export const renderExecutionInToolbar = ({ executedFileRelativeUrl }) => {
 
 const applyExecutionIndicator = ({ status = "running", startTime, endTime } = {}) => {
   const executionIndicator = document.querySelector("#execution-indicator")
-  const variant = executionIndicator.querySelector(`[data-variant="${status}"]`).cloneNode(true)
-  const variantContainer = executionIndicator.querySelector("[data-variant-container]")
-  variantContainer.innerHTML = ""
-  variantContainer.appendChild(variant)
+  enableVariant(executionIndicator, { execution: status })
+  const variantNode = executionIndicator.querySelector("[data-when-active]")
 
-  executionIndicator.querySelector("button").onclick = () => toggleTooltip(executionIndicator)
-  executionIndicator.querySelector(".tooltip").textContent = computeText({
+  variantNode.querySelector("button").onclick = () => toggleTooltip(executionIndicator)
+  variantNode.querySelector(".tooltip").textContent = computeText({
     status,
     startTime,
     endTime,

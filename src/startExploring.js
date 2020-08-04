@@ -9,7 +9,10 @@ import { COMPILE_ID_GLOBAL_BUNDLE } from "./internal/CONSTANTS.js"
 import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
-import { startCompileServer } from "./internal/compiling/startCompileServer.js"
+import {
+  startCompileServer,
+  computeOutDirectoryRelativeUrl,
+} from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 import {
   exploringRedirectorHtmlFileUrl,
@@ -24,17 +27,37 @@ export const startExploring = async ({
   cancellationToken = createCancellationTokenForProcess(),
   explorableConfig = jsenvExplorableConfig,
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
+  outDirectoryName,
   toolbar = true,
   livereloading = true,
+  browserInternalFileAnticipation = false,
   ...rest
 }) => {
   return wrapExternalFunctionExecution(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-    let redirectFiles
-    let serveExploringData
-    let serveExplorableListAsJson
+    const outDirectoryRelativeUrl = computeOutDirectoryRelativeUrl({
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      outDirectoryName,
+    })
+
+    const redirectFiles = createRedirectFilesService({
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+    })
+    const serveExploringData = createExploringDataService({
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+      explorableConfig,
+    })
+    const serveExplorableListAsJson = createExplorableListAsJsonService({
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+      explorableConfig,
+    })
 
     const compileServer = await startCompileServer({
       cancellationToken,
@@ -63,27 +86,10 @@ export const startExploring = async ({
         "service:exploring-data": (request) => serveExploringData(request),
         "service:explorables": (request) => serveExplorableListAsJson(request),
       },
+      jsenvDirectoryRelativeUrl,
+      outDirectoryName,
+      browserInternalFileAnticipation,
       ...rest,
-    })
-
-    const {
-      // importMapFileRelativeUrl,
-      outDirectoryRelativeUrl,
-    } = compileServer
-
-    redirectFiles = createRedirectFilesService({
-      projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-    })
-    serveExploringData = createExploringDataService({
-      projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-      explorableConfig,
-    })
-    serveExplorableListAsJson = createExplorableListAsJsonService({
-      projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-      explorableConfig,
     })
 
     return compileServer

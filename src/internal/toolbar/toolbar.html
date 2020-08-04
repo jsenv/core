@@ -27,183 +27,178 @@
         </section>
 
         <section id="execution-indicator">
-          <div>
-            <div data-variant-container></div>
-            <div style="display: none;">
-              <div data-variant="default">
-                <div class="tooltip">
-                  Unknown state
-                </div>
-              </div>
-              <div data-variant="running">
-                <div class="tooltip">
-                  Executing...
-                </div>
-                <button>
-                  <svg id="loader-icon" data-animate>
-                    <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
-                  </svg>
-                </button>
-              </div>
-              <div data-variant="completed">
-                <div class="tooltip">
-                  Execution completed in X ms
-                </div>
-                <button>
-                  <svg id="check-icon" data-animate viewBox="0 0 52 52">
-                    <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
-                  </svg>
-                </button>
-              </div>
-              <div data-variant="errored">
-                <div class="tooltip">
-                  Execution failed in X ms
-                </div>
-                <button>
-                  <svg id="cross-icon" data-animate viewBox="0 0 512 512">
-                    <rect
-                      id="cross_p1"
-                      x="239.397"
-                      y="67.518"
-                      rx="17"
-                      ry="17"
-                      transform="matrix(0.7071 0.7071 -0.7071 0.7071 255.9995 -106.0389)"
-                    />
-                    <rect
-                      id="cross_p2"
-                      x="239.397"
-                      y="67.519"
-                      rx="17"
-                      ry="17"
-                      transform="matrix(0.7071 -0.7071 0.7071 0.7071 -106.039 256.0001)"
-                    />
-                  </svg>
-                </button>
-              </div>
+          <div data-when="execution:default">
+            <div class="tooltip">
+              Unknown state
             </div>
+          </div>
+          <div data-when="execution:running">
+            <div class="tooltip">
+              Executing...
+            </div>
+            <button>
+              <svg id="loader-icon" data-animate>
+                <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
+              </svg>
+            </button>
+          </div>
+          <div data-when="execution:completed">
+            <div class="tooltip">
+              Execution completed in X ms
+            </div>
+            <button>
+              <svg id="check-icon" data-animate viewBox="0 0 52 52">
+                <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+              </svg>
+            </button>
+          </div>
+          <div data-when="execution:errored">
+            <div class="tooltip">
+              Execution failed in X ms
+            </div>
+            <button>
+              <svg id="cross-icon" data-animate viewBox="0 0 512 512">
+                <rect
+                  id="cross_p1"
+                  x="239.397"
+                  y="67.518"
+                  rx="17"
+                  ry="17"
+                  transform="matrix(0.7071 0.7071 -0.7071 0.7071 255.9995 -106.0389)"
+                />
+                <rect
+                  id="cross_p2"
+                  x="239.397"
+                  y="67.519"
+                  rx="17"
+                  ry="17"
+                  transform="matrix(0.7071 -0.7071 0.7071 0.7071 -106.039 256.0001)"
+                />
+              </svg>
+            </button>
           </div>
         </section>
 
         <div style="width: 100%;"></div>
 
-        <section id="livereload-indicator" data-responsive-toolbar-element>
-          <div>
-            <div data-variant-container></div>
-            <div style="display: none;">
-              <div data-variant="default">
-                <div class="tooltip">
-                  Unknown state
-                </div>
-                <button>
-                  <svg>
-                    <circle class="livereload-circle" cx="20" cy="20" r="5" />
+        <section id="eventsource-indicator" data-responsive-toolbar-element>
+          <div data-when="eventsource:default">
+            <div class="tooltip">
+              Unknown state
+            </div>
+            <button>
+              <svg>
+                <circle class="eventsource-circle" cx="20" cy="20" r="5" />
+              </svg>
+            </button>
+          </div>
+          <div data-when="eventsource:connecting">
+            <div class="tooltip">
+              Connecting to server...
+              <br />
+              <div class="tooltipAction">
+                <a href="javascript:void(0);">
+                  <svg id="powerOffIconSvg" class="tooltipIcon">
+                    <use
+                      xlink:href="./eventsource/toolbar-power-off-icon.svg#toolbar-power-off-icon"
+                    ></use>
                   </svg>
-                </button>
-              </div>
-              <div data-variant="off">
-                <div class="tooltip">
-                  Livereloading disabled
-                  <br />
-                  <div class="tooltipAction">
-                    <a href="javascript:void(0);">
-                      <svg id="powerIconSvg" class="tooltipIcon">
-                        <use
-                          xlink:href="./livereloading/toolbar-power-icon.svg#toolbar-power-icon"
-                        ></use>
-                      </svg>
-                      connect
-                    </a>
-                  </div>
-                </div>
-                <button>
-                  <svg>
-                    <circle class="livereload-circle" data-variant="off" cx="20" cy="20" r="5" />
-                  </svg>
-                </button>
-              </div>
-              <div data-variant="connecting">
-                <div class="tooltip">
-                  Connecting to livereload server...
-                  <br />
-                  <div class="tooltipAction">
-                    <a href="javascript:void(0);">
-                      <svg id="powerOffIconSvg" class="tooltipIcon">
-                        <use
-                          xlink:href="./livereloading/toolbar-power-off-icon.svg#toolbar-power-off-icon"
-                        ></use>
-                      </svg>
-                      cancel
-                    </a>
-                  </div>
-                </div>
-                <button>
-                  <svg>
-                    <circle
-                      class="livereload-circle"
-                      data-variant="connecting"
-                      cx="20"
-                      cy="20"
-                      r="5"
-                    />
-                    <circle class="livereload-ring" cx="20" cy="20" r="13" />
-                  </svg>
-                </button>
-              </div>
-              <div data-variant="connected">
-                <div class="tooltip">
-                  Connected to livereload server
-                  <br />
-                  <div class="tooltipAction">
-                    <a href="javascript:void(0);">
-                      <svg id="powerOffIconSvg" class="tooltipIcon">
-                        <use
-                          xlink:href="./livereloading/toolbar-power-off-icon.svg#toolbar-power-off-icon"
-                        ></use>
-                      </svg>
-                      disconnect
-                    </a>
-                  </div>
-                </div>
-                <button>
-                  <svg>
-                    <circle
-                      class="livereload-circle"
-                      data-variant="connected"
-                      cx="20"
-                      cy="20"
-                      r="5"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <div data-variant="disconnected">
-                <div class="tooltip">
-                  Disconnected from livereload server
-                  <br />
-                  <div class="tooltipAction">
-                    <a href="javascript:void(0);">
-                      <svg id="powerIconSvg" class="tooltipIcon">
-                        <use
-                          xlink:href="./livereloading/toolbar-power-icon.svg#toolbar-power-icon"
-                        ></use>
-                      </svg>
-                      reconnect
-                    </a>
-                  </div>
-                </div>
-                <button>
-                  <svg>
-                    <circle
-                      class="livereload-circle"
-                      data-variant="disconnected"
-                      cx="20"
-                      cy="20"
-                      r="5"
-                    />
-                  </svg>
-                </button>
+                  cancel
+                </a>
               </div>
             </div>
+            <button>
+              <svg>
+                <circle
+                  class="eventsource-circle"
+                  data-variant="connecting"
+                  cx="20"
+                  cy="20"
+                  r="5"
+                />
+                <circle class="eventsource-ring" cx="20" cy="20" r="13" />
+              </svg>
+            </button>
+          </div>
+          <div data-when="eventsource:failed">
+            <div class="tooltip">
+              Cannot connect to server
+              <br />
+              <div class="tooltipAction">
+                <a href="javascript:void(0);">
+                  <svg id="powerIconSvg" class="tooltipIcon">
+                    <use xlink:href="./eventsource/toolbar-power-icon.svg#toolbar-power-icon"></use>
+                  </svg>
+                  retry
+                </a>
+              </div>
+            </div>
+            <button>
+              <svg>
+                <circle class="eventsource-circle" data-variant="failed" cx="20" cy="20" r="5" />
+              </svg>
+            </button>
+          </div>
+          <div data-when="eventsource:connected">
+            <div class="tooltip">
+              Connected to server
+              <br />
+              Livereload: <span data-when="livereload:on" style="color: green;">ON</span
+              ><span data-when="livereload:off" style="color: grey;">OFF</span>
+              <br />
+              Changes:
+              <span data-when="changes:yes"
+                ><a
+                  class="eventsource-changes-link"
+                  style="color: inherit;"
+                  href="javascript:void(0);"
+                  >X</a
+                ></span
+              ><span data-when="changes:no">none</span>
+              <div data-when="changes:yes">
+                <br />
+                <a
+                  class="eventsource-reload-link"
+                  style="color: inherit;"
+                  href="javascript:void(0);"
+                  >reload</a
+                >
+              </div>
+            </div>
+            <button>
+              <div data-when="livereload:on">
+                <svg class="event-source-livereload iconToolbar" data-variant="enabled">
+                  <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
+                </svg>
+              </div>
+              <div data-when="changes:yes">
+                <svg class="event-source-livereload iconToolbar" data-variant="disabled">
+                  <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
+                </svg>
+              </div>
+              <svg class="event-source-icon">
+                <circle class="eventsource-circle" data-variant="connected" cx="20" cy="20" r="5" />
+              </svg>
+            </button>
+          </div>
+          <div data-when="eventsource:disabled">
+            <div class="tooltip">
+              Disconnected from server
+              <br />
+              <div class="tooltipAction">
+                <a href="javascript:void(0);">
+                  <svg id="powerIconSvg" class="tooltipIcon">
+                    <use xlink:href="./eventsource/toolbar-power-icon.svg#toolbar-power-icon"></use>
+                  </svg>
+                  connect
+                </a>
+              </div>
+            </div>
+            <button>
+              <svg>
+                <circle class="eventsource-circle" data-variant="off" cx="20" cy="20" r="5" />
+              </svg>
+            </button>
           </div>
         </section>
 
@@ -237,6 +232,24 @@
                 </label>
                 <div class="category-subtitle">
                   Send system notification when execution fails or is fixed.
+                </div>
+              </div>
+              <div class="settings-box-item">
+                <div class="category-title">
+                  <svg width="20px" height="20px">
+                    <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
+                  </svg>
+                  Livereload
+                </div>
+                <label class="switch" data-contains-hidden-input>
+                  <input id="toggle-livereload" type="checkbox" />
+                  <div>
+                    <div class="slider"></div>
+                    <div class="square"></div>
+                  </div>
+                </label>
+                <div class="category-subtitle">
+                  Reload page when a file is modified, deleted or created.
                 </div>
               </div>
               <div class="settings-box-item">

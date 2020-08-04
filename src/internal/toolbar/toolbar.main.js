@@ -12,7 +12,7 @@ import { renderToolbarNotification } from "./notification/toolbar.notification.j
 import { renderToolbarTheme } from "./theme/toolbar.theme.js"
 import { renderToolbarAnimation } from "./animation/toolbar.animation.js"
 import { renderExecutionInToolbar } from "./execution/toolbar.execution.js"
-import { renderToolbarLivereload } from "./livereloading/toolbar.livereloading.js"
+import { initToolbarEventSource } from "./eventsource/toolbar.eventsource.js"
 import { makeToolbarResponsive } from "./responsive/toolbar.responsive.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
@@ -67,7 +67,7 @@ const renderToolbar = async () => {
   renderExecutionInToolbar({ executedFileRelativeUrl })
   // this might become active but we need to detect this somehow
   deactivateToolbarSection(document.querySelector("#file-list-link"))
-  renderToolbarLivereload({ executedFileRelativeUrl })
+  initToolbarEventSource({ executedFileRelativeUrl })
 
   // if user click enter or space quickly while closing toolbar
   // it will cancel the closing
@@ -134,7 +134,7 @@ const showToolbar = ({ animate = true } = {}) => {
     restoreToolbarIframeParentStyles()
     restoreToolbarIframeStyles()
 
-    hideTooltip(document.querySelector("#livereload-indicator"))
+    hideTooltip(document.querySelector("#eventsource-indicator"))
     hideTooltip(document.querySelector("#execution-indicator"))
     toolbarVisibilityPreference.set(false)
     if (animate) {

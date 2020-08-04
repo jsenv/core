@@ -1,18 +1,40 @@
-#livereload-indicator button svg {
-  height: 40px;
-  width: 40px;
+#eventsource-indicator button {
+  position: relative;
 }
 
-.livereload-circle {
+#eventsource-indicator button svg {
+  width: 40px;
+  height: 40px;
+}
+
+#eventsource-indicator .event-source-livereload {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  margin: 4px;
+  left: 0;
+  top: 0;
+}
+
+.event-source-livereload[data-variant="enabled"] {
+  color: green;
+}
+
+#eventsource-indicator .event-source-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.eventsource-circle {
   stroke: black;
   stroke-width: 0;
 }
 
-.livereload-circle[data-variant="off"] {
+.eventsource-circle[data-variant="off"] {
   fill: #cecece;
 }
 
-.livereload-circle[data-variant="connecting"] {
+.eventsource-circle[data-variant="connecting"] {
   fill: #cecece;
   animation: wink 1.2s ease-out infinite;
   transform-origin: center;
@@ -30,7 +52,7 @@
   }
 }
 
-.livereload-ring {
+.eventsource-ring {
   stroke: rgba(206, 206, 206, 0.46);
   stroke-width: 4;
   fill: transparent;
@@ -52,10 +74,10 @@
   }
 }
 
-.livereload-circle[data-variant="connected"] {
+.eventsource-circle[data-variant="connected"] {
   fill: green;
 }
 
-.livereload-circle[data-variant="disconnected"] {
+.eventsource-circle[data-variant="failed"] {
   fill: #cc0000;
 }

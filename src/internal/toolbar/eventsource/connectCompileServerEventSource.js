@@ -1,14 +1,7 @@
 import { connectEventSource } from "./connectEventSource.js"
 import { jsenvLogger } from "../util/jsenvLogger.js"
-import { createPreference } from "../util/preferences.js"
 
-const livereloadingPreference = createPreference("livereloading")
-
-export const getLivereloadingPreference = () => {
-  return livereloadingPreference.has() ? livereloadingPreference.get() : true
-}
-
-export const createLivereloading = (
+export const connectCompileServerEventSource = (
   fileRelativeUrl,
   {
     onFileModified,
@@ -17,6 +10,7 @@ export const createLivereloading = (
     onConnectionCancelled,
     onConnectionFailed,
     onConnected,
+    lastEventId,
   },
 ) => {
   const eventSourceUrl = `${window.origin}/${fileRelativeUrl}`
@@ -24,7 +18,6 @@ export const createLivereloading = (
   let cancel = () => {}
 
   const connect = () => {
-    livereloadingPreference.set(true)
     return new Promise((resolve) => {
       cancel = connectEventSource(
         eventSourceUrl,
@@ -43,7 +36,6 @@ export const createLivereloading = (
             jsenvLogger.debug(`connecting to ${eventSourceUrl}`)
             onConnecting({
               cancel: () => {
-                livereloadingPreference.set(false)
                 cancel()
               },
             })
@@ -53,7 +45,6 @@ export const createLivereloading = (
             resolve(true)
             onConnected({
               cancel: () => {
-                livereloadingPreference.set(false)
                 cancel()
               },
             })
@@ -70,6 +61,7 @@ export const createLivereloading = (
           },
           retryMaxAttempt: Infinity,
           retryAllocatedMs: 20 * 1000,
+          lastEventId,
         },
       )
     })

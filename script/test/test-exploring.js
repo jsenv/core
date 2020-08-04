@@ -10,4 +10,5 @@ executeTestPlan({
       },
     },
   },
+  // coverage: true,
 })

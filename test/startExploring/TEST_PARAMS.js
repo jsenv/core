@@ -9,5 +9,5 @@ export const START_EXPLORING_TEST_PARAMS = {
   jsenvDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
   keepProcessAlive: false,
-  livereloading: false,
+  // livereloading: false,
 }

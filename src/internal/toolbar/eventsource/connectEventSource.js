@@ -8,6 +8,7 @@ export const connectEventSource = (
     failed = () => {},
     retryMaxAttempt = Infinity,
     retryAllocatedMs = Infinity,
+    lastEventId,
   } = {},
 ) => {
   const { EventSource } = window
@@ -21,7 +22,6 @@ export const connectEventSource = (
   // depending on connectionStatus
   let cancelCurrentConnection = () => {}
 
-  let lastEventId
   const reconnect = () => {
     attemptConnection(
       lastEventId ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId) : eventSourceUrl,

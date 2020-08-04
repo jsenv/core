@@ -10,6 +10,6 @@
     "start-exploring": "node ./start-exploring.js"
   },
   "devDependencies": {
-    "@jsenv/core": "14.0.0-alpha.14"
+    "@jsenv/core": "14.1.0-alpha.1"
   }
 }

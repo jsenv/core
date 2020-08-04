@@ -54,13 +54,14 @@ export const openBrowserPage = async (
   if (inheritCoverage) {
     const { coverageMap } = executionResult
     global.__coverage__ = composeCoverageMap(global.__coverage__ || {}, coverageMap || {})
-    delete executionResult.coverageMap
-    const { fileExecutionResultMap } = executionResult
-    Object.keys(fileExecutionResultMap).forEach((file) => {
-      const fileExecutionResult = fileExecutionResultMap[file]
-      delete fileExecutionResult.coverageMap
-    })
   }
+
+  delete executionResult.coverageMap
+  const { fileExecutionResultMap } = executionResult
+  Object.keys(fileExecutionResultMap).forEach((file) => {
+    const fileExecutionResult = fileExecutionResultMap[file]
+    delete fileExecutionResult.coverageMap
+  })
 
   return {
     browser,
