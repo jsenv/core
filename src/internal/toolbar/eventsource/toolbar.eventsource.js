@@ -28,12 +28,28 @@ let eventSourceHooks = {}
 let eventSourceConnection
 let connectionReadyPromise
 
+const onCssFileChanged = () => {
+  const links = Array.from(window.parent.document.getElementsByTagName("link"))
+  links.forEach((link) => {
+    if (link.rel === "stylesheet") {
+      const url = new URL(link.href)
+      url.searchParams.set("t", Date.now())
+      link.href = String(url)
+    }
+  })
+}
+
 const connectEventSource = (executedFileRelativeUrl) => {
   updateEventSourceIndicator()
   connectionReadyPromise = createPromiseAndHooks()
 
   eventSourceConnection = connectCompileServerEventSource(executedFileRelativeUrl, {
     onFileModified: (file) => {
+      if (file.endsWith(".css")) {
+        onCssFileChanged(file, "modified")
+        return
+      }
+
       latestChangeMap[file] = "modified"
       updateEventSourceIndicator()
       const livereloadingEnabled = getLivereloadingPreference()
@@ -42,6 +58,11 @@ const connectEventSource = (executedFileRelativeUrl) => {
       }
     },
     onFileRemoved: (file) => {
+      if (file.endsWith(".css")) {
+        onCssFileChanged(file, "removed")
+        return
+      }
+
       latestChangeMap[file] = "removed"
       updateEventSourceIndicator()
       const livereloadingEnabled = getLivereloadingPreference()
@@ -50,6 +71,11 @@ const connectEventSource = (executedFileRelativeUrl) => {
       }
     },
     onFileAdded: (file) => {
+      if (file.endsWith(".css")) {
+        onCssFileChanged(file, "added")
+        return
+      }
+
       latestChangeMap[file] = "added"
       updateEventSourceIndicator()
       const livereloadingEnabled = getLivereloadingPreference()
