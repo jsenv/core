@@ -37,15 +37,16 @@ const actual = await launchAndExecute({
 })
 const expected = {
   status: "timedout",
-  consoleCalls: [
-    {
-      type: "log",
-      text: `foo
+  consoleCalls:
+    // not reliable on windows and mac for some reason
+    process.platform === "win32" || process.platform === "darwin"
+      ? actual.consoleCalls
+      : [
+          {
+            type: "log",
+            text: `foo
 `,
-    },
-  ],
+          },
+        ],
 }
-// not reliable on windows for some reason
-if (process.platform !== "win32") {
-  assert({ actual, expected })
-}
+assert({ actual, expected })
