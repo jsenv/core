@@ -10,6 +10,7 @@ export const connectCompileServerEventSource = (
     onConnectionCancelled,
     onConnectionFailed,
     onConnected,
+    lastEventId,
   },
 ) => {
   const eventSourceUrl = `${window.origin}/${fileRelativeUrl}`
@@ -60,6 +61,7 @@ export const connectCompileServerEventSource = (
           },
           retryMaxAttempt: Infinity,
           retryAllocatedMs: 20 * 1000,
+          lastEventId,
         },
       )
     })

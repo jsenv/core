@@ -21,7 +21,8 @@ export const initToolbarEventSource = ({ executedFileRelativeUrl }) => {
   updateEventSourceIndicator()
 }
 
-const changes = []
+const parentEventSource = window.parent.__jsenv_eventsource__()
+const latestChangeMap = parentEventSource.latestChangeMap
 let eventSourceState = "default"
 let eventSourceHooks = {}
 let eventSourceConnection
@@ -33,7 +34,7 @@ const connectEventSource = (executedFileRelativeUrl) => {
 
   eventSourceConnection = connectCompileServerEventSource(executedFileRelativeUrl, {
     onFileModified: (file) => {
-      changes.push({ type: "modified", file })
+      latestChangeMap[file] = "modified"
       updateEventSourceIndicator()
       const livereloadingEnabled = getLivereloadingPreference()
       if (livereloadingEnabled) {
@@ -41,7 +42,7 @@ const connectEventSource = (executedFileRelativeUrl) => {
       }
     },
     onFileRemoved: (file) => {
-      changes.push({ type: "removed", file })
+      latestChangeMap[file] = "removed"
       updateEventSourceIndicator()
       const livereloadingEnabled = getLivereloadingPreference()
       if (livereloadingEnabled) {
@@ -49,7 +50,7 @@ const connectEventSource = (executedFileRelativeUrl) => {
       }
     },
     onFileAdded: (file) => {
-      changes.push({ type: "added", file })
+      latestChangeMap[file] = "added"
       updateEventSourceIndicator()
       const livereloadingEnabled = getLivereloadingPreference()
       if (livereloadingEnabled) {
@@ -76,7 +77,9 @@ const connectEventSource = (executedFileRelativeUrl) => {
       eventSourceHooks = { disconnect: cancel }
       updateEventSourceIndicator()
       connectionReadyPromise.resolve()
+      parentEventSource.disconnect()
     },
+    lastEventId: parentEventSource.lastEventId,
   })
 
   eventSourceConnection.connect()
@@ -103,10 +106,11 @@ const updateEventSourceIndicator = () => {
   const { connect, abort, reconnect } = eventSourceHooks
 
   const eventSourceIndicator = document.querySelector("#eventsource-indicator")
+  const changeCount = Object.keys(latestChangeMap).length
   enableVariant(eventSourceIndicator, {
     eventsource: eventSourceState,
     livereload: getLivereloadingPreference() ? "on" : "off",
-    changes: changes.length ? "yes" : "no",
+    changes: changeCount > 0 ? "yes" : "no",
   })
 
   const variantNode = document.querySelector("#eventsource-indicator > [data-when-active]")
@@ -120,49 +124,18 @@ const updateEventSourceIndicator = () => {
     variantNode.querySelector("a").onclick = abort
   } else if (eventSourceState === "connected") {
     removeAutoShowTooltip(eventSourceIndicator)
-    if (changes.length) {
-      const message = variantNode.querySelector(".eventsource-changes-message")
-      message.innerHTML = changesToMessage(changes)
+    if (changeCount) {
+      const changeLink = variantNode.querySelector(".eventsource-changes-link")
+      changeLink.innerHTML = changeCount
+      changeLink.onclick = () => {
+        console.log(JSON.stringify(latestChangeMap, null, "  "), latestChangeMap)
+        // eslint-disable-next-line no-alert
+        window.parent.alert(JSON.stringify(latestChangeMap, null, "  "))
+      }
       variantNode.querySelector(".eventsource-reload-link").onclick = reloadPage
     }
   } else if (eventSourceState === "failed") {
     autoShowTooltip(eventSourceIndicator)
     variantNode.querySelector("a").onclick = reconnect
   }
-}
-
-const changesToMessage = (changes) => {
-  const added = []
-  const modified = []
-  const removed = []
-
-  changes.reverse().forEach(({ type, file }) => {
-    if (added.includes(file)) return
-    if (modified.includes(file)) return
-    if (removed.includes(file)) return
-
-    if (type === "added") {
-      added.push(file)
-      return
-    }
-    if (type === "modified") {
-      modified.push(file)
-      return
-    }
-    removed.push(file)
-  })
-
-  let message = ""
-
-  if (added.length) {
-    message += `${added.length} ${added.length > 1 ? "files" : "file"} added`
-  }
-  if (modified.length) {
-    message += `${modified.length} ${modified.length > 1 ? "files" : "file"} modified`
-  }
-  if (removed.length) {
-    message += `${removed.length} ${removed.length > 1 ? "files" : "file"} removed`
-  }
-
-  return message
 }

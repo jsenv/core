@@ -109,7 +109,13 @@
             </div>
             <button>
               <svg>
-                <circle class="eventsource-circle" data-variant="connecting" cx="20" cy="20" r="5" />
+                <circle
+                  class="eventsource-circle"
+                  data-variant="connecting"
+                  cx="20"
+                  cy="20"
+                  r="5"
+                />
                 <circle class="eventsource-ring" cx="20" cy="20" r="13" />
               </svg>
             </button>
@@ -135,17 +141,28 @@
           </div>
           <div data-when="eventsource:connected">
             <div class="tooltip">
-              <div data-when="livereload:on">Connected to server<br />Livereload enabled</div>
-              <div data-when="livereload:off">
-                <div data-when="changes:yes">
-                  Connected to server</br>
-                  <span class="eventsource-changes-message">
-                    X changes
-                  </span>
-                  <br />
-                  <a class="eventsource-reload-link" style="color:inherit" href="javascript:void(0);">reload</a>
-                </div>
-                <div data-when="changes:no">Connected to server</div>
+              Connected to server
+              <br />
+              Livereload: <span data-when="livereload:on" style="color: green;">ON</span
+              ><span data-when="livereload:off" style="color: grey;">OFF</span>
+              <br />
+              Changes:
+              <span data-when="changes:yes"
+                ><a
+                  class="eventsource-changes-link"
+                  style="color: inherit;"
+                  href="javascript:void(0);"
+                  >X</a
+                ></span
+              ><span data-when="changes:no">none</span>
+              <div data-when="changes:yes">
+                <br />
+                <a
+                  class="eventsource-reload-link"
+                  style="color: inherit;"
+                  href="javascript:void(0);"
+                  >reload</a
+                >
               </div>
             </div>
             <button>

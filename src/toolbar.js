@@ -1,7 +1,84 @@
 import { setAttributes, setStyles } from "./internal/toolbar/util/dom.js"
 
-// immediatly connects to livereloading source
-// but reload only if needed
+const connectLivereload = () => {
+  const { EventSource } = window
+  if (typeof EventSource !== "function") {
+    return () => {}
+  }
+
+  const getLivereloadPreference = () => {
+    return localStorage.hasOwnProperty("livereload")
+      ? JSON.parse(localStorage.getItem("livereload"))
+      : undefined
+  }
+
+  const url = document.location.href
+  let isOpen = false
+  let lastEventId
+  const latestChangeMap = {}
+
+  const events = {
+    "file-modified": ({ data }) => {
+      latestChangeMap[data] = "modified"
+      if (getLivereloadPreference()) {
+        window.location.reload(true)
+      }
+    },
+    "file-removed": ({ data }) => {
+      latestChangeMap[data] = "removed"
+      if (getLivereloadPreference()) {
+        window.location.reload(true)
+      }
+    },
+    "file-added": ({ data }) => {
+      latestChangeMap[data] = "added"
+      if (getLivereloadPreference()) {
+        window.location.reload(true)
+      }
+    },
+  }
+
+  const eventSourceOrigin = new URL(url).origin
+  const eventSource = new EventSource(url, {
+    withCredentials: true,
+  })
+
+  const disconnect = () => {
+    eventSource.close()
+  }
+
+  eventSource.onopen = () => {
+    isOpen = true
+  }
+
+  eventSource.onerror = (errorEvent) => {
+    if (errorEvent.target.readyState === EventSource.CLOSED) {
+      isOpen = false
+    }
+  }
+
+  Object.keys(events).forEach((eventName) => {
+    eventSource.addEventListener(eventName, (e) => {
+      if (e.origin === eventSourceOrigin) {
+        if (e.lastEventId) {
+          lastEventId = e.lastEventId
+        }
+        events[eventName](e)
+      }
+    })
+  })
+
+  return () => {
+    return {
+      isOpen,
+      latestChangeMap,
+      lastEventId,
+      disconnect,
+    }
+  }
+}
+// eslint-disable-next-line camelcase
+window.__jsenv_eventsource__ = connectLivereload()
 
 const injectToolbar = async () => {
   const placeholder = getToolbarPlaceholder()
