@@ -28,7 +28,22 @@ let eventSourceHooks = {}
 let eventSourceConnection
 let connectionReadyPromise
 
-const onCssFileChanged = () => {
+const handleFileChange = (file, type) => {
+  latestChangeMap[file] = type
+  updateEventSourceIndicator()
+  const livereloadingEnabled = getLivereloadingPreference()
+  if (livereloadingEnabled) {
+    if (file.endsWith(".css")) {
+      reloadAllCss()
+      delete latestChangeMap[file]
+      updateEventSourceIndicator()
+    } else {
+      reloadPage()
+    }
+  }
+}
+
+const reloadAllCss = () => {
   const links = Array.from(window.parent.document.getElementsByTagName("link"))
   links.forEach((link) => {
     if (link.rel === "stylesheet") {
@@ -39,49 +54,41 @@ const onCssFileChanged = () => {
   })
 }
 
+const reloadPage = () => {
+  window.parent.location.reload(true)
+}
+
+const reloadChanges = () => {
+  const fullReloadRequired = Object.keys(latestChangeMap).some((key) => !key.endsWith(".css"))
+  if (fullReloadRequired) {
+    reloadPage()
+    return
+  }
+  const cssReloadRequired = Object.keys(latestChangeMap).some((key) => key.endsWith(".css"))
+  if (cssReloadRequired) {
+    reloadAllCss()
+    Object.keys(latestChangeMap).forEach((key) => {
+      if (key.endsWith(".css")) {
+        delete latestChangeMap[key]
+      }
+      updateEventSourceIndicator()
+    })
+  }
+}
+
 const connectEventSource = (executedFileRelativeUrl) => {
   updateEventSourceIndicator()
   connectionReadyPromise = createPromiseAndHooks()
 
   eventSourceConnection = connectCompileServerEventSource(executedFileRelativeUrl, {
     onFileModified: (file) => {
-      if (file.endsWith(".css")) {
-        onCssFileChanged(file, "modified")
-        return
-      }
-
-      latestChangeMap[file] = "modified"
-      updateEventSourceIndicator()
-      const livereloadingEnabled = getLivereloadingPreference()
-      if (livereloadingEnabled) {
-        reloadPage()
-      }
+      handleFileChange(file, "modified")
     },
     onFileRemoved: (file) => {
-      if (file.endsWith(".css")) {
-        onCssFileChanged(file, "removed")
-        return
-      }
-
-      latestChangeMap[file] = "removed"
-      updateEventSourceIndicator()
-      const livereloadingEnabled = getLivereloadingPreference()
-      if (livereloadingEnabled) {
-        reloadPage()
-      }
+      handleFileChange(file, "removed")
     },
     onFileAdded: (file) => {
-      if (file.endsWith(".css")) {
-        onCssFileChanged(file, "added")
-        return
-      }
-
-      latestChangeMap[file] = "added"
-      updateEventSourceIndicator()
-      const livereloadingEnabled = getLivereloadingPreference()
-      if (livereloadingEnabled) {
-        reloadPage()
-      }
+      handleFileChange(file, "added")
     },
     onConnecting: ({ cancel }) => {
       eventSourceState = "connecting"
@@ -109,10 +116,6 @@ const connectEventSource = (executedFileRelativeUrl) => {
   })
 
   eventSourceConnection.connect()
-}
-
-const reloadPage = () => {
-  window.parent.location.reload(true)
 }
 
 const getLivereloadingPreference = () => {
@@ -158,7 +161,7 @@ const updateEventSourceIndicator = () => {
         // eslint-disable-next-line no-alert
         window.parent.alert(JSON.stringify(latestChangeMap, null, "  "))
       }
-      variantNode.querySelector(".eventsource-reload-link").onclick = reloadPage
+      variantNode.querySelector(".eventsource-reload-link").onclick = reloadChanges
     }
   } else if (eventSourceState === "failed") {
     autoShowTooltip(eventSourceIndicator)
