@@ -31,7 +31,7 @@ export const startExploring = async ({
   outDirectoryName,
   toolbar = true,
   livereloading = true,
-  browserInternalFileAnticipation = true,
+  browserInternalFileAnticipation = false,
   ...rest
 }) => {
   return wrapExternalFunctionExecution(async () => {

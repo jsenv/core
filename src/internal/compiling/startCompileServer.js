@@ -187,8 +187,8 @@ export const startCompileServer = async ({
       trackMainAndDependencies: sseSetup.trackMainAndDependencies,
     })
     customServices = {
-      ...customServices,
       "service:livereload sse": serveSSEForLivereload,
+      ...customServices,
     }
   }
 

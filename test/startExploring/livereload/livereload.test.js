@@ -27,7 +27,7 @@ const exploringServer = await startExploring({
 const { browser, page, pageLogs, pageErrors, executionResult } = await openBrowserPage(
   `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
   {
-    // headless: false,
+    headless: false,
   },
 )
 {
@@ -53,6 +53,21 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
   }
   assert({ actual, expected })
 }
+
+// perform a file change while toolbar is not connected
+{
+  const navigationPromise = page.waitForNavigation({ timeout: 0 })
+  writeFileSystemNodeModificationTime(filePath, Date.now())
+  await navigationPromise
+  const afterReloadExecutionResult = await getHtmlExecutionResult(page)
+  const actual = afterReloadExecutionResult.fileExecutionResultMap["./livereload.main.js"].namespace
+  const expected = {
+    default: 43,
+  }
+  assert({ actual, expected })
+}
+
+// here give time to toolbar to connect to sse
 {
   await new Promise((resolve) => setTimeout(resolve, 10000)) // give time to the toolbar to connect to SSE
   const navigationPromise = page.waitForNavigation()
@@ -61,7 +76,7 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
   const afterReloadExecutionResult = await getHtmlExecutionResult(page)
   const actual = afterReloadExecutionResult.fileExecutionResultMap["./livereload.main.js"].namespace
   const expected = {
-    default: 43,
+    default: 44,
   }
   assert({ actual, expected })
 }

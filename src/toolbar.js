@@ -9,7 +9,7 @@ const connectLivereload = () => {
   const getLivereloadPreference = () => {
     return localStorage.hasOwnProperty("livereload")
       ? JSON.parse(localStorage.getItem("livereload"))
-      : undefined
+      : true
   }
 
   const url = document.location.href
