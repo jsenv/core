@@ -13,8 +13,8 @@
   - [toolbar](#toolbar)
     - [back button](#back-button)
     - [file input](#file-input)
-    - [execution indicator](#execution-icon)
-    - [livereload indicator](#livereload-indicator)
+    - [execution indicator](#execution-indicator)
+    - [server indicator](#server-indicator)
     - [settings button](#settings-button)
     - [close button](#close-button)
   - [Server parameters](#Server-parameters)
@@ -199,39 +199,73 @@ This component is an icon representing the html file execution state. The icon c
 
   ![execution indicator completed state screenshot](./execution-variant-completed.png)
 
-### livereload indicator
+### server indicator
 
-This component is an icon representing the livereload connection state. The icon can be clicked to get more information. Each information tooltip comes with an action to control livereload connection. Useful to disable livereload temporarily for instance.
+This component is an icon representing the server connection state. The icon can be clicked to get more information.
 
-- connecting: You should rarely see this in practice because connection is almost instant.
+#### connecting
 
-  ![livereload indicator connecting screenshot](./livereload-connecting.png)
+You should rarely see this in practice because connection is almost instant.
 
-- connected: Exploring server works correctly and livereload is fully functionnal.
+![server indicator connecting screenshot](./server-connecting.png)
 
-  ![livereload indicator connected screenshot](./livereload-connected.png)
+#### connected with livereloading
 
-- disabled: Happens after you click disconnect button
+Exploring server works correctly and livereload is fully functionnal.
 
-  ![livereload indicator disabled screenshot](./livereload-off.png)
+![server indicator connected screenshot](./server-connected-and-livereloading.png)
 
-- disconnected: Exploring server is down. Livereload will not work. You should check the terminal where exploring server was started.
+You can disable livereloading using [livereload settings](#livereload-setting)
 
-  ![livereload indicator disconnected screenshot](./livereload-disconnected.png)
+#### connected without livereloading
+
+Exploring server works correctly and livereload is disabled.
+
+![server indicator connected without livereloading screenshot](./server-connected-without-livereloading.png)
+
+If files are modified while livereload is disabled the component is updated to give the information:
+
+- This icon is different
+- Number of changes is displayed and can be clicked to see what has changed since page was loaded.
+- There is a reload link to encourage reloading the page
+
+![server indicator connected without livereloading screenshot](./server-connected-and-changes.png)
+
+You can enable livereloading using [livereload settings](#livereload-setting)
+
+#### disconnected
+
+Happens after you click disconnect button
+
+![server indicator disconnected screenshot](./server-disconnected.png)
+
+#### failed
+
+Exploring server is down. Livereload will not work. You should check the terminal where exploring server was started.
+
+![server indicator failed screenshot](./server-failed.png)
 
 ### settings button
 
-This component is a button opening a setting panel when clicked.
+This component is a button opening a setting panel when clicked. Each setting is saved in the browser localStorage.
 
 ![settings panel screenshot](./settings.png)
 
-- Notification: Show a notification when file execution fails, is still failing or is fixed.
+#### Notification setting
 
-- Animation: Enable or disable toolbar animation
+Show a notification when file execution fails, is still failing or is fixed.
 
-- Dark mode: Toogle between dark theme and light theme. Use this to keep a good contrast between the toolbar and the website behind it.
+#### Livereload setting
 
-Each setting is saved in the browser localStorage.
+Useful to disable temporarily livereload for any legit reason you may have. This button switches server indicator between [connected with livereloading](#connected-with-livereloading) and [connected without livereloading](#connected-without-livereloading) states.
+
+#### Animation setting
+
+Useful in case the toolbar animation are annoying to you. There is very few of them like when it's opened or closed. It exists mostly because they more animation than that in the past.
+
+#### Dark mode setting
+
+Toogle between dark theme and light theme. Use this to keep a good contrast between the toolbar and the website behind it.
 
 ### close button
 

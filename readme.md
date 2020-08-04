@@ -113,7 +113,6 @@ startExploring({
     },
   },
   compileServerPort: 3456,
-  livereloading: true,
 })
 ```
 
