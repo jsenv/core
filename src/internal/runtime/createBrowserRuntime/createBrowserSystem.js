@@ -64,6 +64,19 @@ export const createBrowserSystem = ({
     return {
       url: importerUrl,
       resolve: (specifier) => resolve(specifier, importerUrl),
+      // https://github.com/pikapkg/esm-hmr
+      // https://github.com/systemjs/systemjs/pull/2014
+      hot: {
+        accept: (deps, handler) => {
+          if (typeof deps === "function") {
+            handler = deps
+            deps = []
+          }
+        },
+        dispose: () => {},
+        decline: () => {},
+        invalidate: () => {},
+      },
     }
   }
 
