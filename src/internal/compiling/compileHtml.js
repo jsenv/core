@@ -21,6 +21,9 @@ export const compileHtml = (
     replaceImportmapScript = true,
     // resolveScriptSrc = (src) => src,
     generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
+    generateInlineScriptCode = ({ src }) => `<script>
+  window.__jsenv__.importFile(${JSON.stringify(src)})
+</script>`,
   } = {},
 ) => {
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
@@ -32,6 +35,7 @@ export const compileHtml = (
     replaceModuleScripts,
     replaceImportmapScript,
     generateInlineScriptSrc,
+    generateInlineScriptCode,
   })
   // resolveScripts(document, resolveScriptSrc)
 
@@ -146,7 +150,12 @@ const valueToHtmlAttributeValue = (value) => {
 
 const polyfillScripts = (
   document,
-  { replaceModuleScripts, replaceImportmapScript, generateInlineScriptSrc },
+  {
+    replaceModuleScripts,
+    replaceImportmapScript,
+    generateInlineScriptSrc,
+    generateInlineScriptCode,
+  },
 ) => {
   /*
   <script type="module" src="*" /> are going to be inlined
@@ -171,7 +180,7 @@ const polyfillScripts = (
       const nodeSrc = getAttributeValue(node, "src")
       if (nodeSrc) {
         mutations.push(() => {
-          const script = parseHtmlAsSingleElement(generateScriptForJsenv(nodeSrc))
+          const script = parseHtmlAsSingleElement(generateInlineScriptCode({ src: nodeSrc }))
           // inherit script attributes (except src and type)
           script.attrs = [
             ...script.attrs,
@@ -192,7 +201,7 @@ const polyfillScripts = (
             hash,
             id: nodeId,
           })
-          const script = parseHtmlAsSingleElement(generateScriptForJsenv(src))
+          const script = parseHtmlAsSingleElement(generateInlineScriptCode({ src }))
           // inherit script attributes (except src and type)
           script.attrs = [
             ...script.attrs,
@@ -241,12 +250,6 @@ const getAttributeValue = (node, attributeName) => {
 
 const getAttributeByName = (attributes, attributeName) =>
   attributes.find((attr) => attr.name === attributeName)
-
-const generateScriptForJsenv = (src) => {
-  return `<script>
-      window.__jsenv__.importFile(${JSON.stringify(src)})
-    </script>`
-}
 
 const createScriptContentHash = (content) => {
   const hash = createHash("sha256")
