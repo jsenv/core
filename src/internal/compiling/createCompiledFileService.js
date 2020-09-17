@@ -196,14 +196,9 @@ export const createCompiledFileService = ({
 
         compile: async (htmlBeforeCompilation) => {
           const { htmlAfterCompilation, scriptsExternalized } = compileHtml(htmlBeforeCompilation, {
+            importmapSrc: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
+            importmapType: "jsenv-importmap",
             scriptManipulations: [
-              {
-                // when html file already contains an importmap script tag
-                // its src is replaced to target the importmap used for compiled files
-                replaceExisting: true,
-                type: "importmap",
-                src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
-              },
               {
                 src: `/${browserBundledJsFileRelativeUrl}`,
               },

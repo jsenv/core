@@ -17,8 +17,9 @@ export const compileHtml = (
   htmlBeforeCompilation,
   {
     scriptManipulations = [],
+    importmapSrc,
+    importmapType,
     replaceModuleScripts = true,
-    replaceImportmapScript = true,
     // resolveScriptSrc = (src) => src,
     generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
     generateInlineScriptCode = ({ src }) => `<script>
@@ -29,11 +30,24 @@ export const compileHtml = (
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
   const document = parse5.parse(htmlBeforeCompilation)
 
+  if (importmapSrc) {
+    scriptManipulations = [
+      ...scriptManipulations,
+      {
+        // when html file already contains an importmap script tag
+        // its src is replaced to target the importmap used for compiled files
+        replaceExisting: true,
+        type: "importmap",
+        src: importmapSrc,
+      },
+    ]
+  }
+
   manipulateScripts(document, scriptManipulations)
 
   const scriptsExternalized = polyfillScripts(document, {
     replaceModuleScripts,
-    replaceImportmapScript,
+    importmapType,
     generateInlineScriptSrc,
     generateInlineScriptCode,
   })
@@ -150,12 +164,7 @@ const valueToHtmlAttributeValue = (value) => {
 
 const polyfillScripts = (
   document,
-  {
-    replaceModuleScripts,
-    replaceImportmapScript,
-    generateInlineScriptSrc,
-    generateInlineScriptCode,
-  },
+  { replaceModuleScripts, importmapType, generateInlineScriptSrc, generateInlineScriptCode },
 ) => {
   /*
   <script type="module" src="*" /> are going to be inlined
@@ -215,9 +224,9 @@ const polyfillScripts = (
       }
     }
 
-    if (replaceImportmapScript && nodeType === "importmap") {
+    if (importmapType && nodeType === "importmap") {
       const typeAttribute = getAttributeByName(node.attrs, "type")
-      typeAttribute.value = "jsenv-importmap"
+      typeAttribute.value = importmapType
     }
   })
 
