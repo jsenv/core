@@ -45,7 +45,7 @@ export const compileHtml = (
 
   manipulateScripts(document, scriptManipulations)
 
-  const scriptsExternalized = polyfillScripts(document, {
+  const { inlineScriptTanspiled, remoteScriptTranspiled } = polyfillScripts(document, {
     replaceModuleScripts,
     importmapType,
     generateInlineScriptSrc,
@@ -56,7 +56,8 @@ export const compileHtml = (
   const htmlAfterCompilation = parse5.serialize(document)
   return {
     htmlAfterCompilation,
-    scriptsExternalized,
+    inlineScriptTanspiled,
+    remoteScriptTranspiled,
   }
 }
 
@@ -175,7 +176,8 @@ const polyfillScripts = (
   For that reason we perform mutation in the end
   */
   const mutations = []
-  const scriptsExternalized = {}
+  const inlineScriptTanspiled = {}
+  const remoteScriptTranspiled = {}
 
   visitDocument(document, (node) => {
     if (node.nodeName !== "script") {
@@ -190,12 +192,15 @@ const polyfillScripts = (
       if (nodeSrc) {
         mutations.push(() => {
           const script = parseHtmlAsSingleElement(generateInlineScriptCode({ src: nodeSrc }))
+          const { attrs = [] } = script
           // inherit script attributes (except src and type)
           script.attrs = [
-            ...script.attrs,
+            ...attrs,
             ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
           ]
           replaceNode(node, script)
+
+          inlineScriptTanspiled[nodeSrc] = true
         })
         return
       }
@@ -207,18 +212,19 @@ const polyfillScripts = (
           const nodeId = getAttributeValue(node, "id")
           const hash = createScriptContentHash(scriptText)
           const src = generateInlineScriptSrc({
-            hash,
             id: nodeId,
+            hash,
           })
           const script = parseHtmlAsSingleElement(generateInlineScriptCode({ src }))
+          const { attrs = [] } = script
           // inherit script attributes (except src and type)
           script.attrs = [
-            ...script.attrs,
+            ...attrs,
             ...attributes.filter((attr) => attr.name !== "type" && attr.name !== "src"),
           ]
           replaceNode(node, script)
 
-          scriptsExternalized[src] = scriptText
+          remoteScriptTranspiled[src] = scriptText
         })
         return
       }
@@ -232,7 +238,7 @@ const polyfillScripts = (
 
   mutations.forEach((fn) => fn())
 
-  return scriptsExternalized
+  return { inlineScriptTanspiled, remoteScriptTranspiled }
 }
 
 // const resolveScripts = (document, resolveScriptSrc) => {

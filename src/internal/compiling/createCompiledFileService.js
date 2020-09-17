@@ -195,37 +195,40 @@ export const createCompiledFileService = ({
         request,
 
         compile: async (htmlBeforeCompilation) => {
-          const { htmlAfterCompilation, scriptsExternalized } = compileHtml(htmlBeforeCompilation, {
-            importmapSrc: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
-            importmapType: "jsenv-importmap",
-            scriptManipulations: [
-              {
-                src: `/${browserBundledJsFileRelativeUrl}`,
+          const { htmlAfterCompilation, inlineScriptTanspiled } = compileHtml(
+            htmlBeforeCompilation,
+            {
+              importmapSrc: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
+              importmapType: "jsenv-importmap",
+              scriptManipulations: [
+                {
+                  src: `/${browserBundledJsFileRelativeUrl}`,
+                },
+                // todo: this is dirty because it means
+                // compile server is aware of exploring and jsenv toolbar
+                // instead this should be moved to startExploring
+                ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptManipulations),
+              ],
+              generateInlineScriptSrc: ({ id, hash }) => {
+                const scriptAssetUrl = generateCompiledFileAssetUrl(
+                  compiledFileUrl,
+                  id ? `${id}.js` : `${hash}.js`,
+                )
+                return `./${urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`
               },
-              // todo: this is dirty because it means
-              // compile server is aware of exploring and jsenv toolbar
-              // instead this should be moved to startExploring
-              ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptManipulations),
-            ],
-            generateInlineScriptSrc: ({ id, hash }) => {
-              const scriptAssetUrl = generateCompiledFileAssetUrl(
-                compiledFileUrl,
-                id ? `${id}.js` : `${hash}.js`,
-              )
-              return `./${urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`
             },
-          })
+          )
 
           let assets = []
           let assetsContent = []
           await Promise.all(
-            Object.keys(scriptsExternalized).map(async (scriptSrc) => {
+            Object.keys(inlineScriptTanspiled).map(async (scriptSrc) => {
               const scriptAssetUrl = resolveUrl(scriptSrc, compiledFileUrl)
               const scriptBasename = urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)
               const scriptOriginalFileUrl = resolveUrl(scriptBasename, originalFileUrl)
               const scriptAfterTransformFileUrl = resolveUrl(scriptBasename, compiledFileUrl)
 
-              const scriptBeforeCompilation = scriptsExternalized[scriptSrc]
+              const scriptBeforeCompilation = inlineScriptTanspiled[scriptSrc]
               const scriptTransformResult = await transformJs({
                 projectDirectoryUrl,
                 code: scriptBeforeCompilation,

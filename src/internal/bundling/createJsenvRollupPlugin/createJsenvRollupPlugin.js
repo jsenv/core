@@ -1,4 +1,5 @@
 /* eslint-disable import/max-dependencies */
+// import { basename } from "path"
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import {
   isFileSystemPath,
@@ -9,10 +10,12 @@ import {
   writeFile,
   comparePathnames,
 } from "@jsenv/util"
+
 import { appendSourceMappingAsExternalUrl } from "../../sourceMappingURLUtils.js"
 import { fetchUrl } from "../../fetchUrl.js"
 import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
 import { transformJs } from "../../compiling/js-compilation-service/transformJs.js"
+import { compileHtml } from "../../compiling/compileHtml.js"
 import { findAsyncPluginNameInBabelPluginMap } from "../../compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
@@ -102,10 +105,21 @@ export const createJsenvRollupPlugin = async ({
     return false
   }
 
+  const inlineScripts = {}
+  const htmlAfterCompilationMap = {}
+
   const jsenvRollupPlugin = {
     name: "jsenv",
 
-    resolveId: (specifier, importer = compileDirectoryRemoteUrl) => {
+    resolveId(specifier, importer) {
+      if (importer === undefined) {
+        if (specifier.endsWith(".html")) {
+          importer = compileServerOriginForRollup
+        } else {
+          importer = compileDirectoryRemoteUrl
+        }
+      }
+
       if (nativeModulePredicate(specifier)) {
         logger.debug(`${specifier} is native module -> marked as external`)
         return false
@@ -135,11 +149,12 @@ export const createJsenvRollupPlugin = async ({
 
     // },
 
-    load: async (urlForRollup) => {
+    async load(urlForRollup) {
+      const moduleInfo = this.getModuleInfo(urlForRollup)
       const realUrl = urlToRealUrl(urlForRollup) || urlForRollup
 
       logger.debug(`loads ${realUrl}`)
-      const { responseUrl, contentRaw, content, map } = await loadModule(realUrl)
+      const { responseUrl, contentRaw, content, map } = await loadModule(realUrl, moduleInfo)
 
       const responseUrlForRollup = urlToUrlForRollup(responseUrl) || responseUrl
       saveModuleContent(responseUrlForRollup, {
@@ -230,23 +245,39 @@ export const createJsenvRollupPlugin = async ({
     },
 
     generateBundle: async (outputOptions, bundle) => {
-      if (!manifestFile) {
-        return
+      const htmlEntryChunks = {}
+      Object.keys(bundle).forEach((chunkName) => {
+        const chunk = bundle[chunkName]
+        const { facadeModuleId, isEntry } = chunk
+        if (facadeModuleId.endsWith(".html") && isEntry) {
+          htmlEntryChunks[chunkName] = chunk
+        }
+      })
+
+      Object.keys(htmlEntryChunks).forEach((chunkName) => {
+        const chunk = htmlEntryChunks[chunkName]
+        chunk.code = htmlAfterCompilationMap[chunk.facadeModuleId]
+        // chunk.fileName = basename(chunk.facadeModuleId)
+
+        delete bundle[chunkName]
+        bundle[chunk.fileName] = chunk
+      })
+
+      if (manifestFile) {
+        const mappings = {}
+        Object.keys(bundle).forEach((key) => {
+          const chunk = bundle[key]
+          mappings[`${chunk.name}.js`] = chunk.fileName
+        })
+        const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
+        const manifest = {}
+        mappingKeysSorted.forEach((key) => {
+          manifest[key] = mappings[key]
+        })
+
+        const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
+        await writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "))
       }
-
-      const mappings = {}
-      Object.keys(bundle).forEach((key) => {
-        const chunk = bundle[key]
-        mappings[`${chunk.name}.js`] = chunk.fileName
-      })
-      const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
-      const manifest = {}
-      mappingKeysSorted.forEach((key) => {
-        manifest[key] = mappings[key]
-      })
-
-      const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
-      await writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "))
     },
 
     writeBundle: async (options, bundle) => {
@@ -292,7 +323,25 @@ export const createJsenvRollupPlugin = async ({
     return null
   }
 
-  const loadModule = async (moduleUrl) => {
+  const loadModule = async (moduleUrl, moduleInfo) => {
+    if (moduleUrl in inlineScripts) {
+      const codeInput = inlineScripts[moduleUrl]
+
+      const { code, map } = await transformJs({
+        projectDirectoryUrl,
+        code: codeInput,
+        url: moduleUrl,
+        babelPluginMap,
+      })
+
+      return {
+        responseUrl: moduleUrl,
+        contentRaw: code,
+        content: code,
+        map,
+      }
+    }
+
     const moduleResponse = await fetchModule(moduleUrl)
     const contentType = moduleResponse.headers["content-type"] || ""
     const moduleText = await moduleResponse.text()
@@ -326,7 +375,7 @@ export const createJsenvRollupPlugin = async ({
     if (contentType === "text/html") {
       return {
         ...commonData,
-        content: htmlToJavascript(moduleText),
+        content: htmlToJavascript(moduleText, moduleInfo),
       }
     }
 
@@ -371,10 +420,48 @@ ${moduleUrl}`)
     return `export default ${jsonString}`
   }
 
-  const htmlToJavascript = (htmlString) => {
+  const htmlToJavascript = (htmlString, { isEntry, ...rest }) => {
     if (minify) {
       htmlString = minifyHtml(htmlString, minifyHtmlOptions)
     }
+
+    if (isEntry) {
+      // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
+      const { htmlAfterCompilation, inlineScriptTanspiled, remoteScriptTranspiled } = compileHtml(
+        htmlString,
+        {
+          scriptManipulations: [
+            {
+              src: `/node_modules/systemjs/dist/s.min.js`,
+            },
+          ],
+          // TODO: importmapSrc: '',
+          importmapType: "systemjs-importmap",
+          generateInlineScriptCode: ({ src }) =>
+            `<script>window.System.import(${JSON.stringify(src)})</script>`,
+          // generateInlineScriptSrc: ({ id, hash }) => ``,
+        },
+      )
+
+      htmlAfterCompilationMap[rest.id] = htmlAfterCompilation
+      debugger
+
+      const javaScriptSource = Object.keys({
+        ...inlineScriptTanspiled,
+        ...remoteScriptTranspiled,
+      }).map((scriptSrc) => {
+        return `import ${JSON.stringify(scriptSrc)}`
+      }).join(`
+`)
+
+      // pour les scripts externalisé il faudrait les mettre dans une
+      // sorte de cache et lorsqu'on veut les load on peut les trouver
+      // les scripts remote rien besoin de faire de spécial
+      Object.assign(inlineScripts, inlineScriptTanspiled)
+
+      return javaScriptSource
+    }
+
     return `export default ${JSON.stringify(htmlString)}`
   }
 
