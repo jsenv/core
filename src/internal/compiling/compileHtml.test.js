@@ -3,7 +3,8 @@ import {
   parseHtmlString,
   parseHtmlDocumentRessources,
   manipulateHtmlDocument,
-  polyfillHtmlDocumentScripts,
+  transformHtmlDocumentImportmapScript,
+  transformHtmlDocumentModuleScripts,
   stringifyHtmlDocument,
 } from "./compileHtml.js"
 
@@ -13,7 +14,6 @@ const compileHtml = (
     scriptManipulations = [],
     importmapSrc,
     importmapType,
-    replaceModuleScripts = true,
     // resolveScriptSrc = (src) => src,
     generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
     generateInlineScriptCode = ({ src }) => `<script>
@@ -23,7 +23,6 @@ const compileHtml = (
 ) => {
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
   const document = parseHtmlString(htmlBeforeCompilation)
-  const { scripts } = parseHtmlDocumentRessources(document)
 
   if (importmapSrc) {
     scriptManipulations = [
@@ -40,9 +39,9 @@ const compileHtml = (
 
   manipulateHtmlDocument(document, { scriptManipulations })
 
-  const scriptTransformations = polyfillHtmlDocumentScripts(scripts, {
-    replaceModuleScripts,
-    importmapType,
+  const { scripts } = parseHtmlDocumentRessources(document)
+  transformHtmlDocumentImportmapScript(scripts, { importmapType })
+  const scriptTransformations = transformHtmlDocumentModuleScripts(scripts, {
     generateInlineScriptSrc,
     generateInlineScriptCode,
   })
