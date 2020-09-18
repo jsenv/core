@@ -31,31 +31,6 @@ import { minifyHtml } from "./minifyHtml.js"
 import { minifyJs } from "./minifyJs.js"
 import { minifyCss } from "./minifyCss.js"
 
-/**
-
-A word about bundler choosing to return an absolute url for import like
-
-import styleFileUrl from "./style.css"
-import iconFileUrl from "./icon.png"
-
-Bundler choose to return an url so that you can still access your bundled files.
-In a structure like this one I would rather choose to keep target asset with "/directory/icon.png"
-
-dist/
-  esmodule/
-    index.js
-directory/
-  icon.png
-
-Considering it's possible to target original file from bundled files (using import starting with '/'),
-Jsenv bundle do not emit any asset file.
-
-Using import to import something else than a JavaScript file convert it to
-a JavaScript module with an export default of that file content as text.
-Non textual files (png, jpg, video) are converted to base64 text.
-
-*/
-
 const STATIC_COMPILE_SERVER_AUTHORITY = "//jsenv.com"
 
 export const createJsenvRollupPlugin = async ({
@@ -234,31 +209,11 @@ export const createJsenvRollupPlugin = async ({
       const realUrl = urlToRealUrl(urlForRollup) || urlForRollup
 
       logger.debug(`loads ${realUrl}`)
-      const {
-        responseUrl,
-        contentRaw,
-        content = "",
-        map,
-        assets = [],
-        chunks = [],
-      } = await loadModule(realUrl, moduleInfo)
-
-      assets.forEach((asset) => {
-        logger.debug(`${moduleInfo.id} emits asset`, asset)
-        this.emitFile({
-          type: "asset",
-          ...asset,
-        })
-      })
-      chunks.forEach((chunk, index) => {
-        const previousChunkId = index === 0 ? null : chunks[index - 1]
-        logger.debug(`${moduleInfo.id} emits chunk`, chunk)
-        this.emitFile({
-          type: "chunk",
-          implicitlyLoadedAfterOneOf: previousChunkId ? [previousChunkId] : [],
-          ...chunk,
-        })
-      })
+      const { responseUrl, contentRaw, content = "", map } = await loadModule(
+        realUrl,
+        moduleInfo,
+        this.emitFile.bind(this),
+      )
 
       const responseUrlForRollup = urlToUrlForRollup(responseUrl) || responseUrl
       saveModuleContent(responseUrlForRollup, {
@@ -413,7 +368,7 @@ export const createJsenvRollupPlugin = async ({
     return null
   }
 
-  const loadModule = async (moduleUrl, moduleInfo) => {
+  const loadModule = async (moduleUrl, moduleInfo, emitFile) => {
     if (moduleUrl in virtualModules) {
       const codeInput = virtualModules[moduleUrl]
       debugger
@@ -457,37 +412,72 @@ export const createJsenvRollupPlugin = async ({
     }
 
     if (contentType === "application/json" || contentType === "application/importmap+json") {
+      // there is no need to minify the json string
+      // because it becomes valid javascript
+      // that will be minified by minifyJs inside renderChunk
+      const jsonString = moduleText
       return {
         ...commonData,
-        ...jsonToLoadInfo(moduleText, moduleInfo),
+        content: `export default ${jsonString}`,
       }
     }
 
     if (contentType === "text/html") {
+      if (moduleInfo.isEntry) {
+        return {
+          content: "",
+        }
+      }
+
+      const htmlString = minify ? minifyHtml(htmlString, minifyHtmlOptions) : moduleText
+      const referenceId = emitFile({
+        type: "asset",
+        name: basename(moduleInfo.id),
+        source: htmlString,
+      })
       return {
         ...commonData,
-        ...htmlToLoadInfo(moduleText, moduleInfo),
+        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
       }
     }
 
     if (contentType === "text/css") {
+      const cssString = minify ? minifyCss(moduleText, minifyCssOptions) : moduleText
+      const referenceId = emitFile({
+        type: "asset",
+        name: basename(moduleInfo.id),
+        source: cssString,
+      })
       return {
         ...commonData,
-        ...cssToLoadInfo(moduleText, moduleInfo),
+        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
       }
     }
 
     if (contentType === "image/svg+xml") {
+      // could also benefit of minification https://github.com/svg/svgo
+      const svgString = moduleText
+      const referenceId = emitFile({
+        type: "asset",
+        name: basename(moduleInfo.id),
+        source: svgString,
+      })
       return {
         ...commonData,
-        ...svgToLoadInfo(moduleText, moduleInfo),
+        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
       }
     }
 
     if (contentType.startsWith("text/")) {
+      const textString = moduleText
+      const referenceId = emitFile({
+        type: "asset",
+        name: basename(moduleInfo.id),
+        source: textString,
+      })
       return {
         ...commonData,
-        ...textToLoadInfo(moduleText, moduleInfo),
+        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
       }
     }
 
@@ -496,87 +486,15 @@ export const createJsenvRollupPlugin = async ({
 ${contentType}
 --- module url ---
 ${moduleUrl}`)
-
+    const buffer = Buffer.from(moduleText)
+    const referenceId = emitFile({
+      type: "asset",
+      name: basename(moduleInfo.id),
+      source: buffer,
+    })
     return {
       ...commonData,
-      ...bufferToLoadInfo(Buffer.from(moduleText), moduleInfo),
-    }
-  }
-
-  const jsonToLoadInfo = (jsonString) => {
-    // there is no need to minify the json string
-    // because it becomes valid javascript
-    // that will be minified by minifyJs inside renderChunk
-    return { content: `export default ${jsonString}` }
-  }
-
-  const htmlToLoadInfo = (htmlString, { isEntry, id }) => {
-    if (isEntry) {
-      return {
-        content: "",
-      }
-    }
-
-    if (minify) {
-      htmlString = minifyHtml(htmlString, minifyHtmlOptions)
-    }
-
-    return {
-      content: "",
-      assets: [
-        {
-          name: basename(id),
-          source: htmlString,
-        },
-      ],
-    }
-  }
-
-  const cssToLoadInfo = (cssString, { id }) => {
-    if (minify) {
-      cssString = minifyCss(cssString, minifyCssOptions)
-    }
-    return {
-      assets: [
-        {
-          name: basename(id),
-          source: cssString,
-        },
-      ],
-    }
-  }
-
-  const svgToLoadInfo = (svgString, { id }) => {
-    // could also benefit of minification https://github.com/svg/svgo
-    return {
-      assets: [
-        {
-          name: basename(id),
-          source: svgString,
-        },
-      ],
-    }
-  }
-
-  const textToLoadInfo = (textString, { id }) => {
-    return {
-      assets: [
-        {
-          name: basename(id),
-          source: textString,
-        },
-      ],
-    }
-  }
-
-  const bufferToLoadInfo = (buffer, { id }) => {
-    return {
-      assets: [
-        {
-          name: basename(id),
-          source: buffer,
-        },
-      ],
+      content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
     }
   }
 
