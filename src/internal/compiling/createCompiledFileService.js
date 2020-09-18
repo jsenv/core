@@ -18,7 +18,8 @@ import {
   parseHtmlString,
   parseHtmlDocumentRessources,
   manipulateHtmlDocument,
-  polyfillHtmlDocumentScripts,
+  transformHtmlDocumentModuleScripts,
+  transformHtmlDocumentImportmapScript,
   stringifyHtmlDocument,
 } from "./compileHtml.js"
 import { appendSourceMappingAsExternalUrl } from "../sourceMappingURLUtils.js"
@@ -224,9 +225,8 @@ export const createCompiledFileService = ({
           })
 
           const { scripts } = parseHtmlDocumentRessources(document)
-          const { inlineScriptsTransformed } = polyfillHtmlDocumentScripts(scripts, {
-            replaceModuleScripts: true,
-            importmapType: "jsenv-importmap",
+          transformHtmlDocumentImportmapScript(scripts, { importmapType: "jsenv-importmap" })
+          const { inlineScriptsTransformed } = transformHtmlDocumentModuleScripts(scripts, {
             generateInlineScriptSrc: ({ id, hash }) => {
               const scriptAssetUrl = generateCompiledFileAssetUrl(
                 compiledFileUrl,
@@ -235,6 +235,7 @@ export const createCompiledFileService = ({
               return `./${urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`
             },
           })
+
           const htmlAfterTransformation = stringifyHtmlDocument(htmlDocument)
 
           let assets = []

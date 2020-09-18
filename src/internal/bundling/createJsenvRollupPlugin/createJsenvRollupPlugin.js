@@ -19,8 +19,9 @@ import { transformJs } from "../../compiling/js-compilation-service/transformJs.
 import {
   parseHtmlString,
   parseHtmlDocumentRessources,
-  polyfillScripts,
-  manipulateScripts,
+  manipulateHtmlDocument,
+  transformHtmlDocumentImportmapScript,
+  transformHtmlDocumentModuleScripts,
   stringifyHtmlDocument,
 } from "../../compiling/compileHtml.js"
 import { findAsyncPluginNameInBabelPluginMap } from "../../compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
@@ -134,34 +135,37 @@ export const createJsenvRollupPlugin = async ({
               return
             }
             if (script.attributes.type === "module" && script.text) {
-              const inlineScriptId = `\0${value}-${index}`
+              const inlineScriptId = resolveUrl(`${basename(value)}.${index}.js`, htmlFileUrl)
               logger.debug(`inline script number ${index} found in ${value} -> emit chunk`)
+              virtualModules[inlineScriptId] = script.text
               const inlineScriptReference = this.emitFile({
                 type: "chunk",
                 id: inlineScriptId,
-                implicitlyLoadedAfterOneOf: previousScriptId ? [previousScriptId] : [],
+                ...(previousScriptId ? { implicitlyLoadedAfterOneOf: [previousScriptId] } : {}),
               })
               previousScriptId = inlineScriptId
               scriptReferences.push(inlineScriptReference)
+
               return
             }
             scriptReferences.push(null)
           })
 
           virtualAssets.push((rollup) => {
-            polyfillScripts(scripts, {
-              replaceModuleScripts: true,
-              importmapType: "systemjs-importmap",
+            manipulateHtmlDocument(htmlDocument, {
+              scriptManipulations: [
+                {
+                  src: `/node_modules/systemjs/dist/s.min.js`,
+                },
+              ],
+            })
+            transformHtmlDocumentImportmapScript(scripts, { importmapType: "systemjs-importmap" })
+            transformHtmlDocumentModuleScripts(scripts, {
               generateInlineScriptCode: (_, index) =>
                 `<script>window.System.import(${JSON.stringify(
                   rollup.getFileName(scriptReferences[index]),
                 )})</script>`,
             })
-            manipulateScripts(htmlDocument, [
-              {
-                src: `/node_modules/systemjs/dist/s.min.js`,
-              },
-            ])
             const htmlTransformedString = stringifyHtmlDocument(htmlDocument)
             logger.debug(`emit html asset for ${value}`)
             rollup.emitFile({
@@ -191,6 +195,10 @@ export const createJsenvRollupPlugin = async ({
       if (externalImportSpecifiers.includes(specifier)) {
         logger.debug(`${specifier} verifies externalImportSpecifiers  -> marked as external`)
         return { id: specifier, external: true }
+      }
+
+      if (virtualModules.hasOwnProperty(specifier)) {
+        return specifier
       }
 
       if (isFileSystemPath(importer)) {

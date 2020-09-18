@@ -57,15 +57,13 @@ const attributesObjectToAttributesArray = (attributeObject) => {
   return attributeArray
 }
 
-export const polyfillHtmlDocumentScripts = (
+export const transformHtmlDocumentModuleScripts = (
   scripts,
   {
-    replaceModuleScripts,
     generateInlineScriptCode = ({ src }) => `<script>
       window.__jsenv__.importFile(${JSON.stringify(src)})
     </script>`,
     generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
-    importmapType,
   },
 ) => {
   /*
@@ -81,7 +79,7 @@ export const polyfillHtmlDocumentScripts = (
   const inlineScriptsTransformed = {}
 
   const mutations = scripts.map((script, index) => {
-    if (replaceModuleScripts && script.attributes.type === "module" && script.attributes.src) {
+    if (script.attributes.type === "module" && script.attributes.src) {
       return () => {
         const scriptPolyfilledSource = generateInlineScriptCode(
           { src: script.attributes.src },
@@ -100,7 +98,7 @@ export const polyfillHtmlDocumentScripts = (
       }
     }
 
-    if (replaceModuleScripts && script.attributes.type === "module" && script.text) {
+    if (script.attributes.type === "module" && script.text) {
       return () => {
         const hash = createScriptContentHash(script.text)
         const src = generateInlineScriptSrc(
@@ -125,13 +123,6 @@ export const polyfillHtmlDocumentScripts = (
       }
     }
 
-    if (importmapType && script.attributes.type === "importmap") {
-      return () => {
-        const typeAttribute = getAttributeByName(script.node.attrs, "type")
-        typeAttribute.value = importmapType
-      }
-    }
-
     return () => {}
   })
 
@@ -141,6 +132,15 @@ export const polyfillHtmlDocumentScripts = (
     remoteScriptsTransformed,
     inlineScriptsTransformed,
   }
+}
+
+export const transformHtmlDocumentImportmapScript = (scripts, { importmapType }) => {
+  scripts.forEach((script) => {
+    if (script.attributes.type === "importmap") {
+      const typeAttribute = getAttributeByName(script.node.attrs, "type")
+      typeAttribute.value = importmapType
+    }
+  })
 }
 
 export const manipulateHtmlDocument = (document, { scriptManipulations }) => {
