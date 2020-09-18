@@ -115,7 +115,8 @@ ${JSON.stringify(entryPointMap, null, "  ")}
       if (warning.code === "THIS_IS_UNDEFINED") return
       warn(warning)
     },
-    input: entryPointMap,
+    input: [],
+    // preserveEntrySignatures: false,
     plugins: [jsenvRollupPlugin],
     ...formatInputOptions,
   }

@@ -124,7 +124,7 @@
     "playwright-core": "1.2.1",
     "proper-lockfile": "4.1.1",
     "regenerator-runtime": "0.13.7",
-    "rollup": "2.23.0",
+    "rollup": "2.27.1",
     "rollup-plugin-node-builtins": "2.1.2",
     "rollup-plugin-node-globals": "1.4.0",
     "source-map": "0.7.3",

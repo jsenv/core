@@ -90,10 +90,6 @@ export const createJsenvRollupPlugin = async ({
   const virtualModules = {}
   const virtualAssets = []
 
-  // on pourrait aussi passer a ce plugin les points d'entrée dérivé du html
-  // et les mettre dans input: {} de rollup
-  // le seul souci ce serais pour obtenir la référence de ces chunk par la suite
-
   const jsenvRollupPlugin = {
     name: "jsenv",
 
@@ -103,10 +99,18 @@ export const createJsenvRollupPlugin = async ({
       await Promise.all(
         Object.keys(entryPointMap).map(async (key) => {
           const value = entryPointMap[key]
-          if (!value.endsWith(".html")) return
+          if (!value.endsWith(".html")) {
+            this.emitFile({
+              type: "chunk",
+              id: key,
+              fileName: resolveUrl(key, bundleDirectoryUrl),
+            })
+            return
+          }
 
           const htmlFileUrl = resolveUrl(value, projectDirectoryUrl)
-          const htmlCompiledFileUrl = resolveUrl(value, compileDirectoryRemoteUrl)
+          // const htmlFileRemoteUrl = resolveUrl(value, compileServerOrigin)
+          // const htmlCompiledFileRemoteUrl = resolveUrl(value, compileDirectoryRemoteUrl)
           const htmlFileContent = await readFile(htmlFileUrl)
           const htmlFileName = basename(value)
           const htmlDocument = parseHtmlString(htmlFileContent)
@@ -116,12 +120,14 @@ export const createJsenvRollupPlugin = async ({
           const scriptReferences = []
           scripts.forEach((script, index) => {
             if (script.attributes.type === "module" && script.attributes.src) {
-              const remoteScriptId = resolveUrl(script.attributes.src, htmlCompiledFileUrl)
-              logger.debug(`${remoteScriptId} remote script found in ${value} -> emit chunk`)
+              logger.debug(`remote script ${script.attributes.src} found in ${value} -> emit chunk`)
+              const remoteScriptId = script.attributes.src
+              const remoteScriptUrl = resolveUrl(script.attributes.src, htmlFileUrl)
+              const remoteScriptRelativeUrl = urlToRelativeUrl(remoteScriptUrl, projectDirectoryUrl)
               const remoteScriptReference = this.emitFile({
                 type: "chunk",
-                id: remoteScriptId,
-                implicitlyLoadedAfterOneOf: previousScriptId ? [previousScriptId] : [],
+                id: `./${remoteScriptRelativeUrl}`,
+                ...(previousScriptId ? { implicitlyLoadedAfterOneOf: [previousScriptId] } : {}),
               })
               previousScriptId = remoteScriptId
               scriptReferences.push(remoteScriptReference)
@@ -129,7 +135,7 @@ export const createJsenvRollupPlugin = async ({
             }
             if (script.attributes.type === "module" && script.text) {
               const inlineScriptId = `\0${value}-${index}`
-              logger.debug(`${inlineScriptId} inline script found in ${value} -> emit chunk`)
+              logger.debug(`inline script number ${index} found in ${value} -> emit chunk`)
               const inlineScriptReference = this.emitFile({
                 type: "chunk",
                 id: inlineScriptId,
@@ -142,12 +148,14 @@ export const createJsenvRollupPlugin = async ({
             scriptReferences.push(null)
           })
 
-          virtualAssets.push(() => {
+          virtualAssets.push((rollup) => {
             polyfillScripts(scripts, {
+              replaceModuleScripts: true,
               importmapType: "systemjs-importmap",
-              generateInlineScriptSrc: (_, index) => this.getFileName(scriptReferences[index]),
-              generateInlineScriptCode: ({ src }) =>
-                `<script>window.System.import(${JSON.stringify(src)})</script>`,
+              generateInlineScriptCode: (_, index) =>
+                `<script>window.System.import(${JSON.stringify(
+                  rollup.getFileName(scriptReferences[index]),
+                )})</script>`,
             })
             manipulateScripts(htmlDocument, [
               {
@@ -156,7 +164,7 @@ export const createJsenvRollupPlugin = async ({
             ])
             const htmlTransformedString = stringifyHtmlDocument(htmlDocument)
             logger.debug(`emit html asset for ${value}`)
-            this.emitFile({
+            rollup.emitFile({
               type: "asset",
               fileName: htmlFileName,
               source: htmlTransformedString,
@@ -303,9 +311,9 @@ export const createJsenvRollupPlugin = async ({
       }
     },
 
-    generateBundle: async (outputOptions, bundle) => {
+    async generateBundle(outputOptions, bundle) {
       virtualAssets.forEach((fn) => {
-        fn()
+        fn(this)
       })
 
       if (manifestFile) {
