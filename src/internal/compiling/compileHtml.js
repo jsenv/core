@@ -28,8 +28,8 @@ export const compileHtml = (
   } = {},
 ) => {
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
-  const document = parse5.parse(htmlBeforeCompilation)
-  const { scripts } = parseHtmlRessources(document)
+  const document = parseHtmlString(htmlBeforeCompilation)
+  const { scripts } = parseHtmlDocumentRessources(document)
 
   if (importmapSrc) {
     scriptManipulations = [
@@ -46,7 +46,7 @@ export const compileHtml = (
 
   manipulateScripts(document, scriptManipulations)
 
-  const { inlineScriptTanspiled, remoteScriptTranspiled } = polyfillScripts(scripts, {
+  const scriptTransformations = polyfillScripts(scripts, {
     replaceModuleScripts,
     importmapType,
     generateInlineScriptSrc,
@@ -57,12 +57,19 @@ export const compileHtml = (
   const htmlAfterCompilation = parse5.serialize(document)
   return {
     htmlAfterCompilation,
-    inlineScriptTanspiled,
-    remoteScriptTranspiled,
+    ...scriptTransformations,
   }
 }
 
-export const parseHtmlRessources = (document) => {
+export const parseHtmlString = (htmlString) => {
+  return parse5.parse(htmlString)
+}
+
+export const stringifyHtmlDocument = (htmlDocument) => {
+  return parse5.serialize(htmlDocument)
+}
+
+export const parseHtmlDocumentRessources = (document) => {
   const scripts = []
 
   visitDocument(document, (node) => {
@@ -111,13 +118,16 @@ export const polyfillScripts = (
   For that reason we perform mutation in the end
   */
 
-  const remoteScriptTranspiled = {}
-  const inlineScriptTranspiled = {}
+  const remoteScriptsTransformed = {}
+  const inlineScriptsTransformed = {}
 
-  const mutations = scripts.map((script) => {
+  const mutations = scripts.map((script, index) => {
     if (replaceModuleScripts && script.attributes.type === "module" && script.attributes.src) {
       return () => {
-        const scriptPolyfilledSource = generateInlineScriptCode({ src: script.attributes.src })
+        const scriptPolyfilledSource = generateInlineScriptCode(
+          { src: script.attributes.src },
+          index,
+        )
         const scriptPolyfilled = parseHtmlAsSingleElement(scriptPolyfilledSource)
         scriptPolyfilled.attrs = [
           // inherit script attributes except src and type
@@ -127,19 +137,21 @@ export const polyfillScripts = (
           ...scriptPolyfilled.attrs,
         ]
         replaceNode(script.node, scriptPolyfilled)
-        remoteScriptTranspiled[script.attributes.src] = true
+        remoteScriptsTransformed[script.attributes.src] = true
       }
     }
 
     if (replaceModuleScripts && script.attributes.type === "module" && script.text) {
       return () => {
-        const nodeId = script.attributes.id
         const hash = createScriptContentHash(script.text)
-        const src = generateInlineScriptSrc({
-          id: nodeId,
-          hash,
-        })
-        const scriptPolyfilledSource = generateInlineScriptCode({ src })
+        const src = generateInlineScriptSrc(
+          {
+            id: script.attributes.id,
+            hash,
+          },
+          index,
+        )
+        const scriptPolyfilledSource = generateInlineScriptCode({ src }, index)
         const scriptPolyfilled = parseHtmlAsSingleElement(scriptPolyfilledSource)
         scriptPolyfilled.attrs = [
           // inherit script attributes except src and type
@@ -150,7 +162,7 @@ export const polyfillScripts = (
         ]
 
         replaceNode(script.node, scriptPolyfilled)
-        inlineScriptTranspiled[src] = script.text
+        inlineScriptsTransformed[src] = script.text
       }
     }
 
@@ -167,12 +179,12 @@ export const polyfillScripts = (
   mutations.forEach((fn) => fn())
 
   return {
-    remoteScriptTranspiled,
-    inlineScriptTranspiled,
+    remoteScriptsTransformed,
+    inlineScriptsTransformed,
   }
 }
 
-const manipulateScripts = (document, scriptManipulations) => {
+export const manipulateScripts = (document, scriptManipulations) => {
   const htmlNode = document.childNodes.find((node) => node.nodeName === "html")
   const headNode = htmlNode.childNodes[0]
   const bodyNode = htmlNode.childNodes[1]

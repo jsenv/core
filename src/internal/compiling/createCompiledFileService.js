@@ -195,7 +195,7 @@ export const createCompiledFileService = ({
         request,
 
         compile: async (htmlBeforeCompilation) => {
-          const { htmlAfterCompilation, inlineScriptTanspiled } = compileHtml(
+          const { htmlAfterCompilation, inlineScriptsTransformed } = compileHtml(
             htmlBeforeCompilation,
             {
               importmapSrc: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
@@ -222,13 +222,13 @@ export const createCompiledFileService = ({
           let assets = []
           let assetsContent = []
           await Promise.all(
-            Object.keys(inlineScriptTanspiled).map(async (scriptSrc) => {
+            Object.keys(inlineScriptsTransformed).map(async (scriptSrc) => {
               const scriptAssetUrl = resolveUrl(scriptSrc, compiledFileUrl)
               const scriptBasename = urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)
               const scriptOriginalFileUrl = resolveUrl(scriptBasename, originalFileUrl)
               const scriptAfterTransformFileUrl = resolveUrl(scriptBasename, compiledFileUrl)
 
-              const scriptBeforeCompilation = inlineScriptTanspiled[scriptSrc]
+              const scriptBeforeCompilation = inlineScriptsTransformed[scriptSrc]
               const scriptTransformResult = await transformJs({
                 projectDirectoryUrl,
                 code: scriptBeforeCompilation,
