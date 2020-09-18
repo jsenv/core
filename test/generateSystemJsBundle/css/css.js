@@ -1,9 +1,5 @@
-import cssText from "./style.css"
+import cssUrl from "./style.css"
 
-const style = document.createElement("style")
-style.innerText = cssText
-document.head.appendChild(style)
-
-export { cssText }
+export { cssUrl }
 
 export const bodyBackgroundColor = getComputedStyle(document.body).backgroundColor

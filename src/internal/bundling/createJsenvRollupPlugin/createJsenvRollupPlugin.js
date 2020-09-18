@@ -1,5 +1,5 @@
 /* eslint-disable import/max-dependencies */
-import { basename } from "path"
+import { basename, extname } from "path"
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import {
   isFileSystemPath,
@@ -103,8 +103,9 @@ export const createJsenvRollupPlugin = async ({
           if (!value.endsWith(".html")) {
             this.emitFile({
               type: "chunk",
-              id: key,
-              fileName: resolveUrl(key, bundleDirectoryUrl),
+              id: value,
+              // name: key,
+              fileName: `${key}${extname(value)}`,
             })
             return
           }
