@@ -13,6 +13,7 @@ export const generateBundleUsingRollup = async ({
   projectDirectoryUrl,
   entryPointMap,
   bundleDirectoryUrl,
+  bundleDefaultExtension,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
   compileServerImportMap,
@@ -40,6 +41,7 @@ export const generateBundleUsingRollup = async ({
     projectDirectoryUrl,
     entryPointMap,
     bundleDirectoryUrl,
+    bundleDefaultExtension,
     compileDirectoryRelativeUrl,
     compileServerOrigin,
     compileServerImportMap,
@@ -68,6 +70,7 @@ export const generateBundleUsingRollup = async ({
     formatInputOptions,
     formatOutputOptions,
     bundleDirectoryUrl,
+    bundleDefaultExtension,
     sourcemapExcludeSources,
     writeOnFileSystem,
   })
@@ -89,6 +92,7 @@ const useRollup = async ({
   formatInputOptions,
   formatOutputOptions,
   bundleDirectoryUrl,
+  bundleDefaultExtension,
   sourcemapExcludeSources,
   writeOnFileSystem,
 }) => {
@@ -137,8 +141,8 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     sourcemap: true,
     sourcemapExcludeSources,
 
-    entryFileNames: `[name]${outputExtension}`,
-    chunkFileNames: `[name]-[hash]${outputExtension}`,
+    entryFileNames: `[name]${bundleDefaultExtension || outputExtension}`,
+    chunkFileNames: `[name]-[hash]${bundleDefaultExtension || outputExtension}`,
 
     ...formatOutputOptions,
   }

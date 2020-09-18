@@ -52,6 +52,7 @@ export const generateBundle = async ({
   },
   bundleDirectoryRelativeUrl,
   bundleDirectoryClean = false,
+  bundleDefaultExtension = ".js",
   format,
   formatInputOptions = {},
   formatOutputOptions = {},
@@ -91,12 +92,8 @@ export const generateBundle = async ({
       await ensureEmptyDirectory(bundleDirectoryUrl)
     }
 
-    const extension =
-      formatOutputOptions && formatOutputOptions.entryFileNames
-        ? extname(formatOutputOptions.entryFileNames)
-        : ".js"
-
-    const chunkId = `${Object.keys(entryPointMap)[0]}${extension}`
+    let chunkId = Object.keys(entryPointMap)[0]
+    if (!extname(chunkId)) chunkId += bundleDefaultExtension
     env = {
       ...env,
       chunkId,
@@ -158,6 +155,7 @@ export const generateBundle = async ({
         projectDirectoryUrl,
         entryPointMap,
         bundleDirectoryUrl,
+        bundleDefaultExtension,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         compileServerOrigin,
         compileServerImportMap,
@@ -188,6 +186,7 @@ export const generateBundle = async ({
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
         bundleDirectoryUrl,
+        bundleDefaultExtension,
         entryPointMap,
         compileServerOrigin,
         compileServerImportMap,
@@ -215,6 +214,7 @@ export const generateBundle = async ({
         outDirectoryRelativeUrl,
         entryPointMap,
         bundleDirectoryUrl,
+        bundleDefaultExtension,
         compileServerOrigin,
         compileServerImportMap,
         importDefaultExtension,

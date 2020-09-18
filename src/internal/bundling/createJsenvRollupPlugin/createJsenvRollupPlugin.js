@@ -41,6 +41,7 @@ export const createJsenvRollupPlugin = async ({
   projectDirectoryUrl,
   entryPointMap,
   bundleDirectoryUrl,
+  bundleDefaultExtension,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
   compileServerImportMap,
@@ -77,7 +78,8 @@ export const createJsenvRollupPlugin = async ({
     compileDirectoryRelativeUrl,
     compileServerOriginForRollup,
   )
-  const chunkId = `${Object.keys(entryPointMap)[0]}.js`
+  let chunkId = Object.keys(entryPointMap)[0]
+  if (!extname(chunkId)) chunkId += bundleDefaultExtension
   const importMap = normalizeImportMap(compileServerImportMap, compileDirectoryRemoteUrl)
 
   const nativeModulePredicate = (specifier) => {
@@ -104,7 +106,7 @@ export const createJsenvRollupPlugin = async ({
             this.emitFile({
               type: "chunk",
               id: value,
-              fileName: `${key}${format === "commonjs" ? ".cjs" : extname(value)}`,
+              fileName: `${key}${bundleDefaultExtension || extname(value)}`,
             })
             return
           }
