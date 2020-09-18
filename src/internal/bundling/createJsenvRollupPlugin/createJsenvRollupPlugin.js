@@ -114,6 +114,10 @@ export const createJsenvRollupPlugin = async ({
           }
 
           const htmlFileUrl = resolveUrl(value, projectDirectoryUrl)
+          const htmlCompiledFiledUrl = resolveUrl(
+            value,
+            resolveUrl(compileDirectoryRelativeUrl, projectDirectoryUrl),
+          )
           // const htmlFileRemoteUrl = resolveUrl(value, compileServerOrigin)
           // const htmlCompiledFileRemoteUrl = resolveUrl(value, compileDirectoryRemoteUrl)
           const htmlFileContent = await readFile(htmlFileUrl)
@@ -159,26 +163,39 @@ export const createJsenvRollupPlugin = async ({
             manipulateHtmlDocument(htmlDocument, {
               scriptManipulations: systemJsScript ? [systemJsScript] : [],
             })
+            const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
+            const importMapFileRelativeUrlForHtml = urlToRelativeUrl(
+              importMapFileUrl,
+              htmlCompiledFiledUrl,
+            )
+            console.log({
+              importMapFileUrl,
+              htmlCompiledFiledUrl,
+              importMapFileRelativeUrlForHtml,
+            })
             transformHtmlDocumentImportmapScript(scripts, {
               type: "systemjs-importmap",
               // ensure the html src is the one passed when generating the bundle
               // this is useful in case you have an importmap while developping
               // but want to use a different one to bundle so that
               // the production importmap is smaller
-              src: importMapFileRelativeUrl,
+              src: importMapFileRelativeUrlForHtml,
             })
             transformHtmlDocumentModuleScripts(scripts, {
               generateInlineScriptCode: (_, index) =>
                 `<script>window.System.import(${JSON.stringify(
-                  rollup.getFileName(scriptReferences[index]),
+                  `./${rollup.getFileName(scriptReferences[index])}`,
                 )})</script>`,
             })
             const htmlTransformedString = stringifyHtmlDocument(htmlDocument)
             logger.debug(`emit html asset for ${value}`)
             rollup.emitFile({
               type: "asset",
+              name: key,
               fileName: htmlFileName,
-              source: htmlTransformedString,
+              source: minify
+                ? minifyHtml(htmlTransformedString, minifyHtmlOptions)
+                : htmlTransformedString,
             })
           })
         }),
@@ -335,7 +352,9 @@ export const createJsenvRollupPlugin = async ({
         const mappings = {}
         Object.keys(bundle).forEach((key) => {
           const chunk = bundle[key]
-          mappings[`${chunk.name}.js`] = chunk.fileName
+          let chunkId = chunk.name
+          chunkId += extname(chunk.fileName)
+          mappings[chunkId] = chunk.fileName
         })
         const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
         const manifest = {}
