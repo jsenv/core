@@ -4,7 +4,6 @@ import { generateBundle } from "./internal/bundling/generateBundle.js"
 
 export const generateCommonJsBundle = ({
   bundleDirectoryRelativeUrl = "./dist/commonjs",
-  cjsExtension = true,
   node = true,
   formatOutputOptions = {},
   ...rest
@@ -15,13 +14,9 @@ export const generateCommonJsBundle = ({
     node,
     formatOutputOptions: {
       ...formatOutputOptions,
-      ...(cjsExtension
-        ? {
-            // by default it's [name].js
-            entryFileNames: `[name].cjs`,
-            chunkFileNames: `[name]-[hash].cjs`,
-          }
-        : {}),
+      // by default it's [name].js
+      entryFileNames: `[name].cjs`,
+      chunkFileNames: `[name]-[hash].cjs`,
     },
     balancerTemplateFileUrl: resolveUrl(
       "./src/internal/bundling/commonjs-balancer-template.js",

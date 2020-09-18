@@ -104,8 +104,7 @@ export const createJsenvRollupPlugin = async ({
             this.emitFile({
               type: "chunk",
               id: value,
-              // name: key,
-              fileName: `${key}${extname(value)}`,
+              fileName: `${key}${format === "commonjs" ? ".cjs" : extname(value)}`,
             })
             return
           }
