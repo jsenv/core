@@ -206,7 +206,6 @@ export const createCompiledFileService = ({
 
           manipulateHtmlDocument(htmlDocument, {
             scriptManipulations: [
-              ...scriptManipulations,
               {
                 // when html file already contains an importmap script tag
                 // its src is replaced to target the importmap used for compiled files
