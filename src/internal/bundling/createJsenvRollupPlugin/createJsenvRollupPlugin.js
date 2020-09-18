@@ -115,6 +115,10 @@ export const createJsenvRollupPlugin = async ({
   const virtualModules = {}
   const virtualAssets = []
 
+  // on pourrait aussi passer a ce plugin les points d'entrée dérivé du html
+  // et les mettre dans input: {} de rollup
+  // le seul souci ce serais pour obtenir la référence de ces chunk par la suite
+
   const jsenvRollupPlugin = {
     name: "jsenv",
 
@@ -521,55 +525,55 @@ ${moduleUrl}`)
       content: "",
       assets: [
         {
-          fileName: id,
+          name: basename(id),
           source: htmlString,
         },
       ],
     }
   }
 
-  const cssToLoadInfo = (cssString, { fileName }) => {
+  const cssToLoadInfo = (cssString, { id }) => {
     if (minify) {
       cssString = minifyCss(cssString, minifyCssOptions)
     }
     return {
       assets: [
         {
-          fileName,
+          name: basename(id),
           source: cssString,
         },
       ],
     }
   }
 
-  const svgToLoadInfo = (svgString, { fileName }) => {
+  const svgToLoadInfo = (svgString, { id }) => {
     // could also benefit of minification https://github.com/svg/svgo
     return {
       assets: [
         {
-          fileName,
+          name: basename(id),
           source: svgString,
         },
       ],
     }
   }
 
-  const textToLoadInfo = (textString, { fileName }) => {
+  const textToLoadInfo = (textString, { id }) => {
     return {
       assets: [
         {
-          fileName,
+          name: basename(id),
           source: textString,
         },
       ],
     }
   }
 
-  const bufferToLoadInfo = (buffer, { fileName }) => {
+  const bufferToLoadInfo = (buffer, { id }) => {
     return {
       assets: [
         {
-          fileName,
+          name: basename(id),
           source: buffer,
         },
       ],
