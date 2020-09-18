@@ -13,54 +13,6 @@ import { require } from "../require.js"
 
 const parse5 = require("parse5")
 
-export const compileHtml = (
-  htmlBeforeCompilation,
-  {
-    scriptManipulations = [],
-    importmapSrc,
-    importmapType,
-    replaceModuleScripts = true,
-    // resolveScriptSrc = (src) => src,
-    generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
-    generateInlineScriptCode = ({ src }) => `<script>
-      window.__jsenv__.importFile(${JSON.stringify(src)})
-    </script>`,
-  } = {},
-) => {
-  // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
-  const document = parseHtmlString(htmlBeforeCompilation)
-  const { scripts } = parseHtmlDocumentRessources(document)
-
-  if (importmapSrc) {
-    scriptManipulations = [
-      ...scriptManipulations,
-      {
-        // when html file already contains an importmap script tag
-        // its src is replaced to target the importmap used for compiled files
-        replaceExisting: true,
-        type: "importmap",
-        src: importmapSrc,
-      },
-    ]
-  }
-
-  manipulateScripts(document, scriptManipulations)
-
-  const scriptTransformations = polyfillScripts(scripts, {
-    replaceModuleScripts,
-    importmapType,
-    generateInlineScriptSrc,
-    generateInlineScriptCode,
-  })
-  // resolveScripts(document, resolveScriptSrc)
-
-  const htmlAfterCompilation = parse5.serialize(document)
-  return {
-    htmlAfterCompilation,
-    ...scriptTransformations,
-  }
-}
-
 export const parseHtmlString = (htmlString) => {
   return parse5.parse(htmlString)
 }
@@ -105,9 +57,16 @@ const attributesObjectToAttributesArray = (attributeObject) => {
   return attributeArray
 }
 
-export const polyfillScripts = (
+export const polyfillHtmlDocumentScripts = (
   scripts,
-  { replaceModuleScripts, generateInlineScriptCode, generateInlineScriptSrc, importmapType },
+  {
+    replaceModuleScripts,
+    generateInlineScriptCode = ({ src }) => `<script>
+      window.__jsenv__.importFile(${JSON.stringify(src)})
+    </script>`,
+    generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
+    importmapType,
+  },
 ) => {
   /*
   <script type="module" src="*" /> are going to be inlined
@@ -184,7 +143,7 @@ export const polyfillScripts = (
   }
 }
 
-export const manipulateScripts = (document, scriptManipulations) => {
+export const manipulateHtmlDocument = (document, { scriptManipulations }) => {
   const htmlNode = document.childNodes.find((node) => node.nodeName === "html")
   const headNode = htmlNode.childNodes[0]
   const bodyNode = htmlNode.childNodes[1]

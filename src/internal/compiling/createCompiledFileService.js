@@ -14,7 +14,13 @@ import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { compileFile } from "./compileFile.js"
 import { serveBundle } from "./serveBundle.js"
-import { compileHtml } from "./compileHtml.js"
+import {
+  parseHtmlString,
+  parseHtmlDocumentRessources,
+  manipulateHtmlDocument,
+  polyfillHtmlDocumentScripts,
+  stringifyHtmlDocument,
+} from "./compileHtml.js"
 import { appendSourceMappingAsExternalUrl } from "../sourceMappingURLUtils.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
@@ -195,29 +201,41 @@ export const createCompiledFileService = ({
         request,
 
         compile: async (htmlBeforeCompilation) => {
-          const { htmlAfterCompilation, inlineScriptsTransformed } = compileHtml(
-            htmlBeforeCompilation,
-            {
-              importmapSrc: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
-              importmapType: "jsenv-importmap",
-              scriptManipulations: [
-                {
-                  src: `/${browserBundledJsFileRelativeUrl}`,
-                },
-                // todo: this is dirty because it means
-                // compile server is aware of exploring and jsenv toolbar
-                // instead this should be moved to startExploring
-                ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptManipulations),
-              ],
-              generateInlineScriptSrc: ({ id, hash }) => {
-                const scriptAssetUrl = generateCompiledFileAssetUrl(
-                  compiledFileUrl,
-                  id ? `${id}.js` : `${hash}.js`,
-                )
-                return `./${urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`
+          const htmlDocument = parseHtmlString(htmlBeforeCompilation)
+
+          manipulateHtmlDocument(htmlDocument, {
+            scriptManipulations: [
+              ...scriptManipulations,
+              {
+                // when html file already contains an importmap script tag
+                // its src is replaced to target the importmap used for compiled files
+                replaceExisting: true,
+                type: "importmap",
+                src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
               },
+              {
+                src: `/${browserBundledJsFileRelativeUrl}`,
+              },
+              // todo: this is dirty because it means
+              // compile server is aware of exploring and jsenv toolbar
+              // instead this should be moved to startExploring
+              ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptManipulations),
+            ],
+          })
+
+          const { scripts } = parseHtmlDocumentRessources(document)
+          const { inlineScriptsTransformed } = polyfillHtmlDocumentScripts(scripts, {
+            replaceModuleScripts: true,
+            importmapType: "jsenv-importmap",
+            generateInlineScriptSrc: ({ id, hash }) => {
+              const scriptAssetUrl = generateCompiledFileAssetUrl(
+                compiledFileUrl,
+                id ? `${id}.js` : `${hash}.js`,
+              )
+              return `./${urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`
             },
-          )
+          })
+          const htmlAfterTransformation = stringifyHtmlDocument(htmlDocument)
 
           let assets = []
           let assetsContent = []
@@ -256,7 +274,7 @@ export const createCompiledFileService = ({
           )
 
           return {
-            compiledSource: htmlAfterCompilation,
+            compiledSource: htmlAfterTransformation,
             contentType: "text/html",
             sources: [originalFileUrl],
             sourcesContent: [htmlBeforeCompilation],

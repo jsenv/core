@@ -1,5 +1,59 @@
 import { assert } from "@jsenv/assert"
-import { compileHtml } from "./compileHtml.js"
+import {
+  parseHtmlString,
+  parseHtmlDocumentRessources,
+  manipulateHtmlDocument,
+  polyfillHtmlDocumentScripts,
+  stringifyHtmlDocument,
+} from "./compileHtml.js"
+
+const compileHtml = (
+  htmlBeforeCompilation,
+  {
+    scriptManipulations = [],
+    importmapSrc,
+    importmapType,
+    replaceModuleScripts = true,
+    // resolveScriptSrc = (src) => src,
+    generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
+    generateInlineScriptCode = ({ src }) => `<script>
+      window.__jsenv__.importFile(${JSON.stringify(src)})
+    </script>`,
+  } = {},
+) => {
+  // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
+  const document = parseHtmlString(htmlBeforeCompilation)
+  const { scripts } = parseHtmlDocumentRessources(document)
+
+  if (importmapSrc) {
+    scriptManipulations = [
+      ...scriptManipulations,
+      {
+        // when html file already contains an importmap script tag
+        // its src is replaced to target the importmap used for compiled files
+        replaceExisting: true,
+        type: "importmap",
+        src: importmapSrc,
+      },
+    ]
+  }
+
+  manipulateHtmlDocument(document, { scriptManipulations })
+
+  const scriptTransformations = polyfillHtmlDocumentScripts(scripts, {
+    replaceModuleScripts,
+    importmapType,
+    generateInlineScriptSrc,
+    generateInlineScriptCode,
+  })
+  // resolveScripts(document, resolveScriptSrc)
+
+  const htmlAfterCompilation = stringifyHtmlDocument(document)
+  return {
+    htmlAfterCompilation,
+    ...scriptTransformations,
+  }
+}
 
 // inject script tag inside head + there is already a script tag
 {
