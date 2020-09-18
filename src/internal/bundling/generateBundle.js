@@ -60,7 +60,9 @@ export const generateBundle = async ({
   minify = process.env.NODE_ENV === "production",
   minifyJsOptions = {},
   minifyCssOptions = {},
-  minifyHtmlOptions = {},
+  minifyHtmlOptions = {
+    collapseWhitespace: true,
+  },
   sourcemapExcludeSources = true,
   writeOnFileSystem = true,
   manifestFile = false,
