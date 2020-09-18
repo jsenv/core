@@ -1,7 +1,7 @@
 import { SourceMap } from "module"
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { generateEsModuleBundle } from "../../../index.js"
 import {
@@ -18,8 +18,6 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
-const pngText = await readFile(resolveUrl("./jsenv.png", import.meta.url))
-const pngBase64 = Buffer.from(pngText).toString("base64")
 
 await generateEsModuleBundle({
   ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
@@ -30,12 +28,14 @@ await generateEsModuleBundle({
   },
 })
 
+await assertFilePresence(resolveUrl("./dist/esmodule/assets/jsenv-05ba877d.png", import.meta.url))
+
 {
-  const { value: actual } = await browserImportBundle({
+  const { value: actual, serverOrigin } = await browserImportBundle({
     ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = pngBase64
+  const expected = new URL(".dist/esmodule/assets/jsenv-05ba877d.png", serverOrigin).href
   assert({ actual, expected })
 }
 
@@ -45,6 +45,6 @@ if (SourceMap) {
     ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = pngBase64
+  const expected = new URL("./dist/esmodule/assets/jsenv-05ba877d.png", import.meta.url).href
   assert({ actual, expected })
 }

@@ -1,3 +1,3 @@
-import data from "./jsenv.png"
+import pngUrl from "./jsenv.png"
 
-export default data
+export default pngUrl
