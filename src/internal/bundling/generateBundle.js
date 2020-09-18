@@ -57,7 +57,7 @@ export const generateBundle = async ({
   format,
   formatInputOptions = {},
   formatOutputOptions = {},
-  minify = false,
+  minify = process.env.NODE_ENV === "production",
   minifyJsOptions = {},
   minifyCssOptions = {},
   minifyHtmlOptions = {},
