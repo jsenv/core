@@ -354,7 +354,7 @@ export const createJsenvRollupPlugin = async ({
         Object.keys(bundle).forEach((key) => {
           const chunk = bundle[key]
           let chunkId = chunk.name
-          chunkId += extname(chunk.fileName)
+          chunkId += '.js'
           mappings[chunkId] = chunk.fileName
         })
         const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
