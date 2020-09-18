@@ -114,12 +114,7 @@ export const generateBundle = async ({
       await assertFilePresence(balancerTemplateFileUrl)
     }
 
-    const {
-      outDirectoryRelativeUrl,
-      origin: compileServerOrigin,
-      compileServerImportMap,
-      compileServerGroupMap,
-    } = await startCompileServer({
+    const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
 
@@ -147,6 +142,20 @@ export const generateBundle = async ({
 
       transformModuleIntoSystemFormat: false, // will be done by rollup
     })
+
+    const {
+      outDirectoryRelativeUrl,
+      origin: compileServerOrigin,
+      compileServerImportMap,
+      compileServerGroupMap,
+    } = compileServer
+    // only if passed we override with the normalized value
+    // so that further function can still know
+    // if a specific value was passed or if it's the default
+    // value which is used
+    if (importMapFileRelativeUrl) {
+      importMapFileRelativeUrl = compileServer.importMapFileRelativeUrl
+    }
 
     if (compileGroupCount === 1) {
       return generateBundleUsingRollup({

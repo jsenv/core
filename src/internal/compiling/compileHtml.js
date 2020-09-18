@@ -138,8 +138,11 @@ export const transformHtmlDocumentImportmapScript = (scripts, attributes) => {
   scripts.forEach((script) => {
     if (script.attributes.type === "importmap") {
       Object.keys(attributes).forEach((key) => {
-        const attributeNode = getAttributeByName(script.node.attrs, key)
-        attributeNode.value = attributes[key]
+        const value = attributes[key]
+        if (value !== undefined) {
+          const attributeNode = getAttributeByName(script.node.attrs, key)
+          attributeNode.value = value
+        }
       })
     }
   })

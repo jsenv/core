@@ -11,7 +11,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
-  main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+  [`${testDirectoryRelativeUrl}dist/main`]: `./${testDirectoryRelativeUrl}${mainFilename}`,
 }
 
 await generateSystemJsBundle({
