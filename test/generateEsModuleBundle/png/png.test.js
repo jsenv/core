@@ -35,7 +35,7 @@ await assertFilePresence(resolveUrl("./dist/esmodule/assets/jsenv-05ba877d.png",
     ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = new URL(".dist/esmodule/assets/jsenv-05ba877d.png", serverOrigin).href
+  const expected = new URL("./assets/jsenv-05ba877d.png", serverOrigin).href
   assert({ actual, expected })
 }
 

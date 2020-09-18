@@ -35,7 +35,7 @@ await assertFilePresence(resolveUrl("./dist/esmodule/assets/icon-695ec0e5.svg", 
     ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = new URL(".dist/esmodule/assets/icon-695ec0e5.svg", serverOrigin).href
+  const expected = new URL("./assets/icon-695ec0e5.svg", serverOrigin).href
   assert({ actual, expected })
 }
 
@@ -45,6 +45,6 @@ if (SourceMap) {
     ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = new URL(".dist/esmodule/assets/icon-695ec0e5.svg", import.meta.url).href
+  const expected = new URL("./dist/esmodule/assets/icon-695ec0e5.svg", import.meta.url).href
   assert({ actual, expected })
 }
