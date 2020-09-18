@@ -40,7 +40,7 @@ const compileHtml = (
   manipulateHtmlDocument(document, { scriptManipulations })
 
   const { scripts } = parseHtmlDocumentRessources(document)
-  transformHtmlDocumentImportmapScript(scripts, { importmapType })
+  transformHtmlDocumentImportmapScript(scripts, { type: importmapType })
   const scriptTransformations = transformHtmlDocumentModuleScripts(scripts, {
     generateInlineScriptSrc,
     generateInlineScriptCode,

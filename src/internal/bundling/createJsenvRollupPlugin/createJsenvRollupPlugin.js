@@ -42,6 +42,7 @@ export const createJsenvRollupPlugin = async ({
   entryPointMap,
   bundleDirectoryUrl,
   bundleDefaultExtension,
+  importMapFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
   compileServerImportMap,
@@ -60,6 +61,7 @@ export const createJsenvRollupPlugin = async ({
   // https://github.com/kangax/html-minifier#options-quick-reference
   minifyHtmlOptions,
   manifestFile,
+  systemJsScript = { src: "/node_modules/systemjs/dist/s.min.js" },
 
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
@@ -155,13 +157,16 @@ export const createJsenvRollupPlugin = async ({
 
           virtualAssets.push((rollup) => {
             manipulateHtmlDocument(htmlDocument, {
-              scriptManipulations: [
-                {
-                  src: `/node_modules/systemjs/dist/s.min.js`,
-                },
-              ],
+              scriptManipulations: systemJsScript ? [systemJsScript] : [],
             })
-            transformHtmlDocumentImportmapScript(scripts, { importmapType: "systemjs-importmap" })
+            transformHtmlDocumentImportmapScript(scripts, {
+              type: "systemjs-importmap",
+              // ensure the html src is the one passed when generating the bundle
+              // this is useful in case you have an importmap while developping
+              // but want to use a different one to bundle so that
+              // the production importmap is smaller
+              src: importMapFileRelativeUrl,
+            })
             transformHtmlDocumentModuleScripts(scripts, {
               generateInlineScriptCode: (_, index) =>
                 `<script>window.System.import(${JSON.stringify(

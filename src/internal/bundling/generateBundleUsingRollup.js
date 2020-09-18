@@ -14,6 +14,7 @@ export const generateBundleUsingRollup = async ({
   entryPointMap,
   bundleDirectoryUrl,
   bundleDefaultExtension,
+  importMapFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
   compileServerImportMap,
@@ -33,6 +34,7 @@ export const generateBundleUsingRollup = async ({
   sourcemapExcludeSources,
   writeOnFileSystem,
   manifestFile = false,
+  systemJsScript,
 }) => {
   const { jsenvRollupPlugin, getExtraInfo } = await createJsenvRollupPlugin({
     cancellationToken,
@@ -42,6 +44,7 @@ export const generateBundleUsingRollup = async ({
     entryPointMap,
     bundleDirectoryUrl,
     bundleDefaultExtension,
+    importMapFileRelativeUrl,
     compileDirectoryRelativeUrl,
     compileServerOrigin,
     compileServerImportMap,
@@ -57,6 +60,7 @@ export const generateBundleUsingRollup = async ({
     minifyCssOptions,
     minifyHtmlOptions,
     manifestFile,
+    systemJsScript,
   })
 
   const rollupBundle = await useRollup({

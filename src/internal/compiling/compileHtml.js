@@ -134,11 +134,13 @@ export const transformHtmlDocumentModuleScripts = (
   }
 }
 
-export const transformHtmlDocumentImportmapScript = (scripts, { importmapType }) => {
+export const transformHtmlDocumentImportmapScript = (scripts, attributes) => {
   scripts.forEach((script) => {
     if (script.attributes.type === "importmap") {
-      const typeAttribute = getAttributeByName(script.node.attrs, "type")
-      typeAttribute.value = importmapType
+      Object.keys(attributes).forEach((key) => {
+        const attributeNode = getAttributeByName(script.node.attrs, key)
+        attributeNode.value = attributes[key]
+      })
     }
   })
 }
@@ -207,7 +209,7 @@ const scriptToNode = (script) => {
 const scriptsToFragment = (scripts) => {
   const html = scripts.reduce((previous, script) => {
     const scriptAttributes = objectToHtmlAttributes(script)
-    return `${previous}<script ${scriptAttributes}></script>
+    return `${previous}<script ${scriptAttributes}>${script.text || ""}</script>
       `
   }, "")
   const fragment = parse5.parseFragment(html)
@@ -232,9 +234,10 @@ const sameScript = (node, { type = "text/javascript", src }) => {
   return nodeType === type && nodeSrc === src
 }
 
-const objectToHtmlAttributes = (object) => {
-  return Object.keys(object)
-    .map((key) => `${key}=${valueToHtmlAttributeValue(object[key])}`)
+// eslint-disable-next-line no-unused-vars
+const objectToHtmlAttributes = ({ text, ...rest }) => {
+  return Object.keys(rest)
+    .map((key) => `${key}=${valueToHtmlAttributeValue(rest[key])}`)
     .join(" ")
 }
 

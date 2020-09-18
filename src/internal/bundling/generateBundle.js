@@ -45,6 +45,7 @@ export const generateBundle = async ({
     ...jsenvBrowserScoreMap,
     node: jsenvNodeVersionScoreMap,
   },
+  systemJsScript,
   balancerTemplateFileUrl,
 
   entryPointMap = {
@@ -156,6 +157,7 @@ export const generateBundle = async ({
         entryPointMap,
         bundleDirectoryUrl,
         bundleDefaultExtension,
+        importMapFileRelativeUrl,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         compileServerOrigin,
         compileServerImportMap,
@@ -175,6 +177,7 @@ export const generateBundle = async ({
         writeOnFileSystem,
         sourcemapExcludeSources,
         manifestFile,
+        systemJsScript,
       })
     }
 
@@ -187,6 +190,7 @@ export const generateBundle = async ({
         outDirectoryRelativeUrl,
         bundleDirectoryUrl,
         bundleDefaultExtension,
+        importMapFileRelativeUrl,
         entryPointMap,
         compileServerOrigin,
         compileServerImportMap,
@@ -204,6 +208,7 @@ export const generateBundle = async ({
         writeOnFileSystem,
         sourcemapExcludeSources,
         manifestFile,
+        systemJsScript,
       }),
       generateEntryPointsBalancerFiles({
         cancellationToken,
@@ -215,6 +220,7 @@ export const generateBundle = async ({
         entryPointMap,
         bundleDirectoryUrl,
         bundleDefaultExtension,
+        importMapFileRelativeUrl,
         compileServerOrigin,
         compileServerImportMap,
         importDefaultExtension,
@@ -230,6 +236,7 @@ export const generateBundle = async ({
         writeOnFileSystem,
         sourcemapExcludeSources,
         manifestFile,
+        systemJsScript,
       }),
     ])
   })

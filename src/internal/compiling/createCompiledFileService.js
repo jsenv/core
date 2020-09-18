@@ -224,7 +224,9 @@ export const createCompiledFileService = ({
           })
 
           const { scripts } = parseHtmlDocumentRessources(htmlDocument)
-          transformHtmlDocumentImportmapScript(scripts, { importmapType: "jsenv-importmap" })
+          transformHtmlDocumentImportmapScript(scripts, {
+            type: "jsenv-importmap",
+          })
           const { inlineScriptsTransformed } = transformHtmlDocumentModuleScripts(scripts, {
             generateInlineScriptSrc: ({ id, hash }) => {
               const scriptAssetUrl = generateCompiledFileAssetUrl(
