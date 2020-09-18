@@ -387,7 +387,6 @@ export const createJsenvRollupPlugin = async ({
   const loadModule = async (moduleUrl, moduleInfo, emitFile) => {
     if (moduleUrl in virtualModules) {
       const codeInput = virtualModules[moduleUrl]
-      debugger
 
       const { code, map } = await transformJs({
         projectDirectoryUrl,
