@@ -13,6 +13,8 @@ export const generateBundleUsingRollup = async ({
   projectDirectoryUrl,
   entryPointMap,
   bundleDirectoryUrl,
+  bundleDefaultExtension,
+  importMapFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
   compileServerImportMap,
@@ -32,6 +34,7 @@ export const generateBundleUsingRollup = async ({
   sourcemapExcludeSources,
   writeOnFileSystem,
   manifestFile = false,
+  systemJsScript,
 }) => {
   const { jsenvRollupPlugin, getExtraInfo } = await createJsenvRollupPlugin({
     cancellationToken,
@@ -40,6 +43,8 @@ export const generateBundleUsingRollup = async ({
     projectDirectoryUrl,
     entryPointMap,
     bundleDirectoryUrl,
+    bundleDefaultExtension,
+    importMapFileRelativeUrl,
     compileDirectoryRelativeUrl,
     compileServerOrigin,
     compileServerImportMap,
@@ -55,6 +60,7 @@ export const generateBundleUsingRollup = async ({
     minifyCssOptions,
     minifyHtmlOptions,
     manifestFile,
+    systemJsScript,
   })
 
   const rollupBundle = await useRollup({
@@ -68,6 +74,7 @@ export const generateBundleUsingRollup = async ({
     formatInputOptions,
     formatOutputOptions,
     bundleDirectoryUrl,
+    bundleDefaultExtension,
     sourcemapExcludeSources,
     writeOnFileSystem,
   })
@@ -89,6 +96,7 @@ const useRollup = async ({
   formatInputOptions,
   formatOutputOptions,
   bundleDirectoryUrl,
+  bundleDefaultExtension,
   sourcemapExcludeSources,
   writeOnFileSystem,
 }) => {
@@ -98,44 +106,32 @@ parse bundle
 ${JSON.stringify(entryPointMap, null, "  ")}
 `)
 
-  const rollupBundle = await createOperation({
-    cancellationToken,
-    start: () =>
-      rollup({
-        // about cache here, we should/could reuse previous rollup call
-        // to get the cache from the entryPointMap
-        // as shown here: https://rollupjs.org/guide/en#cache
-        // it could be passed in arguments to this function
-        // however parallelism and having different rollup options per
-        // call make it a bit complex
-        // cache: null
-        // https://rollupjs.org/guide/en#experimentaltoplevelawait
-        //  experimentalTopLevelAwait: true,
-        // if we want to ignore some warning
-        // please use https://rollupjs.org/guide/en#onwarn
-        // to be very clear about what we want to ignore
-        onwarn: (warning, warn) => {
-          if (warning.code === "THIS_IS_UNDEFINED") return
-          warn(warning)
-        },
-        input: entryPointMap,
-        plugins: [jsenvRollupPlugin],
-        ...formatInputOptions,
-      }),
-  })
-
-  if (!formatOutputOptions.entryFileNames) {
-    formatOutputOptions.entryFileNames = `[name]${extname(
-      entryPointMap[Object.keys(entryPointMap)[0]],
-    )}`
+  const rollupInputOptions = {
+    // about cache here, we should/could reuse previous rollup call
+    // to get the cache from the entryPointMap
+    // as shown here: https://rollupjs.org/guide/en#cache
+    // it could be passed in arguments to this function
+    // however parallelism and having different rollup options per
+    // call make it a bit complex
+    // cache: null
+    // https://rollupjs.org/guide/en#experimentaltoplevelawait
+    //  experimentalTopLevelAwait: true,
+    // if we want to ignore some warning
+    // please use https://rollupjs.org/guide/en#onwarn
+    // to be very clear about what we want to ignore
+    onwarn: (warning, warn) => {
+      if (warning.code === "THIS_IS_UNDEFINED") return
+      warn(warning)
+    },
+    input: [],
+    // preserveEntrySignatures: false,
+    plugins: [jsenvRollupPlugin],
+    ...formatInputOptions,
   }
-  if (!formatOutputOptions.chunkFileNames) {
-    formatOutputOptions.chunkFileNames = `[name]-[hash]${extname(
-      entryPointMap[Object.keys(entryPointMap)[0]],
-    )}`
-  }
+  const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
+  const outputExtension = extension === ".html" ? ".js" : extension
 
-  const rollupGenerateOptions = {
+  const rollupOutputOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait
     // experimentalTopLevelAwait: true,
     // we could put prefConst to true by checking 'transform-block-scoping'
@@ -148,18 +144,27 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources,
+
+    entryFileNames: `[name]${bundleDefaultExtension || outputExtension}`,
+    chunkFileNames: `[name]-[hash]${bundleDefaultExtension || outputExtension}`,
+
     ...formatOutputOptions,
   }
+
+  const rollupBundle = await createOperation({
+    cancellationToken,
+    start: () => rollup(rollupInputOptions),
+  })
 
   const rollupOutputArray = await createOperation({
     cancellationToken,
     start: () => {
       if (writeOnFileSystem) {
-        logger.info(`write bundle at ${rollupGenerateOptions.dir}`)
-        return rollupBundle.write(rollupGenerateOptions)
+        logger.info(`write bundle at ${rollupOutputOptions.dir}`)
+        return rollupBundle.write(rollupOutputOptions)
       }
       logger.info("generate bundle")
-      return rollupBundle.generate(rollupGenerateOptions)
+      return rollupBundle.generate(rollupOutputOptions)
     },
   })
 

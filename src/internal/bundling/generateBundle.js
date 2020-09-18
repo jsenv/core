@@ -45,6 +45,7 @@ export const generateBundle = async ({
     ...jsenvBrowserScoreMap,
     node: jsenvNodeVersionScoreMap,
   },
+  systemJsScript,
   balancerTemplateFileUrl,
 
   entryPointMap = {
@@ -52,13 +53,16 @@ export const generateBundle = async ({
   },
   bundleDirectoryRelativeUrl,
   bundleDirectoryClean = false,
+  bundleDefaultExtension = ".js",
   format,
   formatInputOptions = {},
   formatOutputOptions = {},
-  minify = false,
+  minify = process.env.NODE_ENV === "production",
   minifyJsOptions = {},
   minifyCssOptions = {},
-  minifyHtmlOptions = {},
+  minifyHtmlOptions = {
+    collapseWhitespace: true,
+  },
   sourcemapExcludeSources = true,
   writeOnFileSystem = true,
   manifestFile = false,
@@ -91,12 +95,8 @@ export const generateBundle = async ({
       await ensureEmptyDirectory(bundleDirectoryUrl)
     }
 
-    const extension =
-      formatOutputOptions && formatOutputOptions.entryFileNames
-        ? extname(formatOutputOptions.entryFileNames)
-        : ".js"
-
-    const chunkId = `${Object.keys(entryPointMap)[0]}${extension}`
+    let chunkId = Object.keys(entryPointMap)[0]
+    if (!extname(chunkId)) chunkId += bundleDefaultExtension
     env = {
       ...env,
       chunkId,
@@ -116,12 +116,7 @@ export const generateBundle = async ({
       await assertFilePresence(balancerTemplateFileUrl)
     }
 
-    const {
-      outDirectoryRelativeUrl,
-      origin: compileServerOrigin,
-      compileServerImportMap,
-      compileServerGroupMap,
-    } = await startCompileServer({
+    const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
 
@@ -150,6 +145,20 @@ export const generateBundle = async ({
       transformModuleIntoSystemFormat: false, // will be done by rollup
     })
 
+    const {
+      outDirectoryRelativeUrl,
+      origin: compileServerOrigin,
+      compileServerImportMap,
+      compileServerGroupMap,
+    } = compileServer
+    // only if passed we override with the normalized value
+    // so that further function can still know
+    // if a specific value was passed or if it's the default
+    // value which is used
+    if (importMapFileRelativeUrl) {
+      importMapFileRelativeUrl = compileServer.importMapFileRelativeUrl
+    }
+
     if (compileGroupCount === 1) {
       return generateBundleUsingRollup({
         cancellationToken,
@@ -158,6 +167,8 @@ export const generateBundle = async ({
         projectDirectoryUrl,
         entryPointMap,
         bundleDirectoryUrl,
+        bundleDefaultExtension,
+        importMapFileRelativeUrl,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         compileServerOrigin,
         compileServerImportMap,
@@ -177,6 +188,7 @@ export const generateBundle = async ({
         writeOnFileSystem,
         sourcemapExcludeSources,
         manifestFile,
+        systemJsScript,
       })
     }
 
@@ -188,6 +200,8 @@ export const generateBundle = async ({
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
         bundleDirectoryUrl,
+        bundleDefaultExtension,
+        importMapFileRelativeUrl,
         entryPointMap,
         compileServerOrigin,
         compileServerImportMap,
@@ -205,6 +219,7 @@ export const generateBundle = async ({
         writeOnFileSystem,
         sourcemapExcludeSources,
         manifestFile,
+        systemJsScript,
       }),
       generateEntryPointsBalancerFiles({
         cancellationToken,
@@ -215,6 +230,8 @@ export const generateBundle = async ({
         outDirectoryRelativeUrl,
         entryPointMap,
         bundleDirectoryUrl,
+        bundleDefaultExtension,
+        importMapFileRelativeUrl,
         compileServerOrigin,
         compileServerImportMap,
         importDefaultExtension,
@@ -230,6 +247,7 @@ export const generateBundle = async ({
         writeOnFileSystem,
         sourcemapExcludeSources,
         manifestFile,
+        systemJsScript,
       }),
     ])
   })

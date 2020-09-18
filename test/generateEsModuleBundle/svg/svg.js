@@ -1,3 +1,3 @@
-import data from "./icon.svg"
+import svgUrl from "./icon.svg"
 
-export default data
+export default svgUrl

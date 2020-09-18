@@ -14,7 +14,14 @@ import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { compileFile } from "./compileFile.js"
 import { serveBundle } from "./serveBundle.js"
-import { compileHtml } from "./compileHtml.js"
+import {
+  parseHtmlString,
+  parseHtmlDocumentRessources,
+  manipulateHtmlDocument,
+  transformHtmlDocumentModuleScripts,
+  transformHtmlDocumentImportmapScript,
+  stringifyHtmlDocument,
+} from "./compileHtml.js"
 import { appendSourceMappingAsExternalUrl } from "../sourceMappingURLUtils.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
@@ -195,7 +202,9 @@ export const createCompiledFileService = ({
         request,
 
         compile: async (htmlBeforeCompilation) => {
-          const { htmlAfterCompilation, scriptsExternalized } = compileHtml(htmlBeforeCompilation, {
+          const htmlDocument = parseHtmlString(htmlBeforeCompilation)
+
+          manipulateHtmlDocument(htmlDocument, {
             scriptManipulations: [
               {
                 // when html file already contains an importmap script tag
@@ -212,6 +221,13 @@ export const createCompiledFileService = ({
               // instead this should be moved to startExploring
               ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptManipulations),
             ],
+          })
+
+          const { scripts } = parseHtmlDocumentRessources(htmlDocument)
+          transformHtmlDocumentImportmapScript(scripts, {
+            type: "jsenv-importmap",
+          })
+          const { inlineScriptsTransformed } = transformHtmlDocumentModuleScripts(scripts, {
             generateInlineScriptSrc: ({ id, hash }) => {
               const scriptAssetUrl = generateCompiledFileAssetUrl(
                 compiledFileUrl,
@@ -221,16 +237,18 @@ export const createCompiledFileService = ({
             },
           })
 
+          const htmlAfterTransformation = stringifyHtmlDocument(htmlDocument)
+
           let assets = []
           let assetsContent = []
           await Promise.all(
-            Object.keys(scriptsExternalized).map(async (scriptSrc) => {
+            Object.keys(inlineScriptsTransformed).map(async (scriptSrc) => {
               const scriptAssetUrl = resolveUrl(scriptSrc, compiledFileUrl)
               const scriptBasename = urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)
               const scriptOriginalFileUrl = resolveUrl(scriptBasename, originalFileUrl)
               const scriptAfterTransformFileUrl = resolveUrl(scriptBasename, compiledFileUrl)
 
-              const scriptBeforeCompilation = scriptsExternalized[scriptSrc]
+              const scriptBeforeCompilation = inlineScriptsTransformed[scriptSrc]
               const scriptTransformResult = await transformJs({
                 projectDirectoryUrl,
                 code: scriptBeforeCompilation,
@@ -258,7 +276,7 @@ export const createCompiledFileService = ({
           )
 
           return {
-            compiledSource: htmlAfterCompilation,
+            compiledSource: htmlAfterTransformation,
             contentType: "text/html",
             sources: [originalFileUrl],
             sourcesContent: [htmlBeforeCompilation],

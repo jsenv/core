@@ -1,7 +1,7 @@
 import { SourceMap } from "module"
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { generateEsModuleBundle } from "../../../index.js"
 import {
@@ -18,7 +18,6 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
-const svgText = await readFile(resolveUrl("./icon.svg", import.meta.url))
 
 await generateEsModuleBundle({
   ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
@@ -29,12 +28,14 @@ await generateEsModuleBundle({
   },
 })
 
+await assertFilePresence(resolveUrl("./dist/esmodule/assets/icon-695ec0e5.svg", import.meta.url))
+
 {
-  const { value: actual } = await browserImportBundle({
+  const { value: actual, serverOrigin } = await browserImportBundle({
     ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = svgText
+  const expected = new URL("./assets/icon-695ec0e5.svg", serverOrigin).href
   assert({ actual, expected })
 }
 
@@ -44,6 +45,6 @@ if (SourceMap) {
     ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = svgText
+  const expected = new URL("./dist/esmodule/assets/icon-695ec0e5.svg", import.meta.url).href
   assert({ actual, expected })
 }

@@ -1,4 +1,5 @@
 /* eslint-disable import/max-dependencies */
+import { basename, extname } from "path"
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import {
   isFileSystemPath,
@@ -7,12 +8,22 @@ import {
   urlToRelativeUrl,
   resolveDirectoryUrl,
   writeFile,
+  readFile,
   comparePathnames,
 } from "@jsenv/util"
+
 import { appendSourceMappingAsExternalUrl } from "../../sourceMappingURLUtils.js"
 import { fetchUrl } from "../../fetchUrl.js"
 import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
 import { transformJs } from "../../compiling/js-compilation-service/transformJs.js"
+import {
+  parseHtmlString,
+  parseHtmlDocumentRessources,
+  manipulateHtmlDocument,
+  transformHtmlDocumentImportmapScript,
+  transformHtmlDocumentModuleScripts,
+  stringifyHtmlDocument,
+} from "../../compiling/compileHtml.js"
 import { findAsyncPluginNameInBabelPluginMap } from "../../compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
@@ -20,31 +31,6 @@ import { fetchSourcemap } from "./fetchSourcemap.js"
 import { minifyHtml } from "./minifyHtml.js"
 import { minifyJs } from "./minifyJs.js"
 import { minifyCss } from "./minifyCss.js"
-
-/**
-
-A word about bundler choosing to return an absolute url for import like
-
-import styleFileUrl from "./style.css"
-import iconFileUrl from "./icon.png"
-
-Bundler choose to return an url so that you can still access your bundled files.
-In a structure like this one I would rather choose to keep target asset with "/directory/icon.png"
-
-dist/
-  esmodule/
-    index.js
-directory/
-  icon.png
-
-Considering it's possible to target original file from bundled files (using import starting with '/'),
-Jsenv bundle do not emit any asset file.
-
-Using import to import something else than a JavaScript file convert it to
-a JavaScript module with an export default of that file content as text.
-Non textual files (png, jpg, video) are converted to base64 text.
-
-*/
 
 const STATIC_COMPILE_SERVER_AUTHORITY = "//jsenv.com"
 
@@ -55,6 +41,8 @@ export const createJsenvRollupPlugin = async ({
   projectDirectoryUrl,
   entryPointMap,
   bundleDirectoryUrl,
+  bundleDefaultExtension,
+  importMapFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
   compileServerImportMap,
@@ -73,6 +61,7 @@ export const createJsenvRollupPlugin = async ({
   // https://github.com/kangax/html-minifier#options-quick-reference
   minifyHtmlOptions,
   manifestFile,
+  systemJsScript = { src: "/node_modules/systemjs/dist/s.min.js" },
 
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
@@ -91,7 +80,8 @@ export const createJsenvRollupPlugin = async ({
     compileDirectoryRelativeUrl,
     compileServerOriginForRollup,
   )
-  const chunkId = `${Object.keys(entryPointMap)[0]}.js`
+  let chunkId = Object.keys(entryPointMap)[0]
+  if (!extname(chunkId)) chunkId += bundleDefaultExtension
   const importMap = normalizeImportMap(compileServerImportMap, compileDirectoryRemoteUrl)
 
   const nativeModulePredicate = (specifier) => {
@@ -102,10 +92,126 @@ export const createJsenvRollupPlugin = async ({
     return false
   }
 
+  const virtualModules = {}
+  const virtualAssets = []
+
   const jsenvRollupPlugin = {
     name: "jsenv",
 
-    resolveId: (specifier, importer = compileDirectoryRemoteUrl) => {
+    async buildStart() {
+      // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
+      // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
+      await Promise.all(
+        Object.keys(entryPointMap).map(async (key) => {
+          const chunkFileRelativeUrl = entryPointMap[key]
+          const chunkFileUrl = resolveUrl(chunkFileRelativeUrl, projectDirectoryUrl)
+          // const chunkBundledFileUrl = resolveUrl(chunkFileRelativeUrl, bundleDirectoryUrl)
+
+          if (!chunkFileRelativeUrl.endsWith(".html")) {
+            this.emitFile({
+              type: "chunk",
+              id: chunkFileRelativeUrl,
+              fileName: `${key}${bundleDefaultExtension || extname(chunkFileRelativeUrl)}`,
+            })
+            return
+          }
+
+          // const htmlFileRemoteUrl = resolveUrl(value, compileServerOrigin)
+          // const htmlCompiledFileRemoteUrl = resolveUrl(value, compileDirectoryRemoteUrl)
+          const htmlFileContent = await readFile(chunkFileUrl)
+          const htmlFileName = basename(chunkFileRelativeUrl)
+          const htmlDocument = parseHtmlString(htmlFileContent)
+          const { scripts } = parseHtmlDocumentRessources(htmlDocument)
+
+          let previousScriptId
+          const scriptReferences = []
+          scripts.forEach((script, index) => {
+            if (script.attributes.type === "module" && script.attributes.src) {
+              logger.debug(
+                `remote script ${script.attributes.src} found in ${chunkFileRelativeUrl} -> emit chunk`,
+              )
+              const remoteScriptId = script.attributes.src
+              const remoteScriptUrl = resolveUrl(script.attributes.src, chunkFileUrl)
+              const remoteScriptRelativeUrl = urlToRelativeUrl(remoteScriptUrl, projectDirectoryUrl)
+              const remoteScriptReference = this.emitFile({
+                type: "chunk",
+                id: `./${remoteScriptRelativeUrl}`,
+                ...(previousScriptId ? { implicitlyLoadedAfterOneOf: [previousScriptId] } : {}),
+              })
+              previousScriptId = remoteScriptId
+              scriptReferences.push(remoteScriptReference)
+              return
+            }
+            if (script.attributes.type === "module" && script.text) {
+              const inlineScriptId = resolveUrl(`htmlFileName.${index}.js`, chunkFileUrl)
+              logger.debug(
+                `inline script number ${index} found in ${chunkFileRelativeUrl} -> emit chunk`,
+              )
+              virtualModules[inlineScriptId] = script.text
+              const inlineScriptReference = this.emitFile({
+                type: "chunk",
+                id: inlineScriptId,
+                ...(previousScriptId ? { implicitlyLoadedAfterOneOf: [previousScriptId] } : {}),
+              })
+              previousScriptId = inlineScriptId
+              scriptReferences.push(inlineScriptReference)
+
+              return
+            }
+            scriptReferences.push(null)
+          })
+
+          virtualAssets.push(async (rollup) => {
+            const htmlFileUrl = resolveUrl(
+              key.endsWith(".html") ? key : `${key}.html`,
+              projectDirectoryUrl,
+            )
+
+            manipulateHtmlDocument(htmlDocument, {
+              scriptManipulations: systemJsScript ? [systemJsScript] : [],
+            })
+            const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
+            const importMapFileRelativeUrlForHtml = urlToRelativeUrl(importMapFileUrl, htmlFileUrl)
+            transformHtmlDocumentImportmapScript(scripts, {
+              type: "systemjs-importmap",
+              // ensure the html src is the one passed when generating the bundle
+              // this is useful in case you have an importmap while developping
+              // but want to use a different one to bundle so that
+              // the production importmap is smaller
+              // but override only if a custom importmap is passed
+              ...(importMapFileRelativeUrl ? { src: importMapFileRelativeUrlForHtml } : {}),
+            })
+
+            transformHtmlDocumentModuleScripts(scripts, {
+              generateInlineScriptCode: (_, index) => {
+                const scriptRelativeUrl = rollup.getFileName(scriptReferences[index])
+                const scriptUrl = resolveUrl(scriptRelativeUrl, bundleDirectoryUrl)
+                const scriptUrlRelativeToHtmlFile = urlToRelativeUrl(scriptUrl, htmlFileUrl)
+                return `<script>window.System.import(${JSON.stringify(
+                  `./${scriptUrlRelativeToHtmlFile}`,
+                )})</script>`
+              },
+            })
+            const htmlTransformedString = stringifyHtmlDocument(htmlDocument)
+            logger.debug(`write ${htmlFileName} at ${htmlFileUrl}`)
+            await writeFile(
+              htmlFileUrl,
+              minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString,
+            )
+          })
+        }),
+      )
+    },
+
+    resolveId(specifier, importer) {
+      if (importer === undefined) {
+        if (specifier.endsWith(".html")) {
+          importer = compileServerOriginForRollup
+        } else {
+          importer = compileDirectoryRemoteUrl
+        }
+      }
+
       if (nativeModulePredicate(specifier)) {
         logger.debug(`${specifier} is native module -> marked as external`)
         return false
@@ -114,6 +220,10 @@ export const createJsenvRollupPlugin = async ({
       if (externalImportSpecifiers.includes(specifier)) {
         logger.debug(`${specifier} verifies externalImportSpecifiers  -> marked as external`)
         return { id: specifier, external: true }
+      }
+
+      if (virtualModules.hasOwnProperty(specifier)) {
+        return specifier
       }
 
       if (isFileSystemPath(importer)) {
@@ -126,7 +236,7 @@ export const createJsenvRollupPlugin = async ({
         defaultExtension: importDefaultExtension,
       })
       // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
-      logger.debug(`${specifier} resolved to ${importUrl}`)
+      logger.debug(`${specifier} imported by ${importer} resolved to ${importUrl}`)
       return importUrl
     },
 
@@ -135,11 +245,16 @@ export const createJsenvRollupPlugin = async ({
 
     // },
 
-    load: async (urlForRollup) => {
+    async load(urlForRollup) {
+      const moduleInfo = this.getModuleInfo(urlForRollup)
       const realUrl = urlToRealUrl(urlForRollup) || urlForRollup
 
       logger.debug(`loads ${realUrl}`)
-      const { responseUrl, contentRaw, content, map } = await loadModule(realUrl)
+      const { responseUrl, contentRaw, content = "", map } = await loadModule(
+        realUrl,
+        moduleInfo,
+        this.emitFile.bind(this),
+      )
 
       const responseUrlForRollup = urlToUrlForRollup(responseUrl) || responseUrl
       saveModuleContent(responseUrlForRollup, {
@@ -229,24 +344,28 @@ export const createJsenvRollupPlugin = async ({
       }
     },
 
-    generateBundle: async (outputOptions, bundle) => {
-      if (!manifestFile) {
-        return
+    async generateBundle(outputOptions, bundle) {
+      virtualAssets.forEach((fn) => {
+        fn(this)
+      })
+
+      if (manifestFile) {
+        const mappings = {}
+        Object.keys(bundle).forEach((key) => {
+          const chunk = bundle[key]
+          let chunkId = chunk.name
+          chunkId += '.js'
+          mappings[chunkId] = chunk.fileName
+        })
+        const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
+        const manifest = {}
+        mappingKeysSorted.forEach((key) => {
+          manifest[key] = mappings[key]
+        })
+
+        const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
+        await writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "))
       }
-
-      const mappings = {}
-      Object.keys(bundle).forEach((key) => {
-        const chunk = bundle[key]
-        mappings[`${chunk.name}.js`] = chunk.fileName
-      })
-      const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
-      const manifest = {}
-      mappingKeysSorted.forEach((key) => {
-        manifest[key] = mappings[key]
-      })
-
-      const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
-      await writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "))
     },
 
     writeBundle: async (options, bundle) => {
@@ -292,7 +411,25 @@ export const createJsenvRollupPlugin = async ({
     return null
   }
 
-  const loadModule = async (moduleUrl) => {
+  const loadModule = async (moduleUrl, moduleInfo, emitFile) => {
+    if (moduleUrl in virtualModules) {
+      const codeInput = virtualModules[moduleUrl]
+
+      const { code, map } = await transformJs({
+        projectDirectoryUrl,
+        code: codeInput,
+        url: moduleUrl,
+        babelPluginMap,
+      })
+
+      return {
+        responseUrl: moduleUrl,
+        contentRaw: code,
+        content: code,
+        map,
+      }
+    }
+
     const moduleResponse = await fetchModule(moduleUrl)
     const contentType = moduleResponse.headers["content-type"] || ""
     const moduleText = await moduleResponse.text()
@@ -317,81 +454,90 @@ export const createJsenvRollupPlugin = async ({
     }
 
     if (contentType === "application/json" || contentType === "application/importmap+json") {
+      // there is no need to minify the json string
+      // because it becomes valid javascript
+      // that will be minified by minifyJs inside renderChunk
+      const jsonString = moduleText
       return {
         ...commonData,
-        content: jsonToJavascript(moduleText),
+        content: `export default ${jsonString}`,
       }
     }
 
     if (contentType === "text/html") {
+      if (moduleInfo.isEntry) {
+        return {
+          content: "",
+        }
+      }
+
+      const htmlString = minify ? minifyHtml(htmlString, minifyHtmlOptions) : moduleText
+      const referenceId = emitFile({
+        type: "asset",
+        name: basename(moduleInfo.id),
+        source: htmlString,
+      })
       return {
         ...commonData,
-        content: htmlToJavascript(moduleText),
+        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
       }
     }
 
     if (contentType === "text/css") {
+      const cssString = minify ? minifyCss(moduleText, minifyCssOptions) : moduleText
+      const referenceId = emitFile({
+        type: "asset",
+        name: basename(moduleInfo.id),
+        source: cssString,
+      })
       return {
         ...commonData,
-        content: cssToJavascript(moduleText),
+        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
       }
     }
 
     if (contentType === "image/svg+xml") {
+      // could also benefit of minification https://github.com/svg/svgo
+      const svgString = moduleText
+      const referenceId = emitFile({
+        type: "asset",
+        name: basename(moduleInfo.id),
+        source: svgString,
+      })
       return {
         ...commonData,
-        content: svgToJavaScript(moduleText),
+        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
       }
     }
 
     if (contentType.startsWith("text/")) {
+      const textString = moduleText
+      const referenceId = emitFile({
+        type: "asset",
+        name: basename(moduleInfo.id),
+        source: textString,
+      })
       return {
         ...commonData,
-        content: textToJavascript(moduleText),
+        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
       }
     }
 
-    logger.debug(`Using base64 to bundle module because of its content-type.
+    logger.debug(`Using buffer to bundle module because of its content-type.
 --- content-type ---
 ${contentType}
 --- module url ---
 ${moduleUrl}`)
-
-    // fallback to base64 text
+    const buffer = Buffer.from(moduleText)
+    const referenceId = emitFile({
+      type: "asset",
+      name: basename(moduleInfo.id),
+      source: buffer,
+    })
     return {
       ...commonData,
-      content: textToJavascript(Buffer.from(moduleText).toString("base64")),
+      content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
     }
-  }
-
-  const jsonToJavascript = (jsonString) => {
-    // there is no need to minify the json string
-    // because it becomes valid javascript
-    // that will be minified by minifyJs inside renderChunk
-    return `export default ${jsonString}`
-  }
-
-  const htmlToJavascript = (htmlString) => {
-    if (minify) {
-      htmlString = minifyHtml(htmlString, minifyHtmlOptions)
-    }
-    return `export default ${JSON.stringify(htmlString)}`
-  }
-
-  const cssToJavascript = (cssString) => {
-    if (minify) {
-      cssString = minifyCss(cssString, minifyCssOptions)
-    }
-    return `export default ${JSON.stringify(cssString)}`
-  }
-
-  const svgToJavaScript = (svgString) => {
-    // could also benefit of minification https://github.com/svg/svgo
-    return `export default ${JSON.stringify(svgString)}`
-  }
-
-  const textToJavascript = (textString) => {
-    return `export default ${JSON.stringify(textString)}`
   }
 
   const fetchModule = async (moduleUrl) => {
