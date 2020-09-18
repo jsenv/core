@@ -372,6 +372,7 @@ export const createJsenvRollupPlugin = async ({
       if (detectAndTransformIfNeededAsyncInsertedByRollup) {
         await transformAsyncInsertedByRollup({
           projectDirectoryUrl,
+          bundleDirectoryUrl,
           babelPluginMap,
           bundle,
         })
