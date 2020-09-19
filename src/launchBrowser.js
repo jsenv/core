@@ -363,10 +363,10 @@ const browserToRuntimeHooks = (
 }
 
 const isTargetClosedError = (error) => {
-  if (error.message.match(/^Protocol error \(.*?\): Target closed/)) {
+  if (error.message.match(/Protocol error \(.*?\): Target closed/)) {
     return true
   }
-  if (error.message.match(/^Protocol error \(.*?\): Browser has been closed/)) {
+  if (error.message.match(/Protocol error \(.*?\): Browser has been closed/)) {
     return true
   }
   return false

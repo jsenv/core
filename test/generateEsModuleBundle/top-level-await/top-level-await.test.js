@@ -35,7 +35,9 @@ try {
   })
   throw new Error("should throw")
 } catch (actual) {
-  const expected = new Error("Evaluation failed: SyntaxError: Unexpected reserved word")
+  const expected = new Error(
+    "page.evaluate: Evaluation failed: SyntaxError: Unexpected reserved word",
+  )
   assert({ actual, expected })
 }
 // top level await not supported in node 13.8 for now (SourceMap test because added in 13.7)

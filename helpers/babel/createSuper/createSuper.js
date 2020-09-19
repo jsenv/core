@@ -5,7 +5,7 @@ import possibleConstructorReturn from "../possibleConstructorReturn/possibleCons
 export default function _createSuper(Derived) {
   var hasNativeReflectConstruct = isNativeReflectConstruct()
 
-  return function () {
+  return function _createSuperInternal() {
     var Super = getPrototypeOf(Derived)
     var result
     if (hasNativeReflectConstruct) {
