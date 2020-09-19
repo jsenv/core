@@ -119,7 +119,6 @@ export const createJsenvRollupPlugin = async ({
           // const htmlFileRemoteUrl = resolveUrl(value, compileServerOrigin)
           // const htmlCompiledFileRemoteUrl = resolveUrl(value, compileDirectoryRemoteUrl)
           const htmlFileContent = await readFile(chunkFileUrl)
-          const htmlFileName = basename(chunkFileRelativeUrl)
           const htmlDocument = parseHtmlString(htmlFileContent)
           const { scripts } = parseHtmlDocumentRessources(htmlDocument)
 
