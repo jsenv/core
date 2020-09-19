@@ -193,11 +193,12 @@ export const createJsenvRollupPlugin = async ({
               },
             })
             const htmlTransformedString = stringifyHtmlDocument(htmlDocument)
-            logger.debug(`write ${htmlFileName} at ${htmlFileUrl}`)
+
             await writeFile(
               htmlFileUrl,
               minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString,
             )
+            logger.info(`-> ${htmlFileUrl}`)
           })
         }),
       )
@@ -345,16 +346,14 @@ export const createJsenvRollupPlugin = async ({
     },
 
     async generateBundle(outputOptions, bundle) {
-      virtualAssets.forEach((fn) => {
-        fn(this)
-      })
+      logger.info(formatBundleGeneratedLog(bundle))
 
       if (manifestFile) {
         const mappings = {}
         Object.keys(bundle).forEach((key) => {
           const chunk = bundle[key]
           let chunkId = chunk.name
-          chunkId += '.js'
+          chunkId += ".js"
           mappings[chunkId] = chunk.fileName
         })
         const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
@@ -368,7 +367,11 @@ export const createJsenvRollupPlugin = async ({
       }
     },
 
-    writeBundle: async (options, bundle) => {
+    async writeBundle(options, bundle) {
+      virtualAssets.forEach((fn) => {
+        fn(this)
+      })
+
       if (detectAndTransformIfNeededAsyncInsertedByRollup) {
         await transformAsyncInsertedByRollup({
           projectDirectoryUrl,
@@ -630,4 +633,46 @@ const transformAsyncInsertedByRollup = async ({
       ])
     }),
   )
+}
+
+const formatBundleGeneratedLog = (bundle) => {
+  const assetFilenames = Object.keys(bundle)
+    .filter((key) => bundle[key].type === "asset")
+    .map((key) => bundle[key].fileName)
+  const assetCount = assetFilenames.length
+
+  const chunkFilenames = Object.keys(bundle)
+    .filter((key) => bundle[key].type === "chunk")
+    .map((key) => bundle[key].fileName)
+  const chunkCount = chunkFilenames.length
+
+  const assetDescription =
+    // eslint-disable-next-line no-nested-ternary
+    assetCount === 0 ? "" : assetCount === 1 ? "1 asset" : `${assetCount} assets`
+  const chunkDescription =
+    // eslint-disable-next-line no-nested-ternary
+    chunkCount === 0 ? "" : chunkCount === 1 ? "1 chunk" : `${chunkCount} chunks`
+
+  return createDetailedMessage(`bundle generated`, {
+    ...(assetDescription ? { [assetDescription]: assetFilenames } : {}),
+    ...(chunkDescription ? { [chunkDescription]: chunkFilenames } : {}),
+  })
+}
+
+const createDetailedMessage = (message, details = {}) => {
+  let string = `${message}`
+
+  Object.keys(details).forEach((key) => {
+    const value = details[key]
+    string += `
+--- ${key} ---
+${
+  Array.isArray(value)
+    ? value.join(`
+`)
+    : value
+}`
+  })
+
+  return string
 }

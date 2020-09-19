@@ -16,13 +16,10 @@ const entryPointMap = {
 
 await generateSystemJsBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+  // logLevel: "info",
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap,
-  // minify: true,
-  // minifyHtmlOptions: {
-  //   collapseWhitespace: true,
-  // },
 })
 
 // const { namespace: actual } = await browserImportSystemJsBundle({

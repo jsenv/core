@@ -160,10 +160,8 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     cancellationToken,
     start: () => {
       if (writeOnFileSystem) {
-        logger.info(`write bundle at ${rollupOutputOptions.dir}`)
         return rollupBundle.write(rollupOutputOptions)
       }
-      logger.info("generate bundle")
       return rollupBundle.generate(rollupOutputOptions)
     },
   })
