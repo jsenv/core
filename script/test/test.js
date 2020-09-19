@@ -10,6 +10,13 @@ executeTestPlan({
         allocatedMs: 60 * 1000,
       },
     },
+    // give more time to the first test because it generates many file cached afterwards
+    "test/execute/alive-after-execution/*.test.js": {
+      node: {
+        launch: launchNode,
+        allocatedMs: 120 * 1000,
+      },
+    },
     "test/execute/basic/file.chromium.test.js": {
       node: {
         launch: launchNode,
