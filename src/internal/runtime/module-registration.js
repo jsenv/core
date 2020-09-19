@@ -110,11 +110,10 @@ ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelative
   }
 
   if (contentTypeShouldBeReadAsText(contentType)) {
-    const bodyAsText = await moduleResponse.text()
     return fromFunctionReturningNamespace(
       () => {
         return {
-          default: bodyAsText,
+          default: moduleResponse.url,
         }
       },
       {
@@ -127,7 +126,7 @@ ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelative
   }
 
   if (contentType) {
-    console.warn(`Module handled as base64 text because of its content-type.
+    console.warn(`Module content-type is unusual.
 --- content-type ---
 ${contentType}
 --- allowed content-type ---
@@ -136,7 +135,7 @@ application/json
 text/*
 ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
   } else {
-    console.warn(`Module handled as base64 text because of missing content-type.
+    console.warn(`Module content-type is missing.
 --- allowed content-type ---
 application/javascript
 application/json
@@ -144,12 +143,10 @@ text/*
 ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
   }
 
-  const bodyAsText = await moduleResponse.text()
-  const bodyAsBase64 = textToBase64(bodyAsText)
   return fromFunctionReturningNamespace(
     () => {
       return {
-        default: bodyAsBase64,
+        default: moduleResponse.url,
       }
     },
     {
@@ -171,10 +168,10 @@ const contentTypeShouldBeReadAsText = (contentType) => {
   return false
 }
 
-const textToBase64 =
-  typeof window === "object"
-    ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
-    : (text) => Buffer.from(text, "utf8").toString("base64")
+// const textToBase64 =
+//   typeof window === "object"
+//     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
+//     : (text) => Buffer.from(text, "utf8").toString("base64")
 
 const getModuleDetails = ({
   url,

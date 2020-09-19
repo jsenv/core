@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, readFile, resolveUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
@@ -12,11 +12,11 @@ import {
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativePath)
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.js`
-const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -33,11 +33,10 @@ const actual = await launchAndExecute({
       compileServerOrigin,
     }),
 })
-const pngFileContent = await readFile(resolveUrl("./jsenv.png", import.meta.url))
 const expected = {
   status: "completed",
   namespace: {
-    default: Buffer.from(pngFileContent).toString("base64"),
+    default: resolveUrl(`${testDirectoryRelativeUrl}jsenv.png`, compileServerOrigin),
   },
 }
 assert({ actual, expected })

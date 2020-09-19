@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, readFile, resolveUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
@@ -23,8 +23,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
   compileGroupCount: 1, // ensure compileId always otherwise
 })
-const pngFileContent = await readFile(resolveUrl("./jsenv.png", import.meta.url))
-const pngBase64 = Buffer.from(pngFileContent).toString("base64")
+const pngFileUrl = resolveUrl(`${testDirectoryRelativeUrl}jsenv.png`, compileServerOrigin)
 
 await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
   const actual = await launchAndExecute({
@@ -46,7 +45,7 @@ await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launc
       "./png.js": {
         status: "completed",
         namespace: {
-          default: pngBase64,
+          default: pngFileUrl,
         },
       },
     },
