@@ -763,6 +763,7 @@ const createAssetFileService = ({ projectDirectoryUrl }) => {
       return serveFile(resolveUrl(ressource.slice(1), projectDirectoryUrl), {
         method,
         headers,
+        etagEnabled: true,
       })
     }
     return null
@@ -831,6 +832,7 @@ const createProjectFileService = ({ projectDirectoryUrl, projectFileRequestedCal
     const responsePromise = serveFile(filePath, {
       method,
       headers,
+      etagEnabled: true,
     })
 
     return responsePromise
