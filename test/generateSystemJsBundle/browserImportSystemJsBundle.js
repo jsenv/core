@@ -75,5 +75,4 @@ const serveTestDirectory = ({ testDirectoryUrl, request: { ressource, method, he
   serveFile(resolveUrl(ressource.slice(1), testDirectoryUrl), {
     method,
     headers,
-    etagEnabled: true,
   })
