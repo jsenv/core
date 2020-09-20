@@ -84,4 +84,5 @@ const serveBundleDirectory = ({ bundleDirectoryUrl, request: { ressource, method
   serveFile(urlToFileSystemPath(resolveUrl(ressource.slice(1), bundleDirectoryUrl)), {
     method,
     headers,
+    etagEnabled: true,
   })
