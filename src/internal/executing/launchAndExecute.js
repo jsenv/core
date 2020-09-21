@@ -335,9 +335,13 @@ options: ${JSON.stringify(options, null, "  ")}`)
       timing = TIMING_DURING_EXECUTION
 
       registerErrorCallback((error) => {
-        logger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
+        logger.error(`error ${timing}.
 --- error stack ---
-${error.stack}`)
+${error.stack}
+--- file executed ---
+${fileRelativeUrl}
+--- runtime ---
+${runtime}`)
         runtimeErrorCallback({ error, timing })
       })
 
@@ -359,9 +363,13 @@ ${error.stack}`)
         // there is no need to log it.
         // the code will know the execution errored because it receives
         // an errored execution result
-        logger.debug(`${fileRelativeUrl} ${runtime}: error ${TIMING_DURING_EXECUTION}.
+        logger.debug(`error ${TIMING_DURING_EXECUTION}.
 --- error stack ---
-${executionResult.error.stack}`)
+${executionResult.error.stack}
+--- file executed ---
+${fileRelativeUrl}
+--- runtime ---
+${runtime}`)
         return createErroredExecutionResult(executionResult, rest)
       }
 
