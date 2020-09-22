@@ -235,7 +235,8 @@ export const startCompileServer = async ({
 
     protocol: compileServerProtocol,
     http2: compileServerProtocol === "https",
-    redirectHttpToHttps: compileServerProtocol === "https",
+    // disabled because it does not work with http2
+    redirectHttpToHttps: false,
     privateKey: compileServerPrivateKey,
     certificate: compileServerCertificate,
     ip: compileServerIp,
