@@ -5,8 +5,6 @@ import {
   createCancellationSource,
   composeCancellationToken,
 } from "@jsenv/cancellation"
-import { composeTwoImportMaps } from "@jsenv/import-map"
-import { getImportMapFromNodeModules } from "@jsenv/node-module-import-map"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -39,7 +37,6 @@ import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
 import { createCallbackList } from "../createCallbackList.js"
-import { readProjectImportMap } from "./readProjectImportMap.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
 import { urlIsAsset } from "./compile-directory/compile-asset.js"
 import {
@@ -101,7 +98,6 @@ export const startCompileServer = async ({
   livereloadLogLevel = "info",
   customServices = {},
   livereloadSSE = false,
-  watchAndSyncImportMap = false,
   scriptManipulations = [],
 
   browserInternalFileAnticipation = false,
@@ -147,12 +143,6 @@ export const startCompileServer = async ({
     runtimeScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
     groupCount: compileGroupCount,
     runtimeAlwaysInsideRuntimeScoreMap,
-  })
-  const compileServerImportMap = await generateImportMapForCompileServer({
-    logLevel: compileServerLogLevel,
-    projectDirectoryUrl,
-    outDirectoryRelativeUrl,
-    importMapFileRelativeUrl,
   })
 
   await setupOutDirectory(outDirectoryUrl, {
@@ -271,7 +261,6 @@ export const startCompileServer = async ({
     outDirectoryRelativeUrl,
     importDefaultExtension,
     importMapFileRelativeUrl,
-    compileServerImportMap,
     compileServerGroupMap,
     env,
     writeOnFilesystem,
@@ -296,45 +285,6 @@ export const startCompileServer = async ({
     compileServer.stoppedPromise.then(
       () => {
         stopListeningJsenvPackageVersionChange()
-      },
-      () => {},
-    )
-  }
-
-  if (watchAndSyncImportMap) {
-    let importmapWrittenPromise = Promise.resolve(() => {})
-
-    const stopWatchingImportMap = listenImportMapFileChange({
-      projectDirectoryUrl,
-      importMapFileRelativeUrl,
-      onProjectImportMapFileChange: async () => {
-        logger.debug(
-          `${importMapFileRelativeUrl} modified -> regenerating importmaps for ${Object.keys(
-            compileServerGroupMap,
-          )} `,
-        )
-        const compileServerImportMap = await generateImportMapForCompileServer({
-          logLevel: compileServerLogLevel,
-          projectDirectoryUrl,
-          outDirectoryRelativeUrl,
-          importMapFileRelativeUrl,
-        })
-        importmapWrittenPromise = installImportMapFiles({
-          projectDirectoryUrl,
-          outDirectoryRelativeUrl,
-          importMapFileRelativeUrl,
-          compileServerImportMap,
-          compileServerGroupMap,
-        })
-      },
-    })
-    compileServer.stoppedPromise.then(
-      async () => {
-        stopWatchingImportMap()
-        if (!writeOnFilesystem) {
-          const removeImportMapFiles = await importmapWrittenPromise
-          removeImportMapFiles()
-        }
       },
       () => {},
     )
@@ -415,63 +365,6 @@ ${projectDirectoryUrl}`)
   if (typeof outDirectoryName !== "string") {
     throw new TypeError(`outDirectoryName must be a string. got ${outDirectoryName}`)
   }
-}
-
-/**
- * generateImportMapForCompileServer allows the following:
- *
- * import importMap from '/jsenv.importmap'
- *
- * returns the project importMap.
- * Note that if importMap file does not exists an empty object is returned.
- * Note that if project uses a custom importMapFileRelativeUrl jsenv internal import map
- * remaps '/jsenv.importmap' to the real importMap
- *
- * This pattern exists so that jsenv can resolve some dynamically injected import such as
- *
- * @jsenv/core/helpers/regenerator-runtime/regenerator-runtime.js
- */
-const generateImportMapForCompileServer = async ({
-  logLevel,
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  importMapFileRelativeUrl,
-}) => {
-  const importMapForJsenvCore = await getImportMapFromNodeModules({
-    logLevel,
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    rootProjectDirectoryUrl: projectDirectoryUrl,
-    projectPackageDevDependenciesIncluded: false,
-  })
-  const importmapForSelfImport = {
-    imports: {
-      "@jsenv/core/": `./${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}`,
-    },
-  }
-
-  // lorsque /.jsenv/out n'est pas la ou on l'attends
-  // il faut alors faire un scope /.jsenv/out/ qui dit hey
-  const importMapInternal = {
-    imports: {
-      ...(outDirectoryRelativeUrl === ".jsenv/out/"
-        ? {}
-        : {
-            "/.jsenv/out/": `./${outDirectoryRelativeUrl}`,
-          }),
-      "/jsenv.importmap": `./${importMapFileRelativeUrl}`,
-    },
-  }
-  const importMapForProject = await readProjectImportMap({
-    projectDirectoryUrl,
-    importMapFileRelativeUrl,
-  })
-  const importMap = [
-    importMapForJsenvCore,
-    importmapForSelfImport,
-    importMapInternal,
-    importMapForProject,
-  ].reduce((previous, current) => composeTwoImportMaps(previous, current), {})
-  return importMap
 }
 
 const setupOutDirectory = async (
@@ -557,6 +450,7 @@ const setupServerSentEventsForLivereload = ({
   outDirectoryRelativeUrl,
   livereloadLogLevel,
   livereloadWatchConfig,
+  importMapCompiledFileRelativeUrls,
 }) => {
   const livereloadLogger = createLogger({ logLevel: livereloadLogLevel })
   const trackerMap = new Map()
@@ -576,11 +470,18 @@ const setupServerSentEventsForLivereload = ({
 
     projectFileRequested.notify(relativeUrl, request)
   }
+  const watchDescription = {
+    ...livereloadWatchConfig,
+    [jsenvDirectoryRelativeUrl]: false,
+    ...importMapCompiledFileRelativeUrls.reduce((previous, importMapCompiledFileRelativeUrl) => {
+      return {
+        ...previous,
+        [importMapCompiledFileRelativeUrl]: true,
+      }
+    }, {}),
+  }
   const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryUrl, {
-    watchDescription: {
-      ...livereloadWatchConfig,
-      [jsenvDirectoryRelativeUrl]: false,
-    },
+    watchDescription,
     updated: ({ relativeUrl }) => {
       projectFileModified.notify(relativeUrl)
     },
@@ -902,7 +803,6 @@ const installOutFiles = async ({
   outDirectoryRelativeUrl,
   importDefaultExtension,
   importMapFileRelativeUrl,
-  compileServerImportMap,
   compileServerGroupMap,
   env,
   onOutFileWritten = () => {},
@@ -921,19 +821,10 @@ const installOutFiles = async ({
   const envToString = () => JSON.stringify(env, null, "  ")
   const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
   const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
-  const importMapFilesWrittenPromise = installImportMapFiles({
-    projectDirectoryUrl,
-    outDirectoryRelativeUrl,
-    importMapFileRelativeUrl,
-    compileServerImportMap,
-    compileServerGroupMap,
-    onOutFileWritten,
-  })
 
   await Promise.all([
     writeFile(groupMapOutFileUrl, groupMapToString()),
     writeFile(envOutFileUrl, envToString()),
-    importMapFilesWrittenPromise,
   ])
 
   onOutFileWritten(groupMapOutFileUrl)
@@ -942,51 +833,7 @@ const installOutFiles = async ({
   return async () => {
     removeFileSystemNode(groupMapOutFileUrl, { allowUseless: true })
     removeFileSystemNode(envOutFileUrl)
-
-    const removeImportmapFiles = await importMapFilesWrittenPromise
-    removeImportmapFiles()
   }
-}
-
-const installImportMapFiles = async ({
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  importMapFileRelativeUrl,
-  compileServerImportMap,
-  compileServerGroupMap,
-  onOutFileWritten = () => {},
-}) => {
-  const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
-  const importMapString = JSON.stringify(compileServerImportMap, null, "  ")
-  const importMapFiles = Object.keys(compileServerGroupMap).map((compileId) =>
-    resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`),
-  )
-  await Promise.all(
-    importMapFiles.map(async (importmapFile) => {
-      await writeFile(importmapFile, importMapString)
-      onOutFileWritten(importmapFile)
-    }),
-  )
-  return () =>
-    Promise.all(importMapFiles.map((importmapFile) => removeFileSystemNode(importmapFile)))
-}
-
-const listenImportMapFileChange = ({
-  projectDirectoryUrl,
-  importMapFileRelativeUrl,
-  onProjectImportMapFileChange = () => {},
-}) => {
-  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-
-  const onchange = () => {
-    onProjectImportMapFileChange()
-  }
-
-  return registerFileLifecycle(importMapFileUrl, {
-    added: onchange,
-    updated: onchange,
-    keepProcessAlive: false,
-  })
 }
 
 const listenJsenvPackageVersionChange = ({

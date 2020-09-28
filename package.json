@@ -98,7 +98,7 @@
     "@babel/plugin-transform-unicode-regex": "7.10.4",
     "@jsenv/cancellation": "1.4.2",
     "@jsenv/import-map": "6.7.4",
-    "@jsenv/logger": "3.3.1",
+    "@jsenv/logger": "3.4.0",
     "@jsenv/node-module-import-map": "12.0.2",
     "@jsenv/node-signals": "2.0.1",
     "@jsenv/server": "4.0.5",
