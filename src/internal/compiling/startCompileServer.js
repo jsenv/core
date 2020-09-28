@@ -450,7 +450,6 @@ const setupServerSentEventsForLivereload = ({
   outDirectoryRelativeUrl,
   livereloadLogLevel,
   livereloadWatchConfig,
-  importMapCompiledFileRelativeUrls,
 }) => {
   const livereloadLogger = createLogger({ logLevel: livereloadLogLevel })
   const trackerMap = new Map()
@@ -473,12 +472,6 @@ const setupServerSentEventsForLivereload = ({
   const watchDescription = {
     ...livereloadWatchConfig,
     [jsenvDirectoryRelativeUrl]: false,
-    ...importMapCompiledFileRelativeUrls.reduce((previous, importMapCompiledFileRelativeUrl) => {
-      return {
-        ...previous,
-        [importMapCompiledFileRelativeUrl]: true,
-      }
-    }, {}),
   }
   const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryUrl, {
     watchDescription,

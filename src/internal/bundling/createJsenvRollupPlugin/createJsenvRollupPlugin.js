@@ -67,6 +67,18 @@ export const createJsenvRollupPlugin = async ({
   const moduleContentMap = {}
   const redirectionMap = {}
 
+  let chunkId = Object.keys(entryPointMap)[0]
+  if (!extname(chunkId)) chunkId += bundleDefaultExtension
+
+  const compileDirectoryRemoteUrl = resolveDirectoryUrl(
+    compileDirectoryRelativeUrl,
+    compileServerOrigin,
+  )
+  const importMapFileRemoteUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
+  const importMapFileResponse = await fetchUrl(importMapFileRemoteUrl)
+  const importMapRaw = await importMapFileResponse.json()
+  logger.debug(`importmap file fetched from ${importMapFileRemoteUrl}`)
+
   // use a fake and predictable compile server origin
   // because rollup will check the dependencies url
   // when computing the file hash
@@ -75,18 +87,15 @@ export const createJsenvRollupPlugin = async ({
   const compileServerOriginForRollup = String(
     new URL(STATIC_COMPILE_SERVER_AUTHORITY, compileServerOrigin),
   ).slice(0, -1)
-  const compileDirectoryRemoteUrl = resolveDirectoryUrl(
+  const compileDirectoryRemoteUrlForRollup = resolveDirectoryUrl(
     compileDirectoryRelativeUrl,
     compileServerOriginForRollup,
   )
-  let chunkId = Object.keys(entryPointMap)[0]
-  if (!extname(chunkId)) chunkId += bundleDefaultExtension
-
-  const importMapFileRemoteUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
-  const importMapFileResponse = await fetchUrl(importMapFileRemoteUrl)
-  const importMapRaw = await importMapFileResponse.json()
-  const importMap = normalizeImportMap(importMapRaw, importMapFileRemoteUrl)
-  logger.debug(`importmap file fetched from ${importMapFileRemoteUrl}`)
+  const importMapFileRemoteUrlForRollup = resolveUrl(
+    importMapFileRelativeUrl,
+    compileServerOriginForRollup,
+  )
+  const importMap = normalizeImportMap(importMapRaw, importMapFileRemoteUrlForRollup)
 
   const nativeModulePredicate = (specifier) => {
     if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
@@ -212,7 +221,7 @@ export const createJsenvRollupPlugin = async ({
         if (specifier.endsWith(".html")) {
           importer = compileServerOriginForRollup
         } else {
-          importer = compileDirectoryRemoteUrl
+          importer = compileDirectoryRemoteUrlForRollup
         }
       }
 
