@@ -11,6 +11,7 @@ export const serveBundle = async ({
   logger,
 
   projectDirectoryUrl,
+  importMapFileRelativeUrl,
   originalFileUrl,
   compiledFileUrl,
   outDirectoryRelativeUrl,
@@ -43,6 +44,7 @@ export const serveBundle = async ({
       logger,
 
       projectDirectoryUrl,
+      importMapFileRelativeUrl,
       entryPointMap,
       // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
       // but still important to know where the files will be written

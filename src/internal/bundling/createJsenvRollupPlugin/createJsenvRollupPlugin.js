@@ -191,7 +191,7 @@ ${Object.keys(importMap.scopes || {}).length}`,
               // but want to use a different one to bundle so that
               // the production importmap is smaller
               // but override only if a custom importmap is passed
-              ...(importMapFileRelativeUrl ? { src: importMapFileRelativeUrlForHtml } : {}),
+              src: importMapFileRelativeUrlForHtml,
             })
 
             transformHtmlDocumentModuleScripts(scripts, {

@@ -131,6 +131,7 @@ export const createCompiledFileService = ({
           logger,
 
           projectDirectoryUrl,
+          importMapFileRelativeUrl,
           originalFileUrl,
           compiledFileUrl,
           outDirectoryRelativeUrl,

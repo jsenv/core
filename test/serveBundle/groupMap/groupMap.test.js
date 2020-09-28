@@ -43,6 +43,7 @@ const babelPluginMap = jsenvBabelPluginMap
     logger: createLogger({ logLevel: "warn" }),
 
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
+    importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
     outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
     originalFileUrl,
     compiledFileUrl,
