@@ -4257,9 +4257,7 @@ ${Object.keys(importMap$1.scopes || {}).length}`);
             // but want to use a different one to bundle so that
             // the production importmap is smaller
             // but override only if a custom importmap is passed
-            ...(importMapFileRelativeUrl ? {
-              src: importMapFileRelativeUrlForHtml
-            } : {})
+            src: importMapFileRelativeUrlForHtml
           });
           transformHtmlDocumentModuleScripts(scripts, {
             generateInlineScriptCode: (_, index) => {
@@ -5044,6 +5042,7 @@ const serveBundle = async ({
   cancellationToken,
   logger,
   projectDirectoryUrl,
+  importMapFileRelativeUrl,
   originalFileUrl,
   compiledFileUrl,
   outDirectoryRelativeUrl,
@@ -5072,6 +5071,7 @@ const serveBundle = async ({
       cancellationToken,
       logger,
       projectDirectoryUrl,
+      importMapFileRelativeUrl,
       entryPointMap,
       // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
       // but still important to know where the files will be written
@@ -5216,6 +5216,7 @@ const createCompiledFileService = ({
           cancellationToken,
           logger,
           projectDirectoryUrl,
+          importMapFileRelativeUrl,
           originalFileUrl,
           compiledFileUrl,
           outDirectoryRelativeUrl,
@@ -6318,7 +6319,7 @@ const installImportMapFiles = async ({
   return () => Promise.all(importMapFiles.map(importmapFile => util.removeFileSystemNode(importmapFile)));
 };
 
-const listenImportMapFileChange = async ({
+const listenImportMapFileChange = ({
   projectDirectoryUrl,
   importMapFileRelativeUrl,
   onProjectImportMapFileChange = () => {}
@@ -8342,14 +8343,7 @@ const generateBundle = async ({
       outDirectoryRelativeUrl,
       origin: compileServerOrigin,
       compileServerGroupMap
-    } = compileServer; // only if passed we override with the normalized value
-    // so that further function can still know
-    // if a specific value was passed or if it's the default
-    // value which is used
-
-    if (importMapFileRelativeUrl) {
-      importMapFileRelativeUrl = compileServer.importMapFileRelativeUrl;
-    }
+    } = compileServer;
 
     if (compileGroupCount === 1) {
       return generateBundleUsingRollup({
@@ -8359,7 +8353,7 @@ const generateBundle = async ({
         entryPointMap,
         bundleDirectoryUrl,
         bundleDefaultExtension,
-        importMapFileRelativeUrl,
+        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         compileServerOrigin,
         importDefaultExtension,
@@ -8388,7 +8382,7 @@ const generateBundle = async ({
       outDirectoryRelativeUrl,
       bundleDirectoryUrl,
       bundleDefaultExtension,
-      importMapFileRelativeUrl,
+      importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
       entryPointMap,
       compileServerOrigin,
       importDefaultExtension,
@@ -8414,7 +8408,7 @@ const generateBundle = async ({
       entryPointMap,
       bundleDirectoryUrl,
       bundleDefaultExtension,
-      importMapFileRelativeUrl,
+      importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
       compileServerOrigin,
       importDefaultExtension,
       externalImportSpecifiers,

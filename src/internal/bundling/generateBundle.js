@@ -147,7 +147,6 @@ export const generateBundle = async ({
 
     const {
       outDirectoryRelativeUrl,
-      importMapFileRelativeUrl,
       origin: compileServerOrigin,
       compileServerGroupMap,
     } = compileServer
@@ -161,7 +160,7 @@ export const generateBundle = async ({
         entryPointMap,
         bundleDirectoryUrl,
         bundleDefaultExtension,
-        importMapFileRelativeUrl,
+        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         compileServerOrigin,
         importDefaultExtension,
@@ -193,7 +192,7 @@ export const generateBundle = async ({
         outDirectoryRelativeUrl,
         bundleDirectoryUrl,
         bundleDefaultExtension,
-        importMapFileRelativeUrl,
+        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
         entryPointMap,
         compileServerOrigin,
         importDefaultExtension,
@@ -222,7 +221,7 @@ export const generateBundle = async ({
         entryPointMap,
         bundleDirectoryUrl,
         bundleDefaultExtension,
-        importMapFileRelativeUrl,
+        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
         compileServerOrigin,
         importDefaultExtension,
         externalImportSpecifiers,

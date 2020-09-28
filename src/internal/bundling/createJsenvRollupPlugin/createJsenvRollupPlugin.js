@@ -87,7 +87,7 @@ export const createJsenvRollupPlugin = async ({
   const importMapFileRemoteUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
   const importMapRaw = JSON.parse(await readFile(importMapFileUrl))
   const importMap = normalizeImportMap(importMapRaw, importMapFileRemoteUrl)
-  logger.info(
+  logger.debug(
     `importmap file loaded from ${importMapFileUrl}.
 --- url for normalization ---
 ${importMapFileRemoteUrl}
