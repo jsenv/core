@@ -6,11 +6,11 @@ var module$1 = require('module');
 var util = require('@jsenv/util');
 var fs = require('fs');
 var cancellation = require('@jsenv/cancellation');
-var importMap = require('@jsenv/import-map');
-var nodeModuleImportMap = require('@jsenv/node-module-import-map');
 var server = require('@jsenv/server');
 var logger = require('@jsenv/logger');
 var https = require('https');
+var importMap = require('@jsenv/import-map');
+var nodeModuleImportMap = require('@jsenv/node-module-import-map');
 var path = require('path');
 var crypto = require('crypto');
 var os = require('os');
@@ -2350,6 +2350,83 @@ const createCallbackList = () => {
   };
 };
 
+const nodeJsFileUrl = util.resolveUrl("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
+const browserJsFileUrl = util.resolveUrl("./src/internal/browser-launcher/jsenv-browser-system.js", jsenvCoreDirectoryUrl);
+const jsenvHtmlFileUrl = util.resolveUrl("./src/internal/jsenv-html-file.html", jsenvCoreDirectoryUrl);
+const exploringRedirectorHtmlFileUrl = util.resolveUrl("./src/internal/exploring/exploring.redirector.html", jsenvCoreDirectoryUrl);
+const exploringRedirectorJsFileUrl = util.resolveUrl("./src/internal/exploring/exploring.redirector.js", jsenvCoreDirectoryUrl);
+const exploringHtmlFileUrl = util.resolveUrl("./src/internal/exploring/exploring.html", jsenvCoreDirectoryUrl);
+const sourcemapMainFileUrl = util.fileSystemPathToUrl(require$1.resolve("source-map/dist/source-map.js"));
+const sourcemapMappingFileUrl = util.fileSystemPathToUrl(require$1.resolve("source-map/lib/mappings.wasm"));
+const jsenvToolbarJsFileUrl = util.resolveUrl("./src/internal/toolbar/toolbar.js", jsenvCoreDirectoryUrl);
+const jsenvToolbarHtmlFileUrl = util.resolveUrl("./src/internal/toolbar/toolbar.html", jsenvCoreDirectoryUrl);
+const jsenvToolbarMainJsFileUrl = util.resolveUrl("./src/internal/toolbar/toolbar.main.js", jsenvCoreDirectoryUrl);
+
+const {
+  addNamed
+} = require$1("@babel/helper-module-imports");
+
+const createImportMetaUrlNamedImportBabelPlugin = ({
+  importMetaSpecifier
+}) => {
+  return () => {
+    return {
+      visitor: {
+        Program(programPath) {
+          const metaPropertyMap = {};
+          programPath.traverse({
+            MemberExpression(path) {
+              const {
+                node
+              } = path;
+              const {
+                object
+              } = node;
+              if (object.type !== "MetaProperty") return;
+              const {
+                property: objectProperty
+              } = object;
+              if (objectProperty.name !== "meta") return;
+              const {
+                property
+              } = node;
+              const {
+                name
+              } = property;
+
+              if (name in metaPropertyMap) {
+                metaPropertyMap[name].push(path);
+              } else {
+                metaPropertyMap[name] = [path];
+              }
+            }
+
+          });
+          Object.keys(metaPropertyMap).forEach(propertyName => {
+            const importMetaPropertyId = propertyName;
+            const result = addNamed(programPath, importMetaPropertyId, importMetaSpecifier);
+            metaPropertyMap[propertyName].forEach(path => {
+              path.replaceWith(result);
+            });
+          });
+        }
+
+      }
+    };
+  };
+};
+
+const createBabePluginMapForBundle = ({
+  format
+}) => {
+  return { ...(format === "global" || format === "commonjs" ? {
+      "import-meta-url-named-import": createImportMetaUrlNamedImportBabelPlugin({
+        importMetaSpecifier: `@jsenv/core/src/internal/bundling/import-meta-${format}.js`
+      })
+    } : {})
+  };
+};
+
 const readProjectImportMap = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl
@@ -2432,80 +2509,66 @@ const getProjectImportMap = async ({
   });
 };
 
-const nodeJsFileUrl = util.resolveUrl("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
-const browserJsFileUrl = util.resolveUrl("./src/internal/browser-launcher/jsenv-browser-system.js", jsenvCoreDirectoryUrl);
-const jsenvHtmlFileUrl = util.resolveUrl("./src/internal/jsenv-html-file.html", jsenvCoreDirectoryUrl);
-const exploringRedirectorHtmlFileUrl = util.resolveUrl("./src/internal/exploring/exploring.redirector.html", jsenvCoreDirectoryUrl);
-const exploringRedirectorJsFileUrl = util.resolveUrl("./src/internal/exploring/exploring.redirector.js", jsenvCoreDirectoryUrl);
-const exploringHtmlFileUrl = util.resolveUrl("./src/internal/exploring/exploring.html", jsenvCoreDirectoryUrl);
-const sourcemapMainFileUrl = util.fileSystemPathToUrl(require$1.resolve("source-map/dist/source-map.js"));
-const sourcemapMappingFileUrl = util.fileSystemPathToUrl(require$1.resolve("source-map/lib/mappings.wasm"));
-const jsenvToolbarJsFileUrl = util.resolveUrl("./src/internal/toolbar/toolbar.js", jsenvCoreDirectoryUrl);
-const jsenvToolbarHtmlFileUrl = util.resolveUrl("./src/internal/toolbar/toolbar.html", jsenvCoreDirectoryUrl);
-const jsenvToolbarMainJsFileUrl = util.resolveUrl("./src/internal/toolbar/toolbar.main.js", jsenvCoreDirectoryUrl);
+/**
+ * generateImportMapForCompileServer allows the following:
+ *
+ * import importMap from '/jsenv.importmap'
+ *
+ * returns the project importMap.
+ * Note that if importMap file does not exists an empty object is returned.
+ * Note that if project uses a custom importMapFileRelativeUrl jsenv internal import map
+ * remaps '/jsenv.importmap' to the real importMap
+ *
+ * This pattern exists so that jsenv can resolve some dynamically injected import such as
+ *
+ * @jsenv/core/helpers/regenerator-runtime/regenerator-runtime.js
+ */
 
-const {
-  addNamed
-} = require$1("@babel/helper-module-imports");
-
-const createImportMetaUrlNamedImportBabelPlugin = ({
-  importMetaSpecifier
+const transformImportmap = async (importmapBeforeTransformation, {
+  logger: logger$1,
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+  importMapFileRelativeUrl,
+  originalFileUrl,
+  // compiledFileUrl,
+  projectFileRequestedCallback,
+  request
 }) => {
-  return () => {
-    return {
-      visitor: {
-        Program(programPath) {
-          const metaPropertyMap = {};
-          programPath.traverse({
-            MemberExpression(path) {
-              const {
-                node
-              } = path;
-              const {
-                object
-              } = node;
-              if (object.type !== "MetaProperty") return;
-              const {
-                property: objectProperty
-              } = object;
-              if (objectProperty.name !== "meta") return;
-              const {
-                property
-              } = node;
-              const {
-                name
-              } = property;
+  // send out/best/*.importmap untouched
+  projectFileRequestedCallback(util.urlToRelativeUrl(originalFileUrl, projectDirectoryUrl), request);
+  const importMapForJsenvCore = await nodeModuleImportMap.getImportMapFromNodeModules({
+    logLevel: logger.loggerToLogLevel(logger$1),
+    projectDirectoryUrl: jsenvCoreDirectoryUrl,
+    rootProjectDirectoryUrl: projectDirectoryUrl,
+    projectPackageDevDependenciesIncluded: false
+  });
+  const importmapForSelfImport = {
+    imports: {
+      "@jsenv/core/": `./${util.urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}`
+    }
+  }; // lorsque /.jsenv/out n'est pas la ou on l'attends
+  // il faut alors faire un scope /.jsenv/out/ qui dit hey
 
-              if (name in metaPropertyMap) {
-                metaPropertyMap[name].push(path);
-              } else {
-                metaPropertyMap[name] = [path];
-              }
-            }
-
-          });
-          Object.keys(metaPropertyMap).forEach(propertyName => {
-            const importMetaPropertyId = propertyName;
-            const result = addNamed(programPath, importMetaPropertyId, importMetaSpecifier);
-            metaPropertyMap[propertyName].forEach(path => {
-              path.replaceWith(result);
-            });
-          });
-        }
-
-      }
-    };
+  const importMapInternal = {
+    imports: { ...(outDirectoryRelativeUrl === ".jsenv/out/" ? {} : {
+        "/.jsenv/out/": `./${outDirectoryRelativeUrl}`
+      }),
+      "/jsenv.importmap": `./${importMapFileRelativeUrl}`
+    }
   };
-};
-
-const createBabePluginMapForBundle = ({
-  format
-}) => {
-  return { ...(format === "global" || format === "commonjs" ? {
-      "import-meta-url-named-import": createImportMetaUrlNamedImportBabelPlugin({
-        importMetaSpecifier: `@jsenv/core/src/internal/bundling/import-meta-${format}.js`
-      })
-    } : {})
+  const importMapForProject = await readProjectImportMap({
+    projectDirectoryUrl,
+    importMapFileRelativeUrl
+  });
+  const importMap$1 = [importMapForJsenvCore, importmapForSelfImport, importMapInternal, importMapForProject].reduce((previous, current) => importMap.composeTwoImportMaps(previous, current), {});
+  return {
+    compiledSource: JSON.stringify(importMap$1, null, "  "),
+    contentType: "application/importmap+json",
+    sources: [originalFileUrl],
+    sourcesContent: [importmapBeforeTransformation],
+    assets: [],
+    assetsContent: []
   };
 };
 
@@ -4146,28 +4209,23 @@ const createJsenvRollupPlugin = async ({
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global"
 }) => {
   const moduleContentMap = {};
-  const redirectionMap = {}; // use a fake and predictable compile server origin
+  const redirectionMap = {};
+  let chunkId = Object.keys(entryPointMap)[0];
+  if (!path.extname(chunkId)) chunkId += bundleDefaultExtension;
+  const compileDirectoryRemoteUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, compileServerOrigin);
+  const importMapFileRemoteUrl = util.resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl);
+  const importMapFileResponse = await fetchUrl(importMapFileRemoteUrl);
+  const importMapRaw = await importMapFileResponse.json();
+  logger.debug(`importmap file fetched from ${importMapFileRemoteUrl}`); // use a fake and predictable compile server origin
   // because rollup will check the dependencies url
   // when computing the file hash
   // see https://github.com/rollup/rollup/blob/d6131378f9481a442aeaa6d4e608faf3303366dc/src/Chunk.ts#L795
   // this way file hash remains the same when file content does not change
 
   const compileServerOriginForRollup = String(new URL(STATIC_COMPILE_SERVER_AUTHORITY, compileServerOrigin)).slice(0, -1);
-  const compileDirectoryUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl);
-  const compileDirectoryRemoteUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, compileServerOriginForRollup);
-  let chunkId = Object.keys(entryPointMap)[0];
-  if (!path.extname(chunkId)) chunkId += bundleDefaultExtension;
-  const importMapFileUrl = util.resolveUrl(importMapFileRelativeUrl, compileDirectoryUrl);
-  const importMapFileRemoteUrl = util.resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl);
-  const importMapRaw = JSON.parse(await util.readFile(importMapFileUrl));
-  const importMap$1 = importMap.normalizeImportMap(importMapRaw, importMapFileRemoteUrl);
-  logger.info(`importmap file loaded from ${importMapFileUrl}.
---- url for normalization ---
-${importMapFileRemoteUrl}
---- number of top level remapping ---
-${Object.keys(importMap$1.imports || {}).length}
---- number of scopes ---
-${Object.keys(importMap$1.scopes || {}).length}`);
+  const compileDirectoryRemoteUrlForRollup = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, compileServerOriginForRollup);
+  const importMapFileRemoteUrlForRollup = util.resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrlForRollup);
+  const importMap$1 = importMap.normalizeImportMap(importMapRaw, importMapFileRemoteUrlForRollup);
 
   const nativeModulePredicate = specifier => {
     if (node && isBareSpecifierForNativeNodeModule(specifier)) return true; // for now browser have no native module
@@ -4279,7 +4337,7 @@ ${Object.keys(importMap$1.scopes || {}).length}`);
         if (specifier.endsWith(".html")) {
           importer = compileServerOriginForRollup;
         } else {
-          importer = compileDirectoryRemoteUrl;
+          importer = compileDirectoryRemoteUrlForRollup;
         }
       }
 
@@ -5189,24 +5247,32 @@ const createCompiledFileService = ({
     const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`;
     const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`;
     const compileDirectoryUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl);
-    const compiledFileUrl = util.resolveUrl(originalFileRelativeUrl, compileDirectoryUrl); // send out/best/*.importmap untouched
+    const compiledFileUrl = util.resolveUrl(originalFileRelativeUrl, compileDirectoryUrl);
 
-    if (originalFileRelativeUrl === importMapFileRelativeUrl) {
-      if (compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES || compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES) {
-        const otherwiseImportmapFileUrl = util.resolveUrl(originalFileRelativeUrl, `${projectDirectoryUrl}${outDirectoryRelativeUrl}otherwise/`); // for otherwise-commonjs-bundle, server did not write *.importmap
-        // let's just return otherwise/importMapFileRelativeUrl
-
-        return server.serveFile(otherwiseImportmapFileUrl, {
-          method,
-          headers,
-          etagEnabled: true
-        });
-      }
-
-      return server.serveFile(compiledFileUrl, {
-        method,
-        headers,
-        etagEnabled: true
+    if (contentType === "application/importmap+json") {
+      return compileFile({
+        cancellationToken,
+        logger,
+        projectDirectoryUrl,
+        originalFileUrl,
+        compiledFileUrl,
+        writeOnFilesystem: true,
+        // we always need them
+        useFilesystemAsCache,
+        compileCacheStrategy,
+        projectFileRequestedCallback,
+        request,
+        compile: importmapBeforeTransformation => transformImportmap(importmapBeforeTransformation, {
+          logger,
+          projectDirectoryUrl,
+          outDirectoryRelativeUrl,
+          jsenvCoreDirectoryUrl,
+          importMapFileRelativeUrl,
+          originalFileUrl,
+          // compiledFileUrl,
+          projectFileRequestedCallback,
+          request
+        })
       });
     }
 
@@ -5455,7 +5521,6 @@ const startCompileServer = async ({
   livereloadLogLevel = "info",
   customServices = {},
   livereloadSSE = false,
-  watchAndSyncImportMap = false,
   scriptManipulations = [],
   browserInternalFileAnticipation = false,
   nodeInternalFileAnticipation = false
@@ -5504,12 +5569,6 @@ const startCompileServer = async ({
     },
     groupCount: compileGroupCount,
     runtimeAlwaysInsideRuntimeScoreMap
-  });
-  const compileServerImportMap = await generateImportMapForCompileServer({
-    logLevel: compileServerLogLevel,
-    projectDirectoryUrl,
-    outDirectoryRelativeUrl,
-    importMapFileRelativeUrl
   });
   await setupOutDirectory(outDirectoryUrl, {
     logger: logger$1,
@@ -5613,7 +5672,6 @@ const startCompileServer = async ({
     outDirectoryRelativeUrl,
     importDefaultExtension,
     importMapFileRelativeUrl,
-    compileServerImportMap,
     compileServerGroupMap,
     env,
     writeOnFilesystem,
@@ -5638,38 +5696,6 @@ const startCompileServer = async ({
     });
     compileServer.stoppedPromise.then(() => {
       stopListeningJsenvPackageVersionChange();
-    }, () => {});
-  }
-
-  if (watchAndSyncImportMap) {
-    let importmapWrittenPromise = Promise.resolve(() => {});
-    const stopWatchingImportMap = listenImportMapFileChange({
-      projectDirectoryUrl,
-      importMapFileRelativeUrl,
-      onProjectImportMapFileChange: async () => {
-        logger$1.debug(`${importMapFileRelativeUrl} modified -> regenerating importmaps for ${Object.keys(compileServerGroupMap)} `);
-        const compileServerImportMap = await generateImportMapForCompileServer({
-          logLevel: compileServerLogLevel,
-          projectDirectoryUrl,
-          outDirectoryRelativeUrl,
-          importMapFileRelativeUrl
-        });
-        importmapWrittenPromise = installImportMapFiles({
-          projectDirectoryUrl,
-          outDirectoryRelativeUrl,
-          importMapFileRelativeUrl,
-          compileServerImportMap,
-          compileServerGroupMap
-        });
-      }
-    });
-    compileServer.stoppedPromise.then(async () => {
-      stopWatchingImportMap();
-
-      if (!writeOnFilesystem) {
-        const removeImportMapFiles = await importmapWrittenPromise;
-        removeImportMapFiles();
-      }
     }, () => {});
   }
 
@@ -5751,55 +5777,6 @@ ${projectDirectoryUrl}`);
   if (typeof outDirectoryName !== "string") {
     throw new TypeError(`outDirectoryName must be a string. got ${outDirectoryName}`);
   }
-};
-/**
- * generateImportMapForCompileServer allows the following:
- *
- * import importMap from '/jsenv.importmap'
- *
- * returns the project importMap.
- * Note that if importMap file does not exists an empty object is returned.
- * Note that if project uses a custom importMapFileRelativeUrl jsenv internal import map
- * remaps '/jsenv.importmap' to the real importMap
- *
- * This pattern exists so that jsenv can resolve some dynamically injected import such as
- *
- * @jsenv/core/helpers/regenerator-runtime/regenerator-runtime.js
- */
-
-
-const generateImportMapForCompileServer = async ({
-  logLevel,
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  importMapFileRelativeUrl
-}) => {
-  const importMapForJsenvCore = await nodeModuleImportMap.getImportMapFromNodeModules({
-    logLevel,
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    rootProjectDirectoryUrl: projectDirectoryUrl,
-    projectPackageDevDependenciesIncluded: false
-  });
-  const importmapForSelfImport = {
-    imports: {
-      "@jsenv/core/": `./${util.urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}`
-    }
-  }; // lorsque /.jsenv/out n'est pas la ou on l'attends
-  // il faut alors faire un scope /.jsenv/out/ qui dit hey
-
-  const importMapInternal = {
-    imports: { ...(outDirectoryRelativeUrl === ".jsenv/out/" ? {} : {
-        "/.jsenv/out/": `./${outDirectoryRelativeUrl}`
-      }),
-      "/jsenv.importmap": `./${importMapFileRelativeUrl}`
-    }
-  };
-  const importMapForProject = await readProjectImportMap({
-    projectDirectoryUrl,
-    importMapFileRelativeUrl
-  });
-  const importMap$1 = [importMapForJsenvCore, importmapForSelfImport, importMapInternal, importMapForProject].reduce((previous, current) => importMap.composeTwoImportMaps(previous, current), {});
-  return importMap$1;
 };
 
 const setupOutDirectory = async (outDirectoryUrl, {
@@ -5908,10 +5885,11 @@ const setupServerSentEventsForLivereload = ({
     projectFileRequested.notify(relativeUrl, request);
   };
 
+  const watchDescription = { ...livereloadWatchConfig,
+    [jsenvDirectoryRelativeUrl]: false
+  };
   const unregisterDirectoryLifecyle = util.registerDirectoryLifecycle(projectDirectoryUrl, {
-    watchDescription: { ...livereloadWatchConfig,
-      [jsenvDirectoryRelativeUrl]: false
-    },
+    watchDescription,
     updated: ({
       relativeUrl
     }) => {
@@ -6261,7 +6239,6 @@ const installOutFiles = async ({
   outDirectoryRelativeUrl,
   importDefaultExtension,
   importMapFileRelativeUrl,
-  compileServerImportMap,
   compileServerGroupMap,
   env,
   onOutFileWritten = () => {}
@@ -6280,15 +6257,7 @@ const installOutFiles = async ({
 
   const groupMapOutFileUrl = util.resolveUrl("./groupMap.json", outDirectoryUrl);
   const envOutFileUrl = util.resolveUrl("./env.json", outDirectoryUrl);
-  const importMapFilesWrittenPromise = installImportMapFiles({
-    projectDirectoryUrl,
-    outDirectoryRelativeUrl,
-    importMapFileRelativeUrl,
-    compileServerImportMap,
-    compileServerGroupMap,
-    onOutFileWritten
-  });
-  await Promise.all([util.writeFile(groupMapOutFileUrl, groupMapToString()), util.writeFile(envOutFileUrl, envToString()), importMapFilesWrittenPromise]);
+  await Promise.all([util.writeFile(groupMapOutFileUrl, groupMapToString()), util.writeFile(envOutFileUrl, envToString())]);
   onOutFileWritten(groupMapOutFileUrl);
   onOutFileWritten(envOutFileUrl);
   return async () => {
@@ -6296,45 +6265,7 @@ const installOutFiles = async ({
       allowUseless: true
     });
     util.removeFileSystemNode(envOutFileUrl);
-    const removeImportmapFiles = await importMapFilesWrittenPromise;
-    removeImportmapFiles();
   };
-};
-
-const installImportMapFiles = async ({
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  importMapFileRelativeUrl,
-  compileServerImportMap,
-  compileServerGroupMap,
-  onOutFileWritten = () => {}
-}) => {
-  const outDirectoryUrl = util.resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl);
-  const importMapString = JSON.stringify(compileServerImportMap, null, "  ");
-  const importMapFiles = Object.keys(compileServerGroupMap).map(compileId => util.resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`));
-  await Promise.all(importMapFiles.map(async importmapFile => {
-    await util.writeFile(importmapFile, importMapString);
-    onOutFileWritten(importmapFile);
-  }));
-  return () => Promise.all(importMapFiles.map(importmapFile => util.removeFileSystemNode(importmapFile)));
-};
-
-const listenImportMapFileChange = ({
-  projectDirectoryUrl,
-  importMapFileRelativeUrl,
-  onProjectImportMapFileChange = () => {}
-}) => {
-  const importMapFileUrl = util.resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
-
-  const onchange = () => {
-    onProjectImportMapFileChange();
-  };
-
-  return util.registerFileLifecycle(importMapFileUrl, {
-    added: onchange,
-    updated: onchange,
-    keepProcessAlive: false
-  });
 };
 
 const listenJsenvPackageVersionChange = ({

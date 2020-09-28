@@ -93,7 +93,7 @@ export const createJsenvRollupPlugin = async ({
   )
   const importMapFileRemoteUrlForRollup = resolveUrl(
     importMapFileRelativeUrl,
-    compileServerOriginForRollup,
+    compileDirectoryRemoteUrlForRollup,
   )
   const importMap = normalizeImportMap(importMapRaw, importMapFileRemoteUrlForRollup)
 
