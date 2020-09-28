@@ -2,8 +2,6 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
-
 var module$1 = require('module');
 var util = require('@jsenv/util');
 var fs = require('fs');
@@ -16,11 +14,15 @@ var https = require('https');
 var path = require('path');
 var crypto = require('crypto');
 var os = require('os');
-var readline = _interopDefault(require('readline'));
+var readline = require('readline');
 var nodeSignals = require('@jsenv/node-signals');
 var vm = require('vm');
 var child_process = require('child_process');
 var _uneval = require('@jsenv/uneval');
+
+function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
+
+var readline__default = /*#__PURE__*/_interopDefaultLegacy(readline);
 
 /* global require, __filename */
 const nodeRequire = require;
@@ -379,7 +381,7 @@ var transformModulesSystemJs = declare((api, options) => {
                 } else if (t.isExportSpecifier(node)) {
                   exportNames.push(node.exported.name);
                   exportValues.push(t.memberExpression(t.identifier(target), node.local));
-                }
+                } else ;
               }
 
               setterBody = setterBody.concat(constructExportCall(path, t.identifier(exportIdent), exportNames, exportValues, hasExportStar ? t.identifier(target) : null));
@@ -3684,6 +3686,309 @@ ${url}`
 
 const responseStatusIsOk = responseStatus => responseStatus >= 200 && responseStatus < 300;
 
+/**
+
+An important concern here:
+
+All script type="module" will be converted to inline script.
+These inline script execution order is non predictible it depends
+which one is being done first
+
+*/
+
+const parse5 = require$1("parse5");
+
+const parseHtmlString = htmlString => {
+  return parse5.parse(htmlString);
+};
+const stringifyHtmlDocument = htmlDocument => {
+  return parse5.serialize(htmlDocument);
+};
+const parseHtmlDocumentRessources = document => {
+  const scripts = [];
+  visitDocument(document, node => {
+    if (node.nodeName === "script") {
+      const attributes = attributeArrayToAttributeObject(node.attrs);
+      const firstChild = node.childNodes[0];
+      scripts.push({
+        node,
+        attributes,
+        ...(firstChild && firstChild.nodeName === "#text" ? {
+          text: firstChild.value
+        } : {})
+      });
+    }
+  });
+  return {
+    scripts
+  };
+};
+
+const attributeArrayToAttributeObject = attributes => {
+  const attributeObject = {};
+  attributes.forEach(attribute => {
+    attributeObject[attribute.name] = attribute.value;
+  });
+  return attributeObject;
+};
+
+const attributesObjectToAttributesArray = attributeObject => {
+  const attributeArray = [];
+  Object.keys(attributeObject).forEach(key => {
+    attributeArray.push({
+      name: key,
+      value: attributeObject[key]
+    });
+  });
+  return attributeArray;
+};
+
+const transformHtmlDocumentModuleScripts = (scripts, {
+  generateInlineScriptCode = ({
+    src
+  }) => `<script>
+      window.__jsenv__.importFile(${JSON.stringify(src)})
+    </script>`,
+  generateInlineScriptSrc = ({
+    hash
+  }) => `./${hash}.js`
+}) => {
+  /*
+  <script type="module" src="*" /> are going to be inlined
+  <script type="module">**</script> are going to be transformed to import a file so that we can transform the script content.
+   but we don't want that a script with an src to be considered as an inline script after it was inlined.
+   For that reason we perform mutation in the end
+  */
+  const remoteScriptsTransformed = {};
+  const inlineScriptsTransformed = {};
+  const mutations = scripts.map((script, index) => {
+    if (script.attributes.type === "module" && script.attributes.src) {
+      return () => {
+        const scriptPolyfilledSource = generateInlineScriptCode({
+          src: script.attributes.src
+        }, index);
+        const scriptPolyfilled = parseHtmlAsSingleElement(scriptPolyfilledSource);
+        scriptPolyfilled.attrs = [// inherit script attributes except src and type
+        ...attributesObjectToAttributesArray(script.attributes).filter(({
+          name
+        }) => name !== "type" && name !== "src"), ...scriptPolyfilled.attrs];
+        replaceNode(script.node, scriptPolyfilled);
+        remoteScriptsTransformed[script.attributes.src] = true;
+      };
+    }
+
+    if (script.attributes.type === "module" && script.text) {
+      return () => {
+        const hash = createScriptContentHash(script.text);
+        const src = generateInlineScriptSrc({
+          id: script.attributes.id,
+          hash
+        }, index);
+        const scriptPolyfilledSource = generateInlineScriptCode({
+          src
+        }, index);
+        const scriptPolyfilled = parseHtmlAsSingleElement(scriptPolyfilledSource);
+        scriptPolyfilled.attrs = [// inherit script attributes except src and type
+        ...attributesObjectToAttributesArray(script.attributes).filter(({
+          name
+        }) => name !== "type" && name !== "src"), ...scriptPolyfilled.attrs];
+        replaceNode(script.node, scriptPolyfilled);
+        inlineScriptsTransformed[src] = script.text;
+      };
+    }
+
+    return () => {};
+  });
+  mutations.forEach(fn => fn());
+  return {
+    remoteScriptsTransformed,
+    inlineScriptsTransformed
+  };
+};
+const transformHtmlDocumentImportmapScript = (scripts, attributes) => {
+  scripts.forEach(script => {
+    if (script.attributes.type === "importmap") {
+      Object.keys(attributes).forEach(key => {
+        const value = attributes[key];
+
+        if (value !== undefined) {
+          const attributeNode = getAttributeByName(script.node.attrs, key);
+          attributeNode.value = value;
+        }
+      });
+    }
+  });
+};
+const manipulateHtmlDocument = (document, {
+  scriptManipulations
+}) => {
+  const htmlNode = document.childNodes.find(node => node.nodeName === "html");
+  const headNode = htmlNode.childNodes[0];
+  const bodyNode = htmlNode.childNodes[1];
+  const scriptsToPreprendInHead = [];
+  scriptManipulations.forEach(({
+    replaceExisting = false,
+    ...script
+  }) => {
+    const scriptExistingInHead = findExistingScript(headNode, script);
+
+    if (scriptExistingInHead) {
+      if (replaceExisting) {
+        replaceNode(scriptExistingInHead, scriptToNode(script));
+      }
+
+      return;
+    }
+
+    const scriptExistingInBody = findExistingScript(bodyNode, script);
+
+    if (scriptExistingInBody) {
+      if (replaceExisting) {
+        replaceNode(scriptExistingInBody, scriptToNode(script));
+      }
+
+      return;
+    }
+
+    scriptsToPreprendInHead.push(script);
+  });
+  const headScriptsFragment = scriptsToFragment(scriptsToPreprendInHead);
+  insertFragmentBefore(headNode, headScriptsFragment, findChild(headNode, node => node.nodeName === "script"));
+};
+
+const insertFragmentBefore = (node, fragment, childNode) => {
+  const {
+    childNodes = []
+  } = node;
+
+  if (childNode) {
+    const childNodeIndex = childNodes.indexOf(childNode);
+    node.childNodes = [...childNodes.slice(0, childNodeIndex), ...fragment.childNodes.map(child => {
+      return { ...child,
+        parentNode: node
+      };
+    }), ...childNodes.slice(childNodeIndex)];
+  } else {
+    node.childNodes = [...childNodes, ...fragment.childNodes.map(child => {
+      return { ...child,
+        parentNode: node
+      };
+    })];
+  }
+};
+
+const scriptToNode = script => {
+  return scriptsToFragment([script]).childNodes[0];
+};
+
+const scriptsToFragment = scripts => {
+  const html = scripts.reduce((previous, script) => {
+    const scriptAttributes = objectToHtmlAttributes(script);
+    return `${previous}<script ${scriptAttributes}>${script.text || ""}</script>
+      `;
+  }, "");
+  const fragment = parse5.parseFragment(html);
+  return fragment;
+};
+
+const findExistingScript = (node, script) => findChild(node, childNode => {
+  return childNode.nodeName === "script" && sameScript(childNode, script);
+});
+
+const findChild = ({
+  childNodes = []
+}, predicate) => childNodes.find(predicate);
+
+const sameScript = (node, {
+  type = "text/javascript",
+  src
+}) => {
+  const nodeType = getAttributeValue(node, "type") || "text/javascript";
+  const nodeSrc = getAttributeValue(node, "src");
+
+  if (type === "importmap") {
+    return nodeType === type;
+  }
+
+  return nodeType === type && nodeSrc === src;
+}; // eslint-disable-next-line no-unused-vars
+
+
+const objectToHtmlAttributes = ({
+  text,
+  ...rest
+}) => {
+  return Object.keys(rest).map(key => `${key}=${valueToHtmlAttributeValue(rest[key])}`).join(" ");
+};
+
+const valueToHtmlAttributeValue = value => {
+  if (typeof value === "string") {
+    return JSON.stringify(value);
+  }
+
+  return `"${JSON.stringify(value)}"`;
+}; // const resolveScripts = (document, resolveScriptSrc) => {
+//   visitDocument(document, (node) => {
+//     if (node.nodeName !== "script") {
+//       return
+//     }
+//     const attributes = node.attrs
+//     const srcAttribute = getAttributeByName(attributes, "src")
+//     if (!srcAttribute) {
+//       return
+//     }
+//     const srcAttributeValue = srcAttribute.value
+//     srcAttribute.value = resolveScriptSrc(srcAttributeValue)
+//   })
+// }
+
+
+const getAttributeValue = (node, attributeName) => {
+  const attribute = getAttributeByName(node.attrs, attributeName);
+  return attribute ? attribute.value : undefined;
+};
+
+const getAttributeByName = (attributes, attributeName) => attributes.find(attr => attr.name === attributeName);
+
+const createScriptContentHash = content => {
+  const hash = crypto.createHash("sha256");
+  hash.update(content);
+  return hash.digest("hex").slice(0, 8);
+};
+
+const parseHtmlAsSingleElement = html => {
+  const fragment = parse5.parseFragment(html);
+  return fragment.childNodes[0];
+};
+
+const replaceNode = (node, newNode) => {
+  const {
+    parentNode
+  } = node;
+  const parentNodeChildNodes = parentNode.childNodes;
+  const nodeIndex = parentNodeChildNodes.indexOf(node);
+  parentNodeChildNodes[nodeIndex] = newNode;
+};
+
+const visitDocument = (document, fn) => {
+  const visitNode = node => {
+    fn(node);
+    const {
+      childNodes
+    } = node;
+
+    if (childNodes) {
+      let i = 0;
+
+      while (i < childNodes.length) {
+        visitNode(childNodes[i++]);
+      }
+    }
+  };
+
+  visitNode(document);
+};
+
 // https://github.com/browserify/resolve/blob/a09a2e7f16273970be4639313c83b913daea15d7/lib/core.json#L1
 // https://nodejs.org/api/modules.html#modules_module_builtinmodules
 // https://stackoverflow.com/a/35825896
@@ -3810,31 +4115,6 @@ const minifyCss = (cssString, options) => {
 };
 
 /* eslint-disable import/max-dependencies */
-/**
-
-A word about bundler choosing to return an absolute url for import like
-
-import styleFileUrl from "./style.css"
-import iconFileUrl from "./icon.png"
-
-Bundler choose to return an url so that you can still access your bundled files.
-In a structure like this one I would rather choose to keep target asset with "/directory/icon.png"
-
-dist/
-  esmodule/
-    index.js
-directory/
-  icon.png
-
-Considering it's possible to target original file from bundled files (using import starting with '/'),
-Jsenv bundle do not emit any asset file.
-
-Using import to import something else than a JavaScript file convert it to
-a JavaScript module with an export default of that file content as text.
-Non textual files (png, jpg, video) are converted to base64 text.
-
-*/
-
 const STATIC_COMPILE_SERVER_AUTHORITY = "//jsenv.com";
 const createJsenvRollupPlugin = async ({
   cancellationToken,
@@ -3842,9 +4122,10 @@ const createJsenvRollupPlugin = async ({
   projectDirectoryUrl,
   entryPointMap,
   bundleDirectoryUrl,
+  bundleDefaultExtension,
+  importMapFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
-  compileServerImportMap,
   importDefaultExtension,
   externalImportSpecifiers,
   node,
@@ -3859,6 +4140,9 @@ const createJsenvRollupPlugin = async ({
   // https://github.com/kangax/html-minifier#options-quick-reference
   minifyHtmlOptions,
   manifestFile,
+  systemJsScript = {
+    src: "/node_modules/systemjs/dist/s.min.js"
+  },
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global"
 }) => {
   const moduleContentMap = {};
@@ -3869,9 +4153,21 @@ const createJsenvRollupPlugin = async ({
   // this way file hash remains the same when file content does not change
 
   const compileServerOriginForRollup = String(new URL(STATIC_COMPILE_SERVER_AUTHORITY, compileServerOrigin)).slice(0, -1);
+  const compileDirectoryUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl);
   const compileDirectoryRemoteUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, compileServerOriginForRollup);
-  const chunkId = `${Object.keys(entryPointMap)[0]}.js`;
-  const importMap$1 = importMap.normalizeImportMap(compileServerImportMap, compileDirectoryRemoteUrl);
+  let chunkId = Object.keys(entryPointMap)[0];
+  if (!path.extname(chunkId)) chunkId += bundleDefaultExtension;
+  const importMapFileUrl = util.resolveUrl(importMapFileRelativeUrl, compileDirectoryUrl);
+  const importMapFileRemoteUrl = util.resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl);
+  const importMapRaw = JSON.parse(await util.readFile(importMapFileUrl));
+  const importMap$1 = importMap.normalizeImportMap(importMapRaw, importMapFileRemoteUrl);
+  logger.info(`importmap file loaded from ${importMapFileUrl}.
+--- url for normalization ---
+${importMapFileRemoteUrl}
+--- number of top level remapping ---
+${Object.keys(importMap$1.imports || {}).length}
+--- number of scopes ---
+${Object.keys(importMap$1.scopes || {}).length}`);
 
   const nativeModulePredicate = specifier => {
     if (node && isBareSpecifierForNativeNodeModule(specifier)) return true; // for now browser have no native module
@@ -3881,9 +4177,114 @@ const createJsenvRollupPlugin = async ({
     return false;
   };
 
+  const virtualModules = {};
+  const virtualAssets = [];
   const jsenvRollupPlugin = {
     name: "jsenv",
-    resolveId: (specifier, importer = compileDirectoryRemoteUrl) => {
+
+    async buildStart() {
+      // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
+      // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
+      await Promise.all(Object.keys(entryPointMap).map(async key => {
+        const chunkFileRelativeUrl = entryPointMap[key];
+        const chunkFileUrl = util.resolveUrl(chunkFileRelativeUrl, projectDirectoryUrl); // const chunkBundledFileUrl = resolveUrl(chunkFileRelativeUrl, bundleDirectoryUrl)
+
+        if (!chunkFileRelativeUrl.endsWith(".html")) {
+          this.emitFile({
+            type: "chunk",
+            id: chunkFileRelativeUrl,
+            fileName: `${key}${bundleDefaultExtension || path.extname(chunkFileRelativeUrl)}`
+          });
+          return;
+        } // const htmlFileRemoteUrl = resolveUrl(value, compileServerOrigin)
+        // const htmlCompiledFileRemoteUrl = resolveUrl(value, compileDirectoryRemoteUrl)
+
+
+        const htmlFileContent = await util.readFile(chunkFileUrl);
+        const htmlDocument = parseHtmlString(htmlFileContent);
+        const {
+          scripts
+        } = parseHtmlDocumentRessources(htmlDocument);
+        let previousScriptId;
+        const scriptReferences = [];
+        scripts.forEach((script, index) => {
+          if (script.attributes.type === "module" && script.attributes.src) {
+            logger.debug(`remote script ${script.attributes.src} found in ${chunkFileRelativeUrl} -> emit chunk`);
+            const remoteScriptId = script.attributes.src;
+            const remoteScriptUrl = util.resolveUrl(script.attributes.src, chunkFileUrl);
+            const remoteScriptRelativeUrl = util.urlToRelativeUrl(remoteScriptUrl, projectDirectoryUrl);
+            const remoteScriptReference = this.emitFile({
+              type: "chunk",
+              id: `./${remoteScriptRelativeUrl}`,
+              ...(previousScriptId ? {
+                implicitlyLoadedAfterOneOf: [previousScriptId]
+              } : {})
+            });
+            previousScriptId = remoteScriptId;
+            scriptReferences.push(remoteScriptReference);
+            return;
+          }
+
+          if (script.attributes.type === "module" && script.text) {
+            const inlineScriptId = util.resolveUrl(`htmlFileName.${index}.js`, chunkFileUrl);
+            logger.debug(`inline script number ${index} found in ${chunkFileRelativeUrl} -> emit chunk`);
+            virtualModules[inlineScriptId] = script.text;
+            const inlineScriptReference = this.emitFile({
+              type: "chunk",
+              id: inlineScriptId,
+              ...(previousScriptId ? {
+                implicitlyLoadedAfterOneOf: [previousScriptId]
+              } : {})
+            });
+            previousScriptId = inlineScriptId;
+            scriptReferences.push(inlineScriptReference);
+            return;
+          }
+
+          scriptReferences.push(null);
+        });
+        virtualAssets.push(async rollup => {
+          const htmlFileUrl = util.resolveUrl(key.endsWith(".html") ? key : `${key}.html`, projectDirectoryUrl);
+          manipulateHtmlDocument(htmlDocument, {
+            scriptManipulations: systemJsScript ? [systemJsScript] : []
+          });
+          const importMapFileUrl = util.resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
+          const importMapFileRelativeUrlForHtml = util.urlToRelativeUrl(importMapFileUrl, htmlFileUrl);
+          transformHtmlDocumentImportmapScript(scripts, {
+            type: "systemjs-importmap",
+            // ensure the html src is the one passed when generating the bundle
+            // this is useful in case you have an importmap while developping
+            // but want to use a different one to bundle so that
+            // the production importmap is smaller
+            // but override only if a custom importmap is passed
+            ...(importMapFileRelativeUrl ? {
+              src: importMapFileRelativeUrlForHtml
+            } : {})
+          });
+          transformHtmlDocumentModuleScripts(scripts, {
+            generateInlineScriptCode: (_, index) => {
+              const scriptRelativeUrl = rollup.getFileName(scriptReferences[index]);
+              const scriptUrl = util.resolveUrl(scriptRelativeUrl, bundleDirectoryUrl);
+              const scriptUrlRelativeToHtmlFile = util.urlToRelativeUrl(scriptUrl, htmlFileUrl);
+              return `<script>window.System.import(${JSON.stringify(`./${scriptUrlRelativeToHtmlFile}`)})</script>`;
+            }
+          });
+          const htmlTransformedString = stringifyHtmlDocument(htmlDocument);
+          await util.writeFile(htmlFileUrl, minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString);
+          logger.info(`-> ${htmlFileUrl}`);
+        });
+      }));
+    },
+
+    resolveId(specifier, importer) {
+      if (importer === undefined) {
+        if (specifier.endsWith(".html")) {
+          importer = compileServerOriginForRollup;
+        } else {
+          importer = compileDirectoryRemoteUrl;
+        }
+      }
+
       if (nativeModulePredicate(specifier)) {
         logger.debug(`${specifier} is native module -> marked as external`);
         return false;
@@ -3897,6 +4298,10 @@ const createJsenvRollupPlugin = async ({
         };
       }
 
+      if (virtualModules.hasOwnProperty(specifier)) {
+        return specifier;
+      }
+
       if (util.isFileSystemPath(importer)) {
         importer = util.fileSystemPathToUrl(importer);
       }
@@ -3908,21 +4313,23 @@ const createJsenvRollupPlugin = async ({
         defaultExtension: importDefaultExtension
       }); // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
 
-      logger.debug(`${specifier} resolved to ${importUrl}`);
+      logger.debug(`${specifier} imported by ${importer} resolved to ${importUrl}`);
       return importUrl;
     },
+
     // https://rollupjs.org/guide/en#resolvedynamicimport
     // resolveDynamicImport: (specifier, importer) => {
     // },
-    load: async urlForRollup => {
+    async load(urlForRollup) {
+      const moduleInfo = this.getModuleInfo(urlForRollup);
       const realUrl = urlToRealUrl(urlForRollup) || urlForRollup;
       logger.debug(`loads ${realUrl}`);
       const {
         responseUrl,
         contentRaw,
-        content,
+        content = "",
         map
-      } = await loadModule(realUrl);
+      } = await loadModule(realUrl, moduleInfo, this.emitFile.bind(this));
       const responseUrlForRollup = urlToUrlForRollup(responseUrl) || responseUrl;
       saveModuleContent(responseUrlForRollup, {
         content,
@@ -3942,6 +4349,7 @@ const createJsenvRollupPlugin = async ({
         map
       };
     },
+
     // resolveImportMeta: () => {}
     // transform should not be required anymore as
     // we will receive
@@ -4013,25 +4421,33 @@ const createJsenvRollupPlugin = async ({
         return result;
       }
     },
-    generateBundle: async (outputOptions, bundle) => {
-      if (!manifestFile) {
-        return;
-      }
 
-      const mappings = {};
-      Object.keys(bundle).forEach(key => {
-        const chunk = bundle[key];
-        mappings[`${chunk.name}.js`] = chunk.fileName;
-      });
-      const mappingKeysSorted = Object.keys(mappings).sort(util.comparePathnames);
-      const manifest = {};
-      mappingKeysSorted.forEach(key => {
-        manifest[key] = mappings[key];
-      });
-      const manifestFileUrl = util.resolveUrl("manifest.json", bundleDirectoryUrl);
-      await util.writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "));
+    async generateBundle(outputOptions, bundle) {
+      logger.info(formatBundleGeneratedLog(bundle));
+
+      if (manifestFile) {
+        const mappings = {};
+        Object.keys(bundle).forEach(key => {
+          const chunk = bundle[key];
+          let chunkId = chunk.name;
+          chunkId += ".js";
+          mappings[chunkId] = chunk.fileName;
+        });
+        const mappingKeysSorted = Object.keys(mappings).sort(util.comparePathnames);
+        const manifest = {};
+        mappingKeysSorted.forEach(key => {
+          manifest[key] = mappings[key];
+        });
+        const manifestFileUrl = util.resolveUrl("manifest.json", bundleDirectoryUrl);
+        await util.writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "));
+      }
     },
-    writeBundle: async (options, bundle) => {
+
+    async writeBundle(options, bundle) {
+      virtualAssets.forEach(fn => {
+        fn(this);
+      });
+
       if (detectAndTransformIfNeededAsyncInsertedByRollup) {
         await transformAsyncInsertedByRollup({
           projectDirectoryUrl,
@@ -4045,6 +4461,7 @@ const createJsenvRollupPlugin = async ({
         logger.info(`-> ${bundleDirectoryUrl}${bundleFilename}`);
       });
     }
+
   };
 
   const urlToRealUrl = url => {
@@ -4077,7 +4494,26 @@ const createJsenvRollupPlugin = async ({
     return null;
   };
 
-  const loadModule = async moduleUrl => {
+  const loadModule = async (moduleUrl, moduleInfo, emitFile) => {
+    if (moduleUrl in virtualModules) {
+      const codeInput = virtualModules[moduleUrl];
+      const {
+        code,
+        map
+      } = await transformJs({
+        projectDirectoryUrl,
+        code: codeInput,
+        url: moduleUrl,
+        babelPluginMap
+      });
+      return {
+        responseUrl: moduleUrl,
+        contentRaw: code,
+        content: code,
+        map
+      };
+    }
+
     const moduleResponse = await fetchModule(moduleUrl);
     const contentType = moduleResponse.headers["content-type"] || "";
     const moduleText = await moduleResponse.text();
@@ -4099,76 +4535,84 @@ const createJsenvRollupPlugin = async ({
     }
 
     if (contentType === "application/json" || contentType === "application/importmap+json") {
+      // there is no need to minify the json string
+      // because it becomes valid javascript
+      // that will be minified by minifyJs inside renderChunk
+      const jsonString = moduleText;
       return { ...commonData,
-        content: jsonToJavascript(moduleText)
+        content: `export default ${jsonString}`
       };
     }
 
     if (contentType === "text/html") {
+      if (moduleInfo.isEntry) {
+        return {
+          content: ""
+        };
+      }
+
+      const htmlString = minify ? minifyHtml(htmlString, minifyHtmlOptions) : moduleText;
+      const referenceId = emitFile({
+        type: "asset",
+        name: path.basename(moduleInfo.id),
+        source: htmlString
+      });
       return { ...commonData,
-        content: htmlToJavascript(moduleText)
+        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`
       };
     }
 
     if (contentType === "text/css") {
+      const cssString = minify ? minifyCss(moduleText, minifyCssOptions) : moduleText;
+      const referenceId = emitFile({
+        type: "asset",
+        name: path.basename(moduleInfo.id),
+        source: cssString
+      });
       return { ...commonData,
-        content: cssToJavascript(moduleText)
+        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`
       };
     }
 
     if (contentType === "image/svg+xml") {
+      // could also benefit of minification https://github.com/svg/svgo
+      const svgString = moduleText;
+      const referenceId = emitFile({
+        type: "asset",
+        name: path.basename(moduleInfo.id),
+        source: svgString
+      });
       return { ...commonData,
-        content: svgToJavaScript(moduleText)
+        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`
       };
     }
 
     if (contentType.startsWith("text/")) {
+      const textString = moduleText;
+      const referenceId = emitFile({
+        type: "asset",
+        name: path.basename(moduleInfo.id),
+        source: textString
+      });
       return { ...commonData,
-        content: textToJavascript(moduleText)
+        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`
       };
     }
 
-    logger.debug(`Using base64 to bundle module because of its content-type.
+    logger.debug(`Using buffer to bundle module because of its content-type.
 --- content-type ---
 ${contentType}
 --- module url ---
-${moduleUrl}`); // fallback to base64 text
-
+${moduleUrl}`);
+    const buffer = Buffer.from(moduleText);
+    const referenceId = emitFile({
+      type: "asset",
+      name: path.basename(moduleInfo.id),
+      source: buffer
+    });
     return { ...commonData,
-      content: textToJavascript(Buffer.from(moduleText).toString("base64"))
+      content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`
     };
-  };
-
-  const jsonToJavascript = jsonString => {
-    // there is no need to minify the json string
-    // because it becomes valid javascript
-    // that will be minified by minifyJs inside renderChunk
-    return `export default ${jsonString}`;
-  };
-
-  const htmlToJavascript = htmlString => {
-    if (minify) {
-      htmlString = minifyHtml(htmlString, minifyHtmlOptions);
-    }
-
-    return `export default ${JSON.stringify(htmlString)}`;
-  };
-
-  const cssToJavascript = cssString => {
-    if (minify) {
-      cssString = minifyCss(cssString, minifyCssOptions);
-    }
-
-    return `export default ${JSON.stringify(cssString)}`;
-  };
-
-  const svgToJavaScript = svgString => {
-    // could also benefit of minification https://github.com/svg/svgo
-    return `export default ${JSON.stringify(svgString)}`;
-  };
-
-  const textToJavascript = textString => {
-    return `export default ${JSON.stringify(textString)}`;
   };
 
   const fetchModule = async moduleUrl => {
@@ -4255,6 +4699,36 @@ const transformAsyncInsertedByRollup = async ({
   }));
 };
 
+const formatBundleGeneratedLog = bundle => {
+  const assetFilenames = Object.keys(bundle).filter(key => bundle[key].type === "asset").map(key => bundle[key].fileName);
+  const assetCount = assetFilenames.length;
+  const chunkFilenames = Object.keys(bundle).filter(key => bundle[key].type === "chunk").map(key => bundle[key].fileName);
+  const chunkCount = chunkFilenames.length;
+  const assetDescription = // eslint-disable-next-line no-nested-ternary
+  assetCount === 0 ? "" : assetCount === 1 ? "1 asset" : `${assetCount} assets`;
+  const chunkDescription = // eslint-disable-next-line no-nested-ternary
+  chunkCount === 0 ? "" : chunkCount === 1 ? "1 chunk" : `${chunkCount} chunks`;
+  return createDetailedMessage(`bundle generated`, { ...(assetDescription ? {
+      [assetDescription]: assetFilenames
+    } : {}),
+    ...(chunkDescription ? {
+      [chunkDescription]: chunkFilenames
+    } : {})
+  });
+};
+
+const createDetailedMessage = (message, details = {}) => {
+  let string = `${message}`;
+  Object.keys(details).forEach(key => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${Array.isArray(value) ? value.join(`
+`) : value}`;
+  });
+  return string;
+};
+
 const {
   rollup: rollup$1
 } = require$1("rollup");
@@ -4265,9 +4739,10 @@ const generateBundleUsingRollup = async ({
   projectDirectoryUrl,
   entryPointMap,
   bundleDirectoryUrl,
+  bundleDefaultExtension,
+  importMapFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
-  compileServerImportMap,
   importDefaultExtension,
   externalImportSpecifiers,
   node,
@@ -4282,7 +4757,8 @@ const generateBundleUsingRollup = async ({
   minifyHtmlOptions,
   sourcemapExcludeSources,
   writeOnFileSystem,
-  manifestFile = false
+  manifestFile = false,
+  systemJsScript
 }) => {
   const {
     jsenvRollupPlugin,
@@ -4293,9 +4769,10 @@ const generateBundleUsingRollup = async ({
     projectDirectoryUrl,
     entryPointMap,
     bundleDirectoryUrl,
+    bundleDefaultExtension,
+    importMapFileRelativeUrl,
     compileDirectoryRelativeUrl,
     compileServerOrigin,
-    compileServerImportMap,
     importDefaultExtension,
     externalImportSpecifiers,
     node,
@@ -4306,7 +4783,8 @@ const generateBundleUsingRollup = async ({
     minifyJsOptions,
     minifyCssOptions,
     minifyHtmlOptions,
-    manifestFile
+    manifestFile,
+    systemJsScript
   });
   const rollupBundle = await useRollup({
     cancellationToken,
@@ -4317,6 +4795,7 @@ const generateBundleUsingRollup = async ({
     formatInputOptions,
     formatOutputOptions,
     bundleDirectoryUrl,
+    bundleDefaultExtension,
     sourcemapExcludeSources,
     writeOnFileSystem
   });
@@ -4335,6 +4814,7 @@ const useRollup = async ({
   formatInputOptions,
   formatOutputOptions,
   bundleDirectoryUrl,
+  bundleDefaultExtension,
   sourcemapExcludeSources,
   writeOnFileSystem
 }) => {
@@ -4343,40 +4823,31 @@ parse bundle
 --- entry point map ---
 ${JSON.stringify(entryPointMap, null, "  ")}
 `);
-  const rollupBundle = await cancellation.createOperation({
-    cancellationToken,
-    start: () => rollup$1({
-      // about cache here, we should/could reuse previous rollup call
-      // to get the cache from the entryPointMap
-      // as shown here: https://rollupjs.org/guide/en#cache
-      // it could be passed in arguments to this function
-      // however parallelism and having different rollup options per
-      // call make it a bit complex
-      // cache: null
-      // https://rollupjs.org/guide/en#experimentaltoplevelawait
-      //  experimentalTopLevelAwait: true,
-      // if we want to ignore some warning
-      // please use https://rollupjs.org/guide/en#onwarn
-      // to be very clear about what we want to ignore
-      onwarn: (warning, warn) => {
-        if (warning.code === "THIS_IS_UNDEFINED") return;
-        warn(warning);
-      },
-      input: entryPointMap,
-      plugins: [jsenvRollupPlugin],
-      ...formatInputOptions
-    })
-  });
-
-  if (!formatOutputOptions.entryFileNames) {
-    formatOutputOptions.entryFileNames = `[name]${path.extname(entryPointMap[Object.keys(entryPointMap)[0]])}`;
-  }
-
-  if (!formatOutputOptions.chunkFileNames) {
-    formatOutputOptions.chunkFileNames = `[name]-[hash]${path.extname(entryPointMap[Object.keys(entryPointMap)[0]])}`;
-  }
-
-  const rollupGenerateOptions = {
+  const rollupInputOptions = {
+    // about cache here, we should/could reuse previous rollup call
+    // to get the cache from the entryPointMap
+    // as shown here: https://rollupjs.org/guide/en#cache
+    // it could be passed in arguments to this function
+    // however parallelism and having different rollup options per
+    // call make it a bit complex
+    // cache: null
+    // https://rollupjs.org/guide/en#experimentaltoplevelawait
+    //  experimentalTopLevelAwait: true,
+    // if we want to ignore some warning
+    // please use https://rollupjs.org/guide/en#onwarn
+    // to be very clear about what we want to ignore
+    onwarn: (warning, warn) => {
+      if (warning.code === "THIS_IS_UNDEFINED") return;
+      warn(warning);
+    },
+    input: [],
+    // preserveEntrySignatures: false,
+    plugins: [jsenvRollupPlugin],
+    ...formatInputOptions
+  };
+  const extension = path.extname(entryPointMap[Object.keys(entryPointMap)[0]]);
+  const outputExtension = extension === ".html" ? ".js" : extension;
+  const rollupOutputOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait
     // experimentalTopLevelAwait: true,
     // we could put prefConst to true by checking 'transform-block-scoping'
@@ -4389,18 +4860,22 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources,
+    entryFileNames: `[name]${bundleDefaultExtension || outputExtension}`,
+    chunkFileNames: `[name]-[hash]${bundleDefaultExtension || outputExtension}`,
     ...formatOutputOptions
   };
+  const rollupBundle = await cancellation.createOperation({
+    cancellationToken,
+    start: () => rollup$1(rollupInputOptions)
+  });
   const rollupOutputArray = await cancellation.createOperation({
     cancellationToken,
     start: () => {
       if (writeOnFileSystem) {
-        logger.info(`write bundle at ${rollupGenerateOptions.dir}`);
-        return rollupBundle.write(rollupGenerateOptions);
+        return rollupBundle.write(rollupOutputOptions);
       }
 
-      logger.info("generate bundle");
-      return rollupBundle.generate(rollupGenerateOptions);
+      return rollupBundle.generate(rollupOutputOptions);
     }
   });
   return rollupOutputArray;
@@ -4573,7 +5048,6 @@ const serveBundle = async ({
   compiledFileUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
-  compileServerImportMap,
   importDefaultExtension,
   externalImportSpecifiers = [],
   compileCacheStrategy,
@@ -4604,7 +5078,6 @@ const serveBundle = async ({
       bundleDirectoryUrl: util.resolveDirectoryUrl("./", compiledFileUrl),
       compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
       compileServerOrigin,
-      compileServerImportMap,
       importDefaultExtension,
       externalImportSpecifiers,
       node,
@@ -4643,277 +5116,6 @@ const serveBundle = async ({
   });
 };
 
-/**
-
-An important concern here:
-
-All script type="module" will be converted to inline script.
-These inline script execution order is non predictible it depends
-which one is being done first
-
-*/
-
-const parse5 = require$1("parse5");
-
-const compileHtml = (htmlBeforeCompilation, {
-  scriptManipulations = [],
-  replaceModuleScripts = true,
-  replaceImportmapScript = true,
-  // resolveScriptSrc = (src) => src,
-  generateInlineScriptSrc = ({
-    hash
-  }) => `./${hash}.js`
-} = {}) => {
-  // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
-  const document = parse5.parse(htmlBeforeCompilation);
-  manipulateScripts(document, scriptManipulations);
-  const scriptsExternalized = polyfillScripts(document, {
-    replaceModuleScripts,
-    replaceImportmapScript,
-    generateInlineScriptSrc
-  }); // resolveScripts(document, resolveScriptSrc)
-
-  const htmlAfterCompilation = parse5.serialize(document);
-  return {
-    htmlAfterCompilation,
-    scriptsExternalized
-  };
-};
-
-const manipulateScripts = (document, scriptManipulations) => {
-  const htmlNode = document.childNodes.find(node => node.nodeName === "html");
-  const headNode = htmlNode.childNodes[0];
-  const bodyNode = htmlNode.childNodes[1];
-  const scriptsToPreprendInHead = [];
-  scriptManipulations.forEach(({
-    replaceExisting = false,
-    ...script
-  }) => {
-    const scriptExistingInHead = findExistingScript(headNode, script);
-
-    if (scriptExistingInHead) {
-      if (replaceExisting) {
-        replaceNode(scriptExistingInHead, scriptToNode(script));
-      }
-
-      return;
-    }
-
-    const scriptExistingInBody = findExistingScript(bodyNode, script);
-
-    if (scriptExistingInBody) {
-      if (replaceExisting) {
-        replaceNode(scriptExistingInBody, scriptToNode(script));
-      }
-
-      return;
-    }
-
-    scriptsToPreprendInHead.push(script);
-  });
-  const headScriptsFragment = scriptsToFragment(scriptsToPreprendInHead);
-  insertFragmentBefore(headNode, headScriptsFragment, findChild(headNode, node => node.nodeName === "script"));
-};
-
-const insertFragmentBefore = (node, fragment, childNode) => {
-  const {
-    childNodes = []
-  } = node;
-
-  if (childNode) {
-    const childNodeIndex = childNodes.indexOf(childNode);
-    node.childNodes = [...childNodes.slice(0, childNodeIndex), ...fragment.childNodes.map(child => {
-      return { ...child,
-        parentNode: node
-      };
-    }), ...childNodes.slice(childNodeIndex)];
-  } else {
-    node.childNodes = [...childNodes, ...fragment.childNodes.map(child => {
-      return { ...child,
-        parentNode: node
-      };
-    })];
-  }
-};
-
-const scriptToNode = script => {
-  return scriptsToFragment([script]).childNodes[0];
-};
-
-const scriptsToFragment = scripts => {
-  const html = scripts.reduce((previous, script) => {
-    const scriptAttributes = objectToHtmlAttributes(script);
-    return `${previous}<script ${scriptAttributes}></script>
-      `;
-  }, "");
-  const fragment = parse5.parseFragment(html);
-  return fragment;
-};
-
-const findExistingScript = (node, script) => findChild(node, childNode => {
-  return childNode.nodeName === "script" && sameScript(childNode, script);
-});
-
-const findChild = ({
-  childNodes = []
-}, predicate) => childNodes.find(predicate);
-
-const sameScript = (node, {
-  type = "text/javascript",
-  src
-}) => {
-  const nodeType = getAttributeValue(node, "type") || "text/javascript";
-  const nodeSrc = getAttributeValue(node, "src");
-
-  if (type === "importmap") {
-    return nodeType === type;
-  }
-
-  return nodeType === type && nodeSrc === src;
-};
-
-const objectToHtmlAttributes = object => {
-  return Object.keys(object).map(key => `${key}=${valueToHtmlAttributeValue(object[key])}`).join(" ");
-};
-
-const valueToHtmlAttributeValue = value => {
-  if (typeof value === "string") {
-    return JSON.stringify(value);
-  }
-
-  return `"${JSON.stringify(value)}"`;
-};
-
-const polyfillScripts = (document, {
-  replaceModuleScripts,
-  replaceImportmapScript,
-  generateInlineScriptSrc
-}) => {
-  /*
-  <script type="module" src="*" /> are going to be inlined
-  <script type="module">** </script> are going to be transformed to import a file so that we can transform the script content.
-   but we don't want that a script with an src to be considered as an inline script after it was inlined.
-   For that reason we perform mutation in the end
-  */
-  const mutations = [];
-  const scriptsExternalized = {};
-  visitDocument(document, node => {
-    if (node.nodeName !== "script") {
-      return;
-    }
-
-    const attributes = node.attrs;
-    const nodeType = getAttributeValue(node, "type");
-
-    if (replaceModuleScripts && nodeType === "module") {
-      const nodeSrc = getAttributeValue(node, "src");
-
-      if (nodeSrc) {
-        mutations.push(() => {
-          const script = parseHtmlAsSingleElement(generateScriptForJsenv(nodeSrc)); // inherit script attributes (except src and type)
-
-          script.attrs = [...script.attrs, ...attributes.filter(attr => attr.name !== "type" && attr.name !== "src")];
-          replaceNode(node, script);
-        });
-        return;
-      }
-
-      const firstChild = node.childNodes[0];
-
-      if (firstChild && firstChild.nodeName === "#text") {
-        const scriptText = firstChild.value;
-        mutations.push(() => {
-          const nodeId = getAttributeValue(node, "id");
-          const hash = createScriptContentHash(scriptText);
-          const src = generateInlineScriptSrc({
-            hash,
-            id: nodeId
-          });
-          const script = parseHtmlAsSingleElement(generateScriptForJsenv(src)); // inherit script attributes (except src and type)
-
-          script.attrs = [...script.attrs, ...attributes.filter(attr => attr.name !== "type" && attr.name !== "src")];
-          replaceNode(node, script);
-          scriptsExternalized[src] = scriptText;
-        });
-        return;
-      }
-    }
-
-    if (replaceImportmapScript && nodeType === "importmap") {
-      const typeAttribute = getAttributeByName(node.attrs, "type");
-      typeAttribute.value = "jsenv-importmap";
-    }
-  });
-  mutations.forEach(fn => fn());
-  return scriptsExternalized;
-}; // const resolveScripts = (document, resolveScriptSrc) => {
-//   visitDocument(document, (node) => {
-//     if (node.nodeName !== "script") {
-//       return
-//     }
-//     const attributes = node.attrs
-//     const srcAttribute = getAttributeByName(attributes, "src")
-//     if (!srcAttribute) {
-//       return
-//     }
-//     const srcAttributeValue = srcAttribute.value
-//     srcAttribute.value = resolveScriptSrc(srcAttributeValue)
-//   })
-// }
-
-
-const getAttributeValue = (node, attributeName) => {
-  const attribute = getAttributeByName(node.attrs, attributeName);
-  return attribute ? attribute.value : undefined;
-};
-
-const getAttributeByName = (attributes, attributeName) => attributes.find(attr => attr.name === attributeName);
-
-const generateScriptForJsenv = src => {
-  return `<script>
-      window.__jsenv__.importFile(${JSON.stringify(src)})
-    </script>`;
-};
-
-const createScriptContentHash = content => {
-  const hash = crypto.createHash("sha256");
-  hash.update(content);
-  return hash.digest("hex").slice(0, 8);
-};
-
-const parseHtmlAsSingleElement = html => {
-  const fragment = parse5.parseFragment(html);
-  return fragment.childNodes[0];
-};
-
-const replaceNode = (node, newNode) => {
-  const {
-    parentNode
-  } = node;
-  const parentNodeChildNodes = parentNode.childNodes;
-  const nodeIndex = parentNodeChildNodes.indexOf(node);
-  parentNodeChildNodes[nodeIndex] = newNode;
-};
-
-const visitDocument = (document, fn) => {
-  const visitNode = node => {
-    fn(node);
-    const {
-      childNodes
-    } = node;
-
-    if (childNodes) {
-      let i = 0;
-
-      while (i < childNodes.length) {
-        visitNode(childNodes[i++]);
-      }
-    }
-  };
-
-  visitNode(document);
-};
-
 /* eslint-disable import/max-dependencies */
 const createCompiledFileService = ({
   cancellationToken,
@@ -4921,7 +5123,6 @@ const createCompiledFileService = ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   browserBundledJsFileRelativeUrl,
-  compileServerImportMap,
   importMapFileRelativeUrl,
   importDefaultExtension,
   transformTopLevelAwait,
@@ -4956,7 +5157,8 @@ const createCompiledFileService = ({
     if (!afterOutDirectory.includes("/") || afterOutDirectory[0] === "/") {
       return server.serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
         method,
-        headers
+        headers,
+        etagEnabled: true
       });
     }
 
@@ -4996,13 +5198,15 @@ const createCompiledFileService = ({
 
         return server.serveFile(otherwiseImportmapFileUrl, {
           method,
-          headers
+          headers,
+          etagEnabled: true
         });
       }
 
       return server.serveFile(compiledFileUrl, {
         method,
-        headers
+        headers,
+        etagEnabled: true
       });
     }
 
@@ -5016,7 +5220,6 @@ const createCompiledFileService = ({
           compiledFileUrl,
           outDirectoryRelativeUrl,
           compileServerOrigin: request.origin,
-          compileServerImportMap,
           importDefaultExtension,
           babelPluginMap,
           projectFileRequestedCallback,
@@ -5077,10 +5280,8 @@ const createCompiledFileService = ({
         projectFileRequestedCallback,
         request,
         compile: async htmlBeforeCompilation => {
-          const {
-            htmlAfterCompilation,
-            scriptsExternalized
-          } = compileHtml(htmlBeforeCompilation, {
+          const htmlDocument = parseHtmlString(htmlBeforeCompilation);
+          manipulateHtmlDocument(htmlDocument, {
             scriptManipulations: [{
               // when html file already contains an importmap script tag
               // its src is replaced to target the importmap used for compiled files
@@ -5092,7 +5293,17 @@ const createCompiledFileService = ({
             }, // todo: this is dirty because it means
             // compile server is aware of exploring and jsenv toolbar
             // instead this should be moved to startExploring
-            ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptManipulations)],
+            ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptManipulations)]
+          });
+          const {
+            scripts
+          } = parseHtmlDocumentRessources(htmlDocument);
+          transformHtmlDocumentImportmapScript(scripts, {
+            type: "jsenv-importmap"
+          });
+          const {
+            inlineScriptsTransformed
+          } = transformHtmlDocumentModuleScripts(scripts, {
             generateInlineScriptSrc: ({
               id,
               hash
@@ -5101,14 +5312,15 @@ const createCompiledFileService = ({
               return `./${util.urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`;
             }
           });
+          const htmlAfterTransformation = stringifyHtmlDocument(htmlDocument);
           let assets = [];
           let assetsContent = [];
-          await Promise.all(Object.keys(scriptsExternalized).map(async scriptSrc => {
+          await Promise.all(Object.keys(inlineScriptsTransformed).map(async scriptSrc => {
             const scriptAssetUrl = util.resolveUrl(scriptSrc, compiledFileUrl);
             const scriptBasename = util.urlToRelativeUrl(scriptAssetUrl, compiledFileUrl);
             const scriptOriginalFileUrl = util.resolveUrl(scriptBasename, originalFileUrl);
             const scriptAfterTransformFileUrl = util.resolveUrl(scriptBasename, compiledFileUrl);
-            const scriptBeforeCompilation = scriptsExternalized[scriptSrc];
+            const scriptBeforeCompilation = inlineScriptsTransformed[scriptSrc];
             const scriptTransformResult = await transformJs({
               projectDirectoryUrl,
               code: scriptBeforeCompilation,
@@ -5133,7 +5345,7 @@ const createCompiledFileService = ({
             assetsContent = [...assetsContent, code, JSON.stringify(map, null, "  ")];
           }));
           return {
-            compiledSource: htmlAfterCompilation,
+            compiledSource: htmlAfterTransformation,
             contentType: "text/html",
             sources: [originalFileUrl],
             sourcesContent: [htmlBeforeCompilation],
@@ -5235,13 +5447,14 @@ const startCompileServer = async ({
   runtimeAlwaysInsideRuntimeScoreMap = false,
   livereloadWatchConfig = {
     "./**": true,
-    "./.*/": true,
+    "./**/.*/": false,
     // any folder starting with a dot is ignored (includes .git for instance)
     "./**/node_modules/": false
   },
   livereloadLogLevel = "info",
   customServices = {},
   livereloadSSE = false,
+  watchAndSyncImportMap = false,
   scriptManipulations = [],
   browserInternalFileAnticipation = false,
   nodeInternalFileAnticipation = false
@@ -5347,7 +5560,6 @@ const startCompileServer = async ({
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
     browserBundledJsFileRelativeUrl,
-    compileServerImportMap,
     importMapFileRelativeUrl,
     importDefaultExtension,
     transformTopLevelAwait,
@@ -5370,7 +5582,8 @@ const startCompileServer = async ({
     logLevel: compileServerLogLevel,
     protocol: compileServerProtocol,
     http2: compileServerProtocol === "https",
-    redirectHttpToHttps: compileServerProtocol === "https",
+    // disabled because it does not work with http2
+    redirectHttpToHttps: false,
     privateKey: compileServerPrivateKey,
     certificate: compileServerCertificate,
     ip: compileServerIp,
@@ -5392,7 +5605,8 @@ const startCompileServer = async ({
     keepProcessAlive
   });
   compileServer.stoppedPromise.then(serverStopCancellationSource.cancel);
-  await installOutFiles(compileServer, {
+  const uninstallOutFiles = await installOutFiles({
+    logger: logger$1,
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
@@ -5401,14 +5615,61 @@ const startCompileServer = async ({
     compileServerImportMap,
     compileServerGroupMap,
     env,
-    writeOnFilesystem
+    writeOnFilesystem,
+    onOutFileWritten: outFileUrl => {
+      logger$1.debug(`-> ${outFileUrl}`);
+    }
   });
 
-  if (stopOnPackageVersionChange) {
-    installStopOnPackageVersionChange(compileServer, {
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl
+  if (!writeOnFilesystem) {
+    compileServer.stoppedPromise.then(() => {
+      uninstallOutFiles();
     });
+  }
+
+  if (stopOnPackageVersionChange) {
+    const stopListeningJsenvPackageVersionChange = listenJsenvPackageVersionChange({
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      onJsenvPackageVersionChange: () => {
+        compileServer.stop(STOP_REASON_PACKAGE_VERSION_CHANGED);
+      }
+    });
+    compileServer.stoppedPromise.then(() => {
+      stopListeningJsenvPackageVersionChange();
+    }, () => {});
+  }
+
+  if (watchAndSyncImportMap) {
+    let importmapWrittenPromise = Promise.resolve(() => {});
+    const stopWatchingImportMap = listenImportMapFileChange({
+      projectDirectoryUrl,
+      importMapFileRelativeUrl,
+      onProjectImportMapFileChange: async () => {
+        logger$1.debug(`${importMapFileRelativeUrl} modified -> regenerating importmaps for ${Object.keys(compileServerGroupMap)} `);
+        const compileServerImportMap = await generateImportMapForCompileServer({
+          logLevel: compileServerLogLevel,
+          projectDirectoryUrl,
+          outDirectoryRelativeUrl,
+          importMapFileRelativeUrl
+        });
+        importmapWrittenPromise = installImportMapFiles({
+          projectDirectoryUrl,
+          outDirectoryRelativeUrl,
+          importMapFileRelativeUrl,
+          compileServerImportMap,
+          compileServerGroupMap
+        });
+      }
+    });
+    compileServer.stoppedPromise.then(async () => {
+      stopWatchingImportMap();
+
+      if (!writeOnFilesystem) {
+        const removeImportMapFiles = await importmapWrittenPromise;
+        removeImportMapFiles();
+      }
+    }, () => {});
   }
 
   const internalFilesToPing = [];
@@ -5439,7 +5700,6 @@ const startCompileServer = async ({
     outDirectoryRelativeUrl,
     importMapFileRelativeUrl,
     ...compileServer,
-    compileServerImportMap,
     compileServerGroupMap
   };
 };
@@ -5680,43 +5940,7 @@ const setupServerSentEventsForLivereload = ({
     dependencySet.add(mainRelativeUrl);
     trackerMap.set(mainRelativeUrl, dependencySet);
     return dependencySet;
-  };
-  /**
-   the reason why sometimes livereloading does not happen:
-   1. js file modified (state A)
-  2. browser reloads
-  3. browser request html file (dependency set becomes empty)
-  4. browser request js file -> recognized as dependency
-  5. js file modified (state B)
-  6. client connects to livereload
-   At this stage browser has loaded and executed js file on state A
-  File was modified for state B before browser could connect to livereload
-  state B is the current state but browser shows state A
-   the correct fix for that would be to connect to livereload events before doing anything else
-  but jsenv toolbar is injected as a script type module
-  (it means the script is non blocking even if in head tag)
-   moreover it loads an html page which loads the toolbar script
-  all this is non blocking and delay the moment browser gets
-  connected to event source
-   several ideas:
-   - put a blocking script tag in main page head to together with toolbar injection
-    :( need yet an other script to inject in recente browsers using uncompiled files
-   - make toolbar a regular script tag instead of module
-    :( cannot hope for using type="module" in recent browsers
-   - whenever browser request html page send a cookie to keep track of files until the browser
-  connects to livereload
-    :( hack, ugly
-   - first line of toolbar should be to inject a regular script tag (or just connect to event source)
-  while the toolbar script is loading we could still miss livereload events
-  but that's only one file, should be very fast
-     :) type module friendly
-    :) no hack
-    :( have to share the livereload connection logic between src/toolbar.js
-    and src/internal/toolbar/toolbar.main.js
-    But I could use a basic connection in src/toolbar.js with the most simple implem
-    and keep the nice integration in toolbar later (and kill the connection from the main page)
-    */
-  // each time a file is requested for the first time its dependencySet is computed
+  }; // each time a file is requested for the first time its dependencySet is computed
 
 
   projectFileRequested.register(mainRelativeUrl => {
@@ -5958,7 +6182,8 @@ const createAssetFileService = ({
     if (urlIsAsset(requestUrl)) {
       return server.serveFile(util.resolveUrl(ressource.slice(1), projectDirectoryUrl), {
         method,
-        headers
+        headers,
+        etagEnabled: true
       });
     }
 
@@ -6022,13 +6247,14 @@ const createProjectFileService = ({
     const filePath = util.urlToFileSystemPath(fileUrl);
     const responsePromise = server.serveFile(filePath, {
       method,
-      headers
+      headers,
+      etagEnabled: true
     });
     return responsePromise;
   };
 };
 
-const installOutFiles = async (compileServer, {
+const installOutFiles = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
@@ -6037,7 +6263,7 @@ const installOutFiles = async (compileServer, {
   compileServerImportMap,
   compileServerGroupMap,
   env,
-  writeOnFilesystem
+  onOutFileWritten = () => {}
 }) => {
   const outDirectoryUrl = util.resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl);
   env = { ...env,
@@ -6047,37 +6273,73 @@ const installOutFiles = async (compileServer, {
     importMapFileRelativeUrl
   };
 
-  const importMapToString = () => JSON.stringify(compileServerImportMap, null, "  ");
-
   const groupMapToString = () => JSON.stringify(compileServerGroupMap, null, "  ");
 
   const envToString = () => JSON.stringify(env, null, "  ");
 
   const groupMapOutFileUrl = util.resolveUrl("./groupMap.json", outDirectoryUrl);
   const envOutFileUrl = util.resolveUrl("./env.json", outDirectoryUrl);
-  const importmapFiles = Object.keys(compileServerGroupMap).map(compileId => {
-    return util.resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`);
+  const importMapFilesWrittenPromise = installImportMapFiles({
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    importMapFileRelativeUrl,
+    compileServerImportMap,
+    compileServerGroupMap,
+    onOutFileWritten
   });
-  await Promise.all([util.writeFile(groupMapOutFileUrl, groupMapToString()), util.writeFile(envOutFileUrl, envToString()), ...importmapFiles.map(importmapFile => util.writeFile(importmapFile, importMapToString()))]);
-
-  if (!writeOnFilesystem) {
-    compileServer.stoppedPromise.then(() => {
-      importmapFiles.forEach(importmapFile => {
-        util.removeFileSystemNode(importmapFile, {
-          allowUseless: true
-        });
-      });
-      util.removeFileSystemNode(groupMapOutFileUrl, {
-        allowUseless: true
-      });
-      util.removeFileSystemNode(envOutFileUrl);
+  await Promise.all([util.writeFile(groupMapOutFileUrl, groupMapToString()), util.writeFile(envOutFileUrl, envToString()), importMapFilesWrittenPromise]);
+  onOutFileWritten(groupMapOutFileUrl);
+  onOutFileWritten(envOutFileUrl);
+  return async () => {
+    util.removeFileSystemNode(groupMapOutFileUrl, {
+      allowUseless: true
     });
-  }
+    util.removeFileSystemNode(envOutFileUrl);
+    const removeImportmapFiles = await importMapFilesWrittenPromise;
+    removeImportmapFiles();
+  };
 };
 
-const installStopOnPackageVersionChange = (compileServer, {
+const installImportMapFiles = async ({
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl
+  outDirectoryRelativeUrl,
+  importMapFileRelativeUrl,
+  compileServerImportMap,
+  compileServerGroupMap,
+  onOutFileWritten = () => {}
+}) => {
+  const outDirectoryUrl = util.resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl);
+  const importMapString = JSON.stringify(compileServerImportMap, null, "  ");
+  const importMapFiles = Object.keys(compileServerGroupMap).map(compileId => util.resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`));
+  await Promise.all(importMapFiles.map(async importmapFile => {
+    await util.writeFile(importmapFile, importMapString);
+    onOutFileWritten(importmapFile);
+  }));
+  return () => Promise.all(importMapFiles.map(importmapFile => util.removeFileSystemNode(importmapFile)));
+};
+
+const listenImportMapFileChange = async ({
+  projectDirectoryUrl,
+  importMapFileRelativeUrl,
+  onProjectImportMapFileChange = () => {}
+}) => {
+  const importMapFileUrl = util.resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
+
+  const onchange = () => {
+    onProjectImportMapFileChange();
+  };
+
+  return util.registerFileLifecycle(importMapFileUrl, {
+    added: onchange,
+    updated: onchange,
+    keepProcessAlive: false
+  });
+};
+
+const listenJsenvPackageVersionChange = ({
+  projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
+  onJsenvPackageVersionChange = () => {}
 }) => {
   const jsenvCoreDirectoryUrl = util.resolveUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl);
   const packageFileUrl = util.resolveUrl("./package.json", jsenvCoreDirectoryUrl);
@@ -6087,7 +6349,7 @@ const installStopOnPackageVersionChange = (compileServer, {
   try {
     packageVersion = readPackage(packageFilePath).version;
   } catch (e) {
-    if (e.code === "ENOENT") return;
+    if (e.code === "ENOENT") return () => {};
   }
 
   const checkPackageVersion = () => {
@@ -6106,18 +6368,15 @@ const installStopOnPackageVersionChange = (compileServer, {
     }
 
     if (packageVersion !== packageObject.version) {
-      compileServer.stop(STOP_REASON_PACKAGE_VERSION_CHANGED);
+      onJsenvPackageVersionChange();
     }
   };
 
-  const unregister = util.registerFileLifecycle(packageFilePath, {
+  return util.registerFileLifecycle(packageFilePath, {
     added: checkPackageVersion,
     updated: checkPackageVersion,
     keepProcessAlive: false
   });
-  compileServer.stoppedPromise.then(() => {
-    unregister();
-  }, () => {});
 };
 
 const readPackage = packagePath => {
@@ -6487,9 +6746,13 @@ options: ${JSON.stringify(options, null, "  ")}`);
       const executed = executeFile(fileRelativeUrl, rest);
       timing = TIMING_DURING_EXECUTION;
       registerErrorCallback(error => {
-        logger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
+        logger.error(`error ${timing}.
 --- error stack ---
-${error.stack}`);
+${error.stack}
+--- file executed ---
+${fileRelativeUrl}
+--- runtime ---
+${runtime}`);
         runtimeErrorCallback({
           error,
           timing
@@ -6516,9 +6779,13 @@ ${error.stack}`);
         // there is no need to log it.
         // the code will know the execution errored because it receives
         // an errored execution result
-        logger.debug(`${fileRelativeUrl} ${runtime}: error ${TIMING_DURING_EXECUTION}.
+        logger.debug(`error ${TIMING_DURING_EXECUTION}.
 --- error stack ---
-${executionResult.error.stack}`);
+${executionResult.error.stack}
+--- file executed ---
+${fileRelativeUrl}
+--- runtime ---
+${runtime}`);
         return createErroredExecutionResult(executionResult, rest);
       }
 
@@ -7047,11 +7314,11 @@ const writeLog = (string, {
   const consoleModified = spyConsoleModification();
 
   const moveCursorToLineAbove = () => {
-    readline.moveCursor(stream, 0, -1);
+    readline__default['default'].moveCursor(stream, 0, -1);
   };
 
   const clearCursorLine = () => {
-    readline.clearLine(stream, 0);
+    readline__default['default'].clearLine(stream, 0);
   };
 
   const remove = util.memoize(() => {
@@ -7966,19 +8233,23 @@ const generateBundle = async ({
   runtimeScoreMap = { ...jsenvBrowserScoreMap,
     node: jsenvNodeVersionScoreMap
   },
+  systemJsScript,
   balancerTemplateFileUrl,
   entryPointMap = {
     main: "./index.js"
   },
   bundleDirectoryRelativeUrl,
   bundleDirectoryClean = false,
+  bundleDefaultExtension = ".js",
   format,
   formatInputOptions = {},
   formatOutputOptions = {},
-  minify = false,
+  minify = "undefined" === "production",
   minifyJsOptions = {},
   minifyCssOptions = {},
-  minifyHtmlOptions = {},
+  minifyHtmlOptions = {
+    collapseWhitespace: true
+  },
   sourcemapExcludeSources = true,
   writeOnFileSystem = true,
   manifestFile = false,
@@ -8020,8 +8291,8 @@ const generateBundle = async ({
       await util.ensureEmptyDirectory(bundleDirectoryUrl);
     }
 
-    const extension = formatOutputOptions && formatOutputOptions.entryFileNames ? path.extname(formatOutputOptions.entryFileNames) : ".js";
-    const chunkId = `${Object.keys(entryPointMap)[0]}${extension}`;
+    let chunkId = Object.keys(entryPointMap)[0];
+    if (!path.extname(chunkId)) chunkId += bundleDefaultExtension;
     env = { ...env,
       chunkId
     };
@@ -8042,12 +8313,7 @@ const generateBundle = async ({
       await util.assertFilePresence(balancerTemplateFileUrl);
     }
 
-    const {
-      outDirectoryRelativeUrl,
-      origin: compileServerOrigin,
-      compileServerImportMap,
-      compileServerGroupMap
-    } = await startCompileServer({
+    const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
       projectDirectoryUrl,
@@ -8072,6 +8338,18 @@ const generateBundle = async ({
       transformModuleIntoSystemFormat: false // will be done by rollup
 
     });
+    const {
+      outDirectoryRelativeUrl,
+      origin: compileServerOrigin,
+      compileServerGroupMap
+    } = compileServer; // only if passed we override with the normalized value
+    // so that further function can still know
+    // if a specific value was passed or if it's the default
+    // value which is used
+
+    if (importMapFileRelativeUrl) {
+      importMapFileRelativeUrl = compileServer.importMapFileRelativeUrl;
+    }
 
     if (compileGroupCount === 1) {
       return generateBundleUsingRollup({
@@ -8080,9 +8358,10 @@ const generateBundle = async ({
         projectDirectoryUrl,
         entryPointMap,
         bundleDirectoryUrl,
+        bundleDefaultExtension,
+        importMapFileRelativeUrl,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         compileServerOrigin,
-        compileServerImportMap,
         importDefaultExtension,
         externalImportSpecifiers,
         babelPluginMap,
@@ -8097,7 +8376,8 @@ const generateBundle = async ({
         formatOutputOptions,
         writeOnFileSystem,
         sourcemapExcludeSources,
-        manifestFile
+        manifestFile,
+        systemJsScript
       });
     }
 
@@ -8107,9 +8387,10 @@ const generateBundle = async ({
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
       bundleDirectoryUrl,
+      bundleDefaultExtension,
+      importMapFileRelativeUrl,
       entryPointMap,
       compileServerOrigin,
-      compileServerImportMap,
       importDefaultExtension,
       externalImportSpecifiers,
       babelPluginMap,
@@ -8122,7 +8403,8 @@ const generateBundle = async ({
       minify,
       writeOnFileSystem,
       sourcemapExcludeSources,
-      manifestFile
+      manifestFile,
+      systemJsScript
     }), generateEntryPointsBalancerFiles({
       cancellationToken,
       logger: logger$1,
@@ -8131,8 +8413,9 @@ const generateBundle = async ({
       outDirectoryRelativeUrl,
       entryPointMap,
       bundleDirectoryUrl,
+      bundleDefaultExtension,
+      importMapFileRelativeUrl,
       compileServerOrigin,
-      compileServerImportMap,
       importDefaultExtension,
       externalImportSpecifiers,
       babelPluginMap,
@@ -8144,7 +8427,8 @@ const generateBundle = async ({
       minify,
       writeOnFileSystem,
       sourcemapExcludeSources,
-      manifestFile
+      manifestFile,
+      systemJsScript
     })]);
   });
 };
@@ -8232,21 +8516,14 @@ const generateEntryPointsBalancerFiles = ({
 
 const generateCommonJsBundle = ({
   bundleDirectoryRelativeUrl = "./dist/commonjs",
-  cjsExtension = true,
+  bundleDefaultExtension = ".cjs",
   node = true,
-  formatOutputOptions = {},
   ...rest
 }) => generateBundle({
   format: "commonjs",
   bundleDirectoryRelativeUrl,
+  bundleDefaultExtension,
   node,
-  formatOutputOptions: { ...formatOutputOptions,
-    ...(cjsExtension ? {
-      // by default it's [name].js
-      entryFileNames: `[name].cjs`,
-      chunkFileNames: `[name]-[hash].cjs`
-    } : {})
-  },
   balancerTemplateFileUrl: util.resolveUrl("./src/internal/bundling/commonjs-balancer-template.js", jsenvCoreDirectoryUrl),
   ...rest
 });
@@ -8255,7 +8532,6 @@ const generateCommonJsBundleForNode = ({
   babelPluginMap = jsenvBabelPluginMap,
   bundleDirectoryRelativeUrl,
   nodeMinimumVersion = decideNodeMinimumVersion(),
-  cjsExtension,
   ...rest
 }) => {
   const babelPluginMapForNode = computeBabelPluginMapForRuntime({
@@ -8265,7 +8541,6 @@ const generateCommonJsBundleForNode = ({
   });
   return generateCommonJsBundle({
     bundleDirectoryRelativeUrl,
-    cjsExtension,
     compileGroupCount: 1,
     babelPluginMap: babelPluginMapForNode,
     ...rest
@@ -8981,11 +9256,11 @@ const browserToRuntimeHooks = (browser, {
 };
 
 const isTargetClosedError = error => {
-  if (error.message.match(/^Protocol error \(.*?\): Target closed/)) {
+  if (error.message.match(/Protocol error \(.*?\): Target closed/)) {
     return true;
   }
 
-  if (error.message.match(/^Protocol error \(.*?\): Browser has been closed/)) {
+  if (error.message.match(/Protocol error \(.*?\): Browser has been closed/)) {
     return true;
   }
 
@@ -9749,6 +10024,7 @@ const startExploring = async ({
       accessControlAllowRequestHeaders: true,
       accessControlAllowCredentials: true,
       stopOnPackageVersionChange: true,
+      watchAndSyncImportMap: true,
       compileGroupCount: 2,
       scriptManipulations: [...(toolbar ? [{
         type: "module",

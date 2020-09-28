@@ -265,6 +265,7 @@ export const startCompileServer = async ({
   compileServer.stoppedPromise.then(serverStopCancellationSource.cancel)
 
   const uninstallOutFiles = await installOutFiles({
+    logger,
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
@@ -274,6 +275,9 @@ export const startCompileServer = async ({
     compileServerGroupMap,
     env,
     writeOnFilesystem,
+    onOutFileWritten: (outFileUrl) => {
+      logger.debug(`-> ${outFileUrl}`)
+    },
   })
   if (!writeOnFilesystem) {
     compileServer.stoppedPromise.then(() => {
@@ -304,6 +308,11 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
       importMapFileRelativeUrl,
       onProjectImportMapFileChange: async () => {
+        logger.debug(
+          `${importMapFileRelativeUrl} modified -> regenerating importmaps for ${Object.keys(
+            compileServerGroupMap,
+          )} `,
+        )
         const compileServerImportMap = await generateImportMapForCompileServer({
           logLevel: compileServerLogLevel,
           projectDirectoryUrl,
@@ -896,6 +905,7 @@ const installOutFiles = async ({
   compileServerImportMap,
   compileServerGroupMap,
   env,
+  onOutFileWritten = () => {},
 }) => {
   const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
 
@@ -917,6 +927,7 @@ const installOutFiles = async ({
     importMapFileRelativeUrl,
     compileServerImportMap,
     compileServerGroupMap,
+    onOutFileWritten,
   })
 
   await Promise.all([
@@ -924,6 +935,9 @@ const installOutFiles = async ({
     writeFile(envOutFileUrl, envToString()),
     importMapFilesWrittenPromise,
   ])
+
+  onOutFileWritten(groupMapOutFileUrl)
+  onOutFileWritten(envOutFileUrl)
 
   return async () => {
     removeFileSystemNode(groupMapOutFileUrl, { allowUseless: true })
@@ -940,6 +954,7 @@ const installImportMapFiles = async ({
   importMapFileRelativeUrl,
   compileServerImportMap,
   compileServerGroupMap,
+  onOutFileWritten = () => {},
 }) => {
   const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
   const importMapString = JSON.stringify(compileServerImportMap, null, "  ")
@@ -947,7 +962,10 @@ const installImportMapFiles = async ({
     resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`),
   )
   await Promise.all(
-    importMapFiles.map((importmapFile) => writeFile(importmapFile, importMapString)),
+    importMapFiles.map(async (importmapFile) => {
+      await writeFile(importmapFile, importMapString)
+      onOutFileWritten(importmapFile)
+    }),
   )
   return () =>
     Promise.all(importMapFiles.map((importmapFile) => removeFileSystemNode(importmapFile)))

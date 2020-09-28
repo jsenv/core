@@ -87,6 +87,15 @@ export const createJsenvRollupPlugin = async ({
   const importMapFileRemoteUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
   const importMapRaw = JSON.parse(await readFile(importMapFileUrl))
   const importMap = normalizeImportMap(importMapRaw, importMapFileRemoteUrl)
+  logger.info(
+    `importmap file loaded from ${importMapFileUrl}.
+--- url for normalization ---
+${importMapFileRemoteUrl}
+--- number of top level remapping ---
+${Object.keys(importMap.imports || {}).length}
+--- number of scopes ---
+${Object.keys(importMap.scopes || {}).length}`,
+  )
 
   const nativeModulePredicate = (specifier) => {
     if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
