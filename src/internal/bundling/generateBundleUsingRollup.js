@@ -17,7 +17,6 @@ export const generateBundleUsingRollup = async ({
   importMapFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
-  compileServerImportMap,
   importDefaultExtension,
   externalImportSpecifiers,
 
@@ -47,7 +46,6 @@ export const generateBundleUsingRollup = async ({
     importMapFileRelativeUrl,
     compileDirectoryRelativeUrl,
     compileServerOrigin,
-    compileServerImportMap,
     importDefaultExtension,
     externalImportSpecifiers,
 

@@ -148,7 +148,6 @@ export const generateBundle = async ({
     const {
       outDirectoryRelativeUrl,
       origin: compileServerOrigin,
-      compileServerImportMap,
       compileServerGroupMap,
     } = compileServer
     // only if passed we override with the normalized value
@@ -171,7 +170,6 @@ export const generateBundle = async ({
         importMapFileRelativeUrl,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         compileServerOrigin,
-        compileServerImportMap,
         importDefaultExtension,
         externalImportSpecifiers,
 
@@ -204,7 +202,6 @@ export const generateBundle = async ({
         importMapFileRelativeUrl,
         entryPointMap,
         compileServerOrigin,
-        compileServerImportMap,
         importDefaultExtension,
         externalImportSpecifiers,
 
@@ -233,7 +230,6 @@ export const generateBundle = async ({
         bundleDefaultExtension,
         importMapFileRelativeUrl,
         compileServerOrigin,
-        compileServerImportMap,
         importDefaultExtension,
         externalImportSpecifiers,
 

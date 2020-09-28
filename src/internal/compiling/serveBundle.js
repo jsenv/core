@@ -15,7 +15,6 @@ export const serveBundle = async ({
   compiledFileUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
-  compileServerImportMap,
   importDefaultExtension,
   externalImportSpecifiers = [],
   compileCacheStrategy,
@@ -50,7 +49,6 @@ export const serveBundle = async ({
       bundleDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
       compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
       compileServerOrigin,
-      compileServerImportMap,
       importDefaultExtension,
       externalImportSpecifiers,
 

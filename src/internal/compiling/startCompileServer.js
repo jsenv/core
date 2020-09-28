@@ -101,6 +101,7 @@ export const startCompileServer = async ({
   livereloadLogLevel = "info",
   customServices = {},
   livereloadSSE = false,
+  watchAndSyncImportMap = false,
   scriptManipulations = [],
 
   browserInternalFileAnticipation = false,
@@ -208,7 +209,6 @@ export const startCompileServer = async ({
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
     browserBundledJsFileRelativeUrl,
-    compileServerImportMap,
     importMapFileRelativeUrl,
     importDefaultExtension,
 
@@ -264,7 +264,7 @@ export const startCompileServer = async ({
 
   compileServer.stoppedPromise.then(serverStopCancellationSource.cancel)
 
-  await installOutFiles(compileServer, {
+  const uninstallOutFiles = await installOutFiles({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
@@ -275,12 +275,60 @@ export const startCompileServer = async ({
     env,
     writeOnFilesystem,
   })
+  if (!writeOnFilesystem) {
+    compileServer.stoppedPromise.then(() => {
+      uninstallOutFiles()
+    })
+  }
 
   if (stopOnPackageVersionChange) {
-    installStopOnPackageVersionChange(compileServer, {
+    const stopListeningJsenvPackageVersionChange = listenJsenvPackageVersionChange({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
+      onJsenvPackageVersionChange: () => {
+        compileServer.stop(STOP_REASON_PACKAGE_VERSION_CHANGED)
+      },
     })
+    compileServer.stoppedPromise.then(
+      () => {
+        stopListeningJsenvPackageVersionChange()
+      },
+      () => {},
+    )
+  }
+
+  if (watchAndSyncImportMap) {
+    let importmapWrittenPromise = Promise.resolve(() => {})
+
+    const stopWatchingImportMap = listenImportMapFileChange({
+      projectDirectoryUrl,
+      importMapFileRelativeUrl,
+      onProjectImportMapFileChange: async () => {
+        const compileServerImportMap = await generateImportMapForCompileServer({
+          logLevel: compileServerLogLevel,
+          projectDirectoryUrl,
+          outDirectoryRelativeUrl,
+          importMapFileRelativeUrl,
+        })
+        importmapWrittenPromise = installImportMapFiles({
+          projectDirectoryUrl,
+          outDirectoryRelativeUrl,
+          importMapFileRelativeUrl,
+          compileServerImportMap,
+          compileServerGroupMap,
+        })
+      },
+    })
+    compileServer.stoppedPromise.then(
+      async () => {
+        stopWatchingImportMap()
+        if (!writeOnFilesystem) {
+          const removeImportMapFiles = await importmapWrittenPromise
+          removeImportMapFiles()
+        }
+      },
+      () => {},
+    )
   }
 
   const internalFilesToPing = []
@@ -310,7 +358,6 @@ export const startCompileServer = async ({
     outDirectoryRelativeUrl,
     importMapFileRelativeUrl,
     ...compileServer,
-    compileServerImportMap,
     compileServerGroupMap,
   }
 }
@@ -840,20 +887,16 @@ const createProjectFileService = ({ projectDirectoryUrl, projectFileRequestedCal
   }
 }
 
-const installOutFiles = async (
-  compileServer,
-  {
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    importDefaultExtension,
-    importMapFileRelativeUrl,
-    compileServerImportMap,
-    compileServerGroupMap,
-    env,
-    writeOnFilesystem,
-  },
-) => {
+const installOutFiles = async ({
+  projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
+  outDirectoryRelativeUrl,
+  importDefaultExtension,
+  importMapFileRelativeUrl,
+  compileServerImportMap,
+  compileServerGroupMap,
+  env,
+}) => {
   const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
 
   env = {
@@ -864,37 +907,75 @@ const installOutFiles = async (
     importMapFileRelativeUrl,
   }
 
-  const importMapToString = () => JSON.stringify(compileServerImportMap, null, "  ")
   const groupMapToString = () => JSON.stringify(compileServerGroupMap, null, "  ")
   const envToString = () => JSON.stringify(env, null, "  ")
-
   const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
   const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
-  const importmapFiles = Object.keys(compileServerGroupMap).map((compileId) => {
-    return resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`)
+  const importMapFilesWrittenPromise = installImportMapFiles({
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    importMapFileRelativeUrl,
+    compileServerImportMap,
+    compileServerGroupMap,
   })
 
   await Promise.all([
     writeFile(groupMapOutFileUrl, groupMapToString()),
     writeFile(envOutFileUrl, envToString()),
-    ...importmapFiles.map((importmapFile) => writeFile(importmapFile, importMapToString())),
+    importMapFilesWrittenPromise,
   ])
 
-  if (!writeOnFilesystem) {
-    compileServer.stoppedPromise.then(() => {
-      importmapFiles.forEach((importmapFile) => {
-        removeFileSystemNode(importmapFile, { allowUseless: true })
-      })
-      removeFileSystemNode(groupMapOutFileUrl, { allowUseless: true })
-      removeFileSystemNode(envOutFileUrl)
-    })
+  return async () => {
+    removeFileSystemNode(groupMapOutFileUrl, { allowUseless: true })
+    removeFileSystemNode(envOutFileUrl)
+
+    const removeImportmapFiles = await importMapFilesWrittenPromise
+    removeImportmapFiles()
   }
 }
 
-const installStopOnPackageVersionChange = (
-  compileServer,
-  { projectDirectoryUrl, jsenvDirectoryRelativeUrl },
-) => {
+const installImportMapFiles = async ({
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+  importMapFileRelativeUrl,
+  compileServerImportMap,
+  compileServerGroupMap,
+}) => {
+  const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
+  const importMapString = JSON.stringify(compileServerImportMap, null, "  ")
+  const importMapFiles = Object.keys(compileServerGroupMap).map((compileId) =>
+    resolveUrl(importMapFileRelativeUrl, `${outDirectoryUrl}${compileId}/`),
+  )
+  await Promise.all(
+    importMapFiles.map((importmapFile) => writeFile(importmapFile, importMapString)),
+  )
+  return () =>
+    Promise.all(importMapFiles.map((importmapFile) => removeFileSystemNode(importmapFile)))
+}
+
+const listenImportMapFileChange = async ({
+  projectDirectoryUrl,
+  importMapFileRelativeUrl,
+  onProjectImportMapFileChange = () => {},
+}) => {
+  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
+
+  const onchange = () => {
+    onProjectImportMapFileChange()
+  }
+
+  return registerFileLifecycle(importMapFileUrl, {
+    added: onchange,
+    updated: onchange,
+    keepProcessAlive: false,
+  })
+}
+
+const listenJsenvPackageVersionChange = ({
+  projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
+  onJsenvPackageVersionChange = () => {},
+}) => {
   const jsenvCoreDirectoryUrl = resolveUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
   const packageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
   const packageFilePath = urlToFileSystemPath(packageFileUrl)
@@ -903,7 +984,7 @@ const installStopOnPackageVersionChange = (
   try {
     packageVersion = readPackage(packageFilePath).version
   } catch (e) {
-    if (e.code === "ENOENT") return
+    if (e.code === "ENOENT") return () => {}
   }
 
   const checkPackageVersion = () => {
@@ -921,21 +1002,15 @@ const installStopOnPackageVersionChange = (
     }
 
     if (packageVersion !== packageObject.version) {
-      compileServer.stop(STOP_REASON_PACKAGE_VERSION_CHANGED)
+      onJsenvPackageVersionChange()
     }
   }
 
-  const unregister = registerFileLifecycle(packageFilePath, {
+  return registerFileLifecycle(packageFilePath, {
     added: checkPackageVersion,
     updated: checkPackageVersion,
     keepProcessAlive: false,
   })
-  compileServer.stoppedPromise.then(
-    () => {
-      unregister()
-    },
-    () => {},
-  )
 }
 
 const readPackage = (packagePath) => {

@@ -47,7 +47,6 @@ const babelPluginMap = jsenvBabelPluginMap
     originalFileUrl,
     compiledFileUrl,
     compileServerOrigin: compileServer.origin,
-    compileServerImportMap: compileServer.compileServerImportMap,
     compileCacheStrategy,
 
     format: "commonjs",

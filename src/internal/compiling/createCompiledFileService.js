@@ -32,7 +32,6 @@ export const createCompiledFileService = ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   browserBundledJsFileRelativeUrl,
-  compileServerImportMap,
   importMapFileRelativeUrl,
   importDefaultExtension,
 
@@ -136,7 +135,6 @@ export const createCompiledFileService = ({
           compiledFileUrl,
           outDirectoryRelativeUrl,
           compileServerOrigin: request.origin,
-          compileServerImportMap,
           importDefaultExtension,
 
           babelPluginMap,

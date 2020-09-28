@@ -23,11 +23,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const babelPluginMap = jsenvBabelPluginMap
-const {
-  outDirectoryRelativeUrl,
-  origin: compileServerOrigin,
-  compileServerImportMap,
-} = await startCompileServer({
+const { outDirectoryRelativeUrl, origin: compileServerOrigin } = await startCompileServer({
   compileServerLogLevel: "warn",
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -52,7 +48,6 @@ const response = await serveBundle({
   compiledFileUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
-  compileServerImportMap,
   format: "commonjs",
 
   projectFileRequestedCallback: () => {},
