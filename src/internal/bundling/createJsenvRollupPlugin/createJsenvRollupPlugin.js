@@ -75,7 +75,6 @@ export const createJsenvRollupPlugin = async ({
   const compileServerOriginForRollup = String(
     new URL(STATIC_COMPILE_SERVER_AUTHORITY, compileServerOrigin),
   ).slice(0, -1)
-  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
   const compileDirectoryRemoteUrl = resolveDirectoryUrl(
     compileDirectoryRelativeUrl,
     compileServerOriginForRollup,
@@ -83,19 +82,11 @@ export const createJsenvRollupPlugin = async ({
   let chunkId = Object.keys(entryPointMap)[0]
   if (!extname(chunkId)) chunkId += bundleDefaultExtension
 
-  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryUrl)
   const importMapFileRemoteUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
-  const importMapRaw = JSON.parse(await readFile(importMapFileUrl))
+  const importMapFileResponse = await fetchUrl(importMapFileRemoteUrl)
+  const importMapRaw = await importMapFileResponse.json()
   const importMap = normalizeImportMap(importMapRaw, importMapFileRemoteUrl)
-  logger.debug(
-    `importmap file loaded from ${importMapFileUrl}.
---- url for normalization ---
-${importMapFileRemoteUrl}
---- number of top level remapping ---
-${Object.keys(importMap.imports || {}).length}
---- number of scopes ---
-${Object.keys(importMap.scopes || {}).length}`,
-  )
+  logger.debug(`importmap file fetched from ${importMapFileRemoteUrl}`)
 
   const nativeModulePredicate = (specifier) => {
     if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
