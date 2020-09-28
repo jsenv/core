@@ -971,7 +971,7 @@ const installImportMapFiles = async ({
     Promise.all(importMapFiles.map((importmapFile) => removeFileSystemNode(importmapFile)))
 }
 
-const listenImportMapFileChange = async ({
+const listenImportMapFileChange = ({
   projectDirectoryUrl,
   importMapFileRelativeUrl,
   onProjectImportMapFileChange = () => {},
