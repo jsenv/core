@@ -35,7 +35,7 @@ const actual = {
   bareB: globalValue[2],
 }
 const expected = {
-  basic: `${serverOrigin}/file.js`,
+  relative: `${serverOrigin}/file.js`,
   bareA: `${serverOrigin}/bar`,
   bareB: `${serverOrigin}/bar`,
 }
