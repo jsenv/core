@@ -1,3 +1,7 @@
-export const basic = import.meta.resolve("./file.js")
+const relative = import.meta.resolve("./file.js")
 
-export const remapped = import.meta.resolve("foo")
+const bareA = import.meta.resolve("bareA")
+
+const bareB = import.meta.resolve("bareB")
+
+export default Promise.all([relative, bareA, bareB])

@@ -25,12 +25,18 @@ await generateGlobalBundle({
     main: `./${testDirectoryRelativeUrl}${mainFilename}`,
   },
 })
-const { globalValue: actual, serverOrigin } = await scriptLoadGlobalBundle({
+const { globalValue, serverOrigin } = await scriptLoadGlobalBundle({
   ...SCRIPT_LOAD_GLOBAL_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
 })
+const actual = {
+  relative: globalValue[0],
+  bareA: globalValue[1],
+  bareB: globalValue[2],
+}
 const expected = {
   basic: `${serverOrigin}/file.js`,
-  remapped: `${serverOrigin}/bar`,
+  bareA: `${serverOrigin}/bar`,
+  bareB: `${serverOrigin}/bar`,
 }
 assert({ actual, expected })
