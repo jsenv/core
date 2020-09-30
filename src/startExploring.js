@@ -70,6 +70,7 @@ export const startExploring = async ({
       accessControlAllowRequestHeaders: true,
       accessControlAllowCredentials: true,
       stopOnPackageVersionChange: true,
+      watchAndSyncImportMap: true,
       compileGroupCount: 2,
       scriptManipulations: [
         ...(toolbar

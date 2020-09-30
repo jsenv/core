@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
 import { COMPILE_ID_OTHERWISE } from "../../../src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
@@ -19,6 +19,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
+const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
 const response = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
 const actual = {
   status: response.status,
@@ -27,7 +28,7 @@ const actual = {
 }
 const expected = {
   status: 404,
-  statusText: "file not found",
+  statusText: `ENOENT: File not found at ${urlToFileSystemPath(fileUrl)}`,
   body: "",
 }
 assert({ actual, expected })

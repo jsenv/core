@@ -8,8 +8,10 @@ import {
   COMPILE_ID_COMMONJS_BUNDLE,
   COMPILE_ID_COMMONJS_BUNDLE_FILES,
 } from "../CONSTANTS.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { jsenvToolbarHtmlFileUrl } from "../jsenvInternalFiles.js"
 import { createBabePluginMapForBundle } from "../bundling/createBabePluginMapForBundle.js"
+import { transformImportmap } from "./transformImportmap.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { compileFile } from "./compileFile.js"
@@ -32,7 +34,6 @@ export const createCompiledFileService = ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   browserBundledJsFileRelativeUrl,
-  compileServerImportMap,
   importMapFileRelativeUrl,
   importDefaultExtension,
 
@@ -108,21 +109,33 @@ export const createCompiledFileService = ({
     )
     const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl)
 
-    // send out/best/*.importmap untouched
-    if (originalFileRelativeUrl === importMapFileRelativeUrl) {
-      if (
-        compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES ||
-        compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES
-      ) {
-        const otherwiseImportmapFileUrl = resolveUrl(
-          originalFileRelativeUrl,
-          `${projectDirectoryUrl}${outDirectoryRelativeUrl}otherwise/`,
-        )
-        // for otherwise-commonjs-bundle, server did not write *.importmap
-        // let's just return otherwise/importMapFileRelativeUrl
-        return serveFile(otherwiseImportmapFileUrl, { method, headers, etagEnabled: true })
-      }
-      return serveFile(compiledFileUrl, { method, headers, etagEnabled: true })
+    if (contentType === "application/importmap+json") {
+      return compileFile({
+        cancellationToken,
+        logger,
+
+        projectDirectoryUrl,
+        originalFileUrl,
+        compiledFileUrl,
+
+        writeOnFilesystem: true, // we always need them
+        useFilesystemAsCache,
+        compileCacheStrategy,
+        projectFileRequestedCallback,
+        request,
+
+        compile: (importmapBeforeTransformation) =>
+          transformImportmap(importmapBeforeTransformation, {
+            logger,
+            projectDirectoryUrl,
+            outDirectoryRelativeUrl,
+            jsenvCoreDirectoryUrl,
+            originalFileUrl,
+            compiledFileUrl,
+            projectFileRequestedCallback,
+            request,
+          }),
+      })
     }
 
     if (contentType === "application/javascript") {
@@ -132,11 +145,11 @@ export const createCompiledFileService = ({
           logger,
 
           projectDirectoryUrl,
+          importMapFileRelativeUrl,
           originalFileUrl,
           compiledFileUrl,
           outDirectoryRelativeUrl,
           compileServerOrigin: request.origin,
-          compileServerImportMap,
           importDefaultExtension,
 
           babelPluginMap,

@@ -26,7 +26,7 @@ const babelPluginMap = jsenvBabelPluginMap
 const {
   outDirectoryRelativeUrl,
   origin: compileServerOrigin,
-  compileServerImportMap,
+  importMapFileRelativeUrl,
 } = await startCompileServer({
   compileServerLogLevel: "warn",
   projectDirectoryUrl,
@@ -48,11 +48,11 @@ const response = await serveBundle({
   }),
 
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  importMapFileRelativeUrl,
   originalFileUrl,
   compiledFileUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
-  compileServerImportMap,
   format: "commonjs",
 
   projectFileRequestedCallback: () => {},

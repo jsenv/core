@@ -148,16 +148,8 @@ export const generateBundle = async ({
     const {
       outDirectoryRelativeUrl,
       origin: compileServerOrigin,
-      compileServerImportMap,
       compileServerGroupMap,
     } = compileServer
-    // only if passed we override with the normalized value
-    // so that further function can still know
-    // if a specific value was passed or if it's the default
-    // value which is used
-    if (importMapFileRelativeUrl) {
-      importMapFileRelativeUrl = compileServer.importMapFileRelativeUrl
-    }
 
     if (compileGroupCount === 1) {
       return generateBundleUsingRollup({
@@ -168,10 +160,9 @@ export const generateBundle = async ({
         entryPointMap,
         bundleDirectoryUrl,
         bundleDefaultExtension,
-        importMapFileRelativeUrl,
+        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         compileServerOrigin,
-        compileServerImportMap,
         importDefaultExtension,
         externalImportSpecifiers,
 
@@ -201,10 +192,9 @@ export const generateBundle = async ({
         outDirectoryRelativeUrl,
         bundleDirectoryUrl,
         bundleDefaultExtension,
-        importMapFileRelativeUrl,
+        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
         entryPointMap,
         compileServerOrigin,
-        compileServerImportMap,
         importDefaultExtension,
         externalImportSpecifiers,
 
@@ -231,9 +221,8 @@ export const generateBundle = async ({
         entryPointMap,
         bundleDirectoryUrl,
         bundleDefaultExtension,
-        importMapFileRelativeUrl,
+        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
         compileServerOrigin,
-        compileServerImportMap,
         importDefaultExtension,
         externalImportSpecifiers,
 

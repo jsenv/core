@@ -1,5 +1,6 @@
 {
   "imports": {
-    "foo": "/bar"
+    "bareA": "./bar",
+    "bareB": "/bar"
   }
 }

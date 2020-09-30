@@ -26,12 +26,18 @@ await generateCommonJsBundle({
   },
 })
 
-const { namespace: actual } = await requireCommonJsBundle({
+const { namespace } = await requireCommonJsBundle({
   ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
 })
+const actual = {
+  relative: await namespace.relative,
+  bareA: await namespace.bareA,
+  bareB: await namespace.bareB,
+}
 const expected = {
-  basic: resolveUrl(`${bundleDirectoryRelativeUrl}/file.js`, jsenvCoreDirectoryUrl),
-  remapped: `file:///bar`,
+  relative: resolveUrl(`${bundleDirectoryRelativeUrl}/file.js`, jsenvCoreDirectoryUrl),
+  bareA: resolveUrl(`${bundleDirectoryRelativeUrl}/bar`, jsenvCoreDirectoryUrl),
+  bareB: "file:///bar",
 }
 assert({ actual, expected })

@@ -11,7 +11,7 @@ generateCommonJsBundleForNode({
   // even if, of course, importmap are ignored in that case.
   // as jsenv don't use import.meta.resolve or would not rely on importmap resolution
   // we can just provide an empty importmap file
-  importMapFileRelativeUrl: "./script/generate-commonjs-bundle/cjsbundle.importmap",
+  importMapFileRelativeUrl: "./cjsbundle.importmap",
   bundleDirectoryClean: true,
   externalImportSpecifiers: [
     "rollup",

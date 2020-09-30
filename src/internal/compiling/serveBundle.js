@@ -11,11 +11,11 @@ export const serveBundle = async ({
   logger,
 
   projectDirectoryUrl,
+  importMapFileRelativeUrl,
   originalFileUrl,
   compiledFileUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
-  compileServerImportMap,
   importDefaultExtension,
   externalImportSpecifiers = [],
   compileCacheStrategy,
@@ -44,13 +44,13 @@ export const serveBundle = async ({
       logger,
 
       projectDirectoryUrl,
+      importMapFileRelativeUrl,
       entryPointMap,
       // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
       // but still important to know where the files will be written
       bundleDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
       compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
       compileServerOrigin,
-      compileServerImportMap,
       importDefaultExtension,
       externalImportSpecifiers,
 
