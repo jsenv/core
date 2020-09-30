@@ -14,12 +14,14 @@ export const url = filenameContainsBackSlashes
   : `file://${__filename}`
 
 export const resolve = (specifier) => {
-  return resolveImport({
-    specifier,
-    importer: url,
-    importMap: memoizedGetImportMap(),
-    defaultExtension: false,
-  })
+  return Promise.resolve(
+    resolveImport({
+      specifier,
+      importer: url,
+      importMap: memoizedGetImportMap(),
+      defaultExtension: false,
+    }),
+  )
 }
 
 // better for perf and helps rollup to tree shake this out

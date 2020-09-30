@@ -1,8 +1,7 @@
 import { loggerToLogLevel } from "@jsenv/logger"
-import { urlToRelativeUrl } from "@jsenv/util"
+import { urlToRelativeUrl, urlIsInsideOf, resolveUrl } from "@jsenv/util"
 import { composeTwoImportMaps } from "@jsenv/import-map"
 import { getImportMapFromNodeModules } from "@jsenv/node-module-import-map"
-import { readProjectImportMap } from "./readProjectImportMap.js"
 
 /**
  * generateImportMapForCompileServer allows the following:
@@ -26,46 +25,41 @@ export const transformImportmap = async (
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
     jsenvCoreDirectoryUrl,
-    importMapFileRelativeUrl,
     originalFileUrl,
-    // compiledFileUrl,
+    compiledFileUrl,
     projectFileRequestedCallback,
     request,
   },
 ) => {
-  // send out/best/*.importmap untouched
-
   projectFileRequestedCallback(urlToRelativeUrl(originalFileUrl, projectDirectoryUrl), request)
+
+  const importMapForProject = JSON.parse(importmapBeforeTransformation)
+  const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
+
+  const topLevelRemappingForJsenvCore = {
+    "@jsenv/core/": urlToRelativeUrlRemapping(jsenvCoreDirectoryUrl, originalFileUrl),
+  }
+
+  const importmapForSelfImport = {
+    imports: topLevelRemappingForJsenvCore,
+    scopes: generateJsenvCoreScopes({ importMapForProject, topLevelRemappingForJsenvCore }),
+  }
 
   const importMapForJsenvCore = await getImportMapFromNodeModules({
     logLevel: loggerToLogLevel(logger),
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
     rootProjectDirectoryUrl: projectDirectoryUrl,
+    importMapFileRelativeUrl: originalFileRelativeUrl,
     projectPackageDevDependenciesIncluded: false,
   })
-  const importmapForSelfImport = {
-    imports: {
-      "@jsenv/core/": `./${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}`,
-    },
-  }
 
-  // lorsque /.jsenv/out n'est pas la ou on l'attends
-  // il faut alors faire un scope /.jsenv/out/ qui dit hey
+  const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
   const importMapInternal = {
     imports: {
-      ...(outDirectoryRelativeUrl === ".jsenv/out/"
-        ? {}
-        : {
-            "/.jsenv/out/": `./${outDirectoryRelativeUrl}`,
-          }),
-      "/jsenv.importmap": `./${importMapFileRelativeUrl}`,
+      "/.jsenv/out/": urlToRelativeUrlRemapping(outDirectoryUrl, compiledFileUrl),
+      "/jsenv.importmap": urlToRelativeUrlRemapping(originalFileUrl, compiledFileUrl),
     },
   }
-
-  const importMapForProject = await readProjectImportMap({
-    projectDirectoryUrl,
-    importMapFileRelativeUrl,
-  })
 
   const importMap = [
     importMapForJsenvCore,
@@ -82,4 +76,39 @@ export const transformImportmap = async (
     assets: [],
     assetsContent: [],
   }
+}
+
+// this function just here to ensure relative urls starts with './'
+// so that importmap do not consider them as bare specifiers
+const urlToRelativeUrlRemapping = (url, baseUrl) => {
+  const relativeUrl = urlToRelativeUrl(url, baseUrl)
+
+  if (urlIsInsideOf(url, baseUrl)) {
+    if (relativeUrl.startsWith("../")) return relativeUrl
+    if (relativeUrl.startsWith("./")) return relativeUrl
+    return `./${relativeUrl}`
+  }
+
+  return relativeUrl
+}
+
+const generateJsenvCoreScopes = ({ importMapForProject, topLevelRemappingForJsenvCore }) => {
+  const { scopes } = importMapForProject
+
+  if (!scopes) {
+    return undefined
+  }
+
+  // I must ensure jsenvCoreImports wins by default in every scope
+  // because scope may contains stuff like
+  // "/": "/"
+  // "/": "/folder/"
+  // to achieve this, we set jsenvCoreImports into every scope
+  // they can still be overriden by importMapForProject
+  // even if I see no use case for that
+  const scopesForJsenvCore = {}
+  Object.keys(scopes).forEach((scopeKey) => {
+    scopesForJsenvCore[scopeKey] = topLevelRemappingForJsenvCore
+  })
+  return scopesForJsenvCore
 }

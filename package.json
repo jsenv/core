@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "15.1.0-alpha.3",
+  "version": "15.1.0",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {
@@ -99,7 +99,7 @@
     "@jsenv/cancellation": "1.4.2",
     "@jsenv/import-map": "6.7.4",
     "@jsenv/logger": "3.4.0",
-    "@jsenv/node-module-import-map": "12.0.2",
+    "@jsenv/node-module-import-map": "12.1.0",
     "@jsenv/node-signals": "2.0.1",
     "@jsenv/server": "4.0.5",
     "@jsenv/uneval": "1.4.0",
