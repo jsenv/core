@@ -39,6 +39,7 @@ export const transformCssFiles = async (
   }, Promise.resolve())
 
   return {
+    assetUrlMappings,
     cssUrlMappings,
     cssContentMappings,
   }
