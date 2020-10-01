@@ -24,12 +24,16 @@ export const transformCssFiles = async (
       ...assetUrlMappings,
       ...cssUrlMappings,
     }
-    const cssAfterTransformation = replaceCssUrls(cssBeforeTransformation, urlsReplacements)
     const cssFileUrlAfterTransformation = computeFileBundleUrl(cssFile, {
-      fileContent: cssAfterTransformation,
+      fileContent: cssBeforeTransformation,
       projectDirectoryUrl,
       bundleDirectoryUrl,
     })
+    const cssAfterTransformation = replaceCssUrls(cssBeforeTransformation, urlsReplacements, {
+      from: cssFile,
+      to: cssFileUrlAfterTransformation,
+    })
+
     cssUrlMappings[cssFile] = cssFileUrlAfterTransformation
     cssContentMappings[cssFile] = cssAfterTransformation
   }, Promise.resolve())

@@ -1,7 +1,15 @@
-// import postcss from "postcss"
-// import { resolveUrl, urlIsInsideOf, readFile } from "@jsenv/util"
-// import { postCssUrlHashPlugin } from "./postcss-urlhash-plugin.js"
+import postcss from "postcss"
+import { urlToFileSystemPath } from "@jsenv/util"
+import { postCssUrlHashPlugin } from "./postcss-urlhash-plugin.js"
 
-// export const replaceCssUrls = (css, urlsReplacements) => {
-
-// }
+export const replaceCssUrls = async (css, urlReplacements, { from, to }) => {
+  const result = await postcss([postCssUrlHashPlugin]).process(css, {
+    from: urlToFileSystemPath(from),
+    to: urlToFileSystemPath(to),
+    urlReplacements,
+    map: {
+      inline: false,
+    },
+  })
+  return result
+}

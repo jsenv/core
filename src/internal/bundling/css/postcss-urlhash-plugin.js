@@ -6,72 +6,86 @@ export const postCssUrlHashPlugin = () => {
   return {
     postcssPlugin: "urlhash",
     prepare: (result) => {
-      const {
-        from,
-        // urlReplacements = {}
-      } = result.opts
+      const { from, collectUrls = false, urlReplacements = {} } = result.opts
       const fromUrl = fileSystemPathToUrl(from)
       return {
-        AtRule: (atRuleNode) => {
-          if (atRuleNode.parent.type !== "root") {
-            atRuleNode.warn(result, "`@import` should be top level")
-            return
-          }
-
-          if (atRuleNode.nodes) {
-            atRuleNode.warn(result, "`@import` was not terminated correctly")
-            return
-          }
-
-          let [urlNode] = valueParser(atRuleNode.params).nodes
-
-          if (!urlNode || (urlNode.type !== "string" && urlNode.type !== "function")) {
-            atRuleNode.warn(result, `No URL in \`${atRuleNode.toString()}\``)
-            return
-          }
-
-          let url = ""
-          if (urlNode.type === "string") {
-            url = urlNode.value
-          } else if (urlNode.type === "function") {
-            // Invalid function
-            if (!/^url$/i.test(urlNode.value)) {
-              atRuleNode.warn(result, `Invalid \`url\` function in \`${atRuleNode.toString()}\``)
+        AtRule: {
+          import: (atImportNode, { AtRule }) => {
+            if (atImportNode.parent.type !== "root") {
+              atImportNode.warn(result, "`@import` should be top level")
               return
             }
 
-            const firstNode = urlNode.nodes[0]
-            if (firstNode && firstNode.type === "string") {
-              urlNode = firstNode
-              url = urlNode.value
-            } else {
-              urlNode = urlNode.nodes
-              url = valueParser.stringify(urlNode.nodes)
+            if (atImportNode.nodes) {
+              atImportNode.warn(result, "`@import` was not terminated correctly")
+              return
             }
-          }
 
-          url = url.trim()
+            let [urlNode] = valueParser(atImportNode.params).nodes
 
-          if (url.length === 0) {
-            atRuleNode.warn(result, `Empty URL in \`${atRuleNode.toString()}\``)
-            return
-          }
+            if (!urlNode || (urlNode.type !== "string" && urlNode.type !== "function")) {
+              atImportNode.warn(result, `No URL in \`${atImportNode.toString()}\``)
+              return
+            }
 
-          const urlRaw = url
-          url = resolveUrl(urlRaw, fromUrl)
+            let url = ""
+            if (urlNode.type === "string") {
+              url = urlNode.value
+            } else if (urlNode.type === "function") {
+              // Invalid function
+              if (!/^url$/i.test(urlNode.value)) {
+                atImportNode.warn(
+                  result,
+                  `Invalid \`url\` function in \`${atImportNode.toString()}\``,
+                )
+                return
+              }
 
-          if (url === fromUrl) {
-            atRuleNode.warn(result, `\`@import\` loop in \`${atRuleNode.toString()}\``)
-            return
-          }
+              const firstNode = urlNode.nodes[0]
+              if (firstNode && firstNode.type === "string") {
+                urlNode = firstNode
+                url = urlNode.value
+              } else {
+                urlNode = urlNode.nodes
+                url = valueParser.stringify(urlNode.nodes)
+              }
+            }
 
-          result.messages.push({
-            type: "import",
-            urlRaw,
-            url,
-            atRuleNode,
-            urlNode,
-          })
+            url = url.trim()
+
+            if (url.length === 0) {
+              atImportNode.warn(result, `Empty URL in \`${atImportNode.toString()}\``)
+              return
+            }
+
+            const urlRaw = url
+            url = resolveUrl(urlRaw, fromUrl)
+
+            if (url === fromUrl) {
+              atImportNode.warn(result, `\`@import\` loop in \`${atImportNode.toString()}\``)
+              return
+            }
+
+            if (url in urlReplacements) {
+              const params = valueParser(atImportNode.params)
+              params.nodes[0].value = urlReplacements[url]
+              const newAtImportRule = new AtRule({
+                name: "import",
+                params: params.toString(),
+              })
+              atImportNode.replaceWith(newAtImportRule)
+            }
+
+            if (collectUrls) {
+              result.messages.push({
+                type: "import",
+                urlRaw,
+                url,
+                atImportNode,
+                urlNode,
+              })
+            }
+          },
         },
         Declaration: (declarationNode) => {
           if (!declarationNodeContainsUrl(declarationNode)) {
@@ -92,14 +106,19 @@ export const postCssUrlHashPlugin = () => {
 
             const urlRaw = url
             url = resolveUrl(urlRaw, fileSystemPathToUrl(from))
+            if (url in urlReplacements) {
+              urlNode.value = urlReplacements[url]
+            }
 
-            result.messages.push({
-              type: "asset",
-              urlRaw,
-              url,
-              declarationNode,
-              urlNode,
-            })
+            if (collectUrls) {
+              result.messages.push({
+                type: "asset",
+                urlRaw,
+                url,
+                declarationNode,
+                urlNode,
+              })
+            }
           })
         },
       }
@@ -127,7 +146,7 @@ const walkUrls = (declarationNode, callback) => {
     if (isImageSetFunctionNode(node)) {
       Array.from(node.nodes).forEach((childNode) => {
         if (childNode.type === "string") {
-          callback(childNode.value.replace(/^\s+|\s+$/g, ""), childNode)
+          callback(childNode.value.trim(), childNode)
           return
         }
 
@@ -142,6 +161,8 @@ const walkUrls = (declarationNode, callback) => {
       })
     }
   })
+
+  declarationNode.value = parsed.toString()
 }
 
 const isUrlFunctionNode = (node) => {
