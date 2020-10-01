@@ -1,28 +1,57 @@
 import { extname, basename } from "path"
 import { createHash } from "crypto"
-import { urlToRelativeUrl, resolveUrl } from "@jsenv/util"
+import { readFile } from "fs"
+import { urlToFileSystemPath, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
 
-export const generateCssAssets = (
-  cssDependencyMap,
+export const fetchCssAssets = async (cssDependencies) => {
+  const assetUrls = []
+  Object.keys(cssDependencies).forEach((cssFileUrl) => {
+    assetUrls.push(...cssDependencies[cssFileUrl].assetUrls)
+  })
+
+  const assetSources = {}
+
+  await Promise.all(
+    assetUrls.map(async (url) => {
+      const assetSource = new Promise((resolve, reject) => {
+        readFile(urlToFileSystemPath(url), (error, buffer) => {
+          if (error) {
+            reject(error)
+          } else {
+            resolve(buffer)
+          }
+        })
+      })
+      return assetSource
+    }),
+  )
+
+  return assetSources
+}
+
+export const generateCssAssets = async (
+  assetSources,
   { projectDirectoryUrl, bundleDirectoryUrl },
 ) => {
-  const assets = {}
-  Object.keys(cssDependencyMap).forEach((fileUrl) => {
-    const fileInfo = cssDependencyMap[fileUrl]
-    if (fileInfo.type === "asset") {
-      const assetFileUrl = fileInfo.url
-      const assetRelativeUrl = urlToRelativeUrl(assetFileUrl, projectDirectoryUrl)
+  const assetMappings = {}
+
+  await Promise.all(
+    Object.keys(assetSources).map(async (assetUrl) => {
+      const assetSource = assetSources[assetUrl]
+      const assetRelativeUrl = urlToRelativeUrl(assetUrl, projectDirectoryUrl)
       const assetParentUrl = urlToParentUrl(assetRelativeUrl)
       const assetFilename = renderNamePattern(`[name]-[hash][extname]`, {
         name: () => basename(assetRelativeUrl, extname(assetRelativeUrl)),
-        hash: () => generateAssetHash(assetRelativeUrl, fileInfo.source),
+        hash: () => generateAssetHash(assetRelativeUrl, assetSource),
         extname: () => extname(assetRelativeUrl),
       })
       const assetBundleFileUrl = resolveUrl(`${assetParentUrl}${assetFilename}`, bundleDirectoryUrl)
-      assets[assetFileUrl] = assetBundleFileUrl
-    }
-  })
-  return assets
+
+      assetMappings[assetUrl] = assetBundleFileUrl
+    }),
+  )
+
+  return assetMappings
 }
 
 const urlToParentUrl = (url) => {

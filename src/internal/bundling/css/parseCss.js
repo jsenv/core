@@ -3,7 +3,7 @@ import { readFile } from "@jsenv/util"
 import { postCssAssetPlugin } from "./postcss-asset-plugin.js"
 
 export const parseCss = async (css, { projectDirectoryUrl, cssFileUrl }) => {
-  const dependencyMap = {}
+  const cssDependencies = {}
 
   const visitCss = async (css, cssFileUrl) => {
     const result = await postcss([postCssAssetPlugin]).process(css, {
@@ -13,29 +13,31 @@ export const parseCss = async (css, { projectDirectoryUrl, cssFileUrl }) => {
       to: cssFileUrl,
     })
 
-    const dependencies = {}
-    result.messages.forEach((message) => {
-      if (message.type === "import") {
-        dependencies[message.url] = message
+    const cssUrls = {}
+    const assetUrls = {}
+    result.messages.forEach(({ type, url }) => {
+      if (type === "import") {
+        cssUrls[url] = {}
       }
-      if (message.type === "asset") {
-        dependencies[message.url] = message
+      if (type === "asset") {
+        assetUrls[url] = {}
       }
     })
-    dependencyMap[cssFileUrl] = dependencies
+    cssDependencies[cssFileUrl] = {
+      source: css,
+      cssUrls,
+      assetUrls,
+    }
 
     await Promise.all(
-      Object.keys(dependencies)
-        .filter((key) => dependencies[key].type === "import")
-        .map(async (key) => {
-          const dependency = dependencies[key]
-          const dependencyCss = await readFile(dependency.url)
-          await visitCss(dependencyCss, dependency.url)
-        }),
+      Object.keys(cssUrls).map(async (cssUrl) => {
+        const cssSource = await readFile(cssUrl)
+        await visitCss(cssSource, cssUrl)
+      }),
     )
   }
 
   await visitCss(css, cssFileUrl)
 
-  return dependencyMap
+  return cssDependencies
 }
