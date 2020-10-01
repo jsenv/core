@@ -1,17 +1,18 @@
 import postcss from "postcss"
 import { resolveUrl, urlIsInsideOf, readFile } from "@jsenv/util"
-import { postCssAssetPlugin } from "./postcss-asset-plugin.js"
+import { postCssUrlHashPlugin } from "./postcss-urlhash-plugin.js"
 
-export const parseCss = async (css, { projectDirectoryUrl, cssFileUrl }) => {
+export const collectCssUrls = async (css, { projectDirectoryUrl, cssFileUrl, urlReplacements }) => {
   const cssDependencies = {}
 
   const visitCss = async (css, cssFileUrl) => {
-    const result = await postcss([postCssAssetPlugin]).process(css, {
+    const result = await postcss([postCssUrlHashPlugin]).process(css, {
       from: cssFileUrl,
       to: cssFileUrl,
+      urlReplacements,
     })
 
-    const cssUrls = {}
+    const importUrls = {}
     const assetUrls = {}
     result.messages.forEach(({ type, url, atRuleNode }) => {
       const fileUrl = resolveUrl(url, cssFileUrl)
@@ -26,7 +27,7 @@ export const parseCss = async (css, { projectDirectoryUrl, cssFileUrl }) => {
           console.warn(result, `\`@import\` loop in \`${atRuleNode.toString()}\``)
           return
         }
-        cssUrls.push(url)
+        importUrls.push(url)
       }
       if (type === "asset") {
         assetUrls.push(url)
@@ -34,12 +35,12 @@ export const parseCss = async (css, { projectDirectoryUrl, cssFileUrl }) => {
     })
     cssDependencies[cssFileUrl] = {
       source: css,
-      cssUrls,
+      importUrls,
       assetUrls,
     }
 
     await Promise.all(
-      Object.keys(cssUrls).map(async (cssUrl) => {
+      Object.keys(importUrls).map(async (cssUrl) => {
         const cssSource = await readFile(cssUrl)
         await visitCss(cssSource, cssUrl)
       }),

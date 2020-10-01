@@ -1,10 +1,10 @@
 import { resolveUrl, readFile } from "@jsenv/util"
-import { parseCss } from "./parseCss.js"
+import { collectCssUrls } from "../collectCssUrls.js"
 
 const cssFileUrl = resolveUrl("./style-a.css", import.meta.url)
 const projectDirectoryUrl = resolveUrl("./", import.meta.url)
 const css = await readFile(cssFileUrl)
-const result = await parseCss(css, { projectDirectoryUrl, cssFileUrl })
+const result = await collectCssUrls(css, { projectDirectoryUrl, cssFileUrl })
 
 /**
 

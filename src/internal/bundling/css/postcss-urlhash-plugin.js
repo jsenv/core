@@ -1,10 +1,11 @@
 // import postcss from "postcss"
 import valueParser from "postcss-value-parser"
 
-export const postCssAssetPlugin = () => {
+export const postCssUrlHashPlugin = () => {
   return {
-    postcssPlugin: "asset",
+    postcssPlugin: "urlhash",
     prepare: (result) => {
+      const { urlReplacements } = result.opts
       return {
         AtRule: (atRuleNode) => {
           if (atRuleNode.parent.type !== "root") {
