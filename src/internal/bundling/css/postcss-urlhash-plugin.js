@@ -1,11 +1,16 @@
 // import postcss from "postcss"
 import valueParser from "postcss-value-parser"
+import { fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
 
 export const postCssUrlHashPlugin = () => {
   return {
     postcssPlugin: "urlhash",
     prepare: (result) => {
-      const { urlReplacements } = result.opts
+      const {
+        from,
+        // urlReplacements = {}
+      } = result.opts
+      const fromUrl = fileSystemPathToUrl(from)
       return {
         AtRule: (atRuleNode) => {
           if (atRuleNode.parent.type !== "root") {
@@ -52,8 +57,17 @@ export const postCssUrlHashPlugin = () => {
             return
           }
 
+          const urlRaw = url
+          url = resolveUrl(urlRaw, fromUrl)
+
+          if (url === fromUrl) {
+            atRuleNode.warn(result, `\`@import\` loop in \`${atRuleNode.toString()}\``)
+            return
+          }
+
           result.messages.push({
             type: "import",
+            urlRaw,
             url,
             atRuleNode,
             urlNode,
@@ -76,8 +90,12 @@ export const postCssUrlHashPlugin = () => {
               return
             }
 
+            const urlRaw = url
+            url = resolveUrl(urlRaw, fileSystemPathToUrl(from))
+
             result.messages.push({
               type: "asset",
+              urlRaw,
               url,
               declarationNode,
               urlNode,
@@ -88,7 +106,7 @@ export const postCssUrlHashPlugin = () => {
     },
   }
 }
-postCssAssetPlugin.postcss = true
+postCssUrlHashPlugin.postcss = true
 
 const declarationNodeContainsUrl = (declarationNode) => {
   return /^(?:url|(?:-webkit-)?image-set)\(/i.test(declarationNode.value)

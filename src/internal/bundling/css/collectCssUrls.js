@@ -1,5 +1,5 @@
 import postcss from "postcss"
-import { resolveUrl, urlIsInsideOf, readFile } from "@jsenv/util"
+import { urlToFileSystemPath, urlIsInsideOf, readFile } from "@jsenv/util"
 import { postCssUrlHashPlugin } from "./postcss-urlhash-plugin.js"
 
 export const collectCssUrls = async (css, { projectDirectoryUrl, cssFileUrl, urlReplacements }) => {
@@ -7,26 +7,20 @@ export const collectCssUrls = async (css, { projectDirectoryUrl, cssFileUrl, url
 
   const visitCss = async (css, cssFileUrl) => {
     const result = await postcss([postCssUrlHashPlugin]).process(css, {
-      from: cssFileUrl,
-      to: cssFileUrl,
+      from: urlToFileSystemPath(cssFileUrl),
+      to: urlToFileSystemPath(cssFileUrl),
       urlReplacements,
     })
 
-    const importUrls = {}
-    const assetUrls = {}
-    result.messages.forEach(({ type, url, atRuleNode }) => {
-      const fileUrl = resolveUrl(url, cssFileUrl)
-
+    const importUrls = []
+    const assetUrls = []
+    result.messages.forEach(({ type, url }) => {
       // ignore external url
-      if (!urlIsInsideOf(fileUrl, projectDirectoryUrl)) {
+      if (!urlIsInsideOf(url, projectDirectoryUrl)) {
         return
       }
 
       if (type === "import") {
-        if (fileUrl === cssFileUrl) {
-          console.warn(result, `\`@import\` loop in \`${atRuleNode.toString()}\``)
-          return
-        }
         importUrls.push(url)
       }
       if (type === "asset") {
@@ -40,7 +34,7 @@ export const collectCssUrls = async (css, { projectDirectoryUrl, cssFileUrl, url
     }
 
     await Promise.all(
-      Object.keys(importUrls).map(async (cssUrl) => {
+      importUrls.map(async (cssUrl) => {
         const cssSource = await readFile(cssUrl)
         await visitCss(cssSource, cssUrl)
       }),
