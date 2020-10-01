@@ -1,0 +1,5 @@
+@import "./style-b.css";
+
+div {
+  background: url("./jsenv.png");
+}
