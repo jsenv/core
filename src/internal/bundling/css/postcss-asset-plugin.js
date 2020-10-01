@@ -1,12 +1,10 @@
 // import postcss from "postcss"
 import valueParser from "postcss-value-parser"
-import { resolveUrl, urlIsInsideOf } from "@jsenv/util"
 
 export const postCssAssetPlugin = () => {
   return {
     postcssPlugin: "asset",
     prepare: (result) => {
-      const { cssFileUrl, projectDirectoryUrl } = result.opts
       return {
         AtRule: (atRuleNode) => {
           if (atRuleNode.parent.type !== "root") {
@@ -19,7 +17,7 @@ export const postCssAssetPlugin = () => {
             return
           }
 
-          const [urlNode] = valueParser(atRuleNode.params).nodes
+          let [urlNode] = valueParser(atRuleNode.params).nodes
 
           if (!urlNode || (urlNode.type !== "string" && urlNode.type !== "function")) {
             atRuleNode.warn(result, `No URL in \`${atRuleNode.toString()}\``)
@@ -37,10 +35,13 @@ export const postCssAssetPlugin = () => {
             }
 
             const firstNode = urlNode.nodes[0]
-            url =
-              firstNode && firstNode.type === "string"
-                ? firstNode.value
-                : valueParser.stringify(urlNode.nodes)
+            if (firstNode && firstNode.type === "string") {
+              urlNode = firstNode
+              url = urlNode.value
+            } else {
+              urlNode = urlNode.nodes
+              url = valueParser.stringify(urlNode.nodes)
+            }
           }
 
           url = url.trim()
@@ -50,20 +51,11 @@ export const postCssAssetPlugin = () => {
             return
           }
 
-          const importedUrl = resolveUrl(url, cssFileUrl)
-          if (importedUrl === cssFileUrl) {
-            atRuleNode.warn(result, `\`@import\` loop in \`${atRuleNode.toString()}\``)
-            return
-          }
-
-          if (!urlIsInsideOf(importedUrl, projectDirectoryUrl)) {
-            return
-          }
-
           result.messages.push({
             type: "import",
-            url: importedUrl,
+            url,
             atRuleNode,
+            urlNode,
           })
         },
         Declaration: (declarationNode) => {
@@ -83,16 +75,9 @@ export const postCssAssetPlugin = () => {
               return
             }
 
-            const assetUrl = resolveUrl(url, cssFileUrl)
-
-            // skip external url
-            if (!urlIsInsideOf(assetUrl, projectDirectoryUrl)) {
-              return
-            }
-
             result.messages.push({
               type: "asset",
-              url: assetUrl,
+              url,
               declarationNode,
               urlNode,
             })

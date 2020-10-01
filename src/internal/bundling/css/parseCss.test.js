@@ -7,23 +7,6 @@ const css = await readFile(cssFileUrl)
 const result = await parseCss(css, { projectDirectoryUrl, cssFileUrl })
 
 /**
-une fois qu'on a toutes les dépendances ça devient plus facile
-mais il faut tout de meme faire plein de truc
-
-en premier il faudrait générer le hash de tous les assets
--> faire une fonction qui prend cssDependencyMap de tous les css
-et genere une url de fichier de destination avec le hash
-
-cette fonction retourne un mapping de url vers url de destination
-
--> faire une fonction qui prend cssDependencyMap et en déduit
-les css les moins dependant.
-Cette fonction prend ensuite le tableau un par un et
-update le chemin des assets + minifie le css et genere une url de destination avec hash
-
-le fichier suivant attend alors la minification du fichier précédent et
-met a jour tout ces chemin vers assets + import rule
-et ainsi de suite.
 
 cette fonction retourn un mapping de url css vers url de destination
 

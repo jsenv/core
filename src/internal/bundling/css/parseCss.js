@@ -1,5 +1,5 @@
 import postcss from "postcss"
-import { readFile } from "@jsenv/util"
+import { resolveUrl, urlIsInsideOf, readFile } from "@jsenv/util"
 import { postCssAssetPlugin } from "./postcss-asset-plugin.js"
 
 export const parseCss = async (css, { projectDirectoryUrl, cssFileUrl }) => {
@@ -7,20 +7,29 @@ export const parseCss = async (css, { projectDirectoryUrl, cssFileUrl }) => {
 
   const visitCss = async (css, cssFileUrl) => {
     const result = await postcss([postCssAssetPlugin]).process(css, {
-      projectDirectoryUrl,
-      cssFileUrl,
       from: cssFileUrl,
       to: cssFileUrl,
     })
 
     const cssUrls = {}
     const assetUrls = {}
-    result.messages.forEach(({ type, url }) => {
+    result.messages.forEach(({ type, url, atRuleNode }) => {
+      const fileUrl = resolveUrl(url, cssFileUrl)
+
+      // ignore external url
+      if (!urlIsInsideOf(fileUrl, projectDirectoryUrl)) {
+        return
+      }
+
       if (type === "import") {
-        cssUrls[url] = {}
+        if (fileUrl === cssFileUrl) {
+          console.warn(result, `\`@import\` loop in \`${atRuleNode.toString()}\``)
+          return
+        }
+        cssUrls.push(url)
       }
       if (type === "asset") {
-        assetUrls[url] = {}
+        assetUrls.push(url)
       }
     })
     cssDependencies[cssFileUrl] = {
