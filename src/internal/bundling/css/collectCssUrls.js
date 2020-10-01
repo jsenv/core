@@ -7,7 +7,7 @@ export const collectCssUrls = async (css, { projectDirectoryUrl, cssFileUrl }) =
 
   const visitCss = async (css, cssFileUrl) => {
     const result = await postcss([postCssUrlHashPlugin]).process(css, {
-      collect: true,
+      collectUrls: true,
       from: urlToFileSystemPath(cssFileUrl),
       to: urlToFileSystemPath(cssFileUrl),
     })
@@ -34,9 +34,9 @@ export const collectCssUrls = async (css, { projectDirectoryUrl, cssFileUrl }) =
     }
 
     await Promise.all(
-      importUrls.map(async (cssUrl) => {
-        const cssSource = await readFile(cssUrl)
-        await visitCss(cssSource, cssUrl)
+      importUrls.map(async (importUrl) => {
+        const cssSource = await readFile(importUrl)
+        await visitCss(cssSource, importUrl)
       }),
     )
   }

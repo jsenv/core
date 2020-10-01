@@ -1,3 +1,4 @@
+import { urlToRelativeUrl } from "@jsenv/util"
 import { computeFileBundleUrl } from "./computeFileBundleUrl.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
 import { fetchCssAssets } from "./fetchCssAssets.js"
@@ -20,29 +21,44 @@ export const transformCssFiles = async (
     await previous
 
     const cssBeforeTransformation = cssDependencies[cssFile].source
-    const urlsReplacements = {
-      ...assetUrlMappings,
-      ...cssUrlMappings,
-    }
     const cssFileUrlAfterTransformation = computeFileBundleUrl(cssFile, {
       fileContent: cssBeforeTransformation,
       projectDirectoryUrl,
       bundleDirectoryUrl,
     })
-    const cssAfterTransformation = replaceCssUrls(cssBeforeTransformation, urlsReplacements, {
+    cssUrlMappings[cssFile] = cssFileUrlAfterTransformation
+
+    const urlsReplacements = makeUrlReplacementsRelativeToCssFile(
+      {
+        ...assetUrlMappings,
+        ...cssUrlMappings,
+      },
+      cssFileUrlAfterTransformation,
+    )
+
+    const cssReplaceResult = await replaceCssUrls(cssBeforeTransformation, urlsReplacements, {
       from: cssFile,
       to: cssFileUrlAfterTransformation,
     })
-
-    cssUrlMappings[cssFile] = cssFileUrlAfterTransformation
+    const cssAfterTransformation = cssReplaceResult.css
     cssContentMappings[cssFile] = cssAfterTransformation
   }, Promise.resolve())
 
   return {
     assetUrlMappings,
+    assetSources,
     cssUrlMappings,
     cssContentMappings,
   }
+}
+
+const makeUrlReplacementsRelativeToCssFile = (urlsReplacements, cssFileUrl) => {
+  const relative = {}
+  Object.keys(urlsReplacements).forEach((key) => {
+    const urlReplacement = urlsReplacements[key]
+    relative[key] = `./${urlToRelativeUrl(urlReplacement, cssFileUrl)}`
+  })
+  return relative
 }
 
 const remapCssAssetUrls = (assetSources, { projectDirectoryUrl, bundleDirectoryUrl }) => {
@@ -67,8 +83,8 @@ const getCssFilesOrderedBydependency = (cssDependencies) => {
 
     const filesToHandle = []
     remainingFiles.forEach((cssFile) => {
-      const { cssUrls } = cssDependencies[cssFile]
-      const allDependenciesResolved = cssUrls.every((cssUrl) =>
+      const { importUrls } = cssDependencies[cssFile]
+      const allDependenciesResolved = importUrls.every((cssUrl) =>
         cssFilesOrderedByDependency.includes(cssUrl),
       )
       if (allDependenciesResolved) {

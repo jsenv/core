@@ -8,10 +8,9 @@ export const fetchCssAssets = async (cssDependencies) => {
   })
 
   const assetSources = {}
-
   await Promise.all(
     assetUrls.map(async (url) => {
-      const assetSource = new Promise((resolve, reject) => {
+      const assetSource = await new Promise((resolve, reject) => {
         readFile(urlToFileSystemPath(url), (error, buffer) => {
           if (error) {
             reject(error)
@@ -20,9 +19,8 @@ export const fetchCssAssets = async (cssDependencies) => {
           }
         })
       })
-      return assetSource
+      assetSources[url] = assetSource
     }),
   )
-
   return assetSources
 }
