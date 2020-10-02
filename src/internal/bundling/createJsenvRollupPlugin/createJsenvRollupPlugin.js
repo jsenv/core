@@ -18,6 +18,7 @@ import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
 import { transformJs } from "../../compiling/js-compilation-service/transformJs.js"
 import { findAsyncPluginNameInBabelPluginMap } from "../../compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 
+import { createAssetHandler } from "./createAssetHandler.js"
 import { extractFromHtml } from "./extractFromHtml.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
@@ -63,6 +64,7 @@ export const createJsenvRollupPlugin = async ({
   let chunkId = Object.keys(entryPointMap)[0]
   if (!extname(chunkId)) chunkId += bundleDefaultExtension
 
+  // const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
   const compileDirectoryRemoteUrl = resolveDirectoryUrl(
     compileDirectoryRelativeUrl,
     compileServerOrigin,
@@ -100,6 +102,7 @@ export const createJsenvRollupPlugin = async ({
 
   const virtualModules = {}
   const assetFinalizers = []
+  const assetHandler = createAssetHandler(projectDirectoryUrl)
 
   const jsenvRollupPlugin = {
     name: "jsenv",
@@ -117,7 +120,7 @@ export const createJsenvRollupPlugin = async ({
             this.emitFile({
               type: "chunk",
               id: chunkFileRelativeUrl,
-              fileName: `${key}${bundleDefaultExtension || extname(chunkFileRelativeUrl)}`,
+              name: `${key}${bundleDefaultExtension || extname(chunkFileRelativeUrl)}`,
             })
             return
           }
@@ -243,7 +246,26 @@ export const createJsenvRollupPlugin = async ({
       const { responseUrl, contentRaw, content = "", map } = await loadModule(
         realUrl,
         moduleInfo,
-        this.emitFile.bind(this),
+        (assetFileContent) => {
+          if (!realUrl) {
+            throw new Error(`${urlForRollup} cannot emit asset`)
+          }
+          if (urlIsInsideOf(realUrl, compileDirectoryRemoteUrl)) {
+            const relativeUrl = urlToRelativeUrl(realUrl, compileDirectoryRemoteUrl)
+            const assetFileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
+            return assetHandler.emitAsset(this, { assetFileUrl, assetFileContent })
+          }
+          if (urlIsInsideOf(realUrl, compileServerOrigin)) {
+            const relativeUrl = urlToRelativeUrl(realUrl, compileServerOrigin)
+            const assetFileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
+            return assetHandler.emitAsset(this, { assetFileUrl, assetFileContent })
+          }
+          throw new Error(`a file outside project cannot emit an asset.
+--- file ---
+${realUrl}
+--- project directory url ---
+${projectDirectoryUrl}`)
+        },
       )
 
       const responseUrlForRollup = urlToUrlForRollup(responseUrl) || responseUrl
@@ -403,7 +425,7 @@ export const createJsenvRollupPlugin = async ({
     return null
   }
 
-  const loadModule = async (moduleUrl, moduleInfo, emitFile) => {
+  const loadModule = async (moduleUrl, moduleInfo, emitAsset) => {
     if (moduleUrl in virtualModules) {
       const codeInput = virtualModules[moduleUrl]
 
@@ -464,11 +486,7 @@ export const createJsenvRollupPlugin = async ({
       }
 
       const htmlString = minify ? minifyHtml(htmlString, minifyHtmlOptions) : moduleText
-      const referenceId = emitFile({
-        type: "asset",
-        name: basename(moduleInfo.id),
-        source: htmlString,
-      })
+      const referenceId = emitAsset(htmlString)
       return {
         ...commonData,
         content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
@@ -477,11 +495,7 @@ export const createJsenvRollupPlugin = async ({
 
     if (contentType === "text/css") {
       const cssString = minify ? minifyCss(moduleText, minifyCssOptions) : moduleText
-      const referenceId = emitFile({
-        type: "asset",
-        name: basename(moduleInfo.id),
-        source: cssString,
-      })
+      const referenceId = emitAsset(cssString)
       return {
         ...commonData,
         content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
@@ -491,11 +505,7 @@ export const createJsenvRollupPlugin = async ({
     if (contentType === "image/svg+xml") {
       // could also benefit of minification https://github.com/svg/svgo
       const svgString = moduleText
-      const referenceId = emitFile({
-        type: "asset",
-        name: basename(moduleInfo.id),
-        source: svgString,
-      })
+      const referenceId = emitAsset(svgString)
       return {
         ...commonData,
         content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
@@ -504,11 +514,7 @@ export const createJsenvRollupPlugin = async ({
 
     if (contentType.startsWith("text/")) {
       const textString = moduleText
-      const referenceId = emitFile({
-        type: "asset",
-        name: basename(moduleInfo.id),
-        source: textString,
-      })
+      const referenceId = emitAsset(textString)
       return {
         ...commonData,
         content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
@@ -520,12 +526,7 @@ export const createJsenvRollupPlugin = async ({
 ${contentType}
 --- module url ---
 ${moduleUrl}`)
-    const buffer = Buffer.from(moduleText)
-    const referenceId = emitFile({
-      type: "asset",
-      name: basename(moduleInfo.id),
-      source: buffer,
-    })
+    const referenceId = emitAsset(Buffer.from(moduleText))
     return {
       ...commonData,
       content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,

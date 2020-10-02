@@ -21,7 +21,7 @@ import {
   ensureEmptyDirectory,
 } from "@jsenv/util"
 import { transformCss } from "../../transformCss.js"
-import { computeFileUrlForCaching } from "../../computeFileUrlForCaching.js"
+import { computeFileUrlForCaching } from "../../../createJsenvRollupPlugin/computeFileUrlForCaching.js"
 
 const require = createRequire(import.meta.url)
 
