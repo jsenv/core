@@ -18,16 +18,14 @@ export const extractFromHtml = async (htmlFileUrl) => {
   const htmlFileName = basename(urlToFileSystemPath(htmlFileUrl))
   const htmlFileContent = await readFile(htmlFileUrl)
   const htmlDocument = parseHtmlString(htmlFileContent)
-  const { scripts } = parseHtmlDocumentRessources(htmlDocument)
+  const { scripts, styles } = parseHtmlDocumentRessources(htmlDocument)
 
   const scriptsFromHtml = []
   const scriptsMapping = new Map()
-
   const handleScriptFound = (script, scriptSimplified) => {
     scriptsMapping.set(script, scriptSimplified)
     scriptsFromHtml.push(scriptSimplified)
   }
-
   scripts.forEach((script, index) => {
     if (script.attributes.type === "module" && script.attributes.src) {
       const remoteScriptSrc = script.attributes.src
@@ -49,6 +47,29 @@ export const extractFromHtml = async (htmlFileUrl) => {
         id: inlineScriptId,
       })
       return
+    }
+  })
+
+  const stylesFromHtml = []
+  styles.forEach((style, index) => {
+    if (style.attributes.href) {
+      const remoteStyleHref = style.attributes.href
+      const remoteStyleUrl = resolveUrl(remoteStyleHref, htmlFileUrl)
+      stylesFromHtml.push({
+        type: "remote",
+        url: remoteStyleUrl,
+        href: remoteStyleHref,
+      })
+    }
+    if (style.text) {
+      const inlineStyleId = `${htmlFileName}.${index}.css`
+      const inlineStyleUrl = resolveUrl(inlineStyleId, htmlFileUrl)
+      stylesFromHtml.push({
+        type: "inline",
+        url: inlineStyleUrl,
+        content: style.text,
+        href: inlineStyleId,
+      })
     }
   })
 

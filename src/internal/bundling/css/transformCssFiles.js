@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
-import { computeFileUrlForCaching } from "./computeFileUrlForCaching.js"
+import { computeFileUrlForCaching } from "../createJsenvRollupPlugin/computeFileUrlForCaching.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
 import { fetchCssAssets } from "./fetchCssAssets.js"
 

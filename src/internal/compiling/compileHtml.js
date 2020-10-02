@@ -37,7 +37,6 @@ export const stringifyHtmlDocument = (htmlDocument) => {
 // ce qui veut dire de mettre a jour link.ref et style.text
 export const parseHtmlDocumentRessources = (document) => {
   const scripts = []
-  const links = []
   const styles = []
 
   visitDocument(document, (node) => {
@@ -52,23 +51,26 @@ export const parseHtmlDocumentRessources = (document) => {
     }
     if (node.nodeName === "link") {
       const attributes = attributeArrayToAttributeObject(node.attrs)
-      links.push({
-        node,
-        attributes,
-      })
+      if (attributes.rel === "stylesheet") {
+        styles.push({
+          node,
+          attributes,
+        })
+      }
     }
     if (node.nameName === "style") {
       const attributes = attributeArrayToAttributeObject(node.attrs)
+      const firstChild = node.childNodes[0]
       styles.push({
         node,
         attributes,
+        ...(firstChild && firstChild.nodeName === "#text" ? { text: firstChild.value } : {}),
       })
     }
   })
 
   return {
     scripts,
-    links,
     styles,
   }
 }
