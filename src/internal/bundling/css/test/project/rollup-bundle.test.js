@@ -12,7 +12,6 @@ a given rollup build generates an hash for the js file
 then modifying only an asset file referenced both by js and css should update the js hash
 */
 
-import { basename } from "path"
 import { createRequire } from "module"
 import { readFileSync } from "fs"
 import {
@@ -24,6 +23,7 @@ import {
   ensureEmptyDirectory,
 } from "@jsenv/util"
 import { transformCss } from "../../transformCss.js"
+import { computeFileUrlForCaching } from "../../computeFileUrlForCaching.js"
 
 const require = createRequire(import.meta.url)
 
@@ -35,7 +35,36 @@ const inputFileUrl = resolveUrl("./main.js", import.meta.url)
 
 const generateBundle = async () => {
   await ensureEmptyDirectory(bundleDirectoryUrl)
+
+  // we share asset amission so that any reference to an asset
+  // in css that was already referenced in js is shared.
+  // and that any reference to an asset in js already referenced by css is shared.
   const assetReferencesByUrl = {}
+  const emitAsset = (rollup, { assetFileUrl, assetFileUrlForRollup, assetFileContent }) => {
+    if (assetFileUrl in assetReferencesByUrl) {
+      return assetReferencesByUrl[assetFileUrl].assetReferenceId
+    }
+    if (assetFileUrlForRollup === undefined) {
+      assetFileUrlForRollup = computeFileUrlForCaching(assetFileUrl, assetFileContent)
+    }
+    const assetFileName = urlToRelativeUrl(assetFileUrlForRollup, projectDirectoryUrl)
+    const assetReferenceId = rollup.emitFile({
+      type: "asset",
+      fileName: assetFileName,
+      source: assetFileContent,
+    })
+    assetReferencesByUrl[assetFileUrl] = {
+      assetReferenceId,
+      assetFileName,
+    }
+    return assetReferenceId
+  }
+
+  const getAssetReferenceId = (assetFileUrl) => {
+    return assetFileUrl in assetReferencesByUrl
+      ? assetReferencesByUrl[assetFileUrl].assetReferenceId
+      : null
+  }
 
   const cssAssetPlugin = {
     async load(id) {
@@ -47,67 +76,51 @@ const generateBundle = async () => {
           assetSources,
           cssUrlMappings,
           cssContentMappings,
-        } = await transformCss(css, {
-          cssFileUrl,
-          projectDirectoryUrl,
-          bundleDirectoryUrl,
-        })
+        } = await transformCss(css, cssFileUrl, projectDirectoryUrl)
 
-        // emit assets referenced by css
+        // emit assets referenced by css (fonts, images, svgs, ...)
         Object.keys(assetSources).forEach((assetUrl) => {
-          const fileName = urlToRelativeUrl(assetUrlMappings[assetUrl], bundleDirectoryUrl)
-
-          const assetReferenceId = this.emitFile({
-            type: "asset",
-            fileName,
-            source: assetSources[assetUrl],
+          emitAsset(this, {
+            assetFileUrl: assetUrl,
+            assetFileUrlForRollup: assetUrlMappings[assetUrl],
+            assetFileContent: assetSources[assetUrl],
           })
-          assetReferencesByUrl[assetUrl] = {
-            assetReferenceId,
-            fileName,
-          }
         })
 
-        // emit css referenced by css and css itself
+        // emit css itself and css referenced by css (@import)
         Object.keys(cssContentMappings).forEach((cssUrl) => {
-          const fileName = urlToRelativeUrl(cssUrlMappings[cssUrl], projectDirectoryUrl)
-          const assetReferenceId = this.emitFile({
-            type: "asset",
-            fileName,
-            source: cssContentMappings[cssUrl].css,
+          emitAsset(this, {
+            assetFileUrl: cssUrl,
+            assetFileUrlForRollup: cssUrlMappings[cssUrl],
+            assetFileContent: cssContentMappings[cssUrl].css,
           })
-          assetReferencesByUrl[cssUrl] = {
-            assetReferenceId,
-            fileName,
-          }
 
-          // TODO: the css sourcemap url are incorrect because
-          // they will be moved into bundleDirectoryUrl
-          // we must re-resolve them
+          const map = cssContentMappings[cssUrl].map
+          const mapFileBundleRelativeUrl = urlToRelativeUrl(
+            `${cssUrlMappings[cssUrl]}.map`,
+            projectDirectoryUrl,
+          )
+          const mapFileBundleUrl = resolveUrl(mapFileBundleRelativeUrl, bundleDirectoryUrl)
+          map.sources = map.sources.map((source) => {
+            const sourceUrl = resolveUrl(source, projectDirectoryUrl)
+            return urlToRelativeUrl(sourceUrl, mapFileBundleUrl)
+          })
           this.emitFile({
             type: "asset",
-            fileName: `${fileName}.map`,
+            fileName: mapFileBundleRelativeUrl,
             source: JSON.stringify(cssContentMappings[cssUrl].map, null, "  "),
           })
         })
-        debugger
-        const mainCssReference = assetReferencesByUrl[cssFileUrl].assetReferenceId
+        const mainCssReference = getAssetReferenceId(cssFileUrl)
         return `export default import.meta.ROLLUP_FILE_URL_${mainCssReference};`
       }
 
       if (id.endsWith(".png")) {
         const assetUrl = fileSystemPathToUrl(id)
-        let assetReferenceId
-        if (assetUrl in assetReferencesByUrl) {
-          assetReferenceId = assetReferencesByUrl[assetUrl].referenceId
-        } else {
-          const buffer = readFileSync(id)
-          assetReferenceId = this.emitFile({
-            type: "asset",
-            name: basename(id),
-            source: buffer,
-          })
-        }
+        const assetReferenceId = emitAsset(this, {
+          assetFileUrl: assetUrl,
+          assetFileContent: readFileSync(id),
+        })
         return `export default import.meta.ROLLUP_FILE_URL_${assetReferenceId};`
       }
 
@@ -115,17 +128,17 @@ const generateBundle = async () => {
     },
 
     augmentChunkHash(chunk) {
+      // pourquoi c'est jamais appelé?
+      // c'est parce que y'a pas de chunk ici, y'a que un main chunk qui n'a pas de hash
+      // donc ce sera appelé pour les chunks pas de souci
       // https://github.com/Anidetrix/rollup-plugin-styles/blob/7532971ed8e0a62206c970f336efaf1bcf5c3315/src/index.ts#L126
-
       debugger
     },
-
-    // dans generateBundle il faudrait supprimer les assets référencé par le js
 
     resolveFileUrl: ({ chunkId, fileName, format, moduleId, referenceId, relativePath }) => {
       const fileUrl = fileSystemPathToUrl(moduleId)
       if (fileUrl in assetReferencesByUrl) {
-        return JSON.stringify(assetReferencesByUrl[fileUrl].fileName)
+        return JSON.stringify(assetReferencesByUrl[fileUrl].assetFileName)
       }
       return JSON.stringify(fileName)
     },
