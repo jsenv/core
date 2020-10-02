@@ -8,8 +8,6 @@ css sourcemaps are written and can be found by browser
 assets referenced only by css are written and path is correct
 assets reference both by css and js have correct path in css and js; and not duplicated
 
-a given rollup build generates an hash for the js file
-then modifying only an asset file referenced both by js and css should update the js hash
 */
 
 import { createRequire } from "module"
@@ -127,15 +125,7 @@ const generateBundle = async () => {
       return null
     },
 
-    augmentChunkHash(chunk) {
-      // pourquoi c'est jamais appelé?
-      // c'est parce que y'a pas de chunk ici, y'a que un main chunk qui n'a pas de hash
-      // donc ce sera appelé pour les chunks pas de souci
-      // https://github.com/Anidetrix/rollup-plugin-styles/blob/7532971ed8e0a62206c970f336efaf1bcf5c3315/src/index.ts#L126
-      debugger
-    },
-
-    resolveFileUrl: ({ chunkId, fileName, format, moduleId, referenceId, relativePath }) => {
+    resolveFileUrl: ({ fileName, moduleId }) => {
       const fileUrl = fileSystemPathToUrl(moduleId)
       if (fileUrl in assetReferencesByUrl) {
         return JSON.stringify(assetReferencesByUrl[fileUrl].assetFileName)
