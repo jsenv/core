@@ -8,24 +8,17 @@ import {
   urlToRelativeUrl,
   resolveDirectoryUrl,
   writeFile,
-  readFile,
   comparePathnames,
+  urlIsInsideOf,
 } from "@jsenv/util"
 
 import { setJavaScriptSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { fetchUrl } from "../../fetchUrl.js"
 import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
 import { transformJs } from "../../compiling/js-compilation-service/transformJs.js"
-import {
-  parseHtmlString,
-  parseHtmlDocumentRessources,
-  manipulateHtmlDocument,
-  transformHtmlDocumentImportmapScript,
-  transformHtmlDocumentModuleScripts,
-  stringifyHtmlDocument,
-} from "../../compiling/compileHtml.js"
 import { findAsyncPluginNameInBabelPluginMap } from "../../compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 
+import { extractFromHtml } from "./extractFromHtml.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { minifyHtml } from "./minifyHtml.js"
@@ -106,7 +99,7 @@ export const createJsenvRollupPlugin = async ({
   }
 
   const virtualModules = {}
-  const virtualAssets = []
+  const assetFinalizers = []
 
   const jsenvRollupPlugin = {
     name: "jsenv",
@@ -129,37 +122,47 @@ export const createJsenvRollupPlugin = async ({
             return
           }
 
-          // const htmlFileRemoteUrl = resolveUrl(value, compileServerOrigin)
-          // const htmlCompiledFileRemoteUrl = resolveUrl(value, compileDirectoryRemoteUrl)
-          const htmlFileContent = await readFile(chunkFileUrl)
-          const htmlDocument = parseHtmlString(htmlFileContent)
-          const { scripts } = parseHtmlDocumentRessources(htmlDocument)
+          const htmlFileUrl = chunkFileUrl
+          const { scriptsFromHtml, generateHtml } = await extractFromHtml(htmlFileUrl)
 
           let previousScriptId
           const scriptReferences = []
-          scripts.forEach((script, index) => {
-            if (script.attributes.type === "module" && script.attributes.src) {
+          scriptsFromHtml.forEach((script) => {
+            if (script.type === "remote") {
+              if (!urlIsInsideOf(script.url, projectDirectoryUrl)) {
+                logger.debug(
+                  `found external remote script ${script.src} in ${chunkFileRelativeUrl} -> ignored`,
+                )
+                return
+              }
+
               logger.debug(
-                `remote script ${script.attributes.src} found in ${chunkFileRelativeUrl} -> emit chunk`,
+                `found remote script ${script.src} in ${chunkFileRelativeUrl} -> emit chunk`,
               )
-              const remoteScriptId = script.attributes.src
-              const remoteScriptUrl = resolveUrl(script.attributes.src, chunkFileUrl)
-              const remoteScriptRelativeUrl = urlToRelativeUrl(remoteScriptUrl, projectDirectoryUrl)
+              const remoteScriptRelativeUrl = `./${urlToRelativeUrl(
+                script.url,
+                projectDirectoryUrl,
+              )}`
+              const remoteScriptId = remoteScriptRelativeUrl
               const remoteScriptReference = this.emitFile({
                 type: "chunk",
-                id: `./${remoteScriptRelativeUrl}`,
+                id: remoteScriptId,
                 ...(previousScriptId ? { implicitlyLoadedAfterOneOf: [previousScriptId] } : {}),
               })
               previousScriptId = remoteScriptId
               scriptReferences.push(remoteScriptReference)
-              return
             }
-            if (script.attributes.type === "module" && script.text) {
-              const inlineScriptId = resolveUrl(`htmlFileName.${index}.js`, chunkFileUrl)
+            if (script.type === "inline") {
               logger.debug(
-                `inline script number ${index} found in ${chunkFileRelativeUrl} -> emit chunk`,
+                `inline script ${script.id} found in ${chunkFileRelativeUrl} -> emit chunk`,
               )
-              virtualModules[inlineScriptId] = script.text
+
+              const inlineScriptRelativeUrl = `./${urlToRelativeUrl(
+                script.url,
+                projectDirectoryUrl,
+              )}`
+              const inlineScriptId = inlineScriptRelativeUrl
+              virtualModules[inlineScriptId] = script.content
               const inlineScriptReference = this.emitFile({
                 type: "chunk",
                 id: inlineScriptId,
@@ -167,50 +170,24 @@ export const createJsenvRollupPlugin = async ({
               })
               previousScriptId = inlineScriptId
               scriptReferences.push(inlineScriptReference)
-
-              return
             }
-            scriptReferences.push(null)
           })
 
-          virtualAssets.push(async (rollup) => {
-            const htmlFileUrl = resolveUrl(
-              key.endsWith(".html") ? key : `${key}.html`,
-              projectDirectoryUrl,
-            )
-
-            manipulateHtmlDocument(htmlDocument, {
-              scriptInjections: systemJsScript ? [systemJsScript] : [],
-            })
-            const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-            const importMapFileRelativeUrlForHtml = urlToRelativeUrl(importMapFileUrl, htmlFileUrl)
-            transformHtmlDocumentImportmapScript(scripts, {
-              type: "systemjs-importmap",
-              // ensure the html src is the one passed when generating the bundle
-              // this is useful in case you have an importmap while developping
-              // but want to use a different one to bundle so that
-              // the production importmap is smaller
-              // but override only if a custom importmap is passed
-              src: importMapFileRelativeUrlForHtml,
-            })
-
-            transformHtmlDocumentModuleScripts(scripts, {
-              generateInlineScriptCode: (_, index) => {
-                const scriptRelativeUrl = rollup.getFileName(scriptReferences[index])
-                const scriptUrl = resolveUrl(scriptRelativeUrl, bundleDirectoryUrl)
-                const scriptUrlRelativeToHtmlFile = urlToRelativeUrl(scriptUrl, htmlFileUrl)
-                return `<script>window.System.import(${JSON.stringify(
-                  `./${scriptUrlRelativeToHtmlFile}`,
-                )})</script>`
+          assetFinalizers.push((rollup) => {
+            const htmlFileContent = generateHtml({
+              importMapFileUrl: resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl),
+              systemJsScript,
+              resolveScriptUrl: (script) => {
+                const scriptReferenceId = scriptReferences[scriptsFromHtml.indexOf(script)]
+                return rollup.getFileName(scriptReferenceId)
               },
             })
-            const htmlTransformedString = stringifyHtmlDocument(htmlDocument)
-
-            await writeFile(
-              htmlFileUrl,
-              minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString,
-            )
-            logger.info(`-> ${htmlFileUrl}`)
+            const htmlFileName = key.endsWith(".html") ? key : `${key}.html`
+            rollup.emitFile({
+              type: "asset",
+              fileName: htmlFileName,
+              source: htmlFileContent,
+            })
           })
         }),
       )
@@ -358,6 +335,10 @@ export const createJsenvRollupPlugin = async ({
     },
 
     async generateBundle(outputOptions, bundle) {
+      assetFinalizers.forEach((fn) => {
+        fn(this)
+      })
+
       logger.info(formatBundleGeneratedLog(bundle))
 
       if (manifestFile) {
@@ -380,10 +361,6 @@ export const createJsenvRollupPlugin = async ({
     },
 
     async writeBundle(options, bundle) {
-      virtualAssets.forEach((fn) => {
-        fn(this)
-      })
-
       if (detectAndTransformIfNeededAsyncInsertedByRollup) {
         await transformAsyncInsertedByRollup({
           projectDirectoryUrl,
