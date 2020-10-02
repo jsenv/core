@@ -1,4 +1,5 @@
-import { urlToRelativeUrl } from "@jsenv/util"
+import { basename } from "path"
+import { urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { computeFileBundleUrl } from "./computeFileBundleUrl.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
@@ -22,6 +23,11 @@ export const transformCssFiles = async (
     await previous
 
     const cssBeforeTransformation = cssDependencies[cssFile].source
+    // we don't know yet the hash of the css file because
+    // we will modify its content, we only know where it's going to be written
+    // postCSS needs this infromation for the sourcemap
+    // once we will know the final css name with hash
+    // we will update the sourcemap.file and sourcemap comment to add the hash
     const cssUrlWithoutHashAfterTransformation = computeFileBundleUrl(cssFile, {
       pattern: "[name][extname]",
       projectDirectoryUrl,
@@ -41,6 +47,7 @@ export const transformCssFiles = async (
     })
     let cssAfterTransformation = cssReplaceResult.css
     const cssAfterTransformationMap = cssReplaceResult.map.toJSON()
+
     const cssFileUrlAfterTransformation = computeFileBundleUrl(cssFile, {
       fileContent: cssAfterTransformation,
       projectDirectoryUrl,
@@ -51,6 +58,7 @@ export const transformCssFiles = async (
       cssSourceMapFileUrl,
       cssFileUrlAfterTransformation,
     )
+    cssAfterTransformationMap.file = basename(urlToFileSystemPath(cssFileUrlAfterTransformation))
     cssAfterTransformation = setCssSourceMappingUrl(
       cssAfterTransformation,
       cssSourceMapFileUrlRelativeToSource,

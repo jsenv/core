@@ -38,7 +38,7 @@ export const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
     cssSourceMappingUrlCommentRegExp,
     () => {
       replaced = true
-      return writeJavaScriptSourceMappingURL(sourceMappingFileUrl)
+      return writeCssSourceMappingUrl(sourceMappingFileUrl)
     },
   )
   if (replaced) {
@@ -78,11 +78,11 @@ const base64ToString =
     : (base64String) => Buffer.from(base64String, "base64").toString("utf8")
 
 const javascriptSourceMappingUrlCommentRegexp = /\/\/# ?sourceMappingURL=([^\s'"]+)/g
-const cssSourceMappingUrlCommentRegExp = /\*\/# ?sourceMappingURL=([^\s'"]+) \*\//g
+const cssSourceMappingUrlCommentRegExp = /\/\*# ?sourceMappingURL=([^\s'"]+) \*\//g
 
 // ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
 const writeJavaScriptSourceMappingURL = (value) => `${"//#"} sourceMappingURL=${value}`
-const writeCssSourceMappingUrl = (value) => `/* sourceMappingURL=${value} */`
+const writeCssSourceMappingUrl = (value) => `/*# sourceMappingURL=${value} */`
 
 const replaceSourceMappingUrl = (source, regexp, callback) => {
   let lastSourceMappingUrl
