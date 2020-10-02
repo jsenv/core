@@ -74,7 +74,7 @@ const generateBundle = async () => {
           assetSources,
           cssUrlMappings,
           cssContentMappings,
-        } = await transformCss(css, cssFileUrl, projectDirectoryUrl)
+        } = await transformCss(css, cssFileUrl, projectDirectoryUrl, { cssMinification: true })
 
         // emit assets referenced by css (fonts, images, svgs, ...)
         Object.keys(assetSources).forEach((assetUrl) => {

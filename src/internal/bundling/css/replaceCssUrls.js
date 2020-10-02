@@ -30,6 +30,7 @@ const getCssMinificationPlugin = (cssMinificationOptions = {}) => {
     preset: cssnanoDefaultPreset({
       ...cssMinificationOptions,
       // just to show how you could configure dicard comment plugin from css nano
+      // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default
       // discardComments: {
       //   remove: () => false,
       // },
