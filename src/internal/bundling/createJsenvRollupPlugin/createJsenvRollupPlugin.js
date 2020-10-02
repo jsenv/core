@@ -1,5 +1,5 @@
 /* eslint-disable import/max-dependencies */
-import { basename, extname } from "path"
+import { extname } from "path"
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import {
   isFileSystemPath,
@@ -64,7 +64,7 @@ export const createJsenvRollupPlugin = async ({
   let chunkId = Object.keys(entryPointMap)[0]
   if (!extname(chunkId)) chunkId += bundleDefaultExtension
 
-  // const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
+  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
   const compileDirectoryRemoteUrl = resolveDirectoryUrl(
     compileDirectoryRelativeUrl,
     compileServerOrigin,
@@ -120,7 +120,7 @@ export const createJsenvRollupPlugin = async ({
             this.emitFile({
               type: "chunk",
               id: chunkFileRelativeUrl,
-              name: `${key}${bundleDefaultExtension || extname(chunkFileRelativeUrl)}`,
+              fileName: `${key}${bundleDefaultExtension || extname(chunkFileRelativeUrl)}`,
             })
             return
           }
@@ -240,35 +240,32 @@ export const createJsenvRollupPlugin = async ({
 
     async load(urlForRollup) {
       const moduleInfo = this.getModuleInfo(urlForRollup)
-      const realUrl = urlToRealUrl(urlForRollup) || urlForRollup
+      const remoteUrl = urlToRemoteUrl(urlForRollup)
+      const url = remoteUrl || urlForRollup
 
-      logger.debug(`loads ${realUrl}`)
+      logger.debug(`loads ${url}`)
       const { responseUrl, contentRaw, content = "", map } = await loadModule(
-        realUrl,
+        url,
         moduleInfo,
         (assetFileContent) => {
-          if (!realUrl) {
-            throw new Error(`${urlForRollup} cannot emit asset`)
+          if (!remoteUrl) {
+            throw new Error(`${url} cannot emit asset`)
           }
-          if (urlIsInsideOf(realUrl, compileDirectoryRemoteUrl)) {
-            const relativeUrl = urlToRelativeUrl(realUrl, compileDirectoryRemoteUrl)
-            const assetFileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
-            return assetHandler.emitAsset(this, { assetFileUrl, assetFileContent })
-          }
-          if (urlIsInsideOf(realUrl, compileServerOrigin)) {
-            const relativeUrl = urlToRelativeUrl(realUrl, compileServerOrigin)
-            const assetFileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
-            return assetHandler.emitAsset(this, { assetFileUrl, assetFileContent })
-          }
-          throw new Error(`a file outside project cannot emit an asset.
---- file ---
-${realUrl}
+
+          const sourceFileUrl = urlToSourceFileUrl(remoteUrl)
+          if (!sourceFileUrl) {
+            throw new Error(`a file outside project cannot emit an asset.
+--- file url ---
+${url}
 --- project directory url ---
 ${projectDirectoryUrl}`)
+          }
+
+          return assetHandler.emitAsset(this, { assetFileUrl: sourceFileUrl, assetFileContent })
         },
       )
 
-      const responseUrlForRollup = urlToUrlForRollup(responseUrl) || responseUrl
+      const responseUrlForRollup = urlToRollupUrl(responseUrl) || responseUrl
       saveModuleContent(responseUrlForRollup, {
         content,
         contentRaw,
@@ -398,31 +395,74 @@ ${projectDirectoryUrl}`)
     },
   }
 
-  const urlToRealUrl = (url) => {
+  // take any url string and return url used for rollup
+  const urlToRollupUrl = (url) => {
     if (url.startsWith(`${compileServerOriginForRollup}/`)) {
-      return `${compileServerOrigin}/${url.slice(`${compileServerOriginForRollup}/`.length)}`
+      return url
     }
-    return null
-  }
 
-  const urlToUrlForRollup = (url) => {
-    if (url.startsWith(`${compileServerOrigin}/`)) {
-      return `${compileServerOriginForRollup}/${url.slice(`${compileServerOrigin}/`.length)}`
+    const remoteUrl = urlToRemoteUrl(url)
+    if (!remoteUrl) {
+      return null
     }
-    return null
+
+    return `${compileServerOriginForRollup}/${url.slice(`${compileServerOrigin}/`.length)}`
   }
 
-  const saveModuleContent = (moduleUrl, value) => {
-    const realUrl = urlToRealUrl(moduleUrl) || moduleUrl
-    const url = urlToProjectUrl(realUrl) || moduleUrl
-    moduleContentMap[url] = value
-  }
+  // take any url string and try to return a file url (an url inside projectDirectoryUrl)
+  const urlToFileUrl = (url) => {
+    if (url.startsWith(`${projectDirectoryUrl}/`)) {
+      return url
+    }
 
-  const urlToProjectUrl = (url) => {
     if (url.startsWith(`${compileServerOrigin}/`)) {
       return `${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`
     }
+
+    if (url.startsWith(`${compileServerOriginForRollup}/`)) {
+      return `${projectDirectoryUrl}${url.slice(`${compileServerOriginForRollup}/`.length)}`
+    }
+
     return null
+  }
+
+  // take any url string and try to return the corresponding remote url (an url inside compileServerOrigin)
+  const urlToRemoteUrl = (url) => {
+    if (url.startsWith(`${compileServerOrigin}/`)) {
+      return url
+    }
+
+    if (url.startsWith(`${compileServerOriginForRollup}/`)) {
+      return `${compileServerOrigin}/${url.slice(`${compileServerOriginForRollup}/`.length)}`
+    }
+
+    if (url.startsWith(`${projectDirectoryUrl}/`)) {
+      return `${compileServerOrigin}/${url.slice(`${projectDirectoryUrl}/`.length)}`
+    }
+
+    return null
+  }
+
+  // take any url string and try to return a file url inside project directory url
+  // prefer the source url if the url is inside compile directory
+  const urlToSourceFileUrl = (url) => {
+    const fileUrl = urlToFileUrl(url)
+    if (!fileUrl) {
+      return null
+    }
+
+    if (!urlIsInsideOf(fileUrl, compileDirectoryUrl)) {
+      return fileUrl
+    }
+
+    const relativeUrl = urlToRelativeUrl(fileUrl, compileDirectoryUrl)
+    return resolveUrl(relativeUrl, projectDirectoryUrl)
+  }
+
+  const saveModuleContent = (moduleUrl, value) => {
+    const remoteUrl = urlToRemoteUrl(moduleUrl)
+    const url = urlToFileUrl(remoteUrl || moduleUrl) || moduleUrl
+    moduleContentMap[url] = value
   }
 
   const loadModule = async (moduleUrl, moduleInfo, emitAsset) => {

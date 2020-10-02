@@ -101,6 +101,7 @@ export const extractFromHtml = async (htmlFileUrl) => {
 
   return {
     scriptsFromHtml,
+    stylesFromHtml,
     generateHtml,
   }
 }

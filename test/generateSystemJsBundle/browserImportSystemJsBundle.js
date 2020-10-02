@@ -12,6 +12,7 @@ export const browserImportSystemJsBundle = async ({
   htmlFileRelativeUrl = "./index.html",
   mainRelativeUrl,
   headless = true,
+  autoStop = true,
 }) => {
   const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
@@ -39,8 +40,10 @@ export const browserImportSystemJsBundle = async ({
       serverOrigin: server.origin,
     }
   } finally {
-    browser.close()
-    server.stop()
+    if (autoStop) {
+      browser.close()
+      server.stop()
+    }
   }
 }
 

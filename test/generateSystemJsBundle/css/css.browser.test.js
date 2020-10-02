@@ -30,9 +30,14 @@ await generateSystemJsBundle({
 const { namespace: actual } = await browserImportSystemJsBundle({
   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
   testDirectoryRelativeUrl,
+  // headless: false,
+  // autoStop: false,
 })
 const expected = {
-  cssUrl: new URL("/dist/systemjs/assets/style-b36d33bc.css", actual.cssUrl).href,
+  cssUrl: new URL(
+    "/dist/systemjs/test/generateSystemJsBundle/css/style-7fe902df.css",
+    actual.cssUrl,
+  ).href,
   bodyBackgroundColor: `rgb(255, 255, 0)`,
 }
 assert({ actual, expected })

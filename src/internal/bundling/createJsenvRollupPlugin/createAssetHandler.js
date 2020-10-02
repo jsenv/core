@@ -29,8 +29,15 @@ export const createAssetHandler = (projectDirectoryUrl) => {
       : null
   }
 
+  const getAssetFileName = (assetFileUrl) => {
+    return assetFileUrl in assetReferencesByUrl
+      ? assetReferencesByUrl[assetFileUrl].assetFileName
+      : null
+  }
+
   return {
     emitAsset,
     getAssetReferenceId,
+    getAssetFileName,
   }
 }
