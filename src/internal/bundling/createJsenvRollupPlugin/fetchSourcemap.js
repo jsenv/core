@@ -1,10 +1,10 @@
 import { resolveUrl } from "@jsenv/util"
-import { parseSourceMappingURL } from "../../sourceMappingURLUtils.js"
+import { getJavaScriptSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { fetchUrl } from "../../fetchUrl.js"
 import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
 
 export const fetchSourcemap = async ({ cancellationToken, logger, moduleUrl, moduleContent }) => {
-  const sourcemapParsingResult = parseSourceMappingURL(moduleContent)
+  const sourcemapParsingResult = getJavaScriptSourceMappingUrl(moduleContent)
 
   if (!sourcemapParsingResult) {
     return null

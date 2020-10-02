@@ -9,7 +9,7 @@ json file etag is used to invalidate the cache
 
 import { readFileSync } from "fs"
 import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
-import { writeOrUpdateSourceMappingURL } from "../sourceMappingURLUtils.js"
+import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 
 export const bundleToCompilationResult = (
   { rollupBundle, moduleContentMap },
@@ -102,7 +102,7 @@ const parseRollupChunk = (
 
   const sourcemap = rollupChunk.map
 
-  const content = writeOrUpdateSourceMappingURL(rollupChunk.code, sourcemapFileRelativeUrlForModule)
+  const content = setJavaScriptSourceMappingUrl(rollupChunk.code, sourcemapFileRelativeUrlForModule)
 
   return {
     dependencyMap,

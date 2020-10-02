@@ -1,4 +1,5 @@
 import { urlToRelativeUrl } from "@jsenv/util"
+import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { computeFileBundleUrl } from "./computeFileBundleUrl.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
 import { fetchCssAssets } from "./fetchCssAssets.js"
@@ -21,27 +22,45 @@ export const transformCssFiles = async (
     await previous
 
     const cssBeforeTransformation = cssDependencies[cssFile].source
-    const cssFileUrlAfterTransformation = computeFileBundleUrl(cssFile, {
-      fileContent: cssBeforeTransformation,
+    const cssUrlWithoutHashAfterTransformation = computeFileBundleUrl(cssFile, {
+      pattern: "[name][extname]",
       projectDirectoryUrl,
       bundleDirectoryUrl,
     })
-    cssUrlMappings[cssFile] = cssFileUrlAfterTransformation
-
     const urlsReplacements = makeUrlReplacementsRelativeToCssFile(
       {
         ...assetUrlMappings,
         ...cssUrlMappings,
       },
-      cssFileUrlAfterTransformation,
+      cssUrlWithoutHashAfterTransformation,
     )
 
     const cssReplaceResult = await replaceCssUrls(cssBeforeTransformation, urlsReplacements, {
       from: cssFile,
-      to: cssFileUrlAfterTransformation,
+      to: cssUrlWithoutHashAfterTransformation,
     })
-    const cssAfterTransformation = cssReplaceResult.css
-    cssContentMappings[cssFile] = cssAfterTransformation
+    let cssAfterTransformation = cssReplaceResult.css
+    const cssAfterTransformationMap = cssReplaceResult.map.toJSON()
+    const cssFileUrlAfterTransformation = computeFileBundleUrl(cssFile, {
+      fileContent: cssAfterTransformation,
+      projectDirectoryUrl,
+      bundleDirectoryUrl,
+    })
+    const cssSourceMapFileUrl = `${cssFileUrlAfterTransformation}.map`
+    const cssSourceMapFileUrlRelativeToSource = urlToRelativeUrl(
+      cssSourceMapFileUrl,
+      cssFileUrlAfterTransformation,
+    )
+    cssAfterTransformation = setCssSourceMappingUrl(
+      cssAfterTransformation,
+      cssSourceMapFileUrlRelativeToSource,
+    )
+    cssContentMappings[cssFile] = {
+      css: cssAfterTransformation,
+      map: cssAfterTransformationMap,
+    }
+
+    cssUrlMappings[cssFile] = cssFileUrlAfterTransformation
   }, Promise.resolve())
 
   return {

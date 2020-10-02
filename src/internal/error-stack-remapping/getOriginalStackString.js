@@ -1,4 +1,4 @@
-import { parseSourceMappingURL } from "../sourceMappingURLUtils.js"
+import { getJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { remapCallSite } from "./remapCallSite.js"
 import { stackToString } from "./stackToString.js"
 
@@ -43,7 +43,7 @@ ${stackTraceFileUrl}`)
         return null
       }
 
-      const sourcemapParsingResult = parseSourceMappingURL(text)
+      const sourcemapParsingResult = getJavaScriptSourceMappingUrl(text)
       if (!sourcemapParsingResult) return null
 
       let sourcemapUrl
