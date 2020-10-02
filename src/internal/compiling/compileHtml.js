@@ -21,8 +21,24 @@ export const stringifyHtmlDocument = (htmlDocument) => {
   return parse5.serialize(htmlDocument)
 }
 
+// let's <img>, <link for favicon>, <link for css>, <styles>
+// <audio> <video> <picture> supports comes for free by detecting
+// <source src> attribute
+// if srcset is used we should parse it and collect all src referenced in it
+// also <link ref="preload">
+// ideally relative iframe should recursively fetch (not needed so lets ignore)
+// <svg> ideally looks for external ressources inside them
+
+// but right now we will focus on: <link href> and <style> tags
+// on veut vérifier qu'on les récupere bien
+// dans rollup pour chaque css on feras le transformcss + l'ajout des assets reférencés
+// pour le style inline on le parse aussi et on le remettra inline dans le html
+// ensuite qu'on est capable de les mettre a jour
+// ce qui veut dire de mettre a jour link.ref et style.text
 export const parseHtmlDocumentRessources = (document) => {
   const scripts = []
+  const links = []
+  const styles = []
 
   visitDocument(document, (node) => {
     if (node.nodeName === "script") {
@@ -34,10 +50,26 @@ export const parseHtmlDocumentRessources = (document) => {
         ...(firstChild && firstChild.nodeName === "#text" ? { text: firstChild.value } : {}),
       })
     }
+    if (node.nodeName === "link") {
+      const attributes = attributeArrayToAttributeObject(node.attrs)
+      links.push({
+        node,
+        attributes,
+      })
+    }
+    if (node.nameName === "style") {
+      const attributes = attributeArrayToAttributeObject(node.attrs)
+      styles.push({
+        node,
+        attributes,
+      })
+    }
   })
 
   return {
     scripts,
+    links,
+    styles,
   }
 }
 
@@ -148,33 +180,25 @@ export const transformHtmlDocumentImportmapScript = (scripts, attributes) => {
   })
 }
 
-export const manipulateHtmlDocument = (document, { scriptManipulations }) => {
+export const manipulateHtmlDocument = (document, { scriptInjections = [] }) => {
   const htmlNode = document.childNodes.find((node) => node.nodeName === "html")
   const headNode = htmlNode.childNodes[0]
   const bodyNode = htmlNode.childNodes[1]
 
   const scriptsToPreprendInHead = []
-
-  scriptManipulations.forEach(({ replaceExisting = false, ...script }) => {
+  scriptInjections.forEach((script) => {
     const scriptExistingInHead = findExistingScript(headNode, script)
     if (scriptExistingInHead) {
-      if (replaceExisting) {
-        replaceNode(scriptExistingInHead, scriptToNode(script))
-      }
+      replaceNode(scriptExistingInHead, scriptToNode(script))
       return
     }
-
     const scriptExistingInBody = findExistingScript(bodyNode, script)
     if (scriptExistingInBody) {
-      if (replaceExisting) {
-        replaceNode(scriptExistingInBody, scriptToNode(script))
-      }
+      replaceNode(scriptExistingInBody, scriptToNode(script))
       return
     }
-
     scriptsToPreprendInHead.push(script)
   })
-
   const headScriptsFragment = scriptsToFragment(scriptsToPreprendInHead)
   insertFragmentBefore(
     headNode,

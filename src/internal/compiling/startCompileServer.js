@@ -98,7 +98,7 @@ export const startCompileServer = async ({
   livereloadLogLevel = "info",
   customServices = {},
   livereloadSSE = false,
-  scriptManipulations = [],
+  scriptInjections = [],
 
   browserInternalFileAnticipation = false,
   nodeInternalFileAnticipation = false,
@@ -207,7 +207,7 @@ export const startCompileServer = async ({
     babelPluginMap,
     groupMap: compileServerGroupMap,
     convertMap,
-    scriptManipulations,
+    scriptInjections,
 
     projectFileRequestedCallback,
     useFilesystemAsCache,

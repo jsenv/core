@@ -24,7 +24,7 @@ import {
   transformHtmlDocumentImportmapScript,
   stringifyHtmlDocument,
 } from "./compileHtml.js"
-import { appendSourceMappingAsExternalUrl } from "../sourceMappingURLUtils.js"
+import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
 export const createCompiledFileService = ({
@@ -42,7 +42,7 @@ export const createCompiledFileService = ({
   babelPluginMap,
   groupMap,
   convertMap,
-  scriptManipulations,
+  scriptInjections,
 
   projectFileRequestedCallback,
   useFilesystemAsCache,
@@ -219,11 +219,10 @@ export const createCompiledFileService = ({
           const htmlDocument = parseHtmlString(htmlBeforeCompilation)
 
           manipulateHtmlDocument(htmlDocument, {
-            scriptManipulations: [
+            scriptInjections: [
               {
                 // when html file already contains an importmap script tag
                 // its src is replaced to target the importmap used for compiled files
-                replaceExisting: true,
                 type: "importmap",
                 src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
               },
@@ -233,7 +232,7 @@ export const createCompiledFileService = ({
               // todo: this is dirty because it means
               // compile server is aware of exploring and jsenv toolbar
               // instead this should be moved to startExploring
-              ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptManipulations),
+              ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptInjections),
             ],
           })
 
@@ -283,7 +282,7 @@ export const createCompiledFileService = ({
                 sourcemapFileUrl,
                 compiledFileUrl,
               )
-              code = appendSourceMappingAsExternalUrl(code, sourcemapFileRelativePathForModule)
+              code = setJavaScriptSourceMappingUrl(code, sourcemapFileRelativePathForModule)
               assets = [...assets, scriptAssetUrl, sourcemapFileUrl]
               assetsContent = [...assetsContent, code, JSON.stringify(map, null, "  ")]
             }),

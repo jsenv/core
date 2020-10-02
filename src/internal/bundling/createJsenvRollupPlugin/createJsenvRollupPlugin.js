@@ -180,7 +180,7 @@ export const createJsenvRollupPlugin = async ({
             )
 
             manipulateHtmlDocument(htmlDocument, {
-              scriptManipulations: systemJsScript ? [systemJsScript] : [],
+              scriptInjections: systemJsScript ? [systemJsScript] : [],
             })
             const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
             const importMapFileRelativeUrlForHtml = urlToRelativeUrl(importMapFileUrl, htmlFileUrl)

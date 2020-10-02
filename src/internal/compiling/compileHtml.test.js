@@ -11,7 +11,7 @@ import {
 const compileHtml = (
   htmlBeforeCompilation,
   {
-    scriptManipulations = [],
+    scriptInjections = [],
     importmapSrc,
     importmapType,
     // resolveScriptSrc = (src) => src,
@@ -25,19 +25,18 @@ const compileHtml = (
   const document = parseHtmlString(htmlBeforeCompilation)
 
   if (importmapSrc) {
-    scriptManipulations = [
-      ...scriptManipulations,
+    scriptInjections = [
+      ...scriptInjections,
       {
         // when html file already contains an importmap script tag
         // its src is replaced to target the importmap used for compiled files
-        replaceExisting: true,
         type: "importmap",
         src: importmapSrc,
       },
     ]
   }
 
-  manipulateHtmlDocument(document, { scriptManipulations })
+  manipulateHtmlDocument(document, { scriptInjections })
 
   const { scripts } = parseHtmlDocumentRessources(document)
   transformHtmlDocumentImportmapScript(scripts, { type: importmapType })
@@ -65,7 +64,7 @@ const compileHtml = (
     <body></body>
   </html>`
   const { htmlAfterCompilation } = compileHtml(htmlBeforeCompilation, {
-    scriptManipulations: [{ src: "bar.js", async: true }],
+    scriptInjections: [{ src: "bar.js", async: true }],
   })
   const actual = htmlAfterCompilation
   const expected = `<html><head>
@@ -89,7 +88,7 @@ const compileHtml = (
     <body></body>
   </html>`
   const { htmlAfterCompilation } = compileHtml(htmlBeforeCompilation, {
-    scriptManipulations: [{ src: "foo.js" }],
+    scriptInjections: [{ src: "foo.js" }],
   })
   const actual = htmlAfterCompilation
   const expected = `<html><head>

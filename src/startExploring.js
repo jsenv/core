@@ -72,7 +72,7 @@ export const startExploring = async ({
       stopOnPackageVersionChange: true,
       watchAndSyncImportMap: true,
       compileGroupCount: 2,
-      scriptManipulations: [
+      scriptInjections: [
         ...(toolbar
           ? [
               {
