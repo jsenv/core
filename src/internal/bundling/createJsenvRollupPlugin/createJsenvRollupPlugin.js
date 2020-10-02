@@ -12,7 +12,7 @@ import {
   comparePathnames,
 } from "@jsenv/util"
 
-import { appendSourceMappingAsExternalUrl } from "../../sourceMappingURLUtils.js"
+import { setJavaScriptSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { fetchUrl } from "../../fetchUrl.js"
 import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
 import { transformJs } from "../../compiling/js-compilation-service/transformJs.js"
@@ -640,7 +640,7 @@ const transformAsyncInsertedByRollup = async ({
       })
 
       await Promise.all([
-        writeFile(bundleFileUrl, appendSourceMappingAsExternalUrl(code, `./${bundleFilename}.map`)),
+        writeFile(bundleFileUrl, setJavaScriptSourceMappingUrl(code, `./${bundleFilename}.map`)),
         writeFile(`${bundleFileUrl}.map`, JSON.stringify(map)),
       ])
     }),
