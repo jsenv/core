@@ -1,19 +1,13 @@
 import { basename } from "path"
 import { urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
-import { computeFileBundleUrl } from "./computeFileBundleUrl.js"
+import { computeFileUrlForCaching } from "./computeFileUrlForCaching.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
 import { fetchCssAssets } from "./fetchCssAssets.js"
 
-export const transformCssFiles = async (
-  cssDependencies,
-  { projectDirectoryUrl, bundleDirectoryUrl },
-) => {
+export const transformCssFiles = async (cssDependencies) => {
   const assetSources = await fetchCssAssets(cssDependencies)
-  const assetUrlMappings = await remapCssAssetUrls(assetSources, {
-    projectDirectoryUrl,
-    bundleDirectoryUrl,
-  })
+  const assetUrlMappings = await remapCssAssetUrls(assetSources)
 
   const cssUrlMappings = {}
   const cssContentMappings = {}
@@ -23,52 +17,44 @@ export const transformCssFiles = async (
     await previous
 
     const cssBeforeTransformation = cssDependencies[cssFile].source
-    // we don't know yet the hash of the css file because
-    // we will modify its content, we only know where it's going to be written
+    // we cannot compute url for caching of the css file because
+    // we will modify its content but we know where it's supposed to be written
     // postCSS needs this infromation for the sourcemap
     // once we will know the final css name with hash
     // we will update the sourcemap.file and sourcemap comment to add the hash
-    const cssUrlWithoutHashAfterTransformation = computeFileBundleUrl(cssFile, {
-      pattern: "[name][extname]",
-      projectDirectoryUrl,
-      bundleDirectoryUrl,
-    })
     const urlsReplacements = makeUrlReplacementsRelativeToCssFile(
       {
         ...assetUrlMappings,
         ...cssUrlMappings,
       },
-      cssUrlWithoutHashAfterTransformation,
+      cssFile,
     )
 
-    const cssReplaceResult = await replaceCssUrls(cssBeforeTransformation, urlsReplacements, {
-      from: cssFile,
-      to: cssUrlWithoutHashAfterTransformation,
-    })
+    const cssReplaceResult = await replaceCssUrls(
+      cssBeforeTransformation,
+      cssFile,
+      urlsReplacements,
+    )
     let cssAfterTransformation = cssReplaceResult.css
     const cssAfterTransformationMap = cssReplaceResult.map.toJSON()
+    const cssAfterTransformationFileUrl = computeFileUrlForCaching(cssFile, cssAfterTransformation)
+    cssUrlMappings[cssFile] = cssAfterTransformationFileUrl
 
-    const cssFileUrlAfterTransformation = computeFileBundleUrl(cssFile, {
-      fileContent: cssAfterTransformation,
-      projectDirectoryUrl,
-      bundleDirectoryUrl,
-    })
-    const cssSourceMapFileUrl = `${cssFileUrlAfterTransformation}.map`
+    const cssSourceMapFileUrl = `${cssAfterTransformationFileUrl}.map`
     const cssSourceMapFileUrlRelativeToSource = urlToRelativeUrl(
       cssSourceMapFileUrl,
-      cssFileUrlAfterTransformation,
+      cssAfterTransformationFileUrl,
     )
-    cssAfterTransformationMap.file = basename(urlToFileSystemPath(cssFileUrlAfterTransformation))
+    cssAfterTransformationMap.file = basename(urlToFileSystemPath(cssAfterTransformationFileUrl))
     cssAfterTransformation = setCssSourceMappingUrl(
       cssAfterTransformation,
       cssSourceMapFileUrlRelativeToSource,
     )
+
     cssContentMappings[cssFile] = {
       css: cssAfterTransformation,
       map: cssAfterTransformationMap,
     }
-
-    cssUrlMappings[cssFile] = cssFileUrlAfterTransformation
   }, Promise.resolve())
 
   return {
@@ -88,15 +74,11 @@ const makeUrlReplacementsRelativeToCssFile = (urlsReplacements, cssFileUrl) => {
   return relative
 }
 
-const remapCssAssetUrls = (assetSources, { projectDirectoryUrl, bundleDirectoryUrl }) => {
+const remapCssAssetUrls = (assetSources) => {
   const assetUrlMappings = {}
 
   Object.keys(assetSources).map(async (assetUrl) => {
-    assetUrlMappings[assetUrl] = computeFileBundleUrl(assetUrl, {
-      fileContent: assetSources[assetUrl],
-      projectDirectoryUrl,
-      bundleDirectoryUrl,
-    })
+    assetUrlMappings[assetUrl] = computeFileUrlForCaching(assetUrl, assetSources[assetUrl])
   })
 
   return assetUrlMappings

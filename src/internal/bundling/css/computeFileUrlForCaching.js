@@ -1,20 +1,17 @@
 import { extname, basename } from "path"
 import { createHash } from "crypto"
-import { urlToRelativeUrl, resolveUrl } from "@jsenv/util"
+import { urlToFileSystemPath } from "@jsenv/util"
 
-export const computeFileBundleUrl = (
-  fileUrl,
-  { pattern = `[name]-[hash][extname]`, fileContent, projectDirectoryUrl, bundleDirectoryUrl },
-) => {
-  const fileRelativeUrl = urlToRelativeUrl(fileUrl, projectDirectoryUrl)
-  const fileParentUrl = urlToParentUrl(fileRelativeUrl)
-  const assetFilename = renderNamePattern(pattern, {
-    name: () => basename(fileRelativeUrl, extname(fileRelativeUrl)),
+export const computeFileUrlForCaching = (fileUrl, fileContent) => {
+  const filePath = urlToFileSystemPath(fileUrl)
+  const fileParentUrl = urlToParentUrl(fileUrl)
+  const assetFilename = renderNamePattern(`[name]-[hash][extname]`, {
+    name: () => basename(filePath, extname(filePath)),
     hash: () => generateAssetHash(fileContent),
-    extname: () => extname(fileRelativeUrl),
+    extname: () => extname(filePath),
   })
-  const bundleFileUrl = resolveUrl(`${fileParentUrl}${assetFilename}`, bundleDirectoryUrl)
-  return bundleFileUrl
+  const cacheUrl = `${fileParentUrl}${assetFilename}`
+  return cacheUrl
 }
 
 const urlToParentUrl = (url) => {

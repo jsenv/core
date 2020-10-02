@@ -2,7 +2,7 @@ import postcss from "postcss"
 import { urlToFileSystemPath, urlIsInsideOf, readFile } from "@jsenv/util"
 import { postCssUrlHashPlugin } from "./postcss-urlhash-plugin.js"
 
-export const collectCssUrls = async (css, { projectDirectoryUrl, cssFileUrl }) => {
+export const collectCssUrls = async (css, cssFileUrl, projectDirectoryUrl) => {
   const cssDependencies = {}
 
   const visitCss = async (css, cssFileUrl) => {
