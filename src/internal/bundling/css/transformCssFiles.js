@@ -5,7 +5,7 @@ import { computeFileUrlForCaching } from "./computeFileUrlForCaching.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
 import { fetchCssAssets } from "./fetchCssAssets.js"
 
-export const transformCssFiles = async (cssDependencies) => {
+export const transformCssFiles = async (cssDependencies, options) => {
   const assetSources = await fetchCssAssets(cssDependencies)
   const assetUrlMappings = await remapCssAssetUrls(assetSources)
 
@@ -34,6 +34,7 @@ export const transformCssFiles = async (cssDependencies) => {
       cssBeforeTransformation,
       cssFile,
       urlsReplacements,
+      options,
     )
     let cssAfterTransformation = cssReplaceResult.css
     const cssAfterTransformationMap = cssReplaceResult.map.toJSON()

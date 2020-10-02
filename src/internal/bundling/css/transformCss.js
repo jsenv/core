@@ -1,7 +1,7 @@
 import { collectCssUrls } from "./collectCssUrls.js"
 import { transformCssFiles } from "./transformCssFiles.js"
 
-export const transformCss = async (css, cssFileUrl, projectDirectoryUrl) => {
+export const transformCss = async (css, cssFileUrl, projectDirectoryUrl, options) => {
   const cssDependencies = await collectCssUrls(css, cssFileUrl, projectDirectoryUrl)
 
   const {
@@ -9,7 +9,7 @@ export const transformCss = async (css, cssFileUrl, projectDirectoryUrl) => {
     assetSources,
     cssUrlMappings,
     cssContentMappings,
-  } = await transformCssFiles(cssDependencies, projectDirectoryUrl)
+  } = await transformCssFiles(cssDependencies, options)
 
   // assetUrlMappings + cssUrlMappings
   // seront nécéssaire a rollup pour
