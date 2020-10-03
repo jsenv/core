@@ -121,6 +121,9 @@ ${JSON.stringify(entryPointMap, null, "  ")}
       if (warning.code === "THIS_IS_UNDEFINED") return
       warn(warning)
     },
+    // on passe input: [] car c'est le plusign jsenv qui se chargera d'emit des chunks
+    // en fonction de entryPointMap
+    // on fait cela car sinon rollup est pénible si on passe un entry point map de type html
     input: [],
     // preserveEntrySignatures: false,
     plugins: [jsenvRollupPlugin],

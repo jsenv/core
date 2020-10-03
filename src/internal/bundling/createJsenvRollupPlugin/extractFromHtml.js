@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { resolveUrl, urlToRelativeUrl, readFile, urlToFileSystemPath } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 
 import {
   parseHtmlString,
@@ -11,12 +11,11 @@ import {
 } from "../../compiling/compileHtml.js"
 
 // https://github.com/rollup/rollup/issues/2872
-export const extractFromHtml = async (htmlFileUrl) => {
+export const extractFromHtml = (htmlFileContent, htmlFileUrl) => {
   // const htmlFileRemoteUrl = resolveUrl(value, compileServerOrigin)
   // const htmlCompiledFileRemoteUrl = resolveUrl(value, compileDirectoryRemoteUrl)
   // const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl)
   const htmlFileName = basename(urlToFileSystemPath(htmlFileUrl))
-  const htmlFileContent = await readFile(htmlFileUrl)
   const htmlDocument = parseHtmlString(htmlFileContent)
   const { scripts, styles } = parseHtmlDocumentRessources(htmlDocument)
 
