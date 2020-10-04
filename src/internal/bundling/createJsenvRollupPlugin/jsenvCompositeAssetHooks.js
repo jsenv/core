@@ -1,5 +1,7 @@
+import { basename } from "path"
 import postcss from "postcss"
-import { readFile, urlToFileSystemPath } from "@jsenv/util"
+import { readFile, urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/util"
+import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
 import { postCssUrlHashPlugin } from "./css/postcss-urlhash-plugin.js"
 
@@ -23,16 +25,36 @@ export const jsenvCompositeAssetHooks = {
           emitAssetReference(urlRaw)
         }
       })
-    }
-  },
-  transform: async (url, source, dependenciesMapping) => {
-    if (url.endsWith(".css")) {
-      const cssReplaceResult = await replaceCssUrls(source, url, dependenciesMapping)
-      return {
-        code: cssReplaceResult.css,
-        map: cssReplaceResult.map.toJSON(),
+
+      return async (dependenciesMapping, { computeFileUrlForCaching }) => {
+        const cssReplaceResult = await replaceCssUrls(source, url, dependenciesMapping)
+        let code = cssReplaceResult.css
+        const map = cssReplaceResult.map.toJSON()
+        const urlForCaching = computeFileUrlForCaching(url, code)
+
+        map.file = basename(urlToFileSystemPath(urlForCaching))
+        const cssSourceMapFileUrl = `${urlForCaching}.map`
+        const cssSourceMapFileUrlRelativeToSource = urlToRelativeUrl(
+          cssSourceMapFileUrl,
+          urlForCaching,
+        )
+        // In theory code should never be modified once the url for caching is computed
+        // because url for caching depends on file content.
+        // There is an exception for sourcemap because we want to update sourcemap.file
+        // to the cached filename of the css file.
+        // To achieve that we set/update the sourceMapping url comment in compiled css file.
+        // This is totally fine to do that because sourcemap and css file lives togethers
+        // so this comment changes nothing regarding cache invalidation and is not important
+        // to decide the filename for this css asset.
+        code = setCssSourceMappingUrl(code, cssSourceMapFileUrlRelativeToSource)
+        return {
+          code,
+          map,
+          urlForCaching,
+        }
       }
     }
+
     return null
   },
 }

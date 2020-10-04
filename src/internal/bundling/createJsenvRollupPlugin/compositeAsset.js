@@ -2,7 +2,7 @@ import { resolveUrl, urlIsInsideOf, urlToRelativeUrl } from "@jsenv/util"
 import { computeFileUrlForCaching } from "./computeFileUrlForCaching.js"
 
 export const createCompositeAssetHandler = (
-  { load, parse, transform },
+  { load, parse },
   { projectDirectoryUrl, emitAsset = () => {} },
 ) => {
   const assetOriginalContentMap = {}
@@ -16,11 +16,12 @@ export const createCompositeAssetHandler = (
   }
 
   const assetDependenciesMap = {}
+  const assetTransformMap = {}
   const parseAsset = memoizeAsyncByUrl(async (url) => {
     const assetSource = await getAssetOriginalContent(url)
 
     const assetDependencies = []
-    await parse(url, assetSource, {
+    const parseReturnValue = await parse(url, assetSource, {
       emitAssetReference: (assetUrlRaw) => {
         const assetUrl = resolveUrl(assetUrlRaw, url)
         // already referenced, we care only once
@@ -36,8 +37,15 @@ export const createCompositeAssetHandler = (
         assetDependencies.push(assetUrl)
       },
     })
-
     assetDependenciesMap[url] = assetDependencies
+    if (assetDependencies.length > 0 && typeof parseReturnValue !== "function") {
+      throw new Error(
+        `parse has dependencies, it must return a function but received ${parseReturnValue}`,
+      )
+    }
+    if (typeof parseReturnValue === "function") {
+      assetTransformMap[url] = parseReturnValue
+    }
   })
   const getAssetDependencies = async (url) => {
     await parseAsset(url)
@@ -57,47 +65,50 @@ export const createCompositeAssetHandler = (
 
     // une fois que les dépendances sont tansformées on peut transformer cet asset
     const assetContentBeforeTransformation = await getAssetOriginalContent(url)
-    // assetDependenciesMapping contains all dependencies for an asset
-    // each key is the absolute url to the dependency file
-    // each value is an url relative to the asset importing this dependency
-    // it looks like this:
-    // {
-    //   "file:///project/coin.png": "./coin-45eiopri.png"
-    // }
-    // it must be used by transform to update url in the asset source
-    const assetDependenciesMapping = {}
-    assetDependencies.forEach((dependencyUrl) => {
-      // here it's guaranteed that dependencUrl is in assetUrlMappings
-      // because we throw in case there is circular deps
-      // so each each dependency is handled one after an other
-      // ensuring dependencies where already handled before
-      const dependencyUrlForCaching = assetUrlMappings[dependencyUrl]
-      assetDependenciesMapping[dependencyUrl] = `./${urlToRelativeUrl(
-        dependencyUrlForCaching,
-        url,
-      )}`
-    })
-    const transformReturnValue = await transform(
-      url,
-      assetContentBeforeTransformation,
-      assetDependenciesMapping,
-    )
-    if (transformReturnValue === undefined) {
-      throw new Error(`transform must return null or {code, map}`)
-    }
+
     let assetContentAfterTransformation
-    if (transformReturnValue === null) {
-      assetContentAfterTransformation = assetContentBeforeTransformation
-    } else {
-      const { code, map } = transformReturnValue
+    let assetUrlForCaching
+    if (url in assetTransformMap) {
+      const transform = assetTransformMap[url]
+      // assetDependenciesMapping contains all dependencies for an asset
+      // each key is the absolute url to the dependency file
+      // each value is an url relative to the asset importing this dependency
+      // it looks like this:
+      // {
+      //   "file:///project/coin.png": "./coin-45eiopri.png"
+      // }
+      // it must be used by transform to update url in the asset source
+      const assetDependenciesMapping = {}
+      assetDependencies.forEach((dependencyUrl) => {
+        // here it's guaranteed that dependencUrl is in assetUrlMappings
+        // because we throw in case there is circular deps
+        // so each each dependency is handled one after an other
+        // ensuring dependencies where already handled before
+        const dependencyUrlForCaching = assetUrlMappings[dependencyUrl]
+        assetDependenciesMapping[dependencyUrl] = `./${urlToRelativeUrl(
+          dependencyUrlForCaching,
+          url,
+        )}`
+      })
+      const transformReturnValue = await transform(assetDependenciesMapping, {
+        computeFileUrlForCaching,
+      })
+      if (!transformReturnValue) {
+        throw new Error(`transform must return an object {code, map}`)
+      }
+
+      const { code, map, urlForCaching } = transformReturnValue
       assetContentAfterTransformation = code
-      // TODO: handle the map (output it, maybe also some url to relocate)
-      // on verra plus tard parce que c'est délicat
-      // ptet fournir une api externe pour mettre a jour le css et le fichier map
+      assetUrlForCaching = urlForCaching || computeFileUrlForCaching(url, code)
+      // TODO: handle the map (it should end in rollup build)
       console.log(map)
+    } else {
+      assetContentAfterTransformation = assetContentBeforeTransformation
+      assetUrlForCaching = computeFileUrlForCaching(url, assetContentBeforeTransformation)
     }
+
     assetContentMap[url] = assetContentAfterTransformation
-    assetUrlMappings[url] = computeFileUrlForCaching(url, assetContentAfterTransformation)
+    assetUrlMappings[url] = assetUrlForCaching
   })
 
   const getAssetReferenceId = memoizeAsyncByUrl(async (url) => {
