@@ -1,13 +1,14 @@
 import { basename } from "path"
+import { readFileSync } from "fs"
 import postcss from "postcss"
-import { readFile, urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/util"
+import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
 import { postCssUrlHashPlugin } from "./css/postcss-urlhash-plugin.js"
 
 export const jsenvCompositeAssetHooks = {
   load: async (url) => {
-    const source = await readFile(url)
+    const source = readFileSync(urlToFileSystemPath(url))
     return source
   },
   parse: async (url, source, { emitAssetReference }) => {

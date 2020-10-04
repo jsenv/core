@@ -1,44 +1,112 @@
-import { resolveUrl, urlIsInsideOf, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { createLogger } from "@jsenv/logger"
 import { computeFileUrlForCaching } from "./computeFileUrlForCaching.js"
+
+const logger = createLogger({ logLevel: "debug" })
 
 export const createCompositeAssetHandler = (
   { load, parse },
-  { projectDirectoryUrl, emitAsset = () => {} },
+  { projectDirectoryUrl = "file:///", connectReference = () => {} },
 ) => {
-  const assetOriginalContentMap = {}
+  const referenceMap = {}
+  const gerOrCreateReference = memoizeByUrl((url, { type, source, importerUrl }) => {
+    if (importerUrl) {
+      logger.debug(
+        `${urlToRelativeUrl(url, projectDirectoryUrl)} referenced by ${urlToRelativeUrl(
+          importerUrl,
+          projectDirectoryUrl,
+        )}`,
+      )
+    } else {
+      logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} referenced by some js file`)
+    }
+
+    let resolveTransformPromise
+    const transformPromise = new Promise((res) => {
+      resolveTransformPromise = ({ code, urlForCaching }) => {
+        logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} transformed`)
+        res({ code, urlForCaching })
+      }
+    })
+
+    let readyPromise
+    let connected = false
+    const connect = (connectFn) => {
+      connected = true
+      readyPromise = Promise.resolve(connectFn({ transformPromise }))
+      readyPromise.then(({ rollupReferenceId, urlForCaching }) => {
+        logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} ready
+--- rollup reference id ---
+${rollupReferenceId}
+--- url for caching ---
+${urlToRelativeUrl(urlForCaching, projectDirectoryUrl)}`)
+      })
+    }
+
+    const reference = {
+      url,
+      type,
+      source,
+      importerUrl,
+      resolveTransformPromise,
+      connect,
+      isConnected: () => connected,
+      getReadyPromise: () => readyPromise,
+    }
+    referenceMap[url] = reference
+    connectReference(reference)
+    return reference
+  })
+
+  const originalContentMap = {}
   const loadAsset = memoizeAsyncByUrl(async (url) => {
+    // pour les assets inline il faudra un logique pour retourner direct la valeur
+    logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} load starts`)
     const assetContent = await load(url)
-    assetOriginalContentMap[url] = assetContent
+    logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} load ends`)
+    originalContentMap[url] = assetContent
   })
   const getAssetOriginalContent = async (url) => {
     await loadAsset(url)
-    return assetOriginalContentMap[url]
+    return originalContentMap[url]
   }
 
-  const assetDependenciesMap = {}
+  const dependenciesMap = {}
   const assetTransformMap = {}
   const parseAsset = memoizeAsyncByUrl(async (url) => {
     const assetSource = await getAssetOriginalContent(url)
 
-    const assetDependencies = []
+    logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} dependencies parsing starts`)
+    const dependencies = []
+    let previousJsReference
     const parseReturnValue = await parse(url, assetSource, {
-      emitAssetReference: (assetUrlRaw) => {
+      emitAssetReference: (assetUrlRaw, assetSource) => {
         const assetUrl = resolveUrl(assetUrlRaw, url)
-        // already referenced, we care only once
-        if (assetDependencies.includes(assetUrl)) {
-          return
+        const assetReference = gerOrCreateReference(assetUrl, {
+          type: "asset",
+          source: assetSource,
+          importerUrl: url,
+        })
+        if (assetReference.isConnected()) {
+          dependencies.push(assetUrl)
         }
-        // ignore url outside project directory
-        // a better version would console.warn about file url outside projectDirectoryUrl
-        // and ignore them and console.info/debug about remote url (https, http, ...)
-        if (!urlIsInsideOf(assetUrl, projectDirectoryUrl)) {
-          return
+      },
+      emitJsReference: (jsUrlRaw, jsSource) => {
+        const jsUrl = resolveUrl(jsUrlRaw, url)
+        const jsReference = gerOrCreateReference(jsUrl, {
+          type: "js",
+          previousJsReference,
+          source: jsSource,
+          importerUrl: url,
+        })
+        if (jsReference.isConnected()) {
+          previousJsReference = jsReference
+          dependencies.push(jsUrl)
         }
-        assetDependencies.push(assetUrl)
       },
     })
-    assetDependenciesMap[url] = assetDependencies
-    if (assetDependencies.length > 0 && typeof parseReturnValue !== "function") {
+    dependenciesMap[url] = dependencies
+    if (dependencies.length > 0 && typeof parseReturnValue !== "function") {
       throw new Error(
         `parse has dependencies, it must return a function but received ${parseReturnValue}`,
       )
@@ -46,25 +114,43 @@ export const createCompositeAssetHandler = (
     if (typeof parseReturnValue === "function") {
       assetTransformMap[url] = parseReturnValue
     }
+    logger.debug(
+      `${urlToRelativeUrl(
+        url,
+        projectDirectoryUrl,
+      )} dependencies parsed -> ${dependencies.map((url) =>
+        urlToRelativeUrl(url, projectDirectoryUrl),
+      )}`,
+    )
   })
   const getAssetDependencies = async (url) => {
     await parseAsset(url)
-    return assetDependenciesMap[url]
+    return dependenciesMap[url]
   }
 
-  const assetContentMap = {}
-  const assetUrlMappings = {}
   const transformAsset = memoizeAsyncByUrl(async (url) => {
     // la transformation d'un asset c'est avant tout la transformation de ses dépendances
     const assetDependencies = await getAssetDependencies(url)
+    const urlMappings = {}
     await Promise.all(
       assetDependencies.map(async (dependencyUrl) => {
-        await transformAsset(dependencyUrl)
+        const reference = referenceMap[dependencyUrl]
+        if (reference.type === "js") {
+          // rollup will produce this chunk and call resolveReadyPromise
+        } else {
+          // parse and transform this asset
+          await transformAsset(dependencyUrl)
+        }
+
+        const { urlForCaching } = await reference.getReadyPromise()
+        // then put that information into the mappings
+        urlMappings[reference.url] = urlForCaching
       }),
     )
 
-    // une fois que les dépendances sont tansformées on peut transformer cet asset
+    // une fois que les dépendances sont transformées on peut transformer cet asset
     const assetContentBeforeTransformation = await getAssetOriginalContent(url)
+    const reference = referenceMap[url]
 
     let assetContentAfterTransformation
     let assetUrlForCaching
@@ -84,12 +170,18 @@ export const createCompositeAssetHandler = (
         // because we throw in case there is circular deps
         // so each each dependency is handled one after an other
         // ensuring dependencies where already handled before
-        const dependencyUrlForCaching = assetUrlMappings[dependencyUrl]
+        const dependencyUrlForCaching = urlMappings[dependencyUrl]
         assetDependenciesMapping[dependencyUrl] = `./${urlToRelativeUrl(
           dependencyUrlForCaching,
           url,
         )}`
       })
+      logger.debug(
+        `${urlToRelativeUrl(
+          url,
+          projectDirectoryUrl,
+        )} transform starts to replace ${assetDependenciesMapping}`,
+      )
       const transformReturnValue = await transform(assetDependenciesMapping, {
         computeFileUrlForCaching,
       })
@@ -97,35 +189,40 @@ export const createCompositeAssetHandler = (
         throw new Error(`transform must return an object {code, map}`)
       }
 
-      const { code, map, urlForCaching } = transformReturnValue
+      const {
+        code,
+        // TODO: handle the map (it should end in rollup build)
+        // map,
+        urlForCaching,
+      } = transformReturnValue
       assetContentAfterTransformation = code
-      assetUrlForCaching = urlForCaching || computeFileUrlForCaching(url, code)
-      // TODO: handle the map (it should end in rollup build)
-      console.log(map)
+      assetUrlForCaching = urlForCaching
     } else {
       assetContentAfterTransformation = assetContentBeforeTransformation
-      assetUrlForCaching = computeFileUrlForCaching(url, assetContentBeforeTransformation)
     }
 
-    assetContentMap[url] = assetContentAfterTransformation
-    assetUrlMappings[url] = assetUrlForCaching
+    reference.resolveTransformPromise({
+      code: assetContentAfterTransformation,
+      urlForCaching: assetUrlForCaching,
+    })
   })
 
   const getAssetReferenceId = memoizeAsyncByUrl(async (url) => {
+    const reference = gerOrCreateReference(url, { type: "asset" })
+    if (!reference.isConnected()) {
+      throw new Error(`reference is not connected ${url}`)
+    }
     await transformAsset(url)
-
-    const assetContent = assetContentMap[url]
-    const assetUrlForCaching = assetUrlMappings[url]
-    return emitAsset(assetUrlForCaching, assetContent)
+    const { rollupReferenceId } = await reference.getReadyPromise()
+    return rollupReferenceId
   })
 
   return {
     getAssetReferenceId,
     inspect: () => {
       return {
-        assetOriginalContentMap,
-        assetContentMap,
-        assetUrlMappings,
+        dependenciesMap,
+        referenceMap,
       }
     },
   }
@@ -133,11 +230,23 @@ export const createCompositeAssetHandler = (
 
 const memoizeAsyncByUrl = (fn) => {
   const urlCache = {}
-  return async (url) => {
+  return async (url, ...args) => {
     if (url in urlCache) {
       return urlCache[url]
     }
-    const promise = fn(url)
+    const promise = fn(url, ...args)
+    urlCache[url] = promise
+    return promise
+  }
+}
+
+const memoizeByUrl = (fn) => {
+  const urlCache = {}
+  return (url, ...args) => {
+    if (url in urlCache) {
+      return urlCache[url]
+    }
+    const promise = fn(url, ...args)
     urlCache[url] = promise
     return promise
   }
