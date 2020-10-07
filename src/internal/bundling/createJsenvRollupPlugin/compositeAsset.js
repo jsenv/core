@@ -8,6 +8,16 @@ export const createCompositeAssetHandler = (
   { load, parse },
   { projectDirectoryUrl = "file:///", connectReference = () => {} },
 ) => {
+  const getAssetReferenceId = memoizeAsyncByUrl(async (url, { source, importerUrl } = {}) => {
+    const reference = gerOrCreateReference(url, { type: "asset", source, importerUrl })
+    if (!reference.isConnected()) {
+      throw new Error(`reference is not connected ${url}`)
+    }
+    await transformAsset(url)
+    const { rollupReferenceId } = await reference.getReadyPromise()
+    return rollupReferenceId
+  })
+
   const referenceMap = {}
   const gerOrCreateReference = memoizeByUrl((url, { type, source, importerUrl }) => {
     if (importerUrl) {
@@ -43,10 +53,13 @@ ${urlToRelativeUrl(urlForCaching, projectDirectoryUrl)}`)
       })
     }
 
+    if (source) {
+      setFileOriginalContent(url, source)
+    }
+
     const reference = {
       url,
       type,
-      source,
       importerUrl,
       resolveTransformPromise,
       connect,
@@ -70,6 +83,10 @@ ${urlToRelativeUrl(urlForCaching, projectDirectoryUrl)}`)
     await loadAsset(url)
     return originalContentMap[url]
   }
+  const setFileOriginalContent = (url, source) => {
+    originalContentMap[url] = source
+    loadAsset.cache[url] = Promise.resolve()
+  }
 
   const dependenciesMap = {}
   const assetTransformMap = {}
@@ -84,8 +101,8 @@ ${urlToRelativeUrl(urlForCaching, projectDirectoryUrl)}`)
         const assetUrl = resolveUrl(assetUrlRaw, url)
         const assetReference = gerOrCreateReference(assetUrl, {
           type: "asset",
-          source: assetSource,
           importerUrl: url,
+          source: assetSource,
         })
         if (assetReference.isConnected()) {
           dependencies.push(assetUrl)
@@ -96,8 +113,8 @@ ${urlToRelativeUrl(urlForCaching, projectDirectoryUrl)}`)
         const jsReference = gerOrCreateReference(jsUrl, {
           type: "js",
           previousJsReference,
-          source: jsSource,
           importerUrl: url,
+          source: jsSource,
         })
         if (jsReference.isConnected()) {
           previousJsReference = jsReference
@@ -207,16 +224,6 @@ ${urlToRelativeUrl(urlForCaching, projectDirectoryUrl)}`)
     })
   })
 
-  const getAssetReferenceId = memoizeAsyncByUrl(async (url) => {
-    const reference = gerOrCreateReference(url, { type: "asset" })
-    if (!reference.isConnected()) {
-      throw new Error(`reference is not connected ${url}`)
-    }
-    await transformAsset(url)
-    const { rollupReferenceId } = await reference.getReadyPromise()
-    return rollupReferenceId
-  })
-
   return {
     getAssetReferenceId,
     inspect: () => {
@@ -230,7 +237,7 @@ ${urlToRelativeUrl(urlForCaching, projectDirectoryUrl)}`)
 
 const memoizeAsyncByUrl = (fn) => {
   const urlCache = {}
-  return async (url, ...args) => {
+  const memoized = async (url, ...args) => {
     if (url in urlCache) {
       return urlCache[url]
     }
@@ -238,6 +245,8 @@ const memoizeAsyncByUrl = (fn) => {
     urlCache[url] = promise
     return promise
   }
+  memoized.cache = urlCache
+  return memoized
 }
 
 const memoizeByUrl = (fn) => {
