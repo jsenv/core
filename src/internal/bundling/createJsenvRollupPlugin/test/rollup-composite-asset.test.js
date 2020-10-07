@@ -7,6 +7,7 @@ import {
   urlIsInsideOf,
   fileSystemPathToUrl,
 } from "@jsenv/util"
+import { createLogger } from "@jsenv/logger"
 import { createCompositeAssetHandler } from "../compositeAsset.js"
 import { jsenvCompositeAssetHooks } from "../jsenvCompositeAssetHooks.js"
 import { computeFileUrlForCaching } from "../computeFileUrlForCaching.js"
@@ -18,6 +19,8 @@ const { rollup } = require("rollup")
 const projectDirectoryUrl = resolveUrl("./", import.meta.url)
 const bundleDirectoryUrl = resolveUrl("./dist/", import.meta.url)
 const inputFileUrl = resolveUrl("./main.js", import.meta.url)
+
+const logger = createLogger({ logLevel: "debug" })
 
 const generateBundle = async () => {
   await ensureEmptyDirectory(bundleDirectoryUrl)
@@ -38,6 +41,19 @@ const generateBundle = async () => {
     return promise
   }
 
+  const shortenUrl = (url) => {
+    return urlIsInsideOf(url, projectDirectoryUrl)
+      ? urlToRelativeUrl(url, projectDirectoryUrl)
+      : url
+  }
+
+  const formatReferenceForLog = ({ url, importerUrl }) => {
+    if (importerUrl) {
+      return `reference to ${shortenUrl(url)} in ${shortenUrl(importerUrl)}`
+    }
+    return `reference to ${shortenUrl(url)} somewhere`
+  }
+
   const compositeAssetPlugin = {
     async buildStart() {
       const rollup = this
@@ -49,7 +65,13 @@ const generateBundle = async () => {
           // a better version would console.warn about file url outside projectDirectoryUrl
           // and ignore them and console.info/debug about remote url (https, http, ...)
           if (!urlIsInsideOf(reference.url, projectDirectoryUrl)) {
+            logger.debug(`found external ${formatReferenceForLog(reference)} -> ignored`)
             return
+          }
+          if (reference.isInline) {
+            logger.debug(`found inline ${formatReferenceForLog(reference)} -> emit file`)
+          } else {
+            logger.debug(`found ${formatReferenceForLog(reference)} -> emit file`)
           }
 
           if (reference.type === "asset") {
@@ -64,6 +86,7 @@ const generateBundle = async () => {
                 source: code,
                 fileName: urlToRelativeUrl(urlForCaching, projectDirectoryUrl),
               })
+              logger.debug(`${shortenUrl(reference.url)} ready -> ${shortenUrl(urlForCaching)}`)
               return { rollupReferenceId, urlForCaching }
             })
           }
@@ -91,11 +114,7 @@ const generateBundle = async () => {
                   : {}),
               })
 
-              await listenJsChunkCompleted(id)
-              const urlForCaching = resolveUrl(
-                rollup.getFileName(rollupReferenceId),
-                projectDirectoryUrl,
-              )
+              const { urlForCaching } = await listenJsChunkCompleted(id)
               return { rollupReferenceId, urlForCaching }
             })
           }
@@ -128,26 +147,43 @@ const generateBundle = async () => {
       return `export default ${JSON.stringify(url)}`
     },
 
-    //   buildEnd: (error) => {
-    //     if (error) {
-    //       console.log(`error during rollup build
+    // buildEnd: (error) => {
+    //   if (error) {
+    //     console.log(`error during rollup build
     // --- error stack ---
     // ${error.stack}`)
-    //       return
-    //     }
-    //     // malheureusement rollup ne permet pas de savoir lorsqu'un chunk
-    //     // a fini d'etre résolu (on connait ses dépendances etc)
-    //     // donc lorsque le build se termine on va indiquer
-    //     // aux assets faisant référence a ces chunk js qu'ils sont terminés
-    //     // et donc les assets peuvent connaitre le nom du chunk
-    //     // et mettre a jour leur dépendance vers ce fichier js
-    //     Object.keys(jsChunkCompletedCallbackMap).forEach((key) => {
-    //       jsChunkCompletedCallbackMap[key]()
-    //     })
-    //   },
+    //     return
+    //   }
+
+    //   // Object.keys(jsChunkCompletedCallbackMap).forEach((key) => {
+    //   //   jsChunkCompletedCallbackMap[key]()
+    //   // })
+    // },
+
+    renderChunk: (
+      code,
+      chunk,
+      // options
+    ) => {
+      // malheureusement rollup ne permet pas de savoir lorsqu'un chunk
+      // a fini d'etre résolu (on connait ses dépendances etc)
+      // donc lorsque le build se termine on va indiquer
+      // aux assets faisant référence a ces chunk js qu'ils sont terminés
+      // et donc les assets peuvent connaitre le nom du chunk
+      // et mettre a jour leur dépendance vers ce fichier js
+      const chunkUrl = chunk.facadeModuleId
+      if (chunkUrl in jsChunkCompletedCallbackMap) {
+        jsChunkCompletedCallbackMap[chunkUrl]({
+          code,
+          urlForCaching: resolveUrl(chunk.fileName, projectDirectoryUrl),
+        })
+      }
+      return null
+    },
 
     generateBundle: (bundle) => {
-      console.log("generate bundle", bundle)
+      // console.log("generate bundle", bundle)
+      debugger
     },
   }
 

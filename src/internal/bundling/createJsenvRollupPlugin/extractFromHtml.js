@@ -88,8 +88,8 @@ export const extractFromHtml = (htmlFileContent, htmlFileUrl) => {
       src: importMapFileRelativeUrlForHtml,
     })
     transformHtmlDocumentModuleScripts(scripts, {
-      generateInlineScriptCode: (_, index) => {
-        const scriptUrl = resolveScriptUrl(scriptsMapping.get(scripts[index]))
+      generateScriptCode: (script) => {
+        const scriptUrl = resolveScriptUrl(scriptsMapping.get(script))
         return `<script>window.System.import(${JSON.stringify(`./${scriptUrl}`)})</script>`
       },
     })

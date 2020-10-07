@@ -94,8 +94,8 @@ const attributesObjectToAttributesArray = (attributeObject) => {
 export const transformHtmlDocumentModuleScripts = (
   scripts,
   {
-    generateInlineScriptCode = ({ src }) => `<script>
-      window.__jsenv__.importFile(${JSON.stringify(src)})
+    generateScriptCode = (script) => `<script>
+      window.__jsenv__.importFile(${JSON.stringify(script.attributes.src)})
     </script>`,
     generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
   },
@@ -115,10 +115,7 @@ export const transformHtmlDocumentModuleScripts = (
   const mutations = scripts.map((script, index) => {
     if (script.attributes.type === "module" && script.attributes.src) {
       return () => {
-        const scriptPolyfilledSource = generateInlineScriptCode(
-          { src: script.attributes.src },
-          index,
-        )
+        const scriptPolyfilledSource = generateScriptCode(script, index)
         const scriptPolyfilled = parseHtmlAsSingleElement(scriptPolyfilledSource)
         scriptPolyfilled.attrs = [
           // inherit script attributes except src and type
@@ -142,7 +139,8 @@ export const transformHtmlDocumentModuleScripts = (
           },
           index,
         )
-        const scriptPolyfilledSource = generateInlineScriptCode({ src }, index)
+        script.attributes.src = src
+        const scriptPolyfilledSource = generateScriptCode(script, index)
         const scriptPolyfilled = parseHtmlAsSingleElement(scriptPolyfilledSource)
         scriptPolyfilled.attrs = [
           // inherit script attributes except src and type

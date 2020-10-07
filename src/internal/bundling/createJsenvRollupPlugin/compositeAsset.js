@@ -20,21 +20,9 @@ export const createCompositeAssetHandler = (
 
   const referenceMap = {}
   const gerOrCreateReference = memoizeByUrl((url, { type, source, importerUrl }) => {
-    if (importerUrl) {
-      logger.debug(
-        `${urlToRelativeUrl(url, projectDirectoryUrl)} referenced by ${urlToRelativeUrl(
-          importerUrl,
-          projectDirectoryUrl,
-        )}`,
-      )
-    } else {
-      logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} referenced by some js file`)
-    }
-
     let resolveTransformPromise
     const transformPromise = new Promise((res) => {
       resolveTransformPromise = ({ code, urlForCaching }) => {
-        logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} transformed`)
         res({ code, urlForCaching })
       }
     })
@@ -44,16 +32,9 @@ export const createCompositeAssetHandler = (
     const connect = (connectFn) => {
       connected = true
       readyPromise = Promise.resolve(connectFn({ transformPromise }))
-      readyPromise.then(({ rollupReferenceId, urlForCaching }) => {
-        logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} ready
---- rollup reference id ---
-${rollupReferenceId}
---- url for caching ---
-${urlToRelativeUrl(urlForCaching, projectDirectoryUrl)}`)
-      })
     }
 
-    if (source) {
+    if (source !== undefined) {
       setFileOriginalContent(url, source)
     }
 
@@ -61,6 +42,7 @@ ${urlToRelativeUrl(urlForCaching, projectDirectoryUrl)}`)
       url,
       type,
       importerUrl,
+      isInline: source !== undefined,
       resolveTransformPromise,
       connect,
       isConnected: () => connected,
@@ -74,9 +56,9 @@ ${urlToRelativeUrl(urlForCaching, projectDirectoryUrl)}`)
   const originalContentMap = {}
   const loadAsset = memoizeAsyncByUrl(async (url) => {
     // pour les assets inline il faudra un logique pour retourner direct la valeur
-    logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} load starts`)
+    // logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} load starts`)
     const assetContent = await load(url)
-    logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} load ends`)
+    // logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} load ends`)
     originalContentMap[url] = assetContent
   })
   const getAssetOriginalContent = async (url) => {
@@ -194,10 +176,11 @@ ${urlToRelativeUrl(urlForCaching, projectDirectoryUrl)}`)
         )}`
       })
       logger.debug(
-        `${urlToRelativeUrl(
-          url,
-          projectDirectoryUrl,
-        )} transform starts to replace ${assetDependenciesMapping}`,
+        `${urlToRelativeUrl(url, projectDirectoryUrl)} transform starts to replace ${JSON.stringify(
+          assetDependenciesMapping,
+          null,
+          "  ",
+        )}`,
       )
       const transformReturnValue = await transform(assetDependenciesMapping, {
         computeFileUrlForCaching,
