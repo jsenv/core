@@ -1,6 +1,5 @@
 import { basename } from "path"
-import { readFileSync } from "fs"
-import { urlToFileSystemPath, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
+import { urlToFileSystemPath, urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
@@ -13,7 +12,7 @@ import {
 
 export const jsenvCompositeAssetHooks = {
   load: async (url) => {
-    const source = readFileSync(urlToFileSystemPath(url))
+    const source = await readFile(url)
     return source
   },
   parse: async (url, source, { emitAssetReference, emitJsReference }) => {

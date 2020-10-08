@@ -8,6 +8,44 @@ export const createCompositeAssetHandler = (
   { load, parse },
   { projectDirectoryUrl = "file:///", connectReference = () => {} },
 ) => {
+  const entryReferences = {}
+
+  const prepareAssetEntry = async (url) => {
+    logger.debug(`prepare entry asset ${shortenUrl(url)}`)
+    const entryReference = gerOrCreateReference(url, { type: "asset", isEntry: true })
+    entryReferences[url] = entryReference
+    await getAssetDependencies(url)
+    // start to wait internally for eventual chunks
+    // but don't await here because this function will be awaited by rollup before starting
+    // to parse chunks
+    transformAsset(url)
+  }
+
+  const rollupChunkReadyCallbackMap = {}
+  const registerCallbackOnceRollupChunkIsReady = (url, callback) => {
+    rollupChunkReadyCallbackMap[url] = callback
+  }
+
+  const resolveAssetEntries = async (rollupBundle) => {
+    Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
+      const chunkName = Object.keys(rollupBundle).find(
+        (bundleKey) => rollupBundle[bundleKey].facadeModuleId === key,
+      )
+      const chunk = rollupBundle[chunkName]
+      logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
+      rollupChunkReadyCallbackMap[key]({
+        code: chunk.code,
+        urlForCaching: resolveUrl(chunk.fileName, projectDirectoryUrl),
+      })
+    })
+
+    await Promise.all(
+      Object.keys(entryReferences).map((assetEntryUrl) => {
+        return getAssetReferenceId(assetEntryUrl)
+      }),
+    )
+  }
+
   const getAssetReferenceId = memoizeAsyncByUrl(async (url, { source, importerUrl } = {}) => {
     const reference = gerOrCreateReference(url, { type: "asset", source, importerUrl })
     if (!reference.isConnected()) {
@@ -19,32 +57,8 @@ export const createCompositeAssetHandler = (
   })
 
   const referenceMap = {}
-  const gerOrCreateReference = memoizeByUrl((url, { type, source, importerUrl }) => {
-    let resolveTransformPromise
-    const transformPromise = new Promise((res) => {
-      resolveTransformPromise = ({ code, urlForCaching }) => {
-        res({ code, urlForCaching })
-      }
-    })
-
-    let readyPromise
-    let connected = false
-    const connect = (connectFn) => {
-      connected = true
-      readyPromise = Promise.resolve(connectFn({ transformPromise }))
-    }
-
-    const reference = {
-      url,
-      type,
-      importerUrl,
-      isInline: source !== undefined,
-      source,
-      resolveTransformPromise,
-      connect,
-      isConnected: () => connected,
-      getReadyPromise: () => readyPromise,
-    }
+  const gerOrCreateReference = memoizeByUrl((url, { isEntry, type, source, importerUrl }) => {
+    const reference = createReference(url, { isEntry, type, source, importerUrl })
     referenceMap[url] = reference
     if (source !== undefined) {
       setFileOriginalContent(url, source)
@@ -71,6 +85,7 @@ export const createCompositeAssetHandler = (
   const assetTransformMap = {}
   const parseAsset = memoizeAsyncByUrl(async (url) => {
     const assetSource = await getAssetOriginalContent(url)
+    const assetReference = referenceMap[url]
 
     // logger.debug(`${shortenUrl(url)} dependencies parsing starts`)
     const dependencies = []
@@ -85,10 +100,27 @@ export const createCompositeAssetHandler = (
         })
         if (assetReference.isConnected()) {
           dependencies.push(assetUrl)
+          if (assetSource) {
+            logger.debug(`found inline asset ${formatReferenceForLog(assetReference)}`)
+          } else {
+            logger.debug(`found asset ${formatReferenceForLog(assetReference)}`)
+          }
+        } else {
+          logger.debug(`found external asset ${formatReferenceForLog(assetReference)} -> ignored`)
         }
         return assetUrl
       },
       emitJsReference: (jsUrlSpecifier, jsSource) => {
+        // for now we can only emit a chunk from an entry file as visible in
+        // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
+        // https://github.com/rollup/rollup/issues/2872
+        if (!assetReference.isEntry) {
+          logger.warn(
+            `cannot handle ${jsUrlSpecifier} found in ${url} because it's not yet supported by rollup`,
+          )
+          return null
+        }
+
         const jsUrl = resolveUrl(jsUrlSpecifier, url)
         const jsReference = gerOrCreateReference(jsUrl, {
           type: "js",
@@ -99,6 +131,13 @@ export const createCompositeAssetHandler = (
         if (jsReference.isConnected()) {
           previousJsReference = jsReference
           dependencies.push(jsUrl)
+          if (jsSource) {
+            logger.debug(`found inline js ${formatReferenceForLog(jsReference)}`)
+          } else {
+            logger.debug(`found js ${formatReferenceForLog(jsReference)}`)
+          }
+        } else {
+          logger.debug(`found external js ${formatReferenceForLog(assetReference)} -> ignored`)
         }
         return jsUrl
       },
@@ -133,13 +172,7 @@ export const createCompositeAssetHandler = (
       assetDependencies.map(async (dependencyUrl) => {
         const reference = referenceMap[dependencyUrl]
         logger.debug(`${shortenUrl(url)} waiting for ${shortenUrl(dependencyUrl)} to be ready`)
-        if (reference.type === "js") {
-          // rollup will produce this chunk and call resolveReadyPromise
-        } else {
-          // parse and transform this asset
-          await transformAsset(dependencyUrl)
-        }
-
+        await transformAsset(dependencyUrl)
         const { urlForCaching } = await reference.getReadyPromise()
         // then put that information into the mappings
         urlMappings[reference.url] = urlForCaching
@@ -152,7 +185,15 @@ export const createCompositeAssetHandler = (
 
     let assetContentAfterTransformation
     let assetUrlForCaching
-    if (url in assetTransformMap) {
+    if (reference.type === "js") {
+      logger.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(url)}`)
+      const rollupChunkReadyPromise = new Promise((resolve) => {
+        registerCallbackOnceRollupChunkIsReady(reference.url, resolve)
+      })
+      const { code, urlForCaching } = await rollupChunkReadyPromise
+      assetContentAfterTransformation = code
+      assetUrlForCaching = urlForCaching
+    } else if (url in assetTransformMap) {
       const transform = assetTransformMap[url]
       // assetDependenciesMapping contains all dependencies for an asset
       // each key is the absolute url to the dependency file
@@ -212,7 +253,16 @@ export const createCompositeAssetHandler = (
       : url
   }
 
+  const formatReferenceForLog = ({ url, importerUrl }) => {
+    if (importerUrl) {
+      return `reference to ${shortenUrl(url)} in ${shortenUrl(importerUrl)}`
+    }
+    return `reference to ${shortenUrl(url)}`
+  }
+
   return {
+    prepareAssetEntry,
+    resolveAssetEntries,
     getAssetReferenceId,
     inspect: () => {
       return {
@@ -247,4 +297,34 @@ const memoizeByUrl = (fn) => {
     urlCache[url] = promise
     return promise
   }
+}
+
+const createReference = (url, { isEntry = false, type, source, importerUrl }) => {
+  let resolveTransformPromise
+  const transformPromise = new Promise((res) => {
+    resolveTransformPromise = ({ code, urlForCaching }) => {
+      res({ code, urlForCaching })
+    }
+  })
+
+  let readyPromise
+  let connected = false
+  const connect = (connectFn) => {
+    connected = true
+    readyPromise = Promise.resolve(connectFn({ transformPromise }))
+  }
+
+  const reference = {
+    url,
+    type,
+    importerUrl,
+    isEntry,
+    isInline: source !== undefined,
+    source,
+    resolveTransformPromise,
+    connect,
+    isConnected: () => connected,
+    getReadyPromise: () => readyPromise,
+  }
+  return reference
 }
