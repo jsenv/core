@@ -1,4 +1,6 @@
 import { createRequire } from "module"
+import { readFileSync } from "fs"
+
 import {
   urlToRelativeUrl,
   resolveUrl,
@@ -54,6 +56,8 @@ const generateBundle = async () => {
     }
     return `reference to ${shortenUrl(url)} somewhere`
   }
+
+  const importerMapping = {}
 
   const compositeAssetPlugin = {
     async buildStart() {
@@ -115,7 +119,10 @@ const generateBundle = async () => {
                   : {}),
               })
 
-              const { urlForCaching } = await listenJsChunkCompleted(id)
+              // ideally we would not rely on reference.url
+              // because resolveId (importmap) could redirect it somewhere else
+              // we'll see about that later when adding importmap back
+              const { urlForCaching } = await listenJsChunkCompleted(reference.url)
               return { rollupReferenceId, urlForCaching }
             })
           }
@@ -135,7 +142,10 @@ const generateBundle = async () => {
       if (!urlIsInsideOf(url, "file:///")) {
         return { id: specifier, external: true }
       }
-      return null
+      if (importer !== projectDirectoryUrl) {
+        importerMapping[url] = importer
+      }
+      return url
     },
 
     load: async (id) => {
@@ -143,26 +153,33 @@ const generateBundle = async () => {
         return virtualModules[id]
       }
       if (id.endsWith(".js")) {
-        return null
+        return String(readFileSync(urlToFileSystemPath(id)))
       }
-      const assetReferenceId = await compositeAssetHandler.getAssetReferenceId(
-        fileSystemPathToUrl(id),
-      )
-      return `export default import.meta.ROLLUP_FILE_URL_${assetReferenceId};`
+      const importer = importerMapping[id]
+
+      if (importer) {
+        const assetReferenceId = await compositeAssetHandler.getAssetReferenceId(id, {
+          importerUrl: importer,
+        })
+        return `export default import.meta.ROLLUP_FILE_URL_${assetReferenceId};`
+      }
+
+      compositeAssetHandler.getAssetReferenceId(id)
+      return { code: "" }
     },
 
-    // buildEnd: (error) => {
-    //   if (error) {
-    //     console.log(`error during rollup build
-    // --- error stack ---
-    // ${error.stack}`)
-    //     return
-    //   }
+    buildEnd: (error) => {
+      if (error) {
+        console.log(`error during rollup build
+    --- error stack ---
+    ${error.stack}`)
+        return
+      }
 
-    //   // Object.keys(jsChunkCompletedCallbackMap).forEach((key) => {
-    //   //   jsChunkCompletedCallbackMap[key]()
-    //   // })
-    // },
+      // Object.keys(jsChunkCompletedCallbackMap).forEach((key) => {
+      //   jsChunkCompletedCallbackMap[key]()
+      // })
+    },
 
     renderChunk: (
       code,
@@ -175,18 +192,29 @@ const generateBundle = async () => {
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
-      const chunkUrl = chunk.facadeModuleId
-      if (chunkUrl in jsChunkCompletedCallbackMap) {
-        jsChunkCompletedCallbackMap[chunkUrl]({
-          code,
-          urlForCaching: resolveUrl(chunk.fileName, projectDirectoryUrl),
-        })
-      }
+      // const chunkUrl = chunk.facadeModuleId
+      // if (chunkUrl in jsChunkCompletedCallbackMap) {
+      //   jsChunkCompletedCallbackMap[chunkUrl]({
+      //     code,
+      //     urlForCaching: resolveUrl(chunk.fileName, projectDirectoryUrl),
+      //   })
+      // }
       return null
     },
 
-    generateBundle: (bundle) => {
+    generateBundle: (options, bundle) => {
       // console.log("generate bundle", bundle)
+
+      Object.keys(jsChunkCompletedCallbackMap).forEach((key) => {
+        const chunkName = Object.keys(bundle).find(
+          (bundleKey) => bundle[bundleKey].facadeModuleId === key,
+        )
+        const chunk = bundle[chunkName]
+        jsChunkCompletedCallbackMap[key]({
+          code: chunk.code,
+          urlForCaching: resolveUrl(chunk.fileName, projectDirectoryUrl),
+        })
+      })
       debugger
     },
   }

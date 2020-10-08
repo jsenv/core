@@ -1,4 +1,4 @@
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlIsInsideOf } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
 import { computeFileUrlForCaching } from "./computeFileUrlForCaching.js"
 
@@ -75,7 +75,7 @@ export const createCompositeAssetHandler = (
   const parseAsset = memoizeAsyncByUrl(async (url) => {
     const assetSource = await getAssetOriginalContent(url)
 
-    logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} dependencies parsing starts`)
+    // logger.debug(`${shortenUrl(url)} dependencies parsing starts`)
     const dependencies = []
     let previousJsReference
     const parseReturnValue = await parse(url, assetSource, {
@@ -115,14 +115,13 @@ export const createCompositeAssetHandler = (
     if (typeof parseReturnValue === "function") {
       assetTransformMap[url] = parseReturnValue
     }
-    logger.debug(
-      `${urlToRelativeUrl(
-        url,
-        projectDirectoryUrl,
-      )} dependencies parsed -> ${dependencies.map((url) =>
-        urlToRelativeUrl(url, projectDirectoryUrl),
-      )}`,
-    )
+    if (dependencies.length) {
+      logger.debug(
+        `${shortenUrl(url)} dependencies collected -> ${dependencies.map((url) =>
+          shortenUrl(url),
+        )}`,
+      )
+    }
   })
   const getAssetDependencies = async (url) => {
     await parseAsset(url)
@@ -136,6 +135,7 @@ export const createCompositeAssetHandler = (
     await Promise.all(
       assetDependencies.map(async (dependencyUrl) => {
         const reference = referenceMap[dependencyUrl]
+        logger.debug(`${shortenUrl(url)} waiting for ${shortenUrl(dependencyUrl)} to be ready`)
         if (reference.type === "js") {
           // rollup will produce this chunk and call resolveReadyPromise
         } else {
@@ -178,7 +178,7 @@ export const createCompositeAssetHandler = (
         )}`
       })
       logger.debug(
-        `${urlToRelativeUrl(url, projectDirectoryUrl)} transform starts to replace ${JSON.stringify(
+        `${shortenUrl(url)} transform starts to replace ${JSON.stringify(
           assetDependenciesMapping,
           null,
           "  ",
@@ -187,18 +187,21 @@ export const createCompositeAssetHandler = (
       const transformReturnValue = await transform(assetDependenciesMapping, {
         computeFileUrlForCaching,
       })
-      if (!transformReturnValue) {
+      if (transformReturnValue === null || transformReturnValue === undefined) {
         throw new Error(`transform must return an object {code, map}`)
       }
-
-      const {
-        code,
-        // TODO: handle the map (it should end in rollup build)
-        // map,
-        urlForCaching,
-      } = transformReturnValue
-      assetContentAfterTransformation = code
-      assetUrlForCaching = urlForCaching
+      if (typeof transformReturnValue === "string") {
+        assetContentAfterTransformation = transformReturnValue
+      } else {
+        const {
+          code,
+          // TODO: handle the map (it should end in rollup build)
+          // map,
+          urlForCaching,
+        } = transformReturnValue
+        assetContentAfterTransformation = code
+        assetUrlForCaching = urlForCaching
+      }
     } else {
       assetContentAfterTransformation = assetContentBeforeTransformation
     }
@@ -208,6 +211,12 @@ export const createCompositeAssetHandler = (
       urlForCaching: assetUrlForCaching,
     })
   })
+
+  const shortenUrl = (url) => {
+    return urlIsInsideOf(url, projectDirectoryUrl)
+      ? urlToRelativeUrl(url, projectDirectoryUrl)
+      : url
+  }
 
   return {
     getAssetReferenceId,

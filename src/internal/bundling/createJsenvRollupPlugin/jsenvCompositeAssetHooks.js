@@ -59,7 +59,6 @@ export const jsenvCompositeAssetHooks = {
               (key) => nodeUrlMapping[key] === script,
             )
             const scriptUrlForCaching = dependenciesMapping[scriptUrl]
-            debugger
             return `<script>window.System.import(${JSON.stringify(
               `./${scriptUrlForCaching}`,
             )})</script>`
@@ -88,8 +87,8 @@ export const jsenvCompositeAssetHooks = {
 
       return async (dependenciesMapping, { computeFileUrlForCaching }) => {
         const cssReplaceResult = await replaceCssUrls(cssSource, cssUrl, ({ urlNode }) => {
-          const scriptUrl = Object.keys(nodeUrlMapping).find(
-            (key) => nodeUrlMapping[key] === urlNode,
+          const scriptUrl = Object.keys(nodeUrlMapping).find((key) =>
+            isSameCssDocumentUrlNode(nodeUrlMapping[key], urlNode),
           )
           return dependenciesMapping[scriptUrl]
         })
@@ -122,4 +121,17 @@ export const jsenvCompositeAssetHooks = {
 
     return null
   },
+}
+
+const isSameCssDocumentUrlNode = (firstUrlNode, secondUrlNode) => {
+  if (firstUrlNode.type !== secondUrlNode.type) {
+    return false
+  }
+  if (firstUrlNode.value !== secondUrlNode.value) {
+    return false
+  }
+  if (firstUrlNode.sourceIndex !== secondUrlNode.sourceIndex) {
+    return false
+  }
+  return true
 }
