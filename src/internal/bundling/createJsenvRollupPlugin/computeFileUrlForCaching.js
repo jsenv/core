@@ -2,16 +2,20 @@ import { extname, basename } from "path"
 import { createHash } from "crypto"
 import { urlToFileSystemPath } from "@jsenv/util"
 
-export const computeFileUrlForCaching = (fileUrl, fileContent) => {
+export const computeFileUrlForCaching = (
+  fileUrl,
+  fileContent,
+  pattern = "[dirname][name]-[hash][extname]",
+) => {
   const filePath = urlToFileSystemPath(fileUrl)
   const fileParentUrl = urlToParentUrl(fileUrl)
-  const assetFilename = renderNamePattern(`[name]-[hash][extname]`, {
+  const urlForCaching = renderNamePattern(pattern, {
+    dirname: () => fileParentUrl,
     name: () => basename(filePath, extname(filePath)),
     hash: () => generateAssetHash(fileContent),
     extname: () => extname(filePath),
   })
-  const cacheUrl = `${fileParentUrl}${assetFilename}`
-  return cacheUrl
+  return urlForCaching
 }
 
 const urlToParentUrl = (url) => {

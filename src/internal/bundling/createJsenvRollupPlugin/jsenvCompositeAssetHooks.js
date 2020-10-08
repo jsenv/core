@@ -65,8 +65,11 @@ export const jsenvCompositeAssetHooks = {
           },
         })
         const htmlTransformedString = stringifyHtmlDocument(htmlDocument)
-        // minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString
-        return htmlTransformedString
+        const code = htmlTransformedString
+        // const code = minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString
+        return {
+          code,
+        }
       }
     }
 

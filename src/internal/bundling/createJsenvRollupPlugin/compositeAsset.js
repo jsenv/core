@@ -34,39 +34,36 @@ export const createCompositeAssetHandler = (
       readyPromise = Promise.resolve(connectFn({ transformPromise }))
     }
 
-    if (source !== undefined) {
-      setFileOriginalContent(url, source)
-    }
-
     const reference = {
       url,
       type,
       importerUrl,
       isInline: source !== undefined,
+      source,
       resolveTransformPromise,
       connect,
       isConnected: () => connected,
       getReadyPromise: () => readyPromise,
     }
     referenceMap[url] = reference
+    if (source !== undefined) {
+      setFileOriginalContent(url, source)
+    }
     connectReference(reference)
     return reference
   })
 
-  const originalContentMap = {}
   const loadAsset = memoizeAsyncByUrl(async (url) => {
-    // pour les assets inline il faudra un logique pour retourner direct la valeur
-    // logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} load starts`)
-    const assetContent = await load(url)
-    // logger.debug(`${urlToRelativeUrl(url, projectDirectoryUrl)} load ends`)
-    originalContentMap[url] = assetContent
+    const assetSource = await load(url)
+    const reference = referenceMap[url]
+    reference.source = assetSource
   })
   const getAssetOriginalContent = async (url) => {
     await loadAsset(url)
-    return originalContentMap[url]
+    return referenceMap[url].source
   }
   const setFileOriginalContent = (url, source) => {
-    originalContentMap[url] = source
+    referenceMap[url].source = source
     loadAsset.cache[url] = Promise.resolve()
   }
 
