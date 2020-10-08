@@ -54,14 +54,17 @@ const generateBundle = async () => {
     if (importerUrl) {
       return `reference to ${shortenUrl(url)} in ${shortenUrl(importerUrl)}`
     }
-    return `reference to ${shortenUrl(url)} somewhere`
+    return `reference to ${shortenUrl(url)}`
   }
 
   const importerMapping = {}
+  const assetPendingUrls = []
+
+  let emitFile = () => {}
 
   const compositeAssetPlugin = {
     async buildStart() {
-      const rollup = this
+      emitFile = (...args) => this.emitFile(...args)
 
       compositeAssetHandler = createCompositeAssetHandler(jsenvCompositeAssetHooks, {
         projectDirectoryUrl,
@@ -73,20 +76,22 @@ const generateBundle = async () => {
             logger.debug(`found external ${formatReferenceForLog(reference)} -> ignored`)
             return
           }
-          if (reference.isInline) {
-            logger.debug(`found inline ${formatReferenceForLog(reference)} -> emit file`)
-          } else {
-            logger.debug(`found ${formatReferenceForLog(reference)} -> emit file`)
-          }
 
           if (reference.type === "asset") {
+            if (reference.isInline) {
+              logger.debug(`found inline asset ${formatReferenceForLog(reference)}`)
+            } else {
+              logger.debug(`found asset ${formatReferenceForLog(reference)}`)
+            }
+
             reference.connect(async ({ transformPromise }) => {
               let { code, urlForCaching } = await transformPromise
 
               if (urlForCaching === undefined) {
                 urlForCaching = computeFileUrlForCaching(reference.url, code)
               }
-              const rollupReferenceId = rollup.emitFile({
+              logger.debug(`emit asset for ${formatReferenceForLog(reference)}`)
+              const rollupReferenceId = emitFile({
                 type: "asset",
                 source: code,
                 fileName: urlToRelativeUrl(urlForCaching, projectDirectoryUrl),
@@ -97,6 +102,23 @@ const generateBundle = async () => {
           }
 
           if (reference.type === "js") {
+            // it's not possible yet to dynamically emit a chunk from an asset
+            // https://github.com/rollup/rollup/issues/2872
+            if (reference.importerUrl !== inputFileUrl) {
+              logger.warn(
+                `cannot handle js ${formatReferenceForLog(
+                  reference,
+                )} because it's not yet supported by rollup`,
+              )
+              return
+            }
+
+            if (reference.isInline) {
+              logger.debug(`found inline js ${formatReferenceForLog(reference)}`)
+            } else {
+              logger.debug(`found js ${formatReferenceForLog(reference)}`)
+            }
+
             reference.connect(async () => {
               const jsRelativeUrl = `./${urlToRelativeUrl(reference.url, projectDirectoryUrl)}`
               const id = jsRelativeUrl
@@ -104,7 +126,8 @@ const generateBundle = async () => {
                 virtualModules[id] = reference.source
               }
 
-              const rollupReferenceId = rollup.emitFile({
+              logger.debug(`emit chunk for ${formatReferenceForLog(reference)}`)
+              const rollupReferenceId = emitFile({
                 type: "chunk",
                 id,
                 ...(reference.previousJsReference
@@ -122,12 +145,15 @@ const generateBundle = async () => {
               // ideally we would not rely on reference.url
               // because resolveId (importmap) could redirect it somewhere else
               // we'll see about that later when adding importmap back
+              assetPendingUrls.push(reference.importerUrl)
               const { urlForCaching } = await listenJsChunkCompleted(reference.url)
               return { rollupReferenceId, urlForCaching }
             })
           }
         },
       })
+
+      compositeAssetHandler.getAssetReferenceId(inputFileUrl)
     },
 
     resolveId: (specifier, importer = projectDirectoryUrl) => {
@@ -168,19 +194,6 @@ const generateBundle = async () => {
       return { code: "" }
     },
 
-    buildEnd: (error) => {
-      if (error) {
-        console.log(`error during rollup build
-    --- error stack ---
-    ${error.stack}`)
-        return
-      }
-
-      // Object.keys(jsChunkCompletedCallbackMap).forEach((key) => {
-      //   jsChunkCompletedCallbackMap[key]()
-      // })
-    },
-
     renderChunk: (
       code,
       chunk,
@@ -202,8 +215,8 @@ const generateBundle = async () => {
       return null
     },
 
-    generateBundle: (options, bundle) => {
-      // console.log("generate bundle", bundle)
+    async generateBundle(options, bundle) {
+      emitFile = (...args) => this.emitFile(...args)
 
       Object.keys(jsChunkCompletedCallbackMap).forEach((key) => {
         const chunkName = Object.keys(bundle).find(
@@ -215,12 +228,17 @@ const generateBundle = async () => {
           urlForCaching: resolveUrl(chunk.fileName, projectDirectoryUrl),
         })
       })
-      debugger
+
+      await Promise.all(
+        assetPendingUrls.map((assetPendingUrl) => {
+          return compositeAssetHandler.getAssetReferenceId(assetPendingUrl)
+        }),
+      )
     },
   }
 
   const bundle = await rollup({
-    input: urlToFileSystemPath(inputFileUrl),
+    input: [],
     plugins: [compositeAssetPlugin],
   })
 

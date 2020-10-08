@@ -172,10 +172,7 @@ export const createCompositeAssetHandler = (
         // so each each dependency is handled one after an other
         // ensuring dependencies where already handled before
         const dependencyUrlForCaching = urlMappings[dependencyUrl]
-        assetDependenciesMapping[dependencyUrl] = `./${urlToRelativeUrl(
-          dependencyUrlForCaching,
-          url,
-        )}`
+        assetDependenciesMapping[dependencyUrl] = urlToRelativeUrl(dependencyUrlForCaching, url)
       })
       logger.debug(
         `${shortenUrl(url)} transform starts to replace ${JSON.stringify(
