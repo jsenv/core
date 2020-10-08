@@ -211,7 +211,7 @@ export const createJsenvRollupPlugin = async ({
       }
 
       if (externalImportSpecifiers.includes(specifier)) {
-        logger.debug(`${specifier} verifies externalImportSpecifiers  -> marked as external`)
+        logger.debug(`${specifier} verifies externalImportSpecifiers -> marked as external`)
         return { id: specifier, external: true }
       }
 

@@ -6,6 +6,7 @@ import {
   ensureEmptyDirectory,
   urlIsInsideOf,
   fileSystemPathToUrl,
+  isFileSystemPath,
 } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
 import { createCompositeAssetHandler } from "../compositeAsset.js"
@@ -18,7 +19,7 @@ const { rollup } = require("rollup")
 
 const projectDirectoryUrl = resolveUrl("./", import.meta.url)
 const bundleDirectoryUrl = resolveUrl("./dist/", import.meta.url)
-const inputFileUrl = resolveUrl("./main.js", import.meta.url)
+const inputFileUrl = resolveUrl("./index.html", import.meta.url)
 
 const logger = createLogger({ logLevel: "debug" })
 
@@ -122,9 +123,17 @@ const generateBundle = async () => {
       })
     },
 
-    resolveId: (id) => {
-      if (id in virtualModules) {
-        return id
+    resolveId: (specifier, importer) => {
+      if (specifier in virtualModules) {
+        return specifier
+      }
+      if (isFileSystemPath(importer)) {
+        importer = fileSystemPathToUrl(importer)
+      }
+      const url = resolveUrl(specifier, importer)
+      // keep external url intact
+      if (!urlIsInsideOf(url, "file:///")) {
+        return { id: specifier, external: true }
       }
       return null
     },
@@ -136,15 +145,10 @@ const generateBundle = async () => {
       if (id.endsWith(".js")) {
         return null
       }
-      const url = fileSystemPathToUrl(id)
-      if (urlIsInsideOf(url, projectDirectoryUrl)) {
-        const assetReferenceId = await compositeAssetHandler.getAssetReferenceId(
-          fileSystemPathToUrl(id),
-        )
-        return `export default import.meta.ROLLUP_FILE_URL_${assetReferenceId};`
-      }
-      // external url are returned untouched
-      return `export default ${JSON.stringify(url)}`
+      const assetReferenceId = await compositeAssetHandler.getAssetReferenceId(
+        fileSystemPathToUrl(id),
+      )
+      return `export default import.meta.ROLLUP_FILE_URL_${assetReferenceId};`
     },
 
     // buildEnd: (error) => {
