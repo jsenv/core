@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../../sourceMappingURLUtils.js"
-import { computeFileUrlForCaching } from "../../createJsenvRollupPlugin/computeFileUrlForCaching.js"
+import { computeFileRelativeUrlForBundle } from "../../createJsenvRollupPlugin/computeFileRelativeUrlForBundle.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
 import { fetchCssAssets } from "./fetchCssAssets.js"
 
@@ -38,7 +38,10 @@ export const transformCssFiles = async (cssDependencies, options) => {
     )
     let cssAfterTransformation = cssReplaceResult.css
     const cssAfterTransformationMap = cssReplaceResult.map.toJSON()
-    const cssAfterTransformationFileUrl = computeFileUrlForCaching(cssFile, cssAfterTransformation)
+    const cssAfterTransformationFileUrl = computeFileRelativeUrlForBundle(
+      cssFile,
+      cssAfterTransformation,
+    )
     cssUrlMappings[cssFile] = cssAfterTransformationFileUrl
 
     const cssSourceMapFileUrl = `${cssAfterTransformationFileUrl}.map`
@@ -79,7 +82,7 @@ const remapCssAssetUrls = (assetSources) => {
   const assetUrlMappings = {}
 
   Object.keys(assetSources).map(async (assetUrl) => {
-    assetUrlMappings[assetUrl] = computeFileUrlForCaching(assetUrl, assetSources[assetUrl])
+    assetUrlMappings[assetUrl] = computeFileRelativeUrlForBundle(assetUrl, assetSources[assetUrl])
   })
 
   return assetUrlMappings

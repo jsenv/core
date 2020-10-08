@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { urlToFileSystemPath, urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
+import { urlToFileSystemPath, resolveUrl, readFile } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
@@ -57,9 +57,9 @@ export const jsenvCompositeAssetHooks = {
             const scriptUrl = Object.keys(nodeUrlMapping).find(
               (key) => nodeUrlMapping[key] === script,
             )
-            const scriptUrlForCaching = dependenciesMapping[scriptUrl]
+            const scriptFileRelativeUrlForBundle = dependenciesMapping[scriptUrl]
             return `<script>window.System.import(${JSON.stringify(
-              `./${scriptUrlForCaching}`,
+              ensureRelativeUrlNotation(scriptFileRelativeUrlForBundle),
             )})</script>`
           },
         })
@@ -87,7 +87,7 @@ export const jsenvCompositeAssetHooks = {
         nodeUrlMapping[cssAssetUrl] = urlDeclaration.urlNode
       })
 
-      return async (dependenciesMapping, { computeFileUrlForCaching }) => {
+      return async (dependenciesMapping, { computeFileRelativeUrlForBundle }) => {
         const cssReplaceResult = await replaceCssUrls(cssSource, cssUrl, ({ urlNode }) => {
           const scriptUrl = Object.keys(nodeUrlMapping).find((key) =>
             isSameCssDocumentUrlNode(nodeUrlMapping[key], urlNode),
@@ -96,14 +96,10 @@ export const jsenvCompositeAssetHooks = {
         })
         let code = cssReplaceResult.css
         const map = cssReplaceResult.map.toJSON()
-        const urlForCaching = computeFileUrlForCaching(url, code)
+        const fileRelativeUrlForBundle = computeFileRelativeUrlForBundle(url, code)
 
-        map.file = basename(urlToFileSystemPath(urlForCaching))
-        const cssSourceMapFileUrl = `${urlForCaching}.map`
-        const cssSourceMapFileUrlRelativeToSource = urlToRelativeUrl(
-          cssSourceMapFileUrl,
-          urlForCaching,
-        )
+        map.file = basename(urlToFileSystemPath(fileRelativeUrlForBundle))
+        const cssSourceMapFileUrlRelativeToSource = `${fileRelativeUrlForBundle}.map`
         // In theory code should never be modified once the url for caching is computed
         // because url for caching depends on file content.
         // There is an exception for sourcemap because we want to update sourcemap.file
@@ -116,13 +112,21 @@ export const jsenvCompositeAssetHooks = {
         return {
           code,
           map,
-          urlForCaching,
+          fileRelativeUrlForBundle,
         }
       }
     }
 
     return null
   },
+}
+
+// otherwise systemjs thinks it's a bare import
+const ensureRelativeUrlNotation = (relativeUrl) => {
+  if (relativeUrl.startsWith("../")) {
+    return relativeUrl
+  }
+  return `./${relativeUrl}`
 }
 
 const isSameCssDocumentUrlNode = (firstUrlNode, secondUrlNode) => {

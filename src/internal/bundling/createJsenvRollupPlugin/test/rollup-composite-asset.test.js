@@ -1,9 +1,8 @@
 /**
  * a faire
  *
- * - urlForCaching qu'on devrait rendre relative
- * il faudrait aussi un autre nom genre fileUrlRelativeToBundleDirectory (equivalent de fileName pour rollup)
- * - le fichier map des css bundled
+ * - ne pas hash le fichier html + le mettre bien a la racine (pour jsenv on lire entryPointMap)
+ * - le fichier map des css bundled doit etre emit pour rollup
  * - tester un aset remap avec importmap
  *
  */
@@ -23,7 +22,7 @@ import {
 import { createLogger } from "@jsenv/logger"
 import { createCompositeAssetHandler } from "../compositeAsset.js"
 import { jsenvCompositeAssetHooks } from "../jsenvCompositeAssetHooks.js"
-import { computeFileUrlForCaching } from "../computeFileUrlForCaching.js"
+import { computeFileRelativeUrlForBundle } from "../computeFileRelativeUrlForBundle.js"
 
 const require = createRequire(import.meta.url)
 
@@ -68,19 +67,19 @@ const generateBundle = async () => {
 
           if (reference.type === "asset") {
             reference.connect(async ({ transformPromise }) => {
-              let { code, urlForCaching } = await transformPromise
+              let { code, fileRelativeUrlForBundle } = await transformPromise
 
-              if (urlForCaching === undefined) {
-                urlForCaching = computeFileUrlForCaching(reference.url, code)
+              if (fileRelativeUrlForBundle === undefined) {
+                fileRelativeUrlForBundle = computeFileRelativeUrlForBundle(reference.url, code)
               }
               logger.debug(`emit asset for ${shortenUrl(reference.url)}`)
               const rollupReferenceId = emitFile({
                 type: "asset",
                 source: code,
-                fileName: urlToRelativeUrl(urlForCaching, projectDirectoryUrl),
+                fileName: fileRelativeUrlForBundle,
               })
-              logger.debug(`${shortenUrl(reference.url)} ready -> ${shortenUrl(urlForCaching)}`)
-              return { rollupReferenceId, urlForCaching }
+              logger.debug(`${shortenUrl(reference.url)} ready -> ${fileRelativeUrlForBundle}`)
+              return { rollupReferenceId, fileRelativeUrlForBundle }
             })
           }
 
@@ -108,10 +107,12 @@ const generateBundle = async () => {
                   : {}),
               })
 
-              const { urlForCaching } = await transformPromise
-              return { rollupReferenceId, urlForCaching }
+              const { fileRelativeUrlForBundle } = await transformPromise
+              return { rollupReferenceId, fileRelativeUrlForBundle }
             })
           }
+
+          return null
         },
       })
 

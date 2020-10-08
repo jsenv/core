@@ -1,6 +1,6 @@
 import { resolveUrl, urlToRelativeUrl, urlIsInsideOf } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
-import { computeFileUrlForCaching } from "./computeFileUrlForCaching.js"
+import { computeFileRelativeUrlForBundle } from "./computeFileRelativeUrlForBundle.js"
 
 const logger = createLogger({ logLevel: "debug" })
 
@@ -35,7 +35,7 @@ export const createCompositeAssetHandler = (
       logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
       rollupChunkReadyCallbackMap[key]({
         code: chunk.code,
-        urlForCaching: resolveUrl(chunk.fileName, projectDirectoryUrl),
+        fileRelativeUrlForBundle: chunk.fileName,
       })
     })
 
@@ -173,9 +173,9 @@ export const createCompositeAssetHandler = (
         const reference = referenceMap[dependencyUrl]
         logger.debug(`${shortenUrl(url)} waiting for ${shortenUrl(dependencyUrl)} to be ready`)
         await transformAsset(dependencyUrl)
-        const { urlForCaching } = await reference.getReadyPromise()
+        const { fileRelativeUrlForBundle } = await reference.getReadyPromise()
         // then put that information into the mappings
-        urlMappings[reference.url] = urlForCaching
+        urlMappings[reference.url] = fileRelativeUrlForBundle
       }),
     )
 
@@ -184,15 +184,15 @@ export const createCompositeAssetHandler = (
     const reference = referenceMap[url]
 
     let assetContentAfterTransformation
-    let assetUrlForCaching
+    let assetFileRelativeUrlForBundle
     if (reference.type === "js") {
       logger.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(url)}`)
       const rollupChunkReadyPromise = new Promise((resolve) => {
         registerCallbackOnceRollupChunkIsReady(reference.url, resolve)
       })
-      const { code, urlForCaching } = await rollupChunkReadyPromise
+      const { code, fileRelativeUrlForBundle } = await rollupChunkReadyPromise
       assetContentAfterTransformation = code
-      assetUrlForCaching = urlForCaching
+      assetFileRelativeUrlForBundle = fileRelativeUrlForBundle
     } else if (url in assetTransformMap) {
       const transform = assetTransformMap[url]
       // assetDependenciesMapping contains all dependencies for an asset
@@ -204,13 +204,24 @@ export const createCompositeAssetHandler = (
       // }
       // it must be used by transform to update url in the asset source
       const assetDependenciesMapping = {}
+      const importerFileUrlForBundle = resolveUrl(
+        computeFileRelativeUrlForBundle(url, ""),
+        "file:///",
+      )
       assetDependencies.forEach((dependencyUrl) => {
-        // here it's guaranteed that dependencUrl is in assetUrlMappings
+        // here it's guaranteed that dependencUrl is in urlMappings
         // because we throw in case there is circular deps
         // so each each dependency is handled one after an other
         // ensuring dependencies where already handled before
-        const dependencyUrlForCaching = urlMappings[dependencyUrl]
-        assetDependenciesMapping[dependencyUrl] = urlToRelativeUrl(dependencyUrlForCaching, url)
+        const dependencyFileRelativeUrlForBundle = urlMappings[dependencyUrl]
+        const dependencyFileUrlForBundle = resolveUrl(
+          dependencyFileRelativeUrlForBundle,
+          "file:///",
+        )
+        assetDependenciesMapping[dependencyUrl] = urlToRelativeUrl(
+          dependencyFileUrlForBundle,
+          importerFileUrlForBundle,
+        )
       })
       logger.debug(
         `${shortenUrl(url)} transform starts to replace ${JSON.stringify(
@@ -220,7 +231,7 @@ export const createCompositeAssetHandler = (
         )}`,
       )
       const transformReturnValue = await transform(assetDependenciesMapping, {
-        computeFileUrlForCaching,
+        computeFileRelativeUrlForBundle,
       })
       if (transformReturnValue === null || transformReturnValue === undefined) {
         throw new Error(`transform must return an object {code, map}`)
@@ -232,10 +243,10 @@ export const createCompositeAssetHandler = (
           code,
           // TODO: handle the map (it should end in rollup build)
           // map,
-          urlForCaching,
+          fileRelativeUrlForBundle,
         } = transformReturnValue
         assetContentAfterTransformation = code
-        assetUrlForCaching = urlForCaching
+        assetFileRelativeUrlForBundle = fileRelativeUrlForBundle
       }
     } else {
       assetContentAfterTransformation = assetContentBeforeTransformation
@@ -243,7 +254,7 @@ export const createCompositeAssetHandler = (
 
     reference.resolveTransformPromise({
       code: assetContentAfterTransformation,
-      urlForCaching: assetUrlForCaching,
+      fileRelativeUrlForBundle: assetFileRelativeUrlForBundle,
     })
   })
 
@@ -302,8 +313,8 @@ const memoizeByUrl = (fn) => {
 const createReference = (url, { isEntry = false, type, source, importerUrl }) => {
   let resolveTransformPromise
   const transformPromise = new Promise((res) => {
-    resolveTransformPromise = ({ code, urlForCaching }) => {
-      res({ code, urlForCaching })
+    resolveTransformPromise = ({ code, fileRelativeUrlForBundle }) => {
+      res({ code, fileRelativeUrlForBundle })
     }
   })
 
@@ -312,6 +323,9 @@ const createReference = (url, { isEntry = false, type, source, importerUrl }) =>
   const connect = (connectFn) => {
     connected = true
     readyPromise = Promise.resolve(connectFn({ transformPromise }))
+    readyPromise.then(({ fileRelativeUrlForBundle }) => {
+      reference.fileRelativeUrlForBundle = fileRelativeUrlForBundle
+    })
   }
 
   const reference = {
