@@ -6,11 +6,14 @@ export const postCssUrlHashPlugin = () => {
   return {
     postcssPlugin: "urlhash",
     prepare: (result) => {
-      const { from, collectUrls = false, urlReplacements = {} } = result.opts
+      const { from, collectUrls = false, getUrlReplacementValue = () => undefined } = result.opts
       const fromUrl = fileSystemPathToUrl(from)
       return {
         AtRule: {
-          import: (atImportNode, { AtRule }) => {
+          import: (
+            atImportNode,
+            // { AtRule }
+          ) => {
             if (atImportNode.parent.type !== "root") {
               atImportNode.warn(result, "`@import` should be top level")
               return
@@ -58,32 +61,38 @@ export const postCssUrlHashPlugin = () => {
               return
             }
 
-            const urlRaw = url
-            url = resolveUrl(urlRaw, fromUrl)
+            const specifier = url
+            url = resolveUrl(specifier, fromUrl)
 
             if (url === fromUrl) {
               atImportNode.warn(result, `\`@import\` loop in \`${atImportNode.toString()}\``)
               return
             }
 
-            if (url in urlReplacements) {
-              const params = valueParser(atImportNode.params)
-              params.nodes[0].value = urlReplacements[url]
-              const newAtImportRule = new AtRule({
-                name: "import",
-                params: params.toString(),
-              })
-              atImportNode.replaceWith(newAtImportRule)
+            const urlReference = {
+              type: "import",
+              specifier,
+              url,
+              atImportNode,
+              urlNode,
+            }
+            const urlNewValue = getUrlReplacementValue(urlReference)
+            if (urlNewValue) {
+              urlNode.value = urlNewValue
             }
 
+            // if (url in urlReplacements) {
+            //   const params = valueParser(atImportNode.params)
+            //   params.nodes[0].value = urlReplacements[url]
+            //   const newAtImportRule = new AtRule({
+            //     name: "import",
+            //     params: params.toString(),
+            //   })
+            //   atImportNode.replaceWith(newAtImportRule)
+            // }
+
             if (collectUrls) {
-              result.messages.push({
-                type: "import",
-                urlRaw,
-                url,
-                atImportNode,
-                urlNode,
-              })
+              result.messages.push(urlReference)
             }
           },
         },
@@ -104,20 +113,24 @@ export const postCssUrlHashPlugin = () => {
               return
             }
 
-            const urlRaw = url
-            url = resolveUrl(urlRaw, fileSystemPathToUrl(from))
-            if (url in urlReplacements) {
-              urlNode.value = urlReplacements[url]
+            const specifier = url
+            url = resolveUrl(specifier, fileSystemPathToUrl(from))
+
+            const urlReference = {
+              type: "asset",
+              specifier,
+              url,
+              declarationNode,
+              urlNode,
+            }
+
+            const urlNewValue = getUrlReplacementValue(urlReference)
+            if (urlNewValue) {
+              urlNode.value = urlNewValue
             }
 
             if (collectUrls) {
-              result.messages.push({
-                type: "asset",
-                urlRaw,
-                url,
-                declarationNode,
-                urlNode,
-              })
+              result.messages.push(urlReference)
             }
           })
         },

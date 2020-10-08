@@ -6,7 +6,7 @@ import { require } from "../../../require.js"
 export const replaceCssUrls = async (
   css,
   cssFileUrl,
-  urlReplacements,
+  getUrlReplacementValue,
   { cssMinification = false, cssMinificationOptions } = {},
 ) => {
   const result = await postcss([
@@ -15,7 +15,7 @@ export const replaceCssUrls = async (
   ]).process(css, {
     from: urlToFileSystemPath(cssFileUrl),
     to: urlToFileSystemPath(cssFileUrl),
-    urlReplacements,
+    getUrlReplacementValue,
     map: {
       inline: false,
     },

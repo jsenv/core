@@ -123,7 +123,7 @@ const generateBundle = async () => {
       })
     },
 
-    resolveId: (specifier, importer) => {
+    resolveId: (specifier, importer = projectDirectoryUrl) => {
       if (specifier in virtualModules) {
         return specifier
       }

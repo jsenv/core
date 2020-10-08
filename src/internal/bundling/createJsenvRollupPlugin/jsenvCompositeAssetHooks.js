@@ -1,10 +1,9 @@
 import { basename } from "path"
 import { readFileSync } from "fs"
-import postcss from "postcss"
 import { urlToFileSystemPath, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
+import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
-import { postCssUrlHashPlugin } from "./css/postcss-urlhash-plugin.js"
 import {
   parseHtmlString,
   parseHtmlDocumentRessources,
@@ -20,22 +19,21 @@ export const jsenvCompositeAssetHooks = {
   parse: async (url, source, { emitAssetReference, emitJsReference }) => {
     if (url.endsWith(".html")) {
       const htmlUrl = url
+      const htmlSource = String(source)
       const htmlFileName = basename(urlToFileSystemPath(htmlUrl))
-      const htmlDocument = parseHtmlString(source)
+      const htmlDocument = parseHtmlString(htmlSource)
       const { scripts, styles } = parseHtmlDocumentRessources(htmlDocument)
 
       const nodeUrlMapping = {}
       scripts.forEach((script, index) => {
         if (script.attributes.type === "module" && script.attributes.src) {
           const remoteScriptSrc = script.attributes.src
-          const remoteScriptUrl = resolveUrl(remoteScriptSrc, htmlUrl)
-          emitJsReference(remoteScriptUrl)
+          const remoteScriptUrl = emitJsReference(remoteScriptSrc)
           nodeUrlMapping[remoteScriptUrl] = script
         }
         if (script.attributes.type === "module" && script.text) {
           const inlineScriptId = `${htmlFileName}.${index}.js`
-          const inlineScriptUrl = resolveUrl(inlineScriptId, htmlUrl)
-          emitJsReference(inlineScriptUrl, script.text)
+          const inlineScriptUrl = emitJsReference(inlineScriptId, script.text)
           nodeUrlMapping[inlineScriptUrl] = script
         }
       })
@@ -74,22 +72,27 @@ export const jsenvCompositeAssetHooks = {
     }
 
     if (url.endsWith(".css")) {
-      const result = await postcss([postCssUrlHashPlugin]).process(source, {
-        collectUrls: true,
-        from: urlToFileSystemPath(url),
-      })
+      const cssSource = String(source)
+      const cssUrl = url
+      const { atImports, urlDeclarations } = await parseCssUrls(cssSource, cssUrl)
+      const nodeUrlMapping = {}
 
-      result.messages.forEach(({ type, urlRaw }) => {
-        if (type === "import") {
-          emitAssetReference(urlRaw)
-        }
-        if (type === "asset") {
-          emitAssetReference(urlRaw)
-        }
+      atImports.forEach((atImport) => {
+        const importedCssUrl = emitAssetReference(atImport.specifier)
+        nodeUrlMapping[importedCssUrl] = atImport.urlNode
+      })
+      urlDeclarations.forEach((urlDeclaration) => {
+        const cssAssetUrl = emitAssetReference(urlDeclaration.specifier)
+        nodeUrlMapping[cssAssetUrl] = urlDeclaration.urlNode
       })
 
       return async (dependenciesMapping, { computeFileUrlForCaching }) => {
-        const cssReplaceResult = await replaceCssUrls(source, url, dependenciesMapping)
+        const cssReplaceResult = await replaceCssUrls(cssSource, cssUrl, ({ urlNode }) => {
+          const scriptUrl = Object.keys(nodeUrlMapping).find(
+            (key) => nodeUrlMapping[key] === urlNode,
+          )
+          return dependenciesMapping[scriptUrl]
+        })
         let code = cssReplaceResult.css
         const map = cssReplaceResult.map.toJSON()
         const urlForCaching = computeFileUrlForCaching(url, code)

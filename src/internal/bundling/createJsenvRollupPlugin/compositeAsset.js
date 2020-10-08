@@ -79,8 +79,8 @@ export const createCompositeAssetHandler = (
     const dependencies = []
     let previousJsReference
     const parseReturnValue = await parse(url, assetSource, {
-      emitAssetReference: (assetUrlRaw, assetSource) => {
-        const assetUrl = resolveUrl(assetUrlRaw, url)
+      emitAssetReference: (assetUrlSpecifier, assetSource) => {
+        const assetUrl = resolveUrl(assetUrlSpecifier, url)
         const assetReference = gerOrCreateReference(assetUrl, {
           type: "asset",
           importerUrl: url,
@@ -89,9 +89,10 @@ export const createCompositeAssetHandler = (
         if (assetReference.isConnected()) {
           dependencies.push(assetUrl)
         }
+        return assetUrl
       },
-      emitJsReference: (jsUrlRaw, jsSource) => {
-        const jsUrl = resolveUrl(jsUrlRaw, url)
+      emitJsReference: (jsUrlSpecifier, jsSource) => {
+        const jsUrl = resolveUrl(jsUrlSpecifier, url)
         const jsReference = gerOrCreateReference(jsUrl, {
           type: "js",
           previousJsReference,
@@ -102,6 +103,7 @@ export const createCompositeAssetHandler = (
           previousJsReference = jsReference
           dependencies.push(jsUrl)
         }
+        return jsUrl
       },
     })
     dependenciesMap[url] = dependencies
