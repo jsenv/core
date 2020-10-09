@@ -1,5 +1,6 @@
 import { basename } from "path"
-import { urlToFileSystemPath, resolveUrl, readFile } from "@jsenv/util"
+import { readFile } from "fs"
+import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
@@ -12,7 +13,18 @@ import {
 
 export const jsenvCompositeAssetHooks = {
   load: async (url) => {
-    const source = await readFile(url)
+    // todo: ajouter un param as: 'buffer' dans @jsenv/util
+    // et utiliser readFile de jsenv util plutot.
+    // dans @jsenv/util on authorisera as: 'string', 'json','buffer' avec un defaut sur string
+    const source = await new Promise((resolve, reject) => {
+      readFile(urlToFileSystemPath(url), (error, buffer) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve(buffer)
+        }
+      })
+    })
     return source
   },
   parse: async (url, source, { emitAssetReference, emitJsReference }) => {
@@ -63,11 +75,10 @@ export const jsenvCompositeAssetHooks = {
             )})</script>`
           },
         })
-        const htmlTransformedString = stringifyHtmlDocument(htmlDocument)
-        const code = htmlTransformedString
+        const htmlAfterTransformation = stringifyHtmlDocument(htmlDocument)
         // const code = minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString
         return {
-          code,
+          sourceAfterTransformation: htmlAfterTransformation,
         }
       }
     }
@@ -87,19 +98,19 @@ export const jsenvCompositeAssetHooks = {
         nodeUrlMapping[cssAssetUrl] = urlDeclaration.urlNode
       })
 
-      return async (dependenciesMapping, { computeFileRelativeUrlForBundle }) => {
+      return async (dependenciesMapping, { precomputeFileNameForRollup }) => {
         const cssReplaceResult = await replaceCssUrls(cssSource, cssUrl, ({ urlNode }) => {
           const scriptUrl = Object.keys(nodeUrlMapping).find((key) =>
             isSameCssDocumentUrlNode(nodeUrlMapping[key], urlNode),
           )
           return dependenciesMapping[scriptUrl]
         })
-        let code = cssReplaceResult.css
+        const code = cssReplaceResult.css
         const map = cssReplaceResult.map.toJSON()
-        const fileRelativeUrlForBundle = computeFileRelativeUrlForBundle(url, code)
+        const cssFileNameForRollup = precomputeFileNameForRollup(code)
 
-        map.file = basename(urlToFileSystemPath(fileRelativeUrlForBundle))
-        const cssSourceMapFileUrlRelativeToSource = `${fileRelativeUrlForBundle}.map`
+        map.file = basename(cssFileNameForRollup)
+        const cssSourceMapFileUrlRelativeToSource = `${cssFileNameForRollup}.map`
         // In theory code should never be modified once the url for caching is computed
         // because url for caching depends on file content.
         // There is an exception for sourcemap because we want to update sourcemap.file
@@ -108,11 +119,14 @@ export const jsenvCompositeAssetHooks = {
         // This is totally fine to do that because sourcemap and css file lives togethers
         // so this comment changes nothing regarding cache invalidation and is not important
         // to decide the filename for this css asset.
-        code = setCssSourceMappingUrl(code, cssSourceMapFileUrlRelativeToSource)
-        return {
+        const cssSourceAfterTransformation = setCssSourceMappingUrl(
           code,
+          cssSourceMapFileUrlRelativeToSource,
+        )
+        return {
+          sourceAfterTransformation: cssSourceAfterTransformation,
           map,
-          fileRelativeUrlForBundle,
+          fileNameForRollup: cssFileNameForRollup,
         }
       }
     }

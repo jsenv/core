@@ -1,7 +1,6 @@
 /**
  * a faire
  *
- * - ne pas hash le fichier html + le mettre bien a la racine (pour jsenv on lire entryPointMap)
  * - le fichier map des css bundled doit etre emit pour rollup
  * - tester un aset remap avec importmap
  *
@@ -22,7 +21,6 @@ import {
 import { createLogger } from "@jsenv/logger"
 import { createCompositeAssetHandler } from "../compositeAsset.js"
 import { jsenvCompositeAssetHooks } from "../jsenvCompositeAssetHooks.js"
-import { computeFileRelativeUrlForBundle } from "../computeFileRelativeUrlForBundle.js"
 
 const require = createRequire(import.meta.url)
 
@@ -66,25 +64,23 @@ const generateBundle = async () => {
           }
 
           if (reference.type === "asset") {
-            reference.connect(async ({ transformPromise }) => {
-              let { code, fileRelativeUrlForBundle } = await transformPromise
+            reference.connect(async () => {
+              await reference.getFileNameReadyPromise()
+              const { sourceAfterTransformation, fileNameForRollup } = reference
 
-              if (fileRelativeUrlForBundle === undefined) {
-                fileRelativeUrlForBundle = computeFileRelativeUrlForBundle(reference.url, code)
-              }
               logger.debug(`emit asset for ${shortenUrl(reference.url)}`)
               const rollupReferenceId = emitFile({
                 type: "asset",
-                source: code,
-                fileName: fileRelativeUrlForBundle,
+                source: sourceAfterTransformation,
+                fileName: fileNameForRollup,
               })
-              logger.debug(`${shortenUrl(reference.url)} ready -> ${fileRelativeUrlForBundle}`)
-              return { rollupReferenceId, fileRelativeUrlForBundle }
+              logger.debug(`${shortenUrl(reference.url)} ready -> ${fileNameForRollup}`)
+              return { rollupReferenceId }
             })
           }
 
           if (reference.type === "js") {
-            reference.connect(async ({ transformPromise }) => {
+            reference.connect(async () => {
               const jsRelativeUrl = `./${urlToRelativeUrl(reference.url, projectDirectoryUrl)}`
               const id = jsRelativeUrl
               if (typeof reference.source !== "undefined") {
@@ -107,8 +103,7 @@ const generateBundle = async () => {
                   : {}),
               })
 
-              const { fileRelativeUrlForBundle } = await transformPromise
-              return { rollupReferenceId, fileRelativeUrlForBundle }
+              return { rollupReferenceId }
             })
           }
 
@@ -116,7 +111,9 @@ const generateBundle = async () => {
         },
       })
 
-      await compositeAssetHandler.prepareAssetEntry(inputFileUrl)
+      await compositeAssetHandler.prepareAssetEntry(inputFileUrl, {
+        fileNameForRollup: "index.html",
+      })
     },
 
     resolveId: (specifier, importer = projectDirectoryUrl) => {
@@ -147,13 +144,13 @@ const generateBundle = async () => {
       const importer = importerMapping[id]
 
       if (importer) {
-        const assetReferenceId = await compositeAssetHandler.getAssetReferenceId(id, {
+        const assetReferenceId = await compositeAssetHandler.getAssetReferenceIdForRollup(id, {
           importerUrl: importer,
         })
         return `export default import.meta.ROLLUP_FILE_URL_${assetReferenceId};`
       }
 
-      compositeAssetHandler.getAssetReferenceId(id)
+      compositeAssetHandler.getAssetReferenceIdForRollup(id)
       return { code: "" }
     },
 
@@ -165,7 +162,7 @@ const generateBundle = async () => {
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
-      await compositeAssetHandler.resolveAssetEntries(bundle)
+      await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle)
     },
   }
 

@@ -2,19 +2,19 @@ import { extname, basename } from "path"
 import { createHash } from "crypto"
 import { urlToFileSystemPath } from "@jsenv/util"
 
-export const computeFileRelativeUrlForBundle = (
+export const computeFileNameForRollup = (
   fileUrl,
   fileContent,
   pattern = "assets/[name]-[hash][extname]",
 ) => {
   const filePath = urlToFileSystemPath(fileUrl)
-  const fileRelativeUrlForBundle = renderNamePattern(pattern, {
+  const fileNameForRollup = renderNamePattern(pattern, {
     dirname: () => urlToParentUrl(fileUrl),
     name: () => basename(filePath, extname(filePath)),
     hash: () => generateAssetHash(fileContent),
     extname: () => extname(filePath),
   })
-  return fileRelativeUrlForBundle
+  return fileNameForRollup
 }
 
 const urlToParentUrl = (url) => {
