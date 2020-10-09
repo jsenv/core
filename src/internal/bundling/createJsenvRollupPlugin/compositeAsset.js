@@ -251,14 +251,12 @@ export const createCompositeAssetHandler = (
         if (typeof transformReturnValue === "string") {
           sourceAfterTransformation = transformReturnValue
         } else {
-          // const {
-          //   sourceAfterTransformation,
-          //   // TODO: handle the map (it should end in rollup build)
-          //   // map,
-          // } = transformReturnValue
           sourceAfterTransformation = transformReturnValue.sourceAfterTransformation
           if (transformReturnValue.fileNameForRollup) {
             fileNameForRollup = transformReturnValue.fileNameForRollup
+          }
+          if (transformReturnValue.map) {
+            reference.map = transformReturnValue.map
           }
         }
 

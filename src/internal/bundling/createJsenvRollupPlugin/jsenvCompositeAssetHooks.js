@@ -108,9 +108,10 @@ export const jsenvCompositeAssetHooks = {
         const code = cssReplaceResult.css
         const map = cssReplaceResult.map.toJSON()
         const cssFileNameForRollup = precomputeFileNameForRollup(code)
+        const cssSourceMapFileUrlRelativeToSource = `${cssFileNameForRollup}.map`
 
         map.file = basename(cssFileNameForRollup)
-        const cssSourceMapFileUrlRelativeToSource = `${cssFileNameForRollup}.map`
+
         // In theory code should never be modified once the url for caching is computed
         // because url for caching depends on file content.
         // There is an exception for sourcemap because we want to update sourcemap.file

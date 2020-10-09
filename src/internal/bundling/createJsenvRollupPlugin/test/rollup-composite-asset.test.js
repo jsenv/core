@@ -1,7 +1,6 @@
 /**
  * a faire
  *
- * - le fichier map des css bundled doit etre emit pour rollup
  * - tester un aset remap avec importmap
  *
  */
@@ -66,7 +65,23 @@ const generateBundle = async () => {
           if (reference.type === "asset") {
             reference.connect(async () => {
               await reference.getFileNameReadyPromise()
-              const { sourceAfterTransformation, fileNameForRollup } = reference
+              const { sourceAfterTransformation, fileNameForRollup, map } = reference
+
+              if (map) {
+                const mapFileName = `${fileNameForRollup}.map`
+                logger.debug(`emit asset for ${mapFileName}`)
+                const mapFileUrl = resolveUrl(mapFileName, bundleDirectoryUrl)
+                map.sources = map.sources.map((source) => {
+                  const sourceUrl = resolveUrl(source, reference.url)
+                  const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapFileUrl)
+                  return sourceUrlRelativeToSourceMap
+                })
+                emitFile({
+                  type: "asset",
+                  source: JSON.stringify(map, null, "  "),
+                  fileName: mapFileName,
+                })
+              }
 
               logger.debug(`emit asset for ${shortenUrl(reference.url)}`)
               const rollupReferenceId = emitFile({
