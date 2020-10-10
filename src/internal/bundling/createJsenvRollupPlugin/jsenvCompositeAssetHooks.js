@@ -73,7 +73,7 @@ export const jsenvCompositeAssetHooks = {
     if (url.endsWith(".css")) {
       const cssSource = String(source)
       const cssUrl = url
-      const { atImports } = await parseCssUrls(cssSource, cssUrl)
+      const { atImports, urlDeclarations } = await parseCssUrls(cssSource, cssUrl)
       const nodeUrlMapping = {}
 
       atImports.forEach((atImport) => {

@@ -1,8 +1,20 @@
 /**
  * a faire
  *
+ * - a warning about some node in html
+ * we must have the source from extractSourceLocation properly shown
+ * test also a syntax error in html
+ * - a warning about some node in css
+ * one with @import, one with url()
+ * a css syntax error to see how it goes
+ * - inline js in html
+ * - link css in html
+ * - inline css in html
  * - tester un aset remap avec importmap
- *
+ * - recevoir un systemJsScriptRelativeUrl qu'on ajoutera
+ * au html lorsque le bundle est de type systemjs
+ * (on le mettra inline)
+ * et que si la page html contient une balise script
  */
 
 import { createRequire } from "module"
