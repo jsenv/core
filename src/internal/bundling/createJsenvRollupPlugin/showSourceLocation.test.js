@@ -37,3 +37,52 @@ const e = false;
   4 | const d = true;`.slice(1)
   assert({ actual, expected })
 }
+
+{
+  const actual = showSourceLocation(
+    `const a = false;
+const b = true;
+const c = true;
+const d = true;
+const e = false;`,
+    {
+      column: 7,
+      line: 3,
+      numberOfSurroundingLinesToShow: 10,
+    },
+  )
+  const expected = `
+  1 | const a = false;
+  2 | const b = true;
+> 3 | const c = true;
+            ^
+  4 | const d = true;
+  5 | const e = false;`.slice(1)
+  assert({ actual, expected })
+}
+
+// empty last line is shown
+{
+  const actual = showSourceLocation(
+    `const a = false;
+const b = true;
+const c = true;
+const d = true;
+const e = false;
+`,
+    {
+      column: 1,
+      line: 3,
+      numberOfSurroundingLinesToShow: 10,
+    },
+  )
+  const expected = `
+  1 | const a = false;
+  2 | const b = true;
+> 3 | const c = true;
+      ^
+  4 | const d = true;
+  5 | const e = false;
+  6 | `.slice(1)
+  assert({ actual, expected })
+}
