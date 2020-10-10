@@ -14,7 +14,7 @@ import { require } from "../require.js"
 const parse5 = require("parse5")
 
 export const parseHtmlString = (htmlString) => {
-  return parse5.parse(htmlString)
+  return parse5.parse(htmlString, { sourceCodeLocationInfo: true })
 }
 
 export const stringifyHtmlDocument = (htmlDocument) => {

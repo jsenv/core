@@ -1,6 +1,5 @@
 import { basename } from "path"
-import { readFile } from "fs"
-import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
+import { urlToFileSystemPath, resolveUrl, readFile } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
@@ -13,19 +12,7 @@ import {
 
 export const jsenvCompositeAssetHooks = {
   load: async (url) => {
-    // todo: ajouter un param as: 'buffer' dans @jsenv/util
-    // et utiliser readFile de jsenv util plutot.
-    // dans @jsenv/util on authorisera as: 'string', 'json','buffer' avec un defaut sur string
-    const source = await new Promise((resolve, reject) => {
-      readFile(urlToFileSystemPath(url), (error, buffer) => {
-        if (error) {
-          reject(error)
-        } else {
-          resolve(buffer)
-        }
-      })
-    })
-    return source
+    return readFile(url, { as: "buffer" })
   },
   parse: async (url, source, { emitAssetReference, emitJsReference }) => {
     if (url.endsWith(".html")) {
@@ -86,7 +73,7 @@ export const jsenvCompositeAssetHooks = {
     if (url.endsWith(".css")) {
       const cssSource = String(source)
       const cssUrl = url
-      const { atImports, urlDeclarations } = await parseCssUrls(cssSource, cssUrl)
+      const { atImports } = await parseCssUrls(cssSource, cssUrl)
       const nodeUrlMapping = {}
 
       atImports.forEach((atImport) => {

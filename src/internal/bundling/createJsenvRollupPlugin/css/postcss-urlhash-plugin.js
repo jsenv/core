@@ -1,3 +1,11 @@
+/**
+
+https://github.com/postcss/postcss/blob/master/docs/writing-a-plugin.md
+https://github.com/postcss/postcss/blob/master/docs/guidelines/plugin.md
+https://github.com/postcss/postcss/blob/master/docs/guidelines/runner.md#31-dont-show-js-stack-for-csssyntaxerror
+
+*/
+
 // import postcss from "postcss"
 import valueParser from "postcss-value-parser"
 import { fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
@@ -147,6 +155,7 @@ const declarationNodeContainsUrl = (declarationNode) => {
 const walkUrls = (declarationNode, callback) => {
   const parsed = valueParser(declarationNode.value)
   parsed.walk((node) => {
+    // https://github.com/andyjansson/postcss-functions
     if (isUrlFunctionNode(node)) {
       const { nodes } = node
       const [urlNode] = nodes

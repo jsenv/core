@@ -6,10 +6,19 @@ export const parseCssUrls = async (css, cssFileUrl) => {
   const atImports = []
   const urlDeclarations = []
 
-  const result = await postcss([postCssUrlHashPlugin]).process(css, {
-    collectUrls: true,
-    from: urlToFileSystemPath(cssFileUrl),
-  })
+  let result
+  try {
+    result = await postcss([postCssUrlHashPlugin]).process(css, {
+      collectUrls: true,
+      from: urlToFileSystemPath(cssFileUrl),
+    })
+  } catch (error) {
+    if (error.name === "CssSyntaxError") {
+      console.error(String(error))
+      throw error
+    }
+    throw error
+  }
 
   result.messages.forEach(({ type, specifier, atImportNode, declarationNode, urlNode }) => {
     if (type === "import") {
