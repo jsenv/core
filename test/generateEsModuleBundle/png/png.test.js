@@ -28,14 +28,14 @@ await generateEsModuleBundle({
   },
 })
 
-await assertFilePresence(resolveUrl("./dist/esmodule/assets/jsenv-05ba877d.png", import.meta.url))
+await assertFilePresence(resolveUrl("./dist/esmodule/assets/jsenv-25e95a00.png", import.meta.url))
 
 {
   const { value: actual, serverOrigin } = await browserImportBundle({
     ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = new URL("./assets/jsenv-05ba877d.png", serverOrigin).href
+  const expected = new URL("./assets/jsenv-25e95a00.png", serverOrigin).href
   assert({ actual, expected })
 }
 
@@ -45,6 +45,6 @@ if (SourceMap) {
     ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = new URL("./dist/esmodule/assets/jsenv-05ba877d.png", import.meta.url).href
+  const expected = new URL("./dist/esmodule/assets/jsenv-25e95a00.png", import.meta.url).href
   assert({ actual, expected })
 }

@@ -7,5 +7,6 @@ export const pathnameToExtension = (pathname) => {
   const dotLastIndex = pathname.lastIndexOf(".")
   if (dotLastIndex === -1) return ""
   // if (dotLastIndex === pathname.length - 1) return ""
-  return pathname.slice(dotLastIndex)
+  const extension = pathname.slice(dotLastIndex)
+  return extension
 }
