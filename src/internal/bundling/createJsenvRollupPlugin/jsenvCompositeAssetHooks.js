@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
+import { urlToFileSystemPath } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
@@ -22,27 +22,39 @@ export const jsenvCompositeAssetHooks = {
       const nodeUrlMapping = {}
       scripts.forEach((script, index) => {
         if (script.attributes.type === "module" && script.attributes.src) {
-          const remoteScriptSrc = script.attributes.src
-          const remoteScriptUrl = emitJsReference(remoteScriptSrc)
+          const remoteScriptUrl = emitJsReference({
+            specifier: script.attributes.src,
+            line: script.line,
+            column: script.node,
+          })
           nodeUrlMapping[remoteScriptUrl] = script
         }
         if (script.attributes.type === "module" && script.text) {
-          const inlineScriptId = `${htmlFileName}.${index}.js`
-          const inlineScriptUrl = emitJsReference(inlineScriptId, script.text)
+          const inlineScriptUrl = emitJsReference({
+            specifier: `${htmlFileName}.${index}.js`,
+            line: script.line,
+            column: script.node,
+            source: script.text,
+          })
           nodeUrlMapping[inlineScriptUrl] = script
         }
       })
       styles.forEach((style, index) => {
         if (style.attributes.href) {
-          const remoteStyleHref = style.attributes.href
-          const remoteStyleUrl = resolveUrl(remoteStyleHref, htmlUrl)
-          emitAssetReference(remoteStyleUrl)
+          const remoteStyleUrl = emitAssetReference({
+            specifier: style.attributes.href,
+            line: style.node,
+            column: style,
+          })
           nodeUrlMapping[remoteStyleUrl] = style
         }
         if (style.text) {
-          const inlineStyleId = `${htmlFileName}.${index}.css`
-          const inlineStyleUrl = resolveUrl(inlineStyleId, htmlUrl)
-          emitAssetReference(inlineStyleUrl, style.text)
+          const inlineStyleUrl = emitAssetReference({
+            specifier: `${htmlFileName}.${index}.css`,
+            line: style.node,
+            column: style.node,
+            source: style.text,
+          })
           nodeUrlMapping[inlineStyleUrl] = style
         }
       })
@@ -74,11 +86,19 @@ export const jsenvCompositeAssetHooks = {
       const nodeUrlMapping = {}
 
       atImports.forEach((atImport) => {
-        const importedCssUrl = emitAssetReference(atImport.specifier)
+        const importedCssUrl = emitAssetReference({
+          specifier: atImport.specifier,
+          line: atImport.urlNode,
+          column: atImport.urlNode,
+        })
         nodeUrlMapping[importedCssUrl] = atImport.urlNode
       })
       urlDeclarations.forEach((urlDeclaration) => {
-        const cssAssetUrl = emitAssetReference(urlDeclaration.specifier)
+        const cssAssetUrl = emitAssetReference({
+          specifier: urlDeclaration.specifier,
+          line: urlDeclaration.node,
+          column: urlDeclaration,
+        })
         nodeUrlMapping[cssAssetUrl] = urlDeclaration.urlNode
       })
 

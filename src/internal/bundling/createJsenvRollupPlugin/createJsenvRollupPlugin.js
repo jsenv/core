@@ -44,6 +44,7 @@ import { minifyJs } from "./minifyJs.js"
 import { minifyCss } from "./minifyCss.js"
 import { createCompositeAssetHandler } from "./compositeAsset.js"
 import { jsenvCompositeAssetHooks } from "./jsenvCompositeAssetHooks.js"
+import { showSourceLocation } from "./showSourceLocation.js"
 
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
@@ -101,7 +102,8 @@ export const createJsenvRollupPlugin = async ({
     return false
   }
 
-  const importerMapping = {}
+  const urlImporterMapping = {}
+  const urlSourceMapping = {}
   const virtualModules = {}
 
   let compositeAssetHandler
@@ -123,25 +125,34 @@ export const createJsenvRollupPlugin = async ({
         },
         {
           projectDirectoryUrl,
-          connectReference: (reference) => {
+          connectTarget: (target) => {
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl
             // and ignore them and console.info/debug about remote url (https, http, ...)
-            if (!urlIsInsideOf(reference.url, projectDirectoryUrl)) {
+            const projectUrl = urlToProjectUrl(target.url)
+            if (!projectUrl) {
+              logger.warn(
+                formatExternalFileWarning(target, {
+                  projectDirectoryUrl,
+                  compositeAssetHandler,
+                  urlSourceMapping,
+                  urlToOriginalProjectUrl,
+                }),
+              )
               return { external: true }
             }
 
-            if (reference.type === "asset") {
-              reference.connect(async () => {
-                await reference.getFileNameReadyPromise()
-                const { sourceAfterTransformation, fileNameForRollup, map } = reference
+            if (target.type === "asset") {
+              target.connect(async () => {
+                await target.getFileNameReadyPromise()
+                const { sourceAfterTransformation, fileNameForRollup, map } = target
 
                 if (map) {
                   const mapFileName = `${fileNameForRollup}.map`
                   logger.debug(`emit asset for ${mapFileName}`)
                   const mapFileUrl = resolveUrl(mapFileName, bundleDirectoryUrl)
                   map.sources = map.sources.map((source) => {
-                    const sourceUrl = resolveUrl(source, reference.url)
+                    const sourceUrl = resolveUrl(source, target.url)
                     const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapFileUrl)
                     return sourceUrlRelativeToSourceMap
                   })
@@ -152,36 +163,33 @@ export const createJsenvRollupPlugin = async ({
                   })
                 }
 
-                logger.debug(`emit asset for ${shortenUrl(reference.url)}`)
+                logger.debug(`emit asset for ${shortenUrl(target.url)}`)
                 const rollupReferenceId = emitFile({
                   type: "asset",
                   source: sourceAfterTransformation,
                   fileName: fileNameForRollup,
                 })
-                logger.debug(`${shortenUrl(reference.url)} ready -> ${fileNameForRollup}`)
+                logger.debug(`${shortenUrl(target.url)} ready -> ${fileNameForRollup}`)
                 return { rollupReferenceId }
               })
             }
 
-            if (reference.type === "js") {
-              reference.connect(async () => {
-                const jsRelativeUrl = `./${urlToRelativeUrl(reference.url, projectDirectoryUrl)}`
+            if (target.type === "js") {
+              target.connect(async () => {
+                const jsRelativeUrl = `./${urlToProjectRelativeUrl(target.url)}`
                 const id = jsRelativeUrl
-                if (typeof reference.source !== "undefined") {
-                  virtualModules[id] = reference.source
+                if (typeof target.source !== "undefined") {
+                  virtualModules[id] = target.source
                 }
 
-                logger.debug(`emit chunk for ${shortenUrl(reference.url)}`)
+                logger.debug(`emit chunk for ${shortenUrl(target.url)}`)
                 const rollupReferenceId = emitFile({
                   type: "chunk",
                   id,
-                  ...(reference.previousJsReference
+                  ...(target.previousJsReference
                     ? {
                         implicitlyLoadedAfterOneOf: [
-                          `./${urlToRelativeUrl(
-                            reference.previousJsReference.url,
-                            projectDirectoryUrl,
-                          )}`,
+                          `./${urlToProjectRelativeUrl(target.previousJsReference.url)}`,
                         ],
                       }
                     : {}),
@@ -205,7 +213,7 @@ export const createJsenvRollupPlugin = async ({
           // const chunkBundledFileUrl = resolveUrl(chunkFileRelativeUrl, bundleDirectoryUrl)
 
           if (!chunkFileRelativeUrl.endsWith(".html")) {
-            this.emitFile({
+            emitFile({
               type: "chunk",
               id: chunkFileRelativeUrl,
               fileName: `${key}${bundleDefaultExtension || extname(chunkFileRelativeUrl)}`,
@@ -253,8 +261,12 @@ export const createJsenvRollupPlugin = async ({
         defaultExtension: importDefaultExtension,
       })
 
+      if (importUrl.slice(4).includes("https:")) {
+        debugger
+      }
+
       if (importer !== projectDirectoryUrl) {
-        importerMapping[importUrl] = importer
+        urlImporterMapping[importUrl] = importer
       }
 
       // keep external url intact
@@ -276,26 +288,9 @@ export const createJsenvRollupPlugin = async ({
       const moduleInfo = this.getModuleInfo(url)
 
       logger.debug(`loads ${url}`)
-      const { responseUrl, contentRaw, content = "", map } = await loadModule(
-        url,
-        moduleInfo,
-        async (assetFileContent) => {
-          const sourceFileUrl = urlToSourceFileUrl(url)
-          if (!sourceFileUrl) {
-            throw new Error(`a file outside project cannot emit an asset.
---- file url ---
-${url}
---- project directory url ---
-${projectDirectoryUrl}`)
-          }
+      const { responseUrl, contentRaw, content = "", map } = await loadModule(url, moduleInfo)
 
-          const assetReferenceId = await compositeAssetHandler.getAssetReferenceIdForRollup(url, {
-            source: assetFileContent,
-            importerUrl: importerMapping[url],
-          })
-          return assetReferenceId
-        },
-      )
+      urlSourceMapping[url] = contentRaw
 
       saveModuleContent(responseUrl, {
         content,
@@ -328,10 +323,10 @@ ${projectDirectoryUrl}`)
 
       options.sourcemapPathTransform = (relativePath) => {
         const url = relativePathToUrl(relativePath)
-        const fileUrl = urlToFileUrl(url)
+        const projectUrl = urlToProjectUrl(url)
 
-        if (fileUrl) {
-          relativePath = urlToRelativeUrl(fileUrl, bundleSourcemapFileUrl)
+        if (projectUrl) {
+          relativePath = urlToRelativeUrl(projectUrl, bundleSourcemapFileUrl)
           return relativePath
         }
         if (url.startsWith(projectDirectoryUrl)) {
@@ -384,6 +379,14 @@ ${projectDirectoryUrl}`)
     },
 
     async generateBundle(outputOptions, bundle) {
+      // malheureusement rollup ne permet pas de savoir lorsqu'un chunk
+      // a fini d'etre résolu (parsing des imports statiques et dynamiques recursivement)
+      // donc lorsque le build se termine on va indiquer
+      // aux assets faisant référence a ces chunk js qu'ils sont terminés
+      // et donc les assets peuvent connaitre le nom du chunk
+      // et mettre a jour leur dépendance vers ce fichier js
+      await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle)
+
       logger.info(formatBundleGeneratedLog(bundle))
 
       if (manifestFile) {
@@ -423,7 +426,7 @@ ${projectDirectoryUrl}`)
   }
 
   // take any url string and try to return a file url (an url inside projectDirectoryUrl)
-  const urlToFileUrl = (url) => {
+  const urlToProjectUrl = (url) => {
     if (url.startsWith(`${projectDirectoryUrl}/`)) {
       return url
     }
@@ -433,6 +436,14 @@ ${projectDirectoryUrl}`)
     }
 
     return null
+  }
+
+  const urlToProjectRelativeUrl = (url) => {
+    const projectUrl = urlToProjectUrl(url)
+    if (!projectUrl) {
+      return null
+    }
+    return urlToRelativeUrl(projectUrl, projectDirectoryUrl)
   }
 
   // take any url string and try to return the corresponding remote url (an url inside compileServerOrigin)
@@ -450,27 +461,27 @@ ${projectDirectoryUrl}`)
 
   // take any url string and try to return a file url inside project directory url
   // prefer the source url if the url is inside compile directory
-  const urlToSourceFileUrl = (url) => {
-    const fileUrl = urlToFileUrl(url)
-    if (!fileUrl) {
+  const urlToOriginalProjectUrl = (url) => {
+    const projectUrl = urlToProjectUrl(url)
+    if (!projectUrl) {
       return null
     }
 
-    if (!urlIsInsideOf(fileUrl, compileDirectoryUrl)) {
-      return fileUrl
+    if (!urlIsInsideOf(projectUrl, compileDirectoryUrl)) {
+      return projectUrl
     }
 
-    const relativeUrl = urlToRelativeUrl(fileUrl, compileDirectoryUrl)
+    const relativeUrl = urlToRelativeUrl(projectUrl, compileDirectoryUrl)
     return resolveUrl(relativeUrl, projectDirectoryUrl)
   }
 
   const saveModuleContent = (moduleUrl, value) => {
     const remoteUrl = urlToRemoteUrl(moduleUrl)
-    const url = urlToFileUrl(remoteUrl || moduleUrl) || moduleUrl
+    const url = urlToProjectUrl(remoteUrl || moduleUrl) || moduleUrl
     moduleContentMap[url] = value
   }
 
-  const loadModule = async (moduleUrl, moduleInfo, emitAsset) => {
+  const loadModule = async (moduleUrl, moduleInfo) => {
     if (moduleUrl in virtualModules) {
       const codeInput = virtualModules[moduleUrl]
 
@@ -489,25 +500,34 @@ ${projectDirectoryUrl}`)
       }
     }
 
+    const generateJavaScriptForAssetSource = async (assetSource) => {
+      return compositeAssetHandler.generateJavaScriptForAssetImport(moduleUrl, {
+        source: assetSource,
+        importerUrl: urlImporterMapping[moduleUrl],
+        // importerSource: urlSourceMapping[urlImporterMapping[moduleUrl]],
+      })
+    }
+
     const moduleResponse = await fetchModule(moduleUrl)
     const contentType = moduleResponse.headers["content-type"] || ""
-    const moduleText = await moduleResponse.text()
+    const moduleResponseBodyAsBuffer = Buffer.from(await moduleResponse.arrayBuffer())
 
     const commonData = {
       responseUrl: moduleResponse.url,
-      contentRaw: moduleText,
+      contentRaw: moduleResponseBodyAsBuffer,
     }
 
     // keep this in sync with module-registration.js
     if (contentType === "application/javascript" || contentType === "text/javascript") {
+      const js = String(moduleResponseBodyAsBuffer)
       return {
         ...commonData,
-        content: moduleText,
+        content: js,
         map: await fetchSourcemap({
           cancellationToken,
           logger,
           moduleUrl,
-          moduleContent: moduleText,
+          moduleContent: js,
         }),
       }
     }
@@ -516,53 +536,51 @@ ${projectDirectoryUrl}`)
       // there is no need to minify the json string
       // because it becomes valid javascript
       // that will be minified by minifyJs inside renderChunk
-      const jsonString = moduleText
+      const json = String(moduleResponseBodyAsBuffer)
       return {
         ...commonData,
-        content: `export default ${jsonString}`,
+        content: `export default ${json}`,
       }
     }
 
     if (contentType === "text/html") {
       if (moduleInfo.isEntry) {
+        // better emit a warning an throw an error there
         return {
           content: "",
         }
       }
-
-      const htmlString = minify ? minifyHtml(htmlString, minifyHtmlOptions) : moduleText
-      const referenceId = await emitAsset(htmlString)
+      const html = String(moduleResponseBodyAsBuffer)
+      const htmlTransformed = minify ? minifyHtml(html, minifyHtmlOptions) : html
       return {
         ...commonData,
-        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
+        content: await generateJavaScriptForAssetSource(htmlTransformed),
       }
     }
 
     if (contentType === "text/css") {
-      const cssString = minify ? minifyCss(moduleText, minifyCssOptions) : moduleText
-      const referenceId = await emitAsset(cssString)
+      const css = String(moduleResponseBodyAsBuffer)
+      const cssTransformed = minify ? minifyCss(css, minifyCssOptions) : css
       return {
         ...commonData,
-        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
+        content: await generateJavaScriptForAssetSource(cssTransformed),
       }
     }
 
     if (contentType === "image/svg+xml") {
       // could also benefit of minification https://github.com/svg/svgo
-      const svgString = moduleText
-      const referenceId = await emitAsset(svgString)
+      const svg = String(moduleResponseBodyAsBuffer)
       return {
         ...commonData,
-        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
+        content: await generateJavaScriptForAssetSource(svg),
       }
     }
 
     if (contentType.startsWith("text/")) {
-      const textString = moduleText
-      const referenceId = await emitAsset(textString)
+      const text = String(moduleResponseBodyAsBuffer)
       return {
         ...commonData,
-        content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
+        content: await generateJavaScriptForAssetSource(text),
       }
     }
 
@@ -571,14 +589,16 @@ ${projectDirectoryUrl}`)
 ${contentType}
 --- module url ---
 ${moduleUrl}`)
-    const referenceId = await emitAsset(Buffer.from(moduleText))
     return {
       ...commonData,
-      content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
+      content: await generateJavaScriptForAssetSource(moduleResponseBodyAsBuffer),
     }
   }
 
   const fetchModule = async (moduleUrl) => {
+    if (moduleUrl.slice(4).includes("https:")) {
+      debugger
+    }
     const response = await fetchUrl(moduleUrl, {
       cancellationToken,
       ignoreHttpsError: true,
@@ -606,6 +626,37 @@ ${moduleUrl}`)
       }
     },
   }
+}
+
+const formatExternalFileWarning = (
+  target,
+  { projectDirectoryUrl, compositeAssetHandler, urlSourceMapping, urlToOriginalProjectUrl },
+) => {
+  return `Ignoring reference a file outside project directory.
+${showTargetFirstReferenceSourceLocation(target, {
+  urlToOriginalProjectUrl,
+  urlToSource: (url) => compositeAssetHandler.getFileSource(url) || urlSourceMapping[url],
+})}
+--- reference url ---
+${target.url}
+--- project directory url ---
+${projectDirectoryUrl}`
+}
+
+const showTargetFirstReferenceSourceLocation = (
+  target,
+  { urlToOriginalProjectUrl, urlToSource },
+) => {
+  const firstReference = target.references[0]
+  return `${urlToOriginalProjectUrl(firstReference.url)}:${firstReference.line}:${
+    firstReference.column
+  }
+
+${showSourceLocation(urlToSource(firstReference.url), {
+  line: firstReference.line,
+  column: firstReference.column,
+})}
+`
 }
 
 // const urlToRollupId = (url, { compileServerOrigin, projectDirectoryUrl }) => {
