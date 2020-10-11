@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { urlToFileSystemPath, resolveUrl, readFile } from "@jsenv/util"
+import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
@@ -11,9 +11,6 @@ import {
 } from "../../compiling/compileHtml.js"
 
 export const jsenvCompositeAssetHooks = {
-  load: async (url) => {
-    return readFile(url, { as: "buffer" })
-  },
   parse: async (url, source, { emitAssetReference, emitJsReference }) => {
     if (url.endsWith(".html")) {
       const htmlUrl = url

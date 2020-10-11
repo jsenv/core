@@ -1,3 +1,22 @@
+/**
+ * a faire
+ *
+ * - inline js in html
+ * - link css in html
+ * - inline css in html
+ * - tester un aset remap avec importmap
+ * - recevoir un systemJsScriptRelativeUrl qu'on ajoutera
+ * au html lorsque le bundle est de type systemjs
+ * (on le mettra inline)
+ * et que si la page html contient une balise script
+ * - a warning about some node in html
+ * we must have the source from extractSourceLocation properly shown
+ * test also a syntax error in html
+ * - a warning about some node in css
+ * one with @import, one with url()
+ * a css syntax error to see how it goes
+ */
+
 /* eslint-disable import/max-dependencies */
 import { extname } from "path"
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
@@ -18,13 +37,13 @@ import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
 import { transformJs } from "../../compiling/js-compilation-service/transformJs.js"
 import { findAsyncPluginNameInBabelPluginMap } from "../../compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 
-import { createAssetHandler } from "./createAssetHandler.js"
-import { extractFromHtml } from "./extractFromHtml.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { minifyHtml } from "./minifyHtml.js"
 import { minifyJs } from "./minifyJs.js"
 import { minifyCss } from "./minifyCss.js"
+import { createCompositeAssetHandler } from "./compositeAsset.js"
+import { jsenvCompositeAssetHooks } from "./jsenvCompositeAssetHooks.js"
 
 const STATIC_COMPILE_SERVER_AUTHORITY = "//jsenv.com"
 
@@ -54,7 +73,7 @@ export const createJsenvRollupPlugin = async ({
   // https://github.com/kangax/html-minifier#options-quick-reference
   minifyHtmlOptions,
   manifestFile,
-  systemJsScript = { src: "/node_modules/systemjs/dist/s.min.js" },
+  // systemJsFileUrl = "/node_modules/systemjs/dist/s.min.js",
 
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
@@ -100,14 +119,101 @@ export const createJsenvRollupPlugin = async ({
     return false
   }
 
+  const importerMapping = {}
   const virtualModules = {}
-  const assetFinalizers = []
-  const assetHandler = createAssetHandler(projectDirectoryUrl)
 
+  let compositeAssetHandler
+  let emitFile = () => {}
   const jsenvRollupPlugin = {
     name: "jsenv",
 
     async buildStart() {
+      emitFile = (...args) => this.emitFile(...args)
+      compositeAssetHandler = createCompositeAssetHandler(
+        {
+          ...jsenvCompositeAssetHooks,
+          load: async (url) => {
+            const moduleResponse = await fetchModule(url)
+            // const contentType = moduleResponse.headers["content-type"] || ""
+            const responseBodyAsArrayBuffer = await moduleResponse.arrayBuffer()
+            return Buffer.from(responseBodyAsArrayBuffer)
+          },
+        },
+        {
+          projectDirectoryUrl,
+          connectReference: (reference) => {
+            // ignore url outside project directory
+            // a better version would console.warn about file url outside projectDirectoryUrl
+            // and ignore them and console.info/debug about remote url (https, http, ...)
+            if (!urlIsInsideOf(reference.url, projectDirectoryUrl)) {
+              return { external: true }
+            }
+
+            if (reference.type === "asset") {
+              reference.connect(async () => {
+                await reference.getFileNameReadyPromise()
+                const { sourceAfterTransformation, fileNameForRollup, map } = reference
+
+                if (map) {
+                  const mapFileName = `${fileNameForRollup}.map`
+                  logger.debug(`emit asset for ${mapFileName}`)
+                  const mapFileUrl = resolveUrl(mapFileName, bundleDirectoryUrl)
+                  map.sources = map.sources.map((source) => {
+                    const sourceUrl = resolveUrl(source, reference.url)
+                    const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapFileUrl)
+                    return sourceUrlRelativeToSourceMap
+                  })
+                  emitFile({
+                    type: "asset",
+                    source: JSON.stringify(map, null, "  "),
+                    fileName: mapFileName,
+                  })
+                }
+
+                logger.debug(`emit asset for ${shortenUrl(reference.url)}`)
+                const rollupReferenceId = emitFile({
+                  type: "asset",
+                  source: sourceAfterTransformation,
+                  fileName: fileNameForRollup,
+                })
+                logger.debug(`${shortenUrl(reference.url)} ready -> ${fileNameForRollup}`)
+                return { rollupReferenceId }
+              })
+            }
+
+            if (reference.type === "js") {
+              reference.connect(async () => {
+                const jsRelativeUrl = `./${urlToRelativeUrl(reference.url, projectDirectoryUrl)}`
+                const id = jsRelativeUrl
+                if (typeof reference.source !== "undefined") {
+                  virtualModules[id] = reference.source
+                }
+
+                logger.debug(`emit chunk for ${shortenUrl(reference.url)}`)
+                const rollupReferenceId = emitFile({
+                  type: "chunk",
+                  id,
+                  ...(reference.previousJsReference
+                    ? {
+                        implicitlyLoadedAfterOneOf: [
+                          `./${urlToRelativeUrl(
+                            reference.previousJsReference.url,
+                            projectDirectoryUrl,
+                          )}`,
+                        ],
+                      }
+                    : {}),
+                })
+
+                return { rollupReferenceId }
+              })
+            }
+
+            return null
+          },
+        },
+      )
+
       // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
       // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
       await Promise.all(
@@ -125,72 +231,8 @@ export const createJsenvRollupPlugin = async ({
             return
           }
 
-          const htmlFileUrl = chunkFileUrl
-          const { scriptsFromHtml, generateHtml } = await extractFromHtml(htmlFileUrl)
-
-          let previousScriptId
-          const scriptReferences = []
-          scriptsFromHtml.forEach((script) => {
-            if (script.type === "remote") {
-              if (!urlIsInsideOf(script.url, projectDirectoryUrl)) {
-                logger.debug(
-                  `found external remote script ${script.src} in ${chunkFileRelativeUrl} -> ignored`,
-                )
-                return
-              }
-
-              logger.debug(
-                `found remote script ${script.src} in ${chunkFileRelativeUrl} -> emit chunk`,
-              )
-              const remoteScriptRelativeUrl = `./${urlToRelativeUrl(
-                script.url,
-                projectDirectoryUrl,
-              )}`
-              const remoteScriptId = remoteScriptRelativeUrl
-              const remoteScriptReference = this.emitFile({
-                type: "chunk",
-                id: remoteScriptId,
-                ...(previousScriptId ? { implicitlyLoadedAfterOneOf: [previousScriptId] } : {}),
-              })
-              previousScriptId = remoteScriptId
-              scriptReferences.push(remoteScriptReference)
-            }
-            if (script.type === "inline") {
-              logger.debug(
-                `inline script ${script.id} found in ${chunkFileRelativeUrl} -> emit chunk`,
-              )
-
-              const inlineScriptRelativeUrl = `./${urlToRelativeUrl(
-                script.url,
-                projectDirectoryUrl,
-              )}`
-              const inlineScriptId = inlineScriptRelativeUrl
-              virtualModules[inlineScriptId] = script.content
-              const inlineScriptReference = this.emitFile({
-                type: "chunk",
-                id: inlineScriptId,
-                ...(previousScriptId ? { implicitlyLoadedAfterOneOf: [previousScriptId] } : {}),
-              })
-              previousScriptId = inlineScriptId
-              scriptReferences.push(inlineScriptReference)
-            }
-          })
-
-          assetFinalizers.push((rollup) => {
-            const htmlFileContent = generateHtml({
-              importMapFileUrl: resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl),
-              systemJsScript,
-              resolveScriptUrl: (script) => {
-                const scriptReferenceId = scriptReferences[scriptsFromHtml.indexOf(script)]
-                return rollup.getFileName(scriptReferenceId)
-              },
-            })
-            const htmlFileName = key.endsWith(".html") ? key : `${key}.html`
-            rollup.emitFile({
-              type: "asset",
-              fileName: htmlFileName,
-              source: htmlFileContent,
-            })
+          await compositeAssetHandler.prepareAssetEntry(chunkFileUrl, {
+            fileNameForRollup: key.endsWith(".html") ? key : `${key}.html`,
           })
         }),
       )
@@ -228,6 +270,16 @@ export const createJsenvRollupPlugin = async ({
         importMap,
         defaultExtension: importDefaultExtension,
       })
+
+      if (importer !== projectDirectoryUrl) {
+        importerMapping[importUrl] = importer
+      }
+
+      // keep external url intact
+      if (!urlIsInsideOf(importUrl, compileServerOrigin)) {
+        return { id: specifier, external: true }
+      }
+
       // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
       logger.debug(`${specifier} imported by ${importer} resolved to ${importUrl}`)
       return importUrl
@@ -247,7 +299,7 @@ export const createJsenvRollupPlugin = async ({
       const { responseUrl, contentRaw, content = "", map } = await loadModule(
         url,
         moduleInfo,
-        (assetFileContent) => {
+        async (assetFileContent) => {
           if (!remoteUrl) {
             throw new Error(`${url} cannot emit asset`)
           }
@@ -261,7 +313,14 @@ ${url}
 ${projectDirectoryUrl}`)
           }
 
-          return assetHandler.emitAsset(this, { assetFileUrl: sourceFileUrl, assetFileContent })
+          const assetReferenceId = await compositeAssetHandler.getAssetReferenceIdForRollup(
+            urlForRollup,
+            {
+              source: assetFileContent,
+              importerUrl: importerMapping[urlForRollup],
+            },
+          )
+          return assetReferenceId
         },
       )
 
@@ -354,10 +413,6 @@ ${projectDirectoryUrl}`)
     },
 
     async generateBundle(outputOptions, bundle) {
-      assetFinalizers.forEach((fn) => {
-        fn(this)
-      })
-
       logger.info(formatBundleGeneratedLog(bundle))
 
       if (manifestFile) {
@@ -379,6 +434,7 @@ ${projectDirectoryUrl}`)
       }
     },
 
+    // ptet transformer ceci en renderChunk
     async writeBundle(options, bundle) {
       if (detectAndTransformIfNeededAsyncInsertedByRollup) {
         await transformAsyncInsertedByRollup({
@@ -526,7 +582,7 @@ ${projectDirectoryUrl}`)
       }
 
       const htmlString = minify ? minifyHtml(htmlString, minifyHtmlOptions) : moduleText
-      const referenceId = emitAsset(htmlString)
+      const referenceId = await emitAsset(htmlString)
       return {
         ...commonData,
         content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
@@ -535,7 +591,7 @@ ${projectDirectoryUrl}`)
 
     if (contentType === "text/css") {
       const cssString = minify ? minifyCss(moduleText, minifyCssOptions) : moduleText
-      const referenceId = emitAsset(cssString)
+      const referenceId = await emitAsset(cssString)
       return {
         ...commonData,
         content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
@@ -545,7 +601,7 @@ ${projectDirectoryUrl}`)
     if (contentType === "image/svg+xml") {
       // could also benefit of minification https://github.com/svg/svgo
       const svgString = moduleText
-      const referenceId = emitAsset(svgString)
+      const referenceId = await emitAsset(svgString)
       return {
         ...commonData,
         content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
@@ -554,7 +610,7 @@ ${projectDirectoryUrl}`)
 
     if (contentType.startsWith("text/")) {
       const textString = moduleText
-      const referenceId = emitAsset(textString)
+      const referenceId = await emitAsset(textString)
       return {
         ...commonData,
         content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
@@ -566,7 +622,7 @@ ${projectDirectoryUrl}`)
 ${contentType}
 --- module url ---
 ${moduleUrl}`)
-    const referenceId = emitAsset(Buffer.from(moduleText))
+    const referenceId = await emitAsset(Buffer.from(moduleText))
     return {
       ...commonData,
       content: `export default import.meta.ROLLUP_FILE_URL_${referenceId};`,
@@ -585,6 +641,12 @@ ${moduleUrl}`)
     }
 
     return response
+  }
+
+  const shortenUrl = (url) => {
+    return urlIsInsideOf(url, projectDirectoryUrl)
+      ? urlToRelativeUrl(url, projectDirectoryUrl)
+      : url
   }
 
   return {
