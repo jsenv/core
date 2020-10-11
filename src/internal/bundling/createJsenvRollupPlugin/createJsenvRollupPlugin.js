@@ -45,8 +45,6 @@ import { minifyCss } from "./minifyCss.js"
 import { createCompositeAssetHandler } from "./compositeAsset.js"
 import { jsenvCompositeAssetHooks } from "./jsenvCompositeAssetHooks.js"
 
-const STATIC_COMPILE_SERVER_AUTHORITY = "//jsenv.com"
-
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
   logger,
@@ -93,23 +91,7 @@ export const createJsenvRollupPlugin = async ({
   const importMapRaw = await importMapFileResponse.json()
   logger.debug(`importmap file fetched from ${importMapFileRemoteUrl}`)
 
-  // use a fake and predictable compile server origin
-  // because rollup will check the dependencies url
-  // when computing the file hash
-  // see https://github.com/rollup/rollup/blob/d6131378f9481a442aeaa6d4e608faf3303366dc/src/Chunk.ts#L795
-  // this way file hash remains the same when file content does not change
-  const compileServerOriginForRollup = String(
-    new URL(STATIC_COMPILE_SERVER_AUTHORITY, compileServerOrigin),
-  ).slice(0, -1)
-  const compileDirectoryRemoteUrlForRollup = resolveDirectoryUrl(
-    compileDirectoryRelativeUrl,
-    compileServerOriginForRollup,
-  )
-  const importMapFileRemoteUrlForRollup = resolveUrl(
-    importMapFileRelativeUrl,
-    compileDirectoryRemoteUrlForRollup,
-  )
-  const importMap = normalizeImportMap(importMapRaw, importMapFileRemoteUrlForRollup)
+  const importMap = normalizeImportMap(importMapRaw, importMapFileRemoteUrl)
 
   const nativeModulePredicate = (specifier) => {
     if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
@@ -241,9 +223,9 @@ export const createJsenvRollupPlugin = async ({
     resolveId(specifier, importer) {
       if (importer === undefined) {
         if (specifier.endsWith(".html")) {
-          importer = compileServerOriginForRollup
+          importer = compileServerOrigin
         } else {
-          importer = compileDirectoryRemoteUrlForRollup
+          importer = compileDirectoryRemoteUrl
         }
       }
 
@@ -290,21 +272,15 @@ export const createJsenvRollupPlugin = async ({
 
     // },
 
-    async load(urlForRollup) {
-      const moduleInfo = this.getModuleInfo(urlForRollup)
-      const remoteUrl = urlToRemoteUrl(urlForRollup)
-      const url = remoteUrl || urlForRollup
+    async load(url) {
+      const moduleInfo = this.getModuleInfo(url)
 
       logger.debug(`loads ${url}`)
       const { responseUrl, contentRaw, content = "", map } = await loadModule(
         url,
         moduleInfo,
         async (assetFileContent) => {
-          if (!remoteUrl) {
-            throw new Error(`${url} cannot emit asset`)
-          }
-
-          const sourceFileUrl = urlToSourceFileUrl(remoteUrl)
+          const sourceFileUrl = urlToSourceFileUrl(url)
           if (!sourceFileUrl) {
             throw new Error(`a file outside project cannot emit an asset.
 --- file url ---
@@ -313,29 +289,25 @@ ${url}
 ${projectDirectoryUrl}`)
           }
 
-          const assetReferenceId = await compositeAssetHandler.getAssetReferenceIdForRollup(
-            urlForRollup,
-            {
-              source: assetFileContent,
-              importerUrl: importerMapping[urlForRollup],
-            },
-          )
+          const assetReferenceId = await compositeAssetHandler.getAssetReferenceIdForRollup(url, {
+            source: assetFileContent,
+            importerUrl: importerMapping[url],
+          })
           return assetReferenceId
         },
       )
 
-      const responseUrlForRollup = urlToRollupUrl(responseUrl) || responseUrl
-      saveModuleContent(responseUrlForRollup, {
+      saveModuleContent(responseUrl, {
         content,
         contentRaw,
       })
       // handle redirection
-      if (responseUrlForRollup !== urlForRollup) {
-        saveModuleContent(urlForRollup, {
+      if (responseUrl !== url) {
+        saveModuleContent(url, {
           content,
           contentRaw,
         })
-        redirectionMap[urlForRollup] = responseUrlForRollup
+        redirectionMap[url] = responseUrl
       }
 
       return { code: content, map }
@@ -355,11 +327,10 @@ ${projectDirectoryUrl}`)
       // options.sourcemapFile = bundleSourcemapFileUrl
 
       options.sourcemapPathTransform = (relativePath) => {
-        const url = relativePathToUrlForRollup(relativePath)
+        const url = relativePathToUrl(relativePath)
+        const fileUrl = urlToFileUrl(url)
 
-        if (url.startsWith(`${compileServerOriginForRollup}/`)) {
-          const relativeUrl = url.slice(`${compileServerOriginForRollup}/`.length)
-          const fileUrl = `${projectDirectoryUrl}${relativeUrl}`
+        if (fileUrl) {
           relativePath = urlToRelativeUrl(fileUrl, bundleSourcemapFileUrl)
           return relativePath
         }
@@ -370,7 +341,7 @@ ${projectDirectoryUrl}`)
         return url
       }
 
-      const relativePathToUrlForRollup = (relativePath) => {
+      const relativePathToUrl = (relativePath) => {
         const rollupUrl = resolveUrl(relativePath, bundleSourcemapFileUrl)
         let url
 
@@ -451,20 +422,6 @@ ${projectDirectoryUrl}`)
     },
   }
 
-  // take any url string and return url used for rollup
-  const urlToRollupUrl = (url) => {
-    if (url.startsWith(`${compileServerOriginForRollup}/`)) {
-      return url
-    }
-
-    const remoteUrl = urlToRemoteUrl(url)
-    if (!remoteUrl) {
-      return null
-    }
-
-    return `${compileServerOriginForRollup}/${url.slice(`${compileServerOrigin}/`.length)}`
-  }
-
   // take any url string and try to return a file url (an url inside projectDirectoryUrl)
   const urlToFileUrl = (url) => {
     if (url.startsWith(`${projectDirectoryUrl}/`)) {
@@ -475,10 +432,6 @@ ${projectDirectoryUrl}`)
       return `${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`
     }
 
-    if (url.startsWith(`${compileServerOriginForRollup}/`)) {
-      return `${projectDirectoryUrl}${url.slice(`${compileServerOriginForRollup}/`.length)}`
-    }
-
     return null
   }
 
@@ -486,10 +439,6 @@ ${projectDirectoryUrl}`)
   const urlToRemoteUrl = (url) => {
     if (url.startsWith(`${compileServerOrigin}/`)) {
       return url
-    }
-
-    if (url.startsWith(`${compileServerOriginForRollup}/`)) {
-      return `${compileServerOrigin}/${url.slice(`${compileServerOriginForRollup}/`.length)}`
     }
 
     if (url.startsWith(`${projectDirectoryUrl}/`)) {
