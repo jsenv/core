@@ -28,15 +28,15 @@ export const transformJs = async ({
   if (typeof babelPluginMap !== "object") {
     throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`)
   }
-  if (typeof code !== "string") {
-    throw new TypeError(`code must be a string, got ${code}`)
+  if (typeof code === "undefined") {
+    throw new TypeError(`code missing, received ${code}`)
   }
   if (typeof url !== "string") {
     throw new TypeError(`url must be a string, got ${url}`)
   }
 
   const { inputCode, inputMap } = await computeInputCodeAndInputMap({
-    code,
+    code: String(code),
     url,
     urlAfterTransform,
     map,
