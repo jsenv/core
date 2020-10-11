@@ -1,5 +1,4 @@
 import { basename } from "path"
-import { urlToFileSystemPath } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
@@ -9,13 +8,15 @@ import {
   transformHtmlDocumentModuleScripts,
   stringifyHtmlDocument,
 } from "../../compiling/compileHtml.js"
+import { urlToPathname } from "./urlToPathname.js"
+import { pathnameToBasename } from "./pathnameToBasename.js"
 
 export const jsenvCompositeAssetHooks = {
   parse: async (url, source, { emitAssetReference, emitJsReference }) => {
     if (url.endsWith(".html")) {
       const htmlUrl = url
       const htmlSource = String(source)
-      const htmlFileName = basename(urlToFileSystemPath(htmlUrl))
+      const htmlBasename = pathnameToBasename(urlToPathname(htmlUrl))
       const htmlDocument = parseHtmlString(htmlSource)
       const { scripts, styles } = parseHtmlDocumentRessources(htmlDocument)
 
@@ -24,16 +25,16 @@ export const jsenvCompositeAssetHooks = {
         if (script.attributes.type === "module" && script.attributes.src) {
           const remoteScriptUrl = emitJsReference({
             specifier: script.attributes.src,
-            line: script.line,
-            column: script.node,
+            line: script.node.sourceCodeLocation.startLine,
+            column: script.node.sourceCodeLocation.startCol,
           })
           nodeUrlMapping[remoteScriptUrl] = script
         }
         if (script.attributes.type === "module" && script.text) {
           const inlineScriptUrl = emitJsReference({
-            specifier: `${htmlFileName}.${index}.js`,
-            line: script.line,
-            column: script.node,
+            specifier: `${htmlBasename}.${index}.js`,
+            line: script.node.sourceCodeLocation.startLine,
+            column: script.node.sourceCodeLocation.startCol,
             source: script.text,
           })
           nodeUrlMapping[inlineScriptUrl] = script
@@ -43,16 +44,16 @@ export const jsenvCompositeAssetHooks = {
         if (style.attributes.href) {
           const remoteStyleUrl = emitAssetReference({
             specifier: style.attributes.href,
-            line: style.node,
-            column: style,
+            line: style.node.sourceCodeLocation.startLine,
+            column: style.node.sourceCodeLocation.startCol,
           })
           nodeUrlMapping[remoteStyleUrl] = style
         }
         if (style.text) {
           const inlineStyleUrl = emitAssetReference({
-            specifier: `${htmlFileName}.${index}.css`,
-            line: style.node,
-            column: style.node,
+            specifier: `${htmlBasename}.${index}.css`,
+            line: style.node.sourceCodeLocation.startLine,
+            column: style.node.sourceCodeLocation.startCol,
             source: style.text,
           })
           nodeUrlMapping[inlineStyleUrl] = style

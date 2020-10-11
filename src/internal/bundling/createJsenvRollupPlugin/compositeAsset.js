@@ -18,7 +18,11 @@ const computeAssetFileNameForRollup = (assetUrl, assetSource) => {
 
 export const createCompositeAssetHandler = (
   { load, parse },
-  { projectDirectoryUrl = "file:///", connectTarget = () => {} },
+  {
+    projectDirectoryUrl = "file:///",
+    connectTarget = () => {},
+    resolveTargetReference = (specifier, target) => resolveUrl(specifier, target.url),
+  },
 ) => {
   const prepareAssetEntry = async (url, { fileNameForRollup }) => {
     logger.debug(`prepare entry asset ${shortenUrl(url)}`)
@@ -73,6 +77,7 @@ export const createCompositeAssetHandler = (
   }) => {
     const target = {
       url,
+      isEntry,
       type,
       source,
       sourceAfterTransformation,
@@ -95,21 +100,15 @@ export const createCompositeAssetHandler = (
       let previousJsReference
       const parseReturnValue = await parse(url, target.source, {
         emitAssetReference: ({ specifier, column, line, source }) => {
-          const assetUrl = resolveUrl(specifier, url)
+          const assetUrl = resolveTargetReference(target, specifier, "asset")
           const [assetReference, assetTarget] = createReference(
             { url, column, line },
             { url: assetUrl, type: "asset", source },
           )
           if (assetTarget.isConnected()) {
             dependencies.push(assetUrl)
-            if (source) {
-              logger.debug(`found inline asset ${formatReferenceForLog(assetReference)}`)
-            } else {
-              logger.debug(`found asset ${formatReferenceForLog(assetReference)}`)
-            }
-          } else {
-            logger.debug(`found external asset ${formatReferenceForLog(assetReference)} -> ignored`)
           }
+          logger.debug(formatReferenceFound(assetReference, assetTarget, { projectDirectoryUrl }))
           return assetUrl
         },
         emitJsReference: ({ specifier, column, line, source }) => {
@@ -123,7 +122,7 @@ export const createCompositeAssetHandler = (
             return null
           }
 
-          const jsUrl = resolveUrl(specifier, url)
+          const jsUrl = resolveTargetReference(target, specifier, "js")
           const [jsReference, jsTarget] = createReference(
             { url, column, line, previousJsReference },
             { url: jsUrl, type: "js", source },
@@ -131,14 +130,8 @@ export const createCompositeAssetHandler = (
           if (jsTarget.isConnected()) {
             previousJsReference = jsReference
             dependencies.push(jsUrl)
-            if (source) {
-              logger.debug(`found inline js ${formatReferenceForLog(jsReference)}`)
-            } else {
-              logger.debug(`found js ${formatReferenceForLog(jsReference)}`)
-            }
-          } else {
-            logger.debug(`found external js ${formatReferenceForLog(jsReference)} -> ignored`)
           }
+          logger.debug(formatReferenceFound(jsReference, jsTarget, { projectDirectoryUrl }))
           return jsUrl
         },
       })
@@ -175,6 +168,8 @@ export const createCompositeAssetHandler = (
 
       // une fois que les dépendances sont transformées on peut transformer cet asset
       if (target.type === "js") {
+        // ici l'url n'est pas top parce que
+        // l'url de l'asset est relative au fichier html source
         logger.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(url)}`)
         const rollupChunkReadyPromise = new Promise((resolve) => {
           registerCallbackOnceRollupChunkIsReady(target.url, resolve)
@@ -297,6 +292,10 @@ export const createCompositeAssetHandler = (
         fileNameForRollup: chunk.fileName,
       })
     })
+
+    // wait html files to be emitted
+    const urlToWait = Object.keys(targetMap).filter((url) => targetMap[url].isEntry)
+    await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdReadyPromise()))
   }
 
   const generateJavaScriptForAssetImport = async (url, { source, importerUrl } = {}) => {
@@ -330,13 +329,6 @@ export const createCompositeAssetHandler = (
       : url
   }
 
-  const formatReferenceForLog = ({ url, importer }) => {
-    if (importer) {
-      return `reference to ${shortenUrl(url)} in ${shortenUrl(importer.url)}`
-    }
-    return `reference to ${shortenUrl(url)}`
-  }
-
   const getFileSource = (url) => {
     return url in targetMap ? targetMap[url].source : null
   }
@@ -352,6 +344,21 @@ export const createCompositeAssetHandler = (
       }
     },
   }
+}
+
+const shortenUrlInside = (url, projectDirectoryUrl) => {
+  return urlIsInsideOf(url, projectDirectoryUrl) ? urlToRelativeUrl(url, projectDirectoryUrl) : url
+}
+
+const formatReferenceFound = (reference, target, { projectDirectoryUrl }) => {
+  const targetUrl = shortenUrlInside(target.url, projectDirectoryUrl)
+  const referenceUrl = shortenUrlInside(reference.url, projectDirectoryUrl)
+  const message = `found reference to ${targetUrl} in ${referenceUrl}:${reference.line}:${reference.column}`
+
+  if (target.isConnected()) {
+    return message
+  }
+  return `${message} -> ignored because url is external`
 }
 
 const memoize = (fn) => {
@@ -378,10 +385,10 @@ const getCallerLocation = () => {
   }
 
   const { stack } = new Error()
-  const callerCallsite = stack[stack.length - 2]
+  const callerCallsite = stack[2]
   const fileName = callerCallsite.getFileName()
   return {
-    url: isFileSystemPath(fileName) ? fileSystemPathToUrl(fileName) : fileName,
+    url: fileName && isFileSystemPath(fileName) ? fileSystemPathToUrl(fileName) : fileName,
     line: callerCallsite.getLineNumber(),
     column: callerCallsite.getColumnNumber(),
   }

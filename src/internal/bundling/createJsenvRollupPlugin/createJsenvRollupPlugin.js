@@ -124,7 +124,17 @@ export const createJsenvRollupPlugin = async ({
           },
         },
         {
-          projectDirectoryUrl,
+          projectDirectoryUrl: `${compileServerOrigin}`,
+          resolveTargetReference: (target, specifier, targetType) => {
+            if (target.isEntry && target.type === "asset" && targetType === "js") {
+              // html entry point
+              // when html references a js we must wait for the compiled version of js
+              const htmlCompiledUrl = urlToCompiledUrl(target.url)
+              const jsAssetUrl = resolveUrl(specifier, htmlCompiledUrl)
+              return jsAssetUrl
+            }
+            return resolveUrl(specifier, target.url)
+          },
           connectTarget: (target) => {
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl
@@ -134,9 +144,10 @@ export const createJsenvRollupPlugin = async ({
               logger.warn(
                 formatExternalFileWarning(target, {
                   projectDirectoryUrl,
-                  compositeAssetHandler,
-                  urlSourceMapping,
                   urlToOriginalProjectUrl,
+                  urlToSource: (url) => {
+                    return compositeAssetHandler.getFileSource(url) || urlSourceMapping[url]
+                  },
                 }),
               )
               return { external: true }
@@ -176,8 +187,7 @@ export const createJsenvRollupPlugin = async ({
 
             if (target.type === "js") {
               target.connect(async () => {
-                const jsRelativeUrl = `./${urlToProjectRelativeUrl(target.url)}`
-                const id = jsRelativeUrl
+                const id = target.url
                 if (typeof target.source !== "undefined") {
                   virtualModules[id] = target.source
                 }
@@ -188,9 +198,7 @@ export const createJsenvRollupPlugin = async ({
                   id,
                   ...(target.previousJsReference
                     ? {
-                        implicitlyLoadedAfterOneOf: [
-                          `./${urlToProjectRelativeUrl(target.previousJsReference.url)}`,
-                        ],
+                        implicitlyLoadedAfterOneOf: [target.previousJsReference.url],
                       }
                     : {}),
                 })
@@ -208,10 +216,8 @@ export const createJsenvRollupPlugin = async ({
       // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
       await Promise.all(
         Object.keys(entryPointMap).map(async (key) => {
-          const chunkFileRelativeUrl = entryPointMap[key]
-          const chunkFileUrl = resolveUrl(chunkFileRelativeUrl, projectDirectoryUrl)
           // const chunkBundledFileUrl = resolveUrl(chunkFileRelativeUrl, bundleDirectoryUrl)
-
+          const chunkFileRelativeUrl = entryPointMap[key]
           if (!chunkFileRelativeUrl.endsWith(".html")) {
             emitFile({
               type: "chunk",
@@ -221,7 +227,8 @@ export const createJsenvRollupPlugin = async ({
             return
           }
 
-          await compositeAssetHandler.prepareAssetEntry(chunkFileUrl, {
+          const chunkFileServerUrl = resolveUrl(chunkFileRelativeUrl, compileServerOrigin)
+          await compositeAssetHandler.prepareAssetEntry(chunkFileServerUrl, {
             fileNameForRollup: key.endsWith(".html") ? key : `${key}.html`,
           })
         }),
@@ -379,6 +386,8 @@ export const createJsenvRollupPlugin = async ({
     },
 
     async generateBundle(outputOptions, bundle) {
+      // it's important to do this to emit late asset
+      emitFile = (...args) => this.emitFile(...args)
       // malheureusement rollup ne permet pas de savoir lorsqu'un chunk
       // a fini d'etre résolu (parsing des imports statiques et dynamiques recursivement)
       // donc lorsque le build se termine on va indiquer
@@ -427,7 +436,7 @@ export const createJsenvRollupPlugin = async ({
 
   // take any url string and try to return a file url (an url inside projectDirectoryUrl)
   const urlToProjectUrl = (url) => {
-    if (url.startsWith(`${projectDirectoryUrl}/`)) {
+    if (url.startsWith(projectDirectoryUrl)) {
       return url
     }
 
@@ -447,13 +456,13 @@ export const createJsenvRollupPlugin = async ({
   }
 
   // take any url string and try to return the corresponding remote url (an url inside compileServerOrigin)
-  const urlToRemoteUrl = (url) => {
+  const urlToServerUrl = (url) => {
     if (url.startsWith(`${compileServerOrigin}/`)) {
       return url
     }
 
-    if (url.startsWith(`${projectDirectoryUrl}/`)) {
-      return `${compileServerOrigin}/${url.slice(`${projectDirectoryUrl}/`.length)}`
+    if (url.startsWith(projectDirectoryUrl)) {
+      return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
     }
 
     return null
@@ -475,8 +484,21 @@ export const createJsenvRollupPlugin = async ({
     return resolveUrl(relativeUrl, projectDirectoryUrl)
   }
 
+  const urlToCompiledUrl = (url) => {
+    if (urlIsInsideOf(url, compileDirectoryUrl)) {
+      return url
+    }
+
+    const projectRelativeUrl = urlToProjectRelativeUrl(url)
+    if (projectRelativeUrl) {
+      return resolveUrl(projectRelativeUrl, compileDirectoryRemoteUrl)
+    }
+
+    return null
+  }
+
   const saveModuleContent = (moduleUrl, value) => {
-    const remoteUrl = urlToRemoteUrl(moduleUrl)
+    const remoteUrl = urlToServerUrl(moduleUrl)
     const url = urlToProjectUrl(remoteUrl || moduleUrl) || moduleUrl
     moduleContentMap[url] = value
   }
@@ -630,12 +652,12 @@ ${moduleUrl}`)
 
 const formatExternalFileWarning = (
   target,
-  { projectDirectoryUrl, compositeAssetHandler, urlSourceMapping, urlToOriginalProjectUrl },
+  { projectDirectoryUrl, urlToOriginalProjectUrl, urlToSource },
 ) => {
   return `Ignoring reference a file outside project directory.
 ${showTargetFirstReferenceSourceLocation(target, {
   urlToOriginalProjectUrl,
-  urlToSource: (url) => compositeAssetHandler.getFileSource(url) || urlSourceMapping[url],
+  urlToSource,
 })}
 --- reference url ---
 ${target.url}
@@ -648,15 +670,22 @@ const showTargetFirstReferenceSourceLocation = (
   { urlToOriginalProjectUrl, urlToSource },
 ) => {
   const firstReference = target.references[0]
-  return `${urlToOriginalProjectUrl(firstReference.url)}:${firstReference.line}:${
-    firstReference.column
-  }
+  const source = urlToSource(firstReference.url)
 
-${showSourceLocation(urlToSource(firstReference.url), {
+  const message = `${urlToOriginalProjectUrl(firstReference.url)}:${firstReference.line}:${
+    firstReference.column
+  }`
+
+  if (source) {
+    return `${message}
+
+${showSourceLocation(source, {
   line: firstReference.line,
   column: firstReference.column,
-})}
-`
+})}`
+  }
+
+  return `${message}`
 }
 
 // const urlToRollupId = (url, { compileServerOrigin, projectDirectoryUrl }) => {
