@@ -44,7 +44,6 @@ import { minifyJs } from "./minifyJs.js"
 import { minifyCss } from "./minifyCss.js"
 import { createCompositeAssetHandler } from "./compositeAsset.js"
 import { jsenvCompositeAssetHooks } from "./jsenvCompositeAssetHooks.js"
-import { showSourceLocation } from "./showSourceLocation.js"
 
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
@@ -125,8 +124,10 @@ export const createJsenvRollupPlugin = async ({
         },
         {
           projectDirectoryUrl: `${compileServerOrigin}`,
-          resolveTargetReference: (target, specifier, targetType) => {
-            if (target.isEntry && target.type === "asset" && targetType === "js") {
+          urlToOriginalProjectUrl,
+          loadReference: (url) => urlSourceMapping[url],
+          resolveTargetReference: (target, specifier, { isAsset }) => {
+            if (target.isEntry && target.isAsset && !isAsset) {
               // html entry point
               // when html references a js we must wait for the compiled version of js
               const htmlCompiledUrl = urlToCompiledUrl(target.url)
@@ -144,16 +145,13 @@ export const createJsenvRollupPlugin = async ({
               logger.warn(
                 formatExternalFileWarning(target, {
                   projectDirectoryUrl,
-                  urlToOriginalProjectUrl,
-                  urlToSource: (url) => {
-                    return compositeAssetHandler.getFileSource(url) || urlSourceMapping[url]
-                  },
+                  compositeAssetHandler,
                 }),
               )
               return { external: true }
             }
 
-            if (target.type === "asset") {
+            if (target.isAsset) {
               target.connect(async () => {
                 await target.getFileNameReadyPromise()
                 const { sourceAfterTransformation, fileNameForRollup, map } = target
@@ -183,9 +181,7 @@ export const createJsenvRollupPlugin = async ({
                 logger.debug(`${shortenUrl(target.url)} ready -> ${fileNameForRollup}`)
                 return { rollupReferenceId }
               })
-            }
-
-            if (target.type === "js") {
+            } else {
               target.connect(async () => {
                 const id = target.url
                 if (typeof target.source !== "undefined") {
@@ -643,42 +639,13 @@ ${moduleUrl}`)
   }
 }
 
-const formatExternalFileWarning = (
-  target,
-  { projectDirectoryUrl, urlToOriginalProjectUrl, urlToSource },
-) => {
+const formatExternalFileWarning = (target, { compositeAssetHandler, projectDirectoryUrl }) => {
   return `Ignoring reference a file outside project directory.
-${showTargetFirstReferenceSourceLocation(target, {
-  urlToOriginalProjectUrl,
-  urlToSource,
-})}
+${compositeAssetHandler.showReferenceSourceLocation(target.references[0])}
 --- reference url ---
 ${target.url}
 --- project directory url ---
 ${projectDirectoryUrl}`
-}
-
-const showTargetFirstReferenceSourceLocation = (
-  target,
-  { urlToOriginalProjectUrl, urlToSource },
-) => {
-  const firstReference = target.references[0]
-  const source = urlToSource(firstReference.url)
-
-  const message = `${urlToOriginalProjectUrl(firstReference.url)}:${firstReference.line}:${
-    firstReference.column
-  }`
-
-  if (source) {
-    return `${message}
-
-${showSourceLocation(source, {
-  line: firstReference.line,
-  column: firstReference.column,
-})}`
-  }
-
-  return `${message}`
 }
 
 // const urlToRollupId = (url, { compileServerOrigin, projectDirectoryUrl }) => {

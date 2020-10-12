@@ -12,7 +12,11 @@ import {
 } from "../../compiling/compileHtml.js"
 
 export const jsenvCompositeAssetHooks = {
-  parse: async (url, source, { emitAssetReference, emitJsReference }) => {
+  parse: async (
+    url,
+    source,
+    { notifyAssetFound, notifyInlineAssetFound, notifyJsFound, notifyInlineJsFound },
+  ) => {
     if (url.endsWith(".html")) {
       const htmlUrl = url
       const htmlSource = String(source)
@@ -23,7 +27,7 @@ export const jsenvCompositeAssetHooks = {
       scripts.forEach((script) => {
         if (script.attributes.type === "module") {
           if (script.attributes.src) {
-            const remoteScriptUrl = emitJsReference({
+            const remoteScriptUrl = notifyJsFound({
               specifier: script.attributes.src,
               ...getHtmlNodeLocation(script.node),
             })
@@ -32,7 +36,7 @@ export const jsenvCompositeAssetHooks = {
           // pour décider du nom je dois voir s'il existe un autre script ayant
           // la meme ligne, si oui on ajoute la colonne
           else if (script.text) {
-            const inlineScriptUrl = emitJsReference({
+            const inlineScriptUrl = notifyInlineJsFound({
               specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
               ...getHtmlNodeLocation(script.node),
               source: script.text,
@@ -42,7 +46,7 @@ export const jsenvCompositeAssetHooks = {
         }
         if (script.attributes.type === "importmap") {
           if (script.attributes.src) {
-            const remoteImportmapUrl = emitAssetReference({
+            const remoteImportmapUrl = notifyAssetFound({
               specifier: script.attributes.src,
               ...getHtmlNodeLocation(script.node),
             })
@@ -51,7 +55,7 @@ export const jsenvCompositeAssetHooks = {
             // pour ce qui est inline, pas sur de l'approche pour le moment
             // on verra plus tard
             // mais ce sera la meme pour le css
-            const inlineImportMapUrl = emitAssetReference({
+            const inlineImportMapUrl = notifyInlineAssetFound({
               specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
               ...getHtmlNodeLocation(script.node),
               source: script.text,
@@ -62,14 +66,14 @@ export const jsenvCompositeAssetHooks = {
       })
       styles.forEach((style) => {
         if (style.attributes.href) {
-          const remoteStyleUrl = emitAssetReference({
+          const remoteStyleUrl = notifyAssetFound({
             specifier: style.attributes.href,
             ...getHtmlNodeLocation(style.node),
           })
           nodeUrlMapping[remoteStyleUrl] = style
         }
         if (style.text) {
-          const inlineStyleUrl = emitAssetReference({
+          const inlineStyleUrl = notifyInlineAssetFound({
             specifier: getUniqueInlineStyleName(style, styles, htmlUrl),
             ...getHtmlNodeLocation(style.node),
             source: style.text,
@@ -90,11 +94,12 @@ export const jsenvCompositeAssetHooks = {
             )})</script>`
           },
         })
-        // on aurait prsque envie de pouvoir inline l'asset si on a l'info
+        // on aurait presque envie de pouvoir inline l'asset si on a l'info
         // et sinon de le garder en remote
+        // en tous cas de pouvoir controler ça
         transformHtmlDocumentImportmapScript(
           scripts,
-          (script) => `<script type="systemjs-importmap">${script.text}</script>`,
+          (script) => `<script type="systemjs-importmap" src="${script.attributes.src}"></script>`,
         )
         const htmlAfterTransformation = stringifyHtmlDocument(htmlDocument)
         // const code = minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString
@@ -111,7 +116,7 @@ export const jsenvCompositeAssetHooks = {
       const nodeUrlMapping = {}
 
       atImports.forEach((atImport) => {
-        const importedCssUrl = emitAssetReference({
+        const importedCssUrl = notifyAssetFound({
           specifier: atImport.specifier,
           line: atImport.urlNode,
           column: atImport.urlNode,
@@ -119,7 +124,7 @@ export const jsenvCompositeAssetHooks = {
         nodeUrlMapping[importedCssUrl] = atImport.urlNode
       })
       urlDeclarations.forEach((urlDeclaration) => {
-        const cssAssetUrl = emitAssetReference({
+        const cssAssetUrl = notifyAssetFound({
           specifier: urlDeclaration.specifier,
           line: urlDeclaration.node,
           column: urlDeclaration,

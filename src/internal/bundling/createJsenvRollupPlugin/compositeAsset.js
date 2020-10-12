@@ -7,6 +7,7 @@ import {
 } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
 import { computeFileNameForRollup } from "./computeFileNameForRollup.js"
+import { showSourceLocation } from "./showSourceLocation.js"
 
 const logger = createLogger({ logLevel: "debug" })
 
@@ -20,6 +21,8 @@ export const createCompositeAssetHandler = (
   { load, parse },
   {
     projectDirectoryUrl = "file:///",
+    loadReference = () => null,
+    urlToOriginalProjectUrl = (url) => url,
     connectTarget = () => {},
     resolveTargetReference = (specifier, target) => resolveUrl(specifier, target.url),
   },
@@ -34,8 +37,8 @@ export const createCompositeAssetHandler = (
     const callerLocation = getCallerLocation()
     const [, entryTarget] = createReference(callerLocation, {
       isEntry: true,
+      isAsset: true,
       url,
-      type: "asset",
       fileNameForRollup,
     })
 
@@ -69,7 +72,8 @@ export const createCompositeAssetHandler = (
   const createTarget = ({
     url,
     isEntry = false,
-    type,
+    isAsset = false,
+    isInline = false,
     source,
     sourceAfterTransformation,
     fileNameForRollup,
@@ -78,7 +82,8 @@ export const createCompositeAssetHandler = (
     const target = {
       url,
       isEntry,
-      type,
+      isAsset,
+      isInline,
       source,
       sourceAfterTransformation,
       fileNameForRollup,
@@ -98,43 +103,43 @@ export const createCompositeAssetHandler = (
       const dependencies = []
 
       let previousJsReference
-      const parseReturnValue = await parse(url, target.source, {
-        emitAssetReference: ({ specifier, column, line, source }) => {
-          const assetUrl = resolveTargetReference(target, specifier, "asset")
-          const [assetReference, assetTarget] = createReference(
-            { url, column, line },
-            { url: assetUrl, type: "asset", source },
-          )
-          if (assetTarget.isConnected()) {
-            dependencies.push(assetUrl)
-          }
-          logger.debug(formatReferenceFound(assetReference, assetTarget, { projectDirectoryUrl }))
-          return assetUrl
-        },
-        emitJsReference: ({ specifier, column, line, source }) => {
+      const notifyReferenceFound = ({ specifier, isAsset, isInline, column, line, source }) => {
+        if (!isEntry && !isAsset) {
           // for now we can only emit a chunk from an entry file as visible in
           // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
           // https://github.com/rollup/rollup/issues/2872
-          if (!isEntry) {
-            logger.warn(
-              `cannot handle ${specifier} found in ${url} because it's not yet supported by rollup`,
-            )
-            return null
-          }
-
-          const jsUrl = resolveTargetReference(target, specifier, "js")
-          const [jsReference, jsTarget] = createReference(
-            { url, column, line, previousJsReference },
-            { url: jsUrl, type: "js", source },
+          logger.warn(
+            `cannot handle ${specifier} found in ${url} because it's not yet supported by rollup`,
           )
-          if (jsTarget.isConnected()) {
-            previousJsReference = jsReference
-            dependencies.push(jsUrl)
+          return null
+        }
+
+        const dependencyTargetUrl = resolveTargetReference(target, specifier, { isAsset, isInline })
+        const [dependencyReference, dependencyTarget] = createReference(
+          { url, column, line, previousJsReference },
+          { url: dependencyTargetUrl, isAsset, isInline, source },
+        )
+        if (dependencyTarget.isConnected()) {
+          dependencies.push(dependencyTargetUrl)
+          if (!isAsset) {
+            previousJsReference = dependencyReference
           }
-          logger.debug(formatReferenceFound(jsReference, jsTarget, { projectDirectoryUrl }))
-          return jsUrl
-        },
+        }
+        logger.debug(formatReferenceFound(dependencyReference))
+        return dependencyTargetUrl
+      }
+
+      const parseReturnValue = await parse(url, target.source, {
+        notifyAssetFound: ({ specifier, column, line }) =>
+          notifyReferenceFound({ isAsset: true, isInline: false, specifier, column, line }),
+        notifyInlineAssetFound: ({ specifier, column, line, source }) =>
+          notifyReferenceFound({ isAsset: true, isInline: true, specifier, column, line, source }),
+        notifyJsFound: ({ specifier, column, line }) =>
+          notifyReferenceFound({ isAsset: false, isInline: false, specifier, column, line }),
+        notifyInlineJsFound: ({ specifier, line, column, source }) =>
+          notifyReferenceFound({ isAsset: false, isInline: true, specifier, column, line, source }),
       })
+
       if (dependencies.length > 0 && typeof parseReturnValue !== "function") {
         throw new Error(
           `parse has dependencies, it must return a function but received ${parseReturnValue}`,
@@ -167,7 +172,7 @@ export const createCompositeAssetHandler = (
       )
 
       // une fois que les dépendances sont transformées on peut transformer cet asset
-      if (target.type === "js") {
+      if (!target.isAsset) {
         // ici l'url n'est pas top parce que
         // l'url de l'asset est relative au fichier html source
         logger.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(url)}`)
@@ -299,7 +304,7 @@ export const createCompositeAssetHandler = (
   }
 
   const generateJavaScriptForAssetImport = async (url, { source, importerUrl } = {}) => {
-    const [, assetTarget] = createReference(
+    const [assetReference, assetTarget] = createReference(
       // the reference to this target comes from importerUrl
       // but we don't really know the line and column
       // because rollup does not share this information
@@ -310,10 +315,12 @@ export const createCompositeAssetHandler = (
       },
       {
         url,
-        type: "asset",
+        isAsset: true,
         source,
       },
     )
+
+    logger.debug(formatReferenceFound(assetReference))
 
     if (!assetTarget.isConnected()) {
       throw new Error(`target is not connected ${url}`)
@@ -329,36 +336,63 @@ export const createCompositeAssetHandler = (
       : url
   }
 
-  const getFileSource = (url) => {
-    return url in targetMap ? targetMap[url].source : null
+  const showReferenceSourceLocation = (reference) => {
+    const referenceUrl = reference.url
+    const referenceSource = String(
+      referenceUrl in targetMap ? targetMap[referenceUrl].source : loadReference(referenceUrl),
+    )
+
+    const message = `${urlToOriginalProjectUrl(referenceUrl)}:${reference.line}:${reference.column}`
+
+    if (referenceSource) {
+      return `${message}
+
+${showSourceLocation(referenceSource, {
+  line: reference.line,
+  column: reference.column,
+})}`
+    }
+
+    return `${message}`
+  }
+
+  const formatReferenceFound = (reference) => {
+    const targetUrl = shortenUrl(reference.target.url)
+
+    let message
+    if (reference.isInline && reference.isAsset) {
+      message = `found inline asset.`
+    } else if (reference.isInline) {
+      message = `found inline js.`
+    } else if (reference.isAsset) {
+      message = `found asset reference to ${targetUrl}.`
+    } else {
+      message = `found js reference to ${targetUrl}.`
+    }
+
+    message += `
+
+${showReferenceSourceLocation(reference)}
+`
+
+    if (reference.target.isConnected()) {
+      return message
+    }
+    return `${message} -> ignored because url is external`
   }
 
   return {
     prepareAssetEntry,
     resolveJsReferencesUsingRollupBundle,
     generateJavaScriptForAssetImport,
-    getFileSource,
+
+    showReferenceSourceLocation,
     inspect: () => {
       return {
         targetMap,
       }
     },
   }
-}
-
-const shortenUrlInside = (url, projectDirectoryUrl) => {
-  return urlIsInsideOf(url, projectDirectoryUrl) ? urlToRelativeUrl(url, projectDirectoryUrl) : url
-}
-
-const formatReferenceFound = (reference, target, { projectDirectoryUrl }) => {
-  const targetUrl = shortenUrlInside(target.url, projectDirectoryUrl)
-  const referenceUrl = shortenUrlInside(reference.url, projectDirectoryUrl)
-  const message = `found reference to ${targetUrl} in ${referenceUrl}:${reference.line}:${reference.column}`
-
-  if (target.isConnected()) {
-    return message
-  }
-  return `${message} -> ignored because url is external`
 }
 
 const memoize = (fn) => {
