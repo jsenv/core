@@ -83,22 +83,41 @@ const attributeArrayToAttributeObject = (attributes) => {
   return attributeObject
 }
 
-const attributesObjectToAttributesArray = (attributeObject) => {
-  const attributeArray = []
-  Object.keys(attributeObject).forEach((key) => {
-    attributeArray.push({ name: key, value: attributeObject[key] })
-  })
-  return attributeArray
-}
+// const attributesObjectToAttributesArray = (attributeObject) => {
+//   const attributeArray = []
+//   Object.keys(attributeObject).forEach((key) => {
+//     attributeArray.push({ name: key, value: attributeObject[key] })
+//   })
+//   return attributeArray
+// }
 
 export const transformHtmlDocumentModuleScripts = (
   scripts,
   {
-    generateScriptCode = (script) => `<script>
-      window.__jsenv__.importFile(${JSON.stringify(script.attributes.src)})
-    </script>`,
-    generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
-  },
+    resolveRemoteScript = (script) => {
+      return script.attributes.src
+    },
+    resolveInlineScript = (script) => {
+      const hash = createInlineScriptHash(script)
+      return `./${hash}.js`
+    },
+    transformScript = (script) => {
+      let specifier
+      if (script.attributes.src) {
+        specifier = resolveRemoteScript(script)
+      } else if (script.text) {
+        specifier = resolveInlineScript(script)
+      }
+
+      if (specifier) {
+        return `<script>
+  window.__jsenv__.importFile(${specifier})
+</script>`
+      }
+
+      return null
+    },
+  } = {},
 ) => {
   /*
   <script type="module" src="*" /> are going to be inlined
@@ -109,49 +128,25 @@ export const transformHtmlDocumentModuleScripts = (
   For that reason we perform mutation in the end
   */
 
-  const remoteScriptsTransformed = {}
-  const inlineScriptsTransformed = {}
+  const replacements = []
 
-  const mutations = scripts.map((script, index) => {
-    if (script.attributes.type === "module" && script.attributes.src) {
+  const mutations = scripts.map((script) => {
+    if (script.attributes.type === "module") {
       return () => {
-        const scriptPolyfilledSource = generateScriptCode(script, index)
-        const scriptPolyfilled = parseHtmlAsSingleElement(scriptPolyfilledSource)
-        scriptPolyfilled.attrs = [
-          // inherit script attributes except src and type
-          ...attributesObjectToAttributesArray(script.attributes).filter(
-            ({ name }) => name !== "type" && name !== "src",
-          ),
-          ...scriptPolyfilled.attrs,
-        ]
-        replaceNode(script.node, scriptPolyfilled)
-        remoteScriptsTransformed[script.attributes.src] = true
-      }
-    }
+        const transformReturnValue = transformScript(script)
+        if (transformReturnValue === null) {
+          return
+        }
 
-    if (script.attributes.type === "module" && script.text) {
-      return () => {
-        const hash = createScriptContentHash(script.text)
-        const src = generateInlineScriptSrc(
-          {
-            id: script.attributes.id,
-            hash,
-          },
-          index,
-        )
-        script.attributes.src = src
-        const scriptPolyfilledSource = generateScriptCode(script, index)
-        const scriptPolyfilled = parseHtmlAsSingleElement(scriptPolyfilledSource)
-        scriptPolyfilled.attrs = [
+        const scriptTransformedSource = transformReturnValue
+        const scriptTransformed = parseHtmlAsSingleElement(scriptTransformedSource)
+        scriptTransformed.attrs = [
           // inherit script attributes except src and type
-          ...attributesObjectToAttributesArray(script.attributes).filter(
-            ({ name }) => name !== "type" && name !== "src",
-          ),
-          ...scriptPolyfilled.attrs,
+          ...script.node.attrs.filter(({ name }) => name !== "type" && name !== "src"),
+          ...scriptTransformed.attrs,
         ]
-
-        replaceNode(script.node, scriptPolyfilled)
-        inlineScriptsTransformed[src] = script.text
+        replaceNode(script.node, scriptTransformed)
+        replacements.push({ from: script.node, to: scriptTransformed })
       }
     }
 
@@ -161,21 +156,20 @@ export const transformHtmlDocumentModuleScripts = (
   mutations.forEach((fn) => fn())
 
   return {
-    remoteScriptsTransformed,
-    inlineScriptsTransformed,
+    replacements,
   }
 }
 
-export const transformHtmlDocumentImportmapScript = (scripts, attributes) => {
+export const transformHtmlDocumentImportmapScript = (scripts, importmapHtmlString) => {
   scripts.forEach((script) => {
     if (script.attributes.type === "importmap") {
-      Object.keys(attributes).forEach((key) => {
-        const value = attributes[key]
-        if (value !== undefined) {
-          const attributeNode = getAttributeByName(script.node.attrs, key)
-          attributeNode.value = value
-        }
-      })
+      const importmapNewNode = parseHtmlAsSingleElement(importmapHtmlString)
+      importmapNewNode.attrs = [
+        // inherit attributes except src and type
+        ...script.node.attrs.filter(({ name }) => name !== "type" && name !== "src"),
+        ...importmapNewNode.attrs,
+      ]
+      replaceNode(script.node, importmapNewNode)
     }
   })
 }
@@ -300,9 +294,9 @@ const getAttributeValue = (node, attributeName) => {
 const getAttributeByName = (attributes, attributeName) =>
   attributes.find((attr) => attr.name === attributeName)
 
-const createScriptContentHash = (content) => {
+export const createInlineScriptHash = (script) => {
   const hash = createHash("sha256")
-  hash.update(content)
+  hash.update(script.text)
   return hash.digest("hex").slice(0, 8)
 }
 

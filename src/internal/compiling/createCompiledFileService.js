@@ -23,6 +23,7 @@ import {
   transformHtmlDocumentModuleScripts,
   transformHtmlDocumentImportmapScript,
   stringifyHtmlDocument,
+  createInlineScriptHash,
 } from "./compileHtml.js"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
@@ -221,12 +222,6 @@ export const createCompiledFileService = ({
           manipulateHtmlDocument(htmlDocument, {
             scriptInjections: [
               {
-                // when html file already contains an importmap script tag
-                // its src is replaced to target the importmap used for compiled files
-                type: "importmap",
-                src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
-              },
-              {
                 src: `/${browserBundledJsFileRelativeUrl}`,
               },
               // todo: this is dirty because it means
@@ -237,14 +232,18 @@ export const createCompiledFileService = ({
           })
 
           const { scripts } = parseHtmlDocumentRessources(htmlDocument)
-          transformHtmlDocumentImportmapScript(scripts, {
-            type: "jsenv-importmap",
-          })
+          transformHtmlDocumentImportmapScript(
+            scripts,
+            () =>
+              `<script type="jsenv-importmap" src="${`/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`}"></script>`,
+          )
           const { inlineScriptsTransformed } = transformHtmlDocumentModuleScripts(scripts, {
-            generateInlineScriptSrc: ({ id, hash }) => {
+            resolveInlineScript: (script) => {
               const scriptAssetUrl = generateCompiledFileAssetUrl(
                 compiledFileUrl,
-                id ? `${id}.js` : `${hash}.js`,
+                script.attributes.id
+                  ? `${script.attributes.id}.js`
+                  : `${createInlineScriptHash(script)}.js`,
               )
               return `./${urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`
             },

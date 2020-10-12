@@ -7,6 +7,7 @@ import {
   parseHtmlString,
   parseHtmlDocumentRessources,
   transformHtmlDocumentModuleScripts,
+  transformHtmlDocumentImportmapScript,
   stringifyHtmlDocument,
 } from "../../compiling/compileHtml.js"
 
@@ -79,7 +80,7 @@ export const jsenvCompositeAssetHooks = {
 
       return async (dependenciesMapping) => {
         transformHtmlDocumentModuleScripts(scripts, {
-          generateScriptCode: (script) => {
+          transformScript: (script) => {
             const scriptUrl = Object.keys(nodeUrlMapping).find(
               (key) => nodeUrlMapping[key] === script,
             )
@@ -89,6 +90,12 @@ export const jsenvCompositeAssetHooks = {
             )})</script>`
           },
         })
+        // on aurait prsque envie de pouvoir inline l'asset si on a l'info
+        // et sinon de le garder en remote
+        transformHtmlDocumentImportmapScript(
+          scripts,
+          (script) => `<script type="systemjs-importmap">${script.text}</script>`,
+        )
         const htmlAfterTransformation = stringifyHtmlDocument(htmlDocument)
         // const code = minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString
         return {
