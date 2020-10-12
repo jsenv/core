@@ -1,4 +1,5 @@
 import { basename } from "path"
+import { urlToBasename } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
@@ -8,15 +9,13 @@ import {
   transformHtmlDocumentModuleScripts,
   stringifyHtmlDocument,
 } from "../../compiling/compileHtml.js"
-import { urlToPathname } from "./urlToPathname.js"
-import { pathnameToBasename } from "./pathnameToBasename.js"
 
 export const jsenvCompositeAssetHooks = {
   parse: async (url, source, { emitAssetReference, emitJsReference }) => {
     if (url.endsWith(".html")) {
       const htmlUrl = url
       const htmlSource = String(source)
-      const htmlBasename = pathnameToBasename(urlToPathname(htmlUrl))
+      const htmlBasename = urlToBasename(htmlUrl)
       const htmlDocument = parseHtmlString(htmlSource)
       const { scripts, styles } = parseHtmlDocumentRessources(htmlDocument)
 

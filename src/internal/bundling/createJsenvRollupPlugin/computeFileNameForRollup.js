@@ -1,29 +1,18 @@
 import { createHash } from "crypto"
-import { urlToPathname } from "./urlToPathname.js"
-import { pathnameToExtension } from "./pathnameToExtension.js"
-import { pathnameToBasename } from "./pathnameToBasename.js"
+import { urlToParentUrl, urlToBasename, urlToExtension } from "@jsenv/util"
 
 export const computeFileNameForRollup = (
   fileUrl,
   fileContent,
   pattern = "assets/[name]-[hash][extname]",
 ) => {
-  const pathname = urlToPathname(fileUrl)
-
   const fileNameForRollup = renderNamePattern(pattern, {
     dirname: () => urlToParentUrl(fileUrl),
-    name: () => pathnameToBasename(pathname),
+    name: () => urlToBasename(fileUrl),
     hash: () => generateAssetHash(fileContent),
-    extname: () => pathnameToExtension(pathname),
+    extname: () => urlToExtension(fileUrl),
   })
   return fileNameForRollup
-}
-
-const urlToParentUrl = (url) => {
-  const slashLastIndex = url.lastIndexOf("/")
-  if (slashLastIndex === -1) return ""
-
-  return url.slice(0, slashLastIndex + 1)
 }
 
 const renderNamePattern = (pattern, replacements) => {

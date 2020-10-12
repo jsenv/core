@@ -268,10 +268,6 @@ export const createJsenvRollupPlugin = async ({
         defaultExtension: importDefaultExtension,
       })
 
-      if (importUrl.slice(4).includes("https:")) {
-        debugger
-      }
-
       if (importer !== projectDirectoryUrl) {
         urlImporterMapping[importUrl] = importer
       }
@@ -618,9 +614,6 @@ ${moduleUrl}`)
   }
 
   const fetchModule = async (moduleUrl) => {
-    if (moduleUrl.slice(4).includes("https:")) {
-      debugger
-    }
     const response = await fetchUrl(moduleUrl, {
       cancellationToken,
       ignoreHttpsError: true,
