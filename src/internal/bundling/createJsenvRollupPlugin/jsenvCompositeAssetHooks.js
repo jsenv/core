@@ -15,44 +15,41 @@ export const jsenvCompositeAssetHooks = {
     if (url.endsWith(".html")) {
       const htmlUrl = url
       const htmlSource = String(source)
-      const htmlBasename = urlToBasename(htmlUrl)
       const htmlDocument = parseHtmlString(htmlSource)
       const { scripts, styles } = parseHtmlDocumentRessources(htmlDocument)
 
       const nodeUrlMapping = {}
-      scripts.forEach((script, index) => {
+      scripts.forEach((script) => {
         if (script.attributes.type === "module" && script.attributes.src) {
           const remoteScriptUrl = emitJsReference({
             specifier: script.attributes.src,
-            line: script.node.sourceCodeLocation.startLine,
-            column: script.node.sourceCodeLocation.startCol,
+            ...getHtmlNodeLocation(script.node),
           })
           nodeUrlMapping[remoteScriptUrl] = script
         }
+        // pour décider du nom je dois voir s'il existe un autre script ayant
+        // la meme ligne, si oui on ajoute la colonne
         if (script.attributes.type === "module" && script.text) {
           const inlineScriptUrl = emitJsReference({
-            specifier: `${htmlBasename}.${index}.js`,
-            line: script.node.sourceCodeLocation.startLine,
-            column: script.node.sourceCodeLocation.startCol,
+            specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
+            ...getHtmlNodeLocation(script.node),
             source: script.text,
           })
           nodeUrlMapping[inlineScriptUrl] = script
         }
       })
-      styles.forEach((style, index) => {
+      styles.forEach((style) => {
         if (style.attributes.href) {
           const remoteStyleUrl = emitAssetReference({
             specifier: style.attributes.href,
-            line: style.node.sourceCodeLocation.startLine,
-            column: style.node.sourceCodeLocation.startCol,
+            ...getHtmlNodeLocation(style.node),
           })
           nodeUrlMapping[remoteStyleUrl] = style
         }
         if (style.text) {
           const inlineStyleUrl = emitAssetReference({
-            specifier: `${htmlBasename}.${index}.css`,
-            line: style.node.sourceCodeLocation.startLine,
-            column: style.node.sourceCodeLocation.startCol,
+            specifier: getUniqueInlineStyleName(style, styles, htmlUrl),
+            ...getHtmlNodeLocation(style.node),
             source: style.text,
           })
           nodeUrlMapping[inlineStyleUrl] = style
@@ -138,6 +135,41 @@ export const jsenvCompositeAssetHooks = {
 
     return null
   },
+}
+
+const getHtmlNodeLocation = (htmlNode) => {
+  return {
+    line: htmlNode.sourceCodeLocation.startLine,
+    column: htmlNode.sourceCodeLocation.startCol,
+  }
+}
+
+const getUniqueInlineScriptName = (script, scripts, htmlUrl) => {
+  const htmlBasename = urlToBasename(htmlUrl)
+  const { line, column } = getHtmlNodeLocation(script.node)
+  const lineTaken = scripts.some(
+    (scriptCandidate) =>
+      scriptCandidate !== script && getHtmlNodeLocation(scriptCandidate.node).line === line,
+  )
+  if (lineTaken) {
+    return `${htmlBasename}.line.${line}.${column}.js`
+  }
+
+  return `${htmlBasename}.line.${line}.js`
+}
+
+const getUniqueInlineStyleName = (style, styles, htmlUrl) => {
+  const htmlBasename = urlToBasename(htmlUrl)
+  const { line, column } = getHtmlNodeLocation(style.node)
+  const lineTaken = styles.some(
+    (styleCandidate) =>
+      styleCandidate !== style && getHtmlNodeLocation(styleCandidate.node).line === line,
+  )
+  if (lineTaken) {
+    return `${htmlBasename}.line.${line}.${column}.css`
+  }
+
+  return `${htmlBasename}.line.${line}.css`
 }
 
 // otherwise systemjs thinks it's a bare import

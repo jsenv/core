@@ -1,7 +1,7 @@
 /**
  * a faire
  *
- * - inline js in html
+ * importmap in html
  * - link css in html
  * - inline css in html
  * - tester un aset remap avec importmap
@@ -506,7 +506,7 @@ export const createJsenvRollupPlugin = async ({
       const { code, map } = await transformJs({
         projectDirectoryUrl,
         code: codeInput,
-        url: moduleUrl,
+        url: urlToProjectUrl(moduleUrl), // transformJs expect a file:// url
         babelPluginMap,
       })
 

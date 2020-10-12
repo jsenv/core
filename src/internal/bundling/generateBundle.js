@@ -63,7 +63,7 @@ export const generateBundle = async ({
   minifyHtmlOptions = {
     collapseWhitespace: true,
   },
-  sourcemapExcludeSources = true,
+  sourcemapExcludeSources = false,
   writeOnFileSystem = true,
   manifestFile = false,
 
