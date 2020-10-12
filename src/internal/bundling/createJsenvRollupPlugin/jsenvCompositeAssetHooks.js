@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { urlToBasename } from "@jsenv/util"
+import { urlToBasename, resolveUrl } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
@@ -13,8 +13,7 @@ import {
 
 export const jsenvCompositeAssetHooks = {
   parse: async (
-    url,
-    source,
+    { url, relativeUrl, source },
     { notifyAssetFound, notifyInlineAssetFound, notifyJsFound, notifyInlineJsFound },
   ) => {
     if (url.endsWith(".html")) {
@@ -45,6 +44,19 @@ export const jsenvCompositeAssetHooks = {
           }
         }
         if (script.attributes.type === "importmap") {
+          // pour importmap il faudra un truc en particulier
+          // en gros en fonction de ou elle finie il faut adapter son contenu
+          // parce qu'il doit rester relatif a la ou elle était a la base en gros
+          // je pense que ce sera un hook dans target
+          // genre target.renderFile
+          // qui peut transformer le fichier avant qu'il soit emit dans rollup
+          // mais ce au moment ou on connait le contenu final
+          // en vrai ça peut tres bien se trouver ici meme
+          // et reproduire ce qu'on fait pour les css importmap
+          // non ?
+          // oui et non parce que sourcemap sont autorisé a sortir
+          // du bundle directory et donc ont besoin de le connaitre
+          // alors que importmap pas vraiment ?
           if (script.attributes.src) {
             const remoteImportmapUrl = notifyAssetFound({
               specifier: script.attributes.src,
@@ -52,9 +64,6 @@ export const jsenvCompositeAssetHooks = {
             })
             nodeUrlMapping[remoteImportmapUrl] = script
           } else if (script.text) {
-            // pour ce qui est inline, pas sur de l'approche pour le moment
-            // on verra plus tard
-            // mais ce sera la meme pour le css
             const inlineImportMapUrl = notifyInlineAssetFound({
               specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
               ...getHtmlNodeLocation(script.node),
@@ -97,10 +106,12 @@ export const jsenvCompositeAssetHooks = {
         // on aurait presque envie de pouvoir inline l'asset si on a l'info
         // et sinon de le garder en remote
         // en tous cas de pouvoir controler ça
-        transformHtmlDocumentImportmapScript(
-          scripts,
-          (script) => `<script type="systemjs-importmap" src="${script.attributes.src}"></script>`,
-        )
+        transformHtmlDocumentImportmapScript(scripts, (script) => {
+          const scriptUrl = Object.keys(nodeUrlMapping).find(
+            (key) => nodeUrlMapping[key] === script,
+          )
+          return `<script type="systemjs-importmap" src="${dependenciesMapping[scriptUrl]}"></script>`
+        })
         const htmlAfterTransformation = stringifyHtmlDocument(htmlDocument)
         // const code = minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString
         return {
@@ -132,7 +143,7 @@ export const jsenvCompositeAssetHooks = {
         nodeUrlMapping[cssAssetUrl] = urlDeclaration.urlNode
       })
 
-      return async (dependenciesMapping, { precomputeFileNameForRollup }) => {
+      return async (dependenciesMapping, { precomputeFileNameForRollup, emitAsset }) => {
         const cssReplaceResult = await replaceCssUrls(cssSource, cssUrl, ({ urlNode }) => {
           const scriptUrl = Object.keys(nodeUrlMapping).find((key) =>
             isSameCssDocumentUrlNode(nodeUrlMapping[key], urlNode),
@@ -142,7 +153,8 @@ export const jsenvCompositeAssetHooks = {
         const code = cssReplaceResult.css
         const map = cssReplaceResult.map.toJSON()
         const cssFileNameForRollup = precomputeFileNameForRollup(code)
-        const cssSourceMapFileUrlRelativeToSource = `${cssFileNameForRollup}.map`
+        map.file = basename(cssFileNameForRollup)
+        const cssSourcemapFilename = `${basename(cssFileNameForRollup)}.map`
 
         // In theory code should never be modified once the url for caching is computed
         // because url for caching depends on file content.
@@ -152,17 +164,47 @@ export const jsenvCompositeAssetHooks = {
         // This is totally fine to do that because sourcemap and css file lives togethers
         // so this comment changes nothing regarding cache invalidation and is not important
         // to decide the filename for this css asset.
-        const cssSourceAfterTransformation = setCssSourceMappingUrl(
-          code,
-          cssSourceMapFileUrlRelativeToSource,
-        )
+        const cssSourceAfterTransformation = setCssSourceMappingUrl(code, cssSourcemapFilename)
 
-        map.file = basename(cssFileNameForRollup)
+        emitAsset({
+          specifier: cssSourcemapFilename,
+          line: cssSourceAfterTransformation.split(/\r?\n/).length,
+          column: 0,
+          source: JSON.stringify(map, null, "  "),
+        })
 
         return {
           sourceAfterTransformation: cssSourceAfterTransformation,
           map,
           fileNameForRollup: cssFileNameForRollup,
+        }
+      }
+    }
+
+    if (url.endsWith(".importmap")) {
+      // de base cet importmap avait une url particuliere relative au projet
+      // c'est par rapport a cette url qu'on veut s'ajuster
+      // et voir ou on se trouve par rapport au bundle directory
+      relativeUrl
+      debugger
+      return (dependenciesMapping, { precomputeFileNameForRollup }) => {
+        const importmapUrl = url
+        const importmapRelativeUrl = relativeUrl
+
+        // foo/bar/importmap.importmap
+        // ../../bar.js
+        // /importmap.importmap
+        // ./bar.js
+        const importmapSource = source
+        const importmap = JSON.parse(importmapSource)
+        const importmapFilenameForRollup = precomputeFileNameForRollup(importmapUrl, "")
+        const importmapAfterTransformation = makeImportMapRelativeTo(
+          importmap,
+          resolveUrl(importmapFilenameForRollup, importmapUrl),
+        )
+
+        return {
+          sourceAfterTransformation: JSON.stringify(importmapAfterTransformation, null, "  "),
         }
       }
     }

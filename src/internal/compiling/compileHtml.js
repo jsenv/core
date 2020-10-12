@@ -160,10 +160,15 @@ export const transformHtmlDocumentModuleScripts = (
   }
 }
 
-export const transformHtmlDocumentImportmapScript = (scripts, importmapHtmlString) => {
+export const transformHtmlDocumentImportmapScript = (scripts, transformImportmapScript) => {
   scripts.forEach((script) => {
     if (script.attributes.type === "importmap") {
-      const importmapNewNode = parseHtmlAsSingleElement(importmapHtmlString)
+      const transformReturnValue = transformImportmapScript(script)
+      if (transformReturnValue === null) {
+        return
+      }
+
+      const importmapNewNode = parseHtmlAsSingleElement(transformReturnValue)
       importmapNewNode.attrs = [
         // inherit attributes except src and type
         ...script.node.attrs.filter(({ name }) => name !== "type" && name !== "src"),

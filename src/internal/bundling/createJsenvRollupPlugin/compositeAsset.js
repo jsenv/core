@@ -17,10 +17,29 @@ const computeAssetFileNameForRollup = (assetUrl, assetSource) => {
   return computeFileNameForRollup(assetUrl, assetSource, assetFileNamePattern)
 }
 
+    // if (url.endsWith(".map")) {
+    //   const sourcemapUrl = url
+    //   const sourcemapRelativeUrl = relativeUrl
+    //   const sourcemapSource = source
+    //   const sourcemap = JSON.parse(sourcemap)
+
+    //   references
+    //   debugger
+    //   // sourcemap.file = basename(cssFileNameForRollup)
+    //   sourcemap.sources = sourcemap.sources.map((source) => {
+    //     const sourceUrl = resolveUrl(source, sourcemapUrl)
+    //     const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, projectDirectoryUrl)
+    //     return sourceUrlRelativeToSourceMap
+    //   })
+
+    //   return JSON.stringify(sourcemap, null, "  ")
+    // }
+
 export const createCompositeAssetHandler = (
   { load, parse },
   {
     projectDirectoryUrl = "file:///",
+    bundleDirectoryUrl = "file:///",
     loadReference = () => null,
     urlToOriginalProjectUrl = (url) => url,
     connectTarget = () => {},
@@ -81,6 +100,7 @@ export const createCompositeAssetHandler = (
   }) => {
     const target = {
       url,
+      relativeUrl: urlToRelativeUrl(url, projectDirectoryUrl),
       isEntry,
       isAsset,
       isInline,
@@ -129,23 +149,50 @@ export const createCompositeAssetHandler = (
         return dependencyTargetUrl
       }
 
-      const parseReturnValue = await parse(urlToOriginalProjectUrl(url), target.source, {
-        notifyAssetFound: ({ specifier, column, line, source }) =>
-          notifyReferenceFound({ isAsset: true, isInline: false, specifier, column, line, source }),
-        notifyInlineAssetFound: ({ specifier, column, line, source }) =>
-          notifyReferenceFound({ isAsset: true, isInline: true, specifier, column, line, source }),
-        notifyJsFound: ({ specifier, column, line, source }) =>
-          notifyReferenceFound({
-            isAsset: false,
-            isInline: false,
-            specifier,
-            column,
-            line,
-            source,
-          }),
-        notifyInlineJsFound: ({ specifier, line, column, source }) =>
-          notifyReferenceFound({ isAsset: false, isInline: true, specifier, column, line, source }),
-      })
+      const parseReturnValue = await parse(
+        {
+          ...target,
+          url: urlToOriginalProjectUrl(url),
+        },
+        {
+          notifyAssetFound: ({ specifier, column, line, source }) =>
+            notifyReferenceFound({
+              isAsset: true,
+              isInline: false,
+              specifier,
+              column,
+              line,
+              source,
+            }),
+          notifyInlineAssetFound: ({ specifier, column, line, source }) =>
+            notifyReferenceFound({
+              isAsset: true,
+              isInline: true,
+              specifier,
+              column,
+              line,
+              source,
+            }),
+          notifyJsFound: ({ specifier, column, line, source }) =>
+            notifyReferenceFound({
+              isAsset: false,
+              isInline: false,
+              specifier,
+              column,
+              line,
+              source,
+            }),
+          notifyInlineJsFound: ({ specifier, line, column, source }) =>
+            notifyReferenceFound({
+              isAsset: false,
+              isInline: true,
+              specifier,
+              column,
+              line,
+              source,
+            }),
+        },
+      )
 
       if (dependencies.length > 0 && typeof parseReturnValue !== "function") {
         throw new Error(
@@ -192,76 +239,87 @@ export const createCompositeAssetHandler = (
         return
       }
 
-      if (url in assetTransformMap) {
-        const transform = assetTransformMap[url]
-        // assetDependenciesMapping contains all dependencies for an asset
-        // each key is the absolute url to the dependency file
-        // each value is an url relative to the asset importing this dependency
-        // it looks like this:
-        // {
-        //   "file:///project/coin.png": "./coin-45eiopri.png"
-        // }
-        // it must be used by transform to update url in the asset source
-        const dependenciesMapping = {}
-        const importerFileNameForRollup =
-          target.fileNameForRollup ||
-          // we don't yet know the exact importerFileNameForRollup but we can generate a fake one
-          // to ensure we resolve dependency against where the importer file will be
-          computeAssetFileNameForRollup(target.url, "")
-        dependencies.forEach((dependencyUrl) => {
-          const dependencyTarget = targetMap[dependencyUrl]
-          // here it's guaranteed that dependencUrl is in urlMappings
-          // because we throw in case there is circular deps
-          // so each each dependency is handled one after an other
-          // ensuring dependencies where already handled before
-          const dependencyFileNameForRollup = dependencyTarget.fileNameForRollup
-          const dependencyFileUrlForRollup = resolveUrl(dependencyFileNameForRollup, "file:///")
-          const importerFileUrlForRollup = resolveUrl(importerFileNameForRollup, "file:///")
-          dependenciesMapping[dependencyUrl] = urlToRelativeUrl(
-            dependencyFileUrlForRollup,
-            importerFileUrlForRollup,
-          )
-        })
-        logger.debug(
-          `${shortenUrl(url)} transform starts to replace ${JSON.stringify(
-            dependenciesMapping,
-            null,
-            "  ",
-          )}`,
-        )
-        const transformReturnValue = await transform(dependenciesMapping, {
-          precomputeFileNameForRollup: (sourceAfterTransformation) =>
-            computeAssetFileNameForRollup(url, sourceAfterTransformation),
-        })
-        if (transformReturnValue === null || transformReturnValue === undefined) {
-          throw new Error(`transform must return an object {code, map}`)
-        }
-
-        let sourceAfterTransformation
-        let fileNameForRollup = target.fileNameForRollup
-        if (typeof transformReturnValue === "string") {
-          sourceAfterTransformation = transformReturnValue
-        } else {
-          sourceAfterTransformation = transformReturnValue.sourceAfterTransformation
-          if (transformReturnValue.fileNameForRollup) {
-            fileNameForRollup = transformReturnValue.fileNameForRollup
-          }
-          if (transformReturnValue.map) {
-            target.map = transformReturnValue.map
-          }
-        }
-
-        if (fileNameForRollup === undefined) {
-          fileNameForRollup = computeAssetFileNameForRollup(target.url, sourceAfterTransformation)
-        }
-
-        target.sourceAfterTransformation = sourceAfterTransformation
-        target.fileNameForRollup = fileNameForRollup
+      if (!assetTransformMap.hasOwnProperty(url)) {
+        target.sourceAfterTransformation = target.source
+        target.fileNameForRollup = computeAssetFileNameForRollup(target.url, target.source)
         return
       }
 
-      target.sourceAfterTransformation = target.source
-      target.fileNameForRollup = computeAssetFileNameForRollup(target.url, target.source)
+      const transform = assetTransformMap[url]
+      // assetDependenciesMapping contains all dependencies for an asset
+      // each key is the absolute url to the dependency file
+      // each value is an url relative to the asset importing this dependency
+      // it looks like this:
+      // {
+      //   "file:///project/coin.png": "./coin-45eiopri.png"
+      // }
+      // it must be used by transform to update url in the asset source
+      const dependenciesMapping = {}
+      const importerFileNameForRollup =
+        target.fileNameForRollup ||
+        // we don't yet know the exact importerFileNameForRollup but we can generate a fake one
+        // to ensure we resolve dependency against where the importer file will be
+        computeAssetFileNameForRollup(target.url, "")
+      dependencies.forEach((dependencyUrl) => {
+        const dependencyTarget = targetMap[dependencyUrl]
+        // here it's guaranteed that dependencUrl is in urlMappings
+        // because we throw in case there is circular deps
+        // so each each dependency is handled one after an other
+        // ensuring dependencies where already handled before
+        const dependencyFileNameForRollup = dependencyTarget.fileNameForRollup
+        const dependencyFileUrlForRollup = resolveUrl(dependencyFileNameForRollup, "file:///")
+        const importerFileUrlForRollup = resolveUrl(importerFileNameForRollup, "file:///")
+        dependenciesMapping[dependencyUrl] = urlToRelativeUrl(
+          dependencyFileUrlForRollup,
+          importerFileUrlForRollup,
+        )
+      })
+      logger.debug(
+        `${shortenUrl(url)} transform starts to replace ${JSON.stringify(
+          dependenciesMapping,
+          null,
+          "  ",
+        )}`,
+      )
+      const assetEmittedDuringTransform = []
+      const transformReturnValue = await transform(dependenciesMapping, {
+        precomputeFileNameForRollup: (sourceAfterTransformation) =>
+          computeAssetFileNameForRollup(url, sourceAfterTransformation),
+        emitAsset: ({ specifier, line, column, source }) => {
+          assetEmittedDuringTransform.push({ specifier, line, column, source })
+        },
+      })
+      if (transformReturnValue === null || transformReturnValue === undefined) {
+        throw new Error(`transform must return an object {code, map}`)
+      }
+
+      let sourceAfterTransformation
+      let fileNameForRollup = target.fileNameForRollup
+      if (typeof transformReturnValue === "string") {
+        sourceAfterTransformation = transformReturnValue
+      } else {
+        sourceAfterTransformation = transformReturnValue.sourceAfterTransformation
+        if (transformReturnValue.fileNameForRollup) {
+          fileNameForRollup = transformReturnValue.fileNameForRollup
+        }
+      }
+
+      if (fileNameForRollup === undefined) {
+        fileNameForRollup = computeAssetFileNameForRollup(target.url, sourceAfterTransformation)
+      }
+
+      target.sourceAfterTransformation = sourceAfterTransformation
+      target.fileNameForRollup = fileNameForRollup
+
+      assetEmittedDuringTransform.forEach(({ specifier, line, column, source }) => {
+        const targetOutUrl = resolveUrl(fileNameForRollup, bundleDirectoryUrl)
+        const targetAssetUrl = resolveUrl(specifier, targetOutUrl)
+        const [assetReference] = createReference(
+          { url: targetOutUrl, column, line },
+          { url: targetAssetUrl, isAsset, isInline, source },
+        )
+        logger.debug(formatReferenceFound(assetReference))
+      })
     })
 
     let connected = false

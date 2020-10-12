@@ -124,6 +124,10 @@ export const createJsenvRollupPlugin = async ({
         },
         {
           projectDirectoryUrl: `${compileServerOrigin}`,
+          bundleDirectoryUrl: resolveUrl(
+            urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl),
+            compileServerOrigin,
+          ),
           urlToOriginalProjectUrl,
           loadReference: (url) => urlSourceMapping[url],
           resolveTargetReference: (target, specifier, { isAsset }) => {
@@ -154,23 +158,7 @@ export const createJsenvRollupPlugin = async ({
             if (target.isAsset) {
               target.connect(async () => {
                 await target.getFileNameReadyPromise()
-                const { sourceAfterTransformation, fileNameForRollup, map } = target
-
-                if (map) {
-                  const mapFileName = `${fileNameForRollup}.map`
-                  logger.debug(`emit asset for ${mapFileName}`)
-                  const mapFileUrl = resolveUrl(mapFileName, bundleDirectoryUrl)
-                  map.sources = map.sources.map((source) => {
-                    const sourceUrl = resolveUrl(source, target.url)
-                    const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapFileUrl)
-                    return sourceUrlRelativeToSourceMap
-                  })
-                  emitFile({
-                    type: "asset",
-                    source: JSON.stringify(map, null, "  "),
-                    fileName: mapFileName,
-                  })
-                }
+                const { sourceAfterTransformation, fileNameForRollup } = target
 
                 logger.debug(`emit asset for ${shortenUrl(target.url)}`)
                 const rollupReferenceId = emitFile({
