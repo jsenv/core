@@ -20,22 +20,43 @@ export const jsenvCompositeAssetHooks = {
 
       const nodeUrlMapping = {}
       scripts.forEach((script) => {
-        if (script.attributes.type === "module" && script.attributes.src) {
-          const remoteScriptUrl = emitJsReference({
-            specifier: script.attributes.src,
-            ...getHtmlNodeLocation(script.node),
-          })
-          nodeUrlMapping[remoteScriptUrl] = script
+        if (script.attributes.type === "module") {
+          if (script.attributes.src) {
+            const remoteScriptUrl = emitJsReference({
+              specifier: script.attributes.src,
+              ...getHtmlNodeLocation(script.node),
+            })
+            nodeUrlMapping[remoteScriptUrl] = script
+          }
+          // pour décider du nom je dois voir s'il existe un autre script ayant
+          // la meme ligne, si oui on ajoute la colonne
+          else if (script.text) {
+            const inlineScriptUrl = emitJsReference({
+              specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
+              ...getHtmlNodeLocation(script.node),
+              source: script.text,
+            })
+            nodeUrlMapping[inlineScriptUrl] = script
+          }
         }
-        // pour décider du nom je dois voir s'il existe un autre script ayant
-        // la meme ligne, si oui on ajoute la colonne
-        if (script.attributes.type === "module" && script.text) {
-          const inlineScriptUrl = emitJsReference({
-            specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
-            ...getHtmlNodeLocation(script.node),
-            source: script.text,
-          })
-          nodeUrlMapping[inlineScriptUrl] = script
+        if (script.attributes.type === "importmap") {
+          if (script.attributes.src) {
+            const remoteImportmapUrl = emitAssetReference({
+              specifier: script.attributes.src,
+              ...getHtmlNodeLocation(script.node),
+            })
+            nodeUrlMapping[remoteImportmapUrl] = script
+          } else if (script.text) {
+            // pour ce qui est inline, pas sur de l'approche pour le moment
+            // on verra plus tard
+            // mais ce sera la meme pour le css
+            const inlineImportMapUrl = emitAssetReference({
+              specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
+              ...getHtmlNodeLocation(script.node),
+              source: script.text,
+            })
+            nodeUrlMapping[inlineImportMapUrl] = script
+          }
         }
       })
       styles.forEach((style) => {
