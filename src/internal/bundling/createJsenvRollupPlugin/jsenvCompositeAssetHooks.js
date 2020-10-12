@@ -118,16 +118,16 @@ export const jsenvCompositeAssetHooks = {
       atImports.forEach((atImport) => {
         const importedCssUrl = notifyAssetFound({
           specifier: atImport.specifier,
-          line: atImport.urlNode,
-          column: atImport.urlNode,
+          line: atImport.urlDeclarationNode.source.start.line,
+          column: atImport.urlDeclarationNode.source.start.column,
         })
         nodeUrlMapping[importedCssUrl] = atImport.urlNode
       })
       urlDeclarations.forEach((urlDeclaration) => {
         const cssAssetUrl = notifyAssetFound({
           specifier: urlDeclaration.specifier,
-          line: urlDeclaration.node,
-          column: urlDeclaration,
+          line: urlDeclaration.urlDeclarationNode.source.start.line,
+          column: urlDeclaration.urlDeclarationNode.source.start.column,
         })
         nodeUrlMapping[cssAssetUrl] = urlDeclaration.urlNode
       })
@@ -144,8 +144,6 @@ export const jsenvCompositeAssetHooks = {
         const cssFileNameForRollup = precomputeFileNameForRollup(code)
         const cssSourceMapFileUrlRelativeToSource = `${cssFileNameForRollup}.map`
 
-        map.file = basename(cssFileNameForRollup)
-
         // In theory code should never be modified once the url for caching is computed
         // because url for caching depends on file content.
         // There is an exception for sourcemap because we want to update sourcemap.file
@@ -158,6 +156,9 @@ export const jsenvCompositeAssetHooks = {
           code,
           cssSourceMapFileUrlRelativeToSource,
         )
+
+        map.file = basename(cssFileNameForRollup)
+
         return {
           sourceAfterTransformation: cssSourceAfterTransformation,
           map,

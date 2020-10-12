@@ -129,13 +129,20 @@ export const createCompositeAssetHandler = (
         return dependencyTargetUrl
       }
 
-      const parseReturnValue = await parse(url, target.source, {
-        notifyAssetFound: ({ specifier, column, line }) =>
-          notifyReferenceFound({ isAsset: true, isInline: false, specifier, column, line }),
+      const parseReturnValue = await parse(urlToOriginalProjectUrl(url), target.source, {
+        notifyAssetFound: ({ specifier, column, line, source }) =>
+          notifyReferenceFound({ isAsset: true, isInline: false, specifier, column, line, source }),
         notifyInlineAssetFound: ({ specifier, column, line, source }) =>
           notifyReferenceFound({ isAsset: true, isInline: true, specifier, column, line, source }),
-        notifyJsFound: ({ specifier, column, line }) =>
-          notifyReferenceFound({ isAsset: false, isInline: false, specifier, column, line }),
+        notifyJsFound: ({ specifier, column, line, source }) =>
+          notifyReferenceFound({
+            isAsset: false,
+            isInline: false,
+            specifier,
+            column,
+            line,
+            source,
+          }),
         notifyInlineJsFound: ({ specifier, line, column, source }) =>
           notifyReferenceFound({ isAsset: false, isInline: true, specifier, column, line, source }),
       })
@@ -357,21 +364,21 @@ ${showSourceLocation(referenceSource, {
   }
 
   const formatReferenceFound = (reference) => {
-    const targetUrl = shortenUrl(reference.target.url)
+    const { target } = reference
+    const targetUrl = shortenUrl(target.url)
 
     let message
-    if (reference.isInline && reference.isAsset) {
+    if (target.isInline && target.isAsset) {
       message = `found inline asset.`
-    } else if (reference.isInline) {
+    } else if (target.isInline) {
       message = `found inline js.`
-    } else if (reference.isAsset) {
+    } else if (target.isAsset) {
       message = `found asset reference to ${targetUrl}.`
     } else {
       message = `found js reference to ${targetUrl}.`
     }
 
     message += `
-
 ${showReferenceSourceLocation(reference)}
 `
 
