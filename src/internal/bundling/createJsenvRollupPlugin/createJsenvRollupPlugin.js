@@ -220,7 +220,8 @@ export const createJsenvRollupPlugin = async ({
 
           const chunkFileServerUrl = resolveUrl(chunkFileRelativeUrl, compileServerOrigin)
           await compositeAssetHandler.prepareAssetEntry(chunkFileServerUrl, {
-            fileNameForRollup: key.endsWith(".html") ? key : `${key}.html`,
+            // don't hash the html entry point
+            fileNamePattern: key.endsWith(".html") ? key : `${key}.html`,
           })
         }),
       )

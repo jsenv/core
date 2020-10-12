@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { urlToBasename, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
+import { urlToBasename, urlToRelativeUrl, resolveUrl, urlToParentUrl } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
@@ -26,21 +26,21 @@ export const jsenvCompositeAssetHooks = {
       scripts.forEach((script) => {
         if (script.attributes.type === "module") {
           if (script.attributes.src) {
-            const remoteScriptUrl = notifyJsFound({
+            const [, remoteScriptTarget] = notifyJsFound({
               specifier: script.attributes.src,
               ...getHtmlNodeLocation(script.node),
             })
-            nodeUrlMapping[remoteScriptUrl] = script
+            nodeUrlMapping[remoteScriptTarget.url] = script
           }
           // pour décider du nom je dois voir s'il existe un autre script ayant
           // la meme ligne, si oui on ajoute la colonne
           else if (script.text) {
-            const inlineScriptUrl = notifyInlineJsFound({
+            const [, inlineScriptTarget] = notifyInlineJsFound({
               specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
               ...getHtmlNodeLocation(script.node),
               source: script.text,
             })
-            nodeUrlMapping[inlineScriptUrl] = script
+            nodeUrlMapping[inlineScriptTarget.url] = script
           }
         }
         if (script.attributes.type === "importmap") {
@@ -58,36 +58,49 @@ export const jsenvCompositeAssetHooks = {
           // du bundle directory et donc ont besoin de le connaitre
           // alors que importmap pas vraiment ?
           if (script.attributes.src) {
-            const remoteImportmapUrl = notifyAssetFound({
+            const [remoteImportmapReference, remoteImportmapTarget] = notifyAssetFound({
               specifier: script.attributes.src,
               ...getHtmlNodeLocation(script.node),
+              // here we want to force the fileName for the importmap
+              // so that we don't have to rewrite its content
+              // the goal is to put the importmap at the same relative path
+              // than in the project
+              fileNamePattern: () => {
+                const htmlUrl = remoteImportmapReference.url
+                const importmapRelativeUrl = urlToRelativeUrl(remoteImportmapTarget.url, htmlUrl)
+                const importmapParentRelativeUrl = urlToRelativeUrl(
+                  urlToParentUrl(resolveUrl(importmapRelativeUrl, "file://")),
+                  "file://",
+                )
+                return `${importmapParentRelativeUrl}[name]-[hash][extname]`
+              },
             })
-            nodeUrlMapping[remoteImportmapUrl] = script
+            nodeUrlMapping[remoteImportmapTarget.url] = script
           } else if (script.text) {
-            const inlineImportMapUrl = notifyInlineAssetFound({
+            const [, inlineImportMapTarget] = notifyInlineAssetFound({
               specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
               ...getHtmlNodeLocation(script.node),
               source: script.text,
             })
-            nodeUrlMapping[inlineImportMapUrl] = script
+            nodeUrlMapping[inlineImportMapTarget.url] = script
           }
         }
       })
       styles.forEach((style) => {
         if (style.attributes.href) {
-          const remoteStyleUrl = notifyAssetFound({
+          const [, remoteStyleTarget] = notifyAssetFound({
             specifier: style.attributes.href,
             ...getHtmlNodeLocation(style.node),
           })
-          nodeUrlMapping[remoteStyleUrl] = style
+          nodeUrlMapping[remoteStyleTarget.url] = style
         }
         if (style.text) {
-          const inlineStyleUrl = notifyInlineAssetFound({
+          const [, inlineStyleTarget] = notifyInlineAssetFound({
             specifier: getUniqueInlineStyleName(style, styles, htmlUrl),
             ...getHtmlNodeLocation(style.node),
             source: style.text,
           })
-          nodeUrlMapping[inlineStyleUrl] = style
+          nodeUrlMapping[inlineStyleTarget.url] = style
         }
       })
 
@@ -127,20 +140,20 @@ export const jsenvCompositeAssetHooks = {
       const nodeUrlMapping = {}
 
       atImports.forEach((atImport) => {
-        const importedCssUrl = notifyAssetFound({
+        const [, importedCssTarget] = notifyAssetFound({
           specifier: atImport.specifier,
           line: atImport.urlDeclarationNode.source.start.line,
           column: atImport.urlDeclarationNode.source.start.column,
         })
-        nodeUrlMapping[importedCssUrl] = atImport.urlNode
+        nodeUrlMapping[importedCssTarget.url] = atImport.urlNode
       })
       urlDeclarations.forEach((urlDeclaration) => {
-        const cssAssetUrl = notifyAssetFound({
+        const [, cssAssetTarget] = notifyAssetFound({
           specifier: urlDeclaration.specifier,
           line: urlDeclaration.urlDeclarationNode.source.start.line,
           column: urlDeclaration.urlDeclarationNode.source.start.column,
         })
-        nodeUrlMapping[cssAssetUrl] = urlDeclaration.urlNode
+        nodeUrlMapping[cssAssetTarget.url] = urlDeclaration.urlNode
       })
 
       return async (dependenciesMapping, { precomputeFileNameForRollup, registerAssetEmitter }) => {
@@ -187,34 +200,6 @@ export const jsenvCompositeAssetHooks = {
         }
       }
     }
-
-    // if (url.endsWith(".importmap")) {
-    //   // de base cet importmap avait une url particuliere relative au projet
-    //   // c'est par rapport a cette url qu'on veut s'ajuster
-    //   // et voir ou on se trouve par rapport au bundle directory
-    //   relativeUrl
-    //   debugger
-    //   return (dependenciesMapping, { precomputeFileNameForRollup }) => {
-    //     const importmapUrl = url
-    //     const importmapRelativeUrl = relativeUrl
-
-    //     // foo/bar/importmap.importmap
-    //     // ../../bar.js
-    //     // /importmap.importmap
-    //     // ./bar.js
-    //     const importmapSource = source
-    //     const importmap = JSON.parse(importmapSource)
-    //     const importmapFilenameForRollup = precomputeFileNameForRollup(importmapUrl, "")
-    //     const importmapAfterTransformation = makeImportMapRelativeTo(
-    //       importmap,
-    //       resolveUrl(importmapFilenameForRollup, importmapUrl),
-    //     )
-
-    //     return {
-    //       sourceAfterTransformation: JSON.stringify(importmapAfterTransformation, null, "  "),
-    //     }
-    //   }
-    // }
 
     return null
   },

@@ -13,8 +13,12 @@ const logger = createLogger({ logLevel: "debug" })
 
 const assetFileNamePattern = "assets/[name]-[hash][extname]"
 
-const computeAssetFileNameForRollup = (assetUrl, assetSource) => {
-  return computeFileNameForRollup(assetUrl, assetSource, assetFileNamePattern)
+const computeTargetFileNameForRollup = (target) => {
+  return computeFileNameForRollup(
+    target.url,
+    target.sourceAfterTransformation,
+    target.fileNamePattern || assetFileNamePattern,
+  )
 }
 
 export const createCompositeAssetHandler = (
@@ -29,7 +33,7 @@ export const createCompositeAssetHandler = (
     resolveTargetReference = (specifier, target) => resolveUrl(specifier, target.url),
   },
 ) => {
-  const prepareAssetEntry = async (url, { fileNameForRollup }) => {
+  const prepareAssetEntry = async (url, { fileNamePattern }) => {
     logger.debug(`prepare entry asset ${shortenUrl(url)}`)
 
     // we don't really know where this reference to that asset file comes from
@@ -41,7 +45,7 @@ export const createCompositeAssetHandler = (
       isEntry: true,
       isAsset: true,
       url,
-      fileNameForRollup,
+      fileNamePattern,
     })
 
     await entryTarget.getDependenciesReadyPromise()
@@ -78,7 +82,7 @@ export const createCompositeAssetHandler = (
     isInline = false,
     source,
     sourceAfterTransformation,
-    fileNameForRollup,
+    fileNamePattern,
     references = [],
   }) => {
     const target = {
@@ -89,7 +93,7 @@ export const createCompositeAssetHandler = (
       isInline,
       source,
       sourceAfterTransformation,
-      fileNameForRollup,
+      fileNamePattern,
       references,
     }
 
@@ -106,21 +110,30 @@ export const createCompositeAssetHandler = (
       const dependencies = []
 
       let previousJsReference
-      const notifyReferenceFound = ({ specifier, isAsset, isInline, column, line, source }) => {
+
+      const notifyReferenceFound = ({
+        isAsset,
+        isInline,
+        specifier,
+        line,
+        column,
+        source,
+        fileNamePattern,
+      }) => {
         if (!isEntry && !isAsset) {
           // for now we can only emit a chunk from an entry file as visible in
           // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
           // https://github.com/rollup/rollup/issues/2872
           logger.warn(
-            `cannot handle ${specifier} found in ${url} because it's not yet supported by rollup`,
+            `ignoring js reference found in an asset (it's only possible to reference js from entry asset)`,
           )
           return null
         }
 
         const dependencyTargetUrl = resolveTargetReference(target, specifier, { isAsset, isInline })
         const [dependencyReference, dependencyTarget] = createReference(
-          { url, column, line, previousJsReference },
-          { url: dependencyTargetUrl, isAsset, isInline, source },
+          { url: target.url, column, line, previousJsReference },
+          { url: dependencyTargetUrl, isAsset, isInline, source, fileNamePattern },
         )
         if (dependencyTarget.isConnected()) {
           dependencies.push(dependencyTargetUrl)
@@ -129,7 +142,7 @@ export const createCompositeAssetHandler = (
           }
         }
         logger.debug(formatReferenceFound(dependencyReference))
-        return dependencyTargetUrl
+        return [dependencyReference, dependencyTarget]
       }
 
       const parseReturnValue = await parse(
@@ -138,41 +151,29 @@ export const createCompositeAssetHandler = (
           url: urlToOriginalProjectUrl(url),
         },
         {
-          notifyAssetFound: ({ specifier, column, line, source }) =>
+          notifyAssetFound: (data) =>
             notifyReferenceFound({
               isAsset: true,
               isInline: false,
-              specifier,
-              column,
-              line,
-              source,
+              ...data,
             }),
-          notifyInlineAssetFound: ({ specifier, column, line, source }) =>
+          notifyInlineAssetFound: (data) =>
             notifyReferenceFound({
               isAsset: true,
               isInline: true,
-              specifier,
-              column,
-              line,
-              source,
+              ...data,
             }),
-          notifyJsFound: ({ specifier, column, line, source }) =>
+          notifyJsFound: (data) =>
             notifyReferenceFound({
               isAsset: false,
               isInline: false,
-              specifier,
-              column,
-              line,
-              source,
+              ...data,
             }),
-          notifyInlineJsFound: ({ specifier, line, column, source }) =>
+          notifyInlineJsFound: (data) =>
             notifyReferenceFound({
               isAsset: false,
               isInline: true,
-              specifier,
-              column,
-              line,
-              source,
+              ...data,
             }),
         },
       )
@@ -224,7 +225,7 @@ export const createCompositeAssetHandler = (
 
       if (!assetTransformMap.hasOwnProperty(url)) {
         target.sourceAfterTransformation = target.source
-        target.fileNameForRollup = computeAssetFileNameForRollup(target.url, target.source)
+        target.fileNameForRollup = computeTargetFileNameForRollup(target)
         return
       }
 
@@ -242,7 +243,7 @@ export const createCompositeAssetHandler = (
         target.fileNameForRollup ||
         // we don't yet know the exact importerFileNameForRollup but we can generate a fake one
         // to ensure we resolve dependency against where the importer file will be
-        computeAssetFileNameForRollup(target.url, "")
+        computeTargetFileNameForRollup(target)
       dependencies.forEach((dependencyUrl) => {
         const dependencyTarget = targetMap[dependencyUrl]
         // here it's guaranteed that dependencUrl is in urlMappings
@@ -266,8 +267,7 @@ export const createCompositeAssetHandler = (
       )
       const assetEmitters = []
       const transformReturnValue = await transform(dependenciesMapping, {
-        precomputeFileNameForRollup: (sourceAfterTransformation) =>
-          computeAssetFileNameForRollup(url, sourceAfterTransformation),
+        precomputeFileNameForRollup: () => computeTargetFileNameForRollup(target),
         registerAssetEmitter: (callback) => {
           assetEmitters.push(callback)
         },
@@ -277,7 +277,7 @@ export const createCompositeAssetHandler = (
       }
 
       let sourceAfterTransformation
-      let fileNameForRollup = target.fileNameForRollup
+      let fileNameForRollup
       if (typeof transformReturnValue === "string") {
         sourceAfterTransformation = transformReturnValue
       } else {
@@ -287,11 +287,10 @@ export const createCompositeAssetHandler = (
         }
       }
 
-      if (fileNameForRollup === undefined) {
-        fileNameForRollup = computeAssetFileNameForRollup(target.url, sourceAfterTransformation)
-      }
-
       target.sourceAfterTransformation = sourceAfterTransformation
+      if (fileNameForRollup === undefined) {
+        fileNameForRollup = computeTargetFileNameForRollup(target)
+      }
       target.fileNameForRollup = fileNameForRollup
 
       assetEmitters.forEach((callback) => {

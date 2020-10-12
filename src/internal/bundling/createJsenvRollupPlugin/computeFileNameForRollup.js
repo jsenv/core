@@ -6,7 +6,7 @@ export const computeFileNameForRollup = (
   fileContent,
   pattern = "assets/[name]-[hash][extname]",
 ) => {
-  const fileNameForRollup = renderNamePattern(pattern, {
+  const fileNameForRollup = renderNamePattern(typeof pattern === "function" ? pattern() : pattern, {
     dirname: () => urlToParentUrl(fileUrl),
     name: () => urlToBasename(fileUrl),
     hash: () => generateAssetHash(fileContent),
