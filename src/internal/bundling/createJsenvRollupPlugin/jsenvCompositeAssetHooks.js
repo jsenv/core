@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { urlToBasename, resolveUrl } from "@jsenv/util"
+import { urlToBasename, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
@@ -13,7 +13,7 @@ import {
 
 export const jsenvCompositeAssetHooks = {
   parse: async (
-    { url, relativeUrl, source },
+    { url, source },
     { notifyAssetFound, notifyInlineAssetFound, notifyJsFound, notifyInlineJsFound },
   ) => {
     if (url.endsWith(".html")) {
@@ -143,7 +143,7 @@ export const jsenvCompositeAssetHooks = {
         nodeUrlMapping[cssAssetUrl] = urlDeclaration.urlNode
       })
 
-      return async (dependenciesMapping, { precomputeFileNameForRollup, emitAsset }) => {
+      return async (dependenciesMapping, { precomputeFileNameForRollup, registerAssetEmitter }) => {
         const cssReplaceResult = await replaceCssUrls(cssSource, cssUrl, ({ urlNode }) => {
           const scriptUrl = Object.keys(nodeUrlMapping).find((key) =>
             isSameCssDocumentUrlNode(nodeUrlMapping[key], urlNode),
@@ -153,7 +153,7 @@ export const jsenvCompositeAssetHooks = {
         const code = cssReplaceResult.css
         const map = cssReplaceResult.map.toJSON()
         const cssFileNameForRollup = precomputeFileNameForRollup(code)
-        map.file = basename(cssFileNameForRollup)
+
         const cssSourcemapFilename = `${basename(cssFileNameForRollup)}.map`
 
         // In theory code should never be modified once the url for caching is computed
@@ -166,11 +166,18 @@ export const jsenvCompositeAssetHooks = {
         // to decide the filename for this css asset.
         const cssSourceAfterTransformation = setCssSourceMappingUrl(code, cssSourcemapFilename)
 
-        emitAsset({
-          specifier: cssSourcemapFilename,
-          line: cssSourceAfterTransformation.split(/\r?\n/).length,
-          column: 0,
-          source: JSON.stringify(map, null, "  "),
+        registerAssetEmitter(({ importerProjectUrl, importerBundleUrl }) => {
+          const mapBundleUrl = resolveUrl(cssSourcemapFilename, importerBundleUrl)
+          map.file = basename(importerBundleUrl)
+          map.sources = map.sources.map((source) => {
+            const sourceUrl = resolveUrl(source, importerProjectUrl)
+            const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBundleUrl)
+            return sourceUrlRelativeToSourceMap
+          })
+
+          const assetSource = JSON.stringify(map, null, "  ")
+          const assetUrl = mapBundleUrl
+          return { assetSource, assetUrl }
         })
 
         return {
@@ -181,33 +188,33 @@ export const jsenvCompositeAssetHooks = {
       }
     }
 
-    if (url.endsWith(".importmap")) {
-      // de base cet importmap avait une url particuliere relative au projet
-      // c'est par rapport a cette url qu'on veut s'ajuster
-      // et voir ou on se trouve par rapport au bundle directory
-      relativeUrl
-      debugger
-      return (dependenciesMapping, { precomputeFileNameForRollup }) => {
-        const importmapUrl = url
-        const importmapRelativeUrl = relativeUrl
+    // if (url.endsWith(".importmap")) {
+    //   // de base cet importmap avait une url particuliere relative au projet
+    //   // c'est par rapport a cette url qu'on veut s'ajuster
+    //   // et voir ou on se trouve par rapport au bundle directory
+    //   relativeUrl
+    //   debugger
+    //   return (dependenciesMapping, { precomputeFileNameForRollup }) => {
+    //     const importmapUrl = url
+    //     const importmapRelativeUrl = relativeUrl
 
-        // foo/bar/importmap.importmap
-        // ../../bar.js
-        // /importmap.importmap
-        // ./bar.js
-        const importmapSource = source
-        const importmap = JSON.parse(importmapSource)
-        const importmapFilenameForRollup = precomputeFileNameForRollup(importmapUrl, "")
-        const importmapAfterTransformation = makeImportMapRelativeTo(
-          importmap,
-          resolveUrl(importmapFilenameForRollup, importmapUrl),
-        )
+    //     // foo/bar/importmap.importmap
+    //     // ../../bar.js
+    //     // /importmap.importmap
+    //     // ./bar.js
+    //     const importmapSource = source
+    //     const importmap = JSON.parse(importmapSource)
+    //     const importmapFilenameForRollup = precomputeFileNameForRollup(importmapUrl, "")
+    //     const importmapAfterTransformation = makeImportMapRelativeTo(
+    //       importmap,
+    //       resolveUrl(importmapFilenameForRollup, importmapUrl),
+    //     )
 
-        return {
-          sourceAfterTransformation: JSON.stringify(importmapAfterTransformation, null, "  "),
-        }
-      }
-    }
+    //     return {
+    //       sourceAfterTransformation: JSON.stringify(importmapAfterTransformation, null, "  "),
+    //     }
+    //   }
+    // }
 
     return null
   },

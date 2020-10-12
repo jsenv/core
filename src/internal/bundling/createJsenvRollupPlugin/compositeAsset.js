@@ -17,24 +17,6 @@ const computeAssetFileNameForRollup = (assetUrl, assetSource) => {
   return computeFileNameForRollup(assetUrl, assetSource, assetFileNamePattern)
 }
 
-    // if (url.endsWith(".map")) {
-    //   const sourcemapUrl = url
-    //   const sourcemapRelativeUrl = relativeUrl
-    //   const sourcemapSource = source
-    //   const sourcemap = JSON.parse(sourcemap)
-
-    //   references
-    //   debugger
-    //   // sourcemap.file = basename(cssFileNameForRollup)
-    //   sourcemap.sources = sourcemap.sources.map((source) => {
-    //     const sourceUrl = resolveUrl(source, sourcemapUrl)
-    //     const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, projectDirectoryUrl)
-    //     return sourceUrlRelativeToSourceMap
-    //   })
-
-    //   return JSON.stringify(sourcemap, null, "  ")
-    // }
-
 export const createCompositeAssetHandler = (
   { load, parse },
   {
@@ -42,6 +24,7 @@ export const createCompositeAssetHandler = (
     bundleDirectoryUrl = "file:///",
     loadReference = () => null,
     urlToOriginalProjectUrl = (url) => url,
+    emitAsset,
     connectTarget = () => {},
     resolveTargetReference = (specifier, target) => resolveUrl(specifier, target.url),
   },
@@ -281,12 +264,12 @@ export const createCompositeAssetHandler = (
           "  ",
         )}`,
       )
-      const assetEmittedDuringTransform = []
+      const assetEmitters = []
       const transformReturnValue = await transform(dependenciesMapping, {
         precomputeFileNameForRollup: (sourceAfterTransformation) =>
           computeAssetFileNameForRollup(url, sourceAfterTransformation),
-        emitAsset: ({ specifier, line, column, source }) => {
-          assetEmittedDuringTransform.push({ specifier, line, column, source })
+        registerAssetEmitter: (callback) => {
+          assetEmitters.push(callback)
         },
       })
       if (transformReturnValue === null || transformReturnValue === undefined) {
@@ -311,14 +294,17 @@ export const createCompositeAssetHandler = (
       target.sourceAfterTransformation = sourceAfterTransformation
       target.fileNameForRollup = fileNameForRollup
 
-      assetEmittedDuringTransform.forEach(({ specifier, line, column, source }) => {
-        const targetOutUrl = resolveUrl(fileNameForRollup, bundleDirectoryUrl)
-        const targetAssetUrl = resolveUrl(specifier, targetOutUrl)
-        const [assetReference] = createReference(
-          { url: targetOutUrl, column, line },
-          { url: targetAssetUrl, isAsset, isInline, source },
-        )
-        logger.debug(formatReferenceFound(assetReference))
+      assetEmitters.forEach((callback) => {
+        const { assetSource, assetUrl } = callback({
+          importerProjectUrl: target.url,
+          importerBundleUrl: resolveUrl(fileNameForRollup, bundleDirectoryUrl),
+        })
+
+        emitAsset({
+          source: assetSource,
+          fileName: urlToRelativeUrl(assetUrl, bundleDirectoryUrl),
+        })
+        logger.debug(`emit ${fileNameForRollup} asset emitted by ${fileNameForRollup}`)
       })
     })
 

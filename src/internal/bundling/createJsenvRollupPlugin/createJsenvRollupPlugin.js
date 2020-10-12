@@ -140,6 +140,13 @@ export const createJsenvRollupPlugin = async ({
             }
             return resolveUrl(specifier, target.url)
           },
+          emitAsset: ({ source, fileName }) => {
+            emitFile({
+              type: "asset",
+              source,
+              fileName,
+            })
+          },
           connectTarget: (target) => {
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl
