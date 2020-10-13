@@ -142,7 +142,7 @@ export const createCompositeAssetHandler = (
           }
         }
         logger.debug(formatReferenceFound(dependencyReference))
-        return [dependencyReference, dependencyTarget]
+        return dependencyReference
       }
 
       const parseReturnValue = await parse(
@@ -267,7 +267,12 @@ export const createCompositeAssetHandler = (
       )
       const assetEmitters = []
       const transformReturnValue = await transform(dependenciesMapping, {
-        precomputeFileNameForRollup: () => computeTargetFileNameForRollup(target),
+        precomputeFileNameForRollup: (sourceAfterTransformation) => {
+          target.sourceAfterTransformation = sourceAfterTransformation
+          const precomputedFileNameForRollup = computeTargetFileNameForRollup(target)
+          target.sourceAfterTransformation = undefined
+          return precomputedFileNameForRollup
+        },
         registerAssetEmitter: (callback) => {
           assetEmitters.push(callback)
         },

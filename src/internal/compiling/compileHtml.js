@@ -37,6 +37,7 @@ export const stringifyHtmlDocument = (htmlDocument) => {
 // ce qui veut dire de mettre a jour link.ref et style.text
 export const parseHtmlDocumentRessources = (document) => {
   const scripts = []
+  const stylesheetLinks = []
   const styles = []
 
   visitDocument(document, (node) => {
@@ -49,15 +50,17 @@ export const parseHtmlDocumentRessources = (document) => {
         ...(firstChild && firstChild.nodeName === "#text" ? { text: firstChild.value } : {}),
       })
     }
+
     if (node.nodeName === "link") {
       const attributes = attributeArrayToAttributeObject(node.attrs)
       if (attributes.rel === "stylesheet") {
-        styles.push({
+        stylesheetLinks.push({
           node,
           attributes,
         })
       }
     }
+
     if (node.nameName === "style") {
       const attributes = attributeArrayToAttributeObject(node.attrs)
       const firstChild = node.childNodes[0]
@@ -71,6 +74,7 @@ export const parseHtmlDocumentRessources = (document) => {
 
   return {
     scripts,
+    stylesheetLinks,
     styles,
   }
 }
@@ -158,6 +162,27 @@ export const transformHtmlDocumentModuleScripts = (
   return {
     replacements,
   }
+}
+
+export const replaceHtmlNode = (scriptNode, replacement, { inheritAttributes = true } = {}) => {
+  let newScriptNode
+  if (typeof replacement === "string") {
+    newScriptNode = parseHtmlAsSingleElement(replacement)
+  } else {
+    newScriptNode = replacement
+  }
+
+  if (inheritAttributes) {
+    newScriptNode.attrs = [
+      // inherit script attributes except src, type, href
+      ...scriptNode.attrs.filter(
+        ({ name }) => name !== "type" && name !== "src" && name !== "href",
+      ),
+      ...newScriptNode.attrs,
+    ]
+  }
+
+  replaceNode(scriptNode, newScriptNode)
 }
 
 export const transformHtmlDocumentImportmapScript = (scripts, transformImportmapScript) => {

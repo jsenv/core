@@ -6,8 +6,7 @@ import { replaceCssUrls } from "./css/replaceCssUrls.js"
 import {
   parseHtmlString,
   parseHtmlDocumentRessources,
-  transformHtmlDocumentModuleScripts,
-  transformHtmlDocumentImportmapScript,
+  replaceHtmlNode,
   stringifyHtmlDocument,
 } from "../../compiling/compileHtml.js"
 
@@ -20,29 +19,45 @@ export const jsenvCompositeAssetHooks = {
       const htmlUrl = url
       const htmlSource = String(source)
       const htmlDocument = parseHtmlString(htmlSource)
-      const { scripts, styles } = parseHtmlDocumentRessources(htmlDocument)
+      const { scripts, stylesheetLinks, styles } = parseHtmlDocumentRessources(htmlDocument)
 
-      const nodeUrlMapping = {}
+      const htmlMutationMap = new Map()
       scripts.forEach((script) => {
         if (script.attributes.type === "module") {
           if (script.attributes.src) {
-            const [, remoteScriptTarget] = notifyJsFound({
+            const remoteScriptReference = notifyJsFound({
               specifier: script.attributes.src,
               ...getHtmlNodeLocation(script.node),
             })
-            nodeUrlMapping[remoteScriptTarget.url] = script
+
+            htmlMutationMap.set(remoteScriptReference, ({ urlRelativeToImporter }) => {
+              replaceHtmlNode(
+                script.node,
+                `<script>window.System.import(${JSON.stringify(
+                  ensureRelativeUrlNotation(urlRelativeToImporter),
+                )})</script>`,
+              )
+            })
           }
           // pour décider du nom je dois voir s'il existe un autre script ayant
           // la meme ligne, si oui on ajoute la colonne
           else if (script.text) {
-            const [, inlineScriptTarget] = notifyInlineJsFound({
+            const inlineScriptReference = notifyInlineJsFound({
               specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
               ...getHtmlNodeLocation(script.node),
               source: script.text,
             })
-            nodeUrlMapping[inlineScriptTarget.url] = script
+            htmlMutationMap.set(inlineScriptReference, ({ urlRelativeToImporter }) => {
+              replaceHtmlNode(
+                script.node,
+                `<script>window.System.import(${JSON.stringify(
+                  ensureRelativeUrlNotation(urlRelativeToImporter),
+                )})</script>`,
+              )
+            })
           }
         }
+
         if (script.attributes.type === "importmap") {
           // pour importmap il faudra un truc en particulier
           // en gros en fonction de ou elle finie il faut adapter son contenu
@@ -58,7 +73,7 @@ export const jsenvCompositeAssetHooks = {
           // du bundle directory et donc ont besoin de le connaitre
           // alors que importmap pas vraiment ?
           if (script.attributes.src) {
-            const [remoteImportmapReference, remoteImportmapTarget] = notifyAssetFound({
+            const remoteImportmapReference = notifyAssetFound({
               specifier: script.attributes.src,
               ...getHtmlNodeLocation(script.node),
               // here we want to force the fileName for the importmap
@@ -67,7 +82,10 @@ export const jsenvCompositeAssetHooks = {
               // than in the project
               fileNamePattern: () => {
                 const htmlUrl = remoteImportmapReference.url
-                const importmapRelativeUrl = urlToRelativeUrl(remoteImportmapTarget.url, htmlUrl)
+                const importmapRelativeUrl = urlToRelativeUrl(
+                  remoteImportmapReference.target.url,
+                  htmlUrl,
+                )
                 const importmapParentRelativeUrl = urlToRelativeUrl(
                   urlToParentUrl(resolveUrl(importmapRelativeUrl, "file://")),
                   "file://",
@@ -75,55 +93,57 @@ export const jsenvCompositeAssetHooks = {
                 return `${importmapParentRelativeUrl}[name]-[hash][extname]`
               },
             })
-            nodeUrlMapping[remoteImportmapTarget.url] = script
+            htmlMutationMap.set(remoteImportmapReference, ({ urlRelativeToImporter }) => {
+              replaceHtmlNode(
+                script.node,
+                `<script type="systemjs-importmap" src="${urlRelativeToImporter}"></script>`,
+              )
+            })
           } else if (script.text) {
-            const [, inlineImportMapTarget] = notifyInlineAssetFound({
+            const inlineImportMapReference = notifyInlineAssetFound({
               specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
               ...getHtmlNodeLocation(script.node),
               source: script.text,
             })
-            nodeUrlMapping[inlineImportMapTarget.url] = script
+            htmlMutationMap.set(inlineImportMapReference, ({ urlRelativeToImporter }) => {
+              // here there is a difference: we want the importmap source to inline it
+              replaceHtmlNode(
+                script.node,
+                `<script type="systemjs-importmap">${urlRelativeToImporter}</script>`,
+              )
+            })
           }
         }
       })
-      styles.forEach((style) => {
-        if (style.attributes.href) {
-          const [, remoteStyleTarget] = notifyAssetFound({
-            specifier: style.attributes.href,
-            ...getHtmlNodeLocation(style.node),
+      stylesheetLinks.forEach((stylesheetLink) => {
+        if (stylesheetLink.attributes.href) {
+          const remoteStyleReference = notifyAssetFound({
+            specifier: stylesheetLink.attributes.href,
+            ...getHtmlNodeLocation(stylesheetLink.node),
           })
-          nodeUrlMapping[remoteStyleTarget.url] = style
+          htmlMutationMap.set(remoteStyleReference, ({ urlRelativeToImporter }) => {
+            replaceHtmlNode(stylesheetLink.node, `<link href="${urlRelativeToImporter}"/>`)
+          })
         }
+      })
+      styles.forEach((style) => {
         if (style.text) {
-          const [, inlineStyleTarget] = notifyInlineAssetFound({
+          const inlineStyleReference = notifyInlineAssetFound({
             specifier: getUniqueInlineStyleName(style, styles, htmlUrl),
             ...getHtmlNodeLocation(style.node),
             source: style.text,
           })
-          nodeUrlMapping[inlineStyleTarget.url] = style
+          htmlMutationMap.set(inlineStyleReference, ({ urlRelativeToImporter }) => {
+            // here there is a difference: we want the css to inline it
+            replaceHtmlNode(style.node, `<style>${urlRelativeToImporter}</style>`)
+          })
         }
       })
 
       return async (dependenciesMapping) => {
-        transformHtmlDocumentModuleScripts(scripts, {
-          transformScript: (script) => {
-            const scriptUrl = Object.keys(nodeUrlMapping).find(
-              (key) => nodeUrlMapping[key] === script,
-            )
-            const scriptFileRelativeUrlForBundle = dependenciesMapping[scriptUrl]
-            return `<script>window.System.import(${JSON.stringify(
-              ensureRelativeUrlNotation(scriptFileRelativeUrlForBundle),
-            )})</script>`
-          },
-        })
-        // on aurait presque envie de pouvoir inline l'asset si on a l'info
-        // et sinon de le garder en remote
-        // en tous cas de pouvoir controler ça
-        transformHtmlDocumentImportmapScript(scripts, (script) => {
-          const scriptUrl = Object.keys(nodeUrlMapping).find(
-            (key) => nodeUrlMapping[key] === script,
-          )
-          return `<script type="systemjs-importmap" src="${dependenciesMapping[scriptUrl]}"></script>`
+        htmlMutationMap.forEach((mutationCallback, reference) => {
+          const urlRelativeToImporter = dependenciesMapping[reference.target.url]
+          mutationCallback({ urlRelativeToImporter })
         })
         const htmlAfterTransformation = stringifyHtmlDocument(htmlDocument)
         // const code = minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString
@@ -137,31 +157,38 @@ export const jsenvCompositeAssetHooks = {
       const cssSource = String(source)
       const cssUrl = url
       const { atImports, urlDeclarations } = await parseCssUrls(cssSource, cssUrl)
-      const nodeUrlMapping = {}
 
+      const urlNodeReferenceMapping = new Map()
       atImports.forEach((atImport) => {
-        const [, importedCssTarget] = notifyAssetFound({
+        const cssImportReference = notifyAssetFound({
           specifier: atImport.specifier,
           line: atImport.urlDeclarationNode.source.start.line,
           column: atImport.urlDeclarationNode.source.start.column,
         })
-        nodeUrlMapping[importedCssTarget.url] = atImport.urlNode
+        urlNodeReferenceMapping.set(atImport.urlNode, cssImportReference)
       })
       urlDeclarations.forEach((urlDeclaration) => {
-        const [, cssAssetTarget] = notifyAssetFound({
+        const cssAssetReference = notifyAssetFound({
           specifier: urlDeclaration.specifier,
           line: urlDeclaration.urlDeclarationNode.source.start.line,
           column: urlDeclaration.urlDeclarationNode.source.start.column,
         })
-        nodeUrlMapping[cssAssetTarget.url] = urlDeclaration.urlNode
+        urlNodeReferenceMapping.set(urlDeclaration.urlNode, cssAssetReference)
       })
 
       return async (dependenciesMapping, { precomputeFileNameForRollup, registerAssetEmitter }) => {
         const cssReplaceResult = await replaceCssUrls(cssSource, cssUrl, ({ urlNode }) => {
-          const scriptUrl = Object.keys(nodeUrlMapping).find((key) =>
-            isSameCssDocumentUrlNode(nodeUrlMapping[key], urlNode),
+          const urlNodeFound = Array.from(urlNodeReferenceMapping.keys()).find(
+            (urlNodeCandidate) => {
+              return isSameCssDocumentUrlNode(urlNodeCandidate, urlNode)
+            },
           )
-          return dependenciesMapping[scriptUrl]
+          if (!urlNodeFound) {
+            return urlNode.value
+          }
+          // url node nous dit quel réfrence y correspond
+          const urlNodeReference = urlNodeReferenceMapping[urlNodeFound]
+          return dependenciesMapping[urlNodeReference.target.url]
         })
         const code = cssReplaceResult.css
         const map = cssReplaceResult.map.toJSON()
