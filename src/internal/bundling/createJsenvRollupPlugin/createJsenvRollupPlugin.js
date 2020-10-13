@@ -88,6 +88,8 @@ export const createJsenvRollupPlugin = async ({
   // rename urlRedirectionMapping = {}
   const redirectionMap = {}
 
+  const EMPTY_CHUNK_URL = resolveUrl("__empty__", projectDirectoryUrl)
+
   let chunkId = Object.keys(entryPointMap)[0]
   if (!extname(chunkId)) chunkId += bundleDefaultExtension
 
@@ -122,6 +124,8 @@ export const createJsenvRollupPlugin = async ({
 
     async buildStart() {
       emitFile = (...args) => this.emitFile(...args)
+
+      let chunkEmitCount = 0
       compositeAssetHandler = createCompositeAssetHandler(
         {
           parse: async (target, notifiers) => {
@@ -247,6 +251,7 @@ export const createJsenvRollupPlugin = async ({
                 }
 
                 logger.debug(`emit chunk for ${shortenUrl(target.url)}`)
+                chunkEmitCount++
                 const rollupReferenceId = emitFile({
                   type: "chunk",
                   id,
@@ -268,26 +273,42 @@ export const createJsenvRollupPlugin = async ({
 
       // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
       // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
+
       await Promise.all(
         Object.keys(entryPointMap).map(async (key) => {
           // const chunkBundledFileUrl = resolveUrl(chunkFileRelativeUrl, bundleDirectoryUrl)
           const chunkFileRelativeUrl = entryPointMap[key]
-          if (!chunkFileRelativeUrl.endsWith(".html")) {
-            emitFile({
-              type: "chunk",
-              id: chunkFileRelativeUrl,
-              fileName: `${key}${bundleDefaultExtension || extname(chunkFileRelativeUrl)}`,
+          if (chunkFileRelativeUrl.endsWith(".html")) {
+            const chunkFileServerUrl = resolveUrl(chunkFileRelativeUrl, compileServerOrigin)
+            await compositeAssetHandler.prepareAssetEntry(chunkFileServerUrl, {
+              // don't hash the html entry point
+              fileNamePattern: key.endsWith(".html") ? key : `${key}.html`,
             })
             return
           }
 
-          const chunkFileServerUrl = resolveUrl(chunkFileRelativeUrl, compileServerOrigin)
-          await compositeAssetHandler.prepareAssetEntry(chunkFileServerUrl, {
-            // don't hash the html entry point
-            fileNamePattern: key.endsWith(".html") ? key : `${key}.html`,
+          chunkEmitCount++
+          emitFile({
+            type: "chunk",
+            id: chunkFileRelativeUrl,
+            fileName: `${key}${bundleDefaultExtension || extname(chunkFileRelativeUrl)}`,
           })
         }),
       )
+
+      // rollup will yell at us telling we did not provide an input option
+      // if we provide only an html file without any script type module in it
+      // but this can be desired to produce a bundle with only assets (html, css, images)
+      // without any js
+      // we emit an empty chunk, discards rollup warning about it and we manually remove
+      // this chunk in generateBundle hook
+      if (chunkEmitCount === 0) {
+        emitFile({
+          type: "chunk",
+          id: EMPTY_CHUNK_URL,
+          fileName: "__empty__",
+        })
+      }
     },
 
     resolveId(specifier, importer) {
@@ -328,7 +349,8 @@ export const createJsenvRollupPlugin = async ({
       }
 
       // keep external url intact
-      if (!urlIsInsideOf(importUrl, compileServerOrigin)) {
+      const importProjectUrl = urlToProjectUrl(importUrl)
+      if (!importProjectUrl) {
         return { id: specifier, external: true }
       }
 
@@ -343,6 +365,10 @@ export const createJsenvRollupPlugin = async ({
     // },
 
     async load(url) {
+      if (url === EMPTY_CHUNK_URL) {
+        return ""
+      }
+
       const moduleInfo = this.getModuleInfo(url)
 
       logger.debug(`loads ${url}`)
@@ -437,6 +463,13 @@ export const createJsenvRollupPlugin = async ({
     },
 
     async generateBundle(outputOptions, bundle) {
+      const emptyChunkKey = Object.keys(bundle).find(
+        (key) => bundle[key].facadeModuleId === EMPTY_CHUNK_URL,
+      )
+      if (emptyChunkKey) {
+        delete bundle[emptyChunkKey]
+      }
+
       // it's important to do this to emit late asset
       emitFile = (...args) => this.emitFile(...args)
       // malheureusement rollup ne permet pas de savoir lorsqu'un chunk

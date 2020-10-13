@@ -88,6 +88,11 @@ export const generateBundle = async ({
 
     assertEntryPointMap({ entryPointMap })
 
+    if (Object.keys(entryPointMap).length === 0) {
+      logger.error(`entryPointMap is an empty object`)
+      return { rollupBundle: {} }
+    }
+
     assertBundleDirectoryRelativeUrl({ bundleDirectoryRelativeUrl })
     const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
     assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
@@ -246,7 +251,8 @@ const assertEntryPointMap = ({ entryPointMap }) => {
   if (typeof entryPointMap !== "object") {
     throw new TypeError(`entryPointMap must be an object, got ${entryPointMap}`)
   }
-  Object.keys(entryPointMap).forEach((entryName) => {
+  const keys = Object.keys(entryPointMap)
+  keys.forEach((entryName) => {
     const entryRelativeUrl = entryPointMap[entryName]
     if (typeof entryRelativeUrl !== "string") {
       throw new TypeError(

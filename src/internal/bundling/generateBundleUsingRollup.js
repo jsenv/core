@@ -119,6 +119,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // to be very clear about what we want to ignore
     onwarn: (warning, warn) => {
       if (warning.code === "THIS_IS_UNDEFINED") return
+      if (warning.code === "EMPTY_BUNDLE" && warning.chunkName === "__empty__") return
       warn(warning)
     },
     // on passe input: [] car c'est le plusign jsenv qui se chargera d'emit des chunks
