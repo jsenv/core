@@ -5,28 +5,27 @@ import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
 
 export const parseCssAsset = async ({ url, source }, { notifyAssetFound }) => {
-  const { atImports, urlDeclarations } = await parseCssUrls(source, url)
+  const cssString = String(source)
+  const { atImports, urlDeclarations } = await parseCssUrls(cssString, url)
 
   const urlNodeReferenceMapping = new Map()
   atImports.forEach((atImport) => {
     const cssImportReference = notifyAssetFound({
       specifier: atImport.specifier,
-      line: atImport.urlDeclarationNode.source.start.line,
-      column: atImport.urlDeclarationNode.source.start.column,
+      ...cssNodeToSourceLocation(atImport.urlDeclarationNode),
     })
     urlNodeReferenceMapping.set(atImport.urlNode, cssImportReference)
   })
   urlDeclarations.forEach((urlDeclaration) => {
     const cssAssetReference = notifyAssetFound({
       specifier: urlDeclaration.specifier,
-      line: urlDeclaration.urlDeclarationNode.source.start.line,
-      column: urlDeclaration.urlDeclarationNode.source.start.column,
+      ...cssNodeToSourceLocation(urlDeclaration.urlDeclarationNode),
     })
     urlNodeReferenceMapping.set(urlDeclaration.urlNode, cssAssetReference)
   })
 
   return async (dependenciesMapping, { precomputeFileNameForRollup, registerAssetEmitter }) => {
-    const cssReplaceResult = await replaceCssUrls(source, url, ({ urlNode }) => {
+    const cssReplaceResult = await replaceCssUrls(cssString, url, ({ urlNode }) => {
       const urlNodeFound = Array.from(urlNodeReferenceMapping.keys()).find((urlNodeCandidate) =>
         isSameCssDocumentUrlNode(urlNodeCandidate, urlNode),
       )
@@ -73,6 +72,11 @@ export const parseCssAsset = async ({ url, source }, { notifyAssetFound }) => {
       fileNameForRollup: cssFileNameForRollup,
     }
   }
+}
+
+const cssNodeToSourceLocation = (node) => {
+  const { line, column } = node.source.start
+  return { line, column }
 }
 
 const isSameCssDocumentUrlNode = (firstUrlNode, secondUrlNode) => {

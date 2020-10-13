@@ -165,8 +165,9 @@ const scriptToNode = (script) => {
 
 const scriptsToFragment = (scripts) => {
   const html = scripts.reduce((previous, script) => {
-    const scriptAttributes = objectToHtmlAttributes(script)
-    return `${previous}<script ${scriptAttributes}>${script.text || ""}</script>
+    const { text = "", ...attributes } = script
+    const scriptAttributes = objectToHtmlAttributes(attributes)
+    return `${previous}<script ${scriptAttributes}>${text}</script>
       `
   }, "")
   const fragment = parse5.parseFragment(html)
@@ -191,10 +192,9 @@ const sameScript = (node, { type = "text/javascript", src }) => {
   return nodeType === type && nodeSrc === src
 }
 
-// eslint-disable-next-line no-unused-vars
-const objectToHtmlAttributes = ({ text, ...rest }) => {
-  return Object.keys(rest)
-    .map((key) => `${key}=${valueToHtmlAttributeValue(rest[key])}`)
+const objectToHtmlAttributes = (object) => {
+  return Object.keys(object)
+    .map((key) => `${key}=${valueToHtmlAttributeValue(object[key])}`)
     .join(" ")
 }
 

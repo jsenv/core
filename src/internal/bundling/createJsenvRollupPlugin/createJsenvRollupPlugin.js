@@ -136,10 +136,13 @@ export const createJsenvRollupPlugin = async ({
                 {
                   transformHtmlAst: (htmlAst) => {
                     if (format === "systemjs") {
+                      // idéalement on injectera un script inline
+                      // pour le moment mettons juse l'url
                       manipulateHtmlAst(htmlAst, {
                         scriptInjections: [
                           {
                             src: `${systemJsUrl}`,
+                            // text: ''
                           },
                         ],
                       })

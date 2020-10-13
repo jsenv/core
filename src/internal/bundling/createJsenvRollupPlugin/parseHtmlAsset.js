@@ -12,7 +12,8 @@ export const parseHtmlAsset = (
   { notifyAssetFound, notifyInlineAssetFound, notifyJsFound, notifyInlineJsFound },
   { transformHtmlAst = () => {} } = {},
 ) => {
-  const htmlAst = parseHtmlString(source)
+  const htmlString = String(source)
+  const htmlAst = parseHtmlString(htmlString)
   const { scripts, stylesheetLinks, styles } = parseHtmlAstRessources(htmlAst)
 
   const htmlMutationMap = new Map()
