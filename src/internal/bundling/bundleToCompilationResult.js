@@ -2,7 +2,7 @@
 
 One thing to keep in mind:
 the sourcemap.sourcesContent will contains a json file transformed to js
-while sourcesContent will contain the json file raw source because the corresponding
+while moduleContentMap will contain the json file raw source because the corresponding
 json file etag is used to invalidate the cache
 
 */

@@ -1,20 +1,17 @@
 /**
  * a faire
  *
- * importmap in html
- * - link css in html
  * - inline css in html
- * - tester un aset remap avec importmap
- * - recevoir un systemJsScriptRelativeUrl qu'on ajoutera
- * au html lorsque le bundle est de type systemjs
- * (on le mettra inline)
- * et que si la page html contient une balise script
- * - a warning about some node in html
- * we must have the source from extractSourceLocation properly shown
- * test also a syntax error in html
- * - a warning about some node in css
- * one with @import, one with url()
- * a css syntax error to see how it goes
+ * - inline importmap
+ * - vérifier la résolution d'url pour un asset
+ * -> ne doit pas etre remap par l'importmap sauf si l'asset est référencé par du js
+ * - vérifier qu'on inject bien le script systemjs dans le html
+ * lorsque le bundle est de type systemjs (et que le html contient une balise script)
+ * et recevoir une option comme systemJsUrl
+ * - pouvoir décider d'inline certains assets ?
+ * peut etre utile pour importmap, favicon et ptet certains css critique
+ * autrement dit un asset qui est trouvé pas inline doit pouvoir etre forcé a inline
+ * on fera base64 pour une image et juste le fichier brute pour css, ou importmap.
  */
 
 /* eslint-disable import/max-dependencies */
@@ -75,7 +72,10 @@ export const createJsenvRollupPlugin = async ({
 
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
+  // simplify this to track only raw content because we care only about this
+  // and deprecate for urlSourceMapping
   const moduleContentMap = {}
+  // rename urlRedirectionMapping = {}
   const redirectionMap = {}
 
   let chunkId = Object.keys(entryPointMap)[0]
