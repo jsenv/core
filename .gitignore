@@ -1,5 +1,4 @@
 /.jsenv/
-/.vscode/settings.json
 /coverage/
 /docs/**/.jsenv/
 /docs/**/coverage/
