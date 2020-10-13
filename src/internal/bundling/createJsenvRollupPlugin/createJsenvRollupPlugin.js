@@ -46,7 +46,9 @@ import { minifyHtml } from "./minifyHtml.js"
 import { minifyJs } from "./minifyJs.js"
 import { minifyCss } from "./minifyCss.js"
 import { createCompositeAssetHandler } from "./compositeAsset.js"
-import { jsenvCompositeAssetHooks } from "./jsenvCompositeAssetHooks.js"
+import { parseHtmlAsset } from "./parseHtmlAsset.js"
+import { parseCssAsset } from "./parseCssAsset.js"
+import { parseImportmapAsset } from "./parseImportmapAsset.js"
 
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
@@ -74,7 +76,7 @@ export const createJsenvRollupPlugin = async ({
   // https://github.com/kangax/html-minifier#options-quick-reference
   minifyHtmlOptions,
   manifestFile,
-  // systemJsFileUrl = "/node_modules/systemjs/dist/s.min.js",
+  systemJsFileUrl = "/node_modules/systemjs/dist/s.min.js",
 
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
@@ -120,7 +122,40 @@ export const createJsenvRollupPlugin = async ({
       emitFile = (...args) => this.emitFile(...args)
       compositeAssetHandler = createCompositeAssetHandler(
         {
-          ...jsenvCompositeAssetHooks,
+          parse: async (target, notifiers) => {
+            const { url } = target
+            if (url.endsWith(".html")) {
+              return parseHtmlAsset(
+                {
+                  ...target,
+                  url: urlToOriginalProjectUrl(url),
+                },
+                notifiers,
+              )
+            }
+
+            if (url.endsWith(".css")) {
+              return parseCssAsset(
+                {
+                  ...target,
+                  url: urlToOriginalProjectUrl(url),
+                },
+                notifiers,
+              )
+            }
+
+            if (url.endsWith(".importmap")) {
+              return parseImportmapAsset(
+                {
+                  ...target,
+                  url: urlToOriginalProjectUrl(url),
+                },
+                notifiers,
+              )
+            }
+
+            return null
+          },
           load: async (url) => {
             const moduleResponse = await fetchModule(url)
             // const contentType = moduleResponse.headers["content-type"] || ""

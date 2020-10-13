@@ -158,10 +158,7 @@ export const createCompositeAssetHandler = (
       }
 
       const parseReturnValue = await parse(
-        {
-          ...target,
-          url: urlToOriginalProjectUrl(url),
-        },
+        target,
         {
           notifyAssetFound: (data) =>
             notifyReferenceFound({
