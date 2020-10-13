@@ -3,11 +3,19 @@
  *
  * - inline css in html
  * - inline importmap
- * - vérifier la résolution d'url pour un asset
- * -> ne doit pas etre remap par l'importmap sauf si l'asset est référencé par du js
  * - vérifier qu'on inject bien le script systemjs dans le html
  * lorsque le bundle est de type systemjs (et que le html contient une balise script)
  * et recevoir une option comme systemJsUrl
+ * - vérifier la résolution d'url pour un asset
+ * -> ne doit pas etre remap par l'importmap sauf si l'asset est référencé par du js
+ * excepté https://github.com/WICG/import-maps#import-urls
+ * - css minification
+ * - html minification
+ * - <link rel="favicon"
+ * - <img>
+ * - xlink:href="" in svg
+ * in theory inline style attributes
+ * - <source> inside <audio>, <video>, <srcset>
  * - pouvoir décider d'inline certains assets ?
  * peut etre utile pour importmap, favicon et ptet certains css critique
  * autrement dit un asset qui est trouvé pas inline doit pouvoir etre forcé a inline
@@ -166,6 +174,10 @@ export const createJsenvRollupPlugin = async ({
               target.connect(async () => {
                 await target.getFileNameReadyPromise()
                 const { sourceAfterTransformation, fileNameForRollup } = target
+
+                if (target.isInline) {
+                  return {}
+                }
 
                 logger.debug(`emit asset for ${shortenUrl(target.url)}`)
                 const rollupReferenceId = emitFile({

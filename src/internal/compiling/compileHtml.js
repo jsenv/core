@@ -61,7 +61,7 @@ export const parseHtmlDocumentRessources = (document) => {
       }
     }
 
-    if (node.nameName === "style") {
+    if (node.nodeName === "style") {
       const attributes = attributeArrayToAttributeObject(node.attrs)
       const firstChild = node.childNodes[0]
       styles.push({

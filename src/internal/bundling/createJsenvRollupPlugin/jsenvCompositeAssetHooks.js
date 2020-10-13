@@ -81,10 +81,10 @@ export const jsenvCompositeAssetHooks = {
               // the goal is to put the importmap at the same relative path
               // than in the project
               fileNamePattern: () => {
-                const htmlUrl = remoteImportmapReference.url
+                const importmapUrl = remoteImportmapReference.url
                 const importmapRelativeUrl = urlToRelativeUrl(
                   remoteImportmapReference.target.url,
-                  htmlUrl,
+                  importmapUrl,
                 )
                 const importmapParentRelativeUrl = urlToRelativeUrl(
                   urlToParentUrl(resolveUrl(importmapRelativeUrl, "file://")),
@@ -179,10 +179,8 @@ export const jsenvCompositeAssetHooks = {
 
       return async (dependenciesMapping, { precomputeFileNameForRollup, registerAssetEmitter }) => {
         const cssReplaceResult = await replaceCssUrls(cssSource, cssUrl, ({ urlNode }) => {
-          const urlNodeFound = Array.from(urlNodeReferenceMapping.keys()).find(
-            (urlNodeCandidate) => {
-              return isSameCssDocumentUrlNode(urlNodeCandidate, urlNode)
-            },
+          const urlNodeFound = Array.from(urlNodeReferenceMapping.keys()).find((urlNodeCandidate) =>
+            isSameCssDocumentUrlNode(urlNodeCandidate, urlNode),
           )
           if (!urlNodeFound) {
             return urlNode.value
@@ -242,30 +240,43 @@ const getHtmlNodeLocation = (htmlNode) => {
 
 const getUniqueInlineScriptName = (script, scripts, htmlUrl) => {
   const htmlBasename = urlToBasename(htmlUrl)
+
+  const scriptId = script.attributes.id
+  if (scriptId) {
+    return `${htmlBasename}.${scriptId}.js`
+  }
+
   const { line, column } = getHtmlNodeLocation(script.node)
   const lineTaken = scripts.some(
     (scriptCandidate) =>
       scriptCandidate !== script && getHtmlNodeLocation(scriptCandidate.node).line === line,
   )
+
   if (lineTaken) {
-    return `${htmlBasename}.line.${line}.${column}.js`
+    return `${htmlBasename}.${line}.${column}.js`
   }
 
-  return `${htmlBasename}.line.${line}.js`
+  return `${htmlBasename}.${line}.js`
 }
 
 const getUniqueInlineStyleName = (style, styles, htmlUrl) => {
   const htmlBasename = urlToBasename(htmlUrl)
+
+  const styleId = style.attributes.id
+  if (styleId) {
+    return `${htmlBasename}.${styleId}.css`
+  }
+
   const { line, column } = getHtmlNodeLocation(style.node)
   const lineTaken = styles.some(
     (styleCandidate) =>
       styleCandidate !== style && getHtmlNodeLocation(styleCandidate.node).line === line,
   )
   if (lineTaken) {
-    return `${htmlBasename}.line.${line}.${column}.css`
+    return `${htmlBasename}.${line}.${column}.css`
   }
 
-  return `${htmlBasename}.line.${line}.css`
+  return `${htmlBasename}.${line}.css`
 }
 
 // otherwise systemjs thinks it's a bare import

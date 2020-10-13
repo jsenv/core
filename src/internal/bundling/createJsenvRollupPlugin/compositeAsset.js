@@ -4,6 +4,7 @@ import {
   urlIsInsideOf,
   isFileSystemPath,
   fileSystemPathToUrl,
+  urlToParentUrl,
 } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
 import { computeFileNameForRollup } from "./computeFileNameForRollup.js"
@@ -22,6 +23,10 @@ const computeTargetFileNameForRollup = (target) => {
 }
 
 const precomputeTargetFileNameForRollup = (target, sourceAfterTransformation = "") => {
+  if (target.fileNameForRollup) {
+    return target.fileNameForRollup
+  }
+
   target.sourceAfterTransformation = sourceAfterTransformation
   const precomputedFileNameForRollup = computeTargetFileNameForRollup(target)
   target.sourceAfterTransformation = undefined
@@ -48,18 +53,18 @@ export const createCompositeAssetHandler = (
     // so we could analyse stack trace here to put this function caller
     // as the reference to this target file
     const callerLocation = getCallerLocation()
-    const [, entryTarget] = createReference(callerLocation, {
+    const entryReference = createReference(callerLocation, {
       isEntry: true,
       isAsset: true,
       url,
       fileNamePattern,
     })
 
-    await entryTarget.getDependenciesReadyPromise()
+    await entryReference.target.getDependenciesReadyPromise()
     // start to wait internally for eventual chunks
     // but don't await here because this function will be awaited by rollup before starting
     // to parse chunks
-    entryTarget.getFileNameReadyPromise()
+    entryReference.target.getFileNameReadyPromise()
   }
 
   const targetMap = {}
@@ -78,7 +83,7 @@ export const createCompositeAssetHandler = (
     target.references.push(reference)
     targetMap[url] = target
     connectTarget(target)
-    return [reference, target]
+    return reference
   }
 
   const assetTransformMap = {}
@@ -138,11 +143,11 @@ export const createCompositeAssetHandler = (
         }
 
         const dependencyTargetUrl = resolveTargetReference(target, specifier, { isAsset, isInline })
-        const [dependencyReference, dependencyTarget] = createReference(
+        const dependencyReference = createReference(
           { url: target.url, column, line, previousJsReference },
           { url: dependencyTargetUrl, isAsset, isInline, source, fileNamePattern },
         )
-        if (dependencyTarget.isConnected()) {
+        if (dependencyReference.target.isConnected()) {
           dependencies.push(dependencyTargetUrl)
           if (!isAsset) {
             previousJsReference = dependencyReference
@@ -168,6 +173,15 @@ export const createCompositeAssetHandler = (
             notifyReferenceFound({
               isAsset: true,
               isInline: true,
+              // inherit parent directory location because it's an inline asset
+              fileNamePattern: () => {
+                const importerFileNameForRollup = precomputeTargetFileNameForRollup(target)
+                const importerParentRelativeUrl = urlToRelativeUrl(
+                  urlToParentUrl(resolveUrl(importerFileNameForRollup, "file://")),
+                  "file://",
+                )
+                return `${importerParentRelativeUrl}[name]-[hash][extname]`
+              },
               ...data,
             }),
           notifyJsFound: (data) =>
@@ -246,11 +260,9 @@ export const createCompositeAssetHandler = (
       // }
       // it must be used by transform to update url in the asset source
       const dependenciesMapping = {}
-      const importerFileNameForRollup =
-        target.fileNameForRollup ||
-        // we don't yet know the exact importerFileNameForRollup but we can generate a fake one
-        // to ensure we resolve dependency against where the importer file will be
-        precomputeTargetFileNameForRollup(target)
+      // we don't yet know the exact importerFileNameForRollup but we can generate a fake one
+      // to ensure we resolve dependency against where the importer file will be
+      const importerFileNameForRollup = precomputeTargetFileNameForRollup(target)
       dependencies.forEach((dependencyUrl) => {
         const dependencyTarget = targetMap[dependencyUrl]
         // here it's guaranteed that dependencUrl is in urlMappings
@@ -302,9 +314,11 @@ export const createCompositeAssetHandler = (
       target.fileNameForRollup = fileNameForRollup
 
       assetEmitters.forEach((callback) => {
+        const importerProjectUrl = target.url
+        const importerBundleUrl = resolveUrl(fileNameForRollup, bundleDirectoryUrl)
         const { assetSource, assetUrl } = callback({
-          importerProjectUrl: target.url,
-          importerBundleUrl: resolveUrl(fileNameForRollup, bundleDirectoryUrl),
+          importerProjectUrl,
+          importerBundleUrl,
         })
 
         emitAsset({
@@ -362,7 +376,7 @@ export const createCompositeAssetHandler = (
   }
 
   const generateJavaScriptForAssetImport = async (url, { source, importerUrl } = {}) => {
-    const [assetReference, assetTarget] = createReference(
+    const assetReference = createReference(
       // the reference to this target comes from importerUrl
       // but we don't really know the line and column
       // because rollup does not share this information
@@ -380,11 +394,11 @@ export const createCompositeAssetHandler = (
 
     logger.debug(formatReferenceFound(assetReference))
 
-    if (!assetTarget.isConnected()) {
+    if (!assetReference.target.isConnected()) {
       throw new Error(`target is not connected ${url}`)
     }
-    await assetTarget.getRollupReferenceIdReadyPromise()
-    const { rollupReferenceId } = assetTarget
+    await assetReference.target.getRollupReferenceIdReadyPromise()
+    const { rollupReferenceId } = assetReference.target
     return `export default import.meta.ROLLUP_FILE_URL_${rollupReferenceId};`
   }
 
