@@ -500,6 +500,7 @@ export const createJsenvRollupPlugin = async ({
         code: codeInput,
         url: urlToProjectUrl(moduleUrl), // transformJs expect a file:// url
         babelPluginMap,
+        transformModuleIntoSystemFormat: false,
       })
 
       return {
