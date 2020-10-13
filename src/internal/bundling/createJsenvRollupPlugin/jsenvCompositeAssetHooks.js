@@ -3,6 +3,7 @@ import { urlToBasename, urlToRelativeUrl, resolveUrl, urlToParentUrl } from "@js
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
+import { renderNamePattern } from "./computeFileNameForRollup.js"
 import {
   parseHtmlString,
   parseHtmlDocumentRessources,
@@ -43,7 +44,11 @@ export const jsenvCompositeAssetHooks = {
           // la meme ligne, si oui on ajoute la colonne
           else if (script.text) {
             const inlineScriptReference = notifyInlineJsFound({
-              specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
+              specifier: getUniqueNameForInlineHtmlNode(
+                script,
+                scripts,
+                `${urlToBasename(htmlUrl)}.[id].js`,
+              ),
               ...getHtmlNodeLocation(script.node),
               source: script.text,
             })
@@ -101,7 +106,11 @@ export const jsenvCompositeAssetHooks = {
             })
           } else if (script.text) {
             const inlineImportMapReference = notifyInlineAssetFound({
-              specifier: getUniqueInlineScriptName(script, scripts, htmlUrl),
+              specifier: getUniqueNameForInlineHtmlNode(
+                script,
+                scripts,
+                `${urlToBasename(htmlUrl)}.[id].importmap`,
+              ),
               ...getHtmlNodeLocation(script.node),
               source: script.text,
             })
@@ -128,7 +137,11 @@ export const jsenvCompositeAssetHooks = {
       styles.forEach((style) => {
         if (style.text) {
           const inlineStyleReference = notifyInlineAssetFound({
-            specifier: getUniqueInlineStyleName(style, styles, htmlUrl),
+            specifier: getUniqueNameForInlineHtmlNode(
+              style,
+              styles,
+              `${urlToBasename(htmlUrl)}.[id].css`,
+            ),
             ...getHtmlNodeLocation(style.node),
             source: style.text,
           })
@@ -227,6 +240,14 @@ export const jsenvCompositeAssetHooks = {
       }
     }
 
+    if (url.endsWith(".importmap")) {
+      const importmapSource = String(source)
+      return () => {
+        // this is to remove eventual whitespaces
+        return JSON.stringify(JSON.parse(importmapSource))
+      }
+    }
+
     return null
   },
 }
@@ -238,45 +259,26 @@ const getHtmlNodeLocation = (htmlNode) => {
   }
 }
 
-const getUniqueInlineScriptName = (script, scripts, htmlUrl) => {
-  const htmlBasename = urlToBasename(htmlUrl)
+const getUniqueNameForInlineHtmlNode = (node, nodes, pattern) => {
+  return renderNamePattern(pattern, {
+    id: () => {
+      const nodeId = node.attributes.id
+      if (nodeId) {
+        return nodeId
+      }
 
-  const scriptId = script.attributes.id
-  if (scriptId) {
-    return `${htmlBasename}.${scriptId}.js`
-  }
+      const { line, column } = getHtmlNodeLocation(node.node)
+      const lineTaken = nodes.some(
+        (nodeCandidate) =>
+          nodeCandidate !== node && getHtmlNodeLocation(nodeCandidate.node).line === line,
+      )
+      if (lineTaken) {
+        return `${line}.${column}`
+      }
 
-  const { line, column } = getHtmlNodeLocation(script.node)
-  const lineTaken = scripts.some(
-    (scriptCandidate) =>
-      scriptCandidate !== script && getHtmlNodeLocation(scriptCandidate.node).line === line,
-  )
-
-  if (lineTaken) {
-    return `${htmlBasename}.${line}.${column}.js`
-  }
-
-  return `${htmlBasename}.${line}.js`
-}
-
-const getUniqueInlineStyleName = (style, styles, htmlUrl) => {
-  const htmlBasename = urlToBasename(htmlUrl)
-
-  const styleId = style.attributes.id
-  if (styleId) {
-    return `${htmlBasename}.${styleId}.css`
-  }
-
-  const { line, column } = getHtmlNodeLocation(style.node)
-  const lineTaken = styles.some(
-    (styleCandidate) =>
-      styleCandidate !== style && getHtmlNodeLocation(styleCandidate.node).line === line,
-  )
-  if (lineTaken) {
-    return `${htmlBasename}.${line}.${column}.css`
-  }
-
-  return `${htmlBasename}.${line}.css`
+      return line
+    },
+  })
 }
 
 // otherwise systemjs thinks it's a bare import

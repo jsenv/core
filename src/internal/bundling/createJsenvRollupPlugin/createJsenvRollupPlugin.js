@@ -1,8 +1,6 @@
 /**
  * a faire
  *
- * - inline css in html
- * - inline importmap
  * - vérifier qu'on inject bien le script systemjs dans le html
  * lorsque le bundle est de type systemjs (et que le html contient une balise script)
  * et recevoir une option comme systemJsUrl
