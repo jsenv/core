@@ -1,11 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  parseHtmlString,
-  parseHtmlDocumentRessources,
-  manipulateHtmlDocument,
-  transformHtmlDocumentModuleScripts,
-  stringifyHtmlDocument,
-} from "./compileHtml.js"
+import { parseHtmlString, manipulateHtmlAst, stringifyHtmlAst } from "./compileHtml.js"
 
 const compileHtml = (
   htmlBeforeCompilation,
@@ -17,16 +11,12 @@ const compileHtml = (
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
   const document = parseHtmlString(htmlBeforeCompilation)
 
-  manipulateHtmlDocument(document, { scriptInjections })
-
-  const { scripts } = parseHtmlDocumentRessources(document)
-  const scriptTransformations = transformHtmlDocumentModuleScripts(scripts)
+  manipulateHtmlAst(document, { scriptInjections })
   // resolveScripts(document, resolveScriptSrc)
 
-  const htmlAfterCompilation = stringifyHtmlDocument(document)
+  const htmlAfterCompilation = stringifyHtmlAst(document)
   return {
     htmlAfterCompilation,
-    ...scriptTransformations,
   }
 }
 

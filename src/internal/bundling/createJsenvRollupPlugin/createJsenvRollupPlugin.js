@@ -39,12 +39,14 @@ import { fetchUrl } from "../../fetchUrl.js"
 import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
 import { transformJs } from "../../compiling/js-compilation-service/transformJs.js"
 import { findAsyncPluginNameInBabelPluginMap } from "../../compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
+import { manipulateHtmlAst } from "../../compiling/compileHtml.js"
 
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { minifyHtml } from "./minifyHtml.js"
 import { minifyJs } from "./minifyJs.js"
 import { minifyCss } from "./minifyCss.js"
+
 import { createCompositeAssetHandler } from "./compositeAsset.js"
 import { parseHtmlAsset } from "./parseHtmlAsset.js"
 import { parseCssAsset } from "./parseCssAsset.js"
@@ -76,7 +78,7 @@ export const createJsenvRollupPlugin = async ({
   // https://github.com/kangax/html-minifier#options-quick-reference
   minifyHtmlOptions,
   manifestFile,
-  systemJsFileUrl = "/node_modules/systemjs/dist/s.min.js",
+  systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
 
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
@@ -131,6 +133,19 @@ export const createJsenvRollupPlugin = async ({
                   url: urlToOriginalProjectUrl(url),
                 },
                 notifiers,
+                {
+                  transformHtmlAst: (htmlAst) => {
+                    if (format === "systemjs") {
+                      manipulateHtmlAst(htmlAst, {
+                        scriptInjections: [
+                          {
+                            src: `${systemJsUrl}`,
+                          },
+                        ],
+                      })
+                    }
+                  },
+                },
               )
             }
 

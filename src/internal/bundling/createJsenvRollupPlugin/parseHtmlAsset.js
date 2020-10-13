@@ -2,17 +2,18 @@ import { urlToBasename, urlToRelativeUrl, resolveUrl, urlToParentUrl } from "@js
 import { renderNamePattern } from "./computeFileNameForRollup.js"
 import {
   parseHtmlString,
-  parseHtmlDocumentRessources,
+  parseHtmlAstRessources,
   replaceHtmlNode,
-  stringifyHtmlDocument,
+  stringifyHtmlAst,
 } from "../../compiling/compileHtml.js"
 
 export const parseHtmlAsset = (
   { source, url },
   { notifyAssetFound, notifyInlineAssetFound, notifyJsFound, notifyInlineJsFound },
+  { transformHtmlAst = () => {} } = {},
 ) => {
-  const htmlDocument = parseHtmlString(source)
-  const { scripts, stylesheetLinks, styles } = parseHtmlDocumentRessources(htmlDocument)
+  const htmlAst = parseHtmlString(source)
+  const { scripts, stylesheetLinks, styles } = parseHtmlAstRessources(htmlAst)
 
   const htmlMutationMap = new Map()
   scripts.forEach((script) => {
@@ -147,8 +148,9 @@ export const parseHtmlAsset = (
         sourceAfterTransformation: reference.target.sourceAfterTransformation,
       })
     })
-    const htmlAfterTransformation = stringifyHtmlDocument(htmlDocument)
-    // const code = minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString
+    await transformHtmlAst(htmlAst)
+    const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
+    // const sourceAfterTransformation = minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlAfterTransformation
     return {
       sourceAfterTransformation: htmlAfterTransformation,
     }
