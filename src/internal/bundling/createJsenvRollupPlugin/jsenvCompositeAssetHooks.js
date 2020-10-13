@@ -105,11 +105,10 @@ export const jsenvCompositeAssetHooks = {
               ...getHtmlNodeLocation(script.node),
               source: script.text,
             })
-            htmlMutationMap.set(inlineImportMapReference, ({ urlRelativeToImporter }) => {
-              // here there is a difference: we want the importmap source to inline it
+            htmlMutationMap.set(inlineImportMapReference, ({ sourceAfterTransformation }) => {
               replaceHtmlNode(
                 script.node,
-                `<script type="systemjs-importmap">${urlRelativeToImporter}</script>`,
+                `<script type="systemjs-importmap">${sourceAfterTransformation}</script>`,
               )
             })
           }
@@ -133,9 +132,8 @@ export const jsenvCompositeAssetHooks = {
             ...getHtmlNodeLocation(style.node),
             source: style.text,
           })
-          htmlMutationMap.set(inlineStyleReference, ({ urlRelativeToImporter }) => {
-            // here there is a difference: we want the css to inline it
-            replaceHtmlNode(style.node, `<style>${urlRelativeToImporter}</style>`)
+          htmlMutationMap.set(inlineStyleReference, ({ sourceAfterTransformation }) => {
+            replaceHtmlNode(style.node, `<style>${sourceAfterTransformation}</style>`)
           })
         }
       })
@@ -143,7 +141,10 @@ export const jsenvCompositeAssetHooks = {
       return async (dependenciesMapping) => {
         htmlMutationMap.forEach((mutationCallback, reference) => {
           const urlRelativeToImporter = dependenciesMapping[reference.target.url]
-          mutationCallback({ urlRelativeToImporter })
+          mutationCallback({
+            urlRelativeToImporter,
+            sourceAfterTransformation: reference.target.sourceAfterTransformation,
+          })
         })
         const htmlAfterTransformation = stringifyHtmlDocument(htmlDocument)
         // const code = minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlTransformedString
@@ -187,7 +188,7 @@ export const jsenvCompositeAssetHooks = {
             return urlNode.value
           }
           // url node nous dit quel réfrence y correspond
-          const urlNodeReference = urlNodeReferenceMapping[urlNodeFound]
+          const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
           return dependenciesMapping[urlNodeReference.target.url]
         })
         const code = cssReplaceResult.css

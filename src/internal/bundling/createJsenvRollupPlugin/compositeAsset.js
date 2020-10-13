@@ -21,6 +21,13 @@ const computeTargetFileNameForRollup = (target) => {
   )
 }
 
+const precomputeTargetFileNameForRollup = (target, sourceAfterTransformation = "") => {
+  target.sourceAfterTransformation = sourceAfterTransformation
+  const precomputedFileNameForRollup = computeTargetFileNameForRollup(target)
+  target.sourceAfterTransformation = undefined
+  return precomputedFileNameForRollup
+}
+
 export const createCompositeAssetHandler = (
   { load, parse },
   {
@@ -243,7 +250,7 @@ export const createCompositeAssetHandler = (
         target.fileNameForRollup ||
         // we don't yet know the exact importerFileNameForRollup but we can generate a fake one
         // to ensure we resolve dependency against where the importer file will be
-        computeTargetFileNameForRollup(target)
+        precomputeTargetFileNameForRollup(target)
       dependencies.forEach((dependencyUrl) => {
         const dependencyTarget = targetMap[dependencyUrl]
         // here it's guaranteed that dependencUrl is in urlMappings
@@ -267,12 +274,8 @@ export const createCompositeAssetHandler = (
       )
       const assetEmitters = []
       const transformReturnValue = await transform(dependenciesMapping, {
-        precomputeFileNameForRollup: (sourceAfterTransformation) => {
-          target.sourceAfterTransformation = sourceAfterTransformation
-          const precomputedFileNameForRollup = computeTargetFileNameForRollup(target)
-          target.sourceAfterTransformation = undefined
-          return precomputedFileNameForRollup
-        },
+        precomputeFileNameForRollup: (sourceAfterTransformation) =>
+          precomputeTargetFileNameForRollup(target, sourceAfterTransformation),
         registerAssetEmitter: (callback) => {
           assetEmitters.push(callback)
         },

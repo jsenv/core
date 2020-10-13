@@ -6,7 +6,6 @@ https://github.com/postcss/postcss/blob/master/docs/guidelines/runner.md#31-dont
 
 */
 
-// import postcss from "postcss"
 import valueParser from "postcss-value-parser"
 import { fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
 
@@ -18,10 +17,7 @@ export const postCssUrlHashPlugin = () => {
       const fromUrl = fileSystemPathToUrl(from)
       return {
         AtRule: {
-          import: (
-            atImportNode,
-            // { AtRule }
-          ) => {
+          import: (atImportNode, { AtRule }) => {
             if (atImportNode.parent.type !== "root") {
               atImportNode.warn(result, "`@import` should be top level")
               return
@@ -32,7 +28,8 @@ export const postCssUrlHashPlugin = () => {
               return
             }
 
-            let [urlNode] = valueParser(atImportNode.params).nodes
+            const parsed = valueParser(atImportNode.params)
+            let [urlNode] = parsed.nodes
 
             if (!urlNode || (urlNode.type !== "string" && urlNode.type !== "function")) {
               atImportNode.warn(result, `No URL in \`${atImportNode.toString()}\``)
@@ -85,19 +82,15 @@ export const postCssUrlHashPlugin = () => {
               urlNode,
             }
             const urlNewValue = getUrlReplacementValue(urlReference)
-            if (urlNewValue) {
+            if (urlNewValue && urlNewValue !== urlNode.value) {
               urlNode.value = urlNewValue
+              const newParams = parsed.toString()
+              const newAtImportRule = new AtRule({
+                name: "import",
+                params: newParams,
+              })
+              atImportNode.replaceWith(newAtImportRule)
             }
-
-            // if (url in urlReplacements) {
-            //   const params = valueParser(atImportNode.params)
-            //   params.nodes[0].value = urlReplacements[url]
-            //   const newAtImportRule = new AtRule({
-            //     name: "import",
-            //     params: params.toString(),
-            //   })
-            //   atImportNode.replaceWith(newAtImportRule)
-            // }
 
             if (collectUrls) {
               result.messages.push(urlReference)
