@@ -21,9 +21,6 @@ export const serveBundle = async ({
   compileCacheStrategy,
 
   format,
-  formatOutputOptions = {},
-  node = format === "commonjs",
-  browser = format === "global",
   projectFileRequestedCallback,
   request,
   babelPluginMap,
@@ -43,24 +40,22 @@ export const serveBundle = async ({
       cancellationToken,
       logger,
 
+      entryPointMap,
       projectDirectoryUrl,
       importMapFileRelativeUrl,
-      entryPointMap,
-      // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
-      // but still important to know where the files will be written
-      bundleDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
       compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
       compileServerOrigin,
       importDefaultExtension,
       externalImportSpecifiers,
-
-      node,
-      browser,
       babelPluginMap,
+
       format,
-      formatOutputOptions,
+      // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
+      // but still important to know where the files will be written
+      bundleDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
       writeOnFileSystem: false,
       sourcemapExcludeSources: true,
+      manifestFile: false,
     })
 
     const sourcemapFileUrl = `${compiledFileUrl}.map`

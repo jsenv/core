@@ -60,30 +60,27 @@ export const createJsenvRollupPlugin = async ({
   cancellationToken,
   logger,
 
-  projectDirectoryUrl,
   entryPointMap,
-  bundleDirectoryUrl,
-  bundleDefaultExtension,
+  projectDirectoryUrl,
   importMapFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
   importDefaultExtension,
-
   externalImportSpecifiers,
+  babelPluginMap,
   node,
   browser,
-  babelPluginMap,
+
   format,
   minify,
-  // https://github.com/terser/terser#minify-options
   minifyJsOptions,
-  // https://github.com/jakubpawlowicz/clean-css#constructor-options
   minifyCssOptions,
-  // https://github.com/kangax/html-minifier#options-quick-reference
   minifyHtmlOptions,
   manifestFile,
-  systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
+  systemJsUrl,
 
+  bundleDirectoryUrl,
+  bundleDefaultExtension,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
   // simplify this to track only raw content because we care only about this
@@ -102,7 +99,12 @@ export const createJsenvRollupPlugin = async ({
     compileDirectoryRelativeUrl,
     compileServerOrigin,
   )
-  let importMap = {}
+  const importMapFileRemoteUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
+  const importMapFileResponse = await fetchUrl(importMapFileRemoteUrl)
+  const importMapRaw = await importMapFileResponse.json()
+  logger.debug(`importmap file fetched from ${importMapFileRemoteUrl}`)
+
+  const importMap = normalizeImportMap(importMapRaw, importMapFileRemoteUrl)
 
   const nativeModulePredicate = (specifier) => {
     if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
@@ -454,11 +456,11 @@ export const createJsenvRollupPlugin = async ({
       return options
     },
 
-    renderChunk: (source) => {
+    renderChunk: (code) => {
       if (!minify) return null
 
       // https://github.com/terser-js/terser#minify-options
-      const result = minifyJs(source, {
+      const result = minifyJs(code, {
         sourceMap: true,
         ...(format === "global" ? { toplevel: false } : { toplevel: true }),
         ...minifyJsOptions,
@@ -487,25 +489,10 @@ export const createJsenvRollupPlugin = async ({
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
       await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle)
-
       logger.info(formatBundleGeneratedLog(bundle))
 
       if (manifestFile) {
-        const mappings = {}
-        Object.keys(bundle).forEach((key) => {
-          const chunk = bundle[key]
-          let chunkId = chunk.name
-          chunkId += ".js"
-          mappings[chunkId] = chunk.fileName
-        })
-        const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
-        const manifest = {}
-        mappingKeysSorted.forEach((key) => {
-          manifest[key] = mappings[key]
-        })
-
-        const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
-        await writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "))
+        await writeManifestFile(bundle, bundleDirectoryUrl)
       }
     },
 
@@ -749,37 +736,6 @@ ${target.url}
 ${projectDirectoryUrl}`
 }
 
-// const urlToRollupId = (url, { compileServerOrigin, projectDirectoryUrl }) => {
-//   if (url.startsWith(`${compileServerOrigin}/`)) {
-//     return urlToFileSystemPath(`${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`)
-//   }
-//   if (url.startsWith("file://")) {
-//     return urlToFileSystemPath(url)
-//   }
-//   return url
-// }
-
-// const urlToServerUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
-//   if (url.startsWith(projectDirectoryUrl)) {
-//     return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
-//   }
-//   return null
-// }
-
-// const rollupIdToFileServerUrl = (rollupId, { projectDirectoryUrl, compileServerOrigin }) => {
-//   const fileUrl = rollupIdToFileUrl(rollupId)
-//   if (!fileUrl) {
-//     return null
-//   }
-
-//   if (!fileUrl.startsWith(projectDirectoryUrl)) {
-//     return null
-//   }
-
-//   const fileRelativeUrl = urlToRelativeUrl(fileUrl, projectDirectoryUrl)
-//   return `${compileServerOrigin}/${fileRelativeUrl}`
-// }
-
 const transformAsyncInsertedByRollup = async ({
   projectDirectoryUrl,
   bundleDirectoryUrl,
@@ -839,6 +795,24 @@ const formatBundleGeneratedLog = (bundle) => {
     ...(assetDescription ? { [assetDescription]: assetFilenames } : {}),
     ...(chunkDescription ? { [chunkDescription]: chunkFilenames } : {}),
   })
+}
+
+const writeManifestFile = async (bundle, bundleDirectoryUrl) => {
+  const mappings = {}
+  Object.keys(bundle).forEach((key) => {
+    const chunk = bundle[key]
+    let chunkId = chunk.name
+    chunkId += ".js"
+    mappings[chunkId] = chunk.fileName
+  })
+  const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
+  const manifest = {}
+  mappingKeysSorted.forEach((key) => {
+    manifest[key] = mappings[key]
+  })
+
+  const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
+  await writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "))
 }
 
 const createDetailedMessage = (message, details = {}) => {

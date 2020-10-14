@@ -10,54 +10,59 @@ export const generateBundleUsingRollup = async ({
   cancellationToken,
   logger,
 
-  projectDirectoryUrl,
   entryPointMap,
-  bundleDirectoryUrl,
-  bundleDefaultExtension,
+  projectDirectoryUrl,
   importMapFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
   importDefaultExtension,
   externalImportSpecifiers,
-
+  babelPluginMap,
   node,
   browser,
-  babelPluginMap,
+
   format,
-  formatOutputOptions,
+  globals,
+  globalName,
+  sourcemapExcludeSources,
+
+  bundleDirectoryUrl,
+  bundleDefaultExtension,
+  systemJsUrl,
   minify,
   minifyJsOptions,
   minifyCssOptions,
   minifyHtmlOptions,
-  sourcemapExcludeSources,
-  writeOnFileSystem,
   manifestFile = false,
-  systemJsScript,
+
+  writeOnFileSystem,
 }) => {
   const { jsenvRollupPlugin, getExtraInfo } = await createJsenvRollupPlugin({
     cancellationToken,
     logger,
 
-    projectDirectoryUrl,
     entryPointMap,
-    bundleDirectoryUrl,
-    bundleDefaultExtension,
+    projectDirectoryUrl,
     importMapFileRelativeUrl,
     compileDirectoryRelativeUrl,
     compileServerOrigin,
     importDefaultExtension,
     externalImportSpecifiers,
-
+    babelPluginMap,
     node,
     browser,
-    babelPluginMap,
+
     format,
+    bundleDirectoryUrl,
+    bundleDefaultExtension,
+
     minify,
     minifyJsOptions,
     minifyCssOptions,
     minifyHtmlOptions,
+
     manifestFile,
-    systemJsScript,
+    systemJsUrl,
   })
 
   const rollupBundle = await useRollup({
@@ -68,11 +73,12 @@ export const generateBundleUsingRollup = async ({
     jsenvRollupPlugin,
 
     format,
-    formatOutputOptions,
-    bundleDirectoryUrl,
-    bundleDefaultExtension,
+    globals,
+    globalName,
     sourcemapExcludeSources,
     writeOnFileSystem,
+    bundleDirectoryUrl,
+    bundleDefaultExtension,
   })
 
   return {
@@ -87,13 +93,13 @@ const useRollup = async ({
 
   entryPointMap,
   jsenvRollupPlugin,
-
   format,
-  formatOutputOptions,
-  bundleDirectoryUrl,
-  bundleDefaultExtension,
+  globals,
+  globalName,
   sourcemapExcludeSources,
   writeOnFileSystem,
+  bundleDirectoryUrl,
+  bundleDefaultExtension,
 }) => {
   logger.info(`
 parse bundle
@@ -142,11 +148,10 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources,
-
     entryFileNames: `[name]${bundleDefaultExtension || outputExtension}`,
     chunkFileNames: `[name]-[hash]${bundleDefaultExtension || outputExtension}`,
-
-    ...formatOutputOptions,
+    globals,
+    globalName,
   }
 
   const rollupBundle = await createOperation({

@@ -2,6 +2,7 @@ import { jsenvCoreDirectoryUrl } from "../../src/internal/jsenvCoreDirectoryUrl.
 import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
 export const GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS = {
+  format: "systemjs",
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   bundleDirectoryClean: true,
   jsenvDirectoryClean: true,

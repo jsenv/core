@@ -8,9 +8,6 @@ export const GENERATE_COMMONJS_BUNDLE_TEST_PARAMS = {
   babelPluginMap: testBabelPluginMap,
   logLevel: "warn",
   compileServerLogLevel: "warn",
-  formatOutputOptions: {
-    exports: "auto",
-  },
 }
 
 export const REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS = {
