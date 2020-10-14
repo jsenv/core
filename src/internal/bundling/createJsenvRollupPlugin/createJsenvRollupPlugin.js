@@ -39,7 +39,12 @@ import { fetchUrl } from "../../fetchUrl.js"
 import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
 import { transformJs } from "../../compiling/js-compilation-service/transformJs.js"
 import { findAsyncPluginNameInBabelPluginMap } from "../../compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
-import { manipulateHtmlAst } from "../../compiling/compileHtml.js"
+import {
+  parseHtmlString,
+  htmlAstContains,
+  htmlNodeIsScriptModule,
+  manipulateHtmlAst,
+} from "../../compiling/compileHtml.js"
 
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
@@ -114,7 +119,7 @@ export const createJsenvRollupPlugin = async ({
   }
 
   const urlImporterMapping = {}
-  const urlSourceMapping = {}
+  const urlResponseBodyMap = {}
   const virtualModules = {}
 
   let compositeAssetHandler
@@ -138,19 +143,28 @@ export const createJsenvRollupPlugin = async ({
                 },
                 notifiers,
                 {
-                  transformHtmlAst: (htmlAst) => {
-                    if (format === "systemjs") {
-                      // idéalement on injectera un script inline
-                      // pour le moment mettons juse l'url
-                      manipulateHtmlAst(htmlAst, {
-                        scriptInjections: [
-                          {
-                            src: `${systemJsUrl}`,
-                            // text: ''
-                          },
-                        ],
-                      })
+                  htmlStringToHtmlAst: (htmlString) => {
+                    const htmlAst = parseHtmlString(htmlString)
+                    if (format !== "systemjs") {
+                      return htmlAst
                     }
+
+                    const htmlContainsModuleScript = htmlAstContains(
+                      htmlAst,
+                      htmlNodeIsScriptModule,
+                    )
+                    if (!htmlContainsModuleScript) {
+                      return htmlAst
+                    }
+
+                    manipulateHtmlAst(htmlAst, {
+                      scriptInjections: [
+                        {
+                          src: systemJsUrl,
+                        },
+                      ],
+                    })
+                    return htmlAst
                   },
                 },
               )
@@ -192,7 +206,7 @@ export const createJsenvRollupPlugin = async ({
             compileServerOrigin,
           ),
           urlToOriginalProjectUrl,
-          loadReference: (url) => urlSourceMapping[url],
+          loadReference: (url) => urlResponseBodyMap[url],
           resolveTargetReference: (target, specifier, { isAsset }) => {
             if (target.isEntry && target.isAsset && !isAsset) {
               // html entry point
@@ -374,7 +388,7 @@ export const createJsenvRollupPlugin = async ({
       logger.debug(`loads ${url}`)
       const { responseUrl, contentRaw, content = "", map } = await loadModule(url, moduleInfo)
 
-      urlSourceMapping[url] = contentRaw
+      urlResponseBodyMap[url] = contentRaw
 
       saveModuleContent(responseUrl, {
         content,

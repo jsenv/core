@@ -1,5 +1,6 @@
 import { createHash } from "crypto"
 import { urlToParentUrl, urlToBasename, urlToExtension } from "@jsenv/util"
+import { renderNamePattern } from "../../renderNamePattern.js"
 
 export const computeFileNameForRollup = (
   fileUrl,
@@ -13,13 +14,6 @@ export const computeFileNameForRollup = (
     extname: () => urlToExtension(fileUrl),
   })
   return fileNameForRollup
-}
-
-export const renderNamePattern = (pattern, replacements) => {
-  return pattern.replace(/\[(\w+)\]/g, (_match, type) => {
-    const replacement = replacements[type]()
-    return replacement
-  })
 }
 
 // https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
