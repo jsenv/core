@@ -24,7 +24,6 @@ export const generateBundleUsingRollup = async ({
   browser,
   babelPluginMap,
   format,
-  formatInputOptions,
   formatOutputOptions,
   minify,
   minifyJsOptions,
@@ -69,7 +68,6 @@ export const generateBundleUsingRollup = async ({
     jsenvRollupPlugin,
 
     format,
-    formatInputOptions,
     formatOutputOptions,
     bundleDirectoryUrl,
     bundleDefaultExtension,
@@ -91,7 +89,6 @@ const useRollup = async ({
   jsenvRollupPlugin,
 
   format,
-  formatInputOptions,
   formatOutputOptions,
   bundleDirectoryUrl,
   bundleDefaultExtension,
@@ -128,7 +125,6 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     input: [],
     // preserveEntrySignatures: false,
     plugins: [jsenvRollupPlugin],
-    ...formatInputOptions,
   }
   const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
   const outputExtension = extension === ".html" ? ".js" : extension
