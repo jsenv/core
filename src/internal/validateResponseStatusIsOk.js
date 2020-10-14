@@ -1,4 +1,4 @@
-export const validateResponseStatusIsOk = ({ status, url }) => {
+export const validateResponseStatusIsOk = ({ status, url }, importerUrl) => {
   if (responseStatusIsOk(status)) {
     return { valid: true }
   }
@@ -11,7 +11,9 @@ ${status}
 --- expected status ---
 200 to 299
 --- url ---
-${url}`,
+${url}
+--- imported by ---
+${importerUrl}`,
   }
 }
 

@@ -22,13 +22,14 @@ export const generateBundleUsingRollup = async ({
   browser,
 
   format,
+  systemJsUrl,
   globals,
   globalName,
   sourcemapExcludeSources,
 
   bundleDirectoryUrl,
   bundleDefaultExtension,
-  systemJsUrl,
+
   minify,
   minifyJsOptions,
   minifyCssOptions,
@@ -53,6 +54,7 @@ export const generateBundleUsingRollup = async ({
     browser,
 
     format,
+    systemJsUrl,
     bundleDirectoryUrl,
     bundleDefaultExtension,
 
@@ -62,7 +64,6 @@ export const generateBundleUsingRollup = async ({
     minifyHtmlOptions,
 
     manifestFile,
-    systemJsUrl,
   })
 
   const rollupBundle = await useRollup({

@@ -50,6 +50,7 @@ export const generateBundle = async ({
     "./index.js": "./index.js",
   },
   format = "esm",
+  systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
   globalName,
   globals = {},
   sourcemapExcludeSources = false,
@@ -182,6 +183,7 @@ export const generateBundle = async ({
       writeOnFileSystem,
 
       format,
+      systemJsUrl,
       globalName,
       globals,
       sourcemapExcludeSources,

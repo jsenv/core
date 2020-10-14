@@ -110,7 +110,7 @@ export const createCompositeAssetHandler = (
     }
 
     const getSourceReadyPromise = memoize(async () => {
-      const source = await load(url)
+      const source = await load(url, references[0].url)
       target.source = source
     })
     if (source !== undefined) {
@@ -157,44 +157,41 @@ export const createCompositeAssetHandler = (
         return dependencyReference
       }
 
-      const parseReturnValue = await parse(
-        target,
-        {
-          notifyAssetFound: (data) =>
-            notifyReferenceFound({
-              isAsset: true,
-              isInline: false,
-              ...data,
-            }),
-          notifyInlineAssetFound: (data) =>
-            notifyReferenceFound({
-              isAsset: true,
-              isInline: true,
-              // inherit parent directory location because it's an inline asset
-              fileNamePattern: () => {
-                const importerFileNameForRollup = precomputeTargetFileNameForRollup(target)
-                const importerParentRelativeUrl = urlToRelativeUrl(
-                  urlToParentUrl(resolveUrl(importerFileNameForRollup, "file://")),
-                  "file://",
-                )
-                return `${importerParentRelativeUrl}[name]-[hash][extname]`
-              },
-              ...data,
-            }),
-          notifyJsFound: (data) =>
-            notifyReferenceFound({
-              isAsset: false,
-              isInline: false,
-              ...data,
-            }),
-          notifyInlineJsFound: (data) =>
-            notifyReferenceFound({
-              isAsset: false,
-              isInline: true,
-              ...data,
-            }),
-        },
-      )
+      const parseReturnValue = await parse(target, {
+        notifyAssetFound: (data) =>
+          notifyReferenceFound({
+            isAsset: true,
+            isInline: false,
+            ...data,
+          }),
+        notifyInlineAssetFound: (data) =>
+          notifyReferenceFound({
+            isAsset: true,
+            isInline: true,
+            // inherit parent directory location because it's an inline asset
+            fileNamePattern: () => {
+              const importerFileNameForRollup = precomputeTargetFileNameForRollup(target)
+              const importerParentRelativeUrl = urlToRelativeUrl(
+                urlToParentUrl(resolveUrl(importerFileNameForRollup, "file://")),
+                "file://",
+              )
+              return `${importerParentRelativeUrl}[name]-[hash][extname]`
+            },
+            ...data,
+          }),
+        notifyJsFound: (data) =>
+          notifyReferenceFound({
+            isAsset: false,
+            isInline: false,
+            ...data,
+          }),
+        notifyInlineJsFound: (data) =>
+          notifyReferenceFound({
+            isAsset: false,
+            isInline: true,
+            ...data,
+          }),
+      })
 
       if (dependencies.length > 0 && typeof parseReturnValue !== "function") {
         throw new Error(
