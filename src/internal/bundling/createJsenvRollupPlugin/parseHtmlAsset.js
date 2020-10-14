@@ -107,7 +107,7 @@ export const parseHtmlAsset = async (
       })
       htmlMutationMap.set(remoteImportmapReference, ({ urlRelativeToImporter }) => {
         replaceHtmlNode(
-          script.node,
+          script,
           `<script type="systemjs-importmap" src="${urlRelativeToImporter}"></script>`,
         )
       })

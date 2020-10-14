@@ -42,7 +42,12 @@ import {
   htmlAstContains,
   htmlNodeIsScriptModule,
   manipulateHtmlAst,
+  findFirstImportmapNode,
+  getHtmlNodeLocation,
+  getHtmlNodeAttributeValue,
+  getHtmlNodeTextContent,
 } from "../../compiling/compileHtml.js"
+import { showSourceLocation } from "./showSourceLocation.js"
 
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
@@ -94,12 +99,6 @@ export const createJsenvRollupPlugin = async ({
     compileDirectoryRelativeUrl,
     compileServerOrigin,
   )
-  const importMapFileRemoteUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
-  const importMapFileResponse = await fetchUrl(importMapFileRemoteUrl)
-  const importMapRaw = await importMapFileResponse.json()
-  logger.debug(`importmap file fetched from ${importMapFileRemoteUrl}`)
-
-  const importMap = normalizeImportMap(importMapRaw, importMapFileRemoteUrl)
 
   const nativeModulePredicate = (specifier) => {
     if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
@@ -113,15 +112,89 @@ export const createJsenvRollupPlugin = async ({
   const urlResponseBodyMap = {}
   const virtualModules = {}
 
+  const fetchImportmapFromParameter = async () => {
+    const importmapProjectUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
+    const importMapFileCompiledUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
+    const importMap = await fetchAndNormalizeImportmap(importMapFileCompiledUrl)
+    logger.debug(`use importmap found following importMapRelativeUrl at ${importmapProjectUrl}`)
+    return importMap
+  }
+
   let compositeAssetHandler
   let emitFile = () => {}
+  let fetchImportmap = fetchImportmapFromParameter
+  let importMap
   const jsenvRollupPlugin = {
     name: "jsenv",
 
     async buildStart() {
       emitFile = (...args) => this.emitFile(...args)
 
-      let chunkEmitCount = 0
+      // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
+      // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
+
+      const entryPointsPrepared = []
+      await Promise.all(
+        Object.keys(entryPointMap).map(async (key) => {
+          const projectRelativeUrl = key
+          const chunkFileRelativeUrl = entryPointMap[key]
+          const chunkFileUrl = resolveUrl(chunkFileRelativeUrl, bundleDirectoryUrl)
+          const chunkName = urlToRelativeUrl(chunkFileUrl, bundleDirectoryUrl)
+
+          if (projectRelativeUrl.endsWith(".html")) {
+            const htmlProjectUrl = resolveUrl(projectRelativeUrl, projectDirectoryUrl)
+            const htmlServerUrl = resolveUrl(projectRelativeUrl, compileServerOrigin)
+            const htmlCompiledUrl = resolveUrl(projectRelativeUrl, compileDirectoryRemoteUrl)
+            const htmlResponse = await fetchModule(htmlServerUrl, `entryPointMap`)
+            const htmlSource = await htmlResponse.text()
+            const importmapHtmlNode = findFirstImportmapNode(htmlSource)
+            if (importmapHtmlNode) {
+              if (fetchImportmap === fetchImportmapFromParameter) {
+                const src = getHtmlNodeAttributeValue(importmapHtmlNode, "src")
+                if (src) {
+                  logger.info(formatUseImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource))
+                  const importmapUrl = resolveUrl(src, htmlCompiledUrl)
+                  fetchImportmap = () => fetchAndNormalizeImportmap(importmapUrl)
+                } else {
+                  const text = getHtmlNodeTextContent(importmapHtmlNode)
+                  if (text) {
+                    logger.info(formatUseImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource))
+                    fetchImportmap = () => {
+                      const importmapRaw = JSON.parse(text)
+                      const importmap = normalizeImportMap(importmapRaw, htmlCompiledUrl)
+                      return importmap
+                    }
+                  }
+                }
+              } else {
+                logger.warn(formatIgnoreImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource))
+              }
+            }
+
+            entryPointsPrepared.push({
+              type: "html",
+              url: htmlServerUrl,
+              chunkName,
+              source: htmlSource,
+            })
+          } else {
+            entryPointsPrepared.push({
+              type: "js",
+              url: resolveUrl(projectRelativeUrl, projectDirectoryUrl),
+              chunkName,
+            })
+          }
+        }),
+      )
+      importMap = await fetchImportmap()
+
+      // rollup will yell at us telling we did not provide an input option
+      // if we provide only an html file without any script type module in it
+      // but this can be desired to produce a bundle with only assets (html, css, images)
+      // without any js
+      // we emit an empty chunk, discards rollup warning about it and we manually remove
+      // this chunk in generateBundle hook
+      let atleastOneChunkEmitted = false
       compositeAssetHandler = createCompositeAssetHandler(
         {
           parse: async (target, notifiers) => {
@@ -256,7 +329,7 @@ export const createJsenvRollupPlugin = async ({
                 }
 
                 logger.debug(`emit chunk for ${shortenUrl(target.url)}`)
-                chunkEmitCount++
+                atleastOneChunkEmitted = true
                 const rollupReferenceId = emitFile({
                   type: "chunk",
                   id,
@@ -276,42 +349,25 @@ export const createJsenvRollupPlugin = async ({
         },
       )
 
-      // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
-      // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
-
       await Promise.all(
-        Object.keys(entryPointMap).map(async (key) => {
-          const projectFileRelativeUrl = key
-          const chunkFileRelativeUrl = entryPointMap[key]
-          const chunkFileUrl = resolveUrl(chunkFileRelativeUrl, bundleDirectoryUrl)
-          const chunkName = urlToRelativeUrl(chunkFileUrl, bundleDirectoryUrl)
-
-          if (projectFileRelativeUrl.endsWith(".html")) {
-            const projectFileServerUrl = resolveUrl(projectFileRelativeUrl, compileServerOrigin)
-            const fileNamePattern = chunkName
-            await compositeAssetHandler.prepareAssetEntry(projectFileServerUrl, {
+        entryPointsPrepared.map(async ({ type, url, chunkName, source }) => {
+          if (type === "html") {
+            await compositeAssetHandler.prepareAssetEntry(url, {
               // don't hash the html entry point
-              fileNamePattern,
+              fileNamePattern: chunkName,
+              source,
             })
-            return
+          } else if (type === "js") {
+            atleastOneChunkEmitted = true
+            emitFile({
+              type: "chunk",
+              id: url,
+              name: chunkName,
+            })
           }
-
-          chunkEmitCount++
-          emitFile({
-            type: "chunk",
-            id: projectFileRelativeUrl,
-            name: chunkName,
-          })
         }),
       )
-
-      // rollup will yell at us telling we did not provide an input option
-      // if we provide only an html file without any script type module in it
-      // but this can be desired to produce a bundle with only assets (html, css, images)
-      // without any js
-      // we emit an empty chunk, discards rollup warning about it and we manually remove
-      // this chunk in generateBundle hook
-      if (chunkEmitCount === 0) {
+      if (!atleastOneChunkEmitted) {
         emitFile({
           type: "chunk",
           id: EMPTY_CHUNK_URL,
@@ -724,6 +780,35 @@ ${moduleUrl}`)
       }
     },
   }
+}
+
+const formatIgnoreImportMap = (importmapHtmlNode, htmlUrl, htmlSource) => {
+  const { line, column } = getHtmlNodeLocation(importmapHtmlNode)
+  return `ignore importmap found in html file.
+${htmlUrl}:${line}:${column}
+
+${showSourceLocation(htmlSource, {
+  line,
+  column,
+})}`
+}
+
+const formatUseImportMap = (importmapHtmlNode, htmlUrl, htmlSource) => {
+  const { line, column } = getHtmlNodeLocation(importmapHtmlNode)
+  return `use importmap found in html file.
+${htmlUrl}:${line}:${column}
+
+${showSourceLocation(htmlSource, {
+  line,
+  column,
+})}`
+}
+
+const fetchAndNormalizeImportmap = async (importmapUrl) => {
+  const importmapResponse = await fetchUrl(importmapUrl)
+  const importmap = await importmapResponse.json()
+  const importmapNormalized = normalizeImportMap(importmap, importmapUrl)
+  return importmapNormalized
 }
 
 const formatExternalFileWarning = (target, { compositeAssetHandler, projectDirectoryUrl }) => {

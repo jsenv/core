@@ -151,8 +151,12 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     sourcemapExcludeSources,
     entryFileNames: `[name]${bundleDefaultExtension || outputExtension}`,
     chunkFileNames: `[name]-[hash]${bundleDefaultExtension || outputExtension}`,
-    globals,
-    globalName,
+    ...(format === "global"
+      ? {
+          globals,
+          globalName,
+        }
+      : {}),
   }
 
   const rollupBundle = await createOperation({

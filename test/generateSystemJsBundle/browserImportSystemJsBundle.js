@@ -9,7 +9,7 @@ const SYSTEM_PATH = require.resolve("systemjs/dist/system.js")
 export const browserImportSystemJsBundle = async ({
   projectDirectoryUrl,
   testDirectoryRelativeUrl,
-  htmlFileRelativeUrl = "./main.html",
+  htmlFileRelativeUrl = "./dist/systemjs/main.html",
   mainRelativeUrl,
   headless = true,
   autoStop = true,
@@ -49,7 +49,7 @@ export const browserImportSystemJsBundle = async ({
 
 const startTestServer = ({ testDirectoryUrl }) => {
   return startServer({
-    logLevel: "off",
+    logLevel: "error",
     protocol: "https",
     requestToResponse: firstService(
       (request) => serveSystemJS({ request }),

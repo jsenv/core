@@ -45,7 +45,7 @@ export const createCompositeAssetHandler = (
     resolveTargetReference = (specifier, target) => resolveUrl(specifier, target.url),
   },
 ) => {
-  const prepareAssetEntry = async (url, { fileNamePattern }) => {
+  const prepareAssetEntry = async (url, { fileNamePattern, source }) => {
     logger.debug(`prepare entry asset ${shortenUrl(url)}`)
 
     // we don't really know where this reference to that asset file comes from
@@ -58,6 +58,7 @@ export const createCompositeAssetHandler = (
       isAsset: true,
       url,
       fileNamePattern,
+      source,
     })
 
     await entryReference.target.getDependenciesReadyPromise()

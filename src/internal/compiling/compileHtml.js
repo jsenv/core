@@ -24,6 +24,19 @@ export const stringifyHtmlAst = (htmlAst) => {
   return htmlString
 }
 
+export const findFirstImportmapNode = (htmlString) => {
+  const htmlAst = parseHtmlString(htmlString)
+  let importmapNode = null
+  visitHtmlAst(htmlAst, (node) => {
+    if (htmlNodeIsScriptImportmap(node)) {
+      importmapNode = node
+      return "stop"
+    }
+    return null
+  })
+  return importmapNode
+}
+
 export const getHtmlNodeAttributeValue = (htmlNode, attributeName) => {
   const attribute = getAttributeByName(htmlNode.attrs, attributeName)
   return attribute ? attribute.value : undefined
@@ -63,6 +76,12 @@ export const htmlAstContains = (htmlAst, predicate) => {
 
 export const htmlNodeIsScriptModule = (htmlNode) => {
   return htmlNode.nodeName === "script" && getHtmlNodeAttributeValue(htmlNode, "type") === "module"
+}
+
+export const htmlNodeIsScriptImportmap = (htmlNode) => {
+  return (
+    htmlNode.nodeName === "script" && getHtmlNodeAttributeValue(htmlNode, "type") === "importmap"
+  )
 }
 
 // let's <img>, <link for favicon>, <link for css>, <styles>

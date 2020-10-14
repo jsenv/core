@@ -1,5 +1,5 @@
 {
  "imports": {
-   "foo": "./foo.txt"
+   "./jsenv.png": "./jsenv-remap.png"
  }
 }

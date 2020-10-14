@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
 import { generateBundle } from "../../../index.js"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
@@ -19,20 +19,22 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
 
-await generateBundle({
+const bundle = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
-  // logLevel: "info",
+  logLevel: "info",
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap,
 })
-
-const { namespace: actual } = await browserImportSystemJsBundle({
+const mainRelativeUrl = `./${bundle.rollupBundle.output[0].fileName}`
+const { namespace: actual, serverOrigin } = await browserImportSystemJsBundle({
   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
   testDirectoryRelativeUrl,
+  mainRelativeUrl,
+  headless: false,
+  autoStop: false,
 })
 const expected = {
-  htmlText: `<button>Hello world</button>`,
-  innerText: "Hello world",
+  default: resolveUrl("dist/systemjs/assets/jsenv-remap-25e95a00.png", serverOrigin),
 }
 assert({ actual, expected })
