@@ -78,7 +78,7 @@ export const createJsenvRollupPlugin = async ({
   minifyCssOptions,
   minifyHtmlOptions,
   manifestFile,
-  // inlineAssetPredicate,
+  inlineAssetPredicate,
 
   bundleDirectoryUrl,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
@@ -281,8 +281,9 @@ export const createJsenvRollupPlugin = async ({
             compileServerOrigin,
           ),
           urlToOriginalProjectUrl,
-          loadReference: (url) => urlResponseBodyMap[url],
-          resolveTargetReference: (target, specifier, { isAsset }) => {
+          inlineAssetPredicate,
+          loadUrl: (url) => urlResponseBodyMap[url],
+          resolveReference: ({ specifier, isAsset }, target) => {
             if (target.isEntry && target.isAsset && !isAsset) {
               // html entry point
               // when html references a js we must wait for the compiled version of js

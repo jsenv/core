@@ -33,14 +33,21 @@ export const parseHtmlAsset = async (
     // regular javascript are not parseable by rollup
     // and we don't really care about there content
     // we will handle them as regular asset
-    // but we can still inline/minify/hash them for performance
+    // but we still want to inline/minify/hash them for performance
     if (type === "text/javascript" && src) {
       const remoteScriptReference = notifyAssetFound({
         specifier: src,
         ...getHtmlNodeLocation(script),
       })
-      htmlMutationMap.set(remoteScriptReference, ({ urlRelativeToImporter }) => {
-        replaceHtmlNode(script, `<script src="${urlRelativeToImporter}"></script>`)
+      htmlMutationMap.set(remoteScriptReference, ({ getReferenceUrlRelativeToImporter }) => {
+        const { preferInline } = remoteScriptReference
+        if (preferInline) {
+          const { sourceAfterTransformation } = remoteScriptReference.target
+          replaceHtmlNode(script, `<script src="${sourceAfterTransformation}"></script>`)
+        } else {
+          const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
+          replaceHtmlNode(script, `<script src="${urlRelativeToImporter}"></script>`)
+        }
       })
       return
     }
@@ -50,7 +57,8 @@ export const parseHtmlAsset = async (
         ...getHtmlNodeLocation(script),
         source: text,
       })
-      htmlMutationMap.set(inlineScriptReference, ({ sourceAfterTransformation }) => {
+      htmlMutationMap.set(inlineScriptReference, () => {
+        const { sourceAfterTransformation } = inlineScriptReference.target
         replaceHtmlNode(script, `<script>${sourceAfterTransformation}</script>`)
       })
       return
@@ -62,7 +70,8 @@ export const parseHtmlAsset = async (
         ...getHtmlNodeLocation(script),
       })
 
-      htmlMutationMap.set(remoteScriptReference, ({ urlRelativeToImporter }) => {
+      htmlMutationMap.set(remoteScriptReference, ({ getReferenceUrlRelativeToImporter }) => {
+        const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
         replaceHtmlNode(
           script,
           `<script>window.System.import(${JSON.stringify(
@@ -78,7 +87,8 @@ export const parseHtmlAsset = async (
         ...getHtmlNodeLocation(script),
         source: text,
       })
-      htmlMutationMap.set(inlineScriptReference, ({ urlRelativeToImporter }) => {
+      htmlMutationMap.set(inlineScriptReference, ({ getReferenceUrlRelativeToImporter }) => {
+        const urlRelativeToImporter = getReferenceUrlRelativeToImporter(inlineScriptReference)
         replaceHtmlNode(
           script,
           `<script>window.System.import(${JSON.stringify(
@@ -110,11 +120,23 @@ export const parseHtmlAsset = async (
           return `${importmapParentRelativeUrl}[name]-[hash][extname]`
         },
       })
-      htmlMutationMap.set(remoteImportmapReference, ({ urlRelativeToImporter }) => {
-        replaceHtmlNode(
-          script,
-          `<script type="systemjs-importmap" src="${urlRelativeToImporter}"></script>`,
-        )
+      htmlMutationMap.set(remoteImportmapReference, ({ getReferenceUrlRelativeToImporter }) => {
+        const { preferInline } = remoteImportmapReference
+        if (preferInline) {
+          // here put a awrning if we cannot inline importmap because it would mess
+          // the remapping (note that it's feasible) but not yet supported
+          const { sourceAfterTransformation } = remoteImportmapReference.target
+          replaceHtmlNode(
+            script,
+            `<script type="systemjs-importmap">${sourceAfterTransformation}</script>`,
+          )
+        } else {
+          const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteImportmapReference)
+          replaceHtmlNode(
+            script,
+            `<script type="systemjs-importmap" src="${urlRelativeToImporter}"></script>`,
+          )
+        }
       })
       return
     }
@@ -128,7 +150,8 @@ export const parseHtmlAsset = async (
         ...getHtmlNodeLocation(script),
         source: text,
       })
-      htmlMutationMap.set(inlineImportMapReference, ({ sourceAfterTransformation }) => {
+      htmlMutationMap.set(inlineImportMapReference, () => {
+        const { sourceAfterTransformation } = inlineImportMapReference.target
         replaceHtmlNode(
           script,
           `<script type="systemjs-importmap">${sourceAfterTransformation}</script>`,
@@ -144,8 +167,15 @@ export const parseHtmlAsset = async (
         specifier: href,
         ...getHtmlNodeLocation(stylesheetLink),
       })
-      htmlMutationMap.set(remoteStyleReference, ({ urlRelativeToImporter }) => {
-        replaceHtmlNode(stylesheetLink, `<link href="${urlRelativeToImporter}"/>`)
+      htmlMutationMap.set(remoteStyleReference, ({ getReferenceUrlRelativeToImporter }) => {
+        const { preferInline } = remoteStyleReference
+        if (preferInline) {
+          const { sourceAfterTransformation } = remoteStyleReference.target
+          replaceHtmlNode(stylesheetLink, `<style>${sourceAfterTransformation}</style>`)
+        } else {
+          const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteStyleReference)
+          replaceHtmlNode(stylesheetLink, `<link href="${urlRelativeToImporter}"/>`)
+        }
       })
     }
   })
@@ -157,19 +187,16 @@ export const parseHtmlAsset = async (
         ...getHtmlNodeLocation(style),
         source: text,
       })
-      htmlMutationMap.set(inlineStyleReference, ({ sourceAfterTransformation }) => {
+      htmlMutationMap.set(inlineStyleReference, () => {
+        const { sourceAfterTransformation } = inlineStyleReference.target
         replaceHtmlNode(style, `<style>${sourceAfterTransformation}</style>`)
       })
     }
   })
 
-  return async (dependenciesMapping) => {
-    htmlMutationMap.forEach((mutationCallback, reference) => {
-      const urlRelativeToImporter = dependenciesMapping[reference.target.url]
-      mutationCallback({
-        urlRelativeToImporter,
-        sourceAfterTransformation: reference.target.sourceAfterTransformation,
-      })
+  return async ({ getReferenceUrlRelativeToImporter }) => {
+    htmlMutationMap.forEach((mutationCallback) => {
+      mutationCallback({ getReferenceUrlRelativeToImporter })
     })
     const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
     const sourceAfterTransformation = minify

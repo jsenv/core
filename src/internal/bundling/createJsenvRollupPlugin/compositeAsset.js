@@ -1,3 +1,29 @@
+/**
+
+--- Inlining asset ---
+In the context of http2 and beyond http request
+is reused so saving http request by inlining asset is less
+attractive.
+You gain some speed because one big file is still faster
+than many small files.
+
+But inlined asset got two drawbacks:
+
+(1) they cannot be cached by the browser
+assets inlined in the html file have no hash
+and must be redownloaded every time.
+-> No way to mitigate this
+
+(2) they cannot be shared by different files.
+assets inlined in the html cannot be shared
+because their source lives in the html.
+You might accidentatly load twice a css because it's
+referenced both in js and html for instance.
+-> We could warn about asset inlined + referenced
+more than once
+
+*/
+
 import {
   resolveUrl,
   urlToRelativeUrl,
@@ -38,11 +64,12 @@ export const createCompositeAssetHandler = (
   {
     projectDirectoryUrl = "file:///",
     bundleDirectoryUrl = "file:///",
-    loadReference = () => null,
+    loadUrl = () => null,
     urlToOriginalProjectUrl = (url) => url,
     emitAsset,
     connectTarget = () => {},
-    resolveTargetReference = (specifier, target) => resolveUrl(specifier, target.url),
+    resolveReference = ({ specifier }, target) => resolveUrl(specifier, target.url),
+    inlineAssetPredicate,
   },
 ) => {
   const prepareAssetEntry = async (url, { fileNamePattern, source }) => {
@@ -61,30 +88,72 @@ export const createCompositeAssetHandler = (
       source,
     })
 
-    await entryReference.target.getDependenciesReadyPromise()
+    await entryReference.target.getReferencesReadyPromise()
     // start to wait internally for eventual chunks
     // but don't await here because this function will be awaited by rollup before starting
     // to parse chunks
-    entryReference.target.getFileNameReadyPromise()
+    entryReference.getReadyPromise()
   }
 
   const targetMap = {}
   const createReference = (referenceData, targetData) => {
     const { url } = targetData
+    const reference = { ...referenceData }
 
     if (url in targetMap) {
       const target = targetMap[url]
-      const reference = { target, ...referenceData }
-      target.references.push(reference)
+      connectReferenceAndTarget(reference, target)
       return [reference, target]
     }
 
     const target = createTarget(targetData)
-    const reference = { target, ...referenceData }
-    target.references.push(reference)
     targetMap[url] = target
+    connectReferenceAndTarget(reference, target)
     connectTarget(target)
     return reference
+  }
+
+  const connectReferenceAndTarget = (reference, target) => {
+    reference.target = target
+    target.references.push(reference)
+
+    reference.getReadyPromise = memoize(async () => {
+      logger.debug(`${shortenUrl(reference.url)} waiting for ${shortenUrl(target.url)} to be ready`)
+      await target.getFileNameReadyPromise()
+
+      const otherReferences = target.references.filter((ref) => ref !== reference)
+      const assetProjectRelativeUrl = target.relativeUrl
+      const assetSize = Buffer.byteLength(target.sourceAfterTransformation)
+      const hasMultipleReferences = Boolean(otherReferences.length)
+
+      const preferInline = inlineAssetPredicate({
+        assetProjectRelativeUrl,
+        assetSize,
+
+        hasMultipleReferences,
+      })
+      reference.preferInline = preferInline
+
+      // we gave information to inlineAssetPredicate that there is multiple references
+      // but inlineAssetPredicate still decides to return true
+      // so let's assume it's desired a put log level to debug
+      if (preferInline && hasMultipleReferences) {
+        logger.debug(formatAssetDuplicationDebug(reference, otherReferences[0]))
+      }
+
+      // we just found a reference to something that was inline before
+      // but at that time we certainly was not aware there was an other reference
+      // the asset will end up duplicated (once inlined, one referenced by url)
+      // -> emit a warning about that.
+      if (!preferInline) {
+        const otherInlineReference = otherReferences.find(
+          (otherReference) => otherReference.preferInline === true,
+        )
+        if (otherInlineReference) {
+          logger.warn(formatAssetDuplicationWarning(reference, otherInlineReference))
+        }
+      }
+    })
   }
 
   const assetTransformMap = {}
@@ -118,9 +187,9 @@ export const createCompositeAssetHandler = (
       getSourceReadyPromise.forceMemoization(source)
     }
 
-    const getDependenciesReadyPromise = memoize(async () => {
+    const getReferencesReadyPromise = memoize(async () => {
       await getSourceReadyPromise()
-      const dependencies = []
+      const references = []
 
       let previousJsReference
 
@@ -143,19 +212,19 @@ export const createCompositeAssetHandler = (
           return null
         }
 
-        const dependencyTargetUrl = resolveTargetReference(target, specifier, { isAsset, isInline })
-        const dependencyReference = createReference(
+        const childTargetUrl = resolveReference({ specifier, isAsset, isInline }, target)
+        const childReference = createReference(
           { url: target.url, column, line, previousJsReference },
-          { url: dependencyTargetUrl, isAsset, isInline, source, fileNamePattern },
+          { url: childTargetUrl, isAsset, isInline, source, fileNamePattern },
         )
-        if (dependencyReference.target.isConnected()) {
-          dependencies.push(dependencyTargetUrl)
+        if (childReference.target.isConnected()) {
+          references.push(childReference)
           if (!isAsset) {
-            previousJsReference = dependencyReference
+            previousJsReference = childReference
           }
         }
-        logger.debug(formatReferenceFound(dependencyReference))
-        return dependencyReference
+        logger.debug(formatReferenceFound(childReference))
+        return childReference
       }
 
       const parseReturnValue = await parse(target, {
@@ -194,36 +263,30 @@ export const createCompositeAssetHandler = (
           }),
       })
 
-      if (dependencies.length > 0 && typeof parseReturnValue !== "function") {
+      if (references.length > 0 && typeof parseReturnValue !== "function") {
         throw new Error(
-          `parse has dependencies, it must return a function but received ${parseReturnValue}`,
+          `parse has references, it must return a function but received ${parseReturnValue}`,
         )
       }
       if (typeof parseReturnValue === "function") {
         assetTransformMap[url] = parseReturnValue
       }
-      if (dependencies.length) {
+      if (references.length) {
         logger.debug(
-          `${shortenUrl(url)} dependencies collected -> ${dependencies.map((url) =>
-            shortenUrl(url),
+          `${shortenUrl(url)} references collected -> ${references.map((reference) =>
+            shortenUrl(reference.target.ur),
           )}`,
         )
       }
 
-      target.dependencies = dependencies
+      target.references = references
     })
 
     const getFileNameReadyPromise = memoize(async () => {
       // la transformation d'un asset c'est avant tout la transformation de ses dépendances
-      await getDependenciesReadyPromise()
-      const dependencies = target.dependencies
-      await Promise.all(
-        dependencies.map(async (dependencyUrl) => {
-          const dependencyTarget = targetMap[dependencyUrl]
-          logger.debug(`${shortenUrl(url)} waiting for ${shortenUrl(dependencyUrl)} to be ready`)
-          await dependencyTarget.getFileNameReadyPromise()
-        }),
-      )
+      await getReferencesReadyPromise()
+      const references = target.references
+      await Promise.all(references.map((reference) => reference.getReadyPromise()))
 
       // une fois que les dépendances sont transformées on peut transformer cet asset
       if (!target.isAsset) {
@@ -253,38 +316,23 @@ export const createCompositeAssetHandler = (
       // {
       //   "file:///project/coin.png": "./coin-45eiopri.png"
       // }
-      // it must be used by transform to update url in the asset source
-      const dependenciesMapping = {}
       // we don't yet know the exact importerFileNameForRollup but we can generate a fake one
       // to ensure we resolve dependency against where the importer file will be
+
       const importerFileNameForRollup = precomputeTargetFileNameForRollup(target)
-      dependencies.forEach((dependencyUrl) => {
-        const dependencyTarget = targetMap[dependencyUrl]
-        // here it's guaranteed that dependencUrl is in urlMappings
-        // because we throw in case there is circular deps
-        // so each each dependency is handled one after an other
-        // ensuring dependencies where already handled before
-        const dependencyFileNameForRollup = dependencyTarget.fileNameForRollup
-        const dependencyFileUrlForRollup = resolveUrl(dependencyFileNameForRollup, "file:///")
-        const importerFileUrlForRollup = resolveUrl(importerFileNameForRollup, "file:///")
-        dependenciesMapping[dependencyUrl] = urlToRelativeUrl(
-          dependencyFileUrlForRollup,
-          importerFileUrlForRollup,
-        )
-      })
-      logger.debug(
-        `${shortenUrl(url)} transform starts to replace ${JSON.stringify(
-          dependenciesMapping,
-          null,
-          "  ",
-        )}`,
-      )
       const assetEmitters = []
-      const transformReturnValue = await transform(dependenciesMapping, {
+      const transformReturnValue = await transform({
         precomputeFileNameForRollup: (sourceAfterTransformation) =>
           precomputeTargetFileNameForRollup(target, sourceAfterTransformation),
         registerAssetEmitter: (callback) => {
           assetEmitters.push(callback)
+        },
+        getReferenceUrlRelativeToImporter: (reference) => {
+          const referenceTarget = reference.target
+          const referenceFileNameForRollup = referenceTarget.fileNameForRollup
+          const referenceUrlForRollup = resolveUrl(referenceFileNameForRollup, "file:///")
+          const importerFileUrlForRollup = resolveUrl(importerFileNameForRollup, "file:///")
+          return urlToRelativeUrl(referenceUrlForRollup, importerFileUrlForRollup)
         },
       })
       if (transformReturnValue === null || transformReturnValue === undefined) {
@@ -339,7 +387,7 @@ export const createCompositeAssetHandler = (
       createReference,
 
       getSourceReadyPromise,
-      getDependenciesReadyPromise,
+      getReferencesReadyPromise,
       getFileNameReadyPromise,
       getRollupReferenceIdReadyPromise,
     })
@@ -406,7 +454,7 @@ export const createCompositeAssetHandler = (
   const showReferenceSourceLocation = (reference) => {
     const referenceUrl = reference.url
     const referenceSource = String(
-      referenceUrl in targetMap ? targetMap[referenceUrl].source : loadReference(referenceUrl),
+      referenceUrl in targetMap ? targetMap[referenceUrl].source : loadUrl(referenceUrl),
     )
 
     const message = `${urlToOriginalProjectUrl(referenceUrl)}:${reference.line}:${reference.column}`
@@ -446,6 +494,26 @@ ${showReferenceSourceLocation(reference)}
       return message
     }
     return `${message} -> ignored because url is external`
+  }
+
+  const formatAssetDuplicationDebug = (reference, otherReference) => {
+    return `${
+      reference.target.relativeUrl
+    } asset will be duplicated because it wants to be inlined and is referenced elsewhere.
+--- reference prefering inline ---
+${showReferenceSourceLocation(reference)}
+--- other reference ---
+${showReferenceSourceLocation(otherReference)}`
+  }
+
+  const formatAssetDuplicationWarning = (reference, otherReference) => {
+    return `${
+      reference.target.relativeUrl
+    } asset will be duplicated because it was inlined and is now referenced.
+--- previous inline reference ---
+${showReferenceSourceLocation(reference)}
+--- reference ---
+${showReferenceSourceLocation(otherReference)}`
   }
 
   return {

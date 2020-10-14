@@ -12,7 +12,7 @@ export const parseJsAsset = async (
   const jsString = String(source)
   let map = await fetchSourcemap(url, jsString)
 
-  return async (dependenciesMapping, { precomputeFileNameForRollup, registerAssetEmitter }) => {
+  return async ({ precomputeFileNameForRollup, registerAssetEmitter }) => {
     let jsSourceAfterTransformation = jsString
 
     if (minify) {

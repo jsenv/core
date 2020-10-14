@@ -28,7 +28,11 @@ export const parseCssAsset = async (
     urlNodeReferenceMapping.set(urlDeclaration.urlNode, cssAssetReference)
   })
 
-  return async (dependenciesMapping, { precomputeFileNameForRollup, registerAssetEmitter }) => {
+  return async ({
+    getReferenceUrlRelativeToImporter,
+    precomputeFileNameForRollup,
+    registerAssetEmitter,
+  }) => {
     const cssReplaceResult = await replaceCssUrls(
       cssString,
       url,
@@ -41,7 +45,12 @@ export const parseCssAsset = async (
         }
         // url node nous dit quel réfrence y correspond
         const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
-        return dependenciesMapping[urlNodeReference.target.url]
+        const { preferInline } = urlNodeReference
+        if (preferInline) {
+          // return a base64 representation of the asset
+          return ""
+        }
+        return getReferenceUrlRelativeToImporter(urlNodeReference)
       },
       {
         cssMinification: minify,
