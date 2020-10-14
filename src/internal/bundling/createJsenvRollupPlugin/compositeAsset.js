@@ -118,7 +118,7 @@ export const createCompositeAssetHandler = (
     target.references.push(reference)
 
     reference.getReadyPromise = memoize(async () => {
-      logger.debug(`${shortenUrl(reference.url)} waiting for ${shortenUrl(target.url)} to be ready`)
+      // logger.debug(`${shortenUrl(reference.url)} waiting for ${shortenUrl(target.url)} to be ready`)
       await target.getFileNameReadyPromise()
 
       const otherReferences = target.references.filter((ref) => ref !== reference)
@@ -274,7 +274,7 @@ export const createCompositeAssetHandler = (
       if (references.length) {
         logger.debug(
           `${shortenUrl(url)} references collected -> ${references.map((reference) =>
-            shortenUrl(reference.target.ur),
+            shortenUrl(reference.target.url),
           )}`,
         )
       }
@@ -283,11 +283,6 @@ export const createCompositeAssetHandler = (
     })
 
     const getFileNameReadyPromise = memoize(async () => {
-      // la transformation d'un asset c'est avant tout la transformation de ses dépendances
-      await getReferencesReadyPromise()
-      const references = target.references
-      await Promise.all(references.map((reference) => reference.getReadyPromise()))
-
       // une fois que les dépendances sont transformées on peut transformer cet asset
       if (!target.isAsset) {
         // ici l'url n'est pas top parce que
@@ -301,6 +296,11 @@ export const createCompositeAssetHandler = (
         target.fileNameForRollup = fileNameForRollup
         return
       }
+
+      // la transformation d'un asset c'est avant tout la transformation de ses dépendances
+      await getReferencesReadyPromise()
+      const references = target.references
+      await Promise.all(references.map((reference) => reference.getReadyPromise()))
 
       if (!assetTransformMap.hasOwnProperty(url)) {
         target.sourceAfterTransformation = target.source

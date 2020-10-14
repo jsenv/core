@@ -563,9 +563,9 @@ export const createJsenvRollupPlugin = async ({
       }
     },
 
-    // ptet transformer ceci en renderChunk
     async writeBundle(options, bundle) {
       if (detectAndTransformIfNeededAsyncInsertedByRollup) {
+        // ptet transformer ceci en renderChunk
         await transformAsyncInsertedByRollup({
           projectDirectoryUrl,
           bundleDirectoryUrl,
@@ -574,9 +574,9 @@ export const createJsenvRollupPlugin = async ({
         })
       }
 
-      Object.keys(bundle).forEach((bundleFilename) => {
-        logger.info(`-> ${bundleDirectoryUrl}${bundleFilename}`)
-      })
+      // Object.keys(bundle).forEach((bundleFilename) => {
+      //   logger.debug(`-> ${bundleDirectoryUrl}${bundleFilename}`)
+      // })
     },
   }
 
