@@ -4,7 +4,11 @@ import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
 
-export const parseCssAsset = async ({ url, source }, { notifyAssetFound }) => {
+export const parseCssAsset = async (
+  { url, source },
+  { notifyAssetFound },
+  { minify, minifyCssOptions },
+) => {
   const cssString = String(source)
   const { atImports, urlDeclarations } = await parseCssUrls(cssString, url)
 
@@ -25,17 +29,25 @@ export const parseCssAsset = async ({ url, source }, { notifyAssetFound }) => {
   })
 
   return async (dependenciesMapping, { precomputeFileNameForRollup, registerAssetEmitter }) => {
-    const cssReplaceResult = await replaceCssUrls(cssString, url, ({ urlNode }) => {
-      const urlNodeFound = Array.from(urlNodeReferenceMapping.keys()).find((urlNodeCandidate) =>
-        isSameCssDocumentUrlNode(urlNodeCandidate, urlNode),
-      )
-      if (!urlNodeFound) {
-        return urlNode.value
-      }
-      // url node nous dit quel réfrence y correspond
-      const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
-      return dependenciesMapping[urlNodeReference.target.url]
-    })
+    const cssReplaceResult = await replaceCssUrls(
+      cssString,
+      url,
+      ({ urlNode }) => {
+        const urlNodeFound = Array.from(urlNodeReferenceMapping.keys()).find((urlNodeCandidate) =>
+          isSameCssDocumentUrlNode(urlNodeCandidate, urlNode),
+        )
+        if (!urlNodeFound) {
+          return urlNode.value
+        }
+        // url node nous dit quel réfrence y correspond
+        const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
+        return dependenciesMapping[urlNodeReference.target.url]
+      },
+      {
+        cssMinification: minify,
+        cssMinificationOptions: minifyCssOptions,
+      },
+    )
     const code = cssReplaceResult.css
     const map = cssReplaceResult.map.toJSON()
     const cssFileNameForRollup = precomputeFileNameForRollup(code)
@@ -68,7 +80,6 @@ export const parseCssAsset = async ({ url, source }, { notifyAssetFound }) => {
 
     return {
       sourceAfterTransformation: cssSourceAfterTransformation,
-      map,
       fileNameForRollup: cssFileNameForRollup,
     }
   }

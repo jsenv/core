@@ -1,9 +1,6 @@
 /**
  * a faire
  *
- * - vérifier la résolution d'url pour un asset
- * -> ne doit pas etre remap par l'importmap sauf si l'asset est référencé par du js
- * excepté https://github.com/WICG/import-maps#import-urls
  * - pouvoir décider d'inline certains assets ?
  * peut etre utile pour importmap, favicon et ptet certains css critique
  * autrement dit un asset qui est trouvé pas inline doit pouvoir etre forcé a inline
@@ -51,14 +48,13 @@ import { showSourceLocation } from "./showSourceLocation.js"
 
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
-import { minifyHtml } from "./minifyHtml.js"
 import { minifyJs } from "./minifyJs.js"
-import { minifyCss } from "./minifyCss.js"
 
 import { createCompositeAssetHandler } from "./compositeAsset.js"
 import { parseHtmlAsset } from "./parseHtmlAsset.js"
 import { parseCssAsset } from "./parseCssAsset.js"
 import { parseImportmapAsset } from "./parseImportmapAsset.js"
+import { parseJsAsset } from "./parseJsAsset.js"
 
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
@@ -82,6 +78,7 @@ export const createJsenvRollupPlugin = async ({
   minifyCssOptions,
   minifyHtmlOptions,
   manifestFile,
+  // inlineAssetPredicate,
 
   bundleDirectoryUrl,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
@@ -207,6 +204,8 @@ export const createJsenvRollupPlugin = async ({
                 },
                 notifiers,
                 {
+                  minify,
+                  minifyHtmlOptions,
                   htmlStringToHtmlAst: (htmlString) => {
                     const htmlAst = parseHtmlString(htmlString)
                     if (format !== "systemjs") {
@@ -241,6 +240,7 @@ export const createJsenvRollupPlugin = async ({
                   url: urlToOriginalProjectUrl(url),
                 },
                 notifiers,
+                { minify, minifyCssOptions },
               )
             }
 
@@ -251,6 +251,17 @@ export const createJsenvRollupPlugin = async ({
                   url: urlToOriginalProjectUrl(url),
                 },
                 notifiers,
+              )
+            }
+
+            if (url.endsWith(".js")) {
+              return parseJsAsset(
+                {
+                  ...target,
+                  url: urlToOriginalProjectUrl(url),
+                },
+                notifiers,
+                { minify, minifyJsOptions },
               )
             }
 
@@ -508,19 +519,19 @@ export const createJsenvRollupPlugin = async ({
       return options
     },
 
-    renderChunk: (code) => {
-      if (!minify) return null
+    renderChunk: async (code, chunk) => {
+      if (!minify) {
+        return null
+      }
 
-      // https://github.com/terser-js/terser#minify-options
-      const result = minifyJs(code, {
+      const result = await minifyJs(code, chunk.fileName, {
         sourceMap: true,
         ...(format === "global" ? { toplevel: false } : { toplevel: true }),
         ...minifyJsOptions,
       })
-      if (result.error) {
-        throw result.error
-      } else {
-        return result
+      return {
+        code: result.code,
+        map: result.map,
       }
     },
 
@@ -677,11 +688,9 @@ export const createJsenvRollupPlugin = async ({
       return {
         ...commonData,
         content: js,
-        map: await fetchSourcemap({
+        map: await fetchSourcemap(moduleUrl, js, {
           cancellationToken,
           logger,
-          moduleUrl,
-          moduleContent: js,
         }),
       }
     }
@@ -705,19 +714,17 @@ export const createJsenvRollupPlugin = async ({
         }
       }
       const html = String(moduleResponseBodyAsBuffer)
-      const htmlTransformed = minify ? minifyHtml(html, minifyHtmlOptions) : html
       return {
         ...commonData,
-        content: await generateJavaScriptForAssetSource(htmlTransformed),
+        content: await generateJavaScriptForAssetSource(html),
       }
     }
 
     if (contentType === "text/css") {
       const css = String(moduleResponseBodyAsBuffer)
-      const cssTransformed = minify ? minifyCss(css, minifyCssOptions) : css
       return {
         ...commonData,
-        content: await generateJavaScriptForAssetSource(cssTransformed),
+        content: await generateJavaScriptForAssetSource(css),
       }
     }
 

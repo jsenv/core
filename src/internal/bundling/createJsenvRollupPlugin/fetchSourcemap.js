@@ -1,10 +1,16 @@
+import { createCancellationToken } from "@jsenv/cancellation"
 import { resolveUrl } from "@jsenv/util"
+import { createLogger } from "@jsenv/logger"
 import { getJavaScriptSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { fetchUrl } from "../../fetchUrl.js"
 import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
 
-export const fetchSourcemap = async ({ cancellationToken, logger, moduleUrl, moduleContent }) => {
-  const sourcemapParsingResult = getJavaScriptSourceMappingUrl(moduleContent)
+export const fetchSourcemap = async (
+  jsUrl,
+  jsString,
+  { cancellationToken = createCancellationToken(), logger = createLogger() } = {},
+) => {
+  const sourcemapParsingResult = getJavaScriptSourceMappingUrl(jsString)
 
   if (!sourcemapParsingResult) {
     return null
@@ -12,13 +18,13 @@ export const fetchSourcemap = async ({ cancellationToken, logger, moduleUrl, mod
 
   if (sourcemapParsingResult.sourcemapString) {
     return generateSourcemapFromString(sourcemapParsingResult.sourcemapString, {
-      sourcemapUrl: moduleUrl,
-      moduleUrl,
+      sourcemapUrl: `${jsUrl}.map`,
+      jsUrl,
       logger,
     })
   }
 
-  const sourcemapUrl = resolveUrl(sourcemapParsingResult.sourcemapURL, moduleUrl)
+  const sourcemapUrl = resolveUrl(sourcemapParsingResult.sourcemapURL, jsUrl)
   const sourcemapResponse = await fetchUrl(sourcemapUrl, {
     cancellationToken,
     ignoreHttpsError: true,
@@ -37,15 +43,12 @@ ${okValidation.message}`)
   return generateSourcemapFromString(sourcemapBodyAsText, {
     logger,
     sourcemapUrl,
-    moduleUrl,
+    jsUrl,
   })
 }
 
-const generateSourcemapFromString = async (
-  sourcemapString,
-  { logger, sourcemapUrl, moduleUrl },
-) => {
-  const map = parseSourcemapString(sourcemapString, { logger, sourcemapUrl, moduleUrl })
+const generateSourcemapFromString = async (sourcemapString, { logger, sourcemapUrl, jsUrl }) => {
+  const map = parseSourcemapString(sourcemapString, { logger, sourcemapUrl, jsUrl })
 
   if (!map) {
     return null
@@ -54,17 +57,17 @@ const generateSourcemapFromString = async (
   return map
 }
 
-const parseSourcemapString = (sourcemapString, { logger, sourcemapUrl, moduleUrl }) => {
+const parseSourcemapString = (sourcemapString, { logger, sourcemapUrl, jsUrl }) => {
   try {
     return JSON.parse(sourcemapString)
   } catch (e) {
     if (e.name === "SyntaxError") {
-      if (sourcemapUrl === moduleUrl) {
+      if (sourcemapUrl === jsUrl) {
         logger.error(`syntax error while parsing inlined sourcemap.
 --- syntax error stack ---
 ${e.stack}
---- module url ---
-${moduleUrl}`)
+--- js url ---
+${jsUrl}`)
       } else {
         logger.error(
           `syntax error while parsing remote sourcemap.
@@ -72,8 +75,8 @@ ${moduleUrl}`)
 ${e.stack}
 --- sourcemap url ---
 ${sourcemapUrl}
---- module url ---
-${moduleUrl}`,
+--- js url ---
+${jsUrl}`,
         )
       }
 

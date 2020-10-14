@@ -1,7 +1,7 @@
-import { require } from "../../require.js"
+import { minify } from "terser"
 
-const { minify } = require("terser")
-
-export const minifyJs = (jsString, options) => {
-  return minify(jsString, options)
+// https://github.com/terser-js/terser#minify-options
+export const minifyJs = async (jsString, jsUrl, options) => {
+  const result = await minify({ [jsUrl]: jsString }, options)
+  return result
 }

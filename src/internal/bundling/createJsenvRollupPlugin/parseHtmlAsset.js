@@ -9,11 +9,16 @@ import {
   getHtmlNodeLocation,
   getUniqueNameForInlineHtmlNode,
 } from "../../compiling/compileHtml.js"
+import { minifyHtml } from "./minifyHtml.js"
 
 export const parseHtmlAsset = async (
   { source, url },
   { notifyAssetFound, notifyInlineAssetFound, notifyJsFound, notifyInlineJsFound },
-  { htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString) } = {},
+  {
+    minify,
+    minifyHtmlOptions,
+    htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString),
+  } = {},
 ) => {
   const htmlString = String(source)
   const htmlAst = await htmlStringToHtmlAst(htmlString)
@@ -167,9 +172,11 @@ export const parseHtmlAsset = async (
       })
     })
     const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
-    // const sourceAfterTransformation = minify ? minifyHtml(htmlTransformedString, minifyHtmlOptions) : htmlAfterTransformation
+    const sourceAfterTransformation = minify
+      ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions)
+      : htmlAfterTransformation
     return {
-      sourceAfterTransformation: htmlAfterTransformation,
+      sourceAfterTransformation,
     }
   }
 }
