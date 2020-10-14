@@ -12,17 +12,6 @@ import { createBabePluginMapForBundle } from "./internal/bundling/createBabePlug
 import { generateBundleUsingRollup } from "./internal/bundling/generateBundleUsingRollup.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
-//  minify: process.env.NODE_ENV === "production",
-//       minifyHtmlOptions: {
-//         collapseWhitespace: true,
-//       },
-// https://github.com/terser/terser#minify-options
-// minifyJsOptions,
-// // https://github.com/jakubpawlowicz/clean-css#constructor-options
-// minifyCssOptions,
-// // https://github.com/kangax/html-minifier#options-quick-reference
-// minifyHtmlOptions,
-
 export const generateBundle = async ({
   cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
@@ -59,6 +48,14 @@ export const generateBundle = async ({
   bundleDefaultExtension,
   writeOnFileSystem = true,
   manifestFile = false,
+
+  minify = process.env.NODE_ENV === "production",
+  // https://github.com/kangax/html-minifier#options-quick-reference
+  minifyHtmlOptions = { collapseWhitespace: true },
+  // https://github.com/terser/terser#minify-options
+  minifyJsOptions,
+  // https://github.com/jakubpawlowicz/clean-css#constructor-options
+  minifyCssOptions,
 
   // when true .jsenv/out-bundle directory is generated
   // with all intermediated files used to produce the final bundle.
@@ -190,6 +187,11 @@ export const generateBundle = async ({
       bundleDirectoryUrl,
       bundleDefaultExtension,
       manifestFile,
+
+      minify,
+      minifyHtmlOptions,
+      minifyJsOptions,
+      minifyCssOptions,
     })
   })
 }
