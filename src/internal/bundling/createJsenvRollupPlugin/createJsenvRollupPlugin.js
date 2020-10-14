@@ -7,6 +7,7 @@
  * on fera base64 pour une image et juste le fichier brute pour css, ou importmap.
  * pour les importmap on le supporte tant que cela ne change
  * pas son url de destinatio, sinon on emit un warning
+ * - warning pour importmap inline
  * - css minification
  * - html minification
  * - <link rel="favicon"
@@ -556,6 +557,7 @@ export const createJsenvRollupPlugin = async ({
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
       await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle)
+      compositeAssetHandler.removeInlinedAssetsFromRollupBundle(bundle)
       logger.info(formatBundleGeneratedLog(bundle))
 
       if (manifestFile) {
@@ -824,7 +826,7 @@ const fetchAndNormalizeImportmap = async (importmapUrl) => {
 
 const formatExternalFileWarning = (target, { compositeAssetHandler, projectDirectoryUrl }) => {
   return `Ignoring reference a file outside project directory.
-${compositeAssetHandler.showReferenceSourceLocation(target.references[0])}
+${compositeAssetHandler.showReferenceSourceLocation(target.importers[0])}
 --- reference url ---
 ${target.url}
 --- project directory url ---

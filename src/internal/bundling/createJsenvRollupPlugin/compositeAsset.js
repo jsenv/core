@@ -35,6 +35,7 @@ import {
 import { createLogger } from "@jsenv/logger"
 import { computeFileNameForRollup } from "./computeFileNameForRollup.js"
 import { showSourceLocation } from "./showSourceLocation.js"
+import { inlineReference } from "./inlineReference.js"
 
 const logger = createLogger({ logLevel: "debug" })
 
@@ -115,42 +116,41 @@ export const createCompositeAssetHandler = (
 
   const connectReferenceAndTarget = (reference, target) => {
     reference.target = target
-    target.references.push(reference)
+    target.importers.push(reference)
 
     reference.getReadyPromise = memoize(async () => {
       // logger.debug(`${shortenUrl(reference.url)} waiting for ${shortenUrl(target.url)} to be ready`)
       await target.getFileNameReadyPromise()
 
-      const otherReferences = target.references.filter((ref) => ref !== reference)
+      const otherImporters = target.importers.filter((ref) => ref !== reference)
       const assetProjectRelativeUrl = target.relativeUrl
       const assetSize = Buffer.byteLength(target.sourceAfterTransformation)
-      const hasMultipleReferences = Boolean(otherReferences.length)
+      const hasMultipleImporters = Boolean(otherImporters.length)
 
       const preferInline = inlineAssetPredicate({
         assetProjectRelativeUrl,
         assetSize,
-
-        hasMultipleReferences,
+        hasMultipleImporters,
       })
       reference.preferInline = preferInline
 
-      // we gave information to inlineAssetPredicate that there is multiple references
+      // we gave information to inlineAssetPredicate that there is multiple importers
       // but inlineAssetPredicate still decides to return true
       // so let's assume it's desired a put log level to debug
-      if (preferInline && hasMultipleReferences) {
-        logger.debug(formatAssetDuplicationDebug(reference, otherReferences[0]))
+      if (preferInline && hasMultipleImporters) {
+        logger.debug(formatAssetDuplicationDebug(reference, otherImporters[0]))
       }
 
       // we just found a reference to something that was inline before
-      // but at that time we certainly was not aware there was an other reference
-      // the asset will end up duplicated (once inlined, one referenced by url)
+      // but at that time we certainly was not aware there was an other importer
+      // for this asset. So asset will end up duplicated (once inlined, one referenced by url)
       // -> emit a warning about that.
       if (!preferInline) {
-        const otherInlineReference = otherReferences.find(
-          (otherReference) => otherReference.preferInline === true,
+        const otherInlineImporterReference = otherImporters.find(
+          (otherImporter) => otherImporter.preferInline === true,
         )
-        if (otherInlineReference) {
-          logger.warn(formatAssetDuplicationWarning(reference, otherInlineReference))
+        if (otherInlineImporterReference) {
+          logger.warn(formatAssetDuplicationWarning(reference, otherInlineImporterReference))
         }
       }
     })
@@ -165,7 +165,7 @@ export const createCompositeAssetHandler = (
     source,
     sourceAfterTransformation,
     fileNamePattern,
-    references = [],
+    importers = [],
   }) => {
     const target = {
       url,
@@ -176,11 +176,11 @@ export const createCompositeAssetHandler = (
       source,
       sourceAfterTransformation,
       fileNamePattern,
-      references,
+      importers,
     }
 
     const getSourceReadyPromise = memoize(async () => {
-      const source = await load(url, references[0].url)
+      const source = await load(url, importers[0].url)
       target.source = source
     })
     if (source !== undefined) {
@@ -379,6 +379,8 @@ export const createCompositeAssetHandler = (
       target.rollupReferenceId = rollupReferenceId
     })
 
+    // the idea is to return the connect promise here
+    // because connect is memoized and called immediatly after target is created
     const getRollupReferenceIdReadyPromise = () => connect()
 
     Object.assign(target, {
@@ -418,6 +420,27 @@ export const createCompositeAssetHandler = (
     await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdReadyPromise()))
   }
 
+  const removeInlinedAssetsFromRollupBundle = (rollupBundle) => {
+    Object.keys(rollupBundle).forEach((key) => {
+      const file = rollupBundle[key]
+      if (file.type === "asset") {
+        const { fileName } = file
+        const targetUrl = Object.keys(targetMap).find(
+          (key) => targetMap[key].fileNameForRollup === fileName,
+        )
+        if (targetUrl) {
+          const target = targetMap[targetUrl]
+          const allImportersInlined = target.importers.every(
+            (importerReference) => importerReference.preferInline,
+          )
+          if (allImportersInlined) {
+            delete rollupBundle[key]
+          }
+        }
+      }
+    })
+  }
+
   const generateJavaScriptForAssetImport = async (url, { source, importerUrl } = {}) => {
     const assetReference = createReference(
       // the reference to this target comes from importerUrl
@@ -441,6 +464,10 @@ export const createCompositeAssetHandler = (
       throw new Error(`target is not connected ${url}`)
     }
     await assetReference.target.getRollupReferenceIdReadyPromise()
+    const { preferInline } = assetReference
+    if (preferInline) {
+      return `export default ${inlineReference(assetReference)}`
+    }
     const { rollupReferenceId } = assetReference.target
     return `export default import.meta.ROLLUP_FILE_URL_${rollupReferenceId};`
   }
@@ -520,6 +547,7 @@ ${showReferenceSourceLocation(otherReference)}`
     prepareAssetEntry,
     resolveJsReferencesUsingRollupBundle,
     generateJavaScriptForAssetImport,
+    removeInlinedAssetsFromRollupBundle,
 
     showReferenceSourceLocation,
     inspect: () => {
