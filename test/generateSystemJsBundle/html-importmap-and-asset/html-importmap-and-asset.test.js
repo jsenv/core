@@ -31,8 +31,8 @@ const { namespace: actual, serverOrigin } = await browserImportSystemJsBundle({
   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
   testDirectoryRelativeUrl,
   mainRelativeUrl,
-  headless: false,
-  autoStop: false,
+  // headless: false,
+  // autoStop: false,
 })
 const expected = {
   default: resolveUrl("dist/systemjs/assets/jsenv-remap-25e95a00.png", serverOrigin),

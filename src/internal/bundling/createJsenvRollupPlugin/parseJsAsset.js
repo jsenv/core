@@ -10,10 +10,10 @@ export const parseJsAsset = async (
   { minify, minifyJsOptions },
 ) => {
   const jsString = String(source)
-  let map = await fetchSourcemap(url, source)
+  let map = await fetchSourcemap(url, jsString)
 
   return async (dependenciesMapping, { precomputeFileNameForRollup, registerAssetEmitter }) => {
-    let jsSourceAfterTransformation = source
+    let jsSourceAfterTransformation = jsString
 
     if (minify) {
       const result = await minifyJs(jsString, relativeUrl, {
