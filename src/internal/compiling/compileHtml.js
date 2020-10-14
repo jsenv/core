@@ -35,9 +35,14 @@ export const getHtmlNodeTextContent = (htmlNode) => {
 }
 
 export const getHtmlNodeLocation = (htmlNode) => {
+  const { sourceCodeLocation } = htmlNode
+  if (!sourceCodeLocation) {
+    return {}
+  }
+  const { startLine, startCol } = sourceCodeLocation
   return {
-    line: htmlNode.sourceCodeLocation.startLine,
-    column: htmlNode.sourceCodeLocation.startCol,
+    line: startLine,
+    column: startCol,
   }
 }
 

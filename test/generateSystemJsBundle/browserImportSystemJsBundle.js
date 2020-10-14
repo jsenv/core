@@ -9,7 +9,7 @@ const SYSTEM_PATH = require.resolve("systemjs/dist/system.js")
 export const browserImportSystemJsBundle = async ({
   projectDirectoryUrl,
   testDirectoryRelativeUrl,
-  htmlFileRelativeUrl = "./index.html",
+  htmlFileRelativeUrl = "./main.html",
   mainRelativeUrl,
   headless = true,
   autoStop = true,

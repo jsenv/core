@@ -1,12 +1,15 @@
 /**
  * a faire
  *
- * - vérifier qu'on inject bien le script systemjs dans le html
- * lorsque le bundle est de type systemjs (et que le html contient une balise script)
- * et recevoir une option comme systemJsUrl
  * - vérifier la résolution d'url pour un asset
  * -> ne doit pas etre remap par l'importmap sauf si l'asset est référencé par du js
  * excepté https://github.com/WICG/import-maps#import-urls
+ * - pouvoir décider d'inline certains assets ?
+ * peut etre utile pour importmap, favicon et ptet certains css critique
+ * autrement dit un asset qui est trouvé pas inline doit pouvoir etre forcé a inline
+ * on fera base64 pour une image et juste le fichier brute pour css, ou importmap.
+ * pour les importmap on le supporte tant que cela ne change
+ * pas son url de destinatio, sinon on emit un warning
  * - css minification
  * - html minification
  * - <link rel="favicon"
@@ -14,10 +17,6 @@
  * - xlink:href="" in svg
  * in theory inline style attributes
  * - <source> inside <audio>, <video>, <srcset>
- * - pouvoir décider d'inline certains assets ?
- * peut etre utile pour importmap, favicon et ptet certains css critique
- * autrement dit un asset qui est trouvé pas inline doit pouvoir etre forcé a inline
- * on fera base64 pour une image et juste le fichier brute pour css, ou importmap.
  */
 
 /* eslint-disable import/max-dependencies */
@@ -103,12 +102,7 @@ export const createJsenvRollupPlugin = async ({
     compileDirectoryRelativeUrl,
     compileServerOrigin,
   )
-  const importMapFileRemoteUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
-  const importMapFileResponse = await fetchUrl(importMapFileRemoteUrl)
-  const importMapRaw = await importMapFileResponse.json()
-  logger.debug(`importmap file fetched from ${importMapFileRemoteUrl}`)
-
-  const importMap = normalizeImportMap(importMapRaw, importMapFileRemoteUrl)
+  let importMap = {}
 
   const nativeModulePredicate = (specifier) => {
     if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
