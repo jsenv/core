@@ -19,6 +19,7 @@ export const parseJsAsset = async (
       const result = await minifyJs(jsString, relativeUrl, {
         sourceMap: {
           ...(map ? { content: JSON.stringify(map) } : {}),
+          asObject: true,
         },
         toplevel: false,
         ...minifyJsOptions,

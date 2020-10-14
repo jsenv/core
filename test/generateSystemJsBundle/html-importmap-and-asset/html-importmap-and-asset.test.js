@@ -25,6 +25,7 @@ const bundle = await generateBundle({
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap,
+  minify: true,
 })
 const mainRelativeUrl = `./${bundle.rollupBundle.output[0].fileName}`
 const { namespace: actual, serverOrigin } = await browserImportSystemJsBundle({

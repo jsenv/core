@@ -525,7 +525,10 @@ export const createJsenvRollupPlugin = async ({
       }
 
       const result = await minifyJs(code, chunk.fileName, {
-        sourceMap: true,
+        sourceMap: {
+          ...(chunk.map ? { content: JSON.stringify(chunk.map) } : {}),
+          asObject: true,
+        },
         ...(format === "global" ? { toplevel: false } : { toplevel: true }),
         ...minifyJsOptions,
       })
