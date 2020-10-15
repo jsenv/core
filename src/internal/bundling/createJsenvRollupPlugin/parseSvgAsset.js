@@ -9,7 +9,11 @@ import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
 // and also we maybe should parse svg because it can contains images and stuff
 // for now let's forget
 
-export const parseSvgAsset = () => {}
+export const parseSvgAsset = ({ target }) => {
+  return () => {
+    return target.content.value
+  }
+}
 
 export const getMutationsForSvgNodes = ({ images, uses }, { notifyAssetFound }) => {
   const mutations = []
@@ -32,13 +36,14 @@ export const getMutationsForSvgNodes = ({ images, uses }, { notifyAssetFound }) 
     if (href) {
       if (href[0] === "#") return
 
+      const { hash } = new URL(href, "file://")
       const hrefReference = notifyAssetFound({
         specifier: href,
         ...getHtmlNodeLocation(use),
       })
       mutations.push(({ getReferenceUrlRelativeToImporter }) => {
         const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter)
-        setHtmlNodeAttributeValue(use, "href", hrefNewValue)
+        setHtmlNodeAttributeValue(use, "href", `${hrefNewValue}${hash}`)
       })
     }
   })

@@ -1,4 +1,5 @@
 import { urlToBasename, urlToRelativeUrl, resolveUrl, urlToParentUrl } from "@jsenv/util"
+import { getMutationsForSvgNodes } from "./parseSvgAsset.js"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
@@ -12,7 +13,6 @@ import {
 } from "../../compiling/compileHtml.js"
 import { minifyHtml } from "./minifyHtml.js"
 import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
-import { getMutationsForSvgNodes } from "./parseSvgAsset.js"
 
 export const parseHtmlAsset = async (
   { content, url },

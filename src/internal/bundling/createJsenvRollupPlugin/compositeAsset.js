@@ -230,6 +230,9 @@ ${target.url}`)
           }
         }
 
+        // any hash in the url would mess up with filenames
+        dependencyTargetUrl = removePotentialUrlHash(dependencyTargetUrl)
+
         if (contentType === undefined) {
           contentType = urlToContentType(dependencyTargetUrl)
         }
@@ -343,16 +346,17 @@ ${target.url}`)
       // mais si on a rien a transformer, on a pas vraiment besoin de tout ça
       await getDependenciesAvailablePromise()
       const dependencies = target.dependencies
-      if (dependencies.length === 0) {
+      await Promise.all(
+        dependencies.map((dependencyReference) => dependencyReference.target.getReadyPromise()),
+      )
+
+      const transform = assetTransformMap[url]
+      if (typeof transform !== "function") {
         target.sourceAfterTransformation = target.content.value
         target.fileNameForRollup = computeTargetFileNameForRollup(target)
         return
       }
 
-      await Promise.all(
-        dependencies.map((dependencyReference) => dependencyReference.target.getReadyPromise()),
-      )
-      const transform = assetTransformMap[url]
       // assetDependenciesMapping contains all dependencies for an asset
       // each key is the absolute url to the dependency file
       // each value is an url relative to the asset importing this dependency
@@ -591,6 +595,12 @@ const getCallerLocation = () => {
     line: callerCallsite.getLineNumber(),
     column: callerCallsite.getColumnNumber(),
   }
+}
+
+const removePotentialUrlHash = (url) => {
+  const urlObject = new URL(url)
+  urlObject.hash = ""
+  return String(urlObject)
 }
 
 // const textualContentTypes = ["text/html", "text/css", "image/svg+xml"]
