@@ -1,17 +1,35 @@
 import {
+  parseSvgString,
+  parseHtmlAstRessources,
   setHtmlNodeAttributeValue,
   getHtmlNodeAttributeValue,
   getHtmlNodeLocation,
+  stringifyHtmlAst,
 } from "../../compiling/compileHtml.js"
+import { minifyHtml } from "./minifyHtml.js"
 import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
 
-// could also benefit of minification https://github.com/svg/svgo
-// and also we maybe should parse svg because it can contains images and stuff
-// for now let's forget
+export const parseSvgAsset = async (
+  target,
+  { notifyAssetFound },
+  { minify, minifyHtmlOptions },
+) => {
+  const svgString = String(target.content.value)
+  const svgAst = await parseSvgString(svgString)
+  const htmlRessources = parseHtmlAstRessources(svgAst)
+  const mutations = getMutationsForSvgNodes(htmlRessources, { notifyAssetFound })
 
-export const parseSvgAsset = ({ target }) => {
-  return () => {
-    return target.content.value
+  return ({ getReferenceUrlRelativeToImporter }) => {
+    mutations.forEach((mutationCallback) => {
+      mutationCallback({ getReferenceUrlRelativeToImporter })
+    })
+    const svgAfterTransformation = stringifyHtmlAst(svgAst)
+    // could also benefit of minification https://github.com/svg/svgo
+    const sourceAfterTransformation = minify
+      ? minifyHtml(svgAfterTransformation, minifyHtmlOptions)
+      : svgAfterTransformation
+
+    return { sourceAfterTransformation }
   }
 }
 

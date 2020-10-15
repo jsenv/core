@@ -19,6 +19,11 @@ export const parseHtmlString = (htmlString) => {
   return htmlAst
 }
 
+export const parseSvgString = (svgString) => {
+  const svgAst = parse5.parseFragment(svgString, { sourceCodeLocationInfo: true })
+  return svgAst
+}
+
 export const stringifyHtmlAst = (htmlAst) => {
   const htmlString = parse5.serialize(htmlAst)
   return htmlString

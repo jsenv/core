@@ -20,6 +20,7 @@ await generateBundle({
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap,
+  minify: true,
 })
 
 // const { namespace: actual } = await browserImportSystemJsBundle({

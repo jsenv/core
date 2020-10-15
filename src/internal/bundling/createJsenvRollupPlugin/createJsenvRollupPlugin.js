@@ -40,7 +40,7 @@ import { fetchSourcemap } from "./fetchSourcemap.js"
 import { minifyJs } from "./minifyJs.js"
 
 import { createCompositeAssetHandler } from "./compositeAsset.js"
-// import { parseSvgAsset } from "./parseSvgAsset.js"
+import { parseSvgAsset } from "./parseSvgAsset.js"
 import { parseHtmlAsset } from "./parseHtmlAsset.js"
 import { parseCssAsset } from "./parseCssAsset.js"
 import { parseImportmapAsset } from "./parseImportmapAsset.js"
@@ -256,15 +256,16 @@ export const createJsenvRollupPlugin = async ({
               )
             }
 
-            // if (contentType === "image/svg+xml") {
-            //   return parseSvgAsset(
-            //     {
-            //       ...target,
-            //       url: urlToOriginalProjectUrl(url),
-            //     },
-            //     notifiers,
-            //   )
-            // }
+            if (contentType === "image/svg+xml") {
+              return parseSvgAsset(
+                {
+                  ...target,
+                  url: urlToOriginalProjectUrl(url),
+                },
+                notifiers,
+                { minify, minifyHtmlOptions },
+              )
+            }
 
             return null
           },
