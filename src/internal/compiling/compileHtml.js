@@ -38,7 +38,7 @@ export const findFirstImportmapNode = (htmlString) => {
 }
 
 export const getHtmlNodeAttributeValue = (htmlNode, attributeName) => {
-  const attribute = getAttributeByName(htmlNode.attrs, attributeName)
+  const attribute = getHtmlNodeAttributeByName(htmlNode, attributeName)
   return attribute ? attribute.value : undefined
 }
 
@@ -59,8 +59,8 @@ export const getHtmlNodeLocation = (htmlNode) => {
   }
 }
 
-const getAttributeByName = (attributes, attributeName) =>
-  attributes.find((attr) => attr.name === attributeName)
+const getHtmlNodeAttributeByName = (htmlNode, attributeName) =>
+  htmlNode.attrs.find((attr) => attr.name === attributeName)
 
 export const htmlAstContains = (htmlAst, predicate) => {
   let contains = false
@@ -102,6 +102,7 @@ export const parseHtmlAstRessources = (htmlAst) => {
   const links = []
   const styles = []
   const scripts = []
+  const imgs = []
 
   visitHtmlAst(htmlAst, (node) => {
     if (node.nodeName === "link") {
@@ -118,34 +119,43 @@ export const parseHtmlAstRessources = (htmlAst) => {
       scripts.push(node)
       return
     }
+
+    if (node.nodeName === "img") {
+      imgs.push(node)
+      return
+    }
   })
 
   return {
     links,
     styles,
     scripts,
+    imgs,
   }
 }
 
-export const replaceHtmlNode = (scriptNode, replacement, { inheritAttributes = true } = {}) => {
-  let newScriptNode
+export const setHtmlNodeAttributeValue = (node, name, value) => {
+  const attribute = getHtmlNodeAttributeByName(node, name)
+  attribute.value = value
+}
+
+export const replaceHtmlNode = (node, replacement, { inheritAttributes = true } = {}) => {
+  let newNode
   if (typeof replacement === "string") {
-    newScriptNode = parseHtmlAsSingleElement(replacement)
+    newNode = parseHtmlAsSingleElement(replacement)
   } else {
-    newScriptNode = replacement
+    newNode = replacement
   }
 
   if (inheritAttributes) {
-    newScriptNode.attrs = [
+    newNode.attrs = [
       // inherit script attributes except src, type, href
-      ...scriptNode.attrs.filter(
-        ({ name }) => name !== "type" && name !== "src" && name !== "href",
-      ),
-      ...newScriptNode.attrs,
+      ...node.attrs.filter(({ name }) => name !== "type" && name !== "src" && name !== "href"),
+      ...newNode.attrs,
     ]
   }
 
-  replaceNode(scriptNode, newScriptNode)
+  replaceNode(node, newNode)
 }
 
 export const manipulateHtmlAst = (htmlAst, { scriptInjections = [] }) => {

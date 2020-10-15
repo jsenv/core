@@ -3,6 +3,7 @@ import {
   parseHtmlString,
   parseHtmlAstRessources,
   replaceHtmlNode,
+  setHtmlNodeAttributeValue,
   stringifyHtmlAst,
   getHtmlNodeAttributeValue,
   getHtmlNodeTextContent,
@@ -23,9 +24,9 @@ export const parseHtmlAsset = async (
 ) => {
   const htmlString = String(content.value)
   const htmlAst = await htmlStringToHtmlAst(htmlString)
-  const { links, styles, scripts } = parseHtmlAstRessources(htmlAst)
+  const { links, styles, scripts, imgs } = parseHtmlAstRessources(htmlAst)
 
-  const htmlMutationMap = new Map()
+  const htmlMutations = []
   scripts.forEach((script) => {
     const type = getHtmlNodeAttributeValue(script, "type") || "text/javascript"
     const src = getHtmlNodeAttributeValue(script, "src")
@@ -41,7 +42,7 @@ export const parseHtmlAsset = async (
         contentType: "text/javascript",
         ...htmlNodeToReferenceParams(script),
       })
-      htmlMutationMap.set(remoteScriptReference, ({ getReferenceUrlRelativeToImporter }) => {
+      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
         const { isInline } = remoteScriptReference.target
         if (isInline) {
           const { sourceAfterTransformation } = remoteScriptReference.target
@@ -62,7 +63,7 @@ export const parseHtmlAsset = async (
           value: text,
         },
       })
-      htmlMutationMap.set(inlineScriptReference, () => {
+      htmlMutations.push(() => {
         const { sourceAfterTransformation } = inlineScriptReference.target
         replaceHtmlNode(script, `<script>${sourceAfterTransformation}</script>`)
       })
@@ -76,7 +77,7 @@ export const parseHtmlAsset = async (
         ...htmlNodeToReferenceParams(script),
       })
 
-      htmlMutationMap.set(remoteScriptReference, ({ getReferenceUrlRelativeToImporter }) => {
+      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
         const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
         replaceHtmlNode(
           script,
@@ -96,7 +97,7 @@ export const parseHtmlAsset = async (
           value: text,
         },
       })
-      htmlMutationMap.set(inlineScriptReference, ({ getReferenceUrlRelativeToImporter }) => {
+      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
         const urlRelativeToImporter = getReferenceUrlRelativeToImporter(inlineScriptReference)
         replaceHtmlNode(
           script,
@@ -130,7 +131,7 @@ export const parseHtmlAsset = async (
           return `${importmapParentRelativeUrl}[name]-[hash][extname]`
         },
       })
-      htmlMutationMap.set(remoteImportmapReference, ({ getReferenceUrlRelativeToImporter }) => {
+      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
         const { isInline } = remoteImportmapReference.target
         if (isInline) {
           // here put a warning if we cannot inline importmap because it would mess
@@ -163,7 +164,7 @@ export const parseHtmlAsset = async (
           value: text,
         },
       })
-      htmlMutationMap.set(inlineImportMapReference, () => {
+      htmlMutations.push(() => {
         const { sourceAfterTransformation } = inlineImportMapReference.target
         replaceHtmlNode(
           script,
@@ -196,7 +197,7 @@ export const parseHtmlAsset = async (
       contentType,
       ...htmlNodeToReferenceParams(link),
     })
-    htmlMutationMap.set(remoteLinkReference, ({ getReferenceUrlRelativeToImporter }) => {
+    htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
       const { isInline } = remoteLinkReference.target
 
       if (isInline) {
@@ -229,14 +230,57 @@ export const parseHtmlAsset = async (
         value: text,
       },
     })
-    htmlMutationMap.set(inlineStyleReference, () => {
+    htmlMutations.push(() => {
       const { sourceAfterTransformation } = inlineStyleReference.target
       replaceHtmlNode(style, `<style>${sourceAfterTransformation}</style>`)
     })
   })
 
+  imgs.forEach((img) => {
+    const src = getHtmlNodeAttributeValue(img, "src")
+
+    if (src) {
+      const srcReference = notifyAssetFound({
+        specifier: src,
+        ...htmlNodeToReferenceParams(img),
+      })
+      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
+        const srcNewValue = referenceToUrl(srcReference, getReferenceUrlRelativeToImporter)
+        setHtmlNodeAttributeValue(img, "src", srcNewValue)
+      })
+    }
+
+    const srcset = getHtmlNodeAttributeValue(img, "srcset")
+
+    if (srcset) {
+      const srcSetParts = []
+      srcset.split(",").forEach((set) => {
+        const [specifier, descriptor] = set.trim().split(" ")
+        if (specifier) {
+          srcSetParts.push({
+            descriptor,
+            reference: notifyAssetFound({
+              specifier,
+              ...htmlNodeToReferenceParams(img),
+            }),
+          })
+        }
+      })
+
+      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
+        const srcSetNewValue = srcSetParts
+          .map(({ descriptor, reference }) => {
+            const newSpecifier = referenceToUrl(reference, getReferenceUrlRelativeToImporter)
+            return `${newSpecifier} ${descriptor}`
+          })
+          .join(", ")
+        setHtmlNodeAttributeValue(img, "srcset", srcSetNewValue)
+      })
+    }
+  })
+
   return async ({ getReferenceUrlRelativeToImporter }) => {
-    htmlMutationMap.forEach((mutationCallback) => {
+    htmlMutations.forEach((mutationCallback) => {
       mutationCallback({ getReferenceUrlRelativeToImporter })
     })
     const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
@@ -247,6 +291,14 @@ export const parseHtmlAsset = async (
       sourceAfterTransformation,
     }
   }
+}
+
+const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
+  const { isInline } = reference.target
+  if (isInline) {
+    return getTargetAsBase64Url(reference.target)
+  }
+  return getReferenceUrlRelativeToImporter(reference)
 }
 
 const htmlNodeToReferenceParams = (htmlNode) => {

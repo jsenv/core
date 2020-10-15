@@ -1,7 +1,6 @@
 /**
  * a faire
  *
- * - <link rel="favicon"
  * - <img>
  * - xlink:href="" in svg
  * in theory inline style attributes
