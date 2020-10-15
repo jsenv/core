@@ -1,8 +1,6 @@
 /**
  * a faire
  *
- * - css minification
- * - html minification
  * - <link rel="favicon"
  * - <img>
  * - xlink:href="" in svg
