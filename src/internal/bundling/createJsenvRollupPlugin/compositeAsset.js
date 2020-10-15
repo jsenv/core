@@ -22,6 +22,12 @@ referenced both in js and html for instance.
 -> We could warn about asset inlined + referenced
 more than once
 
+Each time an asset needs to be inlined its dependencies
+must be re-resolved to its importer location.
+This is quite a lot of work to implement this.
+Considering that inlining is not that worth it and might
+duplicate them when imported more than once let's just not do it.
+
 */
 
 import {
@@ -35,7 +41,6 @@ import {
 import { createLogger } from "@jsenv/logger"
 import { computeFileNameForRollup } from "./computeFileNameForRollup.js"
 import { showSourceLocation } from "./showSourceLocation.js"
-import { inlineReference } from "./inlineReference.js"
 
 const logger = createLogger({ logLevel: "debug" })
 
@@ -70,7 +75,6 @@ export const createCompositeAssetHandler = (
     emitAsset,
     connectTarget = () => {},
     resolveReference = ({ specifier }, target) => resolveUrl(specifier, target.url),
-    inlineAssetPredicate,
   },
 ) => {
   const prepareAssetEntry = async (url, { fileNamePattern, source }) => {
@@ -116,15 +120,6 @@ export const createCompositeAssetHandler = (
 
   const connectReferenceAndTarget = (reference, target) => {
     reference.target = target
-
-    // we just found a reference to a target that was inlined before
-    // but at that time we certainly was not aware there was an other importer
-    // for this asset. So asset will end up duplicated (once inlined, one referenced by url)
-    // -> emit a warning about that.
-    if (target.isInline && target.importers.length > 0) {
-      logger.warn(formatAssetDuplicationWarning(target, target.importers[0], reference))
-    }
-
     target.importers.push(reference)
   }
 
@@ -171,7 +166,6 @@ export const createCompositeAssetHandler = (
         specifier,
         line,
         column,
-        preferInline,
         source,
         fileNamePattern,
       }) => {
@@ -187,7 +181,7 @@ export const createCompositeAssetHandler = (
 
         const dependencyTargetUrl = resolveReference({ specifier, isAsset, isInline }, target)
         const dependencyReference = createReference(
-          { url: target.url, line, column, preferInline, previousJsDependency },
+          { url: target.url, line, column, previousJsDependency },
           { url: dependencyTargetUrl, isAsset, isInline, source, fileNamePattern },
         )
         if (dependencyReference.target.isConnected()) {
@@ -277,7 +271,6 @@ export const createCompositeAssetHandler = (
       if (dependencies.length === 0) {
         target.sourceAfterTransformation = target.source
         target.fileNameForRollup = computeTargetFileNameForRollup(target)
-        await decideInlining()
         return
       }
 
@@ -331,7 +324,6 @@ export const createCompositeAssetHandler = (
         fileNameForRollup = computeTargetFileNameForRollup(target)
       }
       target.fileNameForRollup = fileNameForRollup
-      await decideInlining()
 
       assetEmitters.forEach((callback) => {
         const importerProjectUrl = target.url
@@ -348,29 +340,6 @@ export const createCompositeAssetHandler = (
         logger.debug(`emit ${fileNameForRollup} asset emitted by ${fileNameForRollup}`)
       })
     })
-
-    const decideInlining = async () => {
-      const assetProjectRelativeUrl = target.relativeUrl
-      const assetSize = Buffer.byteLength(target.sourceAfterTransformation)
-      const hasMultipleImporters = target.importers.length > 1
-      let preferInline
-      if (hasMultipleImporters) {
-        // do no inline
-      } else if (target.preferInline === undefined) {
-        preferInline = inlineAssetPredicate({
-          assetProjectRelativeUrl,
-          assetSize,
-        })
-      } else {
-        preferInline = target.preferInline
-      }
-
-      if (preferInline) {
-        // inline this target right now
-        // which means updating it's url
-        // and maybe more stuff ?
-      }
-    }
 
     let connected = false
     const connect = memoize(async (connectFn) => {
@@ -420,27 +389,6 @@ export const createCompositeAssetHandler = (
     await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdAvailablePromise()))
   }
 
-  const removeInlinedAssetsFromRollupBundle = (rollupBundle) => {
-    Object.keys(rollupBundle).forEach((key) => {
-      const file = rollupBundle[key]
-      if (file.type === "asset") {
-        const { fileName } = file
-        const targetUrl = Object.keys(targetMap).find(
-          (key) => targetMap[key].fileNameForRollup === fileName,
-        )
-        if (targetUrl) {
-          const target = targetMap[targetUrl]
-          const allImportersInlined = target.importers.every(
-            (importerReference) => importerReference.preferInline,
-          )
-          if (allImportersInlined) {
-            delete rollupBundle[key]
-          }
-        }
-      }
-    })
-  }
-
   const generateJavaScriptForAssetImport = async (url, { source, importerUrl } = {}) => {
     const assetReference = createReference(
       // the reference to this target comes from importerUrl
@@ -464,10 +412,6 @@ export const createCompositeAssetHandler = (
       throw new Error(`target is not connected ${url}`)
     }
     await assetReference.target.getRollupReferenceIdAvailablePromise()
-    const { preferInline } = assetReference
-    if (preferInline) {
-      return `export default ${inlineReference(assetReference)}`
-    }
     const { rollupReferenceId } = assetReference.target
     return `export default import.meta.ROLLUP_FILE_URL_${rollupReferenceId};`
   }
@@ -523,21 +467,10 @@ ${showReferenceSourceLocation(reference)}
     return `${message} -> ignored because url is external`
   }
 
-  const formatAssetDuplicationWarning = (target, previousReference, reference) => {
-    return `${
-      reference.target.relativeUrl
-    } asset will be duplicated because it was inlined and is now referenced.
---- previous reference ---
-${showReferenceSourceLocation(previousReference)}
---- reference ---
-${showReferenceSourceLocation(reference)}`
-  }
-
   return {
     prepareAssetEntry,
     resolveJsReferencesUsingRollupBundle,
     generateJavaScriptForAssetImport,
-    removeInlinedAssetsFromRollupBundle,
 
     showReferenceSourceLocation,
     inspect: () => {

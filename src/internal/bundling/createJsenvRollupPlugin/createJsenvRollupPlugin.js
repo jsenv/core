@@ -1,13 +1,6 @@
 /**
  * a faire
  *
- * - pouvoir décider d'inline certains assets ?
- * peut etre utile pour importmap, favicon et ptet certains css critique
- * autrement dit un asset qui est trouvé pas inline doit pouvoir etre forcé a inline
- * on fera base64 pour une image et juste le fichier brute pour css, ou importmap.
- * pour les importmap on le supporte tant que cela ne change
- * pas son url de destinatio, sinon on emit un warning
- * - warning pour importmap inline
  * - css minification
  * - html minification
  * - <link rel="favicon"
@@ -79,7 +72,6 @@ export const createJsenvRollupPlugin = async ({
   minifyCssOptions,
   minifyHtmlOptions,
   manifestFile,
-  inlineAssetPredicate,
 
   bundleDirectoryUrl,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
@@ -224,8 +216,7 @@ export const createJsenvRollupPlugin = async ({
                     manipulateHtmlAst(htmlAst, {
                       scriptInjections: [
                         {
-                          "src": systemJsUrl,
-                          "data-prefer-inline": true,
+                          src: systemJsUrl,
                         },
                       ],
                     })
@@ -283,7 +274,6 @@ export const createJsenvRollupPlugin = async ({
             compileServerOrigin,
           ),
           urlToOriginalProjectUrl,
-          inlineAssetPredicate,
           loadUrl: (url) => urlResponseBodyMap[url],
           resolveReference: ({ specifier, isAsset }, target) => {
             if (target.isEntry && target.isAsset && !isAsset) {
@@ -558,7 +548,6 @@ export const createJsenvRollupPlugin = async ({
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
       await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle)
-      compositeAssetHandler.removeInlinedAssetsFromRollupBundle(bundle)
       logger.info(formatBundleGeneratedLog(bundle))
 
       if (manifestFile) {
