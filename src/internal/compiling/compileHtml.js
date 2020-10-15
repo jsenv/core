@@ -99,28 +99,31 @@ export const htmlNodeIsScriptImportmap = (htmlNode) => {
 // ensuite qu'on est capable de les mettre a jour
 // ce qui veut dire de mettre a jour link.ref et style.text
 export const parseHtmlAstRessources = (htmlAst) => {
-  const scripts = []
-  const stylesheetLinks = []
+  const links = []
   const styles = []
+  const scripts = []
 
   visitHtmlAst(htmlAst, (node) => {
-    if (node.nodeName === "script") {
-      scripts.push(node)
-    }
-
-    if (node.nodeName === "link" && getHtmlNodeAttributeValue(node, "rel") === "stylesheet") {
-      stylesheetLinks.push(node)
+    if (node.nodeName === "link") {
+      links.push(node)
+      return
     }
 
     if (node.nodeName === "style") {
       styles.push(node)
+      return
+    }
+
+    if (node.nodeName === "script") {
+      scripts.push(node)
+      return
     }
   })
 
   return {
-    scripts,
-    stylesheetLinks,
+    links,
     styles,
+    scripts,
   }
 }
 

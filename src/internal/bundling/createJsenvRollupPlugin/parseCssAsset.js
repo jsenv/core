@@ -5,11 +5,11 @@ import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
 
 export const parseCssAsset = async (
-  { url, source },
+  { url, content },
   { notifyAssetFound },
   { minify, minifyCssOptions },
 ) => {
-  const cssString = String(source)
+  const cssString = String(content.value)
   const { atImports, urlDeclarations } = await parseCssUrls(cssString, url)
 
   const urlNodeReferenceMapping = new Map()

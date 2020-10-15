@@ -12,7 +12,7 @@ import {
 import { minifyHtml } from "./minifyHtml.js"
 
 export const parseHtmlAsset = async (
-  { source, url },
+  { content, url },
   { notifyAssetFound, notifyInlineAssetFound, notifyJsFound, notifyInlineJsFound },
   {
     minify,
@@ -20,9 +20,9 @@ export const parseHtmlAsset = async (
     htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString),
   } = {},
 ) => {
-  const htmlString = String(source)
+  const htmlString = String(content.value)
   const htmlAst = await htmlStringToHtmlAst(htmlString)
-  const { scripts, stylesheetLinks, styles } = parseHtmlAstRessources(htmlAst)
+  const { links, styles, scripts } = parseHtmlAstRessources(htmlAst)
 
   const htmlMutationMap = new Map()
   scripts.forEach((script) => {
@@ -37,6 +37,7 @@ export const parseHtmlAsset = async (
     if (type === "text/javascript" && src) {
       const remoteScriptReference = notifyAssetFound({
         specifier: src,
+        contentType: "text/javascript",
         ...htmlNodeToReferenceParams(script),
       })
       htmlMutationMap.set(remoteScriptReference, ({ getReferenceUrlRelativeToImporter }) => {
@@ -55,7 +56,10 @@ export const parseHtmlAsset = async (
       const inlineScriptReference = notifyInlineAssetFound({
         specifier: getUniqueNameForInlineHtmlNode(script, scripts, `${urlToBasename(url)}.[id].js`),
         ...htmlNodeToReferenceParams(script),
-        source: text,
+        content: {
+          type: "text/javascript",
+          value: text,
+        },
       })
       htmlMutationMap.set(inlineScriptReference, () => {
         const { sourceAfterTransformation } = inlineScriptReference.target
@@ -67,6 +71,7 @@ export const parseHtmlAsset = async (
     if (type === "module" && src) {
       const remoteScriptReference = notifyJsFound({
         specifier: src,
+        contentType: "text/javascript",
         ...htmlNodeToReferenceParams(script),
       })
 
@@ -85,7 +90,10 @@ export const parseHtmlAsset = async (
       const inlineScriptReference = notifyInlineJsFound({
         specifier: getUniqueNameForInlineHtmlNode(script, scripts, `${urlToBasename(url)}.[id].js`),
         ...htmlNodeToReferenceParams(script),
-        source: text,
+        content: {
+          type: "text/javascript",
+          value: text,
+        },
       })
       htmlMutationMap.set(inlineScriptReference, ({ getReferenceUrlRelativeToImporter }) => {
         const urlRelativeToImporter = getReferenceUrlRelativeToImporter(inlineScriptReference)
@@ -102,6 +110,7 @@ export const parseHtmlAsset = async (
     if (type === "importmap" && src) {
       const remoteImportmapReference = notifyAssetFound({
         specifier: src,
+        contentType: "application/importmap+json",
         ...htmlNodeToReferenceParams(script),
         // here we want to force the fileName for the importmap
         // so that we don't have to rewrite its content
@@ -148,7 +157,10 @@ export const parseHtmlAsset = async (
           `${urlToBasename(url)}.[id].importmap`,
         ),
         ...htmlNodeToReferenceParams(script),
-        source: text,
+        content: {
+          type: "application/importmap+json",
+          value: text,
+        },
       })
       htmlMutationMap.set(inlineImportMapReference, () => {
         const { sourceAfterTransformation } = inlineImportMapReference.target
@@ -160,38 +172,58 @@ export const parseHtmlAsset = async (
       return
     }
   })
-  stylesheetLinks.forEach((stylesheetLink) => {
-    const href = getHtmlNodeAttributeValue(stylesheetLink, "href")
-    if (href) {
-      const remoteStyleReference = notifyAssetFound({
-        specifier: href,
-        ...htmlNodeToReferenceParams(stylesheetLink),
-      })
-      htmlMutationMap.set(remoteStyleReference, ({ getReferenceUrlRelativeToImporter }) => {
-        const { preferInline } = remoteStyleReference
-        if (preferInline) {
-          const { sourceAfterTransformation } = remoteStyleReference.target
-          replaceHtmlNode(stylesheetLink, `<style>${sourceAfterTransformation}</style>`)
-        } else {
-          const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteStyleReference)
-          replaceHtmlNode(stylesheetLink, `<link href="${urlRelativeToImporter}"/>`)
-        }
-      })
+  links.forEach((link) => {
+    const href = getHtmlNodeAttributeValue(link, "href")
+    if (!href) {
+      return
     }
+
+    const type = getHtmlNodeAttributeValue(link, "type")
+    let contentType
+    if (type) {
+      contentType = type
+    } else {
+      const rel = getHtmlNodeAttributeValue(link, "rel")
+      if (rel === "stylesheet") {
+        contentType = "text/css"
+      } else {
+        contentType = undefined
+      }
+    }
+    const remoteLinkReference = notifyAssetFound({
+      specifier: href,
+      contentType,
+      ...htmlNodeToReferenceParams(link),
+    })
+    htmlMutationMap.set(remoteLinkReference, ({ getReferenceUrlRelativeToImporter }) => {
+      const { preferInline } = remoteLinkReference
+      if (preferInline) {
+        const { sourceAfterTransformation } = remoteLinkReference.target
+        replaceHtmlNode(remoteLinkReference, `<style>${sourceAfterTransformation}</style>`)
+      } else {
+        const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteLinkReference)
+        replaceHtmlNode(remoteLinkReference, `<link href="${urlRelativeToImporter}" />`)
+      }
+    })
   })
   styles.forEach((style) => {
     const text = getHtmlNodeTextContent(style)
-    if (text) {
-      const inlineStyleReference = notifyInlineAssetFound({
-        specifier: getUniqueNameForInlineHtmlNode(style, styles, `${urlToBasename(url)}.[id].css`),
-        ...htmlNodeToReferenceParams(style),
-        source: text,
-      })
-      htmlMutationMap.set(inlineStyleReference, () => {
-        const { sourceAfterTransformation } = inlineStyleReference.target
-        replaceHtmlNode(style, `<style>${sourceAfterTransformation}</style>`)
-      })
+    if (!text) {
+      return
     }
+
+    const inlineStyleReference = notifyInlineAssetFound({
+      specifier: getUniqueNameForInlineHtmlNode(style, styles, `${urlToBasename(url)}.[id].css`),
+      ...htmlNodeToReferenceParams(style),
+      content: {
+        type: "text/css",
+        value: text,
+      },
+    })
+    htmlMutationMap.set(inlineStyleReference, () => {
+      const { sourceAfterTransformation } = inlineStyleReference.target
+      replaceHtmlNode(style, `<style>${sourceAfterTransformation}</style>`)
+    })
   })
 
   return async ({ getReferenceUrlRelativeToImporter }) => {

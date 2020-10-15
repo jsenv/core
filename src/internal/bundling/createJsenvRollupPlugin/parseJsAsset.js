@@ -5,11 +5,11 @@ import { minifyJs } from "./minifyJs.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
 
 export const parseJsAsset = async (
-  { source, url, relativeUrl },
+  { content, url, relativeUrl },
   notifiers,
   { minify, minifyJsOptions },
 ) => {
-  const jsString = String(source)
+  const jsString = String(content.value)
   let map = await fetchSourcemap(url, jsString)
 
   return async ({ precomputeFileNameForRollup, registerAssetEmitter }) => {
