@@ -43,7 +43,7 @@ export const parseHtmlAsset = async (
         const { preferInline } = remoteScriptReference
         if (preferInline) {
           const { sourceAfterTransformation } = remoteScriptReference.target
-          replaceHtmlNode(script, `<script src="${sourceAfterTransformation}"></script>`)
+          replaceHtmlNode(script, `<script>${sourceAfterTransformation}</script>`)
         } else {
           const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
           replaceHtmlNode(script, `<script src="${urlRelativeToImporter}"></script>`)

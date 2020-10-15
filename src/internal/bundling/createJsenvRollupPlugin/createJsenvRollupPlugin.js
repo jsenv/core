@@ -224,7 +224,8 @@ export const createJsenvRollupPlugin = async ({
                     manipulateHtmlAst(htmlAst, {
                       scriptInjections: [
                         {
-                          src: systemJsUrl,
+                          "src": systemJsUrl,
+                          "data-prefer-inline": true,
                         },
                       ],
                     })
@@ -318,7 +319,7 @@ export const createJsenvRollupPlugin = async ({
 
             if (target.isAsset) {
               target.connect(async () => {
-                await target.getFileNameReadyPromise()
+                await target.getReadyPromise()
                 const { sourceAfterTransformation, fileNameForRollup } = target
 
                 if (target.isInline) {

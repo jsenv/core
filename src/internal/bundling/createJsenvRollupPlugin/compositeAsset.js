@@ -89,11 +89,11 @@ export const createCompositeAssetHandler = (
       source,
     })
 
-    await entryReference.target.getReferencesReadyPromise()
+    await entryReference.target.getDependenciesAvailablePromise()
     // start to wait internally for eventual chunks
     // but don't await here because this function will be awaited by rollup before starting
     // to parse chunks
-    entryReference.getReadyPromise()
+    entryReference.target.getReadyPromise()
   }
 
   const targetMap = {}
@@ -116,49 +116,16 @@ export const createCompositeAssetHandler = (
 
   const connectReferenceAndTarget = (reference, target) => {
     reference.target = target
+
+    // we just found a reference to a target that was inlined before
+    // but at that time we certainly was not aware there was an other importer
+    // for this asset. So asset will end up duplicated (once inlined, one referenced by url)
+    // -> emit a warning about that.
+    if (target.isInline && target.importers.length > 0) {
+      logger.warn(formatAssetDuplicationWarning(target, target.importers[0], reference))
+    }
+
     target.importers.push(reference)
-
-    reference.getReadyPromise = memoize(async () => {
-      // logger.debug(`${shortenUrl(reference.url)} waiting for ${shortenUrl(target.url)} to be ready`)
-      await target.getFileNameReadyPromise()
-
-      const otherImporters = target.importers.filter((ref) => ref !== reference)
-      const assetProjectRelativeUrl = target.relativeUrl
-      const assetSize = Buffer.byteLength(target.sourceAfterTransformation)
-      const hasMultipleImporters = Boolean(otherImporters.length)
-
-      let preferInline
-      if (reference.preferInline === undefined) {
-        preferInline = inlineAssetPredicate({
-          assetProjectRelativeUrl,
-          assetSize,
-          hasMultipleImporters,
-        })
-        reference.preferInline = preferInline
-      } else {
-        preferInline = reference.preferInline
-      }
-
-      // we gave information to inlineAssetPredicate that there is multiple importers
-      // but inlineAssetPredicate still decides to return true
-      // so let's assume it's desired a put log level to debug
-      if (preferInline && hasMultipleImporters) {
-        logger.debug(formatAssetDuplicationDebug(reference, otherImporters[0]))
-      }
-
-      // we just found a reference to something that was inline before
-      // but at that time we certainly was not aware there was an other importer
-      // for this asset. So asset will end up duplicated (once inlined, one referenced by url)
-      // -> emit a warning about that.
-      if (!preferInline) {
-        const otherInlineImporterReference = otherImporters.find(
-          (otherImporter) => otherImporter.preferInline === true,
-        )
-        if (otherInlineImporterReference) {
-          logger.warn(formatAssetDuplicationWarning(reference, otherInlineImporterReference))
-        }
-      }
-    })
   }
 
   const assetTransformMap = {}
@@ -184,21 +151,21 @@ export const createCompositeAssetHandler = (
       importers,
     }
 
-    const getSourceReadyPromise = memoize(async () => {
+    const getSourceAvailablePromise = memoize(async () => {
       const source = await load(url, importers[0].url)
       target.source = source
     })
     if (source !== undefined) {
-      getSourceReadyPromise.forceMemoization(source)
+      getSourceAvailablePromise.forceMemoization(source)
     }
 
-    const getReferencesReadyPromise = memoize(async () => {
-      await getSourceReadyPromise()
-      const references = []
+    const getDependenciesAvailablePromise = memoize(async () => {
+      await getSourceAvailablePromise()
+      const dependencies = []
 
-      let previousJsReference
+      let previousJsDependency
 
-      const notifyReferenceFound = ({
+      const notifyDependencyFound = ({
         isAsset,
         isInline,
         specifier,
@@ -218,30 +185,30 @@ export const createCompositeAssetHandler = (
           return null
         }
 
-        const childTargetUrl = resolveReference({ specifier, isAsset, isInline }, target)
-        const childReference = createReference(
-          { url: target.url, line, column, preferInline, previousJsReference },
-          { url: childTargetUrl, isAsset, isInline, source, fileNamePattern },
+        const dependencyTargetUrl = resolveReference({ specifier, isAsset, isInline }, target)
+        const dependencyReference = createReference(
+          { url: target.url, line, column, preferInline, previousJsDependency },
+          { url: dependencyTargetUrl, isAsset, isInline, source, fileNamePattern },
         )
-        if (childReference.target.isConnected()) {
-          references.push(childReference)
+        if (dependencyReference.target.isConnected()) {
+          dependencies.push(dependencyReference)
           if (!isAsset) {
-            previousJsReference = childReference
+            previousJsDependency = dependencyReference
           }
         }
-        logger.debug(formatReferenceFound(childReference))
-        return childReference
+        logger.debug(formatReferenceFound(dependencyReference))
+        return dependencyReference
       }
 
       const parseReturnValue = await parse(target, {
         notifyAssetFound: (data) =>
-          notifyReferenceFound({
+          notifyDependencyFound({
             isAsset: true,
             isInline: false,
             ...data,
           }),
         notifyInlineAssetFound: (data) =>
-          notifyReferenceFound({
+          notifyDependencyFound({
             isAsset: true,
             isInline: true,
             // inherit parent directory location because it's an inline asset
@@ -256,39 +223,39 @@ export const createCompositeAssetHandler = (
             ...data,
           }),
         notifyJsFound: (data) =>
-          notifyReferenceFound({
+          notifyDependencyFound({
             isAsset: false,
             isInline: false,
             ...data,
           }),
         notifyInlineJsFound: (data) =>
-          notifyReferenceFound({
+          notifyDependencyFound({
             isAsset: false,
             isInline: true,
             ...data,
           }),
       })
 
-      if (references.length > 0 && typeof parseReturnValue !== "function") {
+      if (dependencies.length > 0 && typeof parseReturnValue !== "function") {
         throw new Error(
-          `parse has references, it must return a function but received ${parseReturnValue}`,
+          `parse notified some dependencies, it must return a function but received ${parseReturnValue}`,
         )
       }
       if (typeof parseReturnValue === "function") {
         assetTransformMap[url] = parseReturnValue
       }
-      if (references.length) {
+      if (dependencies.length > 0) {
         logger.debug(
-          `${shortenUrl(url)} references collected -> ${references.map((reference) =>
-            shortenUrl(reference.target.url),
+          `${shortenUrl(url)} dependencies collected -> ${dependencies.map((dependencyReference) =>
+            shortenUrl(dependencyReference.target.url),
           )}`,
         )
       }
 
-      target.references = references
+      target.dependencies = dependencies
     })
 
-    const getFileNameReadyPromise = memoize(async () => {
+    const getReadyPromise = memoize(async () => {
       // une fois que les dépendances sont transformées on peut transformer cet asset
       if (!target.isAsset) {
         // ici l'url n'est pas top parce que
@@ -304,16 +271,19 @@ export const createCompositeAssetHandler = (
       }
 
       // la transformation d'un asset c'est avant tout la transformation de ses dépendances
-      await getReferencesReadyPromise()
-      const references = target.references
-      await Promise.all(references.map((reference) => reference.getReadyPromise()))
-
-      if (!assetTransformMap.hasOwnProperty(url)) {
+      // mais si on a rien a transformer, on a pas vraiment besoin de tout ça
+      await getDependenciesAvailablePromise()
+      const dependencies = target.dependencies
+      if (dependencies.length === 0) {
         target.sourceAfterTransformation = target.source
         target.fileNameForRollup = computeTargetFileNameForRollup(target)
+        await decideInlining()
         return
       }
 
+      await Promise.all(
+        dependencies.map((dependencyReference) => dependencyReference.target.getReadyPromise()),
+      )
       const transform = assetTransformMap[url]
       // assetDependenciesMapping contains all dependencies for an asset
       // each key is the absolute url to the dependency file
@@ -361,6 +331,7 @@ export const createCompositeAssetHandler = (
         fileNameForRollup = computeTargetFileNameForRollup(target)
       }
       target.fileNameForRollup = fileNameForRollup
+      await decideInlining()
 
       assetEmitters.forEach((callback) => {
         const importerProjectUrl = target.url
@@ -378,6 +349,29 @@ export const createCompositeAssetHandler = (
       })
     })
 
+    const decideInlining = async () => {
+      const assetProjectRelativeUrl = target.relativeUrl
+      const assetSize = Buffer.byteLength(target.sourceAfterTransformation)
+      const hasMultipleImporters = target.importers.length > 1
+      let preferInline
+      if (hasMultipleImporters) {
+        // do no inline
+      } else if (target.preferInline === undefined) {
+        preferInline = inlineAssetPredicate({
+          assetProjectRelativeUrl,
+          assetSize,
+        })
+      } else {
+        preferInline = target.preferInline
+      }
+
+      if (preferInline) {
+        // inline this target right now
+        // which means updating it's url
+        // and maybe more stuff ?
+      }
+    }
+
     let connected = false
     const connect = memoize(async (connectFn) => {
       connected = true
@@ -387,17 +381,17 @@ export const createCompositeAssetHandler = (
 
     // the idea is to return the connect promise here
     // because connect is memoized and called immediatly after target is created
-    const getRollupReferenceIdReadyPromise = () => connect()
+    const getRollupReferenceIdAvailablePromise = () => connect()
 
     Object.assign(target, {
       connect,
       isConnected: () => connected,
       createReference,
 
-      getSourceReadyPromise,
-      getReferencesReadyPromise,
-      getFileNameReadyPromise,
-      getRollupReferenceIdReadyPromise,
+      getSourceAvailablePromise,
+      getDependenciesAvailablePromise,
+      getReadyPromise,
+      getRollupReferenceIdAvailablePromise,
     })
 
     return target
@@ -423,7 +417,7 @@ export const createCompositeAssetHandler = (
 
     // wait html files to be emitted
     const urlToWait = Object.keys(targetMap).filter((url) => targetMap[url].isEntry)
-    await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdReadyPromise()))
+    await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdAvailablePromise()))
   }
 
   const removeInlinedAssetsFromRollupBundle = (rollupBundle) => {
@@ -469,7 +463,7 @@ export const createCompositeAssetHandler = (
     if (!assetReference.target.isConnected()) {
       throw new Error(`target is not connected ${url}`)
     }
-    await assetReference.target.getRollupReferenceIdReadyPromise()
+    await assetReference.target.getRollupReferenceIdAvailablePromise()
     const { preferInline } = assetReference
     if (preferInline) {
       return `export default ${inlineReference(assetReference)}`
@@ -529,24 +523,14 @@ ${showReferenceSourceLocation(reference)}
     return `${message} -> ignored because url is external`
   }
 
-  const formatAssetDuplicationDebug = (reference, otherReference) => {
-    return `${
-      reference.target.relativeUrl
-    } asset will be duplicated because it wants to be inlined and is referenced elsewhere.
---- reference prefering inline ---
-${showReferenceSourceLocation(reference)}
---- other reference ---
-${showReferenceSourceLocation(otherReference)}`
-  }
-
-  const formatAssetDuplicationWarning = (reference, otherReference) => {
+  const formatAssetDuplicationWarning = (target, previousReference, reference) => {
     return `${
       reference.target.relativeUrl
     } asset will be duplicated because it was inlined and is now referenced.
---- previous inline reference ---
-${showReferenceSourceLocation(reference)}
+--- previous reference ---
+${showReferenceSourceLocation(previousReference)}
 --- reference ---
-${showReferenceSourceLocation(otherReference)}`
+${showReferenceSourceLocation(reference)}`
   }
 
   return {
