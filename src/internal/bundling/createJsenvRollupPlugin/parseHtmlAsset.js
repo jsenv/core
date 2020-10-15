@@ -1,3 +1,21 @@
+/**
+
+Finds all asset reference in html then update all references to target the files in dist/ when needed.
+
+There is some cases where the asset won't be found and updated:
+- inline styles
+- inline attributes
+
+Don't write the following for instance:
+
+<div style="background:url('img.png')"></div>
+
+Or be sure to also reference this url somewhere in the html file like
+
+<link rel="preload" href="img.png" />
+
+*/
+
 import { urlToBasename, urlToRelativeUrl, resolveUrl, urlToParentUrl } from "@jsenv/util"
 import { getMutationsForSvgNodes } from "./parseSvgAsset.js"
 import {
@@ -25,7 +43,7 @@ export const parseHtmlAsset = async (
 ) => {
   const htmlString = String(content.value)
   const htmlAst = await htmlStringToHtmlAst(htmlString)
-  const { links, styles, scripts, imgs, images, uses } = parseHtmlAstRessources(htmlAst)
+  const { links, styles, scripts, imgs, images, uses, sources } = parseHtmlAstRessources(htmlAst)
 
   const htmlMutations = []
   scripts.forEach((script) => {
@@ -250,31 +268,21 @@ export const parseHtmlAsset = async (
       })
     }
 
-    const srcset = getHtmlNodeAttributeValue(img, "srcset")
-
-    if (srcset) {
-      const srcSetParts = []
-      srcset.split(",").forEach((set) => {
-        const [specifier, descriptor] = set.trim().split(" ")
-        if (specifier) {
-          srcSetParts.push({
-            descriptor,
-            reference: notifyAssetFound({
-              specifier,
-              ...getHtmlNodeLocation(img),
-            }),
-          })
-        }
+    htmlMutations.push(...getSrcSetMutations(img, notifyAssetFound))
+  })
+  sources.forEach((source) => {
+    htmlMutations.push(...getSrcSetMutations(source, notifyAssetFound))
+    const src = getHtmlNodeAttributeValue(source, "src")
+    if (src) {
+      const type = getHtmlNodeAttributeValue(source, "type")
+      const srcReference = notifyAssetFound({
+        specifier: src,
+        contentType: type,
+        ...getHtmlNodeLocation(source),
       })
-
       htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
-        const srcSetNewValue = srcSetParts
-          .map(({ descriptor, reference }) => {
-            const newSpecifier = referenceToUrl(reference, getReferenceUrlRelativeToImporter)
-            return `${newSpecifier} ${descriptor}`
-          })
-          .join(", ")
-        setHtmlNodeAttributeValue(img, "srcset", srcSetNewValue)
+        const srcNewValue = referenceToUrl(srcReference, getReferenceUrlRelativeToImporter)
+        setHtmlNodeAttributeValue(source, "src", srcNewValue)
       })
     }
   })
@@ -294,6 +302,38 @@ export const parseHtmlAsset = async (
       sourceAfterTransformation,
     }
   }
+}
+
+const getSrcSetMutations = (node, notifyAssetFound) => {
+  const srcsetValue = getHtmlNodeAttributeValue(node, "srcset")
+  if (!srcsetValue) return []
+
+  const srcsetParts = []
+  srcsetValue.split(",").forEach((set) => {
+    const [specifier, descriptor] = set.trim().split(" ")
+    if (specifier) {
+      srcsetParts.push({
+        descriptor,
+        reference: notifyAssetFound({
+          specifier,
+          ...getHtmlNodeLocation(node),
+        }),
+      })
+    }
+  })
+  if (srcsetParts.length === 0) return []
+
+  return [
+    ({ getReferenceUrlRelativeToImporter }) => {
+      const srcsetNewValue = srcsetParts
+        .map(({ descriptor, reference }) => {
+          const newSpecifier = referenceToUrl(reference, getReferenceUrlRelativeToImporter)
+          return `${newSpecifier} ${descriptor}`
+        })
+        .join(", ")
+      setHtmlNodeAttributeValue(node, "srcset", srcsetNewValue)
+    },
+  ]
 }
 
 const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {

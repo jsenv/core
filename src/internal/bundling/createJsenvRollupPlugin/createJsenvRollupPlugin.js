@@ -1,10 +1,3 @@
-/**
- * a faire
- *
- * in theory inline style attributes
- * - <source> inside <audio>, <video>, <srcset>
- */
-
 /* eslint-disable import/max-dependencies */
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import {
