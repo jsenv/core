@@ -12,6 +12,7 @@ import {
 } from "../../compiling/compileHtml.js"
 import { minifyHtml } from "./minifyHtml.js"
 import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
+import { getMutationsForSvgNodes } from "./parseSvgAsset.js"
 
 export const parseHtmlAsset = async (
   { content, url },
@@ -40,7 +41,7 @@ export const parseHtmlAsset = async (
       const remoteScriptReference = notifyAssetFound({
         specifier: src,
         contentType: "text/javascript",
-        ...htmlNodeToReferenceParams(script),
+        ...getHtmlNodeLocation(script),
       })
       htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
         const { isInline } = remoteScriptReference.target
@@ -57,7 +58,7 @@ export const parseHtmlAsset = async (
     if (type === "text/javascript" && text) {
       const inlineScriptReference = notifyInlineAssetFound({
         specifier: getUniqueNameForInlineHtmlNode(script, scripts, `${urlToBasename(url)}.[id].js`),
-        ...htmlNodeToReferenceParams(script),
+        ...getHtmlNodeLocation(script),
         content: {
           type: "text/javascript",
           value: text,
@@ -74,7 +75,7 @@ export const parseHtmlAsset = async (
       const remoteScriptReference = notifyJsFound({
         specifier: src,
         contentType: "text/javascript",
-        ...htmlNodeToReferenceParams(script),
+        ...getHtmlNodeLocation(script),
       })
 
       htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
@@ -91,7 +92,7 @@ export const parseHtmlAsset = async (
     if (type === "module" && text) {
       const inlineScriptReference = notifyInlineJsFound({
         specifier: getUniqueNameForInlineHtmlNode(script, scripts, `${urlToBasename(url)}.[id].js`),
-        ...htmlNodeToReferenceParams(script),
+        ...getHtmlNodeLocation(script),
         content: {
           type: "text/javascript",
           value: text,
@@ -113,7 +114,7 @@ export const parseHtmlAsset = async (
       const remoteImportmapReference = notifyAssetFound({
         specifier: src,
         contentType: "application/importmap+json",
-        ...htmlNodeToReferenceParams(script),
+        ...getHtmlNodeLocation(script),
         // here we want to force the fileName for the importmap
         // so that we don't have to rewrite its content
         // the goal is to put the importmap at the same relative path
@@ -158,7 +159,7 @@ export const parseHtmlAsset = async (
           scripts,
           `${urlToBasename(url)}.[id].importmap`,
         ),
-        ...htmlNodeToReferenceParams(script),
+        ...getHtmlNodeLocation(script),
         content: {
           type: "application/importmap+json",
           value: text,
@@ -195,7 +196,7 @@ export const parseHtmlAsset = async (
     const remoteLinkReference = notifyAssetFound({
       specifier: href,
       contentType,
-      ...htmlNodeToReferenceParams(link),
+      ...getHtmlNodeLocation(link),
     })
     htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
       const { isInline } = remoteLinkReference.target
@@ -224,7 +225,7 @@ export const parseHtmlAsset = async (
 
     const inlineStyleReference = notifyInlineAssetFound({
       specifier: getUniqueNameForInlineHtmlNode(style, styles, `${urlToBasename(url)}.[id].css`),
-      ...htmlNodeToReferenceParams(style),
+      ...getHtmlNodeLocation(style),
       content: {
         type: "text/css",
         value: text,
@@ -241,7 +242,7 @@ export const parseHtmlAsset = async (
     if (src) {
       const srcReference = notifyAssetFound({
         specifier: src,
-        ...htmlNodeToReferenceParams(img),
+        ...getHtmlNodeLocation(img),
       })
       htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
         const srcNewValue = referenceToUrl(srcReference, getReferenceUrlRelativeToImporter)
@@ -260,7 +261,7 @@ export const parseHtmlAsset = async (
             descriptor,
             reference: notifyAssetFound({
               specifier,
-              ...htmlNodeToReferenceParams(img),
+              ...getHtmlNodeLocation(img),
             }),
           })
         }
@@ -277,34 +278,9 @@ export const parseHtmlAsset = async (
       })
     }
   })
-  images.forEach((image) => {
-    const href = getHtmlNodeAttributeValue(image, "href")
-    if (href) {
-      const hrefReference = notifyAssetFound({
-        specifier: href,
-        ...htmlNodeToReferenceParams(image),
-      })
-      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
-        const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter)
-        setHtmlNodeAttributeValue(image, "href", hrefNewValue)
-      })
-    }
-  })
-  uses.forEach((use) => {
-    const href = getHtmlNodeAttributeValue(use, "href")
-    if (href) {
-      if (href[0] === "#") return
 
-      const hrefReference = notifyAssetFound({
-        specifier: href,
-        ...htmlNodeToReferenceParams(use),
-      })
-      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
-        const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter)
-        setHtmlNodeAttributeValue(use, "href", hrefNewValue)
-      })
-    }
-  })
+  const svgNodeMutations = getMutationsForSvgNodes({ images, uses }, { notifyAssetFound })
+  htmlMutations.push(...svgNodeMutations)
 
   return async ({ getReferenceUrlRelativeToImporter }) => {
     htmlMutations.forEach((mutationCallback) => {
@@ -326,12 +302,6 @@ const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
     return getTargetAsBase64Url(reference.target)
   }
   return getReferenceUrlRelativeToImporter(reference)
-}
-
-const htmlNodeToReferenceParams = (htmlNode) => {
-  return {
-    ...getHtmlNodeLocation(htmlNode),
-  }
 }
 
 // otherwise systemjs thinks it's a bare import

@@ -40,6 +40,7 @@ import { fetchSourcemap } from "./fetchSourcemap.js"
 import { minifyJs } from "./minifyJs.js"
 
 import { createCompositeAssetHandler } from "./compositeAsset.js"
+// import { parseSvgAsset } from "./parseSvgAsset.js"
 import { parseHtmlAsset } from "./parseHtmlAsset.js"
 import { parseCssAsset } from "./parseCssAsset.js"
 import { parseImportmapAsset } from "./parseImportmapAsset.js"
@@ -184,8 +185,9 @@ export const createJsenvRollupPlugin = async ({
       compositeAssetHandler = createCompositeAssetHandler(
         {
           parse: async (target, notifiers) => {
-            const { url } = target
-            if (url.endsWith(".html")) {
+            const { url, content } = target
+            const contentType = content.type
+            if (contentType === "text/html") {
               return parseHtmlAsset(
                 {
                   ...target,
@@ -222,7 +224,7 @@ export const createJsenvRollupPlugin = async ({
               )
             }
 
-            if (url.endsWith(".css")) {
+            if (contentType === "text/css") {
               return parseCssAsset(
                 {
                   ...target,
@@ -233,7 +235,7 @@ export const createJsenvRollupPlugin = async ({
               )
             }
 
-            if (url.endsWith(".importmap")) {
+            if (contentType === "application/importmap+json") {
               return parseImportmapAsset(
                 {
                   ...target,
@@ -243,7 +245,7 @@ export const createJsenvRollupPlugin = async ({
               )
             }
 
-            if (url.endsWith(".js")) {
+            if (contentType === "text/javascript" || contentType === "application/javascript") {
               return parseJsAsset(
                 {
                   ...target,
@@ -253,6 +255,16 @@ export const createJsenvRollupPlugin = async ({
                 { minify, minifyJsOptions },
               )
             }
+
+            // if (contentType === "image/svg+xml") {
+            //   return parseSvgAsset(
+            //     {
+            //       ...target,
+            //       url: urlToOriginalProjectUrl(url),
+            //     },
+            //     notifiers,
+            //   )
+            // }
 
             return null
           },
