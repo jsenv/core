@@ -1,7 +1,6 @@
 /**
  * a faire
  *
- * - <img>
  * - xlink:href="" in svg
  * in theory inline style attributes
  * - <source> inside <audio>, <video>, <srcset>

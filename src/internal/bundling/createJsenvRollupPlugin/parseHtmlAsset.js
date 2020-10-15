@@ -24,7 +24,7 @@ export const parseHtmlAsset = async (
 ) => {
   const htmlString = String(content.value)
   const htmlAst = await htmlStringToHtmlAst(htmlString)
-  const { links, styles, scripts, imgs } = parseHtmlAstRessources(htmlAst)
+  const { links, styles, scripts, imgs, images } = parseHtmlAstRessources(htmlAst)
 
   const htmlMutations = []
   scripts.forEach((script) => {
@@ -235,7 +235,6 @@ export const parseHtmlAsset = async (
       replaceHtmlNode(style, `<style>${sourceAfterTransformation}</style>`)
     })
   })
-
   imgs.forEach((img) => {
     const src = getHtmlNodeAttributeValue(img, "src")
 
@@ -275,6 +274,19 @@ export const parseHtmlAsset = async (
           })
           .join(", ")
         setHtmlNodeAttributeValue(img, "srcset", srcSetNewValue)
+      })
+    }
+  })
+  images.forEach((image) => {
+    const href = getHtmlNodeAttributeValue(image, "href")
+    if (href) {
+      const hrefReference = notifyAssetFound({
+        specifier: href,
+        ...htmlNodeToReferenceParams(image),
+      })
+      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
+        const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter)
+        setHtmlNodeAttributeValue(image, "href", hrefNewValue)
       })
     }
   })

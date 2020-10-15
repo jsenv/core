@@ -103,6 +103,7 @@ export const parseHtmlAstRessources = (htmlAst) => {
   const styles = []
   const scripts = []
   const imgs = []
+  const images = []
 
   visitHtmlAst(htmlAst, (node) => {
     if (node.nodeName === "link") {
@@ -124,6 +125,11 @@ export const parseHtmlAstRessources = (htmlAst) => {
       imgs.push(node)
       return
     }
+
+    if (node.nodeName === "image") {
+      images.push(node)
+      return
+    }
   })
 
   return {
@@ -131,6 +137,7 @@ export const parseHtmlAstRessources = (htmlAst) => {
     styles,
     scripts,
     imgs,
+    images
   }
 }
 
