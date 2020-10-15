@@ -40,6 +40,7 @@ import {
   urlToParentUrl,
 } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
+import { parseDataUrl } from "../../parseDataUrl.js"
 import { computeFileNameForRollup } from "./computeFileNameForRollup.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 
@@ -216,6 +217,16 @@ ${target.url}`)
           dependencyTargetUrl = resolveTargetReturnValue.url
         } else {
           dependencyTargetUrl = resolveTargetReturnValue
+        }
+
+        if (dependencyTargetUrl.startsWith("data:")) {
+          isExternal = false
+          isInline = true
+          const { mediaType, base64Flag, data } = parseDataUrl(dependencyTargetUrl)
+          content = {
+            type: mediaType,
+            value: base64Flag ? new Buffer(data, "base64").toString() : decodeURI(data),
+          }
         }
 
         if (contentType === undefined) {
