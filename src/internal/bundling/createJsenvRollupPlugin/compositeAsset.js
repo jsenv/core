@@ -132,7 +132,7 @@ export const createCompositeAssetHandler = (
   const connectReferenceAndTarget = (reference, target) => {
     reference.target = target
     target.importers.push(reference)
-    target.getContentAvailablePromise.then(() => {
+    target.getContentAvailablePromise().then(() => {
       if (reference.contentType !== target.content.type) {
         logger.warn(`A reference was expecting ${reference.contentType} but found ${
           target.content.type
@@ -178,7 +178,7 @@ ${target.url}`)
       }
     })
     if (content !== undefined) {
-      getContentAvailablePromise.forceMemoization()
+      getContentAvailablePromise.forceMemoization(Promise.resolve())
     }
 
     const getDependenciesAvailablePromise = memoize(async () => {
@@ -223,6 +223,7 @@ ${target.url}`)
           isExternal = false
           isInline = true
           const { mediaType, base64Flag, data } = parseDataUrl(dependencyTargetUrl)
+          contentType = mediaType
           content = {
             type: mediaType,
             value: base64Flag ? new Buffer(data, "base64").toString() : decodeURI(data),

@@ -47,6 +47,7 @@ import { parseHtmlAsset } from "./parseHtmlAsset.js"
 import { parseCssAsset } from "./parseCssAsset.js"
 import { parseImportmapAsset } from "./parseImportmapAsset.js"
 import { parseJsAsset } from "./parseJsAsset.js"
+import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
 
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
@@ -694,10 +695,15 @@ export const createJsenvRollupPlugin = async ({
       moduleInfo,
       importerUrl,
     })
+
+    const content = target.isInline
+      ? `export default ${getTargetAsBase64Url(target)}`
+      : `export default import.meta.ROLLUP_FILE_URL_${target.rollupReferenceId}`
+
     return {
       ...commonData,
       contentRaw: String(target.content.value),
-      content: `export default import.meta.ROLLUP_FILE_URL_${target.rollupReferenceId}`,
+      content,
     }
   }
 

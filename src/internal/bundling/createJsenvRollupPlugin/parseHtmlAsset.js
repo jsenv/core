@@ -10,6 +10,7 @@ import {
   getUniqueNameForInlineHtmlNode,
 } from "../../compiling/compileHtml.js"
 import { minifyHtml } from "./minifyHtml.js"
+import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
 
 export const parseHtmlAsset = async (
   { content, url },
@@ -41,8 +42,8 @@ export const parseHtmlAsset = async (
         ...htmlNodeToReferenceParams(script),
       })
       htmlMutationMap.set(remoteScriptReference, ({ getReferenceUrlRelativeToImporter }) => {
-        const { preferInline } = remoteScriptReference
-        if (preferInline) {
+        const { isInline } = remoteScriptReference.target
+        if (isInline) {
           const { sourceAfterTransformation } = remoteScriptReference.target
           replaceHtmlNode(script, `<script>${sourceAfterTransformation}</script>`)
         } else {
@@ -130,9 +131,9 @@ export const parseHtmlAsset = async (
         },
       })
       htmlMutationMap.set(remoteImportmapReference, ({ getReferenceUrlRelativeToImporter }) => {
-        const { preferInline } = remoteImportmapReference
-        if (preferInline) {
-          // here put a awrning if we cannot inline importmap because it would mess
+        const { isInline } = remoteImportmapReference.target
+        if (isInline) {
+          // here put a warning if we cannot inline importmap because it would mess
           // the remapping (note that it's feasible) but not yet supported
           const { sourceAfterTransformation } = remoteImportmapReference.target
           replaceHtmlNode(
@@ -196,13 +197,21 @@ export const parseHtmlAsset = async (
       ...htmlNodeToReferenceParams(link),
     })
     htmlMutationMap.set(remoteLinkReference, ({ getReferenceUrlRelativeToImporter }) => {
-      const { preferInline } = remoteLinkReference
-      if (preferInline) {
-        const { sourceAfterTransformation } = remoteLinkReference.target
-        replaceHtmlNode(remoteLinkReference, `<style>${sourceAfterTransformation}</style>`)
+      const { isInline } = remoteLinkReference.target
+
+      if (isInline) {
+        if (getHtmlNodeAttributeValue(link, "rel") === "stylesheet") {
+          const { sourceAfterTransformation } = remoteLinkReference.target
+          replaceHtmlNode(link, `<style>${sourceAfterTransformation}</style>`)
+        } else {
+          replaceHtmlNode(
+            link,
+            `<link href="${getTargetAsBase64Url(remoteLinkReference.target)}" />`,
+          )
+        }
       } else {
         const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteLinkReference)
-        replaceHtmlNode(remoteLinkReference, `<link href="${urlRelativeToImporter}" />`)
+        replaceHtmlNode(link, `<link href="${urlRelativeToImporter}" />`)
       }
     })
   })
@@ -241,10 +250,7 @@ export const parseHtmlAsset = async (
 }
 
 const htmlNodeToReferenceParams = (htmlNode) => {
-  const dataPreferInline = getHtmlNodeAttributeValue(htmlNode, "data-prefer-inline")
-
   return {
-    preferInline: dataPreferInline === undefined ? undefined : true,
     ...getHtmlNodeLocation(htmlNode),
   }
 }

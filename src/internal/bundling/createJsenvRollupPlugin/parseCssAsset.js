@@ -3,6 +3,7 @@ import { urlToRelativeUrl, resolveUrl } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
 import { parseCssUrls } from "./css/parseCssUrls.js"
 import { replaceCssUrls } from "./css/replaceCssUrls.js"
+import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
 
 export const parseCssAsset = async (
   { url, content },
@@ -43,8 +44,13 @@ export const parseCssAsset = async (
         if (!urlNodeFound) {
           return urlNode.value
         }
+
         // url node nous dit quel réfrence y correspond
         const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
+        const { isInline } = urlNodeReference.target
+        if (isInline) {
+          return getTargetAsBase64Url(urlNodeReference.target)
+        }
         return getReferenceUrlRelativeToImporter(urlNodeReference)
       },
       {
