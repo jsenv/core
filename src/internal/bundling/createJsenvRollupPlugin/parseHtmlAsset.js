@@ -37,7 +37,7 @@ export const parseHtmlAsset = async (
     if (type === "text/javascript" && src) {
       const remoteScriptReference = notifyAssetFound({
         specifier: src,
-        ...getHtmlNodeLocation(script),
+        ...htmlNodeToReferenceParams(script),
       })
       htmlMutationMap.set(remoteScriptReference, ({ getReferenceUrlRelativeToImporter }) => {
         const { preferInline } = remoteScriptReference
@@ -54,7 +54,7 @@ export const parseHtmlAsset = async (
     if (type === "text/javascript" && text) {
       const inlineScriptReference = notifyInlineAssetFound({
         specifier: getUniqueNameForInlineHtmlNode(script, scripts, `${urlToBasename(url)}.[id].js`),
-        ...getHtmlNodeLocation(script),
+        ...htmlNodeToReferenceParams(script),
         source: text,
       })
       htmlMutationMap.set(inlineScriptReference, () => {
@@ -67,7 +67,7 @@ export const parseHtmlAsset = async (
     if (type === "module" && src) {
       const remoteScriptReference = notifyJsFound({
         specifier: src,
-        ...getHtmlNodeLocation(script),
+        ...htmlNodeToReferenceParams(script),
       })
 
       htmlMutationMap.set(remoteScriptReference, ({ getReferenceUrlRelativeToImporter }) => {
@@ -84,7 +84,7 @@ export const parseHtmlAsset = async (
     if (type === "module" && text) {
       const inlineScriptReference = notifyInlineJsFound({
         specifier: getUniqueNameForInlineHtmlNode(script, scripts, `${urlToBasename(url)}.[id].js`),
-        ...getHtmlNodeLocation(script),
+        ...htmlNodeToReferenceParams(script),
         source: text,
       })
       htmlMutationMap.set(inlineScriptReference, ({ getReferenceUrlRelativeToImporter }) => {
@@ -102,7 +102,7 @@ export const parseHtmlAsset = async (
     if (type === "importmap" && src) {
       const remoteImportmapReference = notifyAssetFound({
         specifier: src,
-        ...getHtmlNodeLocation(script),
+        ...htmlNodeToReferenceParams(script),
         // here we want to force the fileName for the importmap
         // so that we don't have to rewrite its content
         // the goal is to put the importmap at the same relative path
@@ -147,7 +147,7 @@ export const parseHtmlAsset = async (
           scripts,
           `${urlToBasename(url)}.[id].importmap`,
         ),
-        ...getHtmlNodeLocation(script),
+        ...htmlNodeToReferenceParams(script),
         source: text,
       })
       htmlMutationMap.set(inlineImportMapReference, () => {
@@ -165,7 +165,7 @@ export const parseHtmlAsset = async (
     if (href) {
       const remoteStyleReference = notifyAssetFound({
         specifier: href,
-        ...getHtmlNodeLocation(stylesheetLink),
+        ...htmlNodeToReferenceParams(stylesheetLink),
       })
       htmlMutationMap.set(remoteStyleReference, ({ getReferenceUrlRelativeToImporter }) => {
         const { preferInline } = remoteStyleReference
@@ -184,7 +184,7 @@ export const parseHtmlAsset = async (
     if (text) {
       const inlineStyleReference = notifyInlineAssetFound({
         specifier: getUniqueNameForInlineHtmlNode(style, styles, `${urlToBasename(url)}.[id].css`),
-        ...getHtmlNodeLocation(style),
+        ...htmlNodeToReferenceParams(style),
         source: text,
       })
       htmlMutationMap.set(inlineStyleReference, () => {
@@ -205,6 +205,15 @@ export const parseHtmlAsset = async (
     return {
       sourceAfterTransformation,
     }
+  }
+}
+
+const htmlNodeToReferenceParams = (htmlNode) => {
+  const dataPreferInline = getHtmlNodeAttributeValue(htmlNode, "data-prefer-inline")
+
+  return {
+    preferInline: dataPreferInline === undefined ? undefined : true,
+    ...getHtmlNodeLocation(htmlNode),
   }
 }
 

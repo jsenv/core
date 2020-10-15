@@ -127,12 +127,17 @@ export const createCompositeAssetHandler = (
       const assetSize = Buffer.byteLength(target.sourceAfterTransformation)
       const hasMultipleImporters = Boolean(otherImporters.length)
 
-      const preferInline = inlineAssetPredicate({
-        assetProjectRelativeUrl,
-        assetSize,
-        hasMultipleImporters,
-      })
-      reference.preferInline = preferInline
+      let preferInline
+      if (reference.preferInline === undefined) {
+        preferInline = inlineAssetPredicate({
+          assetProjectRelativeUrl,
+          assetSize,
+          hasMultipleImporters,
+        })
+        reference.preferInline = preferInline
+      } else {
+        preferInline = reference.preferInline
+      }
 
       // we gave information to inlineAssetPredicate that there is multiple importers
       // but inlineAssetPredicate still decides to return true
@@ -199,6 +204,7 @@ export const createCompositeAssetHandler = (
         specifier,
         line,
         column,
+        preferInline,
         source,
         fileNamePattern,
       }) => {
@@ -214,7 +220,7 @@ export const createCompositeAssetHandler = (
 
         const childTargetUrl = resolveReference({ specifier, isAsset, isInline }, target)
         const childReference = createReference(
-          { url: target.url, column, line, previousJsReference },
+          { url: target.url, line, column, preferInline, previousJsReference },
           { url: childTargetUrl, isAsset, isInline, source, fileNamePattern },
         )
         if (childReference.target.isConnected()) {
