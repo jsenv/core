@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { generateSystemJsBundle, convertCommonJsWithRollup } from "../../../index.js"
+import { generateBundle, convertCommonJsWithRollup } from "../../../index.js"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
 import {
@@ -14,9 +14,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.js`
+const mainFilename = `${testDirectoryname}.html`
 
-await generateSystemJsBundle({
+const bundle = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   // compileServerLogLevel: "debug",
   // logLevel: "debug",
@@ -24,7 +24,7 @@ await generateSystemJsBundle({
   // filesystemCache: true,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
   },
   convertMap: {
     "./node_modules/react/index.js": (options) =>
@@ -34,9 +34,13 @@ await generateSystemJsBundle({
       }),
   },
 })
+const mainRelativeUrl = `./${bundle.rollupBundle.output[0].fileName}`
 const { namespace: actual } = await browserImportSystemJsBundle({
   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
   testDirectoryRelativeUrl,
+  mainRelativeUrl,
+  // headless: false,
+  // autoStop: false,
 })
 const expected = {
   default: "object",
