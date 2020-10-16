@@ -6,8 +6,10 @@ https://github.com/postcss/postcss/blob/master/docs/guidelines/runner.md#31-dont
 
 */
 
-import valueParser from "postcss-value-parser"
 import { fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
+import { require } from "@jsenv/core/src/internal/require.js"
+
+const valueParser = require("postcss-value-parser")
 
 export const postCssUrlHashPlugin = () => {
   return {

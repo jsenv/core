@@ -1,7 +1,8 @@
-import postcss from "postcss"
 import { urlToFileSystemPath } from "@jsenv/util"
+import { require } from "@jsenv/core/src/internal/require.js"
 import { postCssUrlHashPlugin } from "./postcss-urlhash-plugin.js"
-import { require } from "../../../require.js"
+
+const postcss = require("postcss")
 
 export const replaceCssUrls = async (
   css,
