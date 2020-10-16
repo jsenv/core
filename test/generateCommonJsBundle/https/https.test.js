@@ -1,10 +1,18 @@
+/**
+
+External urls are left untouched.
+In the case of commonjs bundle it means they becomes
+require(url)
+Which ends up in MODULE_NOT_FOUND error
+
+*/
+
 import { basename } from "path"
-import { startServer } from "@jsenv/server"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { bundleToCompilationResult } from "../../../src/internal/bundling/bundleToCompilationResult.js"
-import { generateCommonJsBundle } from "../../../index.js"
+import { generateBundle } from "../../../index.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
   GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
@@ -17,32 +25,13 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`
-const server = await startServer({
-  logLevel: "warn",
-  protocol: "https",
-  ip: "127.0.0.1",
-  port: 9999,
-  keepProcessAlive: false,
-  requestToResponse: () => {
-    const body = `export default 42`
 
-    return {
-      status: 200,
-      headers: {
-        "content-type": "application/javascript",
-        "content-length": Buffer.byteLength(body),
-      },
-      body,
-    }
-  },
-})
-
-const bundle = await generateCommonJsBundle({
+const bundle = await generateBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
   },
 })
 const sourcemapFileUrl = resolveUrl(
@@ -71,18 +60,25 @@ const compilationResult = bundleToCompilationResult(bundle, {
   const expected = {
     version: actual.version,
     file: "main.cjs",
-    sources: [`${server.origin}/file.js`],
-    sourcesContent: null,
+    sources: [],
+    sourcesContent: [],
     names: actual.names,
     mappings: actual.mappings,
   }
   assert({ actual, expected })
 }
-{
-  const { namespace: actual } = await requireCommonJsBundle({
+
+try {
+  await requireCommonJsBundle({
     ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = 42
+} catch (e) {
+  const actual = {
+    code: e.code,
+  }
+  const expected = {
+    code: "MODULE_NOT_FOUND",
+  }
   assert({ actual, expected })
 }

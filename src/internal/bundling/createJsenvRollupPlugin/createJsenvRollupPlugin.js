@@ -359,7 +359,8 @@ export const createJsenvRollupPlugin = async ({
             emitFile({
               type: "chunk",
               id: relativeUrl,
-              name: chunkName,
+              // don't hash js entry points
+              fileName: chunkName,
             })
           }
         }),
