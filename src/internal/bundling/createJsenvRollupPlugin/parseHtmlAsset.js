@@ -475,7 +475,7 @@ const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
   return getReferenceUrlRelativeToImporter(reference)
 }
 
-// otherwise systemjs thinks it's a bare import
+// otherwise systemjs handle it as a bare import
 const ensureRelativeUrlNotation = (relativeUrl) => {
   if (relativeUrl.startsWith("../")) {
     return relativeUrl

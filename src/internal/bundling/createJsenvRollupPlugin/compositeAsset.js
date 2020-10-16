@@ -44,32 +44,10 @@ import { parseDataUrl } from "../../parseDataUrl.js"
 import { computeFileNameForRollup } from "./computeFileNameForRollup.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 
-const logger = createLogger({ logLevel: "debug" })
-
-const assetFileNamePattern = "assets/[name]-[hash][extname]"
-
-const computeTargetFileNameForRollup = (target) => {
-  return computeFileNameForRollup(
-    target.url,
-    target.sourceAfterTransformation,
-    target.fileNamePattern || assetFileNamePattern,
-  )
-}
-
-const precomputeTargetFileNameForRollup = (target, sourceAfterTransformation = "") => {
-  if (target.fileNameForRollup) {
-    return target.fileNameForRollup
-  }
-
-  target.sourceAfterTransformation = sourceAfterTransformation
-  const precomputedFileNameForRollup = computeTargetFileNameForRollup(target)
-  target.sourceAfterTransformation = undefined
-  return precomputedFileNameForRollup
-}
-
 export const createCompositeAssetHandler = (
   { fetch, parse },
   {
+    logLevel,
     projectDirectoryUrl = "file:///",
     bundleDirectoryUrl = "file:///",
     loadUrl = () => null,
@@ -79,6 +57,8 @@ export const createCompositeAssetHandler = (
     resolveTargetUrl = ({ specifier }, target) => resolveUrl(specifier, target.url),
   },
 ) => {
+  const logger = createLogger({ logLevel })
+
   const prepareHtmlEntry = async (url, { fileNamePattern, source }) => {
     logger.debug(`prepare entry asset ${shortenUrl(url)}`)
 
@@ -133,13 +113,7 @@ export const createCompositeAssetHandler = (
     target.importers.push(reference)
     target.getContentAvailablePromise().then(() => {
       if (reference.contentType !== target.content.type) {
-        logger.warn(`A reference was expecting ${reference.contentType} but found ${
-          target.content.type
-        } instead.
---- reference ---
-${showReferenceSourceLocation(reference)}
---- target url ---
-${target.url}`)
+        logger.warn(formatContentTypeMismatchLog(reference, { showReferenceSourceLocation }))
       }
     })
   }
@@ -239,6 +213,18 @@ ${target.url}`)
           return null
         }
 
+        if (isInline && fileNamePattern === undefined) {
+          // inherit parent directory location because it's an inline file
+          fileNamePattern = () => {
+            const importerFileNameForRollup = precomputeTargetFileNameForRollup(target)
+            const importerParentRelativeUrl = urlToRelativeUrl(
+              urlToParentUrl(resolveUrl(importerFileNameForRollup, "file://")),
+              "file://",
+            )
+            return `${importerParentRelativeUrl}[name]-[hash][extname]`
+          }
+        }
+
         const dependencyReference = createReference(
           {
             url: target.url,
@@ -262,33 +248,24 @@ ${target.url}`)
           previousJsDependency = dependencyReference
         }
         if (isExternal) {
-          logger.debug(formatExternalReferenceLog(dependencyReference))
+          logger.debug(
+            formatExternalReferenceLog(dependencyReference, {
+              showReferenceSourceLocation,
+              projectDirectoryUrl,
+            }),
+          )
         } else {
-          logger.debug(formatReferenceFound(dependencyReference))
+          logger.debug(
+            formatReferenceFound(dependencyReference, {
+              showReferenceSourceLocation,
+            }),
+          )
         }
         return dependencyReference
       }
 
       const parseReturnValue = await parse(target, {
-        notifyReferenceFound: (data) =>
-          notifyDependencyFound({
-            isInline: false,
-            ...data,
-          }),
-        notifyInlineReferenceFound: (data) =>
-          notifyDependencyFound({
-            isInline: true,
-            // inherit parent directory location because it's an inline asset
-            fileNamePattern: () => {
-              const importerFileNameForRollup = precomputeTargetFileNameForRollup(target)
-              const importerParentRelativeUrl = urlToRelativeUrl(
-                urlToParentUrl(resolveUrl(importerFileNameForRollup, "file://")),
-                "file://",
-              )
-              return `${importerParentRelativeUrl}[name]-[hash][extname]`
-            },
-            ...data,
-          }),
+        notifyReferenceFound: notifyDependencyFound,
       })
 
       if (dependencies.length > 0 && typeof parseReturnValue !== "function") {
@@ -506,50 +483,37 @@ ${showSourceLocation(referenceSource, {
     return `${message}`
   }
 
-  const formatExternalReferenceLog = (reference) => {
-    return `Found reference to an url outside project directory.
-${showReferenceSourceLocation(reference)}
---- target url ---
-${reference.target.url}
---- project directory url ---
-${projectDirectoryUrl}`
-  }
-
-  const formatReferenceFound = (reference) => {
-    const { target } = reference
-    const targetUrl = shortenUrl(target.url)
-
-    let message
-
-    if (target.isInline && target.isJsModule) {
-      message = `found inline js module.`
-    } else if (target.isInline) {
-      message = `found inline asset.`
-    } else if (target.isJsModule) {
-      message = `found js module reference to ${targetUrl}.`
-    } else {
-      message = `found asset reference to ${targetUrl}.`
-    }
-
-    message += `
-${showReferenceSourceLocation(reference)}
-`
-
-    return message
-  }
-
   return {
     prepareHtmlEntry,
     resolveJsReferencesUsingRollupBundle,
     getTargetFromResponse,
-
-    showReferenceSourceLocation,
     inspect: () => {
       return {
         targetMap,
       }
     },
   }
+}
+
+const assetFileNamePattern = "assets/[name]-[hash][extname]"
+
+const computeTargetFileNameForRollup = (target) => {
+  return computeFileNameForRollup(
+    target.url,
+    target.sourceAfterTransformation,
+    target.fileNamePattern || assetFileNamePattern,
+  )
+}
+
+const precomputeTargetFileNameForRollup = (target, sourceAfterTransformation = "") => {
+  if (target.fileNameForRollup) {
+    return target.fileNameForRollup
+  }
+
+  target.sourceAfterTransformation = sourceAfterTransformation
+  const precomputedFileNameForRollup = computeTargetFileNameForRollup(target)
+  target.sourceAfterTransformation = undefined
+  return precomputedFileNameForRollup
 }
 
 const memoize = (fn) => {
@@ -589,6 +553,50 @@ const removePotentialUrlHash = (url) => {
   const urlObject = new URL(url)
   urlObject.hash = ""
   return String(urlObject)
+}
+
+const formatContentTypeMismatchLog = (reference, { showReferenceSourceLocation }) => {
+  return `A reference was expecting ${reference.contentType} but found ${
+    reference.target.content.type
+  } instead.
+--- reference ---
+${showReferenceSourceLocation(reference)}
+--- target url ---
+${reference.target.url}`
+}
+
+const formatExternalReferenceLog = (
+  reference,
+  { showReferenceSourceLocation, projectDirectoryUrl },
+) => {
+  return `Found reference to an url outside project directory.
+${showReferenceSourceLocation(reference)}
+--- target url ---
+${reference.target.url}
+--- project directory url ---
+${projectDirectoryUrl}`
+}
+
+const formatReferenceFound = (reference, { showReferenceSourceLocation }) => {
+  const { target } = reference
+
+  let message
+
+  if (target.isInline && target.isJsModule) {
+    message = `found inline js module.`
+  } else if (target.isInline) {
+    message = `found inline asset.`
+  } else if (target.isJsModule) {
+    message = `found js module reference to ${target.relativeUrl}.`
+  } else {
+    message = `found asset reference to ${target.relativeUrl}.`
+  }
+
+  message += `
+${showReferenceSourceLocation(reference)}
+`
+
+  return message
 }
 
 // const textualContentTypes = ["text/html", "text/css", "image/svg+xml"]
