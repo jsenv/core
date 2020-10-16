@@ -25,8 +25,6 @@ export const generateBundle = async ({
   importDefaultExtension,
   externalImportSpecifiers = [],
   env = {},
-  browser,
-  node,
 
   compileServerProtocol,
   compileServerPrivateKey,
@@ -36,6 +34,8 @@ export const generateBundle = async ({
   babelPluginMap = jsenvBabelPluginMap,
 
   format = "esm",
+  browser = format === "global" || format === "systemjs" || format === "esmodule",
+  node = format === "commonjs",
   entryPointMap = format === "commonjs"
     ? { "./index.js": "./index.cjs" }
     : { "./index.js": "./index.js" },

@@ -59,6 +59,8 @@ export const serveBundle = async ({
       babelPluginMap,
 
       format,
+      node: format === "commonjs",
+      browser: format !== "commonjs",
       // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
       // but still important to know where the files will be written
       bundleDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
