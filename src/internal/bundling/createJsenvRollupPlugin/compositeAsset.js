@@ -430,11 +430,12 @@ export const createCompositeAssetHandler = (
     await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdAvailablePromise()))
   }
 
-  const getTargetFromResponse = async (response, { importerUrl } = {}) => {
-    const targetUrl = response.responseUrl
+  const createJsModuleImportReference = async (response, { importerUrl } = {}) => {
+    const targetUrl = response.url
     const contentType = response.headers["content-type"] || ""
-    const assetReference = createReference(
-      // the reference to this target comes from importerUrl
+    const reference = createReference(
+      // the reference to this target comes from a static or dynamic import
+      // parsed by rollup.
       // but we don't really know the line and column
       // because rollup does not share this information
       {
@@ -452,9 +453,9 @@ export const createCompositeAssetHandler = (
       },
     )
 
-    logger.debug(formatReferenceFound(assetReference))
-    await assetReference.target.getRollupReferenceIdAvailablePromise()
-    return assetReference
+    logger.debug(formatReferenceFound(reference, { showReferenceSourceLocation }))
+    await reference.target.getRollupReferenceIdAvailablePromise()
+    return reference
   }
 
   const shortenUrl = (url) => {
@@ -486,7 +487,7 @@ ${showSourceLocation(referenceSource, {
   return {
     prepareHtmlEntry,
     resolveJsReferencesUsingRollupBundle,
-    getTargetFromResponse,
+    createJsModuleImportReference,
     inspect: () => {
       return {
         targetMap,

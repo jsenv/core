@@ -671,18 +671,20 @@ export const createJsenvRollupPlugin = async ({
       }
     }
 
-    const target = await compositeAssetHandler.getTargetFromResponse(moduleResponse, {
-      moduleInfo,
-      importerUrl,
-    })
-
-    const content = target.isInline
-      ? `export default ${getTargetAsBase64Url(target)}`
-      : `export default import.meta.ROLLUP_FILE_URL_${target.rollupReferenceId}`
-
+    const importReference = await compositeAssetHandler.createJsModuleImportReference(
+      moduleResponse,
+      {
+        moduleInfo,
+        importerUrl,
+      },
+    )
+    const importTarget = importReference.target
+    const content = importTarget.isInline
+      ? `export default ${getTargetAsBase64Url(importTarget)}`
+      : `export default import.meta.ROLLUP_FILE_URL_${importTarget.rollupReferenceId}`
     return {
       ...commonData,
-      contentRaw: String(target.content.value),
+      contentRaw: String(importTarget.content.value),
       content,
     }
   }

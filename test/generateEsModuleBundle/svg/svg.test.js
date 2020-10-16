@@ -3,7 +3,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
-import { generateEsModuleBundle } from "../../../index.js"
+import { generateBundle } from "../../../index.js"
 import {
   GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
   BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
@@ -19,35 +19,34 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
-// on windows the asset hash is different because of line endings
-if (process.platform !== "win32") {
-  await generateEsModuleBundle({
-    ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
+const bundle = await generateBundle({
+  ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
+  bundleDirectoryRelativeUrl,
+  entryPointMap: {
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
+  },
+})
+
+const assetFileName = bundle.rollupBundle.output[1].fileName
+
+await assertFilePresence(resolveUrl(`./dist/esmodule/${assetFileName}`, import.meta.url))
+
+{
+  const { value: actual, serverOrigin } = await browserImportBundle({
+    ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
-    entryPointMap: {
-      main: `./${testDirectoryRelativeUrl}${mainFilename}`,
-    },
   })
+  const expected = new URL(assetFileName, serverOrigin).href
+  assert({ actual, expected })
+}
 
-  await assertFilePresence(resolveUrl("./dist/esmodule/assets/icon-695ec0e5.svg", import.meta.url))
-
-  {
-    const { value: actual, serverOrigin } = await browserImportBundle({
-      ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
-      bundleDirectoryRelativeUrl,
-    })
-    const expected = new URL("./assets/icon-695ec0e5.svg", serverOrigin).href
-    assert({ actual, expected })
-  }
-
-  // node 13.8 test
-  if (SourceMap) {
-    const { value: actual } = await nodeImportBundle({
-      ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
-      bundleDirectoryRelativeUrl,
-    })
-    const expected = new URL("./dist/esmodule/assets/icon-695ec0e5.svg", import.meta.url).href
-    assert({ actual, expected })
-  }
+// node 13.8 test
+if (SourceMap) {
+  const { value: actual } = await nodeImportBundle({
+    ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
+    bundleDirectoryRelativeUrl,
+  })
+  const expected = new URL(`./dist/esmodule/${assetFileName}`, import.meta.url).href
+  assert({ actual, expected })
 }
