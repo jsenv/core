@@ -103,7 +103,7 @@ const babelPluginMap = jsenvBabelPluginMap
   }
   {
     // eslint-disable-next-line import/no-dynamic-require
-    const actual = typeof require(urlToFileSystemPath(compiledFileUrl))
+    const actual = typeof require(urlToFileSystemPath(compiledFileUrl)).value
     const expected = "object"
     assert({ actual, expected })
   }

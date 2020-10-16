@@ -1,5 +1,11 @@
-import { extname, basename } from "path"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, urlIsInsideOf } from "@jsenv/util"
+import {
+  resolveDirectoryUrl,
+  resolveUrl,
+  urlIsInsideOf,
+  urlToRelativeUrl,
+  urlToBasename,
+  urlToFilename,
+} from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_GLOBAL_BUNDLE_FILES, COMPILE_ID_COMMONJS_BUNDLE_FILES } from "../CONSTANTS.js"
 import { generateBundleUsingRollup } from "../bundling/generateBundleUsingRollup.js"
@@ -26,15 +32,18 @@ export const serveBundle = async ({
   babelPluginMap,
 }) => {
   const compile = async () => {
-    const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
-    const entryExtname = extname(originalFileRelativeUrl)
-    const entryBasename = basename(originalFileRelativeUrl, entryExtname)
-    const entryName = entryBasename
-    const entryPointMap = {
-      [entryName]: `./${originalFileRelativeUrl}`,
-    }
     const compileId =
       format === "global" ? COMPILE_ID_GLOBAL_BUNDLE_FILES : COMPILE_ID_COMMONJS_BUNDLE_FILES
+
+    const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
+    const bundleRelativeUrl =
+      format === "commonjs"
+        ? `${urlToBasename(originalFileUrl)}.cjs`
+        : urlToFilename(originalFileUrl)
+
+    const entryPointMap = {
+      [`./${originalFileRelativeUrl}`]: `./${bundleRelativeUrl}`,
+    }
 
     const bundle = await generateBundleUsingRollup({
       cancellationToken,

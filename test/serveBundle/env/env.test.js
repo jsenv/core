@@ -101,7 +101,7 @@ const response = await serveBundle({
 }
 {
   // eslint-disable-next-line import/no-dynamic-require
-  const actual = require(urlToFileSystemPath(compiledFileUrl))
+  const actual = require(urlToFileSystemPath(compiledFileUrl)).value
   const expected = {
     whatever: 42,
     jsenvDirectoryRelativeUrl,

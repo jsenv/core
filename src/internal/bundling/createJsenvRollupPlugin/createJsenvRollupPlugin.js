@@ -547,9 +547,9 @@ export const createJsenvRollupPlugin = async ({
 
   const saveUrlResponseBody = (url, responseBody) => {
     urlResponseBodyMap[url] = responseBody
-    const originalProjectUrl = urlToOriginalProjectUrl(url)
-    if (originalProjectUrl && originalProjectUrl !== url) {
-      urlResponseBodyMap[originalProjectUrl] = responseBody
+    const projectUrl = urlToProjectUrl(url)
+    if (projectUrl && projectUrl !== url) {
+      urlResponseBodyMap[projectUrl] = responseBody
     }
   }
 
