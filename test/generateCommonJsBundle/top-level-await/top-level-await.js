@@ -1,1 +1,1 @@
-export default await Promise.resolve(42)
+export const answer = await Promise.resolve(42)

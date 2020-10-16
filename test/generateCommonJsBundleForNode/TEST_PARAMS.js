@@ -2,6 +2,7 @@ import { jsenvCoreDirectoryUrl } from "../../src/internal/jsenvCoreDirectoryUrl.
 import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
 export const GENERATE_COMMONJS_BUNDLE_FOR_NODE_TEST_PARAMS = {
+  format: "commonjs",
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   bundleDirectoryClean: true,
   jsenvDirectoryClean: true,

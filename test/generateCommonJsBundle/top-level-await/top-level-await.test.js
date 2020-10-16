@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { generateCommonJsBundle } from "../../../index.js"
+import { generateBundle } from "../../../index.js"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { GENERATE_COMMONJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
@@ -13,16 +13,16 @@ const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`
 
 try {
-  await generateCommonJsBundle({
+  await generateBundle({
     ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     bundleDirectoryRelativeUrl,
     entryPointMap: {
-      main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+      [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
     },
   })
 } catch (actual) {
-  process.exitCode = undefined // restore process exitCode set by error in generateCommonJsBundle
+  process.exitCode = undefined // restore process exitCode set by error in generateBundle
   const expected = new Error(
     `Module format cjs does not support top-level await. Use the "es" or "system" output formats rather.`,
   )

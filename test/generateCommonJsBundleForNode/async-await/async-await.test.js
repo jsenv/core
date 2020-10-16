@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { generateCommonJsBundleForNode } from "../../../index.js"
+import { generateBundle, getBabelPluginMapForNode } from "../../../index.js"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
@@ -16,12 +16,15 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
 const mainFilename = `${testDirectoryname}.js`
 
-await generateCommonJsBundleForNode({
+await generateBundle({
   ...GENERATE_COMMONJS_BUNDLE_FOR_NODE_TEST_PARAMS,
+  babelPluginMap: getBabelPluginMapForNode(
+    GENERATE_COMMONJS_BUNDLE_FOR_NODE_TEST_PARAMS.babelPluginMap,
+  ),
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
   },
 })
 const {

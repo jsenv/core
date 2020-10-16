@@ -1,1 +1,1 @@
-export default import("./answer.js")
+export const value = import("./answer.js")
