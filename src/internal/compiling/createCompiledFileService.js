@@ -273,7 +273,7 @@ export const createCompiledFileService = ({
             manipulateHtmlAst(htmlAst, {
               scriptInjections: [
                 {
-                  type: "importmap",
+                  type: "jsenv-importmap",
                   // in case there is no importmap, use a top level one
                   src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
                 },

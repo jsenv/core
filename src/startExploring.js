@@ -133,6 +133,20 @@ const createRedirectFilesService = ({ projectDirectoryUrl, outDirectoryRelativeU
         },
       }
     }
+    // unfortunately browser don't resolve sourcemap to url after redirection
+    // but to url before. It means browser tries to load source map from
+    // "/.jsenv/toolbar.main.js.map"
+    // we could also inline sourcemap but it's not yet possible
+    // inside generateBundle
+    if (request.ressource === "/.jsenv/toolbar.main.js.map") {
+      const toolbarSourcemapCompiledFileUrl = `${request.origin}/${toolbarMainJsCompiledFileRelativeUrl}.map`
+      return {
+        status: 307,
+        headers: {
+          location: toolbarSourcemapCompiledFileUrl,
+        },
+      }
+    }
     if (request.ressource === "/.jsenv/exploring.redirector.js") {
       const exploringRedirectorJsCompiledFileUrl = `${request.origin}/${exploringRedirectorJsCompiledFileRelativeUrl}`
       return {

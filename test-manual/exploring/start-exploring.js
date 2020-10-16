@@ -38,7 +38,7 @@ startExploring({
   compileServerProtocol: "https",
   compileServerPort: 3456,
   keepProcessAlive: true,
-  // jsenvDirectoryClean: true,
+  jsenvDirectoryClean: true,
   stopOnPackageVersionChange: false,
   // useFilesystemAsCache: false,
   // writeOnFileSystem: false,
