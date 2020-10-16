@@ -12,7 +12,7 @@ import {
 } from "@jsenv/util"
 import { require } from "../../../src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { serveBundle } from "../../../src/internal/compiling/serveBundle.js"
 import { jsenvBabelPluginMap } from "../../../src/jsenvBabelPluginMap.js"
 

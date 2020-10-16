@@ -5,7 +5,7 @@ import { fetchUrl } from "@jsenv/server"
 import { require } from "../../../src/internal/require.js"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "../../../src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { jsenvBabelPluginMap } from "../../../src/jsenvBabelPluginMap.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 

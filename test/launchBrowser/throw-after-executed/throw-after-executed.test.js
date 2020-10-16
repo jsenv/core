@@ -3,8 +3,8 @@ import { createCancellationSource } from "@jsenv/cancellation"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
+import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import { launchChromium } from "../../../index.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
