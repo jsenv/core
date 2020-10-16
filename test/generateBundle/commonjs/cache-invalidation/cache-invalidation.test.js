@@ -3,8 +3,8 @@
 
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { generateCommonJsBundle } from "@jsenv/core/index.js"
 import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl, writeFile } from "@jsenv/util"
+import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
@@ -17,19 +17,19 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const testDirectoryBasename = basename(testDirectoryRelativeUrl)
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const mainFileBasename = `${testDirectoryBasename}.js`
-const mainFileRelativeUrl = `${testDirectoryRelativeUrl}${mainFileBasename}`
+const mainFilename = `${testDirectoryBasename}.js`
+const mainFileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
 const mainFileUrl = resolveUrl(mainFileRelativeUrl, jsenvCoreDirectoryUrl)
 
-const generateBundle = () =>
-  generateCommonJsBundle({
+const generate = () =>
+  generateBundle({
     ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
     // logLevel: "debug",
     // compileServerLogLevel: "debug",
     jsenvDirectoryRelativeUrl,
     bundleDirectoryRelativeUrl,
     entryPointMap: {
-      main: `./${testDirectoryRelativeUrl}${mainFileBasename}`,
+      [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
     },
     filesystemCache: true,
   })
@@ -39,13 +39,13 @@ await writeFile(
   `export default 42
 `,
 )
-await generateBundle()
+await generate()
 await writeFile(
   mainFileUrl,
   `export default 43
 `,
 )
-await generateBundle()
+await generate()
 
 const { namespace: actual } = await requireCommonJsBundle({
   ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,

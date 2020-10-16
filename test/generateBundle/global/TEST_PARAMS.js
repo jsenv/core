@@ -1,7 +1,8 @@
-import { jsenvCoreDirectoryUrl } from "../../src/internal/jsenvCoreDirectoryUrl.js"
-import { testBabelPluginMap } from "../testBabelPluginMap.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { testBabelPluginMap } from "../../testBabelPluginMap.js"
 
 export const GENERATE_GLOBAL_BUNDLE_TEST_PARAMS = {
+  format: "global",
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
   bundleDirectoryClean: true,

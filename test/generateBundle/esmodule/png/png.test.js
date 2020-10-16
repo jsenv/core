@@ -3,7 +3,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { generateEsModuleBundle } from "../../../index.js"
+import { generateBundle } from "@jsenv/core/index.js"
 import {
   GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
   BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
@@ -19,12 +19,12 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
-await generateEsModuleBundle({
+await generateBundle({
   ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
   },
 })
 

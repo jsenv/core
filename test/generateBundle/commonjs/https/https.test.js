@@ -11,7 +11,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { bundleToCompilationResult } from "../../../src/internal/bundling/bundleToCompilationResult.js"
+import { bundleToCompilationResult } from "@jsenv/core/src/internal/bundling/bundleToCompilationResult.js"
 import { generateBundle } from "@jsenv/core/index.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {

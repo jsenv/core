@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { generateCommonJsBundle } from "@jsenv/core/index.js"
+import { generateBundle } from "@jsenv/core/index.js"
 import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
@@ -15,13 +15,13 @@ const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const firstEntryRelativeUrl = `${testDirectoryRelativeUrl}a.js`
 const secondEntryRelativeUrl = `${testDirectoryRelativeUrl}b.js`
 
-await generateCommonJsBundle({
+await generateBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    a: `./${firstEntryRelativeUrl}`,
-    b: `./${secondEntryRelativeUrl}`,
+    [`./${firstEntryRelativeUrl}`]: "./a.cjs",
+    [`./${secondEntryRelativeUrl}`]: "./b.cjs",
   },
   manifestFile: true,
 })

@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { generateSystemJsBundle } from "@jsenv/core/index.js"
+import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { nodeImportSystemJsBundle } from "../nodeImportSystemJsBundle.js"
 import {
@@ -16,12 +16,12 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.js`
 
-const bundle = await generateSystemJsBundle({
+const bundle = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
   },
 })
 const { namespace: actual } = await nodeImportSystemJsBundle({
@@ -35,12 +35,12 @@ assert({ actual, expected })
 
 // ensure file hash does not change when runned twice
 {
-  const secondBundle = await generateSystemJsBundle({
+  const secondBundle = await generateBundle({
     ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     bundleDirectoryRelativeUrl,
     entryPointMap: {
-      main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+      [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
     },
   })
   const actual = secondBundle.rollupBundle.output[1].fileName

@@ -1,8 +1,8 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { generateBundle, getBabelPluginMapForNode } from "../../../../index.js"
-import { jsenvCoreDirectoryUrl } from "../../../../src/internal/jsenvCoreDirectoryUrl.js"
+import { generateBundle, getBabelPluginMapForNode } from "@jsenv/core/index.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
   GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
