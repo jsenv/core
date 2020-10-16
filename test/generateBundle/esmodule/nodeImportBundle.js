@@ -1,6 +1,6 @@
 import { fork } from "child_process"
 import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
-import { createChildExecArgv } from "../../src/internal/node-launcher/createChildExecArgv.js"
+import { createChildExecArgv } from "@jsenv/core/src/internal/node-launcher/createChildExecArgv.js"
 
 const CONTROLLABLE_FILE_URL = resolveUrl("./controllable-file.js", import.meta.url)
 

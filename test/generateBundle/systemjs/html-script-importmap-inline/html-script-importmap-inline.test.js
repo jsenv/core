@@ -6,7 +6,7 @@ Let's ensure how importmap ends up in dist
 
 import { basename } from "path"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { generateSystemJsBundle } from "@jsenv/core/index.js"
+import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
@@ -17,10 +17,10 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
-  main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
 
-await generateSystemJsBundle({
+await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,

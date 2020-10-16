@@ -35,10 +35,10 @@ export const generateBundle = async ({
   compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
 
-  entryPointMap = {
-    "./index.js": "./index.js",
-  },
   format = "esm",
+  entryPointMap = format === "commonjs"
+    ? { "./index.js": "./index.cjs" }
+    : { "./index.js": "./index.js" },
   systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
   inlineAssetPredicate = ({ relativeUrl }) => relativeUrl === systemJsUrl.slice(1),
   globalName,

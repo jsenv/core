@@ -1,5 +1,6 @@
-import { generateSystemJsBundle } from "@jsenv/core"
+import { generateBundle } from "@jsenv/core"
 
-generateSystemJsBundle({
+generateBundle({
+  format: "systemjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
 })

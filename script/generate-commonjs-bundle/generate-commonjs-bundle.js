@@ -1,8 +1,10 @@
-import { generateCommonJsBundleForNode } from "@jsenv/core"
+import { generateBundle, getBabelPluginMapForNode } from "@jsenv/core"
 import * as jsenvConfig from "../../jsenv.config.js"
 
-generateCommonJsBundleForNode({
+generateBundle({
   ...jsenvConfig,
+  format: "commonjs",
+  babelPluginMap: getBabelPluginMapForNode(),
   // importmap file presence is mandatory to build jsenv bundle to commonsj format
   // this is because jsenv source files contains import.meta occurences
   // and in that case .importmap file becomes mandatory in case import.meta.resolve() is used.

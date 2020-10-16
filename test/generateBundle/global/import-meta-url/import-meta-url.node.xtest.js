@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { generateGlobalBundle } from "@jsenv/core/index.js"
+import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireGlobalBundle } from "../requireGlobalBundle.js"
 import {
@@ -10,16 +10,16 @@ import {
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs/`
-const mainFileBasename = `${testDirectoryBasename}.js`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryBasename = basename(testDirectoryRelativeUrl)
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/global/`
+const mainFilename = `${testDirectoryBasename}.js`
 
-await generateGlobalBundle({
+await generateBundle({
   ...GENERATE_GLOBAL_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `${testDirectoryRelativePath}${mainFileBasename}`,
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
   },
 })
 const { globalValue: actual } = await requireGlobalBundle({

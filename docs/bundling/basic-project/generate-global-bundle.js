@@ -1,6 +1,7 @@
-import { generateGlobalBundle } from "@jsenv/core"
+import { generateBundle } from "@jsenv/core"
 
-generateGlobalBundle({
+generateBundle({
+  format: "global",
   projectDirectoryUrl: new URL("./", import.meta.url),
   globalName: "__whatever__",
 })
