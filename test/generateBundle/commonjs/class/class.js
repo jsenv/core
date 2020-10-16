@@ -10,4 +10,4 @@ class Bar extends Foo {
   }
 }
 
-export default new Bar(41).value
+export const value = new Bar(41).value

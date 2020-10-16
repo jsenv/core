@@ -1,3 +1,3 @@
 import { answer } from "./answer.js"
 
-export default answer
+export const value = answer

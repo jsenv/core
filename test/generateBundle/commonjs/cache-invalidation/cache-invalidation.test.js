@@ -36,13 +36,13 @@ const generate = () =>
 
 await writeFile(
   mainFileUrl,
-  `export default 42
+  `export const value = 42
 `,
 )
 await generate()
 await writeFile(
   mainFileUrl,
-  `export default 43
+  `export const value = 43
 `,
 )
 await generate()
@@ -51,5 +51,5 @@ const { namespace: actual } = await requireCommonJsBundle({
   ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
 })
-const expected = 43
+const expected = { value: 43 }
 assert({ actual, expected })

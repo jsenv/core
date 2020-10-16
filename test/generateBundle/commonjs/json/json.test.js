@@ -29,5 +29,5 @@ const { namespace: actual } = await requireCommonJsBundle({
   ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
 })
-const expected = 42
+const expected = { value: 42 }
 assert({ actual, expected })

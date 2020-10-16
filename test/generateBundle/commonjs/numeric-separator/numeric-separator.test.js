@@ -21,12 +21,12 @@ await generateBundle({
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: `./main.cjs`,
   },
 })
 const { namespace: actual } = await requireCommonJsBundle({
   ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
 })
-const expected = 1000000000000
+const expected = { value: 1000000000000 }
 assert({ actual, expected })

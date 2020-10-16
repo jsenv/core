@@ -1,3 +1,3 @@
 import data from "./data.json"
 
-export default data
+export const value = data

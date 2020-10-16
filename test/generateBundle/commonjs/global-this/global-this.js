@@ -1,1 +1,1 @@
-export default global.globalThis === global ? 42 : 40
+export const value = global.globalThis === global ? 42 : 40

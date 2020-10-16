@@ -5,4 +5,4 @@ function* test() {
 
 const values = Array.from(test())
 
-export default values
+export const value = values

@@ -9,7 +9,7 @@ Which ends up in MODULE_NOT_FOUND error
 
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { bundleToCompilationResult } from "@jsenv/core/src/internal/bundling/bundleToCompilationResult.js"
 import { generateBundle } from "@jsenv/core/index.js"
@@ -25,13 +25,15 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`
+const mainFileRelativeUrl = `./${testDirectoryRelativeUrl}${mainFilename}`
+const mainFileUrl = resolveUrl("./https.js", import.meta.url)
 
 const bundle = await generateBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
+    [mainFileRelativeUrl]: "./main.cjs",
   },
 })
 const sourcemapFileUrl = resolveUrl(
@@ -48,8 +50,8 @@ const compilationResult = bundleToCompilationResult(bundle, {
   const expected = {
     contentType: "application/javascript",
     compiledSource: actual.compiledSource,
-    sources: [],
-    sourcesContent: [],
+    sources: [mainFileUrl],
+    sourcesContent: [await readFile(mainFileUrl)],
     assets: [sourcemapFileUrl],
     assetsContent: [actual.assetsContent[0]],
   }
@@ -60,8 +62,8 @@ const compilationResult = bundleToCompilationResult(bundle, {
   const expected = {
     version: actual.version,
     file: "main.cjs",
-    sources: [],
-    sourcesContent: [],
+    sources: ["../../https.js"],
+    sourcesContent: [null],
     names: actual.names,
     mappings: actual.mappings,
   }

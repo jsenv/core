@@ -1,3 +1,3 @@
 import { readFile } from "fs"
 
-export default typeof readFile === "function" ? 42 : 40
+export const value = typeof readFile === "function" ? 42 : 40

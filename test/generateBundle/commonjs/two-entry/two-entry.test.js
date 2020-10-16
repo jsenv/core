@@ -43,7 +43,7 @@ await generateBundle({
     bundleDirectoryRelativeUrl,
     mainRelativeUrl: "./a.cjs",
   })
-  const expected = "a-shared"
+  const expected = { value: "a-shared" }
   assert({ actual, expected })
 }
 {
@@ -52,6 +52,6 @@ await generateBundle({
     bundleDirectoryRelativeUrl,
     mainRelativeUrl: "./b.cjs",
   })
-  const expected = "b-shared"
+  const expected = { value: "b-shared" }
   assert({ actual, expected })
 }

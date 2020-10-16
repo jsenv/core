@@ -1,1 +1,1 @@
-export default 43
+export const value = 43
