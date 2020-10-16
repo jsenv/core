@@ -21,7 +21,7 @@ await generateBundle({
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
   },
   convertMap: {
     "./node_modules/react/index.js": (options) =>
