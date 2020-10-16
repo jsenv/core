@@ -20,11 +20,12 @@ import {
   parseHtmlString,
   parseHtmlAstRessources,
   manipulateHtmlAst,
-  replaceHtmlNode,
   stringifyHtmlAst,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
   getUniqueNameForInlineHtmlNode,
+  removeHtmlNodeAttribute,
+  setHtmlNodeText,
 } from "./compileHtml.js"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
@@ -232,22 +233,23 @@ export const createCompiledFileService = ({
           })
           const { scripts } = parseHtmlAstRessources(htmlAst)
 
+          let hasImportmap = false
           const inlineScriptsContentMap = {}
           scripts.forEach((script) => {
             const typeAttribute = getHtmlNodeAttributeByName(script, "type")
             const srcAttribute = getHtmlNodeAttributeByName(script, "src")
 
             if (typeAttribute && typeAttribute.value === "importmap" && srcAttribute) {
-              replaceHtmlNode(
-                script,
-                `<script type="jsenv-importmap" src="${`/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`}"></script>`,
-              )
+              hasImportmap = true
+              typeAttribute.value = "jsenv-importmap"
               return
             }
             if (typeAttribute && typeAttribute.value === "module" && srcAttribute) {
-              replaceHtmlNode(
+              removeHtmlNodeAttribute(script, typeAttribute)
+              removeHtmlNodeAttribute(script, srcAttribute)
+              setHtmlNodeText(
                 script,
-                `<script>window.__jsenv__.importFile(${srcAttribute.value})</script>`,
+                `window.__jsenv__.importFile(${JSON.stringify(srcAttribute.value)})`,
               )
               return
             }
@@ -259,10 +261,25 @@ export const createCompiledFileService = ({
               )
               const specifier = `./${urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`
               inlineScriptsContentMap[specifier] = textNode.value
-              replaceHtmlNode(script, `<script>window.__jsenv__.importFile(${specifier})</script>`)
+
+              removeHtmlNodeAttribute(script, typeAttribute)
+              removeHtmlNodeAttribute(script, srcAttribute)
+              setHtmlNodeText(script, `window.__jsenv__.importFile(${JSON.stringify(specifier)})`)
               return
             }
           })
+          // ensure there is at least the importmap needed for jsenv
+          if (hasImportmap === false) {
+            manipulateHtmlAst(htmlAst, {
+              scriptInjections: [
+                {
+                  type: "importmap",
+                  // in case there is no importmap, use a top level one
+                  src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
+                },
+              ],
+            })
+          }
 
           const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
 

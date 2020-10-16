@@ -152,7 +152,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     ...(format === "global"
       ? {
           globals,
-          globalName,
+          name: globalName,
         }
       : {}),
   }
