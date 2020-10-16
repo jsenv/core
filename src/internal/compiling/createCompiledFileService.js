@@ -22,8 +22,8 @@ import {
   manipulateHtmlAst,
   replaceHtmlNode,
   stringifyHtmlAst,
-  getHtmlNodeAttributeValue,
-  getHtmlNodeTextContent,
+  getHtmlNodeAttributeByName,
+  getHtmlNodeTextNode,
   getUniqueNameForInlineHtmlNode,
 } from "./compileHtml.js"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
@@ -234,28 +234,31 @@ export const createCompiledFileService = ({
 
           const inlineScriptsContentMap = {}
           scripts.forEach((script) => {
-            const type = getHtmlNodeAttributeValue(script, "type") || "text/javascript"
-            const src = getHtmlNodeAttributeValue(script, "src")
-            const text = getHtmlNodeTextContent(script)
+            const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+            const srcAttribute = getHtmlNodeAttributeByName(script, "src")
 
-            if (type === "importmap" && src) {
+            if (typeAttribute && typeAttribute.value === "importmap" && srcAttribute) {
               replaceHtmlNode(
                 script,
                 `<script type="jsenv-importmap" src="${`/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`}"></script>`,
               )
               return
             }
-            if (type === "module" && src) {
-              replaceHtmlNode(script, `<script>window.__jsenv__.importFile(${src})</script>`)
+            if (typeAttribute && typeAttribute.value === "module" && srcAttribute) {
+              replaceHtmlNode(
+                script,
+                `<script>window.__jsenv__.importFile(${srcAttribute.value})</script>`,
+              )
               return
             }
-            if (type === "module" && text) {
+            const textNode = getHtmlNodeTextNode(script)
+            if (typeAttribute && typeAttribute.value === "module" && textNode) {
               const scriptAssetUrl = generateCompiledFileAssetUrl(
                 compiledFileUrl,
                 getUniqueNameForInlineHtmlNode(script, scripts, `[id].js`),
               )
               const specifier = `./${urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`
-              inlineScriptsContentMap[specifier] = text
+              inlineScriptsContentMap[specifier] = textNode.value
               replaceHtmlNode(script, `<script>window.__jsenv__.importFile(${specifier})</script>`)
               return
             }

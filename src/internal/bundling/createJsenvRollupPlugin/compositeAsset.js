@@ -94,7 +94,6 @@ export const createCompositeAssetHandler = (
       },
       {
         isEntry: true,
-        isAsset: true,
         url,
         content: {
           type: "text/html",
@@ -149,7 +148,7 @@ ${target.url}`)
   const createTarget = ({
     url,
     isEntry = false,
-    isAsset = false,
+    isJsModule = false,
     isInline = false,
     content,
     sourceAfterTransformation,
@@ -160,7 +159,7 @@ ${target.url}`)
       url,
       relativeUrl: urlToRelativeUrl(url, projectDirectoryUrl),
       isEntry,
-      isAsset,
+      isJsModule,
       isInline,
       content,
       sourceAfterTransformation,
@@ -188,26 +187,19 @@ ${target.url}`)
       let previousJsDependency
 
       const notifyDependencyFound = ({
-        isAsset,
-        isInline,
-        specifier,
+        isJsModule = false,
         contentType,
+        specifier,
         line,
         column,
         content,
         fileNamePattern,
       }) => {
-        if (!isEntry && !isAsset) {
-          // for now we can only emit a chunk from an entry file as visible in
-          // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
-          // https://github.com/rollup/rollup/issues/2872
-          logger.warn(
-            `ignoring js reference found in an asset (it's only possible to reference js from entry asset)`,
-          )
-          return null
-        }
-
-        const resolveTargetReturnValue = resolveTargetUrl({ specifier, isAsset, isInline }, target)
+        let isInline = typeof content !== "undefined"
+        const resolveTargetReturnValue = resolveTargetUrl(
+          { specifier, contentType, isInline },
+          target,
+        )
         let isExternal = false
         let dependencyTargetUrl
         if (typeof resolveTargetReturnValue === "object") {
@@ -237,6 +229,16 @@ ${target.url}`)
           contentType = urlToContentType(dependencyTargetUrl)
         }
 
+        if (!isEntry && isJsModule) {
+          // for now we can only emit a chunk from an entry file as visible in
+          // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
+          // https://github.com/rollup/rollup/issues/2872
+          logger.warn(
+            `ignoring js reference found in an asset (it's only possible to reference js from entry asset)`,
+          )
+          return null
+        }
+
         const dependencyReference = createReference(
           {
             url: target.url,
@@ -248,7 +250,7 @@ ${target.url}`)
           {
             url: dependencyTargetUrl,
             isExternal,
-            isAsset,
+            isJsModule,
             isInline,
             content,
             fileNamePattern,
@@ -256,7 +258,7 @@ ${target.url}`)
         )
 
         dependencies.push(dependencyReference)
-        if (!isAsset) {
+        if (isJsModule) {
           previousJsDependency = dependencyReference
         }
         if (isExternal) {
@@ -268,15 +270,13 @@ ${target.url}`)
       }
 
       const parseReturnValue = await parse(target, {
-        notifyAssetFound: (data) =>
+        notifyReferenceFound: (data) =>
           notifyDependencyFound({
-            isAsset: true,
             isInline: false,
             ...data,
           }),
-        notifyInlineAssetFound: (data) =>
+        notifyInlineReferenceFound: (data) =>
           notifyDependencyFound({
-            isAsset: true,
             isInline: true,
             // inherit parent directory location because it's an inline asset
             fileNamePattern: () => {
@@ -287,18 +287,6 @@ ${target.url}`)
               )
               return `${importerParentRelativeUrl}[name]-[hash][extname]`
             },
-            ...data,
-          }),
-        notifyJsFound: (data) =>
-          notifyDependencyFound({
-            isAsset: false,
-            isInline: false,
-            ...data,
-          }),
-        notifyInlineJsFound: (data) =>
-          notifyDependencyFound({
-            isAsset: false,
-            isInline: true,
             ...data,
           }),
       })
@@ -329,7 +317,7 @@ ${target.url}`)
       }
 
       // une fois que les dépendances sont transformées on peut transformer cet asset
-      if (!target.isAsset) {
+      if (target.isJsModule) {
         // ici l'url n'est pas top parce que
         // l'url de l'asset est relative au fichier html source
         logger.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(url)}`)
@@ -480,7 +468,6 @@ ${target.url}`)
       },
       {
         url: targetUrl,
-        isAsset: true,
         content: {
           type: contentType,
           value: Buffer.from(await response.arrayBuffer()),
@@ -533,14 +520,15 @@ ${projectDirectoryUrl}`
     const targetUrl = shortenUrl(target.url)
 
     let message
-    if (target.isInline && target.isAsset) {
-      message = `found inline asset.`
+
+    if (target.isInline && target.isJsModule) {
+      message = `found inline js module.`
     } else if (target.isInline) {
-      message = `found inline js.`
-    } else if (target.isAsset) {
-      message = `found asset reference to ${targetUrl}.`
+      message = `found inline asset.`
+    } else if (target.isJsModule) {
+      message = `found js module reference to ${targetUrl}.`
     } else {
-      message = `found js reference to ${targetUrl}.`
+      message = `found asset reference to ${targetUrl}.`
     }
 
     message += `

@@ -1,23 +1,19 @@
 import {
   parseSvgString,
   parseHtmlAstRessources,
-  setHtmlNodeAttributeValue,
-  getHtmlNodeAttributeValue,
+  getHtmlNodeAttributeByName,
   getHtmlNodeLocation,
   stringifyHtmlAst,
 } from "../../compiling/compileHtml.js"
+import { collectNodesMutations } from "./parsing.utils.js"
 import { minifyHtml } from "./minifyHtml.js"
 import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
 
-export const parseSvgAsset = async (
-  target,
-  { notifyAssetFound },
-  { minify, minifyHtmlOptions },
-) => {
+export const parseSvgAsset = async (target, notifiers, { minify, minifyHtmlOptions }) => {
   const svgString = String(target.content.value)
   const svgAst = await parseSvgString(svgString)
   const htmlRessources = parseHtmlAstRessources(svgAst)
-  const mutations = getMutationsForSvgNodes(htmlRessources, { notifyAssetFound })
+  const mutations = collectSvgMutations(htmlRessources, notifiers, target)
 
   return ({ getReferenceUrlRelativeToImporter }) => {
     mutations.forEach((mutationCallback) => {
@@ -33,40 +29,48 @@ export const parseSvgAsset = async (
   }
 }
 
-export const getMutationsForSvgNodes = ({ images, uses }, { notifyAssetFound }) => {
-  const mutations = []
+export const collectSvgMutations = ({ images, uses }, notifiers, target) => {
+  const imagesMutations = collectNodesMutations(images, notifiers, target, [imageHrefVisitor])
+  const usesMutations = collectNodesMutations(uses, notifiers, target, [useHrefVisitor])
+  const svgMutations = [...imagesMutations, ...usesMutations]
+  return svgMutations
+}
 
-  images.forEach((image) => {
-    const href = getHtmlNodeAttributeValue(image, "href")
-    if (href) {
-      const hrefReference = notifyAssetFound({
-        specifier: href,
-        ...getHtmlNodeLocation(image),
-      })
-      mutations.push(({ getReferenceUrlRelativeToImporter }) => {
-        const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter)
-        setHtmlNodeAttributeValue(image, "href", hrefNewValue)
-      })
-    }
+const imageHrefVisitor = (image, { notifyReferenceFound }) => {
+  const hrefAttribute = getHtmlNodeAttributeByName(image, "href")
+  if (!hrefAttribute) {
+    return null
+  }
+
+  const hrefReference = notifyReferenceFound({
+    specifier: hrefAttribute.value,
+    ...getHtmlNodeLocation(image),
   })
-  uses.forEach((use) => {
-    const href = getHtmlNodeAttributeValue(use, "href")
-    if (href) {
-      if (href[0] === "#") return
+  return ({ getReferenceUrlRelativeToImporter }) => {
+    const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter)
+    hrefAttribute.value = hrefNewValue
+  }
+}
 
-      const { hash } = new URL(href, "file://")
-      const hrefReference = notifyAssetFound({
-        specifier: href,
-        ...getHtmlNodeLocation(use),
-      })
-      mutations.push(({ getReferenceUrlRelativeToImporter }) => {
-        const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter)
-        setHtmlNodeAttributeValue(use, "href", `${hrefNewValue}${hash}`)
-      })
-    }
+const useHrefVisitor = (use, { notifyReferenceFound }) => {
+  const hrefAttribute = getHtmlNodeAttributeByName(use, "href")
+  if (!hrefAttribute) {
+    return null
+  }
+  const href = hrefAttribute.value
+  if (href[0] === "#") {
+    return null
+  }
+
+  const { hash } = new URL(href, "file://")
+  const hrefReference = notifyReferenceFound({
+    specifier: href,
+    ...getHtmlNodeLocation(use),
   })
-
-  return mutations
+  return ({ getReferenceUrlRelativeToImporter }) => {
+    const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter)
+    hrefAttribute.value = `${hrefNewValue}${hash}`
+  }
 }
 
 const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {

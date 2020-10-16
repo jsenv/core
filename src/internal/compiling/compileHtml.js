@@ -13,6 +13,9 @@ import { require } from "../require.js"
 import { renderNamePattern } from "../renderNamePattern.js"
 
 const parse5 = require("parse5")
+// https://github.com/inikulin/parse5/blob/master/packages/parse5/lib/tree-adapters/default.js
+// eslint-disable-next-line import/no-unresolved
+// const treeAdapter = require("parse5/lib/tree-adapters/default.js")
 
 export const parseHtmlString = (htmlString) => {
   const htmlAst = parse5.parse(htmlString, { sourceCodeLocationInfo: true })
@@ -42,14 +45,45 @@ export const findFirstImportmapNode = (htmlString) => {
   return importmapNode
 }
 
-export const getHtmlNodeAttributeValue = (htmlNode, attributeName) => {
-  const attribute = getHtmlNodeAttributeByName(htmlNode, attributeName)
-  return attribute ? attribute.value : undefined
+export const getHtmlNodeAttributeByName = (htmlNode, attributeName) =>
+  htmlNode.attrs.find((attr) => attr.name === attributeName)
+
+export const removeHtmlNodeAttribute = (htmlNode, attributeToRemove) => {
+  let attrIndex
+  if (typeof attributeToRemove === "object") {
+    attrIndex = htmlNode.attrs.indexOf(attributeToRemove)
+  }
+  if (attrIndex === -1) {
+    return false
+  }
+  htmlNode.attrs.splice(attrIndex, 1)
+  return true
 }
 
-export const getHtmlNodeTextContent = (htmlNode) => {
+export const addHtmlNodeAttribute = (htmlNode, attributeToSet) => {
+  const existingAttributeIndex = htmlNode.attrs.findIndex(
+    (attr) => attr.name === attributeToSet.name,
+  )
+  if (existingAttributeIndex === -1) {
+    htmlNode.attrs.push(attributeToSet)
+  } else {
+    htmlNode.attrs[existingAttributeIndex] = attributeToSet
+  }
+}
+
+export const getHtmlNodeTextNode = (htmlNode) => {
   const firstChild = htmlNode.childNodes[0]
-  return firstChild && firstChild.nodeName === "#text" ? firstChild.value : undefined
+  return firstChild && firstChild.nodeName === "#text" ? firstChild : null
+}
+
+export const setHtmlNodeText = (htmlNode, textContent) => {
+  const textNode = getHtmlNodeTextNode(htmlNode)
+  if (textNode) {
+    textNode.value = textContent
+  } else {
+    const newTextNode = { nodeName: "#text", value: textContent, parentNode: htmlNode }
+    htmlNode.childNodes.splice(0, 0, newTextNode)
+  }
 }
 
 export const getHtmlNodeLocation = (htmlNode) => {
@@ -64,9 +98,6 @@ export const getHtmlNodeLocation = (htmlNode) => {
   }
 }
 
-const getHtmlNodeAttributeByName = (htmlNode, attributeName) =>
-  htmlNode.attrs.find((attr) => attr.name === attributeName)
-
 export const htmlAstContains = (htmlAst, predicate) => {
   let contains = false
   visitHtmlAst(htmlAst, (node) => {
@@ -80,13 +111,25 @@ export const htmlAstContains = (htmlAst, predicate) => {
 }
 
 export const htmlNodeIsScriptModule = (htmlNode) => {
-  return htmlNode.nodeName === "script" && getHtmlNodeAttributeValue(htmlNode, "type") === "module"
+  if (htmlNode.nodeName !== "script") {
+    return false
+  }
+  const typeAttribute = getHtmlNodeAttributeByName(htmlNode, "type")
+  if (!typeAttribute) {
+    return false
+  }
+  return typeAttribute.value === "module"
 }
 
 export const htmlNodeIsScriptImportmap = (htmlNode) => {
-  return (
-    htmlNode.nodeName === "script" && getHtmlNodeAttributeValue(htmlNode, "type") === "importmap"
-  )
+  if (htmlNode.nodeName !== "script") {
+    return false
+  }
+  const typeAttribute = getHtmlNodeAttributeByName(htmlNode, "type")
+  if (!typeAttribute) {
+    return false
+  }
+  return typeAttribute.value === "importmap"
 }
 
 // let's <img>, <link for favicon>, <link for css>, <styles>
@@ -158,11 +201,6 @@ export const parseHtmlAstRessources = (htmlAst) => {
     uses,
     sources,
   }
-}
-
-export const setHtmlNodeAttributeValue = (node, name, value) => {
-  const attribute = getHtmlNodeAttributeByName(node, name)
-  attribute.value = value
 }
 
 export const replaceHtmlNode = (node, replacement, { inheritAttributes = true } = {}) => {
@@ -256,14 +294,23 @@ const findExistingScript = (node, script) =>
 const findChild = ({ childNodes = [] }, predicate) => childNodes.find(predicate)
 
 const sameScript = (node, { type = "text/javascript", src }) => {
-  const nodeType = getHtmlNodeAttributeValue(node, "type") || "text/javascript"
-
-  if (type === "importmap") {
-    return nodeType === type
+  const typeAttribute = getHtmlNodeAttributeByName(node, "type")
+  if (!typeAttribute) {
+    return type === undefined || type === "text/javascript"
+  }
+  if (typeAttribute !== type) {
+    return false
   }
 
-  const nodeSrc = getHtmlNodeAttributeValue(node, "src")
-  return nodeType === type && nodeSrc === src
+  const srcAttribute = getHtmlNodeAttributeByName(node, "src")
+  if (!srcAttribute) {
+    return src === undefined
+  }
+  if (srcAttribute.value !== src) {
+    return false
+  }
+
+  return true
 }
 
 const objectToHtmlAttributes = (object) => {
@@ -281,16 +328,16 @@ const valueToHtmlAttributeValue = (value) => {
 
 export const createInlineScriptHash = (script) => {
   const hash = createHash("sha256")
-  hash.update(getHtmlNodeTextContent(script))
+  hash.update(getHtmlNodeTextNode(script).value)
   return hash.digest("hex").slice(0, 8)
 }
 
 export const getUniqueNameForInlineHtmlNode = (node, nodes, pattern) => {
   return renderNamePattern(pattern, {
     id: () => {
-      const nodeId = getHtmlNodeAttributeValue(node, "id")
-      if (nodeId) {
-        return nodeId
+      const idAttribute = getHtmlNodeAttributeByName(node, "id")
+      if (idAttribute) {
+        return idAttribute.value
       }
 
       const { line, column } = getHtmlNodeLocation(node)

@@ -23,8 +23,8 @@ import {
   manipulateHtmlAst,
   findFirstImportmapNode,
   getHtmlNodeLocation,
-  getHtmlNodeAttributeValue,
-  getHtmlNodeTextContent,
+  getHtmlNodeAttributeByName,
+  getHtmlNodeTextNode,
 } from "../../compiling/compileHtml.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 
@@ -130,17 +130,17 @@ export const createJsenvRollupPlugin = async ({
             const importmapHtmlNode = findFirstImportmapNode(htmlSource)
             if (importmapHtmlNode) {
               if (fetchImportmap === fetchImportmapFromParameter) {
-                const src = getHtmlNodeAttributeValue(importmapHtmlNode, "src")
-                if (src) {
+                const srcAttribute = getHtmlNodeAttributeByName(importmapHtmlNode, "src")
+                if (srcAttribute) {
                   logger.info(formatUseImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource))
-                  const importmapUrl = resolveUrl(src, htmlCompiledUrl)
+                  const importmapUrl = resolveUrl(srcAttribute.value, htmlCompiledUrl)
                   fetchImportmap = () => fetchAndNormalizeImportmap(importmapUrl)
                 } else {
-                  const text = getHtmlNodeTextContent(importmapHtmlNode)
-                  if (text) {
+                  const textNode = getHtmlNodeTextNode(importmapHtmlNode)
+                  if (textNode) {
                     logger.info(formatUseImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource))
                     fetchImportmap = () => {
-                      const importmapRaw = JSON.parse(text)
+                      const importmapRaw = JSON.parse(textNode.value)
                       const importmap = normalizeImportMap(importmapRaw, htmlCompiledUrl)
                       return importmap
                     }
@@ -275,8 +275,8 @@ export const createJsenvRollupPlugin = async ({
           ),
           urlToOriginalProjectUrl,
           loadUrl: (url) => urlResponseBodyMap[url],
-          resolveTargetUrl: ({ specifier, isAsset }, target) => {
-            if (target.isEntry && target.isAsset && !isAsset) {
+          resolveTargetUrl: ({ specifier, isJsModule }, target) => {
+            if (target.isEntry && !target.isJsModule && isJsModule) {
               // html entry point
               // when html references a js we must wait for the compiled version of js
               const htmlCompiledUrl = urlToCompiledUrl(target.url)
@@ -305,25 +305,7 @@ export const createJsenvRollupPlugin = async ({
               return null
             }
 
-            if (target.isAsset) {
-              target.connect(async () => {
-                await target.getReadyPromise()
-                const { sourceAfterTransformation, fileNameForRollup } = target
-
-                if (target.isInline) {
-                  return {}
-                }
-
-                logger.debug(`emit asset for ${shortenUrl(target.url)}`)
-                const rollupReferenceId = emitFile({
-                  type: "asset",
-                  source: sourceAfterTransformation,
-                  fileName: fileNameForRollup,
-                })
-                logger.debug(`${shortenUrl(target.url)} ready -> ${fileNameForRollup}`)
-                return { rollupReferenceId }
-              })
-            } else {
+            if (target.isJsModule) {
               target.connect(async () => {
                 const id = target.url
                 if (typeof target.content !== "undefined") {
@@ -342,6 +324,24 @@ export const createJsenvRollupPlugin = async ({
                     : {}),
                 })
 
+                return { rollupReferenceId }
+              })
+            } else {
+              target.connect(async () => {
+                await target.getReadyPromise()
+                const { sourceAfterTransformation, fileNameForRollup } = target
+
+                if (target.isInline) {
+                  return {}
+                }
+
+                logger.debug(`emit asset for ${shortenUrl(target.url)}`)
+                const rollupReferenceId = emitFile({
+                  type: "asset",
+                  source: sourceAfterTransformation,
+                  fileName: fileNameForRollup,
+                })
+                logger.debug(`${shortenUrl(target.url)} ready -> ${fileNameForRollup}`)
                 return { rollupReferenceId }
               })
             }

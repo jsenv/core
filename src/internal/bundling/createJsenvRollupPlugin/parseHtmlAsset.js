@@ -17,278 +17,71 @@ Or be sure to also reference this url somewhere in the html file like
 */
 
 import { urlToBasename, urlToRelativeUrl, resolveUrl, urlToParentUrl } from "@jsenv/util"
-import { getMutationsForSvgNodes } from "./parseSvgAsset.js"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
   replaceHtmlNode,
-  setHtmlNodeAttributeValue,
+  getHtmlNodeAttributeByName,
   stringifyHtmlAst,
-  getHtmlNodeAttributeValue,
-  getHtmlNodeTextContent,
   getHtmlNodeLocation,
   getUniqueNameForInlineHtmlNode,
+  removeHtmlNodeAttribute,
+  setHtmlNodeText,
+  getHtmlNodeTextNode,
 } from "../../compiling/compileHtml.js"
 import { minifyHtml } from "./minifyHtml.js"
 import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
+import { collectNodesMutations } from "./parsing.utils.js"
+import { collectSvgMutations } from "./parseSvgAsset.js"
 
 export const parseHtmlAsset = async (
-  { content, url },
-  { notifyAssetFound, notifyInlineAssetFound, notifyJsFound, notifyInlineJsFound },
+  target,
+  notifiers,
   {
     minify,
     minifyHtmlOptions,
     htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString),
   } = {},
 ) => {
-  const htmlString = String(content.value)
+  const htmlString = String(target.content.value)
   const htmlAst = await htmlStringToHtmlAst(htmlString)
   const { links, styles, scripts, imgs, images, uses, sources } = parseHtmlAstRessources(htmlAst)
 
-  const htmlMutations = []
-  scripts.forEach((script) => {
-    const type = getHtmlNodeAttributeValue(script, "type") || "text/javascript"
-    const src = getHtmlNodeAttributeValue(script, "src")
-    const text = getHtmlNodeTextContent(script)
-
+  const scriptsMutations = collectNodesMutations(scripts, notifiers, target, [
     // regular javascript are not parseable by rollup
     // and we don't really care about there content
     // we will handle them as regular asset
     // but we still want to inline/minify/hash them for performance
-    if (type === "text/javascript" && src) {
-      const remoteScriptReference = notifyAssetFound({
-        specifier: src,
-        contentType: "text/javascript",
-        ...getHtmlNodeLocation(script),
-      })
-      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
-        const { isInline } = remoteScriptReference.target
-        if (isInline) {
-          const { sourceAfterTransformation } = remoteScriptReference.target
-          replaceHtmlNode(script, `<script>${sourceAfterTransformation}</script>`)
-        } else {
-          const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
-          replaceHtmlNode(script, `<script src="${urlRelativeToImporter}"></script>`)
-        }
-      })
-      return
-    }
-    if (type === "text/javascript" && text) {
-      const inlineScriptReference = notifyInlineAssetFound({
-        specifier: getUniqueNameForInlineHtmlNode(script, scripts, `${urlToBasename(url)}.[id].js`),
-        ...getHtmlNodeLocation(script),
-        content: {
-          type: "text/javascript",
-          value: text,
-        },
-      })
-      htmlMutations.push(() => {
-        const { sourceAfterTransformation } = inlineScriptReference.target
-        replaceHtmlNode(script, `<script>${sourceAfterTransformation}</script>`)
-      })
-      return
-    }
-
-    if (type === "module" && src) {
-      const remoteScriptReference = notifyJsFound({
-        specifier: src,
-        contentType: "text/javascript",
-        ...getHtmlNodeLocation(script),
-      })
-
-      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
-        const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
-        replaceHtmlNode(
-          script,
-          `<script>window.System.import(${JSON.stringify(
-            ensureRelativeUrlNotation(urlRelativeToImporter),
-          )})</script>`,
-        )
-      })
-      return
-    }
-    if (type === "module" && text) {
-      const inlineScriptReference = notifyInlineJsFound({
-        specifier: getUniqueNameForInlineHtmlNode(script, scripts, `${urlToBasename(url)}.[id].js`),
-        ...getHtmlNodeLocation(script),
-        content: {
-          type: "text/javascript",
-          value: text,
-        },
-      })
-      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
-        const urlRelativeToImporter = getReferenceUrlRelativeToImporter(inlineScriptReference)
-        replaceHtmlNode(
-          script,
-          `<script>window.System.import(${JSON.stringify(
-            ensureRelativeUrlNotation(urlRelativeToImporter),
-          )})</script>`,
-        )
-      })
-      return
-    }
-
-    if (type === "importmap" && src) {
-      const remoteImportmapReference = notifyAssetFound({
-        specifier: src,
-        contentType: "application/importmap+json",
-        ...getHtmlNodeLocation(script),
-        // here we want to force the fileName for the importmap
-        // so that we don't have to rewrite its content
-        // the goal is to put the importmap at the same relative path
-        // than in the project
-        fileNamePattern: () => {
-          const importmapUrl = remoteImportmapReference.url
-          const importmapRelativeUrl = urlToRelativeUrl(
-            remoteImportmapReference.target.url,
-            importmapUrl,
-          )
-          const importmapParentRelativeUrl = urlToRelativeUrl(
-            urlToParentUrl(resolveUrl(importmapRelativeUrl, "file://")),
-            "file://",
-          )
-          return `${importmapParentRelativeUrl}[name]-[hash][extname]`
-        },
-      })
-      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
-        const { isInline } = remoteImportmapReference.target
-        if (isInline) {
-          // here put a warning if we cannot inline importmap because it would mess
-          // the remapping (note that it's feasible) but not yet supported
-          const { sourceAfterTransformation } = remoteImportmapReference.target
-          replaceHtmlNode(
-            script,
-            `<script type="systemjs-importmap">${sourceAfterTransformation}</script>`,
-          )
-        } else {
-          const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteImportmapReference)
-          replaceHtmlNode(
-            script,
-            `<script type="systemjs-importmap" src="${urlRelativeToImporter}"></script>`,
-          )
-        }
-      })
-      return
-    }
-    if (type === "importmap" && text) {
-      const inlineImportMapReference = notifyInlineAssetFound({
-        specifier: getUniqueNameForInlineHtmlNode(
-          script,
-          scripts,
-          `${urlToBasename(url)}.[id].importmap`,
-        ),
-        ...getHtmlNodeLocation(script),
-        content: {
-          type: "application/importmap+json",
-          value: text,
-        },
-      })
-      htmlMutations.push(() => {
-        const { sourceAfterTransformation } = inlineImportMapReference.target
-        replaceHtmlNode(
-          script,
-          `<script type="systemjs-importmap">${sourceAfterTransformation}</script>`,
-        )
-      })
-      return
-    }
+    regularScriptSrcVisitor,
+    regularScriptTextNodeVisitor,
+    moduleScriptSrcVisitor,
+    moduleScriptTextNodeVisitor,
+    importmapScriptSrcVisitor,
+    importmapScriptTextNodeVisitor,
+  ])
+  const linksMutations = collectNodesMutations(links, notifiers, target, [
+    linkStylesheetHrefVisitor,
+    linkHrefVisitor,
+  ])
+  const stylesMutations = collectNodesMutations(styles, notifiers, target, [styleTextNodeVisitor])
+  const imgsMutations = collectNodesMutations(imgs, notifiers, target, [
+    imgSrcVisitor,
+    srcsetVisitor,
+  ])
+  const sourcesMutations = collectNodesMutations(sources, notifiers, target, {
+    sourceSrcVisitor,
+    srcsetVisitor,
   })
-  links.forEach((link) => {
-    const href = getHtmlNodeAttributeValue(link, "href")
-    if (!href) {
-      return
-    }
+  const svgMutations = collectSvgMutations({ images, uses }, notifiers, target)
 
-    const type = getHtmlNodeAttributeValue(link, "type")
-    let contentType
-    if (type) {
-      contentType = type
-    } else {
-      const rel = getHtmlNodeAttributeValue(link, "rel")
-      if (rel === "stylesheet") {
-        contentType = "text/css"
-      } else {
-        contentType = undefined
-      }
-    }
-    const remoteLinkReference = notifyAssetFound({
-      specifier: href,
-      contentType,
-      ...getHtmlNodeLocation(link),
-    })
-    htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
-      const { isInline } = remoteLinkReference.target
-
-      if (isInline) {
-        if (getHtmlNodeAttributeValue(link, "rel") === "stylesheet") {
-          const { sourceAfterTransformation } = remoteLinkReference.target
-          replaceHtmlNode(link, `<style>${sourceAfterTransformation}</style>`)
-        } else {
-          replaceHtmlNode(
-            link,
-            `<link href="${getTargetAsBase64Url(remoteLinkReference.target)}" />`,
-          )
-        }
-      } else {
-        const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteLinkReference)
-        replaceHtmlNode(link, `<link href="${urlRelativeToImporter}" />`)
-      }
-    })
-  })
-  styles.forEach((style) => {
-    const text = getHtmlNodeTextContent(style)
-    if (!text) {
-      return
-    }
-
-    const inlineStyleReference = notifyInlineAssetFound({
-      specifier: getUniqueNameForInlineHtmlNode(style, styles, `${urlToBasename(url)}.[id].css`),
-      ...getHtmlNodeLocation(style),
-      content: {
-        type: "text/css",
-        value: text,
-      },
-    })
-    htmlMutations.push(() => {
-      const { sourceAfterTransformation } = inlineStyleReference.target
-      replaceHtmlNode(style, `<style>${sourceAfterTransformation}</style>`)
-    })
-  })
-  imgs.forEach((img) => {
-    const src = getHtmlNodeAttributeValue(img, "src")
-
-    if (src) {
-      const srcReference = notifyAssetFound({
-        specifier: src,
-        ...getHtmlNodeLocation(img),
-      })
-      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
-        const srcNewValue = referenceToUrl(srcReference, getReferenceUrlRelativeToImporter)
-        setHtmlNodeAttributeValue(img, "src", srcNewValue)
-      })
-    }
-
-    htmlMutations.push(...getSrcSetMutations(img, notifyAssetFound))
-  })
-  sources.forEach((source) => {
-    htmlMutations.push(...getSrcSetMutations(source, notifyAssetFound))
-    const src = getHtmlNodeAttributeValue(source, "src")
-    if (src) {
-      const type = getHtmlNodeAttributeValue(source, "type")
-      const srcReference = notifyAssetFound({
-        specifier: src,
-        contentType: type,
-        ...getHtmlNodeLocation(source),
-      })
-      htmlMutations.push(({ getReferenceUrlRelativeToImporter }) => {
-        const srcNewValue = referenceToUrl(srcReference, getReferenceUrlRelativeToImporter)
-        setHtmlNodeAttributeValue(source, "src", srcNewValue)
-      })
-    }
-  })
-
-  const svgNodeMutations = getMutationsForSvgNodes({ images, uses }, { notifyAssetFound })
-  htmlMutations.push(...svgNodeMutations)
+  const htmlMutations = [
+    ...scriptsMutations,
+    ...linksMutations,
+    ...stylesMutations,
+    ...imgsMutations,
+    ...sourcesMutations,
+    ...svgMutations,
+  ]
 
   return async ({ getReferenceUrlRelativeToImporter }) => {
     htmlMutations.forEach((mutationCallback) => {
@@ -304,36 +97,374 @@ export const parseHtmlAsset = async (
   }
 }
 
-const getSrcSetMutations = (node, notifyAssetFound) => {
-  const srcsetValue = getHtmlNodeAttributeValue(node, "srcset")
-  if (!srcsetValue) return []
+const regularScriptSrcVisitor = (script, { notifyReferenceFound }) => {
+  const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+  if (
+    typeAttribute &&
+    (typeAttribute.value !== "text/javascript" || typeAttribute.value !== "application/javascript")
+  ) {
+    return null
+  }
+  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  if (!srcAttribute) {
+    return null
+  }
+
+  const remoteScriptReference = notifyReferenceFound({
+    contentType: "text/javascript",
+    specifier: srcAttribute.value,
+    ...getHtmlNodeLocation(script),
+  })
+  return ({ getReferenceUrlRelativeToImporter }) => {
+    const { isInline } = remoteScriptReference.target
+    if (isInline) {
+      removeHtmlNodeAttribute(script, srcAttribute)
+      const { sourceAfterTransformation } = remoteScriptReference.target
+      setHtmlNodeText(script, sourceAfterTransformation)
+    } else {
+      const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
+      srcAttribute.value = urlRelativeToImporter
+    }
+  }
+}
+
+const regularScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, scripts) => {
+  const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+  if (
+    typeAttribute &&
+    (typeAttribute.value !== "text/javascript" || typeAttribute.value !== "application/javascript")
+  ) {
+    return null
+  }
+  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  if (!srcAttribute) {
+    return null
+  }
+  const textNode = getHtmlNodeTextNode(script)
+  if (!textNode) {
+    return null
+  }
+
+  const jsReference = notifyReferenceFound({
+    contentType: "text/javascript",
+    specifier: getUniqueNameForInlineHtmlNode(
+      script,
+      scripts,
+      `${urlToBasename(target.url)}.[id].js`,
+    ),
+    ...getHtmlNodeLocation(script),
+    content: {
+      type: "text/javascript",
+      value: textNode.value,
+    },
+  })
+  return () => {
+    const { sourceAfterTransformation } = jsReference.target
+    textNode.value = sourceAfterTransformation
+  }
+}
+
+const moduleScriptSrcVisitor = (script, { notifyReferenceFound }) => {
+  const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+  if (!typeAttribute) {
+    return null
+  }
+  if (typeAttribute.value !== "module") {
+    return null
+  }
+  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  if (!srcAttribute) {
+    return null
+  }
+
+  const remoteScriptReference = notifyReferenceFound({
+    isJsModule: true,
+    contentType: "text/javascript",
+    specifier: srcAttribute.value,
+    ...getHtmlNodeLocation(script),
+  })
+  return ({ getReferenceUrlRelativeToImporter }) => {
+    removeHtmlNodeAttribute(script, typeAttribute)
+    removeHtmlNodeAttribute(script, srcAttribute)
+    const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
+    setHtmlNodeText(
+      script,
+      `window.System.import(${JSON.stringify(ensureRelativeUrlNotation(urlRelativeToImporter))})`,
+    )
+  }
+}
+
+const moduleScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, scripts) => {
+  const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+  if (!typeAttribute) {
+    return null
+  }
+  if (typeAttribute.value !== "module") {
+    return null
+  }
+  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  if (srcAttribute) {
+    return null
+  }
+  const textNode = getHtmlNodeTextNode(script)
+  if (!textNode) {
+    return null
+  }
+
+  const jsReference = notifyReferenceFound({
+    isJsModule: true,
+    contentType: "text/javascript",
+    specifier: getUniqueNameForInlineHtmlNode(
+      script,
+      scripts,
+      `${urlToBasename(target.url)}.[id].js`,
+    ),
+    ...getHtmlNodeLocation(script),
+    content: {
+      type: "text/javascript",
+      value: textNode.value,
+    },
+  })
+  return ({ getReferenceUrlRelativeToImporter }) => {
+    removeHtmlNodeAttribute(script, typeAttribute)
+    const urlRelativeToImporter = getReferenceUrlRelativeToImporter(jsReference)
+    textNode.value = `<script>window.System.import(${JSON.stringify(
+      ensureRelativeUrlNotation(urlRelativeToImporter),
+    )})</script>`
+  }
+}
+
+const importmapScriptSrcVisitor = (script, { notifyReferenceFound }) => {
+  const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+  if (!typeAttribute) {
+    return null
+  }
+  if (typeAttribute.value !== "importmap") {
+    return null
+  }
+  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  if (!srcAttribute) {
+    return null
+  }
+
+  const importmapReference = notifyReferenceFound({
+    contentType: "application/importmap+json",
+    specifier: srcAttribute.value,
+    ...getHtmlNodeLocation(script),
+    // here we want to force the fileName for the importmap
+    // so that we don't have to rewrite its content
+    // the goal is to put the importmap at the same relative path
+    // than in the project
+    fileNamePattern: () => {
+      const importmapUrl = importmapReference.url
+      const importmapRelativeUrl = urlToRelativeUrl(importmapReference.target.url, importmapUrl)
+      const importmapParentRelativeUrl = urlToRelativeUrl(
+        urlToParentUrl(resolveUrl(importmapRelativeUrl, "file://")),
+        "file://",
+      )
+      return `${importmapParentRelativeUrl}[name]-[hash][extname]`
+    },
+  })
+  return ({ getReferenceUrlRelativeToImporter }) => {
+    typeAttribute.value = "systemjs-importmap"
+
+    const { isInline } = importmapReference.target
+    if (isInline) {
+      // here put a warning if we cannot inline importmap because it would mess
+      // the remapping (note that it's feasible) but not yet supported
+      removeHtmlNodeAttribute(script, srcAttribute)
+      const { sourceAfterTransformation } = importmapReference.target
+      setHtmlNodeText(script, sourceAfterTransformation)
+    } else {
+      const urlRelativeToImporter = getReferenceUrlRelativeToImporter(importmapReference)
+      srcAttribute.value = urlRelativeToImporter
+    }
+  }
+}
+
+const importmapScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, scripts) => {
+  const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+  if (!typeAttribute) {
+    return null
+  }
+  if (typeAttribute.value !== "importmap") {
+    return null
+  }
+  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  if (srcAttribute) {
+    return null
+  }
+  const textNode = getHtmlNodeTextNode(script)
+  if (!textNode) {
+    return null
+  }
+
+  const importmapReference = notifyReferenceFound({
+    contentType: "application/importmap+json",
+    specifier: getUniqueNameForInlineHtmlNode(
+      script,
+      scripts,
+      `${urlToBasename(target.url)}.[id].importmap`,
+    ),
+    ...getHtmlNodeLocation(script),
+    content: {
+      type: "application/importmap+json",
+      value: textNode.value,
+    },
+  })
+  return () => {
+    typeAttribute.value = "systemjs-importmap"
+    const { sourceAfterTransformation } = importmapReference.target
+    textNode.value = sourceAfterTransformation
+  }
+}
+
+const linkStylesheetHrefVisitor = (link, { notifyReferenceFound }) => {
+  const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
+  if (!hrefAttribute) {
+    return null
+  }
+  const relAttribute = getHtmlNodeAttributeByName(link, "rel")
+  if (!relAttribute) {
+    return null
+  }
+  if (relAttribute.value !== "stylesheet") {
+    return null
+  }
+
+  const cssReference = notifyReferenceFound({
+    contentType: "text/css",
+    specifier: hrefAttribute.value,
+    ...getHtmlNodeLocation(link),
+  })
+  return ({ getReferenceUrlRelativeToImporter }) => {
+    const { isInline } = cssReference.target
+
+    if (isInline) {
+      const { sourceAfterTransformation } = cssReference.target
+      replaceHtmlNode(link, `<style>${sourceAfterTransformation}</style>`)
+    } else {
+      const urlRelativeToImporter = getReferenceUrlRelativeToImporter(cssReference)
+      hrefAttribute.value = urlRelativeToImporter
+    }
+  }
+}
+
+const linkHrefVisitor = (link, { notifyReferenceFound }) => {
+  const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
+  if (!hrefAttribute) {
+    return null
+  }
+
+  const typeAttribute = getHtmlNodeAttributeByName(link, "type")
+  const reference = notifyReferenceFound({
+    contentType: typeAttribute ? typeAttribute.value : undefined,
+    specifier: hrefAttribute.value,
+    ...getHtmlNodeLocation(link),
+  })
+  return ({ getReferenceUrlRelativeToImporter }) => {
+    const { isInline } = reference.target
+
+    if (isInline) {
+      replaceHtmlNode(link, `<link href="${getTargetAsBase64Url(reference.target)}" />`)
+    } else {
+      const urlRelativeToImporter = getReferenceUrlRelativeToImporter(reference)
+      hrefAttribute.value = urlRelativeToImporter
+    }
+  }
+}
+
+const styleTextNodeVisitor = (style, { notifyReferenceFound }, target, styles) => {
+  const textNode = getHtmlNodeTextNode(style)
+  if (!textNode) {
+    return null
+  }
+
+  const inlineStyleReference = notifyReferenceFound({
+    contentType: "text/css",
+    specifier: getUniqueNameForInlineHtmlNode(
+      style,
+      styles,
+      `${urlToBasename(target.url)}.[id].css`,
+    ),
+    ...getHtmlNodeLocation(style),
+    content: {
+      type: "text/css",
+      value: textNode.value,
+    },
+  })
+  return () => {
+    const { sourceAfterTransformation } = inlineStyleReference.target
+    textNode.value = sourceAfterTransformation
+  }
+}
+
+const imgSrcVisitor = (img, { notifyReferenceFound }) => {
+  const srcAttribute = getHtmlNodeAttributeByName(img, "src")
+  if (!srcAttribute) {
+    return null
+  }
+
+  const srcReference = notifyReferenceFound({
+    specifier: srcAttribute.value,
+    ...getHtmlNodeLocation(img),
+  })
+  return ({ getReferenceUrlRelativeToImporter }) => {
+    const srcNewValue = referenceToUrl(srcReference, getReferenceUrlRelativeToImporter)
+    srcAttribute.value = srcNewValue
+  }
+}
+
+const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
+  const srcsetAttribute = getHtmlNodeAttributeByName(htmlNode, "srcset")
+  if (!srcsetAttribute) {
+    return null
+  }
 
   const srcsetParts = []
-  srcsetValue.split(",").forEach((set) => {
+  srcsetAttribute.value.split(",").forEach((set) => {
     const [specifier, descriptor] = set.trim().split(" ")
     if (specifier) {
       srcsetParts.push({
         descriptor,
-        reference: notifyAssetFound({
+        reference: notifyReferenceFound({
           specifier,
-          ...getHtmlNodeLocation(node),
+          ...getHtmlNodeLocation(htmlNode),
         }),
       })
     }
   })
-  if (srcsetParts.length === 0) return []
+  if (srcsetParts.length === 0) {
+    return null
+  }
 
-  return [
-    ({ getReferenceUrlRelativeToImporter }) => {
-      const srcsetNewValue = srcsetParts
-        .map(({ descriptor, reference }) => {
-          const newSpecifier = referenceToUrl(reference, getReferenceUrlRelativeToImporter)
-          return `${newSpecifier} ${descriptor}`
-        })
-        .join(", ")
-      setHtmlNodeAttributeValue(node, "srcset", srcsetNewValue)
-    },
-  ]
+  return ({ getReferenceUrlRelativeToImporter }) => {
+    const srcsetNewValue = srcsetParts
+      .map(({ descriptor, reference }) => {
+        const newSpecifier = referenceToUrl(reference, getReferenceUrlRelativeToImporter)
+        return `${newSpecifier} ${descriptor}`
+      })
+      .join(", ")
+    srcsetAttribute.value = srcsetNewValue
+  }
+}
+
+const sourceSrcVisitor = (source, { notifyReferenceFound }) => {
+  const srcAttribute = getHtmlNodeAttributeByName(source, "src")
+  if (!srcAttribute) {
+    return null
+  }
+
+  const typeAttribute = getHtmlNodeAttributeByName(source, "type")
+  const srcReference = notifyReferenceFound({
+    contentType: typeAttribute ? typeAttribute.value : undefined,
+    specifier: srcAttribute.value,
+    ...getHtmlNodeLocation(source),
+  })
+  return ({ getReferenceUrlRelativeToImporter }) => {
+    const srcNewValue = referenceToUrl(srcReference, getReferenceUrlRelativeToImporter)
+    srcAttribute.value = srcNewValue
+  }
 }
 
 const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
