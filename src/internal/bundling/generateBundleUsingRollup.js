@@ -28,7 +28,6 @@ export const generateBundleUsingRollup = async ({
   sourcemapExcludeSources,
 
   bundleDirectoryUrl,
-  bundleDefaultExtension,
 
   minify,
   minifyJsOptions,
@@ -57,7 +56,6 @@ export const generateBundleUsingRollup = async ({
     format,
     systemJsUrl,
     bundleDirectoryUrl,
-    bundleDefaultExtension,
     inlineAssetPredicate,
 
     minify,
@@ -81,7 +79,6 @@ export const generateBundleUsingRollup = async ({
     sourcemapExcludeSources,
     writeOnFileSystem,
     bundleDirectoryUrl,
-    bundleDefaultExtension,
   })
 
   return {
@@ -102,7 +99,6 @@ const useRollup = async ({
   sourcemapExcludeSources,
   writeOnFileSystem,
   bundleDirectoryUrl,
-  bundleDefaultExtension,
 }) => {
   logger.info(`
 parse bundle
@@ -151,8 +147,8 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources,
-    entryFileNames: `[name]${bundleDefaultExtension || outputExtension}`,
-    chunkFileNames: `[name]-[hash]${bundleDefaultExtension || outputExtension}`,
+    entryFileNames: `[name]${outputExtension}`,
+    chunkFileNames: `[name]-[hash]${outputExtension}`,
     ...(format === "global"
       ? {
           globals,

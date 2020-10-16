@@ -112,7 +112,7 @@ export const createCompositeAssetHandler = (
     reference.target = target
     target.importers.push(reference)
     target.getContentAvailablePromise().then(() => {
-      if (reference.contentType !== target.content.type) {
+      if (!compareContentType(reference.contentType, target.content.type)) {
         logger.warn(formatContentTypeMismatchLog(reference, { showReferenceSourceLocation }))
       }
     })
@@ -553,6 +553,19 @@ const removePotentialUrlHash = (url) => {
   const urlObject = new URL(url)
   urlObject.hash = ""
   return String(urlObject)
+}
+
+const compareContentType = (leftContentType, rightContentType) => {
+  if (leftContentType === rightContentType) {
+    return true
+  }
+  if (leftContentType === "text/javascript" && rightContentType === "application/javascript") {
+    return true
+  }
+  if (leftContentType === "application/javascript" && rightContentType === "text/javascript") {
+    return true
+  }
+  return false
 }
 
 const formatContentTypeMismatchLog = (reference, { showReferenceSourceLocation }) => {

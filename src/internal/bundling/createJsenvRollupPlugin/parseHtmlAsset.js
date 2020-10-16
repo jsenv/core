@@ -187,10 +187,8 @@ const moduleScriptSrcVisitor = (script, { notifyReferenceFound }) => {
     removeHtmlNodeAttribute(script, typeAttribute)
     removeHtmlNodeAttribute(script, srcAttribute)
     const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
-    setHtmlNodeText(
-      script,
-      `window.System.import(${JSON.stringify(ensureRelativeUrlNotation(urlRelativeToImporter))})`,
-    )
+    const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter)
+    setHtmlNodeText(script, `window.System.import(${JSON.stringify(relativeUrlNotation)})`)
   }
 }
 
@@ -228,9 +226,8 @@ const moduleScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, s
   return ({ getReferenceUrlRelativeToImporter }) => {
     removeHtmlNodeAttribute(script, typeAttribute)
     const urlRelativeToImporter = getReferenceUrlRelativeToImporter(jsReference)
-    textNode.value = `<script>window.System.import(${JSON.stringify(
-      ensureRelativeUrlNotation(urlRelativeToImporter),
-    )})</script>`
+    const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter)
+    textNode.value = `window.System.import(${JSON.stringify(relativeUrlNotation)})`
   }
 }
 

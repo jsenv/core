@@ -19,7 +19,6 @@
 - [Bundling parameters](#bundling-parameters)
   - [bundleDirectoryRelativeUrl](#bundleDirectoryRelativeUrl)
   - [entryPointMap](#entryPointMap)
-  - [bundleDefaultExtension](#bundleDefaultExtension)
   - [externalImportSpecifiers](#externalImportSpecifiers)
   - [minify](#minify)
 - [Shared parameters](#Shared-parameters)
@@ -310,12 +309,6 @@ This section present parameters available to every function generating a bundle.
   "main": "./index.js"
 }
 ```
-
-## bundleDefaultExtension
-
-`bundleDefaultExtension` parameter is a string representing a file extension added to each chunk generated for `entryPointMap` key. This parameter is optional with a default value of `".js"`.
-
-> You might want to pass `".mjs"` when you are bundling esmodule files that will be imported by Node.js.
 
 ## externalImportSpecifiers
 

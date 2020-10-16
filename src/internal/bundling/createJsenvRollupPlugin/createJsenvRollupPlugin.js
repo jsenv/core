@@ -66,11 +66,10 @@ export const createJsenvRollupPlugin = async ({
   bundleDirectoryUrl,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
-  // simplify this to track only raw content because we care only about this
-  // and deprecate for urlSourceMapping
-  const moduleContentMap = {}
-  // rename urlRedirectionMapping = {}
-  const redirectionMap = {}
+  const urlImporterMap = {}
+  const urlResponseBodyMap = {}
+  const virtualModules = {}
+  const urlRedirectionMap = {}
 
   const EMPTY_CHUNK_URL = resolveUrl("__empty__", projectDirectoryUrl)
 
@@ -87,10 +86,6 @@ export const createJsenvRollupPlugin = async ({
     if (browser) return false
     return false
   }
-
-  const urlImporterMapping = {}
-  const urlResponseBodyMap = {}
-  const virtualModules = {}
 
   const fetchImportmapFromParameter = async () => {
     const importmapProjectUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
@@ -412,7 +407,7 @@ export const createJsenvRollupPlugin = async ({
       })
 
       if (importer !== projectDirectoryUrl) {
-        urlImporterMapping[importUrl] = importer
+        urlImporterMap[importUrl] = importer
       }
 
       // keep external url intact
@@ -441,19 +436,11 @@ export const createJsenvRollupPlugin = async ({
       logger.debug(`loads ${url}`)
       const { responseUrl, contentRaw, content = "", map } = await loadModule(url, moduleInfo)
 
-      urlResponseBodyMap[url] = contentRaw
-
-      saveModuleContent(responseUrl, {
-        content,
-        contentRaw,
-      })
+      urlResponseBodyMap[responseUrl] = contentRaw
       // handle redirection
       if (responseUrl !== url) {
-        saveModuleContent(url, {
-          content,
-          contentRaw,
-        })
-        redirectionMap[url] = responseUrl
+        urlResponseBodyMap[url] = contentRaw
+        urlRedirectionMap[url] = responseUrl
       }
 
       return { code: content, map }
@@ -501,8 +488,8 @@ export const createJsenvRollupPlugin = async ({
           }
         }
 
-        if (url in redirectionMap) {
-          return redirectionMap[url]
+        if (url in urlRedirectionMap) {
+          return urlRedirectionMap[url]
         }
         return url
       }
@@ -592,17 +579,17 @@ export const createJsenvRollupPlugin = async ({
   }
 
   // take any url string and try to return the corresponding remote url (an url inside compileServerOrigin)
-  const urlToServerUrl = (url) => {
-    if (url.startsWith(`${compileServerOrigin}/`)) {
-      return url
-    }
+  // const urlToServerUrl = (url) => {
+  //   if (url.startsWith(`${compileServerOrigin}/`)) {
+  //     return url
+  //   }
 
-    if (url.startsWith(projectDirectoryUrl)) {
-      return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
-    }
+  //   if (url.startsWith(projectDirectoryUrl)) {
+  //     return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
+  //   }
 
-    return null
-  }
+  //   return null
+  // }
 
   // take any url string and try to return a file url inside project directory url
   // prefer the source url if the url is inside compile directory
@@ -633,12 +620,6 @@ export const createJsenvRollupPlugin = async ({
     return null
   }
 
-  const saveModuleContent = (moduleUrl, value) => {
-    const remoteUrl = urlToServerUrl(moduleUrl)
-    const url = urlToProjectUrl(remoteUrl || moduleUrl) || moduleUrl
-    moduleContentMap[url] = value
-  }
-
   const loadModule = async (moduleUrl, moduleInfo) => {
     if (moduleUrl in virtualModules) {
       const codeInput = virtualModules[moduleUrl]
@@ -659,7 +640,7 @@ export const createJsenvRollupPlugin = async ({
       }
     }
 
-    const importerUrl = urlImporterMapping[moduleUrl]
+    const importerUrl = urlImporterMap[moduleUrl]
     const moduleResponse = await fetchModule(moduleUrl, importerUrl)
     const contentType = moduleResponse.headers["content-type"] || ""
     const commonData = {
@@ -737,7 +718,7 @@ export const createJsenvRollupPlugin = async ({
     jsenvRollupPlugin,
     getExtraInfo: () => {
       return {
-        moduleContentMap,
+        urlResponseBodyMap,
       }
     },
   }

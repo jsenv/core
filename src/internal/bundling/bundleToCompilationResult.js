@@ -2,7 +2,7 @@
 
 One thing to keep in mind:
 the sourcemap.sourcesContent will contains a json file transformed to js
-while moduleContentMap will contain the json file raw source because the corresponding
+while urlResponseBodyMap will contain the json file raw source because the corresponding
 json file etag is used to invalidate the cache
 
 */
@@ -12,7 +12,7 @@ import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 
 export const bundleToCompilationResult = (
-  { rollupBundle, moduleContentMap },
+  { rollupBundle, urlResponseBodyMap },
   { projectDirectoryUrl, compiledFileUrl, sourcemapFileUrl },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -37,7 +37,7 @@ export const bundleToCompilationResult = (
 
       if (!sources.includes(moduleUrl)) {
         sources.push(moduleUrl)
-        sourcesContent.push(dependencyMap[moduleUrl].contentRaw)
+        sourcesContent.push(dependencyMap[moduleUrl])
       }
     })
   }
@@ -46,7 +46,7 @@ export const bundleToCompilationResult = (
   const assetsContent = []
 
   const mainChunk = parseRollupChunk(rollupBundle.output[0], {
-    moduleContentMap,
+    urlResponseBodyMap,
     sourcemapFileUrl,
     sourcemapFileRelativeUrlForModule: urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl),
   })
@@ -58,7 +58,7 @@ export const bundleToCompilationResult = (
   rollupBundle.output.slice(1).forEach((rollupChunk) => {
     const chunkFileName = rollupChunk.fileName
     const chunk = parseRollupChunk(rollupChunk, {
-      moduleContentMap,
+      urlResponseBodyMap,
       compiledFileUrl,
       sourcemapFileUrl: resolveUrl(rollupChunk.map.file, compiledFileUrl),
     })
@@ -82,7 +82,7 @@ export const bundleToCompilationResult = (
 const parseRollupChunk = (
   rollupChunk,
   {
-    moduleContentMap,
+    urlResponseBodyMap,
     sourcemapFileUrl,
     sourcemapFileRelativeUrlForModule = `./${rollupChunk.fileName}.map`,
   },
@@ -93,7 +93,7 @@ const parseRollupChunk = (
   mainModuleSourcemap.sources.forEach((source, index) => {
     const moduleUrl = resolveUrl(source, sourcemapFileUrl)
     dependencyMap[moduleUrl] = getModuleContent({
-      moduleContentMap,
+      urlResponseBodyMap,
       mainModuleSourcemap,
       moduleUrl,
       moduleIndex: index,
@@ -111,19 +111,16 @@ const parseRollupChunk = (
   }
 }
 
-const getModuleContent = ({ moduleContentMap, mainModuleSourcemap, moduleUrl, moduleIndex }) => {
-  if (moduleUrl in moduleContentMap) {
-    return moduleContentMap[moduleUrl]
+const getModuleContent = ({ urlResponseBodyMap, mainModuleSourcemap, moduleUrl, moduleIndex }) => {
+  if (moduleUrl in urlResponseBodyMap) {
+    return urlResponseBodyMap[moduleUrl]
   }
 
   // try to read it from mainModuleSourcemap
   const sourcesContent = mainModuleSourcemap.sourcesContent || []
   if (moduleIndex in sourcesContent) {
     const contentFromRollupSourcemap = sourcesContent[moduleIndex]
-    return {
-      content: contentFromRollupSourcemap,
-      contentRaw: contentFromRollupSourcemap,
-    }
+    return contentFromRollupSourcemap
   }
 
   // try to get it from filesystem
@@ -135,10 +132,7 @@ const getModuleContent = ({ moduleContentMap, mainModuleSourcemap, moduleUrl, mo
     try {
       const moduleFileBuffer = readFileSync(moduleFilePath)
       const moduleFileString = String(moduleFileBuffer)
-      return {
-        content: moduleFileString,
-        contentRaw: moduleFileString,
-      }
+      return moduleFileString
     } catch (e) {
       if (e && e.code === "ENOENT") {
         throw new Error(`module file not found at ${moduleUrl}`)

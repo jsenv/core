@@ -46,7 +46,6 @@ export const generateBundle = async ({
   sourcemapExcludeSources = false,
   bundleDirectoryRelativeUrl,
   bundleDirectoryClean = false,
-  bundleDefaultExtension,
   writeOnFileSystem = true,
   manifestFile = false,
 
@@ -86,9 +85,6 @@ export const generateBundle = async ({
       if (bundleDirectoryRelativeUrl === undefined) {
         bundleDirectoryRelativeUrl = "./dist/commonjs"
       }
-      if (bundleDefaultExtension === undefined) {
-        bundleDefaultExtension = ".cjs"
-      }
       if (node === undefined) {
         node = true
       }
@@ -103,10 +99,6 @@ export const generateBundle = async ({
       throw new TypeError(
         `unexpected format: ${format}. Must be esm, systemjs, commonjs or global.`,
       )
-    }
-
-    if (bundleDefaultExtension === undefined) {
-      bundleDefaultExtension = ".js"
     }
 
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
@@ -186,7 +178,6 @@ export const generateBundle = async ({
       globals,
       sourcemapExcludeSources,
       bundleDirectoryUrl,
-      bundleDefaultExtension,
       manifestFile,
       inlineAssetPredicate,
 
