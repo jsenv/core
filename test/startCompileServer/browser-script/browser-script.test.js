@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
-import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { browserJsFileUrl } from "../../../src/internal/jsenvInternalFiles.js"
 import { COMPILE_ID_GLOBAL_BUNDLE } from "../../../src/internal/CONSTANTS.js"
