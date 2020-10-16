@@ -155,7 +155,7 @@ export const createJsenvRollupPlugin = async ({
           } else {
             entryPointsPrepared.push({
               type: "js",
-              url: resolveUrl(projectRelativeUrl, projectDirectoryUrl),
+              relativeUrl: projectRelativeUrl,
               chunkName,
             })
           }
@@ -347,7 +347,7 @@ export const createJsenvRollupPlugin = async ({
       )
 
       await Promise.all(
-        entryPointsPrepared.map(async ({ type, url, chunkName, source }) => {
+        entryPointsPrepared.map(async ({ type, url, relativeUrl, chunkName, source }) => {
           if (type === "html") {
             await compositeAssetHandler.prepareHtmlEntry(url, {
               // don't hash the html entry point
@@ -358,7 +358,7 @@ export const createJsenvRollupPlugin = async ({
             atleastOneChunkEmitted = true
             emitFile({
               type: "chunk",
-              id: url,
+              id: relativeUrl,
               name: chunkName,
             })
           }
@@ -436,10 +436,10 @@ export const createJsenvRollupPlugin = async ({
       logger.debug(`loads ${url}`)
       const { responseUrl, contentRaw, content = "", map } = await loadModule(url, moduleInfo)
 
-      urlResponseBodyMap[responseUrl] = contentRaw
+      saveUrlResponseBody(responseUrl, contentRaw)
       // handle redirection
       if (responseUrl !== url) {
-        urlResponseBodyMap[url] = contentRaw
+        saveUrlResponseBody(url, contentRaw)
         urlRedirectionMap[url] = responseUrl
       }
 
@@ -473,20 +473,10 @@ export const createJsenvRollupPlugin = async ({
 
       const relativePathToUrl = (relativePath, sourcemapUrl) => {
         const rollupUrl = resolveUrl(relativePath, sourcemapUrl)
-        let url
-
-        // fix rollup not supporting source being http
-        const httpIndex = rollupUrl.indexOf(`http:/`)
-        if (httpIndex > -1) {
-          url = `http://${rollupUrl.slice(httpIndex + `http:/`.length)}`
-        } else {
-          const httpsIndex = rollupUrl.indexOf("https:/")
-          if (httpsIndex > -1) {
-            url = `https://${rollupUrl.slice(httpsIndex + `https:/`.length)}`
-          } else {
-            url = rollupUrl
-          }
-        }
+        // here relativePath contains a protocol
+        // because rollup don't work with url but with filesystem paths
+        // let fix it below
+        const url = fixRollupUrl(rollupUrl)
 
         if (url in urlRedirectionMap) {
           return urlRedirectionMap[url]
@@ -533,11 +523,12 @@ export const createJsenvRollupPlugin = async ({
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
       await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle)
-      logger.info(formatBundleGeneratedLog(bundle))
 
       if (manifestFile) {
         await writeManifestFile(bundle, bundleDirectoryUrl)
       }
+
+      logger.info(formatBundleGeneratedLog(bundle))
     },
 
     async writeBundle(options, bundle) {
@@ -550,11 +541,15 @@ export const createJsenvRollupPlugin = async ({
           bundle,
         })
       }
-
-      // Object.keys(bundle).forEach((bundleFilename) => {
-      //   logger.debug(`-> ${bundleDirectoryUrl}${bundleFilename}`)
-      // })
     },
+  }
+
+  const saveUrlResponseBody = (url, responseBody) => {
+    urlResponseBodyMap[url] = responseBody
+    const originalProjectUrl = urlToOriginalProjectUrl(url)
+    if (originalProjectUrl && originalProjectUrl !== url) {
+      urlResponseBodyMap[originalProjectUrl] = responseBody
+    }
   }
 
   // take any url string and try to return a file url (an url inside projectDirectoryUrl)
@@ -722,6 +717,26 @@ export const createJsenvRollupPlugin = async ({
       }
     },
   }
+}
+
+const fixRollupUrl = (rollupUrl) => {
+  // fix rollup not supporting source being http
+  const httpIndex = rollupUrl.indexOf(`http:/`, 1)
+  if (httpIndex > -1) {
+    return `http://${rollupUrl.slice(httpIndex + `http:/`.length)}`
+  }
+
+  const httpsIndex = rollupUrl.indexOf("https:/", 1)
+  if (httpsIndex > -1) {
+    return `https://${rollupUrl.slice(httpsIndex + `https:/`.length)}`
+  }
+
+  const fileIndex = rollupUrl.indexOf("file:", 1)
+  if (fileIndex > -1) {
+    return `file://${rollupUrl.slice(fileIndex + `file:`.length)}`
+  }
+
+  return rollupUrl
 }
 
 const formatIgnoreImportMap = (importmapHtmlNode, htmlUrl, htmlSource) => {

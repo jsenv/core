@@ -120,7 +120,9 @@ const getModuleContent = ({ urlResponseBodyMap, mainModuleSourcemap, moduleUrl, 
   const sourcesContent = mainModuleSourcemap.sourcesContent || []
   if (moduleIndex in sourcesContent) {
     const contentFromRollupSourcemap = sourcesContent[moduleIndex]
-    return contentFromRollupSourcemap
+    if (contentFromRollupSourcemap !== null && contentFromRollupSourcemap !== undefined) {
+      return contentFromRollupSourcemap
+    }
   }
 
   // try to get it from filesystem

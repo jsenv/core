@@ -18,6 +18,7 @@ const mainFilename = `${testDirectoryname}.js`
 
 const bundle = await generateBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
