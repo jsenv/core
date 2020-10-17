@@ -45,3 +45,5 @@ const expected = {
   default: resolveUrl(`dist/systemjs/${imgRemapRelativeUrl}`, serverOrigin),
 }
 assert({ actual, expected })
+
+// TODO: also check css url are updated and not remapped

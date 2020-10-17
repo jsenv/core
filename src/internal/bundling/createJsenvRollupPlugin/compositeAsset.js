@@ -432,6 +432,13 @@ export const createCompositeAssetHandler = (
     await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdAvailablePromise()))
   }
 
+  const findAssetUrlByFileNameForRollup = (fileNameForRollup) => {
+    const assetUrl = Object.keys(targetMap).find(
+      (url) => targetMap[url].fileNameForRollup === fileNameForRollup,
+    )
+    return assetUrl
+  }
+
   const createJsModuleImportReference = async (response, { importerUrl } = {}) => {
     const targetUrl = response.url
     const contentType = response.headers["content-type"] || ""
@@ -497,6 +504,7 @@ ${showSourceLocation(referenceSource, {
   return {
     prepareHtmlEntry,
     resolveJsReferencesUsingRollupBundle,
+    findAssetUrlByFileNameForRollup,
     createJsModuleImportReference,
     inspect: () => {
       return {

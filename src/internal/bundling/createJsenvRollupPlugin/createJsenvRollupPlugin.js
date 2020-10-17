@@ -316,7 +316,7 @@ export const createJsenvRollupPlugin = async ({
                 const rollupReferenceId = emitFile({
                   type: "chunk",
                   id,
-                  name: urlToRelativeUrl(target.url, target.importers[0].url),
+                  name: urlToRelativeUrl(target.url, urlToCompiledUrl(target.importers[0].url)),
                   ...(target.previousJsReference
                     ? {
                         implicitlyLoadedAfterOneOf: [target.previousJsReference.url],
@@ -329,18 +329,22 @@ export const createJsenvRollupPlugin = async ({
             } else {
               target.connect(async () => {
                 await target.getReadyPromise()
-                const { sourceAfterTransformation, fileNameForRollup, relativeUrl } = target
+                const { sourceAfterTransformation, fileNameForRollup } = target
 
                 if (target.isInline) {
                   return {}
                 }
 
                 logger.debug(`emit asset for ${shortenUrl(target.url)}`)
+                // const name = urlToRelativeUrl(
+                //   urlToProjectUrl(target.url),
+                //   urlToOriginalProjectUrl(target.importers[0].url),
+                // )
                 const rollupReferenceId = emitFile({
                   type: "asset",
                   source: sourceAfterTransformation,
                   fileName: fileNameForRollup,
-                  name: relativeUrl,
+                  // name,
                 })
                 logger.debug(`${shortenUrl(target.url)} ready -> ${fileNameForRollup}`)
                 return { rollupReferenceId }
@@ -365,6 +369,7 @@ export const createJsenvRollupPlugin = async ({
             emitFile({
               type: "chunk",
               id: relativeUrl,
+              // name: chunkName,
               // don't hash js entry points
               fileName: chunkName,
             })
@@ -531,7 +536,11 @@ export const createJsenvRollupPlugin = async ({
       // et mettre a jour leur dépendance vers ce fichier js
       await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle)
 
-      bundleManifest = rollupBundleToBundleManifest(bundle)
+      bundleManifest = rollupBundleToBundleManifest(bundle, {
+        urlToOriginalProjectUrl,
+        projectDirectoryUrl,
+        compositeAssetHandler,
+      })
       if (manifestFile) {
         const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
         await writeFile(manifestFileUrl, JSON.stringify(bundleManifest, null, "  "))
@@ -852,18 +861,36 @@ const formatBundleGeneratedLog = (bundle) => {
   })
 }
 
-const rollupBundleToBundleManifest = (rollupBundle) => {
+const rollupBundleToBundleManifest = (
+  rollupBundle,
+  { urlToOriginalProjectUrl, projectDirectoryUrl, compositeAssetHandler },
+) => {
   const mappings = {}
   Object.keys(rollupBundle).forEach((key) => {
-    const chunk = rollupBundle[key]
-    mappings[chunk.name] = chunk.fileName
+    const file = rollupBundle[key]
+    if (file.type === "chunk") {
+      const id = file.facadeModuleId
+      const originalProjectUrl = urlToOriginalProjectUrl(id)
+      const projectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
+      mappings[projectRelativeUrl] = file.fileName
+    } else {
+      const assetUrl = compositeAssetHandler.findAssetUrlByFileNameForRollup(file.fileName)
+      if (assetUrl) {
+        const originalProjectUrl = urlToOriginalProjectUrl(assetUrl)
+        const projectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
+        mappings[projectRelativeUrl] = file.fileName
+      } else {
+        // the asset does not exists in the project it was generated during bundling
+      }
+    }
   })
+
   const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
   const manifest = {}
   mappingKeysSorted.forEach((key) => {
     manifest[key] = mappings[key]
   })
-  return mappings
+  return manifest
 }
 
 const createDetailedMessage = (message, details = {}) => {
