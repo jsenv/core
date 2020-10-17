@@ -142,7 +142,7 @@ export const createCompositeAssetHandler = (
     }
 
     const getContentAvailablePromise = memoize(async () => {
-      const response = await fetch(url, importers[0].url)
+      const response = await fetch(url, showReferenceSourceLocation(importers[0]))
       const responseContentTypeHeader = response.headers["content-type"] || ""
       const responseBodyAsArrayBuffer = await response.arrayBuffer()
       target.content = {
@@ -470,7 +470,13 @@ export const createCompositeAssetHandler = (
       referenceUrl in targetMap ? targetMap[referenceUrl].content.value : loadUrl(referenceUrl),
     )
 
-    const message = `${urlToOriginalProjectUrl(referenceUrl)}:${reference.line}:${reference.column}`
+    let message = `${urlToOriginalProjectUrl(referenceUrl)}`
+    if (typeof reference.line === "number") {
+      message += `:${reference.line}`
+      if (typeof reference.column === "number") {
+        message += `:${reference.column}`
+      }
+    }
 
     if (referenceSource) {
       return `${message}
@@ -478,7 +484,8 @@ export const createCompositeAssetHandler = (
 ${showSourceLocation(referenceSource, {
   line: reference.line,
   column: reference.column,
-})}`
+})}
+`
     }
 
     return `${message}`

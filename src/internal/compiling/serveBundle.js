@@ -72,6 +72,7 @@ export const serveBundle = async ({
     const sourcemapFileUrl = `${compiledFileUrl}.map`
 
     return bundleToCompilationResult(bundle, {
+      mainFileName: bundleRelativeUrl,
       projectDirectoryUrl,
       originalFileUrl,
       compiledFileUrl,

@@ -1,4 +1,15 @@
-export const validateResponseStatusIsOk = ({ status, url }, importerUrl) => {
+export const validateResponseStatusIsOk = ({ status, url }, importer) => {
+  if (status === 404) {
+    return {
+      valid: false,
+      message: `Error: got 404 on url.
+--- url ---
+${url}
+--- imported by ---
+${importer}`,
+    }
+  }
+
   if (responseStatusIsOk(status)) {
     return { valid: true }
   }
@@ -13,7 +24,7 @@ ${status}
 --- url ---
 ${url}
 --- imported by ---
-${importerUrl}`,
+${importer}`,
   }
 }
 

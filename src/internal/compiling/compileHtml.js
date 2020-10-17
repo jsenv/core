@@ -32,18 +32,24 @@ export const stringifyHtmlAst = (htmlAst) => {
   return htmlString
 }
 
-export const findFirstImportmapNode = (htmlString) => {
+export const findNode = (htmlString, predicate) => {
   const htmlAst = parseHtmlString(htmlString)
-  let importmapNode = null
+  let nodeMatching = null
   visitHtmlAst(htmlAst, (node) => {
-    if (htmlNodeIsScriptImportmap(node)) {
-      importmapNode = node
+    if (predicate(node)) {
+      nodeMatching = node
       return "stop"
     }
     return null
   })
-  return importmapNode
+  return nodeMatching
 }
+
+export const getNodeByTagName = (htmlString, tagName) =>
+  findNode(htmlString, (node) => node.nodeName === tagName)
+
+export const findFirstImportmapNode = (htmlString) =>
+  findNode(htmlString, htmlNodeIsScriptImportmap)
 
 export const getHtmlNodeAttributeByName = (htmlNode, attributeName) =>
   htmlNode.attrs.find((attr) => attr.name === attributeName)
@@ -130,6 +136,25 @@ export const htmlNodeIsScriptImportmap = (htmlNode) => {
     return false
   }
   return typeAttribute.value === "importmap"
+}
+
+export const parseSrcset = (srcsetString) => {
+  const srcsetParts = []
+  srcsetString.split(",").forEach((set) => {
+    const [specifier, descriptor] = set.trim().split(" ")
+    srcsetParts.push({
+      specifier,
+      descriptor,
+    })
+  })
+  return srcsetParts
+}
+
+export const stringifySrcset = (srcsetParts) => {
+  const srcsetString = srcsetParts
+    .map(({ specifier, descriptor }) => `${specifier} ${descriptor}`)
+    .join(", ")
+  return srcsetString
 }
 
 // let's <img>, <link for favicon>, <link for css>, <styles>

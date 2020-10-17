@@ -38,7 +38,7 @@ export const generateBundleUsingRollup = async ({
 
   writeOnFileSystem,
 }) => {
-  const { jsenvRollupPlugin, getExtraInfo } = await createJsenvRollupPlugin({
+  const { jsenvRollupPlugin, getResult } = await createJsenvRollupPlugin({
     cancellationToken,
     logger,
 
@@ -66,7 +66,7 @@ export const generateBundleUsingRollup = async ({
     manifestFile,
   })
 
-  const rollupBundle = await useRollup({
+  await useRollup({
     cancellationToken,
     logger,
 
@@ -81,10 +81,7 @@ export const generateBundleUsingRollup = async ({
     bundleDirectoryUrl,
   })
 
-  return {
-    rollupBundle,
-    ...getExtraInfo(),
-  }
+  return getResult()
 }
 
 const useRollup = async ({

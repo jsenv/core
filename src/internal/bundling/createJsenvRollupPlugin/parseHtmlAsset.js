@@ -28,6 +28,8 @@ import {
   removeHtmlNodeAttribute,
   setHtmlNodeText,
   getHtmlNodeTextNode,
+  parseSrcset,
+  stringifySrcset,
 } from "../../compiling/compileHtml.js"
 import { minifyHtml } from "./minifyHtml.js"
 import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
@@ -64,12 +66,12 @@ export const parseHtmlAsset = async (
     linkHrefVisitor,
   ])
   const stylesMutations = collectNodesMutations(styles, notifiers, target, [styleTextNodeVisitor])
-  const imgsMutations = collectNodesMutations(imgs, notifiers, target, [
-    imgSrcVisitor,
-    srcsetVisitor,
-  ])
-  const sourcesMutations = collectNodesMutations(sources, notifiers, target, {
+  const imgsSrcMutations = collectNodesMutations(imgs, notifiers, target, [imgSrcVisitor])
+  const imgsSrcsetMutations = collectNodesMutations(imgs, notifiers, target, [srcsetVisitor])
+  const sourcesSrcMutations = collectNodesMutations(sources, notifiers, target, {
     sourceSrcVisitor,
+  })
+  const sourcesSrcsetMutations = collectNodesMutations(sources, notifiers, target, {
     srcsetVisitor,
   })
   const svgMutations = collectSvgMutations({ images, uses }, notifiers, target)
@@ -78,8 +80,10 @@ export const parseHtmlAsset = async (
     ...scriptsMutations,
     ...linksMutations,
     ...stylesMutations,
-    ...imgsMutations,
-    ...sourcesMutations,
+    ...imgsSrcMutations,
+    ...imgsSrcsetMutations,
+    ...sourcesSrcMutations,
+    ...sourcesSrcsetMutations,
     ...svgMutations,
   ]
 
@@ -418,30 +422,24 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
     return null
   }
 
-  const srcsetParts = []
-  srcsetAttribute.value.split(",").forEach((set) => {
-    const [specifier, descriptor] = set.trim().split(" ")
-    if (specifier) {
-      srcsetParts.push({
-        descriptor,
-        reference: notifyReferenceFound({
-          specifier,
-          ...getHtmlNodeLocation(htmlNode),
-        }),
-      })
-    }
-  })
+  const srcsetParts = parseSrcset(srcsetAttribute.value)
+  const srcsetPartsReferences = srcsetParts.map(({ specifier }) =>
+    notifyReferenceFound({
+      specifier,
+      ...getHtmlNodeLocation(htmlNode),
+    }),
+  )
   if (srcsetParts.length === 0) {
     return null
   }
 
   return ({ getReferenceUrlRelativeToImporter }) => {
-    const srcsetNewValue = srcsetParts
-      .map(({ descriptor, reference }) => {
-        const newSpecifier = referenceToUrl(reference, getReferenceUrlRelativeToImporter)
-        return `${newSpecifier} ${descriptor}`
-      })
-      .join(", ")
+    srcsetParts.forEach((srcsetPart, index) => {
+      const reference = srcsetPartsReferences[index]
+      srcsetPart.specifier = referenceToUrl(reference, getReferenceUrlRelativeToImporter)
+    })
+
+    const srcsetNewValue = stringifySrcset(srcsetParts)
     srcsetAttribute.value = srcsetNewValue
   }
 }

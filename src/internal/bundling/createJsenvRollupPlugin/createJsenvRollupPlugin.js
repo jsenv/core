@@ -9,6 +9,7 @@ import {
   writeFile,
   comparePathnames,
   urlIsInsideOf,
+  urlToFileSystemPath,
 } from "@jsenv/util"
 
 import { setJavaScriptSourceMappingUrl } from "../../sourceMappingURLUtils.js"
@@ -70,6 +71,8 @@ export const createJsenvRollupPlugin = async ({
   const urlResponseBodyMap = {}
   const virtualModules = {}
   const urlRedirectionMap = {}
+  let bundleManifest = {}
+  let rollupBundle
 
   const EMPTY_CHUNK_URL = resolveUrl("__empty__", projectDirectoryUrl)
 
@@ -257,8 +260,8 @@ export const createJsenvRollupPlugin = async ({
 
             return null
           },
-          fetch: async (url, importerUrl) => {
-            const moduleResponse = await fetchModule(url, importerUrl)
+          fetch: async (url, importer) => {
+            const moduleResponse = await fetchModule(url, importer)
             return moduleResponse
           },
         },
@@ -324,7 +327,7 @@ export const createJsenvRollupPlugin = async ({
             } else {
               target.connect(async () => {
                 await target.getReadyPromise()
-                const { sourceAfterTransformation, fileNameForRollup } = target
+                const { sourceAfterTransformation, fileNameForRollup, relativeUrl } = target
 
                 if (target.isInline) {
                   return {}
@@ -335,6 +338,7 @@ export const createJsenvRollupPlugin = async ({
                   type: "asset",
                   source: sourceAfterTransformation,
                   fileName: fileNameForRollup,
+                  name: relativeUrl,
                 })
                 logger.debug(`${shortenUrl(target.url)} ready -> ${fileNameForRollup}`)
                 return { rollupReferenceId }
@@ -525,9 +529,13 @@ export const createJsenvRollupPlugin = async ({
       // et mettre a jour leur dépendance vers ce fichier js
       await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle)
 
+      bundleManifest = rollupBundleToBundleManifest(bundle)
       if (manifestFile) {
-        await writeManifestFile(bundle, bundleDirectoryUrl)
+        const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
+        await writeFile(manifestFileUrl, JSON.stringify(bundleManifest, null, "  "))
       }
+
+      rollupBundle = bundle
 
       logger.info(formatBundleGeneratedLog(bundle))
     },
@@ -637,7 +645,10 @@ export const createJsenvRollupPlugin = async ({
     }
 
     const importerUrl = urlImporterMap[moduleUrl]
-    const moduleResponse = await fetchModule(moduleUrl, importerUrl)
+    const moduleResponse = await fetchModule(
+      moduleUrl,
+      urlToFileSystemPath(urlToProjectUrl(importerUrl) || importerUrl),
+    )
     const contentType = moduleResponse.headers["content-type"] || ""
     const commonData = {
       responseUrl: moduleResponse.url,
@@ -689,15 +700,20 @@ export const createJsenvRollupPlugin = async ({
     }
   }
 
-  const fetchModule = async (moduleUrl, importerUrl) => {
+  const fetchModule = async (moduleUrl, importer) => {
     const response = await fetchUrl(moduleUrl, {
       cancellationToken,
       ignoreHttpsError: true,
     })
-    const okValidation = validateResponseStatusIsOk(
-      response,
-      urlToProjectUrl(importerUrl) || importerUrl,
-    )
+    if (response.status === 404) {
+      throw new Error(`A file cannot be found.
+--- file ---
+${urlToFileSystemPath(urlToProjectUrl(response.url))}
+--- imported by ---
+${importer}`)
+    }
+
+    const okValidation = validateResponseStatusIsOk(response, importer)
 
     if (!okValidation.valid) {
       throw new Error(okValidation.message)
@@ -714,9 +730,11 @@ export const createJsenvRollupPlugin = async ({
 
   return {
     jsenvRollupPlugin,
-    getExtraInfo: () => {
+    getResult: () => {
       return {
+        rollupBundle,
         urlResponseBodyMap,
+        bundleManifest,
       }
     },
   }
@@ -832,22 +850,18 @@ const formatBundleGeneratedLog = (bundle) => {
   })
 }
 
-const writeManifestFile = async (bundle, bundleDirectoryUrl) => {
+const rollupBundleToBundleManifest = (rollupBundle) => {
   const mappings = {}
-  Object.keys(bundle).forEach((key) => {
-    const chunk = bundle[key]
-    let chunkId = chunk.name
-    chunkId += ".js"
-    mappings[chunkId] = chunk.fileName
+  Object.keys(rollupBundle).forEach((key) => {
+    const chunk = rollupBundle[key]
+    mappings[chunk.name] = chunk.fileName
   })
   const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
   const manifest = {}
   mappingKeysSorted.forEach((key) => {
     manifest[key] = mappings[key]
   })
-
-  const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
-  await writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "))
+  return mappings
 }
 
 const createDetailedMessage = (message, details = {}) => {
