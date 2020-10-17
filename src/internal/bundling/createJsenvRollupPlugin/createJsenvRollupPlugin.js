@@ -291,10 +291,11 @@ export const createJsenvRollupPlugin = async ({
             }
             return url
           },
-          emitAsset: ({ source, fileName }) => {
+          emitAsset: ({ source, name, fileName }) => {
             emitFile({
               type: "asset",
               source,
+              name,
               fileName,
             })
           },
@@ -315,6 +316,7 @@ export const createJsenvRollupPlugin = async ({
                 const rollupReferenceId = emitFile({
                   type: "chunk",
                   id,
+                  name: urlToRelativeUrl(target.url, target.importers[0].url),
                   ...(target.previousJsReference
                     ? {
                         implicitlyLoadedAfterOneOf: [target.previousJsReference.url],

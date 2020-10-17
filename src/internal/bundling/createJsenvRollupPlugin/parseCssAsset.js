@@ -7,7 +7,7 @@ import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
 
 export const parseCssAsset = async (
   { url, content },
-  { notifyAssetFound },
+  { notifyReferenceFound },
   { minify, minifyCssOptions },
 ) => {
   const cssString = String(content.value)
@@ -15,18 +15,18 @@ export const parseCssAsset = async (
 
   const urlNodeReferenceMapping = new Map()
   atImports.forEach((atImport) => {
-    const cssImportReference = notifyAssetFound({
+    const importReference = notifyReferenceFound({
       specifier: atImport.specifier,
       ...cssNodeToSourceLocation(atImport.urlDeclarationNode),
     })
-    urlNodeReferenceMapping.set(atImport.urlNode, cssImportReference)
+    urlNodeReferenceMapping.set(atImport.urlNode, importReference)
   })
   urlDeclarations.forEach((urlDeclaration) => {
-    const cssAssetReference = notifyAssetFound({
+    const urlReference = notifyReferenceFound({
       specifier: urlDeclaration.specifier,
       ...cssNodeToSourceLocation(urlDeclaration.urlDeclarationNode),
     })
-    urlNodeReferenceMapping.set(urlDeclaration.urlNode, cssAssetReference)
+    urlNodeReferenceMapping.set(urlDeclaration.urlNode, urlReference)
   })
 
   return async ({

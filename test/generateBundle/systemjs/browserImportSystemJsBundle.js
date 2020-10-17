@@ -11,9 +11,14 @@ export const browserImportSystemJsBundle = async ({
   testDirectoryRelativeUrl,
   htmlFileRelativeUrl = "./dist/systemjs/main.html",
   mainRelativeUrl,
-  headless = true,
-  autoStop = true,
+  debug = false,
+  headless = !debug,
+  autoStop = !debug,
 }) => {
+  if (!mainRelativeUrl) {
+    throw new TypeError(`mainRelativeUrl must be a string, received ${mainRelativeUrl}`)
+  }
+
   const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
     startTestServer({ testDirectoryUrl }),
@@ -28,10 +33,15 @@ export const browserImportSystemJsBundle = async ({
   try {
     const namespace = await page.evaluate(
       /* istanbul ignore next */
-      ({ specifier }) => {
+      ({ debug, specifier }) => {
+        if (debug) {
+          window.run = () => window.System.import(specifier)
+          return specifier
+        }
         return window.System.import(specifier)
       },
       {
+        debug,
         specifier: mainRelativeUrl,
       },
     )

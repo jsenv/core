@@ -98,7 +98,7 @@ export const createCompositeAssetHandler = (
     if (url in targetMap) {
       const target = targetMap[url]
       connectReferenceAndTarget(reference, target)
-      return [reference, target]
+      return reference
     }
 
     const target = createTarget(targetData)
@@ -376,10 +376,12 @@ export const createCompositeAssetHandler = (
           importerProjectUrl,
           importerBundleUrl,
         })
+        const relativeUrl = urlToRelativeUrl(assetUrl, bundleDirectoryUrl)
 
         emitAsset({
           source: assetSource,
-          fileName: urlToRelativeUrl(assetUrl, bundleDirectoryUrl),
+          name: relativeUrl,
+          fileName: relativeUrl,
         })
         logger.debug(`emit ${fileNameForRollup} asset emitted by ${fileNameForRollup}`)
       })
@@ -433,6 +435,7 @@ export const createCompositeAssetHandler = (
   const createJsModuleImportReference = async (response, { importerUrl } = {}) => {
     const targetUrl = response.url
     const contentType = response.headers["content-type"] || ""
+    const responseBodyAsBuffer = Buffer.from(await response.arrayBuffer())
     const reference = createReference(
       // the reference to this target comes from a static or dynamic import
       // parsed by rollup.
@@ -448,7 +451,7 @@ export const createCompositeAssetHandler = (
         url: targetUrl,
         content: {
           type: contentType,
-          value: Buffer.from(await response.arrayBuffer()),
+          value: responseBodyAsBuffer,
         },
       },
     )

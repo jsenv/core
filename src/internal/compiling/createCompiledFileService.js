@@ -128,7 +128,7 @@ export const createCompiledFileService = ({
         request,
 
         compile: (importmapBeforeTransformation) =>
-          transformImportmap(importmapBeforeTransformation, {
+           transformImportmap(importmapBeforeTransformation, {
             logger,
             projectDirectoryUrl,
             outDirectoryRelativeUrl,

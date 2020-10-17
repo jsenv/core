@@ -1,3 +1,3 @@
-import url from "./jsenv.png"
+import url from "./img.png"
 
 export default url

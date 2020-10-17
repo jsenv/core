@@ -19,23 +19,29 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
 
-const bundle = await generateBundle({
+const { bundleManifest } = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   logLevel: "info",
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap,
-  minify: true,
+  // minify: true,
 })
-const mainRelativeUrl = `./${bundle.rollupBundle.output[0].fileName}`
+const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
+  const bundleRelativeUrl = bundleManifest[relativeUrl]
+  return bundleRelativeUrl
+}
+
+const mainRelativeUrl = getBundleRelativeUrl("file.js")
+const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
 const { namespace: actual, serverOrigin } = await browserImportSystemJsBundle({
   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
   testDirectoryRelativeUrl,
-  mainRelativeUrl,
-  // headless: false,
-  // autoStop: false,
+  mainRelativeUrl: `./${mainRelativeUrl}`,
+  // debug: true,
 })
 const expected = {
-  default: resolveUrl("dist/systemjs/assets/jsenv-remap-25e95a00.png", serverOrigin),
+  default: resolveUrl(`dist/systemjs/${imgRemapRelativeUrl}`, serverOrigin),
 }
 assert({ actual, expected })
