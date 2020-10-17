@@ -171,7 +171,7 @@ export const createCompositeAssetHandler = (
       }) => {
         let isInline = typeof content !== "undefined"
         const resolveTargetReturnValue = resolveTargetUrl(
-          { specifier, contentType, isInline },
+          { specifier, contentType, isInline, isJsModule },
           target,
         )
         let isExternal = false
