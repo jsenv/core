@@ -1,7 +1,18 @@
 import { basename } from "path"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { assert } from "@jsenv/assert"
+import {
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  readFile,
+  resolveUrl,
+  assertFilePresence,
+} from "@jsenv/util"
 import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import {
+  getNodeByTagName,
+  getHtmlNodeAttributeByName,
+} from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -14,7 +25,7 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
 
-await generateBundle({
+const { bundleManifest } = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -22,12 +33,25 @@ await generateBundle({
   entryPointMap,
 })
 
-// const { namespace: actual } = await browserImportSystemJsBundle({
-//   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
-//   testDirectoryRelativeUrl,
-// })
-// const expected = {
-//   htmlText: `<button>Hello world</button>`,
-//   innerText: "Hello world",
-// }
-// assert({ actual, expected })
+const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
+  const bundleRelativeUrl = bundleManifest[relativeUrl]
+  return bundleRelativeUrl
+}
+
+const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
+const htmlString = await readFile(htmlBundleUrl)
+const image = getNodeByTagName(htmlString, "image")
+
+// ensure href is properly updated
+{
+  const hrefAttribute = getHtmlNodeAttributeByName(image, "href")
+  const imgBundleRelativeUrl = getBundleRelativeUrl("img.png")
+  const actual = hrefAttribute.value
+  const expected = imgBundleRelativeUrl
+  assert({ actual, expected })
+  // ensure corresponding file exists
+  const imgABundleUrl = resolveUrl(imgBundleRelativeUrl, bundleDirectoryUrl)
+  await assertFilePresence(imgABundleUrl)
+}
