@@ -1,26 +1,24 @@
-import { urlToFileSystemPath } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
+import { applyPostCss } from "./applyPostCss.js"
 import { postCssUrlHashPlugin } from "./postcss-urlhash-plugin.js"
-
-const postcss = require("postcss")
 
 export const replaceCssUrls = async (
   css,
-  cssFileUrl,
+  cssUrl,
   getUrlReplacementValue,
   { cssMinification = false, cssMinificationOptions } = {},
 ) => {
-  const result = await postcss([
+  const postcssPlugins = [
     postCssUrlHashPlugin,
     ...(cssMinification ? [getCssMinificationPlugin(cssMinificationOptions)] : []),
-  ]).process(css, {
-    from: urlToFileSystemPath(cssFileUrl),
-    to: urlToFileSystemPath(cssFileUrl),
+  ]
+  const postcssOptions = {
     getUrlReplacementValue,
     map: {
       inline: false,
     },
-  })
+  }
+  const result = await applyPostCss(css, cssUrl, postcssPlugins, postcssOptions)
   return result
 }
 

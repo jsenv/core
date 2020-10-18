@@ -4,6 +4,11 @@ https://github.com/postcss/postcss/blob/master/docs/writing-a-plugin.md
 https://github.com/postcss/postcss/blob/master/docs/guidelines/plugin.md
 https://github.com/postcss/postcss/blob/master/docs/guidelines/runner.md#31-dont-show-js-stack-for-csssyntaxerror
 
+In case css sourcemap contains no%20source
+This is because of https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/map-generator.js#L231
+and it indicates a node has been replaced without passing source
+hence sourcemap cannot point the original source location
+
 */
 
 import { fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
@@ -90,6 +95,7 @@ export const postCssUrlHashPlugin = () => {
               const newAtImportRule = new AtRule({
                 name: "import",
                 params: newParams,
+                source: atImportNode.source,
               })
               atImportNode.replaceWith(newAtImportRule)
             }

@@ -5,13 +5,19 @@ import { parseCssUrls } from "./parseCssUrls.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
 import { getTargetAsBase64Url } from "../getTargetAsBase64Url.js"
 
+/**
+
+TODO: handle potential sourcemapping comment already in the css file as for parseJsAsset
+
+*/
+
 export const parseCssAsset = async (
-  { url, content },
+  cssTarget,
   { notifyReferenceFound },
   { minify, minifyCssOptions },
 ) => {
-  const cssString = String(content.value)
-  const { atImports, urlDeclarations } = await parseCssUrls(cssString, url)
+  const cssString = String(cssTarget.content.value)
+  const { atImports, urlDeclarations } = await parseCssUrls(cssString, cssTarget.url)
 
   const urlNodeReferenceMapping = new Map()
   atImports.forEach((atImport) => {
@@ -36,7 +42,7 @@ export const parseCssAsset = async (
   }) => {
     const cssReplaceResult = await replaceCssUrls(
       cssString,
-      url,
+      cssTarget.url,
       ({ urlNode }) => {
         const urlNodeFound = Array.from(urlNodeReferenceMapping.keys()).find((urlNodeCandidate) =>
           isSameCssDocumentUrlNode(urlNodeCandidate, urlNode),
@@ -74,18 +80,25 @@ export const parseCssAsset = async (
     // to decide the filename for this css asset.
     const cssSourceAfterTransformation = setCssSourceMappingUrl(code, cssSourcemapFilename)
 
-    registerAssetEmitter(({ importerProjectUrl, importerBundleUrl }) => {
-      const mapBundleUrl = resolveUrl(cssSourcemapFilename, importerBundleUrl)
-      map.file = urlToFilename(importerBundleUrl)
-      map.sources = map.sources.map((source) => {
-        const sourceUrl = resolveUrl(source, importerProjectUrl)
-        const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBundleUrl)
-        return sourceUrlRelativeToSourceMap
-      })
+    registerAssetEmitter(({ bundleDirectoryUrl, emitAsset }) => {
+      const cssBundleUrl = resolveUrl(cssTarget.fileNameForRollup, bundleDirectoryUrl)
+      const mapBundleUrl = resolveUrl(cssSourcemapFilename, cssBundleUrl)
+      map.file = urlToFilename(cssBundleUrl)
+      if (map.sources) {
+        map.sources = map.sources.map((source) => {
+          const sourceUrl = resolveUrl(source, cssTarget.url)
+          const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBundleUrl)
+          return sourceUrlRelativeToSourceMap
+        })
+      }
 
-      const assetSource = JSON.stringify(map, null, "  ")
-      const assetUrl = mapBundleUrl
-      return { assetSource, assetUrl }
+      const mapSource = JSON.stringify(map, null, "  ")
+      const relativeUrl = urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl)
+      const fileNameForRollup = relativeUrl
+      emitAsset({
+        source: mapSource,
+        fileName: fileNameForRollup,
+      })
     })
 
     return {

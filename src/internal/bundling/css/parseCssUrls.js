@@ -1,26 +1,13 @@
-import { urlToFileSystemPath } from "@jsenv/util"
-import { require } from "@jsenv/core/src/internal/require.js"
+import { applyPostCss } from "./applyPostCss.js"
 import { postCssUrlHashPlugin } from "./postcss-urlhash-plugin.js"
 
-const postcss = require("postcss")
-
-export const parseCssUrls = async (css, cssFileUrl = "file:///file.css") => {
+export const parseCssUrls = async (css, cssUrl = "file:///file.css") => {
   const atImports = []
   const urlDeclarations = []
 
-  let result
-  try {
-    result = await postcss([postCssUrlHashPlugin]).process(css, {
-      collectUrls: true,
-      from: urlToFileSystemPath(cssFileUrl),
-    })
-  } catch (error) {
-    if (error.name === "CssSyntaxError") {
-      console.error(String(error))
-      throw error
-    }
-    throw error
-  }
+  const postCssPlugins = [postCssUrlHashPlugin]
+  const postCssOptions = { collectUrls: true }
+  const result = await applyPostCss(css, cssUrl, postCssPlugins, postCssOptions)
 
   result.messages.forEach(({ type, specifier, atImportNode, declarationNode, urlNode }) => {
     if (type === "import") {
