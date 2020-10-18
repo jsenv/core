@@ -229,11 +229,9 @@ export const createJsenvRollupPlugin = async ({
         },
         {
           projectDirectoryUrl: `${compileServerOrigin}`,
-          bundleDirectoryUrl: resolveUrl(
-            urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl),
-            compileServerOrigin,
-          ),
-          urlToOriginalProjectUrl: urlToOriginalServerUrl,
+          bundleDirectoryRelativeUrl: urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl),
+          urlToOriginalUrl: urlToOriginalServerUrl,
+          urlToFileUrl: urlToProjectUrl,
           loadUrl: (url) => urlResponseBodyMap[url],
           resolveTargetUrl: ({ specifier, isJsModule }, target) => {
             if (target.isEntry && !target.isJsModule && isJsModule) {

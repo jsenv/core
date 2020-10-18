@@ -48,16 +48,19 @@ export const createCompositeAssetHandler = (
   { fetch, parse },
   {
     logLevel,
-    projectDirectoryUrl = "file:///",
-    bundleDirectoryUrl = "file:///",
+    projectDirectoryUrl, // project url but it can be an http url
+    bundleDirectoryRelativeUrl,
+    urlToOriginalUrl, // get original url from eventually compiled url
+    urlToFileUrl, // get a file url from an eventual http url
     loadUrl = () => null,
-    urlToOriginalProjectUrl = (url) => url,
     emitAsset,
     connectTarget = () => {},
     resolveTargetUrl = ({ specifier }, target) => resolveUrl(specifier, target.url),
   },
 ) => {
   const logger = createLogger({ logLevel })
+
+  const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
 
   const prepareHtmlEntry = async (url, { fileNamePattern, source }) => {
     logger.debug(`prepare entry asset ${shortenUrl(url)}`)
@@ -256,7 +259,7 @@ export const createCompositeAssetHandler = (
           logger.debug(
             formatExternalReferenceLog(dependencyReference, {
               showReferenceSourceLocation,
-              projectDirectoryUrl,
+              projectDirectoryUrl: urlToFileUrl(projectDirectoryUrl),
             }),
           )
         } else {
@@ -449,9 +452,9 @@ export const createCompositeAssetHandler = (
       if (file.type === "asset") {
         const assetUrl = findAssetUrlByFileNameForRollup(file.fileName)
         if (assetUrl) {
-          const originalProjectUrl = urlToOriginalProjectUrl(assetUrl)
-          const projectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
-          assetMappings[projectRelativeUrl] = file.fileName
+          const originalUrl = urlToOriginalUrl(assetUrl)
+          const originalRelativeUrl = urlToRelativeUrl(originalUrl, projectDirectoryUrl)
+          assetMappings[originalRelativeUrl] = file.fileName
         } else {
           // the asset does not exists in the project it was generated during bundling
           // ici il est possible de trouver un asset ayant été redirigé ailleurs
@@ -510,7 +513,7 @@ export const createCompositeAssetHandler = (
       referenceUrl in targetMap ? targetMap[referenceUrl].content.value : loadUrl(referenceUrl),
     )
 
-    let message = `${urlToOriginalProjectUrl(referenceUrl)}`
+    let message = `${urlToFileUrl(referenceUrl)}`
     if (typeof reference.line === "number") {
       message += `:${reference.line}`
       if (typeof reference.column === "number") {
