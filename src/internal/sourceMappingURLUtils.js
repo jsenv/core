@@ -21,14 +21,17 @@ export const setJavaScriptSourceMappingUrl = (javaScriptSource, sourceMappingFil
     javascriptSourceMappingUrlCommentRegexp,
     () => {
       replaced = true
-      return writeJavaScriptSourceMappingURL(sourceMappingFileUrl)
+      return sourceMappingFileUrl ? writeJavaScriptSourceMappingURL(sourceMappingFileUrl) : ""
     },
   )
   if (replaced) {
     return sourceAfterReplace
   }
-  return `${javaScriptSource}
+
+  return sourceMappingFileUrl
+    ? `${javaScriptSource}
 ${writeJavaScriptSourceMappingURL(sourceMappingFileUrl)}`
+    : javaScriptSource
 }
 
 export const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {

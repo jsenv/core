@@ -141,7 +141,7 @@ const regularScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, 
     return null
   }
   const srcAttribute = getHtmlNodeAttributeByName(script, "src")
-  if (!srcAttribute) {
+  if (srcAttribute) {
     return null
   }
   const textNode = getHtmlNodeTextNode(script)

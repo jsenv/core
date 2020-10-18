@@ -34,7 +34,7 @@ const importmapScriptNode = getNodeByTagName(htmlString, "script")
 
 // ensure text content is correct
 {
-  const textNode = getHtmlNodeTextNode(importmapScriptNode, "src")
+  const textNode = getHtmlNodeTextNode(importmapScriptNode)
   const actual = textNode.value
   const expected = `{"imports":{"foo":"./bar.js"}}`
   assert({ actual, expected })

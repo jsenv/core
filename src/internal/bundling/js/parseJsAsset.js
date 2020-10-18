@@ -37,7 +37,10 @@ export const parseJsAsset = async (
     let jsSourceAfterTransformation = jsString
 
     if (minify) {
-      const result = await minifyJs(jsString, jsTarget.relativeUrl, {
+      const jsUrlRelativeToImporter = jsTarget.isInline
+        ? urlToRelativeUrl(jsTarget.url, jsTarget.importers[0].url)
+        : jsTarget.relativeUrl
+      const result = await minifyJs(jsString, jsUrlRelativeToImporter, {
         sourceMap: {
           ...(map ? { content: JSON.stringify(map) } : {}),
           asObject: true,
@@ -47,6 +50,9 @@ export const parseJsAsset = async (
       })
       jsSourceAfterTransformation = result.code
       map = result.map
+      if (!map.sourcesContent) {
+        map.sourcesContent = [jsString]
+      }
     }
 
     if (map) {
