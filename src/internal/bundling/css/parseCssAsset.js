@@ -1,9 +1,9 @@
 import { basename } from "path"
 import { urlToRelativeUrl, resolveUrl } from "@jsenv/util"
-import { setCssSourceMappingUrl } from "../../sourceMappingURLUtils.js"
-import { parseCssUrls } from "./css/parseCssUrls.js"
-import { replaceCssUrls } from "./css/replaceCssUrls.js"
-import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
+import { setCssSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { parseCssUrls } from "./parseCssUrls.js"
+import { replaceCssUrls } from "./replaceCssUrls.js"
+import { getTargetAsBase64Url } from "../getTargetAsBase64Url.js"
 
 export const parseCssAsset = async (
   { url, content },

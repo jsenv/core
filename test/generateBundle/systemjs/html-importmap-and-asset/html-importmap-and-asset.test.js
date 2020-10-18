@@ -1,8 +1,9 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
 import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { parseCssUrls } from "@jsenv/core/src/internal/bundling/css/parseCssUrls.js"
 import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
 import {
   GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
@@ -46,4 +47,8 @@ const expected = {
 }
 assert({ actual, expected })
 
+const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const cssBundleUrl = resolveUrl("style.css", bundleDirectoryUrl)
+const cssString = await readFile(cssBundleUrl)
+const cssUrls = await parseCssUrls(cssString)
 // TODO: also check css url are updated and not remapped

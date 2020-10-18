@@ -1,9 +1,9 @@
 import { createCancellationToken } from "@jsenv/cancellation"
 import { resolveUrl } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
-import { getJavaScriptSourceMappingUrl } from "../../sourceMappingURLUtils.js"
-import { fetchUrl } from "../../fetchUrl.js"
-import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
+import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
+import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
 
 export const fetchSourcemap = async (
   jsUrl,

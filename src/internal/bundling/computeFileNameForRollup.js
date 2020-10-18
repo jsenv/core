@@ -1,6 +1,6 @@
 import { createHash } from "crypto"
 import { urlToParentUrl, urlToBasename, urlToExtension } from "@jsenv/util"
-import { renderNamePattern } from "../../renderNamePattern.js"
+import { renderNamePattern } from "../renderNamePattern.js"
 
 export const computeFileNameForRollup = (
   fileUrl,

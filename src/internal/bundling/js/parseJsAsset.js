@@ -1,8 +1,8 @@
 import { basename } from "path"
 import { urlToBasename, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { setJavaScriptSourceMappingUrl } from "../../sourceMappingURLUtils.js"
+import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { fetchSourcemap } from "../fetchSourcemap.js"
 import { minifyJs } from "./minifyJs.js"
-import { fetchSourcemap } from "./fetchSourcemap.js"
 
 export const parseJsAsset = async (
   { content, url, relativeUrl },

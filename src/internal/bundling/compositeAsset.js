@@ -40,7 +40,7 @@ import {
   urlToParentUrl,
 } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
-import { parseDataUrl } from "../../parseDataUrl.js"
+import { parseDataUrl } from "../parseDataUrl.js"
 import { computeFileNameForRollup } from "./computeFileNameForRollup.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 

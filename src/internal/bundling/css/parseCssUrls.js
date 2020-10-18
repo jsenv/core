@@ -4,7 +4,7 @@ import { postCssUrlHashPlugin } from "./postcss-urlhash-plugin.js"
 
 const postcss = require("postcss")
 
-export const parseCssUrls = async (css, cssFileUrl) => {
+export const parseCssUrls = async (css, cssFileUrl = "file:///file.css") => {
   const atImports = []
   const urlDeclarations = []
 

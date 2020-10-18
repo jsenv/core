@@ -1,4 +1,4 @@
-import { require } from "../../require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 
 const { minify } = require("html-minifier")
 

@@ -12,11 +12,11 @@ import {
   urlToFileSystemPath,
 } from "@jsenv/util"
 
-import { setJavaScriptSourceMappingUrl } from "../../sourceMappingURLUtils.js"
-import { fetchUrl } from "../../fetchUrl.js"
-import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
-import { transformJs } from "../../compiling/js-compilation-service/transformJs.js"
-import { findAsyncPluginNameInBabelPluginMap } from "../../compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
+import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
+import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
+import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
+import { findAsyncPluginNameInBabelPluginMap } from "@jsenv/core/src/internal/compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 import {
   parseHtmlString,
   htmlAstContains,
@@ -26,20 +26,20 @@ import {
   getHtmlNodeLocation,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
-} from "../../compiling/compileHtml.js"
+} from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
-import { minifyJs } from "./minifyJs.js"
-
 import { createCompositeAssetHandler } from "./compositeAsset.js"
-import { parseSvgAsset } from "./parseSvgAsset.js"
-import { parseHtmlAsset } from "./parseHtmlAsset.js"
-import { parseCssAsset } from "./parseCssAsset.js"
-import { parseImportmapAsset } from "./parseImportmapAsset.js"
-import { parseJsAsset } from "./parseJsAsset.js"
 import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
+
+import { parseHtmlAsset } from "./html/parseHtmlAsset.js"
+import { parseImportmapAsset } from "./parseImportmapAsset.js"
+import { parseSvgAsset } from "./html/parseSvgAsset.js"
+import { parseCssAsset } from "./css/parseCssAsset.js"
+import { parseJsAsset } from "./js/parseJsAsset.js"
+import { minifyJs } from "./js/minifyJs.js"
 
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
