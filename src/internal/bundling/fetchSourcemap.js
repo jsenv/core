@@ -1,6 +1,7 @@
 import { createCancellationToken } from "@jsenv/cancellation"
 import { resolveUrl } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
+import { dataUrlToRawData, parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
@@ -10,21 +11,18 @@ export const fetchSourcemap = async (
   jsString,
   { cancellationToken = createCancellationToken(), logger = createLogger() } = {},
 ) => {
-  const sourcemapParsingResult = getJavaScriptSourceMappingUrl(jsString)
+  const jsSourcemapUrl = getJavaScriptSourceMappingUrl(jsString)
 
-  if (!sourcemapParsingResult) {
+  if (!jsSourcemapUrl) {
     return null
   }
 
-  if (sourcemapParsingResult.sourcemapString) {
-    return generateSourcemapFromString(sourcemapParsingResult.sourcemapString, {
-      sourcemapUrl: `${jsUrl}.map`,
-      jsUrl,
-      logger,
-    })
+  if (jsSourcemapUrl.startsWith("data:")) {
+    const jsSourcemapString = dataUrlToRawData(parseDataUrl(jsSourcemapUrl))
+    return parseSourcemapString(jsSourcemapString, jsSourcemapUrl, `inline comment in ${jsUrl}`)
   }
 
-  const sourcemapUrl = resolveUrl(sourcemapParsingResult.sourcemapURL, jsUrl)
+  const sourcemapUrl = resolveUrl(jsSourcemapUrl, jsUrl)
   const sourcemapResponse = await fetchUrl(sourcemapUrl, {
     cancellationToken,
     ignoreHttpsError: true,
@@ -40,46 +38,23 @@ ${okValidation.message}`)
   // in theory we should also check sourcemapResponse content-type is correctly set
   // but not really important.
   const sourcemapBodyAsText = await sourcemapResponse.text()
-  return generateSourcemapFromString(sourcemapBodyAsText, {
-    logger,
-    sourcemapUrl,
-    jsUrl,
-  })
+  return parseSourcemapString(sourcemapBodyAsText, sourcemapUrl, jsUrl)
 }
 
-const generateSourcemapFromString = async (sourcemapString, { logger, sourcemapUrl, jsUrl }) => {
-  const map = parseSourcemapString(sourcemapString, { logger, sourcemapUrl, jsUrl })
-
-  if (!map) {
-    return null
-  }
-
-  return map
-}
-
-const parseSourcemapString = (sourcemapString, { logger, sourcemapUrl, jsUrl }) => {
+const parseSourcemapString = (sourcemapString, sourcemapUrl, importer) => {
   try {
     return JSON.parse(sourcemapString)
   } catch (e) {
     if (e.name === "SyntaxError") {
-      if (sourcemapUrl === jsUrl) {
-        logger.error(`syntax error while parsing inlined sourcemap.
---- syntax error stack ---
-${e.stack}
---- js url ---
-${jsUrl}`)
-      } else {
-        logger.error(
-          `syntax error while parsing remote sourcemap.
+      console.error(
+        `syntax error while parsing sourcemap.
 --- syntax error stack ---
 ${e.stack}
 --- sourcemap url ---
 ${sourcemapUrl}
---- js url ---
-${jsUrl}`,
-        )
-      }
-
+--- imported by ---
+${importer}`,
+      )
       return null
     }
     throw e

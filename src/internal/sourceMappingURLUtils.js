@@ -3,7 +3,7 @@ export const getJavaScriptSourceMappingUrl = (javaScriptSource) => {
   replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, (value) => {
     sourceMappingUrl = value
   })
-  return parseSourceMappingUrl(sourceMappingUrl)
+  return sourceMappingUrl
 }
 
 export const getCssSourceMappingUrl = (cssSource) => {
@@ -11,7 +11,7 @@ export const getCssSourceMappingUrl = (cssSource) => {
   replaceSourceMappingUrl(cssSource, javascriptSourceMappingUrlCommentRegexp, (value) => {
     sourceMappingUrl = value
   })
-  return parseSourceMappingUrl(sourceMappingUrl)
+  return sourceMappingUrl
 }
 
 export const setJavaScriptSourceMappingUrl = (javaScriptSource, sourceMappingFileUrl) => {
@@ -53,31 +53,7 @@ export const sourcemapToBase64Url = (sourcemap) => {
   return `data:application/json;charset=utf-8;base64,${asBase64}`
 }
 
-const parseSourceMappingUrl = (sourceMappingUrl) => {
-  if (!sourceMappingUrl) {
-    return null
-  }
-
-  const base64Prefix = "data:application/json;charset=utf-8;base64,"
-  if (sourceMappingUrl.startsWith(base64Prefix)) {
-    const mapBase64Source = sourceMappingUrl.slice(base64Prefix.length)
-    const sourcemapString = base64ToString(mapBase64Source)
-    return {
-      sourcemapString,
-    }
-  }
-
-  return {
-    sourcemapURL: sourceMappingUrl,
-  }
-}
-
-const base64ToString =
-  typeof window === "object"
-    ? window.btoa
-    : (base64String) => Buffer.from(base64String, "base64").toString("utf8")
-
-const javascriptSourceMappingUrlCommentRegexp = /\/\/# ?sourceMappingURL=([^\s'"]+)/g
+const javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g
 const cssSourceMappingUrlCommentRegExp = /\/\*# ?sourceMappingURL=([^\s'"]+) \*\//g
 
 // ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
