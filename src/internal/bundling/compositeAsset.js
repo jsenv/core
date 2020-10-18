@@ -40,7 +40,7 @@ import {
   urlToParentUrl,
 } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
-import { parseDataUrl } from "../parseDataUrl.js"
+import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import { computeFileNameForRollup } from "./computeFileNameForRollup.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 
@@ -119,6 +119,7 @@ export const createCompositeAssetHandler = (
   }
 
   const assetTransformMap = {}
+  const fileNameToClean = []
   const createTarget = ({
     url,
     isEntry = false,
@@ -159,7 +160,7 @@ export const createCompositeAssetHandler = (
       const dependencies = []
 
       let previousJsDependency
-
+      let parsingDone = false
       const notifyDependencyFound = ({
         isJsModule = false,
         contentType,
@@ -169,6 +170,10 @@ export const createCompositeAssetHandler = (
         content,
         fileNamePattern,
       }) => {
+        if (parsingDone) {
+          throw new Error(`notifyDependencyFound cannot be called once ${url} parsing is done.`)
+        }
+
         let isInline = typeof content !== "undefined"
         const resolveTargetReturnValue = resolveTargetUrl(
           { specifier, contentType, isInline, isJsModule },
@@ -267,6 +272,7 @@ export const createCompositeAssetHandler = (
       const parseReturnValue = await parse(target, {
         notifyReferenceFound: notifyDependencyFound,
       })
+      parsingDone = true
 
       if (dependencies.length > 0 && typeof parseReturnValue !== "function") {
         throw new Error(
@@ -370,20 +376,10 @@ export const createCompositeAssetHandler = (
       target.fileNameForRollup = fileNameForRollup
 
       assetEmitters.forEach((callback) => {
-        const importerProjectUrl = target.url
-        const importerBundleUrl = resolveUrl(fileNameForRollup, bundleDirectoryUrl)
-        const { assetSource, assetUrl } = callback({
-          importerProjectUrl,
-          importerBundleUrl,
+        callback({
+          emitAsset,
+          bundleDirectoryUrl,
         })
-        const relativeUrl = urlToRelativeUrl(assetUrl, bundleDirectoryUrl)
-
-        emitAsset({
-          source: assetSource,
-          name: relativeUrl,
-          fileName: relativeUrl,
-        })
-        logger.debug(`emit ${fileNameForRollup} asset emitted by ${fileNameForRollup}`)
       })
     })
 
@@ -396,6 +392,13 @@ export const createCompositeAssetHandler = (
     // because connect is memoized and called immediatly after target is created
     const getRollupReferenceIdAvailablePromise = () => connect()
 
+    const updateFileNameForRollup = (value) => {
+      if (value !== target.fileNameForRollup) {
+        fileNameToClean.push(target.fileNameForRollup)
+        target.fileNameForRollup = value
+      }
+    }
+
     Object.assign(target, {
       connect,
       createReference,
@@ -404,6 +407,7 @@ export const createCompositeAssetHandler = (
       getDependenciesAvailablePromise,
       getReadyPromise,
       getRollupReferenceIdAvailablePromise,
+      updateFileNameForRollup,
     })
 
     return target
@@ -432,6 +436,31 @@ export const createCompositeAssetHandler = (
     await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdAvailablePromise()))
   }
 
+  const cleanupRollupBundle = (rollupBundle) => {
+    fileNameToClean.forEach((fileName) => {
+      delete rollupBundle[fileName]
+    })
+  }
+
+  const rollupBundleToAssetMappings = (rollupBundle) => {
+    const assetMappings = {}
+    Object.keys(rollupBundle).forEach((key) => {
+      const file = rollupBundle[key]
+      if (file.type === "asset") {
+        const assetUrl = findAssetUrlByFileNameForRollup(file.fileName)
+        if (assetUrl) {
+          const originalProjectUrl = urlToOriginalProjectUrl(assetUrl)
+          const projectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
+          assetMappings[projectRelativeUrl] = file.fileName
+        } else {
+          // the asset does not exists in the project it was generated during bundling
+          // ici il est possible de trouver un asset ayant été redirigé ailleurs
+        }
+      }
+    })
+    return assetMappings
+  }
+
   const findAssetUrlByFileNameForRollup = (fileNameForRollup) => {
     const assetUrl = Object.keys(targetMap).find(
       (url) => targetMap[url].fileNameForRollup === fileNameForRollup,
@@ -440,8 +469,9 @@ export const createCompositeAssetHandler = (
   }
 
   const createJsModuleImportReference = async (response, { importerUrl } = {}) => {
-    const targetUrl = response.url
     const contentType = response.headers["content-type"] || ""
+    // const targetUrl = resolveTargetUrl({ specifier: response.url, contentType })
+    const targetUrl = response.url
     const responseBodyAsBuffer = Buffer.from(await response.arrayBuffer())
     const reference = createReference(
       // the reference to this target comes from a static or dynamic import
@@ -504,7 +534,8 @@ ${showSourceLocation(referenceSource, {
   return {
     prepareHtmlEntry,
     resolveJsReferencesUsingRollupBundle,
-    findAssetUrlByFileNameForRollup,
+    cleanupRollupBundle,
+    rollupBundleToAssetMappings,
     createJsModuleImportReference,
     inspect: () => {
       return {

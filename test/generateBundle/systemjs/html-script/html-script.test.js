@@ -7,6 +7,7 @@ import {
   getNodeByTagName,
   getHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
+import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
 import {
   GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
@@ -51,13 +52,30 @@ const scriptNode = getNodeByTagName(htmlString, "script")
   assert({ actual, expected })
 }
 
-const { namespace } = await browserImportSystemJsBundle({
-  ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  codeToRunInBrowser: "window.whatever",
-  mainRelativeUrl: `./${scriptBundleUrl}`,
-  // debug: true,
-})
-const actual = namespace
-const expected = 42
-assert({ actual, expected })
+// sourcemap file is copied too
+{
+  const scriptString = await readFile(scriptBundleUrl)
+  const actual = getJavaScriptSourceMappingUrl(scriptString)
+  const expected = ""
+  assert({ actual, expected })
+}
+
+// souremap file content
+// {
+//   const sourcemapBundleRelativeUrl = getBundleRelativeUrl("index.js.map")
+//   const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, bundleDirectoryUrl)
+//   const sourcemapString = await readFile(sourcemapBundleUrl)
+// }
+
+// {
+//   const { namespace } = await browserImportSystemJsBundle({
+//     ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+//     testDirectoryRelativeUrl,
+//     codeToRunInBrowser: "window.whatever",
+//     mainRelativeUrl: `./${scriptBundleUrl}`,
+//     // debug: true,
+//   })
+//   const actual = namespace
+//   const expected = 42
+//   assert({ actual, expected })
+// }

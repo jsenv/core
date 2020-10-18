@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { urlToRelativeUrl, resolveUrl } from "@jsenv/util"
+import { urlToFilename, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
 import { setCssSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { parseCssUrls } from "./parseCssUrls.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
@@ -76,7 +76,7 @@ export const parseCssAsset = async (
 
     registerAssetEmitter(({ importerProjectUrl, importerBundleUrl }) => {
       const mapBundleUrl = resolveUrl(cssSourcemapFilename, importerBundleUrl)
-      map.file = basename(importerBundleUrl)
+      map.file = urlToFilename(importerBundleUrl)
       map.sources = map.sources.map((source) => {
         const sourceUrl = resolveUrl(source, importerProjectUrl)
         const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBundleUrl)

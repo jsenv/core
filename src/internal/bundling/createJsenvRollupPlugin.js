@@ -176,86 +176,48 @@ export const createJsenvRollupPlugin = async ({
       compositeAssetHandler = createCompositeAssetHandler(
         {
           parse: async (target, notifiers) => {
-            const { url, content } = target
-            const contentType = content.type
+            const contentType = target.content.type
             if (contentType === "text/html") {
-              return parseHtmlAsset(
-                {
-                  ...target,
-                  url: urlToOriginalProjectUrl(url),
-                },
-                notifiers,
-                {
-                  minify,
-                  minifyHtmlOptions,
-                  htmlStringToHtmlAst: (htmlString) => {
-                    const htmlAst = parseHtmlString(htmlString)
-                    if (format !== "systemjs") {
-                      return htmlAst
-                    }
-
-                    const htmlContainsModuleScript = htmlAstContains(
-                      htmlAst,
-                      htmlNodeIsScriptModule,
-                    )
-                    if (!htmlContainsModuleScript) {
-                      return htmlAst
-                    }
-
-                    manipulateHtmlAst(htmlAst, {
-                      scriptInjections: [
-                        {
-                          src: systemJsUrl,
-                        },
-                      ],
-                    })
+              return parseHtmlAsset(target, notifiers, {
+                minify,
+                minifyHtmlOptions,
+                htmlStringToHtmlAst: (htmlString) => {
+                  const htmlAst = parseHtmlString(htmlString)
+                  if (format !== "systemjs") {
                     return htmlAst
-                  },
+                  }
+
+                  const htmlContainsModuleScript = htmlAstContains(htmlAst, htmlNodeIsScriptModule)
+                  if (!htmlContainsModuleScript) {
+                    return htmlAst
+                  }
+
+                  manipulateHtmlAst(htmlAst, {
+                    scriptInjections: [
+                      {
+                        src: systemJsUrl,
+                      },
+                    ],
+                  })
+                  return htmlAst
                 },
-              )
+              })
             }
 
             if (contentType === "text/css") {
-              return parseCssAsset(
-                {
-                  ...target,
-                  url: urlToOriginalProjectUrl(url),
-                },
-                notifiers,
-                { minify, minifyCssOptions },
-              )
+              return parseCssAsset(target, notifiers, { minify, minifyCssOptions })
             }
 
             if (contentType === "application/importmap+json") {
-              return parseImportmapAsset(
-                {
-                  ...target,
-                  url: urlToOriginalProjectUrl(url),
-                },
-                notifiers,
-              )
+              return parseImportmapAsset(target, notifiers)
             }
 
             if (contentType === "text/javascript" || contentType === "application/javascript") {
-              return parseJsAsset(
-                {
-                  ...target,
-                  url: urlToOriginalProjectUrl(url),
-                },
-                notifiers,
-                { minify, minifyJsOptions },
-              )
+              return parseJsAsset(target, notifiers, { minify, minifyJsOptions })
             }
 
             if (contentType === "image/svg+xml") {
-              return parseSvgAsset(
-                {
-                  ...target,
-                  url: urlToOriginalProjectUrl(url),
-                },
-                notifiers,
-                { minify, minifyHtmlOptions },
-              )
+              return parseSvgAsset(target, notifiers, { minify, minifyHtmlOptions })
             }
 
             return null
@@ -271,7 +233,7 @@ export const createJsenvRollupPlugin = async ({
             urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl),
             compileServerOrigin,
           ),
-          urlToOriginalProjectUrl,
+          urlToOriginalProjectUrl: urlToOriginalServerUrl,
           loadUrl: (url) => urlResponseBodyMap[url],
           resolveTargetUrl: ({ specifier, isJsModule }, target) => {
             if (target.isEntry && !target.isJsModule && isJsModule) {
@@ -535,6 +497,7 @@ export const createJsenvRollupPlugin = async ({
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
       await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle)
+      compositeAssetHandler.cleanupRollupBundle(bundle)
 
       bundleManifest = rollupBundleToBundleManifest(bundle, {
         urlToOriginalProjectUrl,
@@ -594,17 +557,31 @@ export const createJsenvRollupPlugin = async ({
   }
 
   // take any url string and try to return the corresponding remote url (an url inside compileServerOrigin)
-  // const urlToServerUrl = (url) => {
-  //   if (url.startsWith(`${compileServerOrigin}/`)) {
-  //     return url
-  //   }
+  const urlToServerUrl = (url) => {
+    if (url.startsWith(`${compileServerOrigin}/`)) {
+      return url
+    }
 
-  //   if (url.startsWith(projectDirectoryUrl)) {
-  //     return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
-  //   }
+    if (url.startsWith(projectDirectoryUrl)) {
+      return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
+    }
 
-  //   return null
-  // }
+    return null
+  }
+
+  const urlToOriginalServerUrl = (url) => {
+    const serverUrl = urlToServerUrl(url)
+    if (!serverUrl) {
+      return null
+    }
+
+    if (!urlIsInsideOf(serverUrl, compileDirectoryRemoteUrl)) {
+      return serverUrl
+    }
+
+    const relativeUrl = urlToRelativeUrl(serverUrl, compileDirectoryRemoteUrl)
+    return resolveUrl(relativeUrl, compileServerOrigin)
+  }
 
   // take any url string and try to return a file url inside project directory url
   // prefer the source url if the url is inside compile directory
@@ -865,25 +842,21 @@ const rollupBundleToBundleManifest = (
   rollupBundle,
   { urlToOriginalProjectUrl, projectDirectoryUrl, compositeAssetHandler },
 ) => {
-  const mappings = {}
+  const chunkMappings = {}
   Object.keys(rollupBundle).forEach((key) => {
     const file = rollupBundle[key]
     if (file.type === "chunk") {
       const id = file.facadeModuleId
       const originalProjectUrl = urlToOriginalProjectUrl(id)
       const projectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
-      mappings[projectRelativeUrl] = file.fileName
-    } else {
-      const assetUrl = compositeAssetHandler.findAssetUrlByFileNameForRollup(file.fileName)
-      if (assetUrl) {
-        const originalProjectUrl = urlToOriginalProjectUrl(assetUrl)
-        const projectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
-        mappings[projectRelativeUrl] = file.fileName
-      } else {
-        // the asset does not exists in the project it was generated during bundling
-      }
+      chunkMappings[projectRelativeUrl] = file.fileName
     }
   })
+  const assetMappings = compositeAssetHandler.rollupBundleToAssetMappings(rollupBundle)
+  const mappings = {
+    ...chunkMappings,
+    ...assetMappings,
+  }
 
   const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
   const manifest = {}
