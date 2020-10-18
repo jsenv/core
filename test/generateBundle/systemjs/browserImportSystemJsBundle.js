@@ -12,6 +12,7 @@ export const browserImportSystemJsBundle = async ({
   htmlFileRelativeUrl = "./dist/systemjs/main.html",
   mainRelativeUrl,
   debug = false,
+  codeToRunInBrowser = undefined,
   headless = !debug,
   autoStop = !debug,
 }) => {
@@ -33,7 +34,12 @@ export const browserImportSystemJsBundle = async ({
   try {
     const namespace = await page.evaluate(
       /* istanbul ignore next */
-      ({ debug, specifier }) => {
+      ({ codeToRunInBrowser, debug, specifier }) => {
+        if (codeToRunInBrowser) {
+          // eslint-disable-next-line no-eval
+          return window.eval(codeToRunInBrowser)
+        }
+
         if (debug) {
           window.run = () => window.System.import(specifier)
           return specifier
@@ -41,6 +47,7 @@ export const browserImportSystemJsBundle = async ({
         return window.System.import(specifier)
       },
       {
+        codeToRunInBrowser,
         debug,
         specifier: mainRelativeUrl,
       },
