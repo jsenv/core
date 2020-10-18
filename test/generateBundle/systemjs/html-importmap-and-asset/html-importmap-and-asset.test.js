@@ -34,21 +34,32 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const mainRelativeUrl = getBundleRelativeUrl("file.js")
-const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
-const { namespace: actual, serverOrigin } = await browserImportSystemJsBundle({
-  ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  mainRelativeUrl: `./${mainRelativeUrl}`,
-  // debug: true,
-})
-const expected = {
-  default: resolveUrl(`dist/systemjs/${imgRemapRelativeUrl}`, serverOrigin),
+// assert asset url is correct for javascript (remapped + hashed)
+{
+  const mainRelativeUrl = getBundleRelativeUrl("file.js")
+  const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
+  const { namespace: actual, serverOrigin } = await browserImportSystemJsBundle({
+    ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+    testDirectoryRelativeUrl,
+    mainRelativeUrl: `./${mainRelativeUrl}`,
+    // debug: true,
+  })
+  const expected = {
+    default: resolveUrl(`dist/systemjs/${imgRemapRelativeUrl}`, serverOrigin),
+  }
+  assert({ actual, expected })
 }
-assert({ actual, expected })
 
-const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const cssBundleUrl = resolveUrl("style.css", bundleDirectoryUrl)
-const cssString = await readFile(cssBundleUrl)
-const cssUrls = await parseCssUrls(cssString)
-// TODO: also check css url are updated and not remapped
+// assert asset url is correct for css (hashed)
+{
+  const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+  const imgRelativeUrl = getBundleRelativeUrl("img.png")
+  const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")
+  const cssBundleUrl = resolveUrl(cssBundleRelativeUrl, bundleDirectoryUrl)
+  const imgBundleUrl = resolveUrl(imgRelativeUrl, bundleDirectoryUrl)
+  const cssString = await readFile(cssBundleUrl)
+  const cssUrls = await parseCssUrls(cssString, cssBundleUrl)
+  const actual = cssUrls.urlDeclarations[0].specifier
+  const expected = urlToRelativeUrl(imgBundleUrl, cssBundleUrl)
+  assert({ actual, expected })
+}
