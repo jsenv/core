@@ -1,13 +1,12 @@
-/**
-
-Let's ensure how importmap ends up in dist
-
-*/
-
 import { basename } from "path"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { assert } from "@jsenv/assert"
+import { resolveDirectoryUrl, urlToRelativeUrl, readFile, resolveUrl } from "@jsenv/util"
 import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import {
+  getNodeByTagName,
+  getHtmlNodeAttributeByName,
+} from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -20,7 +19,7 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
 
-await generateBundle({
+const { bundleManifest } = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -28,12 +27,35 @@ await generateBundle({
   entryPointMap,
 })
 
-// const { namespace: actual } = await browserImportSystemJsBundle({
-//   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
-//   testDirectoryRelativeUrl,
-// })
-// const expected = {
-//   htmlText: `<button>Hello world</button>`,
-//   innerText: "Hello world",
-// }
-// assert({ actual, expected })
+const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
+  const bundleRelativeUrl = bundleManifest[relativeUrl]
+  return bundleRelativeUrl
+}
+
+const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
+const htmlString = await readFile(htmlBundleUrl)
+const importmapScriptNode = getNodeByTagName(htmlString, "script")
+const importmapBundleRelativeUrl = getBundleRelativeUrl("import-map.importmap")
+const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, bundleDirectoryUrl)
+
+// ensure src is properly updated
+{
+  const srcAttribute = getHtmlNodeAttributeByName(importmapScriptNode, "src")
+  const actual = srcAttribute.value
+  const expected = importmapBundleRelativeUrl
+  assert({ actual, expected })
+}
+
+// ensure importmap file content
+{
+  const importmapString = await readFile(importmapBundleUrl)
+  const actual = JSON.parse(importmapString)
+  const expected = {
+    imports: {
+      foo: "./bar.js",
+    },
+  }
+  assert({ actual, expected })
+}

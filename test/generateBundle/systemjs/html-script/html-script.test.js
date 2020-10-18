@@ -74,7 +74,7 @@ const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, bundleDirector
   const actual = JSON.parse(sourcemapString)
   const expected = {
     file: urlToFilename(scriptBundleUrl),
-    sources: ["../../../whatever.js"],
+    sources: ["../../../../../../whatever.js"],
   }
   assert({ actual, expected })
 }
