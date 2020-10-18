@@ -1,6 +1,12 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
+import {
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  resolveUrl,
+  readFile,
+  urlToFilename,
+} from "@jsenv/util"
 import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
@@ -44,6 +50,8 @@ const scriptBundleUrl = resolveUrl(scriptBundleRelativeUrl, bundleDirectoryUrl)
 const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
 const scriptNode = getNodeByTagName(htmlString, "script")
+const sourcemapBundleRelativeUrl = getBundleRelativeUrl("index.js.map")
+const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, bundleDirectoryUrl)
 
 {
   const srcAttribute = getHtmlNodeAttributeByName(scriptNode, "src")
@@ -56,26 +64,30 @@ const scriptNode = getNodeByTagName(htmlString, "script")
 {
   const scriptString = await readFile(scriptBundleUrl)
   const actual = getJavaScriptSourceMappingUrl(scriptString)
-  const expected = ""
+  const expected = urlToRelativeUrl(sourcemapBundleUrl, scriptBundleUrl)
   assert({ actual, expected })
 }
 
 // souremap file content
-// {
-//   const sourcemapBundleRelativeUrl = getBundleRelativeUrl("index.js.map")
-//   const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, bundleDirectoryUrl)
-//   const sourcemapString = await readFile(sourcemapBundleUrl)
-// }
+{
+  const sourcemapString = await readFile(sourcemapBundleUrl)
+  const actual = JSON.parse(sourcemapString)
+  const expected = {
+    file: urlToFilename(scriptBundleUrl),
+    sources: ["../../../whatever.js"],
+  }
+  assert({ actual, expected })
+}
 
-// {
-//   const { namespace } = await browserImportSystemJsBundle({
-//     ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
-//     testDirectoryRelativeUrl,
-//     codeToRunInBrowser: "window.whatever",
-//     mainRelativeUrl: `./${scriptBundleUrl}`,
-//     // debug: true,
-//   })
-//   const actual = namespace
-//   const expected = 42
-//   assert({ actual, expected })
-// }
+{
+  const { namespace } = await browserImportSystemJsBundle({
+    ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+    testDirectoryRelativeUrl,
+    codeToRunInBrowser: "window.whatever",
+    mainRelativeUrl: `./${scriptBundleUrl}`,
+    // debug: true,
+  })
+  const actual = namespace
+  const expected = 42
+  assert({ actual, expected })
+}

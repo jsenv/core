@@ -23,7 +23,7 @@ export const parseJsAsset = async (
       contentType: "application/json",
       // we don't really know the line or column
       // but let's asusme it the last line and first column
-      line: jsString.split(/\r?\n/).length,
+      line: jsString.split(/\r?\n/).length - 1,
       column: 0,
     })
   }
