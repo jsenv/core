@@ -10,7 +10,7 @@ import {
 import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  getNodeByTagName,
+  findNodeByTagName,
   getHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { parseCssUrls } from "@jsenv/core/src/internal/bundling/css/parseCssUrls.js"
@@ -43,7 +43,7 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
 const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
-const link = getNodeByTagName(htmlString, "link")
+const link = findNodeByTagName(htmlString, "link")
 const mainCssBundleRelativeUrl = getBundleRelativeUrl("style.css")
 const depCssBundleRelativeUrl = getBundleRelativeUrl("dir/dep.css")
 const mainCssBundleUrl = resolveUrl(mainCssBundleRelativeUrl, bundleDirectoryUrl)

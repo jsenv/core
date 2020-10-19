@@ -8,7 +8,7 @@ import {
   setJavaScriptSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import {
-  getNodeByTagName,
+  findNodeByTagName,
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
@@ -35,7 +35,7 @@ await generateBundle({
 const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
-const scriptNode = getNodeByTagName(htmlString, "script")
+const scriptNode = findNodeByTagName(htmlString, "script")
 
 const textNode = getHtmlNodeTextNode(scriptNode)
 const text = textNode.value
@@ -56,7 +56,7 @@ const text = textNode.value
   const sourcemap = JSON.parse(sourcemapString)
   const htmlUrl = resolveUrl(mainFilename, testDirectoryUrl)
   const htmlString = await readFile(htmlUrl)
-  const scriptNode = getNodeByTagName(htmlString, "script")
+  const scriptNode = findNodeByTagName(htmlString, "script")
   const textNode = getHtmlNodeTextNode(scriptNode)
   const sourceContent = textNode.value
   const actual = sourcemap

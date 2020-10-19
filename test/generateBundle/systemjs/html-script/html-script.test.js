@@ -10,7 +10,7 @@ import {
 import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  getNodeByTagName,
+  findNodeByTagName,
   getHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
@@ -49,7 +49,7 @@ const scriptBundleRelativeUrl = getBundleRelativeUrl("index.js")
 const scriptBundleUrl = resolveUrl(scriptBundleRelativeUrl, bundleDirectoryUrl)
 const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
-const scriptNode = getNodeByTagName(htmlString, "script")
+const scriptNode = findNodeByTagName(htmlString, "script")
 const sourcemapBundleRelativeUrl = getBundleRelativeUrl("index.js.map")
 const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, bundleDirectoryUrl)
 

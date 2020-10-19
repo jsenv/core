@@ -45,8 +45,23 @@ export const findNode = (htmlString, predicate) => {
   return nodeMatching
 }
 
-export const getNodeByTagName = (htmlString, tagName) =>
+export const findNodes = (htmlString, predicate) => {
+  const htmlAst = parseHtmlString(htmlString)
+  const nodes = []
+  visitHtmlAst(htmlAst, (node) => {
+    if (predicate(node)) {
+      nodes.push(node)
+    }
+    return null
+  })
+  return nodes
+}
+
+export const findNodeByTagName = (htmlString, tagName) =>
   findNode(htmlString, (node) => node.nodeName === tagName)
+
+export const findAllNodeByTagName = (htmlString, tagName) =>
+  findNodes(htmlString, (node) => node.nodeName === tagName)
 
 export const findFirstImportmapNode = (htmlString) =>
   findNode(htmlString, htmlNodeIsScriptImportmap)

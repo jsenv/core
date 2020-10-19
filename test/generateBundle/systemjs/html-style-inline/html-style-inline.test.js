@@ -9,7 +9,7 @@ import {
 import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  getNodeByTagName,
+  findNodeByTagName,
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import {
@@ -46,7 +46,7 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
 const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
-const styleNode = getNodeByTagName(htmlString, "style")
+const styleNode = findNodeByTagName(htmlString, "style")
 const depBundleRelativeUrl = getBundleRelativeUrl("dep.css")
 const depBundleUrl = resolveUrl(depBundleRelativeUrl, bundleDirectoryUrl)
 const textNode = getHtmlNodeTextNode(styleNode)
@@ -68,7 +68,7 @@ const text = textNode.value
   const sourcemap = JSON.parse(sourcemapString)
   const htmlUrl = resolveUrl(mainFilename, testDirectoryUrl)
   const htmlString = await readFile(htmlUrl)
-  const styleNode = getNodeByTagName(htmlString, "style")
+  const styleNode = findNodeByTagName(htmlString, "style")
   const textNode = getHtmlNodeTextNode(styleNode)
   const sourceContent = textNode.value
   const actual = sourcemap

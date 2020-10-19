@@ -10,7 +10,7 @@ import {
 import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  getNodeByTagName,
+  findNodeByTagName,
   getHtmlNodeAttributeByName,
   parseSrcset,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
@@ -43,7 +43,7 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
 const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
-const img = getNodeByTagName(htmlString, "img")
+const img = findNodeByTagName(htmlString, "img")
 
 // ensure src is properly updated
 {

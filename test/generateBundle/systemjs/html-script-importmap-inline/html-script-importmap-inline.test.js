@@ -4,7 +4,7 @@ import { resolveDirectoryUrl, urlToRelativeUrl, readFile, resolveUrl } from "@js
 import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  getNodeByTagName,
+  findNodeByTagName,
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
@@ -30,7 +30,7 @@ await generateBundle({
 const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
-const importmapScriptNode = getNodeByTagName(htmlString, "script")
+const importmapScriptNode = findNodeByTagName(htmlString, "script")
 
 // ensure text content is correct
 {
