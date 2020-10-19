@@ -511,6 +511,7 @@ export const createJsenvRollupPlugin = async ({
       bundleManifest = rollupBundleToBundleManifest(bundle, {
         urlToOriginalProjectUrl,
         projectDirectoryUrl,
+        bundleDirectoryUrl,
         compositeAssetHandler,
       })
       if (manifestFile) {
@@ -552,7 +553,7 @@ export const createJsenvRollupPlugin = async ({
 
     const serverUrl = urlToServerUrl(url)
     if (serverUrl) {
-      return `${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`
+      return `${projectDirectoryUrl}${serverUrl.slice(`${compileServerOrigin}/`.length)}`
     }
 
     return null
@@ -870,16 +871,24 @@ const formatBundleGeneratedLog = (bundle) => {
 
 const rollupBundleToBundleManifest = (
   rollupBundle,
-  { urlToOriginalProjectUrl, projectDirectoryUrl, compositeAssetHandler },
+  { urlToOriginalProjectUrl, projectDirectoryUrl, bundleDirectoryUrl, compositeAssetHandler },
 ) => {
   const chunkMappings = {}
   Object.keys(rollupBundle).forEach((key) => {
     const file = rollupBundle[key]
     if (file.type === "chunk") {
       const id = file.facadeModuleId
-      const originalProjectUrl = urlToOriginalProjectUrl(id)
-      const projectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
-      chunkMappings[projectRelativeUrl] = file.fileName
+      if (id) {
+        const originalProjectUrl = urlToOriginalProjectUrl(id)
+        const projectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
+        chunkMappings[projectRelativeUrl] = file.fileName
+      } else {
+        const sourcePath = file.map.sources[0]
+        const fileBundleUrl = resolveUrl(file.fileName, bundleDirectoryUrl)
+        const originalProjectUrl = resolveUrl(sourcePath, fileBundleUrl)
+        const projectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
+        chunkMappings[projectRelativeUrl] = file.fileName
+      }
     }
   })
   const assetMappings = compositeAssetHandler.rollupBundleToAssetMappings(rollupBundle)

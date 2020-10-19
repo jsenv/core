@@ -31,9 +31,11 @@ await generateBundle({
   const manifestFileContent = await readFile(manifestFileUrl)
   const actual = JSON.parse(manifestFileContent)
   const expected = {
-    "a.js": "a.cjs",
-    "b.js": "b.cjs",
-    "used-by-both.js": actual["used-by-both.js"],
+    [`${testDirectoryRelativeUrl}a.js`]: "a.cjs",
+    [`${testDirectoryRelativeUrl}b.js`]: "b.cjs",
+    [`${testDirectoryRelativeUrl}used-by-both.js`]: actual[
+      `${testDirectoryRelativeUrl}used-by-both.js`
+    ],
   }
   assert({ actual, expected })
 }
