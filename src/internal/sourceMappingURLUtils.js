@@ -6,14 +6,6 @@ export const getJavaScriptSourceMappingUrl = (javaScriptSource) => {
   return sourceMappingUrl
 }
 
-export const getCssSourceMappingUrl = (cssSource) => {
-  let sourceMappingUrl
-  replaceSourceMappingUrl(cssSource, javascriptSourceMappingUrlCommentRegexp, (value) => {
-    sourceMappingUrl = value
-  })
-  return sourceMappingUrl
-}
-
 export const setJavaScriptSourceMappingUrl = (javaScriptSource, sourceMappingFileUrl) => {
   let replaced
   const sourceAfterReplace = replaceSourceMappingUrl(
@@ -34,6 +26,14 @@ ${writeJavaScriptSourceMappingURL(sourceMappingFileUrl)}`
     : javaScriptSource
 }
 
+export const getCssSourceMappingUrl = (cssSource) => {
+  let sourceMappingUrl
+  replaceSourceMappingUrl(cssSource, cssSourceMappingUrlCommentRegExp, (value) => {
+    sourceMappingUrl = value
+  })
+  return sourceMappingUrl
+}
+
 export const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
   let replaced
   const sourceAfterReplace = replaceSourceMappingUrl(
@@ -41,19 +41,16 @@ export const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
     cssSourceMappingUrlCommentRegExp,
     () => {
       replaced = true
-      return writeCssSourceMappingUrl(sourceMappingFileUrl)
+      return sourceMappingFileUrl ? writeCssSourceMappingUrl(sourceMappingFileUrl) : ""
     },
   )
   if (replaced) {
     return sourceAfterReplace
   }
-  return `${cssSource}
+  return sourceMappingFileUrl
+    ? `${cssSource}
 ${writeCssSourceMappingUrl(sourceMappingFileUrl)}`
-}
-
-export const sourcemapToBase64Url = (sourcemap) => {
-  const asBase64 = Buffer.from(JSON.stringify(sourcemap)).toString("base64")
-  return `data:application/json;charset=utf-8;base64,${asBase64}`
+    : cssSource
 }
 
 const javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g
@@ -62,6 +59,11 @@ const cssSourceMappingUrlCommentRegExp = /\/\*# ?sourceMappingURL=([^\s'"]+) \*\
 // ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
 const writeJavaScriptSourceMappingURL = (value) => `${"//#"} sourceMappingURL=${value}`
 const writeCssSourceMappingUrl = (value) => `/*# sourceMappingURL=${value} */`
+
+export const sourcemapToBase64Url = (sourcemap) => {
+  const asBase64 = Buffer.from(JSON.stringify(sourcemap)).toString("base64")
+  return `data:application/json;charset=utf-8;base64,${asBase64}`
+}
 
 const replaceSourceMappingUrl = (source, regexp, callback) => {
   let lastSourceMappingUrl
