@@ -5839,7 +5839,7 @@ options = {}) => {
 };
 
 const urlToFileUrl = url => {
-  if (url.startsWith("file:///")) {
+  if (url.startsWith("file://")) {
     return url;
   }
 
@@ -6434,7 +6434,15 @@ const createJsenvRollupPlugin = async ({
   const fetchImportmapFromParameter = async () => {
     const importmapProjectUrl = util.resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
     const importMapFileCompiledUrl = util.resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl);
-    const importMap = await fetchAndNormalizeImportmap(importMapFileCompiledUrl);
+    const importMap = await fetchAndNormalizeImportmap(importMapFileCompiledUrl, {
+      allow404: true
+    });
+
+    if (importMap === null) {
+      logger$1.warn(`WARNING: no importmap found following importMapRelativeUrl at ${importmapProjectUrl}`);
+      return {};
+    }
+
     logger$1.debug(`use importmap found following importMapRelativeUrl at ${importmapProjectUrl}`);
     return importMap;
   };
@@ -6475,6 +6483,10 @@ const createJsenvRollupPlugin = async ({
               if (srcAttribute) {
                 logger$1.info(formatUseImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource));
                 const importmapUrl = util.resolveUrl(srcAttribute.value, htmlCompiledUrl);
+
+                if (!util.urlIsInsideOf(importmapUrl, compileDirectoryRemoteUrl)) {
+                  logger$1.warn(formatImportmapOutsideCompileDirectory(importmapHtmlNode, htmlProjectUrl, htmlSource, compileDirectoryUrl));
+                }
 
                 fetchImportmap = () => fetchAndNormalizeImportmap(importmapUrl);
               } else {
@@ -7154,36 +7166,48 @@ ${util.urlToFileSystemPath(url)}
 ${importer}`;
 };
 
-const formatIgnoreImportMap = (importmapHtmlNode, htmlUrl, htmlSource) => {
+const showImportmapSourceLocation = (importmapHtmlNode, htmlUrl, htmlSource) => {
   const {
     line,
     column
   } = getHtmlNodeLocation(importmapHtmlNode);
-  return `ignore importmap found in html file.
-${htmlUrl}:${line}:${column}
+  return `${htmlUrl}:${line}:${column}
 
 ${showSourceLocation(htmlSource, {
     line,
     column
-  })}`;
+  })}
+`;
+};
+
+const formatIgnoreImportMap = (importmapHtmlNode, htmlUrl, htmlSource) => {
+  return `ignore importmap found in html file.
+${showImportmapSourceLocation(importmapHtmlNode, htmlUrl, htmlSource)}`;
 };
 
 const formatUseImportMap = (importmapHtmlNode, htmlUrl, htmlSource) => {
-  const {
-    line,
-    column
-  } = getHtmlNodeLocation(importmapHtmlNode);
   return `use importmap found in html file.
-${htmlUrl}:${line}:${column}
-
-${showSourceLocation(htmlSource, {
-    line,
-    column
-  })}`;
+${showImportmapSourceLocation(importmapHtmlNode, htmlUrl, htmlSource)}`;
 };
 
-const fetchAndNormalizeImportmap = async importmapUrl => {
+const formatImportmapOutsideCompileDirectory = (importmapHtmlNode, htmlUrl, htmlSource, compileDirectoryUrl) => {
+  return `WARNING: found importmap outside compile directory.
+Remapped import will not be compiled.
+You should make importmap source relative.
+${showImportmapSourceLocation(importmapHtmlNode, htmlUrl, htmlSource)}
+--- compile directory url ---
+${compileDirectoryUrl}`;
+};
+
+const fetchAndNormalizeImportmap = async (importmapUrl, {
+  allow404 = false
+} = {}) => {
   const importmapResponse = await fetchUrl(importmapUrl);
+
+  if (allow404 && importmapResponse.status === 404) {
+    return null;
+  }
+
   const importmap = await importmapResponse.json();
   const importmapNormalized = importMap.normalizeImportMap(importmap, importmapUrl);
   return importmapNormalized;
@@ -7260,7 +7284,7 @@ const rollupBundleToBundleManifest = (rollupBundle, {
         const projectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl);
         chunkMappings[projectRelativeUrl] = file.fileName;
       } else {
-        const sourcePath = file.map.sources[0];
+        const sourcePath = file.map.sources[file.map.sources.length - 1];
         const fileBundleUrl = util.resolveUrl(file.fileName, bundleDirectoryUrl);
         const originalProjectUrl = util.resolveUrl(sourcePath, fileBundleUrl);
         const projectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl);

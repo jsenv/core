@@ -126,14 +126,19 @@ ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelative
   }
 
   if (contentType) {
-    console.warn(`Module content-type is unusual.
---- content-type ---
-${contentType}
---- allowed content-type ---
-application/javascript
-application/json
-text/*
-${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
+    // for now content type different of javascript are not unusual anymore
+    // ideally we would not use static import to tell rollup we have a dependency to an url
+    // insetad we would write something that would be compatible with web strandard such as
+    // new URL('./whatever', import.meta.url)
+    // or import.meta.resolve('./whatever')
+    //     console.warn(`Module content-type is unusual.
+    // --- content-type ---
+    // ${contentType}
+    // --- allowed content-type ---
+    // application/javascript
+    // application/json
+    // text/*
+    // ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
   } else {
     console.warn(`Module content-type is missing.
 --- allowed content-type ---
