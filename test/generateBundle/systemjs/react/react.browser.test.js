@@ -16,7 +16,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.html`
 
-const { bundleManifest } = await generateBundle({
+const { bundleMappings } = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   // compileServerLogLevel: "debug",
   // logLevel: "debug",
@@ -34,7 +34,7 @@ const { bundleManifest } = await generateBundle({
       }),
   },
 })
-const mainRelativeUrl = `./${bundleManifest[`${testDirectoryRelativeUrl}react.js`]}`
+const mainRelativeUrl = `./${bundleMappings[`${testDirectoryRelativeUrl}react.js`]}`
 const { namespace: actual } = await browserImportSystemJsBundle({
   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
   testDirectoryRelativeUrl,

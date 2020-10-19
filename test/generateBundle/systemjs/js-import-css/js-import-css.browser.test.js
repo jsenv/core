@@ -19,7 +19,7 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
 }
 
-const { bundleManifest } = await generateBundle({
+const { bundleMappings } = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
@@ -29,7 +29,7 @@ const { bundleManifest } = await generateBundle({
 
 const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = bundleManifest[relativeUrl]
+  const bundleRelativeUrl = bundleMappings[relativeUrl]
   return bundleRelativeUrl
 }
 const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")

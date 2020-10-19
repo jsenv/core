@@ -4,6 +4,7 @@ import { loggerToLogLevel } from "@jsenv/logger"
 import {
   isFileSystemPath,
   fileSystemPathToUrl,
+  urlToFilename,
   resolveUrl,
   urlToRelativeUrl,
   resolveDirectoryUrl,
@@ -79,6 +80,9 @@ export const createJsenvRollupPlugin = async ({
   const urlResponseBodyMap = {}
   const virtualModules = {}
   const urlRedirectionMap = {}
+  // map project relative urls to bundle file relative urls
+  let bundleMappings = {}
+  // map bundle relative urls to relative url without hashes
   let bundleManifest = {}
   let rollupBundle
 
@@ -107,7 +111,9 @@ export const createJsenvRollupPlugin = async ({
     const importMapFileCompiledUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
     const importMap = await fetchAndNormalizeImportmap(importMapFileCompiledUrl, { allow404: true })
     if (importMap === null) {
-      logger.warn(`WARNING: no importmap found following importMapRelativeUrl at ${importmapProjectUrl}`)
+      logger.warn(
+        `WARNING: no importmap found following importMapRelativeUrl at ${importmapProjectUrl}`,
+      )
       return {}
     }
     logger.debug(`use importmap found following importMapRelativeUrl at ${importmapProjectUrl}`)
@@ -330,8 +336,8 @@ export const createJsenvRollupPlugin = async ({
                 const rollupReferenceId = emitFile({
                   type: "asset",
                   source: sourceAfterTransformation,
+                  name: urlToFilename(target.url),
                   fileName: fileNameForRollup,
-                  // name,
                 })
                 logger.debug(`${shortenUrl(target.url)} ready -> ${fileNameForRollup}`)
                 return { rollupReferenceId }
@@ -356,7 +362,7 @@ export const createJsenvRollupPlugin = async ({
             emitFile({
               type: "chunk",
               id: relativeUrl,
-              // name: chunkName,
+              name: chunkName,
               // don't hash js entry points
               fileName: chunkName,
             })
@@ -522,12 +528,14 @@ export const createJsenvRollupPlugin = async ({
       await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle, urlToServerUrl)
       compositeAssetHandler.cleanupRollupBundle(bundle)
 
-      bundleManifest = rollupBundleToBundleManifest(bundle, {
+      const result = rollupBundleToManifestAndMappings(bundle, {
         urlToOriginalProjectUrl,
         projectDirectoryUrl,
         bundleDirectoryUrl,
         compositeAssetHandler,
       })
+      bundleMappings = result.bundleMappings
+      bundleManifest = result.bundleManifest
       if (manifestFile) {
         const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
         await writeFile(manifestFileUrl, JSON.stringify(bundleManifest, null, "  "))
@@ -759,6 +767,7 @@ export const createJsenvRollupPlugin = async ({
       return {
         rollupBundle,
         urlResponseBodyMap,
+        bundleMappings,
         bundleManifest,
       }
     },
@@ -900,10 +909,12 @@ const formatBundleGeneratedLog = (bundle) => {
   })
 }
 
-const rollupBundleToBundleManifest = (
+const rollupBundleToManifestAndMappings = (
   rollupBundle,
   { urlToOriginalProjectUrl, projectDirectoryUrl, bundleDirectoryUrl, compositeAssetHandler },
 ) => {
+  const chunkManifest = {}
+  const assetManifest = {}
   const chunkMappings = {}
   Object.keys(rollupBundle).forEach((key) => {
     const file = rollupBundle[key]
@@ -920,20 +931,43 @@ const rollupBundleToBundleManifest = (
         const projectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
         chunkMappings[projectRelativeUrl] = file.fileName
       }
+      chunkManifest[rollupFileNameWithoutHash(file.fileName)] = file.fileName
+    } else {
+      assetManifest[rollupFileNameWithoutHash(file.fileName)] = file.fileName
     }
   })
+
   const assetMappings = compositeAssetHandler.rollupBundleToAssetMappings(rollupBundle)
   const mappings = {
     ...chunkMappings,
     ...assetMappings,
   }
 
-  const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
-  const manifest = {}
-  mappingKeysSorted.forEach((key) => {
-    manifest[key] = mappings[key]
+  const manifest = {
+    ...chunkManifest,
+    ...assetManifest,
+  }
+  const manifestKeysSorted = Object.keys(manifest).sort(comparePathnames)
+  const bundleManifest = {}
+  manifestKeysSorted.forEach((key) => {
+    bundleManifest[key] = manifest[key]
   })
-  return manifest
+
+  const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
+  const bundleMappings = {}
+  mappingKeysSorted.forEach((key) => {
+    bundleMappings[key] = mappings[key]
+  })
+  return {
+    bundleMappings,
+    bundleManifest,
+  }
+}
+
+const rollupFileNameWithoutHash = (fileName) => {
+  return fileName.replace(/-[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
+    return afterHash
+  })
 }
 
 const createDetailedMessage = (message, details = {}) => {

@@ -19,7 +19,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
-const { bundleManifest } = await generateBundle({
+const { bundleMappings } = await generateBundle({
   ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
@@ -28,7 +28,7 @@ const { bundleManifest } = await generateBundle({
   },
 })
 
-const iconBundleRelativeUrl = bundleManifest[`${testDirectoryRelativeUrl}icon.svg`]
+const iconBundleRelativeUrl = bundleMappings[`${testDirectoryRelativeUrl}icon.svg`]
 const iconBundleUrl = resolveUrl(`./dist/esmodule/${iconBundleRelativeUrl}`, import.meta.url)
 
 await assertFilePresence(iconBundleUrl)
