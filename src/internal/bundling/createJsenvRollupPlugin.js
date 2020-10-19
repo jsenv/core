@@ -505,7 +505,7 @@ export const createJsenvRollupPlugin = async ({
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
-      await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle)
+      await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle, urlToServerUrl)
       compositeAssetHandler.cleanupRollupBundle(bundle)
 
       bundleManifest = rollupBundleToBundleManifest(bundle, {

@@ -431,11 +431,13 @@ export const createCompositeAssetHandler = (
     rollupChunkReadyCallbackMap[url] = callback
   }
 
-  const resolveJsReferencesUsingRollupBundle = async (rollupBundle) => {
+  const resolveJsReferencesUsingRollupBundle = async (rollupBundle, urlToServerUrl) => {
     Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
-      const chunkName = Object.keys(rollupBundle).find(
-        (bundleKey) => rollupBundle[bundleKey].facadeModuleId === key,
-      )
+      const chunkName = Object.keys(rollupBundle).find((bundleKey) => {
+        const rollupFile = rollupBundle[bundleKey]
+        const { facadeModuleId } = rollupFile
+        return facadeModuleId && urlToServerUrl(facadeModuleId) === key
+      })
       const chunk = rollupBundle[chunkName]
       logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
       rollupChunkReadyCallbackMap[key]({
