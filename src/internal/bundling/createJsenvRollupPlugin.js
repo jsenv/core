@@ -105,7 +105,11 @@ export const createJsenvRollupPlugin = async ({
   const fetchImportmapFromParameter = async () => {
     const importmapProjectUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
     const importMapFileCompiledUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
-    const importMap = await fetchAndNormalizeImportmap(importMapFileCompiledUrl)
+    const importMap = await fetchAndNormalizeImportmap(importMapFileCompiledUrl, { allow404: true })
+    if (importMap === null) {
+      logger.warn(`WARNING: no importmap found following importMapRelativeUrl at ${importmapProjectUrl}`)
+      return {}
+    }
     logger.debug(`use importmap found following importMapRelativeUrl at ${importmapProjectUrl}`)
     return importMap
   }
@@ -825,8 +829,11 @@ ${showImportmapSourceLocation(importmapHtmlNode, htmlUrl, htmlSource)}
 ${compileDirectoryUrl}`
 }
 
-const fetchAndNormalizeImportmap = async (importmapUrl) => {
+const fetchAndNormalizeImportmap = async (importmapUrl, { allow404 = false } = {}) => {
   const importmapResponse = await fetchUrl(importmapUrl)
+  if (allow404 && importmapResponse.status === 404) {
+    return null
+  }
   const importmap = await importmapResponse.json()
   const importmapNormalized = normalizeImportMap(importmap, importmapUrl)
   return importmapNormalized
