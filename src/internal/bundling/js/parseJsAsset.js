@@ -16,7 +16,6 @@ export const parseJsAsset = async (
   const jsSourcemapUrl = getJavaScriptSourceMappingUrl(jsString)
   let sourcemapReference
 
-  // don en gros on parse le sourcemap du fichier
   if (jsSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
       specifier: jsSourcemapUrl,
@@ -78,7 +77,6 @@ export const parseJsAsset = async (
         const mapSource = JSON.stringify(map, null, "  ")
         const relativeUrl = urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl)
         const fileNameForRollup = relativeUrl
-
         emitAsset({
           source: mapSource,
           fileName: fileNameForRollup,

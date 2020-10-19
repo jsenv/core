@@ -6,7 +6,7 @@ export const replaceCssUrls = async (
   css,
   cssUrl,
   getUrlReplacementValue,
-  { cssMinification = false, cssMinificationOptions } = {},
+  { cssMinification = false, cssMinificationOptions, sourcemapOptions = {} } = {},
 ) => {
   const postcssPlugins = [
     postCssUrlHashPlugin,
@@ -16,6 +16,7 @@ export const replaceCssUrls = async (
     getUrlReplacementValue,
     map: {
       inline: false,
+      ...sourcemapOptions,
     },
   }
   const result = await applyPostCss(css, cssUrl, postcssPlugins, postcssOptions)

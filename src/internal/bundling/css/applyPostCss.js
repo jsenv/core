@@ -3,7 +3,13 @@ import { require } from "@jsenv/core/src/internal/require.js"
 
 const postcss = require("postcss")
 
-export const applyPostCss = async (cssString, cssUrl, plugins, options = {}) => {
+export const applyPostCss = async (
+  cssString,
+  cssUrl,
+  plugins,
+  // https://github.com/postcss/postcss#options
+  options = {},
+) => {
   let result
   try {
     const cssFileUrl = urlToFileUrl(cssUrl)

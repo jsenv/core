@@ -1,23 +1,34 @@
 import { basename } from "path"
 import { urlToFilename, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
-import { setCssSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import {
+  getCssSourceMappingUrl,
+  setCssSourceMappingUrl,
+} from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { parseCssUrls } from "./parseCssUrls.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
 import { getTargetAsBase64Url } from "../getTargetAsBase64Url.js"
-
-/**
-
-TODO: handle potential sourcemapping comment already in the css file as for parseJsAsset
-
-*/
 
 export const parseCssAsset = async (
   cssTarget,
   { notifyReferenceFound },
   { minify, minifyCssOptions },
 ) => {
+  const cssUrl = cssTarget.url
   const cssString = String(cssTarget.content.value)
-  const { atImports, urlDeclarations } = await parseCssUrls(cssString, cssTarget.url)
+  const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
+  let sourcemapReference
+  if (cssSourcemapUrl) {
+    sourcemapReference = notifyReferenceFound({
+      specifier: cssSourcemapUrl,
+      contentType: "application/json",
+      // we don't really know the line or column
+      // but let's asusme it the last line and first column
+      line: cssString.split(/\r?\n/).length - 1,
+      column: 0,
+    })
+  }
+
+  const { atImports, urlDeclarations } = await parseCssUrls(cssString, cssUrl)
 
   const urlNodeReferenceMapping = new Map()
   atImports.forEach((atImport) => {
@@ -42,7 +53,7 @@ export const parseCssAsset = async (
   }) => {
     const cssReplaceResult = await replaceCssUrls(
       cssString,
-      cssTarget.url,
+      cssUrl,
       ({ urlNode }) => {
         const urlNodeFound = Array.from(urlNodeReferenceMapping.keys()).find((urlNodeCandidate) =>
           isSameCssDocumentUrlNode(urlNodeCandidate, urlNode),
@@ -62,6 +73,9 @@ export const parseCssAsset = async (
       {
         cssMinification: minify,
         cssMinificationOptions: minifyCssOptions,
+        sourcemapOptions: sourcemapReference
+          ? { prev: sourcemapReference.target.sourceAfterTransformation }
+          : {},
       },
     )
     const code = cssReplaceResult.css
@@ -99,6 +113,9 @@ export const parseCssAsset = async (
         source: mapSource,
         fileName: fileNameForRollup,
       })
+      if (sourcemapReference) {
+        sourcemapReference.target.updateFileNameForRollup(fileNameForRollup)
+      }
     })
 
     return {
