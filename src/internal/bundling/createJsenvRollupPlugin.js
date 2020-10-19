@@ -4,7 +4,6 @@ import { loggerToLogLevel } from "@jsenv/logger"
 import {
   isFileSystemPath,
   fileSystemPathToUrl,
-  urlToFilename,
   resolveUrl,
   urlToRelativeUrl,
   resolveDirectoryUrl,
@@ -12,6 +11,7 @@ import {
   comparePathnames,
   urlIsInsideOf,
   urlToFileSystemPath,
+  urlToBasename,
 } from "@jsenv/util"
 
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
@@ -306,10 +306,16 @@ export const createJsenvRollupPlugin = async ({
 
                 logger.debug(`emit chunk for ${shortenUrl(target.url)}`)
                 atleastOneChunkEmitted = true
+                const name = urlToRelativeUrl(
+                  // get basename url
+                  resolveUrl(urlToBasename(target.url), target.url),
+                  // get importer url
+                  urlToCompiledUrl(target.importers[0].url),
+                )
                 const rollupReferenceId = emitFile({
                   type: "chunk",
                   id,
-                  name: urlToRelativeUrl(target.url, urlToCompiledUrl(target.importers[0].url)),
+                  name,
                   ...(target.previousJsReference
                     ? {
                         implicitlyLoadedAfterOneOf: [target.previousJsReference.url],
@@ -336,7 +342,7 @@ export const createJsenvRollupPlugin = async ({
                 const rollupReferenceId = emitFile({
                   type: "asset",
                   source: sourceAfterTransformation,
-                  name: urlToFilename(target.url),
+                  // name: urlToFilename(target.url),
                   fileName: fileNameForRollup,
                 })
                 logger.debug(`${shortenUrl(target.url)} ready -> ${fileNameForRollup}`)

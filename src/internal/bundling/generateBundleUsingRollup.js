@@ -26,6 +26,7 @@ export const generateBundleUsingRollup = async ({
   globals,
   globalName,
   sourcemapExcludeSources,
+  preserveEntrySignatures,
 
   bundleDirectoryUrl,
 
@@ -77,6 +78,7 @@ export const generateBundleUsingRollup = async ({
     globals,
     globalName,
     sourcemapExcludeSources,
+    preserveEntrySignatures,
     writeOnFileSystem,
     bundleDirectoryUrl,
   })
@@ -94,6 +96,7 @@ const useRollup = async ({
   globals,
   globalName,
   sourcemapExcludeSources,
+  preserveEntrySignatures,
   writeOnFileSystem,
   bundleDirectoryUrl,
 }) => {
@@ -125,7 +128,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // en fonction de entryPointMap
     // on fait cela car sinon rollup est pénible si on passe un entry point map de type html
     input: [],
-    // preserveEntrySignatures: false,
+    preserveEntrySignatures,
     plugins: [jsenvRollupPlugin],
   }
   const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
