@@ -25,9 +25,10 @@ await generateBundle({
   },
 })
 
-const { namespace: actual } = await requireCommonJsBundle({
+const { namespace } = await requireCommonJsBundle({
   ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
 })
-const expected = { value: [0, 1] }
+const actual = namespace.value
+const expected = [0, 1]
 assert({ actual, expected })
