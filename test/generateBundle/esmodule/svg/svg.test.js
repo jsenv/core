@@ -19,7 +19,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
-const bundle = await generateBundle({
+const { bundleManifest } = await generateBundle({
   ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
@@ -28,16 +28,17 @@ const bundle = await generateBundle({
   },
 })
 
-const assetFileName = bundle.rollupBundle.output[1].fileName
+const iconBundleRelativeUrl = bundleManifest[`${testDirectoryRelativeUrl}icon.svg`]
+const iconBundleUrl = resolveUrl(`./dist/esmodule/${iconBundleRelativeUrl}`, import.meta.url)
 
-await assertFilePresence(resolveUrl(`./dist/esmodule/${assetFileName}`, import.meta.url))
+await assertFilePresence(iconBundleUrl)
 
 {
   const { value: actual, serverOrigin } = await browserImportBundle({
     ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = new URL(assetFileName, serverOrigin).href
+  const expected = new URL(iconBundleRelativeUrl, serverOrigin).href
   assert({ actual, expected })
 }
 
@@ -47,6 +48,6 @@ if (SourceMap) {
     ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = new URL(`./dist/esmodule/${assetFileName}`, import.meta.url).href
+  const expected = new URL(`./dist/esmodule/${iconBundleRelativeUrl}`, import.meta.url).href
   assert({ actual, expected })
 }
