@@ -55,7 +55,8 @@ export const parseCssAsset = async (
       cssString,
       cssUrl,
       ({ urlNode }) => {
-        const urlNodeFound = Array.from(urlNodeReferenceMapping.keys()).find((urlNodeCandidate) =>
+        const nodeCandidates = Array.from(urlNodeReferenceMapping.keys())
+        const urlNodeFound = nodeCandidates.find((urlNodeCandidate) =>
           isSameCssDocumentUrlNode(urlNodeCandidate, urlNode),
         )
         if (!urlNodeFound) {
@@ -131,14 +132,45 @@ const cssNodeToSourceLocation = (node) => {
 }
 
 const isSameCssDocumentUrlNode = (firstUrlNode, secondUrlNode) => {
-  if (firstUrlNode.type !== secondUrlNode.type) {
+  if (!compareUrlNodeTypes(firstUrlNode.type, secondUrlNode.type)) {
     return false
   }
-  if (firstUrlNode.value !== secondUrlNode.value) {
+  if (!compareUrlNodeValue(firstUrlNode.value, secondUrlNode.value)) {
     return false
   }
+  // maybe this sourceIndex should be removed in case there is some css transformation one day?
+  // it does not seems to change though as if it was refering the original file source index
   if (firstUrlNode.sourceIndex !== secondUrlNode.sourceIndex) {
     return false
   }
   return true
+}
+
+// minification may change url node type from string to word
+// that's still the same node
+const compareUrlNodeTypes = (firstUrlNodeType, secondUrlNodeType) => {
+  if (firstUrlNodeType === secondUrlNodeType) {
+    return true
+  }
+  if (firstUrlNodeType === "word" && secondUrlNodeType === "string") {
+    return true
+  }
+  if (firstUrlNodeType === "string" && secondUrlNodeType === "word") {
+    return true
+  }
+  return false
+}
+
+// minification may change url node value from './whatever.png' to 'whatever.png'
+// the value still revolves to the same target
+const compareUrlNodeValue = (firstUrlNodeValue, secondUrlNodeValue) => {
+  const firstValueNormalized = urlToRelativeUrl(
+    resolveUrl(firstUrlNodeValue, "file:///"),
+    "file:///",
+  )
+  const secondValueNormalized = urlToRelativeUrl(
+    resolveUrl(secondUrlNodeValue, "file:///"),
+    "file:///",
+  )
+  return firstValueNormalized === secondValueNormalized
 }
