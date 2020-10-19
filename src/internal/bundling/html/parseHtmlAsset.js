@@ -68,12 +68,8 @@ export const parseHtmlAsset = async (
   const stylesMutations = collectNodesMutations(styles, notifiers, target, [styleTextNodeVisitor])
   const imgsSrcMutations = collectNodesMutations(imgs, notifiers, target, [imgSrcVisitor])
   const imgsSrcsetMutations = collectNodesMutations(imgs, notifiers, target, [srcsetVisitor])
-  const sourcesSrcMutations = collectNodesMutations(sources, notifiers, target, {
-    sourceSrcVisitor,
-  })
-  const sourcesSrcsetMutations = collectNodesMutations(sources, notifiers, target, {
-    srcsetVisitor,
-  })
+  const sourcesSrcMutations = collectNodesMutations(sources, notifiers, target, [sourceSrcVisitor])
+  const sourcesSrcsetMutations = collectNodesMutations(sources, notifiers, target, [srcsetVisitor])
   const svgMutations = collectSvgMutations({ images, uses }, notifiers, target)
 
   const htmlMutations = [
