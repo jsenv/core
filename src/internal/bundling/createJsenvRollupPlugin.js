@@ -144,6 +144,16 @@ export const createJsenvRollupPlugin = async ({
                 if (srcAttribute) {
                   logger.info(formatUseImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource))
                   const importmapUrl = resolveUrl(srcAttribute.value, htmlCompiledUrl)
+                  if (!urlIsInsideOf(importmapUrl, compileDirectoryRemoteUrl)) {
+                    logger.warn(
+                      formatImportmapOutsideCompileDirectory(
+                        importmapHtmlNode,
+                        htmlProjectUrl,
+                        htmlSource,
+                        compileDirectoryUrl,
+                      ),
+                    )
+                  }
                   fetchImportmap = () => fetchAndNormalizeImportmap(importmapUrl)
                 } else {
                   const textNode = getHtmlNodeTextNode(importmapHtmlNode)
@@ -779,26 +789,40 @@ ${urlToFileSystemPath(url)}
 ${importer}`
 }
 
-const formatIgnoreImportMap = (importmapHtmlNode, htmlUrl, htmlSource) => {
+const showImportmapSourceLocation = (importmapHtmlNode, htmlUrl, htmlSource) => {
   const { line, column } = getHtmlNodeLocation(importmapHtmlNode)
-  return `ignore importmap found in html file.
-${htmlUrl}:${line}:${column}
+
+  return `${htmlUrl}:${line}:${column}
 
 ${showSourceLocation(htmlSource, {
   line,
   column,
-})}`
+})}
+`
+}
+
+const formatIgnoreImportMap = (importmapHtmlNode, htmlUrl, htmlSource) => {
+  return `ignore importmap found in html file.
+${showImportmapSourceLocation(importmapHtmlNode, htmlUrl, htmlSource)}`
 }
 
 const formatUseImportMap = (importmapHtmlNode, htmlUrl, htmlSource) => {
-  const { line, column } = getHtmlNodeLocation(importmapHtmlNode)
   return `use importmap found in html file.
-${htmlUrl}:${line}:${column}
+${showImportmapSourceLocation(importmapHtmlNode, htmlUrl, htmlSource)}`
+}
 
-${showSourceLocation(htmlSource, {
-  line,
-  column,
-})}`
+const formatImportmapOutsideCompileDirectory = (
+  importmapHtmlNode,
+  htmlUrl,
+  htmlSource,
+  compileDirectoryUrl,
+) => {
+  return `WARNING: found importmap outside compile directory.
+Remapped import will not be compiled.
+You should make importmap source relative.
+${showImportmapSourceLocation(importmapHtmlNode, htmlUrl, htmlSource)}
+--- compile directory url ---
+${compileDirectoryUrl}`
 }
 
 const fetchAndNormalizeImportmap = async (importmapUrl) => {
@@ -883,7 +907,7 @@ const rollupBundleToBundleManifest = (
         const projectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
         chunkMappings[projectRelativeUrl] = file.fileName
       } else {
-        const sourcePath = file.map.sources[0]
+        const sourcePath = file.map.sources[file.map.sources.length - 1]
         const fileBundleUrl = resolveUrl(file.fileName, bundleDirectoryUrl)
         const originalProjectUrl = resolveUrl(sourcePath, fileBundleUrl)
         const projectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
