@@ -37,8 +37,8 @@ export const generateBundle = async ({
   browser = format === "global" || format === "systemjs" || format === "esmodule",
   node = format === "commonjs",
   entryPointMap = format === "commonjs"
-    ? { "./index.js": "./index.cjs" }
-    : { "./index.js": "./index.js" },
+    ? { "./index.js": "./main.cjs" }
+    : { "./index.js": "./main.js" },
   systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
   inlineAssetPredicate = ({ relativeUrl }) => relativeUrl === systemJsUrl.slice(1),
   globalName,
