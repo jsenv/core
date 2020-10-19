@@ -27,6 +27,7 @@ await generateBundle({
 const { namespace: actual, serverOrigin } = await browserImportSystemJsBundle({
   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
   testDirectoryRelativeUrl,
+  htmlFileRelativeUrl: "./index.html",
 })
 const expected = {
   default: `${serverOrigin}/dist/systemjs/main.js`,
