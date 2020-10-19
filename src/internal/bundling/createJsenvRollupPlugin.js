@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
-import { loggerToLogLevel }from '@jsenv/logger'
+import { loggerToLogLevel } from "@jsenv/logger"
 import {
   isFileSystemPath,
   fileSystemPathToUrl,
@@ -42,6 +42,13 @@ import { parseCssAsset } from "./css/parseCssAsset.js"
 import { parseJsAsset } from "./js/parseJsAsset.js"
 import { minifyJs } from "./js/minifyJs.js"
 
+// use a fake and predictable compile server origin
+// because rollup will check the dependencies url
+// when computing the file hash
+// https://github.com/rollup/rollup/blob/d6131378f9481a442aeaa6d4e608faf3303366dc/src/Chunk.ts#L483
+// this way file hash remains the same when file content does not change
+const STATIC_COMPILE_SERVER_AUTHORITY = "//jsenv.com"
+
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
   logger,
@@ -74,6 +81,10 @@ export const createJsenvRollupPlugin = async ({
   const urlRedirectionMap = {}
   let bundleManifest = {}
   let rollupBundle
+
+  const compileServerOriginForRollup = String(
+    new URL(STATIC_COMPILE_SERVER_AUTHORITY, compileServerOrigin),
+  ).slice(0, -1)
 
   const EMPTY_CHUNK_URL = resolveUrl("__empty__", projectDirectoryUrl)
 
@@ -354,6 +365,8 @@ export const createJsenvRollupPlugin = async ({
         } else {
           importer = compileDirectoryRemoteUrl
         }
+      } else {
+        importer = urlToServerUrl(importer)
       }
 
       if (nativeModulePredicate(specifier)) {
@@ -392,7 +405,7 @@ export const createJsenvRollupPlugin = async ({
 
       // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
       logger.debug(`${specifier} imported by ${importer} resolved to ${importUrl}`)
-      return importUrl
+      return urlToUrlForRollup(importUrl)
     },
 
     // https://rollupjs.org/guide/en#resolvedynamicimport
@@ -400,12 +413,13 @@ export const createJsenvRollupPlugin = async ({
 
     // },
 
-    async load(url) {
-      if (url === EMPTY_CHUNK_URL) {
+    async load(id) {
+      if (id === EMPTY_CHUNK_URL) {
         return ""
       }
 
-      const moduleInfo = this.getModuleInfo(url)
+      const moduleInfo = this.getModuleInfo(id)
+      const url = urlToServerUrl(id)
 
       logger.debug(`loads ${url}`)
       const { responseUrl, contentRaw, content = "", map } = await loadModule(url, moduleInfo)
@@ -432,17 +446,16 @@ export const createJsenvRollupPlugin = async ({
       options.sourcemapPathTransform = (relativePath, sourcemapPath) => {
         const sourcemapUrl = fileSystemPathToUrl(sourcemapPath)
         const url = relativePathToUrl(relativePath, sourcemapUrl)
-        const projectUrl = urlToProjectUrl(url)
+        const serverUrl = urlToServerUrl(url)
+        const finalUrl = serverUrl in urlRedirectionMap ? urlRedirectionMap[serverUrl] : serverUrl
+        const projectUrl = urlToProjectUrl(finalUrl)
 
         if (projectUrl) {
           relativePath = urlToRelativeUrl(projectUrl, sourcemapUrl)
           return relativePath
         }
-        if (url.startsWith(projectDirectoryUrl)) {
-          return relativePath
-        }
 
-        return url
+        return finalUrl
       }
 
       const relativePathToUrl = (relativePath, sourcemapUrl) => {
@@ -451,10 +464,6 @@ export const createJsenvRollupPlugin = async ({
         // because rollup don't work with url but with filesystem paths
         // let fix it below
         const url = fixRollupUrl(rollupUrl)
-
-        if (url in urlRedirectionMap) {
-          return urlRedirectionMap[url]
-        }
         return url
       }
 
@@ -541,11 +550,19 @@ export const createJsenvRollupPlugin = async ({
       return url
     }
 
-    if (url.startsWith(`${compileServerOrigin}/`)) {
+    const serverUrl = urlToServerUrl(url)
+    if (serverUrl) {
       return `${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`
     }
 
     return null
+  }
+
+  const urlToUrlForRollup = (url) => {
+    if (url.startsWith(`${compileServerOrigin}/`)) {
+      return `${compileServerOriginForRollup}/${url.slice(`${compileServerOrigin}/`.length)}`
+    }
+    return url
   }
 
   const urlToProjectRelativeUrl = (url) => {
@@ -560,6 +577,10 @@ export const createJsenvRollupPlugin = async ({
   const urlToServerUrl = (url) => {
     if (url.startsWith(`${compileServerOrigin}/`)) {
       return url
+    }
+
+    if (url.startsWith(`${compileServerOriginForRollup}/`)) {
+      return `${compileServerOrigin}/${url.slice(`${compileServerOriginForRollup}/`.length)}`
     }
 
     if (url.startsWith(projectDirectoryUrl)) {
@@ -600,11 +621,16 @@ export const createJsenvRollupPlugin = async ({
   }
 
   const urlToCompiledUrl = (url) => {
-    if (urlIsInsideOf(url, compileDirectoryUrl)) {
-      return url
+    const projectUrl = urlToProjectUrl(url)
+    if (!projectUrl) {
+      return null
     }
 
-    const projectRelativeUrl = urlToProjectRelativeUrl(url)
+    if (urlIsInsideOf(projectUrl, compileDirectoryUrl)) {
+      return projectUrl
+    }
+
+    const projectRelativeUrl = urlToProjectRelativeUrl(projectUrl)
     if (projectRelativeUrl) {
       return resolveUrl(projectRelativeUrl, compileDirectoryRemoteUrl)
     }
@@ -694,11 +720,7 @@ export const createJsenvRollupPlugin = async ({
       ignoreHttpsError: true,
     })
     if (response.status === 404) {
-      throw new Error(`A file cannot be found.
---- file ---
-${urlToFileSystemPath(urlToProjectUrl(response.url))}
---- imported by ---
-${importer}`)
+      throw new Error(formatFileNotFound(urlToProjectUrl(response.url), importer))
     }
 
     const okValidation = validateResponseStatusIsOk(response, importer)
@@ -746,6 +768,14 @@ const fixRollupUrl = (rollupUrl) => {
   }
 
   return rollupUrl
+}
+
+const formatFileNotFound = (url, importer) => {
+  return `A file cannot be found.
+--- file ---
+${urlToFileSystemPath(url)}
+--- imported by ---
+${importer}`
 }
 
 const formatIgnoreImportMap = (importmapHtmlNode, htmlUrl, htmlSource) => {
