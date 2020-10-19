@@ -6,7 +6,7 @@ import { grey, red, ansiResetSequence } from "../executing/ansi.js"
 
 export const showSourceLocation = (
   source,
-  { line, column, numberOfSurroundingLinesToShow = 1, lineMaxLength = 100, color = false },
+  { line, column, numberOfSurroundingLinesToShow = 1, lineMaxLength = 120, color = false },
 ) => {
   let mark = (string) => string
   let aside = (string) => string
