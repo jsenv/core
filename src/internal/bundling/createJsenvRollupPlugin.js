@@ -1,5 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
+import { loggerToLogLevel }from '@jsenv/logger'
 import {
   isFileSystemPath,
   fileSystemPathToUrl,
@@ -228,6 +229,7 @@ export const createJsenvRollupPlugin = async ({
           },
         },
         {
+          logLevel: loggerToLogLevel(logger),
           projectDirectoryUrl: `${compileServerOrigin}`,
           bundleDirectoryRelativeUrl: urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl),
           urlToOriginalUrl: urlToOriginalServerUrl,

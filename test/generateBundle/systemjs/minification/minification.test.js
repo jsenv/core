@@ -21,6 +21,6 @@ const { rollupBundle } = await generateBundle({
   },
   minify: true,
 })
-const actual = rollupBundle.output[0].code.trim()
+const actual = rollupBundle["main.js"].code.trim()
 const expected = `System.register([],(function(e){"use strict";return{execute:function(){e("default",42)}}}));`
 assert({ actual, expected })

@@ -115,7 +115,17 @@ export const createCompositeAssetHandler = (
     reference.target = target
     target.importers.push(reference)
     target.getContentAvailablePromise().then(() => {
-      if (!compareContentType(reference.contentType, target.content.type)) {
+      const expectedContentType = reference.contentType
+      const actualContentType = target.content.type
+      if (!compareContentType(expectedContentType, actualContentType)) {
+        // sourcemap content type is fine if we got octet-stream too
+        if (
+          expectedContentType === "application/json" &&
+          actualContentType === "application/octet-stream" &&
+          target.url.endsWith(".map")
+        ) {
+          return
+        }
         logger.warn(formatContentTypeMismatchLog(reference, { showReferenceSourceLocation }))
       }
     })

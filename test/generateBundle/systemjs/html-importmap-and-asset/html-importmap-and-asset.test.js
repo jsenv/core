@@ -22,7 +22,7 @@ const entryPointMap = {
 
 const { bundleManifest } = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
-  logLevel: "info",
+  // logLevel: "info",
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap,

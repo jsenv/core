@@ -27,6 +27,7 @@ await generateBundle({
 const { namespace: actual } = await browserImportSystemJsBundle({
   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
   testDirectoryRelativeUrl,
+  htmlFileRelativeUrl: "./index.html",
 })
 const expected = { default: 42 }
 assert({ actual, expected })
