@@ -30,7 +30,7 @@ export const applyPostCss = async (
 }
 
 const urlToFileUrl = (url) => {
-  if (url.startsWith("file:///")) {
+  if (url.startsWith("file://")) {
     return url
   }
   const origin = new URL(url).origin
