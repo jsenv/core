@@ -15,7 +15,7 @@ const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const firstEntryRelativeUrl = `${testDirectoryRelativeUrl}a.js`
 const secondEntryRelativeUrl = `${testDirectoryRelativeUrl}b.js`
 
-await generateBundle({
+const { bundleManifest, bundleMappings } = await generateBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
@@ -25,11 +25,9 @@ await generateBundle({
   },
   manifestFile: true,
 })
+
 {
-  const manifestFileRelativeUrl = `${bundleDirectoryRelativeUrl}manifest.json`
-  const manifestFileUrl = resolveUrl(manifestFileRelativeUrl, jsenvCoreDirectoryUrl)
-  const manifestFileContent = await readFile(manifestFileUrl)
-  const actual = JSON.parse(manifestFileContent)
+  const actual = bundleMappings
   const expected = {
     [`${testDirectoryRelativeUrl}a.js`]: "a.cjs",
     [`${testDirectoryRelativeUrl}b.js`]: "b.cjs",
@@ -38,6 +36,26 @@ await generateBundle({
     ],
   }
   assert({ actual, expected })
+}
+
+{
+  const manifestFileRelativeUrl = `${bundleDirectoryRelativeUrl}manifest.json`
+  const manifestFileUrl = resolveUrl(manifestFileRelativeUrl, jsenvCoreDirectoryUrl)
+  const manifestFileContent = await readFile(manifestFileUrl)
+  const manifestFileObject = JSON.parse(manifestFileContent)
+  const actual = manifestFileObject
+  const expected = {
+    [`a.cjs`]: "a.cjs",
+    [`b.cjs`]: "b.cjs",
+    [`used-by-both.cjs`]: actual[`used-by-both.cjs`],
+  }
+  assert({ actual, expected })
+
+  {
+    const actual = manifestFileObject
+    const expected = bundleManifest
+    assert({ actual, expected })
+  }
 }
 {
   const { namespace: actual } = await requireCommonJsBundle({

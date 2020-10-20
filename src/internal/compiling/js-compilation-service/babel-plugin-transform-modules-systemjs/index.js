@@ -1,5 +1,6 @@
 /* eslint-disable */
 // https://github.com/babel/babel/tree/master/packages/babel-plugin-transform-modules-systemjs
+// https://github.com/babel/babel/pull/12163
 
 import { require } from "../../../require.js"
 
