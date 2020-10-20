@@ -1,9 +1,5 @@
 import { createLogger } from "@jsenv/logger"
-import {
-  resolveDirectoryUrl,
-  ensureEmptyDirectory,
-  createCancellationTokenForProcess,
-} from "@jsenv/util"
+import { resolveDirectoryUrl, createCancellationTokenForProcess } from "@jsenv/util"
 import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
 import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
@@ -117,9 +113,6 @@ export const generateBundle = async ({
     assertBundleDirectoryRelativeUrl({ bundleDirectoryRelativeUrl })
     const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
     assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
-    if (bundleDirectoryClean) {
-      await ensureEmptyDirectory(bundleDirectoryUrl)
-    }
 
     babelPluginMap = {
       ...babelPluginMap,
@@ -180,6 +173,7 @@ export const generateBundle = async ({
       sourcemapExcludeSources,
       preserveEntrySignatures,
       bundleDirectoryUrl,
+      bundleDirectoryClean,
       manifestFile,
       inlineAssetPredicate,
 

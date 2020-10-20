@@ -1,6 +1,6 @@
 import { extname } from "path"
 import { createOperation } from "@jsenv/cancellation"
-import { urlToFileSystemPath } from "@jsenv/util"
+import { urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/util"
 import { require } from "../require.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
@@ -29,6 +29,7 @@ export const generateBundleUsingRollup = async ({
   preserveEntrySignatures,
 
   bundleDirectoryUrl,
+  bundleDirectoryClean,
 
   minify,
   minifyJsOptions,
@@ -81,6 +82,7 @@ export const generateBundleUsingRollup = async ({
     preserveEntrySignatures,
     writeOnFileSystem,
     bundleDirectoryUrl,
+    bundleDirectoryClean,
   })
 
   return getResult()
@@ -99,6 +101,7 @@ const useRollup = async ({
   preserveEntrySignatures,
   writeOnFileSystem,
   bundleDirectoryUrl,
+  bundleDirectoryClean,
 }) => {
   logger.info(`
 parse bundle
@@ -161,6 +164,10 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     cancellationToken,
     start: () => rollup(rollupInputOptions),
   })
+
+  if (bundleDirectoryClean) {
+    await ensureEmptyDirectory(bundleDirectoryUrl)
+  }
 
   const rollupOutputArray = await createOperation({
     cancellationToken,
