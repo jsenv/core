@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { transformJs } from "../../../src/internal/compiling/js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "../../../src/internal/compiling/js-compilation-service/transformResultToCompilationResult.js"
 import { TRANSFORM_JS_TEST_PARAMS, TRANSFORM_RESULT_TEST_PARAMS } from "../TEST_PARAMS.js"

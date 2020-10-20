@@ -72,7 +72,7 @@ export const startExploring = async ({
       stopOnPackageVersionChange: true,
       watchAndSyncImportMap: true,
       compileGroupCount: 2,
-      scriptManipulations: [
+      scriptInjections: [
         ...(toolbar
           ? [
               {
@@ -130,6 +130,20 @@ const createRedirectFilesService = ({ projectDirectoryUrl, outDirectoryRelativeU
         status: 307,
         headers: {
           location: toolbarMainJsCompiledFileUrl,
+        },
+      }
+    }
+    // unfortunately browser don't resolve sourcemap to url after redirection
+    // but to url before. It means browser tries to load source map from
+    // "/.jsenv/toolbar.main.js.map"
+    // we could also inline sourcemap but it's not yet possible
+    // inside generateBundle
+    if (request.ressource === "/.jsenv/toolbar.main.js.map") {
+      const toolbarSourcemapCompiledFileUrl = `${request.origin}/${toolbarMainJsCompiledFileRelativeUrl}.map`
+      return {
+        status: 307,
+        headers: {
+          location: toolbarSourcemapCompiledFileUrl,
         },
       }
     }

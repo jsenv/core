@@ -1,5 +1,5 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { executeTestPlan, launchNode } from "../../../index.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)

@@ -1,6 +1,6 @@
 import { startContinuousTesting } from "../../../src/internal/testing/continuous-testing/startContinuousTesting.js"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { launchNode, launchChromium } from "../../../index.js"
 import { CONTINUOUS_TESTING_TEST_PARAM } from "../TEST_PARAMS.js"
 

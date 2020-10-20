@@ -1,4 +1,5 @@
-import { parseSourceMappingURL } from "../sourceMappingURLUtils.js"
+import { parseDataUrl, dataUrlToRawData } from "../dataUrl.utils.js"
+import { getJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { remapCallSite } from "./remapCallSite.js"
 import { stackToString } from "./stackToString.js"
 
@@ -43,16 +44,18 @@ ${stackTraceFileUrl}`)
         return null
       }
 
-      const sourcemapParsingResult = parseSourceMappingURL(text)
-      if (!sourcemapParsingResult) return null
+      const jsSourcemapUrl = getJavaScriptSourceMappingUrl(text)
+      if (!jsSourcemapUrl) {
+        return null
+      }
 
       let sourcemapUrl
       let sourcemapString
-      if (sourcemapParsingResult.sourcemapString) {
+      if (jsSourcemapUrl.startsWith("data:")) {
         sourcemapUrl = stackTraceFileUrl
-        sourcemapString = sourcemapParsingResult.sourcemapString
+        sourcemapString = dataUrlToRawData(parseDataUrl(jsSourcemapUrl))
       } else {
-        sourcemapUrl = resolveFile(sourcemapParsingResult.sourcemapURL, stackTraceFileUrl, {
+        sourcemapUrl = resolveFile(jsSourcemapUrl, stackTraceFileUrl, {
           type: "source-map",
         })
 

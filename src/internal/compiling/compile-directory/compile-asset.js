@@ -1,11 +1,15 @@
+import { urlToFilename } from "@jsenv/util"
+
 export const urlIsAsset = (url) => {
-  const pathname = new URL(url).pathname
+  const filename = urlToFilename(url)
 
   // sourcemap are not inside the asset folder because
   // of https://github.com/microsoft/vscode-chrome-debug-core/issues/544
-  if (pathname.endsWith(".map")) return true
+  if (filename.endsWith(".map")) {
+    return true
+  }
 
-  return pathnameToBasename(pathname).includes("__asset__")
+  return filename.includes("__asset__")
 }
 
 export const getMetaJsonFileUrl = (compileFileUrl) =>
@@ -13,12 +17,4 @@ export const getMetaJsonFileUrl = (compileFileUrl) =>
 
 export const generateCompiledFileAssetUrl = (compiledFileUrl, assetName) => {
   return `${compiledFileUrl}__asset__${assetName}`
-}
-
-export const pathnameToBasename = (pathname) => {
-  const slashLastIndex = pathname.lastIndexOf("/")
-  if (slashLastIndex === -1) {
-    return pathname
-  }
-  return pathname.slice(slashLastIndex + 1)
 }

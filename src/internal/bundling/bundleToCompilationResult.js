@@ -2,18 +2,18 @@
 
 One thing to keep in mind:
 the sourcemap.sourcesContent will contains a json file transformed to js
-while sourcesContent will contain the json file raw source because the corresponding
+while urlResponseBodyMap will contain the json file raw source because the corresponding
 json file etag is used to invalidate the cache
 
 */
 
 import { readFileSync } from "fs"
 import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
-import { writeOrUpdateSourceMappingURL } from "../sourceMappingURLUtils.js"
+import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 
 export const bundleToCompilationResult = (
-  { rollupBundle, moduleContentMap },
-  { projectDirectoryUrl, compiledFileUrl, sourcemapFileUrl },
+  { rollupBundle, urlResponseBodyMap },
+  { mainFileName, projectDirectoryUrl, compiledFileUrl, sourcemapFileUrl },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -28,6 +28,10 @@ export const bundleToCompilationResult = (
   const sources = []
   const sourcesContent = []
 
+  if (mainFileName === undefined) {
+    mainFileName = Object.keys(rollupBundle).find((key) => rollupBundle[key].isEntry)
+  }
+
   const trackDependencies = (dependencyMap) => {
     Object.keys(dependencyMap).forEach((moduleUrl) => {
       // do not track dependency outside project
@@ -37,7 +41,7 @@ export const bundleToCompilationResult = (
 
       if (!sources.includes(moduleUrl)) {
         sources.push(moduleUrl)
-        sourcesContent.push(dependencyMap[moduleUrl].contentRaw)
+        sourcesContent.push(dependencyMap[moduleUrl])
       }
     })
   }
@@ -45,33 +49,36 @@ export const bundleToCompilationResult = (
   const assets = []
   const assetsContent = []
 
-  const mainChunk = parseRollupChunk(rollupBundle.output[0], {
-    moduleContentMap,
+  const mainRollupFile = rollupBundle[mainFileName]
+  const mainFile = parseRollupFile(mainRollupFile, {
+    urlResponseBodyMap,
     sourcemapFileUrl,
     sourcemapFileRelativeUrlForModule: urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl),
   })
-  // mainChunk.sourcemap.file = fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl)
-  trackDependencies(mainChunk.dependencyMap)
+  // mainFile.sourcemap.file = fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl)
+  trackDependencies(mainFile.dependencyMap)
   assets.push(sourcemapFileUrl)
-  assetsContent.push(JSON.stringify(mainChunk.sourcemap, null, "  "))
+  assetsContent.push(JSON.stringify(mainFile.sourcemap, null, "  "))
 
-  rollupBundle.output.slice(1).forEach((rollupChunk) => {
-    const chunkFileName = rollupChunk.fileName
-    const chunk = parseRollupChunk(rollupChunk, {
-      moduleContentMap,
+  Object.keys(rollupBundle).forEach((fileName) => {
+    if (fileName === mainFileName) return
+
+    const rollupFile = rollupBundle[fileName]
+    const file = parseRollupFile(rollupFile, {
+      urlResponseBodyMap,
       compiledFileUrl,
-      sourcemapFileUrl: resolveUrl(rollupChunk.map.file, compiledFileUrl),
+      sourcemapFileUrl: resolveUrl(file.map.file, compiledFileUrl),
     })
-    trackDependencies(chunk.dependencyMap)
-    assets.push(resolveUrl(chunkFileName), compiledFileUrl)
-    assetsContent.push(chunk.content)
-    assets.push(resolveUrl(`${rollupChunk.fileName}.map`, compiledFileUrl))
-    assetsContent.push(JSON.stringify(chunk.sourcemap, null, "  "))
+    trackDependencies(file.dependencyMap)
+    assets.push(resolveUrl(fileName), compiledFileUrl)
+    assetsContent.push(file.content)
+    assets.push(resolveUrl(`${fileName}.map`, compiledFileUrl))
+    assetsContent.push(JSON.stringify(rollupFile.sourcemap, null, "  "))
   })
 
   return {
     contentType: "application/javascript",
-    compiledSource: mainChunk.content,
+    compiledSource: mainFile.content,
     sources,
     sourcesContent,
     assets,
@@ -79,30 +86,30 @@ export const bundleToCompilationResult = (
   }
 }
 
-const parseRollupChunk = (
-  rollupChunk,
+const parseRollupFile = (
+  rollupFile,
   {
-    moduleContentMap,
+    urlResponseBodyMap,
     sourcemapFileUrl,
-    sourcemapFileRelativeUrlForModule = `./${rollupChunk.fileName}.map`,
+    sourcemapFileRelativeUrlForModule = `./${rollupFile.fileName}.map`,
   },
 ) => {
   const dependencyMap = {}
-  const mainModuleSourcemap = rollupChunk.map
+  const mainModuleSourcemap = rollupFile.map
 
   mainModuleSourcemap.sources.forEach((source, index) => {
     const moduleUrl = resolveUrl(source, sourcemapFileUrl)
     dependencyMap[moduleUrl] = getModuleContent({
-      moduleContentMap,
+      urlResponseBodyMap,
       mainModuleSourcemap,
       moduleUrl,
       moduleIndex: index,
     })
   })
 
-  const sourcemap = rollupChunk.map
+  const sourcemap = rollupFile.map
 
-  const content = writeOrUpdateSourceMappingURL(rollupChunk.code, sourcemapFileRelativeUrlForModule)
+  const content = setJavaScriptSourceMappingUrl(rollupFile.code, sourcemapFileRelativeUrlForModule)
 
   return {
     dependencyMap,
@@ -111,18 +118,17 @@ const parseRollupChunk = (
   }
 }
 
-const getModuleContent = ({ moduleContentMap, mainModuleSourcemap, moduleUrl, moduleIndex }) => {
-  if (moduleUrl in moduleContentMap) {
-    return moduleContentMap[moduleUrl]
+const getModuleContent = ({ urlResponseBodyMap, mainModuleSourcemap, moduleUrl, moduleIndex }) => {
+  if (moduleUrl in urlResponseBodyMap) {
+    return urlResponseBodyMap[moduleUrl]
   }
 
   // try to read it from mainModuleSourcemap
   const sourcesContent = mainModuleSourcemap.sourcesContent || []
   if (moduleIndex in sourcesContent) {
     const contentFromRollupSourcemap = sourcesContent[moduleIndex]
-    return {
-      content: contentFromRollupSourcemap,
-      contentRaw: contentFromRollupSourcemap,
+    if (contentFromRollupSourcemap !== null && contentFromRollupSourcemap !== undefined) {
+      return contentFromRollupSourcemap
     }
   }
 
@@ -135,10 +141,7 @@ const getModuleContent = ({ moduleContentMap, mainModuleSourcemap, moduleUrl, mo
     try {
       const moduleFileBuffer = readFileSync(moduleFilePath)
       const moduleFileString = String(moduleFileBuffer)
-      return {
-        content: moduleFileString,
-        contentRaw: moduleFileString,
-      }
+      return moduleFileString
     } catch (e) {
       if (e && e.code === "ENOENT") {
         throw new Error(`module file not found at ${moduleUrl}`)

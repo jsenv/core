@@ -1,5 +1,6 @@
-import { generateEsModuleBundle } from "@jsenv/core"
+import { generateBundle } from "@jsenv/core"
 
-generateEsModuleBundle({
+generateBundle({
+  format: "esmodule",
   projectDirectoryUrl: new URL("./", import.meta.url),
 })

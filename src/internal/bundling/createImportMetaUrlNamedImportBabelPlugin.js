@@ -1,4 +1,4 @@
-import { require } from "../../internal/require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 
 // https://github.com/cfware/babel-plugin-bundled-import-meta/blob/master/index.js
 const { addNamed } = require("@babel/helper-module-imports")

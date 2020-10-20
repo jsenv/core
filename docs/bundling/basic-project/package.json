@@ -13,6 +13,6 @@
     "generate-systemjs-bundle": "node ./generate-systemjs-bundle.js"
   },
   "devDependencies": {
-    "@jsenv/core": "12.1.0-alpha.6"
+    "@jsenv/core": "16.0.0"
   }
 }

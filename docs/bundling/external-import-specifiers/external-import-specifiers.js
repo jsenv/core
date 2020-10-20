@@ -1,11 +1,16 @@
-import {
-  generateCommonJsBundle,
-  generateSystemJsBundle,
-  generateEsModuleBundle,
-  generateGlobalBundle,
-} from "@jsenv/core"
+import { generateBundle } from "@jsenv/core"
 
-generateCommonJsBundle({
+generateBundle({
+  format: "commonjs",
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  entryPointMap: {
+    main: "./file.cjs",
+  },
+  externalImportSpecifiers: ["./answer.js"],
+})
+
+generateBundle({
+  format: "systemjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPointMap: {
     main: "./file.js",
@@ -13,7 +18,8 @@ generateCommonJsBundle({
   externalImportSpecifiers: ["./answer.js"],
 })
 
-generateSystemJsBundle({
+generateBundle({
+  format: "esmodule",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPointMap: {
     main: "./file.js",
@@ -21,15 +27,8 @@ generateSystemJsBundle({
   externalImportSpecifiers: ["./answer.js"],
 })
 
-generateEsModuleBundle({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  entryPointMap: {
-    main: "./file.js",
-  },
-  externalImportSpecifiers: ["./answer.js"],
-})
-
-generateGlobalBundle({
+generateBundle({
+  format: "global",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPointMap: {
     main: "./file.js",

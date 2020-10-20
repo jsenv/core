@@ -1,56 +1,22 @@
 import { assert } from "@jsenv/assert"
-import {
-  parseHtmlString,
-  parseHtmlDocumentRessources,
-  manipulateHtmlDocument,
-  transformHtmlDocumentImportmapScript,
-  transformHtmlDocumentModuleScripts,
-  stringifyHtmlDocument,
-} from "./compileHtml.js"
+import { parseHtmlString, manipulateHtmlAst, stringifyHtmlAst } from "./compileHtml.js"
 
 const compileHtml = (
   htmlBeforeCompilation,
   {
-    scriptManipulations = [],
-    importmapSrc,
-    importmapType,
+    scriptInjections = [],
     // resolveScriptSrc = (src) => src,
-    generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
-    generateInlineScriptCode = ({ src }) => `<script>
-      window.__jsenv__.importFile(${JSON.stringify(src)})
-    </script>`,
   } = {},
 ) => {
   // https://github.com/inikulin/parse5/blob/master/packages/parse5/docs/tree-adapter/interface.md
   const document = parseHtmlString(htmlBeforeCompilation)
 
-  if (importmapSrc) {
-    scriptManipulations = [
-      ...scriptManipulations,
-      {
-        // when html file already contains an importmap script tag
-        // its src is replaced to target the importmap used for compiled files
-        replaceExisting: true,
-        type: "importmap",
-        src: importmapSrc,
-      },
-    ]
-  }
-
-  manipulateHtmlDocument(document, { scriptManipulations })
-
-  const { scripts } = parseHtmlDocumentRessources(document)
-  transformHtmlDocumentImportmapScript(scripts, { type: importmapType })
-  const scriptTransformations = transformHtmlDocumentModuleScripts(scripts, {
-    generateInlineScriptSrc,
-    generateInlineScriptCode,
-  })
+  manipulateHtmlAst(document, { scriptInjections })
   // resolveScripts(document, resolveScriptSrc)
 
-  const htmlAfterCompilation = stringifyHtmlDocument(document)
+  const htmlAfterCompilation = stringifyHtmlAst(document)
   return {
     htmlAfterCompilation,
-    ...scriptTransformations,
   }
 }
 
@@ -65,7 +31,7 @@ const compileHtml = (
     <body></body>
   </html>`
   const { htmlAfterCompilation } = compileHtml(htmlBeforeCompilation, {
-    scriptManipulations: [{ src: "bar.js", async: true }],
+    scriptInjections: [{ src: "bar.js", async: true }],
   })
   const actual = htmlAfterCompilation
   const expected = `<html><head>
@@ -89,7 +55,7 @@ const compileHtml = (
     <body></body>
   </html>`
   const { htmlAfterCompilation } = compileHtml(htmlBeforeCompilation, {
-    scriptManipulations: [{ src: "foo.js" }],
+    scriptInjections: [{ src: "foo.js" }],
   })
   const actual = htmlAfterCompilation
   const expected = `<html><head>

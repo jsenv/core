@@ -4,12 +4,7 @@ import * as jsenvConfig from "../../jsenv.config.js"
 executeTestPlan({
   ...jsenvConfig,
   testPlan: {
-    "test/generateCommonJsBundle/**/*.test.js": {
-      node: {
-        launch: launchNode,
-      },
-    },
-    "test/generateCommonJsBundleForNode/**/*.test.js": {
+    "test/generateBundle/commonjs/**/*.test.js": {
       node: {
         launch: launchNode,
       },

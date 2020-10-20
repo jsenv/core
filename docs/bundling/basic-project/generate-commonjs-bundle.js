@@ -1,5 +1,6 @@
-import { generateCommonJsBundle } from "@jsenv/core"
+import { generateBundle } from "@jsenv/core"
 
-generateCommonJsBundle({
+generateBundle({
+  format: "commonjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
 })

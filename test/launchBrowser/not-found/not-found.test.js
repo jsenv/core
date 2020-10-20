@@ -1,9 +1,9 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
+import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import { launchChromium, launchFirefox, launchWebkit } from "../../../index.js"
 import { launchBrowsers } from "../launchBrowsers.js"
 import {

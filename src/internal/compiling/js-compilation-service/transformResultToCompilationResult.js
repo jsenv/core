@@ -4,10 +4,7 @@ import {
   startsWithWindowsDriveLetter,
   windowsFilePathToUrl,
 } from "../../filePathUtils.js"
-import {
-  appendSourceMappingAsBase64Url,
-  appendSourceMappingAsExternalUrl,
-} from "../../sourceMappingURLUtils.js"
+import { setJavaScriptSourceMappingUrl, sourcemapToBase64Url } from "../../sourceMappingURLUtils.js"
 import { generateCompiledFileAssetUrl } from "../compile-directory/compile-asset.js"
 
 const isWindows = process.platform === "win32"
@@ -101,10 +98,10 @@ export const transformResultToCompilationResult = async (
     delete map.sourceRoot
 
     if (remapMethod === "inline") {
-      output = appendSourceMappingAsBase64Url(output, map)
+      output = setJavaScriptSourceMappingUrl(output, sourcemapToBase64Url(map))
     } else if (remapMethod === "comment") {
       const sourcemapFileRelativePathForModule = urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl)
-      output = appendSourceMappingAsExternalUrl(output, sourcemapFileRelativePathForModule)
+      output = setJavaScriptSourceMappingUrl(output, sourcemapFileRelativePathForModule)
       assets.push(sourcemapFileUrl)
       assetsContent.push(stringifyMap(map))
     }

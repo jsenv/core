@@ -10,171 +10,277 @@ which one is being done first
 
 import { createHash } from "crypto"
 import { require } from "../require.js"
+import { renderNamePattern } from "../renderNamePattern.js"
 
 const parse5 = require("parse5")
+// https://github.com/inikulin/parse5/blob/master/packages/parse5/lib/tree-adapters/default.js
+// eslint-disable-next-line import/no-unresolved
+// const treeAdapter = require("parse5/lib/tree-adapters/default.js")
 
 export const parseHtmlString = (htmlString) => {
-  return parse5.parse(htmlString)
+  const htmlAst = parse5.parse(htmlString, { sourceCodeLocationInfo: true })
+  return htmlAst
 }
 
-export const stringifyHtmlDocument = (htmlDocument) => {
-  return parse5.serialize(htmlDocument)
+export const parseSvgString = (svgString) => {
+  const svgAst = parse5.parseFragment(svgString, { sourceCodeLocationInfo: true })
+  return svgAst
 }
 
-export const parseHtmlDocumentRessources = (document) => {
+export const stringifyHtmlAst = (htmlAst) => {
+  const htmlString = parse5.serialize(htmlAst)
+  return htmlString
+}
+
+export const findNode = (htmlString, predicate) => {
+  const htmlAst = parseHtmlString(htmlString)
+  let nodeMatching = null
+  visitHtmlAst(htmlAst, (node) => {
+    if (predicate(node)) {
+      nodeMatching = node
+      return "stop"
+    }
+    return null
+  })
+  return nodeMatching
+}
+
+export const findNodes = (htmlString, predicate) => {
+  const htmlAst = parseHtmlString(htmlString)
+  const nodes = []
+  visitHtmlAst(htmlAst, (node) => {
+    if (predicate(node)) {
+      nodes.push(node)
+    }
+    return null
+  })
+  return nodes
+}
+
+export const findNodeByTagName = (htmlString, tagName) =>
+  findNode(htmlString, (node) => node.nodeName === tagName)
+
+export const findAllNodeByTagName = (htmlString, tagName) =>
+  findNodes(htmlString, (node) => node.nodeName === tagName)
+
+export const findFirstImportmapNode = (htmlString) =>
+  findNode(htmlString, htmlNodeIsScriptImportmap)
+
+export const getHtmlNodeAttributeByName = (htmlNode, attributeName) =>
+  htmlNode.attrs.find((attr) => attr.name === attributeName)
+
+export const removeHtmlNodeAttribute = (htmlNode, attributeToRemove) => {
+  let attrIndex
+  if (typeof attributeToRemove === "object") {
+    attrIndex = htmlNode.attrs.indexOf(attributeToRemove)
+  }
+  if (attrIndex === -1) {
+    return false
+  }
+  htmlNode.attrs.splice(attrIndex, 1)
+  return true
+}
+
+export const addHtmlNodeAttribute = (htmlNode, attributeToSet) => {
+  const existingAttributeIndex = htmlNode.attrs.findIndex(
+    (attr) => attr.name === attributeToSet.name,
+  )
+  if (existingAttributeIndex === -1) {
+    htmlNode.attrs.push(attributeToSet)
+  } else {
+    htmlNode.attrs[existingAttributeIndex] = attributeToSet
+  }
+}
+
+export const getHtmlNodeTextNode = (htmlNode) => {
+  const firstChild = htmlNode.childNodes[0]
+  return firstChild && firstChild.nodeName === "#text" ? firstChild : null
+}
+
+export const setHtmlNodeText = (htmlNode, textContent) => {
+  const textNode = getHtmlNodeTextNode(htmlNode)
+  if (textNode) {
+    textNode.value = textContent
+  } else {
+    const newTextNode = { nodeName: "#text", value: textContent, parentNode: htmlNode }
+    htmlNode.childNodes.splice(0, 0, newTextNode)
+  }
+}
+
+export const getHtmlNodeLocation = (htmlNode) => {
+  const { sourceCodeLocation } = htmlNode
+  if (!sourceCodeLocation) {
+    return {}
+  }
+  const { startLine, startCol } = sourceCodeLocation
+  return {
+    line: startLine,
+    column: startCol,
+  }
+}
+
+export const htmlAstContains = (htmlAst, predicate) => {
+  let contains = false
+  visitHtmlAst(htmlAst, (node) => {
+    if (predicate(node)) {
+      contains = true
+      return "stop"
+    }
+    return null
+  })
+  return contains
+}
+
+export const htmlNodeIsScriptModule = (htmlNode) => {
+  if (htmlNode.nodeName !== "script") {
+    return false
+  }
+  const typeAttribute = getHtmlNodeAttributeByName(htmlNode, "type")
+  if (!typeAttribute) {
+    return false
+  }
+  return typeAttribute.value === "module"
+}
+
+export const htmlNodeIsScriptImportmap = (htmlNode) => {
+  if (htmlNode.nodeName !== "script") {
+    return false
+  }
+  const typeAttribute = getHtmlNodeAttributeByName(htmlNode, "type")
+  if (!typeAttribute) {
+    return false
+  }
+  return typeAttribute.value === "importmap"
+}
+
+export const parseSrcset = (srcsetString) => {
+  const srcsetParts = []
+  srcsetString.split(",").forEach((set) => {
+    const [specifier, descriptor] = set.trim().split(" ")
+    srcsetParts.push({
+      specifier,
+      descriptor,
+    })
+  })
+  return srcsetParts
+}
+
+export const stringifySrcset = (srcsetParts) => {
+  const srcsetString = srcsetParts
+    .map(({ specifier, descriptor }) => `${specifier} ${descriptor}`)
+    .join(", ")
+  return srcsetString
+}
+
+// let's <img>, <link for favicon>, <link for css>, <styles>
+// <audio> <video> <picture> supports comes for free by detecting
+// <source src> attribute
+// if srcset is used we should parse it and collect all src referenced in it
+// also <link ref="preload">
+// ideally relative iframe should recursively fetch (not needed so lets ignore)
+// <svg> ideally looks for external ressources inside them
+
+// but right now we will focus on: <link href> and <style> tags
+// on veut vérifier qu'on les récupere bien
+// dans rollup pour chaque css on feras le transformcss + l'ajout des assets reférencés
+// pour le style inline on le parse aussi et on le remettra inline dans le html
+// ensuite qu'on est capable de les mettre a jour
+// ce qui veut dire de mettre a jour link.ref et style.text
+export const parseHtmlAstRessources = (htmlAst) => {
+  const links = []
+  const styles = []
   const scripts = []
+  const imgs = []
+  const images = []
+  const uses = []
+  const sources = []
 
-  visitDocument(document, (node) => {
+  visitHtmlAst(htmlAst, (node) => {
+    if (node.nodeName === "link") {
+      links.push(node)
+      return
+    }
+
+    if (node.nodeName === "style") {
+      styles.push(node)
+      return
+    }
+
     if (node.nodeName === "script") {
-      const attributes = attributeArrayToAttributeObject(node.attrs)
-      const firstChild = node.childNodes[0]
-      scripts.push({
-        node,
-        attributes,
-        ...(firstChild && firstChild.nodeName === "#text" ? { text: firstChild.value } : {}),
-      })
+      scripts.push(node)
+      return
+    }
+
+    if (node.nodeName === "img") {
+      imgs.push(node)
+      return
+    }
+
+    if (node.nodeName === "image") {
+      images.push(node)
+      return
+    }
+
+    if (node.nodeName === "use") {
+      uses.push(node)
+      return
+    }
+
+    if (node.nodeName === "source") {
+      sources.push(node)
+      return
     }
   })
 
   return {
+    links,
+    styles,
     scripts,
+    imgs,
+    images,
+    uses,
+    sources,
   }
 }
 
-const attributeArrayToAttributeObject = (attributes) => {
-  const attributeObject = {}
-  attributes.forEach((attribute) => {
-    attributeObject[attribute.name] = attribute.value
-  })
-  return attributeObject
-}
-
-const attributesObjectToAttributesArray = (attributeObject) => {
-  const attributeArray = []
-  Object.keys(attributeObject).forEach((key) => {
-    attributeArray.push({ name: key, value: attributeObject[key] })
-  })
-  return attributeArray
-}
-
-export const transformHtmlDocumentModuleScripts = (
-  scripts,
-  {
-    generateInlineScriptCode = ({ src }) => `<script>
-      window.__jsenv__.importFile(${JSON.stringify(src)})
-    </script>`,
-    generateInlineScriptSrc = ({ hash }) => `./${hash}.js`,
-  },
-) => {
-  /*
-  <script type="module" src="*" /> are going to be inlined
-  <script type="module">**</script> are going to be transformed to import a file so that we can transform the script content.
-
-  but we don't want that a script with an src to be considered as an inline script after it was inlined.
-
-  For that reason we perform mutation in the end
-  */
-
-  const remoteScriptsTransformed = {}
-  const inlineScriptsTransformed = {}
-
-  const mutations = scripts.map((script, index) => {
-    if (script.attributes.type === "module" && script.attributes.src) {
-      return () => {
-        const scriptPolyfilledSource = generateInlineScriptCode(
-          { src: script.attributes.src },
-          index,
-        )
-        const scriptPolyfilled = parseHtmlAsSingleElement(scriptPolyfilledSource)
-        scriptPolyfilled.attrs = [
-          // inherit script attributes except src and type
-          ...attributesObjectToAttributesArray(script.attributes).filter(
-            ({ name }) => name !== "type" && name !== "src",
-          ),
-          ...scriptPolyfilled.attrs,
-        ]
-        replaceNode(script.node, scriptPolyfilled)
-        remoteScriptsTransformed[script.attributes.src] = true
-      }
-    }
-
-    if (script.attributes.type === "module" && script.text) {
-      return () => {
-        const hash = createScriptContentHash(script.text)
-        const src = generateInlineScriptSrc(
-          {
-            id: script.attributes.id,
-            hash,
-          },
-          index,
-        )
-        const scriptPolyfilledSource = generateInlineScriptCode({ src }, index)
-        const scriptPolyfilled = parseHtmlAsSingleElement(scriptPolyfilledSource)
-        scriptPolyfilled.attrs = [
-          // inherit script attributes except src and type
-          ...attributesObjectToAttributesArray(script.attributes).filter(
-            ({ name }) => name !== "type" && name !== "src",
-          ),
-          ...scriptPolyfilled.attrs,
-        ]
-
-        replaceNode(script.node, scriptPolyfilled)
-        inlineScriptsTransformed[src] = script.text
-      }
-    }
-
-    return () => {}
-  })
-
-  mutations.forEach((fn) => fn())
-
-  return {
-    remoteScriptsTransformed,
-    inlineScriptsTransformed,
+export const replaceHtmlNode = (node, replacement, { inheritAttributes = true } = {}) => {
+  let newNode
+  if (typeof replacement === "string") {
+    newNode = parseHtmlAsSingleElement(replacement)
+  } else {
+    newNode = replacement
   }
+
+  if (inheritAttributes) {
+    newNode.attrs = [
+      // inherit script attributes except src, type, href
+      ...node.attrs.filter(({ name }) => name !== "type" && name !== "src" && name !== "href"),
+      ...newNode.attrs,
+    ]
+  }
+
+  replaceNode(node, newNode)
 }
 
-export const transformHtmlDocumentImportmapScript = (scripts, attributes) => {
-  scripts.forEach((script) => {
-    if (script.attributes.type === "importmap") {
-      Object.keys(attributes).forEach((key) => {
-        const value = attributes[key]
-        if (value !== undefined) {
-          const attributeNode = getAttributeByName(script.node.attrs, key)
-          attributeNode.value = value
-        }
-      })
-    }
-  })
-}
-
-export const manipulateHtmlDocument = (document, { scriptManipulations }) => {
-  const htmlNode = document.childNodes.find((node) => node.nodeName === "html")
+export const manipulateHtmlAst = (htmlAst, { scriptInjections = [] }) => {
+  const htmlNode = htmlAst.childNodes.find((node) => node.nodeName === "html")
   const headNode = htmlNode.childNodes[0]
   const bodyNode = htmlNode.childNodes[1]
 
   const scriptsToPreprendInHead = []
-
-  scriptManipulations.forEach(({ replaceExisting = false, ...script }) => {
+  scriptInjections.forEach((script) => {
     const scriptExistingInHead = findExistingScript(headNode, script)
     if (scriptExistingInHead) {
-      if (replaceExisting) {
-        replaceNode(scriptExistingInHead, scriptToNode(script))
-      }
+      replaceNode(scriptExistingInHead, scriptToNode(script))
       return
     }
-
     const scriptExistingInBody = findExistingScript(bodyNode, script)
     if (scriptExistingInBody) {
-      if (replaceExisting) {
-        replaceNode(scriptExistingInBody, scriptToNode(script))
-      }
+      replaceNode(scriptExistingInBody, scriptToNode(script))
       return
     }
-
     scriptsToPreprendInHead.push(script)
   })
-
   const headScriptsFragment = scriptsToFragment(scriptsToPreprendInHead)
   insertFragmentBefore(
     headNode,
@@ -211,8 +317,9 @@ const scriptToNode = (script) => {
 
 const scriptsToFragment = (scripts) => {
   const html = scripts.reduce((previous, script) => {
-    const scriptAttributes = objectToHtmlAttributes(script)
-    return `${previous}<script ${scriptAttributes}>${script.text || ""}</script>
+    const { text = "", ...attributes } = script
+    const scriptAttributes = objectToHtmlAttributes(attributes)
+    return `${previous}<script ${scriptAttributes}>${text}</script>
       `
   }, "")
   const fragment = parse5.parseFragment(html)
@@ -227,20 +334,28 @@ const findExistingScript = (node, script) =>
 const findChild = ({ childNodes = [] }, predicate) => childNodes.find(predicate)
 
 const sameScript = (node, { type = "text/javascript", src }) => {
-  const nodeType = getAttributeValue(node, "type") || "text/javascript"
-  const nodeSrc = getAttributeValue(node, "src")
-
-  if (type === "importmap") {
-    return nodeType === type
+  const typeAttribute = getHtmlNodeAttributeByName(node, "type")
+  if (!typeAttribute) {
+    return type === undefined || type === "text/javascript"
+  }
+  if (typeAttribute !== type) {
+    return false
   }
 
-  return nodeType === type && nodeSrc === src
+  const srcAttribute = getHtmlNodeAttributeByName(node, "src")
+  if (!srcAttribute) {
+    return src === undefined
+  }
+  if (srcAttribute.value !== src) {
+    return false
+  }
+
+  return true
 }
 
-// eslint-disable-next-line no-unused-vars
-const objectToHtmlAttributes = ({ text, ...rest }) => {
-  return Object.keys(rest)
-    .map((key) => `${key}=${valueToHtmlAttributeValue(rest[key])}`)
+const objectToHtmlAttributes = (object) => {
+  return Object.keys(object)
+    .map((key) => `${key}=${valueToHtmlAttributeValue(object[key])}`)
     .join(" ")
 }
 
@@ -251,35 +366,32 @@ const valueToHtmlAttributeValue = (value) => {
   return `"${JSON.stringify(value)}"`
 }
 
-// const resolveScripts = (document, resolveScriptSrc) => {
-//   visitDocument(document, (node) => {
-//     if (node.nodeName !== "script") {
-//       return
-//     }
-
-//     const attributes = node.attrs
-//     const srcAttribute = getAttributeByName(attributes, "src")
-//     if (!srcAttribute) {
-//       return
-//     }
-
-//     const srcAttributeValue = srcAttribute.value
-//     srcAttribute.value = resolveScriptSrc(srcAttributeValue)
-//   })
-// }
-
-const getAttributeValue = (node, attributeName) => {
-  const attribute = getAttributeByName(node.attrs, attributeName)
-  return attribute ? attribute.value : undefined
+export const createInlineScriptHash = (script) => {
+  const hash = createHash("sha256")
+  hash.update(getHtmlNodeTextNode(script).value)
+  return hash.digest("hex").slice(0, 8)
 }
 
-const getAttributeByName = (attributes, attributeName) =>
-  attributes.find((attr) => attr.name === attributeName)
+export const getUniqueNameForInlineHtmlNode = (node, nodes, pattern) => {
+  return renderNamePattern(pattern, {
+    id: () => {
+      const idAttribute = getHtmlNodeAttributeByName(node, "id")
+      if (idAttribute) {
+        return idAttribute.value
+      }
 
-const createScriptContentHash = (content) => {
-  const hash = createHash("sha256")
-  hash.update(content)
-  return hash.digest("hex").slice(0, 8)
+      const { line, column } = getHtmlNodeLocation(node)
+      const lineTaken = nodes.some(
+        (nodeCandidate) =>
+          nodeCandidate !== node && getHtmlNodeLocation(nodeCandidate).line === line,
+      )
+      if (lineTaken) {
+        return `${line}.${column}`
+      }
+
+      return line
+    },
+  })
 }
 
 const parseHtmlAsSingleElement = (html) => {
@@ -294,9 +406,12 @@ const replaceNode = (node, newNode) => {
   parentNodeChildNodes[nodeIndex] = newNode
 }
 
-const visitDocument = (document, fn) => {
+const visitHtmlAst = (htmlAst, callback) => {
   const visitNode = (node) => {
-    fn(node)
+    const callbackReturnValue = callback(node)
+    if (callbackReturnValue === "stop") {
+      return
+    }
     const { childNodes } = node
     if (childNodes) {
       let i = 0
@@ -305,5 +420,5 @@ const visitDocument = (document, fn) => {
       }
     }
   }
-  visitNode(document)
+  visitNode(htmlAst)
 }

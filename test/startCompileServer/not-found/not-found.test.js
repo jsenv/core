@@ -3,8 +3,8 @@ import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
 import { COMPILE_ID_OTHERWISE } from "../../../src/internal/CONSTANTS.js"
-import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)

@@ -1,5 +1,11 @@
-import { extname, basename } from "path"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, urlIsInsideOf } from "@jsenv/util"
+import {
+  resolveDirectoryUrl,
+  resolveUrl,
+  urlIsInsideOf,
+  urlToRelativeUrl,
+  urlToBasename,
+  urlToFilename,
+} from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_GLOBAL_BUNDLE_FILES, COMPILE_ID_COMMONJS_BUNDLE_FILES } from "../CONSTANTS.js"
 import { generateBundleUsingRollup } from "../bundling/generateBundleUsingRollup.js"
@@ -21,51 +27,52 @@ export const serveBundle = async ({
   compileCacheStrategy,
 
   format,
-  formatOutputOptions = {},
-  node = format === "commonjs",
-  browser = format === "global",
   projectFileRequestedCallback,
   request,
   babelPluginMap,
 }) => {
   const compile = async () => {
-    const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
-    const entryExtname = extname(originalFileRelativeUrl)
-    const entryBasename = basename(originalFileRelativeUrl, entryExtname)
-    const entryName = entryBasename
-    const entryPointMap = {
-      [entryName]: `./${originalFileRelativeUrl}`,
-    }
     const compileId =
       format === "global" ? COMPILE_ID_GLOBAL_BUNDLE_FILES : COMPILE_ID_COMMONJS_BUNDLE_FILES
+
+    const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
+    const bundleRelativeUrl =
+      format === "commonjs"
+        ? `${urlToBasename(originalFileUrl)}.cjs`
+        : urlToFilename(originalFileUrl)
+
+    const entryPointMap = {
+      [`./${originalFileRelativeUrl}`]: `./${bundleRelativeUrl}`,
+    }
 
     const bundle = await generateBundleUsingRollup({
       cancellationToken,
       logger,
 
+      entryPointMap,
       projectDirectoryUrl,
       importMapFileRelativeUrl,
-      entryPointMap,
-      // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
-      // but still important to know where the files will be written
-      bundleDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
       compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
       compileServerOrigin,
       importDefaultExtension,
       externalImportSpecifiers,
-
-      node,
-      browser,
       babelPluginMap,
+
       format,
-      formatOutputOptions,
+      node: format === "commonjs",
+      browser: format !== "commonjs",
+      // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
+      // but still important to know where the files will be written
+      bundleDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
       writeOnFileSystem: false,
       sourcemapExcludeSources: true,
+      manifestFile: false,
     })
 
     const sourcemapFileUrl = `${compiledFileUrl}.map`
 
     return bundleToCompilationResult(bundle, {
+      mainFileName: bundleRelativeUrl,
       projectDirectoryUrl,
       originalFileUrl,
       compiledFileUrl,

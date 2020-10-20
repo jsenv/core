@@ -4,7 +4,7 @@ import * as jsenvConfig from "../../jsenv.config.js"
 executeTestPlan({
   ...jsenvConfig,
   testPlan: {
-    "test/generateEsModuleBundle/**/*.test.js": {
+    "test/generateBundle/esmodule/**/*.test.js": {
       node: {
         launch: launchNode,
       },

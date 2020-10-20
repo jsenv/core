@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
-import { execute, launchNode } from "../../../index.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { execute, launchNode } from "@jsenv/core/index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)

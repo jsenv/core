@@ -1,10 +1,10 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
-import { launchNode } from "../../../index.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
+import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
+import { launchNode } from "@jsenv/core/index.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTE_TEST_PARAMS,

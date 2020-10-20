@@ -18,13 +18,16 @@ import { compileFile } from "./compileFile.js"
 import { serveBundle } from "./serveBundle.js"
 import {
   parseHtmlString,
-  parseHtmlDocumentRessources,
-  manipulateHtmlDocument,
-  transformHtmlDocumentModuleScripts,
-  transformHtmlDocumentImportmapScript,
-  stringifyHtmlDocument,
+  parseHtmlAstRessources,
+  manipulateHtmlAst,
+  stringifyHtmlAst,
+  getHtmlNodeAttributeByName,
+  getHtmlNodeTextNode,
+  getUniqueNameForInlineHtmlNode,
+  removeHtmlNodeAttribute,
+  setHtmlNodeText,
 } from "./compileHtml.js"
-import { appendSourceMappingAsExternalUrl } from "../sourceMappingURLUtils.js"
+import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
 export const createCompiledFileService = ({
@@ -42,7 +45,7 @@ export const createCompiledFileService = ({
   babelPluginMap,
   groupMap,
   convertMap,
-  scriptManipulations,
+  scriptInjections,
 
   projectFileRequestedCallback,
   useFilesystemAsCache,
@@ -125,7 +128,7 @@ export const createCompiledFileService = ({
         request,
 
         compile: (importmapBeforeTransformation) =>
-          transformImportmap(importmapBeforeTransformation, {
+           transformImportmap(importmapBeforeTransformation, {
             logger,
             projectDirectoryUrl,
             outDirectoryRelativeUrl,
@@ -216,53 +219,80 @@ export const createCompiledFileService = ({
         request,
 
         compile: async (htmlBeforeCompilation) => {
-          const htmlDocument = parseHtmlString(htmlBeforeCompilation)
-
-          manipulateHtmlDocument(htmlDocument, {
-            scriptManipulations: [
-              {
-                // when html file already contains an importmap script tag
-                // its src is replaced to target the importmap used for compiled files
-                replaceExisting: true,
-                type: "importmap",
-                src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
-              },
+          const htmlAst = parseHtmlString(htmlBeforeCompilation)
+          manipulateHtmlAst(htmlAst, {
+            scriptInjections: [
               {
                 src: `/${browserBundledJsFileRelativeUrl}`,
               },
               // todo: this is dirty because it means
               // compile server is aware of exploring and jsenv toolbar
               // instead this should be moved to startExploring
-              ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptManipulations),
+              ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptInjections),
             ],
           })
+          const { scripts } = parseHtmlAstRessources(htmlAst)
 
-          const { scripts } = parseHtmlDocumentRessources(htmlDocument)
-          transformHtmlDocumentImportmapScript(scripts, {
-            type: "jsenv-importmap",
-          })
-          const { inlineScriptsTransformed } = transformHtmlDocumentModuleScripts(scripts, {
-            generateInlineScriptSrc: ({ id, hash }) => {
+          let hasImportmap = false
+          const inlineScriptsContentMap = {}
+          scripts.forEach((script) => {
+            const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+            const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+
+            if (typeAttribute && typeAttribute.value === "importmap" && srcAttribute) {
+              hasImportmap = true
+              typeAttribute.value = "jsenv-importmap"
+              return
+            }
+            if (typeAttribute && typeAttribute.value === "module" && srcAttribute) {
+              removeHtmlNodeAttribute(script, typeAttribute)
+              removeHtmlNodeAttribute(script, srcAttribute)
+              setHtmlNodeText(
+                script,
+                `window.__jsenv__.importFile(${JSON.stringify(srcAttribute.value)})`,
+              )
+              return
+            }
+            const textNode = getHtmlNodeTextNode(script)
+            if (typeAttribute && typeAttribute.value === "module" && textNode) {
               const scriptAssetUrl = generateCompiledFileAssetUrl(
                 compiledFileUrl,
-                id ? `${id}.js` : `${hash}.js`,
+                getUniqueNameForInlineHtmlNode(script, scripts, `[id].js`),
               )
-              return `./${urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`
-            },
-          })
+              const specifier = `./${urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`
+              inlineScriptsContentMap[specifier] = textNode.value
 
-          const htmlAfterTransformation = stringifyHtmlDocument(htmlDocument)
+              removeHtmlNodeAttribute(script, typeAttribute)
+              removeHtmlNodeAttribute(script, srcAttribute)
+              setHtmlNodeText(script, `window.__jsenv__.importFile(${JSON.stringify(specifier)})`)
+              return
+            }
+          })
+          // ensure there is at least the importmap needed for jsenv
+          if (hasImportmap === false) {
+            manipulateHtmlAst(htmlAst, {
+              scriptInjections: [
+                {
+                  type: "jsenv-importmap",
+                  // in case there is no importmap, use a top level one
+                  src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
+                },
+              ],
+            })
+          }
+
+          const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
 
           let assets = []
           let assetsContent = []
           await Promise.all(
-            Object.keys(inlineScriptsTransformed).map(async (scriptSrc) => {
+            Object.keys(inlineScriptsContentMap).map(async (scriptSrc) => {
               const scriptAssetUrl = resolveUrl(scriptSrc, compiledFileUrl)
               const scriptBasename = urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)
               const scriptOriginalFileUrl = resolveUrl(scriptBasename, originalFileUrl)
               const scriptAfterTransformFileUrl = resolveUrl(scriptBasename, compiledFileUrl)
 
-              const scriptBeforeCompilation = inlineScriptsTransformed[scriptSrc]
+              const scriptBeforeCompilation = inlineScriptsContentMap[scriptSrc]
               const scriptTransformResult = await transformJs({
                 projectDirectoryUrl,
                 code: scriptBeforeCompilation,
@@ -283,7 +313,7 @@ export const createCompiledFileService = ({
                 sourcemapFileUrl,
                 compiledFileUrl,
               )
-              code = appendSourceMappingAsExternalUrl(code, sourcemapFileRelativePathForModule)
+              code = setJavaScriptSourceMappingUrl(code, sourcemapFileRelativePathForModule)
               assets = [...assets, scriptAssetUrl, sourcemapFileUrl]
               assetsContent = [...assetsContent, code, JSON.stringify(map, null, "  ")]
             }),

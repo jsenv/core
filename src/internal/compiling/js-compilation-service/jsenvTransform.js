@@ -1,7 +1,6 @@
-/* eslint-disable import/max-dependencies */
-import { require } from "../../require.js"
-import { minimalBabelPluginArray } from "../../minimalBabelPluginArray.js"
-import transformModulesSystemJs from "./babel-plugin-transform-modules-systemjs/index.js"
+import { require } from "@jsenv/core/src/internal/require.js"
+import { minimalBabelPluginArray } from "@jsenv/core/src/internal/minimalBabelPluginArray.js"
+
 import { findAsyncPluginNameInBabelPluginMap } from "./findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"
 import { ensureRegeneratorRuntimeImportBabelPlugin } from "./ensureRegeneratorRuntimeImportBabelPlugin.js"
@@ -10,6 +9,8 @@ import { transformBabelHelperToImportBabelPlugin } from "./transformBabelHelperT
 import { filePathToBabelHelperName } from "./babelHelper.js"
 
 const { transformAsync, transformFromAstAsync } = require("@babel/core")
+const transformModulesSystemJs = require("@babel/plugin-transform-modules-systemjs")
+const proposalDynamicImport = require("@babel/plugin-proposal-dynamic-import")
 
 export const jsenvTransform = async ({
   inputCode,
@@ -97,7 +98,8 @@ export const jsenvTransform = async ({
         plugins: [
           ...minimalBabelPluginArray,
           ...babelPluginArrayWithoutAsync,
-          [transformModulesSystemJs, { topLevelAwait: transformTopLevelAwait }],
+          [proposalDynamicImport],
+          [transformModulesSystemJs],
         ],
       },
     })
@@ -131,7 +133,7 @@ export const jsenvTransform = async ({
     ...minimalBabelPluginArray,
     ...Object.keys(babelPluginMap).map((babelPluginName) => babelPluginMap[babelPluginName]),
     ...(transformModuleIntoSystemFormat
-      ? [[transformModulesSystemJs, { topLevelAwait: transformTopLevelAwait }]]
+      ? [[proposalDynamicImport], [transformModulesSystemJs]]
       : []),
   ]
   const result = await babelTransform({

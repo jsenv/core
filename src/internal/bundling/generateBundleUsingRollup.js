@@ -1,8 +1,8 @@
 import { extname } from "path"
 import { createOperation } from "@jsenv/cancellation"
-import { urlToFileSystemPath } from "@jsenv/util"
+import { urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/util"
 import { require } from "../require.js"
-import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin/createJsenvRollupPlugin.js"
+import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
 const { rollup } = require("rollup")
 
@@ -10,58 +10,63 @@ export const generateBundleUsingRollup = async ({
   cancellationToken,
   logger,
 
-  projectDirectoryUrl,
   entryPointMap,
-  bundleDirectoryUrl,
-  bundleDefaultExtension,
+  projectDirectoryUrl,
   importMapFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
   importDefaultExtension,
   externalImportSpecifiers,
-
+  babelPluginMap,
   node,
   browser,
-  babelPluginMap,
+
   format,
-  formatInputOptions,
-  formatOutputOptions,
+  systemJsUrl,
+  globals,
+  globalName,
+  sourcemapExcludeSources,
+  preserveEntrySignatures,
+
+  bundleDirectoryUrl,
+  bundleDirectoryClean,
+
   minify,
   minifyJsOptions,
   minifyCssOptions,
   minifyHtmlOptions,
-  sourcemapExcludeSources,
-  writeOnFileSystem,
   manifestFile = false,
-  systemJsScript,
+
+  writeOnFileSystem,
 }) => {
-  const { jsenvRollupPlugin, getExtraInfo } = await createJsenvRollupPlugin({
+  const { jsenvRollupPlugin, getResult } = await createJsenvRollupPlugin({
     cancellationToken,
     logger,
 
-    projectDirectoryUrl,
     entryPointMap,
-    bundleDirectoryUrl,
-    bundleDefaultExtension,
+    projectDirectoryUrl,
     importMapFileRelativeUrl,
     compileDirectoryRelativeUrl,
     compileServerOrigin,
     importDefaultExtension,
     externalImportSpecifiers,
-
+    babelPluginMap,
     node,
     browser,
-    babelPluginMap,
+
     format,
+    systemJsUrl,
+    bundleDirectoryUrl,
+
     minify,
     minifyJsOptions,
     minifyCssOptions,
     minifyHtmlOptions,
+
     manifestFile,
-    systemJsScript,
   })
 
-  const rollupBundle = await useRollup({
+  await useRollup({
     cancellationToken,
     logger,
 
@@ -69,18 +74,16 @@ export const generateBundleUsingRollup = async ({
     jsenvRollupPlugin,
 
     format,
-    formatInputOptions,
-    formatOutputOptions,
-    bundleDirectoryUrl,
-    bundleDefaultExtension,
+    globals,
+    globalName,
     sourcemapExcludeSources,
+    preserveEntrySignatures,
     writeOnFileSystem,
+    bundleDirectoryUrl,
+    bundleDirectoryClean,
   })
 
-  return {
-    rollupBundle,
-    ...getExtraInfo(),
-  }
+  return getResult()
 }
 
 const useRollup = async ({
@@ -89,14 +92,14 @@ const useRollup = async ({
 
   entryPointMap,
   jsenvRollupPlugin,
-
   format,
-  formatInputOptions,
-  formatOutputOptions,
-  bundleDirectoryUrl,
-  bundleDefaultExtension,
+  globals,
+  globalName,
   sourcemapExcludeSources,
+  preserveEntrySignatures,
   writeOnFileSystem,
+  bundleDirectoryUrl,
+  bundleDirectoryClean,
 }) => {
   logger.info(`
 parse bundle
@@ -119,12 +122,15 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // to be very clear about what we want to ignore
     onwarn: (warning, warn) => {
       if (warning.code === "THIS_IS_UNDEFINED") return
+      if (warning.code === "EMPTY_BUNDLE" && warning.chunkName === "__empty__") return
       warn(warning)
     },
+    // on passe input: [] car c'est le plusign jsenv qui se chargera d'emit des chunks
+    // en fonction de entryPointMap
+    // on fait cela car sinon rollup est pénible si on passe un entry point map de type html
     input: [],
-    // preserveEntrySignatures: false,
+    preserveEntrySignatures,
     plugins: [jsenvRollupPlugin],
-    ...formatInputOptions,
   }
   const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
   const outputExtension = extension === ".html" ? ".js" : extension
@@ -142,17 +148,24 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources,
-
-    entryFileNames: `[name]${bundleDefaultExtension || outputExtension}`,
-    chunkFileNames: `[name]-[hash]${bundleDefaultExtension || outputExtension}`,
-
-    ...formatOutputOptions,
+    entryFileNames: `[name]${outputExtension}`,
+    chunkFileNames: `[name]-[hash]${outputExtension}`,
+    ...(format === "global"
+      ? {
+          globals,
+          name: globalName,
+        }
+      : {}),
   }
 
   const rollupBundle = await createOperation({
     cancellationToken,
     start: () => rollup(rollupInputOptions),
   })
+
+  if (bundleDirectoryClean) {
+    await ensureEmptyDirectory(bundleDirectoryUrl)
+  }
 
   const rollupOutputArray = await createOperation({
     cancellationToken,
