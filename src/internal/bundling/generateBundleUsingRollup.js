@@ -36,7 +36,6 @@ export const generateBundleUsingRollup = async ({
   minifyCssOptions,
   minifyHtmlOptions,
   manifestFile = false,
-  inlineAssetPredicate = () => false,
 
   writeOnFileSystem,
 }) => {
@@ -58,7 +57,6 @@ export const generateBundleUsingRollup = async ({
     format,
     systemJsUrl,
     bundleDirectoryUrl,
-    inlineAssetPredicate,
 
     minify,
     minifyJsOptions,

@@ -9,27 +9,49 @@
 - [Concrete example](#concrete-example)
   - [1 - Setup basic project](#1---setup-basic-project)
   - [2 - Generate bundles](#2---generate-bundles)
-- [generateEsModuleBundle](#generateEsModuleBundle)
-- [generateSystemJsBundle](#generateSystemJsBundle)
-- [generateGlobalBundle](#generateglobalbundle)
-  - [globalName](#globalName)
-- [generateCommonJsBundle](#generateCommonJsBundle)
-- [generateCommonJsBundleForNode](#generateCommonJsBundleForNode)
-  - [nodeMinimumVersion](#nodeMinimumVersion)
+- [Html entry point](#html-entry-point)
 - [Bundling parameters](#bundling-parameters)
   - [bundleDirectoryRelativeUrl](#bundleDirectoryRelativeUrl)
   - [entryPointMap](#entryPointMap)
   - [externalImportSpecifiers](#externalImportSpecifiers)
   - [minify](#minify)
 - [Shared parameters](#Shared-parameters)
-- [Balancing](#balancing)
 
 # Presentation
 
-A bundle is the concatenation of an entry file and its dependencies into one file.
+A bundle consist into taking one or many input files to generate one or many output files. It provides a dedicated build time where you can perform production specific optimizations:
 
-They are used to save http requests if your production servers are not compatible with http2 multiplexing (or not configured for it).
-They also provide a dedicated build time where you can perform changes or optimization production specific like minifying files.
+- File concatenation to save http request
+- Minification or compression to reduce file size
+- Hash url to enable long term caching
+
+A basic example applied to an html file
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="./img.png" />
+  </head>
+  <body></body>
+</html>
+```
+
+Becomes
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="assets/img-25e95a00.png" />
+  </head>
+  <body></body>
+</html>
+```
 
 Jsenv uses [rollup](https://github.com/rollup/rollup) to provide functions generating bundle of various formats.
 These formats output different code for the same files as shown in the next part.
@@ -52,9 +74,18 @@ export default 42
 
 ### Esmodule format
 
+Use `esmodule` format if you want a bundle that can be consumed like this:
+
+```html
+<script type="module">
+  import value from "./dist/main.js"
+</script>
+```
+
 Things to know about esmodule format:
 
 - Cannot use top level await because browsers and Node.js does not support top level await for now
+- Cannot use importmaps because not yet supported
 - Cannot be used in old browsers or node < 13.7
 
 Here is the generated bundle using esmodule format for the [file structure](#File-structure)
@@ -68,11 +99,53 @@ export default index
 
 ### Systemjs format
 
+Use `systemjs` format if you any of the feature listed below. Assuming that feature is not supported in the browsers that you want to be compatible with.
+
+##### import export keywords
+
+```js
+import foo from "./foo.js"
+```
+
+##### dynamic import
+
+```js
+const namespace = await import("./foo.js")
+```
+
+##### top level await
+
+```js
+const a = await Promise.resolve(42)
+```
+
+##### import remapping using importmap
+
+```js
+import foo from "foo"
+```
+
+— see [importmap specifications](https://github.com/WICG/import-maps)
+
+systemjs bundle can be used by loading systemjs library and importing the bundle file as shown below.
+
+```html
+<script src="https://unpkg.com/systemjs@6.1.4/dist/system.js"></script>
+<script>
+  window.System.import("./dist/systemjs/main.js").then((namespace) => {
+    console.log(namespace.default)
+  })
+</script>
+```
+
+If you use an [html entry point](#Html-entry-point) this is done for you automatically
+
 Things to know about bundle using systemjs format:
 
 - needs [systemjs](https://github.com/systemjs/systemjs) to be used
 - compatible with dynamic import
 - compatible with top level await
+- compatible with importmap
 
 Here is the generated bundle using systemjs format for the [file structure](#File-structure)
 
@@ -90,18 +163,16 @@ System.register([], function (exports) {
 Systemjs bundle put files content into a System.register call. This format was invented by systemjs to polyfill module feature like top level await.<br />
 — see [System.register documentation on github](https://github.com/systemjs/systemjs/blob/762f46db81b55e48891b42e7a97af374478e9cf7/docs/system-register.md)
 
-This systemjs bundle can be used by loading systemjs library and importing the bundle file.
+### Global format
+
+Use `global` format if you want a bundle that can be consumed by a browser like this:
 
 ```html
-<script src="https://unpkg.com/systemjs@6.1.4/dist/system.js"></script>
+<script src="./dist/global/main.js"></script>
 <script>
-  window.System.import("./dist/systemjs/main.js").then((namespace) => {
-    console.log(namespace.default)
-  })
+  console.log(window.__whatever__)
 </script>
 ```
-
-### Global format
 
 Things to know about bundle using global format:
 
@@ -123,14 +194,15 @@ Global bundle put files content into a function executable in old browsers writi
 
 This global bundle can be used with a classic script tag.
 
-```html
-<script src="./dist/global/main.js"></script>
-<script>
-  console.log(window.__whatever__)
-</script>
-```
-
 ### Commonjs format
+
+Use `commonjs` format to generate a file that can be used in Node.js like this:
+
+```js
+const namespace = require("./dist/commonjs/main.cjs")
+
+console.log(namespace)
+```
 
 Things to know about bundle using commonjs format:
 
@@ -146,14 +218,6 @@ module.exports = 42
 
 Commonjs bundle put files content into a file executable in Node.js writing exports on `module.exports`.<br />
 — see [Modules documentation on node.js](https://nodejs.org/docs/latest-v12.x/api/modules.html)
-
-This commonjs bundle can be used by require.
-
-```js
-const namespace = require("./dist/commonjs/main.cjs")
-
-console.log(namespace)
-```
 
 ## Concrete example
 
@@ -188,85 +252,119 @@ Or you can use the preconfigured script from package.json.
 npm run generate-systemjs-bundle
 ```
 
-# generateEsModuleBundle
+# Html entry point
 
-`generateEsModuleBundle` is an async function generating an esmodule bundle for your project.
+When generating a bundle, if you provide an html file in [entryPointMap](#entryPointMap), cool things happens...
+
+Let's get an overview with the following `index.html` file
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="./favicon.ico" />
+    <script type="importmap" src="./project.importmap"></script>
+    <link rel="stylesheet" type="text/css" href="./main.css" />
+  </head>
+
+  <body>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
+```
+
+To keep the example short let's assume the following file exists: `favicon.ico`, `project.importmap`, `main.css` and `index.js`.
+
+Now let's generate a bundle passing `index.html` as entry point.
 
 ```js
-import { generateEsModuleBundle } from "@jsenv/core"
+import { generateBundle } from "@jsenv/core"
 
-generateEsModuleBundle({
-  projectDirectoryUrl: new URL("./", import.meta.url),
+await generateBundle({
+  format: "systemjs",
+  enryPointMap: {
+    "./index.html": "main.html",
+  },
 })
 ```
 
-— source code at [src/generateEsModuleBundle.js](../../src/generateEsModuleBundle.js).
+Here is the html generated in `dist/systemjs/main.html`:
 
-# generateSystemJsBundle
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="assets/favicon-5340s4789a.ico" />
+    <script src="assets/s.min-550cb99a.js"></script>
+    <script type="systemjs-importmap" src="import-map-b237a334.importmap"></script>
+    <link rel="stylesheet" type="text/css" href="assets/main-3b329ff0.css" />
+  </head>
 
-`generateSystemJsBundle` is an async function generating a systemjs bundle for your project.
-
-```js
-import { generateSystemJsBundle } from "@jsenv/core"
-
-generateSystemJsBundle({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-})
+  <body>
+    <script>
+      window.System.import("./main-f7379e10.js")
+    </script>
+  </body>
+</html>
 ```
 
-— source code at [src/generateSystemJsBundle.js](../../src/generateSystemJsBundle.js).
+The following happened:
 
-# generateGlobalBundle
+##### url hashing
 
-`generateGlobalBundle` is an async function generating a global bundle for your project.
+All urls now contains a hash, allowing long term caching of your assets.
 
-```js
-import { generateGlobalBundle } from "@jsenv/core"
+An article to explain long term caching: https://jakearchibald.com/2016/caching-best-practices/#pattern-1-immutable-content--long-max-age
 
-generateGlobalBundle({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  globalName: "__whatever__",
-})
+Please note url are replaced in the html, css, js, or svg files referencing an url. This is done using js parser (rollup), a css parser (postcss) or an html/svg parser (parse-5). This is recursive meaning it works for css imported by css or svg importing an image and so on.
+
+Consequently, if `main.css` content is the following:
+
+```css
+body {
+  background: url("./favicon.ico");
+}
 ```
 
-— source code at [src/generateGlobalBundle.js](../../src/generateGlobalBundle.js).
+`dist/systemjs/assets/main-3b329ff0.css` content is the following:
 
-## globalName
-
-`globalName` parameter controls what global variable will contain your entry file exports. This is a **required** parameter. Passing `"__whatever__"` means generated bundle will write your exports under `window.__whatever__`.
-
-# generateCommonJsBundle
-
-`generateCommonJsBundle` is an async function generating a commonjs bundle for your project.
-
-```js
-import { generateCommonJsBundle } from "@jsenv/core"
-
-generateCommonJsBundle({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-})
+```css
+body {
+  background: url("favicon-5340s4789a.ico");
+}
 ```
 
-— source code at [src/generateCommonJsBundle.js](../../src/generateCommonJsBundle.js).
+##### module script polyfill
 
-# generateCommonJsBundleForNode
+As you can see
 
-`generateCommonJsBundleForNode` is an async function generating a commonjs bundle for your project assuming it will run in your current node version.
-
-```js
-import { generateCommonJsBundleForNode } from "@jsenv/core"
-
-generateCommonJsBundleForNode({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  nodeMinimumVersion: "8.0.0",
-})
+```html
+<script type="module" src="./main.js"></script>
 ```
 
-— source code at [src/generateCommonJsBundleForNode.js](../../src/generateCommonJsBundleForNode.js)
+Was transformed into
 
-## nodeMinimumVersion
+```html
+<script>
+  window.System.import("./main-f7379e10.js")
+</script>
+```
 
-`nodeMinimumVersion` parameter is a string representing the minimum node version your bundle will work with. This parameter is optional with a default value corresponding to your current node version.
+> Happens only when using `systemjs` format. If you use `esmodule` format your `<script type="module"></script>` are kept untouched.
+
+This is to make your html file compatible with browser that does not support `<script type="module"></script>` or because you want to use an other feature not yet supported like top level await or import maps. To provide `window.System` the following script tag was injected into `<head>` of `dist/systemjs/main.html`
+
+```html
+<script src="assets/s.min-550cb99a.js"></script>
+```
+
+It loads systemjs that creates `window.System` that is needed to import the js file.
+
+> If you have no `<script type="module"></script>` in the html file, this script is not needed so it's no injected in `<head>`
 
 # Bundling parameters
 
@@ -276,37 +374,41 @@ This section present parameters available to every function generating a bundle.
 
 `bundleDirectoryRelativeUrl` parameter is a string leading to a directory where bundle files are written. This parameter is optional with a default value specific to each bundling function:
 
-- Default for `generateEsModuleBundle`:
+- Default for `esmodule` format:
 
   ```js
   "./dist/esmodule/"
+
   ```
 
-- Default for `generateSystemJsBundle`:
+- Default for `systemjs` format:
 
   ```js
   "./dist/systemjs/"
+
   ```
 
-- Default for `generateCommonJsBundle` and `generateCommonJsBundleForNode`:
+- Default for `commonjs` format:
 
   ```js
   "./dist/commonjs/"
+
   ```
 
-- Default for `generateGlobalBundle`:
+- Default for `global` fromat:
 
   ```js
   "./dist/global/"
+
   ```
 
 ## entryPointMap
 
-`entryPointMap` parameter is an object describing your project entry points. A dedicated bundle is generated for each entry. This parameter is optional with a default value assuming your have one entry point being `index.js`.
+`entryPointMap` parameter is an object describing your project entry points. A dedicated bundle is generated for each entry. This parameter is optional with a default value assuming you have one entry point being `index.js` that will be written into `dist/${format}/main.js`.
 
 ```json
 {
-  "main": "./index.js"
+  "./index.js": "./main.js"
 }
 ```
 
@@ -406,7 +508,3 @@ To avoid duplication some parameter are linked to a generic documentation.
 - [compileServerCertificate](../shared-parameters.md#compileServerCertificate)
 - [compileServerIp](../shared-parameters.md#compileServerIp)
 - [compileServerPort](../shared-parameters.md#compileServerPort)
-
-# Balancing
-
-If you check source code you might see some code related to a balancing concept. It is not documented nor ready to be used. It's likely never going to have a use case.

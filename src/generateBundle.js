@@ -36,7 +36,6 @@ export const generateBundle = async ({
     ? { "./index.js": "./main.cjs" }
     : { "./index.js": "./main.js" },
   systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
-  inlineAssetPredicate = ({ relativeUrl }) => relativeUrl === systemJsUrl.slice(1),
   globalName,
   globals = {},
   sourcemapExcludeSources = false,
@@ -175,7 +174,6 @@ export const generateBundle = async ({
       bundleDirectoryUrl,
       bundleDirectoryClean,
       manifestFile,
-      inlineAssetPredicate,
 
       minify,
       minifyHtmlOptions,
