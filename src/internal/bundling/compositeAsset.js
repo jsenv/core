@@ -62,9 +62,10 @@ export const createCompositeAssetHandler = (
 
   const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
 
-  const prepareHtmlEntry = async (url, { fileNamePattern, source }) => {
-    logger.debug(`prepare entry asset ${shortenUrl(url)}`)
-
+  const createReferenceForAssetEntry = async (
+    entryUrl,
+    { entryContentType, entryBundleRelativeUrl, entrySource },
+  ) => {
     // we don't really know where this reference to that asset file comes from
     // we could almost say it's from the script calling this function
     // so we could analyse stack trace here to put this function caller
@@ -73,16 +74,21 @@ export const createCompositeAssetHandler = (
     const entryReference = createReference(
       {
         ...callerLocation,
-        contentType: "text/html",
+        contentType: entryContentType,
       },
       {
         isEntry: true,
-        url,
-        content: {
-          type: "text/html",
-          value: source,
-        },
-        fileNamePattern,
+        url: entryUrl,
+        ...(entrySource
+          ? {
+              content: {
+                type: entryContentType,
+                value: entrySource,
+              },
+            }
+          : {}),
+        // don't hash asset entry points
+        fileNamePattern: entryBundleRelativeUrl,
       },
     )
 
@@ -91,6 +97,36 @@ export const createCompositeAssetHandler = (
     // but don't await here because this function will be awaited by rollup before starting
     // to parse chunks
     entryReference.target.getReadyPromise()
+  }
+
+  const createReferenceForJsModuleImport = async (response, { importerUrl } = {}) => {
+    const contentType = response.headers["content-type"] || ""
+    // const targetUrl = resolveTargetUrl({ specifier: response.url, contentType })
+    const targetUrl = response.url
+    const responseBodyAsBuffer = Buffer.from(await response.arrayBuffer())
+    const reference = createReference(
+      // the reference to this target comes from a static or dynamic import
+      // parsed by rollup.
+      // but we don't really know the line and column
+      // because rollup does not share this information
+      {
+        url: importerUrl,
+        column: undefined,
+        line: undefined,
+        contentType,
+      },
+      {
+        url: targetUrl,
+        content: {
+          type: contentType,
+          value: responseBodyAsBuffer,
+        },
+      },
+    )
+
+    logger.debug(formatReferenceFound(reference, { showReferenceSourceLocation }))
+    await reference.target.getRollupReferenceIdAvailablePromise()
+    return reference
   }
 
   const targetMap = {}
@@ -483,36 +519,6 @@ export const createCompositeAssetHandler = (
     return assetUrl
   }
 
-  const createJsModuleImportReference = async (response, { importerUrl } = {}) => {
-    const contentType = response.headers["content-type"] || ""
-    // const targetUrl = resolveTargetUrl({ specifier: response.url, contentType })
-    const targetUrl = response.url
-    const responseBodyAsBuffer = Buffer.from(await response.arrayBuffer())
-    const reference = createReference(
-      // the reference to this target comes from a static or dynamic import
-      // parsed by rollup.
-      // but we don't really know the line and column
-      // because rollup does not share this information
-      {
-        url: importerUrl,
-        column: undefined,
-        line: undefined,
-        contentType,
-      },
-      {
-        url: targetUrl,
-        content: {
-          type: contentType,
-          value: responseBodyAsBuffer,
-        },
-      },
-    )
-
-    logger.debug(formatReferenceFound(reference, { showReferenceSourceLocation }))
-    await reference.target.getRollupReferenceIdAvailablePromise()
-    return reference
-  }
-
   const shortenUrl = (url) => {
     return urlIsInsideOf(url, projectDirectoryUrl)
       ? urlToRelativeUrl(url, projectDirectoryUrl)
@@ -547,11 +553,13 @@ ${showSourceLocation(referenceSource, {
   }
 
   return {
-    prepareHtmlEntry,
+    createReferenceForAssetEntry,
+    createReferenceForJsModuleImport,
+
     resolveJsReferencesUsingRollupBundle,
     cleanupRollupBundle,
     rollupBundleToAssetMappings,
-    createJsModuleImportReference,
+
     inspect: () => {
       return {
         targetMap,
