@@ -65,7 +65,7 @@ export const createJsenvRollupPlugin = async ({
   browser,
 
   format,
-  importmapEnabled = format === "systemjs",
+  useImportMap = format === "systemjs",
   systemJsUrl,
   minify,
   minifyJsOptions,
@@ -341,7 +341,7 @@ export const createJsenvRollupPlugin = async ({
             } else {
               target.connect(async () => {
                 await target.getReadyPromise()
-                const { sourceAfterTransformation, fileNameForRollup } = target
+                const { sourceAfterTransformation, bundleRelativeUrl } = target
 
                 if (target.isInline) {
                   return {}
@@ -356,9 +356,9 @@ export const createJsenvRollupPlugin = async ({
                   type: "asset",
                   source: sourceAfterTransformation,
                   // name: urlToFilename(target.url),
-                  fileName: fileNameForRollup,
+                  fileName: bundleRelativeUrl,
                 })
-                logger.debug(`${shortenUrl(target.url)} ready -> ${fileNameForRollup}`)
+                logger.debug(`${shortenUrl(target.url)} ready -> ${bundleRelativeUrl}`)
                 return { rollupReferenceId }
               })
             }
@@ -496,18 +496,17 @@ export const createJsenvRollupPlugin = async ({
     // we will receive
     // transform: async (moduleContent, rollupId) => {}
 
-    outputOptions: (options) => {
-      // rollup does not expects to have http dependency in the mix
-
+    outputOptions: (outputOptions) => {
       const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
       const outputExtension = extension === ".html" ? ".js" : extension
 
-      options.entryFileNames = `[name]${outputExtension}`
-      options.chunkFileNames = importmapEnabled
+      outputOptions.entryFileNames = `[name]${outputExtension}`
+      outputOptions.chunkFileNames = useImportMap
         ? `[name]${outputExtension}`
         : `[name]-[hash].${outputExtension}`
 
-      options.sourcemapPathTransform = (relativePath, sourcemapPath) => {
+      // rollup does not expects to have http dependency in the mix: fix them
+      outputOptions.sourcemapPathTransform = (relativePath, sourcemapPath) => {
         const sourcemapUrl = fileSystemPathToUrl(sourcemapPath)
         const url = relativePathToUrl(relativePath, sourcemapUrl)
         const serverUrl = urlToServerUrl(url)
@@ -531,7 +530,7 @@ export const createJsenvRollupPlugin = async ({
         return url
       }
 
-      return options
+      return outputOptions
     },
 
     renderChunk: async (code, chunk) => {
@@ -573,7 +572,10 @@ export const createJsenvRollupPlugin = async ({
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
-      await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle, urlToServerUrl)
+      await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle, {
+        urlToServerUrl,
+        useImportMap,
+      })
       compositeAssetHandler.cleanupRollupBundle(bundle)
 
       const result = rollupBundleToManifestAndMappings(bundle, {

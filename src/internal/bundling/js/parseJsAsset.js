@@ -27,7 +27,7 @@ export const parseJsAsset = async (
     })
   }
 
-  return async ({ precomputeFileNameForRollup, registerAssetEmitter }) => {
+  return async ({ precomputeBundleRelativeUrl, registerAssetEmitter }) => {
     let map
     if (sourcemapReference) {
       map = JSON.parse(sourcemapReference.target.sourceAfterTransformation)
@@ -55,15 +55,15 @@ export const parseJsAsset = async (
     }
 
     if (map) {
-      const jsFileNameForRollup = precomputeFileNameForRollup(jsString)
-      const jsSourcemapFilename = `${basename(jsFileNameForRollup)}.map`
+      const jsBundleRelativeUrl = precomputeBundleRelativeUrl(jsString)
+      const jsSourcemapFilename = `${basename(jsBundleRelativeUrl)}.map`
       jsSourceAfterTransformation = setJavaScriptSourceMappingUrl(
         jsSourceAfterTransformation,
         jsSourcemapFilename,
       )
 
       registerAssetEmitter(({ bundleDirectoryUrl, emitAsset }) => {
-        const jsBundleUrl = resolveUrl(jsTarget.fileNameForRollup, bundleDirectoryUrl)
+        const jsBundleUrl = resolveUrl(jsTarget.bundleRelativeUrl, bundleDirectoryUrl)
         const mapBundleUrl = resolveUrl(jsSourcemapFilename, jsBundleUrl)
         map.file = urlToFilename(jsBundleUrl)
         if (map.sources) {
@@ -75,24 +75,23 @@ export const parseJsAsset = async (
         }
 
         const mapSource = JSON.stringify(map, null, "  ")
-        const relativeUrl = urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl)
-        const fileNameForRollup = relativeUrl
+        const bundleRelativeUrl = urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl)
         emitAsset({
           source: mapSource,
-          fileName: fileNameForRollup,
+          fileName: bundleRelativeUrl,
         })
         if (sourcemapReference) {
           // redirect original sourcemap from bundle to a new file
           // we'll need to remove the old asset from rollup bundle
           // and emit a new one instead
           // when finding this asset in the rollupbundle we'll have to remove it
-          sourcemapReference.target.updateFileNameForRollup(fileNameForRollup)
+          sourcemapReference.target.updateBundleRelativeUrl(bundleRelativeUrl)
         }
       })
 
       return {
         sourceAfterTransformation: jsSourceAfterTransformation,
-        fileNameForRollup: jsFileNameForRollup,
+        bundleRelativeUrl: jsBundleRelativeUrl,
       }
     }
 

@@ -48,7 +48,7 @@ export const parseCssAsset = async (
 
   return async ({
     getReferenceUrlRelativeToImporter,
-    precomputeFileNameForRollup,
+    precomputeBundleRelativeUrl,
     registerAssetEmitter,
   }) => {
     const cssReplaceResult = await replaceCssUrls(
@@ -81,9 +81,9 @@ export const parseCssAsset = async (
     )
     const code = cssReplaceResult.css
     const map = cssReplaceResult.map.toJSON()
-    const cssFileNameForRollup = precomputeFileNameForRollup(code)
+    const cssBundleRelativeUrl = precomputeBundleRelativeUrl(code)
 
-    const cssSourcemapFilename = `${basename(cssFileNameForRollup)}.map`
+    const cssSourcemapFilename = `${basename(cssBundleRelativeUrl)}.map`
 
     // In theory code should never be modified once the url for caching is computed
     // because url for caching depends on file content.
@@ -96,7 +96,7 @@ export const parseCssAsset = async (
     const cssSourceAfterTransformation = setCssSourceMappingUrl(code, cssSourcemapFilename)
 
     registerAssetEmitter(({ bundleDirectoryUrl, emitAsset }) => {
-      const cssBundleUrl = resolveUrl(cssTarget.fileNameForRollup, bundleDirectoryUrl)
+      const cssBundleUrl = resolveUrl(cssTarget.bundleRelativeUrl, bundleDirectoryUrl)
       const mapBundleUrl = resolveUrl(cssSourcemapFilename, cssBundleUrl)
       map.file = urlToFilename(cssBundleUrl)
       if (map.sources) {
@@ -108,20 +108,19 @@ export const parseCssAsset = async (
       }
 
       const mapSource = JSON.stringify(map, null, "  ")
-      const relativeUrl = urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl)
-      const fileNameForRollup = relativeUrl
+      const bundleRelativeUrl = urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl)
       emitAsset({
         source: mapSource,
-        fileName: fileNameForRollup,
+        fileName: bundleRelativeUrl,
       })
       if (sourcemapReference) {
-        sourcemapReference.target.updateFileNameForRollup(fileNameForRollup)
+        sourcemapReference.target.updateBundleRelativeUrl(bundleRelativeUrl)
       }
     })
 
     return {
       sourceAfterTransformation: cssSourceAfterTransformation,
-      fileNameForRollup: cssFileNameForRollup,
+      bundleRelativeUrl: cssBundleRelativeUrl,
     }
   }
 }
