@@ -142,9 +142,10 @@ export const createJsenvRollupPlugin = async ({
           const entryProjectRelativeUrl = urlToRelativeUrl(entryProjectUrl, projectDirectoryUrl)
           const entryBundleRelativeUrl = urlToRelativeUrl(entryBundleUrl, bundleDirectoryUrl)
 
+          const entryServerUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
           const entryCompiledUrl = resolveUrl(entryProjectRelativeUrl, compileDirectoryRemoteUrl)
 
-          const entryResponse = await fetchModule(entryCompiledUrl, `entryPointMap`)
+          const entryResponse = await fetchModule(entryServerUrl, `entryPointMap`)
           const entryContentType = entryResponse.headers["content-type"]
 
           if (entryContentType === "text/html") {
