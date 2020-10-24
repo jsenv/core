@@ -136,29 +136,31 @@ export const createJsenvRollupPlugin = async ({
       const entryPointsPrepared = []
       await Promise.all(
         Object.keys(entryPointMap).map(async (key) => {
-          const projectRelativeUrl = key
-          const chunkFileRelativeUrl = entryPointMap[key]
-          const chunkFileUrl = resolveUrl(chunkFileRelativeUrl, bundleDirectoryUrl)
-          const chunkName = urlToRelativeUrl(chunkFileUrl, bundleDirectoryUrl)
+          const entryProjectUrl = resolveUrl(key, projectDirectoryUrl)
+          const entryBundleUrl = resolveUrl(entryPointMap[key], bundleDirectoryUrl)
 
-          if (projectRelativeUrl.endsWith(".html")) {
-            const htmlProjectUrl = resolveUrl(projectRelativeUrl, projectDirectoryUrl)
-            const htmlServerUrl = resolveUrl(projectRelativeUrl, compileServerOrigin)
-            const htmlCompiledUrl = resolveUrl(projectRelativeUrl, compileDirectoryRemoteUrl)
-            const htmlResponse = await fetchModule(htmlServerUrl, `entryPointMap`)
-            const htmlSource = await htmlResponse.text()
+          const entryProjectRelativeUrl = urlToRelativeUrl(entryProjectUrl, projectDirectoryUrl)
+          const entryBundleRelativeUrl = urlToRelativeUrl(entryBundleUrl, bundleDirectoryUrl)
+
+          const entryCompiledUrl = resolveUrl(entryProjectRelativeUrl, compileDirectoryRemoteUrl)
+
+          const entryResponse = await fetchModule(entryCompiledUrl, `entryPointMap`)
+          const entryContentType = entryResponse.headers["content-type"]
+
+          if (entryContentType === "text/html") {
+            const htmlSource = await entryResponse.text()
             const importmapHtmlNode = findFirstImportmapNode(htmlSource)
             if (importmapHtmlNode) {
               if (fetchImportmap === fetchImportmapFromParameter) {
                 const srcAttribute = getHtmlNodeAttributeByName(importmapHtmlNode, "src")
                 if (srcAttribute) {
-                  logger.info(formatUseImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource))
-                  const importmapUrl = resolveUrl(srcAttribute.value, htmlCompiledUrl)
+                  logger.info(formatUseImportMap(importmapHtmlNode, entryProjectUrl, htmlSource))
+                  const importmapUrl = resolveUrl(srcAttribute.value, entryCompiledUrl)
                   if (!urlIsInsideOf(importmapUrl, compileDirectoryRemoteUrl)) {
                     logger.warn(
                       formatImportmapOutsideCompileDirectory(
                         importmapHtmlNode,
-                        htmlProjectUrl,
+                        entryProjectUrl,
                         htmlSource,
                         compileDirectoryUrl,
                       ),
@@ -168,30 +170,40 @@ export const createJsenvRollupPlugin = async ({
                 } else {
                   const textNode = getHtmlNodeTextNode(importmapHtmlNode)
                   if (textNode) {
-                    logger.info(formatUseImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource))
+                    logger.info(formatUseImportMap(importmapHtmlNode, entryProjectUrl, htmlSource))
                     fetchImportmap = () => {
                       const importmapRaw = JSON.parse(textNode.value)
-                      const importmap = normalizeImportMap(importmapRaw, htmlCompiledUrl)
+                      const importmap = normalizeImportMap(importmapRaw, entryCompiledUrl)
                       return importmap
                     }
                   }
                 }
               } else {
-                logger.warn(formatIgnoreImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource))
+                logger.warn(formatIgnoreImportMap(importmapHtmlNode, entryProjectUrl, htmlSource))
               }
             }
 
             entryPointsPrepared.push({
-              type: "html",
-              url: htmlServerUrl,
-              chunkName,
-              source: htmlSource,
+              entryContentType,
+              entryProjectRelativeUrl,
+              entryBundleRelativeUrl,
+              entrySource: htmlSource,
+            })
+          } else if (
+            entryContentType === "application/javascript" ||
+            entryContentType === "text/javascript"
+          ) {
+            entryPointsPrepared.push({
+              entryContentType: "application/javascript",
+              entryProjectRelativeUrl,
+              entryBundleRelativeUrl,
             })
           } else {
             entryPointsPrepared.push({
-              type: "js",
-              relativeUrl: projectRelativeUrl,
-              chunkName,
+              entryContentType,
+              entryProjectRelativeUrl,
+              entryBundleRelativeUrl,
+              entrySource: Buffer.from(await entryResponse.arrayBuffer()),
             })
           }
         }),
@@ -356,24 +368,41 @@ export const createJsenvRollupPlugin = async ({
       )
 
       await Promise.all(
-        entryPointsPrepared.map(async ({ type, url, relativeUrl, chunkName, source }) => {
-          if (type === "html") {
-            await compositeAssetHandler.prepareHtmlEntry(url, {
-              // don't hash the html entry point
-              fileNamePattern: chunkName,
-              source,
-            })
-          } else if (type === "js") {
-            atleastOneChunkEmitted = true
-            emitFile({
-              type: "chunk",
-              id: relativeUrl,
-              name: chunkName,
-              // don't hash js entry points
-              fileName: chunkName,
-            })
-          }
-        }),
+        entryPointsPrepared.map(
+          async ({
+            entryContentType,
+            entryProjectRelativeUrl,
+            entryBundleRelativeUrl,
+            entrySource,
+          }) => {
+            if (entryContentType === "text/html") {
+              const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
+              await compositeAssetHandler.createReferenceForAssetEntry(entryUrl, {
+                entryContentType,
+                entryProjectRelativeUrl,
+                entryBundleRelativeUrl,
+                entrySource,
+              })
+            } else if (entryContentType === "application/javascript") {
+              atleastOneChunkEmitted = true
+              emitFile({
+                type: "chunk",
+                id: entryProjectRelativeUrl,
+                name: entryBundleRelativeUrl,
+                // don't hash js entry points
+                fileName: entryBundleRelativeUrl,
+              })
+            } else {
+              const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
+              await compositeAssetHandler.createReferenceForAssetEntry(entryUrl, {
+                entryContentType,
+                entryProjectRelativeUrl,
+                entryBundleRelativeUrl,
+                entrySource,
+              })
+            }
+          },
+        ),
       )
       if (!atleastOneChunkEmitted) {
         emitFile({
@@ -725,7 +754,7 @@ export const createJsenvRollupPlugin = async ({
       }
     }
 
-    const importReference = await compositeAssetHandler.createJsModuleImportReference(
+    const importReference = await compositeAssetHandler.createReferenceForJsModuleImport(
       moduleResponse,
       {
         moduleInfo,
