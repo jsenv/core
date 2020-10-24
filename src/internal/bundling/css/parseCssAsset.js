@@ -114,7 +114,7 @@ export const parseCssAsset = async (
         fileName: bundleRelativeUrl,
       })
       if (sourcemapReference) {
-        sourcemapReference.target.updateBundleRelativeUrl(bundleRelativeUrl)
+        sourcemapReference.target.updateOnceReady({ bundleRelativeUrl })
       }
     })
 

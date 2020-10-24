@@ -65,7 +65,7 @@ export const createJsenvRollupPlugin = async ({
   browser,
 
   format,
-  useImportMap = format === "systemjs",
+  useJsModuleMappings = format === "systemjs",
   systemJsUrl,
   minify,
   minifyJsOptions,
@@ -224,6 +224,7 @@ export const createJsenvRollupPlugin = async ({
             const contentType = target.content.type
             if (contentType === "text/html") {
               return parseHtmlAsset(target, notifiers, {
+                useJsModuleMappings,
                 minify,
                 minifyHtmlOptions,
                 htmlStringToHtmlAst: (htmlString) => {
@@ -274,6 +275,7 @@ export const createJsenvRollupPlugin = async ({
         },
         {
           logLevel: loggerToLogLevel(logger),
+          format,
           projectDirectoryUrl: `${compileServerOrigin}`,
           bundleDirectoryRelativeUrl: urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl),
           urlToOriginalUrl: urlToOriginalServerUrl,
@@ -348,14 +350,9 @@ export const createJsenvRollupPlugin = async ({
                 }
 
                 logger.debug(`emit asset for ${shortenUrl(target.url)}`)
-                // const name = urlToRelativeUrl(
-                //   urlToProjectUrl(target.url),
-                //   urlToOriginalProjectUrl(target.importers[0].url),
-                // )
                 const rollupReferenceId = emitFile({
                   type: "asset",
                   source: sourceAfterTransformation,
-                  // name: urlToFilename(target.url),
                   fileName: bundleRelativeUrl,
                 })
                 logger.debug(`${shortenUrl(target.url)} ready -> ${bundleRelativeUrl}`)
@@ -501,7 +498,7 @@ export const createJsenvRollupPlugin = async ({
       const outputExtension = extension === ".html" ? ".js" : extension
 
       outputOptions.entryFileNames = `[name]${outputExtension}`
-      outputOptions.chunkFileNames = useImportMap
+      outputOptions.chunkFileNames = useJsModuleMappings
         ? `[name]${outputExtension}`
         : `[name]-[hash].${outputExtension}`
 
@@ -537,7 +534,7 @@ export const createJsenvRollupPlugin = async ({
       let map = chunk.map
 
       if (!minify) {
-      return null
+        return null
       }
 
       const result = await minifyJs(code, chunk.fileName, {
@@ -574,7 +571,6 @@ export const createJsenvRollupPlugin = async ({
       // et mettre a jour leur dépendance vers ce fichier js
       await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle, {
         urlToServerUrl,
-        useImportMap,
       })
       compositeAssetHandler.cleanupRollupBundle(bundle)
 
@@ -601,7 +597,7 @@ export const createJsenvRollupPlugin = async ({
             const file = bundle[key]
             const fileBundleRelativeUrl = file.fileName
             const fileBundleUrl = resolveUrl(fileBundleRelativeUrl, bundleDirectoryUrl)
-            await writeFile(fileBundleUrl, file.type === 'chunk' ? file.code : file.source)
+            await writeFile(fileBundleUrl, file.type === "chunk" ? file.code : file.source)
           }),
         )
       }

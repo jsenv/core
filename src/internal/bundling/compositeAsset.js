@@ -48,6 +48,7 @@ export const createCompositeAssetHandler = (
   { fetch, parse },
   {
     logLevel,
+    format,
     projectDirectoryUrl, // project url but it can be an http url
     bundleDirectoryRelativeUrl,
     urlToOriginalUrl, // get original url from eventually compiled url
@@ -56,8 +57,11 @@ export const createCompositeAssetHandler = (
     emitAsset,
     connectTarget = () => {},
     resolveTargetUrl = ({ specifier }, target) => resolveUrl(specifier, target.url),
+    useJsModuleMappings = false,
   },
 ) => {
+  const jsModuleMappings = {}
+
   const logger = createLogger({ logLevel })
 
   const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
@@ -129,10 +133,7 @@ export const createCompositeAssetHandler = (
     return reference
   }
 
-  const resolveJsReferencesUsingRollupBundle = async (
-    rollupBundle,
-    { urlToServerUrl, useImportMap },
-  ) => {
+  const resolveJsReferencesUsingRollupBundle = async (rollupBundle, { urlToServerUrl }) => {
     Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
       const chunkName = Object.keys(rollupBundle).find((bundleKey) => {
         const rollupFile = rollupBundle[bundleKey]
@@ -140,17 +141,19 @@ export const createCompositeAssetHandler = (
         return facadeModuleId && urlToServerUrl(facadeModuleId) === key
       })
       const chunk = rollupBundle[chunkName]
-      const fileName = chunk.fileName
-      // ça on a besoin de le faire que si on ne hash pas le fichier
-      // sinon on laisse rollup s'en charger
-      const bundleRelativeUrl = useImportMap
-        ? computeBundleRelativeUrl(
-            resolveUrl(fileName, bundleDirectoryUrl),
-            chunk.code,
-            // should be same as outputOptions.chunkFileNames
-            "[name][extname]",
-          )
-        : fileName
+      const bundleRelativeUrlForJs = chunk.fileName
+      let bundleRelativeUrl
+      if (useJsModuleMappings) {
+        bundleRelativeUrl = computeBundleRelativeUrl(
+          resolveUrl(bundleRelativeUrlForJs, bundleDirectoryUrl),
+          chunk.code,
+          // should be same as outputOptions.chunkFileNames
+          "[name][extname]",
+        )
+        jsModuleMappings[bundleRelativeUrlForJs] = bundleRelativeUrl
+      } else {
+        bundleRelativeUrl = bundleRelativeUrlForJs
+      }
       logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
       rollupChunkReadyCallbackMap[key]({
         sourceAfterTransformation: chunk.code,
@@ -159,6 +162,7 @@ export const createCompositeAssetHandler = (
     })
 
     // wait html files to be emitted
+    // one important think here is too update any html importmap to inject the chunk sourcemap
     const urlToWait = Object.keys(targetMap).filter((url) => targetMap[url].isEntry)
     await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdAvailablePromise()))
   }
@@ -425,6 +429,8 @@ export const createCompositeAssetHandler = (
       const importerBundleRelativeUrl = precomputeBundleRelativeUrlForTarget(target)
       const assetEmitters = []
       const transformReturnValue = await transform({
+        jsModuleMappings,
+        format,
         precomputeBundleRelativeUrl: (sourceAfterTransformation) =>
           precomputeBundleRelativeUrlForTarget(target, sourceAfterTransformation),
         registerAssetEmitter: (callback) => {
@@ -476,10 +482,25 @@ export const createCompositeAssetHandler = (
     // because connect is memoized and called immediatly after target is created
     const getRollupReferenceIdAvailablePromise = () => connect()
 
-    const updateBundleRelativeUrl = (value) => {
-      if (value !== target.bundleRelativeUrl) {
+    // meant to be used only when asset is modified
+    // after being emitted.
+    // (sourcemap and importmap)
+    const updateOnceReady = ({ sourceAfterTransformation, bundleRelativeUrl }) => {
+      // the source after transform has changed
+      if (
+        sourceAfterTransformation !== undefined &&
+        sourceAfterTransformation !== target.sourceAfterTransformation
+      ) {
+        target.sourceAfterTransformation = sourceAfterTransformation
+        if (bundleRelativeUrl === undefined) {
+          bundleRelativeUrl = computeBundleRelativeUrlForTarget(target)
+        }
+      }
+
+      // the bundle relative url has changed
+      if (bundleRelativeUrl === undefined && bundleRelativeUrl !== target.bundleRelativeUrl) {
         fileNameToClean.push(target.bundleRelativeUrl)
-        target.bundleRelativeUrl = value
+        target.bundleRelativeUrl = bundleRelativeUrl
       }
     }
 
@@ -491,7 +512,8 @@ export const createCompositeAssetHandler = (
       getDependenciesAvailablePromise,
       getReadyPromise,
       getRollupReferenceIdAvailablePromise,
-      updateBundleRelativeUrl,
+
+      updateOnceReady,
     })
 
     return target

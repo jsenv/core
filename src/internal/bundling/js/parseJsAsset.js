@@ -85,7 +85,7 @@ export const parseJsAsset = async (
           // we'll need to remove the old asset from rollup bundle
           // and emit a new one instead
           // when finding this asset in the rollupbundle we'll have to remove it
-          sourcemapReference.target.updateBundleRelativeUrl(bundleRelativeUrl)
+          sourcemapReference.target.updateOnceReady({ bundleRelativeUrl })
         }
       })
 

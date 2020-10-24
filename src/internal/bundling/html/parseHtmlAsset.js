@@ -17,9 +17,12 @@ Or be sure to also reference this url somewhere in the html file like
 */
 
 import { urlToBasename, urlToRelativeUrl, resolveUrl, urlToParentUrl } from "@jsenv/util"
+import { composeTwoImportMaps } from "@jsenv/import-map"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
+  findFirstImportmapNode,
+  manipulateHtmlAst,
   replaceHtmlNode,
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
@@ -40,9 +43,11 @@ export const parseHtmlAsset = async (
   target,
   notifiers,
   {
+    useJsModuleMappings,
     minify,
     minifyHtmlOptions,
     htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString),
+    htmlAstToHtmlString = (htmlAst) => stringifyHtmlAst(htmlAst),
   } = {},
 ) => {
   const htmlString = String(target.content.value)
@@ -72,6 +77,13 @@ export const parseHtmlAsset = async (
   const sourcesSrcsetMutations = collectNodesMutations(sources, notifiers, target, [srcsetVisitor])
   const svgMutations = collectSvgMutations({ images, uses }, notifiers, target)
 
+  // for the presence of a fake+inline+empty importmap script
+  // that we will fill later with top level remapping required to target hashed script urls
+  const fakeImportMapMutations =
+    useJsModuleMappings && !findFirstImportmapNode(htmlAst)
+      ? collectFakeImportMapMutations(htmlAst, notifiers, target)
+      : []
+
   const htmlMutations = [
     ...scriptsMutations,
     ...linksMutations,
@@ -81,13 +93,16 @@ export const parseHtmlAsset = async (
     ...sourcesSrcMutations,
     ...sourcesSrcsetMutations,
     ...svgMutations,
+
+    ...fakeImportMapMutations,
   ]
 
   return async ({ getReferenceUrlRelativeToImporter }) => {
     htmlMutations.forEach((mutationCallback) => {
       mutationCallback({ getReferenceUrlRelativeToImporter })
     })
-    const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
+
+    const htmlAfterTransformation = htmlAstToHtmlString(htmlAst)
     const sourceAfterTransformation = minify
       ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions)
       : htmlAfterTransformation
@@ -262,8 +277,11 @@ const importmapScriptSrcVisitor = (script, { notifyReferenceFound }) => {
       return `${importmapParentRelativeUrl}[name]-[hash][extname]`
     },
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
-    typeAttribute.value = "systemjs-importmap"
+  return ({ getReferenceUrlRelativeToImporter, format, jsModuleMappings }) => {
+    if (format === "systemjs") {
+      typeAttribute.value = "systemjs-importmap"
+    }
+    injectImportMapIntoImportmapTarget(importmapReference.target, { imports: jsModuleMappings })
 
     const { isInline } = importmapReference.target
     if (isInline) {
@@ -309,8 +327,12 @@ const importmapScriptTextNodeVisitor = (script, { notifyReferenceFound }, target
       value: textNode.value,
     },
   })
-  return () => {
-    typeAttribute.value = "systemjs-importmap"
+  return ({ format, jsModuleMappings }) => {
+    if (format === "systemjs") {
+      typeAttribute.value = "systemjs-importmap"
+    }
+    injectImportMapIntoImportmapTarget(importmapReference.target, { imports: jsModuleMappings })
+
     const { sourceAfterTransformation } = importmapReference.target
     textNode.value = sourceAfterTransformation
   }
@@ -472,4 +494,27 @@ const ensureRelativeUrlNotation = (relativeUrl) => {
     return relativeUrl
   }
   return `./${relativeUrl}`
+}
+
+const collectFakeImportMapMutations = (htmlAst, notifiers, target) => {
+  manipulateHtmlAst(htmlAst, {
+    scriptInjections: {
+      type: "importmap",
+      text: "{}",
+    },
+  })
+  const importMapNode = findFirstImportmapNode(htmlAst)
+  const importMapInjectedMutations = collectNodesMutations([importMapNode], notifiers, target, [
+    importmapScriptTextNodeVisitor,
+  ])
+  return importMapInjectedMutations
+}
+
+const injectImportMapIntoImportmapTarget = (importmapTarget, importMapToInject) => {
+  const { sourceAfterTransformation } = importmapTarget
+  const originalImportMap = JSON.parse(sourceAfterTransformation)
+  const importMap = composeTwoImportMaps(originalImportMap, importMapToInject)
+  importmapTarget.updateOnceReady({
+    sourceAfterTransformation: JSON.stringify(importMap),
+  })
 }
