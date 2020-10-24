@@ -537,7 +537,7 @@ export const createJsenvRollupPlugin = async ({
       let map = chunk.map
 
       if (!minify) {
-        return { code, map }
+      return null
       }
 
       const result = await minifyJs(code, chunk.fileName, {
@@ -601,7 +601,7 @@ export const createJsenvRollupPlugin = async ({
             const file = bundle[key]
             const fileBundleRelativeUrl = file.fileName
             const fileBundleUrl = resolveUrl(fileBundleRelativeUrl, bundleDirectoryUrl)
-            await writeFile(fileBundleUrl, file.code)
+            await writeFile(fileBundleUrl, file.type === 'chunk' ? file.code : file.source)
           }),
         )
       }
