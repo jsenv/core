@@ -1,4 +1,5 @@
 /* eslint-disable import/max-dependencies */
+import { extname } from "path"
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import { loggerToLogLevel } from "@jsenv/logger"
 import {
@@ -14,7 +15,6 @@ import {
   urlToBasename,
 } from "@jsenv/util"
 
-import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
@@ -66,12 +66,14 @@ export const createJsenvRollupPlugin = async ({
   browser,
 
   format,
+  importmapEnabled = format === "systemjs",
   systemJsUrl,
   minify,
   minifyJsOptions,
   minifyCssOptions,
   minifyHtmlOptions,
   manifestFile,
+  writeOnFileSystem,
 
   bundleDirectoryUrl,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
@@ -499,6 +501,14 @@ export const createJsenvRollupPlugin = async ({
     outputOptions: (options) => {
       // rollup does not expects to have http dependency in the mix
 
+      const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
+      const outputExtension = extension === ".html" ? ".js" : extension
+
+      options.entryFileNames = `[name]${outputExtension}`
+      options.chunkFileNames = importmapEnabled
+        ? `[name]${outputExtension}`
+        : `[name]-[hash].${outputExtension}`
+
       options.sourcemapPathTransform = (relativePath, sourcemapPath) => {
         const sourcemapUrl = fileSystemPathToUrl(sourcemapPath)
         const url = relativePathToUrl(relativePath, sourcemapUrl)
@@ -527,21 +537,39 @@ export const createJsenvRollupPlugin = async ({
     },
 
     renderChunk: async (code, chunk) => {
+      let map = chunk.map
+
+      if (detectAndTransformIfNeededAsyncInsertedByRollup) {
+        // ptet transformer ceci en renderChunk
+        const result = await transformAsyncInsertedByRollup(
+          { code, map },
+          {
+            projectDirectoryUrl,
+            bundleDirectoryUrl,
+            babelPluginMap,
+          },
+        )
+        code = result.code
+        map = result.map
+      }
+
       if (!minify) {
-        return null
+        return { code, map }
       }
 
       const result = await minifyJs(code, chunk.fileName, {
         sourceMap: {
-          ...(chunk.map ? { content: JSON.stringify(chunk.map) } : {}),
+          ...(map ? { content: JSON.stringify(map) } : {}),
           asObject: true,
         },
         ...(format === "global" ? { toplevel: false } : { toplevel: true }),
         ...minifyJsOptions,
       })
+      code = result.code
+      map = result.map
       return {
-        code: result.code,
-        map: result.map,
+        code,
+        map,
       }
     },
 
@@ -580,17 +608,16 @@ export const createJsenvRollupPlugin = async ({
       rollupBundle = bundle
 
       logger.info(formatBundleGeneratedLog(bundle))
-    },
 
-    async writeBundle(options, bundle) {
-      if (detectAndTransformIfNeededAsyncInsertedByRollup) {
-        // ptet transformer ceci en renderChunk
-        await transformAsyncInsertedByRollup({
-          projectDirectoryUrl,
-          bundleDirectoryUrl,
-          babelPluginMap,
-          bundle,
-        })
+      if (writeOnFileSystem) {
+        await Promise.all(
+          Object.keys(bundle).map(async (key) => {
+            const file = bundle[key]
+            const fileBundleRelativeUrl = file.fileName
+            const fileBundleUrl = resolveUrl(fileBundleRelativeUrl, bundleDirectoryUrl)
+            await writeFile(fileBundleUrl, file.code)
+          }),
+        )
       }
     },
   }
@@ -884,41 +911,29 @@ const fetchAndNormalizeImportmap = async (importmapUrl, { allow404 = false } = {
   return importmapNormalized
 }
 
-const transformAsyncInsertedByRollup = async ({
-  projectDirectoryUrl,
-  bundleDirectoryUrl,
-  babelPluginMap,
-  bundle,
-}) => {
+// we have to do this because rollup ads
+// an async wrapper function without transpiling it
+// if your bundle contains a dynamic import
+const transformAsyncInsertedByRollup = async (
+  { code, map },
+  { relativeUrl, projectDirectoryUrl, bundleDirectoryUrl, babelPluginMap },
+) => {
   const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap)
 
-  if (!asyncPluginName) return
+  if (!asyncPluginName) {
+    return null
+  }
 
-  // we have to do this because rollup ads
-  // an async wrapper function without transpiling it
-  // if your bundle contains a dynamic import
-  await Promise.all(
-    Object.keys(bundle).map(async (bundleFilename) => {
-      const bundleInfo = bundle[bundleFilename]
-      const bundleFileUrl = resolveUrl(bundleFilename, bundleDirectoryUrl)
-
-      const { code, map } = await transformJs({
-        projectDirectoryUrl,
-        code: bundleInfo.code,
-        url: bundleFileUrl,
-        map: bundleInfo.map,
-        babelPluginMap: { [asyncPluginName]: babelPluginMap[asyncPluginName] },
-        transformModuleIntoSystemFormat: false, // already done by rollup
-        transformGenerator: false, // already done
-        transformGlobalThis: false,
-      })
-
-      await Promise.all([
-        writeFile(bundleFileUrl, setJavaScriptSourceMappingUrl(code, `./${bundleFilename}.map`)),
-        writeFile(`${bundleFileUrl}.map`, JSON.stringify(map)),
-      ])
-    }),
-  )
+  return await transformJs({
+    projectDirectoryUrl,
+    code,
+    url: resolveUrl(relativeUrl, bundleDirectoryUrl),
+    map,
+    babelPluginMap: { [asyncPluginName]: babelPluginMap[asyncPluginName] },
+    transformModuleIntoSystemFormat: false, // already done by rollup
+    transformGenerator: false, // already done
+    transformGlobalThis: false,
+  })
 }
 
 const formatBundleGeneratedLog = (bundle) => {
