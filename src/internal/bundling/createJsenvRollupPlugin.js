@@ -388,7 +388,7 @@ export const createJsenvRollupPlugin = async ({
               atleastOneChunkEmitted = true
               emitFile({
                 type: "chunk",
-                id: entryProjectRelativeUrl,
+                id: ensureRelativeUrlNotation(entryProjectRelativeUrl),
                 name: entryBundleRelativeUrl,
                 // don't hash js entry points
                 fileName: entryBundleRelativeUrl,
@@ -1022,4 +1022,12 @@ ${
   })
 
   return string
+}
+
+// otherwise importmap handle it as a bare import
+const ensureRelativeUrlNotation = (relativeUrl) => {
+  if (relativeUrl.startsWith("../")) {
+    return relativeUrl
+  }
+  return `./${relativeUrl}`
 }
