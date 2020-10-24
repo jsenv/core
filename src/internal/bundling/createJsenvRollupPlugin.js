@@ -18,7 +18,6 @@ import {
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-import { findAsyncPluginNameInBabelPluginMap } from "@jsenv/core/src/internal/compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 import {
   parseHtmlString,
   htmlAstContains,
@@ -76,7 +75,6 @@ export const createJsenvRollupPlugin = async ({
   writeOnFileSystem,
 
   bundleDirectoryUrl,
-  detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
   const urlImporterMap = {}
   const urlResponseBodyMap = {}
@@ -539,20 +537,6 @@ export const createJsenvRollupPlugin = async ({
     renderChunk: async (code, chunk) => {
       let map = chunk.map
 
-      if (detectAndTransformIfNeededAsyncInsertedByRollup) {
-        // ptet transformer ceci en renderChunk
-        const result = await transformAsyncInsertedByRollup(
-          { code, map },
-          {
-            projectDirectoryUrl,
-            bundleDirectoryUrl,
-            babelPluginMap,
-          },
-        )
-        code = result.code
-        map = result.map
-      }
-
       if (!minify) {
         return { code, map }
       }
@@ -909,31 +893,6 @@ const fetchAndNormalizeImportmap = async (importmapUrl, { allow404 = false } = {
   const importmap = await importmapResponse.json()
   const importmapNormalized = normalizeImportMap(importmap, importmapUrl)
   return importmapNormalized
-}
-
-// we have to do this because rollup ads
-// an async wrapper function without transpiling it
-// if your bundle contains a dynamic import
-const transformAsyncInsertedByRollup = async (
-  { code, map },
-  { relativeUrl, projectDirectoryUrl, bundleDirectoryUrl, babelPluginMap },
-) => {
-  const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap)
-
-  if (!asyncPluginName) {
-    return null
-  }
-
-  return await transformJs({
-    projectDirectoryUrl,
-    code,
-    url: resolveUrl(relativeUrl, bundleDirectoryUrl),
-    map,
-    babelPluginMap: { [asyncPluginName]: babelPluginMap[asyncPluginName] },
-    transformModuleIntoSystemFormat: false, // already done by rollup
-    transformGenerator: false, // already done
-    transformGlobalThis: false,
-  })
 }
 
 const formatBundleGeneratedLog = (bundle) => {
