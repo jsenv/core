@@ -28,11 +28,12 @@ import {
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { showSourceLocation } from "./showSourceLocation.js"
 
+import { showSourceLocation } from "./showSourceLocation.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { createCompositeAssetHandler } from "./compositeAsset.js"
+import { computeBundleRelativeUrl } from "./computeBundleRelativeUrl.js"
 import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
 
 import { parseHtmlAsset } from "./html/parseHtmlAsset.js"
@@ -65,7 +66,7 @@ export const createJsenvRollupPlugin = async ({
   browser,
 
   format,
-  useJsModuleMappings = format === "systemjs",
+  useImportMapForJsUrlMappings = format === "systemjs",
   systemJsUrl,
   minify,
   minifyJsOptions,
@@ -80,6 +81,9 @@ export const createJsenvRollupPlugin = async ({
   const urlResponseBodyMap = {}
   const virtualModules = {}
   const urlRedirectionMap = {}
+  // map bundle relative url without hash to bundle relative url with hash but only for chunks
+  // meant to deduce where to write the file and generate an importmap to know whaere are the files
+  const bundleRelativeUrlMap = {}
   // map project relative urls to bundle file relative urls
   let bundleMappings = {}
   // map bundle relative urls to relative url without hashes
@@ -224,27 +228,58 @@ export const createJsenvRollupPlugin = async ({
             const contentType = target.content.type
             if (contentType === "text/html") {
               return parseHtmlAsset(target, notifiers, {
-                useJsModuleMappings,
+                useImportMapForJsUrlMappings,
                 minify,
                 minifyHtmlOptions,
                 htmlStringToHtmlAst: (htmlString) => {
                   const htmlAst = parseHtmlString(htmlString)
-                  if (format !== "systemjs") {
-                    return htmlAst
+
+                  // force presence of systemjs script if html contains a module script
+                  const injectSystemJsScriptIfNeeded = (htmlAst) => {
+                    if (format !== "systemjs") {
+                      return
+                    }
+
+                    const htmlContainsModuleScript = htmlAstContains(
+                      htmlAst,
+                      htmlNodeIsScriptModule,
+                    )
+                    if (!htmlContainsModuleScript) {
+                      return
+                    }
+
+                    manipulateHtmlAst(htmlAst, {
+                      scriptInjections: [
+                        {
+                          src: systemJsUrl,
+                        },
+                      ],
+                    })
                   }
 
-                  const htmlContainsModuleScript = htmlAstContains(htmlAst, htmlNodeIsScriptModule)
-                  if (!htmlContainsModuleScript) {
-                    return htmlAst
-                  }
+                  // force the presence of a fake+inline+empty importmap script
+                  // if html contains no importmap and we useImportMapForJsUrlMappings
+                  // this inline importmap will be transformed later to have top level remapping
+                  // required to target hashed js urls
+                  const injectImportMapScriptIfNeeded = (htmlAst) => {
+                    if (!useImportMapForJsUrlMappings) {
+                      return
+                    }
+                    if (findFirstImportmapNode(htmlAst)) {
+                      return
+                    }
 
-                  manipulateHtmlAst(htmlAst, {
-                    scriptInjections: [
-                      {
-                        src: systemJsUrl,
+                    manipulateHtmlAst(htmlAst, {
+                      scriptInjections: {
+                        type: "importmap",
+                        text: "{}",
                       },
-                    ],
-                  })
+                    })
+                  }
+
+                  injectSystemJsScriptIfNeeded(htmlAst)
+                  injectImportMapScriptIfNeeded(htmlAst)
+
                   return htmlAst
                 },
               })
@@ -498,7 +533,7 @@ export const createJsenvRollupPlugin = async ({
       const outputExtension = extension === ".html" ? ".js" : extension
 
       outputOptions.entryFileNames = `[name]${outputExtension}`
-      outputOptions.chunkFileNames = useJsModuleMappings
+      outputOptions.chunkFileNames = useImportMapForJsUrlMappings
         ? `[name]${outputExtension}`
         : `[name]-[hash].${outputExtension}`
 
@@ -563,15 +598,44 @@ export const createJsenvRollupPlugin = async ({
 
       // it's important to do this to emit late asset
       emitFile = (...args) => this.emitFile(...args)
+
       // malheureusement rollup ne permet pas de savoir lorsqu'un chunk
       // a fini d'etre résolu (parsing des imports statiques et dynamiques recursivement)
       // donc lorsque le build se termine on va indiquer
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
-      await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle, {
-        urlToServerUrl,
+      const rollupChunkReadyCallbackMap = compositeAssetHandler.getRollupChunkReadyCallbackMap()
+      Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
+        const chunkName = Object.keys(rollupBundle).find((bundleKey) => {
+          const rollupFile = rollupBundle[bundleKey]
+          const { facadeModuleId } = rollupFile
+          return facadeModuleId && urlToServerUrl(facadeModuleId) === key
+        })
+        const chunk = rollupBundle[chunkName]
+        const bundleRelativeUrlForJs = chunk.fileName
+        let bundleRelativeUrl
+        if (useImportMapForJsUrlMappings) {
+          bundleRelativeUrl = computeBundleRelativeUrl(
+            resolveUrl(bundleRelativeUrlForJs, bundleDirectoryUrl),
+            chunk.code,
+            outputOptions.chunkFileNames,
+          )
+          bundleRelativeUrlMap[bundleRelativeUrlForJs] = bundleRelativeUrl
+        } else {
+          bundleRelativeUrl = bundleRelativeUrlForJs
+        }
+        logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
+        rollupChunkReadyCallbackMap[key]({
+          sourceAfterTransformation: chunk.code,
+          bundleRelativeUrl,
+        })
       })
+      // wait html files to be emitted
+      await compositeAssetHandler.getAllAssetEntryEmittedPromise()
+      // remove potential useless assets which happens when:
+      // - sourcemap re-emitted
+      // - importmap re-emitted to have bundleRelativeUrlMap
       compositeAssetHandler.cleanupRollupBundle(bundle)
 
       const result = rollupBundleToManifestAndMappings(bundle, {
@@ -595,8 +659,15 @@ export const createJsenvRollupPlugin = async ({
         await Promise.all(
           Object.keys(bundle).map(async (key) => {
             const file = bundle[key]
-            const fileBundleRelativeUrl = file.fileName
-            const fileBundleUrl = resolveUrl(fileBundleRelativeUrl, bundleDirectoryUrl)
+            const bundleRelativeUrlForRollup = file.fileName
+            let bundleRelativeUrl
+            if (bundleRelativeUrlForRollup in bundleRelativeUrlMap) {
+              bundleRelativeUrl = bundleRelativeUrlMap[bundleRelativeUrlForRollup]
+            } else {
+              bundleRelativeUrl = bundleRelativeUrlForRollup
+            }
+
+            const fileBundleUrl = resolveUrl(bundleRelativeUrl, bundleDirectoryUrl)
             await writeFile(fileBundleUrl, file.type === "chunk" ? file.code : file.source)
           }),
         )

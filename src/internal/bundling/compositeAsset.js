@@ -57,7 +57,6 @@ export const createCompositeAssetHandler = (
     emitAsset,
     connectTarget = () => {},
     resolveTargetUrl = ({ specifier }, target) => resolveUrl(specifier, target.url),
-    useJsModuleMappings = false,
   },
 ) => {
   const jsModuleMappings = {}
@@ -133,36 +132,7 @@ export const createCompositeAssetHandler = (
     return reference
   }
 
-  const resolveJsReferencesUsingRollupBundle = async (rollupBundle, { urlToServerUrl }) => {
-    Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
-      const chunkName = Object.keys(rollupBundle).find((bundleKey) => {
-        const rollupFile = rollupBundle[bundleKey]
-        const { facadeModuleId } = rollupFile
-        return facadeModuleId && urlToServerUrl(facadeModuleId) === key
-      })
-      const chunk = rollupBundle[chunkName]
-      const bundleRelativeUrlForJs = chunk.fileName
-      let bundleRelativeUrl
-      if (useJsModuleMappings) {
-        bundleRelativeUrl = computeBundleRelativeUrl(
-          resolveUrl(bundleRelativeUrlForJs, bundleDirectoryUrl),
-          chunk.code,
-          // should be same as outputOptions.chunkFileNames
-          "[name][extname]",
-        )
-        jsModuleMappings[bundleRelativeUrlForJs] = bundleRelativeUrl
-      } else {
-        bundleRelativeUrl = bundleRelativeUrlForJs
-      }
-      logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
-      rollupChunkReadyCallbackMap[key]({
-        sourceAfterTransformation: chunk.code,
-        bundleRelativeUrl,
-      })
-    })
-
-    // wait html files to be emitted
-    // one important think here is too update any html importmap to inject the chunk sourcemap
+  const getAllAssetEntryEmittedPromise = async () => {
     const urlToWait = Object.keys(targetMap).filter((url) => targetMap[url].isEntry)
     await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdAvailablePromise()))
   }
@@ -523,6 +493,7 @@ export const createCompositeAssetHandler = (
   const registerCallbackOnceRollupChunkIsReady = (url, callback) => {
     rollupChunkReadyCallbackMap[url] = callback
   }
+  const getRollupChunkReadyCallbackMap = () => rollupChunkReadyCallbackMap
 
   const cleanupRollupBundle = (rollupBundle) => {
     fileNameToClean.forEach((fileName) => {
@@ -593,7 +564,8 @@ ${showSourceLocation(referenceSource, {
     createReferenceForAssetEntry,
     createReferenceForJsModuleImport,
 
-    resolveJsReferencesUsingRollupBundle,
+    getRollupChunkReadyCallbackMap,
+    getAllAssetEntryEmittedPromise,
     cleanupRollupBundle,
     rollupBundleToAssetMappings,
 

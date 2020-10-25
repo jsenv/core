@@ -21,8 +21,6 @@ import { composeTwoImportMaps } from "@jsenv/import-map"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
-  findFirstImportmapNode,
-  manipulateHtmlAst,
   replaceHtmlNode,
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
@@ -43,7 +41,6 @@ export const parseHtmlAsset = async (
   target,
   notifiers,
   {
-    useJsModuleMappings,
     minify,
     minifyHtmlOptions,
     htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString),
@@ -77,13 +74,6 @@ export const parseHtmlAsset = async (
   const sourcesSrcsetMutations = collectNodesMutations(sources, notifiers, target, [srcsetVisitor])
   const svgMutations = collectSvgMutations({ images, uses }, notifiers, target)
 
-  // for the presence of a fake+inline+empty importmap script
-  // that we will fill later with top level remapping required to target hashed script urls
-  const fakeImportMapMutations =
-    useJsModuleMappings && !findFirstImportmapNode(htmlAst)
-      ? collectFakeImportMapMutations(htmlAst, notifiers, target)
-      : []
-
   const htmlMutations = [
     ...scriptsMutations,
     ...linksMutations,
@@ -93,8 +83,6 @@ export const parseHtmlAsset = async (
     ...sourcesSrcMutations,
     ...sourcesSrcsetMutations,
     ...svgMutations,
-
-    ...fakeImportMapMutations,
   ]
 
   return async ({ getReferenceUrlRelativeToImporter }) => {
@@ -277,11 +265,14 @@ const importmapScriptSrcVisitor = (script, { notifyReferenceFound }) => {
       return `${importmapParentRelativeUrl}[name]-[hash][extname]`
     },
   })
-  return ({ getReferenceUrlRelativeToImporter, format, jsModuleMappings }) => {
+  return ({ getReferenceUrlRelativeToImporter, format, bundleRelativeUrlMap }) => {
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-importmap"
     }
-    injectImportMapIntoImportmapTarget(importmapReference.target, { imports: jsModuleMappings })
+    appendImportMapIntoTarget(
+      importmapReference.target,
+      bundleRelativeUrlMapToImportMap(bundleRelativeUrlMap),
+    )
 
     const { isInline } = importmapReference.target
     if (isInline) {
@@ -327,11 +318,14 @@ const importmapScriptTextNodeVisitor = (script, { notifyReferenceFound }, target
       value: textNode.value,
     },
   })
-  return ({ format, jsModuleMappings }) => {
+  return ({ format, bundleRelativeUrlMap }) => {
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-importmap"
     }
-    injectImportMapIntoImportmapTarget(importmapReference.target, { imports: jsModuleMappings })
+    appendImportMapIntoTarget(
+      importmapReference.target,
+      bundleRelativeUrlMapToImportMap(bundleRelativeUrlMap),
+    )
 
     const { sourceAfterTransformation } = importmapReference.target
     textNode.value = sourceAfterTransformation
@@ -496,21 +490,15 @@ const ensureRelativeUrlNotation = (relativeUrl) => {
   return `./${relativeUrl}`
 }
 
-const collectFakeImportMapMutations = (htmlAst, notifiers, target) => {
-  manipulateHtmlAst(htmlAst, {
-    scriptInjections: {
-      type: "importmap",
-      text: "{}",
-    },
+const bundleRelativeUrlMapToImportMap = (bundleRelativeUrlMap) => {
+  const topLevelMappings = {}
+  Object.keys(bundleRelativeUrlMap).forEach((key) => {
+    topLevelMappings[`./${key}`] = `./${bundleRelativeUrlMap[key]}`
   })
-  const importMapNode = findFirstImportmapNode(htmlAst)
-  const importMapInjectedMutations = collectNodesMutations([importMapNode], notifiers, target, [
-    importmapScriptTextNodeVisitor,
-  ])
-  return importMapInjectedMutations
+  return { imports: topLevelMappings }
 }
 
-const injectImportMapIntoImportmapTarget = (importmapTarget, importMapToInject) => {
+const appendImportMapIntoTarget = (importmapTarget, importMapToInject) => {
   const { sourceAfterTransformation } = importmapTarget
   const originalImportMap = JSON.parse(sourceAfterTransformation)
   const importMap = composeTwoImportMaps(originalImportMap, importMapToInject)
