@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { extname } from "path"
-import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
+import { composeTwoImportMaps, normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import { loggerToLogLevel } from "@jsenv/logger"
 import {
   isFileSystemPath,
@@ -228,7 +228,6 @@ export const createJsenvRollupPlugin = async ({
             const contentType = target.content.type
             if (contentType === "text/html") {
               return parseHtmlAsset(target, notifiers, {
-                useImportMapForJsUrlMappings,
                 minify,
                 minifyHtmlOptions,
                 htmlStringToHtmlAst: (htmlString) => {
@@ -281,6 +280,15 @@ export const createJsenvRollupPlugin = async ({
                   injectImportMapScriptIfNeeded(htmlAst)
 
                   return htmlAst
+                },
+                transformImportmapTarget: (importmapTarget) => {
+                  if (!useImportMapForJsUrlMappings) {
+                    return
+                  }
+                  injectBundleRelativeUrlMapIntoImportMapTarget(
+                    importmapTarget,
+                    bundleRelativeUrlMap,
+                  )
                 },
               })
             }
@@ -589,6 +597,8 @@ export const createJsenvRollupPlugin = async ({
     },
 
     async generateBundle(outputOptions, bundle) {
+      rollupBundle = bundle
+
       const emptyChunkKey = Object.keys(bundle).find(
         (key) => bundle[key].facadeModuleId === EMPTY_CHUNK_URL,
       )
@@ -607,18 +617,18 @@ export const createJsenvRollupPlugin = async ({
       // et mettre a jour leur dépendance vers ce fichier js
       const rollupChunkReadyCallbackMap = compositeAssetHandler.getRollupChunkReadyCallbackMap()
       Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
-        const chunkName = Object.keys(rollupBundle).find((bundleKey) => {
-          const rollupFile = rollupBundle[bundleKey]
+        const chunkName = Object.keys(bundle).find((bundleKey) => {
+          const rollupFile = bundle[bundleKey]
           const { facadeModuleId } = rollupFile
           return facadeModuleId && urlToServerUrl(facadeModuleId) === key
         })
-        const chunk = rollupBundle[chunkName]
-        const bundleRelativeUrlForJs = chunk.fileName
+        const rollupFile = bundle[chunkName]
+        const bundleRelativeUrlForJs = rollupFile.fileName
         let bundleRelativeUrl
         if (useImportMapForJsUrlMappings) {
           bundleRelativeUrl = computeBundleRelativeUrl(
             resolveUrl(bundleRelativeUrlForJs, bundleDirectoryUrl),
-            chunk.code,
+            rollupFile.code,
             outputOptions.chunkFileNames,
           )
           bundleRelativeUrlMap[bundleRelativeUrlForJs] = bundleRelativeUrl
@@ -627,7 +637,7 @@ export const createJsenvRollupPlugin = async ({
         }
         logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
         rollupChunkReadyCallbackMap[key]({
-          sourceAfterTransformation: chunk.code,
+          sourceAfterTransformation: rollupFile.code,
           bundleRelativeUrl,
         })
       })
@@ -651,15 +661,13 @@ export const createJsenvRollupPlugin = async ({
         await writeFile(manifestFileUrl, JSON.stringify(bundleManifest, null, "  "))
       }
 
-      rollupBundle = bundle
-
       logger.info(formatBundleGeneratedLog(bundle))
 
       if (writeOnFileSystem) {
         await Promise.all(
           Object.keys(bundle).map(async (key) => {
-            const file = bundle[key]
-            const bundleRelativeUrlForRollup = file.fileName
+            const rollupFile = bundle[key]
+            const bundleRelativeUrlForRollup = rollupFile.fileName
             let bundleRelativeUrl
             if (bundleRelativeUrlForRollup in bundleRelativeUrlMap) {
               bundleRelativeUrl = bundleRelativeUrlMap[bundleRelativeUrlForRollup]
@@ -668,7 +676,10 @@ export const createJsenvRollupPlugin = async ({
             }
 
             const fileBundleUrl = resolveUrl(bundleRelativeUrl, bundleDirectoryUrl)
-            await writeFile(fileBundleUrl, file.type === "chunk" ? file.code : file.source)
+            await writeFile(
+              fileBundleUrl,
+              rollupFile.type === "chunk" ? rollupFile.code : rollupFile.source,
+            )
           }),
         )
       }
@@ -1047,6 +1058,25 @@ const rollupFileNameWithoutHash = (fileName) => {
   return fileName.replace(/-[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
     return afterHash
   })
+}
+
+const injectBundleRelativeUrlMapIntoImportMapTarget = (importmapTarget, bundleRelativeUrlMap) => {
+  const { sourceAfterTransformation } = importmapTarget
+  const importMapOriginal = JSON.parse(sourceAfterTransformation)
+  const importMapToInject = bundleRelativeUrlMapToImportMap(bundleRelativeUrlMap)
+
+  const importMap = composeTwoImportMaps(importMapOriginal, importMapToInject)
+  importmapTarget.updateOnceReady({
+    sourceAfterTransformation: JSON.stringify(importMap),
+  })
+}
+
+const bundleRelativeUrlMapToImportMap = (bundleRelativeUrlMap) => {
+  const topLevelMappings = {}
+  Object.keys(bundleRelativeUrlMap).forEach((key) => {
+    topLevelMappings[`./${key}`] = `./${bundleRelativeUrlMap[key]}`
+  })
+  return { imports: topLevelMappings }
 }
 
 const createDetailedMessage = (message, details = {}) => {

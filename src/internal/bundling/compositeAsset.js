@@ -59,8 +59,6 @@ export const createCompositeAssetHandler = (
     resolveTargetUrl = ({ specifier }, target) => resolveUrl(specifier, target.url),
   },
 ) => {
-  const jsModuleMappings = {}
-
   const logger = createLogger({ logLevel })
 
   const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
@@ -328,6 +326,7 @@ export const createCompositeAssetHandler = (
       }
 
       const parseReturnValue = await parse(target, {
+        format,
         notifyReferenceFound: notifyDependencyFound,
       })
       parsingDone = true
@@ -399,8 +398,6 @@ export const createCompositeAssetHandler = (
       const importerBundleRelativeUrl = precomputeBundleRelativeUrlForTarget(target)
       const assetEmitters = []
       const transformReturnValue = await transform({
-        jsModuleMappings,
-        format,
         precomputeBundleRelativeUrl: (sourceAfterTransformation) =>
           precomputeBundleRelativeUrlForTarget(target, sourceAfterTransformation),
         registerAssetEmitter: (callback) => {

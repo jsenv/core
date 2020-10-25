@@ -17,7 +17,6 @@ Or be sure to also reference this url somewhere in the html file like
 */
 
 import { urlToBasename, urlToRelativeUrl, resolveUrl, urlToParentUrl } from "@jsenv/util"
-import { composeTwoImportMaps } from "@jsenv/import-map"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
@@ -43,6 +42,7 @@ export const parseHtmlAsset = async (
   {
     minify,
     minifyHtmlOptions,
+    transformImportmapTarget = () => {},
     htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString),
     htmlAstToHtmlString = (htmlAst) => stringifyHtmlAst(htmlAst),
   } = {},
@@ -85,9 +85,12 @@ export const parseHtmlAsset = async (
     ...svgMutations,
   ]
 
-  return async ({ getReferenceUrlRelativeToImporter }) => {
+  return async (params) => {
     htmlMutations.forEach((mutationCallback) => {
-      mutationCallback({ getReferenceUrlRelativeToImporter })
+      mutationCallback({
+        ...params,
+        transformImportmapTarget,
+      })
     })
 
     const htmlAfterTransformation = htmlAstToHtmlString(htmlAst)
@@ -234,7 +237,7 @@ const moduleScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, s
   }
 }
 
-const importmapScriptSrcVisitor = (script, { notifyReferenceFound }) => {
+const importmapScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
   if (!typeAttribute) {
     return null
@@ -265,14 +268,11 @@ const importmapScriptSrcVisitor = (script, { notifyReferenceFound }) => {
       return `${importmapParentRelativeUrl}[name]-[hash][extname]`
     },
   })
-  return ({ getReferenceUrlRelativeToImporter, format, bundleRelativeUrlMap }) => {
+  return ({ getReferenceUrlRelativeToImporter, transformImportmapTarget }) => {
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-importmap"
     }
-    appendImportMapIntoTarget(
-      importmapReference.target,
-      bundleRelativeUrlMapToImportMap(bundleRelativeUrlMap),
-    )
+    transformImportmapTarget(importmapReference.target)
 
     const { isInline } = importmapReference.target
     if (isInline) {
@@ -288,7 +288,12 @@ const importmapScriptSrcVisitor = (script, { notifyReferenceFound }) => {
   }
 }
 
-const importmapScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, scripts) => {
+const importmapScriptTextNodeVisitor = (
+  script,
+  { format, notifyReferenceFound },
+  target,
+  scripts,
+) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
   if (!typeAttribute) {
     return null
@@ -318,14 +323,11 @@ const importmapScriptTextNodeVisitor = (script, { notifyReferenceFound }, target
       value: textNode.value,
     },
   })
-  return ({ format, bundleRelativeUrlMap }) => {
+  return ({ transformImportmapTarget }) => {
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-importmap"
     }
-    appendImportMapIntoTarget(
-      importmapReference.target,
-      bundleRelativeUrlMapToImportMap(bundleRelativeUrlMap),
-    )
+    transformImportmapTarget(importmapReference.target)
 
     const { sourceAfterTransformation } = importmapReference.target
     textNode.value = sourceAfterTransformation
@@ -488,21 +490,4 @@ const ensureRelativeUrlNotation = (relativeUrl) => {
     return relativeUrl
   }
   return `./${relativeUrl}`
-}
-
-const bundleRelativeUrlMapToImportMap = (bundleRelativeUrlMap) => {
-  const topLevelMappings = {}
-  Object.keys(bundleRelativeUrlMap).forEach((key) => {
-    topLevelMappings[`./${key}`] = `./${bundleRelativeUrlMap[key]}`
-  })
-  return { imports: topLevelMappings }
-}
-
-const appendImportMapIntoTarget = (importmapTarget, importMapToInject) => {
-  const { sourceAfterTransformation } = importmapTarget
-  const originalImportMap = JSON.parse(sourceAfterTransformation)
-  const importMap = composeTwoImportMaps(originalImportMap, importMapToInject)
-  importmapTarget.updateOnceReady({
-    sourceAfterTransformation: JSON.stringify(importMap),
-  })
 }
