@@ -66,7 +66,7 @@ export const createJsenvRollupPlugin = async ({
   browser,
 
   format,
-  useImportMapForJsUrlMappings = format === "systemjs",
+  useImportMapForJsBundleUrls = format === "systemjs",
   systemJsUrl,
   minify,
   minifyJsOptions,
@@ -163,7 +163,7 @@ export const createJsenvRollupPlugin = async ({
 
   const emitAsset = ({ source, fileName }) => {
     const bundleRelativeUrl = fileName
-    if (useImportMapForJsUrlMappings) {
+    if (useImportMapForJsBundleUrls) {
       fileName = rollupFileNameWithoutHash(bundleRelativeUrl)
     } else {
       fileName = bundleRelativeUrl
@@ -311,11 +311,11 @@ export const createJsenvRollupPlugin = async ({
                   }
 
                   // force the presence of a fake+inline+empty importmap script
-                  // if html contains no importmap and we useImportMapForJsUrlMappings
+                  // if html contains no importmap and we useImportMapForJsBundleUrls
                   // this inline importmap will be transformed later to have top level remapping
                   // required to target hashed js urls
                   const injectImportMapScriptIfNeeded = (htmlAst) => {
-                    if (!useImportMapForJsUrlMappings) {
+                    if (!useImportMapForJsBundleUrls) {
                       return
                     }
                     if (findFirstImportmapNode(htmlAst)) {
@@ -339,7 +339,7 @@ export const createJsenvRollupPlugin = async ({
                   return htmlAst
                 },
                 transformImportmapTarget: (importmapTarget) => {
-                  if (!useImportMapForJsUrlMappings) {
+                  if (!useImportMapForJsBundleUrls) {
                     return
                   }
                   injectImportedFilesIntoImportMapTarget(
@@ -552,7 +552,7 @@ export const createJsenvRollupPlugin = async ({
       return urlToUrlForRollup(importUrl)
     },
 
-    ...(useImportMapForJsUrlMappings
+    ...(useImportMapForJsBundleUrls
       ? {
           resolveFileUrl: ({ fileName }) => {
             return `System.resolve("./${fileName}", module.meta.url)`
@@ -597,7 +597,7 @@ export const createJsenvRollupPlugin = async ({
       const outputExtension = extension === ".html" ? ".js" : extension
 
       outputOptions.entryFileNames = `[name]${outputExtension}`
-      outputOptions.chunkFileNames = useImportMapForJsUrlMappings
+      outputOptions.chunkFileNames = useImportMapForJsBundleUrls
         ? `[name]${outputExtension}`
         : `[name]-[hash]${outputExtension}`
 
@@ -662,7 +662,7 @@ export const createJsenvRollupPlugin = async ({
 
         if (file.type === "chunk") {
           let bundleRelativeUrl
-          if (useImportMapForJsUrlMappings) {
+          if (useImportMapForJsBundleUrls) {
             if (file.isEntry) {
               bundleRelativeUrl = fileName
             } else {
