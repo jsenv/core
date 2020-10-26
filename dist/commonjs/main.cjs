@@ -7229,11 +7229,9 @@ const useRollup = async ({
   bundleDirectoryUrl,
   bundleDirectoryClean
 }) => {
-  logger.info(`
-parse bundle
+  logger.info(`parse bundle
 --- entry point map ---
-${JSON.stringify(entryPointMap, null, "  ")}
-`);
+${JSON.stringify(entryPointMap, null, "  ")}`);
   const rollupInputOptions = {
     // about cache here, we should/could reuse previous rollup call
     // to get the cache from the entryPointMap
