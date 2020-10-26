@@ -34,10 +34,45 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
+const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
+
+// check importmap content
+{
+  const importmapBundleRelativeUrl = getBundleRelativeUrl("import-map.importmap")
+  const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, bundleDirectoryUrl)
+  const importmapString = await readFile(importmapBundleUrl)
+  const importmap = JSON.parse(importmapString)
+  const actual = importmap
+  const expected = {
+    imports: {
+      // the original importmap remapping are still there (maybe useless,let's keep it for now)
+      "./img.png": "./img-remap.png",
+      // the importmap for img-remap is available
+      "./assets/img-remap.png": `./${imgRemapRelativeUrl}`,
+      // and nothing more because js is referencing only img-remap
+    },
+    scopes: {},
+  }
+  assert({ actual, expected })
+}
+
+// assert asset url is correct for css (hashed)
+{
+  const imgRelativeUrl = getBundleRelativeUrl("img.png")
+  const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")
+  const cssBundleUrl = resolveUrl(cssBundleRelativeUrl, bundleDirectoryUrl)
+  const imgBundleUrl = resolveUrl(imgRelativeUrl, bundleDirectoryUrl)
+  const cssString = await readFile(cssBundleUrl)
+  const cssUrls = await parseCssUrls(cssString, cssBundleUrl)
+  const actual = cssUrls.urlDeclarations[0].specifier
+  const expected = urlToRelativeUrl(imgBundleUrl, cssBundleUrl)
+  assert({ actual, expected })
+}
+
 // assert asset url is correct for javascript (remapped + hashed)
 {
   const mainRelativeUrl = getBundleRelativeUrl("file.js")
-  const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
   const { namespace, serverOrigin } = await browserImportSystemJsBundle({
     ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
     testDirectoryRelativeUrl,
@@ -48,19 +83,5 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   const expected = {
     default: resolveUrl(`dist/systemjs/${imgRemapRelativeUrl}`, serverOrigin),
   }
-  assert({ actual, expected })
-}
-
-// assert asset url is correct for css (hashed)
-{
-  const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-  const imgRelativeUrl = getBundleRelativeUrl("img.png")
-  const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")
-  const cssBundleUrl = resolveUrl(cssBundleRelativeUrl, bundleDirectoryUrl)
-  const imgBundleUrl = resolveUrl(imgRelativeUrl, bundleDirectoryUrl)
-  const cssString = await readFile(cssBundleUrl)
-  const cssUrls = await parseCssUrls(cssString, cssBundleUrl)
-  const actual = cssUrls.urlDeclarations[0].specifier
-  const expected = urlToRelativeUrl(imgBundleUrl, cssBundleUrl)
   assert({ actual, expected })
 }

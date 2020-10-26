@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
 import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
@@ -31,6 +31,29 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
   const bundleRelativeUrl = bundleMappings[relativeUrl]
   return bundleRelativeUrl
+}
+
+const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+
+// importmap content
+{
+  const importmapBundleRelativeUrl = getBundleRelativeUrl("import-map.importmap")
+  const fooBundleRelativeUrl = getBundleRelativeUrl("foo.js")
+  const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, bundleDirectoryUrl)
+  const importmapString = await readFile(importmapBundleUrl)
+  const importmap = JSON.parse(importmapString)
+  const actual = importmap
+  const expected = {
+    imports: {
+      // the original importmap remapping are still there (maybe useless,let's keep it for now)
+      "foo": "./foo.js",
+      // the importmap for foo is available
+      "./foo.js": `./${fooBundleRelativeUrl}`,
+      // and nothing more because js is referencing only an other js
+    },
+    scopes: {},
+  }
+  assert({ actual, expected })
 }
 
 // assert asset url is correct for javascript (remapped + hashed)

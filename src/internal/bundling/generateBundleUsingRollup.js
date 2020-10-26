@@ -121,6 +121,13 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     onwarn: (warning, warn) => {
       if (warning.code === "THIS_IS_UNDEFINED") return
       if (warning.code === "EMPTY_BUNDLE" && warning.chunkName === "__empty__") return
+      // ignore file name conflict when sourcemap or importmap are re-emitted
+      if (
+        warning.code === "FILE_NAME_CONFLICT" &&
+        (warning.message.includes(".map") || warning.message.includes(".importmap"))
+      ) {
+        return
+      }
       warn(warning)
     },
     // on passe input: [] car c'est le plusign jsenv qui se chargera d'emit des chunks
