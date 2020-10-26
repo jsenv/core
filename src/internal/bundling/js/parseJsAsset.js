@@ -76,16 +76,18 @@ export const parseJsAsset = async (
 
         const mapSource = JSON.stringify(map, null, "  ")
         const bundleRelativeUrl = urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl)
-        emitAsset({
-          source: mapSource,
-          fileName: bundleRelativeUrl,
-        })
+
         if (sourcemapReference) {
           // redirect original sourcemap from bundle to a new file
           // we'll need to remove the old asset from rollup bundle
           // and emit a new one instead
           // when finding this asset in the rollupbundle we'll have to remove it
           sourcemapReference.target.updateOnceReady({ bundleRelativeUrl })
+        } else {
+          emitAsset({
+            source: mapSource,
+            fileName: bundleRelativeUrl,
+          })
         }
       })
 
