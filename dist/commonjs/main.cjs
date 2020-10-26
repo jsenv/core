@@ -46,408 +46,6 @@ const syntaxNumericSeparator = require$1("@babel/plugin-syntax-numeric-separator
 
 const minimalBabelPluginArray = [syntaxDynamicImport, syntaxImportMeta, syntaxNumericSeparator];
 
-/* eslint-disable */
-
-const {
-  template,
-  types: t
-} = require$1("@babel/core");
-
-const {
-  declare
-} = require$1("@babel/helper-plugin-utils");
-
-const {
-  default: hoistVariables
-} = require$1("@babel/helper-hoist-variables");
-
-const buildTemplate = template(`
-  SYSTEM_REGISTER(MODULE_NAME, SOURCES, function (EXPORT_IDENTIFIER, CONTEXT_IDENTIFIER) {
-    "use strict";
-    BEFORE_BODY;
-    return {
-      setters: SETTERS,
-      execute: EXECUTE
-    };
-  });
-`);
-const buildExportAll = template(`
-  for (var KEY in TARGET) {
-    if (KEY !== "default" && KEY !== "__esModule") EXPORT_OBJ[KEY] = TARGET[KEY];
-  }
-`);
-
-function constructExportCall(path, exportIdent, exportNames, exportValues, exportStarTarget) {
-  const statements = [];
-
-  if (exportNames.length === 1) {
-    statements.push(t.expressionStatement(t.callExpression(exportIdent, [t.stringLiteral(exportNames[0]), exportValues[0]]))); // eslint-disable-next-line no-negated-condition
-  } else if (!exportStarTarget) {
-    const objectProperties = [];
-
-    for (let i = 0; i < exportNames.length; i++) {
-      const exportName = exportNames[i];
-      const exportValue = exportValues[i];
-      objectProperties.push(t.objectProperty(t.identifier(exportName), exportValue));
-    }
-
-    statements.push(t.expressionStatement(t.callExpression(exportIdent, [t.objectExpression(objectProperties)])));
-  } else {
-    const exportObj = path.scope.generateUid("exportObj");
-    statements.push(t.variableDeclaration("var", [t.variableDeclarator(t.identifier(exportObj), t.objectExpression([]))]));
-    statements.push(buildExportAll({
-      KEY: path.scope.generateUidIdentifier("key"),
-      EXPORT_OBJ: t.identifier(exportObj),
-      TARGET: exportStarTarget
-    }));
-
-    for (let i = 0; i < exportNames.length; i++) {
-      const exportName = exportNames[i];
-      const exportValue = exportValues[i];
-      statements.push(t.expressionStatement(t.assignmentExpression("=", t.memberExpression(t.identifier(exportObj), t.identifier(exportName)), exportValue)));
-    }
-
-    statements.push(t.expressionStatement(t.callExpression(exportIdent, [t.identifier(exportObj)])));
-  }
-
-  return statements;
-}
-
-const TYPE_IMPORT = "Import";
-var transformModulesSystemJs = declare((api, options) => {
-  api.assertVersion(7);
-  const {
-    systemGlobal = "System"
-  } = options;
-  const IGNORE_REASSIGNMENT_SYMBOL = Symbol();
-  const reassignmentVisitor = {
-    "AssignmentExpression|UpdateExpression"(path) {
-      if (path.node[IGNORE_REASSIGNMENT_SYMBOL]) return;
-      path.node[IGNORE_REASSIGNMENT_SYMBOL] = true;
-      const arg = path.get(path.isAssignmentExpression() ? "left" : "argument");
-
-      if (arg.isObjectPattern() || arg.isArrayPattern()) {
-        const exprs = [path.node];
-
-        for (const name of Object.keys(arg.getBindingIdentifiers())) {
-          if (this.scope.getBinding(name) !== path.scope.getBinding(name)) {
-            return;
-          }
-
-          const exportedNames = this.exports[name];
-          if (!exportedNames) return;
-
-          for (const exportedName of exportedNames) {
-            exprs.push(this.buildCall(exportedName, t.identifier(name)).expression);
-          }
-        }
-
-        path.replaceWith(t.sequenceExpression(exprs));
-        return;
-      }
-
-      if (!arg.isIdentifier()) return;
-      const name = arg.node.name; // redeclared in this scope
-
-      if (this.scope.getBinding(name) !== path.scope.getBinding(name)) return;
-      const exportedNames = this.exports[name];
-      if (!exportedNames) return;
-      let node = path.node; // if it is a non-prefix update expression (x++ etc)
-      // then we must replace with the expression (_export('x', x + 1), x++)
-      // in order to ensure the same update expression value
-
-      const isPostUpdateExpression = path.isUpdateExpression({
-        prefix: false
-      });
-
-      if (isPostUpdateExpression) {
-        node = t.binaryExpression(node.operator[0], t.unaryExpression("+", t.cloneNode(node.argument)), t.numericLiteral(1));
-      }
-
-      for (const exportedName of exportedNames) {
-        node = this.buildCall(exportedName, node).expression;
-      }
-
-      if (isPostUpdateExpression) {
-        node = t.sequenceExpression([node, path.node]);
-      }
-
-      path.replaceWith(node);
-    }
-
-  };
-  return {
-    name: "transform-modules-systemjs",
-    visitor: {
-      CallExpression(path, state) {
-        if (path.node.callee.type === TYPE_IMPORT) {
-          path.replaceWith(t.callExpression(t.memberExpression(t.identifier(state.contextIdent), t.identifier("import")), path.node.arguments));
-        }
-      },
-
-      MetaProperty(path, state) {
-        if (path.node.meta.name === "import" && path.node.property.name === "meta") {
-          path.replaceWith(t.memberExpression(t.identifier(state.contextIdent), t.identifier("meta")));
-        }
-      },
-
-      ReferencedIdentifier(path, state) {
-        if (path.node.name === "__moduleName" && !path.scope.hasBinding("__moduleName")) {
-          path.replaceWith(t.memberExpression(t.identifier(state.contextIdent), t.identifier("id")));
-        }
-      },
-
-      Program: {
-        enter(path, state) {
-          state.contextIdent = path.scope.generateUid("context");
-        },
-
-        exit(path, state) {
-          const undefinedIdent = path.scope.buildUndefinedNode();
-          const exportIdent = path.scope.generateUid("export");
-          const contextIdent = state.contextIdent;
-          const exportMap = Object.create(null);
-          const modules = [];
-          let beforeBody = [];
-          const setters = [];
-          const sources = [];
-          const variableIds = [];
-          const removedPaths = [];
-
-          function addExportName(key, val) {
-            exportMap[key] = exportMap[key] || [];
-            exportMap[key].push(val);
-          }
-
-          function pushModule(source, key, specifiers) {
-            let module;
-            modules.forEach(function (m) {
-              if (m.key === source) {
-                module = m;
-              }
-            });
-
-            if (!module) {
-              modules.push(module = {
-                key: source,
-                imports: [],
-                exports: []
-              });
-            }
-
-            module[key] = module[key].concat(specifiers);
-          }
-
-          function buildExportCall(name, val) {
-            return t.expressionStatement(t.callExpression(t.identifier(exportIdent), [t.stringLiteral(name), val]));
-          }
-
-          const exportNames = [];
-          const exportValues = [];
-          const body = path.get("body");
-
-          for (const path of body) {
-            if (path.isFunctionDeclaration()) {
-              beforeBody.push(path.node);
-              removedPaths.push(path);
-            } else if (path.isClassDeclaration()) {
-              variableIds.push(path.node.id);
-              path.replaceWith(t.expressionStatement(t.assignmentExpression("=", t.cloneNode(path.node.id), t.toExpression(path.node))));
-            } else if (path.isImportDeclaration()) {
-              const source = path.node.source.value;
-              pushModule(source, "imports", path.node.specifiers);
-
-              for (const name of Object.keys(path.getBindingIdentifiers())) {
-                path.scope.removeBinding(name);
-                variableIds.push(t.identifier(name));
-              }
-
-              path.remove();
-            } else if (path.isExportAllDeclaration()) {
-              pushModule(path.node.source.value, "exports", path.node);
-              path.remove();
-            } else if (path.isExportDefaultDeclaration()) {
-              const declar = path.get("declaration");
-              const id = declar.node.id;
-
-              if (declar.isClassDeclaration()) {
-                if (id) {
-                  exportNames.push("default");
-                  exportValues.push(undefinedIdent);
-                  variableIds.push(id);
-                  addExportName(id.name, "default");
-                  path.replaceWith(t.expressionStatement(t.assignmentExpression("=", t.cloneNode(id), t.toExpression(declar.node))));
-                } else {
-                  exportNames.push("default");
-                  exportValues.push(t.toExpression(declar.node));
-                  removedPaths.push(path);
-                }
-              } else if (declar.isFunctionDeclaration()) {
-                if (id) {
-                  beforeBody.push(declar.node);
-                  exportNames.push("default");
-                  exportValues.push(t.cloneNode(id));
-                  addExportName(id.name, "default");
-                } else {
-                  exportNames.push("default");
-                  exportValues.push(t.toExpression(declar.node));
-                }
-
-                removedPaths.push(path);
-              } else {
-                path.replaceWith(buildExportCall("default", declar.node));
-              }
-            } else if (path.isExportNamedDeclaration()) {
-              const declar = path.get("declaration");
-
-              if (declar.node) {
-                path.replaceWith(declar);
-
-                if (path.isFunction()) {
-                  const node = declar.node;
-                  const name = node.id.name;
-                  addExportName(name, name);
-                  beforeBody.push(node);
-                  exportNames.push(name);
-                  exportValues.push(t.cloneNode(node.id));
-                  removedPaths.push(path);
-                } else if (path.isClass()) {
-                  const name = declar.node.id.name;
-                  exportNames.push(name);
-                  exportValues.push(undefinedIdent);
-                  variableIds.push(declar.node.id);
-                  path.replaceWith(t.expressionStatement(t.assignmentExpression("=", t.cloneNode(declar.node.id), t.toExpression(declar.node))));
-                  addExportName(name, name);
-                } else {
-                  for (const name of Object.keys(declar.getBindingIdentifiers())) {
-                    addExportName(name, name);
-                  }
-                }
-              } else {
-                const specifiers = path.node.specifiers;
-
-                if (specifiers && specifiers.length) {
-                  if (path.node.source) {
-                    pushModule(path.node.source.value, "exports", specifiers);
-                    path.remove();
-                  } else {
-                    const nodes = [];
-
-                    for (const specifier of specifiers) {
-                      const binding = path.scope.getBinding(specifier.local.name); // hoisted function export
-
-                      if (binding && t.isFunctionDeclaration(binding.path.node)) {
-                        exportNames.push(specifier.exported.name);
-                        exportValues.push(t.cloneNode(specifier.local));
-                      } // only globals also exported this way
-                      else if (!binding) {
-                          nodes.push(buildExportCall(specifier.exported.name, specifier.local));
-                        }
-
-                      addExportName(specifier.local.name, specifier.exported.name);
-                    }
-
-                    path.replaceWithMultiple(nodes);
-                  }
-                }
-              }
-            }
-          }
-
-          modules.forEach(function (specifiers) {
-            let setterBody = [];
-            const target = path.scope.generateUid(specifiers.key);
-
-            for (let specifier of specifiers.imports) {
-              if (t.isImportNamespaceSpecifier(specifier)) {
-                setterBody.push(t.expressionStatement(t.assignmentExpression("=", specifier.local, t.identifier(target))));
-              } else if (t.isImportDefaultSpecifier(specifier)) {
-                specifier = t.importSpecifier(specifier.local, t.identifier("default"));
-              }
-
-              if (t.isImportSpecifier(specifier)) {
-                setterBody.push(t.expressionStatement(t.assignmentExpression("=", specifier.local, t.memberExpression(t.identifier(target), specifier.imported))));
-              }
-            }
-
-            if (specifiers.exports.length) {
-              const exportNames = [];
-              const exportValues = [];
-              let hasExportStar = false;
-
-              for (const node of specifiers.exports) {
-                if (t.isExportAllDeclaration(node)) {
-                  hasExportStar = true;
-                } else if (t.isExportSpecifier(node)) {
-                  exportNames.push(node.exported.name);
-                  exportValues.push(t.memberExpression(t.identifier(target), node.local));
-                } else ;
-              }
-
-              setterBody = setterBody.concat(constructExportCall(path, t.identifier(exportIdent), exportNames, exportValues, hasExportStar ? t.identifier(target) : null));
-            }
-
-            sources.push(t.stringLiteral(specifiers.key));
-            setters.push(t.functionExpression(null, [t.identifier(target)], t.blockStatement(setterBody)));
-          });
-          let moduleName = this.getModuleName();
-          if (moduleName) moduleName = t.stringLiteral(moduleName);
-          hoistVariables(path, (id, name, hasInit) => {
-            variableIds.push(id);
-
-            if (!hasInit) {
-              exportNames.push(name);
-              exportValues.push(undefinedIdent);
-            }
-          }, null);
-
-          if (variableIds.length) {
-            beforeBody.unshift(t.variableDeclaration("var", variableIds.map(id => t.variableDeclarator(id))));
-          }
-
-          if (exportNames.length) {
-            beforeBody = beforeBody.concat(constructExportCall(path, t.identifier(exportIdent), exportNames, exportValues, null));
-          }
-
-          path.traverse(reassignmentVisitor, {
-            exports: exportMap,
-            buildCall: buildExportCall,
-            scope: path.scope
-          });
-
-          for (const path of removedPaths) {
-            path.remove();
-          }
-
-          path.node.body = [buildTemplate({
-            SYSTEM_REGISTER: t.memberExpression(t.identifier(systemGlobal), t.identifier("register")),
-            BEFORE_BODY: beforeBody,
-            MODULE_NAME: moduleName,
-            SETTERS: t.arrayExpression(setters),
-            SOURCES: t.arrayExpression(sources),
-            EXECUTE: t.functionExpression(null, [], t.blockStatement(path.node.body), false, options.topLevelAwait && programUsesTopLevelAwait(path)),
-            EXPORT_IDENTIFIER: t.identifier(exportIdent),
-            CONTEXT_IDENTIFIER: t.identifier(contextIdent)
-          })];
-        }
-
-      }
-    }
-  };
-});
-
-const programUsesTopLevelAwait = path => {
-  let hasTopLevelAwait = false;
-  path.traverse({
-    AwaitExpression(path) {
-      const parent = path.getFunctionParent();
-      if (!parent || parent.type === "Program") hasTopLevelAwait = true;
-    }
-
-  });
-  return hasTopLevelAwait;
-};
-
 const findAsyncPluginNameInBabelPluginMap = babelPluginMap => {
   if ("transform-async-to-promises" in babelPluginMap) {
     return "transform-async-to-promises";
@@ -617,12 +215,14 @@ const transformBabelHelperToImportBabelPlugin = api => {
   };
 };
 
-/* eslint-disable import/max-dependencies */
-
 const {
   transformAsync,
   transformFromAstAsync
 } = require$1("@babel/core");
+
+const transformModulesSystemJs = require$1("@babel/plugin-transform-modules-systemjs");
+
+const proposalDynamicImport = require$1("@babel/plugin-proposal-dynamic-import");
 
 const jsenvTransform = async ({
   inputCode,
@@ -698,9 +298,7 @@ const jsenvTransform = async ({
       ast: inputAst,
       code: inputCode,
       options: { ...options,
-        plugins: [...minimalBabelPluginArray, ...babelPluginArrayWithoutAsync, [transformModulesSystemJs, {
-          topLevelAwait: transformTopLevelAwait
-        }]]
+        plugins: [...minimalBabelPluginArray, ...babelPluginArrayWithoutAsync, [proposalDynamicImport], [transformModulesSystemJs]]
       }
     }); // we need to retranspile the await keywords now wrapped
     // inside Systemjs function.
@@ -726,9 +324,7 @@ const jsenvTransform = async ({
     };
   }
 
-  const babelPluginArray = [...minimalBabelPluginArray, ...Object.keys(babelPluginMap).map(babelPluginName => babelPluginMap[babelPluginName]), ...(transformModuleIntoSystemFormat ? [[transformModulesSystemJs, {
-    topLevelAwait: transformTopLevelAwait
-  }]] : [])];
+  const babelPluginArray = [...minimalBabelPluginArray, ...Object.keys(babelPluginMap).map(babelPluginName => babelPluginMap[babelPluginName]), ...(transformModuleIntoSystemFormat ? [[proposalDynamicImport], [transformModulesSystemJs]] : [])];
   const result = await babelTransform({
     ast: inputAst,
     code: inputCode,
@@ -3763,8 +3359,8 @@ const stringifyHtmlAst = htmlAst => {
   const htmlString = parse5.serialize(htmlAst);
   return htmlString;
 };
-const findNode = (htmlString, predicate) => {
-  const htmlAst = parseHtmlString(htmlString);
+const findNode = (htmlStringOrAst, predicate) => {
+  const htmlAst = typeof htmlStringOrAst === "string" ? parseHtmlString(htmlStringOrAst) : htmlStringOrAst;
   let nodeMatching = null;
   visitHtmlAst(htmlAst, node => {
     if (predicate(node)) {
@@ -3776,7 +3372,7 @@ const findNode = (htmlString, predicate) => {
   });
   return nodeMatching;
 };
-const findFirstImportmapNode = htmlString => findNode(htmlString, htmlNodeIsScriptImportmap);
+const findFirstImportmapNode = htmlStringOrAst => findNode(htmlStringOrAst, htmlNodeIsScriptImportmap);
 const getHtmlNodeAttributeByName = (htmlNode, attributeName) => htmlNode.attrs.find(attr => attr.name === attributeName);
 const removeHtmlNodeAttribute = (htmlNode, attributeToRemove) => {
   let attrIndex;
@@ -4437,14 +4033,14 @@ ${importer}`);
   }
 };
 
-const computeFileNameForRollup = (fileUrl, fileContent, pattern = "assets/[name]-[hash][extname]") => {
-  const fileNameForRollup = renderNamePattern(typeof pattern === "function" ? pattern() : pattern, {
+const computeBundleRelativeUrl = (fileUrl, fileContent, pattern = "[name]-[hash][extname]") => {
+  const bundleRelativeUrl = renderNamePattern(typeof pattern === "function" ? pattern() : pattern, {
     dirname: () => util.urlToParentUrl(fileUrl),
     name: () => util.urlToBasename(fileUrl),
     hash: () => generateAssetHash(fileContent),
     extname: () => util.urlToExtension(fileUrl)
   });
-  return fileNameForRollup;
+  return bundleRelativeUrl;
 }; // https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
 
 const generateAssetHash = assetSource => {
@@ -4489,11 +4085,10 @@ const createCompositeAssetHandler = ({
   parse
 }, {
   logLevel,
+  format,
   projectDirectoryUrl,
   // project url but it can be an http url
   bundleDirectoryRelativeUrl,
-  urlToOriginalUrl,
-  // get original url from eventually compiled url
   urlToFileUrl,
   // get a file url from an eventual http url
   loadUrl = () => null,
@@ -4508,32 +4103,70 @@ const createCompositeAssetHandler = ({
   });
   const bundleDirectoryUrl = util.resolveUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl);
 
-  const prepareHtmlEntry = async (url, {
-    fileNamePattern,
-    source
+  const createReferenceForAssetEntry = async (entryUrl, {
+    entryContentType,
+    entryBundleRelativeUrl,
+    entrySource
   }) => {
-    logger$1.debug(`prepare entry asset ${shortenUrl(url)}`); // we don't really know where this reference to that asset file comes from
+    // we don't really know where this reference to that asset file comes from
     // we could almost say it's from the script calling this function
     // so we could analyse stack trace here to put this function caller
     // as the reference to this target file
-
     const callerLocation = getCallerLocation();
     const entryReference = createReference({ ...callerLocation,
-      contentType: "text/html"
+      contentType: entryContentType
     }, {
       isEntry: true,
-      url,
-      content: {
-        type: "text/html",
-        value: source
-      },
-      fileNamePattern
+      url: entryUrl,
+      ...(entrySource ? {
+        content: {
+          type: entryContentType,
+          value: entrySource
+        }
+      } : {}),
+      // don't hash asset entry points
+      fileNamePattern: entryBundleRelativeUrl
     });
     await entryReference.target.getDependenciesAvailablePromise(); // start to wait internally for eventual chunks
     // but don't await here because this function will be awaited by rollup before starting
     // to parse chunks
 
     entryReference.target.getReadyPromise();
+  };
+
+  const createReferenceForJsModuleImport = async (response, {
+    importerUrl
+  } = {}) => {
+    const contentType = response.headers["content-type"] || ""; // const targetUrl = resolveTargetUrl({ specifier: response.url, contentType })
+
+    const targetUrl = response.url;
+    const responseBodyAsBuffer = Buffer.from(await response.arrayBuffer());
+    const reference = createReference( // the reference to this target comes from a static or dynamic import
+    // parsed by rollup.
+    // but we don't really know the line and column
+    // because rollup does not share this information
+    {
+      url: importerUrl,
+      column: undefined,
+      line: undefined,
+      contentType
+    }, {
+      url: targetUrl,
+      content: {
+        type: contentType,
+        value: responseBodyAsBuffer
+      }
+    });
+    logger$1.debug(formatReferenceFound(reference, {
+      showReferenceSourceLocation
+    }));
+    await reference.target.getRollupReferenceIdAvailablePromise();
+    return reference;
+  };
+
+  const getAllAssetEntryEmittedPromise = async () => {
+    const urlToWait = Object.keys(targetMap).filter(url => targetMap[url].isEntry);
+    await Promise.all(urlToWait.map(url => targetMap[url].getRollupReferenceIdAvailablePromise()));
   };
 
   const targetMap = {};
@@ -4578,8 +4211,11 @@ const createCompositeAssetHandler = ({
     });
   };
 
-  const assetTransformMap = {};
-  const fileNameToClean = [];
+  const assetTransformMap = {}; // used to remove sourcemap files that are renamed after they are emitted
+
+  const bundleRelativeUrlsToClean = [];
+
+  const getBundleRelativeUrlsToClean = () => bundleRelativeUrlsToClean;
 
   const createTarget = ({
     url,
@@ -4688,8 +4324,8 @@ const createCompositeAssetHandler = ({
         if (isInline && fileNamePattern === undefined) {
           // inherit parent directory location because it's an inline file
           fileNamePattern = () => {
-            const importerFileNameForRollup = precomputeTargetFileNameForRollup(target);
-            const importerParentRelativeUrl = util.urlToRelativeUrl(util.urlToParentUrl(util.resolveUrl(importerFileNameForRollup, "file://")), "file://");
+            const importerBundleRelativeUrl = precomputeBundleRelativeUrlForTarget(target);
+            const importerParentRelativeUrl = util.urlToRelativeUrl(util.urlToParentUrl(util.resolveUrl(importerBundleRelativeUrl, "file://")), "file://");
             return `${importerParentRelativeUrl}[name]-[hash][extname]`;
           };
         }
@@ -4729,6 +4365,7 @@ const createCompositeAssetHandler = ({
       };
 
       const parseReturnValue = await parse(target, {
+        format,
         notifyReferenceFound: notifyDependencyFound
       });
       parsingDone = true;
@@ -4763,10 +4400,10 @@ const createCompositeAssetHandler = ({
         });
         const {
           sourceAfterTransformation,
-          fileNameForRollup
+          bundleRelativeUrl
         } = await rollupChunkReadyPromise;
         target.sourceAfterTransformation = sourceAfterTransformation;
-        target.fileNameForRollup = fileNameForRollup;
+        target.bundleRelativeUrl = bundleRelativeUrl;
         return;
       } // la transformation d'un asset c'est avant tout la transformation de ses dépendances
       // mais si on a rien a transformer, on a pas vraiment besoin de tout ça
@@ -4779,7 +4416,7 @@ const createCompositeAssetHandler = ({
 
       if (typeof transform !== "function") {
         target.sourceAfterTransformation = target.content.value;
-        target.fileNameForRollup = computeTargetFileNameForRollup(target);
+        target.bundleRelativeUrl = computeBundleRelativeUrlForTarget(target);
         return;
       } // assetDependenciesMapping contains all dependencies for an asset
       // each key is the absolute url to the dependency file
@@ -4788,23 +4425,23 @@ const createCompositeAssetHandler = ({
       // {
       //   "file:///project/coin.png": "./coin-45eiopri.png"
       // }
-      // we don't yet know the exact importerFileNameForRollup but we can generate a fake one
+      // we don't yet know the exact importerBundleRelativeUrl but we can generate a fake one
       // to ensure we resolve dependency against where the importer file will be
 
 
-      const importerFileNameForRollup = precomputeTargetFileNameForRollup(target);
+      const importerBundleRelativeUrl = precomputeBundleRelativeUrlForTarget(target);
       const assetEmitters = [];
       const transformReturnValue = await transform({
-        precomputeFileNameForRollup: sourceAfterTransformation => precomputeTargetFileNameForRollup(target, sourceAfterTransformation),
+        precomputeBundleRelativeUrl: sourceAfterTransformation => precomputeBundleRelativeUrlForTarget(target, sourceAfterTransformation),
         registerAssetEmitter: callback => {
           assetEmitters.push(callback);
         },
         getReferenceUrlRelativeToImporter: reference => {
           const referenceTarget = reference.target;
-          const referenceFileNameForRollup = referenceTarget.fileNameForRollup;
-          const referenceUrlForRollup = util.resolveUrl(referenceFileNameForRollup, "file:///");
-          const importerFileUrlForRollup = util.resolveUrl(importerFileNameForRollup, "file:///");
-          return util.urlToRelativeUrl(referenceUrlForRollup, importerFileUrlForRollup);
+          const referenceTargetBundleRelativeUrl = referenceTarget.bundleRelativeUrl;
+          const referenceTargetBundleUrl = util.resolveUrl(referenceTargetBundleRelativeUrl, "file:///");
+          const importerBundleUrl = util.resolveUrl(importerBundleRelativeUrl, "file:///");
+          return util.urlToRelativeUrl(referenceTargetBundleUrl, importerBundleUrl);
         }
       });
 
@@ -4813,25 +4450,25 @@ const createCompositeAssetHandler = ({
       }
 
       let sourceAfterTransformation;
-      let fileNameForRollup;
+      let bundleRelativeUrl;
 
       if (typeof transformReturnValue === "string") {
         sourceAfterTransformation = transformReturnValue;
       } else {
         sourceAfterTransformation = transformReturnValue.sourceAfterTransformation;
 
-        if (transformReturnValue.fileNameForRollup) {
-          fileNameForRollup = transformReturnValue.fileNameForRollup;
+        if (transformReturnValue.bundleRelativeUrl) {
+          bundleRelativeUrl = transformReturnValue.bundleRelativeUrl;
         }
       }
 
       target.sourceAfterTransformation = sourceAfterTransformation;
 
-      if (fileNameForRollup === undefined) {
-        fileNameForRollup = computeTargetFileNameForRollup(target);
+      if (bundleRelativeUrl === undefined) {
+        bundleRelativeUrl = computeBundleRelativeUrlForTarget(target);
       }
 
-      target.fileNameForRollup = fileNameForRollup;
+      target.bundleRelativeUrl = bundleRelativeUrl;
       assetEmitters.forEach(callback => {
         callback({
           emitAsset,
@@ -4847,12 +4484,32 @@ const createCompositeAssetHandler = ({
     }); // the idea is to return the connect promise here
     // because connect is memoized and called immediatly after target is created
 
-    const getRollupReferenceIdAvailablePromise = () => connect();
+    const getRollupReferenceIdAvailablePromise = () => connect(); // meant to be used only when asset is modified
+    // after being emitted.
+    // (sourcemap and importmap)
 
-    const updateFileNameForRollup = value => {
-      if (value !== target.fileNameForRollup) {
-        fileNameToClean.push(target.fileNameForRollup);
-        target.fileNameForRollup = value;
+
+    const updateOnceReady = ({
+      sourceAfterTransformation,
+      bundleRelativeUrl
+    }) => {
+      // the source after transform has changed
+      if (sourceAfterTransformation !== undefined && sourceAfterTransformation !== target.sourceAfterTransformation) {
+        target.sourceAfterTransformation = sourceAfterTransformation;
+
+        if (bundleRelativeUrl === undefined) {
+          bundleRelativeUrl = computeBundleRelativeUrlForTarget(target);
+        }
+      } // the bundle relative url has changed
+
+
+      if (bundleRelativeUrl !== undefined && bundleRelativeUrl !== target.bundleRelativeUrl) {
+        bundleRelativeUrlsToClean.push(target.bundleRelativeUrl);
+        target.bundleRelativeUrl = bundleRelativeUrl;
+        emitAsset({
+          source: target.sourceAfterTransformation,
+          fileName: bundleRelativeUrl
+        });
       }
     };
 
@@ -4863,7 +4520,7 @@ const createCompositeAssetHandler = ({
       getDependenciesAvailablePromise,
       getReadyPromise,
       getRollupReferenceIdAvailablePromise,
-      updateFileNameForRollup
+      updateOnceReady
     });
     return target;
   };
@@ -4874,84 +4531,11 @@ const createCompositeAssetHandler = ({
     rollupChunkReadyCallbackMap[url] = callback;
   };
 
-  const resolveJsReferencesUsingRollupBundle = async (rollupBundle, urlToServerUrl) => {
-    Object.keys(rollupChunkReadyCallbackMap).forEach(key => {
-      const chunkName = Object.keys(rollupBundle).find(bundleKey => {
-        const rollupFile = rollupBundle[bundleKey];
-        const {
-          facadeModuleId
-        } = rollupFile;
-        return facadeModuleId && urlToServerUrl(facadeModuleId) === key;
-      });
-      const chunk = rollupBundle[chunkName];
-      logger$1.debug(`resolve rollup chunk ${shortenUrl(key)}`);
-      rollupChunkReadyCallbackMap[key]({
-        sourceAfterTransformation: chunk.code,
-        fileNameForRollup: chunk.fileName
-      });
-    }); // wait html files to be emitted
+  const getRollupChunkReadyCallbackMap = () => rollupChunkReadyCallbackMap;
 
-    const urlToWait = Object.keys(targetMap).filter(url => targetMap[url].isEntry);
-    await Promise.all(urlToWait.map(url => targetMap[url].getRollupReferenceIdAvailablePromise()));
-  };
-
-  const cleanupRollupBundle = rollupBundle => {
-    fileNameToClean.forEach(fileName => {
-      delete rollupBundle[fileName];
-    });
-  };
-
-  const rollupBundleToAssetMappings = rollupBundle => {
-    const assetMappings = {};
-    Object.keys(rollupBundle).forEach(key => {
-      const file = rollupBundle[key];
-
-      if (file.type === "asset") {
-        const assetUrl = findAssetUrlByFileNameForRollup(file.fileName);
-
-        if (assetUrl) {
-          const originalUrl = urlToOriginalUrl(assetUrl);
-          const originalRelativeUrl = util.urlToRelativeUrl(originalUrl, projectDirectoryUrl);
-          assetMappings[originalRelativeUrl] = file.fileName;
-        }
-      }
-    });
-    return assetMappings;
-  };
-
-  const findAssetUrlByFileNameForRollup = fileNameForRollup => {
-    const assetUrl = Object.keys(targetMap).find(url => targetMap[url].fileNameForRollup === fileNameForRollup);
+  const findAssetUrlByBundleRelativeUrl = bundleRelativeUrl => {
+    const assetUrl = Object.keys(targetMap).find(url => targetMap[url].bundleRelativeUrl === bundleRelativeUrl);
     return assetUrl;
-  };
-
-  const createJsModuleImportReference = async (response, {
-    importerUrl
-  } = {}) => {
-    const contentType = response.headers["content-type"] || ""; // const targetUrl = resolveTargetUrl({ specifier: response.url, contentType })
-
-    const targetUrl = response.url;
-    const responseBodyAsBuffer = Buffer.from(await response.arrayBuffer());
-    const reference = createReference( // the reference to this target comes from a static or dynamic import
-    // parsed by rollup.
-    // but we don't really know the line and column
-    // because rollup does not share this information
-    {
-      url: importerUrl,
-      column: undefined,
-      line: undefined,
-      contentType
-    }, {
-      url: targetUrl,
-      content: {
-        type: contentType,
-        value: responseBodyAsBuffer
-      }
-    });
-    logger$1.debug(formatReferenceFound(reference, {
-      showReferenceSourceLocation
-    }));
-    await reference.target.getRollupReferenceIdAvailablePromise();
-    return reference;
   };
 
   const shortenUrl = url => {
@@ -4985,11 +4569,12 @@ ${showSourceLocation(referenceSource, {
   };
 
   return {
-    prepareHtmlEntry,
-    resolveJsReferencesUsingRollupBundle,
-    cleanupRollupBundle,
-    rollupBundleToAssetMappings,
-    createJsModuleImportReference,
+    createReferenceForAssetEntry,
+    createReferenceForJsModuleImport,
+    getRollupChunkReadyCallbackMap,
+    getAllAssetEntryEmittedPromise,
+    getBundleRelativeUrlsToClean,
+    findAssetUrlByBundleRelativeUrl,
     inspect: () => {
       return {
         targetMap
@@ -4999,19 +4584,19 @@ ${showSourceLocation(referenceSource, {
 };
 const assetFileNamePattern = "assets/[name]-[hash][extname]";
 
-const computeTargetFileNameForRollup = target => {
-  return computeFileNameForRollup(target.url, target.sourceAfterTransformation, target.fileNamePattern || assetFileNamePattern);
+const computeBundleRelativeUrlForTarget = target => {
+  return computeBundleRelativeUrl(target.url, target.sourceAfterTransformation, target.fileNamePattern || assetFileNamePattern);
 };
 
-const precomputeTargetFileNameForRollup = (target, sourceAfterTransformation = "") => {
-  if (target.fileNameForRollup) {
-    return target.fileNameForRollup;
+const precomputeBundleRelativeUrlForTarget = (target, sourceAfterTransformation = "") => {
+  if (target.bundleRelativeUrl) {
+    return target.bundleRelativeUrl;
   }
 
   target.sourceAfterTransformation = sourceAfterTransformation;
-  const precomputedFileNameForRollup = computeTargetFileNameForRollup(target);
+  const precomputedBundleRelativeUrl = computeBundleRelativeUrlForTarget(target);
   target.sourceAfterTransformation = undefined;
-  return precomputedFileNameForRollup;
+  return precomputedBundleRelativeUrl;
 };
 
 const memoize = fn => {
@@ -5300,7 +4885,9 @@ Or be sure to also reference this url somewhere in the html file like
 const parseHtmlAsset = async (target, notifiers, {
   minify,
   minifyHtmlOptions,
-  htmlStringToHtmlAst = htmlString => parseHtmlString(htmlString)
+  transformImportmapTarget = () => {},
+  htmlStringToHtmlAst = htmlString => parseHtmlString(htmlString),
+  htmlAstToHtmlString = htmlAst => stringifyHtmlAst(htmlAst)
 } = {}) => {
   const htmlString = String(target.content.value);
   const htmlAst = await htmlStringToHtmlAst(htmlString);
@@ -5329,15 +4916,13 @@ const parseHtmlAsset = async (target, notifiers, {
     uses
   }, notifiers, target);
   const htmlMutations = [...scriptsMutations, ...linksMutations, ...stylesMutations, ...imgsSrcMutations, ...imgsSrcsetMutations, ...sourcesSrcMutations, ...sourcesSrcsetMutations, ...svgMutations];
-  return async ({
-    getReferenceUrlRelativeToImporter
-  }) => {
+  return async params => {
     htmlMutations.forEach(mutationCallback => {
-      mutationCallback({
-        getReferenceUrlRelativeToImporter
+      mutationCallback({ ...params,
+        transformImportmapTarget
       });
     });
-    const htmlAfterTransformation = stringifyHtmlAst(htmlAst);
+    const htmlAfterTransformation = htmlAstToHtmlString(htmlAst);
     const sourceAfterTransformation = minify ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions) : htmlAfterTransformation;
     return {
       sourceAfterTransformation
@@ -5505,6 +5090,7 @@ const moduleScriptTextNodeVisitor = (script, {
 };
 
 const importmapScriptSrcVisitor = (script, {
+  format,
   notifyReferenceFound
 }) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type");
@@ -5539,9 +5125,14 @@ const importmapScriptSrcVisitor = (script, {
     }
   });
   return ({
-    getReferenceUrlRelativeToImporter
+    getReferenceUrlRelativeToImporter,
+    transformImportmapTarget
   }) => {
-    typeAttribute.value = "systemjs-importmap";
+    if (format === "systemjs") {
+      typeAttribute.value = "systemjs-importmap";
+    }
+
+    transformImportmapTarget(importmapReference.target);
     const {
       isInline
     } = importmapReference.target;
@@ -5562,6 +5153,7 @@ const importmapScriptSrcVisitor = (script, {
 };
 
 const importmapScriptTextNodeVisitor = (script, {
+  format,
   notifyReferenceFound
 }, target, scripts) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type");
@@ -5595,8 +5187,14 @@ const importmapScriptTextNodeVisitor = (script, {
       value: textNode.value
     }
   });
-  return () => {
-    typeAttribute.value = "systemjs-importmap";
+  return ({
+    transformImportmapTarget
+  }) => {
+    if (format === "systemjs") {
+      typeAttribute.value = "systemjs-importmap";
+    }
+
+    transformImportmapTarget(importmapReference.target);
     const {
       sourceAfterTransformation
     } = importmapReference.target;
@@ -5804,11 +5402,17 @@ const ensureRelativeUrlNotation = relativeUrl => {
 
 const parseImportmapAsset = ({
   content
+}, notifiers, {
+  minify
 }) => {
   const importmapString = String(content.value);
   return () => {
-    // this is to remove eventual whitespaces
-    return JSON.stringify(JSON.parse(importmapString));
+    if (minify) {
+      // this is to remove eventual whitespaces
+      return JSON.stringify(JSON.parse(importmapString));
+    }
+
+    return importmapString;
   };
 };
 
@@ -5836,7 +5440,13 @@ options = {}) => {
   }
 
   return result;
-};
+}; // the goal of this function is to take an url that is likely an http url
+// info a file:// url
+// for instance http://example.com/dir/file.js
+// must becomes file:///dir/file.js
+// but in windows it must be file://C:/dir/file.js
+
+const filesystemRootUrl = new URL("/", url);
 
 const urlToFileUrl = url => {
   if (url.startsWith("file://")) {
@@ -5845,7 +5455,7 @@ const urlToFileUrl = url => {
 
   const origin = new URL(url).origin;
   const afterOrigin = url.slice(origin.length);
-  return `file://${afterOrigin}`;
+  return new URL(afterOrigin, filesystemRootUrl).href;
 };
 
 /**
@@ -6166,13 +5776,14 @@ const parseCssAsset = async (cssTarget, {
   });
   return async ({
     getReferenceUrlRelativeToImporter,
-    precomputeFileNameForRollup,
+    precomputeBundleRelativeUrl,
     registerAssetEmitter
   }) => {
     const cssReplaceResult = await replaceCssUrls(cssString, cssUrl, ({
       urlNode
     }) => {
-      const urlNodeFound = Array.from(urlNodeReferenceMapping.keys()).find(urlNodeCandidate => isSameCssDocumentUrlNode(urlNodeCandidate, urlNode));
+      const nodeCandidates = Array.from(urlNodeReferenceMapping.keys());
+      const urlNodeFound = nodeCandidates.find(urlNodeCandidate => isSameCssDocumentUrlNode(urlNodeCandidate, urlNode));
 
       if (!urlNodeFound) {
         return urlNode.value;
@@ -6198,8 +5809,8 @@ const parseCssAsset = async (cssTarget, {
     });
     const code = cssReplaceResult.css;
     const map = cssReplaceResult.map.toJSON();
-    const cssFileNameForRollup = precomputeFileNameForRollup(code);
-    const cssSourcemapFilename = `${path.basename(cssFileNameForRollup)}.map`; // In theory code should never be modified once the url for caching is computed
+    const cssBundleRelativeUrl = precomputeBundleRelativeUrl(code);
+    const cssSourcemapFilename = `${path.basename(cssBundleRelativeUrl)}.map`; // In theory code should never be modified once the url for caching is computed
     // because url for caching depends on file content.
     // There is an exception for sourcemap because we want to update sourcemap.file
     // to the cached filename of the css file.
@@ -6213,7 +5824,7 @@ const parseCssAsset = async (cssTarget, {
       bundleDirectoryUrl,
       emitAsset
     }) => {
-      const cssBundleUrl = util.resolveUrl(cssTarget.fileNameForRollup, bundleDirectoryUrl);
+      const cssBundleUrl = util.resolveUrl(cssTarget.bundleRelativeUrl, bundleDirectoryUrl);
       const mapBundleUrl = util.resolveUrl(cssSourcemapFilename, cssBundleUrl);
       map.file = util.urlToFilename(cssBundleUrl);
 
@@ -6226,20 +5837,23 @@ const parseCssAsset = async (cssTarget, {
       }
 
       const mapSource = JSON.stringify(map, null, "  ");
-      const relativeUrl = util.urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl);
-      const fileNameForRollup = relativeUrl;
-      emitAsset({
-        source: mapSource,
-        fileName: fileNameForRollup
-      });
+      const bundleRelativeUrl = util.urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl);
 
       if (sourcemapReference) {
-        sourcemapReference.target.updateFileNameForRollup(fileNameForRollup);
+        sourcemapReference.target.updateOnceReady({
+          sourceAfterTransformation: mapSource,
+          bundleRelativeUrl
+        });
+      } else {
+        emitAsset({
+          source: mapSource,
+          fileName: bundleRelativeUrl
+        });
       }
     });
     return {
       sourceAfterTransformation: cssSourceAfterTransformation,
-      fileNameForRollup: cssFileNameForRollup
+      bundleRelativeUrl: cssBundleRelativeUrl
     };
   };
 };
@@ -6256,19 +5870,47 @@ const cssNodeToSourceLocation = node => {
 };
 
 const isSameCssDocumentUrlNode = (firstUrlNode, secondUrlNode) => {
-  if (firstUrlNode.type !== secondUrlNode.type) {
+  if (!compareUrlNodeTypes(firstUrlNode.type, secondUrlNode.type)) {
     return false;
   }
 
-  if (firstUrlNode.value !== secondUrlNode.value) {
+  if (!compareUrlNodeValue(firstUrlNode.value, secondUrlNode.value)) {
     return false;
-  }
+  } // maybe this sourceIndex should be removed in case there is some css transformation one day?
+  // it does not seems to change though as if it was refering the original file source index
+
 
   if (firstUrlNode.sourceIndex !== secondUrlNode.sourceIndex) {
     return false;
   }
 
   return true;
+}; // minification may change url node type from string to word
+// that's still the same node
+
+
+const compareUrlNodeTypes = (firstUrlNodeType, secondUrlNodeType) => {
+  if (firstUrlNodeType === secondUrlNodeType) {
+    return true;
+  }
+
+  if (firstUrlNodeType === "word" && secondUrlNodeType === "string") {
+    return true;
+  }
+
+  if (firstUrlNodeType === "string" && secondUrlNodeType === "word") {
+    return true;
+  }
+
+  return false;
+}; // minification may change url node value from './whatever.png' to 'whatever.png'
+// the value still revolves to the same target
+
+
+const compareUrlNodeValue = (firstUrlNodeValue, secondUrlNodeValue) => {
+  const firstValueNormalized = util.urlToRelativeUrl(util.resolveUrl(firstUrlNodeValue, "file:///"), "file:///");
+  const secondValueNormalized = util.urlToRelativeUrl(util.resolveUrl(secondUrlNodeValue, "file:///"), "file:///");
+  return firstValueNormalized === secondValueNormalized;
 };
 
 const {
@@ -6306,7 +5948,7 @@ const parseJsAsset = async (jsTarget, {
   }
 
   return async ({
-    precomputeFileNameForRollup,
+    precomputeBundleRelativeUrl,
     registerAssetEmitter
   }) => {
     let map;
@@ -6337,14 +5979,14 @@ const parseJsAsset = async (jsTarget, {
     }
 
     if (map) {
-      const jsFileNameForRollup = precomputeFileNameForRollup(jsString);
-      const jsSourcemapFilename = `${path.basename(jsFileNameForRollup)}.map`;
+      const jsBundleRelativeUrl = precomputeBundleRelativeUrl(jsString);
+      const jsSourcemapFilename = `${path.basename(jsBundleRelativeUrl)}.map`;
       jsSourceAfterTransformation = setJavaScriptSourceMappingUrl(jsSourceAfterTransformation, jsSourcemapFilename);
       registerAssetEmitter(({
         bundleDirectoryUrl,
         emitAsset
       }) => {
-        const jsBundleUrl = util.resolveUrl(jsTarget.fileNameForRollup, bundleDirectoryUrl);
+        const jsBundleUrl = util.resolveUrl(jsTarget.bundleRelativeUrl, bundleDirectoryUrl);
         const mapBundleUrl = util.resolveUrl(jsSourcemapFilename, jsBundleUrl);
         map.file = util.urlToFilename(jsBundleUrl);
 
@@ -6357,24 +5999,27 @@ const parseJsAsset = async (jsTarget, {
         }
 
         const mapSource = JSON.stringify(map, null, "  ");
-        const relativeUrl = util.urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl);
-        const fileNameForRollup = relativeUrl;
-        emitAsset({
-          source: mapSource,
-          fileName: fileNameForRollup
-        });
+        const bundleRelativeUrl = util.urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl);
 
         if (sourcemapReference) {
           // redirect original sourcemap from bundle to a new file
           // we'll need to remove the old asset from rollup bundle
           // and emit a new one instead
           // when finding this asset in the rollupbundle we'll have to remove it
-          sourcemapReference.target.updateFileNameForRollup(fileNameForRollup);
+          sourcemapReference.target.updateOnceReady({
+            sourceAfterTransformation: mapSource,
+            bundleRelativeUrl
+          });
+        } else {
+          emitAsset({
+            source: mapSource,
+            fileName: bundleRelativeUrl
+          });
         }
       });
       return {
         sourceAfterTransformation: jsSourceAfterTransformation,
-        fileNameForRollup: jsFileNameForRollup
+        bundleRelativeUrl: jsBundleRelativeUrl
       };
     }
 
@@ -6403,20 +6048,63 @@ const createJsenvRollupPlugin = async ({
   node,
   browser,
   format,
+  useImportMapForJsBundleUrls = format === "systemjs",
   systemJsUrl,
   minify,
   minifyJsOptions,
   minifyCssOptions,
   minifyHtmlOptions,
   manifestFile,
-  bundleDirectoryUrl,
-  detectAndTransformIfNeededAsyncInsertedByRollup = format === "global"
+  writeOnFileSystem,
+  bundleDirectoryUrl
 }) => {
   const urlImporterMap = {};
   const urlResponseBodyMap = {};
   const virtualModules = {};
-  const urlRedirectionMap = {};
+  const urlRedirectionMap = {}; // map fileName (bundle relative urls without hash) to bundle relative url
+
   let bundleManifest = {};
+
+  const fileNameToBundleRelativeUrl = fileName => {
+    if (fileName in bundleManifest) {
+      return bundleManifest[fileName];
+    }
+
+    return null;
+  };
+
+  const bundleRelativeUrlToFileName = bundleRelativeUrl => {
+    const fileName = Object.keys(bundleManifest).find(key => bundleManifest[key] === bundleRelativeUrl);
+    return fileName;
+  };
+
+  const addFileNameMapping = (fileName, bundleRelativeUrl) => {
+    bundleManifest[fileName] = bundleRelativeUrl;
+  };
+
+  const bundleRelativeUrlsUsedInJs = [];
+
+  const markBundleRelativeUrlAsUsedByJs = bundleRelativeUrl => {
+    bundleRelativeUrlsUsedInJs.push(bundleRelativeUrl);
+  };
+
+  const createImportMapForFilesUsedInJs = () => {
+    const topLevelMappings = {};
+    bundleRelativeUrlsUsedInJs.forEach(bundleRelativeUrl => {
+      const fileName = bundleRelativeUrlToFileName(bundleRelativeUrl);
+      topLevelMappings[`./${fileName}`] = `./${bundleRelativeUrl}`;
+    });
+    return {
+      imports: topLevelMappings
+    };
+  };
+
+  let bundleMappings = {}; // a clean rollup bundle where keys are bundle relative urls
+  // and values rollup chunk or asset
+  // we need this because we sometimes tell rollup
+  // that a file.fileName is something while it's not really this
+  // because of remapping
+
   let rollupBundle;
   const compileServerOriginForRollup = String(new URL(STATIC_COMPILE_SERVER_AUTHORITY, compileServerOrigin)).slice(0, -1);
   const EMPTY_CHUNK_URL = util.resolveUrl("__empty__", projectDirectoryUrl);
@@ -6453,6 +6141,32 @@ const createJsenvRollupPlugin = async ({
 
   let fetchImportmap = fetchImportmapFromParameter;
   let importMap$1;
+
+  const emitAsset = ({
+    source,
+    fileName
+  }) => {
+    const bundleRelativeUrl = fileName;
+
+    if (useImportMapForJsBundleUrls) {
+      fileName = rollupFileNameWithoutHash(bundleRelativeUrl);
+    } else {
+      fileName = bundleRelativeUrl;
+    }
+
+    addFileNameMapping(fileName, bundleRelativeUrl);
+    return emitFile({
+      type: "asset",
+      source,
+      fileName
+    });
+  };
+
+  const emitChunk = chunk => emitFile({
+    type: "chunk",
+    ...chunk
+  });
+
   const jsenvRollupPlugin = {
     name: "jsenv",
 
@@ -6463,17 +6177,17 @@ const createJsenvRollupPlugin = async ({
 
       const entryPointsPrepared = [];
       await Promise.all(Object.keys(entryPointMap).map(async key => {
-        const projectRelativeUrl = key;
-        const chunkFileRelativeUrl = entryPointMap[key];
-        const chunkFileUrl = util.resolveUrl(chunkFileRelativeUrl, bundleDirectoryUrl);
-        const chunkName = util.urlToRelativeUrl(chunkFileUrl, bundleDirectoryUrl);
+        const entryProjectUrl = util.resolveUrl(key, projectDirectoryUrl);
+        const entryBundleUrl = util.resolveUrl(entryPointMap[key], bundleDirectoryUrl);
+        const entryProjectRelativeUrl = util.urlToRelativeUrl(entryProjectUrl, projectDirectoryUrl);
+        const entryBundleRelativeUrl = util.urlToRelativeUrl(entryBundleUrl, bundleDirectoryUrl);
+        const entryServerUrl = util.resolveUrl(entryProjectRelativeUrl, compileServerOrigin);
+        const entryCompiledUrl = util.resolveUrl(entryProjectRelativeUrl, compileDirectoryRemoteUrl);
+        const entryResponse = await fetchModule(entryServerUrl, `entryPointMap`);
+        const entryContentType = entryResponse.headers["content-type"];
 
-        if (projectRelativeUrl.endsWith(".html")) {
-          const htmlProjectUrl = util.resolveUrl(projectRelativeUrl, projectDirectoryUrl);
-          const htmlServerUrl = util.resolveUrl(projectRelativeUrl, compileServerOrigin);
-          const htmlCompiledUrl = util.resolveUrl(projectRelativeUrl, compileDirectoryRemoteUrl);
-          const htmlResponse = await fetchModule(htmlServerUrl, `entryPointMap`);
-          const htmlSource = await htmlResponse.text();
+        if (entryContentType === "text/html") {
+          const htmlSource = await entryResponse.text();
           const importmapHtmlNode = findFirstImportmapNode(htmlSource);
 
           if (importmapHtmlNode) {
@@ -6481,11 +6195,11 @@ const createJsenvRollupPlugin = async ({
               const srcAttribute = getHtmlNodeAttributeByName(importmapHtmlNode, "src");
 
               if (srcAttribute) {
-                logger$1.info(formatUseImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource));
-                const importmapUrl = util.resolveUrl(srcAttribute.value, htmlCompiledUrl);
+                logger$1.info(formatUseImportMap(importmapHtmlNode, entryProjectUrl, htmlSource));
+                const importmapUrl = util.resolveUrl(srcAttribute.value, entryCompiledUrl);
 
                 if (!util.urlIsInsideOf(importmapUrl, compileDirectoryRemoteUrl)) {
-                  logger$1.warn(formatImportmapOutsideCompileDirectory(importmapHtmlNode, htmlProjectUrl, htmlSource, compileDirectoryUrl));
+                  logger$1.warn(formatImportmapOutsideCompileDirectory(importmapHtmlNode, entryProjectUrl, htmlSource, compileDirectoryUrl));
                 }
 
                 fetchImportmap = () => fetchAndNormalizeImportmap(importmapUrl);
@@ -6493,31 +6207,38 @@ const createJsenvRollupPlugin = async ({
                 const textNode = getHtmlNodeTextNode(importmapHtmlNode);
 
                 if (textNode) {
-                  logger$1.info(formatUseImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource));
+                  logger$1.info(formatUseImportMap(importmapHtmlNode, entryProjectUrl, htmlSource));
 
                   fetchImportmap = () => {
                     const importmapRaw = JSON.parse(textNode.value);
-                    const importmap = importMap.normalizeImportMap(importmapRaw, htmlCompiledUrl);
+                    const importmap = importMap.normalizeImportMap(importmapRaw, entryCompiledUrl);
                     return importmap;
                   };
                 }
               }
             } else {
-              logger$1.warn(formatIgnoreImportMap(importmapHtmlNode, htmlProjectUrl, htmlSource));
+              logger$1.warn(formatIgnoreImportMap(importmapHtmlNode, entryProjectUrl, htmlSource));
             }
           }
 
           entryPointsPrepared.push({
-            type: "html",
-            url: htmlServerUrl,
-            chunkName,
-            source: htmlSource
+            entryContentType,
+            entryProjectRelativeUrl,
+            entryBundleRelativeUrl,
+            entrySource: htmlSource
+          });
+        } else if (entryContentType === "application/javascript" || entryContentType === "text/javascript") {
+          entryPointsPrepared.push({
+            entryContentType: "application/javascript",
+            entryProjectRelativeUrl,
+            entryBundleRelativeUrl
           });
         } else {
           entryPointsPrepared.push({
-            type: "js",
-            relativeUrl: projectRelativeUrl,
-            chunkName
+            entryContentType,
+            entryProjectRelativeUrl,
+            entryBundleRelativeUrl,
+            entrySource: Buffer.from(await entryResponse.arrayBuffer())
           });
         }
       }));
@@ -6538,24 +6259,58 @@ const createJsenvRollupPlugin = async ({
               minify,
               minifyHtmlOptions,
               htmlStringToHtmlAst: htmlString => {
-                const htmlAst = parseHtmlString(htmlString);
+                const htmlAst = parseHtmlString(htmlString); // force presence of systemjs script if html contains a module script
 
-                if (format !== "systemjs") {
-                  return htmlAst;
-                }
+                const injectSystemJsScriptIfNeeded = htmlAst => {
+                  if (format !== "systemjs") {
+                    return;
+                  }
 
-                const htmlContainsModuleScript = htmlAstContains(htmlAst, htmlNodeIsScriptModule);
+                  const htmlContainsModuleScript = htmlAstContains(htmlAst, htmlNodeIsScriptModule);
 
-                if (!htmlContainsModuleScript) {
-                  return htmlAst;
-                }
+                  if (!htmlContainsModuleScript) {
+                    return;
+                  }
 
-                manipulateHtmlAst(htmlAst, {
-                  scriptInjections: [{
-                    src: systemJsUrl
-                  }]
-                });
+                  manipulateHtmlAst(htmlAst, {
+                    scriptInjections: [{
+                      src: systemJsUrl
+                    }]
+                  });
+                }; // force the presence of a fake+inline+empty importmap script
+                // if html contains no importmap and we useImportMapForJsBundleUrls
+                // this inline importmap will be transformed later to have top level remapping
+                // required to target hashed js urls
+
+
+                const injectImportMapScriptIfNeeded = htmlAst => {
+                  if (!useImportMapForJsBundleUrls) {
+                    return;
+                  }
+
+                  if (findFirstImportmapNode(htmlAst)) {
+                    return;
+                  }
+
+                  manipulateHtmlAst(htmlAst, {
+                    scriptInjections: [{
+                      type: "importmap",
+                      id: "jsenv-bundle-importmap",
+                      text: "{}"
+                    }]
+                  });
+                };
+
+                injectSystemJsScriptIfNeeded(htmlAst);
+                injectImportMapScriptIfNeeded(htmlAst);
                 return htmlAst;
+              },
+              transformImportmapTarget: importmapTarget => {
+                if (!useImportMapForJsBundleUrls) {
+                  return;
+                }
+
+                injectImportedFilesIntoImportMapTarget(importmapTarget, createImportMapForFilesUsedInJs());
               }
             });
           }
@@ -6568,7 +6323,9 @@ const createJsenvRollupPlugin = async ({
           }
 
           if (contentType === "application/importmap+json") {
-            return parseImportmapAsset(target);
+            return parseImportmapAsset(target, notifiers, {
+              minify
+            });
           }
 
           if (contentType === "text/javascript" || contentType === "application/javascript") {
@@ -6593,9 +6350,9 @@ const createJsenvRollupPlugin = async ({
         }
       }, {
         logLevel: logger.loggerToLogLevel(logger$1),
+        format,
         projectDirectoryUrl: `${compileServerOrigin}`,
         bundleDirectoryRelativeUrl: util.urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl),
-        urlToOriginalUrl: urlToOriginalServerUrl,
         urlToFileUrl: urlToProjectUrl,
         loadUrl: url => urlResponseBodyMap[url],
         resolveTargetUrl: ({
@@ -6625,18 +6382,7 @@ const createJsenvRollupPlugin = async ({
 
           return url;
         },
-        emitAsset: ({
-          source,
-          name,
-          fileName
-        }) => {
-          emitFile({
-            type: "asset",
-            source,
-            name,
-            fileName
-          });
-        },
+        emitAsset,
         connectTarget: target => {
           if (target.isExternal) {
             return null;
@@ -6652,10 +6398,12 @@ const createJsenvRollupPlugin = async ({
 
               logger$1.debug(`emit chunk for ${shortenUrl(target.url)}`);
               atleastOneChunkEmitted = true;
-              const rollupReferenceId = emitFile({
-                type: "chunk",
+              const name = util.urlToRelativeUrl( // get basename url
+              util.resolveUrl(util.urlToBasename(target.url), target.url), // get importer url
+              urlToCompiledUrl(target.importers[0].url));
+              const rollupReferenceId = emitChunk({
                 id,
-                name: util.urlToRelativeUrl(target.url, urlToCompiledUrl(target.importers[0].url)),
+                name,
                 ...(target.previousJsReference ? {
                   implicitlyLoadedAfterOneOf: [target.previousJsReference.url]
                 } : {})
@@ -6669,25 +6417,20 @@ const createJsenvRollupPlugin = async ({
               await target.getReadyPromise();
               const {
                 sourceAfterTransformation,
-                fileNameForRollup
+                bundleRelativeUrl
               } = target;
 
               if (target.isInline) {
                 return {};
               }
 
-              logger$1.debug(`emit asset for ${shortenUrl(target.url)}`); // const name = urlToRelativeUrl(
-              //   urlToProjectUrl(target.url),
-              //   urlToOriginalProjectUrl(target.importers[0].url),
-              // )
-
-              const rollupReferenceId = emitFile({
-                type: "asset",
+              logger$1.debug(`emit asset for ${shortenUrl(target.url)}`);
+              const fileName = bundleRelativeUrl;
+              const rollupReferenceId = emitAsset({
                 source: sourceAfterTransformation,
-                fileName: fileNameForRollup // name,
-
+                fileName
               });
-              logger$1.debug(`${shortenUrl(target.url)} ready -> ${fileNameForRollup}`);
+              logger$1.debug(`${shortenUrl(target.url)} ready -> ${bundleRelativeUrl}`);
               return {
                 rollupReferenceId
               };
@@ -6698,33 +6441,40 @@ const createJsenvRollupPlugin = async ({
         }
       });
       await Promise.all(entryPointsPrepared.map(async ({
-        type,
-        url,
-        relativeUrl,
-        chunkName,
-        source
+        entryContentType,
+        entryProjectRelativeUrl,
+        entryBundleRelativeUrl,
+        entrySource
       }) => {
-        if (type === "html") {
-          await compositeAssetHandler.prepareHtmlEntry(url, {
-            // don't hash the html entry point
-            fileNamePattern: chunkName,
-            source
+        if (entryContentType === "text/html") {
+          const entryUrl = util.resolveUrl(entryProjectRelativeUrl, compileServerOrigin);
+          await compositeAssetHandler.createReferenceForAssetEntry(entryUrl, {
+            entryContentType,
+            entryProjectRelativeUrl,
+            entryBundleRelativeUrl,
+            entrySource
           });
-        } else if (type === "js") {
+        } else if (entryContentType === "application/javascript") {
           atleastOneChunkEmitted = true;
-          emitFile({
-            type: "chunk",
-            id: relativeUrl,
-            // name: chunkName,
+          emitChunk({
+            id: ensureRelativeUrlNotation$1(entryProjectRelativeUrl),
+            name: entryBundleRelativeUrl,
             // don't hash js entry points
-            fileName: chunkName
+            fileName: entryBundleRelativeUrl
+          });
+        } else {
+          const entryUrl = util.resolveUrl(entryProjectRelativeUrl, compileServerOrigin);
+          await compositeAssetHandler.createReferenceForAssetEntry(entryUrl, {
+            entryContentType,
+            entryProjectRelativeUrl,
+            entryBundleRelativeUrl,
+            entrySource
           });
         }
       }));
 
       if (!atleastOneChunkEmitted) {
-        emitFile({
-          type: "chunk",
+        emitChunk({
           id: EMPTY_CHUNK_URL,
           fileName: "__empty__"
         });
@@ -6789,6 +6539,14 @@ const createJsenvRollupPlugin = async ({
       return urlToUrlForRollup(importUrl);
     },
 
+    ...(useImportMapForJsBundleUrls ? {
+      resolveFileUrl: ({
+        fileName
+      }) => {
+        return `System.resolve("./${fileName}", module.meta.url)`;
+      }
+    } : {}),
+
     // https://rollupjs.org/guide/en#resolvedynamicimport
     // resolveDynamicImport: (specifier, importer) => {
     // },
@@ -6823,9 +6581,13 @@ const createJsenvRollupPlugin = async ({
     // transform should not be required anymore as
     // we will receive
     // transform: async (moduleContent, rollupId) => {}
-    outputOptions: options => {
-      // rollup does not expects to have http dependency in the mix
-      options.sourcemapPathTransform = (relativePath, sourcemapPath) => {
+    outputOptions: outputOptions => {
+      const extension = path.extname(entryPointMap[Object.keys(entryPointMap)[0]]);
+      const outputExtension = extension === ".html" ? ".js" : extension;
+      outputOptions.entryFileNames = `[name]${outputExtension}`;
+      outputOptions.chunkFileNames = useImportMapForJsBundleUrls ? `[name]${outputExtension}` : `[name]-[hash]${outputExtension}`; // rollup does not expects to have http dependency in the mix: fix them
+
+      outputOptions.sourcemapPathTransform = (relativePath, sourcemapPath) => {
         const sourcemapUrl = util.fileSystemPathToUrl(sourcemapPath);
         const url = relativePathToUrl(relativePath, sourcemapUrl);
         const serverUrl = urlToServerUrl(url);
@@ -6849,16 +6611,18 @@ const createJsenvRollupPlugin = async ({
         return url;
       };
 
-      return options;
+      return outputOptions;
     },
     renderChunk: async (code, chunk) => {
+      let map = chunk.map;
+
       if (!minify) {
         return null;
       }
 
       const result = await minifyJs(code, chunk.fileName, {
-        sourceMap: { ...(chunk.map ? {
-            content: JSON.stringify(chunk.map)
+        sourceMap: { ...(map ? {
+            content: JSON.stringify(map)
           } : {}),
           asObject: true
         },
@@ -6869,19 +6633,45 @@ const createJsenvRollupPlugin = async ({
         }),
         ...minifyJsOptions
       });
+      code = result.code;
+      map = result.map;
       return {
-        code: result.code,
-        map: result.map
+        code,
+        map
       };
     },
 
-    async generateBundle(outputOptions, bundle) {
-      const emptyChunkKey = Object.keys(bundle).find(key => bundle[key].facadeModuleId === EMPTY_CHUNK_URL);
+    async generateBundle(outputOptions, bundleForRollup) {
+      const jsBundle = {};
+      Object.keys(bundleForRollup).forEach(fileName => {
+        const file = bundleForRollup[fileName];
 
-      if (emptyChunkKey) {
-        delete bundle[emptyChunkKey];
-      } // it's important to do this to emit late asset
+        if (file.type === "chunk" && file.facadeModuleId === EMPTY_CHUNK_URL) {
+          return;
+        }
 
+        if (file.type === "chunk") {
+          let bundleRelativeUrl;
+
+          if (useImportMapForJsBundleUrls) {
+            if (file.isEntry) {
+              bundleRelativeUrl = fileName;
+            } else {
+              bundleRelativeUrl = computeBundleRelativeUrl(util.resolveUrl(fileName, bundleDirectoryUrl), file.code, `[name]-[hash][extname]`);
+            }
+          } else {
+            bundleRelativeUrl = fileName;
+            fileName = rollupFileNameWithoutHash(fileName);
+          }
+
+          if (!file.isEntry) {
+            markBundleRelativeUrlAsUsedByJs(bundleRelativeUrl);
+          }
+
+          addFileNameMapping(fileName, bundleRelativeUrl);
+          jsBundle[bundleRelativeUrl] = file;
+        }
+      }); // it's important to do this to emit late asset
 
       emitFile = (...args) => this.emitFile(...args); // malheureusement rollup ne permet pas de savoir lorsqu'un chunk
       // a fini d'etre résolu (parsing des imports statiques et dynamiques recursivement)
@@ -6891,33 +6681,106 @@ const createJsenvRollupPlugin = async ({
       // et mettre a jour leur dépendance vers ce fichier js
 
 
-      await compositeAssetHandler.resolveJsReferencesUsingRollupBundle(bundle, urlToServerUrl);
-      compositeAssetHandler.cleanupRollupBundle(bundle);
-      bundleManifest = rollupBundleToBundleManifest(bundle, {
-        urlToOriginalProjectUrl,
-        projectDirectoryUrl,
-        bundleDirectoryUrl,
-        compositeAssetHandler
+      const rollupChunkReadyCallbackMap = compositeAssetHandler.getRollupChunkReadyCallbackMap();
+      Object.keys(rollupChunkReadyCallbackMap).forEach(key => {
+        const bundleRelativeUrl = Object.keys(jsBundle).find(bundleRelativeUrlCandidate => {
+          const file = jsBundle[bundleRelativeUrlCandidate];
+          const {
+            facadeModuleId
+          } = file;
+          return facadeModuleId && urlToServerUrl(facadeModuleId) === key;
+        });
+        const file = jsBundle[bundleRelativeUrl];
+        const sourceAfterTransformation = file.code;
+        logger$1.debug(`resolve rollup chunk ${shortenUrl(key)}`);
+        rollupChunkReadyCallbackMap[key]({
+          sourceAfterTransformation,
+          bundleRelativeUrl
+        });
+      }); // wait html files to be emitted
+
+      await compositeAssetHandler.getAllAssetEntryEmittedPromise();
+      const assetBundle = {};
+      const bundleRelativeUrlsToClean = compositeAssetHandler.getBundleRelativeUrlsToClean();
+      Object.keys(bundleForRollup).forEach(fileName => {
+        const file = bundleForRollup[fileName];
+
+        if (file.type !== "asset") {
+          return;
+        }
+
+        const bundleRelativeUrl = fileNameToBundleRelativeUrl(fileName); // ignore potential useless assets which happens when:
+        // - sourcemap re-emitted
+        // - importmap re-emitted to have bundleRelativeUrlMap
+
+        if (bundleRelativeUrlsToClean.includes(bundleRelativeUrl)) {
+          return;
+        }
+
+        assetBundle[bundleRelativeUrl] = file;
       });
+      rollupBundle = { ...jsBundle,
+        ...assetBundle
+      };
+      Object.keys(rollupBundle).forEach(bundleRelativeUrl => {
+        const file = rollupBundle[bundleRelativeUrl];
+
+        if (file.type === "chunk") {
+          const id = file.facadeModuleId;
+
+          if (id) {
+            const originalProjectUrl = urlToOriginalProjectUrl(id);
+            const originalProjectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl);
+            bundleMappings[originalProjectRelativeUrl] = bundleRelativeUrl;
+          } else {
+            const sourcePath = file.map.sources[file.map.sources.length - 1];
+            const fileBundleUrl = util.resolveUrl(file.fileName, bundleDirectoryUrl);
+            const originalProjectUrl = util.resolveUrl(sourcePath, fileBundleUrl);
+            const originalProjectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl);
+            bundleMappings[originalProjectRelativeUrl] = bundleRelativeUrl;
+          }
+        } else {
+          const assetUrl = compositeAssetHandler.findAssetUrlByBundleRelativeUrl(bundleRelativeUrl);
+
+          if (assetUrl) {
+            const originalProjectUrl = urlToOriginalProjectUrl(assetUrl);
+            const originalProjectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl);
+            bundleMappings[originalProjectRelativeUrl] = bundleRelativeUrl;
+          }
+        }
+      });
+      rollupBundle = sortObjectByPathnames(rollupBundle);
+      bundleManifest = sortObjectByPathnames(bundleManifest);
+      bundleMappings = sortObjectByPathnames(bundleMappings);
 
       if (manifestFile) {
         const manifestFileUrl = util.resolveUrl("manifest.json", bundleDirectoryUrl);
         await util.writeFile(manifestFileUrl, JSON.stringify(bundleManifest, null, "  "));
       }
 
-      rollupBundle = bundle;
-      logger$1.info(formatBundleGeneratedLog(bundle));
-    },
+      logger$1.info(formatBundleGeneratedLog(rollupBundle));
 
-    async writeBundle(options, bundle) {
-      if (detectAndTransformIfNeededAsyncInsertedByRollup) {
-        // ptet transformer ceci en renderChunk
-        await transformAsyncInsertedByRollup({
-          projectDirectoryUrl,
-          bundleDirectoryUrl,
-          babelPluginMap,
-          bundle
-        });
+      if (writeOnFileSystem) {
+        await Promise.all(Object.keys(rollupBundle).map(async bundleRelativeUrl => {
+          const file = rollupBundle[bundleRelativeUrl];
+          const fileBundleUrl = util.resolveUrl(bundleRelativeUrl, bundleDirectoryUrl);
+
+          if (file.type === "chunk") {
+            await util.writeFile(fileBundleUrl, file.code);
+          } else {
+            await util.writeFile(fileBundleUrl, file.source);
+          }
+
+          if (file.map) {
+            const sourcemapBundleRelativeUrl = `${bundleRelativeUrl}.map`;
+
+            if (sourcemapBundleRelativeUrl in rollupBundle === false) {
+              const sourcemapBundleUrl = util.resolveUrl(sourcemapBundleRelativeUrl, bundleDirectoryUrl);
+              const fileSourcemapString = JSON.stringify(file.map, null, "  ");
+              await util.writeFile(sourcemapBundleUrl, fileSourcemapString);
+            }
+          }
+        }));
       }
     }
 
@@ -6980,22 +6843,18 @@ const createJsenvRollupPlugin = async ({
     }
 
     return null;
-  };
-
-  const urlToOriginalServerUrl = url => {
-    const serverUrl = urlToServerUrl(url);
-
-    if (!serverUrl) {
-      return null;
-    }
-
-    if (!util.urlIsInsideOf(serverUrl, compileDirectoryRemoteUrl)) {
-      return serverUrl;
-    }
-
-    const relativeUrl = util.urlToRelativeUrl(serverUrl, compileDirectoryRemoteUrl);
-    return util.resolveUrl(relativeUrl, compileServerOrigin);
-  }; // take any url string and try to return a file url inside project directory url
+  }; // const urlToOriginalServerUrl = (url) => {
+  //   const serverUrl = urlToServerUrl(url)
+  //   if (!serverUrl) {
+  //     return null
+  //   }
+  //   if (!urlIsInsideOf(serverUrl, compileDirectoryRemoteUrl)) {
+  //     return serverUrl
+  //   }
+  //   const relativeUrl = urlToRelativeUrl(serverUrl, compileDirectoryRemoteUrl)
+  //   return resolveUrl(relativeUrl, compileServerOrigin)
+  // }
+  // take any url string and try to return a file url inside project directory url
   // prefer the source url if the url is inside compile directory
 
 
@@ -7088,11 +6947,12 @@ const createJsenvRollupPlugin = async ({
       };
     }
 
-    const importReference = await compositeAssetHandler.createJsModuleImportReference(moduleResponse, {
+    const importReference = await compositeAssetHandler.createReferenceForJsModuleImport(moduleResponse, {
       moduleInfo,
       importerUrl
     });
     const importTarget = importReference.target;
+    markBundleRelativeUrlAsUsedByJs(importTarget.bundleRelativeUrl);
     const content = importTarget.isInline ? `export default ${getTargetAsBase64Url(importTarget)}` : `export default import.meta.ROLLUP_FILE_URL_${importTarget.rollupReferenceId}`;
     return { ...commonData,
       contentRaw: String(importTarget.content.value),
@@ -7129,7 +6989,9 @@ const createJsenvRollupPlugin = async ({
       return {
         rollupBundle,
         urlResponseBodyMap,
-        bundleManifest
+        bundleMappings,
+        bundleManifest,
+        bundleImportMap: createImportMapForFilesUsedInJs()
       };
     }
   };
@@ -7213,41 +7075,6 @@ const fetchAndNormalizeImportmap = async (importmapUrl, {
   return importmapNormalized;
 };
 
-const transformAsyncInsertedByRollup = async ({
-  projectDirectoryUrl,
-  bundleDirectoryUrl,
-  babelPluginMap,
-  bundle
-}) => {
-  const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap);
-  if (!asyncPluginName) return; // we have to do this because rollup ads
-  // an async wrapper function without transpiling it
-  // if your bundle contains a dynamic import
-
-  await Promise.all(Object.keys(bundle).map(async bundleFilename => {
-    const bundleInfo = bundle[bundleFilename];
-    const bundleFileUrl = util.resolveUrl(bundleFilename, bundleDirectoryUrl);
-    const {
-      code,
-      map
-    } = await transformJs({
-      projectDirectoryUrl,
-      code: bundleInfo.code,
-      url: bundleFileUrl,
-      map: bundleInfo.map,
-      babelPluginMap: {
-        [asyncPluginName]: babelPluginMap[asyncPluginName]
-      },
-      transformModuleIntoSystemFormat: false,
-      // already done by rollup
-      transformGenerator: false,
-      // already done
-      transformGlobalThis: false
-    });
-    await Promise.all([util.writeFile(bundleFileUrl, setJavaScriptSourceMappingUrl(code, `./${bundleFilename}.map`)), util.writeFile(`${bundleFileUrl}.map`, JSON.stringify(map))]);
-  }));
-};
-
 const formatBundleGeneratedLog = bundle => {
   const assetFilenames = Object.keys(bundle).filter(key => bundle[key].type === "asset").map(key => bundle[key].fileName);
   const assetCount = assetFilenames.length;
@@ -7266,42 +7093,30 @@ const formatBundleGeneratedLog = bundle => {
   });
 };
 
-const rollupBundleToBundleManifest = (rollupBundle, {
-  urlToOriginalProjectUrl,
-  projectDirectoryUrl,
-  bundleDirectoryUrl,
-  compositeAssetHandler
-}) => {
-  const chunkMappings = {};
-  Object.keys(rollupBundle).forEach(key => {
-    const file = rollupBundle[key];
-
-    if (file.type === "chunk") {
-      const id = file.facadeModuleId;
-
-      if (id) {
-        const originalProjectUrl = urlToOriginalProjectUrl(id);
-        const projectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl);
-        chunkMappings[projectRelativeUrl] = file.fileName;
-      } else {
-        const sourcePath = file.map.sources[file.map.sources.length - 1];
-        const fileBundleUrl = util.resolveUrl(file.fileName, bundleDirectoryUrl);
-        const originalProjectUrl = util.resolveUrl(sourcePath, fileBundleUrl);
-        const projectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl);
-        chunkMappings[projectRelativeUrl] = file.fileName;
-      }
-    }
+const sortObjectByPathnames = object => {
+  const objectSorted = {};
+  const keysSorted = Object.keys(object).sort(util.comparePathnames);
+  keysSorted.forEach(key => {
+    objectSorted[key] = object[key];
   });
-  const assetMappings = compositeAssetHandler.rollupBundleToAssetMappings(rollupBundle);
-  const mappings = { ...chunkMappings,
-    ...assetMappings
-  };
-  const mappingKeysSorted = Object.keys(mappings).sort(util.comparePathnames);
-  const manifest = {};
-  mappingKeysSorted.forEach(key => {
-    manifest[key] = mappings[key];
+  return objectSorted;
+};
+
+const rollupFileNameWithoutHash = fileName => {
+  return fileName.replace(/-[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
+    return afterHash;
   });
-  return manifest;
+};
+
+const injectImportedFilesIntoImportMapTarget = (importmapTarget, importMapToInject) => {
+  const {
+    sourceAfterTransformation
+  } = importmapTarget;
+  const importMapOriginal = JSON.parse(sourceAfterTransformation);
+  const importMap$1 = importMap.composeTwoImportMaps(importMapOriginal, importMapToInject);
+  importmapTarget.updateOnceReady({
+    sourceAfterTransformation: JSON.stringify(importMap$1)
+  });
 };
 
 const createDetailedMessage = (message, details = {}) => {
@@ -7314,6 +7129,15 @@ ${Array.isArray(value) ? value.join(`
 `) : value}`;
   });
   return string;
+}; // otherwise importmap handle it as a bare import
+
+
+const ensureRelativeUrlNotation$1 = relativeUrl => {
+  if (relativeUrl.startsWith("../")) {
+    return relativeUrl;
+  }
+
+  return `./${relativeUrl}`;
 };
 
 const {
@@ -7334,17 +7158,19 @@ const generateBundleUsingRollup = async ({
   node,
   browser,
   format,
+  useImportMapForJsBundleUrls,
   systemJsUrl,
   globals,
   globalName,
   sourcemapExcludeSources,
+  preserveEntrySignatures,
   bundleDirectoryUrl,
+  bundleDirectoryClean,
   minify,
   minifyJsOptions,
   minifyCssOptions,
   minifyHtmlOptions,
   manifestFile = false,
-  inlineAssetPredicate = () => false,
   writeOnFileSystem
 }) => {
   const {
@@ -7364,14 +7190,15 @@ const generateBundleUsingRollup = async ({
     node,
     browser,
     format,
+    useImportMapForJsBundleUrls,
     systemJsUrl,
     bundleDirectoryUrl,
-    inlineAssetPredicate,
     minify,
     minifyJsOptions,
     minifyCssOptions,
     minifyHtmlOptions,
-    manifestFile
+    manifestFile,
+    writeOnFileSystem
   });
   await useRollup({
     cancellationToken,
@@ -7382,8 +7209,9 @@ const generateBundleUsingRollup = async ({
     globals,
     globalName,
     sourcemapExcludeSources,
-    writeOnFileSystem,
-    bundleDirectoryUrl
+    preserveEntrySignatures,
+    bundleDirectoryUrl,
+    bundleDirectoryClean
   });
   return getResult();
 };
@@ -7397,8 +7225,9 @@ const useRollup = async ({
   globals,
   globalName,
   sourcemapExcludeSources,
-  writeOnFileSystem,
-  bundleDirectoryUrl
+  preserveEntrySignatures,
+  bundleDirectoryUrl,
+  bundleDirectoryClean
 }) => {
   logger.info(`
 parse bundle
@@ -7420,18 +7249,21 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // to be very clear about what we want to ignore
     onwarn: (warning, warn) => {
       if (warning.code === "THIS_IS_UNDEFINED") return;
-      if (warning.code === "EMPTY_BUNDLE" && warning.chunkName === "__empty__") return;
+      if (warning.code === "EMPTY_BUNDLE" && warning.chunkName === "__empty__") return; // ignore file name conflict when sourcemap or importmap are re-emitted
+
+      if (warning.code === "FILE_NAME_CONFLICT" && (warning.message.includes(".map") || warning.message.includes(".importmap"))) {
+        return;
+      }
+
       warn(warning);
     },
     // on passe input: [] car c'est le plusign jsenv qui se chargera d'emit des chunks
     // en fonction de entryPointMap
     // on fait cela car sinon rollup est pénible si on passe un entry point map de type html
     input: [],
-    // preserveEntrySignatures: false,
+    preserveEntrySignatures,
     plugins: [jsenvRollupPlugin]
   };
-  const extension = path.extname(entryPointMap[Object.keys(entryPointMap)[0]]);
-  const outputExtension = extension === ".html" ? ".js" : extension;
   const rollupOutputOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait
     // experimentalTopLevelAwait: true,
@@ -7445,8 +7277,6 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources,
-    entryFileNames: `[name]${outputExtension}`,
-    chunkFileNames: `[name]-[hash]${outputExtension}`,
     ...(format === "global" ? {
       globals,
       name: globalName
@@ -7456,15 +7286,14 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     cancellationToken,
     start: () => rollup$1(rollupInputOptions)
   });
+
+  if (bundleDirectoryClean) {
+    await util.ensureEmptyDirectory(bundleDirectoryUrl);
+  }
+
   const rollupOutputArray = await cancellation.createOperation({
     cancellationToken,
-    start: () => {
-      if (writeOnFileSystem) {
-        return rollupBundle.write(rollupOutputOptions);
-      }
-
-      return rollupBundle.generate(rollupOutputOptions);
-    }
+    start: () => rollupBundle.generate(rollupOutputOptions)
   });
   return rollupOutputArray;
 };
@@ -10701,6 +10530,7 @@ const generateBundle = async ({
   compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
   format = "esm",
+  useImportMapForJsBundleUrls,
   browser = format === "global" || format === "systemjs" || format === "esmodule",
   node = format === "commonjs",
   entryPointMap = format === "commonjs" ? {
@@ -10709,12 +10539,10 @@ const generateBundle = async ({
     "./index.js": "./main.js"
   },
   systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
-  inlineAssetPredicate = ({
-    relativeUrl
-  }) => relativeUrl === systemJsUrl.slice(1),
   globalName,
   globals = {},
   sourcemapExcludeSources = false,
+  preserveEntrySignatures,
   bundleDirectoryRelativeUrl,
   bundleDirectoryClean = false,
   writeOnFileSystem = true,
@@ -10798,11 +10626,6 @@ const generateBundle = async ({
       bundleDirectoryUrl,
       projectDirectoryUrl
     });
-
-    if (bundleDirectoryClean) {
-      await util.ensureEmptyDirectory(bundleDirectoryUrl);
-    }
-
     babelPluginMap = { ...babelPluginMap,
       ...createBabePluginMapForBundle({
         format
@@ -10850,13 +10673,15 @@ const generateBundle = async ({
       browser,
       writeOnFileSystem,
       format,
+      useImportMapForJsBundleUrls,
       systemJsUrl,
       globalName,
       globals,
       sourcemapExcludeSources,
+      preserveEntrySignatures,
       bundleDirectoryUrl,
+      bundleDirectoryClean,
       manifestFile,
-      inlineAssetPredicate,
       minify,
       minifyHtmlOptions,
       minifyJsOptions,
@@ -11462,15 +11287,24 @@ const launchBrowser = async (browserName, {
   const launchOperation = cancellation.createStoppableOperation({
     cancellationToken,
     start: async () => {
+      if (stopOnExit) {
+        const unregisterProcessTeardown = nodeSignals.teardownSignal.addCallback(reason => {
+          unregisterProcessTeardown();
+          launchOperation.stop(`process ${reason}`);
+        });
+        ressourceTracker.registerCleanupCallback(unregisterProcessTeardown);
+        cancellationToken.register(unregisterProcessTeardown);
+      }
+
       try {
-        const result = await browserClass.launch({ ...options,
-          // let's handle them to close properly browser, remove listener
-          // and so on, instead of relying on playwright
+        const browser = await browserClass.launch({ ...options,
+          // let's handle them to close properly browser + remove listener
+          // instead of relying on playwright to do so
           handleSIGINT: false,
           handleSIGTERM: false,
           handleSIGHUP: false
         });
-        return result;
+        return browser;
       } catch (e) {
         if (cancellationToken.cancellationRequested && isTargetClosedError(e)) {
           return e;
@@ -11496,14 +11330,6 @@ const launchBrowser = async (browserName, {
     }
   });
   ressourceTracker.registerCleanupCallback(launchOperation.stop);
-
-  if (stopOnExit) {
-    const unregisterProcessTeadown = nodeSignals.teardownSignal.addCallback(reason => {
-      launchOperation.stop(`process ${reason}`);
-    });
-    ressourceTracker.registerCleanupCallback(unregisterProcessTeadown);
-  }
-
   return launchOperation;
 };
 
@@ -12540,4 +12366,3 @@ exports.launchNode = launchNode;
 exports.launchWebkit = launchWebkit;
 exports.launchWebkitTab = launchWebkitTab;
 exports.startExploring = startExploring;
-//# sourceMappingURL=main.cjs.map

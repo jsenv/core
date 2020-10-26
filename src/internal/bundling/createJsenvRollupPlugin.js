@@ -791,8 +791,24 @@ export const createJsenvRollupPlugin = async ({
           Object.keys(rollupBundle).map(async (bundleRelativeUrl) => {
             const file = rollupBundle[bundleRelativeUrl]
             const fileBundleUrl = resolveUrl(bundleRelativeUrl, bundleDirectoryUrl)
-            const fileContent = file.type === "chunk" ? file.code : file.source
-            await writeFile(fileBundleUrl, fileContent)
+
+            if (file.type === "chunk") {
+              await writeFile(fileBundleUrl, file.code)
+            } else {
+              await writeFile(fileBundleUrl, file.source)
+            }
+
+            if (file.map) {
+              const sourcemapBundleRelativeUrl = `${bundleRelativeUrl}.map`
+              if (sourcemapBundleRelativeUrl in rollupBundle === false) {
+                const sourcemapBundleUrl = resolveUrl(
+                  sourcemapBundleRelativeUrl,
+                  bundleDirectoryUrl,
+                )
+                const fileSourcemapString = JSON.stringify(file.map, null, "  ")
+                await writeFile(sourcemapBundleUrl, fileSourcemapString)
+              }
+            }
           }),
         )
       }
