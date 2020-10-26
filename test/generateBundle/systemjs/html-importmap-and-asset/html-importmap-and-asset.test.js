@@ -38,12 +38,13 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
 {
   const mainRelativeUrl = getBundleRelativeUrl("file.js")
   const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
-  const { namespace: actual, serverOrigin } = await browserImportSystemJsBundle({
+  const { namespace, serverOrigin } = await browserImportSystemJsBundle({
     ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
     testDirectoryRelativeUrl,
     mainRelativeUrl: `./${mainRelativeUrl}`,
     // debug: true,
   })
+  const actual = namespace
   const expected = {
     default: resolveUrl(`dist/systemjs/${imgRemapRelativeUrl}`, serverOrigin),
   }

@@ -51,7 +51,6 @@ export const createCompositeAssetHandler = (
     format,
     projectDirectoryUrl, // project url but it can be an http url
     bundleDirectoryRelativeUrl,
-    urlToOriginalUrl, // get original url from eventually compiled url
     urlToFileUrl, // get a file url from an eventual http url
     loadUrl = () => null,
     emitAsset,
@@ -498,28 +497,9 @@ export const createCompositeAssetHandler = (
   }
   const getRollupChunkReadyCallbackMap = () => rollupChunkReadyCallbackMap
 
-  const rollupBundleToAssetMappings = (rollupBundle) => {
-    const assetMappings = {}
-    Object.keys(rollupBundle).forEach((key) => {
-      const file = rollupBundle[key]
-      if (file.type === "asset") {
-        const assetUrl = findAssetUrlByFileNameForRollup(file.fileName)
-        if (assetUrl) {
-          const originalUrl = urlToOriginalUrl(assetUrl)
-          const originalRelativeUrl = urlToRelativeUrl(originalUrl, projectDirectoryUrl)
-          assetMappings[originalRelativeUrl] = file.fileName
-        } else {
-          // the asset does not exists in the project it was generated during bundling
-          // ici il est possible de trouver un asset ayant été redirigé ailleurs (sourcemap)
-        }
-      }
-    })
-    return assetMappings
-  }
-
-  const findAssetUrlByFileNameForRollup = (fileNameForRollup) => {
+  const findAssetUrlByBundleRelativeUrl = (bundleRelativeUrl) => {
     const assetUrl = Object.keys(targetMap).find(
-      (url) => targetMap[url].bundleRelativeUrl === fileNameForRollup,
+      (url) => targetMap[url].bundleRelativeUrl === bundleRelativeUrl,
     )
     return assetUrl
   }
@@ -564,7 +544,7 @@ ${showSourceLocation(referenceSource, {
     getRollupChunkReadyCallbackMap,
     getAllAssetEntryEmittedPromise,
     getBundleRelativeUrlsToClean,
-    rollupBundleToAssetMappings,
+    findAssetUrlByBundleRelativeUrl,
 
     inspect: () => {
       return {
