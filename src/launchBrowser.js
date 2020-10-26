@@ -233,16 +233,25 @@ const launchBrowser = async (
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
+      if (stopOnExit) {
+        const unregisterProcessTeardown = teardownSignal.addCallback((reason) => {
+          unregisterProcessTeardown()
+          launchOperation.stop(`process ${reason}`)
+        })
+        ressourceTracker.registerCleanupCallback(unregisterProcessTeardown)
+        cancellationToken.register(unregisterProcessTeardown)
+      }
+
       try {
-        const result = await browserClass.launch({
+        const browser = await browserClass.launch({
           ...options,
-          // let's handle them to close properly browser, remove listener
-          // and so on, instead of relying on playwright
+          // let's handle them to close properly browser + remove listener
+          // instead of relying on playwright to do so
           handleSIGINT: false,
           handleSIGTERM: false,
           handleSIGHUP: false,
         })
-        return result
+        return browser
       } catch (e) {
         if (cancellationToken.cancellationRequested && isTargetClosedError(e)) {
           return e
@@ -270,13 +279,6 @@ const launchBrowser = async (
     },
   })
   ressourceTracker.registerCleanupCallback(launchOperation.stop)
-
-  if (stopOnExit) {
-    const unregisterProcessTeadown = teardownSignal.addCallback((reason) => {
-      launchOperation.stop(`process ${reason}`)
-    })
-    ressourceTracker.registerCleanupCallback(unregisterProcessTeadown)
-  }
 
   return launchOperation
 }
