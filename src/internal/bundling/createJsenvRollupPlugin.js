@@ -105,9 +105,11 @@ export const createJsenvRollupPlugin = async ({
   }
   const createImportMapForFilesUsedInJs = () => {
     const topLevelMappings = {}
-    bundleRelativeUrlsUsedInJs.forEach((bundleRelativeUrl) => {
+    bundleRelativeUrlsUsedInJs.sort(comparePathnames).forEach((bundleRelativeUrl) => {
       const fileName = bundleRelativeUrlToFileName(bundleRelativeUrl)
-      topLevelMappings[`./${fileName}`] = `./${bundleRelativeUrl}`
+      if (fileName !== bundleRelativeUrl) {
+        topLevelMappings[`./${fileName}`] = `./${bundleRelativeUrl}`
+      }
     })
     return {
       imports: topLevelMappings,
