@@ -175,7 +175,9 @@ export const createCompositeAssetHandler = (
 
   const assetTransformMap = {}
   // used to remove sourcemap files that are renamed after they are emitted
-  const fileNameToClean = []
+  const bundleRelativeUrlsToClean = []
+  const getBundleRelativeUrlsToClean = () => bundleRelativeUrlsToClean
+
   const createTarget = ({
     url,
     isEntry = false,
@@ -466,7 +468,7 @@ export const createCompositeAssetHandler = (
 
       // the bundle relative url has changed
       if (bundleRelativeUrl !== undefined && bundleRelativeUrl !== target.bundleRelativeUrl) {
-        fileNameToClean.push(target.bundleRelativeUrl)
+        bundleRelativeUrlsToClean.push(target.bundleRelativeUrl)
         target.bundleRelativeUrl = bundleRelativeUrl
         emitAsset({
           source: target.sourceAfterTransformation,
@@ -495,12 +497,6 @@ export const createCompositeAssetHandler = (
     rollupChunkReadyCallbackMap[url] = callback
   }
   const getRollupChunkReadyCallbackMap = () => rollupChunkReadyCallbackMap
-
-  const cleanupRollupBundle = (rollupBundle) => {
-    fileNameToClean.forEach((fileName) => {
-      delete rollupBundle[fileName]
-    })
-  }
 
   const rollupBundleToAssetMappings = (rollupBundle) => {
     const assetMappings = {}
@@ -567,7 +563,7 @@ ${showSourceLocation(referenceSource, {
 
     getRollupChunkReadyCallbackMap,
     getAllAssetEntryEmittedPromise,
-    cleanupRollupBundle,
+    getBundleRelativeUrlsToClean,
     rollupBundleToAssetMappings,
 
     inspect: () => {

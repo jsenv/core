@@ -397,9 +397,18 @@ export const createJsenvRollupPlugin = async ({
                 }
 
                 logger.debug(`emit asset for ${shortenUrl(target.url)}`)
+
+                let fileName
+                if (useImportMapForJsUrlMappings) {
+                  fileName = rollupFileNameWithoutHash(bundleRelativeUrl)
+                  bundleRelativeUrlMap[fileName] = bundleRelativeUrl
+                } else {
+                  fileName = bundleRelativeUrl
+                }
+
                 const rollupReferenceId = emitAsset({
                   source: sourceAfterTransformation,
-                  fileName: bundleRelativeUrl,
+                  fileName,
                 })
 
                 logger.debug(`${shortenUrl(target.url)} ready -> ${bundleRelativeUrl}`)
@@ -611,16 +620,14 @@ export const createJsenvRollupPlugin = async ({
       if (useImportMapForJsUrlMappings) {
         Object.keys(bundle).forEach((fileName) => {
           const rollupFile = bundle[fileName]
-          if (rollupFile.type !== "chunk") {
-            return
+          if (rollupFile.type === "chunk") {
+            const bundleRelativeUrl = computeBundleRelativeUrl(
+              resolveUrl(fileName, bundleDirectoryUrl),
+              rollupFile.code,
+              `[name]-[hash][extname]`,
+            )
+            bundleRelativeUrlMap[fileName] = bundleRelativeUrl
           }
-
-          const bundleRelativeUrl = computeBundleRelativeUrl(
-            resolveUrl(fileName, bundleDirectoryUrl),
-            rollupFile.code,
-            `[name]-[hash][extname]`,
-          )
-          bundleRelativeUrlMap[fileName] = bundleRelativeUrl
         })
       }
 
@@ -656,7 +663,13 @@ export const createJsenvRollupPlugin = async ({
       // remove potential useless assets which happens when:
       // - sourcemap re-emitted
       // - importmap re-emitted to have bundleRelativeUrlMap
-      compositeAssetHandler.cleanupRollupBundle(bundle)
+      const bundleRelativeUrlsToClean = compositeAssetHandler.getBundleRelativeUrlsToClean()
+      bundleRelativeUrlsToClean.forEach((bundleRelativeUrlToClean) => {
+        const bundleRelativeUrl =
+          getObjectKeyFor(bundleRelativeUrlMap, bundleRelativeUrlToClean) ||
+          bundleRelativeUrlToClean
+        delete bundle[bundleRelativeUrl]
+      })
 
       const result = rollupBundleToManifestAndMappings(bundle, {
         urlToOriginalProjectUrl,
@@ -864,9 +877,13 @@ export const createJsenvRollupPlugin = async ({
       },
     )
     const importTarget = importReference.target
+    // eslint-disable-next-line no-nested-ternary
     const content = importTarget.isInline
       ? `export default ${getTargetAsBase64Url(importTarget)}`
+      : useImportMapForJsUrlMappings
+      ? `export default System.resolve(import.meta.ROLLUP_FILE_URL_${importTarget.rollupReferenceId}, module.meta.url)`
       : `export default import.meta.ROLLUP_FILE_URL_${importTarget.rollupReferenceId}`
+
     return {
       ...commonData,
       contentRaw: String(importTarget.content.value),
@@ -909,6 +926,10 @@ export const createJsenvRollupPlugin = async ({
       }
     },
   }
+}
+
+const getObjectKeyFor = (object, value) => {
+  return Object.keys(object).find((key) => object[key] === value)
 }
 
 const fixRollupUrl = (rollupUrl) => {

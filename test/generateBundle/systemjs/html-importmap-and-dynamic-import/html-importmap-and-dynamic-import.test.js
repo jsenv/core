@@ -36,14 +36,15 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
 // assert asset url is correct for javascript (remapped + hashed)
 {
   const mainRelativeUrl = getBundleRelativeUrl("file.js")
-  const { namespace: actual } = await browserImportSystemJsBundle({
+  const { namespace } = await browserImportSystemJsBundle({
     ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
     testDirectoryRelativeUrl,
     mainRelativeUrl: `./${mainRelativeUrl}`,
     // debug: true,
   })
+  const actual = namespace
   const expected = {
-    default: "",
+    value: 42,
   }
   assert({ actual, expected })
 }
