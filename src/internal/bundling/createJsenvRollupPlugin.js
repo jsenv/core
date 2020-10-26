@@ -606,6 +606,22 @@ export const createJsenvRollupPlugin = async ({
         delete bundle[emptyChunkKey]
       }
 
+      if (useImportMapForJsUrlMappings) {
+        Object.keys(bundle).forEach((fileName) => {
+          const rollupFile = bundle[fileName]
+          if (rollupFile.type !== "chunk") {
+            return
+          }
+
+          const bundleRelativeUrl = computeBundleRelativeUrl(
+            resolveUrl(fileName, bundleDirectoryUrl),
+            rollupFile.code,
+            `[name]-[hash][extname]`,
+          )
+          bundleRelativeUrlMap[fileName] = bundleRelativeUrl
+        })
+      }
+
       // it's important to do this to emit late asset
       emitFile = (...args) => this.emitFile(...args)
 
@@ -617,27 +633,19 @@ export const createJsenvRollupPlugin = async ({
       // et mettre a jour leur dépendance vers ce fichier js
       const rollupChunkReadyCallbackMap = compositeAssetHandler.getRollupChunkReadyCallbackMap()
       Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
-        const chunkName = Object.keys(bundle).find((bundleKey) => {
+        const fileName = Object.keys(bundle).find((bundleKey) => {
           const rollupFile = bundle[bundleKey]
           const { facadeModuleId } = rollupFile
           return facadeModuleId && urlToServerUrl(facadeModuleId) === key
         })
-        const rollupFile = bundle[chunkName]
-        const bundleRelativeUrlForJs = rollupFile.fileName
-        let bundleRelativeUrl
-        if (useImportMapForJsUrlMappings) {
-          bundleRelativeUrl = computeBundleRelativeUrl(
-            resolveUrl(bundleRelativeUrlForJs, bundleDirectoryUrl),
-            rollupFile.code,
-            outputOptions.chunkFileNames,
-          )
-          bundleRelativeUrlMap[bundleRelativeUrlForJs] = bundleRelativeUrl
-        } else {
-          bundleRelativeUrl = bundleRelativeUrlForJs
-        }
+        const rollupFile = bundle[fileName]
+        const sourceAfterTransformation = rollupFile.code
+        const bundleRelativeUrl =
+          fileName in bundleRelativeUrlMap ? bundleRelativeUrlMap[fileName] : fileName
+
         logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
         rollupChunkReadyCallbackMap[key]({
-          sourceAfterTransformation: rollupFile.code,
+          sourceAfterTransformation,
           bundleRelativeUrl,
         })
       })

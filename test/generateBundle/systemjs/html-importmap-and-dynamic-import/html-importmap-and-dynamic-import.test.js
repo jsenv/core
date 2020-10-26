@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
@@ -36,15 +36,14 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
 // assert asset url is correct for javascript (remapped + hashed)
 {
   const mainRelativeUrl = getBundleRelativeUrl("file.js")
-  const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
-  const { namespace: actual, serverOrigin } = await browserImportSystemJsBundle({
+  const { namespace: actual } = await browserImportSystemJsBundle({
     ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
     testDirectoryRelativeUrl,
     mainRelativeUrl: `./${mainRelativeUrl}`,
     // debug: true,
   })
   const expected = {
-    default: resolveUrl(`dist/systemjs/${imgRemapRelativeUrl}`, serverOrigin),
+    default: "",
   }
   assert({ actual, expected })
 }
