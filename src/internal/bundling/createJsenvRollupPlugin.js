@@ -599,7 +599,7 @@ export const createJsenvRollupPlugin = async ({
       outputOptions.entryFileNames = `[name]${outputExtension}`
       outputOptions.chunkFileNames = useImportMapForJsUrlMappings
         ? `[name]${outputExtension}`
-        : `[name]-[hash].${outputExtension}`
+        : `[name]-[hash]${outputExtension}`
 
       // rollup does not expects to have http dependency in the mix: fix them
       outputOptions.sourcemapPathTransform = (relativePath, sourcemapPath) => {

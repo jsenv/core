@@ -18,7 +18,7 @@ const mainFilename = `${testDirectoryname}.js`
 
 const bundle = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
-  useImportMapForJsUrlMapping: false,
+  useImportMapForJsUrlMappings: false,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
@@ -38,7 +38,7 @@ assert({ actual, expected })
 {
   const secondBundle = await generateBundle({
     ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
-    useImportMapForJsUrlMapping: false,
+    useImportMapForJsUrlMappings: false,
     jsenvDirectoryRelativeUrl,
     bundleDirectoryRelativeUrl,
     entryPointMap: {
