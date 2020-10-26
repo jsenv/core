@@ -111,7 +111,10 @@ export const parseCssAsset = async (
       const bundleRelativeUrl = urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl)
 
       if (sourcemapReference) {
-        sourcemapReference.target.updateOnceReady({ bundleRelativeUrl })
+        sourcemapReference.target.updateOnceReady({
+          sourceAfterTransformation: mapSource,
+          bundleRelativeUrl,
+        })
       } else {
         emitAsset({
           source: mapSource,

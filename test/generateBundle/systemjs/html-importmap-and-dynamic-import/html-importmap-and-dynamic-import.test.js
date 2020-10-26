@@ -51,7 +51,6 @@ const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirec
       "./foo.js": `./${fooBundleRelativeUrl}`,
       // and nothing more because js is referencing only an other js
     },
-    scopes: {},
   }
   assert({ actual, expected })
 }

@@ -18,6 +18,7 @@ const mainFilename = `${testDirectoryname}.js`
 
 await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+  useImportMapForJsUrlMappings: false,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {

@@ -52,7 +52,6 @@ const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
       "./assets/img-remap.png": `./${imgRemapRelativeUrl}`,
       // and nothing more because js is referencing only img-remap
     },
-    scopes: {},
   }
   assert({ actual, expected })
 }

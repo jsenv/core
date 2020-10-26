@@ -21,6 +21,7 @@ export const generateBundleUsingRollup = async ({
   browser,
 
   format,
+  useImportMapForJsUrlMappings,
   systemJsUrl,
   globals,
   globalName,
@@ -54,6 +55,7 @@ export const generateBundleUsingRollup = async ({
     browser,
 
     format,
+    useImportMapForJsUrlMappings,
     systemJsUrl,
     bundleDirectoryUrl,
 

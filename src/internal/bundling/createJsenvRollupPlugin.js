@@ -163,7 +163,11 @@ export const createJsenvRollupPlugin = async ({
 
   const emitAsset = ({ source, fileName }) => {
     const bundleRelativeUrl = fileName
-    fileName = rollupFileNameWithoutHash(bundleRelativeUrl)
+    if (useImportMapForJsUrlMappings) {
+      fileName = rollupFileNameWithoutHash(bundleRelativeUrl)
+    } else {
+      fileName = bundleRelativeUrl
+    }
     addFileNameMapping(fileName, bundleRelativeUrl)
 
     return emitFile({
@@ -319,10 +323,13 @@ export const createJsenvRollupPlugin = async ({
                     }
 
                     manipulateHtmlAst(htmlAst, {
-                      scriptInjections: {
-                        type: "importmap",
-                        text: "{}",
-                      },
+                      scriptInjections: [
+                        {
+                          type: "importmap",
+                          id: "jsenv-bundle-importmap",
+                          text: "{}",
+                        },
+                      ],
                     })
                   }
 
@@ -654,21 +661,27 @@ export const createJsenvRollupPlugin = async ({
         }
 
         if (file.type === "chunk") {
+          let bundleRelativeUrl
           if (useImportMapForJsUrlMappings) {
-            const bundleRelativeUrl = computeBundleRelativeUrl(
-              resolveUrl(fileName, bundleDirectoryUrl),
-              file.code,
-              `[name]-[hash][extname]`,
-            )
-            addFileNameMapping(fileName, bundleRelativeUrl)
-            if (file.isEntry === false) {
-              markBundleRelativeUrlAsUsedByJs(bundleRelativeUrl)
+            if (file.isEntry) {
+              bundleRelativeUrl = fileName
+            } else {
+              bundleRelativeUrl = computeBundleRelativeUrl(
+                resolveUrl(fileName, bundleDirectoryUrl),
+                file.code,
+                `[name]-[hash][extname]`,
+              )
             }
-            jsBundle[bundleRelativeUrl] = file
           } else {
-            addFileNameMapping(rollupFileNameWithoutHash(fileName), fileName)
-            jsBundle[fileName] = file
+            bundleRelativeUrl = fileName
+            fileName = rollupFileNameWithoutHash(fileName)
           }
+
+          if (!file.isEntry) {
+            markBundleRelativeUrlAsUsedByJs(bundleRelativeUrl)
+          }
+          addFileNameMapping(fileName, bundleRelativeUrl)
+          jsBundle[bundleRelativeUrl] = file
         }
       })
 
@@ -998,6 +1011,7 @@ export const createJsenvRollupPlugin = async ({
         urlResponseBodyMap,
         bundleMappings,
         bundleManifest,
+        bundleImportMap: createImportMapForFilesUsedInJs(),
       }
     },
   }
