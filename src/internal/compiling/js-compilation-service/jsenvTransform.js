@@ -1,3 +1,4 @@
+/* eslint-disable import/max-dependencies */
 import { require } from "@jsenv/core/src/internal/require.js"
 import { minimalBabelPluginArray } from "@jsenv/core/src/internal/minimalBabelPluginArray.js"
 
