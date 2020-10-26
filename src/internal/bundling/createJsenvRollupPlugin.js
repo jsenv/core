@@ -128,6 +128,18 @@ export const createJsenvRollupPlugin = async ({
   let emitFile = () => {}
   let fetchImportmap = fetchImportmapFromParameter
   let importMap
+
+  const emitAsset = (asset) =>
+    emitFile({
+      type: "asset",
+      ...asset,
+    })
+  const emitChunk = (chunk) =>
+    emitFile({
+      type: "chunk",
+      ...chunk,
+    })
+
   const jsenvRollupPlugin = {
     name: "jsenv",
 
@@ -342,14 +354,7 @@ export const createJsenvRollupPlugin = async ({
             }
             return url
           },
-          emitAsset: ({ source, name, fileName }) => {
-            emitFile({
-              type: "asset",
-              source,
-              name,
-              fileName,
-            })
-          },
+          emitAsset,
           connectTarget: (target) => {
             if (target.isExternal) {
               return null
@@ -370,8 +375,7 @@ export const createJsenvRollupPlugin = async ({
                   // get importer url
                   urlToCompiledUrl(target.importers[0].url),
                 )
-                const rollupReferenceId = emitFile({
-                  type: "chunk",
+                const rollupReferenceId = emitChunk({
                   id,
                   name,
                   ...(target.previousJsReference
@@ -393,11 +397,11 @@ export const createJsenvRollupPlugin = async ({
                 }
 
                 logger.debug(`emit asset for ${shortenUrl(target.url)}`)
-                const rollupReferenceId = emitFile({
-                  type: "asset",
+                const rollupReferenceId = emitAsset({
                   source: sourceAfterTransformation,
                   fileName: bundleRelativeUrl,
                 })
+
                 logger.debug(`${shortenUrl(target.url)} ready -> ${bundleRelativeUrl}`)
                 return { rollupReferenceId }
               })
@@ -426,8 +430,7 @@ export const createJsenvRollupPlugin = async ({
               })
             } else if (entryContentType === "application/javascript") {
               atleastOneChunkEmitted = true
-              emitFile({
-                type: "chunk",
+              emitChunk({
                 id: ensureRelativeUrlNotation(entryProjectRelativeUrl),
                 name: entryBundleRelativeUrl,
                 // don't hash js entry points
@@ -446,8 +449,7 @@ export const createJsenvRollupPlugin = async ({
         ),
       )
       if (!atleastOneChunkEmitted) {
-        emitFile({
-          type: "chunk",
+        emitChunk({
           id: EMPTY_CHUNK_URL,
           fileName: "__empty__",
         })
