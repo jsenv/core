@@ -47,7 +47,8 @@ const { status, statusText, headers } = await fetchUrl(compiledFileServerUrl, {
 }
 {
   // eslint-disable-next-line import/no-dynamic-require
-  const actual = require(urlToFileSystemPath(compiledFileUrl))
+  const namespace = require(urlToFileSystemPath(compiledFileUrl))
+  const actual = namespace.value
   const expected = 42
   assert({ actual, expected })
 }

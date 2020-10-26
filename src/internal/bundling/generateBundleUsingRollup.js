@@ -1,4 +1,3 @@
-import { extname } from "path"
 import { createOperation } from "@jsenv/cancellation"
 import { urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/util"
 import { require } from "../require.js"
@@ -22,6 +21,7 @@ export const generateBundleUsingRollup = async ({
   browser,
 
   format,
+  useImportMapForJsBundleUrls,
   systemJsUrl,
   globals,
   globalName,
@@ -55,6 +55,7 @@ export const generateBundleUsingRollup = async ({
     browser,
 
     format,
+    useImportMapForJsBundleUrls,
     systemJsUrl,
     bundleDirectoryUrl,
 
@@ -64,6 +65,7 @@ export const generateBundleUsingRollup = async ({
     minifyHtmlOptions,
 
     manifestFile,
+    writeOnFileSystem,
   })
 
   await useRollup({
@@ -78,7 +80,6 @@ export const generateBundleUsingRollup = async ({
     globalName,
     sourcemapExcludeSources,
     preserveEntrySignatures,
-    writeOnFileSystem,
     bundleDirectoryUrl,
     bundleDirectoryClean,
   })
@@ -97,7 +98,6 @@ const useRollup = async ({
   globalName,
   sourcemapExcludeSources,
   preserveEntrySignatures,
-  writeOnFileSystem,
   bundleDirectoryUrl,
   bundleDirectoryClean,
 }) => {
@@ -123,6 +123,13 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     onwarn: (warning, warn) => {
       if (warning.code === "THIS_IS_UNDEFINED") return
       if (warning.code === "EMPTY_BUNDLE" && warning.chunkName === "__empty__") return
+      // ignore file name conflict when sourcemap or importmap are re-emitted
+      if (
+        warning.code === "FILE_NAME_CONFLICT" &&
+        (warning.message.includes(".map") || warning.message.includes(".importmap"))
+      ) {
+        return
+      }
       warn(warning)
     },
     // on passe input: [] car c'est le plusign jsenv qui se chargera d'emit des chunks
@@ -132,9 +139,6 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     preserveEntrySignatures,
     plugins: [jsenvRollupPlugin],
   }
-  const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
-  const outputExtension = extension === ".html" ? ".js" : extension
-
   const rollupOutputOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait
     // experimentalTopLevelAwait: true,
@@ -148,8 +152,6 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources,
-    entryFileNames: `[name]${outputExtension}`,
-    chunkFileNames: `[name]-[hash]${outputExtension}`,
     ...(format === "global"
       ? {
           globals,
@@ -169,12 +171,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}
 
   const rollupOutputArray = await createOperation({
     cancellationToken,
-    start: () => {
-      if (writeOnFileSystem) {
-        return rollupBundle.write(rollupOutputOptions)
-      }
-      return rollupBundle.generate(rollupOutputOptions)
-    },
+    start: () => rollupBundle.generate(rollupOutputOptions),
   })
 
   return rollupOutputArray

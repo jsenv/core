@@ -12,7 +12,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.js`
 
-const { rollupBundle } = await generateBundle({
+const { bundleManifest, rollupBundle } = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
@@ -21,6 +21,6 @@ const { rollupBundle } = await generateBundle({
   },
   minify: true,
 })
-const actual = rollupBundle["main.js"].code.trim()
+const actual = rollupBundle[bundleManifest["main.js"]].code.trim()
 const expected = `System.register([],(function(e){"use strict";return{execute:function(){e("default",42)}}}));`
 assert({ actual, expected })

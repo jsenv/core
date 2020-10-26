@@ -30,6 +30,7 @@ export const generateBundle = async ({
   babelPluginMap = jsenvBabelPluginMap,
 
   format = "esm",
+  useImportMapForJsBundleUrls,
   browser = format === "global" || format === "systemjs" || format === "esmodule",
   node = format === "commonjs",
   entryPointMap = format === "commonjs"
@@ -166,6 +167,7 @@ export const generateBundle = async ({
       writeOnFileSystem,
 
       format,
+      useImportMapForJsBundleUrls,
       systemJsUrl,
       globalName,
       globals,

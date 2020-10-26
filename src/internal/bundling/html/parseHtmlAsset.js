@@ -42,7 +42,9 @@ export const parseHtmlAsset = async (
   {
     minify,
     minifyHtmlOptions,
+    transformImportmapTarget = () => {},
     htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString),
+    htmlAstToHtmlString = (htmlAst) => stringifyHtmlAst(htmlAst),
   } = {},
 ) => {
   const htmlString = String(target.content.value)
@@ -83,11 +85,15 @@ export const parseHtmlAsset = async (
     ...svgMutations,
   ]
 
-  return async ({ getReferenceUrlRelativeToImporter }) => {
+  return async (params) => {
     htmlMutations.forEach((mutationCallback) => {
-      mutationCallback({ getReferenceUrlRelativeToImporter })
+      mutationCallback({
+        ...params,
+        transformImportmapTarget,
+      })
     })
-    const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
+
+    const htmlAfterTransformation = htmlAstToHtmlString(htmlAst)
     const sourceAfterTransformation = minify
       ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions)
       : htmlAfterTransformation
@@ -231,7 +237,7 @@ const moduleScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, s
   }
 }
 
-const importmapScriptSrcVisitor = (script, { notifyReferenceFound }) => {
+const importmapScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
   if (!typeAttribute) {
     return null
@@ -262,8 +268,11 @@ const importmapScriptSrcVisitor = (script, { notifyReferenceFound }) => {
       return `${importmapParentRelativeUrl}[name]-[hash][extname]`
     },
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
-    typeAttribute.value = "systemjs-importmap"
+  return ({ getReferenceUrlRelativeToImporter, transformImportmapTarget }) => {
+    if (format === "systemjs") {
+      typeAttribute.value = "systemjs-importmap"
+    }
+    transformImportmapTarget(importmapReference.target)
 
     const { isInline } = importmapReference.target
     if (isInline) {
@@ -279,7 +288,12 @@ const importmapScriptSrcVisitor = (script, { notifyReferenceFound }) => {
   }
 }
 
-const importmapScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, scripts) => {
+const importmapScriptTextNodeVisitor = (
+  script,
+  { format, notifyReferenceFound },
+  target,
+  scripts,
+) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
   if (!typeAttribute) {
     return null
@@ -309,8 +323,12 @@ const importmapScriptTextNodeVisitor = (script, { notifyReferenceFound }, target
       value: textNode.value,
     },
   })
-  return () => {
-    typeAttribute.value = "systemjs-importmap"
+  return ({ transformImportmapTarget }) => {
+    if (format === "systemjs") {
+      typeAttribute.value = "systemjs-importmap"
+    }
+    transformImportmapTarget(importmapReference.target)
+
     const { sourceAfterTransformation } = importmapReference.target
     textNode.value = sourceAfterTransformation
   }

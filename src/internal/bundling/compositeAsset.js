@@ -41,16 +41,16 @@ import {
 } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
 import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
-import { computeFileNameForRollup } from "./computeFileNameForRollup.js"
+import { computeBundleRelativeUrl } from "./computeBundleRelativeUrl.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 
 export const createCompositeAssetHandler = (
   { fetch, parse },
   {
     logLevel,
+    format,
     projectDirectoryUrl, // project url but it can be an http url
     bundleDirectoryRelativeUrl,
-    urlToOriginalUrl, // get original url from eventually compiled url
     urlToFileUrl, // get a file url from an eventual http url
     loadUrl = () => null,
     emitAsset,
@@ -129,6 +129,11 @@ export const createCompositeAssetHandler = (
     return reference
   }
 
+  const getAllAssetEntryEmittedPromise = async () => {
+    const urlToWait = Object.keys(targetMap).filter((url) => targetMap[url].isEntry)
+    await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdAvailablePromise()))
+  }
+
   const targetMap = {}
   const createReference = (referenceData, targetData) => {
     const { url } = targetData
@@ -168,7 +173,10 @@ export const createCompositeAssetHandler = (
   }
 
   const assetTransformMap = {}
-  const fileNameToClean = []
+  // used to remove sourcemap files that are renamed after they are emitted
+  const bundleRelativeUrlsToClean = []
+  const getBundleRelativeUrlsToClean = () => bundleRelativeUrlsToClean
+
   const createTarget = ({
     url,
     isEntry = false,
@@ -270,9 +278,9 @@ export const createCompositeAssetHandler = (
         if (isInline && fileNamePattern === undefined) {
           // inherit parent directory location because it's an inline file
           fileNamePattern = () => {
-            const importerFileNameForRollup = precomputeTargetFileNameForRollup(target)
+            const importerBundleRelativeUrl = precomputeBundleRelativeUrlForTarget(target)
             const importerParentRelativeUrl = urlToRelativeUrl(
-              urlToParentUrl(resolveUrl(importerFileNameForRollup, "file://")),
+              urlToParentUrl(resolveUrl(importerBundleRelativeUrl, "file://")),
               "file://",
             )
             return `${importerParentRelativeUrl}[name]-[hash][extname]`
@@ -319,6 +327,7 @@ export const createCompositeAssetHandler = (
       }
 
       const parseReturnValue = await parse(target, {
+        format,
         notifyReferenceFound: notifyDependencyFound,
       })
       parsingDone = true
@@ -356,9 +365,9 @@ export const createCompositeAssetHandler = (
         const rollupChunkReadyPromise = new Promise((resolve) => {
           registerCallbackOnceRollupChunkIsReady(target.url, resolve)
         })
-        const { sourceAfterTransformation, fileNameForRollup } = await rollupChunkReadyPromise
+        const { sourceAfterTransformation, bundleRelativeUrl } = await rollupChunkReadyPromise
         target.sourceAfterTransformation = sourceAfterTransformation
-        target.fileNameForRollup = fileNameForRollup
+        target.bundleRelativeUrl = bundleRelativeUrl
         return
       }
 
@@ -373,7 +382,7 @@ export const createCompositeAssetHandler = (
       const transform = assetTransformMap[url]
       if (typeof transform !== "function") {
         target.sourceAfterTransformation = target.content.value
-        target.fileNameForRollup = computeTargetFileNameForRollup(target)
+        target.bundleRelativeUrl = computeBundleRelativeUrlForTarget(target)
         return
       }
 
@@ -384,23 +393,23 @@ export const createCompositeAssetHandler = (
       // {
       //   "file:///project/coin.png": "./coin-45eiopri.png"
       // }
-      // we don't yet know the exact importerFileNameForRollup but we can generate a fake one
+      // we don't yet know the exact importerBundleRelativeUrl but we can generate a fake one
       // to ensure we resolve dependency against where the importer file will be
 
-      const importerFileNameForRollup = precomputeTargetFileNameForRollup(target)
+      const importerBundleRelativeUrl = precomputeBundleRelativeUrlForTarget(target)
       const assetEmitters = []
       const transformReturnValue = await transform({
-        precomputeFileNameForRollup: (sourceAfterTransformation) =>
-          precomputeTargetFileNameForRollup(target, sourceAfterTransformation),
+        precomputeBundleRelativeUrl: (sourceAfterTransformation) =>
+          precomputeBundleRelativeUrlForTarget(target, sourceAfterTransformation),
         registerAssetEmitter: (callback) => {
           assetEmitters.push(callback)
         },
         getReferenceUrlRelativeToImporter: (reference) => {
           const referenceTarget = reference.target
-          const referenceFileNameForRollup = referenceTarget.fileNameForRollup
-          const referenceUrlForRollup = resolveUrl(referenceFileNameForRollup, "file:///")
-          const importerFileUrlForRollup = resolveUrl(importerFileNameForRollup, "file:///")
-          return urlToRelativeUrl(referenceUrlForRollup, importerFileUrlForRollup)
+          const referenceTargetBundleRelativeUrl = referenceTarget.bundleRelativeUrl
+          const referenceTargetBundleUrl = resolveUrl(referenceTargetBundleRelativeUrl, "file:///")
+          const importerBundleUrl = resolveUrl(importerBundleRelativeUrl, "file:///")
+          return urlToRelativeUrl(referenceTargetBundleUrl, importerBundleUrl)
         },
       })
       if (transformReturnValue === null || transformReturnValue === undefined) {
@@ -408,21 +417,21 @@ export const createCompositeAssetHandler = (
       }
 
       let sourceAfterTransformation
-      let fileNameForRollup
+      let bundleRelativeUrl
       if (typeof transformReturnValue === "string") {
         sourceAfterTransformation = transformReturnValue
       } else {
         sourceAfterTransformation = transformReturnValue.sourceAfterTransformation
-        if (transformReturnValue.fileNameForRollup) {
-          fileNameForRollup = transformReturnValue.fileNameForRollup
+        if (transformReturnValue.bundleRelativeUrl) {
+          bundleRelativeUrl = transformReturnValue.bundleRelativeUrl
         }
       }
 
       target.sourceAfterTransformation = sourceAfterTransformation
-      if (fileNameForRollup === undefined) {
-        fileNameForRollup = computeTargetFileNameForRollup(target)
+      if (bundleRelativeUrl === undefined) {
+        bundleRelativeUrl = computeBundleRelativeUrlForTarget(target)
       }
-      target.fileNameForRollup = fileNameForRollup
+      target.bundleRelativeUrl = bundleRelativeUrl
 
       assetEmitters.forEach((callback) => {
         callback({
@@ -441,10 +450,29 @@ export const createCompositeAssetHandler = (
     // because connect is memoized and called immediatly after target is created
     const getRollupReferenceIdAvailablePromise = () => connect()
 
-    const updateFileNameForRollup = (value) => {
-      if (value !== target.fileNameForRollup) {
-        fileNameToClean.push(target.fileNameForRollup)
-        target.fileNameForRollup = value
+    // meant to be used only when asset is modified
+    // after being emitted.
+    // (sourcemap and importmap)
+    const updateOnceReady = ({ sourceAfterTransformation, bundleRelativeUrl }) => {
+      // the source after transform has changed
+      if (
+        sourceAfterTransformation !== undefined &&
+        sourceAfterTransformation !== target.sourceAfterTransformation
+      ) {
+        target.sourceAfterTransformation = sourceAfterTransformation
+        if (bundleRelativeUrl === undefined) {
+          bundleRelativeUrl = computeBundleRelativeUrlForTarget(target)
+        }
+      }
+
+      // the bundle relative url has changed
+      if (bundleRelativeUrl !== undefined && bundleRelativeUrl !== target.bundleRelativeUrl) {
+        bundleRelativeUrlsToClean.push(target.bundleRelativeUrl)
+        target.bundleRelativeUrl = bundleRelativeUrl
+        emitAsset({
+          source: target.sourceAfterTransformation,
+          fileName: bundleRelativeUrl,
+        })
       }
     }
 
@@ -456,7 +484,8 @@ export const createCompositeAssetHandler = (
       getDependenciesAvailablePromise,
       getReadyPromise,
       getRollupReferenceIdAvailablePromise,
-      updateFileNameForRollup,
+
+      updateOnceReady,
     })
 
     return target
@@ -466,55 +495,11 @@ export const createCompositeAssetHandler = (
   const registerCallbackOnceRollupChunkIsReady = (url, callback) => {
     rollupChunkReadyCallbackMap[url] = callback
   }
+  const getRollupChunkReadyCallbackMap = () => rollupChunkReadyCallbackMap
 
-  const resolveJsReferencesUsingRollupBundle = async (rollupBundle, urlToServerUrl) => {
-    Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
-      const chunkName = Object.keys(rollupBundle).find((bundleKey) => {
-        const rollupFile = rollupBundle[bundleKey]
-        const { facadeModuleId } = rollupFile
-        return facadeModuleId && urlToServerUrl(facadeModuleId) === key
-      })
-      const chunk = rollupBundle[chunkName]
-      logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
-      rollupChunkReadyCallbackMap[key]({
-        sourceAfterTransformation: chunk.code,
-        fileNameForRollup: chunk.fileName,
-      })
-    })
-
-    // wait html files to be emitted
-    const urlToWait = Object.keys(targetMap).filter((url) => targetMap[url].isEntry)
-    await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdAvailablePromise()))
-  }
-
-  const cleanupRollupBundle = (rollupBundle) => {
-    fileNameToClean.forEach((fileName) => {
-      delete rollupBundle[fileName]
-    })
-  }
-
-  const rollupBundleToAssetMappings = (rollupBundle) => {
-    const assetMappings = {}
-    Object.keys(rollupBundle).forEach((key) => {
-      const file = rollupBundle[key]
-      if (file.type === "asset") {
-        const assetUrl = findAssetUrlByFileNameForRollup(file.fileName)
-        if (assetUrl) {
-          const originalUrl = urlToOriginalUrl(assetUrl)
-          const originalRelativeUrl = urlToRelativeUrl(originalUrl, projectDirectoryUrl)
-          assetMappings[originalRelativeUrl] = file.fileName
-        } else {
-          // the asset does not exists in the project it was generated during bundling
-          // ici il est possible de trouver un asset ayant été redirigé ailleurs
-        }
-      }
-    })
-    return assetMappings
-  }
-
-  const findAssetUrlByFileNameForRollup = (fileNameForRollup) => {
+  const findAssetUrlByBundleRelativeUrl = (bundleRelativeUrl) => {
     const assetUrl = Object.keys(targetMap).find(
-      (url) => targetMap[url].fileNameForRollup === fileNameForRollup,
+      (url) => targetMap[url].bundleRelativeUrl === bundleRelativeUrl,
     )
     return assetUrl
   }
@@ -556,9 +541,10 @@ ${showSourceLocation(referenceSource, {
     createReferenceForAssetEntry,
     createReferenceForJsModuleImport,
 
-    resolveJsReferencesUsingRollupBundle,
-    cleanupRollupBundle,
-    rollupBundleToAssetMappings,
+    getRollupChunkReadyCallbackMap,
+    getAllAssetEntryEmittedPromise,
+    getBundleRelativeUrlsToClean,
+    findAssetUrlByBundleRelativeUrl,
 
     inspect: () => {
       return {
@@ -570,23 +556,23 @@ ${showSourceLocation(referenceSource, {
 
 const assetFileNamePattern = "assets/[name]-[hash][extname]"
 
-const computeTargetFileNameForRollup = (target) => {
-  return computeFileNameForRollup(
+const computeBundleRelativeUrlForTarget = (target) => {
+  return computeBundleRelativeUrl(
     target.url,
     target.sourceAfterTransformation,
     target.fileNamePattern || assetFileNamePattern,
   )
 }
 
-const precomputeTargetFileNameForRollup = (target, sourceAfterTransformation = "") => {
-  if (target.fileNameForRollup) {
-    return target.fileNameForRollup
+const precomputeBundleRelativeUrlForTarget = (target, sourceAfterTransformation = "") => {
+  if (target.bundleRelativeUrl) {
+    return target.bundleRelativeUrl
   }
 
   target.sourceAfterTransformation = sourceAfterTransformation
-  const precomputedFileNameForRollup = computeTargetFileNameForRollup(target)
+  const precomputedBundleRelativeUrl = computeBundleRelativeUrlForTarget(target)
   target.sourceAfterTransformation = undefined
-  return precomputedFileNameForRollup
+  return precomputedBundleRelativeUrl
 }
 
 const memoize = (fn) => {

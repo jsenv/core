@@ -3,7 +3,6 @@ import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
 import { generateBundle } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { parseCssUrls } from "@jsenv/core/src/internal/bundling/css/parseCssUrls.js"
 import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
 import {
   GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
@@ -35,11 +34,11 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
 }
 
 const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
 
-// check importmap content
+// importmap content
 {
   const importmapBundleRelativeUrl = getBundleRelativeUrl("import-map.importmap")
+  const fooBundleRelativeUrl = getBundleRelativeUrl("foo.js")
   const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, bundleDirectoryUrl)
   const importmapString = await readFile(importmapBundleUrl)
   const importmap = JSON.parse(importmapString)
@@ -47,32 +46,19 @@ const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
   const expected = {
     imports: {
       // the original importmap remapping are still there (maybe useless,let's keep it for now)
-      "./img.png": "./img-remap.png",
-      // the importmap for img-remap is available
-      "./assets/img-remap.png": `./${imgRemapRelativeUrl}`,
-      // and nothing more because js is referencing only img-remap
+      "foo": "./foo.js",
+      // the importmap for foo is available
+      "./foo.js": `./${fooBundleRelativeUrl}`,
+      // and nothing more because js is referencing only an other js
     },
   }
-  assert({ actual, expected })
-}
-
-// assert asset url is correct for css (hashed)
-{
-  const imgRelativeUrl = getBundleRelativeUrl("img.png")
-  const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")
-  const cssBundleUrl = resolveUrl(cssBundleRelativeUrl, bundleDirectoryUrl)
-  const imgBundleUrl = resolveUrl(imgRelativeUrl, bundleDirectoryUrl)
-  const cssString = await readFile(cssBundleUrl)
-  const cssUrls = await parseCssUrls(cssString, cssBundleUrl)
-  const actual = cssUrls.urlDeclarations[0].specifier
-  const expected = urlToRelativeUrl(imgBundleUrl, cssBundleUrl)
   assert({ actual, expected })
 }
 
 // assert asset url is correct for javascript (remapped + hashed)
 {
   const mainRelativeUrl = getBundleRelativeUrl("file.js")
-  const { namespace, serverOrigin } = await browserImportSystemJsBundle({
+  const { namespace } = await browserImportSystemJsBundle({
     ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
     testDirectoryRelativeUrl,
     mainRelativeUrl: `./${mainRelativeUrl}`,
@@ -80,7 +66,7 @@ const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
   })
   const actual = namespace
   const expected = {
-    default: resolveUrl(`dist/systemjs/${imgRemapRelativeUrl}`, serverOrigin),
+    value: 42,
   }
   assert({ actual, expected })
 }

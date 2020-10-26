@@ -21,6 +21,7 @@ const entryPointMap = {
 
 const { bundleMappings } = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+  useImportMapForJsBundleUrls: false,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap,
@@ -34,13 +35,14 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
 }
 const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")
 
-const { namespace: actual, serverOrigin } = await browserImportSystemJsBundle({
+const { namespace, serverOrigin } = await browserImportSystemJsBundle({
   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
   testDirectoryRelativeUrl,
   htmlFileRelativeUrl: "./index.html",
   // headless: false,
   // autoStop: false,
 })
+const actual = namespace
 const expected = {
   cssUrl: resolveUrl(`/dist/systemjs/${cssBundleRelativeUrl}`, serverOrigin),
 }

@@ -32,8 +32,9 @@ export const stringifyHtmlAst = (htmlAst) => {
   return htmlString
 }
 
-export const findNode = (htmlString, predicate) => {
-  const htmlAst = parseHtmlString(htmlString)
+export const findNode = (htmlStringOrAst, predicate) => {
+  const htmlAst =
+    typeof htmlStringOrAst === "string" ? parseHtmlString(htmlStringOrAst) : htmlStringOrAst
   let nodeMatching = null
   visitHtmlAst(htmlAst, (node) => {
     if (predicate(node)) {
@@ -63,8 +64,8 @@ export const findNodeByTagName = (htmlString, tagName) =>
 export const findAllNodeByTagName = (htmlString, tagName) =>
   findNodes(htmlString, (node) => node.nodeName === tagName)
 
-export const findFirstImportmapNode = (htmlString) =>
-  findNode(htmlString, htmlNodeIsScriptImportmap)
+export const findFirstImportmapNode = (htmlStringOrAst) =>
+  findNode(htmlStringOrAst, htmlNodeIsScriptImportmap)
 
 export const getHtmlNodeAttributeByName = (htmlNode, attributeName) =>
   htmlNode.attrs.find((attr) => attr.name === attributeName)
