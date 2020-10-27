@@ -2,21 +2,23 @@ import { resolveUrl, fileSystemPathToUrl } from "@jsenv/util"
 import { require } from "./require.js"
 import { jsenvCoreDirectoryUrl } from "./jsenvCoreDirectoryUrl.js"
 
-export const jsenvNodeSystemUrl = resolveUrl(
-  "./src/internal/node-launcher/node-js-file.js",
-  jsenvCoreDirectoryUrl,
-)
+export const jsenvNodeSystemRelativeUrl = "./src/internal/node-launcher/node-js-file.js"
+export const jsenvNodeSystemBundleRelativeUrl = "./dist/jsenv-node-system.cjs"
+export const jsenvNodeSystemUrl = resolveUrl(jsenvNodeSystemRelativeUrl, jsenvCoreDirectoryUrl)
 export const jsenvNodeSystemBundleUrl = resolveUrl(
-  "./dist/jsenv-node-system.cjs",
+  jsenvNodeSystemBundleRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
 
+export const jsenvBrowserSystemRelativeUrl =
+  "./src/internal/browser-launcher/jsenv-browser-system.js"
+export const jsenvBrowserSystemBundleRelativeUrl = "./dist/jsenv-browser-system.js"
 export const jsenvBrowserSystemUrl = resolveUrl(
-  "./src/internal/browser-launcher/jsenv-browser-system.js",
+  jsenvBrowserSystemRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
 export const jsenvBrowserSystemBundleUrl = resolveUrl(
-  "./dist/jsenv-browser-system.js",
+  jsenvBrowserSystemBundleRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
 
@@ -25,8 +27,15 @@ export const exploringRedirectorHtmlFileUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 
-export const exploringRedirectorJsFileUrl = resolveUrl(
-  "./src/internal/exploring/exploring.redirector.js",
+export const jsenvExploringRedirectorJsRelativeUrl =
+  "./src/internal/exploring/exploring.redirector.js"
+export const jsenvExploringRedirectorJsBundleRelativeUrl = "./dist/jsenv-exploring-redirector.js"
+export const jsenvExploringRedirectorJsUrl = resolveUrl(
+  jsenvExploringRedirectorJsRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
+export const jsenvExploringRedirectorJsBundleUrl = resolveUrl(
+  jsenvExploringRedirectorJsBundleRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
 

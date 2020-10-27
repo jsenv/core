@@ -16,7 +16,7 @@ import {
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 import {
   exploringRedirectorHtmlFileUrl,
-  exploringRedirectorJsFileUrl,
+  jsenvExploringRedirectorJsBundleUrl,
   exploringHtmlFileUrl,
   sourcemapMainFileUrl,
   sourcemapMappingFileUrl,
@@ -102,11 +102,10 @@ const createRedirectFilesService = ({ projectDirectoryUrl, outDirectoryRelativeU
     exploringRedirectorHtmlFileUrl,
     projectDirectoryUrl,
   )
-  const exploringRedirectorJsFileRelativeUrl = urlToRelativeUrl(
-    exploringRedirectorJsFileUrl,
+  const jsenvExploringRedirectorJsBundleRelativeUrlForProject = urlToRelativeUrl(
+    jsenvExploringRedirectorJsBundleUrl,
     projectDirectoryUrl,
   )
-  const exploringRedirectorJsCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${exploringRedirectorJsFileRelativeUrl}`
 
   const toolbarMainJsFileRelativeUrl = urlToRelativeUrl(
     jsenvToolbarMainJsFileUrl,
@@ -148,11 +147,11 @@ const createRedirectFilesService = ({ projectDirectoryUrl, outDirectoryRelativeU
       }
     }
     if (request.ressource === "/.jsenv/exploring.redirector.js") {
-      const exploringRedirectorJsCompiledFileUrl = `${request.origin}/${exploringRedirectorJsCompiledFileRelativeUrl}`
+      const jsenvExploringRedirectorServerBundleUrl = `${request.origin}/${jsenvExploringRedirectorJsBundleRelativeUrlForProject}`
       return {
         status: 307,
         headers: {
-          location: exploringRedirectorJsCompiledFileUrl,
+          location: jsenvExploringRedirectorServerBundleUrl,
         },
       }
     }

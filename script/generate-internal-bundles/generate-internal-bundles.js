@@ -1,6 +1,11 @@
 // import { resolveUrl } from "@jsenv/util"
 import { generateBundle } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import {
+  jsenvNodeSystemRelativeUrl,
+  jsenvBrowserSystemRelativeUrl,
+  jsenvExploringRedirectorJsRelativeUrl,
+} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
 const bundlesToGenerate = [
   {
@@ -8,7 +13,7 @@ const bundlesToGenerate = [
     bundleDirectoryRelativeUrl: "dist",
     format: "commonjs",
     entryPointMap: {
-      "./src/internal/node-launcher/node-js-file.js": "./jsenv-node-system.cjs",
+      [jsenvNodeSystemRelativeUrl]: "./jsenv-node-system.cjs",
     },
   },
   {
@@ -16,7 +21,15 @@ const bundlesToGenerate = [
     bundleDirectoryRelativeUrl: "dist",
     format: "global",
     entryPointMap: {
-      "./src/internal/browser-launcher/jsenv-browser-system.js": "./jsenv-browser-system.js",
+      [jsenvBrowserSystemRelativeUrl]: "./jsenv-browser-system.js",
+    },
+  },
+  {
+    projectDirectoryUrl: jsenvCoreDirectoryUrl,
+    bundleDirectoryRelativeUrl: "dist",
+    format: "global",
+    entryPointMap: {
+      [jsenvExploringRedirectorJsRelativeUrl]: "./jsenv-exploring-redirector.js",
     },
   },
   // il faut aussi faire le exploring redirector et jsenv toolbar
