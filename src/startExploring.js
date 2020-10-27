@@ -175,7 +175,7 @@ const createExploringDataService = ({
       const data = {
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
-        jsenvDirectoryRelativeUrl: urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl),
+        jsenvDirectoryRelativeUrl: urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl),
         exploringHtmlFileRelativeUrl: urlToRelativeUrl(jsenvExploringHtmlUrl, projectDirectoryUrl),
         sourcemapMainFileRelativeUrl: urlToRelativeUrl(sourcemapMainFileUrl, jsenvCoreDirectoryUrl),
         sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
