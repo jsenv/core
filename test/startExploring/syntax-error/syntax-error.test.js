@@ -67,10 +67,6 @@ const expected = {
     startTime: assert.any(Number),
     endTime: assert.any(Number),
     fileExecutionResultMap: {
-      "@jsenv/core/src/toolbar.js": {
-        status: "completed",
-        namespace: {},
-      },
       "./syntax-error.main.js": {
         status: "errored",
         exceptionSource: assert.any(String),

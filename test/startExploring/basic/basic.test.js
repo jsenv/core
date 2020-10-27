@@ -33,10 +33,6 @@ const expected = {
     startTime: actual.executionResult.startTime,
     endTime: actual.executionResult.endTime,
     fileExecutionResultMap: {
-      "@jsenv/core/src/toolbar.js": {
-        status: "completed",
-        namespace: {},
-      },
       "./basic.main.js": {
         status: "completed",
         namespace: { default: 42 },

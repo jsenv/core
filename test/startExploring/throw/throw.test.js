@@ -33,10 +33,6 @@ const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage
       startTime: assert.any(Number),
       endTime: assert.any(Number),
       fileExecutionResultMap: {
-        "@jsenv/core/src/toolbar.js": {
-          status: "completed",
-          namespace: {},
-        },
         "./throw.main.js": {
           status: "errored",
           exceptionSource: assert.any(String),
