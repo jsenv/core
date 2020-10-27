@@ -135,10 +135,10 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
     }
     // unfortunately browser don't resolve sourcemap to url after redirection
     // but to url before. It means browser tries to load source map from
-    // "/.jsenv/toolbar.main.js.map"
+    // "/.jsenv/jsenv-toolbar.js.map"
     // we could also inline sourcemap but it's not yet possible
     // inside generateBundle
-    if (request.ressource === "/.jsenv/toolbar.main.js.map") {
+    if (request.ressource === "/.jsenv/jsenv-toolbar.js.map") {
       const jsenvToolbarJsBundleSourcemapServerUrl = `${request.origin}/${jsenvToolbarJsBundleRelativeUrlForProject}.map`
       return {
         status: 307,

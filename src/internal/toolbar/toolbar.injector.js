@@ -1,3 +1,4 @@
+import { fetchExploringJson } from "@jsenv/core/src/internal/exploring/fetchExploringJson.js"
 import { setAttributes, setStyles } from "./util/dom.js"
 
 /*
@@ -90,6 +91,9 @@ const connectLivereload = () => {
 window.__jsenv_eventsource__ = connectLivereload()
 
 const injectToolbar = async () => {
+  const { jsenvDirectoryRelativeUrl } = await fetchExploringJson()
+  const jsenvDirectoryServerUrl = resolveUrl(jsenvDirectoryRelativeUrl, document.location.origin)
+
   const placeholder = getToolbarPlaceholder()
 
   const iframe = document.createElement("iframe")
@@ -111,8 +115,12 @@ const injectToolbar = async () => {
     border: "none",
   })
   const iframeLoadedPromise = iframeToLoadedPromise(iframe)
+  const jsenvToolbarHtmlServerUrl = resolveUrl(
+    "./src/internal/toolbar/toolbar.html",
+    jsenvDirectoryServerUrl,
+  )
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
-  iframe.setAttribute("src", new URL("./internal/toolbar/toolbar.html", import.meta.url))
+  iframe.setAttribute("src", jsenvToolbarHtmlServerUrl)
   placeholder.parentNode.replaceChild(iframe, placeholder)
 
   await iframeLoadedPromise
@@ -143,7 +151,8 @@ const injectToolbar = async () => {
   })
 
   const div = document.createElement("div")
-  const jsenvLogoSvgSrc = new URL("./internal/toolbar/jsenv-logo.svg", import.meta.url)
+  const jsenvLogoUrl = resolveUrl("./src/internal/toolbar/jsenv-logo.svg", jsenvDirectoryServerUrl)
+  const jsenvLogoSvgSrc = jsenvLogoUrl
   div.innerHTML = `
 <div id="jsenv-toolbar-trigger">
   <svg id="jsenv-toolbar-trigger-icon">
@@ -264,6 +273,8 @@ const iframeToLoadedPromise = (iframe) => {
     iframe.addEventListener("load", onload, true)
   })
 }
+
+const resolveUrl = (url, baseUrl) => String(new URL(url, baseUrl))
 
 if (document.readyState === "complete") {
   injectToolbar()
