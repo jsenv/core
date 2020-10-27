@@ -58,6 +58,7 @@ export const startCompileServer = async ({
   outDirectoryName = "out",
 
   writeOnFilesystem = true,
+  sourcemapExcludeSources = false, // this should increase perf (no need to download source for browser)
   useFilesystemAsCache = true,
   compileCacheStrategy = "etag",
 
@@ -212,6 +213,7 @@ export const startCompileServer = async ({
     projectFileRequestedCallback,
     useFilesystemAsCache,
     writeOnFilesystem,
+    sourcemapExcludeSources,
     compileCacheStrategy,
   })
   const serveProjectFile = createProjectFileService({

@@ -17,8 +17,14 @@ export const transformResultToCompilationResult = async (
     originalFileUrl,
     compiledFileUrl,
     sourcemapFileUrl,
-    remap = true,
-    remapMethod = "comment", // 'comment', 'inline'
+    sourcemapEnabled = true,
+    // removing sourcesContent from map decrease the sourceMap
+    // it also means client have to fetch source from server (additional http request)
+    // some client ignore sourcesContent property such as vscode-chrome-debugger
+    // Because it's the most complex scenario and we want to ensure client is always able
+    // to find source from the sourcemap, we remove map.sourcesContent by default to test this.
+    sourcemapExcludeSources = true,
+    sourcemapMethod = "comment", // "comment", "inline"
   },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -43,7 +49,7 @@ export const transformResultToCompilationResult = async (
   const assetsContent = []
 
   let output = code
-  if (remap && map) {
+  if (sourcemapEnabled && map) {
     if (map.sources.length === 0) {
       // may happen in some cases where babel returns a wrong sourcemap
       // there is at least one case where it happens
@@ -86,20 +92,17 @@ export const transformResultToCompilationResult = async (
       )
     }
 
-    // removing sourcesContent from map decrease the sourceMap
-    // it also means client have to fetch source from server (additional http request)
-    // some client ignore sourcesContent property such as vscode-chrome-debugger
-    // Because it's the most complex scenario and we want to ensure client is always able
-    // to find source from the sourcemap, we explicitely delete map.sourcesContent to test this.
-    delete map.sourcesContent
+    if (sourcemapExcludeSources) {
+      delete map.sourcesContent
+    }
 
     // we don't need sourceRoot because our path are relative or absolute to the current location
     // we could comment this line because it is not set by babel because not passed during transform
     delete map.sourceRoot
 
-    if (remapMethod === "inline") {
+    if (sourcemapMethod === "inline") {
       output = setJavaScriptSourceMappingUrl(output, sourcemapToBase64Url(map))
-    } else if (remapMethod === "comment") {
+    } else if (sourcemapMethod === "comment") {
       const sourcemapFileRelativePathForModule = urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl)
       output = setJavaScriptSourceMappingUrl(output, sourcemapFileRelativePathForModule)
       assets.push(sourcemapFileUrl)

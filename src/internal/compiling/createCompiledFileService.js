@@ -51,6 +51,7 @@ export const createCompiledFileService = ({
   useFilesystemAsCache,
   writeOnFilesystem,
   compileCacheStrategy,
+  sourcemapExcludeSources,
 }) => {
   return (request) => {
     const { origin, ressource, method, headers } = request
@@ -128,7 +129,7 @@ export const createCompiledFileService = ({
         request,
 
         compile: (importmapBeforeTransformation) =>
-           transformImportmap(importmapBeforeTransformation, {
+          transformImportmap(importmapBeforeTransformation, {
             logger,
             projectDirectoryUrl,
             outDirectoryRelativeUrl,
@@ -197,7 +198,8 @@ export const createCompiledFileService = ({
             originalFileUrl,
             compiledFileUrl,
             sourcemapFileUrl,
-            remapMethod: writeOnFilesystem ? "comment" : "inline",
+            sourcemapMethod: writeOnFilesystem ? "comment" : "inline",
+            sourcemapExcludeSources,
           })
         },
       })

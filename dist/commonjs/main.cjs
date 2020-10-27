@@ -215,6 +215,8 @@ const transformBabelHelperToImportBabelPlugin = api => {
   };
 };
 
+/* eslint-disable import/max-dependencies */
+
 const {
   transformAsync,
   transformFromAstAsync
@@ -237,7 +239,7 @@ const jsenvTransform = async ({
   transformGenerator,
   transformGlobalThis,
   regeneratorRuntimeImportPath,
-  remap
+  sourcemapEnabled
 }) => {
   // https://babeljs.io/docs/en/options
   const options = {
@@ -248,7 +250,7 @@ const jsenvTransform = async ({
     babelrc: false,
     // trust only these options, do not read any babelrc config file
     ast: true,
-    sourceMaps: remap,
+    sourceMaps: sourcemapEnabled,
     sourceFileName: inputPath,
     // https://babeljs.io/docs/en/options#parseropts
     parserOpts: {
@@ -389,7 +391,7 @@ const transformJs = async ({
   transformModuleIntoSystemFormat = true,
   transformGenerator = true,
   transformGlobalThis = true,
-  remap = true
+  sourcemapEnabled = true
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`);
@@ -417,7 +419,7 @@ const transformJs = async ({
     map,
     projectDirectoryUrl,
     convertMap,
-    remap,
+    sourcemapEnabled,
     allowTopLevelAwait
   });
   const inputPath = computeInputPath(url);
@@ -434,7 +436,7 @@ const transformJs = async ({
     transformModuleIntoSystemFormat,
     transformGenerator,
     transformGlobalThis,
-    remap
+    sourcemapEnabled
   });
 };
 
@@ -2238,8 +2240,14 @@ const transformResultToCompilationResult = async ({
   originalFileUrl,
   compiledFileUrl,
   sourcemapFileUrl,
-  remap = true,
-  remapMethod = "comment" // 'comment', 'inline'
+  sourcemapEnabled = true,
+  // removing sourcesContent from map decrease the sourceMap
+  // it also means client have to fetch source from server (additional http request)
+  // some client ignore sourcesContent property such as vscode-chrome-debugger
+  // Because it's the most complex scenario and we want to ensure client is always able
+  // to find source from the sourcemap, we remove map.sourcesContent by default to test this.
+  sourcemapExcludeSources = true,
+  sourcemapMethod = "comment" // "comment", "inline"
 
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -2268,7 +2276,7 @@ const transformResultToCompilationResult = async ({
   const assetsContent = [];
   let output = code;
 
-  if (remap && map) {
+  if (sourcemapEnabled && map) {
     if (map.sources.length === 0) {
       // may happen in some cases where babel returns a wrong sourcemap
       // there is at least one case where it happens
@@ -2298,21 +2306,19 @@ const transformResultToCompilationResult = async ({
           sourcesContent[index] = sourceFileContent;
         }
       }));
-    } // removing sourcesContent from map decrease the sourceMap
-    // it also means client have to fetch source from server (additional http request)
-    // some client ignore sourcesContent property such as vscode-chrome-debugger
-    // Because it's the most complex scenario and we want to ensure client is always able
-    // to find source from the sourcemap, we explicitely delete map.sourcesContent to test this.
+    }
 
-
-    delete map.sourcesContent; // we don't need sourceRoot because our path are relative or absolute to the current location
+    if (sourcemapExcludeSources) {
+      delete map.sourcesContent;
+    } // we don't need sourceRoot because our path are relative or absolute to the current location
     // we could comment this line because it is not set by babel because not passed during transform
+
 
     delete map.sourceRoot;
 
-    if (remapMethod === "inline") {
+    if (sourcemapMethod === "inline") {
       output = setJavaScriptSourceMappingUrl(output, sourcemapToBase64Url(map));
-    } else if (remapMethod === "comment") {
+    } else if (sourcemapMethod === "comment") {
       const sourcemapFileRelativePathForModule = util.urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl);
       output = setJavaScriptSourceMappingUrl(output, sourcemapFileRelativePathForModule);
       assets.push(sourcemapFileUrl);
@@ -6769,19 +6775,23 @@ const createJsenvRollupPlugin = async ({
           const fileBundleUrl = util.resolveUrl(bundleRelativeUrl, bundleDirectoryUrl);
 
           if (file.type === "chunk") {
-            await util.writeFile(fileBundleUrl, file.code);
+            let fileCode = file.code;
+
+            if (file.map) {
+              const sourcemapBundleRelativeUrl = `${bundleRelativeUrl}.map`;
+
+              if (sourcemapBundleRelativeUrl in rollupBundle === false) {
+                const sourcemapBundleUrl = util.resolveUrl(sourcemapBundleRelativeUrl, bundleDirectoryUrl);
+                const fileSourcemapString = JSON.stringify(file.map, null, "  ");
+                await util.writeFile(sourcemapBundleUrl, fileSourcemapString);
+                const sourcemapBundleUrlRelativeToFileBundleUrl = util.urlToRelativeUrl(sourcemapBundleUrl, fileBundleUrl);
+                fileCode = setJavaScriptSourceMappingUrl(fileCode, sourcemapBundleUrlRelativeToFileBundleUrl);
+              }
+            }
+
+            await util.writeFile(fileBundleUrl, fileCode);
           } else {
             await util.writeFile(fileBundleUrl, file.source);
-          }
-
-          if (file.map) {
-            const sourcemapBundleRelativeUrl = `${bundleRelativeUrl}.map`;
-
-            if (sourcemapBundleRelativeUrl in rollupBundle === false) {
-              const sourcemapBundleUrl = util.resolveUrl(sourcemapBundleRelativeUrl, bundleDirectoryUrl);
-              const fileSourcemapString = JSON.stringify(file.map, null, "  ");
-              await util.writeFile(sourcemapBundleUrl, fileSourcemapString);
-            }
           }
         }));
       }
@@ -7554,7 +7564,8 @@ const createCompiledFileService = ({
   projectFileRequestedCallback,
   useFilesystemAsCache,
   writeOnFilesystem,
-  compileCacheStrategy
+  compileCacheStrategy,
+  sourcemapExcludeSources
 }) => {
   return request => {
     const {
@@ -7689,7 +7700,8 @@ const createCompiledFileService = ({
             originalFileUrl,
             compiledFileUrl,
             sourcemapFileUrl,
-            remapMethod: writeOnFilesystem ? "comment" : "inline"
+            sourcemapMethod: writeOnFilesystem ? "comment" : "inline",
+            sourcemapExcludeSources
           });
         }
       });
@@ -7867,6 +7879,8 @@ const startCompileServer = async ({
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
   writeOnFilesystem = true,
+  sourcemapExcludeSources = false,
+  // this should increase perf (no need to download source for browser)
   useFilesystemAsCache = true,
   compileCacheStrategy = "etag",
   // js compile options
@@ -8014,6 +8028,7 @@ const startCompileServer = async ({
     projectFileRequestedCallback,
     useFilesystemAsCache,
     writeOnFilesystem,
+    sourcemapExcludeSources,
     compileCacheStrategy
   });
   const serveProjectFile = createProjectFileService({
@@ -12367,3 +12382,5 @@ exports.launchNode = launchNode;
 exports.launchWebkit = launchWebkit;
 exports.launchWebkitTab = launchWebkitTab;
 exports.startExploring = startExploring;
+
+//# sourceMappingURL=main.cjs.map

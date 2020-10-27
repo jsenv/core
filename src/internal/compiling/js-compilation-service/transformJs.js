@@ -20,7 +20,7 @@ export const transformJs = async ({
   transformModuleIntoSystemFormat = true,
   transformGenerator = true,
   transformGlobalThis = true,
-  remap = true,
+  sourcemapEnabled = true,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -42,7 +42,7 @@ export const transformJs = async ({
     map,
     projectDirectoryUrl,
     convertMap,
-    remap,
+    sourcemapEnabled,
     allowTopLevelAwait,
   })
   const inputPath = computeInputPath(url)
@@ -60,7 +60,7 @@ export const transformJs = async ({
     transformModuleIntoSystemFormat,
     transformGenerator,
     transformGlobalThis,
-    remap,
+    sourcemapEnabled,
   })
 }
 

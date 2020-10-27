@@ -26,7 +26,7 @@ export const jsenvTransform = async ({
   transformGenerator,
   transformGlobalThis,
   regeneratorRuntimeImportPath,
-  remap,
+  sourcemapEnabled,
 }) => {
   // https://babeljs.io/docs/en/options
   const options = {
@@ -36,7 +36,7 @@ export const jsenvTransform = async ({
     configFile: false,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,
-    sourceMaps: remap,
+    sourceMaps: sourcemapEnabled,
     sourceFileName: inputPath,
     // https://babeljs.io/docs/en/options#parseropts
     parserOpts: {
