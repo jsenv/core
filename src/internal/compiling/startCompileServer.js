@@ -43,7 +43,6 @@ import {
   sourcemapMainFileUrl,
   sourcemapMappingFileUrl,
   browserJsFileUrl,
-  nodeJsFileUrl,
 } from "../jsenvInternalFiles.js"
 
 export const startCompileServer = async ({
@@ -102,7 +101,6 @@ export const startCompileServer = async ({
   scriptInjections = [],
 
   browserInternalFileAnticipation = false,
-  nodeInternalFileAnticipation = false,
 }) => {
   assertArguments({
     projectDirectoryUrl,
@@ -297,12 +295,6 @@ export const startCompileServer = async ({
     const browserJsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
     internalFilesToPing.push(
       `${compileServer.origin}/${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserJsFileRelativeUrl}`,
-    )
-  }
-  if (nodeInternalFileAnticipation) {
-    const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl)
-    internalFilesToPing.push(
-      `${compileServer.origin}/${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`,
     )
   }
   if (internalFilesToPing.length) {

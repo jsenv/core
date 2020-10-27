@@ -2,8 +2,12 @@ import { resolveUrl, fileSystemPathToUrl } from "@jsenv/util"
 import { require } from "./require.js"
 import { jsenvCoreDirectoryUrl } from "./jsenvCoreDirectoryUrl.js"
 
-export const nodeJsFileUrl = resolveUrl(
+export const jsenvNodeSystemUrl = resolveUrl(
   "./src/internal/node-launcher/node-js-file.js",
+  jsenvCoreDirectoryUrl,
+)
+export const jsenvNodeSystemBundleUrl = resolveUrl(
+  "./dist/jsenv-node-system.cjs",
   jsenvCoreDirectoryUrl,
 )
 
