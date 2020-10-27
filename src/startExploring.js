@@ -5,7 +5,6 @@ import {
   collectFiles,
   urlToRelativeUrl,
 } from "@jsenv/util"
-import { COMPILE_ID_GLOBAL_BUNDLE } from "./internal/CONSTANTS.js"
 import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
@@ -15,12 +14,12 @@ import {
 } from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 import {
-  exploringRedirectorHtmlFileUrl,
-  jsenvExploringRedirectorJsBundleUrl,
-  exploringHtmlFileUrl,
   sourcemapMainFileUrl,
   sourcemapMappingFileUrl,
-  jsenvToolbarMainJsFileUrl,
+  jsenvExploringRedirectorHtmlUrl,
+  jsenvExploringRedirectorJsBundleUrl,
+  jsenvExploringHtmlUrl,
+  jsenvToolbarJsBundleUrl,
 } from "./internal/jsenvInternalFiles.js"
 
 export const startExploring = async ({
@@ -97,38 +96,36 @@ export const startExploring = async ({
   })
 }
 
-const createRedirectFilesService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) => {
-  const exploringRedirectorHtmlFileRelativeUrl = urlToRelativeUrl(
-    exploringRedirectorHtmlFileUrl,
+const createRedirectFilesService = ({ projectDirectoryUrl }) => {
+  const jsenvExploringRedirectorHtmlRelativeUrlForProject = urlToRelativeUrl(
+    jsenvExploringRedirectorHtmlUrl,
     projectDirectoryUrl,
   )
   const jsenvExploringRedirectorJsBundleRelativeUrlForProject = urlToRelativeUrl(
     jsenvExploringRedirectorJsBundleUrl,
     projectDirectoryUrl,
   )
-
-  const toolbarMainJsFileRelativeUrl = urlToRelativeUrl(
-    jsenvToolbarMainJsFileUrl,
+  const jsenvToolbarJsBundleRelativeUrlForProject = urlToRelativeUrl(
+    jsenvToolbarJsBundleUrl,
     projectDirectoryUrl,
   )
-  const toolbarMainJsCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${toolbarMainJsFileRelativeUrl}`
 
   return (request) => {
     if (request.ressource === "/") {
-      const exploringRedirectorHtmlFileUrl = `${request.origin}/${exploringRedirectorHtmlFileRelativeUrl}`
+      const jsenvExploringRedirectorHtmlServerUrl = `${request.origin}/${jsenvExploringRedirectorHtmlRelativeUrlForProject}`
       return {
         status: 307,
         headers: {
-          location: exploringRedirectorHtmlFileUrl,
+          location: jsenvExploringRedirectorHtmlServerUrl,
         },
       }
     }
     if (request.ressource === "/.jsenv/toolbar.main.js") {
-      const toolbarMainJsCompiledFileUrl = `${request.origin}/${toolbarMainJsCompiledFileRelativeUrl}`
+      const jsenvToolbarJsBundleServerUrl = `${request.origin}/${jsenvToolbarJsBundleRelativeUrlForProject}`
       return {
         status: 307,
         headers: {
-          location: toolbarMainJsCompiledFileUrl,
+          location: jsenvToolbarJsBundleServerUrl,
         },
       }
     }
@@ -138,20 +135,20 @@ const createRedirectFilesService = ({ projectDirectoryUrl, outDirectoryRelativeU
     // we could also inline sourcemap but it's not yet possible
     // inside generateBundle
     if (request.ressource === "/.jsenv/toolbar.main.js.map") {
-      const toolbarSourcemapCompiledFileUrl = `${request.origin}/${toolbarMainJsCompiledFileRelativeUrl}.map`
+      const jsenvToolbarJsBundleSourcemapServerUrl = `${request.origin}/${jsenvToolbarJsBundleRelativeUrlForProject}.map`
       return {
         status: 307,
         headers: {
-          location: toolbarSourcemapCompiledFileUrl,
+          location: jsenvToolbarJsBundleSourcemapServerUrl,
         },
       }
     }
     if (request.ressource === "/.jsenv/exploring.redirector.js") {
-      const jsenvExploringRedirectorServerBundleUrl = `${request.origin}/${jsenvExploringRedirectorJsBundleRelativeUrlForProject}`
+      const jsenvExploringRedirectorBundleServerUrl = `${request.origin}/${jsenvExploringRedirectorJsBundleRelativeUrlForProject}`
       return {
         status: 307,
         headers: {
-          location: jsenvExploringRedirectorServerBundleUrl,
+          location: jsenvExploringRedirectorBundleServerUrl,
         },
       }
     }
@@ -175,7 +172,7 @@ const createExploringDataService = ({
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
         jsenvDirectoryRelativeUrl: urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl),
-        exploringHtmlFileRelativeUrl: urlToRelativeUrl(exploringHtmlFileUrl, projectDirectoryUrl),
+        exploringHtmlFileRelativeUrl: urlToRelativeUrl(jsenvExploringHtmlUrl, projectDirectoryUrl),
         sourcemapMainFileRelativeUrl: urlToRelativeUrl(sourcemapMainFileUrl, jsenvCoreDirectoryUrl),
         sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
           sourcemapMappingFileUrl,

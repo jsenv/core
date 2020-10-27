@@ -5,6 +5,7 @@ import {
   jsenvNodeSystemRelativeUrl,
   jsenvBrowserSystemRelativeUrl,
   jsenvExploringRedirectorJsRelativeUrl,
+  jsenvToolbarJsRelativeUrl,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
 const bundlesToGenerate = [
@@ -32,7 +33,14 @@ const bundlesToGenerate = [
       [jsenvExploringRedirectorJsRelativeUrl]: "./jsenv-exploring-redirector.js",
     },
   },
-  // il faut aussi faire le exploring redirector et jsenv toolbar
+  {
+    projectDirectoryUrl: jsenvCoreDirectoryUrl,
+    bundleDirectoryRelativeUrl: "dist",
+    format: "global",
+    entryPointMap: {
+      [jsenvToolbarJsRelativeUrl]: "./jsenv-toolbar.js",
+    },
+  },
 ]
 
 await bundlesToGenerate.reduce(async (previous, bundleToGenerate) => {
