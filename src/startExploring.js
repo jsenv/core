@@ -31,7 +31,6 @@ export const startExploring = async ({
   outDirectoryName,
   toolbar = true,
   livereloading = true,
-  browserInternalFileAnticipation = false,
   ...rest
 }) => {
   return wrapExternalFunctionExecution(async () => {
@@ -92,7 +91,6 @@ export const startExploring = async ({
       },
       jsenvDirectoryRelativeUrl,
       outDirectoryName,
-      browserInternalFileAnticipation,
       ...rest,
     })
 
