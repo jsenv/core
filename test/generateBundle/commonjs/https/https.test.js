@@ -63,7 +63,7 @@ const compilationResult = bundleToCompilationResult(bundle, {
     version: actual.version,
     file: "main.cjs",
     sources: ["../../https.js"],
-    sourcesContent: [null],
+    sourcesContent: [await readFile(mainFileUrl)],
     names: actual.names,
     mappings: actual.mappings,
   }

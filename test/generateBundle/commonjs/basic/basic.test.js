@@ -40,6 +40,8 @@ await generateBundle({
 // ensure sourcemap is generated
 {
   const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+  const answerUrl = resolveUrl("answer.js", testDirectoryUrl)
+  const basicUrl = resolveUrl("basic.js", testDirectoryUrl)
   const sourcemapBundleRelativeUrl = "main.cjs.map"
   const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, bundleDirectoryUrl)
   const sourcemapString = await readFile(sourcemapBundleUrl)
@@ -48,7 +50,7 @@ await generateBundle({
     version: 3,
     file: "main.cjs",
     sources: ["../../answer.js", "../../basic.js"],
-    sourcesContent: [null, null],
+    sourcesContent: [await readFile(answerUrl), await readFile(basicUrl)],
     names: actual.names,
     mappings: actual.mappings,
   }
