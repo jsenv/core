@@ -2,20 +2,19 @@ import { loggerToLogLevel } from "@jsenv/logger"
 import { urlToRelativeUrl, urlIsInsideOf, resolveUrl } from "@jsenv/util"
 import { composeTwoImportMaps } from "@jsenv/import-map"
 import { getImportMapFromNodeModules } from "@jsenv/node-module-import-map"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
 /**
- * generateImportMapForCompileServer allows the following:
+ * allows the following:
  *
- * import importMap from '/jsenv.importmap'
+ * import "@jsenv/core/helpers/regenerator-runtime/regenerator-runtime.js"
+ * -> searches a file inside @jsenv/core/*
  *
- * returns the project importMap.
- * Note that if importMap file does not exists an empty object is returned.
- * Note that if project uses a custom importMapFileRelativeUrl jsenv internal import map
- * remaps '/jsenv.importmap' to the real importMap
+ * import importMap from "/jsenv.importmap"
+ * -> searches project importMap at importMapFileRelativeUrl
+ * (if importMap file does not exists an empty object is returned)
+ * (if project uses a custom importMapFileRelativeUrl jsenv that file is returned)
  *
- * This pattern exists so that jsenv can resolve some dynamically injected import such as
- *
- * @jsenv/core/helpers/regenerator-runtime/regenerator-runtime.js
  */
 
 export const transformImportmap = async (
@@ -24,7 +23,6 @@ export const transformImportmap = async (
     logger,
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
-    jsenvCoreDirectoryUrl,
     originalFileUrl,
     compiledFileUrl,
     projectFileRequestedCallback,
@@ -36,6 +34,14 @@ export const transformImportmap = async (
   const importMapForProject = JSON.parse(importmapBeforeTransformation)
   const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
 
+  const importMapForJsenvCore = await getImportMapFromNodeModules({
+    logLevel: loggerToLogLevel(logger),
+    projectDirectoryUrl: jsenvCoreDirectoryUrl,
+    rootProjectDirectoryUrl: projectDirectoryUrl,
+    importMapFileRelativeUrl: originalFileRelativeUrl,
+    projectPackageDevDependenciesIncluded: false,
+  })
+
   const topLevelRemappingForJsenvCore = {
     "@jsenv/core/": urlToRelativeUrlRemapping(jsenvCoreDirectoryUrl, originalFileUrl),
   }
@@ -44,14 +50,6 @@ export const transformImportmap = async (
     imports: topLevelRemappingForJsenvCore,
     scopes: generateJsenvCoreScopes({ importMapForProject, topLevelRemappingForJsenvCore }),
   }
-
-  const importMapForJsenvCore = await getImportMapFromNodeModules({
-    logLevel: loggerToLogLevel(logger),
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    rootProjectDirectoryUrl: projectDirectoryUrl,
-    importMapFileRelativeUrl: originalFileRelativeUrl,
-    projectPackageDevDependenciesIncluded: false,
-  })
 
   const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
   const importMapInternal = {

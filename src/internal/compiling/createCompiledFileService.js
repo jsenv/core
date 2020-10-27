@@ -8,7 +8,6 @@ import {
   COMPILE_ID_COMMONJS_BUNDLE,
   COMPILE_ID_COMMONJS_BUNDLE_FILES,
 } from "../CONSTANTS.js"
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { jsenvToolbarHtmlFileUrl } from "../jsenvInternalFiles.js"
 import { createBabePluginMapForBundle } from "../bundling/createBabePluginMapForBundle.js"
 import { transformImportmap } from "./transformImportmap.js"
@@ -133,7 +132,6 @@ export const createCompiledFileService = ({
             logger,
             projectDirectoryUrl,
             outDirectoryRelativeUrl,
-            jsenvCoreDirectoryUrl,
             originalFileUrl,
             compiledFileUrl,
             projectFileRequestedCallback,
