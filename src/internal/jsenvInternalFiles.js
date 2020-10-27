@@ -11,13 +11,12 @@ export const jsenvNodeSystemBundleUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 
-export const browserJsFileUrl = resolveUrl(
+export const jsenvBrowserSystemUrl = resolveUrl(
   "./src/internal/browser-launcher/jsenv-browser-system.js",
   jsenvCoreDirectoryUrl,
 )
-
-export const jsenvHtmlFileUrl = resolveUrl(
-  "./src/internal/jsenv-html-file.html",
+export const jsenvBrowserSystemBundleUrl = resolveUrl(
+  "./dist/jsenv-browser-system.js",
   jsenvCoreDirectoryUrl,
 )
 

@@ -26,8 +26,6 @@ import {
   registerDirectoryLifecycle,
   urlIsInsideOf,
 } from "@jsenv/util"
-import { COMPILE_ID_GLOBAL_BUNDLE, COMPILE_ID_COMMONJS_BUNDLE } from "../CONSTANTS.js"
-import { fetchUrl } from "../fetchUrl.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { assertImportMapFileRelativeUrl, assertImportMapFileInsideProject } from "../argUtils.js"
 import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
@@ -39,11 +37,7 @@ import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
 import { createCallbackList } from "../createCallbackList.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
 import { urlIsAsset } from "./compile-directory/compile-asset.js"
-import {
-  sourcemapMainFileUrl,
-  sourcemapMappingFileUrl,
-  browserJsFileUrl,
-} from "../jsenvInternalFiles.js"
+import { sourcemapMainFileUrl, sourcemapMappingFileUrl } from "../jsenvInternalFiles.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -99,8 +93,6 @@ export const startCompileServer = async ({
   customServices = {},
   livereloadSSE = false,
   scriptInjections = [],
-
-  browserInternalFileAnticipation = false,
 }) => {
   assertArguments({
     projectDirectoryUrl,
@@ -182,14 +174,10 @@ export const startCompileServer = async ({
     }
   }
 
-  const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
-  const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
-
   const serveAssetFile = createAssetFileService({ projectDirectoryUrl })
   const serveBrowserScript = createBrowserScriptService({
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
-    browserBundledJsFileRelativeUrl,
   })
   const serveCompiledFile = createCompiledFileService({
     cancellationToken,
@@ -197,7 +185,6 @@ export const startCompileServer = async ({
 
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
-    browserBundledJsFileRelativeUrl,
     importMapFileRelativeUrl,
     importDefaultExtension,
 
@@ -288,22 +275,6 @@ export const startCompileServer = async ({
       },
       () => {},
     )
-  }
-
-  const internalFilesToPing = []
-  if (browserInternalFileAnticipation) {
-    const browserJsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
-    internalFilesToPing.push(
-      `${compileServer.origin}/${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserJsFileRelativeUrl}`,
-    )
-  }
-  if (internalFilesToPing.length) {
-    logger.info(`preparing jsenv internal files (${internalFilesToPing.length})...`)
-    await internalFilesToPing.reduce(async (previous, internalFileUrl) => {
-      await previous
-      logger.debug(`ping internal file at ${internalFileUrl} to have it in filesystem cache`)
-      return fetchUrl(internalFileUrl, { ignoreHttpsError: true })
-    }, Promise.resolve())
   }
 
   return {
@@ -715,11 +686,7 @@ const createAssetFileService = ({ projectDirectoryUrl }) => {
   }
 }
 
-const createBrowserScriptService = ({
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  browserBundledJsFileRelativeUrl,
-}) => {
+const createBrowserScriptService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) => {
   const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl)
   const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
     sourcemapMappingFileUrl,
@@ -747,17 +714,6 @@ const createBrowserScriptService = ({
           "content-length": Buffer.byteLength(body),
         },
         body,
-      }
-    }
-
-    if (request.ressource === "/.jsenv/browser-script.js") {
-      const browserBundledJsFileRemoteUrl = `${request.origin}/${browserBundledJsFileRelativeUrl}`
-
-      return {
-        status: 307,
-        headers: {
-          location: browserBundledJsFileRemoteUrl,
-        },
       }
     }
 
