@@ -28,6 +28,7 @@ import {
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
+import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 
 import { showSourceLocation } from "./showSourceLocation.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
@@ -795,21 +796,30 @@ export const createJsenvRollupPlugin = async ({
             const fileBundleUrl = resolveUrl(bundleRelativeUrl, bundleDirectoryUrl)
 
             if (file.type === "chunk") {
-              await writeFile(fileBundleUrl, file.code)
+              let fileCode = file.code
+              if (file.map) {
+                const sourcemapBundleRelativeUrl = `${bundleRelativeUrl}.map`
+                if (sourcemapBundleRelativeUrl in rollupBundle === false) {
+                  const sourcemapBundleUrl = resolveUrl(
+                    sourcemapBundleRelativeUrl,
+                    bundleDirectoryUrl,
+                  )
+                  const fileSourcemapString = JSON.stringify(file.map, null, "  ")
+                  await writeFile(sourcemapBundleUrl, fileSourcemapString)
+
+                  const sourcemapBundleUrlRelativeToFileBundleUrl = urlToRelativeUrl(
+                    sourcemapBundleUrl,
+                    fileBundleUrl,
+                  )
+                  fileCode = setJavaScriptSourceMappingUrl(
+                    fileCode,
+                    sourcemapBundleUrlRelativeToFileBundleUrl,
+                  )
+                }
+              }
+              await writeFile(fileBundleUrl, fileCode)
             } else {
               await writeFile(fileBundleUrl, file.source)
-            }
-
-            if (file.map) {
-              const sourcemapBundleRelativeUrl = `${bundleRelativeUrl}.map`
-              if (sourcemapBundleRelativeUrl in rollupBundle === false) {
-                const sourcemapBundleUrl = resolveUrl(
-                  sourcemapBundleRelativeUrl,
-                  bundleDirectoryUrl,
-                )
-                const fileSourcemapString = JSON.stringify(file.map, null, "  ")
-                await writeFile(sourcemapBundleUrl, fileSourcemapString)
-              }
             }
           }),
         )
