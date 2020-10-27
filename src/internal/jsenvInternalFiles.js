@@ -57,6 +57,12 @@ export const jsenvToolbarHtmlUrl = resolveUrl(
   "./src/internal/toolbar/toolbar.html",
   jsenvCoreDirectoryUrl,
 )
+export const jsenvToolbarInjectorRelativeUrl = "./src/internal/toolbar/toolbar.injector.js"
+export const jsenvToolbarInjectorBundleRelativeUrl = "./dist/jsenv-toolbar-injector.js"
+export const jsenvToolbarInjectorBundleUrl = resolveUrl(
+  jsenvToolbarInjectorBundleRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 export const jsenvToolbarJsRelativeUrl = "./src/internal/toolbar/toolbar.main.js"
 export const jsenvToolbarJsBundleRelativeUrl = "dist/jsenv-toolbar.js"
 export const jsenvToolbarJsUrl = resolveUrl(jsenvToolbarJsRelativeUrl, jsenvCoreDirectoryUrl)

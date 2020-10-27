@@ -150,38 +150,43 @@ export const generateBundle = async ({
 
     const { outDirectoryRelativeUrl, origin: compileServerOrigin } = compileServer
 
-    return generateBundleUsingRollup({
-      cancellationToken,
-      logger,
+    try {
+      const result = await generateBundleUsingRollup({
+        cancellationToken,
+        logger,
 
-      entryPointMap,
-      projectDirectoryUrl,
-      importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
-      compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
-      compileServerOrigin,
-      importDefaultExtension,
-      externalImportSpecifiers,
-      babelPluginMap,
-      node,
-      browser,
-      writeOnFileSystem,
+        entryPointMap,
+        projectDirectoryUrl,
+        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
+        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
+        compileServerOrigin,
+        importDefaultExtension,
+        externalImportSpecifiers,
+        babelPluginMap,
+        node,
+        browser,
+        writeOnFileSystem,
 
-      format,
-      useImportMapForJsBundleUrls,
-      systemJsUrl,
-      globalName,
-      globals,
-      sourcemapExcludeSources,
-      preserveEntrySignatures,
-      bundleDirectoryUrl,
-      bundleDirectoryClean,
-      manifestFile,
+        format,
+        useImportMapForJsBundleUrls,
+        systemJsUrl,
+        globalName,
+        globals,
+        sourcemapExcludeSources,
+        preserveEntrySignatures,
+        bundleDirectoryUrl,
+        bundleDirectoryClean,
+        manifestFile,
 
-      minify,
-      minifyHtmlOptions,
-      minifyJsOptions,
-      minifyCssOptions,
-    })
+        minify,
+        minifyHtmlOptions,
+        minifyJsOptions,
+        minifyCssOptions,
+      })
+      return result
+    } finally {
+      compileServer.stop("bundle generated")
+    }
   })
 }
 

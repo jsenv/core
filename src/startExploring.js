@@ -19,6 +19,7 @@ import {
   jsenvExploringRedirectorHtmlUrl,
   jsenvExploringRedirectorJsBundleUrl,
   jsenvExploringHtmlUrl,
+  jsenvToolbarInjectorBundleUrl,
   jsenvToolbarJsBundleUrl,
 } from "./internal/jsenvInternalFiles.js"
 
@@ -42,6 +43,10 @@ export const startExploring = async ({
       jsenvDirectoryRelativeUrl,
       outDirectoryName,
     })
+    const jsenvToolbarInjectorBundleRelativeUrlForProject = urlToRelativeUrl(
+      jsenvToolbarInjectorBundleUrl,
+      projectDirectoryUrl,
+    )
 
     const redirectFiles = createRedirectFilesService({
       projectDirectoryUrl,
@@ -75,8 +80,7 @@ export const startExploring = async ({
         ...(toolbar
           ? [
               {
-                type: "module",
-                src: "@jsenv/core/src/toolbar.js",
+                src: `/${jsenvToolbarInjectorBundleRelativeUrlForProject}`,
               },
             ]
           : []),

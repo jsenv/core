@@ -5,6 +5,7 @@ import {
   jsenvNodeSystemRelativeUrl,
   jsenvBrowserSystemRelativeUrl,
   jsenvExploringRedirectorJsRelativeUrl,
+  jsenvToolbarInjectorRelativeUrl,
   jsenvToolbarJsRelativeUrl,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
@@ -31,6 +32,14 @@ const bundlesToGenerate = [
     format: "global",
     entryPointMap: {
       [jsenvExploringRedirectorJsRelativeUrl]: "./jsenv-exploring-redirector.js",
+    },
+  },
+  {
+    projectDirectoryUrl: jsenvCoreDirectoryUrl,
+    bundleDirectoryRelativeUrl: "dist",
+    format: "global",
+    entryPointMap: {
+      [jsenvToolbarInjectorRelativeUrl]: "./jsenv-toolbar-injector.js",
     },
   },
   {

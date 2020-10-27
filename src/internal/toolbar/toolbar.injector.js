@@ -1,4 +1,4 @@
-import { setAttributes, setStyles } from "./internal/toolbar/util/dom.js"
+import { setAttributes, setStyles } from "./util/dom.js"
 
 /*
 We must connect to livereload server asap so that if a file is modified
