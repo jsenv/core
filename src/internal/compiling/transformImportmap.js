@@ -66,6 +66,17 @@ export const transformImportmap = async (
     importMapForProject,
   ].reduce((previous, current) => composeTwoImportMaps(previous, current), {})
 
+  const scopes = importMap.scopes || {}
+  const projectTopLevelMappings = importMapForProject.imports || {}
+  Object.keys(scopes).forEach((scope) => {
+    const scopedMappings = scopes[scope]
+    Object.keys(projectTopLevelMappings).forEach((key) => {
+      if (key in scopedMappings) {
+        scopedMappings[key] = projectTopLevelMappings[key]
+      }
+    })
+  })
+
   return {
     compiledSource: JSON.stringify(importMap, null, "  "),
     contentType: "application/importmap+json",
