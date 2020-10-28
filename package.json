@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "16.3.1",
+  "version": "16.3.2",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {
@@ -131,7 +131,7 @@
     "proper-lockfile": "4.1.1",
     "regenerator-runtime": "0.13.7",
     "rollup": "2.32.1",
-    "rollup-plugin-node-builtins": "2.1.2",
+    "rollup-plugin-node-builtins-brofs": "github:anwarhahjjeffersongeorge/rollup-plugin-node-builtins",
     "rollup-plugin-node-globals": "1.4.0",
     "source-map": "0.7.3",
     "string-width": "4.2.0",
