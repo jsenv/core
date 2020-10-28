@@ -4,8 +4,8 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 var module$1 = require('module');
 var util = require('@jsenv/util');
-var fs = require('fs');
 var cancellation = require('@jsenv/cancellation');
+var fs = require('fs');
 var server = require('@jsenv/server');
 var logger = require('@jsenv/logger');
 var importMap = require('@jsenv/import-map');
@@ -764,7 +764,7 @@ const convertCommonJsWithRollup = async ({
 const __filenameReplacement$1 = `import.meta.url.slice('file:///'.length)`;
 const __dirnameReplacement$1 = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`;
 
-const wrapExternalFunctionExecution = fn => util.wrapExternalFunction(fn, {
+const executeJsenvAsyncFunction = fn => cancellation.executeAsyncFunction(fn, {
   catchCancellation: true,
   unhandledRejectionStrict: true
 });
@@ -9187,7 +9187,7 @@ const promiseTrackRace = promiseArray => {
 };
 
 const execute = async ({
-  cancellationToken = util.createCancellationTokenForProcess(),
+  cancellationToken = cancellation.createCancellationTokenForProcess(),
   logLevel = "warn",
   compileServerLogLevel = logLevel,
   executionLogLevel = logLevel,
@@ -9212,7 +9212,7 @@ const execute = async ({
   ignoreError = false,
   ...rest
 }) => {
-  const executionPromise = wrapExternalFunctionExecution(async () => {
+  const executionPromise = executeJsenvAsyncFunction(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({
       projectDirectoryUrl
     });
@@ -9249,8 +9249,7 @@ const execute = async ({
       compileServerPort,
       babelPluginMap,
       convertMap,
-      compileGroupCount,
-      browserInternalFileAnticipation: fileRelativeUrl.endsWith(".html")
+      compileGroupCount
     });
     const result = await launchAndExecute({
       cancellationToken,
@@ -10240,8 +10239,7 @@ const executePlan = async (plan, {
     // to be sure it stays alive
     babelPluginMap,
     convertMap,
-    compileGroupCount,
-    browserInternalFileAnticipation: Object.keys(plan).some(key => key.endsWith(".html"))
+    compileGroupCount
   });
   const executionSteps = await generateExecutionSteps({ ...plan,
     [outDirectoryRelativeUrl]: null
@@ -10338,8 +10336,9 @@ const jsenvCoverageConfig = {
 
 };
 
+/* eslint-disable import/max-dependencies */
 const executeTestPlan = async ({
-  cancellationToken = util.createCancellationTokenForProcess(),
+  cancellationToken = cancellation.createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
   executionLogLevel = "warn",
@@ -10384,7 +10383,7 @@ const executeTestPlan = async ({
   // but we need something angostic that just forward the params hence using ...rest
   ...rest
 }) => {
-  return wrapExternalFunctionExecution(async () => {
+  return executeJsenvAsyncFunction(async () => {
     const logger$1 = logger.createLogger({
       logLevel
     });
@@ -10507,7 +10506,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
 };
 
 const generateBundle = async ({
-  cancellationToken = util.createCancellationTokenForProcess(),
+  cancellationToken = cancellation.createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
   logger: logger$1,
@@ -10563,7 +10562,7 @@ const generateBundle = async ({
   filesystemCache = true,
   ...rest
 }) => {
-  return wrapExternalFunctionExecution(async () => {
+  return executeJsenvAsyncFunction(async () => {
     logger$1 = logger$1 || logger.createLogger({
       logLevel
     });
@@ -12126,17 +12125,16 @@ const evalSource$2 = (code, href) => {
 };
 
 const startExploring = async ({
-  cancellationToken = util.createCancellationTokenForProcess(),
+  cancellationToken = cancellation.createCancellationTokenForProcess(),
   explorableConfig = jsenvExplorableConfig,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryName,
   toolbar = true,
   livereloading = true,
-  browserInternalFileAnticipation = false,
   ...rest
 }) => {
-  return wrapExternalFunctionExecution(async () => {
+  return executeJsenvAsyncFunction(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({
       projectDirectoryUrl
     });
@@ -12186,7 +12184,6 @@ const startExploring = async ({
       },
       jsenvDirectoryRelativeUrl,
       outDirectoryName,
-      browserInternalFileAnticipation,
       ...rest
     });
     return compileServer;

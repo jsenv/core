@@ -1,19 +1,19 @@
 /* eslint-disable import/max-dependencies */
 import {
+  createCancellationTokenForProcess,
   composeCancellationToken,
   createCancellationSource,
   errorToCancelReason,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import {
-  createCancellationTokenForProcess,
   urlIsInsideOf,
   urlToRelativeUrl,
   urlToFileSystemPath,
   registerDirectoryLifecycle,
 } from "@jsenv/util"
-import { wrapExternalFunctionExecution } from "../../wrapExternalFunctionExecution.js"
-import { require } from "../../require.js"
+import { executeJsenvAsyncFunction } from "@jsenv/core/src/internal/executeJsenvAsyncFunction.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "../../argUtils.js"
 import { generateExecutionSteps } from "../../executing/generateExecutionSteps.js"
 import { executeConcurrently } from "../../executing/executeConcurrently.js"
@@ -52,7 +52,7 @@ export const startContinuousTesting = async ({
   measureTotalDuration = false,
   systemNotification = true,
 }) => {
-  return wrapExternalFunctionExecution(async () => {
+  return executeJsenvAsyncFunction(async () => {
     const logger = createLogger({ logLevel })
 
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })

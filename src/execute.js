@@ -1,5 +1,5 @@
-import { createCancellationTokenForProcess } from "@jsenv/util"
-import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
+import { createCancellationTokenForProcess } from "@jsenv/cancellation"
+import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
@@ -33,7 +33,7 @@ export const execute = async ({
   ignoreError = false,
   ...rest
 }) => {
-  const executionPromise = wrapExternalFunctionExecution(async () => {
+  const executionPromise = executeJsenvAsyncFunction(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 

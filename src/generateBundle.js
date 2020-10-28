@@ -1,6 +1,7 @@
 import { createLogger } from "@jsenv/logger"
-import { resolveDirectoryUrl, createCancellationTokenForProcess } from "@jsenv/util"
-import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
+import { createCancellationTokenForProcess } from "@jsenv/cancellation"
+import { resolveDirectoryUrl } from "@jsenv/util"
+import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
@@ -67,7 +68,7 @@ export const generateBundle = async ({
 
   ...rest
 }) => {
-  return wrapExternalFunctionExecution(async () => {
+  return executeJsenvAsyncFunction(async () => {
     logger = logger || createLogger({ logLevel })
 
     if (format === "esm") {

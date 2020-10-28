@@ -2,18 +2,10 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var url$1 = require('url');
-var fs = require('fs');
-var crypto = require('crypto');
-var path = require('path');
-var util = require('util');
+var util = require('@jsenv/util');
 var module$1 = require('module');
 var https = require('https');
-var perf_hooks = require('perf_hooks');
-require('net');
-require('http');
-require('stream');
-require('os');
+var server = require('@jsenv/server');
 var vm = require('vm');
 
 var _defineProperty = (function (obj, key, value) {
@@ -122,367 +114,6 @@ var customTypeOf = function customTypeOf(obj) {
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
-var ensureUrlTrailingSlash = function ensureUrlTrailingSlash(url) {
-  return url.endsWith("/") ? url : "".concat(url, "/");
-};
-
-var isFileSystemPath = function isFileSystemPath(value) {
-  if (typeof value !== "string") {
-    throw new TypeError("isFileSystemPath first arg must be a string, got ".concat(value));
-  }
-
-  if (value[0] === "/") return true;
-  return startsWithWindowsDriveLetter(value);
-};
-
-var startsWithWindowsDriveLetter = function startsWithWindowsDriveLetter(string) {
-  var firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  var secondChar = string[1];
-  if (secondChar !== ":") return false;
-  return true;
-};
-
-var fileSystemPathToUrl = function fileSystemPathToUrl(value) {
-  if (!isFileSystemPath(value)) {
-    throw new Error("received an invalid value for fileSystemPath: ".concat(value));
-  }
-
-  return String(url$1.pathToFileURL(value));
-};
-
-var assertAndNormalizeDirectoryUrl = function assertAndNormalizeDirectoryUrl(value) {
-  var urlString;
-
-  if (value instanceof URL) {
-    urlString = value.href;
-  } else if (typeof value === "string") {
-    if (isFileSystemPath(value)) {
-      urlString = fileSystemPathToUrl(value);
-    } else {
-      try {
-        urlString = String(new URL(value));
-      } catch (e) {
-        throw new TypeError("directoryUrl must be a valid url, received ".concat(value));
-      }
-    }
-  } else {
-    throw new TypeError("directoryUrl must be a string or an url, received ".concat(value));
-  }
-
-  if (!urlString.startsWith("file://")) {
-    throw new Error("directoryUrl must starts with file://, received ".concat(value));
-  }
-
-  return ensureUrlTrailingSlash(urlString);
-};
-
-var assertAndNormalizeFileUrl = function assertAndNormalizeFileUrl(value, baseUrl) {
-  var urlString;
-
-  if (value instanceof URL) {
-    urlString = value.href;
-  } else if (typeof value === "string") {
-    if (isFileSystemPath(value)) {
-      urlString = fileSystemPathToUrl(value);
-    } else {
-      try {
-        urlString = String(new URL(value, baseUrl));
-      } catch (e) {
-        throw new TypeError("fileUrl must be a valid url, received ".concat(value));
-      }
-    }
-  } else {
-    throw new TypeError("fileUrl must be a string or an url, received ".concat(value));
-  }
-
-  if (!urlString.startsWith("file://")) {
-    throw new Error("fileUrl must starts with file://, received ".concat(value));
-  }
-
-  return urlString;
-};
-
-var urlToFileSystemPath = function urlToFileSystemPath(fileUrl) {
-  if (fileUrl[fileUrl.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    fileUrl = fileUrl.slice(0, -1);
-  }
-
-  var fileSystemPath = url$1.fileURLToPath(fileUrl);
-  return fileSystemPath;
-};
-
-var isWindows = process.platform === "win32";
-
-var ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-var bufferToEtag = function bufferToEtag(buffer) {
-  if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError("buffer expected, got ".concat(buffer));
-  }
-
-  if (buffer.length === 0) {
-    return ETAG_FOR_EMPTY_CONTENT;
-  }
-
-  var hash = crypto.createHash("sha1");
-  hash.update(buffer, "utf8");
-  var hashBase64String = hash.digest("base64");
-  var hashBase64StringSubset = hashBase64String.slice(0, 27);
-  var length = buffer.length;
-  return "\"".concat(length.toString(16), "-").concat(hashBase64StringSubset, "\"");
-};
-
-var createCancellationToken = function createCancellationToken() {
-  var register = function register(callback) {
-    if (typeof callback !== "function") {
-      throw new Error("callback must be a function, got ".concat(callback));
-    }
-
-    return {
-      callback: callback,
-      unregister: function unregister() {}
-    };
-  };
-
-  var throwIfRequested = function throwIfRequested() {
-    return undefined;
-  };
-
-  return {
-    register: register,
-    cancellationRequested: false,
-    throwIfRequested: throwIfRequested
-  };
-};
-
-var createOperation = function createOperation(_ref) {
-  var _ref$cancellationToke = _ref.cancellationToken,
-      cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
-      start = _ref.start,
-      rest = _objectWithoutProperties(_ref, ["cancellationToken", "start"]);
-
-  var unknownArgumentNames = Object.keys(rest);
-
-  if (unknownArgumentNames.length) {
-    throw new Error("createOperation called with unknown argument names.\n--- unknown argument names ---\n".concat(unknownArgumentNames, "\n--- possible argument names ---\ncancellationToken\nstart"));
-  }
-
-  cancellationToken.throwIfRequested();
-  var promise = new Promise(function (resolve) {
-    resolve(start());
-  });
-  var cancelPromise = new Promise(function (resolve, reject) {
-    var cancelRegistration = cancellationToken.register(function (cancelError) {
-      cancelRegistration.unregister();
-      reject(cancelError);
-    });
-    promise.then(cancelRegistration.unregister, function () {});
-  });
-  var operationPromise = Promise.race([promise, cancelPromise]);
-  return operationPromise;
-};
-
-/* eslint-disable no-eq-null, eqeqeq */
-function arrayLikeToArray(arr, len) {
-  if (len == null || len > arr.length) len = arr.length;
-  var arr2 = new Array(len);
-
-  for (var i = 0; i < len; i++) {
-    arr2[i] = arr[i];
-  }
-
-  return arr2;
-}
-
-var arrayWithoutHoles = (function (arr) {
-  if (Array.isArray(arr)) return arrayLikeToArray(arr);
-});
-
-// eslint-disable-next-line consistent-return
-var iterableToArray = (function (iter) {
-  if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter);
-});
-
-/* eslint-disable consistent-return */
-function unsupportedIterableToArray(o, minLen) {
-  if (!o) return;
-  if (typeof o === "string") return arrayLikeToArray(o, minLen);
-  var n = Object.prototype.toString.call(o).slice(8, -1);
-  if (n === "Object" && o.constructor) n = o.constructor.name;
-  if (n === "Map" || n === "Set") return Array.from(o);
-  if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
-}
-
-var nonIterableSpread = (function () {
-  throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-});
-
-var _toConsumableArray = (function (arr) {
-  return arrayWithoutHoles(arr) || iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
-});
-
-function _async(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var readDirectory = _async(function (url) {
-  var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-      _ref$emfileMaxWait = _ref.emfileMaxWait,
-      emfileMaxWait = _ref$emfileMaxWait === void 0 ? 1000 : _ref$emfileMaxWait;
-
-  var directoryUrl = assertAndNormalizeDirectoryUrl(url);
-  var directoryPath = urlToFileSystemPath(directoryUrl);
-  var startMs = Date.now();
-  var attemptCount = 0;
-
-  var attempt = function attempt() {
-    return readdirNaive(directoryPath, {
-      handleTooManyFilesOpenedError: _async(function (error) {
-        attemptCount++;
-        var nowMs = Date.now();
-        var timeSpentWaiting = nowMs - startMs;
-
-        if (timeSpentWaiting > emfileMaxWait) {
-          throw error;
-        }
-
-        return new Promise(function (resolve) {
-          setTimeout(function () {
-            resolve(attempt());
-          }, attemptCount);
-        });
-      })
-    });
-  };
-
-  return attempt();
-});
-
-var readdirNaive = function readdirNaive(directoryPath) {
-  var _ref2 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-      _ref2$handleTooManyFi = _ref2.handleTooManyFilesOpenedError,
-      handleTooManyFilesOpenedError = _ref2$handleTooManyFi === void 0 ? null : _ref2$handleTooManyFi;
-
-  return new Promise(function (resolve, reject) {
-    fs.readdir(directoryPath, function (error, names) {
-      if (error) {
-        // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
-        if (handleTooManyFilesOpenedError && (error.code === "EMFILE" || error.code === "ENFILE")) {
-          resolve(handleTooManyFilesOpenedError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(names);
-      }
-    });
-  });
-};
-
-var mkdir = fs.promises.mkdir;
-
-var resolveUrl = function resolveUrl(specifier, baseUrl) {
-  if (typeof baseUrl === "undefined") {
-    throw new TypeError("baseUrl missing to resolve ".concat(specifier));
-  }
-
-  return String(new URL(specifier, baseUrl));
-};
-
-var isWindows$1 = process.platform === "win32";
-var baseUrlFallback = fileSystemPathToUrl(process.cwd());
-/**
- * Some url might be resolved or remapped to url without the windows drive letter.
- * For instance
- * new URL('/foo.js', 'file:///C:/dir/file.js')
- * resolves to
- * 'file:///foo.js'
- *
- * But on windows it becomes a problem because we need the drive letter otherwise
- * url cannot be converted to a filesystem path.
- *
- * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
- */
-
-var ensureWindowsDriveLetter = function ensureWindowsDriveLetter(url, baseUrl) {
-  try {
-    url = String(new URL(url));
-  } catch (e) {
-    throw new Error("absolute url expected but got ".concat(url));
-  }
-
-  if (!isWindows$1) {
-    return url;
-  }
-
-  try {
-    baseUrl = String(new URL(baseUrl));
-  } catch (e) {
-    throw new Error("absolute baseUrl expected but got ".concat(baseUrl, " to ensure windows drive letter on ").concat(url));
-  }
-
-  if (!url.startsWith("file://")) {
-    return url;
-  }
-
-  var afterProtocol = url.slice("file://".length); // we still have the windows drive letter
-
-  if (extractDriveLetter(afterProtocol)) {
-    return url;
-  } // drive letter was lost, restore it
-
-
-  var baseUrlOrFallback = baseUrl.startsWith("file://") ? baseUrl : baseUrlFallback;
-  var driveLetter = extractDriveLetter(baseUrlOrFallback.slice("file://".length));
-
-  if (!driveLetter) {
-    throw new Error("drive letter expected on baseUrl but got ".concat(baseUrl, " to ensure windows drive letter on ").concat(url));
-  }
-
-  return "file:///".concat(driveLetter, ":").concat(afterProtocol);
-};
-
-var extractDriveLetter = function extractDriveLetter(ressource) {
-  // we still have the windows drive letter
-  if (/[a-zA-Z]/.test(ressource[1]) && ressource[2] === ":") {
-    return ressource[1];
-  }
-
-  return null;
-};
-
-var symlink = fs.promises.symlink;
-
-var isWindows$2 = process.platform === "win32";
-
-var stat = fs.promises.stat;
-
-var readFilePromisified = util.promisify(fs.readFile);
-
-var isWindows$3 = process.platform === "win32";
-
-var isLinux = process.platform === "linux"; // linux does not support recursive option
-
-var access = fs.promises.access;
-
-var R_OK = fs.constants.R_OK,
-    W_OK = fs.constants.W_OK,
-    X_OK = fs.constants.X_OK;
-
-var writeFileNode = fs.promises.writeFile;
-
 var assertImportMap = function assertImportMap(value) {
   if (value === null) {
     throw new TypeError("an importMap must be an object, got null");
@@ -563,7 +194,7 @@ var pathnameToParentPathname = function pathnameToParentPathname(pathname) {
 };
 
 // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
-var resolveUrl$1 = function resolveUrl(specifier, baseUrl) {
+var resolveUrl = function resolveUrl(specifier, baseUrl) {
   if (baseUrl) {
     if (typeof baseUrl !== "string") {
       throw new TypeError(writeBaseUrlMustBeAString({
@@ -666,13 +297,13 @@ var writeBaseUrlRequired = function writeBaseUrlRequired(_ref3) {
 };
 
 var tryUrlResolution = function tryUrlResolution(string, url) {
-  var result = resolveUrl$1(string, url);
+  var result = resolveUrl(string, url);
   return hasScheme(result) ? result : null;
 };
 
 var resolveSpecifier = function resolveSpecifier(specifier, importer) {
   if (specifier === "." || specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
-    return resolveUrl$1(specifier, importer);
+    return resolveUrl(specifier, importer);
   }
 
   if (hasScheme(specifier)) {
@@ -951,7 +582,7 @@ var resolveImport = function resolveImport(_ref) {
       importMap: importMap,
       specifier: specifier,
       importer: importer
-    }) : resolveUrl$1(specifier, importer),
+    }) : resolveUrl(specifier, importer),
     importer: importer,
     defaultExtension: defaultExtension
   });
@@ -996,390 +627,6 @@ var url = filenameContainsBackSlashes ? "file:///".concat(__filename.replace(/\\
 
 var require$1 = module$1.createRequire(url);
 
-var compositionMappingToComposeStrict = function compositionMappingToComposeStrict(compositionMapping) {
-  var createInitial = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {
-    return {};
-  };
-  var reducer = compositionMappingToStrictReducer(compositionMapping);
-  return function () {
-    for (var _len = arguments.length, objects = new Array(_len), _key = 0; _key < _len; _key++) {
-      objects[_key] = arguments[_key];
-    }
-
-    return objects.reduce(reducer, createInitial());
-  };
-};
-
-var compositionMappingToStrictReducer = function compositionMappingToStrictReducer(compositionMapping) {
-  var propertyComposeStrict = function propertyComposeStrict(key, previous, current) {
-    var propertyExistInCurrent = (key in current);
-    if (!propertyExistInCurrent) return previous[key];
-    var propertyExistInPrevious = (key in previous);
-    if (!propertyExistInPrevious) return current[key];
-    var composeProperty = compositionMapping[key];
-    return composeProperty(previous[key], current[key]);
-  };
-
-  return function (previous, current) {
-    if (_typeof(current) !== "object" || current === null) return previous;
-    var composed = {};
-    Object.keys(compositionMapping).forEach(function (key) {
-      composed[key] = propertyComposeStrict(key, previous, current);
-    });
-    return composed;
-  };
-};
-
-var compositionMappingToCompose = function compositionMappingToCompose(compositionMapping) {
-  var createInitial = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {
-    return {};
-  };
-  var reducer = compositionMappingToReducer(compositionMapping);
-  return function () {
-    for (var _len = arguments.length, objects = new Array(_len), _key = 0; _key < _len; _key++) {
-      objects[_key] = arguments[_key];
-    }
-
-    return objects.reduce(reducer, createInitial());
-  };
-};
-
-var compositionMappingToReducer = function compositionMappingToReducer(compositionMapping) {
-  var composeProperty = function composeProperty(key, previous, current) {
-    var propertyExistInCurrent = (key in current);
-    if (!propertyExistInCurrent) return previous[key];
-    var propertyExistInPrevious = (key in previous);
-    if (!propertyExistInPrevious) return current[key];
-    var propertyHasComposer = (key in compositionMapping);
-    if (!propertyHasComposer) return current[key];
-    var composerForProperty = compositionMapping[key];
-    return composerForProperty(previous[key], current[key]);
-  };
-
-  return function (previous, current) {
-    if (_typeof(current) !== "object" || current === null) return previous;
-
-    var composed = _objectSpread({}, previous);
-
-    Object.keys(current).forEach(function (key) {
-      composed[key] = composeProperty(key, previous, current);
-    });
-    return composed;
-  };
-};
-
-var composeHeaderValues = function composeHeaderValues(value, nextValue) {
-  var headerValues = value.split(", ");
-  nextValue.split(", ").forEach(function (value) {
-    if (!headerValues.includes(value)) {
-      headerValues.push(value);
-    }
-  });
-  return headerValues.join(", ");
-};
-
-var headerCompositionMapping = {
-  "accept": composeHeaderValues,
-  "accept-charset": composeHeaderValues,
-  "accept-language": composeHeaderValues,
-  "access-control-allow-headers": composeHeaderValues,
-  "access-control-allow-methods": composeHeaderValues,
-  "access-control-allow-origin": composeHeaderValues,
-  // https://www.w3.org/TR/server-timing/
-  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
-  "server-timing": composeHeaderValues,
-  // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
-  "vary": composeHeaderValues
-};
-var composeResponseHeaders = compositionMappingToCompose(headerCompositionMapping);
-
-var responseCompositionMapping = {
-  status: function status(prevStatus, _status) {
-    return _status;
-  },
-  statusText: function statusText(prevStatusText, _statusText) {
-    return _statusText;
-  },
-  headers: composeResponseHeaders,
-  body: function body(prevBody, _body) {
-    return _body;
-  },
-  bodyEncoding: function bodyEncoding(prevEncoding, encoding) {
-    return encoding;
-  },
-  timing: function timing(prevTiming, _timing) {
-    return _objectSpread(_objectSpread({}, prevTiming), _timing);
-  }
-};
-var composeResponse = compositionMappingToComposeStrict(responseCompositionMapping);
-
-var convertFileSystemErrorToResponseProperties = function convertFileSystemErrorToResponseProperties(error) {
-  // https://iojs.org/api/errors.html#errors_eacces_permission_denied
-  if (isErrorWithCode(error, "EACCES")) {
-    return {
-      status: 403,
-      statusText: "EACCES: No permission to read file at ".concat(error.path)
-    };
-  }
-
-  if (isErrorWithCode(error, "EPERM")) {
-    return {
-      status: 403,
-      statusText: "EPERM: No permission to read file at ".concat(error.path)
-    };
-  }
-
-  if (isErrorWithCode(error, "ENOENT")) {
-    return {
-      status: 404,
-      statusText: "ENOENT: File not found at ".concat(error.path)
-    };
-  } // file access may be temporarily blocked
-  // (by an antivirus scanning it because recently modified for instance)
-
-
-  if (isErrorWithCode(error, "EBUSY")) {
-    return {
-      status: 503,
-      statusText: "EBUSY: File is busy ".concat(error.path),
-      headers: {
-        "retry-after": 0.01 // retry in 10ms
-
-      }
-    };
-  } // emfile means there is too many files currently opened
-
-
-  if (isErrorWithCode(error, "EMFILE")) {
-    return {
-      status: 503,
-      statusText: "EMFILE: too many file opened",
-      headers: {
-        "retry-after": 0.1 // retry in 100ms
-
-      }
-    };
-  }
-
-  if (isErrorWithCode(error, "EISDIR")) {
-    return {
-      status: 500,
-      statusText: "EISDIR: Unexpected directory operation at ".concat(error.path)
-    };
-  }
-
-  return Promise.reject(error);
-};
-
-var isErrorWithCode = function isErrorWithCode(error, code) {
-  return _typeof(error) === "object" && error.code === code;
-};
-
-if ("observable" in Symbol === false) {
-  Symbol.observable = Symbol.for("observable");
-}
-
-// eslint-disable-next-line consistent-return
-var arrayWithHoles = (function (arr) {
-  if (Array.isArray(arr)) return arr;
-});
-
-var iterableToArrayLimit = (function (arr, i) {
-  // this is an expanded form of \`for...of\` that properly supports abrupt completions of
-  // iterators etc. variable names have been minimised to reduce the size of this massive
-  // helper. sometimes spec compliance is annoying :(
-  //
-  // _n = _iteratorNormalCompletion
-  // _d = _didIteratorError
-  // _e = _iteratorError
-  // _i = _iterator
-  // _s = _step
-  if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return;
-  var _arr = [];
-  var _n = true;
-  var _d = false;
-
-  var _e;
-
-  var _i = arr[Symbol.iterator]();
-
-  var _s;
-
-  try {
-    for (; !(_n = (_s = _i.next()).done); _n = true) {
-      _arr.push(_s.value);
-
-      if (i && _arr.length === i) break;
-    }
-  } catch (err) {
-    _d = true;
-    _e = err;
-  } finally {
-    try {
-      if (!_n && _i.return !== null) _i.return();
-    } finally {
-      if (_d) throw _e;
-    }
-  } // eslint-disable-next-line consistent-return
-
-
-  return _arr;
-});
-
-var nonIterableRest = (function () {
-  throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-});
-
-var _slicedToArray = (function (arr, i) {
-  return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
-});
-
-var timeStart = function timeStart(name) {
-  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
-  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
-  var startTimestamp = perf_hooks.performance.now();
-
-  var timeEnd = function timeEnd() {
-    var endTimestamp = perf_hooks.performance.now();
-
-    var timing = _defineProperty({}, name, endTimestamp - startTimestamp);
-
-    return timing;
-  };
-
-  return timeEnd;
-};
-var timeFunction = function timeFunction(name, fn) {
-  var timeEnd = timeStart(name);
-  var returnValue = fn();
-
-  if (returnValue && typeof returnValue.then === "function") {
-    return returnValue.then(function (value) {
-      return [timeEnd(), value];
-    });
-  }
-
-  return [timeEnd(), returnValue];
-}; // to predict order in chrome devtools we should put a,b,c,d,e or something
-
-var jsenvContentTypeMap = {
-  "application/javascript": {
-    extensions: ["js", "cjs", "mjs", "ts", "jsx"]
-  },
-  "application/json": {
-    extensions: ["json"]
-  },
-  "application/importmap+json": {
-    extensions: ["importmap"]
-  },
-  "application/octet-stream": {},
-  "application/pdf": {
-    extensions: ["pdf"]
-  },
-  "application/xml": {
-    extensions: ["xml"]
-  },
-  "application/x-gzip": {
-    extensions: ["gz"]
-  },
-  "application/wasm": {
-    extensions: ["wasm"]
-  },
-  "application/zip": {
-    extensions: ["zip"]
-  },
-  "audio/basic": {
-    extensions: ["au", "snd"]
-  },
-  "audio/mpeg": {
-    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"]
-  },
-  "audio/midi": {
-    extensions: ["midi", "mid", "kar", "rmi"]
-  },
-  "audio/mp4": {
-    extensions: ["m4a", "mp4a"]
-  },
-  "audio/ogg": {
-    extensions: ["oga", "ogg", "spx"]
-  },
-  "audio/webm": {
-    extensions: ["weba"]
-  },
-  "audio/x-wav": {
-    extensions: ["wav"]
-  },
-  "font/ttf": {
-    extensions: ["ttf"]
-  },
-  "font/woff": {
-    extensions: ["woff"]
-  },
-  "font/woff2": {
-    extensions: ["woff2"]
-  },
-  "image/png": {
-    extensions: ["png"]
-  },
-  "image/gif": {
-    extensions: ["gif"]
-  },
-  "image/jpeg": {
-    extensions: ["jpg"]
-  },
-  "image/svg+xml": {
-    extensions: ["svg", "svgz"]
-  },
-  "text/plain": {
-    extensions: ["txt"]
-  },
-  "text/html": {
-    extensions: ["html"]
-  },
-  "text/css": {
-    extensions: ["css"]
-  },
-  "text/cache-manifest": {
-    extensions: ["appcache"]
-  },
-  "video/mp4": {
-    extensions: ["mp4", "mp4v", "mpg4"]
-  },
-  "video/mpeg": {
-    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"]
-  },
-  "video/ogg": {
-    extensions: ["ogv"]
-  },
-  "video/webm": {
-    extensions: ["webm"]
-  }
-};
-
-var urlToContentType = function urlToContentType(url) {
-  var contentTypeMap = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : jsenvContentTypeMap;
-  var contentTypeDefault = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "application/octet-stream";
-
-  if (_typeof(contentTypeMap) !== "object") {
-    throw new TypeError("contentTypeMap must be an object, got ".concat(contentTypeMap));
-  }
-
-  var pathname = new URL(url).pathname;
-  var extensionWithDot = path.extname(pathname);
-
-  if (!extensionWithDot || extensionWithDot === ".") {
-    return contentTypeDefault;
-  }
-
-  var extension = extensionWithDot.slice(1);
-  var availableContentTypes = Object.keys(contentTypeMap);
-  var contentTypeForExtension = availableContentTypes.find(function (contentTypeName) {
-    var contentType = contentTypeMap[contentTypeName];
-    return contentType.extensions && contentType.extensions.indexOf(extension) > -1;
-  });
-  return contentTypeForExtension || contentTypeDefault;
-};
-
 function _await(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
@@ -1392,525 +639,7 @@ function _await(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-var readFile = fs.promises.readFile;
-
-function _catch(body, recover) {
-  try {
-    var result = body();
-  } catch (e) {
-    return recover(e);
-  }
-
-  if (result && result.then) {
-    return result.then(void 0, recover);
-  }
-
-  return result;
-}
-
-function _async$1(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-function _invoke(body, then) {
-  var result = body();
-
-  if (result && result.then) {
-    return result.then(then);
-  }
-
-  return then(result);
-}
-
-var serveFile = _async$1(function (source) {
-  var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-      _ref$cancellationToke = _ref.cancellationToken,
-      cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
-      _ref$method = _ref.method,
-      method = _ref$method === void 0 ? "GET" : _ref$method,
-      _ref$headers = _ref.headers,
-      headers = _ref$headers === void 0 ? {} : _ref$headers,
-      _ref$contentTypeMap = _ref.contentTypeMap,
-      contentTypeMap = _ref$contentTypeMap === void 0 ? jsenvContentTypeMap : _ref$contentTypeMap,
-      _ref$etagEnabled = _ref.etagEnabled,
-      etagEnabled = _ref$etagEnabled === void 0 ? false : _ref$etagEnabled,
-      _ref$mtimeEnabled = _ref.mtimeEnabled,
-      mtimeEnabled = _ref$mtimeEnabled === void 0 ? false : _ref$mtimeEnabled,
-      _ref$cacheControl = _ref.cacheControl,
-      cacheControl = _ref$cacheControl === void 0 ? etagEnabled || mtimeEnabled ? "private,max-age=0,must-revalidate" : "no-store" : _ref$cacheControl,
-      _ref$canReadDirectory = _ref.canReadDirectory,
-      canReadDirectory = _ref$canReadDirectory === void 0 ? false : _ref$canReadDirectory,
-      _ref$readableStreamLi = _ref.readableStreamLifetimeInSeconds,
-      readableStreamLifetimeInSeconds = _ref$readableStreamLi === void 0 ? 5 : _ref$readableStreamLi;
-
-  // here you might be tempted to add || cacheControl === 'no-cache'
-  // but no-cache means ressource can be cache but must be revalidated (yeah naming is strange)
-  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
-  if (cacheControl === "no-store") {
-    if (etagEnabled) {
-      console.warn("cannot enable etag when cache-control is ".concat(cacheControl));
-      etagEnabled = false;
-    }
-
-    if (mtimeEnabled) {
-      console.warn("cannot enable mtime when cache-control is ".concat(cacheControl));
-      mtimeEnabled = false;
-    }
-  }
-
-  if (etagEnabled && mtimeEnabled) {
-    console.warn("cannot enable both etag and mtime, mtime disabled in favor of etag.");
-    mtimeEnabled = false;
-  }
-
-  if (method !== "GET" && method !== "HEAD") {
-    return {
-      status: 501
-    };
-  }
-
-  var sourceUrl = assertAndNormalizeFileUrl(source);
-  return _catch(function () {
-    return _await(timeFunction("file service>read file stat", function () {
-      return fs.statSync(urlToFileSystemPath(sourceUrl));
-    }), function (_ref2) {
-      var _ref3 = _slicedToArray(_ref2, 2),
-          readStatTiming = _ref3[0],
-          sourceStat = _ref3[1];
-
-      return _await(getClientCacheResponse({
-        cancellationToken: cancellationToken,
-        etagEnabled: etagEnabled,
-        mtimeEnabled: mtimeEnabled,
-        method: method,
-        headers: headers,
-        sourceStat: sourceStat,
-        sourceUrl: sourceUrl
-      }), function (clientCacheResponse) {
-        return clientCacheResponse.status === 304 ? composeResponse({
-          timing: readStatTiming,
-          headers: _objectSpread({}, cacheControl ? {
-            "cache-control": cacheControl
-          } : {})
-        }, clientCacheResponse) : _await(getRawResponse({
-          cancellationToken: cancellationToken,
-          canReadDirectory: canReadDirectory,
-          contentTypeMap: contentTypeMap,
-          method: method,
-          headers: headers,
-          sourceStat: sourceStat,
-          sourceUrl: sourceUrl
-        }), function (rawResponse) {
-          // do not keep readable stream opened on that file
-          // otherwise file is kept open forever.
-          // moreover it will prevent to unlink the file on windows.
-          if (clientCacheResponse.body) {
-            rawResponse.body.destroy();
-          } else if (readableStreamLifetimeInSeconds && readableStreamLifetimeInSeconds !== Infinity) {
-            // safe measure, ensure the readable stream gets used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
-            var timeout = setTimeout(function () {
-              console.warn("readable stream on ".concat(sourceUrl, " still unused after ").concat(readableStreamLifetimeInSeconds, " seconds -> destroying it to release file handle"));
-              rawResponse.body.destroy();
-            }, readableStreamLifetimeInSeconds * 1000);
-            onceReadableStreamUsedOrClosed(rawResponse.body, function () {
-              clearTimeout(timeout);
-            });
-          }
-
-          return composeResponse({
-            timing: readStatTiming,
-            headers: _objectSpread({}, cacheControl ? {
-              "cache-control": cacheControl
-            } : {})
-          }, rawResponse, clientCacheResponse);
-        });
-      }); // send 304 (redirect response to client cache)
-      // because the response body does not have to be transmitted
-    });
-  }, function (e) {
-    return convertFileSystemErrorToResponseProperties(e);
-  });
-});
-
-var getClientCacheResponse = _async$1(function (_ref4) {
-  var headers = _ref4.headers,
-      etagEnabled = _ref4.etagEnabled,
-      mtimeEnabled = _ref4.mtimeEnabled,
-      rest = _objectWithoutProperties(_ref4, ["headers", "etagEnabled", "mtimeEnabled"]);
-
-  // here you might be tempted to add || headers["cache-control"] === "no-cache"
-  // but no-cache means ressource can be cache but must be revalidated (yeah naming is strange)
-  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
-  if (headers["cache-control"] === "no-store") {
-    return {
-      status: 200
-    };
-  }
-
-  if (etagEnabled) {
-    return getEtagResponse(_objectSpread({
-      headers: headers
-    }, rest));
-  }
-
-  return mtimeEnabled ? getMtimeResponse(_objectSpread({
-    headers: headers
-  }, rest)) : {
-    status: 200
-  };
-});
-
-var getEtagResponse = _async$1(function (_ref5) {
-  var cancellationToken = _ref5.cancellationToken,
-      sourceUrl = _ref5.sourceUrl,
-      headers = _ref5.headers;
-  return _await(timeFunction("file service>read file", function () {
-    return createOperation({
-      cancellationToken: cancellationToken,
-      start: function start() {
-        return readFile(urlToFileSystemPath(sourceUrl));
-      }
-    });
-  }), function (_ref6) {
-    var _ref7 = _slicedToArray(_ref6, 2),
-        readFileTiming = _ref7[0],
-        fileContentAsBuffer = _ref7[1];
-
-    return _await(timeFunction("file service>generate file etag", function () {
-      return bufferToEtag(fileContentAsBuffer);
-    }), function (_ref8) {
-      var _ref9 = _slicedToArray(_ref8, 2),
-          computeEtagTiming = _ref9[0],
-          fileContentEtag = _ref9[1];
-
-      return "if-none-match" in headers && headers["if-none-match"] === fileContentEtag ? {
-        status: 304,
-        timing: _objectSpread(_objectSpread({}, readFileTiming), computeEtagTiming)
-      } : {
-        status: 200,
-        headers: {
-          etag: fileContentEtag
-        },
-        body: fileContentAsBuffer,
-        timing: _objectSpread(_objectSpread({}, readFileTiming), computeEtagTiming)
-      };
-    });
-  });
-});
-
-var getMtimeResponse = _async$1(function (_ref10) {
-  var sourceStat = _ref10.sourceStat,
-      headers = _ref10.headers;
-
-  if ("if-modified-since" in headers) {
-    var cachedModificationDate;
-
-    try {
-      cachedModificationDate = new Date(headers["if-modified-since"]);
-    } catch (e) {
-      return {
-        status: 400,
-        statusText: "if-modified-since header is not a valid date"
-      };
-    }
-
-    var actualModificationDate = dateToSecondsPrecision(sourceStat.mtime);
-
-    if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
-      return {
-        status: 304
-      };
-    }
-  }
-
-  return {
-    status: 200,
-    headers: {
-      "last-modified": dateToUTCString(sourceStat.mtime)
-    }
-  };
-});
-
-var getRawResponse = _async$1(function (_ref11) {
-  var _exit = false;
-  var cancellationToken = _ref11.cancellationToken,
-      sourceStat = _ref11.sourceStat,
-      sourceUrl = _ref11.sourceUrl,
-      canReadDirectory = _ref11.canReadDirectory,
-      contentTypeMap = _ref11.contentTypeMap;
-  return _invoke(function () {
-    if (sourceStat.isDirectory()) {
-      if (canReadDirectory === false) {
-        _exit = true;
-        return {
-          status: 403,
-          statusText: "not allowed to read directory"
-        };
-      }
-
-      return _await(timeFunction("file service>read directory", function () {
-        return createOperation({
-          cancellationToken: cancellationToken,
-          start: function start() {
-            return readDirectory(sourceUrl);
-          }
-        });
-      }), function (_ref12) {
-        var _ref13 = _slicedToArray(_ref12, 2),
-            readDirectoryTiming = _ref13[0],
-            directoryContentArray = _ref13[1];
-
-        var directoryContentJson = JSON.stringify(directoryContentArray);
-        _exit = true;
-        return {
-          status: 200,
-          headers: {
-            "content-type": "application/json",
-            "content-length": directoryContentJson.length
-          },
-          body: directoryContentJson,
-          timing: readDirectoryTiming
-        };
-      });
-    }
-  }, function (_result) {
-    return _exit ? _result : sourceStat.isFile() ? {
-      status: 200,
-      headers: {
-        "content-type": urlToContentType(sourceUrl, contentTypeMap),
-        "content-length": sourceStat.size
-      },
-      body: fs.createReadStream(urlToFileSystemPath(sourceUrl), {
-        emitClose: true
-      })
-    } : {
-      status: 404
-    };
-  }); // not a file, give up
-});
-
-var onceReadableStreamUsedOrClosed = function onceReadableStreamUsedOrClosed(readableStream, callback) {
-  var dataOrCloseCallback = function dataOrCloseCallback() {
-    readableStream.removeListener("data", dataOrCloseCallback);
-    readableStream.removeListener("close", dataOrCloseCallback);
-    callback();
-  };
-
-  readableStream.on("data", dataOrCloseCallback);
-  readableStream.on("close", dataOrCloseCallback);
-}; // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
-
-
-var dateToUTCString = function dateToUTCString(date) {
-  return date.toUTCString();
-};
-
-var dateToSecondsPrecision = function dateToSecondsPrecision(date) {
-  var dateWithSecondsPrecision = new Date(date);
-  dateWithSecondsPrecision.setMilliseconds(0);
-  return dateWithSecondsPrecision;
-};
-
-function _await$1(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-var require$2 = module$1.createRequire(url);
-
-function _catch$1(body, recover) {
-  try {
-    var result = body();
-  } catch (e) {
-    return recover(e);
-  }
-
-  if (result && result.then) {
-    return result.then(void 0, recover);
-  }
-
-  return result;
-}
-
-var nodeFetch = require$2("node-fetch");
-
-function _continue(value, then) {
-  return value && value.then ? value.then(then) : then(value);
-}
-
-var AbortController = require$2("abort-controller");
-
-function _invoke$1(body, then) {
-  var result = body();
-
-  if (result && result.then) {
-    return result.then(then);
-  }
-
-  return then(result);
-}
-
-var Response = nodeFetch.Response;
-
-function _async$2(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var fetchUrl = _async$2(function (url) {
-  var _exit = false;
-
-  var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-  var _ref$cancellationToke = _ref.cancellationToken,
-      cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
-      _ref$simplified = _ref.simplified,
-      simplified = _ref$simplified === void 0 ? false : _ref$simplified,
-      _ref$ignoreHttpsError = _ref.ignoreHttpsError,
-      ignoreHttpsError = _ref$ignoreHttpsError === void 0 ? false : _ref$ignoreHttpsError,
-      canReadDirectory = _ref.canReadDirectory,
-      contentTypeMap = _ref.contentTypeMap,
-      cacheStrategy = _ref.cacheStrategy,
-      options = _objectWithoutProperties(_ref, ["cancellationToken", "simplified", "ignoreHttpsError", "canReadDirectory", "contentTypeMap", "cacheStrategy"]);
-
-  try {
-    url = String(new URL(url));
-  } catch (e) {
-    throw new Error("fetchUrl first argument must be an absolute url, received ".concat(url));
-  }
-
-  return _invoke$1(function () {
-    if (url.startsWith("file://")) {
-      return _await$1(serveFile(url, _objectSpread({
-        cancellationToken: cancellationToken,
-        cacheStrategy: cacheStrategy,
-        canReadDirectory: canReadDirectory,
-        contentTypeMap: contentTypeMap
-      }, options)), function (_ref2) {
-        var status = _ref2.status,
-            statusText = _ref2.statusText,
-            headers = _ref2.headers,
-            body = _ref2.body;
-        var response = new Response(typeof body === "string" ? Buffer.from(body) : body, {
-          url: url,
-          status: status,
-          statusText: statusText,
-          headers: headers
-        });
-        _exit = true;
-        return simplified ? standardResponseToSimplifiedResponse(response) : response;
-      });
-    }
-  }, function (_result) {
-    if (_exit) return _result;
-    // cancellation might be requested early, abortController does not support that
-    // so we have to throw if requested right away
-    cancellationToken.throwIfRequested(); // https://github.com/bitinn/node-fetch#request-cancellation-with-abortsignal
-
-    var abortController = new AbortController();
-    var cancelError;
-    cancellationToken.register(function (reason) {
-      cancelError = reason;
-      abortController.abort(reason);
-    });
-    var response;
-    return _continue(_catch$1(function () {
-      return _await$1(nodeFetch(url, _objectSpread(_objectSpread({
-        signal: abortController.signal
-      }, ignoreHttpsError && url.startsWith("https") ? {
-        agent: new https.Agent({
-          rejectUnauthorized: false
-        })
-      } : {}), options)), function (_nodeFetch) {
-        response = _nodeFetch;
-      });
-    }, function (e) {
-      if (e.message.includes("reason: connect ECONNRESET")) {
-        if (cancelError) {
-          throw cancelError;
-        }
-
-        throw e;
-      }
-
-      if (e.name === "AbortError") {
-        if (cancelError) {
-          throw cancelError;
-        }
-
-        throw e;
-      }
-
-      throw e;
-    }), function (_result2) {
-      return  simplified ? standardResponseToSimplifiedResponse(response) : response;
-    });
-  });
-});
-
-var standardResponseToSimplifiedResponse = _async$2(function (response) {
-  return _await$1(response.text(), function (text) {
-    return {
-      url: response.url,
-      status: response.status,
-      statusText: response.statusText,
-      headers: responseToHeaders(response),
-      body: text
-    };
-  });
-});
-
-var responseToHeaders = function responseToHeaders(response) {
-  var headers = {};
-  response.headers.forEach(function (value, name) {
-    headers[name] = value;
-  });
-  return headers;
-};
-
-var require$3 = module$1.createRequire(url);
-
-var killPort = require$3("kill-port");
-
-function _await$2(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-function _async$3(f) {
+function _async(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -1925,7 +654,7 @@ function _async$3(f) {
 }
 
 https.globalAgent.options.rejectUnauthorized = false;
-var fetchUrl$1 = _async$3(function (url) {
+var fetchUrl = _async(function (url) {
   var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
   var _ref$simplified = _ref.simplified,
@@ -1934,7 +663,7 @@ var fetchUrl$1 = _async$3(function (url) {
       ignoreHttpsError = _ref$ignoreHttpsError === void 0 ? true : _ref$ignoreHttpsError,
       rest = _objectWithoutProperties(_ref, ["simplified", "ignoreHttpsError"]);
 
-  return _await$2(fetchUrl(url, _objectSpread({
+  return _await(server.fetchUrl(url, _objectSpread({
     simplified: simplified,
     ignoreHttpsError: ignoreHttpsError
   }, rest)), function (response) {
@@ -1942,7 +671,7 @@ var fetchUrl$1 = _async$3(function (url) {
       url: response.url,
       status: response.status,
       statusText: response.statusText,
-      headers: responseToHeaders$1(response),
+      headers: responseToHeaders(response),
       text: response.text.bind(response),
       json: response.json.bind(response),
       blob: response.blob.bind(response),
@@ -1951,13 +680,52 @@ var fetchUrl$1 = _async$3(function (url) {
   });
 });
 
-var responseToHeaders$1 = function responseToHeaders(response) {
+var responseToHeaders = function responseToHeaders(response) {
   var headers = {};
   response.headers.forEach(function (value, name) {
     headers[name] = value;
   });
   return headers;
 };
+
+/* eslint-disable no-eq-null, eqeqeq */
+function arrayLikeToArray(arr, len) {
+  if (len == null || len > arr.length) len = arr.length;
+  var arr2 = new Array(len);
+
+  for (var i = 0; i < len; i++) {
+    arr2[i] = arr[i];
+  }
+
+  return arr2;
+}
+
+var arrayWithoutHoles = (function (arr) {
+  if (Array.isArray(arr)) return arrayLikeToArray(arr);
+});
+
+// eslint-disable-next-line consistent-return
+var iterableToArray = (function (iter) {
+  if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter);
+});
+
+/* eslint-disable consistent-return */
+function unsupportedIterableToArray(o, minLen) {
+  if (!o) return;
+  if (typeof o === "string") return arrayLikeToArray(o, minLen);
+  var n = Object.prototype.toString.call(o).slice(8, -1);
+  if (n === "Object" && o.constructor) n = o.constructor.name;
+  if (n === "Map" || n === "Set") return Array.from(o);
+  if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
+}
+
+var nonIterableSpread = (function () {
+  throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+});
+
+var _toConsumableArray = (function (arr) {
+  return arrayWithoutHoles(arr) || iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
+});
 
 var stackToString = function stackToString(stack, _ref) {
   var error = _ref.error,
@@ -2034,7 +802,7 @@ var replaceSourceMappingUrl = function replaceSourceMappingUrl(source, regexp, c
   return source;
 };
 
-var startsWithWindowsDriveLetter$1 = function startsWithWindowsDriveLetter(string) {
+var startsWithWindowsDriveLetter = function startsWithWindowsDriveLetter(string) {
   var firstChar = string[0];
   if (!/[a-zA-Z]/.test(firstChar)) return false;
   var secondChar = string[1];
@@ -2048,7 +816,7 @@ var replaceBackSlashesWithSlashes = function replaceBackSlashesWithSlashes(strin
   return string.replace(/\\/g, "/");
 };
 
-function _await$3(value, then, direct) {
+function _await$1(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -2060,7 +828,7 @@ function _await$3(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _invoke$2(body, then) {
+function _invoke(body, then) {
   var result = body();
 
   if (result && result.then) {
@@ -2070,7 +838,7 @@ function _invoke$2(body, then) {
   return then(result);
 }
 
-function _async$4(f) {
+function _async$1(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -2084,7 +852,7 @@ function _async$4(f) {
   };
 }
 
-var remapCallSite = _async$4(function (callSite, _ref) {
+var remapCallSite = _async$1(function (callSite, _ref) {
   var _exit = false;
   var urlToSourcemapConsumer = _ref.urlToSourcemapConsumer,
       resolveFile = _ref.resolveFile,
@@ -2099,11 +867,11 @@ var remapCallSite = _async$4(function (callSite, _ref) {
 
 
   var source = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
-  return _invoke$2(function () {
+  return _invoke(function () {
     if (source) {
       var line = callSite.getLineNumber();
       var column = callSite.getColumnNumber() - 1;
-      return _await$3(remapSourcePosition({
+      return _await$1(remapSourcePosition({
         source: source,
         line: line,
         column: column,
@@ -2142,13 +910,13 @@ var remapCallSite = _async$4(function (callSite, _ref) {
     var _exit2 = false;
     if (_exit) return _result;
     // Code called using eval() needs special handling
-    return _invoke$2(function () {
+    return _invoke(function () {
       if (callSite.isEval()) {
         var origin = callSite.getEvalOrigin();
-        return _invoke$2(function () {
+        return _invoke(function () {
           if (origin) {
             var callSiteClone = cloneCallSite(callSite);
-            return _await$3(remapEvalOrigin(origin, {
+            return _await$1(remapEvalOrigin(origin, {
               resolveFile: resolveFile,
               urlToSourcemapConsumer: urlToSourcemapConsumer,
               readErrorStack: readErrorStack,
@@ -2289,19 +1057,19 @@ var callSiteToSourceFile = function callSiteToSourceFile(callSite) {
 // https://code.google.com/p/v8/source/browse/trunk/src/messages.js
 
 
-var remapEvalOrigin = _async$4(function (origin, _ref3) {
+var remapEvalOrigin = _async$1(function (origin, _ref3) {
   var _exit3 = false;
   var resolveFile = _ref3.resolveFile,
       urlToSourcemapConsumer = _ref3.urlToSourcemapConsumer,
       onFailure = _ref3.onFailure;
   // Most eval() calls are in this format
   var topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(origin);
-  return _invoke$2(function () {
+  return _invoke(function () {
     if (topLevelEvalMatch) {
       var source = topLevelEvalMatch[2];
       var line = Number(topLevelEvalMatch[3]);
       var column = topLevelEvalMatch[4] - 1;
-      return _await$3(remapSourcePosition({
+      return _await$1(remapSourcePosition({
         source: source,
         line: line,
         column: column,
@@ -2318,9 +1086,9 @@ var remapEvalOrigin = _async$4(function (origin, _ref3) {
     if (_exit3) return _result4;
     // Parse nested eval() calls using recursion
     var nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
-    return _invoke$2(function () {
+    return _invoke(function () {
       if (nestedEvalMatch) {
-        return _await$3(remapEvalOrigin(nestedEvalMatch[2], {
+        return _await$1(remapEvalOrigin(nestedEvalMatch[2], {
           resolveFile: resolveFile,
           urlToSourcemapConsumer: urlToSourcemapConsumer,
           onFailure: onFailure
@@ -2335,7 +1103,7 @@ var remapEvalOrigin = _async$4(function (origin, _ref3) {
   });
 });
 
-var remapSourcePosition = _async$4(function (_ref4) {
+var remapSourcePosition = _async$1(function (_ref4) {
   var source = _ref4.source,
       line = _ref4.line,
       column = _ref4.column,
@@ -2351,7 +1119,7 @@ var remapSourcePosition = _async$4(function (_ref4) {
   var url = sourceToUrl(source, {
     resolveFile: resolveFile
   });
-  return url ? _await$3(urlToSourcemapConsumer(url), function (sourceMapConsumer) {
+  return url ? _await$1(urlToSourcemapConsumer(url), function (sourceMapConsumer) {
     if (!sourceMapConsumer) return position;
 
     try {
@@ -2390,7 +1158,7 @@ var sourceToUrl = function sourceToUrl(source, _ref5) {
   // And I avoid to rely on process.platform === "win32" because this file might be executed in chrome
 
 
-  if (startsWithWindowsDriveLetter$1(source)) {
+  if (startsWithWindowsDriveLetter(source)) {
     return windowsFilePathToUrl(source);
   } // I don't think we will ever encounter relative file in the stack trace
   // but if it ever happens we are safe :)
@@ -2417,7 +1185,7 @@ var startsWithScheme = function startsWithScheme(string) {
   return /^[a-zA-Z]{2,}:/.test(string);
 };
 
-function _await$4(value, then, direct) {
+function _await$2(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -2429,7 +1197,7 @@ function _await$4(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _catch$2(body, recover) {
+function _catch(body, recover) {
   try {
     var result = body();
   } catch (e) {
@@ -2443,7 +1211,7 @@ function _catch$2(body, recover) {
   return result;
 }
 
-function _async$5(f) {
+function _async$2(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -2457,7 +1225,7 @@ function _async$5(f) {
   };
 }
 
-function _invoke$3(body, then) {
+function _invoke$1(body, then) {
   var result = body();
 
   if (result && result.then) {
@@ -2467,11 +1235,11 @@ function _invoke$3(body, then) {
   return then(result);
 }
 
-function _continue$1(value, then) {
+function _continue(value, then) {
   return value && value.then ? value.then(then) : then(value);
 }
 
-var generateOriginalStackString = _async$5(function (_ref) {
+var generateOriginalStackString = _async$2(function (_ref) {
   var stack = _ref.stack,
       error = _ref.error,
       resolveFile = _ref.resolveFile,
@@ -2480,12 +1248,12 @@ var generateOriginalStackString = _async$5(function (_ref) {
       indent = _ref.indent,
       readErrorStack = _ref.readErrorStack,
       onFailure = _ref.onFailure;
-  var urlToSourcemapConsumer = memoizeByFirstArgStringValue(_async$5(function (stackTraceFileUrl) {
+  var urlToSourcemapConsumer = memoizeByFirstArgStringValue(_async$2(function (stackTraceFileUrl) {
     var _exit = false;
-    return _catch$2(function () {
+    return _catch(function () {
       var text;
-      return _continue$1(_catch$2(function () {
-        return _await$4(fetchFile(stackTraceFileUrl), function (fileResponse) {
+      return _continue(_catch(function () {
+        return _await$2(fetchFile(stackTraceFileUrl), function (fileResponse) {
           var status = fileResponse.status;
 
           if (status !== 200) {
@@ -2499,7 +1267,7 @@ var generateOriginalStackString = _async$5(function (_ref) {
             return null;
           }
 
-          return _await$4(fileResponse.text(), function (_fileResponse$text) {
+          return _await$2(fileResponse.text(), function (_fileResponse$text) {
             text = _fileResponse$text;
           });
         });
@@ -2518,7 +1286,7 @@ var generateOriginalStackString = _async$5(function (_ref) {
 
         var sourcemapUrl;
         var sourcemapString;
-        return _invoke$3(function () {
+        return _invoke$1(function () {
           if (jsSourcemapUrl.startsWith("data:")) {
             sourcemapUrl = stackTraceFileUrl;
             sourcemapString = dataUrlToRawData(parseDataUrl(jsSourcemapUrl));
@@ -2526,17 +1294,17 @@ var generateOriginalStackString = _async$5(function (_ref) {
             sourcemapUrl = resolveFile(jsSourcemapUrl, stackTraceFileUrl, {
               type: "source-map"
             });
-            return _catch$2(function () {
-              return _await$4(fetchFile(sourcemapUrl), function (sourcemapResponse) {
+            return _catch(function () {
+              return _await$2(fetchFile(sourcemapUrl), function (sourcemapResponse) {
                 var _exit3 = false;
                 var status = sourcemapResponse.status;
-                return _invoke$3(function () {
+                return _invoke$1(function () {
                   if (status !== 200) {
-                    return _invoke$3(function () {
+                    return _invoke$1(function () {
                       if (status === 404) {
                         onFailure("sourcemap file not found at ".concat(sourcemapUrl));
                       } else {
-                        return _await$4(sourcemapResponse.text(), function (_sourcemapResponse$te) {
+                        return _await$2(sourcemapResponse.text(), function (_sourcemapResponse$te) {
                           onFailure("unexpected response for sourcemap file.\n--- response status ---\n".concat(status, "\n--- response text ---\n").concat(_sourcemapResponse$te, "\n--- sourcemap url ---\n").concat(sourcemapUrl));
                         });
                       }
@@ -2546,7 +1314,7 @@ var generateOriginalStackString = _async$5(function (_ref) {
                     });
                   }
                 }, function (_result3) {
-                  return _exit3 ? _result3 : _await$4(sourcemapResponse.text(), function (_sourcemapResponse$te2) {
+                  return _exit3 ? _result3 : _await$2(sourcemapResponse.text(), function (_sourcemapResponse$te2) {
                     sourcemapString = _sourcemapResponse$te2;
                   });
                 });
@@ -2577,16 +1345,16 @@ var generateOriginalStackString = _async$5(function (_ref) {
           }
 
           var firstSourceMapSourceFailure = null;
-          return _await$4(Promise.all(sourceMap.sources.map(_async$5(function (source, index) {
+          return _await$2(Promise.all(sourceMap.sources.map(_async$2(function (source, index) {
             if (index in sourcesContent) return;
             var sourcemapSourceUrl = resolveFile(source, sourcemapUrl, {
               type: "source"
             });
-            return _catch$2(function () {
-              return _await$4(fetchFile(sourcemapSourceUrl), function (sourceResponse) {
+            return _catch(function () {
+              return _await$2(fetchFile(sourcemapSourceUrl), function (sourceResponse) {
                 var _exit4 = false;
                 var status = sourceResponse.status;
-                return _invoke$3(function () {
+                return _invoke$1(function () {
                   if (status !== 200) {
                     if (firstSourceMapSourceFailure) {
                       _exit4 = true;
@@ -2599,13 +1367,13 @@ var generateOriginalStackString = _async$5(function (_ref) {
                       return;
                     }
 
-                    return _await$4(sourceResponse.text(), function (_sourceResponse$text) {
+                    return _await$2(sourceResponse.text(), function (_sourceResponse$text) {
                       firstSourceMapSourceFailure = "unexpected response for sourcemap source.\n  --- response status ---\n  ".concat(status, "\n  --- response text ---\n  ").concat(_sourceResponse$text, "\n  --- sourcemap source url ---\n  ").concat(sourcemapSourceUrl, "\n  --- sourcemap url ---\n  ").concat(sourcemapUrl);
                       _exit4 = true;
                     });
                   }
                 }, function (_result6) {
-                  return _exit4 ? _result6 : _await$4(sourceResponse.text(), function (sourceString) {
+                  return _exit4 ? _result6 : _await$2(sourceResponse.text(), function (sourceString) {
                     sourcesContent[index] = sourceString;
                   });
                 });
@@ -2629,8 +1397,8 @@ var generateOriginalStackString = _async$5(function (_ref) {
       return null;
     });
   }));
-  return _catch$2(function () {
-    return _await$4(Promise.all(stack.map(function (callSite) {
+  return _catch(function () {
+    return _await$2(Promise.all(stack.map(function (callSite) {
       return remapCallSite(callSite, {
         resolveFile: resolveFile,
         urlToSourcemapConsumer: urlToSourcemapConsumer,
@@ -2664,7 +1432,7 @@ var memoizeByFirstArgStringValue = function memoizeByFirstArgStringValue(fn) {
   };
 };
 
-function _await$5(value, then, direct) {
+function _await$3(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -2676,7 +1444,7 @@ function _await$5(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _invoke$4(body, then) {
+function _invoke$2(body, then) {
   var result = body();
 
   if (result && result.then) {
@@ -2686,7 +1454,7 @@ function _invoke$4(body, then) {
   return then(result);
 }
 
-function _async$6(f) {
+function _async$3(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -2775,7 +1543,7 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
     });
   };
 
-  var getErrorOriginalStackString = _async$6(function (error) {
+  var getErrorOriginalStackString = _async$3(function (error) {
     var _exit = false;
 
     var _ref2 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
@@ -2797,9 +1565,9 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
 
     var stack = error.stack;
     var promise = errorOriginalStackStringCache.get(error);
-    return _invoke$4(function () {
+    return _invoke$2(function () {
       if (promise) {
-        return _await$5(promise, function (originalStack) {
+        return _await$3(promise, function (originalStack) {
           errorRemapFailureCallbackMap.get(error);
           _exit = true;
           return originalStack;
@@ -2819,7 +1587,7 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
 
 var memoizeFetch = function memoizeFetch(fetchUrl) {
   var urlCache = {};
-  return _async$6(function (url) {
+  return _async$3(function (url) {
     if (url in urlCache) {
       return urlCache[url];
     }
@@ -2839,13 +1607,68 @@ var installNodeErrorStackRemapping = function installNodeErrorStackRemapping(_re
 
   return installErrorStackRemapping(_objectSpread({
     SourceMapConsumer: SourceMapConsumer,
-    fetchFile: fetchUrl$1,
+    fetchFile: fetchUrl,
     resolveFile: function resolveFile(specifier) {
       var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : projectDirectoryUrl;
-      return ensureWindowsDriveLetter(resolveUrl(specifier, importer), importer);
+      return util.ensureWindowsDriveLetter(util.resolveUrl(specifier, importer), importer);
     }
   }, options));
 };
+
+// eslint-disable-next-line consistent-return
+var arrayWithHoles = (function (arr) {
+  if (Array.isArray(arr)) return arr;
+});
+
+var iterableToArrayLimit = (function (arr, i) {
+  // this is an expanded form of \`for...of\` that properly supports abrupt completions of
+  // iterators etc. variable names have been minimised to reduce the size of this massive
+  // helper. sometimes spec compliance is annoying :(
+  //
+  // _n = _iteratorNormalCompletion
+  // _d = _didIteratorError
+  // _e = _iteratorError
+  // _i = _iterator
+  // _s = _step
+  if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return;
+  var _arr = [];
+  var _n = true;
+  var _d = false;
+
+  var _e;
+
+  var _i = arr[Symbol.iterator]();
+
+  var _s;
+
+  try {
+    for (; !(_n = (_s = _i.next()).done); _n = true) {
+      _arr.push(_s.value);
+
+      if (i && _arr.length === i) break;
+    }
+  } catch (err) {
+    _d = true;
+    _e = err;
+  } finally {
+    try {
+      if (!_n && _i.return !== null) _i.return();
+    } finally {
+      if (_d) throw _e;
+    }
+  } // eslint-disable-next-line consistent-return
+
+
+  return _arr;
+});
+
+var nonIterableRest = (function () {
+  throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+});
+
+var _slicedToArray = (function (arr, i) {
+  return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
+});
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Primitive
 var isComposite = function isComposite(value) {
@@ -3519,7 +2342,7 @@ var fetchSource = function fetchSource(url) {
   var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
       executionId = _ref.executionId;
 
-  return fetchUrl$1(url, {
+  return fetchUrl(url, {
     ignoreHttpsError: true,
     headers: _objectSpread({}, executionId ? {
       "x-jsenv-execution-id": executionId
@@ -4324,7 +3147,7 @@ var resolveNodeGroup = function resolveNodeGroup(groupMap) {
   };
 })();
 
-function _await$6(value, then, direct) {
+function _await$4(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -4336,7 +3159,7 @@ function _await$6(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _invoke$5(body, then) {
+function _invoke$3(body, then) {
   var result = body();
 
   if (result && result.then) {
@@ -4346,7 +3169,7 @@ function _invoke$5(body, then) {
   return then(result);
 }
 
-function _async$7(f) {
+function _async$4(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -4385,14 +3208,14 @@ var fromFunctionReturningRegisteredModule = function fromFunctionReturningRegist
   }
 };
 
-var fromUrl = _async$7(function (_ref) {
+var fromUrl = _async$4(function (_ref) {
   var url = _ref.url,
       importerUrl = _ref.importerUrl,
       fetchSource = _ref.fetchSource,
       instantiateJavaScript = _ref.instantiateJavaScript,
       compileServerOrigin = _ref.compileServerOrigin,
       outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
-  return _await$6(fetchSource(url, {
+  return _await$4(fetchSource(url, {
     importerUrl: importerUrl
   }), function (moduleResponse) {
 
@@ -4407,9 +3230,9 @@ var fromUrl = _async$7(function (_ref) {
     }
 
     var contentType = moduleResponse.headers["content-type"] || "";
-    return _invoke$5(function () {
+    return _invoke$3(function () {
       if (moduleResponse.status === 500 && contentType === "application/json") {
-        return _await$6(moduleResponse.json(), function (bodyAsJson) {
+        return _await$4(moduleResponse.json(), function (bodyAsJson) {
           if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
             var error = new Error("Module file cannot be parsed.\n--- parsing error message ---\n".concat(bodyAsJson.message, "\n").concat(getModuleDetails({
               url: url,
@@ -4436,9 +3259,9 @@ var fromUrl = _async$7(function (_ref) {
       // and in sync with loadModule in createJsenvRollupPlugin.js
 
 
-      return _invoke$5(function () {
+      return _invoke$3(function () {
         if (contentType === "application/javascript" || contentType === "text/javascript") {
-          return _await$6(moduleResponse.text(), function (bodyAsText) {
+          return _await$4(moduleResponse.text(), function (bodyAsText) {
             _exit2 = true;
             return fromFunctionReturningRegisteredModule(function () {
               return instantiateJavaScript(bodyAsText, moduleResponse.url);
@@ -4453,9 +3276,9 @@ var fromUrl = _async$7(function (_ref) {
       }, function (_result2) {
         var _exit3 = false;
         if (_exit2) return _result2;
-        return _invoke$5(function () {
+        return _invoke$3(function () {
           if (contentType === "application/json" || contentType === "application/importmap+json") {
-            return _await$6(moduleResponse.json(), function (bodyAsJson) {
+            return _await$4(moduleResponse.json(), function (bodyAsJson) {
               _exit3 = true;
               return fromFunctionReturningNamespace(function () {
                 return {
@@ -4610,7 +3433,7 @@ var evalSource = function evalSource(code, filePath) {
   return script.runInThisContext();
 };
 
-function _async$8(f) {
+function _async$5(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -4652,7 +3475,7 @@ var createNodeSystem = function createNodeSystem() {
   };
 
   nodeSystem.resolve = _resolve;
-  nodeSystem.instantiate = _async$8(function (url, importerUrl) {
+  nodeSystem.instantiate = _async$5(function (url, importerUrl) {
     if (url === GLOBAL_SPECIFIER) {
       return fromFunctionReturningNamespace(function () {
         return global;
@@ -4725,7 +3548,7 @@ var responseUrlToSourceUrl = function responseUrlToSourceUrl(responseUrl, _ref2)
       projectDirectoryUrl = _ref2.projectDirectoryUrl;
 
   if (responseUrl.startsWith("file://")) {
-    return urlToFileSystemPath(responseUrl);
+    return util.urlToFileSystemPath(responseUrl);
   } // compileServerOrigin is optionnal
   // because we can also create a node system and use it to import a bundle
   // from filesystem. In that case there is no compileServerOrigin
@@ -4733,8 +3556,8 @@ var responseUrlToSourceUrl = function responseUrlToSourceUrl(responseUrl, _ref2)
 
   if (compileServerOrigin && responseUrl.startsWith("".concat(compileServerOrigin, "/"))) {
     var afterOrigin = responseUrl.slice("".concat(compileServerOrigin, "/").length);
-    var fileUrl = resolveUrl(afterOrigin, projectDirectoryUrl);
-    return urlToFileSystemPath(fileUrl);
+    var fileUrl = util.resolveUrl(afterOrigin, projectDirectoryUrl);
+    return util.urlToFileSystemPath(fileUrl);
   }
 
   return responseUrl;
@@ -4767,7 +3590,7 @@ var urlToOriginalUrl = function urlToOriginalUrl(url, _ref3) {
   }
 
   var afterCompileId = afterCompileDirectory.slice(nextSlashIndex + 1);
-  return resolveUrl(afterCompileId, projectDirectoryUrl);
+  return util.resolveUrl(afterCompileId, projectDirectoryUrl);
 };
 
 var moduleExportsToModuleNamespace = function moduleExportsToModuleNamespace(moduleExports) {
@@ -4781,7 +3604,7 @@ var moduleExportsToModuleNamespace = function moduleExportsToModuleNamespace(mod
   });
 };
 
-function _await$7(value, then, direct) {
+function _await$5(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -4795,7 +3618,7 @@ function _await$7(value, then, direct) {
 
 var memoizedCreateNodeSystem = memoize(createNodeSystem);
 
-function _invoke$6(body, then) {
+function _invoke$4(body, then) {
   var result = body();
 
   if (result && result.then) {
@@ -4805,7 +3628,7 @@ function _invoke$6(body, then) {
   return then(result);
 }
 
-function _async$9(f) {
+function _async$6(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -4819,7 +3642,7 @@ function _async$9(f) {
   };
 }
 
-function _catch$3(body, recover) {
+function _catch$1(body, recover) {
   try {
     var result = body();
   } catch (e) {
@@ -4833,7 +3656,7 @@ function _catch$3(body, recover) {
   return result;
 }
 
-function _continue$2(value, then) {
+function _continue$1(value, then) {
   return value && value.then ? value.then(then) : then(value);
 }
 
@@ -4856,14 +3679,14 @@ function _finallyRethrows(body, finalizer) {
   return finalizer(false, result);
 }
 
-var createNodeRuntime = _async$9(function (_ref) {
+var createNodeRuntime = _async$6(function (_ref) {
   var projectDirectoryUrl = _ref.projectDirectoryUrl,
       compileServerOrigin = _ref.compileServerOrigin,
       outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
   var outDirectoryUrl = "".concat(projectDirectoryUrl).concat(outDirectoryRelativeUrl);
   var groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl));
   var envUrl = String(new URL("env.json", outDirectoryUrl));
-  return _await$7(Promise.all([importJson(groupMapUrl), importJson(envUrl)]), function (_ref2) {
+  return _await$5(Promise.all([importJson(groupMapUrl), importJson(envUrl)]), function (_ref2) {
     var _ref3 = _slicedToArray(_ref2, 2),
         groupMap = _ref3[0],
         _ref3$ = _ref3[1],
@@ -4876,21 +3699,21 @@ var createNodeRuntime = _async$9(function (_ref) {
     });
     var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/");
     var importMap;
-    return _invoke$6(function () {
+    return _invoke$4(function () {
       if (importMapFileRelativeUrl) {
         var importmapFileUrl = "".concat(compileServerOrigin, "/").concat(compileDirectoryRelativeUrl).concat(importMapFileRelativeUrl);
-        return _await$7(fetchUrl$1(importmapFileUrl), function (importmapFileResponse) {
+        return _await$5(fetchUrl(importmapFileUrl), function (importmapFileResponse) {
           var _temp = importmapFileResponse.status === 404;
 
-          return _await$7(_temp ? {} : importmapFileResponse.json(), function (importmap) {
+          return _await$5(_temp ? {} : importmapFileResponse.json(), function (importmap) {
             var importmapNormalized = normalizeImportMap(importmap, importmapFileUrl);
             importMap = importmapNormalized;
           }, _temp);
         });
       }
     }, function () {
-      var importFile = _async$9(function (specifier) {
-        return _await$7(memoizedCreateNodeSystem({
+      var importFile = _async$6(function (specifier) {
+        return _await$5(memoizedCreateNodeSystem({
           projectDirectoryUrl: projectDirectoryUrl,
           compileServerOrigin: compileServerOrigin,
           outDirectoryRelativeUrl: outDirectoryRelativeUrl,
@@ -4902,7 +3725,7 @@ var createNodeRuntime = _async$9(function (_ref) {
         });
       });
 
-      var executeFile = _async$9(function (specifier) {
+      var executeFile = _async$6(function (specifier) {
         var _ref4 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
             _ref4$errorExposureIn = _ref4.errorExposureInConsole,
             errorExposureInConsole = _ref4$errorExposureIn === void 0 ? true : _ref4$errorExposureIn,
@@ -4911,7 +3734,7 @@ var createNodeRuntime = _async$9(function (_ref) {
           return error;
         } : _ref4$errorTransform;
 
-        return _await$7(memoizedCreateNodeSystem({
+        return _await$5(memoizedCreateNodeSystem({
           projectDirectoryUrl: projectDirectoryUrl,
           compileServerOrigin: compileServerOrigin,
           outDirectoryRelativeUrl: outDirectoryRelativeUrl,
@@ -4919,8 +3742,8 @@ var createNodeRuntime = _async$9(function (_ref) {
           importDefaultExtension: importDefaultExtension,
           fetchSource: fetchSource
         }), function (nodeSystem) {
-          return _catch$3(function () {
-            return _await$7(makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier)), function (namespace) {
+          return _catch$1(function () {
+            return _await$5(makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier)), function (namespace) {
               return {
                 status: "completed",
                 namespace: namespace,
@@ -4929,8 +3752,8 @@ var createNodeRuntime = _async$9(function (_ref) {
             });
           }, function (error) {
             var transformedError;
-            return _continue$2(_catch$3(function () {
-              return _await$7(errorTransform(error), function (_errorTransform) {
+            return _continue$1(_catch$1(function () {
+              return _await$5(errorTransform(error), function (_errorTransform) {
                 transformedError = _errorTransform;
               });
             }, function () {
@@ -4956,9 +3779,9 @@ var createNodeRuntime = _async$9(function (_ref) {
   });
 });
 
-var importJson = _async$9(function (url) {
-  return _await$7(fetchSource(url), function (response) {
-    return _await$7(response.json());
+var importJson = _async$6(function (url) {
+  return _await$5(fetchSource(url), function (response) {
+    return _await$5(response.json());
   });
 });
 
@@ -4970,10 +3793,10 @@ var readCoverage = function readCoverage() {
   return global.__coverage__;
 };
 
-var makePromiseKeepNodeProcessAlive = _async$9(function (promise) {
+var makePromiseKeepNodeProcessAlive = _async$6(function (promise) {
   var timerId = setInterval(function () {}, 10000);
   return _finallyRethrows(function () {
-    return _await$7(promise);
+    return _await$5(promise);
   }, function (_wasThrown, _result) {
     clearInterval(timerId);
     return _rethrow(_wasThrown, _result);
@@ -4984,7 +3807,7 @@ var nodeRuntime = {
   create: createNodeRuntime
 };
 
-function _await$8(value, then, direct) {
+function _await$6(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -4996,7 +3819,7 @@ function _await$8(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _async$a(f) {
+function _async$7(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -5010,7 +3833,7 @@ function _async$a(f) {
   };
 }
 
-var execute = _async$a(function (_ref) {
+var execute = _async$7(function (_ref) {
   var projectDirectoryUrl = _ref.projectDirectoryUrl,
       fileRelativeUrl = _ref.fileRelativeUrl,
       compileServerOrigin = _ref.compileServerOrigin,
@@ -5018,7 +3841,7 @@ var execute = _async$a(function (_ref) {
       executionId = _ref.executionId,
       _ref$errorExposureInC = _ref.errorExposureInConsole,
       errorExposureInConsole = _ref$errorExposureInC === void 0 ? false : _ref$errorExposureInC;
-  return _await$8(nodeRuntime.create({
+  return _await$6(nodeRuntime.create({
     projectDirectoryUrl: projectDirectoryUrl,
     compileServerOrigin: compileServerOrigin,
     outDirectoryRelativeUrl: outDirectoryRelativeUrl
@@ -5031,11 +3854,11 @@ var execute = _async$a(function (_ref) {
     }),
         getErrorOriginalStackString = _installNodeErrorStac.getErrorOriginalStackString;
 
-    var compiledFileRemoteUrl = resolveUrl(fileRelativeUrl, "".concat(compileServerOrigin, "/").concat(compileDirectoryRelativeUrl));
+    var compiledFileRemoteUrl = util.resolveUrl(fileRelativeUrl, "".concat(compileServerOrigin, "/").concat(compileDirectoryRelativeUrl));
     return executeFile(compiledFileRemoteUrl, {
       executionId: executionId,
-      errorTransform: _async$a(function (error) {
-        return !error || !(error instanceof Error) ? error : _await$8(getErrorOriginalStackString(error), function (originalStack) {
+      errorTransform: _async$7(function (error) {
+        return !error || !(error instanceof Error) ? error : _await$6(getErrorOriginalStackString(error), function (originalStack) {
           error.stack = originalStack;
           return error;
         });

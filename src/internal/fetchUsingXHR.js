@@ -1,4 +1,4 @@
-import { createCancellationToken } from "@jsenv/cancellation"
+import { createCancellationToken } from "@jsenv/cancellation/main.browser.js"
 // ideally we should do some window.fetch detection (ensuring it has cancellation) and accordingly
 // fallback to this polyfill (or even use an existing polyfill would be better)
 // https://github.com/github/fetch/blob/master/fetch.js
