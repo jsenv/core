@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, bufferToEtag, readFile } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
 import { COMPILE_ID_OTHERWISE } from "../../../src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -18,10 +18,14 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   ...COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
-const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
+const fileRelativeCompiledUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
+const fileServerUrl = resolveUrl(fileRelativeCompiledUrl, compileServerOrigin)
+const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
 await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
 const response = await fetchUrl(`${fileServerUrl}__asset__meta.json`, { ignoreHttpsError: true })
 const body = await response.json()
+const mapCompiledRelativeUrl = `${fileRelativeCompiledUrl}.map`
+const mapCompiledUrl = resolveUrl(mapCompiledRelativeUrl, jsenvCoreDirectoryUrl)
 const actual = {
   status: response.status,
   statusText: response.statusText,
@@ -35,11 +39,9 @@ const expected = {
   body: {
     contentType: "application/javascript",
     sources: [`../../../../../../${filename}`],
-    sourcesEtag:
-      // it fails on windows because windows got \r\n and etag differs
-      process.platform === "win32" ? actual.body.sourcesEtag : ['"7c-b5QcrFoIrKrXSr5F415m5RCd6uY"'],
+    sourcesEtag: [bufferToEtag(await readFile(fileUrl, { as: "buffer" }))],
     assets: [`${filename}.map`],
-    assetsEtag: ['"f0-bxeoZF9Aw0804N/SDnLk8R1QdGY"'],
+    assetsEtag: [bufferToEtag(await readFile(mapCompiledUrl, { as: "buffer" }))],
     createdMs: actual.body.createdMs,
     lastModifiedMs: actual.body.lastModifiedMs,
   },

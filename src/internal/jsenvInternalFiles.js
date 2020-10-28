@@ -2,33 +2,23 @@ import { resolveUrl, fileSystemPathToUrl } from "@jsenv/util"
 import { require } from "./require.js"
 import { jsenvCoreDirectoryUrl } from "./jsenvCoreDirectoryUrl.js"
 
-export const nodeJsFileUrl = resolveUrl(
-  "./src/internal/node-launcher/node-js-file.js",
+export const jsenvNodeSystemRelativeUrl = "./src/internal/node-launcher/node-js-file.js"
+export const jsenvNodeSystemBundleRelativeUrl = "./dist/jsenv-node-system.cjs"
+export const jsenvNodeSystemUrl = resolveUrl(jsenvNodeSystemRelativeUrl, jsenvCoreDirectoryUrl)
+export const jsenvNodeSystemBundleUrl = resolveUrl(
+  jsenvNodeSystemBundleRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
 
-export const browserJsFileUrl = resolveUrl(
-  "./src/internal/browser-launcher/jsenv-browser-system.js",
+export const jsenvBrowserSystemRelativeUrl =
+  "./src/internal/browser-launcher/jsenv-browser-system.js"
+export const jsenvBrowserSystemBundleRelativeUrl = "./dist/jsenv-browser-system.js"
+export const jsenvBrowserSystemUrl = resolveUrl(
+  jsenvBrowserSystemRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-
-export const jsenvHtmlFileUrl = resolveUrl(
-  "./src/internal/jsenv-html-file.html",
-  jsenvCoreDirectoryUrl,
-)
-
-export const exploringRedirectorHtmlFileUrl = resolveUrl(
-  "./src/internal/exploring/exploring.redirector.html",
-  jsenvCoreDirectoryUrl,
-)
-
-export const exploringRedirectorJsFileUrl = resolveUrl(
-  "./src/internal/exploring/exploring.redirector.js",
-  jsenvCoreDirectoryUrl,
-)
-
-export const exploringHtmlFileUrl = resolveUrl(
-  "./src/internal/exploring/exploring.html",
+export const jsenvBrowserSystemBundleUrl = resolveUrl(
+  jsenvBrowserSystemBundleRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
 
@@ -40,17 +30,43 @@ export const sourcemapMappingFileUrl = fileSystemPathToUrl(
   require.resolve("source-map/lib/mappings.wasm"),
 )
 
-export const jsenvToolbarJsFileUrl = resolveUrl(
-  "./src/internal/toolbar/toolbar.js",
+// Exploring redirection
+// (auto redirection to a compile group depending on browser capabilities)
+export const jsenvExploringRedirectorHtmlUrl = resolveUrl(
+  "./src/internal/exploring/exploring.redirector.html",
+  jsenvCoreDirectoryUrl,
+)
+export const jsenvExploringRedirectorJsRelativeUrl =
+  "./src/internal/exploring/exploring.redirector.js"
+export const jsenvExploringRedirectorJsBundleRelativeUrl = "./dist/jsenv-exploring-redirector.js"
+export const jsenvExploringRedirectorJsUrl = resolveUrl(
+  jsenvExploringRedirectorJsRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
+export const jsenvExploringRedirectorJsBundleUrl = resolveUrl(
+  jsenvExploringRedirectorJsBundleRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
 
-export const jsenvToolbarHtmlFileUrl = resolveUrl(
+// Exploring index and toolbar
+export const jsenvExploringHtmlUrl = resolveUrl(
+  "./src/internal/exploring/exploring.html",
+  jsenvCoreDirectoryUrl,
+)
+export const jsenvToolbarHtmlUrl = resolveUrl(
   "./src/internal/toolbar/toolbar.html",
   jsenvCoreDirectoryUrl,
 )
-
-export const jsenvToolbarMainJsFileUrl = resolveUrl(
-  "./src/internal/toolbar/toolbar.main.js",
+export const jsenvToolbarInjectorRelativeUrl = "./src/internal/toolbar/toolbar.injector.js"
+export const jsenvToolbarInjectorBundleRelativeUrl = "./dist/jsenv-toolbar-injector.js"
+export const jsenvToolbarInjectorBundleUrl = resolveUrl(
+  jsenvToolbarInjectorBundleRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
+export const jsenvToolbarJsRelativeUrl = "./src/internal/toolbar/toolbar.main.js"
+export const jsenvToolbarJsBundleRelativeUrl = "dist/jsenv-toolbar.js"
+export const jsenvToolbarJsUrl = resolveUrl(jsenvToolbarJsRelativeUrl, jsenvCoreDirectoryUrl)
+export const jsenvToolbarJsBundleUrl = resolveUrl(
+  jsenvToolbarJsBundleRelativeUrl,
   jsenvCoreDirectoryUrl,
 )

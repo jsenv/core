@@ -67,11 +67,6 @@ export const executePlan = async (
     babelPluginMap,
     convertMap,
     compileGroupCount,
-
-    browserInternalFileAnticipation: Object.keys(plan).some((key) => key.endsWith(".html")),
-    nodeInternalFileAnticipation: Object.keys(plan).some(
-      (key) => key.endsWith(".js") || key.endsWith(".jsx") || key.endsWith(".ts"),
-    ),
   })
 
   const executionSteps = await generateExecutionSteps(

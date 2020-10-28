@@ -8,10 +8,10 @@ var fs = require('fs');
 var cancellation = require('@jsenv/cancellation');
 var server = require('@jsenv/server');
 var logger = require('@jsenv/logger');
-var https = require('https');
 var importMap = require('@jsenv/import-map');
 var nodeModuleImportMap = require('@jsenv/node-module-import-map');
 var path = require('path');
+var https = require('https');
 var crypto = require('crypto');
 var os = require('os');
 var readline = require('readline');
@@ -803,44 +803,6 @@ ${projectDirectoryUrl}`);
   }
 };
 
-const COMPILE_ID_BEST = "best";
-const COMPILE_ID_OTHERWISE = "otherwise";
-const COMPILE_ID_GLOBAL_BUNDLE = "otherwise-global-bundle";
-const COMPILE_ID_GLOBAL_BUNDLE_FILES = "otherwise-global-bundle-files";
-const COMPILE_ID_COMMONJS_BUNDLE = "otherwise-commonjs-bundle";
-const COMPILE_ID_COMMONJS_BUNDLE_FILES = "otherwise-commonjs-bundle-files";
-
-https.globalAgent.options.rejectUnauthorized = false;
-const fetchUrl = async (url, {
-  simplified = false,
-  ignoreHttpsError = true,
-  ...rest
-} = {}) => {
-  const response = await server.fetchUrl(url, {
-    simplified,
-    ignoreHttpsError,
-    ...rest
-  });
-  return {
-    url: response.url,
-    status: response.status,
-    statusText: response.statusText,
-    headers: responseToHeaders(response),
-    text: response.text.bind(response),
-    json: response.json.bind(response),
-    blob: response.blob.bind(response),
-    arrayBuffer: response.arrayBuffer.bind(response)
-  };
-};
-
-const responseToHeaders = response => {
-  const headers = {};
-  response.headers.forEach((value, name) => {
-    headers[name] = value;
-  });
-  return headers;
-};
-
 let jsenvCoreDirectoryUrl;
 
 if (typeof __filename === "string") {
@@ -850,6 +812,13 @@ if (typeof __filename === "string") {
   jsenvCoreDirectoryUrl = util.resolveUrl( // get ride of src/internal/jsenvCoreDirectoryUrl.js
   "../../", url);
 }
+
+const COMPILE_ID_BEST = "best";
+const COMPILE_ID_OTHERWISE = "otherwise";
+const COMPILE_ID_GLOBAL_BUNDLE = "otherwise-global-bundle";
+const COMPILE_ID_GLOBAL_BUNDLE_FILES = "otherwise-global-bundle-files";
+const COMPILE_ID_COMMONJS_BUNDLE = "otherwise-commonjs-bundle";
+const COMPILE_ID_COMMONJS_BUNDLE_FILES = "otherwise-commonjs-bundle-files";
 
 const valueToVersion = value => {
   if (typeof value === "number") {
@@ -1948,17 +1917,32 @@ const createCallbackList = () => {
   };
 };
 
-const nodeJsFileUrl = util.resolveUrl("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
-const browserJsFileUrl = util.resolveUrl("./src/internal/browser-launcher/jsenv-browser-system.js", jsenvCoreDirectoryUrl);
-const jsenvHtmlFileUrl = util.resolveUrl("./src/internal/jsenv-html-file.html", jsenvCoreDirectoryUrl);
-const exploringRedirectorHtmlFileUrl = util.resolveUrl("./src/internal/exploring/exploring.redirector.html", jsenvCoreDirectoryUrl);
-const exploringRedirectorJsFileUrl = util.resolveUrl("./src/internal/exploring/exploring.redirector.js", jsenvCoreDirectoryUrl);
-const exploringHtmlFileUrl = util.resolveUrl("./src/internal/exploring/exploring.html", jsenvCoreDirectoryUrl);
+const jsenvNodeSystemRelativeUrl = "./src/internal/node-launcher/node-js-file.js";
+const jsenvNodeSystemBundleRelativeUrl = "./dist/jsenv-node-system.cjs";
+const jsenvNodeSystemUrl = util.resolveUrl(jsenvNodeSystemRelativeUrl, jsenvCoreDirectoryUrl);
+const jsenvNodeSystemBundleUrl = util.resolveUrl(jsenvNodeSystemBundleRelativeUrl, jsenvCoreDirectoryUrl);
+const jsenvBrowserSystemRelativeUrl = "./src/internal/browser-launcher/jsenv-browser-system.js";
+const jsenvBrowserSystemBundleRelativeUrl = "./dist/jsenv-browser-system.js";
+const jsenvBrowserSystemUrl = util.resolveUrl(jsenvBrowserSystemRelativeUrl, jsenvCoreDirectoryUrl);
+const jsenvBrowserSystemBundleUrl = util.resolveUrl(jsenvBrowserSystemBundleRelativeUrl, jsenvCoreDirectoryUrl);
 const sourcemapMainFileUrl = util.fileSystemPathToUrl(require$1.resolve("source-map/dist/source-map.js"));
-const sourcemapMappingFileUrl = util.fileSystemPathToUrl(require$1.resolve("source-map/lib/mappings.wasm"));
-const jsenvToolbarJsFileUrl = util.resolveUrl("./src/internal/toolbar/toolbar.js", jsenvCoreDirectoryUrl);
-const jsenvToolbarHtmlFileUrl = util.resolveUrl("./src/internal/toolbar/toolbar.html", jsenvCoreDirectoryUrl);
-const jsenvToolbarMainJsFileUrl = util.resolveUrl("./src/internal/toolbar/toolbar.main.js", jsenvCoreDirectoryUrl);
+const sourcemapMappingFileUrl = util.fileSystemPathToUrl(require$1.resolve("source-map/lib/mappings.wasm")); // Exploring redirection
+// (auto redirection to a compile group depending on browser capabilities)
+
+const jsenvExploringRedirectorHtmlUrl = util.resolveUrl("./src/internal/exploring/exploring.redirector.html", jsenvCoreDirectoryUrl);
+const jsenvExploringRedirectorJsRelativeUrl = "./src/internal/exploring/exploring.redirector.js";
+const jsenvExploringRedirectorJsBundleRelativeUrl = "./dist/jsenv-exploring-redirector.js";
+const jsenvExploringRedirectorJsUrl = util.resolveUrl(jsenvExploringRedirectorJsRelativeUrl, jsenvCoreDirectoryUrl);
+const jsenvExploringRedirectorJsBundleUrl = util.resolveUrl(jsenvExploringRedirectorJsBundleRelativeUrl, jsenvCoreDirectoryUrl); // Exploring index and toolbar
+
+const jsenvExploringHtmlUrl = util.resolveUrl("./src/internal/exploring/exploring.html", jsenvCoreDirectoryUrl);
+const jsenvToolbarHtmlUrl = util.resolveUrl("./src/internal/toolbar/toolbar.html", jsenvCoreDirectoryUrl);
+const jsenvToolbarInjectorBundleRelativeUrl = "./dist/jsenv-toolbar-injector.js";
+const jsenvToolbarInjectorBundleUrl = util.resolveUrl(jsenvToolbarInjectorBundleRelativeUrl, jsenvCoreDirectoryUrl);
+const jsenvToolbarJsRelativeUrl = "./src/internal/toolbar/toolbar.main.js";
+const jsenvToolbarJsBundleRelativeUrl = "dist/jsenv-toolbar.js";
+const jsenvToolbarJsUrl = util.resolveUrl(jsenvToolbarJsRelativeUrl, jsenvCoreDirectoryUrl);
+const jsenvToolbarJsBundleUrl = util.resolveUrl(jsenvToolbarJsBundleRelativeUrl, jsenvCoreDirectoryUrl);
 
 const {
   addNamed
@@ -2026,25 +2010,22 @@ const createBabePluginMapForBundle = ({
 };
 
 /**
- * generateImportMapForCompileServer allows the following:
+ * allows the following:
  *
- * import importMap from '/jsenv.importmap'
+ * import "@jsenv/core/helpers/regenerator-runtime/regenerator-runtime.js"
+ * -> searches a file inside @jsenv/core/*
  *
- * returns the project importMap.
- * Note that if importMap file does not exists an empty object is returned.
- * Note that if project uses a custom importMapFileRelativeUrl jsenv internal import map
- * remaps '/jsenv.importmap' to the real importMap
+ * import importMap from "/jsenv.importmap"
+ * -> searches project importMap at importMapFileRelativeUrl
+ * (if importMap file does not exists an empty object is returned)
+ * (if project uses a custom importMapFileRelativeUrl jsenv that file is returned)
  *
- * This pattern exists so that jsenv can resolve some dynamically injected import such as
- *
- * @jsenv/core/helpers/regenerator-runtime/regenerator-runtime.js
  */
 
 const transformImportmap = async (importmapBeforeTransformation, {
   logger: logger$1,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
-  jsenvCoreDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
   projectFileRequestedCallback,
@@ -2053,6 +2034,13 @@ const transformImportmap = async (importmapBeforeTransformation, {
   projectFileRequestedCallback(util.urlToRelativeUrl(originalFileUrl, projectDirectoryUrl), request);
   const importMapForProject = JSON.parse(importmapBeforeTransformation);
   const originalFileRelativeUrl = util.urlToRelativeUrl(originalFileUrl, projectDirectoryUrl);
+  const importMapForJsenvCore = await nodeModuleImportMap.getImportMapFromNodeModules({
+    logLevel: logger.loggerToLogLevel(logger$1),
+    projectDirectoryUrl: jsenvCoreDirectoryUrl,
+    rootProjectDirectoryUrl: projectDirectoryUrl,
+    importMapFileRelativeUrl: originalFileRelativeUrl,
+    projectPackageDevDependenciesIncluded: false
+  });
   const topLevelRemappingForJsenvCore = {
     "@jsenv/core/": urlToRelativeUrlRemapping(jsenvCoreDirectoryUrl, originalFileUrl)
   };
@@ -2063,13 +2051,6 @@ const transformImportmap = async (importmapBeforeTransformation, {
       topLevelRemappingForJsenvCore
     })
   };
-  const importMapForJsenvCore = await nodeModuleImportMap.getImportMapFromNodeModules({
-    logLevel: logger.loggerToLogLevel(logger$1),
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    rootProjectDirectoryUrl: projectDirectoryUrl,
-    importMapFileRelativeUrl: originalFileRelativeUrl,
-    projectPackageDevDependenciesIncluded: false
-  });
   const outDirectoryUrl = util.resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl);
   const importMapInternal = {
     imports: {
@@ -2078,6 +2059,16 @@ const transformImportmap = async (importmapBeforeTransformation, {
     }
   };
   const importMap$1 = [importMapForJsenvCore, importmapForSelfImport, importMapInternal, importMapForProject].reduce((previous, current) => importMap.composeTwoImportMaps(previous, current), {});
+  const scopes = importMap$1.scopes || {};
+  const projectTopLevelMappings = importMapForProject.imports || {};
+  Object.keys(scopes).forEach(scope => {
+    const scopedMappings = scopes[scope];
+    Object.keys(projectTopLevelMappings).forEach(key => {
+      if (key in scopedMappings) {
+        scopedMappings[key] = projectTopLevelMappings[key];
+      }
+    });
+  });
   return {
     compiledSource: JSON.stringify(importMap$1, null, "  "),
     contentType: "application/importmap+json",
@@ -3288,6 +3279,37 @@ const compileFile = async ({
 
     return server.convertFileSystemErrorToResponseProperties(error);
   }
+};
+
+https.globalAgent.options.rejectUnauthorized = false;
+const fetchUrl = async (url, {
+  simplified = false,
+  ignoreHttpsError = true,
+  ...rest
+} = {}) => {
+  const response = await server.fetchUrl(url, {
+    simplified,
+    ignoreHttpsError,
+    ...rest
+  });
+  return {
+    url: response.url,
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseToHeaders(response),
+    text: response.text.bind(response),
+    json: response.json.bind(response),
+    blob: response.blob.bind(response),
+    arrayBuffer: response.arrayBuffer.bind(response)
+  };
+};
+
+const responseToHeaders = response => {
+  const headers = {};
+  response.headers.forEach((value, name) => {
+    headers[name] = value;
+  });
+  return headers;
 };
 
 const validateResponseStatusIsOk = ({
@@ -7552,7 +7574,6 @@ const createCompiledFileService = ({
   logger,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
-  browserBundledJsFileRelativeUrl,
   importMapFileRelativeUrl,
   importDefaultExtension,
   transformTopLevelAwait,
@@ -7567,6 +7588,7 @@ const createCompiledFileService = ({
   compileCacheStrategy,
   sourcemapExcludeSources
 }) => {
+  const jsenvBrowserBundleUrlRelativeToProject = util.urlToRelativeUrl(jsenvBrowserSystemBundleUrl, projectDirectoryUrl);
   return request => {
     const {
       origin,
@@ -7639,7 +7661,6 @@ const createCompiledFileService = ({
           logger,
           projectDirectoryUrl,
           outDirectoryRelativeUrl,
-          jsenvCoreDirectoryUrl,
           originalFileUrl,
           compiledFileUrl,
           projectFileRequestedCallback,
@@ -7723,11 +7744,11 @@ const createCompiledFileService = ({
           const htmlAst = parseHtmlString(htmlBeforeCompilation);
           manipulateHtmlAst(htmlAst, {
             scriptInjections: [{
-              src: `/${browserBundledJsFileRelativeUrl}`
+              src: `/${jsenvBrowserBundleUrlRelativeToProject}`
             }, // todo: this is dirty because it means
             // compile server is aware of exploring and jsenv toolbar
             // instead this should be moved to startExploring
-            ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptInjections)]
+            ...(originalFileUrl === jsenvToolbarHtmlUrl ? [] : scriptInjections)]
           });
           const {
             scripts
@@ -7918,9 +7939,7 @@ const startCompileServer = async ({
   livereloadLogLevel = "info",
   customServices = {},
   livereloadSSE = false,
-  scriptInjections = [],
-  browserInternalFileAnticipation = false,
-  nodeInternalFileAnticipation = false
+  scriptInjections = []
 }) => {
   assertArguments({
     projectDirectoryUrl,
@@ -8001,22 +8020,18 @@ const startCompileServer = async ({
     };
   }
 
-  const browserjsFileRelativeUrl = util.urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl);
-  const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`;
   const serveAssetFile = createAssetFileService({
     projectDirectoryUrl
   });
   const serveBrowserScript = createBrowserScriptService({
     projectDirectoryUrl,
-    outDirectoryRelativeUrl,
-    browserBundledJsFileRelativeUrl
+    outDirectoryRelativeUrl
   });
   const serveCompiledFile = createCompiledFileService({
     cancellationToken,
     logger: logger$1,
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
-    browserBundledJsFileRelativeUrl,
     importMapFileRelativeUrl,
     importDefaultExtension,
     transformTopLevelAwait,
@@ -8095,29 +8110,6 @@ const startCompileServer = async ({
     compileServer.stoppedPromise.then(() => {
       stopListeningJsenvPackageVersionChange();
     }, () => {});
-  }
-
-  const internalFilesToPing = [];
-
-  if (browserInternalFileAnticipation) {
-    const browserJsFileRelativeUrl = util.urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl);
-    internalFilesToPing.push(`${compileServer.origin}/${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserJsFileRelativeUrl}`);
-  }
-
-  if (nodeInternalFileAnticipation) {
-    const nodeJsFileRelativeUrl = util.urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl);
-    internalFilesToPing.push(`${compileServer.origin}/${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`);
-  }
-
-  if (internalFilesToPing.length) {
-    logger$1.info(`preparing jsenv internal files (${internalFilesToPing.length})...`);
-    await internalFilesToPing.reduce(async (previous, internalFileUrl) => {
-      await previous;
-      logger$1.debug(`ping internal file at ${internalFileUrl} to have it in filesystem cache`);
-      return fetchUrl(internalFileUrl, {
-        ignoreHttpsError: true
-      });
-    }, Promise.resolve());
   }
 
   return {
@@ -8570,8 +8562,7 @@ const createAssetFileService = ({
 
 const createBrowserScriptService = ({
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  browserBundledJsFileRelativeUrl
+  outDirectoryRelativeUrl
 }) => {
   const sourcemapMainFileRelativeUrl = util.urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl);
   const sourcemapMappingFileRelativeUrl = util.urlToRelativeUrl(sourcemapMappingFileUrl, projectDirectoryUrl);
@@ -8591,16 +8582,6 @@ const createBrowserScriptService = ({
           "content-length": Buffer.byteLength(body)
         },
         body
-      };
-    }
-
-    if (request.ressource === "/.jsenv/browser-script.js") {
-      const browserBundledJsFileRemoteUrl = `${request.origin}/${browserBundledJsFileRelativeUrl}`;
-      return {
-        status: 307,
-        headers: {
-          location: browserBundledJsFileRemoteUrl
-        }
       };
     }
 
@@ -9269,8 +9250,7 @@ const execute = async ({
       babelPluginMap,
       convertMap,
       compileGroupCount,
-      browserInternalFileAnticipation: fileRelativeUrl.endsWith(".html"),
-      nodeInternalFileAnticipation: fileRelativeUrl.endsWith(".js") || fileRelativeUrl.endsWith(".jsx") || fileRelativeUrl.endsWith(".ts")
+      browserInternalFileAnticipation: fileRelativeUrl.endsWith(".html")
     });
     const result = await launchAndExecute({
       cancellationToken,
@@ -10261,8 +10241,7 @@ const executePlan = async (plan, {
     babelPluginMap,
     convertMap,
     compileGroupCount,
-    browserInternalFileAnticipation: Object.keys(plan).some(key => key.endsWith(".html")),
-    nodeInternalFileAnticipation: Object.keys(plan).some(key => key.endsWith(".js") || key.endsWith(".jsx") || key.endsWith(".ts"))
+    browserInternalFileAnticipation: Object.keys(plan).some(key => key.endsWith(".html"))
   });
   const executionSteps = await generateExecutionSteps({ ...plan,
     [outDirectoryRelativeUrl]: null
@@ -10674,35 +10653,41 @@ const generateBundle = async ({
       outDirectoryRelativeUrl,
       origin: compileServerOrigin
     } = compileServer;
-    return generateBundleUsingRollup({
-      cancellationToken,
-      logger: logger$1,
-      entryPointMap,
-      projectDirectoryUrl,
-      importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
-      compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
-      compileServerOrigin,
-      importDefaultExtension,
-      externalImportSpecifiers,
-      babelPluginMap,
-      node,
-      browser,
-      writeOnFileSystem,
-      format,
-      useImportMapForJsBundleUrls,
-      systemJsUrl,
-      globalName,
-      globals,
-      sourcemapExcludeSources,
-      preserveEntrySignatures,
-      bundleDirectoryUrl,
-      bundleDirectoryClean,
-      manifestFile,
-      minify,
-      minifyHtmlOptions,
-      minifyJsOptions,
-      minifyCssOptions
-    });
+
+    try {
+      const result = await generateBundleUsingRollup({
+        cancellationToken,
+        logger: logger$1,
+        entryPointMap,
+        projectDirectoryUrl,
+        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
+        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
+        compileServerOrigin,
+        importDefaultExtension,
+        externalImportSpecifiers,
+        babelPluginMap,
+        node,
+        browser,
+        writeOnFileSystem,
+        format,
+        useImportMapForJsBundleUrls,
+        systemJsUrl,
+        globalName,
+        globals,
+        sourcemapExcludeSources,
+        preserveEntrySignatures,
+        bundleDirectoryUrl,
+        bundleDirectoryClean,
+        manifestFile,
+        minify,
+        minifyHtmlOptions,
+        minifyJsOptions,
+        minifyCssOptions
+      });
+      return result;
+    } finally {
+      compileServer.stop("bundle generated");
+    }
   });
 };
 
@@ -11686,7 +11671,6 @@ const STOP_SIGNAL = "SIGKILL"; // it would be more correct if GRACEFUL_STOP_FAIL
 // but I'm not sure and it changes nothing so just use SIGKILL
 
 const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
-const nodeJsFileUrl$1 = util.resolveUrl("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
 const launchNode = async ({
   cancellationToken = cancellation.createCancellationToken(),
   logger,
@@ -12095,38 +12079,27 @@ const onceProcessEvent = (childProcess, type, callback) => {
 
 const generateSourceToEvaluate = async ({
   dynamicImportSupported,
-  executeParams,
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  compileServerOrigin
+  executeParams
 }) => {
   if (dynamicImportSupported) {
-    return `import { execute } from ${JSON.stringify(nodeJsFileUrl$1)}
+    return `import { execute } from ${JSON.stringify(jsenvNodeSystemUrl)}
 
 export default execute(${JSON.stringify(executeParams, null, "    ")})`;
-  }
-
-  const nodeJsFileRelativeUrl = util.urlToRelativeUrl(nodeJsFileUrl$1, projectDirectoryUrl);
-  const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`;
-  const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`;
-  const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`; // The compiled nodeRuntime file will be somewhere else in the filesystem
+  } // The compiled nodeRuntime file will be somewhere else in the filesystem
   // than the original nodeRuntime file.
   // It is important for the compiled file to be able to require
   // node modules that original file could access
   // hence the requireCompiledFileAsOriginalFile
 
+
   return `(() => {
   const { readFileSync } = require("fs")
   const Module = require('module')
   const { dirname } = require("path")
-  const { fetchUrl } = require("@jsenv/server")
 
   const run = async () => {
-    await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)}, { ignoreHttpsError: true })
-
-    const nodeFilePath = ${JSON.stringify(util.urlToFileSystemPath(nodeJsFileUrl$1))}
-    const nodeBundledJsFilePath = ${JSON.stringify(util.urlToFileSystemPath(nodeBundledJsFileUrl))}
-    const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
+    const nodeFilePath = ${JSON.stringify(util.urlToFileSystemPath(jsenvNodeSystemBundleUrl))}
+    const { execute } = requireCompiledFileAsOriginalFile(nodeFilePath, nodeFilePath)
 
     return execute(${JSON.stringify(executeParams, null, "    ")})
   }
@@ -12175,6 +12148,7 @@ const startExploring = async ({
       jsenvDirectoryRelativeUrl,
       outDirectoryName
     });
+    const jsenvToolbarInjectorBundleRelativeUrlForProject = util.urlToRelativeUrl(jsenvToolbarInjectorBundleUrl, projectDirectoryUrl);
     const redirectFiles = createRedirectFilesService({
       projectDirectoryUrl,
       outDirectoryRelativeUrl
@@ -12203,8 +12177,7 @@ const startExploring = async ({
       watchAndSyncImportMap: true,
       compileGroupCount: 2,
       scriptInjections: [...(toolbar ? [{
-        type: "module",
-        src: "@jsenv/core/src/toolbar.js"
+        src: `/${jsenvToolbarInjectorBundleRelativeUrlForProject}`
       }] : [])],
       customServices: {
         "service:exploring-redirect": request => redirectFiles(request),
@@ -12221,56 +12194,53 @@ const startExploring = async ({
 };
 
 const createRedirectFilesService = ({
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl
+  projectDirectoryUrl
 }) => {
-  const exploringRedirectorHtmlFileRelativeUrl = util.urlToRelativeUrl(exploringRedirectorHtmlFileUrl, projectDirectoryUrl);
-  const exploringRedirectorJsFileRelativeUrl = util.urlToRelativeUrl(exploringRedirectorJsFileUrl, projectDirectoryUrl);
-  const exploringRedirectorJsCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${exploringRedirectorJsFileRelativeUrl}`;
-  const toolbarMainJsFileRelativeUrl = util.urlToRelativeUrl(jsenvToolbarMainJsFileUrl, projectDirectoryUrl);
-  const toolbarMainJsCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${toolbarMainJsFileRelativeUrl}`;
+  const jsenvExploringRedirectorHtmlRelativeUrlForProject = util.urlToRelativeUrl(jsenvExploringRedirectorHtmlUrl, projectDirectoryUrl);
+  const jsenvExploringRedirectorJsBundleRelativeUrlForProject = util.urlToRelativeUrl(jsenvExploringRedirectorJsBundleUrl, projectDirectoryUrl);
+  const jsenvToolbarJsBundleRelativeUrlForProject = util.urlToRelativeUrl(jsenvToolbarJsBundleUrl, projectDirectoryUrl);
   return request => {
     if (request.ressource === "/") {
-      const exploringRedirectorHtmlFileUrl = `${request.origin}/${exploringRedirectorHtmlFileRelativeUrl}`;
+      const jsenvExploringRedirectorHtmlServerUrl = `${request.origin}/${jsenvExploringRedirectorHtmlRelativeUrlForProject}`;
       return {
         status: 307,
         headers: {
-          location: exploringRedirectorHtmlFileUrl
+          location: jsenvExploringRedirectorHtmlServerUrl
         }
       };
     }
 
     if (request.ressource === "/.jsenv/toolbar.main.js") {
-      const toolbarMainJsCompiledFileUrl = `${request.origin}/${toolbarMainJsCompiledFileRelativeUrl}`;
+      const jsenvToolbarJsBundleServerUrl = `${request.origin}/${jsenvToolbarJsBundleRelativeUrlForProject}`;
       return {
         status: 307,
         headers: {
-          location: toolbarMainJsCompiledFileUrl
+          location: jsenvToolbarJsBundleServerUrl
         }
       };
     } // unfortunately browser don't resolve sourcemap to url after redirection
     // but to url before. It means browser tries to load source map from
-    // "/.jsenv/toolbar.main.js.map"
+    // "/.jsenv/jsenv-toolbar.js.map"
     // we could also inline sourcemap but it's not yet possible
     // inside generateBundle
 
 
-    if (request.ressource === "/.jsenv/toolbar.main.js.map") {
-      const toolbarSourcemapCompiledFileUrl = `${request.origin}/${toolbarMainJsCompiledFileRelativeUrl}.map`;
+    if (request.ressource === "/.jsenv/jsenv-toolbar.js.map") {
+      const jsenvToolbarJsBundleSourcemapServerUrl = `${request.origin}/${jsenvToolbarJsBundleRelativeUrlForProject}.map`;
       return {
         status: 307,
         headers: {
-          location: toolbarSourcemapCompiledFileUrl
+          location: jsenvToolbarJsBundleSourcemapServerUrl
         }
       };
     }
 
     if (request.ressource === "/.jsenv/exploring.redirector.js") {
-      const exploringRedirectorJsCompiledFileUrl = `${request.origin}/${exploringRedirectorJsCompiledFileRelativeUrl}`;
+      const jsenvExploringRedirectorBundleServerUrl = `${request.origin}/${jsenvExploringRedirectorJsBundleRelativeUrlForProject}`;
       return {
         status: 307,
         headers: {
-          location: exploringRedirectorJsCompiledFileUrl
+          location: jsenvExploringRedirectorBundleServerUrl
         }
       };
     }
@@ -12289,8 +12259,8 @@ const createExploringDataService = ({
       const data = {
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
-        jsenvDirectoryRelativeUrl: util.urlToRelativeUrl(projectDirectoryUrl, jsenvCoreDirectoryUrl),
-        exploringHtmlFileRelativeUrl: util.urlToRelativeUrl(exploringHtmlFileUrl, projectDirectoryUrl),
+        jsenvDirectoryRelativeUrl: util.urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl),
+        exploringHtmlFileRelativeUrl: util.urlToRelativeUrl(jsenvExploringHtmlUrl, projectDirectoryUrl),
         sourcemapMainFileRelativeUrl: util.urlToRelativeUrl(sourcemapMainFileUrl, jsenvCoreDirectoryUrl),
         sourcemapMappingFileRelativeUrl: util.urlToRelativeUrl(sourcemapMappingFileUrl, jsenvCoreDirectoryUrl),
         explorableConfig

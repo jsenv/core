@@ -40,10 +40,6 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
       startTime: assert.any(Number),
       endTime: assert.any(Number),
       fileExecutionResultMap: {
-        "@jsenv/core/src/toolbar.js": {
-          status: "completed",
-          namespace: {},
-        },
         "./livereload.main.js": {
           status: "completed",
           namespace: { default: 42 },

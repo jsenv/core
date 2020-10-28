@@ -3,8 +3,8 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { browserJsFileUrl } from "../../../src/internal/jsenvInternalFiles.js"
-import { COMPILE_ID_GLOBAL_BUNDLE } from "../../../src/internal/CONSTANTS.js"
+import { jsenvBrowserSystemRelativeUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { COMPILE_ID_GLOBAL_BUNDLE } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -18,8 +18,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
 })
-const browserJsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, jsenvCoreDirectoryUrl)
-const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserJsFileRelativeUrl}`
+const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${jsenvBrowserSystemRelativeUrl}`
 const { url, status, statusText, headers } = await fetchUrl(fileServerUrl, {
   ignoreHttpsError: true,
 })

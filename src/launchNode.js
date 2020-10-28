@@ -3,10 +3,13 @@ import { Script } from "vm"
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
+import { urlToFileSystemPath, resolveUrl, assertFilePresence } from "@jsenv/util"
+import {
+  jsenvNodeSystemUrl,
+  jsenvNodeSystemBundleUrl,
+} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { require } from "./internal/require.js"
 import { supportsDynamicImport } from "./internal/supportsDynamicImport.js"
-import { COMPILE_ID_COMMONJS_BUNDLE } from "./internal/CONSTANTS.js"
-import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createChildExecArgv } from "./internal/node-launcher/createChildExecArgv.js"
@@ -29,11 +32,6 @@ const STOP_SIGNAL = "SIGKILL"
 // it would be more correct if GRACEFUL_STOP_FAILED_SIGNAL was SIGHUP instead of SIGKILL.
 // but I'm not sure and it changes nothing so just use SIGKILL
 const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL"
-
-const nodeJsFileUrl = resolveUrl(
-  "./src/internal/node-launcher/node-js-file.js",
-  jsenvCoreDirectoryUrl,
-)
 
 export const launchNode = async ({
   cancellationToken = createCancellationToken(),
@@ -424,24 +422,12 @@ const onceProcessEvent = (childProcess, type, callback) => {
   }
 }
 
-const generateSourceToEvaluate = async ({
-  dynamicImportSupported,
-  executeParams,
-
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  compileServerOrigin,
-}) => {
+const generateSourceToEvaluate = async ({ dynamicImportSupported, executeParams }) => {
   if (dynamicImportSupported) {
-    return `import { execute } from ${JSON.stringify(nodeJsFileUrl)}
+    return `import { execute } from ${JSON.stringify(jsenvNodeSystemUrl)}
 
 export default execute(${JSON.stringify(executeParams, null, "    ")})`
   }
-
-  const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl)
-  const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`
-  const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`
-  const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`
 
   // The compiled nodeRuntime file will be somewhere else in the filesystem
   // than the original nodeRuntime file.
@@ -452,14 +438,10 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`
   const { readFileSync } = require("fs")
   const Module = require('module')
   const { dirname } = require("path")
-  const { fetchUrl } = require("@jsenv/server")
 
   const run = async () => {
-    await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)}, { ignoreHttpsError: true })
-
-    const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
-    const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
-    const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
+    const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(jsenvNodeSystemBundleUrl))}
+    const { execute } = requireCompiledFileAsOriginalFile(nodeFilePath, nodeFilePath)
 
     return execute(${JSON.stringify(executeParams, null, "    ")})
   }

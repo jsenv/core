@@ -8,8 +8,7 @@ import {
   COMPILE_ID_COMMONJS_BUNDLE,
   COMPILE_ID_COMMONJS_BUNDLE_FILES,
 } from "../CONSTANTS.js"
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { jsenvToolbarHtmlFileUrl } from "../jsenvInternalFiles.js"
+import { jsenvToolbarHtmlUrl, jsenvBrowserSystemBundleUrl } from "../jsenvInternalFiles.js"
 import { createBabePluginMapForBundle } from "../bundling/createBabePluginMapForBundle.js"
 import { transformImportmap } from "./transformImportmap.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
@@ -36,7 +35,6 @@ export const createCompiledFileService = ({
 
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
-  browserBundledJsFileRelativeUrl,
   importMapFileRelativeUrl,
   importDefaultExtension,
 
@@ -53,6 +51,11 @@ export const createCompiledFileService = ({
   compileCacheStrategy,
   sourcemapExcludeSources,
 }) => {
+  const jsenvBrowserBundleUrlRelativeToProject = urlToRelativeUrl(
+    jsenvBrowserSystemBundleUrl,
+    projectDirectoryUrl,
+  )
+
   return (request) => {
     const { origin, ressource, method, headers } = request
     const requestUrl = `${origin}${ressource}`
@@ -133,7 +136,6 @@ export const createCompiledFileService = ({
             logger,
             projectDirectoryUrl,
             outDirectoryRelativeUrl,
-            jsenvCoreDirectoryUrl,
             originalFileUrl,
             compiledFileUrl,
             projectFileRequestedCallback,
@@ -225,12 +227,12 @@ export const createCompiledFileService = ({
           manipulateHtmlAst(htmlAst, {
             scriptInjections: [
               {
-                src: `/${browserBundledJsFileRelativeUrl}`,
+                src: `/${jsenvBrowserBundleUrlRelativeToProject}`,
               },
               // todo: this is dirty because it means
               // compile server is aware of exploring and jsenv toolbar
               // instead this should be moved to startExploring
-              ...(originalFileUrl === jsenvToolbarHtmlFileUrl ? [] : scriptInjections),
+              ...(originalFileUrl === jsenvToolbarHtmlUrl ? [] : scriptInjections),
             ],
           })
           const { scripts } = parseHtmlAstRessources(htmlAst)
