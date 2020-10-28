@@ -1,5 +1,6 @@
+/* eslint-disable import/max-dependencies */
+import { createCancellationTokenForProcess } from "@jsenv/cancellation"
 import {
-  createCancellationTokenForProcess,
   metaMapToSpecifierMetaMap,
   normalizeSpecifierMetaMap,
   urlToFileSystemPath,
@@ -9,7 +10,7 @@ import {
   resolveUrl,
 } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
-import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
+import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { executePlan } from "./internal/executing/executePlan.js"
 import { executionIsPassed } from "./internal/executing/executionIsPassed.js"
@@ -69,7 +70,7 @@ export const executeTestPlan = async ({
   // but we need something angostic that just forward the params hence using ...rest
   ...rest
 }) => {
-  return wrapExternalFunctionExecution(async () => {
+  return executeJsenvAsyncFunction(async () => {
     const logger = createLogger({ logLevel })
 
     cancellationToken.register((cancelError) => {

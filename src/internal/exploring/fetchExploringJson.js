@@ -1,4 +1,4 @@
-import { isCancelError } from "@jsenv/cancellation"
+import { isCancelError } from "@jsenv/cancellation/main.browser.js"
 import { fetchUrl } from "../fetch-browser.js"
 
 export const fetchExploringJson = async ({ cancellationToken } = {}) => {

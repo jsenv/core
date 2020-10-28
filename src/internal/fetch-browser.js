@@ -1,4 +1,4 @@
-import { createCancellationToken } from "@jsenv/cancellation"
+import { createCancellationToken } from "@jsenv/cancellation/main.browser.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
 
 const fetchNative = async (

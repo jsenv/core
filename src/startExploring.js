@@ -1,11 +1,11 @@
+import { createCancellationTokenForProcess } from "@jsenv/cancellation"
 import {
-  createCancellationTokenForProcess,
   metaMapToSpecifierMetaMap,
   normalizeSpecifierMetaMap,
   collectFiles,
   urlToRelativeUrl,
 } from "@jsenv/util"
-import { wrapExternalFunctionExecution } from "./internal/wrapExternalFunctionExecution.js"
+import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import {
@@ -33,7 +33,7 @@ export const startExploring = async ({
   livereloading = true,
   ...rest
 }) => {
-  return wrapExternalFunctionExecution(async () => {
+  return executeJsenvAsyncFunction(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
