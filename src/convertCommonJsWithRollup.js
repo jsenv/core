@@ -6,7 +6,7 @@ const commonjs = require("@rollup/plugin-commonjs")
 const { nodeResolve } = require("@rollup/plugin-node-resolve")
 const createJSONRollupPlugin = require("@rollup/plugin-json")
 const createReplaceRollupPlugin = require("@rollup/plugin-replace")
-const builtins = require("rollup-plugin-node-builtins")
+const builtins = require("rollup-plugin-node-builtins-brofs")
 const createNodeGlobalRollupPlugin = require("rollup-plugin-node-globals")
 
 export const convertCommonJsWithRollup = async ({
