@@ -686,7 +686,7 @@ const createJSONRollupPlugin = require$1("@rollup/plugin-json");
 
 const createReplaceRollupPlugin = require$1("@rollup/plugin-replace");
 
-const builtins = require$1("rollup-plugin-node-builtins");
+const builtins = require$1("rollup-plugin-node-builtins-brofs");
 
 const createNodeGlobalRollupPlugin = require$1("rollup-plugin-node-globals");
 
@@ -7904,6 +7904,7 @@ const startCompileServer = async ({
   // this should increase perf (no need to download source for browser)
   useFilesystemAsCache = true,
   compileCacheStrategy = "etag",
+  projectFileEtagEnabled = true,
   // js compile options
   transformTopLevelAwait = true,
   transformModuleIntoSystemFormat = true,
@@ -8048,7 +8049,8 @@ const startCompileServer = async ({
   });
   const serveProjectFile = createProjectFileService({
     projectDirectoryUrl,
-    projectFileRequestedCallback
+    projectFileRequestedCallback,
+    projectFileEtagEnabled
   });
   const compileServer = await server.startServer({
     cancellationToken,
@@ -8591,7 +8593,8 @@ const createBrowserScriptService = ({
 
 const createProjectFileService = ({
   projectDirectoryUrl,
-  projectFileRequestedCallback
+  projectFileRequestedCallback,
+  projectFileEtagEnabled
 }) => {
   return request => {
     const {
@@ -8606,7 +8609,7 @@ const createProjectFileService = ({
     const responsePromise = server.serveFile(filePath, {
       method,
       headers,
-      etagEnabled: true
+      etagEnabled: projectFileEtagEnabled
     });
     return responsePromise;
   };
