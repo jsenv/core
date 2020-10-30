@@ -54,6 +54,7 @@ export const startCompileServer = async ({
   sourcemapExcludeSources = false, // this should increase perf (no need to download source for browser)
   useFilesystemAsCache = true,
   compileCacheStrategy = "etag",
+  projectFileEtagEnabled = false,
 
   // js compile options
   transformTopLevelAwait = true,
@@ -204,6 +205,7 @@ export const startCompileServer = async ({
   const serveProjectFile = createProjectFileService({
     projectDirectoryUrl,
     projectFileRequestedCallback,
+    projectFileEtagEnabled,
   })
 
   const compileServer = await startServer({
@@ -721,7 +723,11 @@ const createBrowserScriptService = ({ projectDirectoryUrl, outDirectoryRelativeU
   }
 }
 
-const createProjectFileService = ({ projectDirectoryUrl, projectFileRequestedCallback }) => {
+const createProjectFileService = ({
+  projectDirectoryUrl,
+  projectFileRequestedCallback,
+  projectFileEtagEnabled,
+}) => {
   return (request) => {
     const { ressource, method, headers } = request
     const relativeUrl = ressource.slice(1)
@@ -733,7 +739,7 @@ const createProjectFileService = ({ projectDirectoryUrl, projectFileRequestedCal
     const responsePromise = serveFile(filePath, {
       method,
       headers,
-      etagEnabled: true,
+      etagEnabled: projectFileEtagEnabled,
     })
 
     return responsePromise
