@@ -20,6 +20,7 @@ export const generateBundle = async ({
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
   importDefaultExtension,
+  importMetaDev = process.env.NODE_ENV !== "production",
   externalImportSpecifiers = [],
   env = {},
 
@@ -134,9 +135,14 @@ export const generateBundle = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
+      // bundle compiled files are written into a different directory
+      // than exploring-server. This is because here we compile for rollup
+      // that is expecting esmodule format, not systemjs
+      // + some more differences like import.meta.dev
       outDirectoryName: "out-bundle",
       importMapFileRelativeUrl,
       importDefaultExtension,
+      importMetaDev,
 
       compileServerProtocol,
       compileServerPrivateKey,
