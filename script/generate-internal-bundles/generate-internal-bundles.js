@@ -25,7 +25,6 @@ const bundlesToGenerate = [
     entryPointMap: {
       [jsenvBrowserSystemRelativeUrl]: "./jsenv-browser-system.js",
     },
-    externalImportUrlPatterns: {},
   },
   {
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
@@ -34,7 +33,6 @@ const bundlesToGenerate = [
     entryPointMap: {
       [jsenvExploringRedirectorJsRelativeUrl]: "./jsenv-exploring-redirector.js",
     },
-    externalImportUrlPatterns: {},
   },
   {
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
@@ -43,7 +41,6 @@ const bundlesToGenerate = [
     entryPointMap: {
       [jsenvToolbarInjectorRelativeUrl]: "./jsenv-toolbar-injector.js",
     },
-    externalImportUrlPatterns: {},
   },
   {
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
@@ -52,7 +49,6 @@ const bundlesToGenerate = [
     entryPointMap: {
       [jsenvToolbarJsRelativeUrl]: "./jsenv-toolbar.js",
     },
-    externalImportUrlPatterns: {},
   },
 ]
 

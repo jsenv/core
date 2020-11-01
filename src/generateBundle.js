@@ -21,9 +21,6 @@ export const generateBundle = async ({
   importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers = [],
-  externalImportUrlPatterns = {
-    "node_modules/": true,
-  },
   env = {},
 
   compileServerProtocol,
@@ -34,6 +31,11 @@ export const generateBundle = async ({
   babelPluginMap = jsenvBabelPluginMap,
 
   format = "esm",
+  externalImportUrlPatterns = format === "commonjs"
+    ? {
+        "node_modules/": true,
+      }
+    : {},
   useImportMapForJsBundleUrls,
   browser = format === "global" || format === "systemjs" || format === "esmodule",
   node = format === "commonjs",
