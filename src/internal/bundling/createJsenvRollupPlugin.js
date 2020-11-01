@@ -1213,7 +1213,11 @@ const externalImportUrlPatternsToExternalUrlPredicate = (
   projectDirectoryUrl,
 ) => {
   const externalImportUrlMetaMap = metaMapToSpecifierMetaMap({
-    external: externalImportUrlPatterns,
+    external: {
+      ...externalImportUrlPatterns,
+      "node_modules/@jsenv/core/src/internal/import-meta/": false,
+      "node_modules/@jsenv/core/helpers/": false,
+    },
   })
   const externalImportUrlMetaMapNormalized = normalizeSpecifierMetaMap(
     externalImportUrlMetaMap,

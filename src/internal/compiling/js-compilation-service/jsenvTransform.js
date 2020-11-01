@@ -96,13 +96,13 @@ export const jsenvTransform = async ({
             }
             if (moduleOutFormat === "commonjs") {
               replaceWithImport({
-                from: `@jsenv/core/src/internal/bundling/import-meta-url-commonjs.js`,
+                from: `@jsenv/core/src/internal/import-meta/import-meta-url-commonjs.js`,
               })
               return
             }
             if (moduleOutFormat === "global") {
               replaceWithImport({
-                from: `@jsenv/core/src/internal/bundling/import-meta-url-global.js`,
+                from: `@jsenv/core/src/internal/import-meta/import-meta-url-global.js`,
               })
               return
             }
@@ -120,13 +120,13 @@ export const jsenvTransform = async ({
             }
             if (moduleOutFormat === "commonjs") {
               replaceWithImport({
-                from: `@jsenv/core/src/internal/bundling/import-meta-resolve-commonjs.js`,
+                from: `@jsenv/core/src/internal/import-meta/import-meta-resolve-commonjs.js`,
               })
               return
             }
             if (moduleOutFormat === "global") {
               replaceWithImport({
-                from: `@jsenv/core/src/internal/bundling/import-meta-resolve-global.js`,
+                from: `@jsenv/core/src/internal/import-meta/import-meta-resolve-global.js`,
               })
               return
             }
