@@ -21,6 +21,9 @@ export const generateBundle = async ({
   importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers = [],
+  externalImportUrlPatterns = {
+    "node_modules/": true,
+  },
   env = {},
 
   compileServerProtocol,
@@ -163,6 +166,7 @@ export const generateBundle = async ({
         compileServerOrigin,
         importDefaultExtension,
         externalImportSpecifiers,
+        externalImportUrlPatterns,
         babelPluginMap,
         node,
         browser,

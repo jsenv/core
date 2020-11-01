@@ -344,6 +344,8 @@ const setupOutDirectory = async (
     babelPluginMap,
     convertMap,
     compileServerGroupMap,
+    replaceProcessEnvNodeEnv,
+    processEnvNodeEnv,
   },
 ) => {
   if (jsenvDirectoryClean) {
@@ -359,6 +361,8 @@ const setupOutDirectory = async (
       babelPluginMap,
       convertMap,
       compileServerGroupMap,
+      replaceProcessEnvNodeEnv,
+      processEnvNodeEnv,
     }
     const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
 

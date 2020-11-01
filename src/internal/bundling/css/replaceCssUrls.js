@@ -1,4 +1,3 @@
-import { require } from "@jsenv/core/src/internal/require.js"
 import { applyPostCss } from "./applyPostCss.js"
 import { postCssUrlHashPlugin } from "./postcss-urlhash-plugin.js"
 
@@ -10,7 +9,7 @@ export const replaceCssUrls = async (
 ) => {
   const postcssPlugins = [
     postCssUrlHashPlugin,
-    ...(cssMinification ? [getCssMinificationPlugin(cssMinificationOptions)] : []),
+    ...(cssMinification ? [await getCssMinificationPlugin(cssMinificationOptions)] : []),
   ]
   const postcssOptions = {
     getUrlReplacementValue,
@@ -23,9 +22,9 @@ export const replaceCssUrls = async (
   return result
 }
 
-const getCssMinificationPlugin = (cssMinificationOptions = {}) => {
-  const cssnano = require("cssnano")
-  const cssnanoDefaultPreset = require("cssnano-preset-default")
+const getCssMinificationPlugin = async (cssMinificationOptions = {}) => {
+  const cssnano = await import("cssnano")
+  const cssnanoDefaultPreset = await import("cssnano-preset-default")
   return cssnano({
     preset: cssnanoDefaultPreset({
       ...cssMinificationOptions,

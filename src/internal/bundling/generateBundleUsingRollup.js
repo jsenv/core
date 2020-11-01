@@ -1,9 +1,7 @@
+import { rollup } from "rollup"
 import { createOperation } from "@jsenv/cancellation"
 import { urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/util"
-import { require } from "../require.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
-
-const { rollup } = require("rollup")
 
 export const generateBundleUsingRollup = async ({
   cancellationToken,
@@ -16,6 +14,7 @@ export const generateBundleUsingRollup = async ({
   compileServerOrigin,
   importDefaultExtension,
   externalImportSpecifiers,
+  externalImportUrlPatterns,
   babelPluginMap,
   node,
   browser,
@@ -50,6 +49,7 @@ export const generateBundleUsingRollup = async ({
     compileServerOrigin,
     importDefaultExtension,
     externalImportSpecifiers,
+    externalImportUrlPatterns,
     babelPluginMap,
     node,
     browser,

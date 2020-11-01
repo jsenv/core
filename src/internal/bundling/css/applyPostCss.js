@@ -1,7 +1,5 @@
+import postcss from "postcss"
 import { urlToFileSystemPath } from "@jsenv/util"
-import { require } from "@jsenv/core/src/internal/require.js"
-
-const postcss = require("postcss")
 
 export const applyPostCss = async (
   cssString,

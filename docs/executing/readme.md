@@ -325,10 +325,10 @@ const { startMs, endMs } = await execute({
 `runtimeName` is a string describing the runtime used to execute the file. It is returned only when `collectRuntimeName` is enabled. For now the possible runtimeName values are `"chromium"`, `"node"`, `"firefox"`, `"webkit"`.
 
 ```js
-const { execute } = require("@jsenv/core")
+import { execute } from "@jsenv/core"
 
 const { runtimeName } = await execute({
-  projectDirectoryUrl: __dirname,
+  projectDirectoryUrl: new URL('./', import.meta.url),
   fileRelativeUrl: "./index.js",
   collectRuntimeName: true, // without this runtimeName is undefined
 })

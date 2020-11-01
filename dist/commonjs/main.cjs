@@ -2,8 +2,11 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
+require('@jsenv/import-map/src/normalizeImportMap.js');
+require('@jsenv/import-map/src/resolveImport.js');
 var module$1 = require('module');
 var util = require('@jsenv/util');
+var rollup = require('rollup');
 var cancellation = require('@jsenv/cancellation');
 var fs = require('fs');
 var server = require('@jsenv/server');
@@ -13,6 +16,9 @@ var nodeModuleImportMap = require('@jsenv/node-module-import-map');
 var path = require('path');
 var https = require('https');
 var crypto = require('crypto');
+var postcss = require('postcss');
+var valueParser = require('postcss-value-parser');
+var terser = require('terser');
 var os = require('os');
 var readline = require('readline');
 var nodeSignals = require('@jsenv/node-signals');
@@ -22,6 +28,28 @@ var _uneval = require('@jsenv/uneval');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
+function _interopNamespace(e) {
+  if (e && e.__esModule) return e;
+  var n = Object.create(null);
+  if (e) {
+    Object.keys(e).forEach(function (k) {
+      if (k !== 'default') {
+        var d = Object.getOwnPropertyDescriptor(e, k);
+        Object.defineProperty(n, k, d.get ? d : {
+          enumerable: true,
+          get: function () {
+            return e[k];
+          }
+        });
+      }
+    });
+  }
+  n['default'] = e;
+  return Object.freeze(n);
+}
+
+var postcss__default = /*#__PURE__*/_interopDefaultLegacy(postcss);
+var valueParser__default = /*#__PURE__*/_interopDefaultLegacy(valueParser);
 var readline__default = /*#__PURE__*/_interopDefaultLegacy(readline);
 
 /* global require, __filename */
@@ -672,10 +700,6 @@ const __dirnameReplacement = `import.meta.url.slice('file:///'.length).replace(/
 //   }
 // }
 
-const {
-  rollup
-} = require$1("rollup");
-
 const commonjs = require$1("@rollup/plugin-commonjs");
 
 const {
@@ -728,7 +752,7 @@ const convertCommonJsWithRollup = async ({
     buffer: replaceBuffer
   });
   const commonJsRollupPlugin = commonjs();
-  const rollupBundle = await rollup({
+  const rollupBundle = await rollup.rollup({
     input: filePath,
     inlineDynamicImports: true,
     external,
@@ -5444,15 +5468,13 @@ const parseImportmapAsset = ({
   };
 };
 
-const postcss = require$1("postcss");
-
 const applyPostCss = async (cssString, cssUrl, plugins, // https://github.com/postcss/postcss#options
 options = {}) => {
   let result;
 
   try {
     const cssFileUrl = urlToFileUrl(cssUrl);
-    result = await postcss(plugins).process(cssString, {
+    result = await postcss__default['default'](plugins).process(cssString, {
       collectUrls: true,
       from: util.urlToFileSystemPath(cssFileUrl),
       to: util.urlToFileSystemPath(cssFileUrl),
@@ -5498,9 +5520,6 @@ and it indicates a node has been replaced without passing source
 hence sourcemap cannot point the original source location
 
 */
-
-const valueParser = require$1("postcss-value-parser");
-
 const postCssUrlHashPlugin = () => {
   return {
     postcssPlugin: "urlhash",
@@ -5526,7 +5545,7 @@ const postCssUrlHashPlugin = () => {
               return;
             }
 
-            const parsed = valueParser(atImportNode.params);
+            const parsed = valueParser__default['default'](atImportNode.params);
             let [urlNode] = parsed.nodes;
 
             if (!urlNode || urlNode.type !== "string" && urlNode.type !== "function") {
@@ -5552,7 +5571,7 @@ const postCssUrlHashPlugin = () => {
                 url = urlNode.value;
               } else {
                 urlNode = urlNode.nodes;
-                url = valueParser.stringify(urlNode.nodes);
+                url = valueParser__default['default'].stringify(urlNode.nodes);
               }
             }
 
@@ -5644,7 +5663,7 @@ const declarationNodeContainsUrl = declarationNode => {
 };
 
 const walkUrls = (declarationNode, callback) => {
-  const parsed = valueParser(declarationNode.value);
+  const parsed = valueParser__default['default'](declarationNode.value);
   parsed.walk(node => {
     // https://github.com/andyjansson/postcss-functions
     if (isUrlFunctionNode(node)) {
@@ -5652,7 +5671,7 @@ const walkUrls = (declarationNode, callback) => {
         nodes
       } = node;
       const [urlNode] = nodes;
-      const url = urlNode && urlNode.type === "string" ? urlNode.value : valueParser.stringify(nodes);
+      const url = urlNode && urlNode.type === "string" ? urlNode.value : valueParser__default['default'].stringify(nodes);
       callback(url.trim(), urlNode);
       return;
     }
@@ -5669,7 +5688,7 @@ const walkUrls = (declarationNode, callback) => {
             nodes
           } = childNode;
           const [urlNode] = nodes;
-          const url = urlNode && urlNode.type === "string" ? urlNode.value : valueParser.stringify(nodes);
+          const url = urlNode && urlNode.type === "string" ? urlNode.value : valueParser__default['default'].stringify(nodes);
           callback(url.trim(), urlNode);
           return;
         }
@@ -5733,7 +5752,7 @@ const replaceCssUrls = async (css, cssUrl, getUrlReplacementValue, {
   cssMinificationOptions,
   sourcemapOptions = {}
 } = {}) => {
-  const postcssPlugins = [postCssUrlHashPlugin, ...(cssMinification ? [getCssMinificationPlugin(cssMinificationOptions)] : [])];
+  const postcssPlugins = [postCssUrlHashPlugin, ...(cssMinification ? [await getCssMinificationPlugin(cssMinificationOptions)] : [])];
   const postcssOptions = {
     getUrlReplacementValue,
     map: {
@@ -5745,11 +5764,9 @@ const replaceCssUrls = async (css, cssUrl, getUrlReplacementValue, {
   return result;
 };
 
-const getCssMinificationPlugin = (cssMinificationOptions = {}) => {
-  const cssnano = require$1("cssnano");
-
-  const cssnanoDefaultPreset = require$1("cssnano-preset-default");
-
+const getCssMinificationPlugin = async (cssMinificationOptions = {}) => {
+  const cssnano = await Promise.resolve().then(function () { return /*#__PURE__*/_interopNamespace(require('cssnano')); });
+  const cssnanoDefaultPreset = await Promise.resolve().then(function () { return /*#__PURE__*/_interopNamespace(require('cssnano-preset-default')); });
   return cssnano({
     preset: cssnanoDefaultPreset({ ...cssMinificationOptions // just to show how you could configure dicard comment plugin from css nano
       // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default
@@ -5941,13 +5958,8 @@ const compareUrlNodeValue = (firstUrlNodeValue, secondUrlNodeValue) => {
   return firstValueNormalized === secondValueNormalized;
 };
 
-const {
-  minify: minify$1
-} = require$1("terser"); // https://github.com/terser-js/terser#minify-options
-
-
 const minifyJs = async (jsString, jsUrl, options) => {
-  const result = await minify$1({
+  const result = await terser.minify({
     [jsUrl]: jsString
   }, options);
   return result;
@@ -6072,6 +6084,7 @@ const createJsenvRollupPlugin = async ({
   compileServerOrigin,
   importDefaultExtension,
   externalImportSpecifiers,
+  externalImportUrlPatterns,
   babelPluginMap,
   node,
   browser,
@@ -6089,7 +6102,8 @@ const createJsenvRollupPlugin = async ({
   const urlImporterMap = {};
   const urlResponseBodyMap = {};
   const virtualModules = {};
-  const urlRedirectionMap = {}; // map fileName (bundle relative urls without hash) to bundle relative url
+  const urlRedirectionMap = {};
+  const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(externalImportUrlPatterns, projectDirectoryUrl); // map fileName (bundle relative urls without hash) to bundle relative url
 
   let bundleManifest = {};
 
@@ -6559,6 +6573,13 @@ const createJsenvRollupPlugin = async ({
       const importProjectUrl = urlToProjectUrl(importUrl);
 
       if (!importProjectUrl) {
+        return {
+          id: specifier,
+          external: true
+        };
+      }
+
+      if (externalUrlPredicate(urlToOriginalProjectUrl(importProjectUrl))) {
         return {
           id: specifier,
           external: true
@@ -7175,9 +7196,19 @@ const ensureRelativeUrlNotation$1 = relativeUrl => {
   return `./${relativeUrl}`;
 };
 
-const {
-  rollup: rollup$1
-} = require$1("rollup");
+const externalImportUrlPatternsToExternalUrlPredicate = (externalImportUrlPatterns, projectDirectoryUrl) => {
+  const externalImportUrlMetaMap = util.metaMapToSpecifierMetaMap({
+    external: externalImportUrlPatterns
+  });
+  const externalImportUrlMetaMapNormalized = util.normalizeSpecifierMetaMap(externalImportUrlMetaMap, projectDirectoryUrl);
+  return url => {
+    const meta = util.urlToMeta({
+      url,
+      specifierMetaMap: externalImportUrlMetaMapNormalized
+    });
+    return Boolean(meta.external);
+  };
+};
 
 const generateBundleUsingRollup = async ({
   cancellationToken,
@@ -7189,6 +7220,7 @@ const generateBundleUsingRollup = async ({
   compileServerOrigin,
   importDefaultExtension,
   externalImportSpecifiers,
+  externalImportUrlPatterns,
   babelPluginMap,
   node,
   browser,
@@ -7221,6 +7253,7 @@ const generateBundleUsingRollup = async ({
     compileServerOrigin,
     importDefaultExtension,
     externalImportSpecifiers,
+    externalImportUrlPatterns,
     babelPluginMap,
     node,
     browser,
@@ -7317,7 +7350,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
   };
   const rollupBundle = await cancellation.createOperation({
     cancellationToken,
-    start: () => rollup$1(rollupInputOptions)
+    start: () => rollup.rollup(rollupInputOptions)
   });
 
   if (bundleDirectoryClean) {
@@ -8178,7 +8211,9 @@ const setupOutDirectory = async (outDirectoryUrl, {
   useFilesystemAsCache,
   babelPluginMap,
   convertMap,
-  compileServerGroupMap
+  compileServerGroupMap,
+  replaceProcessEnvNodeEnv,
+  processEnvNodeEnv
 }) => {
   if (jsenvDirectoryClean) {
     logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`);
@@ -8193,7 +8228,9 @@ const setupOutDirectory = async (outDirectoryUrl, {
       jsenvCorePackageVersion,
       babelPluginMap,
       convertMap,
-      compileServerGroupMap
+      compileServerGroupMap,
+      replaceProcessEnvNodeEnv,
+      processEnvNodeEnv
     };
     const metaFileUrl = util.resolveUrl("./meta.json", outDirectoryUrl);
     let previousOutDirectoryMeta;
@@ -10519,6 +10556,9 @@ const generateBundle = async ({
   importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers = [],
+  externalImportUrlPatterns = {
+    "node_modules/": true
+  },
   env = {},
   compileServerProtocol,
   compileServerPrivateKey,
@@ -10667,6 +10707,7 @@ const generateBundle = async ({
         compileServerOrigin,
         importDefaultExtension,
         externalImportSpecifiers,
+        externalImportUrlPatterns,
         babelPluginMap,
         node,
         browser,
