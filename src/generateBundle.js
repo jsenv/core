@@ -139,8 +139,8 @@ export const generateBundle = async ({
       importDefaultExtension,
       importMetaEnvFileRelativeUrl,
       importMeta,
-      importMetaFormat: format,
       moduleOutFormat: "esmodule", // rollup will transform into systemjs
+      importMetaFormat: format, // but ensure import.meta are correctly transformed into the right format
 
       compileServerProtocol,
       compileServerPrivateKey,

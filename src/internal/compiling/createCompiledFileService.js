@@ -201,7 +201,7 @@ export const createCompiledFileService = ({
                 ? "global"
                 : compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES
                 ? "commonjs"
-                : moduleOutFormat,
+                : importMetaFormat,
           })
           const sourcemapFileUrl = `${compiledFileUrl}.map`
 
