@@ -1,4 +1,5 @@
 import {
+  resolveUrl,
   urlToFileSystemPath,
   urlToRelativeUrl,
   metaMapToSpecifierMetaMap,
@@ -17,6 +18,8 @@ export const transformJs = async ({
   babelPluginMap,
   convertMap = {},
   moduleOutFormat = "esmodule",
+  importMetaEnvFileRelativeUrl,
+  importMeta = {},
 
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
@@ -50,6 +53,10 @@ export const transformJs = async ({
   const inputPath = computeInputPath(url)
   const inputRelativePath = computeInputRelativePath(url, projectDirectoryUrl)
 
+  const importMetaEnvFileUrl = resolveUrl(importMetaEnvFileRelativeUrl, projectDirectoryUrl)
+  const importMetaEnvRelativeUrlForInput = urlToRelativeUrl(importMetaEnvFileUrl, url)
+  const importMetaEnvFileSpecifier = relativeUrlToSpecifier(importMetaEnvRelativeUrlForInput)
+
   return jsenvTransform({
     inputCode,
     inputMap,
@@ -59,6 +66,8 @@ export const transformJs = async ({
     babelPluginMap,
     convertMap,
     moduleOutFormat,
+    importMetaEnvFileSpecifier,
+    importMeta,
 
     allowTopLevelAwait,
     transformTopLevelAwait,
@@ -120,9 +129,15 @@ const computeInputPath = (url) => {
   return url
 }
 
-export const computeInputRelativePath = (url, projectDirectoryUrl) => {
+const computeInputRelativePath = (url, projectDirectoryUrl) => {
   if (url.startsWith(projectDirectoryUrl)) {
     return urlToRelativeUrl(url, projectDirectoryUrl)
   }
   return undefined
+}
+
+const relativeUrlToSpecifier = (relativeUrl) => {
+  if (relativeUrl.startsWith("../")) return relativeUrl
+  if (relativeUrl.startsWith("./")) return relativeUrl
+  return `./${relativeUrl}`
 }

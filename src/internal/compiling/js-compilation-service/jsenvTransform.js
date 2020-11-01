@@ -20,10 +20,13 @@ export const jsenvTransform = async ({
   inputRelativePath,
   inputAst,
   inputMap,
+
   babelPluginMap,
   moduleOutFormat,
-  allowTopLevelAwait,
+  importMetaEnvFileSpecifier,
   importMeta = {},
+
+  allowTopLevelAwait,
   transformTopLevelAwait,
   transformGenerator,
   transformGlobalThis,
@@ -78,66 +81,72 @@ export const jsenvTransform = async ({
   }
 
   babelPluginMap = {
-    ...babelPluginMap,
-    "transform-babel-helpers-to-import": [transformBabelHelperToImportBabelPlugin],
     "transform-import-meta": [
       babelPluginTransformImportMeta,
       {
         replaceImportMeta: (metaPropertyName, { replaceWithImport, replaceWithValue }) => {
-          if (moduleOutFormat === "esmodule") {
-            if (metaPropertyName === "url" || metaPropertyName === "resolve") {
-              // handled natively
+          if (metaPropertyName === "url") {
+            if (moduleOutFormat === "esmodule") {
+              // keep native version
               return
             }
-            replaceWithValue(importMeta[metaPropertyName])
-            return
-          }
-
-          if (moduleOutFormat === "systemjs") {
-            if (metaPropertyName === "url" || metaPropertyName === "resolve") {
-              // handled by rollup or systemjs itself
+            if (moduleOutFormat === "systemjs") {
+              // systemjs will handle it
               return
             }
-            replaceWithValue(importMeta[metaPropertyName])
-            return
-          }
-
-          if (moduleOutFormat === "commonjs") {
-            if (metaPropertyName === "url") {
+            if (moduleOutFormat === "commonjs") {
               replaceWithImport({
                 from: `@jsenv/core/src/internal/bundling/import-meta-url-commonjs.js`,
               })
               return
             }
-            if (metaPropertyName === "resolve") {
-              replaceWithImport({
-                from: `@jsenv/core/src/internal/bundling/import-meta-resolve-commonjs.js`,
-              })
-              return
-            }
-            replaceWithValue(importMeta[metaPropertyName])
-            return
-          }
-
-          if (moduleOutFormat === "global") {
-            if (metaPropertyName === "url") {
+            if (moduleOutFormat === "global") {
               replaceWithImport({
                 from: `@jsenv/core/src/internal/bundling/import-meta-url-global.js`,
               })
               return
             }
-            if (metaPropertyName === "resolve") {
+            return
+          }
+
+          if (metaPropertyName === "resolve") {
+            if (moduleOutFormat === "esmodule") {
+              // keep native version
+              return
+            }
+            if (moduleOutFormat === "systemjs") {
+              // systemjs will handle it
+              return
+            }
+            if (moduleOutFormat === "commonjs") {
+              replaceWithImport({
+                from: `@jsenv/core/src/internal/bundling/import-meta-resolve-commonjs.js`,
+              })
+              return
+            }
+            if (moduleOutFormat === "global") {
               replaceWithImport({
                 from: `@jsenv/core/src/internal/bundling/import-meta-resolve-global.js`,
               })
               return
             }
-            replaceWithValue(importMeta[metaPropertyName])
             return
           }
+
+          if (metaPropertyName === "env") {
+            replaceWithImport({
+              namespace: true,
+              from: importMetaEnvFileSpecifier,
+            })
+            return
+          }
+
+          replaceWithValue(importMeta[metaPropertyName])
         },
       },
     ],
+    ...babelPluginMap,
+    "transform-babel-helpers-to-import": [transformBabelHelperToImportBabelPlugin],
   }
 
   const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap)

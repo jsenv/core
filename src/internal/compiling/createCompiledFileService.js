@@ -35,6 +35,7 @@ export const createCompiledFileService = ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   importMapFileRelativeUrl,
+  importMetaEnvFileRelativeUrl,
   importDefaultExtension,
 
   transformTopLevelAwait,
@@ -180,6 +181,7 @@ export const createCompiledFileService = ({
         compile: async (originalFileContent) => {
           const transformResult = await transformJs({
             projectDirectoryUrl,
+            importMetaEnvFileRelativeUrl,
             code: originalFileContent,
             url: originalFileUrl,
             urlAfterTransform: compiledFileUrl,
@@ -298,6 +300,7 @@ export const createCompiledFileService = ({
               const scriptBeforeCompilation = inlineScriptsContentMap[scriptSrc]
               const scriptTransformResult = await transformJs({
                 projectDirectoryUrl,
+                importMetaEnvFileRelativeUrl,
                 code: scriptBeforeCompilation,
                 url: scriptOriginalFileUrl,
                 urlAfterTransform: scriptAfterTransformFileUrl,

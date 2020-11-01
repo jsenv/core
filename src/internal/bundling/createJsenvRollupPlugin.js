@@ -61,6 +61,7 @@ export const createJsenvRollupPlugin = async ({
   entryPointMap,
   projectDirectoryUrl,
   importMapFileRelativeUrl,
+  importMetaEnvFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
   importDefaultExtension,
@@ -948,6 +949,7 @@ export const createJsenvRollupPlugin = async ({
 
       const { code, map } = await transformJs({
         projectDirectoryUrl,
+        importMetaEnvFileRelativeUrl,
         code: codeInput,
         url: urlToProjectUrl(moduleUrl), // transformJs expect a file:// url
         babelPluginMap,
