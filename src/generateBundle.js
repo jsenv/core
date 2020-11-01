@@ -20,7 +20,7 @@ export const generateBundle = async ({
   importMapFileRelativeUrl,
   importMetaEnvFileRelativeUrl,
   importMeta = {
-    dev: process.env.NODE_ENV !== "production",
+    dev: false,
   },
   importDefaultExtension,
   externalImportSpecifiers = [],
