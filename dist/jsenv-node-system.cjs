@@ -3,6 +3,8 @@
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var util = require('@jsenv/util');
+require('@jsenv/import-map/src/normalizeImportMap.js');
+require('@jsenv/import-map/src/resolveImport.js');
 var module$1 = require('module');
 var https = require('https');
 var server = require('@jsenv/server');
@@ -105,16 +107,6 @@ var _objectWithoutProperties = (function (source, excluded) {
 
   return target;
 });
-
-var nativeTypeOf = function nativeTypeOf(obj) {
-  return typeof obj;
-};
-
-var customTypeOf = function customTypeOf(obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-};
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
 /* global require, __filename */
 var nodeRequire = require;
@@ -233,6 +225,16 @@ var stackToString = function stackToString(stack, _ref) {
   }).join("");
   return "".concat(name, ": ").concat(message).concat(stackString);
 };
+
+var nativeTypeOf = function nativeTypeOf(obj) {
+  return typeof obj;
+};
+
+var customTypeOf = function customTypeOf(obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+};
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
 var parseDataUrl = function parseDataUrl(dataUrl) {
   var afterDataProtocol = dataUrl.slice("data:".length);

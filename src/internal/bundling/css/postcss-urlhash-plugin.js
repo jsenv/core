@@ -11,8 +11,10 @@ hence sourcemap cannot point the original source location
 
 */
 
-import valueParser from "postcss-value-parser"
 import { fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
+import { require } from "@jsenv/core/src/internal/require.js"
+
+const valueParser = require("postcss-value-parser")
 
 export const postCssUrlHashPlugin = () => {
   return {

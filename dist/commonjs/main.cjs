@@ -16,8 +16,6 @@ var nodeModuleImportMap = require('@jsenv/node-module-import-map');
 var path = require('path');
 var https = require('https');
 var crypto = require('crypto');
-var postcss = require('postcss');
-var valueParser = require('postcss-value-parser');
 var terser = require('terser');
 var os = require('os');
 var readline = require('readline');
@@ -28,28 +26,6 @@ var _uneval = require('@jsenv/uneval');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
-function _interopNamespace(e) {
-  if (e && e.__esModule) return e;
-  var n = Object.create(null);
-  if (e) {
-    Object.keys(e).forEach(function (k) {
-      if (k !== 'default') {
-        var d = Object.getOwnPropertyDescriptor(e, k);
-        Object.defineProperty(n, k, d.get ? d : {
-          enumerable: true,
-          get: function () {
-            return e[k];
-          }
-        });
-      }
-    });
-  }
-  n['default'] = e;
-  return Object.freeze(n);
-}
-
-var postcss__default = /*#__PURE__*/_interopDefaultLegacy(postcss);
-var valueParser__default = /*#__PURE__*/_interopDefaultLegacy(valueParser);
 var readline__default = /*#__PURE__*/_interopDefaultLegacy(readline);
 
 /* global require, __filename */
@@ -5468,13 +5444,15 @@ const parseImportmapAsset = ({
   };
 };
 
+const postcss = require$1("postcss");
+
 const applyPostCss = async (cssString, cssUrl, plugins, // https://github.com/postcss/postcss#options
 options = {}) => {
   let result;
 
   try {
     const cssFileUrl = urlToFileUrl(cssUrl);
-    result = await postcss__default['default'](plugins).process(cssString, {
+    result = await postcss(plugins).process(cssString, {
       collectUrls: true,
       from: util.urlToFileSystemPath(cssFileUrl),
       to: util.urlToFileSystemPath(cssFileUrl),
@@ -5520,6 +5498,9 @@ and it indicates a node has been replaced without passing source
 hence sourcemap cannot point the original source location
 
 */
+
+const valueParser = require$1("postcss-value-parser");
+
 const postCssUrlHashPlugin = () => {
   return {
     postcssPlugin: "urlhash",
@@ -5545,7 +5526,7 @@ const postCssUrlHashPlugin = () => {
               return;
             }
 
-            const parsed = valueParser__default['default'](atImportNode.params);
+            const parsed = valueParser(atImportNode.params);
             let [urlNode] = parsed.nodes;
 
             if (!urlNode || urlNode.type !== "string" && urlNode.type !== "function") {
@@ -5571,7 +5552,7 @@ const postCssUrlHashPlugin = () => {
                 url = urlNode.value;
               } else {
                 urlNode = urlNode.nodes;
-                url = valueParser__default['default'].stringify(urlNode.nodes);
+                url = valueParser.stringify(urlNode.nodes);
               }
             }
 
@@ -5663,7 +5644,7 @@ const declarationNodeContainsUrl = declarationNode => {
 };
 
 const walkUrls = (declarationNode, callback) => {
-  const parsed = valueParser__default['default'](declarationNode.value);
+  const parsed = valueParser(declarationNode.value);
   parsed.walk(node => {
     // https://github.com/andyjansson/postcss-functions
     if (isUrlFunctionNode(node)) {
@@ -5671,7 +5652,7 @@ const walkUrls = (declarationNode, callback) => {
         nodes
       } = node;
       const [urlNode] = nodes;
-      const url = urlNode && urlNode.type === "string" ? urlNode.value : valueParser__default['default'].stringify(nodes);
+      const url = urlNode && urlNode.type === "string" ? urlNode.value : valueParser.stringify(nodes);
       callback(url.trim(), urlNode);
       return;
     }
@@ -5688,7 +5669,7 @@ const walkUrls = (declarationNode, callback) => {
             nodes
           } = childNode;
           const [urlNode] = nodes;
-          const url = urlNode && urlNode.type === "string" ? urlNode.value : valueParser__default['default'].stringify(nodes);
+          const url = urlNode && urlNode.type === "string" ? urlNode.value : valueParser.stringify(nodes);
           callback(url.trim(), urlNode);
           return;
         }
@@ -5765,8 +5746,10 @@ const replaceCssUrls = async (css, cssUrl, getUrlReplacementValue, {
 };
 
 const getCssMinificationPlugin = async (cssMinificationOptions = {}) => {
-  const cssnano = await Promise.resolve().then(function () { return /*#__PURE__*/_interopNamespace(require('cssnano')); });
-  const cssnanoDefaultPreset = await Promise.resolve().then(function () { return /*#__PURE__*/_interopNamespace(require('cssnano-preset-default')); });
+  const cssnano = require$1("cssnano");
+
+  const cssnanoDefaultPreset = require$1("cssnano-preset-default");
+
   return cssnano({
     preset: cssnanoDefaultPreset({ ...cssMinificationOptions // just to show how you could configure dicard comment plugin from css nano
       // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default
