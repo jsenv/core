@@ -6,7 +6,6 @@ require('@jsenv/import-map/src/normalizeImportMap.js');
 require('@jsenv/import-map/src/resolveImport.js');
 var module$1 = require('module');
 var util = require('@jsenv/util');
-var rollup$1 = require('rollup');
 var cancellation = require('@jsenv/cancellation');
 var fs = require('fs');
 var server = require('@jsenv/server');
@@ -63,17 +62,17 @@ const findAsyncPluginNameInBabelPluginMap = babelPluginMap => {
 
 // https://github.com/drudru/ansi_up/blob/master/ansi_up.js
 
-const Convert = require$1("ansi-to-html");
-
 const ansiToHTML = ansiString => {
+  const Convert = require$1("ansi-to-html");
+
   return new Convert().toHtml(ansiString);
 };
 
-const {
-  addSideEffect
-} = require$1("@babel/helper-module-imports");
-
 const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
+  const {
+    addSideEffect
+  } = require$1("@babel/helper-module-imports");
+
   api.assertVersion(7);
   const {
     regeneratorRuntimeIdentifierName = "regeneratorRuntime",
@@ -104,11 +103,11 @@ const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
   };
 };
 
-const {
-  addSideEffect: addSideEffect$1
-} = require$1("@babel/helper-module-imports");
-
 const ensureGlobalThisImportBabelPlugin = (api, options) => {
+  const {
+    addSideEffect
+  } = require$1("@babel/helper-module-imports");
+
   api.assertVersion(7);
   const {
     globalThisIdentifierName = "globalThis",
@@ -131,7 +130,7 @@ const ensureGlobalThisImportBabelPlugin = (api, options) => {
         } = path;
 
         if (node.name === globalThisIdentifierName) {
-          addSideEffect$1(path.scope.getProgramParent().path, globalThisImportPath);
+          addSideEffect(path.scope.getProgramParent().path, globalThisImportPath);
         }
       }
 
@@ -612,8 +611,6 @@ const babelPluginReplaceExpressions = (api, options) => {
   };
 };
 
-const transformCommonJs = require$1("babel-plugin-transform-commonjs");
-
 const convertCommonJsWithBabel = async ({
   projectDirectoryUrl,
   code,
@@ -625,7 +622,9 @@ const convertCommonJsWithBabel = async ({
   processEnvNodeEnv = "undefined",
   replaceMap = {}
 }) => {
-  // maybe we should use babel core here instead of transformJs
+  const transformCommonJs = require$1("babel-plugin-transform-commonjs"); // maybe we should use babel core here instead of transformJs
+
+
   const result = await transformJs({
     projectDirectoryUrl,
     code,
@@ -675,20 +674,6 @@ const __dirnameReplacement = `import.meta.url.slice('file:///'.length).replace(/
 //   }
 // }
 
-const commonjs = require$1("@rollup/plugin-commonjs");
-
-const {
-  nodeResolve
-} = require$1("@rollup/plugin-node-resolve");
-
-const createJSONRollupPlugin = require$1("@rollup/plugin-json");
-
-const createReplaceRollupPlugin = require$1("@rollup/plugin-replace");
-
-const builtins = require$1("rollup-plugin-node-builtins-brofs");
-
-const createNodeGlobalRollupPlugin = require$1("rollup-plugin-node-globals");
-
 const convertCommonJsWithRollup = async ({
   url,
   urlAfterTransform,
@@ -710,6 +695,24 @@ const convertCommonJsWithRollup = async ({
     throw new Error(`compatible only with file:// protocol, got ${url}`);
   }
 
+  const {
+    rollup
+  } = require$1("rollup");
+
+  const commonjs = require$1("@rollup/plugin-commonjs");
+
+  const {
+    nodeResolve
+  } = require$1("@rollup/plugin-node-resolve");
+
+  const createJSONRollupPlugin = require$1("@rollup/plugin-json");
+
+  const createReplaceRollupPlugin = require$1("@rollup/plugin-replace");
+
+  const builtins = require$1("rollup-plugin-node-builtins-brofs");
+
+  const createNodeGlobalRollupPlugin = require$1("rollup-plugin-node-globals");
+
   const filePath = util.urlToFileSystemPath(url);
   const nodeBuiltinsRollupPlugin = builtins();
   const nodeResolveRollupPlugin = nodeResolve({
@@ -727,7 +730,7 @@ const convertCommonJsWithRollup = async ({
     buffer: replaceBuffer
   });
   const commonJsRollupPlugin = commonjs();
-  const rollupBundle = await rollup$1.rollup({
+  const rollupBundle = await rollup({
     input: filePath,
     inlineDynamicImports: true,
     external,
@@ -2855,9 +2858,6 @@ const createLockRegistry = () => {
 const {
   lockForRessource
 } = createLockRegistry();
-
-const lockfile = require$1("proper-lockfile");
-
 const getOrGenerateCompiledFile = async ({
   logger,
   projectDirectoryUrl,
@@ -3099,6 +3099,8 @@ const startAsap = async (fn, {
     // trying to do the same (mapy happen when spawining multiple server for instance)
     // https://github.com/moxystudio/node-proper-lockfile/issues/69
     await util.ensureParentDirectories(metaJsonFilePath); // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
+
+    const lockfile = require$1("proper-lockfile");
 
     unlockInterProcessLock = await lockfile.lock(metaJsonFilePath, {
       realpath: false,
@@ -4755,11 +4757,11 @@ const getTargetAsBase64Url = ({
   });
 };
 
-const {
-  minify
-} = require$1("html-minifier");
-
 const minifyHtml = (htmlString, options) => {
+  const {
+    minify
+  } = require$1("html-minifier");
+
   return minify(htmlString, options);
 };
 
@@ -5443,10 +5445,10 @@ const parseImportmapAsset = ({
   };
 };
 
-const postcss = require$1("postcss");
-
 const applyPostCss = async (cssString, cssUrl, plugins, // https://github.com/postcss/postcss#options
 options = {}) => {
+  const postcss = require$1("postcss");
+
   let result;
 
   try {
@@ -5940,13 +5942,12 @@ const compareUrlNodeValue = (firstUrlNodeValue, secondUrlNodeValue) => {
   return firstValueNormalized === secondValueNormalized;
 };
 
-const {
-  minify: minify$1
-} = require$1("terser"); // https://github.com/terser-js/terser#minify-options
-
-
 const minifyJs = async (jsString, jsUrl, options) => {
-  const result = await minify$1({
+  const {
+    minify
+  } = require$1("terser");
+
+  const result = await minify({
     [jsUrl]: jsString
   }, options);
   return result;
@@ -7197,10 +7198,6 @@ const externalImportUrlPatternsToExternalUrlPredicate = (externalImportUrlPatter
   };
 };
 
-const {
-  rollup
-} = require$1("rollup");
-
 const generateBundleUsingRollup = async ({
   cancellationToken,
   logger,
@@ -7288,6 +7285,10 @@ const useRollup = async ({
   bundleDirectoryUrl,
   bundleDirectoryClean
 }) => {
+  const {
+    rollup
+  } = require$1("rollup");
+
   logger.info(`parse bundle
 --- entry point map ---
 ${JSON.stringify(entryPointMap, null, "  ")}`);
@@ -9325,12 +9326,11 @@ const execute = async ({
   return result;
 };
 
-const {
-  programVisitor
-} = require$1("istanbul-lib-instrument"); // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
-
-
 const babelPluginInstrument = (api, options) => {
+  const {
+    programVisitor
+  } = require$1("istanbul-lib-instrument");
+
   const {
     types
   } = api;
@@ -9478,15 +9478,15 @@ const {
 
 const createEmptyCoverage = relativeUrl => createFileCoverage$1(relativeUrl).toJSON();
 
-const {
-  transformAsync: transformAsync$1
-} = require$1("@babel/core");
-
 const relativeUrlToEmptyCoverage = async (relativeUrl, {
   cancellationToken,
   projectDirectoryUrl,
   babelPluginMap
 }) => {
+  const {
+    transformAsync
+  } = require$1("@babel/core");
+
   const fileUrl = util.resolveUrl(relativeUrl, projectDirectoryUrl);
   const source = await cancellation.createOperation({
     cancellationToken,
@@ -9507,7 +9507,7 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
       metadata
     } = await cancellation.createOperation({
       cancellationToken,
-      start: () => transformAsync$1(source, {
+      start: () => transformAsync(source, {
         filename: util.urlToFileSystemPath(fileUrl),
         filenameRelative: relativeUrl,
         configFile: false,
@@ -10315,15 +10315,15 @@ const {
   readFileSync
 } = require$1("fs");
 
-const libReport = require$1("istanbul-lib-report");
-
-const reports = require$1("istanbul-reports");
-
-const {
-  createCoverageMap
-} = require$1("istanbul-lib-coverage");
-
 const generateCoverageHtmlDirectory = async (coverageMap, htmlDirectoryRelativeUrl, projectDirectoryUrl) => {
+  const libReport = require$1("istanbul-lib-report");
+
+  const reports = require$1("istanbul-reports");
+
+  const {
+    createCoverageMap
+  } = require$1("istanbul-lib-coverage");
+
   const context = libReport.createContext({
     dir: util.urlToFileSystemPath(projectDirectoryUrl),
     coverageMap: createCoverageMap(coverageMap),
@@ -10339,19 +10339,19 @@ const generateCoverageHtmlDirectory = async (coverageMap, htmlDirectoryRelativeU
   report.execute(context);
 };
 
-const libReport$1 = require$1("istanbul-lib-report");
-
-const reports$1 = require$1("istanbul-reports");
-
-const {
-  createCoverageMap: createCoverageMap$1
-} = require$1("istanbul-lib-coverage");
-
 const generateCoverageTextLog = coverageMap => {
-  const context = libReport$1.createContext({
-    coverageMap: createCoverageMap$1(coverageMap)
+  const libReport = require$1("istanbul-lib-report");
+
+  const reports = require$1("istanbul-reports");
+
+  const {
+    createCoverageMap
+  } = require$1("istanbul-lib-coverage");
+
+  const context = libReport.createContext({
+    coverageMap: createCoverageMap(coverageMap)
   });
-  const report = reports$1.create("text", {
+  const report = reports.create("text", {
     skipEmpty: true,
     skipFull: true
   });

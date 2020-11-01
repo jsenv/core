@@ -2,8 +2,6 @@ import { urlToFileSystemPath } from "@jsenv/util"
 
 import { require } from "@jsenv/core/src/internal/require.js"
 
-const postcss = require("postcss")
-
 export const applyPostCss = async (
   cssString,
   cssUrl,
@@ -11,6 +9,8 @@ export const applyPostCss = async (
   // https://github.com/postcss/postcss#options
   options = {},
 ) => {
+  const postcss = require("postcss")
+
   let result
   try {
     const cssFileUrl = urlToFileUrl(cssUrl)

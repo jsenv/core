@@ -2,8 +2,6 @@ import { require } from "./internal/require.js"
 import { transformJs } from "./internal/compiling/js-compilation-service/transformJs.js"
 import { babelPluginReplaceExpressions } from "./internal/babel-plugin-replace-expressions.js"
 
-const transformCommonJs = require("babel-plugin-transform-commonjs")
-
 export const convertCommonJsWithBabel = async ({
   projectDirectoryUrl,
   code,
@@ -15,6 +13,8 @@ export const convertCommonJsWithBabel = async ({
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceMap = {},
 }) => {
+  const transformCommonJs = require("babel-plugin-transform-commonjs")
+
   // maybe we should use babel core here instead of transformJs
   const result = await transformJs({
     projectDirectoryUrl,

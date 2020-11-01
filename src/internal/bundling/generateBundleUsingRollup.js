@@ -3,8 +3,6 @@ import { urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/util"
 import { require } from "../require.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
-const { rollup } = require("rollup")
-
 export const generateBundleUsingRollup = async ({
   cancellationToken,
   logger,
@@ -103,6 +101,8 @@ const useRollup = async ({
   bundleDirectoryUrl,
   bundleDirectoryClean,
 }) => {
+  const { rollup } = require("rollup")
+
   logger.info(`parse bundle
 --- entry point map ---
 ${JSON.stringify(entryPointMap, null, "  ")}`)

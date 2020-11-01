@@ -1,14 +1,6 @@
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { require } from "./internal/require.js"
 
-const { rollup } = require("rollup")
-const commonjs = require("@rollup/plugin-commonjs")
-const { nodeResolve } = require("@rollup/plugin-node-resolve")
-const createJSONRollupPlugin = require("@rollup/plugin-json")
-const createReplaceRollupPlugin = require("@rollup/plugin-replace")
-const builtins = require("rollup-plugin-node-builtins-brofs")
-const createNodeGlobalRollupPlugin = require("rollup-plugin-node-globals")
-
 export const convertCommonJsWithRollup = async ({
   url,
   urlAfterTransform,
@@ -29,6 +21,14 @@ export const convertCommonJsWithRollup = async ({
     // however it's an exotic use case for now
     throw new Error(`compatible only with file:// protocol, got ${url}`)
   }
+
+  const { rollup } = require("rollup")
+  const commonjs = require("@rollup/plugin-commonjs")
+  const { nodeResolve } = require("@rollup/plugin-node-resolve")
+  const createJSONRollupPlugin = require("@rollup/plugin-json")
+  const createReplaceRollupPlugin = require("@rollup/plugin-replace")
+  const builtins = require("rollup-plugin-node-builtins-brofs")
+  const createNodeGlobalRollupPlugin = require("rollup-plugin-node-globals")
 
   const filePath = urlToFileSystemPath(url)
 

@@ -1,8 +1,8 @@
 import { require } from "../../require.js"
 
-const { addSideEffect } = require("@babel/helper-module-imports")
-
 export const ensureGlobalThisImportBabelPlugin = (api, options) => {
+  const { addSideEffect } = require("@babel/helper-module-imports")
+
   api.assertVersion(7)
 
   const {

@@ -10,8 +10,6 @@ import { createLockRegistry } from "./createLockRegistry.js"
 
 const { lockForRessource } = createLockRegistry()
 
-const lockfile = require("proper-lockfile")
-
 export const getOrGenerateCompiledFile = async ({
   logger,
 
@@ -242,6 +240,7 @@ const startAsap = async (fn, { logger, compiledFileUrl, cacheInterProcessLocking
     // https://github.com/moxystudio/node-proper-lockfile/issues/69
     await ensureParentDirectories(metaJsonFilePath)
     // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
+    const lockfile = require("proper-lockfile")
     unlockInterProcessLock = await lockfile.lock(metaJsonFilePath, {
       realpath: false,
       retries: {
