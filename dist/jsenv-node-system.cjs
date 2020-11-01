@@ -3,8 +3,6 @@
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var util = require('@jsenv/util');
-require('@jsenv/import-map/src/normalizeImportMap.js');
-require('@jsenv/import-map/src/resolveImport.js');
 var module$1 = require('module');
 var https = require('https');
 var server = require('@jsenv/server');
@@ -108,8 +106,7 @@ var _objectWithoutProperties = (function (source, excluded) {
   return target;
 });
 
-/* global require, __filename */
-var nodeRequire = require;
+/* global __filename */
 var filenameContainsBackSlashes = __filename.indexOf("\\") > -1;
 var url = filenameContainsBackSlashes ? "file:///".concat(__filename.replace(/\\/g, "/")) : "file://".concat(__filename);
 
