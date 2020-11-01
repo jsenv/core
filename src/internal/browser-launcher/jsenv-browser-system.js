@@ -62,9 +62,36 @@ const importFile = (specifier) => {
 
   // }
 
+  const { currentScript } = document
+
   const fileExecutionResultPromise = (async () => {
     const browserRuntime = await getBrowserRuntime()
     const executionResult = await browserRuntime.executeFile(specifier, {})
+    if (executionResult.status === "errored") {
+      // eslint-disable-next-line no-eval
+      const originalError = window.eval(executionResult.exceptionSource)
+      if (originalError.code === "NETWORK_FAILURE") {
+        if (currentScript) {
+          const errorEvent = new Event("error")
+          currentScript.dispatchEvent(errorEvent)
+        }
+      } else {
+        const { parsingError } = originalError
+        const globalErrorEvent = new Event("error")
+        if (parsingError) {
+          globalErrorEvent.filename = parsingError.filename
+          globalErrorEvent.lineno = parsingError.lineNumber
+          globalErrorEvent.message = parsingError.message
+          globalErrorEvent.colno = parsingError.columnNumber
+        } else {
+          globalErrorEvent.filename = originalError.filename
+          globalErrorEvent.lineno = originalError.lineno
+          globalErrorEvent.message = originalError.message
+          globalErrorEvent.colno = originalError.columnno
+        }
+        window.dispatchEvent(globalErrorEvent)
+      }
+    }
     return executionResult
   })()
 
