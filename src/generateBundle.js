@@ -5,7 +5,6 @@ import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.
 import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
-import { createBabePluginMapForBundle } from "./internal/bundling/createBabePluginMapForBundle.js"
 import { generateBundleUsingRollup } from "./internal/bundling/generateBundleUsingRollup.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
@@ -121,13 +120,6 @@ export const generateBundle = async ({
     const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
     assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
 
-    babelPluginMap = {
-      ...babelPluginMap,
-      ...createBabePluginMapForBundle({
-        format,
-      }),
-    }
-
     const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
@@ -157,7 +149,7 @@ export const generateBundle = async ({
       // override with potential custom options
       ...rest,
 
-      transformModuleIntoSystemFormat: false, // will be done by rollup
+      moduleOutFormat: "esmodule", // rollup will transform into systemjs
     })
 
     const { outDirectoryRelativeUrl, origin: compileServerOrigin } = compileServer

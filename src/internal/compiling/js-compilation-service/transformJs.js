@@ -13,11 +13,13 @@ export const transformJs = async ({
   url,
   urlAfterTransform,
   map,
+
   babelPluginMap,
   convertMap = {},
+  moduleOutFormat = "esmodule",
+
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
-  transformModuleIntoSystemFormat = true,
   transformGenerator = true,
   transformGlobalThis = true,
   sourcemapEnabled = true,
@@ -53,11 +55,13 @@ export const transformJs = async ({
     inputMap,
     inputPath,
     inputRelativePath,
+
     babelPluginMap,
     convertMap,
+    moduleOutFormat,
+
     allowTopLevelAwait,
     transformTopLevelAwait,
-    transformModuleIntoSystemFormat,
     transformGenerator,
     transformGlobalThis,
     sourcemapEnabled,

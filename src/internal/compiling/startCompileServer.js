@@ -46,7 +46,6 @@ export const startCompileServer = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
-  importMetaDev = process.env.NODE_ENV !== "production",
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
@@ -59,7 +58,7 @@ export const startCompileServer = async ({
 
   // js compile options
   transformTopLevelAwait = true,
-  transformModuleIntoSystemFormat = true,
+  moduleOutFormat = "systemjs",
   env = {},
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceProcessEnvNodeEnv = true,
@@ -123,7 +122,6 @@ export const startCompileServer = async ({
           ...(replaceGlobalObject ? { global: "globalThis" } : {}),
           ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
           ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
-          "import.meta.dev": importMetaDev,
           ...replaceMap,
         },
         allowConflictingReplacements: true,
@@ -192,10 +190,10 @@ export const startCompileServer = async ({
     importDefaultExtension,
 
     transformTopLevelAwait,
-    transformModuleIntoSystemFormat,
-    babelPluginMap,
     groupMap: compileServerGroupMap,
+    babelPluginMap,
     convertMap,
+    moduleOutFormat,
     scriptInjections,
 
     projectFileRequestedCallback,

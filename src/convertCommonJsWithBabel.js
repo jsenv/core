@@ -37,7 +37,6 @@ export const convertCommonJsWithBabel = async ({
         },
       ],
     },
-    transformModuleIntoSystemFormat: false,
   })
   return result
 }

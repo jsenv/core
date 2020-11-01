@@ -9,7 +9,6 @@ import {
   COMPILE_ID_COMMONJS_BUNDLE_FILES,
 } from "../CONSTANTS.js"
 import { jsenvToolbarHtmlUrl, jsenvBrowserSystemBundleUrl } from "../jsenvInternalFiles.js"
-import { createBabePluginMapForBundle } from "../bundling/createBabePluginMapForBundle.js"
 import { transformImportmap } from "./transformImportmap.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
@@ -39,7 +38,7 @@ export const createCompiledFileService = ({
   importDefaultExtension,
 
   transformTopLevelAwait,
-  transformModuleIntoSystemFormat,
+  moduleOutFormat,
   babelPluginMap,
   groupMap,
   convertMap,
@@ -187,10 +186,10 @@ export const createCompiledFileService = ({
             babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
             convertMap,
             transformTopLevelAwait,
-            transformModuleIntoSystemFormat: compileIdIsForBundleFiles(compileId)
+            moduleOutFormat: compileIdIsForBundleFiles(compileId)
               ? // we are compiling for rollup, do not transform into systemjs format
-                false
-              : transformModuleIntoSystemFormat,
+                "esmodule"
+              : moduleOutFormat,
           })
           const sourcemapFileUrl = `${compiledFileUrl}.map`
 
@@ -305,7 +304,7 @@ export const createCompiledFileService = ({
                 babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
                 convertMap,
                 transformTopLevelAwait,
-                transformModuleIntoSystemFormat: true,
+                moduleOutFormat: "systemjs",
               })
               const sourcemapFileUrl = resolveUrl(
                 `${scriptBasename}.map`,
@@ -363,9 +362,7 @@ const compileIdToBabelPluginMap = (compileId, { babelPluginMap, groupMap }) => {
   let babelPluginMapForGroupMap
   if (compileIdIsForBundleFiles(compileId)) {
     compiledIdForGroupMap = getWorstCompileId(groupMap)
-    babelPluginMapForGroupMap = createBabePluginMapForBundle({
-      format: compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES ? "global" : "commonjs",
-    })
+    babelPluginMapForGroupMap = {}
   } else {
     compiledIdForGroupMap = compileId
     babelPluginMapForGroupMap = {}
