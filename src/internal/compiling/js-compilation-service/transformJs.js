@@ -18,8 +18,9 @@ export const transformJs = async ({
   babelPluginMap,
   convertMap = {},
   moduleOutFormat = "esmodule",
+  importMetaFormat = moduleOutFormat,
   importMetaEnvFileRelativeUrl,
-  importMeta = {},
+  importMeta,
 
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
@@ -66,6 +67,7 @@ export const transformJs = async ({
     babelPluginMap,
     convertMap,
     moduleOutFormat,
+    importMetaFormat,
     importMetaEnvFileSpecifier,
     importMeta,
 

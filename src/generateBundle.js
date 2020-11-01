@@ -18,8 +18,11 @@ export const generateBundle = async ({
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
+  importMetaEnvFileRelativeUrl,
+  importMeta = {
+    dev: process.env.NODE_ENV !== "production",
+  },
   importDefaultExtension,
-  importMetaDev = process.env.NODE_ENV !== "production",
   externalImportSpecifiers = [],
   env = {},
 
@@ -134,7 +137,10 @@ export const generateBundle = async ({
       outDirectoryName: "out-bundle",
       importMapFileRelativeUrl,
       importDefaultExtension,
-      importMetaDev,
+      importMetaEnvFileRelativeUrl,
+      importMeta,
+      importMetaFormat: format,
+      moduleOutFormat: "esmodule", // rollup will transform into systemjs
 
       compileServerProtocol,
       compileServerPrivateKey,
@@ -143,13 +149,12 @@ export const generateBundle = async ({
       compileServerPort,
       env,
       babelPluginMap,
+
       writeOnFilesystem: filesystemCache,
       useFilesystemAsCache: filesystemCache,
 
       // override with potential custom options
       ...rest,
-
-      moduleOutFormat: "esmodule", // rollup will transform into systemjs
     })
 
     const { outDirectoryRelativeUrl, origin: compileServerOrigin } = compileServer

@@ -47,6 +47,9 @@ export const startCompileServer = async ({
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
   importMetaEnvFileRelativeUrl = "env.js",
+  importMeta = {
+    dev: process.env.NODE_ENV !== "production",
+  },
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
@@ -60,6 +63,7 @@ export const startCompileServer = async ({
   // js compile options
   transformTopLevelAwait = true,
   moduleOutFormat = "systemjs",
+  importMetaFormat = moduleOutFormat,
   env = {},
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceProcessEnvNodeEnv = true,
@@ -190,12 +194,14 @@ export const startCompileServer = async ({
     importMapFileRelativeUrl,
     importDefaultExtension,
     importMetaEnvFileRelativeUrl,
+    importMeta,
 
     transformTopLevelAwait,
     groupMap: compileServerGroupMap,
     babelPluginMap,
     convertMap,
     moduleOutFormat,
+    importMetaFormat,
     scriptInjections,
 
     projectFileRequestedCallback,

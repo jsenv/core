@@ -23,6 +23,7 @@ export const jsenvTransform = async ({
 
   babelPluginMap,
   moduleOutFormat,
+  importMetaFormat,
   importMetaEnvFileSpecifier,
   importMeta = {},
 
@@ -86,21 +87,21 @@ export const jsenvTransform = async ({
       {
         replaceImportMeta: (metaPropertyName, { replaceWithImport, replaceWithValue }) => {
           if (metaPropertyName === "url") {
-            if (moduleOutFormat === "esmodule") {
+            if (importMetaFormat === "esmodule") {
               // keep native version
               return
             }
-            if (moduleOutFormat === "systemjs") {
+            if (importMetaFormat === "systemjs") {
               // systemjs will handle it
               return
             }
-            if (moduleOutFormat === "commonjs") {
+            if (importMetaFormat === "commonjs") {
               replaceWithImport({
                 from: `@jsenv/core/src/internal/import-meta/import-meta-url-commonjs.js`,
               })
               return
             }
-            if (moduleOutFormat === "global") {
+            if (importMetaFormat === "global") {
               replaceWithImport({
                 from: `@jsenv/core/src/internal/import-meta/import-meta-url-global.js`,
               })
@@ -110,21 +111,21 @@ export const jsenvTransform = async ({
           }
 
           if (metaPropertyName === "resolve") {
-            if (moduleOutFormat === "esmodule") {
+            if (importMetaFormat === "esmodule") {
               // keep native version
               return
             }
-            if (moduleOutFormat === "systemjs") {
+            if (importMetaFormat === "systemjs") {
               // systemjs will handle it
               return
             }
-            if (moduleOutFormat === "commonjs") {
+            if (importMetaFormat === "commonjs") {
               replaceWithImport({
                 from: `@jsenv/core/src/internal/import-meta/import-meta-resolve-commonjs.js`,
               })
               return
             }
-            if (moduleOutFormat === "global") {
+            if (importMetaFormat === "global") {
               replaceWithImport({
                 from: `@jsenv/core/src/internal/import-meta/import-meta-resolve-global.js`,
               })

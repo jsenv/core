@@ -36,10 +36,12 @@ export const createCompiledFileService = ({
   outDirectoryRelativeUrl,
   importMapFileRelativeUrl,
   importMetaEnvFileRelativeUrl,
+  importMeta,
   importDefaultExtension,
 
   transformTopLevelAwait,
   moduleOutFormat,
+  importMetaFormat,
   babelPluginMap,
   groupMap,
   convertMap,
@@ -182,6 +184,7 @@ export const createCompiledFileService = ({
           const transformResult = await transformJs({
             projectDirectoryUrl,
             importMetaEnvFileRelativeUrl,
+            importMeta,
             code: originalFileContent,
             url: originalFileUrl,
             urlAfterTransform: compiledFileUrl,
@@ -192,6 +195,13 @@ export const createCompiledFileService = ({
               ? // we are compiling for rollup, do not transform into systemjs format
                 "esmodule"
               : moduleOutFormat,
+            importMetaFormat:
+              // eslint-disable-next-line no-nested-ternary
+              compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES
+                ? "global"
+                : compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES
+                ? "commonjs"
+                : moduleOutFormat,
           })
           const sourcemapFileUrl = `${compiledFileUrl}.map`
 
@@ -301,13 +311,15 @@ export const createCompiledFileService = ({
               const scriptTransformResult = await transformJs({
                 projectDirectoryUrl,
                 importMetaEnvFileRelativeUrl,
+                importMeta,
                 code: scriptBeforeCompilation,
                 url: scriptOriginalFileUrl,
                 urlAfterTransform: scriptAfterTransformFileUrl,
                 babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
                 convertMap,
                 transformTopLevelAwait,
-                moduleOutFormat: "systemjs",
+                moduleOutFormat,
+                importMetaFormat,
               })
               const sourcemapFileUrl = resolveUrl(
                 `${scriptBasename}.map`,
