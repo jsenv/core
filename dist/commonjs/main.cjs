@@ -6,7 +6,7 @@ require('@jsenv/import-map/src/normalizeImportMap.js');
 require('@jsenv/import-map/src/resolveImport.js');
 var module$1 = require('module');
 var util = require('@jsenv/util');
-var rollup = require('rollup');
+var rollup$1 = require('rollup');
 var cancellation = require('@jsenv/cancellation');
 var fs = require('fs');
 var server = require('@jsenv/server');
@@ -16,7 +16,6 @@ var nodeModuleImportMap = require('@jsenv/node-module-import-map');
 var path = require('path');
 var https = require('https');
 var crypto = require('crypto');
-var terser = require('terser');
 var os = require('os');
 var readline = require('readline');
 var nodeSignals = require('@jsenv/node-signals');
@@ -728,7 +727,7 @@ const convertCommonJsWithRollup = async ({
     buffer: replaceBuffer
   });
   const commonJsRollupPlugin = commonjs();
-  const rollupBundle = await rollup.rollup({
+  const rollupBundle = await rollup$1.rollup({
     input: filePath,
     inlineDynamicImports: true,
     external,
@@ -5941,8 +5940,13 @@ const compareUrlNodeValue = (firstUrlNodeValue, secondUrlNodeValue) => {
   return firstValueNormalized === secondValueNormalized;
 };
 
+const {
+  minify: minify$1
+} = require$1("terser"); // https://github.com/terser-js/terser#minify-options
+
+
 const minifyJs = async (jsString, jsUrl, options) => {
-  const result = await terser.minify({
+  const result = await minify$1({
     [jsUrl]: jsString
   }, options);
   return result;
@@ -7193,6 +7197,10 @@ const externalImportUrlPatternsToExternalUrlPredicate = (externalImportUrlPatter
   };
 };
 
+const {
+  rollup
+} = require$1("rollup");
+
 const generateBundleUsingRollup = async ({
   cancellationToken,
   logger,
@@ -7333,7 +7341,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
   };
   const rollupBundle = await cancellation.createOperation({
     cancellationToken,
-    start: () => rollup.rollup(rollupInputOptions)
+    start: () => rollup(rollupInputOptions)
   });
 
   if (bundleDirectoryClean) {
