@@ -24,8 +24,7 @@ function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'defau
 
 var readline__default = /*#__PURE__*/_interopDefaultLegacy(readline);
 
-/* global require, __filename */
-const nodeRequire = require;
+/* global __filename */
 const filenameContainsBackSlashes = __filename.indexOf("\\") > -1;
 const url = filenameContainsBackSlashes ? `file:///${__filename.replace(/\\/g, "/")}` : `file://${__filename}`;
 
@@ -46,6 +45,127 @@ const syntaxNumericSeparator = require$1("@babel/plugin-syntax-numeric-separator
 
 const minimalBabelPluginArray = [syntaxDynamicImport, syntaxImportMeta, syntaxNumericSeparator];
 
+// https://github.com/jamiebuilds/babel-handbook/blob/master/translations/en/plugin-handbook.md#toc-stages-of-babel
+
+const {
+  addNamespace,
+  addDefault,
+  addNamed
+} = require$1("@babel/helper-module-imports");
+
+const {
+  parseExpression
+} = require$1("@babel/parser");
+
+const babelPluginTransformImportMeta = (api, pluginOptions) => {
+  const {
+    replaceImportMeta
+  } = pluginOptions;
+  let babelState;
+
+  const jsValueToAst = jsValue => {
+    const valueAst = parseExpression(jsValue, babelState.opts);
+    return valueAst;
+  };
+
+  return {
+    pre: state => {
+      babelState = state;
+    },
+    // visitor: {
+    //   Program(path) {
+    //     const metas = []
+    //     const identifiers = new Set()
+    //     path.traverse({
+    //       MetaProperty(path) {
+    //         const node = path.node
+    //         if (node.meta && node.meta.name === "import" && node.property.name === "meta") {
+    //           metas.push(path)
+    //           Object.keys(path.scope.getAllBindings()).forEach((name) => {
+    //             identifiers.add(name)
+    //           })
+    //         }
+    //       },
+    //     })
+    //     if (metas.length === 0) {
+    //       return
+    //     }
+    //   },
+    // },
+    visitor: {
+      Program(programPath) {
+        const metaPropertyPathMap = {};
+        programPath.traverse({
+          MemberExpression(path) {
+            const {
+              node
+            } = path;
+            const {
+              object
+            } = node;
+
+            if (object.type !== "MetaProperty") {
+              return;
+            }
+
+            const {
+              property: objectProperty
+            } = object;
+
+            if (objectProperty.name !== "meta") {
+              return;
+            }
+
+            const {
+              property
+            } = node;
+            const {
+              name
+            } = property;
+
+            if (name in metaPropertyPathMap) {
+              metaPropertyPathMap[name].push(path);
+            } else {
+              metaPropertyPathMap[name] = [path];
+            }
+          }
+
+        });
+        Object.keys(metaPropertyPathMap).forEach(importMetaPropertyName => {
+          replaceImportMeta(importMetaPropertyName, {
+            replaceWithImport: ({
+              namespace,
+              name,
+              from
+            }) => {
+              let importAst;
+
+              if (namespace) {
+                importAst = addNamespace(programPath, from);
+              } else if (name) {
+                importAst = addNamed(programPath, name, from);
+              } else {
+                importAst = addDefault(programPath, from);
+              }
+
+              metaPropertyPathMap[importMetaPropertyName].forEach(path => {
+                path.replaceWith(importAst);
+              });
+            },
+            replaceWithValue: value => {
+              const valueAst = jsValueToAst(JSON.stringify(value));
+              metaPropertyPathMap[importMetaPropertyName].forEach(path => {
+                path.replaceWith(valueAst);
+              });
+            }
+          });
+        });
+      }
+
+    }
+  };
+};
+
 const findAsyncPluginNameInBabelPluginMap = babelPluginMap => {
   if ("transform-async-to-promises" in babelPluginMap) {
     return "transform-async-to-promises";
@@ -60,17 +180,17 @@ const findAsyncPluginNameInBabelPluginMap = babelPluginMap => {
 
 // https://github.com/drudru/ansi_up/blob/master/ansi_up.js
 
-const Convert = require$1("ansi-to-html");
-
 const ansiToHTML = ansiString => {
+  const Convert = require$1("ansi-to-html");
+
   return new Convert().toHtml(ansiString);
 };
 
-const {
-  addSideEffect
-} = require$1("@babel/helper-module-imports");
-
 const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
+  const {
+    addSideEffect
+  } = require$1("@babel/helper-module-imports");
+
   api.assertVersion(7);
   const {
     regeneratorRuntimeIdentifierName = "regeneratorRuntime",
@@ -101,11 +221,11 @@ const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
   };
 };
 
-const {
-  addSideEffect: addSideEffect$1
-} = require$1("@babel/helper-module-imports");
-
 const ensureGlobalThisImportBabelPlugin = (api, options) => {
+  const {
+    addSideEffect
+  } = require$1("@babel/helper-module-imports");
+
   api.assertVersion(7);
   const {
     globalThisIdentifierName = "globalThis",
@@ -128,7 +248,7 @@ const ensureGlobalThisImportBabelPlugin = (api, options) => {
         } = path;
 
         if (node.name === globalThisIdentifierName) {
-          addSideEffect$1(path.scope.getProgramParent().path, globalThisImportPath);
+          addSideEffect(path.scope.getProgramParent().path, globalThisImportPath);
         }
       }
 
@@ -173,7 +293,7 @@ const filePathToBabelHelperName = filePath => {
 };
 
 const {
-  addDefault
+  addDefault: addDefault$1
 } = require$1("@babel/helper-module-imports"); // named import approach found here:
 // https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
 // for reference this is how it's done to reference
@@ -205,7 +325,7 @@ const transformBabelHelperToImportBabelPlugin = api => {
           return undefined;
         }
 
-        const helper = addDefault(file.path, babelHelperImportSpecifier, {
+        const helper = addDefault$1(file.path, babelHelperImportSpecifier, {
           nameHint: `_${name}`
         });
         cachedHelpers[name] = helper;
@@ -233,9 +353,12 @@ const jsenvTransform = async ({
   inputAst,
   inputMap,
   babelPluginMap,
+  moduleOutFormat,
+  importMetaFormat,
+  importMetaEnvFileSpecifier,
+  importMeta = {},
   allowTopLevelAwait,
   transformTopLevelAwait,
-  transformModuleIntoSystemFormat,
   transformGenerator,
   transformGlobalThis,
   regeneratorRuntimeImportPath,
@@ -283,12 +406,85 @@ const jsenvTransform = async ({
     };
   }
 
-  babelPluginMap = { ...babelPluginMap,
+  babelPluginMap = {
+    "transform-import-meta": [babelPluginTransformImportMeta, {
+      replaceImportMeta: (metaPropertyName, {
+        replaceWithImport,
+        replaceWithValue
+      }) => {
+        if (metaPropertyName === "url") {
+          if (importMetaFormat === "esmodule") {
+            // keep native version
+            return;
+          }
+
+          if (importMetaFormat === "systemjs") {
+            // systemjs will handle it
+            return;
+          }
+
+          if (importMetaFormat === "commonjs") {
+            replaceWithImport({
+              from: `@jsenv/core/src/internal/import-meta/import-meta-url-commonjs.js`
+            });
+            return;
+          }
+
+          if (importMetaFormat === "global") {
+            replaceWithImport({
+              from: `@jsenv/core/src/internal/import-meta/import-meta-url-global.js`
+            });
+            return;
+          }
+
+          return;
+        }
+
+        if (metaPropertyName === "resolve") {
+          if (importMetaFormat === "esmodule") {
+            // keep native version
+            return;
+          }
+
+          if (importMetaFormat === "systemjs") {
+            // systemjs will handle it
+            return;
+          }
+
+          if (importMetaFormat === "commonjs") {
+            replaceWithImport({
+              from: `@jsenv/core/src/internal/import-meta/import-meta-resolve-commonjs.js`
+            });
+            return;
+          }
+
+          if (importMetaFormat === "global") {
+            replaceWithImport({
+              from: `@jsenv/core/src/internal/import-meta/import-meta-resolve-global.js`
+            });
+            return;
+          }
+
+          return;
+        }
+
+        if (metaPropertyName === "env") {
+          replaceWithImport({
+            namespace: true,
+            from: importMetaEnvFileSpecifier
+          });
+          return;
+        }
+
+        replaceWithValue(importMeta[metaPropertyName]);
+      }
+    }],
+    ...babelPluginMap,
     "transform-babel-helpers-to-import": [transformBabelHelperToImportBabelPlugin]
   };
   const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap);
 
-  if (transformModuleIntoSystemFormat && transformTopLevelAwait && asyncPluginName) {
+  if (moduleOutFormat === "systemjs" && transformTopLevelAwait && asyncPluginName) {
     const babelPluginArrayWithoutAsync = [];
     Object.keys(babelPluginMap).forEach(name => {
       if (name !== asyncPluginName) {
@@ -326,7 +522,7 @@ const jsenvTransform = async ({
     };
   }
 
-  const babelPluginArray = [...minimalBabelPluginArray, ...Object.keys(babelPluginMap).map(babelPluginName => babelPluginMap[babelPluginName]), ...(transformModuleIntoSystemFormat ? [[proposalDynamicImport], [transformModulesSystemJs]] : [])];
+  const babelPluginArray = [...minimalBabelPluginArray, ...Object.keys(babelPluginMap).map(babelPluginName => babelPluginMap[babelPluginName]), ...(moduleOutFormat === "systemjs" ? [[proposalDynamicImport], [transformModulesSystemJs]] : [])];
   const result = await babelTransform({
     ast: inputAst,
     code: inputCode,
@@ -386,9 +582,12 @@ const transformJs = async ({
   map,
   babelPluginMap,
   convertMap = {},
+  moduleOutFormat = "esmodule",
+  importMetaFormat = moduleOutFormat,
+  importMetaEnvFileRelativeUrl,
+  importMeta,
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
-  transformModuleIntoSystemFormat = true,
   transformGenerator = true,
   transformGlobalThis = true,
   sourcemapEnabled = true
@@ -424,6 +623,9 @@ const transformJs = async ({
   });
   const inputPath = computeInputPath(url);
   const inputRelativePath = computeInputRelativePath(url, projectDirectoryUrl);
+  const importMetaEnvFileUrl = util.resolveUrl(importMetaEnvFileRelativeUrl, projectDirectoryUrl);
+  const importMetaEnvRelativeUrlForInput = util.urlToRelativeUrl(importMetaEnvFileUrl, url);
+  const importMetaEnvFileSpecifier = relativeUrlToSpecifier(importMetaEnvRelativeUrlForInput);
   return jsenvTransform({
     inputCode,
     inputMap,
@@ -431,9 +633,12 @@ const transformJs = async ({
     inputRelativePath,
     babelPluginMap,
     convertMap,
+    moduleOutFormat,
+    importMetaFormat,
+    importMetaEnvFileSpecifier,
+    importMeta,
     allowTopLevelAwait,
     transformTopLevelAwait,
-    transformModuleIntoSystemFormat,
     transformGenerator,
     transformGlobalThis,
     sourcemapEnabled
@@ -513,6 +718,12 @@ const computeInputRelativePath = (url, projectDirectoryUrl) => {
   }
 
   return undefined;
+};
+
+const relativeUrlToSpecifier = relativeUrl => {
+  if (relativeUrl.startsWith("../")) return relativeUrl;
+  if (relativeUrl.startsWith("./")) return relativeUrl;
+  return `./${relativeUrl}`;
 };
 
 // heavily inspired from https://github.com/jviide/babel-plugin-transform-replace-expressions
@@ -609,10 +820,9 @@ const babelPluginReplaceExpressions = (api, options) => {
   };
 };
 
-const transformCommonJs = require$1("babel-plugin-transform-commonjs");
-
 const convertCommonJsWithBabel = async ({
   projectDirectoryUrl,
+  importMetaEnvFileRelativeUrl,
   code,
   url,
   replaceGlobalObject = true,
@@ -622,9 +832,12 @@ const convertCommonJsWithBabel = async ({
   processEnvNodeEnv = "undefined",
   replaceMap = {}
 }) => {
-  // maybe we should use babel core here instead of transformJs
+  const transformCommonJs = require$1("babel-plugin-transform-commonjs"); // maybe we should use babel core here instead of transformJs
+
+
   const result = await transformJs({
     projectDirectoryUrl,
+    importMetaEnvFileRelativeUrl,
     code,
     url,
     babelPluginMap: {
@@ -645,8 +858,7 @@ const convertCommonJsWithBabel = async ({
           ...replaceMap
         }
       }]
-    },
-    transformModuleIntoSystemFormat: false
+    }
   });
   return result;
 };
@@ -672,24 +884,6 @@ const __dirnameReplacement = `import.meta.url.slice('file:///'.length).replace(/
 //   }
 // }
 
-const {
-  rollup
-} = require$1("rollup");
-
-const commonjs = require$1("@rollup/plugin-commonjs");
-
-const {
-  nodeResolve
-} = require$1("@rollup/plugin-node-resolve");
-
-const createJSONRollupPlugin = require$1("@rollup/plugin-json");
-
-const createReplaceRollupPlugin = require$1("@rollup/plugin-replace");
-
-const builtins = require$1("rollup-plugin-node-builtins-brofs");
-
-const createNodeGlobalRollupPlugin = require$1("rollup-plugin-node-globals");
-
 const convertCommonJsWithRollup = async ({
   url,
   urlAfterTransform,
@@ -710,6 +904,24 @@ const convertCommonJsWithRollup = async ({
     // however it's an exotic use case for now
     throw new Error(`compatible only with file:// protocol, got ${url}`);
   }
+
+  const {
+    rollup
+  } = require$1("rollup");
+
+  const commonjs = require$1("@rollup/plugin-commonjs");
+
+  const {
+    nodeResolve
+  } = require$1("@rollup/plugin-node-resolve");
+
+  const createJSONRollupPlugin = require$1("@rollup/plugin-json");
+
+  const createReplaceRollupPlugin = require$1("@rollup/plugin-replace");
+
+  const builtins = require$1("rollup-plugin-node-builtins-brofs");
+
+  const createNodeGlobalRollupPlugin = require$1("rollup-plugin-node-globals");
 
   const filePath = util.urlToFileSystemPath(url);
   const nodeBuiltinsRollupPlugin = builtins();
@@ -1944,71 +2156,6 @@ const jsenvToolbarJsBundleRelativeUrl = "dist/jsenv-toolbar.js";
 const jsenvToolbarJsUrl = util.resolveUrl(jsenvToolbarJsRelativeUrl, jsenvCoreDirectoryUrl);
 const jsenvToolbarJsBundleUrl = util.resolveUrl(jsenvToolbarJsBundleRelativeUrl, jsenvCoreDirectoryUrl);
 
-const {
-  addNamed
-} = require$1("@babel/helper-module-imports");
-
-const createImportMetaUrlNamedImportBabelPlugin = ({
-  importMetaSpecifier
-}) => {
-  return () => {
-    return {
-      visitor: {
-        Program(programPath) {
-          const metaPropertyMap = {};
-          programPath.traverse({
-            MemberExpression(path) {
-              const {
-                node
-              } = path;
-              const {
-                object
-              } = node;
-              if (object.type !== "MetaProperty") return;
-              const {
-                property: objectProperty
-              } = object;
-              if (objectProperty.name !== "meta") return;
-              const {
-                property
-              } = node;
-              const {
-                name
-              } = property;
-
-              if (name in metaPropertyMap) {
-                metaPropertyMap[name].push(path);
-              } else {
-                metaPropertyMap[name] = [path];
-              }
-            }
-
-          });
-          Object.keys(metaPropertyMap).forEach(propertyName => {
-            const importMetaPropertyId = propertyName;
-            const result = addNamed(programPath, importMetaPropertyId, importMetaSpecifier);
-            metaPropertyMap[propertyName].forEach(path => {
-              path.replaceWith(result);
-            });
-          });
-        }
-
-      }
-    };
-  };
-};
-
-const createBabePluginMapForBundle = ({
-  format
-}) => {
-  return { ...(format === "global" || format === "commonjs" ? {
-      "import-meta-url-named-import": createImportMetaUrlNamedImportBabelPlugin({
-        importMetaSpecifier: `@jsenv/core/src/internal/bundling/import-meta-${format}.js`
-      })
-    } : {})
-  };
-};
-
 /**
  * allows the following:
  *
@@ -2856,9 +3003,6 @@ const createLockRegistry = () => {
 const {
   lockForRessource
 } = createLockRegistry();
-
-const lockfile = require$1("proper-lockfile");
-
 const getOrGenerateCompiledFile = async ({
   logger,
   projectDirectoryUrl,
@@ -3100,6 +3244,8 @@ const startAsap = async (fn, {
     // trying to do the same (mapy happen when spawining multiple server for instance)
     // https://github.com/moxystudio/node-proper-lockfile/issues/69
     await util.ensureParentDirectories(metaJsonFilePath); // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
+
+    const lockfile = require$1("proper-lockfile");
 
     unlockInterProcessLock = await lockfile.lock(metaJsonFilePath, {
       realpath: false,
@@ -4756,11 +4902,11 @@ const getTargetAsBase64Url = ({
   });
 };
 
-const {
-  minify
-} = require$1("html-minifier");
-
 const minifyHtml = (htmlString, options) => {
+  const {
+    minify
+  } = require$1("html-minifier");
+
   return minify(htmlString, options);
 };
 
@@ -5444,10 +5590,10 @@ const parseImportmapAsset = ({
   };
 };
 
-const postcss = require$1("postcss");
-
 const applyPostCss = async (cssString, cssUrl, plugins, // https://github.com/postcss/postcss#options
 options = {}) => {
+  const postcss = require$1("postcss");
+
   let result;
 
   try {
@@ -5733,7 +5879,7 @@ const replaceCssUrls = async (css, cssUrl, getUrlReplacementValue, {
   cssMinificationOptions,
   sourcemapOptions = {}
 } = {}) => {
-  const postcssPlugins = [postCssUrlHashPlugin, ...(cssMinification ? [getCssMinificationPlugin(cssMinificationOptions)] : [])];
+  const postcssPlugins = [postCssUrlHashPlugin, ...(cssMinification ? [await getCssMinificationPlugin(cssMinificationOptions)] : [])];
   const postcssOptions = {
     getUrlReplacementValue,
     map: {
@@ -5745,7 +5891,7 @@ const replaceCssUrls = async (css, cssUrl, getUrlReplacementValue, {
   return result;
 };
 
-const getCssMinificationPlugin = (cssMinificationOptions = {}) => {
+const getCssMinificationPlugin = async (cssMinificationOptions = {}) => {
   const cssnano = require$1("cssnano");
 
   const cssnanoDefaultPreset = require$1("cssnano-preset-default");
@@ -5941,13 +6087,12 @@ const compareUrlNodeValue = (firstUrlNodeValue, secondUrlNodeValue) => {
   return firstValueNormalized === secondValueNormalized;
 };
 
-const {
-  minify: minify$1
-} = require$1("terser"); // https://github.com/terser-js/terser#minify-options
-
-
 const minifyJs = async (jsString, jsUrl, options) => {
-  const result = await minify$1({
+  const {
+    minify
+  } = require$1("terser");
+
+  const result = await minify({
     [jsUrl]: jsString
   }, options);
   return result;
@@ -6068,10 +6213,12 @@ const createJsenvRollupPlugin = async ({
   entryPointMap,
   projectDirectoryUrl,
   importMapFileRelativeUrl,
+  importMetaEnvFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
   importDefaultExtension,
   externalImportSpecifiers,
+  externalImportUrlPatterns,
   babelPluginMap,
   node,
   browser,
@@ -6089,7 +6236,8 @@ const createJsenvRollupPlugin = async ({
   const urlImporterMap = {};
   const urlResponseBodyMap = {};
   const virtualModules = {};
-  const urlRedirectionMap = {}; // map fileName (bundle relative urls without hash) to bundle relative url
+  const urlRedirectionMap = {};
+  const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(externalImportUrlPatterns, projectDirectoryUrl); // map fileName (bundle relative urls without hash) to bundle relative url
 
   let bundleManifest = {};
 
@@ -6563,6 +6711,13 @@ const createJsenvRollupPlugin = async ({
           id: specifier,
           external: true
         };
+      }
+
+      if (externalUrlPredicate(urlToOriginalProjectUrl(importProjectUrl))) {
+        return {
+          id: specifier,
+          external: true
+        };
       } // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
 
 
@@ -6936,11 +7091,11 @@ const createJsenvRollupPlugin = async ({
         map
       } = await transformJs({
         projectDirectoryUrl,
+        importMetaEnvFileRelativeUrl,
         code: codeInput,
         url: urlToProjectUrl(moduleUrl),
         // transformJs expect a file:// url
-        babelPluginMap,
-        transformModuleIntoSystemFormat: false
+        babelPluginMap
       });
       return {
         responseUrl: moduleUrl,
@@ -7175,9 +7330,22 @@ const ensureRelativeUrlNotation$1 = relativeUrl => {
   return `./${relativeUrl}`;
 };
 
-const {
-  rollup: rollup$1
-} = require$1("rollup");
+const externalImportUrlPatternsToExternalUrlPredicate = (externalImportUrlPatterns, projectDirectoryUrl) => {
+  const externalImportUrlMetaMap = util.metaMapToSpecifierMetaMap({
+    external: { ...externalImportUrlPatterns,
+      "node_modules/@jsenv/core/src/internal/import-meta/": false,
+      "node_modules/@jsenv/core/helpers/": false
+    }
+  });
+  const externalImportUrlMetaMapNormalized = util.normalizeSpecifierMetaMap(externalImportUrlMetaMap, projectDirectoryUrl);
+  return url => {
+    const meta = util.urlToMeta({
+      url,
+      specifierMetaMap: externalImportUrlMetaMapNormalized
+    });
+    return Boolean(meta.external);
+  };
+};
 
 const generateBundleUsingRollup = async ({
   cancellationToken,
@@ -7189,6 +7357,7 @@ const generateBundleUsingRollup = async ({
   compileServerOrigin,
   importDefaultExtension,
   externalImportSpecifiers,
+  externalImportUrlPatterns,
   babelPluginMap,
   node,
   browser,
@@ -7221,6 +7390,7 @@ const generateBundleUsingRollup = async ({
     compileServerOrigin,
     importDefaultExtension,
     externalImportSpecifiers,
+    externalImportUrlPatterns,
     babelPluginMap,
     node,
     browser,
@@ -7264,6 +7434,10 @@ const useRollup = async ({
   bundleDirectoryUrl,
   bundleDirectoryClean
 }) => {
+  const {
+    rollup
+  } = require$1("rollup");
+
   logger.info(`parse bundle
 --- entry point map ---
 ${JSON.stringify(entryPointMap, null, "  ")}`);
@@ -7317,7 +7491,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
   };
   const rollupBundle = await cancellation.createOperation({
     cancellationToken,
-    start: () => rollup$1(rollupInputOptions)
+    start: () => rollup(rollupInputOptions)
   });
 
   if (bundleDirectoryClean) {
@@ -7575,9 +7749,12 @@ const createCompiledFileService = ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   importMapFileRelativeUrl,
+  importMetaEnvFileRelativeUrl,
+  importMeta,
   importDefaultExtension,
   transformTopLevelAwait,
-  transformModuleIntoSystemFormat,
+  moduleOutFormat,
+  importMetaFormat,
   babelPluginMap,
   groupMap,
   convertMap,
@@ -7702,6 +7879,8 @@ const createCompiledFileService = ({
         compile: async originalFileContent => {
           const transformResult = await transformJs({
             projectDirectoryUrl,
+            importMetaEnvFileRelativeUrl,
+            importMeta,
             code: originalFileContent,
             url: originalFileUrl,
             urlAfterTransform: compiledFileUrl,
@@ -7711,8 +7890,10 @@ const createCompiledFileService = ({
             }),
             convertMap,
             transformTopLevelAwait,
-            transformModuleIntoSystemFormat: compileIdIsForBundleFiles(compileId) ? // we are compiling for rollup, do not transform into systemjs format
-            false : transformModuleIntoSystemFormat
+            moduleOutFormat: compileIdIsForBundleFiles(compileId) ? // we are compiling for rollup, do not transform into systemjs format
+            "esmodule" : moduleOutFormat,
+            importMetaFormat: // eslint-disable-next-line no-nested-ternary
+            compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES ? "global" : compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES ? "commonjs" : importMetaFormat
           });
           const sourcemapFileUrl = `${compiledFileUrl}.map`;
           return transformResultToCompilationResult(transformResult, {
@@ -7806,6 +7987,8 @@ const createCompiledFileService = ({
             const scriptBeforeCompilation = inlineScriptsContentMap[scriptSrc];
             const scriptTransformResult = await transformJs({
               projectDirectoryUrl,
+              importMetaEnvFileRelativeUrl,
+              importMeta,
               code: scriptBeforeCompilation,
               url: scriptOriginalFileUrl,
               urlAfterTransform: scriptAfterTransformFileUrl,
@@ -7815,7 +7998,8 @@ const createCompiledFileService = ({
               }),
               convertMap,
               transformTopLevelAwait,
-              transformModuleIntoSystemFormat: true
+              moduleOutFormat,
+              importMetaFormat
             });
             const sourcemapFileUrl = util.resolveUrl(`${scriptBasename}.map`, scriptAfterTransformFileUrl);
             let {
@@ -7870,9 +8054,7 @@ const compileIdToBabelPluginMap = (compileId, {
 
   if (compileIdIsForBundleFiles(compileId)) {
     compiledIdForGroupMap = getWorstCompileId(groupMap);
-    babelPluginMapForGroupMap = createBabePluginMapForBundle({
-      format: compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES ? "global" : "commonjs"
-    });
+    babelPluginMapForGroupMap = {};
   } else {
     compiledIdForGroupMap = compileId;
     babelPluginMapForGroupMap = {};
@@ -7896,6 +8078,10 @@ const startCompileServer = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
+  importMetaEnvFileRelativeUrl = "env.js",
+  importMeta = {
+    dev: "undefined" !== "production"
+  },
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
@@ -7907,7 +8093,8 @@ const startCompileServer = async ({
   projectFileEtagEnabled = true,
   // js compile options
   transformTopLevelAwait = true,
-  transformModuleIntoSystemFormat = true,
+  moduleOutFormat = "systemjs",
+  importMetaFormat = moduleOutFormat,
   env = {},
   processEnvNodeEnv = "undefined",
   replaceProcessEnvNodeEnv = true,
@@ -7994,6 +8181,8 @@ const startCompileServer = async ({
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
+    importMeta,
+    importMetaEnvFileRelativeUrl,
     compileServerGroupMap
   });
   const serverStopCancellationSource = cancellation.createCancellationSource();
@@ -8035,11 +8224,14 @@ const startCompileServer = async ({
     outDirectoryRelativeUrl,
     importMapFileRelativeUrl,
     importDefaultExtension,
+    importMetaEnvFileRelativeUrl,
+    importMeta,
     transformTopLevelAwait,
-    transformModuleIntoSystemFormat,
-    babelPluginMap,
     groupMap: compileServerGroupMap,
+    babelPluginMap,
     convertMap,
+    moduleOutFormat,
+    importMetaFormat,
     scriptInjections,
     projectFileRequestedCallback,
     useFilesystemAsCache,
@@ -8178,7 +8370,11 @@ const setupOutDirectory = async (outDirectoryUrl, {
   useFilesystemAsCache,
   babelPluginMap,
   convertMap,
-  compileServerGroupMap
+  importMeta,
+  importMetaEnvFileRelativeUrl,
+  compileServerGroupMap,
+  replaceProcessEnvNodeEnv,
+  processEnvNodeEnv
 }) => {
   if (jsenvDirectoryClean) {
     logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`);
@@ -8193,7 +8389,11 @@ const setupOutDirectory = async (outDirectoryUrl, {
       jsenvCorePackageVersion,
       babelPluginMap,
       convertMap,
-      compileServerGroupMap
+      importMeta,
+      importMetaEnvFileRelativeUrl,
+      compileServerGroupMap,
+      replaceProcessEnvNodeEnv,
+      processEnvNodeEnv
     };
     const metaFileUrl = util.resolveUrl("./meta.json", outDirectoryUrl);
     let previousOutDirectoryMeta;
@@ -9297,12 +9497,11 @@ const execute = async ({
   return result;
 };
 
-const {
-  programVisitor
-} = require$1("istanbul-lib-instrument"); // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
-
-
 const babelPluginInstrument = (api, options) => {
+  const {
+    programVisitor
+  } = require$1("istanbul-lib-instrument");
+
   const {
     types
   } = api;
@@ -9450,15 +9649,15 @@ const {
 
 const createEmptyCoverage = relativeUrl => createFileCoverage$1(relativeUrl).toJSON();
 
-const {
-  transformAsync: transformAsync$1
-} = require$1("@babel/core");
-
 const relativeUrlToEmptyCoverage = async (relativeUrl, {
   cancellationToken,
   projectDirectoryUrl,
   babelPluginMap
 }) => {
+  const {
+    transformAsync
+  } = require$1("@babel/core");
+
   const fileUrl = util.resolveUrl(relativeUrl, projectDirectoryUrl);
   const source = await cancellation.createOperation({
     cancellationToken,
@@ -9479,7 +9678,7 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
       metadata
     } = await cancellation.createOperation({
       cancellationToken,
-      start: () => transformAsync$1(source, {
+      start: () => transformAsync(source, {
         filename: util.urlToFileSystemPath(fileUrl),
         filenameRelative: relativeUrl,
         configFile: false,
@@ -10287,15 +10486,15 @@ const {
   readFileSync
 } = require$1("fs");
 
-const libReport = require$1("istanbul-lib-report");
-
-const reports = require$1("istanbul-reports");
-
-const {
-  createCoverageMap
-} = require$1("istanbul-lib-coverage");
-
 const generateCoverageHtmlDirectory = async (coverageMap, htmlDirectoryRelativeUrl, projectDirectoryUrl) => {
+  const libReport = require$1("istanbul-lib-report");
+
+  const reports = require$1("istanbul-reports");
+
+  const {
+    createCoverageMap
+  } = require$1("istanbul-lib-coverage");
+
   const context = libReport.createContext({
     dir: util.urlToFileSystemPath(projectDirectoryUrl),
     coverageMap: createCoverageMap(coverageMap),
@@ -10311,19 +10510,19 @@ const generateCoverageHtmlDirectory = async (coverageMap, htmlDirectoryRelativeU
   report.execute(context);
 };
 
-const libReport$1 = require$1("istanbul-lib-report");
-
-const reports$1 = require$1("istanbul-reports");
-
-const {
-  createCoverageMap: createCoverageMap$1
-} = require$1("istanbul-lib-coverage");
-
 const generateCoverageTextLog = coverageMap => {
-  const context = libReport$1.createContext({
-    coverageMap: createCoverageMap$1(coverageMap)
+  const libReport = require$1("istanbul-lib-report");
+
+  const reports = require$1("istanbul-reports");
+
+  const {
+    createCoverageMap
+  } = require$1("istanbul-lib-coverage");
+
+  const context = libReport.createContext({
+    coverageMap: createCoverageMap(coverageMap)
   });
-  const report = reports$1.create("text", {
+  const report = reports.create("text", {
     skipEmpty: true,
     skipFull: true
   });
@@ -10517,6 +10716,10 @@ const generateBundle = async ({
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
+  importMetaEnvFileRelativeUrl,
+  importMeta = {
+    dev: false
+  },
   importDefaultExtension,
   externalImportSpecifiers = [],
   env = {},
@@ -10527,6 +10730,9 @@ const generateBundle = async ({
   compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
   format = "esm",
+  externalImportUrlPatterns = format === "commonjs" ? {
+    "node_modules/": true
+  } : {},
   useImportMapForJsBundleUrls,
   browser = format === "global" || format === "systemjs" || format === "esmodule",
   node = format === "commonjs",
@@ -10623,20 +10829,25 @@ const generateBundle = async ({
       bundleDirectoryUrl,
       projectDirectoryUrl
     });
-    babelPluginMap = { ...babelPluginMap,
-      ...createBabePluginMapForBundle({
-        format
-      })
-    };
     const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
+      // bundle compiled files are written into a different directory
+      // than exploring-server. This is because here we compile for rollup
+      // that is expecting esmodule format, not systemjs
+      // + some more differences like import.meta.dev
       outDirectoryName: "out-bundle",
       importMapFileRelativeUrl,
       importDefaultExtension,
+      importMetaEnvFileRelativeUrl,
+      importMeta,
+      moduleOutFormat: "esmodule",
+      // rollup will transform into systemjs
+      importMetaFormat: format,
+      // but ensure import.meta are correctly transformed into the right format
       compileServerProtocol,
       compileServerPrivateKey,
       compileServerCertificate,
@@ -10647,9 +10858,7 @@ const generateBundle = async ({
       writeOnFilesystem: filesystemCache,
       useFilesystemAsCache: filesystemCache,
       // override with potential custom options
-      ...rest,
-      transformModuleIntoSystemFormat: false // will be done by rollup
-
+      ...rest
     });
     const {
       outDirectoryRelativeUrl,
@@ -10667,6 +10876,7 @@ const generateBundle = async ({
         compileServerOrigin,
         importDefaultExtension,
         externalImportSpecifiers,
+        externalImportUrlPatterns,
         babelPluginMap,
         node,
         browser,

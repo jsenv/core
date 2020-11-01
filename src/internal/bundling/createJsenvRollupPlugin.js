@@ -13,6 +13,9 @@ import {
   urlIsInsideOf,
   urlToFileSystemPath,
   urlToBasename,
+  metaMapToSpecifierMetaMap,
+  normalizeSpecifierMetaMap,
+  urlToMeta,
 } from "@jsenv/util"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
@@ -58,10 +61,12 @@ export const createJsenvRollupPlugin = async ({
   entryPointMap,
   projectDirectoryUrl,
   importMapFileRelativeUrl,
+  importMetaEnvFileRelativeUrl,
   compileDirectoryRelativeUrl,
   compileServerOrigin,
   importDefaultExtension,
   externalImportSpecifiers,
+  externalImportUrlPatterns,
   babelPluginMap,
   node,
   browser,
@@ -82,6 +87,11 @@ export const createJsenvRollupPlugin = async ({
   const urlResponseBodyMap = {}
   const virtualModules = {}
   const urlRedirectionMap = {}
+
+  const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(
+    externalImportUrlPatterns,
+    projectDirectoryUrl,
+  )
 
   // map fileName (bundle relative urls without hash) to bundle relative url
   let bundleManifest = {}
@@ -550,6 +560,10 @@ export const createJsenvRollupPlugin = async ({
         return { id: specifier, external: true }
       }
 
+      if (externalUrlPredicate(urlToOriginalProjectUrl(importProjectUrl))) {
+        return { id: specifier, external: true }
+      }
+
       // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
       logger.debug(`${specifier} imported by ${importer} resolved to ${importUrl}`)
       return urlToUrlForRollup(importUrl)
@@ -935,10 +949,10 @@ export const createJsenvRollupPlugin = async ({
 
       const { code, map } = await transformJs({
         projectDirectoryUrl,
+        importMetaEnvFileRelativeUrl,
         code: codeInput,
         url: urlToProjectUrl(moduleUrl), // transformJs expect a file:// url
         babelPluginMap,
-        transformModuleIntoSystemFormat: false,
       })
 
       return {
@@ -1192,4 +1206,25 @@ const ensureRelativeUrlNotation = (relativeUrl) => {
     return relativeUrl
   }
   return `./${relativeUrl}`
+}
+
+const externalImportUrlPatternsToExternalUrlPredicate = (
+  externalImportUrlPatterns,
+  projectDirectoryUrl,
+) => {
+  const externalImportUrlMetaMap = metaMapToSpecifierMetaMap({
+    external: {
+      ...externalImportUrlPatterns,
+      "node_modules/@jsenv/core/src/internal/import-meta/": false,
+      "node_modules/@jsenv/core/helpers/": false,
+    },
+  })
+  const externalImportUrlMetaMapNormalized = normalizeSpecifierMetaMap(
+    externalImportUrlMetaMap,
+    projectDirectoryUrl,
+  )
+  return (url) => {
+    const meta = urlToMeta({ url, specifierMetaMap: externalImportUrlMetaMapNormalized })
+    return Boolean(meta.external)
+  }
 }

@@ -106,18 +106,7 @@ var _objectWithoutProperties = (function (source, excluded) {
   return target;
 });
 
-var nativeTypeOf = function nativeTypeOf(obj) {
-  return typeof obj;
-};
-
-var customTypeOf = function customTypeOf(obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-};
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
-
-/* global require, __filename */
-var nodeRequire = require;
+/* global __filename */
 var filenameContainsBackSlashes = __filename.indexOf("\\") > -1;
 var url = filenameContainsBackSlashes ? "file:///".concat(__filename.replace(/\\/g, "/")) : "file://".concat(__filename);
 
@@ -233,6 +222,16 @@ var stackToString = function stackToString(stack, _ref) {
   }).join("");
   return "".concat(name, ": ").concat(message).concat(stackString);
 };
+
+var nativeTypeOf = function nativeTypeOf(obj) {
+  return typeof obj;
+};
+
+var customTypeOf = function customTypeOf(obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+};
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
 var parseDataUrl = function parseDataUrl(dataUrl) {
   var afterDataProtocol = dataUrl.slice("data:".length);

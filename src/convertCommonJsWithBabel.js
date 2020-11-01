@@ -2,10 +2,9 @@ import { require } from "./internal/require.js"
 import { transformJs } from "./internal/compiling/js-compilation-service/transformJs.js"
 import { babelPluginReplaceExpressions } from "./internal/babel-plugin-replace-expressions.js"
 
-const transformCommonJs = require("babel-plugin-transform-commonjs")
-
 export const convertCommonJsWithBabel = async ({
   projectDirectoryUrl,
+  importMetaEnvFileRelativeUrl,
   code,
   url,
   replaceGlobalObject = true,
@@ -15,9 +14,12 @@ export const convertCommonJsWithBabel = async ({
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceMap = {},
 }) => {
+  const transformCommonJs = require("babel-plugin-transform-commonjs")
+
   // maybe we should use babel core here instead of transformJs
   const result = await transformJs({
     projectDirectoryUrl,
+    importMetaEnvFileRelativeUrl,
     code,
     url,
     babelPluginMap: {
@@ -37,7 +39,6 @@ export const convertCommonJsWithBabel = async ({
         },
       ],
     },
-    transformModuleIntoSystemFormat: false,
   })
   return result
 }

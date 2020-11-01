@@ -17,12 +17,6 @@ const bundlesToGenerate = [
     entryPointMap: {
       [jsenvNodeSystemRelativeUrl]: "./jsenv-node-system.cjs",
     },
-    externalImportSpecifiers: [
-      "@jsenv/server",
-      "@jsenv/util",
-      "@jsenv/uneval",
-      "@jsenv/import-map",
-    ],
   },
   {
     projectDirectoryUrl: jsenvCoreDirectoryUrl,

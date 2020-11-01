@@ -5,12 +5,12 @@ import { minimalBabelPluginArray } from "../../minimalBabelPluginArray.js"
 import { babelPluginInstrument } from "./babel-plugin-instrument.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
-const { transformAsync } = require("@babel/core")
-
 export const relativeUrlToEmptyCoverage = async (
   relativeUrl,
   { cancellationToken, projectDirectoryUrl, babelPluginMap },
 ) => {
+  const { transformAsync } = require("@babel/core")
+
   const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
   const source = await createOperation({
     cancellationToken,

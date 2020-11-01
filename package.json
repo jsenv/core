@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "16.3.6",
+  "version": "16.4.0",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {
@@ -63,6 +63,7 @@
     "@babel/helper-module-imports": "7.12.1",
     "@babel/helper-plugin-utils": "7.10.4",
     "@babel/helpers": "7.12.1",
+    "@babel/parser": "7.12.1",
     "@babel/plugin-proposal-dynamic-import": "7.12.1",
     "@babel/plugin-proposal-json-strings": "7.12.1",
     "@babel/plugin-proposal-numeric-separator": "7.12.1",
@@ -103,7 +104,7 @@
     "@jsenv/logger": "3.4.0",
     "@jsenv/node-module-import-map": "12.1.2",
     "@jsenv/node-signals": "2.0.1",
-    "@jsenv/server": "4.0.9",
+    "@jsenv/server": "4.1.0",
     "@jsenv/uneval": "1.4.0",
     "@jsenv/util": "3.10.0",
     "@rollup/plugin-commonjs": "16.0.0",

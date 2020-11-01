@@ -10,7 +10,7 @@ export const replaceCssUrls = async (
 ) => {
   const postcssPlugins = [
     postCssUrlHashPlugin,
-    ...(cssMinification ? [getCssMinificationPlugin(cssMinificationOptions)] : []),
+    ...(cssMinification ? [await getCssMinificationPlugin(cssMinificationOptions)] : []),
   ]
   const postcssOptions = {
     getUrlReplacementValue,
@@ -23,7 +23,7 @@ export const replaceCssUrls = async (
   return result
 }
 
-const getCssMinificationPlugin = (cssMinificationOptions = {}) => {
+const getCssMinificationPlugin = async (cssMinificationOptions = {}) => {
   const cssnano = require("cssnano")
   const cssnanoDefaultPreset = require("cssnano-preset-default")
   return cssnano({

@@ -1,19 +1,9 @@
-/* global require, __filename */
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/jsenv.importmap"
-import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
-import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
+import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
+import url from "./import-meta-url-commonjs.js"
 
-const nodeRequire = require
-export { nodeRequire as require }
-
-const filenameContainsBackSlashes = __filename.indexOf("\\") > -1
-
-export const url = filenameContainsBackSlashes
-  ? `file:///${__filename.replace(/\\/g, "/")}`
-  : `file://${__filename}`
-
-export const resolve = (specifier) => {
+const resolve = (specifier) => {
   return Promise.resolve(
     resolveImport({
       specifier,
@@ -32,3 +22,5 @@ const memoizedGetImportMap = () => {
   memoizedImportMap = normalizeImportMap(importMap, url)
   return memoizedImportMap
 }
+
+export default resolve

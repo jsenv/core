@@ -46,6 +46,10 @@ export const startCompileServer = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
+  importMetaEnvFileRelativeUrl = "env.js",
+  importMeta = {
+    dev: process.env.NODE_ENV !== "production",
+  },
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
@@ -58,7 +62,8 @@ export const startCompileServer = async ({
 
   // js compile options
   transformTopLevelAwait = true,
-  transformModuleIntoSystemFormat = true,
+  moduleOutFormat = "systemjs",
+  importMetaFormat = moduleOutFormat,
   env = {},
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceProcessEnvNodeEnv = true,
@@ -144,6 +149,8 @@ export const startCompileServer = async ({
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
+    importMeta,
+    importMetaEnvFileRelativeUrl,
     compileServerGroupMap,
   })
 
@@ -188,12 +195,15 @@ export const startCompileServer = async ({
     outDirectoryRelativeUrl,
     importMapFileRelativeUrl,
     importDefaultExtension,
+    importMetaEnvFileRelativeUrl,
+    importMeta,
 
     transformTopLevelAwait,
-    transformModuleIntoSystemFormat,
-    babelPluginMap,
     groupMap: compileServerGroupMap,
+    babelPluginMap,
     convertMap,
+    moduleOutFormat,
+    importMetaFormat,
     scriptInjections,
 
     projectFileRequestedCallback,
@@ -343,7 +353,11 @@ const setupOutDirectory = async (
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
+    importMeta,
+    importMetaEnvFileRelativeUrl,
     compileServerGroupMap,
+    replaceProcessEnvNodeEnv,
+    processEnvNodeEnv,
   },
 ) => {
   if (jsenvDirectoryClean) {
@@ -358,7 +372,11 @@ const setupOutDirectory = async (
       jsenvCorePackageVersion,
       babelPluginMap,
       convertMap,
+      importMeta,
+      importMetaEnvFileRelativeUrl,
       compileServerGroupMap,
+      replaceProcessEnvNodeEnv,
+      processEnvNodeEnv,
     }
     const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
 

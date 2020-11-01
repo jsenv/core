@@ -9,7 +9,6 @@ import {
   COMPILE_ID_COMMONJS_BUNDLE_FILES,
 } from "../CONSTANTS.js"
 import { jsenvToolbarHtmlUrl, jsenvBrowserSystemBundleUrl } from "../jsenvInternalFiles.js"
-import { createBabePluginMapForBundle } from "../bundling/createBabePluginMapForBundle.js"
 import { transformImportmap } from "./transformImportmap.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
@@ -36,10 +35,13 @@ export const createCompiledFileService = ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   importMapFileRelativeUrl,
+  importMetaEnvFileRelativeUrl,
+  importMeta,
   importDefaultExtension,
 
   transformTopLevelAwait,
-  transformModuleIntoSystemFormat,
+  moduleOutFormat,
+  importMetaFormat,
   babelPluginMap,
   groupMap,
   convertMap,
@@ -181,16 +183,25 @@ export const createCompiledFileService = ({
         compile: async (originalFileContent) => {
           const transformResult = await transformJs({
             projectDirectoryUrl,
+            importMetaEnvFileRelativeUrl,
+            importMeta,
             code: originalFileContent,
             url: originalFileUrl,
             urlAfterTransform: compiledFileUrl,
             babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
             convertMap,
             transformTopLevelAwait,
-            transformModuleIntoSystemFormat: compileIdIsForBundleFiles(compileId)
+            moduleOutFormat: compileIdIsForBundleFiles(compileId)
               ? // we are compiling for rollup, do not transform into systemjs format
-                false
-              : transformModuleIntoSystemFormat,
+                "esmodule"
+              : moduleOutFormat,
+            importMetaFormat:
+              // eslint-disable-next-line no-nested-ternary
+              compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES
+                ? "global"
+                : compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES
+                ? "commonjs"
+                : importMetaFormat,
           })
           const sourcemapFileUrl = `${compiledFileUrl}.map`
 
@@ -299,13 +310,16 @@ export const createCompiledFileService = ({
               const scriptBeforeCompilation = inlineScriptsContentMap[scriptSrc]
               const scriptTransformResult = await transformJs({
                 projectDirectoryUrl,
+                importMetaEnvFileRelativeUrl,
+                importMeta,
                 code: scriptBeforeCompilation,
                 url: scriptOriginalFileUrl,
                 urlAfterTransform: scriptAfterTransformFileUrl,
                 babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
                 convertMap,
                 transformTopLevelAwait,
-                transformModuleIntoSystemFormat: true,
+                moduleOutFormat,
+                importMetaFormat,
               })
               const sourcemapFileUrl = resolveUrl(
                 `${scriptBasename}.map`,
@@ -363,9 +377,7 @@ const compileIdToBabelPluginMap = (compileId, { babelPluginMap, groupMap }) => {
   let babelPluginMapForGroupMap
   if (compileIdIsForBundleFiles(compileId)) {
     compiledIdForGroupMap = getWorstCompileId(groupMap)
-    babelPluginMapForGroupMap = createBabePluginMapForBundle({
-      format: compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES ? "global" : "commonjs",
-    })
+    babelPluginMapForGroupMap = {}
   } else {
     compiledIdForGroupMap = compileId
     babelPluginMapForGroupMap = {}

@@ -7,13 +7,12 @@ import {
   createFixedNotificationMessage,
 } from "./continuous-testing-notifications.js"
 
-const notifier = require("node-notifier")
-
 export const showContinuousTestingNotification = ({
   projectDirectoryUrl,
   previousTestingResult,
   testingResult,
 }) => {
+  const notifier = require("node-notifier")
   const projectName = basename(projectDirectoryUrl)
 
   const previousTestingPassed = executionIsPassed(previousTestingResult)

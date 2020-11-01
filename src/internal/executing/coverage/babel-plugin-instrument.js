@@ -6,11 +6,11 @@ import {
 } from "@jsenv/util"
 import { require } from "../../require.js"
 
-const { programVisitor } = require("istanbul-lib-instrument")
-
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 
 export const babelPluginInstrument = (api, options) => {
+  const { programVisitor } = require("istanbul-lib-instrument")
+
   const { types } = api
   const {
     useInlineSourceMaps = false,

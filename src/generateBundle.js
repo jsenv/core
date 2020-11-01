@@ -5,7 +5,6 @@ import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.
 import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
-import { createBabePluginMapForBundle } from "./internal/bundling/createBabePluginMapForBundle.js"
 import { generateBundleUsingRollup } from "./internal/bundling/generateBundleUsingRollup.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
@@ -19,6 +18,10 @@ export const generateBundle = async ({
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
+  importMetaEnvFileRelativeUrl,
+  importMeta = {
+    dev: false,
+  },
   importDefaultExtension,
   externalImportSpecifiers = [],
   env = {},
@@ -31,6 +34,11 @@ export const generateBundle = async ({
   babelPluginMap = jsenvBabelPluginMap,
 
   format = "esm",
+  externalImportUrlPatterns = format === "commonjs"
+    ? {
+        "node_modules/": true,
+      }
+    : {},
   useImportMapForJsBundleUrls,
   browser = format === "global" || format === "systemjs" || format === "esmodule",
   node = format === "commonjs",
@@ -115,13 +123,6 @@ export const generateBundle = async ({
     const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
     assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
 
-    babelPluginMap = {
-      ...babelPluginMap,
-      ...createBabePluginMapForBundle({
-        format,
-      }),
-    }
-
     const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
@@ -129,9 +130,17 @@ export const generateBundle = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
+      // bundle compiled files are written into a different directory
+      // than exploring-server. This is because here we compile for rollup
+      // that is expecting esmodule format, not systemjs
+      // + some more differences like import.meta.dev
       outDirectoryName: "out-bundle",
       importMapFileRelativeUrl,
       importDefaultExtension,
+      importMetaEnvFileRelativeUrl,
+      importMeta,
+      moduleOutFormat: "esmodule", // rollup will transform into systemjs
+      importMetaFormat: format, // but ensure import.meta are correctly transformed into the right format
 
       compileServerProtocol,
       compileServerPrivateKey,
@@ -140,13 +149,12 @@ export const generateBundle = async ({
       compileServerPort,
       env,
       babelPluginMap,
+
       writeOnFilesystem: filesystemCache,
       useFilesystemAsCache: filesystemCache,
 
       // override with potential custom options
       ...rest,
-
-      transformModuleIntoSystemFormat: false, // will be done by rollup
     })
 
     const { outDirectoryRelativeUrl, origin: compileServerOrigin } = compileServer
@@ -163,6 +171,7 @@ export const generateBundle = async ({
         compileServerOrigin,
         importDefaultExtension,
         externalImportSpecifiers,
+        externalImportUrlPatterns,
         babelPluginMap,
         node,
         browser,
