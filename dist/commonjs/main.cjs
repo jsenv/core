@@ -8181,6 +8181,8 @@ const startCompileServer = async ({
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
+    importMeta,
+    importMetaEnvFileRelativeUrl,
     compileServerGroupMap
   });
   const serverStopCancellationSource = cancellation.createCancellationSource();
@@ -8368,6 +8370,8 @@ const setupOutDirectory = async (outDirectoryUrl, {
   useFilesystemAsCache,
   babelPluginMap,
   convertMap,
+  importMeta,
+  importMetaEnvFileRelativeUrl,
   compileServerGroupMap,
   replaceProcessEnvNodeEnv,
   processEnvNodeEnv
@@ -8385,6 +8389,8 @@ const setupOutDirectory = async (outDirectoryUrl, {
       jsenvCorePackageVersion,
       babelPluginMap,
       convertMap,
+      importMeta,
+      importMetaEnvFileRelativeUrl,
       compileServerGroupMap,
       replaceProcessEnvNodeEnv,
       processEnvNodeEnv
@@ -10712,7 +10718,7 @@ const generateBundle = async ({
   importMapFileRelativeUrl,
   importMetaEnvFileRelativeUrl,
   importMeta = {
-    dev: "undefined" !== "production"
+    dev: false
   },
   importDefaultExtension,
   externalImportSpecifiers = [],
