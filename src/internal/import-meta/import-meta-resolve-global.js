@@ -4,7 +4,7 @@ import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
 import url from "./import-meta-url-global.js"
 
-export const resolve = (specifier) => {
+const resolve = (specifier) => {
   return Promise.resolve(
     resolveImport({
       specifier,
@@ -23,3 +23,5 @@ const memoizedGetImportMap = () => {
   memoizedImportMap = normalizeImportMap(importMap, url)
   return memoizedImportMap
 }
+
+export default resolve
