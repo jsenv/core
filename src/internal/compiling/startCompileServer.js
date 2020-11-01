@@ -149,6 +149,8 @@ export const startCompileServer = async ({
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
+    importMeta,
+    importMetaEnvFileRelativeUrl,
     compileServerGroupMap,
   })
 
@@ -351,6 +353,8 @@ const setupOutDirectory = async (
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
+    importMeta,
+    importMetaEnvFileRelativeUrl,
     compileServerGroupMap,
     replaceProcessEnvNodeEnv,
     processEnvNodeEnv,
@@ -368,6 +372,8 @@ const setupOutDirectory = async (
       jsenvCorePackageVersion,
       babelPluginMap,
       convertMap,
+      importMeta,
+      importMetaEnvFileRelativeUrl,
       compileServerGroupMap,
       replaceProcessEnvNodeEnv,
       processEnvNodeEnv,
