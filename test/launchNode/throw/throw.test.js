@@ -37,7 +37,11 @@ const actual = await launchAndExecute({
 })
 const expected = {
   status: "errored",
-  error: new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
+  error: Object.assign(new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"), {
+    filename: actual.error.filename,
+    lineno: actual.error.lineno,
+    columnno: actual.error.columnno,
+  }),
   consoleCalls: actual.consoleCalls,
 }
 assert({ actual, expected })

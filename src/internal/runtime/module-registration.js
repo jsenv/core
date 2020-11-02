@@ -35,13 +35,15 @@ export const fromUrl = async ({
   compileServerOrigin,
   outDirectoryRelativeUrl,
 }) => {
-  const moduleResponse = await fetchSource(url, {
-    importerUrl,
-  })
+  let moduleResponse
+  try {
+    moduleResponse = await fetchSource(url, {
+      importerUrl,
+    })
 
-  if (moduleResponse.status === 404) {
-    throw new Error(
-      `Module file cannot be found.
+    if (moduleResponse.status === 404) {
+      throw new Error(
+        `Module file cannot be found.
 ${getModuleDetails({
   url,
   importerUrl,
@@ -49,7 +51,11 @@ ${getModuleDetails({
   outDirectoryRelativeUrl,
   notFound: true,
 })}`,
-    )
+      )
+    }
+  } catch (e) {
+    e.code = "NETWORK_FAILURE"
+    throw e
   }
 
   const contentType = moduleResponse.headers["content-type"] || ""

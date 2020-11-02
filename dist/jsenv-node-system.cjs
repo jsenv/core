@@ -692,20 +692,6 @@ function _await$2(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _catch(body, recover) {
-  try {
-    var result = body();
-  } catch (e) {
-    return recover(e);
-  }
-
-  if (result && result.then) {
-    return result.then(void 0, recover);
-  }
-
-  return result;
-}
-
 function _async$2(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
@@ -718,6 +704,20 @@ function _async$2(f) {
       return Promise.reject(e);
     }
   };
+}
+
+function _catch(body, recover) {
+  try {
+    var result = body();
+  } catch (e) {
+    return recover(e);
+  }
+
+  if (result && result.then) {
+    return result.then(void 0, recover);
+  }
+
+  return result;
 }
 
 function _invoke$1(body, then) {
@@ -734,13 +734,11 @@ function _continue(value, then) {
   return value && value.then ? value.then(then) : then(value);
 }
 
-var generateOriginalStackString = _async$2(function (_ref) {
+var getOriginalCallsites = _async$2(function (_ref) {
   var stack = _ref.stack,
-      error = _ref.error,
       resolveFile = _ref.resolveFile,
       fetchFile = _ref.fetchFile,
       SourceMapConsumer = _ref.SourceMapConsumer,
-      indent = _ref.indent,
       readErrorStack = _ref.readErrorStack,
       onFailure = _ref.onFailure;
   var urlToSourcemapConsumer = memoizeByFirstArgStringValue(_async$2(function (stackTraceFileUrl) {
@@ -892,29 +890,14 @@ var generateOriginalStackString = _async$2(function (_ref) {
       return null;
     });
   }));
-  return _catch(function () {
-    return _await$2(Promise.all(stack.map(function (callSite) {
-      return remapCallSite(callSite, {
-        resolveFile: resolveFile,
-        urlToSourcemapConsumer: urlToSourcemapConsumer,
-        readErrorStack: readErrorStack,
-        onFailure: onFailure
-      });
-    })), function (originalStack) {
-      return stackToString(originalStack, {
-        error: error,
-        indent: indent
-      });
+  return Promise.all(stack.map(function (callSite) {
+    return remapCallSite(callSite, {
+      resolveFile: resolveFile,
+      urlToSourcemapConsumer: urlToSourcemapConsumer,
+      readErrorStack: readErrorStack,
+      onFailure: onFailure
     });
-  }, function (e) {
-    var unmappedStack = stackToString(stack, {
-      error: error,
-      indent: indent
-    });
-    onFailure("error while computing original stack.\n--- stack from error while computing ---\n".concat(readErrorStack(e), "\n--- stack from error to remap ---\n").concat(unmappedStack)); // in case of error return the non remapped stack
-
-    return unmappedStack;
-  });
+  }));
 });
 
 var memoizeByFirstArgStringValue = function memoizeByFirstArgStringValue(fn) {
@@ -937,6 +920,20 @@ function _await$3(value, then, direct) {
   }
 
   return then ? value.then(then) : value;
+}
+
+function _catch$1(body, recover) {
+  try {
+    var result = body();
+  } catch (e) {
+    return recover(e);
+  }
+
+  if (result && result.then) {
+    return result.then(void 0, recover);
+  }
+
+  return result;
 }
 
 function _invoke$2(body, then) {
@@ -982,7 +979,7 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
     throw new TypeError("indent must be a string, got ".concat(indent));
   }
 
-  var errorOriginalStackStringCache = new WeakMap();
+  var errorRemappingCache = new WeakMap();
   var errorRemapFailureCallbackMap = new WeakMap();
   var installed = false;
   var previousPrepareStackTrace = Error.prepareStackTrace;
@@ -1021,7 +1018,7 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
       }
     };
 
-    var originalStackStringPromise = generateOriginalStackString({
+    var stackRemappingPromise = getOriginalCallsites({
       stack: stack,
       error: error,
       resolveFile: resolveFile,
@@ -1031,7 +1028,7 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
       indent: indent,
       onFailure: onFailure
     });
-    errorOriginalStackStringCache.set(error, originalStackStringPromise);
+    errorRemappingCache.set(error, stackRemappingPromise);
     return stackToString(stack, {
       error: error,
       indent: indent
@@ -1059,13 +1056,32 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
 
 
     var stack = error.stack;
-    var promise = errorOriginalStackStringCache.get(error);
+    var promise = errorRemappingCache.get(error);
     return _invoke$2(function () {
       if (promise) {
-        return _await$3(promise, function (originalStack) {
-          errorRemapFailureCallbackMap.get(error);
+        return _catch$1(function () {
+          return _await$3(promise, function (originalCallsites) {
+            errorRemapFailureCallbackMap.get(error);
+            var firstCall = originalCallsites[0];
+
+            if (firstCall) {
+              Object.assign(error, {
+                filename: firstCall.getFileName(),
+                lineno: firstCall.getLineNumber(),
+                columnno: firstCall.getColumnNumber()
+              });
+            }
+
+            _exit = true;
+            return stackToString(originalCallsites, {
+              error: error,
+              indent: indent
+            });
+          });
+        }, function (e) {
+          onFailure("error while computing original stack.\n--- stack from error while computing ---\n".concat(readErrorStack(e), "\n--- stack from error to remap ---\n").concat(stack));
           _exit = true;
-          return originalStack;
+          return stack;
         });
       }
     }, function (_result) {
@@ -1366,7 +1382,7 @@ var resolveNodeGroup = function resolveNodeGroup(groupMap) {
 };
 
 /*
-* SJS 6.6.1
+* SJS 6.7.1
 * Minimal SystemJS Build
 */
 (function () {
@@ -1635,7 +1651,7 @@ var resolveNodeGroup = function resolveNodeGroup(groupMap) {
         load.h = true;
         var changed = false;
 
-        if (_typeof(name) !== 'object') {
+        if (typeof name === 'string') {
           if (!(name in ns) || ns[name] !== value) {
             ns[name] = value;
             changed = true;
@@ -1856,7 +1872,9 @@ var resolveNodeGroup = function resolveNodeGroup(groupMap) {
         System.import(script.src.slice(0, 7) === 'import:' ? script.src.slice(7) : resolveUrl(script.src, baseUrl));
       } else if (script.type === 'systemjs-importmap') {
         script.sp = true;
-        var fetchPromise = script.src ? fetch(script.src).then(function (res) {
+        var fetchPromise = script.src ? fetch(script.src, {
+          integrity: script.integrity
+        }).then(function (res) {
           return res.text();
         }) : script.innerHTML;
         importMapPromise = importMapPromise.then(function () {
@@ -1904,24 +1922,24 @@ var resolveNodeGroup = function resolveNodeGroup(groupMap) {
   }; // Auto imports -> script tags can be inlined directly for load phase
 
 
-  var lastAutoImportDeps, lastAutoImportTimeout;
+  var lastAutoImportUrl, lastAutoImportDeps, lastAutoImportTimeout;
   var autoImportCandidates = {};
   var systemRegister = systemJSPrototype.register;
 
   systemJSPrototype.register = function (deps, declare) {
     if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
-      var scripts = document.getElementsByTagName('script');
+      var scripts = document.querySelectorAll('script[src]');
       var lastScript = scripts[scripts.length - 1];
-      var url = lastScript && lastScript.src;
 
-      if (url) {
+      if (lastScript) {
+        lastAutoImportUrl = lastScript.src;
         lastAutoImportDeps = deps; // if this is already a System load, then the instantiate has already begun
         // so this re-import has no consequence
 
         var loader = this;
         lastAutoImportTimeout = setTimeout(function () {
-          autoImportCandidates[url] = [deps, declare];
-          loader.import(url);
+          autoImportCandidates[lastScript.src] = [deps, declare];
+          loader.import(lastScript.src);
         });
       }
     } else {
@@ -1961,6 +1979,35 @@ var resolveNodeGroup = function resolveNodeGroup(groupMap) {
         }
       });
       document.head.appendChild(script);
+    });
+  };
+  /*
+   * Fetch loader, sets up shouldFetch and fetch hooks
+   */
+
+
+  systemJSPrototype.shouldFetch = function () {
+    return false;
+  };
+
+  if (typeof fetch !== 'undefined') systemJSPrototype.fetch = fetch;
+  var instantiate = systemJSPrototype.instantiate;
+  var jsContentTypeRegEx = /^(text|application)\/(x-)?javascript(;|$)/;
+
+  systemJSPrototype.instantiate = function (url, parent) {
+    var loader = this;
+    if (!this.shouldFetch(url)) return instantiate.apply(this, arguments);
+    return this.fetch(url, {
+      credentials: 'same-origin',
+      integrity: importMap.integrity[url]
+    }).then(function (res) {
+      if (!res.ok) throw Error(errMsg(7, [res.status, res.statusText, url, parent].join(', ')));
+      var contentType = res.headers.get('content-type');
+      if (!contentType || !jsContentTypeRegEx.test(contentType)) throw Error(errMsg(4, contentType));
+      return res.text().then(function (source) {
+        (0, eval)(source);
+        return loader.getRegister();
+      });
     });
   };
 
@@ -2012,6 +2059,20 @@ function _await$4(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
+function _catch$2(body, recover) {
+  try {
+    var result = body();
+  } catch (e) {
+    return recover(e);
+  }
+
+  if (result && result.then) {
+    return result.then(void 0, recover);
+  }
+
+  return result;
+}
+
 function _invoke$3(body, then) {
   var result = body();
 
@@ -2020,6 +2081,10 @@ function _invoke$3(body, then) {
   }
 
   return then(result);
+}
+
+function _continue$1(value, then) {
+  return value && value.then ? value.then(then) : then(value);
 }
 
 function _async$4(f) {
@@ -2068,20 +2133,27 @@ var fromUrl = _async$4(function (_ref) {
       instantiateJavaScript = _ref.instantiateJavaScript,
       compileServerOrigin = _ref.compileServerOrigin,
       outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
-  return _await$4(fetchSource(url, {
-    importerUrl: importerUrl
-  }), function (moduleResponse) {
+  var moduleResponse;
+  return _continue$1(_catch$2(function () {
+    return _await$4(fetchSource(url, {
+      importerUrl: importerUrl
+    }), function (_fetchSource) {
+      moduleResponse = _fetchSource;
 
-    if (moduleResponse.status === 404) {
-      throw new Error("Module file cannot be found.\n".concat(getModuleDetails({
-        url: url,
-        importerUrl: importerUrl,
-        compileServerOrigin: compileServerOrigin,
-        outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-        notFound: true
-      })));
-    }
-
+      if (moduleResponse.status === 404) {
+        throw new Error("Module file cannot be found.\n".concat(getModuleDetails({
+          url: url,
+          importerUrl: importerUrl,
+          compileServerOrigin: compileServerOrigin,
+          outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+          notFound: true
+        })));
+      }
+    });
+  }, function (e) {
+    e.code = "NETWORK_FAILURE";
+    throw e;
+  }), function (_result) {
     var contentType = moduleResponse.headers["content-type"] || "";
     return _invoke$3(function () {
       if (moduleResponse.status === 500 && contentType === "application/json") {
@@ -2098,8 +2170,8 @@ var fromUrl = _async$4(function (_ref) {
           }
         });
       }
-    }, function (_result) {
-      var _exit2 = false;
+    }, function (_result2) {
+      var _exit3 = false;
 
       if (moduleResponse.status < 200 || moduleResponse.status >= 300) {
         throw new Error("Module file response status is unexpected.\n--- status ---\n".concat(moduleResponse.status, "\n--- allowed status\n200 to 299\n--- statusText ---\n").concat(moduleResponse.statusText, "\n").concat(getModuleDetails({
@@ -2115,7 +2187,7 @@ var fromUrl = _async$4(function (_ref) {
       return _invoke$3(function () {
         if (contentType === "application/javascript" || contentType === "text/javascript") {
           return _await$4(moduleResponse.text(), function (bodyAsText) {
-            _exit2 = true;
+            _exit3 = true;
             return fromFunctionReturningRegisteredModule(function () {
               return instantiateJavaScript(bodyAsText, moduleResponse.url);
             }, {
@@ -2126,13 +2198,13 @@ var fromUrl = _async$4(function (_ref) {
             });
           });
         }
-      }, function (_result2) {
-        var _exit3 = false;
-        if (_exit2) return _result2;
+      }, function (_result3) {
+        var _exit4 = false;
+        if (_exit3) return _result3;
         return _invoke$3(function () {
           if (contentType === "application/json" || contentType === "application/importmap+json") {
             return _await$4(moduleResponse.json(), function (bodyAsJson) {
-              _exit3 = true;
+              _exit4 = true;
               return fromFunctionReturningNamespace(function () {
                 return {
                   default: bodyAsJson
@@ -2145,8 +2217,8 @@ var fromUrl = _async$4(function (_ref) {
               });
             });
           }
-        }, function (_result3) {
-          if (_exit3) return _result3;
+        }, function (_result4) {
+          if (_exit4) return _result4;
 
           if (contentTypeShouldBeReadAsText(contentType)) {
             return fromFunctionReturningNamespace(function () {
@@ -2495,7 +2567,7 @@ function _async$6(f) {
   };
 }
 
-function _catch$1(body, recover) {
+function _catch$3(body, recover) {
   try {
     var result = body();
   } catch (e) {
@@ -2509,7 +2581,7 @@ function _catch$1(body, recover) {
   return result;
 }
 
-function _continue$1(value, then) {
+function _continue$2(value, then) {
   return value && value.then ? value.then(then) : then(value);
 }
 
@@ -2595,7 +2667,7 @@ var createNodeRuntime = _async$6(function (_ref) {
           importDefaultExtension: importDefaultExtension,
           fetchSource: fetchSource
         }), function (nodeSystem) {
-          return _catch$1(function () {
+          return _catch$3(function () {
             return _await$5(makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier)), function (namespace) {
               return {
                 status: "completed",
@@ -2605,7 +2677,7 @@ var createNodeRuntime = _async$6(function (_ref) {
             });
           }, function (error) {
             var transformedError;
-            return _continue$1(_catch$1(function () {
+            return _continue$2(_catch$3(function () {
               return _await$5(errorTransform(error), function (_errorTransform) {
                 transformedError = _errorTransform;
               });

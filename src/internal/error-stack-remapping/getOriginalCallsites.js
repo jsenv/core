@@ -1,15 +1,12 @@
 import { parseDataUrl, dataUrlToRawData } from "../dataUrl.utils.js"
 import { getJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { remapCallSite } from "./remapCallSite.js"
-import { stackToString } from "./stackToString.js"
 
-export const generateOriginalStackString = async ({
+export const getOriginalCallsites = async ({
   stack,
-  error,
   resolveFile,
   fetchFile,
   SourceMapConsumer,
-  indent,
   readErrorStack,
   onFailure,
 }) => {
@@ -170,28 +167,17 @@ ${stackTraceFileUrl}`)
     }
   })
 
-  try {
-    const originalStack = await Promise.all(
-      stack.map((callSite) =>
-        remapCallSite(callSite, {
-          resolveFile,
-          urlToSourcemapConsumer,
-          readErrorStack,
-          onFailure,
-        }),
-      ),
-    )
-    return stackToString(originalStack, { error, indent })
-  } catch (e) {
-    const unmappedStack = stackToString(stack, { error, indent })
-    onFailure(`error while computing original stack.
---- stack from error while computing ---
-${readErrorStack(e)}
---- stack from error to remap ---
-${unmappedStack}`)
-    // in case of error return the non remapped stack
-    return unmappedStack
-  }
+  const originalCallsites = await Promise.all(
+    stack.map((callSite) =>
+      remapCallSite(callSite, {
+        resolveFile,
+        urlToSourcemapConsumer,
+        readErrorStack,
+        onFailure,
+      }),
+    ),
+  )
+  return originalCallsites
 }
 
 const memoizeByFirstArgStringValue = (fn) => {

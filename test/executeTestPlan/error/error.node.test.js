@@ -36,7 +36,11 @@ const expected = {
     [fileRelativeUrl]: {
       node: {
         status: "errored",
-        error: new Error(`ask() should return 42, got 40`),
+        error: Object.assign(new Error(`ask() should return 42, got 40`), {
+          filename: actual.report[fileRelativeUrl].node.error.filename,
+          lineno: actual.report[fileRelativeUrl].node.error.lineno,
+          columnno: actual.report[fileRelativeUrl].node.error.columnno,
+        }),
         consoleCalls: actual.report[fileRelativeUrl].node.consoleCalls,
         runtimeName: "node",
         runtimeVersion: actual.report[fileRelativeUrl].node.runtimeVersion,

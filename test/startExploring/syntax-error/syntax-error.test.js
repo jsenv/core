@@ -43,16 +43,21 @@ const expectedParsingError = {
   lineNumber: 1,
   columnNumber: 17,
 }
-const expectedError = new Error(`Module file cannot be parsed.
+const expectedError = Object.assign(
+  new Error(`Module file cannot be parsed.
 --- parsing error message ---
 ${expectedParsingError.message}
 --- file ---
 ${importedFileRelativeUrl}
 --- file url ---
-${compiledImportedFileUrl}`)
-Object.assign(expectedError, {
-  parsingError: expectedParsingError,
-})
+${compiledImportedFileUrl}`),
+  {
+    parsingError: expectedParsingError,
+    filename: actual.executionResult.error.filename,
+    lineno: actual.executionResult.error.lineno,
+    columnno: actual.executionResult.error.columnno,
+  },
+)
 const expected = {
   pageLogs: [
     {

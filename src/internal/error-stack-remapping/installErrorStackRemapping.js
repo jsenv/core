@@ -1,5 +1,5 @@
 import { stackToString } from "./stackToString.js"
-import { generateOriginalStackString } from "./getOriginalStackString.js"
+import { getOriginalCallsites } from "./getOriginalCallsites.js"
 
 export const installErrorStackRemapping = ({
   fetchFile,
@@ -17,7 +17,7 @@ export const installErrorStackRemapping = ({
     throw new TypeError(`indent must be a string, got ${indent}`)
   }
 
-  const errorOriginalStackStringCache = new WeakMap()
+  const errorRemappingCache = new WeakMap()
   const errorRemapFailureCallbackMap = new WeakMap()
 
   let installed = false
@@ -53,7 +53,7 @@ export const installErrorStackRemapping = ({
       }
     }
 
-    const originalStackStringPromise = generateOriginalStackString({
+    const stackRemappingPromise = getOriginalCallsites({
       stack,
       error,
       resolveFile,
@@ -63,7 +63,7 @@ export const installErrorStackRemapping = ({
       indent,
       onFailure,
     })
-    errorOriginalStackStringCache.set(error, originalStackStringPromise)
+    errorRemappingCache.set(error, stackRemappingPromise)
 
     return stackToString(stack, { error, indent })
   }
@@ -87,12 +87,30 @@ export const installErrorStackRemapping = ({
 
     // ensure Error.prepareStackTrace gets triggered by reading error.stack now
     const { stack } = error
-    const promise = errorOriginalStackStringCache.get(error)
+    const promise = errorRemappingCache.get(error)
 
     if (promise) {
-      const originalStack = await promise
-      errorRemapFailureCallbackMap.get(error)
-      return originalStack
+      try {
+        const originalCallsites = await promise
+        errorRemapFailureCallbackMap.get(error)
+
+        const firstCall = originalCallsites[0]
+        if (firstCall) {
+          Object.assign(error, {
+            filename: firstCall.getFileName(),
+            lineno: firstCall.getLineNumber(),
+            columnno: firstCall.getColumnNumber(),
+          })
+        }
+        return stackToString(originalCallsites, { error, indent })
+      } catch (e) {
+        onFailure(`error while computing original stack.
+--- stack from error while computing ---
+${readErrorStack(e)}
+--- stack from error to remap ---
+${stack}`)
+        return stack
+      }
     }
 
     return stack
