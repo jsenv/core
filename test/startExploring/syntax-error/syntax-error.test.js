@@ -52,14 +52,12 @@ ${importedFileRelativeUrl}
 --- file url ---
 ${compiledImportedFileUrl}`),
   {
-    filename: actual.filename,
-    lineno: actual.lineno,
-    columnno: actual.columnno,
+    parsingError: expectedParsingError,
+    filename: actual.executionResult.error.filename,
+    lineno: actual.executionResult.error.lineno,
+    columnno: actual.executionResult.error.columnno,
   },
 )
-Object.assign(expectedError, {
-  parsingError: expectedParsingError,
-})
 const expected = {
   pageLogs: [
     {

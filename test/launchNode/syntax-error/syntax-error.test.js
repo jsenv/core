@@ -38,6 +38,16 @@ const actual = await launchAndExecute({
       compileServerOrigin,
     }),
 })
+const parsingError = {
+  message: `${filePath}: Unexpected token (1:14)
+
+> 1 | const node = (
+    |               ^`,
+  messageHTML: assert.any(String),
+  filename: filePath,
+  lineNumber: 1,
+  columnNumber: 14,
+}
 const expectedError = Object.assign(
   new Error(`Module file cannot be parsed.
 --- parsing error message ---
@@ -50,21 +60,12 @@ ${fileRelativeUrl}
 --- file url ---
 ${compiledFileUrl}`),
   {
-    filename: actual.filename,
-    lineno: actual.lineno,
-    columnno: actual.columnno,
+    parsingError,
+    filename: actual.error.filename,
+    lineno: actual.error.lineno,
+    columnno: actual.error.columnno,
   },
 )
-expectedError.parsingError = {
-  message: `${filePath}: Unexpected token (1:14)
-
-> 1 | const node = (
-    |               ^`,
-  messageHTML: assert.any(String),
-  filename: filePath,
-  lineNumber: 1,
-  columnNumber: 14,
-}
 const expected = {
   status: "errored",
   error: expectedError,
