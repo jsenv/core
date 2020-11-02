@@ -1285,7 +1285,7 @@
   };
 
   /*
-  * SJS 6.6.1
+  * SJS 6.7.1
   * Minimal SystemJS Build
   */
   (function () {
@@ -1554,7 +1554,7 @@
           load.h = true;
           var changed = false;
 
-          if (_typeof(name) !== 'object') {
+          if (typeof name === 'string') {
             if (!(name in ns) || ns[name] !== value) {
               ns[name] = value;
               changed = true;
@@ -1775,7 +1775,9 @@
           System.import(script.src.slice(0, 7) === 'import:' ? script.src.slice(7) : resolveUrl(script.src, baseUrl));
         } else if (script.type === 'systemjs-importmap') {
           script.sp = true;
-          var fetchPromise = script.src ? fetch(script.src).then(function (res) {
+          var fetchPromise = script.src ? fetch(script.src, {
+            integrity: script.integrity
+          }).then(function (res) {
             return res.text();
           }) : script.innerHTML;
           importMapPromise = importMapPromise.then(function () {
@@ -1823,24 +1825,24 @@
     }; // Auto imports -> script tags can be inlined directly for load phase
 
 
-    var lastAutoImportDeps, lastAutoImportTimeout;
+    var lastAutoImportUrl, lastAutoImportDeps, lastAutoImportTimeout;
     var autoImportCandidates = {};
     var systemRegister = systemJSPrototype.register;
 
     systemJSPrototype.register = function (deps, declare) {
       if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
-        var scripts = document.getElementsByTagName('script');
+        var scripts = document.querySelectorAll('script[src]');
         var lastScript = scripts[scripts.length - 1];
-        var url = lastScript && lastScript.src;
 
-        if (url) {
+        if (lastScript) {
+          lastAutoImportUrl = lastScript.src;
           lastAutoImportDeps = deps; // if this is already a System load, then the instantiate has already begun
           // so this re-import has no consequence
 
           var loader = this;
           lastAutoImportTimeout = setTimeout(function () {
-            autoImportCandidates[url] = [deps, declare];
-            loader.import(url);
+            autoImportCandidates[lastScript.src] = [deps, declare];
+            loader.import(lastScript.src);
           });
         }
       } else {
@@ -1880,6 +1882,35 @@
           }
         });
         document.head.appendChild(script);
+      });
+    };
+    /*
+     * Fetch loader, sets up shouldFetch and fetch hooks
+     */
+
+
+    systemJSPrototype.shouldFetch = function () {
+      return false;
+    };
+
+    if (typeof fetch !== 'undefined') systemJSPrototype.fetch = fetch;
+    var instantiate = systemJSPrototype.instantiate;
+    var jsContentTypeRegEx = /^(text|application)\/(x-)?javascript(;|$)/;
+
+    systemJSPrototype.instantiate = function (url, parent) {
+      var loader = this;
+      if (!this.shouldFetch(url)) return instantiate.apply(this, arguments);
+      return this.fetch(url, {
+        credentials: 'same-origin',
+        integrity: importMap.integrity[url]
+      }).then(function (res) {
+        if (!res.ok) throw Error(errMsg(7, [res.status, res.statusText, url, parent].join(', ')));
+        var contentType = res.headers.get('content-type');
+        if (!contentType || !jsContentTypeRegEx.test(contentType)) throw Error(errMsg(4, contentType));
+        return res.text().then(function (source) {
+          (0, eval)(source);
+          return loader.getRegister();
+        });
       });
     };
 
@@ -4534,9 +4565,9 @@
                 globalErrorEvent.colno = parsingError.columnNumber;
               } else {
                 globalErrorEvent.filename = originalError.filename;
-                globalErrorEvent.lineno = originalError.lineNumber;
+                globalErrorEvent.lineno = originalError.lineno;
                 globalErrorEvent.message = originalError.message;
-                globalErrorEvent.colno = originalError.columnNumber;
+                globalErrorEvent.colno = originalError.columnno;
               }
 
               window.dispatchEvent(globalErrorEvent);
