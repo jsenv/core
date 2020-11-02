@@ -41,7 +41,11 @@ const expected = {
     [htmlFileRelativeUrl]: {
       chromium: {
         status: "errored",
-        error: new Error(`ask() should return 42, got 40`),
+        error: Object.assign(new Error(`ask() should return 42, got 40`), {
+          filename: actual.report[htmlFileRelativeUrl].chromium.error.filename,
+          lineno: actual.report[htmlFileRelativeUrl].chromium.error.lineno,
+          columnno: actual.report[htmlFileRelativeUrl].chromium.error.columnno,
+        }),
         consoleCalls: actual.report[htmlFileRelativeUrl].chromium.consoleCalls,
         runtimeName: "chromium",
         runtimeVersion: assert.any(String),

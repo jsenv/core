@@ -38,7 +38,11 @@ const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage
           exceptionSource: assert.any(String),
         },
       },
-      error: new Error("error"),
+      error: Object.assign(new Error("error"), {
+        filename: actual.executionResult.error.filename,
+        lineno: actual.executionResult.error.lineno,
+        columnno: actual.executionResult.error.columnno,
+      }),
     },
   }
   assert({ actual, expected })

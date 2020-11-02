@@ -42,12 +42,21 @@ const actual = await launchAndExecute({
 })
 const expected = {
   status: "errored",
-  error: new Error(`Module file cannot be found.
+  error: Object.assign(
+    new Error(`Module file cannot be found.
 --- import declared in ---
 ${fileRelativeUrl}
 --- file ---
 ${importedFileRelativeUrl}
 --- file url ---
 ${importedFileUrl}`),
+    {
+      code: "NETWORK_FAILURE",
+      filename: actual.error.filename,
+      lineno: actual.error.lineno,
+      columnno: actual.error.columnno,
+    },
+  ),
 }
+
 assert({ actual, expected })
