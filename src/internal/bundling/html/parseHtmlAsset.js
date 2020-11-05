@@ -25,6 +25,7 @@ import {
   stringifyHtmlAst,
   getHtmlNodeLocation,
   getUniqueNameForInlineHtmlNode,
+  addHtmlNodeAttribute,
   removeHtmlNodeAttribute,
   setHtmlNodeText,
   getHtmlNodeTextNode,
@@ -170,7 +171,7 @@ const regularScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, 
   }
 }
 
-const moduleScriptSrcVisitor = (script, { notifyReferenceFound }) => {
+const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
   if (!typeAttribute) {
     return null
@@ -190,15 +191,16 @@ const moduleScriptSrcVisitor = (script, { notifyReferenceFound }) => {
     ...getHtmlNodeLocation(script),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
-    removeHtmlNodeAttribute(script, typeAttribute)
-    removeHtmlNodeAttribute(script, srcAttribute)
+    if (format === "systemjs") {
+      typeAttribute.value = "systemjs-module"
+    }
     const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
     const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter)
-    setHtmlNodeText(script, `window.System.import(${JSON.stringify(relativeUrlNotation)})`)
+    srcAttribute.value = relativeUrlNotation
   }
 }
 
-const moduleScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, scripts) => {
+const moduleScriptTextNodeVisitor = (script, { format, notifyReferenceFound }, target, scripts) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
   if (!typeAttribute) {
     return null
@@ -230,10 +232,12 @@ const moduleScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, s
     },
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
-    removeHtmlNodeAttribute(script, typeAttribute)
+    if (format === "systemjs") {
+      typeAttribute.value = "systemjs-module"
+    }
     const urlRelativeToImporter = getReferenceUrlRelativeToImporter(jsReference)
     const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter)
-    textNode.value = `window.System.import(${JSON.stringify(relativeUrlNotation)})`
+    addHtmlNodeAttribute(script, "src", relativeUrlNotation)
   }
 }
 
