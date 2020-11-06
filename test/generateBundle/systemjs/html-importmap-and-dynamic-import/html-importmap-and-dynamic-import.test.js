@@ -38,6 +38,7 @@ const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirec
 // importmap content
 {
   const importmapBundleRelativeUrl = getBundleRelativeUrl("import-map.importmap")
+  const fileBundleRelativeUrl = getBundleRelativeUrl("file.js")
   const fooBundleRelativeUrl = getBundleRelativeUrl("foo.js")
   const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, bundleDirectoryUrl)
   const importmapString = await readFile(importmapBundleUrl)
@@ -45,9 +46,10 @@ const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirec
   const actual = importmap
   const expected = {
     imports: {
-      // the original importmap remapping are still there (maybe useless,let's keep it for now)
-      "foo": "./foo.js",
+      // the original importmap remapping are still there (but an updated version)
+      "foo": `./${fooBundleRelativeUrl}`,
       // the importmap for foo is available
+      "./file.js": `./${fileBundleRelativeUrl}`,
       "./foo.js": `./${fooBundleRelativeUrl}`,
       // and nothing more because js is referencing only an other js
     },
