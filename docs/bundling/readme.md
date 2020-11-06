@@ -305,9 +305,7 @@ Here is the html generated in `dist/systemjs/main.html`:
   </head>
 
   <body>
-    <script>
-      window.System.import("./main-f7379e10.js")
-    </script>
+    <script type="systemjs-module" src="./main-f7379e10.js"></script>
   </body>
 </html>
 ```
@@ -349,9 +347,7 @@ As you can see
 Was transformed into
 
 ```html
-<script>
-  window.System.import("./main-f7379e10.js")
-</script>
+<script type="systemjs-module" src="./main-f7379e10.js"></script>
 ```
 
 > Happens only when using `systemjs` format. If you use `esmodule` format your `<script type="module"></script>` are kept untouched.

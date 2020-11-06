@@ -35,7 +35,11 @@ const importmapScriptNode = findNodeByTagName(htmlString, "script")
 // ensure text content is correct
 {
   const textNode = getHtmlNodeTextNode(importmapScriptNode)
-  const actual = textNode.value
-  const expected = `{"imports":{"foo":"./bar.js"}}`
+  const actual = JSON.parse(textNode.value)
+  const expected = {
+    imports: {
+      foo: "./bar.js",
+    },
+  }
   assert({ actual, expected })
 }

@@ -475,10 +475,12 @@ export const createCompositeAssetHandler = (
       if (bundleRelativeUrl !== undefined && bundleRelativeUrl !== target.bundleRelativeUrl) {
         bundleRelativeUrlsToClean.push(target.bundleRelativeUrl)
         target.bundleRelativeUrl = bundleRelativeUrl
-        emitAsset({
-          source: target.sourceAfterTransformation,
-          fileName: bundleRelativeUrl,
-        })
+        if (!target.isInline) {
+          emitAsset({
+            source: target.sourceAfterTransformation,
+            fileName: bundleRelativeUrl,
+          })
+        }
       }
     }
 

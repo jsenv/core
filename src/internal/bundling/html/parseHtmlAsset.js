@@ -29,6 +29,7 @@ import {
   removeHtmlNodeAttribute,
   setHtmlNodeText,
   getHtmlNodeTextNode,
+  removeHtmlNodeText,
   parseSrcset,
   stringifySrcset,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
@@ -237,7 +238,8 @@ const moduleScriptTextNodeVisitor = (script, { format, notifyReferenceFound }, t
     }
     const urlRelativeToImporter = getReferenceUrlRelativeToImporter(jsReference)
     const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter)
-    addHtmlNodeAttribute(script, "src", relativeUrlNotation)
+    removeHtmlNodeText(script)
+    addHtmlNodeAttribute(script, { name: "src", value: relativeUrlNotation })
   }
 }
 

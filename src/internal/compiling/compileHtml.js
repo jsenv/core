@@ -83,6 +83,10 @@ export const removeHtmlNodeAttribute = (htmlNode, attributeToRemove) => {
 }
 
 export const addHtmlNodeAttribute = (htmlNode, attributeToSet) => {
+  if (typeof attributeToSet !== "object") {
+    throw new TypeError(`addHtmlNodeAttribute attribute must be an object {name, value}`)
+  }
+
   const existingAttributeIndex = htmlNode.attrs.findIndex(
     (attr) => attr.name === attributeToSet.name,
   )
@@ -105,6 +109,13 @@ export const setHtmlNodeText = (htmlNode, textContent) => {
   } else {
     const newTextNode = { nodeName: "#text", value: textContent, parentNode: htmlNode }
     htmlNode.childNodes.splice(0, 0, newTextNode)
+  }
+}
+
+export const removeHtmlNodeText = (htmlNode) => {
+  const textNode = getHtmlNodeTextNode(htmlNode)
+  if (textNode) {
+    htmlNode.childNodes = []
   }
 }
 
