@@ -359,6 +359,7 @@ export const createJsenvRollupPlugin = async ({
                   injectImportedFilesIntoImportMapTarget(
                     importmapTarget,
                     createImportMapForFilesUsedInJs(),
+                    minify,
                   )
                 },
               })
@@ -723,9 +724,9 @@ export const createJsenvRollupPlugin = async ({
         })
         const file = jsBundle[bundleRelativeUrl]
         const sourceAfterTransformation = file.code
-        const fileName =useImportMapForJsBundleUrls
-            ? bundleRelativeUrlToFileName(bundleRelativeUrl)
-            : bundleRelativeUrl
+        const fileName = useImportMapForJsBundleUrls
+          ? bundleRelativeUrlToFileName(bundleRelativeUrl)
+          : bundleRelativeUrl
 
         logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
         rollupChunkReadyCallbackMap[key]({
@@ -1179,13 +1180,13 @@ const rollupFileNameWithoutHash = (fileName) => {
   })
 }
 
-const injectImportedFilesIntoImportMapTarget = (importmapTarget, importMapToInject) => {
+const injectImportedFilesIntoImportMapTarget = (importmapTarget, importMapToInject, minify) => {
   const { sourceAfterTransformation } = importmapTarget
   const importMapOriginal = JSON.parse(sourceAfterTransformation)
 
   const importMap = composeTwoImportMaps(importMapOriginal, importMapToInject)
   importmapTarget.updateOnceReady({
-    sourceAfterTransformation: JSON.stringify(importMap),
+    sourceAfterTransformation: minify ? JSON.stringify(importMap) : JSON.stringify(importMap, null, '  '),
   })
 }
 
