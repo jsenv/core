@@ -365,9 +365,14 @@ export const createCompositeAssetHandler = (
         const rollupChunkReadyPromise = new Promise((resolve) => {
           registerCallbackOnceRollupChunkIsReady(target.url, resolve)
         })
-        const { sourceAfterTransformation, bundleRelativeUrl } = await rollupChunkReadyPromise
+        const {
+          sourceAfterTransformation,
+          bundleRelativeUrl,
+          fileName,
+        } = await rollupChunkReadyPromise
         target.sourceAfterTransformation = sourceAfterTransformation
         target.bundleRelativeUrl = bundleRelativeUrl
+        target.fileName = fileName
         return
       }
 
@@ -406,7 +411,8 @@ export const createCompositeAssetHandler = (
         },
         getReferenceUrlRelativeToImporter: (reference) => {
           const referenceTarget = reference.target
-          const referenceTargetBundleRelativeUrl = referenceTarget.bundleRelativeUrl
+          const referenceTargetBundleRelativeUrl =
+            referenceTarget.fileName || referenceTarget.bundleRelativeUrl
           const referenceTargetBundleUrl = resolveUrl(referenceTargetBundleRelativeUrl, "file:///")
           const importerBundleUrl = resolveUrl(importerBundleRelativeUrl, "file:///")
           return urlToRelativeUrl(referenceTargetBundleUrl, importerBundleUrl)
@@ -469,10 +475,12 @@ export const createCompositeAssetHandler = (
       if (bundleRelativeUrl !== undefined && bundleRelativeUrl !== target.bundleRelativeUrl) {
         bundleRelativeUrlsToClean.push(target.bundleRelativeUrl)
         target.bundleRelativeUrl = bundleRelativeUrl
-        emitAsset({
-          source: target.sourceAfterTransformation,
-          fileName: bundleRelativeUrl,
-        })
+        if (!target.isInline) {
+          emitAsset({
+            source: target.sourceAfterTransformation,
+            fileName: bundleRelativeUrl,
+          })
+        }
       }
     }
 

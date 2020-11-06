@@ -33,7 +33,7 @@ export const generateBundle = async ({
   compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
 
-  format = "esm",
+  format = "esmodule",
   externalImportUrlPatterns = format === "commonjs"
     ? {
         "node_modules/": true,
@@ -79,9 +79,9 @@ export const generateBundle = async ({
   return executeJsenvAsyncFunction(async () => {
     logger = logger || createLogger({ logLevel })
 
-    if (format === "esm") {
+    if (format === "esmodule") {
       if (bundleDirectoryRelativeUrl === undefined) {
-        bundleDirectoryRelativeUrl = "./dist/esm"
+        bundleDirectoryRelativeUrl = "./dist/esmodule"
       }
     } else if (format === "systemjs") {
       if (bundleDirectoryRelativeUrl === undefined) {
@@ -103,7 +103,7 @@ export const generateBundle = async ({
       }
     } else {
       throw new TypeError(
-        `unexpected format: ${format}. Must be esm, systemjs, commonjs or global.`,
+        `unexpected format: ${format}. Must be esmodule, systemjs, commonjs or global.`,
       )
     }
 

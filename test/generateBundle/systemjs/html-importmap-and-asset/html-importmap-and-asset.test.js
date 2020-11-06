@@ -35,7 +35,8 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
 }
 
 const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
+const jsBundleRelativeUrl = getBundleRelativeUrl("file.js")
+const imgRemapBundleRelativeUrl = getBundleRelativeUrl("img-remap.png")
 
 // check importmap content
 {
@@ -46,10 +47,12 @@ const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
   const actual = importmap
   const expected = {
     imports: {
-      // the original importmap remapping are still there (maybe useless,let's keep it for now)
+      // the original importmap remapping are still there
+      // ideally it should target `./${imgRemapBundleRelativeUrl}` but for now it's not supported
       "./img.png": "./img-remap.png",
       // the importmap for img-remap is available
-      "./assets/img-remap.png": `./${imgRemapRelativeUrl}`,
+      "./assets/img-remap.png": `./${imgRemapBundleRelativeUrl}`,
+      "./file.js": `./${jsBundleRelativeUrl}`,
       // and nothing more because js is referencing only img-remap
     },
   }
@@ -80,7 +83,7 @@ const imgRemapRelativeUrl = getBundleRelativeUrl("img-remap.png")
   })
   const actual = namespace
   const expected = {
-    default: resolveUrl(`dist/systemjs/${imgRemapRelativeUrl}`, serverOrigin),
+    default: resolveUrl(`dist/systemjs/${imgRemapBundleRelativeUrl}`, serverOrigin),
   }
   assert({ actual, expected })
 }
