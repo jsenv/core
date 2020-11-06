@@ -87,6 +87,7 @@ export const createJsenvRollupPlugin = async ({
   const urlResponseBodyMap = {}
   const virtualModules = {}
   const urlRedirectionMap = {}
+  const jsModulesInHtml = {}
 
   const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(
     externalImportUrlPatterns,
@@ -432,6 +433,7 @@ export const createJsenvRollupPlugin = async ({
                   // get importer url
                   urlToCompiledUrl(target.importers[0].url),
                 )
+                jsModulesInHtml[urlToUrlForRollup(id)] = true
                 const rollupReferenceId = emitChunk({
                   id,
                   name,
@@ -679,22 +681,23 @@ export const createJsenvRollupPlugin = async ({
 
         if (file.type === "chunk") {
           let bundleRelativeUrl
+          const canBeHashed = file.facadeModuleId in jsModulesInHtml || !file.isEntry
           if (useImportMapForJsBundleUrls) {
-            if (file.isEntry) {
-              bundleRelativeUrl = fileName
-            } else {
+            if (canBeHashed) {
               bundleRelativeUrl = computeBundleRelativeUrl(
                 resolveUrl(fileName, bundleDirectoryUrl),
                 file.code,
                 `[name]-[hash][extname]`,
               )
+            } else {
+              bundleRelativeUrl = fileName
             }
           } else {
             bundleRelativeUrl = fileName
             fileName = rollupFileNameWithoutHash(fileName)
           }
 
-          if (!file.isEntry) {
+          if (canBeHashed) {
             markBundleRelativeUrlAsUsedByJs(bundleRelativeUrl)
           }
           addFileNameMapping(fileName, bundleRelativeUrl)
@@ -720,11 +723,15 @@ export const createJsenvRollupPlugin = async ({
         })
         const file = jsBundle[bundleRelativeUrl]
         const sourceAfterTransformation = file.code
+        const fileName =useImportMapForJsBundleUrls
+            ? bundleRelativeUrlToFileName(bundleRelativeUrl)
+            : bundleRelativeUrl
 
         logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
         rollupChunkReadyCallbackMap[key]({
           sourceAfterTransformation,
           bundleRelativeUrl,
+          fileName,
         })
       })
       // wait html files to be emitted
