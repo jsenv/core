@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Mille sabords</title>
+    <title>Systemjs script network error</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:," />
@@ -9,9 +9,7 @@
   </head>
 
   <body>
-    <script id="main-script">
-      window.System.import("./idex.test.js")
-    </script>
+    <script id="main-script" type="systemjs-module" src="./idex.test.js"></script>
     <script async>
       const mainScript = document.querySelector("script#main-script")
       mainScript.onerror = () => {
