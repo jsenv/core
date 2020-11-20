@@ -1,0 +1,210 @@
+<!--
+
+This scenario is to show different context where the toolbar
+must be at the very bottom and can expand/collapse
+
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Exploring layout</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      iframe {
+        width: 100%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <script type="text/javascript">
+      const startJavaScriptAnimation = ({
+  duration = 300,
+  timingFunction = (t) => t,
+  onProgress = () => {},
+  onCancel = () => {},
+  onComplete = () => {},
+}) => {
+  if (isNaN(duration)) {
+    // console.warn(`duration must be a number, received ${duration}`)
+    return () => {}
+  }
+  duration = parseInt(duration, 10)
+  const startMs = performance.now()
+  let currentRequestAnimationFrameId
+  let done = false
+  let rawProgress = 0
+  let progress = 0
+  const handler = () => {
+    currentRequestAnimationFrameId = null
+    const nowMs = performance.now()
+    rawProgress = Math.min((nowMs - startMs) / duration, 1)
+    progress = timingFunction(rawProgress)
+    done = rawProgress === 1
+    onProgress({
+      done,
+      rawProgress,
+      progress,
+    })
+    if (done) {
+      onComplete()
+    } else {
+      currentRequestAnimationFrameId = window.requestAnimationFrame(handler)
+    }
+  }
+  handler()
+  const stop = () => {
+    if (currentRequestAnimationFrameId) {
+      window.cancelAnimationFrame(currentRequestAnimationFrameId)
+      currentRequestAnimationFrameId = null
+    }
+    if (!done) {
+      done = true
+      onCancel({
+        rawProgress,
+        progress,
+      })
+    }
+  }
+  return stop
+}
+
+      window.injectToolbar = (script) => {
+        const iframe = script.parentNode.querySelector('iframe')
+        const toolbarIframe = document.createElement('iframe')
+
+        const openToolbar = () => {
+          const iframeWindow = iframe.contentWindow
+          const iframeDocumentElement = iframe.contentWindow.document.compatMode === "CSS1Compat" ? iframe.contentWindow.document.documentElement : iframe.contentWindow.document.body
+
+          const scrollYMax = iframeDocumentElement.scrollHeight - iframeWindow.innerHeight
+          const scrollY = iframeDocumentElement.scrollTop
+          const scrollYRemaining = scrollYMax - scrollY
+
+          Object.assign(iframe.contentWindow.document.body.style, {
+            "scroll-padding-bottom": "40px",
+            "transition-duration": "300ms",
+            "padding-bottom": "40px",
+          })
+          Object.assign(toolbarIframe.style, {
+            "height": "40px",
+            "visibility": "visible",
+            "transition-property": "height, visibility",
+            "transition-duration": "300ms",
+          })
+
+          if (scrollYRemaining < 40 && scrollYMax > 0) {
+            const scrollEnd = scrollY + 40
+            startJavaScriptAnimation({
+              duration: 300,
+              onProgress: ({ progress }) => {
+                const value = scrollY + (scrollEnd - scrollY) * progress
+                iframeDocumentElement.scrollTop = value
+              },
+            })
+          }
+        }
+
+        const closeToolbar = ()=> {
+          Object.assign(iframe.contentWindow.document.body.style, {
+            "scroll-padding-bottom": "0",
+            "transition-duration": "300ms",
+            "padding-bottom": "0",
+          })
+          Object.assign(toolbarIframe.style, {
+            "height": "0",
+            "visibility": "hidden",
+            "transition-property": "height, visibility",
+            "transition-duration": "300ms",
+          })
+        }
+
+        const buttonOpenToolbar = script.parentNode.querySelector('.button-open-toolbar')
+        buttonOpenToolbar.onclick = () => {
+          openToolbar()
+        }
+
+        const buttonCloseToolbar = script.parentNode.querySelector('.button-close-toolbar')
+        buttonCloseToolbar.onclick = () => {
+          closeToolbar()
+        }
+
+        Object.assign(toolbarIframe.style, {
+          position: "fixed",
+          zIndex: "1000",
+          bottom: "0px",
+          left: "0px",
+          width: "100%",
+          height: "100%",
+          visibility: "visible",
+          border: "none",
+          transitionProperty: "height, visibility",
+          transitionDuration: "0ms",
+        })
+        toolbarIframe.src = './toolbar.html'
+        iframe.addEventListener("load", () => {
+          iframe.contentWindow.document.body.appendChild(toolbarIframe)
+          Object.assign(iframe.contentWindow.document.body.style, {
+            "transition-property": "padding-bottom",
+          })
+          openToolbar()
+        }, true)
+      }
+    </script>
+    <div id="app">
+      <div>
+        <p>
+          Short page
+          <button class="button-open-toolbar">Open</button>
+          <button class="button-close-toolbar">Close</button>
+        </p>
+        <iframe src="./short-page.html"></iframe>
+        <script>
+          window.injectToolbar(document.currentScript)
+        </script>
+      </div>
+
+      <<div>
+        <p>
+          Height and 20 page
+          <button class="button-open-toolbar">Open</button>
+          <button class="button-close-toolbar">Close</button>
+        </p>
+        <iframe src="./height-and-20-page.html"></iframe>
+        <script>
+          window.injectToolbar(document.currentScript)
+        </script>
+      </div>
+
+      <div>
+        <p>
+          Full height page
+          <button class="button-open-toolbar">Open</button>
+          <button class="button-close-toolbar">Close</button>
+        </p>
+        <iframe src="./full-height-page.html"></iframe>
+        <script>
+          window.injectToolbar(document.currentScript)
+        </script>
+      </div>
+
+      <div>
+        <p>
+          Long page
+          <button class="button-open-toolbar">Open</button>
+          <button class="button-close-toolbar">Close</button>
+        </p>
+        <iframe src="./long-page.html"></iframe>
+        <script>
+          window.injectToolbar(document.currentScript)
+        </script>
+      </div>
+  </body>
+</html>
