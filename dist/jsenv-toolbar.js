@@ -1030,6 +1030,71 @@
     element.removeAttribute("data-active");
   };
 
+  var startJavaScriptAnimation = function startJavaScriptAnimation(_ref6) {
+    var _ref6$duration = _ref6.duration,
+        duration = _ref6$duration === void 0 ? 300 : _ref6$duration,
+        _ref6$timingFunction = _ref6.timingFunction,
+        timingFunction = _ref6$timingFunction === void 0 ? function (t) {
+      return t;
+    } : _ref6$timingFunction,
+        _ref6$onProgress = _ref6.onProgress,
+        onProgress = _ref6$onProgress === void 0 ? function () {} : _ref6$onProgress,
+        _ref6$onCancel = _ref6.onCancel,
+        onCancel = _ref6$onCancel === void 0 ? function () {} : _ref6$onCancel,
+        _ref6$onComplete = _ref6.onComplete,
+        onComplete = _ref6$onComplete === void 0 ? function () {} : _ref6$onComplete;
+
+    if (isNaN(duration)) {
+      // console.warn(`duration must be a number, received ${duration}`)
+      return function () {};
+    }
+
+    duration = parseInt(duration, 10);
+    var startMs = performance.now();
+    var currentRequestAnimationFrameId;
+    var done = false;
+    var rawProgress = 0;
+    var progress = 0;
+
+    var handler = function handler() {
+      currentRequestAnimationFrameId = null;
+      var nowMs = performance.now();
+      rawProgress = Math.min((nowMs - startMs) / duration, 1);
+      progress = timingFunction(rawProgress);
+      done = rawProgress === 1;
+      onProgress({
+        done: done,
+        rawProgress: rawProgress,
+        progress: progress
+      });
+
+      if (done) {
+        onComplete();
+      } else {
+        currentRequestAnimationFrameId = window.requestAnimationFrame(handler);
+      }
+    };
+
+    handler();
+
+    var stop = function stop() {
+      if (currentRequestAnimationFrameId) {
+        window.cancelAnimationFrame(currentRequestAnimationFrameId);
+        currentRequestAnimationFrameId = null;
+      }
+
+      if (!done) {
+        done = true;
+        onCancel({
+          rawProgress: rawProgress,
+          progress: progress
+        });
+      }
+    };
+
+    return stop;
+  };
+
   var createPreference = function createPreference(name) {
     return {
       has: function has() {
@@ -2344,12 +2409,19 @@
     document.documentElement.setAttribute("data-toolbar-visible", "");
     sendEventToParent("toolbar-visibility-change", true);
     var toolbarIframe = getToolbarIframe();
-    var toolbarIframeParent = toolbarIframe.parentNode; // maybe we should use js animation here because we would not conflict with css
+    var toolbarIframeParent = toolbarIframe.parentNode;
+    var parentWindow = window.parent;
+    var parentDocumentElement = parentWindow.document.compatMode === "CSS1Compat" ? parentWindow.document.documentElement : parentWindow.document.body;
+    var scrollYMax = parentDocumentElement.scrollHeight - parentWindow.innerHeight;
+    var scrollY = parentDocumentElement.scrollTop;
+    var scrollYRemaining = scrollYMax - scrollY;
+    setStyles(toolbarIframeParent, {
+      "transition-property": "padding-bottom"
+    }); // maybe we should use js animation here because we would not conflict with css
 
     var restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
       "scroll-padding-bottom": "40px",
       // same here we should add 40px
-      "transition-property": "padding-bottom",
       "transition-duration": "300ms",
       "padding-bottom": "40px" // if there is already one we should add 40px
 
@@ -2360,6 +2432,18 @@
       "transition-property": "height, visibility",
       "transition-duration": "300ms"
     });
+
+    if (scrollYRemaining < 40 && scrollYMax > 0) {
+      var scrollEnd = scrollY + 40;
+      startJavaScriptAnimation({
+        duration: 300,
+        onProgress: function onProgress(_ref2) {
+          var progress = _ref2.progress;
+          var value = scrollY + (scrollEnd - scrollY) * progress;
+          parentDocumentElement.scrollTop = value;
+        }
+      });
+    }
 
     hideToolbar = function hideToolbar() {
       restoreToolbarIframeParentStyles();

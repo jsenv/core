@@ -2122,6 +2122,10 @@ var fromFunctionReturningRegisteredModule = function fromFunctionReturningRegist
   try {
     return fn();
   } catch (error) {
+    if (error.name === "SyntaxError") {
+      throw new Error("Syntax error in module.\n".concat(getModuleDetails(data), "\n--- syntax error stack ---\n").concat(error.stack));
+    }
+
     throw new Error("Module instantiation error.\n--- instantiation error stack ---\n".concat(error.stack).concat(getModuleDetails(data)));
   }
 };

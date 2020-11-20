@@ -234,6 +234,11 @@ export const createCompiledFileService = ({
         request,
 
         compile: async (htmlBeforeCompilation) => {
+          // parsing html should not throw any syntax error
+          // invalid html markup is converted into some valid html
+          // in the worst cases the faulty html string special characters
+          // will be html encoded.
+          // All this comment to say we don't have to try/catch html parsing
           const htmlAst = parseHtmlString(htmlBeforeCompilation)
           manipulateHtmlAst(htmlAst, {
             scriptInjections: [
@@ -308,19 +313,40 @@ export const createCompiledFileService = ({
               const scriptAfterTransformFileUrl = resolveUrl(scriptBasename, compiledFileUrl)
 
               const scriptBeforeCompilation = inlineScriptsContentMap[scriptSrc]
-              const scriptTransformResult = await transformJs({
-                projectDirectoryUrl,
-                importMetaEnvFileRelativeUrl,
-                importMeta,
-                code: scriptBeforeCompilation,
-                url: scriptOriginalFileUrl,
-                urlAfterTransform: scriptAfterTransformFileUrl,
-                babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
-                convertMap,
-                transformTopLevelAwait,
-                moduleOutFormat,
-                importMetaFormat,
-              })
+              let scriptTransformResult
+              try {
+                scriptTransformResult = await transformJs({
+                  projectDirectoryUrl,
+                  importMetaEnvFileRelativeUrl,
+                  importMeta,
+                  code: scriptBeforeCompilation,
+                  url: scriptOriginalFileUrl,
+                  urlAfterTransform: scriptAfterTransformFileUrl,
+                  babelPluginMap: compileIdToBabelPluginMap(compileId, {
+                    groupMap,
+                    babelPluginMap,
+                  }),
+                  convertMap,
+                  transformTopLevelAwait,
+                  moduleOutFormat,
+                  importMetaFormat,
+                })
+              } catch (e) {
+                // If there is a syntax error in inline script
+                // we put the raw script without transformation.
+                // when systemjs will try to instantiate to script it
+                // will re-throw this syntax error.
+                // Thanks to this we see the syntax error in the
+                // document and livereloading still works
+                // because we gracefully handle this error
+                if (e.code === "PARSE_ERROR") {
+                  const code = scriptBeforeCompilation
+                  assets = [...assets, scriptAssetUrl]
+                  assetsContent = [...assetsContent, code]
+                  return
+                }
+                throw e
+              }
               const sourcemapFileUrl = resolveUrl(
                 `${scriptBasename}.map`,
                 scriptAfterTransformFileUrl,

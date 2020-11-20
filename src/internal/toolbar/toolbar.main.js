@@ -5,6 +5,7 @@ import { fetchExploringJson } from "../exploring/fetchExploringJson.js"
 import "./focus/toolbar.focus.js"
 import { renderBackToListInToolbar } from "./backtolist/toolbar.backtolist.js"
 import { getToolbarIframe, deactivateToolbarSection, setStyles } from "./util/dom.js"
+import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
 import { createPreference } from "./util/preferences.js"
 import { hideTooltip, hideAllTooltip } from "./tooltip/tooltip.js"
 import { renderToolbarSettings, hideSettings } from "./settings/toolbar.settings.js"
@@ -115,11 +116,22 @@ const showToolbar = ({ animate = true } = {}) => {
 
   const toolbarIframe = getToolbarIframe()
   const toolbarIframeParent = toolbarIframe.parentNode
+  const parentWindow = window.parent
+  const parentDocumentElement =
+    parentWindow.document.compatMode === "CSS1Compat"
+      ? parentWindow.document.documentElement
+      : parentWindow.document.body
 
+  const scrollYMax = parentDocumentElement.scrollHeight - parentWindow.innerHeight
+  const scrollY = parentDocumentElement.scrollTop
+  const scrollYRemaining = scrollYMax - scrollY
+
+  setStyles(toolbarIframeParent, {
+    "transition-property": "padding-bottom",
+  })
   // maybe we should use js animation here because we would not conflict with css
   const restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
     "scroll-padding-bottom": "40px", // same here we should add 40px
-    "transition-property": "padding-bottom",
     "transition-duration": "300ms",
     "padding-bottom": "40px", // if there is already one we should add 40px
   })
@@ -129,6 +141,17 @@ const showToolbar = ({ animate = true } = {}) => {
     "transition-property": "height, visibility",
     "transition-duration": "300ms",
   })
+
+  if (scrollYRemaining < 40 && scrollYMax > 0) {
+    const scrollEnd = scrollY + 40
+    startJavaScriptAnimation({
+      duration: 300,
+      onProgress: ({ progress }) => {
+        const value = scrollY + (scrollEnd - scrollY) * progress
+        parentDocumentElement.scrollTop = value
+      },
+    })
+  }
 
   hideToolbar = () => {
     restoreToolbarIframeParentStyles()
