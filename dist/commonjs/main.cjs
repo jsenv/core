@@ -3562,6 +3562,19 @@ const removeHtmlNodeAttribute = (htmlNode, attributeToRemove) => {
   htmlNode.attrs.splice(attrIndex, 1);
   return true;
 };
+const addHtmlNodeAttribute = (htmlNode, attributeToSet) => {
+  if (typeof attributeToSet !== "object") {
+    throw new TypeError(`addHtmlNodeAttribute attribute must be an object {name, value}`);
+  }
+
+  const existingAttributeIndex = htmlNode.attrs.findIndex(attr => attr.name === attributeToSet.name);
+
+  if (existingAttributeIndex === -1) {
+    htmlNode.attrs.push(attributeToSet);
+  } else {
+    htmlNode.attrs[existingAttributeIndex] = attributeToSet;
+  }
+};
 const getHtmlNodeTextNode = htmlNode => {
   const firstChild = htmlNode.childNodes[0];
   return firstChild && firstChild.nodeName === "#text" ? firstChild : null;
@@ -3578,6 +3591,13 @@ const setHtmlNodeText = (htmlNode, textContent) => {
       parentNode: htmlNode
     };
     htmlNode.childNodes.splice(0, 0, newTextNode);
+  }
+};
+const removeHtmlNodeText = htmlNode => {
+  const textNode = getHtmlNodeTextNode(htmlNode);
+
+  if (textNode) {
+    htmlNode.childNodes = [];
   }
 };
 const getHtmlNodeLocation = htmlNode => {
@@ -4574,10 +4594,12 @@ const createCompositeAssetHandler = ({
         });
         const {
           sourceAfterTransformation,
-          bundleRelativeUrl
+          bundleRelativeUrl,
+          fileName
         } = await rollupChunkReadyPromise;
         target.sourceAfterTransformation = sourceAfterTransformation;
         target.bundleRelativeUrl = bundleRelativeUrl;
+        target.fileName = fileName;
         return;
       } // la transformation d'un asset c'est avant tout la transformation de ses dépendances
       // mais si on a rien a transformer, on a pas vraiment besoin de tout ça
@@ -4612,7 +4634,7 @@ const createCompositeAssetHandler = ({
         },
         getReferenceUrlRelativeToImporter: reference => {
           const referenceTarget = reference.target;
-          const referenceTargetBundleRelativeUrl = referenceTarget.bundleRelativeUrl;
+          const referenceTargetBundleRelativeUrl = referenceTarget.fileName || referenceTarget.bundleRelativeUrl;
           const referenceTargetBundleUrl = util.resolveUrl(referenceTargetBundleRelativeUrl, "file:///");
           const importerBundleUrl = util.resolveUrl(importerBundleRelativeUrl, "file:///");
           return util.urlToRelativeUrl(referenceTargetBundleUrl, importerBundleUrl);
@@ -4680,10 +4702,13 @@ const createCompositeAssetHandler = ({
       if (bundleRelativeUrl !== undefined && bundleRelativeUrl !== target.bundleRelativeUrl) {
         bundleRelativeUrlsToClean.push(target.bundleRelativeUrl);
         target.bundleRelativeUrl = bundleRelativeUrl;
-        emitAsset({
-          source: target.sourceAfterTransformation,
-          fileName: bundleRelativeUrl
-        });
+
+        if (!target.isInline) {
+          emitAsset({
+            source: target.sourceAfterTransformation,
+            fileName: bundleRelativeUrl
+          });
+        }
       }
     };
 
@@ -5183,6 +5208,7 @@ const regularScriptTextNodeVisitor = (script, {
 };
 
 const moduleScriptSrcVisitor = (script, {
+  format,
   notifyReferenceFound
 }) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type");
@@ -5210,15 +5236,18 @@ const moduleScriptSrcVisitor = (script, {
   return ({
     getReferenceUrlRelativeToImporter
   }) => {
-    removeHtmlNodeAttribute(script, typeAttribute);
-    removeHtmlNodeAttribute(script, srcAttribute);
+    if (format === "systemjs") {
+      typeAttribute.value = "systemjs-module";
+    }
+
     const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference);
     const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter);
-    setHtmlNodeText(script, `window.System.import(${JSON.stringify(relativeUrlNotation)})`);
+    srcAttribute.value = relativeUrlNotation;
   };
 };
 
 const moduleScriptTextNodeVisitor = (script, {
+  format,
   notifyReferenceFound
 }, target, scripts) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type");
@@ -5256,10 +5285,17 @@ const moduleScriptTextNodeVisitor = (script, {
   return ({
     getReferenceUrlRelativeToImporter
   }) => {
-    removeHtmlNodeAttribute(script, typeAttribute);
+    if (format === "systemjs") {
+      typeAttribute.value = "systemjs-module";
+    }
+
     const urlRelativeToImporter = getReferenceUrlRelativeToImporter(jsReference);
     const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter);
-    textNode.value = `window.System.import(${JSON.stringify(relativeUrlNotation)})`;
+    removeHtmlNodeText(script);
+    addHtmlNodeAttribute(script, {
+      name: "src",
+      value: relativeUrlNotation
+    });
   };
 };
 
@@ -6237,6 +6273,7 @@ const createJsenvRollupPlugin = async ({
   const urlResponseBodyMap = {};
   const virtualModules = {};
   const urlRedirectionMap = {};
+  const jsModulesInHtml = {};
   const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(externalImportUrlPatterns, projectDirectoryUrl); // map fileName (bundle relative urls without hash) to bundle relative url
 
   let bundleManifest = {};
@@ -6489,7 +6526,7 @@ const createJsenvRollupPlugin = async ({
                   return;
                 }
 
-                injectImportedFilesIntoImportMapTarget(importmapTarget, createImportMapForFilesUsedInJs());
+                injectImportedFilesIntoImportMapTarget(importmapTarget, createImportMapForFilesUsedInJs(), minify);
               }
             });
           }
@@ -6580,6 +6617,7 @@ const createJsenvRollupPlugin = async ({
               const name = util.urlToRelativeUrl( // get basename url
               util.resolveUrl(util.urlToBasename(target.url), target.url), // get importer url
               urlToCompiledUrl(target.importers[0].url));
+              jsModulesInHtml[urlToUrlForRollup(id)] = true;
               const rollupReferenceId = emitChunk({
                 id,
                 name,
@@ -6838,19 +6876,20 @@ const createJsenvRollupPlugin = async ({
 
         if (file.type === "chunk") {
           let bundleRelativeUrl;
+          const canBeHashed = file.facadeModuleId in jsModulesInHtml || !file.isEntry;
 
           if (useImportMapForJsBundleUrls) {
-            if (file.isEntry) {
-              bundleRelativeUrl = fileName;
-            } else {
+            if (canBeHashed) {
               bundleRelativeUrl = computeBundleRelativeUrl(util.resolveUrl(fileName, bundleDirectoryUrl), file.code, `[name]-[hash][extname]`);
+            } else {
+              bundleRelativeUrl = fileName;
             }
           } else {
             bundleRelativeUrl = fileName;
             fileName = rollupFileNameWithoutHash(fileName);
           }
 
-          if (!file.isEntry) {
+          if (canBeHashed) {
             markBundleRelativeUrlAsUsedByJs(bundleRelativeUrl);
           }
 
@@ -6878,10 +6917,12 @@ const createJsenvRollupPlugin = async ({
         });
         const file = jsBundle[bundleRelativeUrl];
         const sourceAfterTransformation = file.code;
+        const fileName = useImportMapForJsBundleUrls ? bundleRelativeUrlToFileName(bundleRelativeUrl) : bundleRelativeUrl;
         logger$1.debug(`resolve rollup chunk ${shortenUrl(key)}`);
         rollupChunkReadyCallbackMap[key]({
           sourceAfterTransformation,
-          bundleRelativeUrl
+          bundleRelativeUrl,
+          fileName
         });
       }); // wait html files to be emitted
 
@@ -7298,14 +7339,14 @@ const rollupFileNameWithoutHash = fileName => {
   });
 };
 
-const injectImportedFilesIntoImportMapTarget = (importmapTarget, importMapToInject) => {
+const injectImportedFilesIntoImportMapTarget = (importmapTarget, importMapToInject, minify) => {
   const {
     sourceAfterTransformation
   } = importmapTarget;
   const importMapOriginal = JSON.parse(sourceAfterTransformation);
   const importMap$1 = importMap.composeTwoImportMaps(importMapOriginal, importMapToInject);
   importmapTarget.updateOnceReady({
-    sourceAfterTransformation: JSON.stringify(importMap$1)
+    sourceAfterTransformation: minify ? JSON.stringify(importMap$1) : JSON.stringify(importMap$1, null, '  ')
   });
 };
 
@@ -7509,7 +7550,7 @@ const formatToRollupFormat = format => {
   if (format === "global") return "iife";
   if (format === "commonjs") return "cjs";
   if (format === "systemjs") return "system";
-  if (format === "esm") return "esm";
+  if (format === "esmodule") return "esm";
   throw new Error(`unexpected format, got ${format}`);
 };
 
@@ -7922,6 +7963,11 @@ const createCompiledFileService = ({
         projectFileRequestedCallback,
         request,
         compile: async htmlBeforeCompilation => {
+          // parsing html should not throw any syntax error
+          // invalid html markup is converted into some valid html
+          // in the worst cases the faulty html string special characters
+          // will be html encoded.
+          // All this comment to say we don't have to try/catch html parsing
           const htmlAst = parseHtmlString(htmlBeforeCompilation);
           manipulateHtmlAst(htmlAst, {
             scriptInjections: [{
@@ -7985,22 +8031,43 @@ const createCompiledFileService = ({
             const scriptOriginalFileUrl = util.resolveUrl(scriptBasename, originalFileUrl);
             const scriptAfterTransformFileUrl = util.resolveUrl(scriptBasename, compiledFileUrl);
             const scriptBeforeCompilation = inlineScriptsContentMap[scriptSrc];
-            const scriptTransformResult = await transformJs({
-              projectDirectoryUrl,
-              importMetaEnvFileRelativeUrl,
-              importMeta,
-              code: scriptBeforeCompilation,
-              url: scriptOriginalFileUrl,
-              urlAfterTransform: scriptAfterTransformFileUrl,
-              babelPluginMap: compileIdToBabelPluginMap(compileId, {
-                groupMap,
-                babelPluginMap
-              }),
-              convertMap,
-              transformTopLevelAwait,
-              moduleOutFormat,
-              importMetaFormat
-            });
+            let scriptTransformResult;
+
+            try {
+              scriptTransformResult = await transformJs({
+                projectDirectoryUrl,
+                importMetaEnvFileRelativeUrl,
+                importMeta,
+                code: scriptBeforeCompilation,
+                url: scriptOriginalFileUrl,
+                urlAfterTransform: scriptAfterTransformFileUrl,
+                babelPluginMap: compileIdToBabelPluginMap(compileId, {
+                  groupMap,
+                  babelPluginMap
+                }),
+                convertMap,
+                transformTopLevelAwait,
+                moduleOutFormat,
+                importMetaFormat
+              });
+            } catch (e) {
+              // If there is a syntax error in inline script
+              // we put the raw script without transformation.
+              // when systemjs will try to instantiate to script it
+              // will re-throw this syntax error.
+              // Thanks to this we see the syntax error in the
+              // document and livereloading still works
+              // because we gracefully handle this error
+              if (e.code === "PARSE_ERROR") {
+                const code = scriptBeforeCompilation;
+                assets = [...assets, scriptAssetUrl];
+                assetsContent = [...assetsContent, code];
+                return;
+              }
+
+              throw e;
+            }
+
             const sourcemapFileUrl = util.resolveUrl(`${scriptBasename}.map`, scriptAfterTransformFileUrl);
             let {
               code,
@@ -10729,7 +10796,7 @@ const generateBundle = async ({
   compileServerIp,
   compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
-  format = "esm",
+  format = "esmodule",
   externalImportUrlPatterns = format === "commonjs" ? {
     "node_modules/": true
   } : {},
@@ -10776,9 +10843,9 @@ const generateBundle = async ({
       logLevel
     });
 
-    if (format === "esm") {
+    if (format === "esmodule") {
       if (bundleDirectoryRelativeUrl === undefined) {
-        bundleDirectoryRelativeUrl = "./dist/esm";
+        bundleDirectoryRelativeUrl = "./dist/esmodule";
       }
     } else if (format === "systemjs") {
       if (bundleDirectoryRelativeUrl === undefined) {
@@ -10801,7 +10868,7 @@ const generateBundle = async ({
         browser = true;
       }
     } else {
-      throw new TypeError(`unexpected format: ${format}. Must be esm, systemjs, commonjs or global.`);
+      throw new TypeError(`unexpected format: ${format}. Must be esmodule, systemjs, commonjs or global.`);
     }
 
     projectDirectoryUrl = assertProjectDirectoryUrl({
