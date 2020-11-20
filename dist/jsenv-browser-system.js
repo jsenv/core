@@ -2038,6 +2038,10 @@
     try {
       return fn();
     } catch (error) {
+      if (error.name === "SyntaxError") {
+        throw new Error("Syntax error in module.\n".concat(getModuleDetails(data), "\n--- syntax error stack ---\n").concat(error.stack));
+      }
+
       throw new Error("Module instantiation error.\n--- instantiation error stack ---\n".concat(error.stack).concat(getModuleDetails(data)));
     }
   };
@@ -2336,7 +2340,7 @@
     if (error && error.parsingError) {
       theme = "light";
       var parsingError = error.parsingError;
-      message = errorToHTML(parsingError.messageHTML || parsingError.message);
+      message = errorToHTML(parsingError.messageHTML || escapeHtml(parsingError.message));
     } else {
       theme = "dark";
       message = errorToHTML(error);
@@ -2352,16 +2356,20 @@
     appendHMTLInside(html, document.body);
   };
 
+  var escapeHtml = function escapeHtml(string) {
+    return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  };
+
   var errorToHTML = function errorToHTML(error) {
     var html;
 
     if (error && error instanceof Error) {
       //  stackTrace formatted by V8
       if (Error.captureStackTrace) {
-        html = error.stack;
+        html = escapeHtml(error.stack);
       } else {
         // other stack trace such as firefox do not contain error.message
-        html = "".concat(error.message, "\n  ").concat(error.stack);
+        html = escapeHtml("".concat(error.message, "\n  ").concat(error.stack));
       }
     } else if (typeof error === "string") {
       html = error;
