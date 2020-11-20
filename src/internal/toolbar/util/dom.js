@@ -11,7 +11,11 @@ export const updateIframeOverflowOnParentWindow = () => {
   }
 }
 
+let iframeOverflowEnabled = false
 const enableIframeOverflowOnParentWindow = () => {
+  if (iframeOverflowEnabled) return
+  iframeOverflowEnabled = true
+
   const iframe = getToolbarIframe()
   const transitionDuration = iframe.style.transitionDuration
   setStyles(iframe, { "height": "100%", "transition-duration": "0ms" })
@@ -23,6 +27,9 @@ const enableIframeOverflowOnParentWindow = () => {
 }
 
 const disableIframeOverflowOnParentWindow = () => {
+  if (!iframeOverflowEnabled) return
+  iframeOverflowEnabled = true
+
   const iframe = getToolbarIframe()
   const transitionDuration = iframe.style.transitionDuration
   setStyles(iframe, { "height": "40px", "transition-duration": "0ms" })

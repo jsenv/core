@@ -42,6 +42,7 @@ const renderToolbar = async () => {
       element: toolbarElement,
       show: showToolbar,
       hide: () => hideToolbar(),
+      toggle: toogleToolbar,
     },
   })
 
@@ -190,4 +191,4 @@ const sendEventToParent = (type, value) => {
   )
 }
 
-renderToolbar()
+window.renderToolbar = renderToolbar
