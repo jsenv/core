@@ -234,7 +234,13 @@ export const createCompiledFileService = ({
         request,
 
         compile: async (htmlBeforeCompilation) => {
-          const htmlAst = parseHtmlString(htmlBeforeCompilation)
+          let htmlAst
+          try {
+            htmlAst = parseHtmlString(htmlBeforeCompilation)
+          } catch (e) {
+            debugger
+            throw e
+          }
           manipulateHtmlAst(htmlAst, {
             scriptInjections: [
               {
