@@ -21,6 +21,12 @@ const fromFunctionReturningRegisteredModule = (fn, data) => {
   try {
     return fn()
   } catch (error) {
+    if (error.name === "SyntaxError") {
+      throw new Error(`Syntax error in module.
+${getModuleDetails(data)}
+--- syntax error stack ---
+${error.stack}`)
+    }
     throw new Error(`Module instantiation error.
 --- instantiation error stack ---
 ${error.stack}${getModuleDetails(data)}`)

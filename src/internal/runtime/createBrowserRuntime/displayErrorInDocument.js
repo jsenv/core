@@ -6,7 +6,7 @@ export const displayErrorInDocument = (error) => {
   if (error && error.parsingError) {
     theme = "light"
     const { parsingError } = error
-    message = errorToHTML(parsingError.messageHTML || parsingError.message)
+    message = errorToHTML(parsingError.messageHTML || escapeHtml(parsingError.message))
   } else {
     theme = "dark"
     message = errorToHTML(error)
@@ -52,17 +52,26 @@ export const displayErrorInDocument = (error) => {
   appendHMTLInside(html, document.body)
 }
 
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+}
+
 const errorToHTML = (error) => {
   let html
 
   if (error && error instanceof Error) {
     //  stackTrace formatted by V8
     if (Error.captureStackTrace) {
-      html = error.stack
+      html = escapeHtml(error.stack)
     } else {
       // other stack trace such as firefox do not contain error.message
-      html = `${error.message}
-  ${error.stack}`
+      html = escapeHtml(`${error.message}
+  ${error.stack}`)
     }
   } else if (typeof error === "string") {
     html = error
