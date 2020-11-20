@@ -906,16 +906,17 @@
         allowtransparency: true
       });
       setStyles(iframe, {
-        position: "fixed",
-        zIndex: 1000,
-        bottom: 0,
-        left: 0,
-        width: "100%",
-        height: 0,
+        "position": "fixed",
+        "zIndex": 1000,
+        "bottom": 0,
+        "left": 0,
+        "width": "100%",
+        "height": 0,
 
         /* ensure toolbar children are not focusable when hidden */
-        visibility: "hidden",
-        border: "none"
+        "visibility": "hidden",
+        "transition-duration": "300ms",
+        "border": "none"
       });
       var iframeLoadedPromise = iframeToLoadedPromise(iframe);
       var jsenvToolbarHtmlServerUrl = resolveUrl("./src/internal/toolbar/toolbar.html", jsenvDirectoryServerUrl); // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
@@ -994,6 +995,7 @@
         };
 
         hideToolbarTrigger();
+        iframe.contentWindow.renderToolbar();
         return iframe;
       });
     });

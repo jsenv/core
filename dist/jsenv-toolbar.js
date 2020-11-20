@@ -947,8 +947,11 @@
       disableIframeOverflowOnParentWindow();
     }
   };
+  var iframeOverflowEnabled = false;
 
   var enableIframeOverflowOnParentWindow = function enableIframeOverflowOnParentWindow() {
+    if (iframeOverflowEnabled) return;
+    iframeOverflowEnabled = true;
     var iframe = getToolbarIframe();
     var transitionDuration = iframe.style.transitionDuration;
     setStyles(iframe, {
@@ -966,6 +969,8 @@
   };
 
   var disableIframeOverflowOnParentWindow = function disableIframeOverflowOnParentWindow() {
+    if (!iframeOverflowEnabled) return;
+    iframeOverflowEnabled = true;
     var iframe = getToolbarIframe();
     var transitionDuration = iframe.style.transitionDuration;
     setStyles(iframe, {
@@ -2322,7 +2327,8 @@
           show: showToolbar,
           hide: function hide() {
             return hideToolbar();
-          }
+          },
+          toggle: toogleToolbar
         }
       });
       var toolbarVisible = toolbarVisibilityPreference.has() ? toolbarVisibilityPreference.get() : true;
@@ -2481,7 +2487,7 @@
     }, "*");
   };
 
-  renderToolbar();
+  window.renderToolbar = renderToolbar;
 
 }());
 
