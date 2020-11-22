@@ -2422,21 +2422,19 @@
     var scrollY = parentDocumentElement.scrollTop;
     var scrollYRemaining = scrollYMax - scrollY;
     setStyles(toolbarIframeParent, {
-      "transition-property": "padding-bottom"
+      "transition-property": "padding-bottom",
+      "transition-duration": "300ms"
     }); // maybe we should use js animation here because we would not conflict with css
 
     var restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
       "scroll-padding-bottom": "40px",
       // same here we should add 40px
-      "transition-duration": "300ms",
       "padding-bottom": "40px" // if there is already one we should add 40px
 
     });
     var restoreToolbarIframeStyles = setStyles(toolbarIframe, {
-      "height": "40px",
-      "visibility": "visible",
-      "transition-property": "height, visibility",
-      "transition-duration": "300ms"
+      height: "40px",
+      visibility: "visible"
     });
 
     if (scrollYRemaining < 40 && scrollYMax > 0) {

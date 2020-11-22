@@ -916,6 +916,7 @@
         /* ensure toolbar children are not focusable when hidden */
         "visibility": "hidden",
         "transition-duration": "300ms",
+        "transition-property": "height, visibility",
         "border": "none"
       });
       var iframeLoadedPromise = iframeToLoadedPromise(iframe);
