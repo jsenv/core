@@ -28,7 +28,7 @@ const enableIframeOverflowOnParentWindow = () => {
 
 const disableIframeOverflowOnParentWindow = () => {
   if (!iframeOverflowEnabled) return
-  iframeOverflowEnabled = true
+  iframeOverflowEnabled = false
 
   const iframe = getToolbarIframe()
   const transitionDuration = iframe.style.transitionDuration

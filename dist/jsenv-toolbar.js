@@ -970,7 +970,7 @@
 
   var disableIframeOverflowOnParentWindow = function disableIframeOverflowOnParentWindow() {
     if (!iframeOverflowEnabled) return;
-    iframeOverflowEnabled = true;
+    iframeOverflowEnabled = false;
     var iframe = getToolbarIframe();
     var transitionDuration = iframe.style.transitionDuration;
     setStyles(iframe, {
