@@ -26,6 +26,7 @@ export const generateBundleUsingRollup = async ({
   globalName,
   sourcemapExcludeSources,
   preserveEntrySignatures,
+  bundleConcatenation,
 
   bundleDirectoryUrl,
   bundleDirectoryClean,
@@ -80,6 +81,7 @@ export const generateBundleUsingRollup = async ({
     globalName,
     sourcemapExcludeSources,
     preserveEntrySignatures,
+    bundleConcatenation,
     bundleDirectoryUrl,
     bundleDirectoryClean,
   })
@@ -98,6 +100,7 @@ const useRollup = async ({
   globalName,
   sourcemapExcludeSources,
   preserveEntrySignatures,
+  bundleConcatenation,
   bundleDirectoryUrl,
   bundleDirectoryClean,
 }) => {
@@ -152,6 +155,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources,
+    preserveModules: !bundleConcatenation,
     ...(format === "global"
       ? {
           globals,
