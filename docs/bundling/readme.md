@@ -88,7 +88,36 @@ await generateBundle({
 
 # Concatenation
 
+By default jsenv concatenates will concatenates js files as much as possible. There is legimitimates reasons to disable this behaviour. Merging `n` files into chunks poses two issues:
+
+- On big project it becomes very hard to know what ends up where.
+  Tools like [webpack bundle analyzer](https://github.com/webpack-contrib/webpack-bundle-analyzer) exists to mitigate this but it's still hard to grasp what is going on.
+- When a file part of a chunk is modified the entire chunk must be recreated. A returning user have to redownload/parse/execute the entire chunk even if you modified only one line in one file.
+
+Disabling concatenation fixes the two issue it creates (of course) but also means browser will have to create an http request per file. Thanks to http2, one connection can be reused to server `n` file meaning concatenation becomes less effective.
+
+> It's still faster for a web browser to donwload/parse/execute one big file than doing the same for 50 tiny files.
+
+To me you should consider the following before disabling concatenation:
+
+- Is your production server compatible with http2 ?
+- Does your website provide a user friendly loading experience (A loading screen + a progress bar for instance) ?
+- Do you have a lot of returning users ? Which one do you want to favor between new/returning users.
+
+To disable concatenation of js files use `jsConcatenation` parameter.
+
+```js
+import { generateBundle } from "@jsenv/core"
+
+await generateBundle({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  jsConcatenation: false,
+})
+```
+
 # Minification
+
+Minification is enabled by default when `process.env.NODE_ENV` is `"production"` and disabled otherwise. When true js, css, html, importmap, json, svg are minified.
 
 # Long term caching
 
@@ -100,7 +129,7 @@ The screenshot belows shows how a 144kB file takes 1ms for the browser to fetch 
 
 > An article to explain long term caching: https://jakearchibald.com/2016/caching-best-practices/#pattern-1-immutable-content--long-max-age
 
-This is a massive boost in performance but can be tricky to setup because you need to know how and when to invalidate browser cache. Jsenv does this for you by computing a unique url for each file and update any reference to that url accordingly.
+This is a massive boost in performance but can be tricky to setup because you need to know how and when to invalidate browser cache. Jsenv enable long term caching by default by computing a unique url for each file and update any reference to that url accordingly.
 
 As you can see in the previous section
 
@@ -130,6 +159,17 @@ body {
 }
 ```
 
+If you don't want to change urls to enable long term caching use `longTermCaching` parameter.
+
+```js
+import { generateBundle } from "@jsenv/core"
+
+await generateBundle({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  longTermCaching: false,
+})
+```
+
 — link to Babel on GitHub: https://github.com/babel/babel<br />
 — link to PostCSS on GitHub: https://github.com/postcss/postcss<br />
 — link to parse5 on GitHub: https://github.com/inikulin/parse5
@@ -146,7 +186,7 @@ By default jsenv generate bundle assuming the browser will support JavaScript mo
 
 SystemJS format can be used if you want to use [import maps](#import-maps) or [top level await](#top-level-await) in your codebase.
 
-We can slightly change the [Code example](#Code-example) by passing `format: "systemjs"`.
+To use SystemJS format, use `format` parameter
 
 ```js
 import { generateBundle } from "@jsenv/core"

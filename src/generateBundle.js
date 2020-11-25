@@ -8,6 +8,13 @@ import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { generateBundleUsingRollup } from "./internal/bundling/generateBundleUsingRollup.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
+const FORMAT_ENTRY_POINTS = {
+  commonjs: { "./index.js": "./main.cjs" },
+  systemjs: { "./main.html": "./main.html" },
+  global: { "./index.js": "./main.js" },
+  esmodule: { "./main.html": "./main.html" },
+}
+
 export const generateBundle = async ({
   cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
@@ -41,10 +48,7 @@ export const generateBundle = async ({
     : {},
   browser = format === "global" || format === "systemjs" || format === "esmodule",
   node = format === "commonjs",
-  entryPointMap = format === "commonjs"
-    ? { "./index.js": "./main.cjs" }
-    : { "./index.js": "./main.js" },
-  systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
+  entryPointMap = FORMAT_ENTRY_POINTS[format],
   globalName,
   globals = {},
   sourcemapExcludeSources = false,

@@ -178,7 +178,7 @@ export const createJsenvRollupPlugin = async ({
 
   const emitAsset = ({ source, fileName }) => {
     const bundleRelativeUrl = fileName
-    if (useImportMapToImproveLongTermCaching) {
+    if (useImportMapToImproveLongTermCaching || !longTermCaching) {
       fileName = rollupFileNameWithoutHash(bundleRelativeUrl)
     } else {
       fileName = bundleRelativeUrl
@@ -725,7 +725,7 @@ export const createJsenvRollupPlugin = async ({
         })
         const file = jsBundle[bundleRelativeUrl]
         const sourceAfterTransformation = file.code
-        const fileName = useImportMapToImproveLongTermCaching
+        const fileName = useImportMapToImproveLongTermCaching || !longTermCaching
           ? bundleRelativeUrlToFileName(bundleRelativeUrl)
           : bundleRelativeUrl
 
