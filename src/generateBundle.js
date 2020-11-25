@@ -49,6 +49,7 @@ export const generateBundle = async ({
   browser = format === "global" || format === "systemjs" || format === "esmodule",
   node = format === "commonjs",
   entryPointMap = FORMAT_ENTRY_POINTS[format],
+  systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
   globalName,
   globals = {},
   sourcemapExcludeSources = false,
