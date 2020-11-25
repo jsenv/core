@@ -39,7 +39,6 @@ export const generateBundle = async ({
         "node_modules/": true,
       }
     : {},
-  useImportMapForJsBundleUrls,
   browser = format === "global" || format === "systemjs" || format === "esmodule",
   node = format === "commonjs",
   entryPointMap = format === "commonjs"
@@ -49,13 +48,16 @@ export const generateBundle = async ({
   globalName,
   globals = {},
   sourcemapExcludeSources = false,
-  preserveEntrySignatures,
-  bundleConcatenation = true,
+
   bundleDirectoryRelativeUrl,
   bundleDirectoryClean = false,
   writeOnFileSystem = true,
   manifestFile = false,
 
+  longTermCaching = true,
+  useImportMapToImproveLongTermCaching = format === "systemjs",
+  preserveEntrySignatures,
+  jsConcatenation = true,
   minify = process.env.NODE_ENV === "production",
   // https://github.com/kangax/html-minifier#options-quick-reference
   minifyHtmlOptions = { collapseWhitespace: true },
@@ -179,17 +181,19 @@ export const generateBundle = async ({
         writeOnFileSystem,
 
         format,
-        useImportMapForJsBundleUrls,
         systemJsUrl,
         globalName,
         globals,
         sourcemapExcludeSources,
-        preserveEntrySignatures,
-        bundleConcatenation,
+
         bundleDirectoryUrl,
         bundleDirectoryClean,
         manifestFile,
 
+        longTermCaching,
+        useImportMapToImproveLongTermCaching,
+        preserveEntrySignatures,
+        jsConcatenation,
         minify,
         minifyHtmlOptions,
         minifyJsOptions,

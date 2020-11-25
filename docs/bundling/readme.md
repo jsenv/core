@@ -2,6 +2,8 @@
 
 - [Presentation](#Presentation)
 - [Code example](#Code-example)
+- [Concatenation](#Concatenation)
+- [Minification](#Minification)
 - [Long term caching](#Long-term-caching)
 - [JavaScript modules](#JavaScript-modules)
   - [SystemJS format](#SystemJS-format)
@@ -83,6 +85,10 @@ await generateBundle({
 ```
 
 </details>
+
+# Concatenation
+
+# Minification
 
 # Long term caching
 
