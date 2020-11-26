@@ -16,13 +16,13 @@ const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
 const { bundleMappings } = await generateBundle({
   ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   entryPointMap: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
   },
@@ -36,7 +36,7 @@ await assertFilePresence(iconBundleUrl)
 {
   const { value: actual, serverOrigin } = await browserImportBundle({
     ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
-    bundleDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
   })
   const expected = new URL(iconBundleRelativeUrl, serverOrigin).href
   assert({ actual, expected })
@@ -46,7 +46,7 @@ await assertFilePresence(iconBundleUrl)
 if (SourceMap) {
   const { value: actual } = await nodeImportBundle({
     ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
-    bundleDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
   })
   const expected = new URL(`./dist/esmodule/${iconBundleRelativeUrl}`, import.meta.url).href
   assert({ actual, expected })

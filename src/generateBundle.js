@@ -55,7 +55,7 @@ export const generateBundle = async ({
   globals = {},
   sourcemapExcludeSources = false,
 
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   bundleDirectoryClean = false,
   writeOnFileSystem = true,
   manifestFile = false,
@@ -89,23 +89,23 @@ export const generateBundle = async ({
     logger = logger || createLogger({ logLevel })
 
     if (format === "esmodule") {
-      if (bundleDirectoryRelativeUrl === undefined) {
-        bundleDirectoryRelativeUrl = "./dist/esmodule"
+      if (buildDirectoryRelativeUrl === undefined) {
+        buildDirectoryRelativeUrl = "./dist/esmodule"
       }
     } else if (format === "systemjs") {
-      if (bundleDirectoryRelativeUrl === undefined) {
-        bundleDirectoryRelativeUrl = "./dist/systemjs"
+      if (buildDirectoryRelativeUrl === undefined) {
+        buildDirectoryRelativeUrl = "./dist/systemjs"
       }
     } else if (format === "commonjs") {
-      if (bundleDirectoryRelativeUrl === undefined) {
-        bundleDirectoryRelativeUrl = "./dist/commonjs"
+      if (buildDirectoryRelativeUrl === undefined) {
+        buildDirectoryRelativeUrl = "./dist/commonjs"
       }
       if (node === undefined) {
         node = true
       }
     } else if (format === "global") {
-      if (bundleDirectoryRelativeUrl === undefined) {
-        bundleDirectoryRelativeUrl = "./dist/global"
+      if (buildDirectoryRelativeUrl === undefined) {
+        buildDirectoryRelativeUrl = "./dist/global"
       }
       if (browser === undefined) {
         browser = true
@@ -134,8 +134,8 @@ export const generateBundle = async ({
       }
     }
 
-    assertBundleDirectoryRelativeUrl({ bundleDirectoryRelativeUrl })
-    const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
+    assertbuildDirectoryRelativeUrl({ buildDirectoryRelativeUrl })
+    const bundleDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
     assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
 
     const compileServer = await startCompileServer({
@@ -244,10 +244,10 @@ const assertEntryPointMap = ({ entryPointMap }) => {
   })
 }
 
-const assertBundleDirectoryRelativeUrl = ({ bundleDirectoryRelativeUrl }) => {
-  if (typeof bundleDirectoryRelativeUrl !== "string") {
+const assertbuildDirectoryRelativeUrl = ({ buildDirectoryRelativeUrl }) => {
+  if (typeof buildDirectoryRelativeUrl !== "string") {
     throw new TypeError(
-      `bundleDirectoryRelativeUrl must be a string, received ${bundleDirectoryRelativeUrl}`,
+      `buildDirectoryRelativeUrl must be a string, received ${buildDirectoryRelativeUrl}`,
     )
   }
 }

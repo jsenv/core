@@ -6,11 +6,11 @@ const CONTROLLABLE_FILE_URL = resolveUrl("./controllable-file.js", import.meta.u
 
 export const nodeImportBundle = async ({
   projectDirectoryUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   mainRelativeUrl,
   namespaceProperty = "default",
 }) => {
-  const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
+  const bundleDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
   const mainFileUrl = resolveUrl(mainRelativeUrl, bundleDirectoryUrl)
 
   const child = fork(urlToFileSystemPath(CONTROLLABLE_FILE_URL), {

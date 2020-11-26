@@ -13,13 +13,13 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.js`
 
 await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   importMapFileRelativeUrl: `${testDirectoryRelativeUrl}test.importmap`,
   entryPointMap: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",

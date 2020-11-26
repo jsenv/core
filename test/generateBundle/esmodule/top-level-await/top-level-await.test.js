@@ -16,13 +16,13 @@ const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
 await generateBundle({
   ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   entryPointMap: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
   },
@@ -31,7 +31,7 @@ await generateBundle({
 try {
   await browserImportBundle({
     ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
-    bundleDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
   })
   throw new Error("should throw")
 } catch (actual) {
@@ -45,7 +45,7 @@ if (SourceMap) {
   try {
     await nodeImportBundle({
       ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
-      bundleDirectoryRelativeUrl,
+      buildDirectoryRelativeUrl,
     })
     throw new Error("should throw")
   } catch (error) {

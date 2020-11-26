@@ -32,7 +32,7 @@ import { generateBundle } from "@jsenv/core"
 
 await generateBundle({
   projectDirectoryUrl: new URL("./", import.meta.url),
-  bundleDirectoryRelativeUrl: "dist",
+  buildDirectoryRelativeUrl: "dist",
   enryPointMap: {
     "./index.html": "./main.html",
   },
@@ -164,7 +164,7 @@ import { generateBundle } from "@jsenv/core"
 
 await generateBundle({
   projectDirectoryUrl: new URL("./", import.meta.url),
-  bundleDirectoryRelativeUrl: "dist",
+  buildDirectoryRelativeUrl: "dist",
   enryPointMap: {
     "./index.html": "main.html",
   },

@@ -14,7 +14,7 @@ import { GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `style.css`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./style.css",
@@ -24,7 +24,7 @@ const { bundleMappings } = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   entryPointMap,
 })
 
@@ -34,7 +34,7 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")
 const cssBundleUrl = resolveUrl(cssBundleRelativeUrl, bundleDirectoryUrl)
 const cssString = await readFile(cssBundleUrl)

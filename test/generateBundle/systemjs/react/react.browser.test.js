@@ -13,7 +13,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.html`
 
 const { bundleMappings } = await generateBundle({
@@ -22,7 +22,7 @@ const { bundleMappings } = await generateBundle({
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   // filesystemCache: true,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   entryPointMap: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
   },

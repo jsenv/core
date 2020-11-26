@@ -6,11 +6,11 @@ const { chromium } = require("playwright-chromium")
 
 export const scriptLoadGlobalBundle = async ({
   projectDirectoryUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   mainRelativeUrl,
   globalName,
 }) => {
-  const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
+  const bundleDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
     startTestServer({ bundleDirectoryUrl }),
     chromium.launch(),

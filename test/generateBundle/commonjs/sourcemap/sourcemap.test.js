@@ -13,22 +13,22 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`
 
 const bundle = await generateBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   entryPointMap: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
   },
 })
 const compilationResult = bundleToCompilationResult(bundle, {
   projectDirectoryUrl: testDirectoryUrl,
-  compiledFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.js`, jsenvCoreDirectoryUrl),
-  sourcemapFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.js.map`, jsenvCoreDirectoryUrl),
+  compiledFileUrl: resolveUrl(`${buildDirectoryRelativeUrl}main.js`, jsenvCoreDirectoryUrl),
+  sourcemapFileUrl: resolveUrl(`${buildDirectoryRelativeUrl}main.js.map`, jsenvCoreDirectoryUrl),
 })
 const sourceMap = JSON.parse(compilationResult.assetsContent[0])
 const sourceMapConsumer = await new SourceMapConsumer(sourceMap)

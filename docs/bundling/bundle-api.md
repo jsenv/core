@@ -1,5 +1,5 @@
 - [Bundling parameters](#bundling-parameters)
-  - [bundleDirectoryRelativeUrl](#bundleDirectoryRelativeUrl)
+  - [buildDirectoryRelativeUrl](#buildDirectoryRelativeUrl)
   - [entryPointMap](#entryPointMap)
   - [externalImportSpecifiers](#externalImportSpecifiers)
   - [minify](#minify)
@@ -9,9 +9,9 @@
 
 This section present parameters available to every function generating a bundle.
 
-## bundleDirectoryRelativeUrl
+## buildDirectoryRelativeUrl
 
-`bundleDirectoryRelativeUrl` parameter is a string leading to a directory where bundle files are written. This parameter is optional with a default value specific to each bundling function:
+`buildDirectoryRelativeUrl` parameter is a string leading to a directory where bundle files are written. This parameter is optional with a default value specific to each bundling function:
 
 - Default for `esmodule` format:
 

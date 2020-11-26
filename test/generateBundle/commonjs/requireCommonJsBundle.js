@@ -3,10 +3,10 @@ import { require } from "@jsenv/core/src/internal/require.js"
 
 export const requireCommonJsBundle = async ({
   projectDirectoryUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   mainRelativeUrl,
 }) => {
-  const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
+  const bundleDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
   const mainFileUrl = resolveUrl(mainRelativeUrl, bundleDirectoryUrl)
   const mainFilePath = urlToFileSystemPath(mainFileUrl)
   // eslint-disable-next-line import/no-dynamic-require

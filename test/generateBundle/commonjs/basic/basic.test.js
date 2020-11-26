@@ -12,7 +12,7 @@ import {
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativeUrl)
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const mainFilename = `${testDirectoryBasename}.js`
 
@@ -20,7 +20,7 @@ await generateBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   // compileServerLogLevel: "debug",
   jsenvDirectoryRelativeUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   entryPointMap: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
   },
@@ -30,7 +30,7 @@ await generateBundle({
 {
   const { namespace } = await requireCommonJsBundle({
     ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
-    bundleDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
   })
   const actual = namespace
   const expected = { value: 42 }
@@ -39,7 +39,7 @@ await generateBundle({
 
 // ensure sourcemap is generated
 {
-  const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+  const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
   const answerUrl = resolveUrl("answer.js", testDirectoryUrl)
   const basicUrl = resolveUrl("basic.js", testDirectoryUrl)
   const sourcemapBundleRelativeUrl = "main.cjs.map"

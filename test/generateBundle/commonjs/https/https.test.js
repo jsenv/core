@@ -23,7 +23,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`
 const mainFileRelativeUrl = `./${testDirectoryRelativeUrl}${mainFilename}`
 const mainFileUrl = resolveUrl("./https.js", import.meta.url)
@@ -31,18 +31,18 @@ const mainFileUrl = resolveUrl("./https.js", import.meta.url)
 const bundle = await generateBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   entryPointMap: {
     [mainFileRelativeUrl]: "./main.cjs",
   },
 })
 const sourcemapFileUrl = resolveUrl(
-  `${bundleDirectoryRelativeUrl}main.cjs.map`,
+  `${buildDirectoryRelativeUrl}main.cjs.map`,
   jsenvCoreDirectoryUrl,
 )
 const compilationResult = bundleToCompilationResult(bundle, {
   projectDirectoryUrl: testDirectoryUrl,
-  compiledFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.cjs`, jsenvCoreDirectoryUrl),
+  compiledFileUrl: resolveUrl(`${buildDirectoryRelativeUrl}main.cjs`, jsenvCoreDirectoryUrl),
   sourcemapFileUrl,
 })
 {
@@ -73,7 +73,7 @@ const compilationResult = bundleToCompilationResult(bundle, {
 try {
   await requireCommonJsBundle({
     ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
-    bundleDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
   })
 } catch (e) {
   const actual = {

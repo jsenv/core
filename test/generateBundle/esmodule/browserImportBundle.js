@@ -6,13 +6,13 @@ const { chromium } = require("playwright-chromium")
 
 export const browserImportBundle = async ({
   projectDirectoryUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   mainRelativeUrl,
   namespaceProperty = "default",
   headless = true,
   stopAfterImport = true,
 }) => {
-  const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
+  const bundleDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
     startTestServer({ bundleDirectoryUrl }),
     chromium.launch({

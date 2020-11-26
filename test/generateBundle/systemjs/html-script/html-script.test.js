@@ -24,7 +24,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
@@ -34,7 +34,7 @@ const { bundleMappings } = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   entryPointMap,
 })
 
@@ -44,7 +44,7 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const scriptBundleRelativeUrl = getBundleRelativeUrl("index.js")
 const scriptBundleUrl = resolveUrl(scriptBundleRelativeUrl, bundleDirectoryUrl)
 const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)

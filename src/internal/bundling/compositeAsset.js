@@ -50,7 +50,7 @@ export const createCompositeAssetHandler = (
     logLevel,
     format,
     projectDirectoryUrl, // project url but it can be an http url
-    bundleDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
     urlToFileUrl, // get a file url from an eventual http url
     loadUrl = () => null,
     emitAsset,
@@ -60,7 +60,7 @@ export const createCompositeAssetHandler = (
 ) => {
   const logger = createLogger({ logLevel })
 
-  const bundleDirectoryUrl = resolveUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
+  const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
 
   const createReferenceForAssetEntry = async (
     entryUrl,

@@ -12,7 +12,7 @@ import {
 const bundlesToGenerate = [
   {
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    bundleDirectoryRelativeUrl: "dist",
+    buildDirectoryRelativeUrl: "dist",
     format: "commonjs",
     entryPointMap: {
       [jsenvNodeSystemRelativeUrl]: "./jsenv-node-system.cjs",
@@ -20,7 +20,7 @@ const bundlesToGenerate = [
   },
   {
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    bundleDirectoryRelativeUrl: "dist",
+    buildDirectoryRelativeUrl: "dist",
     format: "global",
     entryPointMap: {
       [jsenvBrowserSystemRelativeUrl]: "./jsenv-browser-system.js",
@@ -28,7 +28,7 @@ const bundlesToGenerate = [
   },
   {
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    bundleDirectoryRelativeUrl: "dist",
+    buildDirectoryRelativeUrl: "dist",
     format: "global",
     entryPointMap: {
       [jsenvExploringRedirectorJsRelativeUrl]: "./jsenv-exploring-redirector.js",
@@ -36,7 +36,7 @@ const bundlesToGenerate = [
   },
   {
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    bundleDirectoryRelativeUrl: "dist",
+    buildDirectoryRelativeUrl: "dist",
     format: "global",
     entryPointMap: {
       [jsenvToolbarInjectorRelativeUrl]: "./jsenv-toolbar-injector.js",
@@ -44,7 +44,7 @@ const bundlesToGenerate = [
   },
   {
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    bundleDirectoryRelativeUrl: "dist",
+    buildDirectoryRelativeUrl: "dist",
     format: "global",
     entryPointMap: {
       [jsenvToolbarJsRelativeUrl]: "./jsenv-toolbar.js",

@@ -11,14 +11,14 @@ import {
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const firstEntryRelativeUrl = `${testDirectoryRelativeUrl}a.js`
 const secondEntryRelativeUrl = `${testDirectoryRelativeUrl}b.js`
 
 const { bundleManifest, bundleMappings } = await generateBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  bundleDirectoryRelativeUrl,
+  buildDirectoryRelativeUrl,
   entryPointMap: {
     [`./${firstEntryRelativeUrl}`]: "./a.cjs",
     [`./${secondEntryRelativeUrl}`]: "./b.cjs",
@@ -39,7 +39,7 @@ const { bundleManifest, bundleMappings } = await generateBundle({
 }
 
 {
-  const manifestFileRelativeUrl = `${bundleDirectoryRelativeUrl}manifest.json`
+  const manifestFileRelativeUrl = `${buildDirectoryRelativeUrl}manifest.json`
   const manifestFileUrl = resolveUrl(manifestFileRelativeUrl, jsenvCoreDirectoryUrl)
   const manifestFileContent = await readFile(manifestFileUrl)
   const manifestFileObject = JSON.parse(manifestFileContent)
@@ -60,7 +60,7 @@ const { bundleManifest, bundleMappings } = await generateBundle({
 {
   const { namespace: actual } = await requireCommonJsBundle({
     ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
-    bundleDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
     mainRelativeUrl: "./a.cjs",
   })
   const expected = { value: "a-shared" }
@@ -69,7 +69,7 @@ const { bundleManifest, bundleMappings } = await generateBundle({
 {
   const { namespace: actual } = await requireCommonJsBundle({
     ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
-    bundleDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
     mainRelativeUrl: "./b.cjs",
   })
   const expected = { value: "b-shared" }
