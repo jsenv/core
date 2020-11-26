@@ -10,16 +10,15 @@ Execute JavaScript on multiple environments for testing.
 # Table of contents
 
 - [Presentation](#Presentation)
+- [Testing](#Testing)
 - [Exploring](#Exploring)
 - [Building](#Building)
-- [Testing](#Testing)
 - [Installation](#Installation)
 - [Configuration](#Configuration)
   - [jsenv.config.js](#jsenvconfigjs)
   - [CommonJS](#CommonJS)
   - [React](#React)
   - [TypeScript](#TypeScript)
-- [API](#API)
 - [See also](#See-also)
 
 # Presentation
