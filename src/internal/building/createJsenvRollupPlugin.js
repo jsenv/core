@@ -201,6 +201,15 @@ export const createJsenvRollupPlugin = async ({
     name: "jsenv",
 
     async buildStart() {
+      logger.info(`
+start building project
+--- project directory path ---
+${urlToFileSystemPath(projectDirectoryUrl)}
+--- build directory path ---
+${urlToFileSystemPath(buildDirectoryUrl)}
+--- entry point map ---
+${JSON.stringify(entryPointMap, null, "  ")}`)
+
       emitFile = (...args) => this.emitFile(...args)
 
       // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
@@ -674,7 +683,7 @@ export const createJsenvRollupPlugin = async ({
       }
     },
 
-    async buildProject(outputOptions, rollupResult) {
+    async generateBundle(outputOptions, rollupResult) {
       const jsBuild = {}
       Object.keys(rollupResult).forEach((fileName) => {
         const file = rollupResult[fileName]
@@ -812,7 +821,7 @@ export const createJsenvRollupPlugin = async ({
         await writeFile(manifestFileUrl, JSON.stringify(buildManifest, null, "  "))
       }
 
-      logger.info(formatBuildGeneratedLog(rollupBuild))
+      logger.info(createDetailedMessage(`build done`, formatBuildDoneDetails(rollupBuild)))
 
       if (writeOnFileSystem) {
         await Promise.all(
@@ -1141,7 +1150,7 @@ const fetchAndNormalizeImportmap = async (importmapUrl, { allow404 = false } = {
   return importmapNormalized
 }
 
-const formatBuildGeneratedLog = (build) => {
+const formatBuildDoneDetails = (build) => {
   const assetFilenames = Object.keys(build)
     .filter((key) => build[key].type === "asset")
     .map((key) => build[key].fileName)
@@ -1159,10 +1168,10 @@ const formatBuildGeneratedLog = (build) => {
     // eslint-disable-next-line no-nested-ternary
     chunkCount === 0 ? "" : chunkCount === 1 ? "1 chunk" : `${chunkCount} chunks`
 
-  return createDetailedMessage(`build generated`, {
+  return {
     ...(assetDescription ? { [assetDescription]: assetFilenames } : {}),
     ...(chunkDescription ? { [chunkDescription]: chunkFilenames } : {}),
-  })
+  }
 }
 
 const sortObjectByPathnames = (object) => {

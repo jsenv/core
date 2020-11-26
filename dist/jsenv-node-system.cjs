@@ -2479,7 +2479,7 @@ var responseUrlToSourceUrl = function responseUrlToSourceUrl(responseUrl, _ref2)
   if (responseUrl.startsWith("file://")) {
     return util.urlToFileSystemPath(responseUrl);
   } // compileServerOrigin is optionnal
-  // because we can also create a node system and use it to import a bundle
+  // because we can also create a node system and use it to import a build
   // from filesystem. In that case there is no compileServerOrigin
 
 

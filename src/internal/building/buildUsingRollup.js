@@ -73,9 +73,6 @@ export const buildUsingRollup = async ({
 
   await useRollup({
     cancellationToken,
-    logger,
-
-    entryPointMap,
     jsenvRollupPlugin,
 
     format,
@@ -93,9 +90,6 @@ export const buildUsingRollup = async ({
 
 const useRollup = async ({
   cancellationToken,
-  logger,
-
-  entryPointMap,
   jsenvRollupPlugin,
   format,
   globals,
@@ -107,10 +101,6 @@ const useRollup = async ({
   buildDirectoryClean,
 }) => {
   const { rollup } = require("rollup")
-
-  logger.info(`start parsing project files...
---- entry point map ---
-${JSON.stringify(entryPointMap, null, "  ")}`)
 
   const rollupInputOptions = {
     // about cache here, we should/could reuse previous rollup call
