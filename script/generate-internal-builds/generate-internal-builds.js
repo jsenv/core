@@ -9,7 +9,7 @@ import {
   jsenvToolbarJsRelativeUrl,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
-const bundlesToGenerate = [
+const buildsToGenerate = [
   {
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
     buildDirectoryRelativeUrl: "dist",
@@ -52,7 +52,7 @@ const bundlesToGenerate = [
   },
 ]
 
-await bundlesToGenerate.reduce(async (previous, bundleToGenerate) => {
+await buildsToGenerate.reduce(async (previous, buildToGenerate) => {
   await previous
-  await buildProject(bundleToGenerate)
+  await buildProject(buildToGenerate)
 }, Promise.resolve())

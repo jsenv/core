@@ -43,7 +43,7 @@ This section present parameters available to every function generating files.
 
 ## entryPointMap
 
-`entryPointMap` parameter is an object describing your project entry points. A dedicated bundle is generated for each entry. This parameter is optional with a default value assuming you have a single entry point being `main.html` or `main.js` depending the format you are using. Keys are relative to project directory and values are relative to bundle directory.
+`entryPointMap` parameter is an object describing your project entry points. This parameter is optional with a default value assuming you have a single entry point being `main.html` or `main.js` depending the format you are using. Keys are relative to project directory and values are relative to build directory.
 
 ```json
 {
@@ -53,7 +53,7 @@ This section present parameters available to every function generating files.
 
 ## externalImportSpecifiers
 
-`externalImportSpecifiers` parameter is an array of string repsenting import that will be ignored whle generating the bundle. This parameter is optional with a default value being an empty array. This parameter can be used to avoid bundling some dependencies.
+`externalImportSpecifiers` parameter is an array of string repsenting import that will be ignored whle generating the build files. This parameter is optional with a default value being an empty array. This parameter can be used to avoid building some dependencies.
 
 To better understand this let's assume your source files contains the following import.
 
@@ -63,9 +63,9 @@ import { answer } from "foo"
 export const ask = () => answer
 ```
 
-If `externalImportSpecifiers` contains `foo` the generated bundle will keep that import untouched and still try to load this file resulting in a bundle as below:
+If `externalImportSpecifiers` contains `foo` the generated files will keep that import untouched and still try to load this file resulting in a file as below:
 
-- For bundle using `esmodule` format:
+- For build using `esmodule` format:
 
   ```js
   import { answer } from "foo"
@@ -73,7 +73,7 @@ If `externalImportSpecifiers` contains `foo` the generated bundle will keep that
   export const ask = () => answer
   ```
 
-- For bundle using `systemjs` format
+- For build using `systemjs` format
 
   ```js
   System.register(["foo"], function (exports) {
@@ -93,7 +93,7 @@ If `externalImportSpecifiers` contains `foo` the generated bundle will keep that
   })
   ```
 
-- For bundle using `commonjs` format
+- For build using `commonjs` format
 
   ```js
   const { answer } = require("foo")
@@ -101,7 +101,7 @@ If `externalImportSpecifiers` contains `foo` the generated bundle will keep that
   module.exports.ask = () => answer
   ```
 
-- For bundle using `global` format:
+- For build using `global` format:
 
   ```js
   ;(function (exports, foo) {
@@ -114,12 +114,12 @@ If `externalImportSpecifiers` contains `foo` the generated bundle will keep that
   })({}, foo)
   ```
 
-  It means bundle using `global` format expect `window.foo` or `global.foo` to exists. You can control the expected global variable name using `globals`.
+  It means build using `global` format expect `window.foo` or `global.foo` to exists. You can control the expected global variable name using `globals`.
 
   ```js
-  import { generateGlobalBundle } from "@jsenv/core"
+  import { buildProject } from "@jsenv/core"
 
-  generateGlobalBundle({
+  buildProject({
     externalImportSpecifiers: ["foo"],
     globals: {
       foo: "bar",
@@ -129,7 +129,7 @@ If `externalImportSpecifiers` contains `foo` the generated bundle will keep that
 
 ## minify
 
-`minify` parameter is a boolean controlling if bundle content will be minified to save bytes. This parameter is optional.
+`minify` parameter is a boolean controlling if build files will be minified to save bytes. This parameter is optional.
 
 # Shared parameters
 

@@ -16,9 +16,9 @@
 
 # Presentation
 
-Some syntax are compatible only with a subset of bundle formats. For instance `generateCommonJsBundle` throw an error if it encounters a `top level await`.
+Some syntax are compatible only with a subset of build formats. For instance `commonjs` throw an error if it encounters a `top level await`.
 
-This documents what you can and cannot do when generating bundles.
+This documents what you can and cannot do when building project.
 
 # top level await
 

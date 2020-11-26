@@ -9,8 +9,8 @@
     - [import maps](#import-maps)
     - [top level await](#top-level-await)
 - [Concatenation](#Concatenation)
-- [Bundle for Node.js](#Bundle-for-nodejs)
-- [API](./bundle-api.md)
+- [Build for Node.js](#Build-for-nodejs)
+- [API](./build-api.md)
 
 # Presentation
 
@@ -226,7 +226,7 @@ main.js
           └────── foo.js
 ```
 
-You can generate a first bundle, dependency tree becomes:
+You can generate build files a first time, dependency tree becomes:
 
 ```console
 main-x3rdf.js
@@ -330,6 +330,6 @@ await buildProject({
 })
 ```
 
-# Bundle for Node.js
+# Build for Node.js
 
 TODO
