@@ -21,7 +21,7 @@ const entryPointMap = {
 
 const { bundleMappings } = await generateBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
-  useImportMapForJsBundleUrls: false,
+  useImportMapToImproveLongTermCaching: false,
   jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap,

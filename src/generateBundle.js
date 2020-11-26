@@ -8,6 +8,13 @@ import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { generateBundleUsingRollup } from "./internal/bundling/generateBundleUsingRollup.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
+const FORMAT_ENTRY_POINTS = {
+  commonjs: { "./main.js": "./main.cjs" },
+  systemjs: { "./main.html": "./main.html" },
+  global: { "./main.js": "./main.js" },
+  esmodule: { "./main.html": "./main.html" },
+}
+
 export const generateBundle = async ({
   cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
@@ -39,23 +46,23 @@ export const generateBundle = async ({
         "node_modules/": true,
       }
     : {},
-  useImportMapForJsBundleUrls,
   browser = format === "global" || format === "systemjs" || format === "esmodule",
   node = format === "commonjs",
-  entryPointMap = format === "commonjs"
-    ? { "./index.js": "./main.cjs" }
-    : { "./index.js": "./main.js" },
+  entryPointMap = FORMAT_ENTRY_POINTS[format],
   systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
   globalName,
   globals = {},
   sourcemapExcludeSources = false,
-  preserveEntrySignatures,
-  bundleConcatenation = true,
+
   bundleDirectoryRelativeUrl,
   bundleDirectoryClean = false,
   writeOnFileSystem = true,
   manifestFile = false,
 
+  longTermCaching = true,
+  useImportMapToImproveLongTermCaching = format === "systemjs",
+  preserveEntrySignatures,
+  jsConcatenation = true,
   minify = process.env.NODE_ENV === "production",
   // https://github.com/kangax/html-minifier#options-quick-reference
   minifyHtmlOptions = { collapseWhitespace: true },
@@ -105,6 +112,12 @@ export const generateBundle = async ({
     } else {
       throw new TypeError(
         `unexpected format: ${format}. Must be esmodule, systemjs, commonjs or global.`,
+      )
+    }
+
+    if (!jsConcatenation) {
+      throw new Error(
+        `jsConcatenation cannot be disabled for now. See https://github.com/rollup/rollup/issues/3882`,
       )
     }
 
@@ -179,17 +192,19 @@ export const generateBundle = async ({
         writeOnFileSystem,
 
         format,
-        useImportMapForJsBundleUrls,
         systemJsUrl,
         globalName,
         globals,
         sourcemapExcludeSources,
-        preserveEntrySignatures,
-        bundleConcatenation,
+
         bundleDirectoryUrl,
         bundleDirectoryClean,
         manifestFile,
 
+        longTermCaching,
+        useImportMapToImproveLongTermCaching,
+        preserveEntrySignatures,
+        jsConcatenation,
         minify,
         minifyHtmlOptions,
         minifyJsOptions,

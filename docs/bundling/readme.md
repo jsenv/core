@@ -2,17 +2,19 @@
 
 - [Presentation](#Presentation)
 - [Code example](#Code-example)
+- [Minification](#Minification)
 - [Long term caching](#Long-term-caching)
 - [JavaScript modules](#JavaScript-modules)
   - [SystemJS format](#SystemJS-format)
     - [import maps](#import-maps)
     - [top level await](#top-level-await)
+- [Concatenation](#Concatenation)
 - [Bundle for Node.js](#Bundle-for-nodejs)
 - [API](./bundle-api.md)
 
 # Presentation
 
-A bundle consist into taking one or many input files to generate one or many output files. It creates a step between dev and production where you can perform specific optimizations:
+Bundling consists into taking one or many input files to generate one or many output files. It creates a step between dev and production where you can perform specific optimizations:
 
 - File concatenation to save http request
 - Minify file content to reduce file size
@@ -32,7 +34,7 @@ await generateBundle({
   projectDirectoryUrl: new URL("./", import.meta.url),
   bundleDirectoryRelativeUrl: "dist",
   enryPointMap: {
-    "./index.html": "main.html",
+    "./index.html": "./main.html",
   },
   minify: false,
 })
@@ -84,9 +86,13 @@ await generateBundle({
 
 </details>
 
+# Minification
+
+Minification is enabled by default when `process.env.NODE_ENV` is `"production"` and disabled otherwise. When true js, css, html, importmap, json, svg are minified.
+
 # Long term caching
 
-Long term caching consists into configuring a web server to send a `cache-control` header when serving your files. By doing so the browser will cache the file for the duration configured by the server and won't even ask the server if the file changed for subsequent requests.
+Long term caching consists into configuring a web server to send a `cache-control` header when serving your files. When doing so, browser cache the file for the duration configured by the server and won't even ask the server if the file changed for subsequent requests.
 
 The screenshot belows shows how a 144kB file takes 1ms for the browser to fetch in that scenario.
 
@@ -94,7 +100,7 @@ The screenshot belows shows how a 144kB file takes 1ms for the browser to fetch 
 
 > An article to explain long term caching: https://jakearchibald.com/2016/caching-best-practices/#pattern-1-immutable-content--long-max-age
 
-This is a massive boost in performance but can be tricky to setup because you need to know how and when to invalidate browser cache. Jsenv does this for you by computing a unique url for each file and update any reference to that url accordingly.
+This is a massive boost in performance but can be tricky to setup because you need to know how and when to invalidate browser cache. Jsenv allows you to use long term caching if you want because it computes a unique url for each file and update any reference to that url accordingly.
 
 As you can see in the previous section
 
@@ -124,6 +130,17 @@ body {
 }
 ```
 
+If you don't want to change urls to enable long term caching use `longTermCaching` parameter.
+
+```js
+import { generateBundle } from "@jsenv/core"
+
+await generateBundle({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  longTermCaching: false,
+})
+```
+
 — link to Babel on GitHub: https://github.com/babel/babel<br />
 — link to PostCSS on GitHub: https://github.com/postcss/postcss<br />
 — link to parse5 on GitHub: https://github.com/inikulin/parse5
@@ -134,13 +151,13 @@ JavaScript modules, also called ES modules, refers to the browser support for th
 
 > For a more detailed explanation about JavaScript modules, see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules
 
-By default jsenv generate bundle assuming the browser will support JavaScript modules. But for reasons detailed below you might want to output bundle using the [SystemJS format](#SystemJS-format)
+By default jsenv generate files assuming the browser will support JavaScript modules. But for reasons detailed below you might want to output files using the [SystemJS format](#SystemJS-format)
 
 ## SystemJS format
 
-SystemJS format can be used if you want to use [import maps](#import-maps) or [top level await](#top-level-await) in your codebase.
+If you want any of the benefits of [import maps](#import-maps) and/or [top level await](#top-level-await), you must use SystemJS format until browser supports them natively.
 
-We can slightly change the [Code example](#Code-example) by passing `format: "systemjs"`.
+To use SystemJS format, use `format` parameter
 
 ```js
 import { generateBundle } from "@jsenv/core"
@@ -182,7 +199,7 @@ await generateBundle({
 When using this format the html generated is a bit different:
 
 - `<script type="module">` are transformed into `<script type="systemjs-module">`
-  > This also means bundle becomes compatilbe with browser that does not support `<script type="module"></script>`.
+  > This also means html becomes compatible with browser that does not support `<script type="module"></script>`.
 - `<script type="importmap">` are transformed into `<script type="systemjs-importmap">`
 
 - `<script src="assets/s.min-550cb99a.js"></script>` was injected into `<head>`
@@ -232,7 +249,7 @@ Import maps allows to tell browser exactly which files have changed and reuse th
 </details>
 
 <details>
-  <summary>See details on how importmaps imrpove developer experience</summary>
+  <summary>See details on how import maps improve developer experience</summary>
   The ability to remap import is important to simplify the developper experience when reading and writing imports.
 
 ```js
@@ -241,7 +258,9 @@ import "../../file.js"
 import "src/feature/file.js"
 ```
 
-The following html will become supported by browsers natively:
+This unlock consistent import paths accross the codebase which helps a lot to know where we are. As import maps is a standard, tools (VSCode, ESLint, Webpack, ...) will soon use them too.
+
+The following html will be support natively by browsers:
 
 ```html
 <!DOCTYPE html>
@@ -268,8 +287,6 @@ The following html will become supported by browsers natively:
 
 </details>
 
-If you want any of the benefits of import maps you should use SystemJS format until browser support import maps natively.
-
 — Link to import maps specifications on GitHub: https://github.com/WICG/import-maps
 
 ### top level await
@@ -283,6 +300,35 @@ export default a
 ```
 
 Top level await, depites being useful, is not yet supported by browsers are reported in chrome platform status: https://www.chromestatus.com/feature/5767881411264512. By using SystemJS format it becomes possible to use it right now.
+
+# Concatenation
+
+By default js files are concatenated as much as possible. There is legimitimates reasons to disable this behaviour. Merging `n` files into chunks poses two issues:
+
+- On big project it becomes very hard to know what ends up where.
+  Tools like [webpack bundle analyzer](https://github.com/webpack-contrib/webpack-bundle-analyzer) exists to mitigate this but it's still hard to grasp what is going on.
+- When a file part of a chunk is modified the entire chunk must be recreated. A returning user have to redownload/parse/execute the entire chunk even if you modified only one line in one file.
+
+Disabling concatenation fixes the two issue it creates (of course) but also means browser will have to create an http request per file. Thanks to http2, one connection can be reused to server `n` file meaning concatenation becomes less effective.
+
+> It's still faster for a web browser to donwload/parse/execute one big file than doing the same for 50 tiny files.
+
+I would consider the following before disabling concatenation:
+
+- Is production server compatible with http2 ?
+- Is there a friendly loading experience on the website ? (A loading screen + a progress bar for instance) ?
+- What type of user experience I want to favor: new users or returning users ?
+
+Concatenation cannot be disabled because rollup cannot do that. It should be possible with rollup 3.0 as stated in https://github.com/rollup/rollup/issues/3882. Whenever rollup makes it possible it will become possible to use `jsConcatenation` parameter to disable concatenation.
+
+```js
+import { generateBundle } from "@jsenv/core"
+
+await generateBundle({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  jsConcatenation: false,
+})
+```
 
 # Bundle for Node.js
 

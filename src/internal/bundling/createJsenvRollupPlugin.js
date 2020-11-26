@@ -72,7 +72,8 @@ export const createJsenvRollupPlugin = async ({
   browser,
 
   format,
-  useImportMapForJsBundleUrls = format === "systemjs",
+  longTermCaching,
+  useImportMapToImproveLongTermCaching,
   systemJsUrl,
   minify,
   minifyJsOptions,
@@ -177,7 +178,7 @@ export const createJsenvRollupPlugin = async ({
 
   const emitAsset = ({ source, fileName }) => {
     const bundleRelativeUrl = fileName
-    if (useImportMapForJsBundleUrls) {
+    if (useImportMapToImproveLongTermCaching || !longTermCaching) {
       fileName = rollupFileNameWithoutHash(bundleRelativeUrl)
     } else {
       fileName = bundleRelativeUrl
@@ -325,11 +326,11 @@ export const createJsenvRollupPlugin = async ({
                   }
 
                   // force the presence of a fake+inline+empty importmap script
-                  // if html contains no importmap and we useImportMapForJsBundleUrls
+                  // if html contains no importmap and we useImportMapToImproveLongTermCaching
                   // this inline importmap will be transformed later to have top level remapping
                   // required to target hashed js urls
                   const injectImportMapScriptIfNeeded = (htmlAst) => {
-                    if (!useImportMapForJsBundleUrls) {
+                    if (!useImportMapToImproveLongTermCaching) {
                       return
                     }
                     if (findFirstImportmapNode(htmlAst)) {
@@ -353,7 +354,7 @@ export const createJsenvRollupPlugin = async ({
                   return htmlAst
                 },
                 transformImportmapTarget: (importmapTarget) => {
-                  if (!useImportMapForJsBundleUrls) {
+                  if (!useImportMapToImproveLongTermCaching) {
                     return
                   }
                   injectImportedFilesIntoImportMapTarget(
@@ -572,7 +573,7 @@ export const createJsenvRollupPlugin = async ({
       return urlToUrlForRollup(importUrl)
     },
 
-    ...(useImportMapForJsBundleUrls
+    ...(format === "systemjs"
       ? {
           resolveFileUrl: ({ fileName }) => {
             return `System.resolve("./${fileName}", module.meta.url)`
@@ -617,9 +618,10 @@ export const createJsenvRollupPlugin = async ({
       const outputExtension = extension === ".html" ? ".js" : extension
 
       outputOptions.entryFileNames = `[name]${outputExtension}`
-      outputOptions.chunkFileNames = useImportMapForJsBundleUrls
-        ? `[name]${outputExtension}`
-        : `[name]-[hash]${outputExtension}`
+      outputOptions.chunkFileNames =
+        useImportMapToImproveLongTermCaching || !longTermCaching
+          ? `[name]${outputExtension}`
+          : `[name]-[hash]${outputExtension}`
 
       // rollup does not expects to have http dependency in the mix: fix them
       outputOptions.sourcemapPathTransform = (relativePath, sourcemapPath) => {
@@ -683,7 +685,7 @@ export const createJsenvRollupPlugin = async ({
         if (file.type === "chunk") {
           let bundleRelativeUrl
           const canBeHashed = file.facadeModuleId in jsModulesInHtml || !file.isEntry
-          if (useImportMapForJsBundleUrls) {
+          if (longTermCaching && useImportMapToImproveLongTermCaching) {
             if (canBeHashed) {
               bundleRelativeUrl = computeBundleRelativeUrl(
                 resolveUrl(fileName, bundleDirectoryUrl),
@@ -724,9 +726,10 @@ export const createJsenvRollupPlugin = async ({
         })
         const file = jsBundle[bundleRelativeUrl]
         const sourceAfterTransformation = file.code
-        const fileName = useImportMapForJsBundleUrls
-          ? bundleRelativeUrlToFileName(bundleRelativeUrl)
-          : bundleRelativeUrl
+        const fileName =
+          useImportMapToImproveLongTermCaching || !longTermCaching
+            ? bundleRelativeUrlToFileName(bundleRelativeUrl)
+            : bundleRelativeUrl
 
         logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
         rollupChunkReadyCallbackMap[key]({
@@ -1186,7 +1189,9 @@ const injectImportedFilesIntoImportMapTarget = (importmapTarget, importMapToInje
 
   const importMap = composeTwoImportMaps(importMapOriginal, importMapToInject)
   importmapTarget.updateOnceReady({
-    sourceAfterTransformation: minify ? JSON.stringify(importMap) : JSON.stringify(importMap, null, '  '),
+    sourceAfterTransformation: minify
+      ? JSON.stringify(importMap)
+      : JSON.stringify(importMap, null, "  "),
   })
 }
 
