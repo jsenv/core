@@ -37,7 +37,7 @@ import { showSourceLocation } from "./showSourceLocation.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { createCompositeAssetHandler } from "./compositeAsset.js"
-import { computeBundleRelativeUrl } from "./computeBundleRelativeUrl.js"
+import { computeBuildRelativeUrl } from "./computeBuildRelativeUrl.js"
 import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
 
 import { parseHtmlAsset } from "./html/parseHtmlAsset.js"
@@ -95,33 +95,33 @@ export const createJsenvRollupPlugin = async ({
     projectDirectoryUrl,
   )
 
-  // map fileName (bundle relative urls without hash) to bundle relative url
+  // map fileName (build relative urls without hash) to build relative url
   let buildManifest = {}
-  const fileNameToBundleRelativeUrl = (fileName) => {
+  const fileNameToBuildRelativeUrl = (fileName) => {
     if (fileName in buildManifest) {
       return buildManifest[fileName]
     }
     return null
   }
-  const bundleRelativeUrlToFileName = (bundleRelativeUrl) => {
+  const buildRelativeUrlToFileName = (buildRelativeUrl) => {
     const fileName = Object.keys(buildManifest).find(
-      (key) => buildManifest[key] === bundleRelativeUrl,
+      (key) => buildManifest[key] === buildRelativeUrl,
     )
     return fileName
   }
-  const addFileNameMapping = (fileName, bundleRelativeUrl) => {
-    buildManifest[fileName] = bundleRelativeUrl
+  const addFileNameMapping = (fileName, buildRelativeUrl) => {
+    buildManifest[fileName] = buildRelativeUrl
   }
-  const bundleRelativeUrlsUsedInJs = []
-  const markBundleRelativeUrlAsUsedByJs = (bundleRelativeUrl) => {
-    bundleRelativeUrlsUsedInJs.push(bundleRelativeUrl)
+  const buildRelativeUrlsUsedInJs = []
+  const markBuildRelativeUrlAsUsedByJs = (buildRelativeUrl) => {
+    buildRelativeUrlsUsedInJs.push(buildRelativeUrl)
   }
   const createImportMapForFilesUsedInJs = () => {
     const topLevelMappings = {}
-    bundleRelativeUrlsUsedInJs.sort(comparePathnames).forEach((bundleRelativeUrl) => {
-      const fileName = bundleRelativeUrlToFileName(bundleRelativeUrl)
-      if (fileName !== bundleRelativeUrl) {
-        topLevelMappings[`./${fileName}`] = `./${bundleRelativeUrl}`
+    buildRelativeUrlsUsedInJs.sort(comparePathnames).forEach((buildRelativeUrl) => {
+      const fileName = buildRelativeUrlToFileName(buildRelativeUrl)
+      if (fileName !== buildRelativeUrl) {
+        topLevelMappings[`./${fileName}`] = `./${buildRelativeUrl}`
       }
     })
     return {
@@ -130,12 +130,12 @@ export const createJsenvRollupPlugin = async ({
   }
 
   let buildMappings = {}
-  // a clean rollup bundle where keys are bundle relative urls
+  // an object where keys are build relative urls
   // and values rollup chunk or asset
   // we need this because we sometimes tell rollup
   // that a file.fileName is something while it's not really this
   // because of remapping
-  let rollupBundle
+  let rollupBuild
 
   const compileServerOriginForRollup = String(
     new URL(STATIC_COMPILE_SERVER_AUTHORITY, compileServerOrigin),
@@ -177,13 +177,13 @@ export const createJsenvRollupPlugin = async ({
   let importMap
 
   const emitAsset = ({ source, fileName }) => {
-    const bundleRelativeUrl = fileName
+    const buildRelativeUrl = fileName
     if (useImportMapToImproveLongTermCaching || !longTermCaching) {
-      fileName = rollupFileNameWithoutHash(bundleRelativeUrl)
+      fileName = rollupFileNameWithoutHash(buildRelativeUrl)
     } else {
-      fileName = bundleRelativeUrl
+      fileName = buildRelativeUrl
     }
-    addFileNameMapping(fileName, bundleRelativeUrl)
+    addFileNameMapping(fileName, buildRelativeUrl)
 
     return emitFile({
       type: "asset",
@@ -210,10 +210,10 @@ export const createJsenvRollupPlugin = async ({
       await Promise.all(
         Object.keys(entryPointMap).map(async (key) => {
           const entryProjectUrl = resolveUrl(key, projectDirectoryUrl)
-          const entryBundleUrl = resolveUrl(entryPointMap[key], buildDirectoryUrl)
+          const entryBuildUrl = resolveUrl(entryPointMap[key], buildDirectoryUrl)
 
           const entryProjectRelativeUrl = urlToRelativeUrl(entryProjectUrl, projectDirectoryUrl)
-          const entryBundleRelativeUrl = urlToRelativeUrl(entryBundleUrl, buildDirectoryUrl)
+          const entryBuildRelativeUrl = urlToRelativeUrl(entryBuildUrl, buildDirectoryUrl)
 
           const entryServerUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
           const entryCompiledUrl = resolveUrl(entryProjectRelativeUrl, compileDirectoryRemoteUrl)
@@ -260,7 +260,7 @@ export const createJsenvRollupPlugin = async ({
             entryPointsPrepared.push({
               entryContentType,
               entryProjectRelativeUrl,
-              entryBundleRelativeUrl,
+              entryBuildRelativeUrl,
               entrySource: htmlSource,
             })
           } else if (
@@ -270,13 +270,13 @@ export const createJsenvRollupPlugin = async ({
             entryPointsPrepared.push({
               entryContentType: "application/javascript",
               entryProjectRelativeUrl,
-              entryBundleRelativeUrl,
+              entryBuildRelativeUrl,
             })
           } else {
             entryPointsPrepared.push({
               entryContentType,
               entryProjectRelativeUrl,
-              entryBundleRelativeUrl,
+              entryBuildRelativeUrl,
               entrySource: Buffer.from(await entryResponse.arrayBuffer()),
             })
           }
@@ -286,7 +286,7 @@ export const createJsenvRollupPlugin = async ({
 
       // rollup will yell at us telling we did not provide an input option
       // if we provide only an html file without any script type module in it
-      // but this can be desired to produce a bundle with only assets (html, css, images)
+      // but this can be desired to produce a build with only assets (html, css, images)
       // without any js
       // we emit an empty chunk, discards rollup warning about it and we manually remove
       // this chunk in buildProject hook
@@ -451,7 +451,7 @@ export const createJsenvRollupPlugin = async ({
             } else {
               target.connect(async () => {
                 await target.getReadyPromise()
-                const { sourceAfterTransformation, bundleRelativeUrl } = target
+                const { sourceAfterTransformation, buildRelativeUrl } = target
 
                 if (target.isInline) {
                   return {}
@@ -459,13 +459,13 @@ export const createJsenvRollupPlugin = async ({
 
                 logger.debug(`emit asset for ${shortenUrl(target.url)}`)
 
-                const fileName = bundleRelativeUrl
+                const fileName = buildRelativeUrl
                 const rollupReferenceId = emitAsset({
                   source: sourceAfterTransformation,
                   fileName,
                 })
 
-                logger.debug(`${shortenUrl(target.url)} ready -> ${bundleRelativeUrl}`)
+                logger.debug(`${shortenUrl(target.url)} ready -> ${buildRelativeUrl}`)
                 return { rollupReferenceId }
               })
             }
@@ -480,7 +480,7 @@ export const createJsenvRollupPlugin = async ({
           async ({
             entryContentType,
             entryProjectRelativeUrl,
-            entryBundleRelativeUrl,
+            entryBuildRelativeUrl,
             entrySource,
           }) => {
             if (entryContentType === "text/html") {
@@ -488,23 +488,23 @@ export const createJsenvRollupPlugin = async ({
               await compositeAssetHandler.createReferenceForAssetEntry(entryUrl, {
                 entryContentType,
                 entryProjectRelativeUrl,
-                entryBundleRelativeUrl,
+                entryBuildRelativeUrl,
                 entrySource,
               })
             } else if (entryContentType === "application/javascript") {
               atleastOneChunkEmitted = true
               emitChunk({
                 id: ensureRelativeUrlNotation(entryProjectRelativeUrl),
-                name: entryBundleRelativeUrl,
+                name: entryBuildRelativeUrl,
                 // don't hash js entry points
-                fileName: entryBundleRelativeUrl,
+                fileName: entryBuildRelativeUrl,
               })
             } else {
               const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
               await compositeAssetHandler.createReferenceForAssetEntry(entryUrl, {
                 entryContentType,
                 entryProjectRelativeUrl,
-                entryBundleRelativeUrl,
+                entryBuildRelativeUrl,
                 entrySource,
               })
             }
@@ -674,37 +674,37 @@ export const createJsenvRollupPlugin = async ({
       }
     },
 
-    async buildProject(outputOptions, bundleForRollup) {
-      const jsBundle = {}
-      Object.keys(bundleForRollup).forEach((fileName) => {
-        const file = bundleForRollup[fileName]
+    async buildProject(outputOptions, rollupResult) {
+      const jsBuild = {}
+      Object.keys(rollupResult).forEach((fileName) => {
+        const file = rollupResult[fileName]
         if (file.type === "chunk" && file.facadeModuleId === EMPTY_CHUNK_URL) {
           return
         }
 
         if (file.type === "chunk") {
-          let bundleRelativeUrl
+          let buildRelativeUrl
           const canBeHashed = file.facadeModuleId in jsModulesInHtml || !file.isEntry
           if (longTermCaching && useImportMapToImproveLongTermCaching) {
             if (canBeHashed) {
-              bundleRelativeUrl = computeBundleRelativeUrl(
+              buildRelativeUrl = computeBuildRelativeUrl(
                 resolveUrl(fileName, buildDirectoryUrl),
                 file.code,
                 `[name]-[hash][extname]`,
               )
             } else {
-              bundleRelativeUrl = fileName
+              buildRelativeUrl = fileName
             }
           } else {
-            bundleRelativeUrl = fileName
+            buildRelativeUrl = fileName
             fileName = rollupFileNameWithoutHash(fileName)
           }
 
           if (canBeHashed) {
-            markBundleRelativeUrlAsUsedByJs(bundleRelativeUrl)
+            markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
           }
-          addFileNameMapping(fileName, bundleRelativeUrl)
-          jsBundle[bundleRelativeUrl] = file
+          addFileNameMapping(fileName, buildRelativeUrl)
+          jsBuild[buildRelativeUrl] = file
         }
       })
 
@@ -719,54 +719,54 @@ export const createJsenvRollupPlugin = async ({
       // et mettre a jour leur dépendance vers ce fichier js
       const rollupChunkReadyCallbackMap = compositeAssetHandler.getRollupChunkReadyCallbackMap()
       Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
-        const bundleRelativeUrl = Object.keys(jsBundle).find((bundleRelativeUrlCandidate) => {
-          const file = jsBundle[bundleRelativeUrlCandidate]
+        const buildRelativeUrl = Object.keys(jsBuild).find((buildRelativeUrlCandidate) => {
+          const file = jsBuild[buildRelativeUrlCandidate]
           const { facadeModuleId } = file
           return facadeModuleId && urlToServerUrl(facadeModuleId) === key
         })
-        const file = jsBundle[bundleRelativeUrl]
+        const file = jsBuild[buildRelativeUrl]
         const sourceAfterTransformation = file.code
         const fileName =
           useImportMapToImproveLongTermCaching || !longTermCaching
-            ? bundleRelativeUrlToFileName(bundleRelativeUrl)
-            : bundleRelativeUrl
+            ? buildRelativeUrlToFileName(buildRelativeUrl)
+            : buildRelativeUrl
 
         logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
         rollupChunkReadyCallbackMap[key]({
           sourceAfterTransformation,
-          bundleRelativeUrl,
+          buildRelativeUrl,
           fileName,
         })
       })
       // wait html files to be emitted
       await compositeAssetHandler.getAllAssetEntryEmittedPromise()
 
-      const assetBundle = {}
-      const bundleRelativeUrlsToClean = compositeAssetHandler.getBundleRelativeUrlsToClean()
-      Object.keys(bundleForRollup).forEach((fileName) => {
-        const file = bundleForRollup[fileName]
+      const assetBuild = {}
+      const buildRelativeUrlsToClean = compositeAssetHandler.getBuildRelativeUrlsToClean()
+      Object.keys(rollupResult).forEach((fileName) => {
+        const file = rollupResult[fileName]
         if (file.type !== "asset") {
           return
         }
 
-        const bundleRelativeUrl = fileNameToBundleRelativeUrl(fileName)
+        const buildRelativeUrl = fileNameToBuildRelativeUrl(fileName)
         // ignore potential useless assets which happens when:
         // - sourcemap re-emitted
-        // - importmap re-emitted to have bundleRelativeUrlMap
-        if (bundleRelativeUrlsToClean.includes(bundleRelativeUrl)) {
+        // - importmap re-emitted to have buildRelativeUrlMap
+        if (buildRelativeUrlsToClean.includes(buildRelativeUrl)) {
           return
         }
 
-        assetBundle[bundleRelativeUrl] = file
+        assetBuild[buildRelativeUrl] = file
       })
 
-      rollupBundle = {
-        ...jsBundle,
-        ...assetBundle,
+      rollupBuild = {
+        ...jsBuild,
+        ...assetBuild,
       }
 
-      Object.keys(rollupBundle).forEach((bundleRelativeUrl) => {
-        const file = rollupBundle[bundleRelativeUrl]
+      Object.keys(rollupBuild).forEach((buildRelativeUrl) => {
+        const file = rollupBuild[buildRelativeUrl]
 
         if (file.type === "chunk") {
           const id = file.facadeModuleId
@@ -776,26 +776,26 @@ export const createJsenvRollupPlugin = async ({
               originalProjectUrl,
               projectDirectoryUrl,
             )
-            buildMappings[originalProjectRelativeUrl] = bundleRelativeUrl
+            buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
           } else {
             const sourcePath = file.map.sources[file.map.sources.length - 1]
-            const fileBundleUrl = resolveUrl(file.fileName, buildDirectoryUrl)
-            const originalProjectUrl = resolveUrl(sourcePath, fileBundleUrl)
+            const fileBuildUrl = resolveUrl(file.fileName, buildDirectoryUrl)
+            const originalProjectUrl = resolveUrl(sourcePath, fileBuildUrl)
             const originalProjectRelativeUrl = urlToRelativeUrl(
               originalProjectUrl,
               projectDirectoryUrl,
             )
-            buildMappings[originalProjectRelativeUrl] = bundleRelativeUrl
+            buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
           }
         } else {
-          const assetUrl = compositeAssetHandler.findAssetUrlByBundleRelativeUrl(bundleRelativeUrl)
+          const assetUrl = compositeAssetHandler.findAssetUrlByBuildRelativeUrl(buildRelativeUrl)
           if (assetUrl) {
             const originalProjectUrl = urlToOriginalProjectUrl(assetUrl)
             const originalProjectRelativeUrl = urlToRelativeUrl(
               originalProjectUrl,
               projectDirectoryUrl,
             )
-            buildMappings[originalProjectRelativeUrl] = bundleRelativeUrl
+            buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
           } else {
             // the asset does not exists in the project it was generated during building
             // ici il est possible de trouver un asset ayant été redirigé ailleurs (sourcemap)
@@ -803,7 +803,7 @@ export const createJsenvRollupPlugin = async ({
         }
       })
 
-      rollupBundle = sortObjectByPathnames(rollupBundle)
+      rollupBuild = sortObjectByPathnames(rollupBuild)
       buildManifest = sortObjectByPathnames(buildManifest)
       buildMappings = sortObjectByPathnames(buildMappings)
 
@@ -812,39 +812,36 @@ export const createJsenvRollupPlugin = async ({
         await writeFile(manifestFileUrl, JSON.stringify(buildManifest, null, "  "))
       }
 
-      logger.info(formatBundleGeneratedLog(rollupBundle))
+      logger.info(formatBuildGeneratedLog(rollupBuild))
 
       if (writeOnFileSystem) {
         await Promise.all(
-          Object.keys(rollupBundle).map(async (bundleRelativeUrl) => {
-            const file = rollupBundle[bundleRelativeUrl]
-            const fileBundleUrl = resolveUrl(bundleRelativeUrl, buildDirectoryUrl)
+          Object.keys(rollupBuild).map(async (buildRelativeUrl) => {
+            const file = rollupBuild[buildRelativeUrl]
+            const fileBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
 
             if (file.type === "chunk") {
               let fileCode = file.code
               if (file.map) {
-                const sourcemapBundleRelativeUrl = `${bundleRelativeUrl}.map`
-                if (sourcemapBundleRelativeUrl in rollupBundle === false) {
-                  const sourcemapBundleUrl = resolveUrl(
-                    sourcemapBundleRelativeUrl,
-                    buildDirectoryUrl,
-                  )
+                const sourcemapBuildRelativeUrl = `${buildRelativeUrl}.map`
+                if (sourcemapBuildRelativeUrl in rollupBuild === false) {
+                  const sourcemapBuildUrl = resolveUrl(sourcemapBuildRelativeUrl, buildDirectoryUrl)
                   const fileSourcemapString = JSON.stringify(file.map, null, "  ")
-                  await writeFile(sourcemapBundleUrl, fileSourcemapString)
+                  await writeFile(sourcemapBuildUrl, fileSourcemapString)
 
-                  const sourcemapBundleUrlRelativeToFileBundleUrl = urlToRelativeUrl(
-                    sourcemapBundleUrl,
-                    fileBundleUrl,
+                  const sourcemapBuildUrlRelativeToFileBuildUrl = urlToRelativeUrl(
+                    sourcemapBuildUrl,
+                    fileBuildUrl,
                   )
                   fileCode = setJavaScriptSourceMappingUrl(
                     fileCode,
-                    sourcemapBundleUrlRelativeToFileBundleUrl,
+                    sourcemapBuildUrlRelativeToFileBuildUrl,
                   )
                 }
               }
-              await writeFile(fileBundleUrl, fileCode)
+              await writeFile(fileBuildUrl, fileCode)
             } else {
-              await writeFile(fileBundleUrl, file.source)
+              await writeFile(fileBuildUrl, file.source)
             }
           }),
         )
@@ -1020,7 +1017,7 @@ export const createJsenvRollupPlugin = async ({
       },
     )
     const importTarget = importReference.target
-    markBundleRelativeUrlAsUsedByJs(importTarget.bundleRelativeUrl)
+    markBuildRelativeUrlAsUsedByJs(importTarget.buildRelativeUrl)
     const content = importTarget.isInline
       ? `export default ${getTargetAsBase64Url(importTarget)}`
       : `export default import.meta.ROLLUP_FILE_URL_${importTarget.rollupReferenceId}`
@@ -1060,7 +1057,7 @@ export const createJsenvRollupPlugin = async ({
     jsenvRollupPlugin,
     getResult: () => {
       return {
-        rollupBundle,
+        rollupBuild,
         urlResponseBodyMap,
         buildMappings,
         buildManifest,
@@ -1144,15 +1141,15 @@ const fetchAndNormalizeImportmap = async (importmapUrl, { allow404 = false } = {
   return importmapNormalized
 }
 
-const formatBundleGeneratedLog = (bundle) => {
-  const assetFilenames = Object.keys(bundle)
-    .filter((key) => bundle[key].type === "asset")
-    .map((key) => bundle[key].fileName)
+const formatBuildGeneratedLog = (build) => {
+  const assetFilenames = Object.keys(build)
+    .filter((key) => build[key].type === "asset")
+    .map((key) => build[key].fileName)
   const assetCount = assetFilenames.length
 
-  const chunkFilenames = Object.keys(bundle)
-    .filter((key) => bundle[key].type === "chunk")
-    .map((key) => bundle[key].fileName)
+  const chunkFilenames = Object.keys(build)
+    .filter((key) => build[key].type === "chunk")
+    .map((key) => build[key].fileName)
   const chunkCount = chunkFilenames.length
 
   const assetDescription =
@@ -1162,7 +1159,7 @@ const formatBundleGeneratedLog = (bundle) => {
     // eslint-disable-next-line no-nested-ternary
     chunkCount === 0 ? "" : chunkCount === 1 ? "1 chunk" : `${chunkCount} chunks`
 
-  return createDetailedMessage(`bundle generated`, {
+  return createDetailedMessage(`build generated`, {
     ...(assetDescription ? { [assetDescription]: assetFilenames } : {}),
     ...(chunkDescription ? { [chunkDescription]: chunkFilenames } : {}),
   })
