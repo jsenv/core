@@ -623,7 +623,6 @@ export const createJsenvRollupPlugin = async ({
           ? `[name]${outputExtension}`
           : `[name]-[hash]${outputExtension}`
 
-
       // rollup does not expects to have http dependency in the mix: fix them
       outputOptions.sourcemapPathTransform = (relativePath, sourcemapPath) => {
         const sourcemapUrl = fileSystemPathToUrl(sourcemapPath)
@@ -686,7 +685,7 @@ export const createJsenvRollupPlugin = async ({
         if (file.type === "chunk") {
           let bundleRelativeUrl
           const canBeHashed = file.facadeModuleId in jsModulesInHtml || !file.isEntry
-          if (longTermCaching) {
+          if (longTermCaching && useImportMapToImproveLongTermCaching) {
             if (canBeHashed) {
               bundleRelativeUrl = computeBundleRelativeUrl(
                 resolveUrl(fileName, bundleDirectoryUrl),
