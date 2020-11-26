@@ -10,9 +10,9 @@ Execute JavaScript on multiple environments for testing.
 # Table of contents
 
 - [Presentation](#Presentation)
-- [Example](#Example)
-  - [Executing tests](#Executing-tests)
-  - [Writing tests](#Writing-tests)
+- [Exploring](#Exploring)
+- [Building](#Building)
+- [Testing](#Testing)
 - [Installation](#Installation)
 - [Configuration](#Configuration)
   - [jsenv.config.js](#jsenvconfigjs)
@@ -24,24 +24,26 @@ Execute JavaScript on multiple environments for testing.
 
 # Presentation
 
-`@jsenv/core` is a test runner. It focuses on executing many files in parallel and report how it goes.
+`@jsenv/core` was first created to be able to write tests that could be executed in different browsers and even Node.js. As a result it is a tool capable to execute js inside browsers and Node.js.
 
-![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
+`@jsenv/core` cover core needs of a JavaScript project:
 
-It's main characteristics are:
+- A developer friendly environment with livereloading
+- A function to build files for production when you're done developing
+- A function to run your test files for non regression.
 
-- Can execute html files in browsers (chromium, firefox, webkit)
-- Can execute js files in Node.js
-- Easy to debug single file
-- Framework agnostic: can be configured to run jsx, typescript and more.
-- Can generate coverage from all executions
-- Rely on top level await to test asynchronous code
+> Note that it can be used only as a test runner. Or only to build files for production. However using it entirely is simpler for you, prefer this if you can.
 
-# Example
+Jsenv integrates seamlessly with standard html, css and js. It can be configured to work with things that are not part of web standards such as TypeScript or React.
+
+# Testing
+
+Testing can be described as: executing many files in parallel and report how it goes.
+
+<details>
+  <summary>Math.max.test.html</summary>
 
 > In order to show code unrelated to a specific codebase the example below is testing `Math.max`. In reality you wouldn't test `Math.max`.
-
-`Math.max.test.html`
 
 ```html
 <!DOCTYPE html>
@@ -62,11 +64,10 @@ It's main characteristics are:
 </html>
 ```
 
-## Executing tests
+</details>
 
-Let's create a script that will execute `Math.max.test.html` in chromium and firefox.
-
-`execute-test-plan.js`
+<details>
+  <summary>execute-test-plan.js</summary>
 
 ```js
 import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
@@ -86,21 +87,22 @@ executeTestPlan({
 })
 ```
 
-```console
-node ./execute-test-plan.js
-```
+</details>
 
 ![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
 
-As shown by the logs jsenv has launched chromium and firefox and executed `Math.max.test.html`. Check [testing](./docs/testing/readme.md) for detailed documentation around `executeTestPlan`.
+Read more on [testing documentation](./docs/testing/readme.md)
 
-## Writing tests
+# Exploring
 
-Jsenv also helps to write tests using a development server to execute test in isolation and one at a time. It comes with livereloading and a toolbar.
+Exploring can be described as: starting an environment helping to develop faster on 1 or many html files thanks to livereloading and jsenv toolbar. It can be used to work on test files or your website html file.
 
-The following script would start such server.
+> In other words you have the same experience when you are coding for a test file or your application.
 
-`start-exploring.js`
+You can start this environment by creating a script and executing it with node.
+
+<details>
+  <summary>start-exploring.js</summary>
 
 ```js
 import { startExploring } from "@jsenv/core"
@@ -116,21 +118,22 @@ startExploring({
 })
 ```
 
-```console
-node ./start-exploring.js
-```
+</details>
 
 ![exploring command terminal screenshot](./docs/main/main-example-exploring-terminal.png)
 
-When you open that url in a browser, a page called jsenv exploring index is shown.
+When you open that url in a browser, a page called jsenv exploring index is shown. You can click a file to execute it inside the browser. Clicking `Math.max.test.html` loads an other empty blank page because executing `Math.max.test.html` displays nothing and does not throw.
 
-![jsenv exploring index page screenshot](./docs/main/main-example-exploring-index.png)
+<details>
+    <summary>Exploring screenshots</summary>
 
-You can click a file to execute it inside the browser. Clicking `Math.max.test.html` loads an other page visible in the following image.
+  <img src="./docs/main/main-example-exploring-index.png" alt="jsenv exploring index page screenshot" />
 
 ![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
 
-As shown in the image above there is an empty blank page. It's because executing `Math.max.test.html` displays nothing on the page and execution did not throw. You can ignore the black toolbar at the bottom of the page for now, it is documented later.
+> You can ignore the black toolbar at the bottom of the page for now, it is documented later.
+
+</details>
 
 If you update `Math.max.test.html` to make it fail
 
@@ -139,13 +142,16 @@ If you update `Math.max.test.html` to make it fail
 + const expected = 3
 ```
 
-The browser page is reloaded. Now page displays the failure.
+The browser page is reloaded and page displays the failure. Jsenv also uses [Notification API](https://developer.mozilla.org/en-US/docs/Web/API/Notification) to display a system notification.
+
+<details>
+    <summary>Failure screenshot</summary>
 
 ![test file failing page screenshot](./docs/main/main-example-exploring-failing.png)
 
-Jsenv also uses [Notification API](https://developer.mozilla.org/en-US/docs/Web/API/Notification) to display a system notification.
-
 ![test file failing notification screenshot](./docs/main/main-example-failing-notif.png)
+
+</details>
 
 If you revert you changes
 
@@ -154,13 +160,90 @@ If you revert you changes
 + const expected = 4
 ```
 
-Browser livereloads again and you can see error is gone.
+Browser livereloads again and error is gone together with a system notification.
+
+<details>
+    <summary>Fixed screenshot</summary>
 
 ![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
 
-Together with a system notification.
-
 ![test file fixed notification screenshot](./docs/main/main-example-fixed-notif.png)
+
+</details>
+
+Read more [exploring documentation](./docs/exploring/readme.md)
+
+# Building
+
+Building can be described as: generating files optimized for production thanks to minification, concatenation and long term caching.
+
+Jsenv only needs to know your main html file and where to write the builded files. You can create a script and execute it with node. `index.html` will be parsed and optimized for production into `dist/main.html`.
+
+<details>
+  <summary>build-project.js</summary>
+
+```js
+import { buildProject } from "@jsenv/core"
+
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  buildDirectoryRelativeUrl: "dist",
+  enryPointMap: {
+    "./index.html": "./main.html",
+  },
+  minify: false,
+})
+```
+
+</details>
+
+<details>
+  <summary>index.html</summary>
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="./favicon.ico" />
+    <script type="importmap" src="./project.importmap"></script>
+    <link rel="stylesheet" type="text/css" href="./main.css" />
+  </head>
+
+  <body>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
+```
+
+</details>
+
+<details>
+  <summary>dist/main.html</summary>
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="assets/favicon-5340s4789a.ico" />
+    <script type="importmap" src="import-map-b237a334.importmap"></script>
+    <link rel="stylesheet" type="text/css" href="assets/main-3b329ff0.css" />
+  </head>
+
+  <body>
+    <script type="module" src="./main-f7379e10.js"></script>
+  </body>
+</html>
+```
+
+</details>
+
+> To keep example concise, the following files content is not shown: `favicon.ico`, `project.importmap`, `main.css` and `index.js`.
+
+Read more [building documentation](./docs/building/readme.md)
 
 # Installation
 
@@ -254,24 +337,6 @@ See also
 
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
 - [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
-
-# API
-
-- [Testing](./docs/testing/readme.md)
-
-  Executing many files in parallel and report how it goes.
-
-- [Exploring](./docs/exploring/readme.md)
-
-  Start a development server to execute html files, comes with livereloading and jsenv toolbar.
-
-- [Executing](./docs/executing/readme.md)
-
-  Execute html file in a browser or js file in Node.js, can be used to debug within VS Code.
-
-- [Building](./docs/building/readme.md)
-
-  Generate files compatible with browsers and Node.js.
 
 # See also
 

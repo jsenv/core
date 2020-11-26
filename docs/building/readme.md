@@ -1,7 +1,6 @@
 # Table of contents
 
 - [Presentation](#Presentation)
-- [Code example](#Code-example)
 - [Minification](#Minification)
 - [Long term caching](#Long-term-caching)
 - [JavaScript modules](#JavaScript-modules)
@@ -22,69 +21,6 @@ Building consists into taking one or many input files to generate one or many ou
 - Transform file content to support more execution environments (old browsers for instance)
 
 Building for the web means generating files that will be executed by a web browser (Chrome, Firefox, and so on). To do that provide your main html file to a function called `buildProject`. It will collect all the files used directly or indirectly by the html file. Once all the files are known they are eventually minified, concatened and file urls are replaced with a unique url identifier to enable long term caching.
-
-# Code example
-
-In practice you pass a `main.html` and `buildProject` writes a file in `dist/main.html`.
-
-```js
-import { buildProject } from "@jsenv/core"
-
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  buildDirectoryRelativeUrl: "dist",
-  enryPointMap: {
-    "./index.html": "./main.html",
-  },
-  minify: false,
-})
-```
-
-> To keep example concise, the following files content is not shown: `favicon.ico`, `project.importmap`, `main.css` and `index.js`.
-
-<details>
-  <summary>index.html</summary>
-
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="./favicon.ico" />
-    <script type="importmap" src="./project.importmap"></script>
-    <link rel="stylesheet" type="text/css" href="./main.css" />
-  </head>
-
-  <body>
-    <script type="module" src="./main.js"></script>
-  </body>
-</html>
-```
-
-</details>
-
-<details>
-  <summary>dist/main.html</summary>
-
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="assets/favicon-5340s4789a.ico" />
-    <script type="importmap" src="import-map-b237a334.importmap"></script>
-    <link rel="stylesheet" type="text/css" href="assets/main-3b329ff0.css" />
-  </head>
-
-  <body>
-    <script type="module" src="./main-f7379e10.js"></script>
-  </body>
-</html>
-```
-
-</details>
 
 # Minification
 
