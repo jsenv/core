@@ -123,11 +123,11 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
       }
     }
     if (request.ressource === "/.jsenv/toolbar.main.js") {
-      const jsenvToolbarJsBundleServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}`
+      const jsenvToolbarJsBuildServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}`
       return {
         status: 307,
         headers: {
-          location: jsenvToolbarJsBundleServerUrl,
+          location: jsenvToolbarJsBuildServerUrl,
         },
       }
     }
@@ -137,20 +137,20 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
     // we could also inline sourcemap but it's not yet possible
     // inside buildProject
     if (request.ressource === "/.jsenv/jsenv-toolbar.js.map") {
-      const jsenvToolbarJsBundleSourcemapServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}.map`
+      const jsenvToolbarJsBuildSourcemapServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}.map`
       return {
         status: 307,
         headers: {
-          location: jsenvToolbarJsBundleSourcemapServerUrl,
+          location: jsenvToolbarJsBuildSourcemapServerUrl,
         },
       }
     }
     if (request.ressource === "/.jsenv/exploring.redirector.js") {
-      const jsenvExploringRedirectorBundleServerUrl = `${request.origin}/${jsenvExploringRedirectorJsBuildRelativeUrlForProject}`
+      const jsenvExploringRedirectorBuildServerUrl = `${request.origin}/${jsenvExploringRedirectorJsBuildRelativeUrlForProject}`
       return {
         status: 307,
         headers: {
-          location: jsenvExploringRedirectorBundleServerUrl,
+          location: jsenvExploringRedirectorBuildServerUrl,
         },
       }
     }

@@ -6,7 +6,7 @@ import { assert } from "@jsenv/assert"
 import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl, writeFile } from "@jsenv/util"
 import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
+import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {
   GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
@@ -47,7 +47,7 @@ await writeFile(
 )
 await generate()
 
-const { namespace: actual } = await requireCommonJsBundle({
+const { namespace: actual } = await requireCommonJsBuild({
   ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
   buildDirectoryRelativeUrl,
 })

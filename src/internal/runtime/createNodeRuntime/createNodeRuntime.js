@@ -1,6 +1,6 @@
 import { normalizeImportMap } from "@jsenv/import-map"
 import { uneval } from "@jsenv/uneval"
-// do not use memoize from @jsenv/util to avoid pulling @jsenv/util code into the node bundle
+// do not use memoize from @jsenv/util to avoid pulling @jsenv/util code into the node build
 import { memoize } from "../../memoize.js"
 import { fetchUrl } from "../../fetchUrl.js"
 import { fetchSource } from "./fetchSource.js"

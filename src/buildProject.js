@@ -212,7 +212,7 @@ export const buildProject = async ({
       })
       return result
     } finally {
-      compileServer.stop("bundle generated")
+      compileServer.stop("build generated")
     }
   })
 }

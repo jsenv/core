@@ -108,7 +108,7 @@ const useRollup = async ({
 }) => {
   const { rollup } = require("rollup")
 
-  logger.info(`parse bundle
+  logger.info(`start parsing project files...
 --- entry point map ---
 ${JSON.stringify(entryPointMap, null, "  ")}`)
 
