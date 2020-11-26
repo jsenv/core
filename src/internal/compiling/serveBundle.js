@@ -8,8 +8,8 @@ import {
 } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_BUILD_GLOBAL_FILES, COMPILE_ID_BUILD_COMMONJS_FILES } from "../CONSTANTS.js"
-import { generateBundleUsingRollup } from "../bundling/generateBundleUsingRollup.js"
-import { bundleToCompilationResult } from "../bundling/bundleToCompilationResult.js"
+import { generateBundleUsingRollup } from "../building/generateBundleUsingRollup.js"
+import { bundleToCompilationResult } from "../building/bundleToCompilationResult.js"
 import { compileFile } from "./compileFile.js"
 
 export const serveBundle = async ({

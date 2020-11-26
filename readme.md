@@ -269,7 +269,7 @@ See also
 
   Execute html file in a browser or js file in Node.js, can be used to debug within VS Code.
 
-- [Bundling](./docs/bundling/readme.md)
+- [Bundling](./docs/building/readme.md)
 
   Generate bundles compatible with browsers and Node.js.
 

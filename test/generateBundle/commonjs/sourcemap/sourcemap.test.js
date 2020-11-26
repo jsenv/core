@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { bundleToCompilationResult } from "@jsenv/core/src/internal/bundling/bundleToCompilationResult.js"
+import { bundleToCompilationResult } from "@jsenv/core/src/internal/building/bundleToCompilationResult.js"
 import { buildProject } from "@jsenv/core/index.js"
 import { GENERATE_COMMONJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
 

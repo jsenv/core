@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
 import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { parseCssUrls } from "@jsenv/core/src/internal/bundling/css/parseCssUrls.js"
+import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls.js"
 import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
 import {
   GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,

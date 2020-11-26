@@ -5,7 +5,7 @@ import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.
 import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
-import { generateBundleUsingRollup } from "./internal/bundling/generateBundleUsingRollup.js"
+import { generateBundleUsingRollup } from "./internal/building/generateBundleUsingRollup.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 const FORMAT_ENTRY_POINTS = {

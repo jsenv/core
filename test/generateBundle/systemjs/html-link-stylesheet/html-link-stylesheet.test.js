@@ -13,7 +13,7 @@ import {
   findNodeByTagName,
   getHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { parseCssUrls } from "@jsenv/core/src/internal/bundling/css/parseCssUrls.js"
+import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls.js"
 import { GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
