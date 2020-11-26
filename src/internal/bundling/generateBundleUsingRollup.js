@@ -102,7 +102,7 @@ const useRollup = async ({
   globalName,
   sourcemapExcludeSources,
   preserveEntrySignatures,
-  jsConcatenation,
+  // jsConcatenation,
   bundleDirectoryUrl,
   bundleDirectoryClean,
 }) => {
