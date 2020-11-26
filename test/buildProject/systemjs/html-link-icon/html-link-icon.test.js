@@ -25,7 +25,7 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
 
-const { bundleMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -35,7 +35,7 @@ const { bundleMappings } = await buildProject({
 
 const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = bundleMappings[relativeUrl]
+  const bundleRelativeUrl = buildMappings[relativeUrl]
   return bundleRelativeUrl
 }
 

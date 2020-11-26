@@ -8,11 +8,11 @@ import {
 } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_BUILD_GLOBAL_FILES, COMPILE_ID_BUILD_COMMONJS_FILES } from "../CONSTANTS.js"
-import { generateBundleUsingRollup } from "../building/generateBundleUsingRollup.js"
-import { bundleToCompilationResult } from "../building/bundleToCompilationResult.js"
+import { buildUsingRollup } from "../building/buildUsingRollup.js"
+import { buildToCompilationResult } from "../building/buildToCompilationResult.js"
 import { compileFile } from "./compileFile.js"
 
-export const serveBundle = async ({
+export const serveBuild = async ({
   cancellationToken,
   logger,
 
@@ -36,16 +36,16 @@ export const serveBundle = async ({
       format === "global" ? COMPILE_ID_BUILD_GLOBAL_FILES : COMPILE_ID_BUILD_COMMONJS_FILES
 
     const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
-    const bundleRelativeUrl =
+    const buildRelativeUrl =
       format === "commonjs"
         ? `${urlToBasename(originalFileUrl)}.cjs`
         : urlToFilename(originalFileUrl)
 
     const entryPointMap = {
-      [`./${originalFileRelativeUrl}`]: `./${bundleRelativeUrl}`,
+      [`./${originalFileRelativeUrl}`]: `./${buildRelativeUrl}`,
     }
 
-    const bundle = await generateBundleUsingRollup({
+    const build = await buildUsingRollup({
       cancellationToken,
       logger,
 
@@ -71,8 +71,8 @@ export const serveBundle = async ({
 
     const sourcemapFileUrl = `${compiledFileUrl}.map`
 
-    return bundleToCompilationResult(bundle, {
-      mainFileName: bundleRelativeUrl,
+    return buildToCompilationResult(build, {
+      mainFileName: buildRelativeUrl,
       projectDirectoryUrl,
       originalFileUrl,
       compiledFileUrl,

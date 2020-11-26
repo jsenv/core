@@ -13,7 +13,7 @@ import { transformImportmap } from "./transformImportmap.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { compileFile } from "./compileFile.js"
-import { serveBundle } from "./serveBundle.js"
+import { serveBuild } from "./serveBuild.js"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
@@ -148,7 +148,7 @@ export const createCompiledFileService = ({
 
     if (contentType === "application/javascript") {
       if (compileId === COMPILE_ID_BUILD_GLOBAL || compileId === COMPILE_ID_BUILD_COMMONJS) {
-        return serveBundle({
+        return serveBuild({
           cancellationToken,
           logger,
 
@@ -191,7 +191,7 @@ export const createCompiledFileService = ({
             babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
             convertMap,
             transformTopLevelAwait,
-            moduleOutFormat: compileIdIsForBundleFiles(compileId)
+            moduleOutFormat: compileIdIsForBuildFiles(compileId)
               ? // we are compiling for rollup, do not transform into systemjs format
                 "esmodule"
               : moduleOutFormat,
@@ -385,7 +385,7 @@ export const createCompiledFileService = ({
   }
 }
 
-const compileIdIsForBundleFiles = (compileId) => {
+const compileIdIsForBuildFiles = (compileId) => {
   return (
     compileId === COMPILE_ID_BUILD_GLOBAL_FILES || compileId === COMPILE_ID_BUILD_COMMONJS_FILES
   )
@@ -401,7 +401,7 @@ const getWorstCompileId = (groupMap) => {
 const compileIdToBabelPluginMap = (compileId, { babelPluginMap, groupMap }) => {
   let compiledIdForGroupMap
   let babelPluginMapForGroupMap
-  if (compileIdIsForBundleFiles(compileId)) {
+  if (compileIdIsForBuildFiles(compileId)) {
     compiledIdForGroupMap = getWorstCompileId(groupMap)
     babelPluginMapForGroupMap = {}
   } else {

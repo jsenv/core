@@ -9,7 +9,7 @@ import {
   GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
-import { browserImportBundle } from "../browserImportBundle.js"
+import { browserImportBuild } from "../browserImportBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -18,7 +18,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
-const { bundleMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -30,14 +30,14 @@ const { bundleMappings } = await buildProject({
 
 const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = bundleMappings[relativeUrl]
+  const bundleRelativeUrl = buildMappings[relativeUrl]
   return bundleRelativeUrl
 }
 
 const indexRelativeUrl = getBundleRelativeUrl("index.js")
 
 {
-  const { value: actual } = await browserImportBundle({
+  const { value: actual } = await browserImportBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
     mainRelativeUrl: `./${indexRelativeUrl}`,

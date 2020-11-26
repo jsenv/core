@@ -1,7 +1,7 @@
 /**
 
 External urls are left untouched.
-In the case of commonjs bundle it means they becomes
+In the case of commonjs build it means they becomes
 require(url)
 Which ends up in MODULE_NOT_FOUND error
 
@@ -11,7 +11,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { bundleToCompilationResult } from "@jsenv/core/src/internal/building/bundleToCompilationResult.js"
+import { buildToCompilationResult } from "@jsenv/core/src/internal/building/buildToCompilationResult.js"
 import { buildProject } from "@jsenv/core/index.js"
 import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {
@@ -28,7 +28,7 @@ const mainFilename = `${testDirectoryname}.js`
 const mainFileRelativeUrl = `./${testDirectoryRelativeUrl}${mainFilename}`
 const mainFileUrl = resolveUrl("./https.js", import.meta.url)
 
-const bundle = await buildProject({
+const build = await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -40,7 +40,7 @@ const sourcemapFileUrl = resolveUrl(
   `${buildDirectoryRelativeUrl}main.cjs.map`,
   jsenvCoreDirectoryUrl,
 )
-const compilationResult = bundleToCompilationResult(bundle, {
+const compilationResult = buildToCompilationResult(build, {
   projectDirectoryUrl: testDirectoryUrl,
   compiledFileUrl: resolveUrl(`${buildDirectoryRelativeUrl}main.cjs`, jsenvCoreDirectoryUrl),
   sourcemapFileUrl,

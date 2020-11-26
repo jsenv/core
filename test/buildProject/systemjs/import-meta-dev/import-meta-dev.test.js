@@ -12,7 +12,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.js`
 
-const { bundleManifest } = await buildProject({
+const { buildManifest } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -21,7 +21,7 @@ const { bundleManifest } = await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
   },
 })
-const actual = bundleManifest
+const actual = buildManifest
 // assert that dynamic import for dev is treeshaked
 const expected = { "main.js": "main.js" }
 assert({ actual, expected })

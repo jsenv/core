@@ -42,9 +42,9 @@ await buildProject({
   const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
   const answerUrl = resolveUrl("answer.js", testDirectoryUrl)
   const basicUrl = resolveUrl("basic.js", testDirectoryUrl)
-  const sourcemapBundleRelativeUrl = "main.cjs.map"
-  const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, buildDirectoryUrl)
-  const sourcemapString = await readFile(sourcemapBundleUrl)
+  const sourcemapBuildRelativeUrl = "main.cjs.map"
+  const sourcemapBuildUrl = resolveUrl(sourcemapBuildRelativeUrl, buildDirectoryUrl)
+  const sourcemapString = await readFile(sourcemapBuildUrl)
   const actual = JSON.parse(sourcemapString)
   const expected = {
     version: 3,

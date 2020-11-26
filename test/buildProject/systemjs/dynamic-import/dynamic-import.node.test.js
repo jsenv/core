@@ -45,7 +45,7 @@ assert({ actual, expected })
       [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
     },
   })
-  const actual = secondBundle.bundleMappings
-  const expected = bundle.bundleMappings
+  const actual = secondBundle.buildMappings
+  const expected = bundle.buildMappings
   assert({ actual, expected })
 }

@@ -4,7 +4,7 @@ Here the idea is to test that
 
 import htmlText from "./file.html"
 
-works properly inside a bundle but let's keep this in a grey area for now.
+works properly inside a build but let's keep this in a grey area for now.
 -> meaning no documentation nor official support for this
 
 Inside jsenv it would work ok (but html being transformed could be unexpected)

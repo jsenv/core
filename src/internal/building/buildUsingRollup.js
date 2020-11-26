@@ -166,7 +166,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       : {}),
   }
 
-  const rollupBundle = await createOperation({
+  const rollupReturnValue = await createOperation({
     cancellationToken,
     start: () => rollup(rollupInputOptions),
   })
@@ -177,7 +177,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
 
   const rollupOutputArray = await createOperation({
     cancellationToken,
-    start: () => rollupBundle.generate(rollupOutputOptions),
+    start: () => rollupReturnValue.generate(rollupOutputOptions),
   })
 
   return rollupOutputArray

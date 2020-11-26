@@ -9,8 +9,8 @@ import {
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
   NODE_IMPORT_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
-import { browserImportBundle } from "../browserImportBundle.js"
-import { nodeImportBundle } from "../nodeImportBundle.js"
+import { browserImportBuild } from "../browserImportBuild.js"
+import { nodeImportBuild } from "../nodeImportBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -28,7 +28,7 @@ await buildProject({
   },
 })
 {
-  const { value: actual } = await browserImportBundle({
+  const { value: actual } = await browserImportBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
     // headless: false,
@@ -39,7 +39,7 @@ await buildProject({
 }
 // SourceMap added in 13.7, used to test only if we got dynamic import
 if (SourceMap) {
-  const { value: actual } = await nodeImportBundle({
+  const { value: actual } = await nodeImportBuild({
     ...NODE_IMPORT_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
   })

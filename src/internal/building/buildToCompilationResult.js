@@ -11,8 +11,8 @@ import { readFileSync } from "fs"
 import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 
-export const bundleToCompilationResult = (
-  { rollupBundle, urlResponseBodyMap },
+export const buildToCompilationResult = (
+  { rollupBuild, urlResponseBodyMap },
   { mainFileName, projectDirectoryUrl, compiledFileUrl, sourcemapFileUrl },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -29,7 +29,7 @@ export const bundleToCompilationResult = (
   const sourcesContent = []
 
   if (mainFileName === undefined) {
-    mainFileName = Object.keys(rollupBundle).find((key) => rollupBundle[key].isEntry)
+    mainFileName = Object.keys(rollupBuild).find((key) => rollupBuild[key].isEntry)
   }
 
   const trackDependencies = (dependencyMap) => {
@@ -49,7 +49,7 @@ export const bundleToCompilationResult = (
   const assets = []
   const assetsContent = []
 
-  const mainRollupFile = rollupBundle[mainFileName]
+  const mainRollupFile = rollupBuild[mainFileName]
   const mainFile = parseRollupFile(mainRollupFile, {
     urlResponseBodyMap,
     sourcemapFileUrl,
@@ -60,10 +60,10 @@ export const bundleToCompilationResult = (
   assets.push(sourcemapFileUrl)
   assetsContent.push(JSON.stringify(mainFile.sourcemap, null, "  "))
 
-  Object.keys(rollupBundle).forEach((fileName) => {
+  Object.keys(rollupBuild).forEach((fileName) => {
     if (fileName === mainFileName) return
 
-    const rollupFile = rollupBundle[fileName]
+    const rollupFile = rollupBuild[fileName]
     const file = parseRollupFile(rollupFile, {
       urlResponseBodyMap,
       compiledFileUrl,

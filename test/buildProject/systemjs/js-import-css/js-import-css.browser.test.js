@@ -19,7 +19,7 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
 }
 
-const { bundleMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   useImportMapToImproveLongTermCaching: false,
   jsenvDirectoryRelativeUrl,
@@ -30,7 +30,7 @@ const { bundleMappings } = await buildProject({
 
 const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = bundleMappings[relativeUrl]
+  const bundleRelativeUrl = buildMappings[relativeUrl]
   return bundleRelativeUrl
 }
 const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")

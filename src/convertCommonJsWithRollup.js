@@ -49,7 +49,7 @@ export const convertCommonJsWithRollup = async ({
 
   const commonJsRollupPlugin = commonjs()
 
-  const rollupBundle = await rollup({
+  const rollupBuild = await rollup({
     input: filePath,
     inlineDynamicImports: true,
     external,
@@ -81,7 +81,7 @@ export const convertCommonJsWithRollup = async ({
     ...(urlAfterTransform ? { dir: urlToFileSystemPath(resolveUrl("./", urlAfterTransform)) } : {}),
   }
 
-  const result = await rollupBundle.generate(generateOptions)
+  const result = await rollupBuild.generate(generateOptions)
 
   return result.output[0]
 }

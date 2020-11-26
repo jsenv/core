@@ -4,7 +4,7 @@ import { createChildExecArgv } from "@jsenv/core/src/internal/node-launcher/crea
 
 const CONTROLLABLE_FILE_URL = resolveUrl("./controllable-file.js", import.meta.url)
 
-export const nodeImportBundle = async ({
+export const nodeImportBuild = async ({
   projectDirectoryUrl,
   buildDirectoryRelativeUrl,
   mainRelativeUrl,

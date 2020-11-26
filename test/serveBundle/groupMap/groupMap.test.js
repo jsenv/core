@@ -10,11 +10,11 @@ import {
   readFile,
   bufferToEtag,
 } from "@jsenv/util"
-import { require } from "../../../src/internal/require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { serveBundle } from "../../../src/internal/compiling/serveBundle.js"
-import { jsenvBabelPluginMap } from "../../../src/jsenvBabelPluginMap.js"
+import { serveBuild } from "@jsenv/core/src/internal/compiling/serveBuild.js"
+import { jsenvBabelPluginMap } from "@jsenv/core/src/jsenvBabelPluginMap.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const originalFileUrl = resolveUrl("./file.cjs", import.meta.url)
@@ -38,7 +38,7 @@ const babelPluginMap = jsenvBabelPluginMap
     },
   })
   const ressource = `/${compileServer.outDirectoryRelativeUrl}file.cjs`
-  const serveBundleParams = {
+  const serveBuildParams = {
     cancellationToken: createCancellationToken(),
     logger: createLogger({ logLevel: "warn" }),
 
@@ -61,7 +61,7 @@ const babelPluginMap = jsenvBabelPluginMap
     babelPluginMap,
   }
 
-  const response = await serveBundle(serveBundleParams)
+  const response = await serveBuild(serveBuildParams)
   {
     const { status: actual } = response
     const expected = 200
@@ -109,10 +109,10 @@ const babelPluginMap = jsenvBabelPluginMap
   }
 
   // ensure serveBundle cache works
-  const secondResponse = await serveBundle({
-    ...serveBundleParams,
+  const secondResponse = await serveBuild({
+    ...serveBuildParams,
     request: {
-      ...serveBundleParams.request,
+      ...serveBuildParams.request,
       headers: {
         ...(compileCacheStrategy === "etag"
           ? { "if-none-match": response.headers.eTag }

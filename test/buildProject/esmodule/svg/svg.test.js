@@ -9,8 +9,8 @@ import {
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
   NODE_IMPORT_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
-import { browserImportBundle } from "../browserImportBundle.js"
-import { nodeImportBundle } from "../nodeImportBundle.js"
+import { browserImportBuild } from "../browserImportBuild.js"
+import { nodeImportBuild } from "../nodeImportBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -19,7 +19,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
-const { bundleMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -28,13 +28,13 @@ const { bundleMappings } = await buildProject({
   },
 })
 
-const iconBundleRelativeUrl = bundleMappings[`${testDirectoryRelativeUrl}icon.svg`]
+const iconBundleRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}icon.svg`]
 const iconBundleUrl = resolveUrl(`./dist/esmodule/${iconBundleRelativeUrl}`, import.meta.url)
 
 await assertFilePresence(iconBundleUrl)
 
 {
-  const { value: actual, serverOrigin } = await browserImportBundle({
+  const { value: actual, serverOrigin } = await browserImportBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
   })
@@ -44,7 +44,7 @@ await assertFilePresence(iconBundleUrl)
 
 // node 13.8 test
 if (SourceMap) {
-  const { value: actual } = await nodeImportBundle({
+  const { value: actual } = await nodeImportBuild({
     ...NODE_IMPORT_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
   })

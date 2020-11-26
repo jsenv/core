@@ -15,7 +15,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const firstEntryRelativeUrl = `${testDirectoryRelativeUrl}a.js`
 const secondEntryRelativeUrl = `${testDirectoryRelativeUrl}b.js`
 
-const { bundleManifest, bundleMappings } = await buildProject({
+const { buildManifest, buildMappings } = await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -27,7 +27,7 @@ const { bundleManifest, bundleMappings } = await buildProject({
 })
 
 {
-  const actual = bundleMappings
+  const actual = buildMappings
   const expected = {
     [`${testDirectoryRelativeUrl}a.js`]: "a.cjs",
     [`${testDirectoryRelativeUrl}b.js`]: "b.cjs",
@@ -53,7 +53,7 @@ const { bundleManifest, bundleMappings } = await buildProject({
 
   {
     const actual = manifestFileObject
-    const expected = bundleManifest
+    const expected = buildManifest
     assert({ actual, expected })
   }
 }
