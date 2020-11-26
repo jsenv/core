@@ -20,15 +20,26 @@ Building consists into taking one or many input files to generate one or many ou
 - Hash url to enable long term caching
 - Transform file content to support more execution environments (old browsers for instance)
 
-Building for the web means generating files that will be executed by a web browser (Chrome, Firefox, and so on). To do that provide your main html file to a function called `buildProject`. It will collect all the files used directly or indirectly by the html file. Once all the files are known they are eventually minified, concatened and file urls are replaced with a unique url identifier to enable long term caching.
+Building for the web means generating files that will be executed by a web browser (Chrome, Firefox, and so on). To do that provide your main html file to a function called `buildProject`. It will collect all the files used directly or indirectly by the html file. Once all the files are known they are eventually minified, concatenated and file urls are replaced with a unique url identifier to enable long term caching.
 
 # Minification
 
-Minification is enabled by default when `process.env.NODE_ENV` is `"production"` and disabled otherwise. When true js, css, html, importmap, json, svg are minified.
+Minification is enabled by default when `process.env.NODE_ENV` is `"production"` and disabled otherwise. When enabled: js, css, html, importmap, json, svg are minified.
+
+You can manually control this parameter like this:
+
+```js
+import { buildProject } from "@jsenv/core"
+
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  minify: true,
+})
+```
 
 # Long term caching
 
-Long term caching consists into configuring a web server to send a `cache-control` header when serving your files. When doing so, browser cache the file for the duration configured by the server and won't even ask the server if the file changed for subsequent requests.
+Long term caching consists into configuring a web server to send a `cache-control` header when serving your files. When doing so, browser caches the file for the duration configured by the server and won't even ask the server if the file changed for subsequent requests.
 
 The screenshot belows shows how a 144kB file takes 1ms for the browser to fetch in that scenario.
 
@@ -38,13 +49,13 @@ The screenshot belows shows how a 144kB file takes 1ms for the browser to fetch 
 
 This is a massive boost in performance but can be tricky to setup because you need to know how and when to invalidate browser cache. Jsenv allows you to use long term caching if you want because it computes a unique url for each file and update any reference to that url accordingly.
 
-As you can see in the previous section
+For instance, if you write this in an html file:
 
 ```html
 <link rel="icon" href="./favicon.ico" />
 ```
 
-Became
+After the build, it becomes:
 
 ```html
 <link rel="icon" href="assets/favicon-5340s4789a.ico" />
@@ -87,7 +98,7 @@ JavaScript modules, also called ES modules, refers to the browser support for th
 
 > For a more detailed explanation about JavaScript modules, see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules
 
-By default jsenv generate files assuming the browser will support JavaScript modules. But for reasons detailed below you might want to output files using the [SystemJS format](#SystemJS-format)
+By default jsenv generates files assuming the browser will support JavaScript modules. But for reasons detailed below you might want to output files using the [SystemJS format](#SystemJS-format)
 
 ## SystemJS format
 
@@ -140,7 +151,7 @@ When using this format the html generated is a bit different:
 
 - `<script src="assets/s.min-550cb99a.js"></script>` was injected into `<head>`
 
-  > To is to provide `window.System` needed by SystemJS.
+  > This is to provide `window.System` needed by SystemJS.
 
   > If you have no `<script type="module"></script>` in the html file, this script is not needed so it's no injected in `<head>`
 
@@ -153,7 +164,7 @@ Browser does not yet support import maps while they drastically improve reuse of
 <details>
   <summary>See details on how import maps improves cache reuse</summary>
 
-Without import maps changing a file content update its unique url with hash and all files referencing that url (directrly or indirectly) must be updated. To illustrate, let's say you have three js files:
+Without import maps, changing a file content updates its unique url with hash and all files referencing that url (directly or indirectly) must be updated. To illustrate, let's say you have three js files:
 `main.js` importing `dependency.js` which is importing `foo.js`. You have a dependency tree between files that looks like this:
 
 ```console
@@ -185,8 +196,8 @@ Import maps allows to tell browser exactly which files have changed and reuse th
 </details>
 
 <details>
-  <summary>See details on how import maps improve developer experience</summary>
-  The ability to remap import is important to simplify the developper experience when reading and writing imports.
+  <summary>See details on how import maps improves developer experience</summary>
+  The ability to remap imports is important to simplify the developper experience when reading and writing imports.
 
 ```js
 import "../../file.js"
@@ -196,7 +207,7 @@ import "src/feature/file.js"
 
 This unlock consistent import paths accross the codebase which helps a lot to know where we are. As import maps is a standard, tools (VSCode, ESLint, Webpack, ...) will soon use them too.
 
-The following html will be support natively by browsers:
+The following html will be supported natively by browsers:
 
 ```html
 <!DOCTYPE html>
@@ -235,17 +246,17 @@ const a = await Promise.resolve(42)
 export default a
 ```
 
-Top level await, depites being useful, is not yet supported by browsers are reported in chrome platform status: https://www.chromestatus.com/feature/5767881411264512. By using SystemJS format it becomes possible to use it right now.
+Top level await, depites being useful, is not yet supported by browsers as reported in chrome platform status: https://www.chromestatus.com/feature/5767881411264512. By using SystemJS format it becomes possible to use it right now.
 
 # Concatenation
 
-By default js files are concatenated as much as possible. There is legimitimates reasons to disable this behaviour. Merging `n` files into chunks poses two issues:
+By default js files are concatenated as much as possible. There is legitimates reasons to disable this behaviour. Merging `n` files into chunks poses two issues:
 
-- On big project it becomes very hard to know what ends up where.
+- On a big project it becomes very hard to know what ends up where.
   Tools like [webpack bundle analyzer](https://github.com/webpack-contrib/webpack-bundle-analyzer) exists to mitigate this but it's still hard to grasp what is going on.
 - When a file part of a chunk is modified the entire chunk must be recreated. A returning user have to redownload/parse/execute the entire chunk even if you modified only one line in one file.
 
-Disabling concatenation fixes the two issue it creates (of course) but also means browser will have to create an http request per file. Thanks to http2, one connection can be reused to server `n` file meaning concatenation becomes less effective.
+Disabling concatenation will fixe these two issues, but also means browser will have to create an http request per file. Thanks to http2, one connection can be reused to serve `n` files meaning concatenation becomes less crucial.
 
 > It's still faster for a web browser to donwload/parse/execute one big file than doing the same for 50 tiny files.
 

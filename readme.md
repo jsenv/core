@@ -1,6 +1,6 @@
 # core
 
-Cover core needs of a JavaScript project.
+Covers core needs of a JavaScript project.
 
 [![github package](https://img.shields.io/github/package-json/v/jsenv/jsenv-core.svg?logo=github&label=package)](https://github.com/jsenv/jsenv-core/packages)
 [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
@@ -23,21 +23,28 @@ Cover core needs of a JavaScript project.
 
 # Presentation
 
-`@jsenv/core` was first created to be able to write tests that could be executed in different browsers and even Node.js. As a result it is a tool capable to execute js inside browsers and Node.js.
+`@jsenv/core` was first created to be able to write tests that could be executed in different browsers and even Node.js. As a result it is a tool capable of executing any js file in browsers and Node.js.
 
-`@jsenv/core` cover core needs of a JavaScript project:
+`@jsenv/core` covers core needs of a JavaScript project:
 
 - A developer friendly environment with livereloading
-- A function to build files for production when you're done developing
+- A function to build files for production
 - A function to run your test files for non regression.
 
 > Note that it can be used only as a test runner. Or only to build files for production. However using it entirely is simpler for you, prefer this if you can.
 
-Jsenv integrates seamlessly with standard html, css and js. It can be configured to work with things that are not part of web standards such as TypeScript or React.
+Jsenv integrates naturally with standard html, css and js. It can be configured to work with non-standard approaches such as TypeScript or React.
 
 # Testing
 
 Testing can be described as: executing many files in parallel and report how it goes.
+
+Here is a simplified example showing how you can test your code using jsenv:
+
+- Create a test file
+- Write js inside
+- Create a file to configure and run your test file
+- Run it and see colorful logs in your terminal!
 
 <details>
   <summary>Math.max.test.html</summary>
@@ -94,11 +101,11 @@ Read more on [testing documentation](./docs/testing/readme.md)
 
 # Exploring
 
-Exploring can be described as: starting an environment helping to develop faster on 1 or many html files thanks to livereloading and jsenv toolbar. It can be used to work on test files or your website html file.
+Exploring feature can be described as: a developer friendly environment helpful to code faster thanks to livereloading and jsenv toolbar. It can be seen as a storybook of all your html files including tests.
 
-> In other words you have the same experience when you are coding for a test file or your application.
+> In other words you have the same experience when you are coding for a test file or your application. No context switching, relax.
 
-You can start this environment by creating a script and executing it with node.
+You can start this environment by creating a script as the one below and executing it with node.
 
 <details>
   <summary>start-exploring.js</summary>
@@ -121,7 +128,7 @@ startExploring({
 
 ![exploring command terminal screenshot](./docs/main/main-example-exploring-terminal.png)
 
-When you open that url in a browser, a page called jsenv exploring index is shown. You can click a file to execute it inside the browser. Clicking `Math.max.test.html` loads an other empty blank page because executing `Math.max.test.html` displays nothing and does not throw.
+When you open that url in a browser, a page called jsenv exploring index is shown. It displays a list of all your html files. You can click a file to execute it inside the browser. In our previous example we created `Math.max.test.html`, clicking it will load an empty blank page because `Math.max.test.html` displays nothing and does not throw.
 
 <details>
     <summary>Exploring screenshots</summary>
@@ -130,7 +137,7 @@ When you open that url in a browser, a page called jsenv exploring index is show
 
 ![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
 
-> You can ignore the black toolbar at the bottom of the page for now, it is documented later.
+> Maybe you noticed the black toolbar at the bottom of the page? We'll see that further in the documentation.
 
 </details>
 
@@ -176,7 +183,9 @@ Read more [exploring documentation](./docs/exploring/readme.md)
 
 Building can be described as: generating files optimized for production thanks to minification, concatenation and long term caching.
 
-Jsenv only needs to know your main html file and where to write the builded files. You can create a script and execute it with node. `index.html` will be parsed and optimized for production into `dist/main.html`.
+Jsenv only needs to know your main html file and where to write the builded files. You can create a script and execute it with node.
+
+The script below would parse `index.html`, optimize it for production and write it at `dist/main.html`.
 
 <details>
   <summary>build-project.js</summary>
