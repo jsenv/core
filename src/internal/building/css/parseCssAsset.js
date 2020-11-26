@@ -48,7 +48,7 @@ export const parseCssAsset = async (
 
   return async ({
     getReferenceUrlRelativeToImporter,
-    precomputeBundleRelativeUrl,
+    precomputeBuildRelativeUrl,
     registerAssetEmitter,
   }) => {
     const cssReplaceResult = await replaceCssUrls(
@@ -81,9 +81,9 @@ export const parseCssAsset = async (
     )
     const code = cssReplaceResult.css
     const map = cssReplaceResult.map.toJSON()
-    const cssBundleRelativeUrl = precomputeBundleRelativeUrl(code)
+    const cssBuildRelativeUrl = precomputeBuildRelativeUrl(code)
 
-    const cssSourcemapFilename = `${basename(cssBundleRelativeUrl)}.map`
+    const cssSourcemapFilename = `${basename(cssBuildRelativeUrl)}.map`
 
     // In theory code should never be modified once the url for caching is computed
     // because url for caching depends on file content.
@@ -96,36 +96,36 @@ export const parseCssAsset = async (
     const cssSourceAfterTransformation = setCssSourceMappingUrl(code, cssSourcemapFilename)
 
     registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
-      const cssBundleUrl = resolveUrl(cssTarget.bundleRelativeUrl, buildDirectoryUrl)
-      const mapBundleUrl = resolveUrl(cssSourcemapFilename, cssBundleUrl)
-      map.file = urlToFilename(cssBundleUrl)
+      const cssBuildUrl = resolveUrl(cssTarget.buildRelativeUrl, buildDirectoryUrl)
+      const mapBuildUrl = resolveUrl(cssSourcemapFilename, cssBuildUrl)
+      map.file = urlToFilename(cssBuildUrl)
       if (map.sources) {
         map.sources = map.sources.map((source) => {
           const sourceUrl = resolveUrl(source, cssTarget.url)
-          const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBundleUrl)
+          const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBuildUrl)
           return sourceUrlRelativeToSourceMap
         })
       }
 
       const mapSource = JSON.stringify(map, null, "  ")
-      const bundleRelativeUrl = urlToRelativeUrl(mapBundleUrl, buildDirectoryUrl)
+      const buildRelativeUrl = urlToRelativeUrl(mapBuildUrl, buildDirectoryUrl)
 
       if (sourcemapReference) {
         sourcemapReference.target.updateOnceReady({
           sourceAfterTransformation: mapSource,
-          bundleRelativeUrl,
+          buildRelativeUrl,
         })
       } else {
         emitAsset({
           source: mapSource,
-          fileName: bundleRelativeUrl,
+          fileName: buildRelativeUrl,
         })
       }
     })
 
     return {
       sourceAfterTransformation: cssSourceAfterTransformation,
-      bundleRelativeUrl: cssBundleRelativeUrl,
+      buildRelativeUrl: cssBuildRelativeUrl,
     }
   }
 }

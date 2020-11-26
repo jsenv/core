@@ -27,7 +27,7 @@ export const parseJsAsset = async (
     })
   }
 
-  return async ({ precomputeBundleRelativeUrl, registerAssetEmitter }) => {
+  return async ({ precomputeBuildRelativeUrl, registerAssetEmitter }) => {
     let map
     if (sourcemapReference) {
       map = JSON.parse(sourcemapReference.target.sourceAfterTransformation)
@@ -55,48 +55,48 @@ export const parseJsAsset = async (
     }
 
     if (map) {
-      const jsBundleRelativeUrl = precomputeBundleRelativeUrl(jsString)
-      const jsSourcemapFilename = `${basename(jsBundleRelativeUrl)}.map`
+      const jsBuildRelativeUrl = precomputeBuildRelativeUrl(jsString)
+      const jsSourcemapFilename = `${basename(jsBuildRelativeUrl)}.map`
       jsSourceAfterTransformation = setJavaScriptSourceMappingUrl(
         jsSourceAfterTransformation,
         jsSourcemapFilename,
       )
 
       registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
-        const jsBundleUrl = resolveUrl(jsTarget.bundleRelativeUrl, buildDirectoryUrl)
-        const mapBundleUrl = resolveUrl(jsSourcemapFilename, jsBundleUrl)
-        map.file = urlToFilename(jsBundleUrl)
+        const jsBuildUrl = resolveUrl(jsTarget.buildRelativeUrl, buildDirectoryUrl)
+        const mapBuildUrl = resolveUrl(jsSourcemapFilename, jsBuildUrl)
+        map.file = urlToFilename(jsBuildUrl)
         if (map.sources) {
           map.sources = map.sources.map((source) => {
             const sourceUrl = resolveUrl(source, jsUrl)
-            const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBundleUrl)
+            const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBuildUrl)
             return sourceUrlRelativeToSourceMap
           })
         }
 
         const mapSource = JSON.stringify(map, null, "  ")
-        const bundleRelativeUrl = urlToRelativeUrl(mapBundleUrl, buildDirectoryUrl)
+        const buildRelativeUrl = urlToRelativeUrl(mapBuildUrl, buildDirectoryUrl)
 
         if (sourcemapReference) {
-          // redirect original sourcemap from bundle to a new file
-          // we'll need to remove the old asset from rollup bundle
+          // redirect original sourcemap from build to a new file
+          // we'll need to remove the old asset from rollup build
           // and emit a new one instead
-          // when finding this asset in the rollupbundle we'll have to remove it
+          // when finding this asset in the rollup build we'll have to remove it
           sourcemapReference.target.updateOnceReady({
             sourceAfterTransformation: mapSource,
-            bundleRelativeUrl,
+            buildRelativeUrl,
           })
         } else {
           emitAsset({
             source: mapSource,
-            fileName: bundleRelativeUrl,
+            fileName: buildRelativeUrl,
           })
         }
       })
 
       return {
         sourceAfterTransformation: jsSourceAfterTransformation,
-        bundleRelativeUrl: jsBundleRelativeUrl,
+        buildRelativeUrl: jsBuildRelativeUrl,
       }
     }
 
