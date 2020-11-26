@@ -14,5 +14,5 @@ generateBundle({
   // as jsenv don't use import.meta.resolve or would not rely on importmap resolution
   // we can just provide an empty importmap file
   importMapFileRelativeUrl: "./cjsbundle.importmap",
-  bundleDirectoryClean: true,
+  buildDirectoryClean: true,
 })

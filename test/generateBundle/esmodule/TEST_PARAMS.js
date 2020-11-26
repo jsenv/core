@@ -4,7 +4,7 @@ import { testBabelPluginMap } from "../../testBabelPluginMap.js"
 export const GENERATE_ESMODULE_BUNDLE_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
-  bundleDirectoryClean: true,
+  buildDirectoryClean: true,
   logLevel: "warn",
   babelPluginMap: testBabelPluginMap,
 }

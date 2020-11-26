@@ -5,7 +5,7 @@ export const GENERATE_GLOBAL_BUNDLE_TEST_PARAMS = {
   format: "global",
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
-  bundleDirectoryClean: true,
+  buildDirectoryClean: true,
   logLevel: "warn",
   babelPluginMap: testBabelPluginMap,
   globalName: "__namespace__",

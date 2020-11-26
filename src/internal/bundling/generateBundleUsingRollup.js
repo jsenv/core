@@ -26,7 +26,7 @@ export const generateBundleUsingRollup = async ({
   sourcemapExcludeSources,
 
   bundleDirectoryUrl,
-  bundleDirectoryClean,
+  buildDirectoryClean,
 
   longTermCaching,
   useImportMapToImproveLongTermCaching,
@@ -85,7 +85,7 @@ export const generateBundleUsingRollup = async ({
     preserveEntrySignatures,
     jsConcatenation,
     bundleDirectoryUrl,
-    bundleDirectoryClean,
+    buildDirectoryClean,
   })
 
   return getResult()
@@ -104,7 +104,7 @@ const useRollup = async ({
   preserveEntrySignatures,
   // jsConcatenation,
   bundleDirectoryUrl,
-  bundleDirectoryClean,
+  buildDirectoryClean,
 }) => {
   const { rollup } = require("rollup")
 
@@ -171,7 +171,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
     start: () => rollup(rollupInputOptions),
   })
 
-  if (bundleDirectoryClean) {
+  if (buildDirectoryClean) {
     await ensureEmptyDirectory(bundleDirectoryUrl)
   }
 

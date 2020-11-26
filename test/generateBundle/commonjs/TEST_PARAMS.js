@@ -5,7 +5,7 @@ export const GENERATE_COMMONJS_BUNDLE_TEST_PARAMS = {
   format: "commonjs",
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
-  bundleDirectoryClean: true,
+  buildDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
   logLevel: "warn",
   compileServerLogLevel: "warn",

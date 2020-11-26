@@ -56,7 +56,7 @@ export const generateBundle = async ({
   sourcemapExcludeSources = false,
 
   buildDirectoryRelativeUrl,
-  bundleDirectoryClean = false,
+  buildDirectoryClean = false,
   writeOnFileSystem = true,
   manifestFile = false,
 
@@ -199,7 +199,7 @@ export const generateBundle = async ({
         sourcemapExcludeSources,
 
         bundleDirectoryUrl,
-        bundleDirectoryClean,
+        buildDirectoryClean,
         manifestFile,
 
         longTermCaching,
