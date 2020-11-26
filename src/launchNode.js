@@ -6,7 +6,7 @@ import { createCancellationToken } from "@jsenv/cancellation"
 import { urlToFileSystemPath, resolveUrl, assertFilePresence } from "@jsenv/util"
 import {
   jsenvNodeSystemUrl,
-  jsenvNodeSystemBundleUrl,
+  jsenvNodeSystemBuildUrl,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { require } from "./internal/require.js"
 import { supportsDynamicImport } from "./internal/supportsDynamicImport.js"
@@ -440,7 +440,7 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`
   const { dirname } = require("path")
 
   const run = async () => {
-    const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(jsenvNodeSystemBundleUrl))}
+    const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(jsenvNodeSystemBuildUrl))}
     const { execute } = requireCompiledFileAsOriginalFile(nodeFilePath, nodeFilePath)
 
     return execute(${JSON.stringify(executeParams, null, "    ")})

@@ -8,7 +8,7 @@ import {
   COMPILE_ID_BUILD_COMMONJS,
   COMPILE_ID_BUILD_COMMONJS_FILES,
 } from "../CONSTANTS.js"
-import { jsenvToolbarHtmlUrl, jsenvBrowserSystemBundleUrl } from "../jsenvInternalFiles.js"
+import { jsenvToolbarHtmlUrl, jsenvBrowserSystemBuildUrl } from "../jsenvInternalFiles.js"
 import { transformImportmap } from "./transformImportmap.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
@@ -53,8 +53,8 @@ export const createCompiledFileService = ({
   compileCacheStrategy,
   sourcemapExcludeSources,
 }) => {
-  const jsenvBrowserBundleUrlRelativeToProject = urlToRelativeUrl(
-    jsenvBrowserSystemBundleUrl,
+  const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
+    jsenvBrowserSystemBuildUrl,
     projectDirectoryUrl,
   )
 
@@ -243,7 +243,7 @@ export const createCompiledFileService = ({
           manipulateHtmlAst(htmlAst, {
             scriptInjections: [
               {
-                src: `/${jsenvBrowserBundleUrlRelativeToProject}`,
+                src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
               },
               // todo: this is dirty because it means
               // compile server is aware of exploring and jsenv toolbar

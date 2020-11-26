@@ -3,22 +3,22 @@ import { require } from "./require.js"
 import { jsenvCoreDirectoryUrl } from "./jsenvCoreDirectoryUrl.js"
 
 export const jsenvNodeSystemRelativeUrl = "./src/internal/node-launcher/node-js-file.js"
-export const jsenvNodeSystemBundleRelativeUrl = "./dist/jsenv-node-system.cjs"
+const jsenvNodeSystemBuildRelativeUrl = "./dist/jsenv-node-system.cjs"
 export const jsenvNodeSystemUrl = resolveUrl(jsenvNodeSystemRelativeUrl, jsenvCoreDirectoryUrl)
-export const jsenvNodeSystemBundleUrl = resolveUrl(
-  jsenvNodeSystemBundleRelativeUrl,
+export const jsenvNodeSystemBuildUrl = resolveUrl(
+  jsenvNodeSystemBuildRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
 
 export const jsenvBrowserSystemRelativeUrl =
   "./src/internal/browser-launcher/jsenv-browser-system.js"
-export const jsenvBrowserSystemBundleRelativeUrl = "./dist/jsenv-browser-system.js"
+const jsenvBrowserSystemBuildRelativeUrl = "./dist/jsenv-browser-system.js"
 export const jsenvBrowserSystemUrl = resolveUrl(
   jsenvBrowserSystemRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-export const jsenvBrowserSystemBundleUrl = resolveUrl(
-  jsenvBrowserSystemBundleRelativeUrl,
+export const jsenvBrowserSystemBuildUrl = resolveUrl(
+  jsenvBrowserSystemBuildRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
 
@@ -38,13 +38,13 @@ export const jsenvExploringRedirectorHtmlUrl = resolveUrl(
 )
 export const jsenvExploringRedirectorJsRelativeUrl =
   "./src/internal/exploring/exploring.redirector.js"
-export const jsenvExploringRedirectorJsBundleRelativeUrl = "./dist/jsenv-exploring-redirector.js"
+const jsenvExploringRedirectorJsBuildRelativeUrl = "./dist/jsenv-exploring-redirector.js"
 export const jsenvExploringRedirectorJsUrl = resolveUrl(
   jsenvExploringRedirectorJsRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-export const jsenvExploringRedirectorJsBundleUrl = resolveUrl(
-  jsenvExploringRedirectorJsBundleRelativeUrl,
+export const jsenvExploringRedirectorJsBuildUrl = resolveUrl(
+  jsenvExploringRedirectorJsBuildRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
 
@@ -58,15 +58,15 @@ export const jsenvToolbarHtmlUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 export const jsenvToolbarInjectorRelativeUrl = "./src/internal/toolbar/toolbar.injector.js"
-export const jsenvToolbarInjectorBundleRelativeUrl = "./dist/jsenv-toolbar-injector.js"
-export const jsenvToolbarInjectorBundleUrl = resolveUrl(
-  jsenvToolbarInjectorBundleRelativeUrl,
+const jsenvToolbarInjectorBuildRelativeUrl = "./dist/jsenv-toolbar-injector.js"
+export const jsenvToolbarInjectorBuildUrl = resolveUrl(
+  jsenvToolbarInjectorBuildRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
 export const jsenvToolbarJsRelativeUrl = "./src/internal/toolbar/toolbar.main.js"
-export const jsenvToolbarJsBundleRelativeUrl = "dist/jsenv-toolbar.js"
+const jsenvToolbarJsBuildRelativeUrl = "dist/jsenv-toolbar.js"
 export const jsenvToolbarJsUrl = resolveUrl(jsenvToolbarJsRelativeUrl, jsenvCoreDirectoryUrl)
-export const jsenvToolbarJsBundleUrl = resolveUrl(
-  jsenvToolbarJsBundleRelativeUrl,
+export const jsenvToolbarJsBuildUrl = resolveUrl(
+  jsenvToolbarJsBuildRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
