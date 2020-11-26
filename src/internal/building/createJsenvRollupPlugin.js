@@ -96,21 +96,21 @@ export const createJsenvRollupPlugin = async ({
   )
 
   // map fileName (bundle relative urls without hash) to bundle relative url
-  let bundleManifest = {}
+  let buildManifest = {}
   const fileNameToBundleRelativeUrl = (fileName) => {
-    if (fileName in bundleManifest) {
-      return bundleManifest[fileName]
+    if (fileName in buildManifest) {
+      return buildManifest[fileName]
     }
     return null
   }
   const bundleRelativeUrlToFileName = (bundleRelativeUrl) => {
-    const fileName = Object.keys(bundleManifest).find(
-      (key) => bundleManifest[key] === bundleRelativeUrl,
+    const fileName = Object.keys(buildManifest).find(
+      (key) => buildManifest[key] === bundleRelativeUrl,
     )
     return fileName
   }
   const addFileNameMapping = (fileName, bundleRelativeUrl) => {
-    bundleManifest[fileName] = bundleRelativeUrl
+    buildManifest[fileName] = bundleRelativeUrl
   }
   const bundleRelativeUrlsUsedInJs = []
   const markBundleRelativeUrlAsUsedByJs = (bundleRelativeUrl) => {
@@ -129,7 +129,7 @@ export const createJsenvRollupPlugin = async ({
     }
   }
 
-  let bundleMappings = {}
+  let buildMappings = {}
   // a clean rollup bundle where keys are bundle relative urls
   // and values rollup chunk or asset
   // we need this because we sometimes tell rollup
@@ -341,7 +341,7 @@ export const createJsenvRollupPlugin = async ({
                       scriptInjections: [
                         {
                           type: "importmap",
-                          id: "jsenv-bundle-importmap",
+                          id: "jsenv-build-importmap",
                           text: "{}",
                         },
                       ],
@@ -776,7 +776,7 @@ export const createJsenvRollupPlugin = async ({
               originalProjectUrl,
               projectDirectoryUrl,
             )
-            bundleMappings[originalProjectRelativeUrl] = bundleRelativeUrl
+            buildMappings[originalProjectRelativeUrl] = bundleRelativeUrl
           } else {
             const sourcePath = file.map.sources[file.map.sources.length - 1]
             const fileBundleUrl = resolveUrl(file.fileName, buildDirectoryUrl)
@@ -785,7 +785,7 @@ export const createJsenvRollupPlugin = async ({
               originalProjectUrl,
               projectDirectoryUrl,
             )
-            bundleMappings[originalProjectRelativeUrl] = bundleRelativeUrl
+            buildMappings[originalProjectRelativeUrl] = bundleRelativeUrl
           }
         } else {
           const assetUrl = compositeAssetHandler.findAssetUrlByBundleRelativeUrl(bundleRelativeUrl)
@@ -795,7 +795,7 @@ export const createJsenvRollupPlugin = async ({
               originalProjectUrl,
               projectDirectoryUrl,
             )
-            bundleMappings[originalProjectRelativeUrl] = bundleRelativeUrl
+            buildMappings[originalProjectRelativeUrl] = bundleRelativeUrl
           } else {
             // the asset does not exists in the project it was generated during building
             // ici il est possible de trouver un asset ayant été redirigé ailleurs (sourcemap)
@@ -804,12 +804,12 @@ export const createJsenvRollupPlugin = async ({
       })
 
       rollupBundle = sortObjectByPathnames(rollupBundle)
-      bundleManifest = sortObjectByPathnames(bundleManifest)
-      bundleMappings = sortObjectByPathnames(bundleMappings)
+      buildManifest = sortObjectByPathnames(buildManifest)
+      buildMappings = sortObjectByPathnames(buildMappings)
 
       if (manifestFile) {
         const manifestFileUrl = resolveUrl("manifest.json", buildDirectoryUrl)
-        await writeFile(manifestFileUrl, JSON.stringify(bundleManifest, null, "  "))
+        await writeFile(manifestFileUrl, JSON.stringify(buildManifest, null, "  "))
       }
 
       logger.info(formatBundleGeneratedLog(rollupBundle))
@@ -1062,9 +1062,9 @@ export const createJsenvRollupPlugin = async ({
       return {
         rollupBundle,
         urlResponseBodyMap,
-        bundleMappings,
-        bundleManifest,
-        bundleImportMap: createImportMapForFilesUsedInJs(),
+        buildMappings,
+        buildManifest,
+        buildImportMap: createImportMapForFilesUsedInJs(),
       }
     },
   }
