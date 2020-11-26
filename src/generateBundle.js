@@ -15,6 +15,7 @@ const FORMAT_ENTRY_POINTS = {
   esmodule: { "./main.html": "./main.html" },
 }
 
+// TODO: rename buildProject
 export const generateBundle = async ({
   cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
