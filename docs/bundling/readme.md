@@ -14,14 +14,14 @@
 
 # Presentation
 
-Bundling consists into taking one or many input files to generate one or many output files. It creates a step between dev and production where you can perform specific optimizations:
+Building consists into taking one or many input files to generate one or many output files. It creates a step between dev and production where you can perform specific optimizations:
 
 - File concatenation to save http request
 - Minify file content to reduce file size
 - Hash url to enable long term caching
 - Transform file content to support more execution environments (old browsers for instance)
 
-Bundling for the web means generating files that will be executed by a web browser (Chrome, Firefox, and so on). To do that provide your main html file to a function called `buildProject`. It will collect all the files used directly or indirectly by the html file. Once all the files are known they are eventually minified, concatened and file urls are replaced with a unique url identifier to enable long term caching.
+Building for the web means generating files that will be executed by a web browser (Chrome, Firefox, and so on). To do that provide your main html file to a function called `buildProject`. It will collect all the files used directly or indirectly by the html file. Once all the files are known they are eventually minified, concatened and file urls are replaced with a unique url identifier to enable long term caching.
 
 # Code example
 

@@ -17,7 +17,6 @@ export const convertCommonJsWithRollup = async ({
 } = {}) => {
   if (!url.startsWith("file:///")) {
     // it's possible to make rollup compatible with http:// for instance
-    // as we do in @jsenv/bundling
     // however it's an exotic use case for now
     throw new Error(`compatible only with file:// protocol, got ${url}`)
   }

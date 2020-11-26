@@ -797,7 +797,7 @@ export const createJsenvRollupPlugin = async ({
             )
             bundleMappings[originalProjectRelativeUrl] = bundleRelativeUrl
           } else {
-            // the asset does not exists in the project it was generated during bundling
+            // the asset does not exists in the project it was generated during building
             // ici il est possible de trouver un asset ayant été redirigé ailleurs (sourcemap)
           }
         }
