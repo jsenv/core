@@ -9,9 +9,9 @@ import { generateBundleUsingRollup } from "./internal/bundling/generateBundleUsi
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 const FORMAT_ENTRY_POINTS = {
-  commonjs: { "./index.js": "./main.cjs" },
+  commonjs: { "./main.js": "./main.cjs" },
   systemjs: { "./main.html": "./main.html" },
-  global: { "./index.js": "./main.js" },
+  global: { "./main.js": "./main.js" },
   esmodule: { "./main.html": "./main.html" },
 }
 
@@ -112,6 +112,12 @@ export const generateBundle = async ({
     } else {
       throw new TypeError(
         `unexpected format: ${format}. Must be esmodule, systemjs, commonjs or global.`,
+      )
+    }
+
+    if (!jsConcatenation) {
+      throw new Error(
+        `jsConcatenation cannot be disabled for now. See https://github.com/rollup/rollup/issues/3882`,
       )
     }
 

@@ -157,7 +157,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources,
-    preserveModules: !jsConcatenation,
+    // preserveModules: !jsConcatenation,
     ...(format === "global"
       ? {
           globals,

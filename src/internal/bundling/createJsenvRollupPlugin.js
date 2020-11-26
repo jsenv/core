@@ -618,9 +618,11 @@ export const createJsenvRollupPlugin = async ({
       const outputExtension = extension === ".html" ? ".js" : extension
 
       outputOptions.entryFileNames = `[name]${outputExtension}`
-      outputOptions.chunkFileNames = longTermCaching
-        ? `[name]${outputExtension}`
-        : `[name]-[hash]${outputExtension}`
+      outputOptions.chunkFileNames =
+        useImportMapToImproveLongTermCaching || !longTermCaching
+          ? `[name]${outputExtension}`
+          : `[name]-[hash]${outputExtension}`
+
 
       // rollup does not expects to have http dependency in the mix: fix them
       outputOptions.sourcemapPathTransform = (relativePath, sourcemapPath) => {
@@ -725,9 +727,10 @@ export const createJsenvRollupPlugin = async ({
         })
         const file = jsBundle[bundleRelativeUrl]
         const sourceAfterTransformation = file.code
-        const fileName = useImportMapToImproveLongTermCaching || !longTermCaching
-          ? bundleRelativeUrlToFileName(bundleRelativeUrl)
-          : bundleRelativeUrl
+        const fileName =
+          useImportMapToImproveLongTermCaching || !longTermCaching
+            ? bundleRelativeUrlToFileName(bundleRelativeUrl)
+            : bundleRelativeUrl
 
         logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
         rollupChunkReadyCallbackMap[key]({

@@ -43,11 +43,11 @@ This section present parameters available to every function generating a bundle.
 
 ## entryPointMap
 
-`entryPointMap` parameter is an object describing your project entry points. A dedicated bundle is generated for each entry. This parameter is optional with a default value assuming you have one entry point being `index.js` that will be written into `dist/${format}/main.js`.
+`entryPointMap` parameter is an object describing your project entry points. A dedicated bundle is generated for each entry. This parameter is optional with a default value assuming you have a single entry point being `main.html` or `main.js` depending the format you are using. Keys are relative to project directory and values are relative to bundle directory.
 
 ```json
 {
-  "./index.js": "./main.js"
+  "./main.html": "./main.html"
 }
 ```
 
@@ -129,7 +129,7 @@ If `externalImportSpecifiers` contains `foo` the generated bundle will keep that
 
 ## minify
 
-`minify` parameter is a boolean controlling if bundle content will be minified to save bytes. This parameter is optional with a default value of `false`.
+`minify` parameter is a boolean controlling if bundle content will be minified to save bytes. This parameter is optional.
 
 # Shared parameters
 
