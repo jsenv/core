@@ -39,10 +39,10 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
 const videoBundleRelativeUrl = getBundleRelativeUrl("video.mp4")
-const videoBundleUrl = resolveUrl(videoBundleRelativeUrl, bundleDirectoryUrl)
+const videoBundleUrl = resolveUrl(videoBundleRelativeUrl, buildDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
 const sourceNode = findNodeByTagName(htmlString, "source")
 

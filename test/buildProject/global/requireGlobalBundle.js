@@ -7,8 +7,8 @@ export const requireGlobalBundle = async ({
   mainRelativeUrl,
   globalName,
 }) => {
-  const bundleDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
-  const mainFileUrl = resolveUrl(mainRelativeUrl, bundleDirectoryUrl)
+  const buildDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
+  const mainFileUrl = resolveUrl(mainRelativeUrl, buildDirectoryUrl)
   const mainFilePath = urlToFileSystemPath(mainFileUrl)
   // eslint-disable-next-line import/no-dynamic-require
   require(mainFilePath)

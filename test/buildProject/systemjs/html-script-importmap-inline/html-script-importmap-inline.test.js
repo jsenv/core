@@ -27,8 +27,8 @@ await buildProject({
   entryPointMap,
 })
 
-const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
 const importmapScriptNode = findNodeByTagName(htmlString, "script")
 

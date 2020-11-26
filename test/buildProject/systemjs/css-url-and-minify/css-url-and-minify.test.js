@@ -31,11 +31,11 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const styleBundleRelativeUrl = getBundleRelativeUrl("style.css")
 const imgBundleRelativeUrl = getBundleRelativeUrl("img.png")
-const styleBundleUrl = resolveUrl(styleBundleRelativeUrl, bundleDirectoryUrl)
-const imgBundleUrl = resolveUrl(imgBundleRelativeUrl, bundleDirectoryUrl)
+const styleBundleUrl = resolveUrl(styleBundleRelativeUrl, buildDirectoryUrl)
+const imgBundleUrl = resolveUrl(imgBundleRelativeUrl, buildDirectoryUrl)
 
 // ensure background image url is properly updated
 {

@@ -82,7 +82,7 @@ export const createJsenvRollupPlugin = async ({
   manifestFile,
   writeOnFileSystem,
 
-  bundleDirectoryUrl,
+  buildDirectoryUrl,
 }) => {
   const urlImporterMap = {}
   const urlResponseBodyMap = {}
@@ -210,10 +210,10 @@ export const createJsenvRollupPlugin = async ({
       await Promise.all(
         Object.keys(entryPointMap).map(async (key) => {
           const entryProjectUrl = resolveUrl(key, projectDirectoryUrl)
-          const entryBundleUrl = resolveUrl(entryPointMap[key], bundleDirectoryUrl)
+          const entryBundleUrl = resolveUrl(entryPointMap[key], buildDirectoryUrl)
 
           const entryProjectRelativeUrl = urlToRelativeUrl(entryProjectUrl, projectDirectoryUrl)
-          const entryBundleRelativeUrl = urlToRelativeUrl(entryBundleUrl, bundleDirectoryUrl)
+          const entryBundleRelativeUrl = urlToRelativeUrl(entryBundleUrl, buildDirectoryUrl)
 
           const entryServerUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
           const entryCompiledUrl = resolveUrl(entryProjectRelativeUrl, compileDirectoryRemoteUrl)
@@ -393,7 +393,7 @@ export const createJsenvRollupPlugin = async ({
           logLevel: loggerToLogLevel(logger),
           format,
           projectDirectoryUrl: `${compileServerOrigin}`,
-          buildDirectoryRelativeUrl: urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl),
+          buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
           urlToFileUrl: urlToProjectUrl,
           loadUrl: (url) => urlResponseBodyMap[url],
           resolveTargetUrl: ({ specifier, isJsModule }, target) => {
@@ -688,7 +688,7 @@ export const createJsenvRollupPlugin = async ({
           if (longTermCaching && useImportMapToImproveLongTermCaching) {
             if (canBeHashed) {
               bundleRelativeUrl = computeBundleRelativeUrl(
-                resolveUrl(fileName, bundleDirectoryUrl),
+                resolveUrl(fileName, buildDirectoryUrl),
                 file.code,
                 `[name]-[hash][extname]`,
               )
@@ -779,7 +779,7 @@ export const createJsenvRollupPlugin = async ({
             bundleMappings[originalProjectRelativeUrl] = bundleRelativeUrl
           } else {
             const sourcePath = file.map.sources[file.map.sources.length - 1]
-            const fileBundleUrl = resolveUrl(file.fileName, bundleDirectoryUrl)
+            const fileBundleUrl = resolveUrl(file.fileName, buildDirectoryUrl)
             const originalProjectUrl = resolveUrl(sourcePath, fileBundleUrl)
             const originalProjectRelativeUrl = urlToRelativeUrl(
               originalProjectUrl,
@@ -808,7 +808,7 @@ export const createJsenvRollupPlugin = async ({
       bundleMappings = sortObjectByPathnames(bundleMappings)
 
       if (manifestFile) {
-        const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
+        const manifestFileUrl = resolveUrl("manifest.json", buildDirectoryUrl)
         await writeFile(manifestFileUrl, JSON.stringify(bundleManifest, null, "  "))
       }
 
@@ -818,7 +818,7 @@ export const createJsenvRollupPlugin = async ({
         await Promise.all(
           Object.keys(rollupBundle).map(async (bundleRelativeUrl) => {
             const file = rollupBundle[bundleRelativeUrl]
-            const fileBundleUrl = resolveUrl(bundleRelativeUrl, bundleDirectoryUrl)
+            const fileBundleUrl = resolveUrl(bundleRelativeUrl, buildDirectoryUrl)
 
             if (file.type === "chunk") {
               let fileCode = file.code
@@ -827,7 +827,7 @@ export const createJsenvRollupPlugin = async ({
                 if (sourcemapBundleRelativeUrl in rollupBundle === false) {
                   const sourcemapBundleUrl = resolveUrl(
                     sourcemapBundleRelativeUrl,
-                    bundleDirectoryUrl,
+                    buildDirectoryUrl,
                   )
                   const fileSourcemapString = JSON.stringify(file.map, null, "  ")
                   await writeFile(sourcemapBundleUrl, fileSourcemapString)

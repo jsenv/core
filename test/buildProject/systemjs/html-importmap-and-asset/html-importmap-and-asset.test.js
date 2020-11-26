@@ -34,14 +34,14 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const jsBundleRelativeUrl = getBundleRelativeUrl("file.js")
 const imgRemapBundleRelativeUrl = getBundleRelativeUrl("img-remap.png")
 
 // check importmap content
 {
   const importmapBundleRelativeUrl = getBundleRelativeUrl("import-map.importmap")
-  const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, bundleDirectoryUrl)
+  const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, buildDirectoryUrl)
   const importmapString = await readFile(importmapBundleUrl)
   const importmap = JSON.parse(importmapString)
   const actual = importmap
@@ -63,8 +63,8 @@ const imgRemapBundleRelativeUrl = getBundleRelativeUrl("img-remap.png")
 {
   const imgRelativeUrl = getBundleRelativeUrl("img.png")
   const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")
-  const cssBundleUrl = resolveUrl(cssBundleRelativeUrl, bundleDirectoryUrl)
-  const imgBundleUrl = resolveUrl(imgRelativeUrl, bundleDirectoryUrl)
+  const cssBundleUrl = resolveUrl(cssBundleRelativeUrl, buildDirectoryUrl)
+  const imgBundleUrl = resolveUrl(imgRelativeUrl, buildDirectoryUrl)
   const cssString = await readFile(cssBundleUrl)
   const cssUrls = await parseCssUrls(cssString, cssBundleUrl)
   const actual = cssUrls.urlDeclarations[0].specifier

@@ -43,12 +43,12 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
 const styleNode = findNodeByTagName(htmlString, "style")
 const depBundleRelativeUrl = getBundleRelativeUrl("dep.css")
-const depBundleUrl = resolveUrl(depBundleRelativeUrl, bundleDirectoryUrl)
+const depBundleUrl = resolveUrl(depBundleRelativeUrl, buildDirectoryUrl)
 const textNode = getHtmlNodeTextNode(styleNode)
 const text = textNode.value
 

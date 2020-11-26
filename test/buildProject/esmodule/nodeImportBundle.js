@@ -10,8 +10,8 @@ export const nodeImportBundle = async ({
   mainRelativeUrl,
   namespaceProperty = "default",
 }) => {
-  const bundleDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
-  const mainFileUrl = resolveUrl(mainRelativeUrl, bundleDirectoryUrl)
+  const buildDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
+  const mainFileUrl = resolveUrl(mainRelativeUrl, buildDirectoryUrl)
 
   const child = fork(urlToFileSystemPath(CONTROLLABLE_FILE_URL), {
     execArgv: await createChildExecArgv(),

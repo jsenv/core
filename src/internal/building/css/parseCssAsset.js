@@ -95,8 +95,8 @@ export const parseCssAsset = async (
     // to decide the filename for this css asset.
     const cssSourceAfterTransformation = setCssSourceMappingUrl(code, cssSourcemapFilename)
 
-    registerAssetEmitter(({ bundleDirectoryUrl, emitAsset }) => {
-      const cssBundleUrl = resolveUrl(cssTarget.bundleRelativeUrl, bundleDirectoryUrl)
+    registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
+      const cssBundleUrl = resolveUrl(cssTarget.bundleRelativeUrl, buildDirectoryUrl)
       const mapBundleUrl = resolveUrl(cssSourcemapFilename, cssBundleUrl)
       map.file = urlToFilename(cssBundleUrl)
       if (map.sources) {
@@ -108,7 +108,7 @@ export const parseCssAsset = async (
       }
 
       const mapSource = JSON.stringify(map, null, "  ")
-      const bundleRelativeUrl = urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl)
+      const bundleRelativeUrl = urlToRelativeUrl(mapBundleUrl, buildDirectoryUrl)
 
       if (sourcemapReference) {
         sourcemapReference.target.updateOnceReady({

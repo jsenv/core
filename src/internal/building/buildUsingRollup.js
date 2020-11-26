@@ -3,7 +3,7 @@ import { urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/util"
 import { require } from "../require.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
-export const generateBundleUsingRollup = async ({
+export const buildUsingRollup = async ({
   cancellationToken,
   logger,
 
@@ -25,7 +25,7 @@ export const generateBundleUsingRollup = async ({
   globalName,
   sourcemapExcludeSources,
 
-  bundleDirectoryUrl,
+  buildDirectoryUrl,
   buildDirectoryClean,
 
   longTermCaching,
@@ -58,7 +58,7 @@ export const generateBundleUsingRollup = async ({
 
     format,
     systemJsUrl,
-    bundleDirectoryUrl,
+    buildDirectoryUrl,
 
     longTermCaching,
     useImportMapToImproveLongTermCaching,
@@ -84,7 +84,7 @@ export const generateBundleUsingRollup = async ({
     sourcemapExcludeSources,
     preserveEntrySignatures,
     jsConcatenation,
-    bundleDirectoryUrl,
+    buildDirectoryUrl,
     buildDirectoryClean,
   })
 
@@ -103,7 +103,7 @@ const useRollup = async ({
   sourcemapExcludeSources,
   preserveEntrySignatures,
   // jsConcatenation,
-  bundleDirectoryUrl,
+  buildDirectoryUrl,
   buildDirectoryClean,
 }) => {
   const { rollup } = require("rollup")
@@ -151,7 +151,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
     // presence in babelPluginMap
     preferConst: false,
     // https://rollupjs.org/guide/en#output-dir
-    dir: urlToFileSystemPath(bundleDirectoryUrl),
+    dir: urlToFileSystemPath(buildDirectoryUrl),
     // https://rollupjs.org/guide/en#output-format
     format: formatToRollupFormat(format),
     // https://rollupjs.org/guide/en#output-sourcemap
@@ -172,7 +172,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
   })
 
   if (buildDirectoryClean) {
-    await ensureEmptyDirectory(bundleDirectoryUrl)
+    await ensureEmptyDirectory(buildDirectoryUrl)
   }
 
   const rollupOutputArray = await createOperation({

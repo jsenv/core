@@ -12,9 +12,9 @@ export const browserImportBundle = async ({
   headless = true,
   stopAfterImport = true,
 }) => {
-  const bundleDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
+  const buildDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
-    startTestServer({ bundleDirectoryUrl }),
+    startTestServer({ buildDirectoryUrl }),
     chromium.launch({
       headless,
       // handleSIGINT: false,
@@ -46,13 +46,13 @@ export const browserImportBundle = async ({
   }
 }
 
-const startTestServer = ({ bundleDirectoryUrl }) => {
+const startTestServer = ({ buildDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "https",
     requestToResponse: firstService(
       (request) => serveIndexPage({ request }),
-      (request) => serveBundleDirectory({ bundleDirectoryUrl, request }),
+      (request) => serveBundleDirectory({ buildDirectoryUrl, request }),
     ),
   })
 }
@@ -87,8 +87,8 @@ const generateIndexPage = () => `<!doctype html>
 
 </html>`
 
-const serveBundleDirectory = ({ bundleDirectoryUrl, request: { ressource, method, headers } }) =>
-  serveFile(urlToFileSystemPath(resolveUrl(ressource.slice(1), bundleDirectoryUrl)), {
+const serveBundleDirectory = ({ buildDirectoryUrl, request: { ressource, method, headers } }) =>
+  serveFile(urlToFileSystemPath(resolveUrl(ressource.slice(1), buildDirectoryUrl)), {
     method,
     headers,
   })

@@ -62,8 +62,8 @@ export const parseJsAsset = async (
         jsSourcemapFilename,
       )
 
-      registerAssetEmitter(({ bundleDirectoryUrl, emitAsset }) => {
-        const jsBundleUrl = resolveUrl(jsTarget.bundleRelativeUrl, bundleDirectoryUrl)
+      registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
+        const jsBundleUrl = resolveUrl(jsTarget.bundleRelativeUrl, buildDirectoryUrl)
         const mapBundleUrl = resolveUrl(jsSourcemapFilename, jsBundleUrl)
         map.file = urlToFilename(jsBundleUrl)
         if (map.sources) {
@@ -75,7 +75,7 @@ export const parseJsAsset = async (
         }
 
         const mapSource = JSON.stringify(map, null, "  ")
-        const bundleRelativeUrl = urlToRelativeUrl(mapBundleUrl, bundleDirectoryUrl)
+        const bundleRelativeUrl = urlToRelativeUrl(mapBundleUrl, buildDirectoryUrl)
 
         if (sourcemapReference) {
           // redirect original sourcemap from bundle to a new file

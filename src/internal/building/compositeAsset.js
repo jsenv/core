@@ -60,7 +60,7 @@ export const createCompositeAssetHandler = (
 ) => {
   const logger = createLogger({ logLevel })
 
-  const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
+  const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
 
   const createReferenceForAssetEntry = async (
     entryUrl,
@@ -442,7 +442,7 @@ export const createCompositeAssetHandler = (
       assetEmitters.forEach((callback) => {
         callback({
           emitAsset,
-          bundleDirectoryUrl,
+          buildDirectoryUrl,
         })
       })
     })

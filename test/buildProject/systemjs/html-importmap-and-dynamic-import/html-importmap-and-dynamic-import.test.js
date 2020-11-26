@@ -33,14 +33,14 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 
 // importmap content
 {
   const importmapBundleRelativeUrl = getBundleRelativeUrl("import-map.importmap")
   const fileBundleRelativeUrl = getBundleRelativeUrl("file.js")
   const fooBundleRelativeUrl = getBundleRelativeUrl("foo.js")
-  const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, bundleDirectoryUrl)
+  const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, buildDirectoryUrl)
   const importmapString = await readFile(importmapBundleUrl)
   const importmap = JSON.parse(importmapString)
   const actual = importmap

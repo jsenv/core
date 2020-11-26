@@ -5,7 +5,7 @@ import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.
 import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
-import { generateBundleUsingRollup } from "./internal/building/generateBundleUsingRollup.js"
+import { buildUsingRollup } from "./internal/building/buildUsingRollup.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 const FORMAT_ENTRY_POINTS = {
@@ -72,8 +72,8 @@ export const buildProject = async ({
   minifyCssOptions,
 
   // when true .jsenv/out-build directory is generated
-  // with all intermediated files used to produce the final bundle.
-  // it might improve buildProject speed for subsequent bundle generation
+  // with all intermediated files used to produce the final build files.
+  // it might improve buildProject speed for subsequent build generation
   // but this is to be proven and not absolutely required
   // When false intermediates files are transformed and served in memory
   // by the compile server
@@ -133,9 +133,9 @@ export const buildProject = async ({
       }
     }
 
-    assertbuildDirectoryRelativeUrl({ buildDirectoryRelativeUrl })
-    const bundleDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
-    assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
+    assertBuildDirectoryRelativeUrl({ buildDirectoryRelativeUrl })
+    const buildDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
+    assertBuildDirectoryInsideProject({ buildDirectoryUrl, projectDirectoryUrl })
 
     const compileServer = await startCompileServer({
       cancellationToken,
@@ -174,7 +174,7 @@ export const buildProject = async ({
     const { outDirectoryRelativeUrl, origin: compileServerOrigin } = compileServer
 
     try {
-      const result = await generateBundleUsingRollup({
+      const result = await buildUsingRollup({
         cancellationToken,
         logger,
 
@@ -197,7 +197,7 @@ export const buildProject = async ({
         globals,
         sourcemapExcludeSources,
 
-        bundleDirectoryUrl,
+        buildDirectoryUrl,
         buildDirectoryClean,
         manifestFile,
 
@@ -243,7 +243,7 @@ const assertEntryPointMap = ({ entryPointMap }) => {
   })
 }
 
-const assertbuildDirectoryRelativeUrl = ({ buildDirectoryRelativeUrl }) => {
+const assertBuildDirectoryRelativeUrl = ({ buildDirectoryRelativeUrl }) => {
   if (typeof buildDirectoryRelativeUrl !== "string") {
     throw new TypeError(
       `buildDirectoryRelativeUrl must be a string, received ${buildDirectoryRelativeUrl}`,
@@ -251,11 +251,11 @@ const assertbuildDirectoryRelativeUrl = ({ buildDirectoryRelativeUrl }) => {
   }
 }
 
-const assertBundleDirectoryInsideProject = ({ bundleDirectoryUrl, projectDirectoryUrl }) => {
-  if (!bundleDirectoryUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`bundle directory must be inside project directory
---- bundle directory url ---
-${bundleDirectoryUrl}
+const assertBuildDirectoryInsideProject = ({ buildDirectoryUrl, projectDirectoryUrl }) => {
+  if (!buildDirectoryUrl.startsWith(projectDirectoryUrl)) {
+    throw new Error(`build directory must be inside project directory
+--- build directory url ---
+${buildDirectoryUrl}
 --- project directory url ---
 ${projectDirectoryUrl}`)
   }

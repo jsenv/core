@@ -40,14 +40,14 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
 const link = findNodeByTagName(htmlString, "link")
 const mainCssBundleRelativeUrl = getBundleRelativeUrl("style.css")
 const depCssBundleRelativeUrl = getBundleRelativeUrl("dir/dep.css")
-const mainCssBundleUrl = resolveUrl(mainCssBundleRelativeUrl, bundleDirectoryUrl)
-const depCssBundleUrl = resolveUrl(depCssBundleRelativeUrl, bundleDirectoryUrl)
+const mainCssBundleUrl = resolveUrl(mainCssBundleRelativeUrl, buildDirectoryUrl)
+const depCssBundleUrl = resolveUrl(depCssBundleRelativeUrl, buildDirectoryUrl)
 
 // ensure link.href is properly updated
 {
@@ -56,7 +56,7 @@ const depCssBundleUrl = resolveUrl(depCssBundleRelativeUrl, bundleDirectoryUrl)
   const expected = mainCssBundleRelativeUrl
   assert({ actual, expected })
   // ensure corresponding file exists
-  const imgABundleUrl = resolveUrl(mainCssBundleRelativeUrl, bundleDirectoryUrl)
+  const imgABundleUrl = resolveUrl(mainCssBundleRelativeUrl, buildDirectoryUrl)
   await assertFilePresence(imgABundleUrl)
 }
 

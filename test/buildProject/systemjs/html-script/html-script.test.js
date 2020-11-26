@@ -44,14 +44,14 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const scriptBundleRelativeUrl = getBundleRelativeUrl("index.js")
-const scriptBundleUrl = resolveUrl(scriptBundleRelativeUrl, bundleDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
+const scriptBundleUrl = resolveUrl(scriptBundleRelativeUrl, buildDirectoryUrl)
+const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
 const scriptNode = findNodeByTagName(htmlString, "script")
 const sourcemapBundleRelativeUrl = getBundleRelativeUrl("index.js.map")
-const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, bundleDirectoryUrl)
+const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, buildDirectoryUrl)
 
 {
   const srcAttribute = getHtmlNodeAttributeByName(scriptNode, "src")

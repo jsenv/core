@@ -61,9 +61,9 @@ export const serveBundle = async ({
       format,
       node: format === "commonjs",
       browser: format !== "commonjs",
-      // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
+      // buildDirectoryUrl is just theorical because of writeOnFileSystem: false
       // but still important to know where the files will be written
-      bundleDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
+      buildDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
       writeOnFileSystem: false,
       sourcemapExcludeSources: true,
       manifestFile: false,

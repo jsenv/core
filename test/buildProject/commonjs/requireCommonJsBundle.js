@@ -6,8 +6,8 @@ export const requireCommonJsBundle = async ({
   buildDirectoryRelativeUrl,
   mainRelativeUrl,
 }) => {
-  const bundleDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
-  const mainFileUrl = resolveUrl(mainRelativeUrl, bundleDirectoryUrl)
+  const buildDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
+  const mainFileUrl = resolveUrl(mainRelativeUrl, buildDirectoryUrl)
   const mainFilePath = urlToFileSystemPath(mainFileUrl)
   // eslint-disable-next-line import/no-dynamic-require
   const namespace = require(mainFilePath)

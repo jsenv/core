@@ -34,12 +34,12 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
 const svgBundleRelativeUrl = getBundleRelativeUrl("icon.svg")
-const svgBundleUrl = resolveUrl(svgBundleRelativeUrl, bundleDirectoryUrl)
+const svgBundleUrl = resolveUrl(svgBundleRelativeUrl, buildDirectoryUrl)
 const pngBundleRelativeUrl = getBundleRelativeUrl("img.png")
-const pngBundleUrl = resolveUrl(pngBundleRelativeUrl, bundleDirectoryUrl)
+const pngBundleUrl = resolveUrl(pngBundleRelativeUrl, buildDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
 const [firstUseNodeInBundle, secondUseNodeInBundle] = findAllNodeByTagName(htmlString, "use")
 

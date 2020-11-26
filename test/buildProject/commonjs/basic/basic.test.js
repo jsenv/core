@@ -39,11 +39,11 @@ await buildProject({
 
 // ensure sourcemap is generated
 {
-  const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+  const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
   const answerUrl = resolveUrl("answer.js", testDirectoryUrl)
   const basicUrl = resolveUrl("basic.js", testDirectoryUrl)
   const sourcemapBundleRelativeUrl = "main.cjs.map"
-  const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, bundleDirectoryUrl)
+  const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, buildDirectoryUrl)
   const sourcemapString = await readFile(sourcemapBundleUrl)
   const actual = JSON.parse(sourcemapString)
   const expected = {

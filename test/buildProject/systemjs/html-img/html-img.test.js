@@ -40,8 +40,8 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", bundleDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBundleUrl)
 const img = findNodeByTagName(htmlString, "img")
 
@@ -53,7 +53,7 @@ const img = findNodeByTagName(htmlString, "img")
   const expected = imgABundleRelativeUrl
   assert({ actual, expected })
   // ensure corresponding file exists
-  const imgABundleUrl = resolveUrl(imgABundleRelativeUrl, bundleDirectoryUrl)
+  const imgABundleUrl = resolveUrl(imgABundleRelativeUrl, buildDirectoryUrl)
   await assertFilePresence(imgABundleUrl)
 }
 
@@ -75,8 +75,8 @@ const img = findNodeByTagName(htmlString, "img")
   ]
   // and corresponding file exists
   assert({ actual, expected })
-  const imgBBundleUrl = resolveUrl(imgBBundleRelativeUrl, bundleDirectoryUrl)
+  const imgBBundleUrl = resolveUrl(imgBBundleRelativeUrl, buildDirectoryUrl)
   await assertFilePresence(imgBBundleUrl)
-  const imgCBundleUrl = resolveUrl(imgCBundleRelativeUrl, bundleDirectoryUrl)
+  const imgCBundleUrl = resolveUrl(imgCBundleRelativeUrl, buildDirectoryUrl)
   await assertFilePresence(imgCBundleUrl)
 }

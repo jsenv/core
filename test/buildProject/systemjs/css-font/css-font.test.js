@@ -34,9 +34,9 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
   return bundleRelativeUrl
 }
 
-const bundleDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")
-const cssBundleUrl = resolveUrl(cssBundleRelativeUrl, bundleDirectoryUrl)
+const cssBundleUrl = resolveUrl(cssBundleRelativeUrl, buildDirectoryUrl)
 const cssString = await readFile(cssBundleUrl)
 
 // ensure font urls properly updated in css file
@@ -44,7 +44,7 @@ const cssString = await readFile(cssBundleUrl)
   const cssUrls = await parseCssUrls(cssString, cssBundleUrl)
   const fontSpecifier = cssUrls.urlDeclarations[0].specifier
   const fontBundleRelativeUrl = getBundleRelativeUrl("Roboto-Thin.ttf")
-  const fontBundleUrl = resolveUrl(fontBundleRelativeUrl, bundleDirectoryUrl)
+  const fontBundleUrl = resolveUrl(fontBundleRelativeUrl, buildDirectoryUrl)
 
   const actual = fontSpecifier
   const expected = urlToRelativeUrl(fontBundleUrl, cssBundleUrl)
