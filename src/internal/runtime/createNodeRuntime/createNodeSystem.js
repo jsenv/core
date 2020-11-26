@@ -119,7 +119,7 @@ const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirec
     return urlToFileSystemPath(responseUrl)
   }
   // compileServerOrigin is optionnal
-  // because we can also create a node system and use it to import a bundle
+  // because we can also create a node system and use it to import a build
   // from filesystem. In that case there is no compileServerOrigin
   if (compileServerOrigin && responseUrl.startsWith(`${compileServerOrigin}/`)) {
     const afterOrigin = responseUrl.slice(`${compileServerOrigin}/`.length)

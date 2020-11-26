@@ -1,6 +1,6 @@
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { uneval } from "@jsenv/uneval"
-// do not use memoize from @jsenv/util to avoid pulling @jsenv/util code into the browser bundle
+// do not use memoize from @jsenv/util to avoid pulling @jsenv/util code into the browser build
 import { memoize } from "../../memoize.js"
 import { createBrowserSystem } from "./createBrowserSystem.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"

@@ -28,14 +28,10 @@
 
         <section id="execution-indicator">
           <div data-when="execution:default">
-            <div class="tooltip">
-              Unknown state
-            </div>
+            <div class="tooltip">Unknown state</div>
           </div>
           <div data-when="execution:running">
-            <div class="tooltip">
-              Executing...
-            </div>
+            <div class="tooltip">Executing...</div>
             <button>
               <svg id="loader-icon" data-animate>
                 <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
@@ -43,9 +39,7 @@
             </button>
           </div>
           <div data-when="execution:completed">
-            <div class="tooltip">
-              Execution completed in X ms
-            </div>
+            <div class="tooltip">Execution completed in X ms</div>
             <button>
               <svg id="check-icon" data-animate viewBox="0 0 52 52">
                 <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
@@ -53,9 +47,7 @@
             </button>
           </div>
           <div data-when="execution:errored">
-            <div class="tooltip">
-              Execution failed in X ms
-            </div>
+            <div class="tooltip">Execution failed in X ms</div>
             <button>
               <svg id="cross-icon" data-animate viewBox="0 0 512 512">
                 <rect
@@ -79,13 +71,11 @@
           </div>
         </section>
 
-        <div style="width: 100%;"></div>
+        <div style="width: 100%"></div>
 
         <section id="eventsource-indicator" data-responsive-toolbar-element>
           <div data-when="eventsource:default">
-            <div class="tooltip">
-              Unknown state
-            </div>
+            <div class="tooltip">Unknown state</div>
             <button>
               <svg>
                 <circle class="eventsource-circle" cx="20" cy="20" r="5" />
@@ -143,24 +133,21 @@
             <div class="tooltip">
               Connected to server
               <br />
-              Livereload: <span data-when="livereload:on" style="color: green;">ON</span
-              ><span data-when="livereload:off" style="color: grey;">OFF</span>
+              Livereload: <span data-when="livereload:on" style="color: green">ON</span
+              ><span data-when="livereload:off" style="color: grey">OFF</span>
               <br />
               Changes:
               <span data-when="changes:yes"
                 ><a
                   class="eventsource-changes-link"
-                  style="color: inherit;"
+                  style="color: inherit"
                   href="javascript:void(0);"
                   >X</a
                 ></span
               ><span data-when="changes:no">none</span>
               <div data-when="changes:yes">
                 <br />
-                <a
-                  class="eventsource-reload-link"
-                  style="color: inherit;"
-                  href="javascript:void(0);"
+                <a class="eventsource-reload-link" style="color: inherit" href="javascript:void(0);"
                   >reload</a
                 >
               </div>
@@ -266,9 +253,7 @@
                     <div class="square"></div>
                   </div>
                 </label>
-                <div class="category-subtitle">
-                  Play toolbar animations and transitions.
-                </div>
+                <div class="category-subtitle">Play toolbar animations and transitions.</div>
               </div>
               <div class="settings-box-item">
                 <div class="category-title">
@@ -306,7 +291,7 @@
       </div>
 
       <div id="overflow-menu">
-        <div style="width: 100%;"></div>
+        <div style="width: 100%"></div>
       </div>
 
       <div id="overflow-menu-button">
@@ -342,7 +327,7 @@
     <!--
     <script type="module" src="./toolbar.main.js"></script>
     The script type module approach works too but
-    is slower than having a bundle.
+    is slower than having a prebuilt file.
     Because this will impact every page using jsenv let's
     use the fatest solution for now.
     The day browser support import maps the script

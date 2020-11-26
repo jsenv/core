@@ -3,17 +3,17 @@ import { urlToContentType, serveFile } from "@jsenv/server"
 import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import {
   COMPILE_ID_OTHERWISE,
-  COMPILE_ID_GLOBAL_BUNDLE,
-  COMPILE_ID_GLOBAL_BUNDLE_FILES,
-  COMPILE_ID_COMMONJS_BUNDLE,
-  COMPILE_ID_COMMONJS_BUNDLE_FILES,
+  COMPILE_ID_BUILD_GLOBAL,
+  COMPILE_ID_BUILD_GLOBAL_FILES,
+  COMPILE_ID_BUILD_COMMONJS,
+  COMPILE_ID_BUILD_COMMONJS_FILES,
 } from "../CONSTANTS.js"
-import { jsenvToolbarHtmlUrl, jsenvBrowserSystemBundleUrl } from "../jsenvInternalFiles.js"
+import { jsenvToolbarHtmlUrl, jsenvBrowserSystemBuildUrl } from "../jsenvInternalFiles.js"
 import { transformImportmap } from "./transformImportmap.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { compileFile } from "./compileFile.js"
-import { serveBundle } from "./serveBundle.js"
+import { serveBuild } from "./serveBuild.js"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
@@ -53,8 +53,8 @@ export const createCompiledFileService = ({
   compileCacheStrategy,
   sourcemapExcludeSources,
 }) => {
-  const jsenvBrowserBundleUrlRelativeToProject = urlToRelativeUrl(
-    jsenvBrowserSystemBundleUrl,
+  const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
+    jsenvBrowserSystemBuildUrl,
     projectDirectoryUrl,
   )
 
@@ -91,10 +91,10 @@ export const createCompiledFileService = ({
 
     const allowedCompileIds = [
       ...Object.keys(groupMap),
-      COMPILE_ID_GLOBAL_BUNDLE,
-      COMPILE_ID_GLOBAL_BUNDLE_FILES,
-      COMPILE_ID_COMMONJS_BUNDLE,
-      COMPILE_ID_COMMONJS_BUNDLE_FILES,
+      COMPILE_ID_BUILD_GLOBAL,
+      COMPILE_ID_BUILD_GLOBAL_FILES,
+      COMPILE_ID_BUILD_COMMONJS,
+      COMPILE_ID_BUILD_COMMONJS_FILES,
     ]
 
     if (!allowedCompileIds.includes(compileId)) {
@@ -147,8 +147,8 @@ export const createCompiledFileService = ({
     }
 
     if (contentType === "application/javascript") {
-      if (compileId === COMPILE_ID_GLOBAL_BUNDLE || compileId === COMPILE_ID_COMMONJS_BUNDLE) {
-        return serveBundle({
+      if (compileId === COMPILE_ID_BUILD_GLOBAL || compileId === COMPILE_ID_BUILD_COMMONJS) {
+        return serveBuild({
           cancellationToken,
           logger,
 
@@ -163,7 +163,7 @@ export const createCompiledFileService = ({
           babelPluginMap,
           projectFileRequestedCallback,
           request,
-          format: compileId === COMPILE_ID_GLOBAL_BUNDLE ? "global" : "commonjs",
+          format: compileId === COMPILE_ID_BUILD_GLOBAL ? "global" : "commonjs",
         })
       }
 
@@ -191,15 +191,15 @@ export const createCompiledFileService = ({
             babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
             convertMap,
             transformTopLevelAwait,
-            moduleOutFormat: compileIdIsForBundleFiles(compileId)
+            moduleOutFormat: compileIdIsForBuildFiles(compileId)
               ? // we are compiling for rollup, do not transform into systemjs format
                 "esmodule"
               : moduleOutFormat,
             importMetaFormat:
               // eslint-disable-next-line no-nested-ternary
-              compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES
+              compileId === COMPILE_ID_BUILD_GLOBAL_FILES
                 ? "global"
-                : compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES
+                : compileId === COMPILE_ID_BUILD_COMMONJS_FILES
                 ? "commonjs"
                 : importMetaFormat,
           })
@@ -243,7 +243,7 @@ export const createCompiledFileService = ({
           manipulateHtmlAst(htmlAst, {
             scriptInjections: [
               {
-                src: `/${jsenvBrowserBundleUrlRelativeToProject}`,
+                src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
               },
               // todo: this is dirty because it means
               // compile server is aware of exploring and jsenv toolbar
@@ -385,9 +385,9 @@ export const createCompiledFileService = ({
   }
 }
 
-const compileIdIsForBundleFiles = (compileId) => {
+const compileIdIsForBuildFiles = (compileId) => {
   return (
-    compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES || compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES
+    compileId === COMPILE_ID_BUILD_GLOBAL_FILES || compileId === COMPILE_ID_BUILD_COMMONJS_FILES
   )
 }
 
@@ -401,7 +401,7 @@ const getWorstCompileId = (groupMap) => {
 const compileIdToBabelPluginMap = (compileId, { babelPluginMap, groupMap }) => {
   let compiledIdForGroupMap
   let babelPluginMapForGroupMap
-  if (compileIdIsForBundleFiles(compileId)) {
+  if (compileIdIsForBuildFiles(compileId)) {
     compiledIdForGroupMap = getWorstCompileId(groupMap)
     babelPluginMapForGroupMap = {}
   } else {

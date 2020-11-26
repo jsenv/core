@@ -10,11 +10,11 @@ import {
   readFile,
   bufferToEtag,
 } from "@jsenv/util"
-import { require } from "../../../src/internal/require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { serveBundle } from "../../../src/internal/compiling/serveBundle.js"
-import { jsenvBabelPluginMap } from "../../../src/jsenvBabelPluginMap.js"
+import { serveBuild } from "@jsenv/core/src/internal/compiling/serveBuild.js"
+import { jsenvBabelPluginMap } from "@jsenv/core/src/jsenvBabelPluginMap.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const originalFileUrl = resolveUrl("./file.cjs", import.meta.url)
@@ -41,7 +41,7 @@ const ressource = `/${outDirectoryRelativeUrl}file.cjs`
 const metaFileUrl = `${compiledFileUrl}__asset__meta.json`
 const envFileUrl = resolveUrl("out/env.json", metaFileUrl)
 
-const response = await serveBundle({
+const response = await serveBuild({
   cancellationToken: createCancellationToken(),
   logger: createLogger({
     logLevel: "warn",
