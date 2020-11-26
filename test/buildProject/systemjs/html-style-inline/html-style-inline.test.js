@@ -47,8 +47,8 @@ const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirecto
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const styleNode = findNodeByTagName(htmlString, "style")
-const depBundleRelativeUrl = getBuildRelativeUrl("dep.css")
-const depBundleUrl = resolveUrl(depBundleRelativeUrl, buildDirectoryUrl)
+const depBuildRelativeUrl = getBuildRelativeUrl("dep.css")
+const depBuildUrl = resolveUrl(depBuildRelativeUrl, buildDirectoryUrl)
 const textNode = getHtmlNodeTextNode(styleNode)
 const text = textNode.value
 
@@ -56,7 +56,7 @@ const text = textNode.value
 {
   const source = setCssSourceMappingUrl(text, null)
   const actual = source.trim()
-  const expected = `@import "${depBundleRelativeUrl}";body{padding:10px}`
+  const expected = `@import "${depBuildRelativeUrl}";body{padding:10px}`
   assert({ actual, expected })
 }
 
@@ -84,7 +84,7 @@ const text = textNode.value
 }
 
 // ensure dep file content is correct
-const depFileContent = await readFile(depBundleUrl)
+const depFileContent = await readFile(depBuildUrl)
 {
   const actual = setCssSourceMappingUrl(depFileContent, null).trim()
   const expected = `body{color:red}`
@@ -93,7 +93,7 @@ const depFileContent = await readFile(depBundleUrl)
 // ensure dep souremap is correct too
 {
   const sourcemappingUrl = getCssSourceMappingUrl(depFileContent)
-  const sourcemapUrl = resolveUrl(sourcemappingUrl, depBundleUrl)
+  const sourcemapUrl = resolveUrl(sourcemappingUrl, depBuildUrl)
   const sourcemapString = await readFile(sourcemapUrl)
   const sourcemap = JSON.parse(sourcemapString)
   const depUrl = resolveUrl("dep.css", testDirectoryUrl)

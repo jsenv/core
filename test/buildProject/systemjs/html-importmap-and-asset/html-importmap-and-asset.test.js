@@ -35,24 +35,24 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const jsBundleRelativeUrl = getBuildRelativeUrl("file.js")
-const imgRemapBundleRelativeUrl = getBuildRelativeUrl("img-remap.png")
+const jsBuildRelativeUrl = getBuildRelativeUrl("file.js")
+const imgRemapBuildRelativeUrl = getBuildRelativeUrl("img-remap.png")
 
 // check importmap content
 {
-  const importmapBundleRelativeUrl = getBuildRelativeUrl("import-map.importmap")
-  const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, buildDirectoryUrl)
-  const importmapString = await readFile(importmapBundleUrl)
+  const importmapBuildRelativeUrl = getBuildRelativeUrl("import-map.importmap")
+  const importmapBuildUrl = resolveUrl(importmapBuildRelativeUrl, buildDirectoryUrl)
+  const importmapString = await readFile(importmapBuildUrl)
   const importmap = JSON.parse(importmapString)
   const actual = importmap
   const expected = {
     imports: {
       // the original importmap remapping are still there
-      // ideally it should target `./${imgRemapBundleRelativeUrl}` but for now it's not supported
+      // ideally it should target `./${imgRemapBuildRelativeUrl}` but for now it's not supported
       "./img.png": "./img-remap.png",
       // the importmap for img-remap is available
-      "./assets/img-remap.png": `./${imgRemapBundleRelativeUrl}`,
-      "./file.js": `./${jsBundleRelativeUrl}`,
+      "./assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
+      "./file.js": `./${jsBuildRelativeUrl}`,
       // and nothing more because js is referencing only img-remap
     },
   }
@@ -63,12 +63,12 @@ const imgRemapBundleRelativeUrl = getBuildRelativeUrl("img-remap.png")
 {
   const imgRelativeUrl = getBuildRelativeUrl("img.png")
   const cssBuildRelativeUrl = getBuildRelativeUrl("style.css")
-  const cssBundleUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
-  const imgBundleUrl = resolveUrl(imgRelativeUrl, buildDirectoryUrl)
-  const cssString = await readFile(cssBundleUrl)
-  const cssUrls = await parseCssUrls(cssString, cssBundleUrl)
+  const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
+  const imgBuildUrl = resolveUrl(imgRelativeUrl, buildDirectoryUrl)
+  const cssString = await readFile(cssBuildUrl)
+  const cssUrls = await parseCssUrls(cssString, cssBuildUrl)
   const actual = cssUrls.urlDeclarations[0].specifier
-  const expected = urlToRelativeUrl(imgBundleUrl, cssBundleUrl)
+  const expected = urlToRelativeUrl(imgBuildUrl, cssBuildUrl)
   assert({ actual, expected })
 }
 
@@ -83,7 +83,7 @@ const imgRemapBundleRelativeUrl = getBuildRelativeUrl("img-remap.png")
   })
   const actual = namespace
   const expected = {
-    default: resolveUrl(`dist/systemjs/${imgRemapBundleRelativeUrl}`, serverOrigin),
+    default: resolveUrl(`dist/systemjs/${imgRemapBuildRelativeUrl}`, serverOrigin),
   }
   assert({ actual, expected })
 }

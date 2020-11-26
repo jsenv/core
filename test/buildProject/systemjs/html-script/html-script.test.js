@@ -45,35 +45,35 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const scriptBundleRelativeUrl = getBuildRelativeUrl("index.js")
-const scriptBundleUrl = resolveUrl(scriptBundleRelativeUrl, buildDirectoryUrl)
+const scriptBuildRelativeUrl = getBuildRelativeUrl("index.js")
+const scriptBuildUrl = resolveUrl(scriptBuildRelativeUrl, buildDirectoryUrl)
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const scriptNode = findNodeByTagName(htmlString, "script")
-const sourcemapBundleRelativeUrl = getBuildRelativeUrl("index.js.map")
-const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, buildDirectoryUrl)
+const sourcemapBuildRelativeUrl = getBuildRelativeUrl("index.js.map")
+const sourcemapBuildUrl = resolveUrl(sourcemapBuildRelativeUrl, buildDirectoryUrl)
 
 {
   const srcAttribute = getHtmlNodeAttributeByName(scriptNode, "src")
   const actual = srcAttribute.value
-  const expected = scriptBundleRelativeUrl
+  const expected = scriptBuildRelativeUrl
   assert({ actual, expected })
 }
 
 // sourcemap file is copied too
 {
-  const scriptString = await readFile(scriptBundleUrl)
+  const scriptString = await readFile(scriptBuildUrl)
   const actual = getJavaScriptSourceMappingUrl(scriptString)
-  const expected = urlToRelativeUrl(sourcemapBundleUrl, scriptBundleUrl)
+  const expected = urlToRelativeUrl(sourcemapBuildUrl, scriptBuildUrl)
   assert({ actual, expected })
 }
 
 // souremap file content
 {
-  const sourcemapString = await readFile(sourcemapBundleUrl)
+  const sourcemapString = await readFile(sourcemapBuildUrl)
   const actual = JSON.parse(sourcemapString)
   const expected = {
-    file: urlToFilename(scriptBundleUrl),
+    file: urlToFilename(scriptBuildUrl),
     sources: ["../../../../../../whatever.js"],
   }
   assert({ actual, expected })
@@ -84,7 +84,7 @@ const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, buildDirectory
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
     codeToRunInBrowser: "window.whatever",
-    mainRelativeUrl: `./${scriptBundleUrl}`,
+    mainRelativeUrl: `./${scriptBuildUrl}`,
     // debug: true,
   })
   const actual = namespace

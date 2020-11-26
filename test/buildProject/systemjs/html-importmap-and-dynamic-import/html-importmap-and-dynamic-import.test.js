@@ -37,20 +37,20 @@ const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirecto
 
 // importmap content
 {
-  const importmapBundleRelativeUrl = getBuildRelativeUrl("import-map.importmap")
-  const fileBundleRelativeUrl = getBuildRelativeUrl("file.js")
-  const fooBundleRelativeUrl = getBuildRelativeUrl("foo.js")
-  const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, buildDirectoryUrl)
-  const importmapString = await readFile(importmapBundleUrl)
+  const importmapBuildRelativeUrl = getBuildRelativeUrl("import-map.importmap")
+  const fileBuildRelativeUrl = getBuildRelativeUrl("file.js")
+  const fooBuildRelativeUrl = getBuildRelativeUrl("foo.js")
+  const importmapBuildUrl = resolveUrl(importmapBuildRelativeUrl, buildDirectoryUrl)
+  const importmapString = await readFile(importmapBuildUrl)
   const importmap = JSON.parse(importmapString)
   const actual = importmap
   const expected = {
     imports: {
       // the original importmap remapping are still there (but an updated version)
-      "foo": `./${fooBundleRelativeUrl}`,
+      "foo": `./${fooBuildRelativeUrl}`,
       // the importmap for foo is available
-      "./file.js": `./${fileBundleRelativeUrl}`,
-      "./foo.js": `./${fooBundleRelativeUrl}`,
+      "./file.js": `./${fileBuildRelativeUrl}`,
+      "./foo.js": `./${fooBuildRelativeUrl}`,
       // and nothing more because js is referencing only an other js
     },
   }

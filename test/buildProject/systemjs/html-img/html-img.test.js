@@ -48,35 +48,35 @@ const img = findNodeByTagName(htmlString, "img")
 // ensure src is properly updated
 {
   const srcAttribute = getHtmlNodeAttributeByName(img, "src")
-  const imgABundleRelativeUrl = getBuildRelativeUrl("img-a.png")
+  const imgABuildRelativeUrl = getBuildRelativeUrl("img-a.png")
   const actual = srcAttribute.value
-  const expected = imgABundleRelativeUrl
+  const expected = imgABuildRelativeUrl
   assert({ actual, expected })
   // ensure corresponding file exists
-  const imgABundleUrl = resolveUrl(imgABundleRelativeUrl, buildDirectoryUrl)
-  await assertFilePresence(imgABundleUrl)
+  const imgABuildUrl = resolveUrl(imgABuildRelativeUrl, buildDirectoryUrl)
+  await assertFilePresence(imgABuildUrl)
 }
 
 // ensure srcset is properly updated
 {
   const srcsetAttribute = getHtmlNodeAttributeByName(img, "srcset")
-  const imgBBundleRelativeUrl = getBuildRelativeUrl("img-b.png")
-  const imgCBundleRelativeUrl = getBuildRelativeUrl("img-c.png")
+  const imgBBuildRelativeUrl = getBuildRelativeUrl("img-b.png")
+  const imgCBuildRelativeUrl = getBuildRelativeUrl("img-c.png")
   const actual = parseSrcset(srcsetAttribute.value)
   const expected = [
     {
-      specifier: imgBBundleRelativeUrl,
+      specifier: imgBBuildRelativeUrl,
       descriptor: "200w",
     },
     {
-      specifier: imgCBundleRelativeUrl,
+      specifier: imgCBuildRelativeUrl,
       descriptor: "400w",
     },
   ]
   // and corresponding file exists
   assert({ actual, expected })
-  const imgBBundleUrl = resolveUrl(imgBBundleRelativeUrl, buildDirectoryUrl)
-  await assertFilePresence(imgBBundleUrl)
-  const imgCBundleUrl = resolveUrl(imgCBundleRelativeUrl, buildDirectoryUrl)
-  await assertFilePresence(imgCBundleUrl)
+  const imgBBuildUrl = resolveUrl(imgBBuildRelativeUrl, buildDirectoryUrl)
+  await assertFilePresence(imgBBuildUrl)
+  const imgCBuildUrl = resolveUrl(imgCBuildRelativeUrl, buildDirectoryUrl)
+  await assertFilePresence(imgCBuildUrl)
 }

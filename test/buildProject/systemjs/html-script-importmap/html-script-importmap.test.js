@@ -37,20 +37,20 @@ const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirecto
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const importmapScriptNode = findNodeByTagName(htmlString, "script")
-const importmapBundleRelativeUrl = getBuildRelativeUrl("import-map.importmap")
-const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, buildDirectoryUrl)
+const importmapBuildRelativeUrl = getBuildRelativeUrl("import-map.importmap")
+const importmapBuildUrl = resolveUrl(importmapBuildRelativeUrl, buildDirectoryUrl)
 
 // ensure src is properly updated
 {
   const srcAttribute = getHtmlNodeAttributeByName(importmapScriptNode, "src")
   const actual = srcAttribute.value
-  const expected = importmapBundleRelativeUrl
+  const expected = importmapBuildRelativeUrl
   assert({ actual, expected })
 }
 
 // ensure importmap file content
 {
-  const importmapString = await readFile(importmapBundleUrl)
+  const importmapString = await readFile(importmapBuildUrl)
   const actual = JSON.parse(importmapString)
   const expected = {
     imports: {

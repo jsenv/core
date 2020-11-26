@@ -41,8 +41,8 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
-const videoBundleRelativeUrl = getBuildRelativeUrl("video.mp4")
-const videoBundleUrl = resolveUrl(videoBundleRelativeUrl, buildDirectoryUrl)
+const videoBuildRelativeUrl = getBuildRelativeUrl("video.mp4")
+const videoBuildUrl = resolveUrl(videoBuildRelativeUrl, buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const sourceNode = findNodeByTagName(htmlString, "source")
 
@@ -50,8 +50,8 @@ const sourceNode = findNodeByTagName(htmlString, "source")
 {
   const srcAttribute = getHtmlNodeAttributeByName(sourceNode, "src")
   const actual = srcAttribute.value
-  const expected = videoBundleRelativeUrl
+  const expected = videoBuildRelativeUrl
   assert({ actual, expected })
   // ensure corresponding file exists
-  await assertFilePresence(videoBundleUrl)
+  await assertFilePresence(videoBuildUrl)
 }

@@ -36,16 +36,16 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
-const svgBundleRelativeUrl = getBuildRelativeUrl("icon.svg")
-const svgBundleUrl = resolveUrl(svgBundleRelativeUrl, buildDirectoryUrl)
-const pngBundleRelativeUrl = getBuildRelativeUrl("img.png")
-const pngBundleUrl = resolveUrl(pngBundleRelativeUrl, buildDirectoryUrl)
+const svgBuildRelativeUrl = getBuildRelativeUrl("icon.svg")
+const svgBuildUrl = resolveUrl(svgBuildRelativeUrl, buildDirectoryUrl)
+const pngBuildRelativeUrl = getBuildRelativeUrl("img.png")
+const pngBuildUrl = resolveUrl(pngBuildRelativeUrl, buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
-const [firstUseNodeInBundle, secondUseNodeInBundle] = findAllNodeByTagName(htmlString, "use")
+const [firstUseNodeInBuild, secondUseNodeInBuild] = findAllNodeByTagName(htmlString, "use")
 
 // ensure first use is untouched
 {
-  const hrefAttribute = getHtmlNodeAttributeByName(firstUseNodeInBundle, "href")
+  const hrefAttribute = getHtmlNodeAttributeByName(firstUseNodeInBuild, "href")
   const actual = hrefAttribute.value
   const expected = "#icon-1"
   assert({ actual, expected })
@@ -53,18 +53,18 @@ const [firstUseNodeInBundle, secondUseNodeInBundle] = findAllNodeByTagName(htmlS
 
 // ensure second use.href is updated
 {
-  const hrefAttribute = getHtmlNodeAttributeByName(secondUseNodeInBundle, "href")
+  const hrefAttribute = getHtmlNodeAttributeByName(secondUseNodeInBuild, "href")
   const actual = hrefAttribute.value
-  const expected = `${svgBundleRelativeUrl}#icon-1`
+  const expected = `${svgBuildRelativeUrl}#icon-1`
   assert({ actual, expected })
 }
 
 // ensure href in icon file is updated
 {
-  const svgString = await readFile(svgBundleUrl)
+  const svgString = await readFile(svgBuildUrl)
   const image = findNodeByTagName(svgString, "image")
   const hrefAttribute = getHtmlNodeAttributeByName(image, "href")
   const actual = hrefAttribute.value
-  const expected = urlToRelativeUrl(pngBundleUrl, svgBundleUrl)
+  const expected = urlToRelativeUrl(pngBuildUrl, svgBuildUrl)
   assert({ actual, expected })
 }

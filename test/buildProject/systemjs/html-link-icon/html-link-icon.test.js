@@ -47,11 +47,11 @@ const link = findNodeByTagName(htmlString, "link")
 // ensure link.href is properly updated
 {
   const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
-  const imgBundleRelativeUrl = getBuildRelativeUrl("img.png")
+  const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
   const actual = hrefAttribute.value
-  const expected = imgBundleRelativeUrl
+  const expected = imgBuildRelativeUrl
   assert({ actual, expected })
   // ensure corresponding file exists
-  const imgABundleUrl = resolveUrl(imgBundleRelativeUrl, buildDirectoryUrl)
-  await assertFilePresence(imgABundleUrl)
+  const imgABuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
+  await assertFilePresence(imgABuildUrl)
 }
