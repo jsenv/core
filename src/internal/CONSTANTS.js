@@ -2,10 +2,10 @@ export const COMPILE_ID_BEST = "best"
 
 export const COMPILE_ID_OTHERWISE = "otherwise"
 
-export const COMPILE_ID_GLOBAL_BUNDLE = "otherwise-global-bundle"
+export const COMPILE_ID_BUILD_GLOBAL = "otherwise-build-global"
 
-export const COMPILE_ID_GLOBAL_BUNDLE_FILES = "otherwise-global-bundle-files"
+export const COMPILE_ID_BUILD_GLOBAL_FILES = "otherwise-build-global-files"
 
-export const COMPILE_ID_COMMONJS_BUNDLE = "otherwise-commonjs-bundle"
+export const COMPILE_ID_BUILD_COMMONJS = "otherwise-build-commonjs"
 
-export const COMPILE_ID_COMMONJS_BUNDLE_FILES = "otherwise-commonjs-bundle-files"
+export const COMPILE_ID_BUILD_COMMONJS_FILES = "otherwise-build-commonjs-files"

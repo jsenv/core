@@ -3,10 +3,10 @@ import { urlToContentType, serveFile } from "@jsenv/server"
 import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import {
   COMPILE_ID_OTHERWISE,
-  COMPILE_ID_GLOBAL_BUNDLE,
-  COMPILE_ID_GLOBAL_BUNDLE_FILES,
-  COMPILE_ID_COMMONJS_BUNDLE,
-  COMPILE_ID_COMMONJS_BUNDLE_FILES,
+  COMPILE_ID_BUILD_GLOBAL,
+  COMPILE_ID_BUILD_GLOBAL_FILES,
+  COMPILE_ID_BUILD_COMMONJS,
+  COMPILE_ID_BUILD_COMMONJS_FILES,
 } from "../CONSTANTS.js"
 import { jsenvToolbarHtmlUrl, jsenvBrowserSystemBundleUrl } from "../jsenvInternalFiles.js"
 import { transformImportmap } from "./transformImportmap.js"
@@ -91,10 +91,10 @@ export const createCompiledFileService = ({
 
     const allowedCompileIds = [
       ...Object.keys(groupMap),
-      COMPILE_ID_GLOBAL_BUNDLE,
-      COMPILE_ID_GLOBAL_BUNDLE_FILES,
-      COMPILE_ID_COMMONJS_BUNDLE,
-      COMPILE_ID_COMMONJS_BUNDLE_FILES,
+      COMPILE_ID_BUILD_GLOBAL,
+      COMPILE_ID_BUILD_GLOBAL_FILES,
+      COMPILE_ID_BUILD_COMMONJS,
+      COMPILE_ID_BUILD_COMMONJS_FILES,
     ]
 
     if (!allowedCompileIds.includes(compileId)) {
@@ -147,7 +147,7 @@ export const createCompiledFileService = ({
     }
 
     if (contentType === "application/javascript") {
-      if (compileId === COMPILE_ID_GLOBAL_BUNDLE || compileId === COMPILE_ID_COMMONJS_BUNDLE) {
+      if (compileId === COMPILE_ID_BUILD_GLOBAL || compileId === COMPILE_ID_BUILD_COMMONJS) {
         return serveBundle({
           cancellationToken,
           logger,
@@ -163,7 +163,7 @@ export const createCompiledFileService = ({
           babelPluginMap,
           projectFileRequestedCallback,
           request,
-          format: compileId === COMPILE_ID_GLOBAL_BUNDLE ? "global" : "commonjs",
+          format: compileId === COMPILE_ID_BUILD_GLOBAL ? "global" : "commonjs",
         })
       }
 
@@ -197,9 +197,9 @@ export const createCompiledFileService = ({
               : moduleOutFormat,
             importMetaFormat:
               // eslint-disable-next-line no-nested-ternary
-              compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES
+              compileId === COMPILE_ID_BUILD_GLOBAL_FILES
                 ? "global"
-                : compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES
+                : compileId === COMPILE_ID_BUILD_COMMONJS_FILES
                 ? "commonjs"
                 : importMetaFormat,
           })
@@ -387,7 +387,7 @@ export const createCompiledFileService = ({
 
 const compileIdIsForBundleFiles = (compileId) => {
   return (
-    compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES || compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES
+    compileId === COMPILE_ID_BUILD_GLOBAL_FILES || compileId === COMPILE_ID_BUILD_COMMONJS_FILES
   )
 }
 

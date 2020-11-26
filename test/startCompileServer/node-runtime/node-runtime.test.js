@@ -1,7 +1,8 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
-import { require } from "../../../src/internal/require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
+import { COMPILE_ID_BUILD_COMMONJS } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
@@ -16,7 +17,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
     compileServerLogLevel: "warn",
     jsenvDirectoryRelativeUrl,
   })
-  const compiledFileRelativeUrl = `${outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodeRuntime.js`
+  const compiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_BUILD_COMMONJS}/src/nodeRuntime.js`
   const fileServerUrl = `${compileServerOrigin}/${compiledFileRelativeUrl}`
   const { url, status, statusText, headers } = await fetchUrl(fileServerUrl, {
     ignoreHttpsError: true,
@@ -38,7 +39,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
   }
   {
     const compiledFileUrl = resolveUrl(
-      "./.jsenv/out/otherwise-commonjs-bundle/src/nodeRuntime.js",
+      `./.jsenv/out/${COMPILE_ID_BUILD_COMMONJS}/src/nodeRuntime.js`,
       testDirectoryUrl,
     )
 

@@ -7,7 +7,7 @@ import {
   urlToFilename,
 } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { COMPILE_ID_GLOBAL_BUNDLE_FILES, COMPILE_ID_COMMONJS_BUNDLE_FILES } from "../CONSTANTS.js"
+import { COMPILE_ID_BUILD_GLOBAL_FILES, COMPILE_ID_BUILD_COMMONJS_FILES } from "../CONSTANTS.js"
 import { generateBundleUsingRollup } from "../bundling/generateBundleUsingRollup.js"
 import { bundleToCompilationResult } from "../bundling/bundleToCompilationResult.js"
 import { compileFile } from "./compileFile.js"
@@ -33,7 +33,7 @@ export const serveBundle = async ({
 }) => {
   const compile = async () => {
     const compileId =
-      format === "global" ? COMPILE_ID_GLOBAL_BUNDLE_FILES : COMPILE_ID_COMMONJS_BUNDLE_FILES
+      format === "global" ? COMPILE_ID_BUILD_GLOBAL_FILES : COMPILE_ID_BUILD_COMMONJS_FILES
 
     const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
     const bundleRelativeUrl =

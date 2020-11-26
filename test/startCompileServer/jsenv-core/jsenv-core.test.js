@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
 import { require } from "../../../src/internal/require.js"
-import { COMPILE_ID_COMMONJS_BUNDLE } from "../../../src/internal/CONSTANTS.js"
+import { COMPILE_ID_BUILD_COMMONJS } from "../../../src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { jsenvBabelPluginMap } from "../../../src/jsenvBabelPluginMap.js"
@@ -26,7 +26,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
     whatever: 42,
   },
 })
-const compiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${filename}`
+const compiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_BUILD_COMMONJS}/${filename}`
 const compiledFileServerUrl = `${compileServerOrigin}/${compiledFileRelativeUrl}`
 const compiledFileUrl = `${testDirectoryUrl}${compiledFileRelativeUrl}`
 const { status, statusText, headers } = await fetchUrl(compiledFileServerUrl, {
