@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl, readFile, resolveUrl } from "@jsenv/util"
-import { generateBundle } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   findAllNodeByTagName,
@@ -20,7 +20,7 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
 
-const { bundleMappings } = await generateBundle({
+const { bundleMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,

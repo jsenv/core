@@ -1,7 +1,7 @@
-import { generateBundle, getBabelPluginMapForNode } from "@jsenv/core"
+import { buildProject, getBabelPluginMapForNode } from "@jsenv/core"
 import * as jsenvConfig from "../../jsenv.config.js"
 
-generateBundle({
+buildProject({
   ...jsenvConfig,
   format: "commonjs",
   babelPluginMap: getBabelPluginMapForNode(),

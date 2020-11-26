@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { generateBundle } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireGlobalBundle } from "../requireGlobalBundle.js"
 import {
@@ -15,7 +15,7 @@ const testDirectoryBasename = basename(testDirectoryRelativeUrl)
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/global/`
 const mainFilename = `${testDirectoryBasename}.js`
 
-await generateBundle({
+await buildProject({
   ...GENERATE_GLOBAL_BUNDLE_TEST_PARAMS,
   buildDirectoryRelativeUrl,
   entryPointMap: {

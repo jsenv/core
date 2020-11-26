@@ -15,7 +15,7 @@ but in production you would get 404 on jsenv-browser-system.js.
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { generateBundle } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
 import {
@@ -33,7 +33,7 @@ const entryPointMap = {
   main: `./${testDirectoryRelativeUrl}${mainFilename}`,
 }
 
-await generateBundle({
+await buildProject({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,

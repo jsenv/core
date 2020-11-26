@@ -1,6 +1,6 @@
-import { generateBundle } from "@jsenv/core"
+import { buildProject } from "@jsenv/core"
 
-generateBundle({
+buildProject({
   format: "commonjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPointMap: {
@@ -9,7 +9,7 @@ generateBundle({
   externalImportSpecifiers: ["./answer.js"],
 })
 
-generateBundle({
+buildProject({
   format: "systemjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPointMap: {
@@ -18,7 +18,7 @@ generateBundle({
   externalImportSpecifiers: ["./answer.js"],
 })
 
-generateBundle({
+buildProject({
   format: "esmodule",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPointMap: {
@@ -27,7 +27,7 @@ generateBundle({
   externalImportSpecifiers: ["./answer.js"],
 })
 
-generateBundle({
+buildProject({
   format: "global",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPointMap: {

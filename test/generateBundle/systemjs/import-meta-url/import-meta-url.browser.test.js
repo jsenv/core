@@ -2,7 +2,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { generateBundle } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core/index.js"
 import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
 import {
   GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
@@ -16,7 +16,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.js`
 
-await generateBundle({
+await buildProject({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,

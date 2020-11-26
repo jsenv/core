@@ -2,7 +2,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
-import { generateBundle } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
@@ -19,7 +19,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
 const mainFilename = `${testDirectoryname}.ts`
 
-await generateBundle({
+await buildProject({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   babelPluginMap: {
     ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS.babelPluginMap,

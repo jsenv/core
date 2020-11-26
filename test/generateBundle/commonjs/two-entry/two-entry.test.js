@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { generateBundle } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core/index.js"
 import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
@@ -15,7 +15,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const firstEntryRelativeUrl = `${testDirectoryRelativeUrl}a.js`
 const secondEntryRelativeUrl = `${testDirectoryRelativeUrl}b.js`
 
-const { bundleManifest, bundleMappings } = await generateBundle({
+const { bundleManifest, bundleMappings } = await buildProject({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,

@@ -21,16 +21,16 @@ Bundling consists into taking one or many input files to generate one or many ou
 - Hash url to enable long term caching
 - Transform file content to support more execution environments (old browsers for instance)
 
-Bundling for the web means generating files that will be executed by a web browser (Chrome, Firefox, and so on). To do that provide your main html file to a function called `generateBundle`. It will collect all the files used directly or indirectly by the html file. Once all the files are known they are eventually minified, concatened and file urls are replaced with a unique url identifier to enable long term caching.
+Bundling for the web means generating files that will be executed by a web browser (Chrome, Firefox, and so on). To do that provide your main html file to a function called `buildProject`. It will collect all the files used directly or indirectly by the html file. Once all the files are known they are eventually minified, concatened and file urls are replaced with a unique url identifier to enable long term caching.
 
 # Code example
 
-In practice you pass a `main.html` and `generateBundle` writes a file in `dist/main.html`.
+In practice you pass a `main.html` and `buildProject` writes a file in `dist/main.html`.
 
 ```js
-import { generateBundle } from "@jsenv/core"
+import { buildProject } from "@jsenv/core"
 
-await generateBundle({
+await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "dist",
   enryPointMap: {
@@ -133,9 +133,9 @@ body {
 If you don't want to change urls to enable long term caching use `longTermCaching` parameter.
 
 ```js
-import { generateBundle } from "@jsenv/core"
+import { buildProject } from "@jsenv/core"
 
-await generateBundle({
+await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   longTermCaching: false,
 })
@@ -160,9 +160,9 @@ If you want any of the benefits of [import maps](#import-maps) and/or [top level
 To use SystemJS format, use `format` parameter
 
 ```js
-import { generateBundle } from "@jsenv/core"
+import { buildProject } from "@jsenv/core"
 
-await generateBundle({
+await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "dist",
   enryPointMap: {
@@ -322,9 +322,9 @@ I would consider the following before disabling concatenation:
 Concatenation cannot be disabled because rollup cannot do that. It should be possible with rollup 3.0 as stated in https://github.com/rollup/rollup/issues/3882. Whenever rollup makes it possible it will become possible to use `jsConcatenation` parameter to disable concatenation.
 
 ```js
-import { generateBundle } from "@jsenv/core"
+import { buildProject } from "@jsenv/core"
 
-await generateBundle({
+await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   jsConcatenation: false,
 })

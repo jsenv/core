@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { generateBundle } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { nodeImportSystemJsBundle } from "../nodeImportSystemJsBundle.js"
 import {
@@ -16,7 +16,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.js`
 
-const bundle = await generateBundle({
+const bundle = await buildProject({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   useImportMapToImproveLongTermCaching: false,
   jsenvDirectoryRelativeUrl,
@@ -36,7 +36,7 @@ assert({ actual, expected })
 
 // ensure file hash does not change when runned twice
 {
-  const secondBundle = await generateBundle({
+  const secondBundle = await buildProject({
     ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
     useImportMapToImproveLongTermCaching: false,
     jsenvDirectoryRelativeUrl,

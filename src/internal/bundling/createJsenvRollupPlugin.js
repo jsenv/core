@@ -289,7 +289,7 @@ export const createJsenvRollupPlugin = async ({
       // but this can be desired to produce a bundle with only assets (html, css, images)
       // without any js
       // we emit an empty chunk, discards rollup warning about it and we manually remove
-      // this chunk in generateBundle hook
+      // this chunk in buildProject hook
       let atleastOneChunkEmitted = false
       compositeAssetHandler = createCompositeAssetHandler(
         {
@@ -674,7 +674,7 @@ export const createJsenvRollupPlugin = async ({
       }
     },
 
-    async generateBundle(outputOptions, bundleForRollup) {
+    async buildProject(outputOptions, bundleForRollup) {
       const jsBundle = {}
       Object.keys(bundleForRollup).forEach((fileName) => {
         const file = bundleForRollup[fileName]

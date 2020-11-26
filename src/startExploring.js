@@ -135,7 +135,7 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
     // but to url before. It means browser tries to load source map from
     // "/.jsenv/jsenv-toolbar.js.map"
     // we could also inline sourcemap but it's not yet possible
-    // inside generateBundle
+    // inside buildProject
     if (request.ressource === "/.jsenv/jsenv-toolbar.js.map") {
       const jsenvToolbarJsBundleSourcemapServerUrl = `${request.origin}/${jsenvToolbarJsBundleRelativeUrlForProject}.map`
       return {

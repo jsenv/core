@@ -4,7 +4,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl, writeFile } from "@jsenv/util"
-import { generateBundle } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
@@ -22,7 +22,7 @@ const mainFileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
 const mainFileUrl = resolveUrl(mainFileRelativeUrl, jsenvCoreDirectoryUrl)
 
 const generate = () =>
-  generateBundle({
+  buildProject({
     ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
     // logLevel: "debug",
     // compileServerLogLevel: "debug",

@@ -1,5 +1,5 @@
 // import { resolveUrl } from "@jsenv/util"
-import { generateBundle } from "@jsenv/core"
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   jsenvNodeSystemRelativeUrl,
@@ -54,5 +54,5 @@ const bundlesToGenerate = [
 
 await bundlesToGenerate.reduce(async (previous, bundleToGenerate) => {
   await previous
-  await generateBundle(bundleToGenerate)
+  await buildProject(bundleToGenerate)
 }, Promise.resolve())

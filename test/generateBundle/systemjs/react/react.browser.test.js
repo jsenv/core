@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { generateBundle, convertCommonJsWithRollup } from "@jsenv/core/index.js"
+import { buildProject, convertCommonJsWithRollup } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
 import {
@@ -16,7 +16,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.html`
 
-const { bundleMappings } = await generateBundle({
+const { bundleMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   // compileServerLogLevel: "debug",
   // logLevel: "debug",

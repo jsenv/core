@@ -12,7 +12,7 @@ import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { bundleToCompilationResult } from "@jsenv/core/src/internal/bundling/bundleToCompilationResult.js"
-import { generateBundle } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core/index.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
   GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
@@ -28,7 +28,7 @@ const mainFilename = `${testDirectoryname}.js`
 const mainFileRelativeUrl = `./${testDirectoryRelativeUrl}${mainFilename}`
 const mainFileUrl = resolveUrl("./https.js", import.meta.url)
 
-const bundle = await generateBundle({
+const bundle = await buildProject({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,

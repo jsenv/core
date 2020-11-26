@@ -73,7 +73,7 @@ export const buildProject = async ({
 
   // when true .jsenv/out-build directory is generated
   // with all intermediated files used to produce the final bundle.
-  // it might improve generateBundle speed for subsequent bundle generation
+  // it might improve buildProject speed for subsequent bundle generation
   // but this is to be proven and not absolutely required
   // When false intermediates files are transformed and served in memory
   // by the compile server
