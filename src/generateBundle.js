@@ -72,7 +72,7 @@ export const generateBundle = async ({
   // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default
   minifyCssOptions,
 
-  // when true .jsenv/out-bundle directory is generated
+  // when true .jsenv/out-build directory is generated
   // with all intermediated files used to produce the final bundle.
   // it might improve generateBundle speed for subsequent bundle generation
   // but this is to be proven and not absolutely required
@@ -145,11 +145,11 @@ export const generateBundle = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      // bundle compiled files are written into a different directory
+      // build compiled files are written into a different directory
       // than exploring-server. This is because here we compile for rollup
       // that is expecting esmodule format, not systemjs
       // + some more differences like import.meta.dev
-      outDirectoryName: "out-bundle",
+      outDirectoryName: "out-build",
       importMapFileRelativeUrl,
       importDefaultExtension,
       importMetaEnvFileRelativeUrl,
