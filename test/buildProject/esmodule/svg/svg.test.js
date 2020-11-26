@@ -28,17 +28,17 @@ const { buildMappings } = await buildProject({
   },
 })
 
-const iconBundleRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}icon.svg`]
-const iconBundleUrl = resolveUrl(`./dist/esmodule/${iconBundleRelativeUrl}`, import.meta.url)
+const iconBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}icon.svg`]
+const iconBuildUrl = resolveUrl(`./dist/esmodule/${iconBuildRelativeUrl}`, import.meta.url)
 
-await assertFilePresence(iconBundleUrl)
+await assertFilePresence(iconBuildUrl)
 
 {
   const { value: actual, serverOrigin } = await browserImportBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
   })
-  const expected = new URL(iconBundleRelativeUrl, serverOrigin).href
+  const expected = new URL(iconBuildRelativeUrl, serverOrigin).href
   assert({ actual, expected })
 }
 
@@ -48,6 +48,6 @@ if (SourceMap) {
     ...NODE_IMPORT_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
   })
-  const expected = new URL(`./dist/esmodule/${iconBundleRelativeUrl}`, import.meta.url).href
+  const expected = new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, import.meta.url).href
   assert({ actual, expected })
 }

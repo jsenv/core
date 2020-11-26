@@ -25,23 +25,23 @@ const { buildMappings } = await buildProject({
   minify: true,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const styleBundleRelativeUrl = getBundleRelativeUrl("style.css")
-const imgBundleRelativeUrl = getBundleRelativeUrl("img.png")
-const styleBundleUrl = resolveUrl(styleBundleRelativeUrl, buildDirectoryUrl)
-const imgBundleUrl = resolveUrl(imgBundleRelativeUrl, buildDirectoryUrl)
+const styleBuildRelativeUrl = getBuildRelativeUrl("style.css")
+const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
+const styleBuildUrl = resolveUrl(styleBuildRelativeUrl, buildDirectoryUrl)
+const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
 
 // ensure background image url is properly updated
 {
-  const styleCssString = await readFile(styleBundleUrl)
-  const styleUrls = await parseCssUrls(styleCssString, styleBundleUrl)
+  const styleCssString = await readFile(styleBuildUrl)
+  const styleUrls = await parseCssUrls(styleCssString, styleBuildUrl)
   const actual = styleUrls.urlDeclarations[0].specifier
-  const expected = urlToRelativeUrl(imgBundleUrl, styleBundleUrl)
+  const expected = urlToRelativeUrl(imgBuildUrl, styleBuildUrl)
   assert({ actual, expected })
 }

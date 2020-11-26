@@ -28,8 +28,8 @@ await buildProject({
 })
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBundleUrl)
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const htmlString = await readFile(htmlBuildUrl)
 const importmapScriptNode = findNodeByTagName(htmlString, "script")
 
 // ensure text content is correct

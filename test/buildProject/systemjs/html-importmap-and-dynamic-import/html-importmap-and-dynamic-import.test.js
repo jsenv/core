@@ -27,19 +27,19 @@ const { buildMappings } = await buildProject({
   entryPointMap,
   // minify: true,
 })
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 
 // importmap content
 {
-  const importmapBundleRelativeUrl = getBundleRelativeUrl("import-map.importmap")
-  const fileBundleRelativeUrl = getBundleRelativeUrl("file.js")
-  const fooBundleRelativeUrl = getBundleRelativeUrl("foo.js")
+  const importmapBundleRelativeUrl = getBuildRelativeUrl("import-map.importmap")
+  const fileBundleRelativeUrl = getBuildRelativeUrl("file.js")
+  const fooBundleRelativeUrl = getBuildRelativeUrl("foo.js")
   const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, buildDirectoryUrl)
   const importmapString = await readFile(importmapBundleUrl)
   const importmap = JSON.parse(importmapString)
@@ -59,7 +59,7 @@ const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirecto
 
 // assert asset url is correct for javascript (remapped + hashed)
 {
-  const mainRelativeUrl = getBundleRelativeUrl("file.js")
+  const mainRelativeUrl = getBuildRelativeUrl("file.js")
   const { namespace } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

@@ -4,7 +4,7 @@ import { require } from "@jsenv/core/src/internal/require.js"
 
 const { chromium } = require("playwright-chromium")
 
-export const scriptLoadGlobalBundle = async ({
+export const scriptLoadGlobalBuild = async ({
   projectDirectoryUrl,
   buildDirectoryRelativeUrl,
   mainRelativeUrl,
@@ -45,7 +45,7 @@ const startTestServer = ({ buildDirectoryUrl }) => {
     protocol: "https",
     requestToResponse: firstService(
       (request) => serveIndexPage({ request }),
-      (request) => serveBundleDirectory({ buildDirectoryUrl, request }),
+      (request) => serveBuildDirectory({ buildDirectoryUrl, request }),
     ),
   })
 }
@@ -80,7 +80,7 @@ const generateIndexPage = () => `<!doctype html>
 
 </html>`
 
-const serveBundleDirectory = ({ buildDirectoryUrl, request: { ressource, method, headers } }) =>
+const serveBuildDirectory = ({ buildDirectoryUrl, request: { ressource, method, headers } }) =>
   serveFile(urlToFileSystemPath(resolveUrl(ressource.slice(1), buildDirectoryUrl)), {
     method,
     headers,

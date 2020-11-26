@@ -33,8 +33,8 @@ await buildProject({
 })
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBundleUrl)
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const htmlString = await readFile(htmlBuildUrl)
 const scriptNode = findNodeByTagName(htmlString, "script")
 
 const textNode = getHtmlNodeTextNode(scriptNode)
@@ -51,7 +51,7 @@ const text = textNode.value
 // now ensure sourcemap file content looks good
 {
   const sourcemappingUrl = getJavaScriptSourceMappingUrl(text)
-  const sourcemapUrl = resolveUrl(sourcemappingUrl, htmlBundleUrl)
+  const sourcemapUrl = resolveUrl(sourcemappingUrl, htmlBuildUrl)
   const sourcemapString = await readFile(sourcemapUrl)
   const sourcemap = JSON.parse(sourcemapString)
   const htmlUrl = resolveUrl(mainFilename, testDirectoryUrl)

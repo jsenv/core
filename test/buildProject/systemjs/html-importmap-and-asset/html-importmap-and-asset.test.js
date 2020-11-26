@@ -28,19 +28,19 @@ const { buildMappings } = await buildProject({
   entryPointMap,
   // minify: true,
 })
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const jsBundleRelativeUrl = getBundleRelativeUrl("file.js")
-const imgRemapBundleRelativeUrl = getBundleRelativeUrl("img-remap.png")
+const jsBundleRelativeUrl = getBuildRelativeUrl("file.js")
+const imgRemapBundleRelativeUrl = getBuildRelativeUrl("img-remap.png")
 
 // check importmap content
 {
-  const importmapBundleRelativeUrl = getBundleRelativeUrl("import-map.importmap")
+  const importmapBundleRelativeUrl = getBuildRelativeUrl("import-map.importmap")
   const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, buildDirectoryUrl)
   const importmapString = await readFile(importmapBundleUrl)
   const importmap = JSON.parse(importmapString)
@@ -61,9 +61,9 @@ const imgRemapBundleRelativeUrl = getBundleRelativeUrl("img-remap.png")
 
 // assert asset url is correct for css (hashed)
 {
-  const imgRelativeUrl = getBundleRelativeUrl("img.png")
-  const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")
-  const cssBundleUrl = resolveUrl(cssBundleRelativeUrl, buildDirectoryUrl)
+  const imgRelativeUrl = getBuildRelativeUrl("img.png")
+  const cssBuildRelativeUrl = getBuildRelativeUrl("style.css")
+  const cssBundleUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
   const imgBundleUrl = resolveUrl(imgRelativeUrl, buildDirectoryUrl)
   const cssString = await readFile(cssBundleUrl)
   const cssUrls = await parseCssUrls(cssString, cssBundleUrl)
@@ -74,7 +74,7 @@ const imgRemapBundleRelativeUrl = getBundleRelativeUrl("img-remap.png")
 
 // assert asset url is correct for javascript (remapped + hashed)
 {
-  const mainRelativeUrl = getBundleRelativeUrl("file.js")
+  const mainRelativeUrl = getBuildRelativeUrl("file.js")
   const { namespace, serverOrigin } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

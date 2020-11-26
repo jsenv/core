@@ -33,21 +33,21 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBundleUrl)
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const htmlString = await readFile(htmlBuildUrl)
 const link = findNodeByTagName(htmlString, "link")
 
 // ensure link.href is properly updated
 {
   const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
-  const imgBundleRelativeUrl = getBundleRelativeUrl("img.png")
+  const imgBundleRelativeUrl = getBuildRelativeUrl("img.png")
   const actual = hrefAttribute.value
   const expected = imgBundleRelativeUrl
   assert({ actual, expected })

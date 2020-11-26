@@ -37,17 +37,17 @@ const { buildMappings } = await buildProject({
   minify: true,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBundleUrl)
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const htmlString = await readFile(htmlBuildUrl)
 const styleNode = findNodeByTagName(htmlString, "style")
-const depBundleRelativeUrl = getBundleRelativeUrl("dep.css")
+const depBundleRelativeUrl = getBuildRelativeUrl("dep.css")
 const depBundleUrl = resolveUrl(depBundleRelativeUrl, buildDirectoryUrl)
 const textNode = getHtmlNodeTextNode(styleNode)
 const text = textNode.value
@@ -63,7 +63,7 @@ const text = textNode.value
 // now ensure sourcemap file content looks good
 {
   const sourcemappingUrl = getCssSourceMappingUrl(text)
-  const sourcemapUrl = resolveUrl(sourcemappingUrl, htmlBundleUrl)
+  const sourcemapUrl = resolveUrl(sourcemappingUrl, htmlBuildUrl)
   const sourcemapString = await readFile(sourcemapUrl)
   const sourcemap = JSON.parse(sourcemapString)
   const htmlUrl = resolveUrl(mainFilename, testDirectoryUrl)

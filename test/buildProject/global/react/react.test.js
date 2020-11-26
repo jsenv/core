@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { buildProject, convertCommonJsWithRollup } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { scriptLoadGlobalBundle } from "../scriptLoadGlobalBundle.js"
+import { scriptLoadGlobalBuild } from "../scriptLoadGlobalBuild.js"
 import {
   GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
@@ -28,7 +28,7 @@ await buildProject({
       convertCommonJsWithRollup({ ...options, processEnvNodeEnv: "dev" }),
   },
 })
-const { globalValue: actual } = await scriptLoadGlobalBundle({
+const { globalValue: actual } = await scriptLoadGlobalBuild({
   ...SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
 })

@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { buildProject } from "@jsenv/core/index.js"
-import { scriptLoadGlobalBundle } from "../scriptLoadGlobalBundle.js"
+import { scriptLoadGlobalBuild } from "../scriptLoadGlobalBuild.js"
 import {
   GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
@@ -25,7 +25,7 @@ await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
   },
 })
-const { globalValue, serverOrigin } = await scriptLoadGlobalBundle({
+const { globalValue, serverOrigin } = await scriptLoadGlobalBuild({
   ...SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
 })

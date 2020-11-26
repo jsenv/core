@@ -34,29 +34,29 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBundleUrl)
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const htmlString = await readFile(htmlBuildUrl)
 const link = findNodeByTagName(htmlString, "link")
-const mainCssBundleRelativeUrl = getBundleRelativeUrl("style.css")
-const depCssBundleRelativeUrl = getBundleRelativeUrl("dir/dep.css")
-const mainCssBundleUrl = resolveUrl(mainCssBundleRelativeUrl, buildDirectoryUrl)
-const depCssBundleUrl = resolveUrl(depCssBundleRelativeUrl, buildDirectoryUrl)
+const maincssBuildRelativeUrl = getBuildRelativeUrl("style.css")
+const depcssBuildRelativeUrl = getBuildRelativeUrl("dir/dep.css")
+const mainCssBundleUrl = resolveUrl(maincssBuildRelativeUrl, buildDirectoryUrl)
+const depCssBundleUrl = resolveUrl(depcssBuildRelativeUrl, buildDirectoryUrl)
 
 // ensure link.href is properly updated
 {
   const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
   const actual = hrefAttribute.value
-  const expected = mainCssBundleRelativeUrl
+  const expected = maincssBuildRelativeUrl
   assert({ actual, expected })
   // ensure corresponding file exists
-  const imgABundleUrl = resolveUrl(mainCssBundleRelativeUrl, buildDirectoryUrl)
+  const imgABundleUrl = resolveUrl(maincssBuildRelativeUrl, buildDirectoryUrl)
   await assertFilePresence(imgABundleUrl)
 }
 

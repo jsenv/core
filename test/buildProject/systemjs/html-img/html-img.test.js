@@ -34,21 +34,21 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBundleUrl)
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const htmlString = await readFile(htmlBuildUrl)
 const img = findNodeByTagName(htmlString, "img")
 
 // ensure src is properly updated
 {
   const srcAttribute = getHtmlNodeAttributeByName(img, "src")
-  const imgABundleRelativeUrl = getBundleRelativeUrl("img-a.png")
+  const imgABundleRelativeUrl = getBuildRelativeUrl("img-a.png")
   const actual = srcAttribute.value
   const expected = imgABundleRelativeUrl
   assert({ actual, expected })
@@ -60,8 +60,8 @@ const img = findNodeByTagName(htmlString, "img")
 // ensure srcset is properly updated
 {
   const srcsetAttribute = getHtmlNodeAttributeByName(img, "srcset")
-  const imgBBundleRelativeUrl = getBundleRelativeUrl("img-b.png")
-  const imgCBundleRelativeUrl = getBundleRelativeUrl("img-c.png")
+  const imgBBundleRelativeUrl = getBuildRelativeUrl("img-b.png")
+  const imgCBundleRelativeUrl = getBuildRelativeUrl("img-c.png")
   const actual = parseSrcset(srcsetAttribute.value)
   const expected = [
     {

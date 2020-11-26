@@ -28,13 +28,13 @@ const { buildMappings } = await buildProject({
   // minify: true,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
-const inlineScriptBundleRelativeUrl = getBundleRelativeUrl("html-script-module-inline.10.js")
+const inlineScriptBundleRelativeUrl = getBuildRelativeUrl("html-script-module-inline.10.js")
 
 const { namespace: actual } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,

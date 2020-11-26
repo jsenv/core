@@ -33,25 +33,25 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBundleUrl)
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const htmlString = await readFile(htmlBuildUrl)
 const image = findNodeByTagName(htmlString, "image")
 
 // ensure href is properly updated
 {
   const hrefAttribute = getHtmlNodeAttributeByName(image, "href")
-  const imgBundleRelativeUrl = getBundleRelativeUrl("img.png")
+  const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
   const actual = hrefAttribute.value
-  const expected = imgBundleRelativeUrl
+  const expected = imgBuildRelativeUrl
   assert({ actual, expected })
   // ensure corresponding file exists
-  const imgABundleUrl = resolveUrl(imgBundleRelativeUrl, buildDirectoryUrl)
-  await assertFilePresence(imgABundleUrl)
+  const imgABuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
+  await assertFilePresence(imgABuildUrl)
 }

@@ -17,7 +17,7 @@ export const SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS = {
   globalName: "__namespace__",
 }
 
-export const REQUIRE_GLOBAL_BUNDLE_TEST_PARAMS = {
+export const REQUIRE_GLOBAL_BUILD_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   mainRelativeUrl: "./main.js",
   globalName: "__namespace__",

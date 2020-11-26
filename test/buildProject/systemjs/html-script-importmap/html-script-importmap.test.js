@@ -27,17 +27,17 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBundleUrl)
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const htmlString = await readFile(htmlBuildUrl)
 const importmapScriptNode = findNodeByTagName(htmlString, "script")
-const importmapBundleRelativeUrl = getBundleRelativeUrl("import-map.importmap")
+const importmapBundleRelativeUrl = getBuildRelativeUrl("import-map.importmap")
 const importmapBundleUrl = resolveUrl(importmapBundleRelativeUrl, buildDirectoryUrl)
 
 // ensure src is properly updated

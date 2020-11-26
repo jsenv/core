@@ -16,7 +16,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.js`
 
-const bundle = await buildProject({
+const firstBuild = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   useImportMapToImproveLongTermCaching: false,
   jsenvDirectoryRelativeUrl,
@@ -36,7 +36,7 @@ assert({ actual, expected })
 
 // ensure file hash does not change when runned twice
 {
-  const secondBundle = await buildProject({
+  const secondBuild = await buildProject({
     ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
     useImportMapToImproveLongTermCaching: false,
     jsenvDirectoryRelativeUrl,
@@ -45,7 +45,7 @@ assert({ actual, expected })
       [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
     },
   })
-  const actual = secondBundle.buildMappings
-  const expected = bundle.buildMappings
+  const actual = secondBuild.buildMappings
+  const expected = firstBuild.buildMappings
   assert({ actual, expected })
 }

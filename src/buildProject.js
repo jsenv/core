@@ -129,7 +129,7 @@ export const buildProject = async ({
     if (Object.keys(entryPointMap).length === 0) {
       logger.error(`entryPointMap is an empty object`)
       return {
-        rollupBundles: {},
+        rollupBuilds: {},
       }
     }
 

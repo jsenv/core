@@ -28,19 +28,19 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
-const svgBundleRelativeUrl = getBundleRelativeUrl("icon.svg")
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const svgBundleRelativeUrl = getBuildRelativeUrl("icon.svg")
 const svgBundleUrl = resolveUrl(svgBundleRelativeUrl, buildDirectoryUrl)
-const pngBundleRelativeUrl = getBundleRelativeUrl("img.png")
+const pngBundleRelativeUrl = getBuildRelativeUrl("img.png")
 const pngBundleUrl = resolveUrl(pngBundleRelativeUrl, buildDirectoryUrl)
-const htmlString = await readFile(htmlBundleUrl)
+const htmlString = await readFile(htmlBuildUrl)
 const [firstUseNodeInBundle, secondUseNodeInBundle] = findAllNodeByTagName(htmlString, "use")
 
 // ensure first use is untouched

@@ -33,17 +33,17 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
-const videoBundleRelativeUrl = getBundleRelativeUrl("video.mp4")
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const videoBundleRelativeUrl = getBuildRelativeUrl("video.mp4")
 const videoBundleUrl = resolveUrl(videoBundleRelativeUrl, buildDirectoryUrl)
-const htmlString = await readFile(htmlBundleUrl)
+const htmlString = await readFile(htmlBuildUrl)
 const sourceNode = findNodeByTagName(htmlString, "source")
 
 // ensure source.src is properly updated

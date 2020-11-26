@@ -28,12 +28,12 @@ const { buildMappings } = await buildProject({
   minify: true,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
-const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")
+const cssBuildRelativeUrl = getBuildRelativeUrl("style.css")
 
 const { namespace, serverOrigin } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
@@ -44,6 +44,6 @@ const { namespace, serverOrigin } = await browserImportSystemJsBuild({
 })
 const actual = namespace
 const expected = {
-  cssUrl: resolveUrl(`/dist/systemjs/${cssBundleRelativeUrl}`, serverOrigin),
+  cssUrl: resolveUrl(`/dist/systemjs/${cssBuildRelativeUrl}`, serverOrigin),
 }
 assert({ actual, expected })

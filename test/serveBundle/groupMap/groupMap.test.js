@@ -108,7 +108,7 @@ const babelPluginMap = jsenvBabelPluginMap
     assert({ actual, expected })
   }
 
-  // ensure serveBundle cache works
+  // ensure serveBuild cache works
   const secondResponse = await serveBuild({
     ...serveBuildParams,
     request: {

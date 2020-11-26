@@ -28,13 +28,13 @@ const { buildMappings } = await buildProject({
   jsConcatenation: false,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
-const indexRelativeUrl = getBundleRelativeUrl("index.js")
+const indexRelativeUrl = getBuildRelativeUrl("index.js")
 
 {
   const { value: actual } = await browserImportBuild({

@@ -38,19 +38,19 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const scriptBundleRelativeUrl = getBundleRelativeUrl("index.js")
+const scriptBundleRelativeUrl = getBuildRelativeUrl("index.js")
 const scriptBundleUrl = resolveUrl(scriptBundleRelativeUrl, buildDirectoryUrl)
-const htmlBundleUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBundleUrl)
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const htmlString = await readFile(htmlBuildUrl)
 const scriptNode = findNodeByTagName(htmlString, "script")
-const sourcemapBundleRelativeUrl = getBundleRelativeUrl("index.js.map")
+const sourcemapBundleRelativeUrl = getBuildRelativeUrl("index.js.map")
 const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, buildDirectoryUrl)
 
 {

@@ -28,27 +28,27 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
+const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const bundleRelativeUrl = buildMappings[relativeUrl]
-  return bundleRelativeUrl
+  const buildRelativeUrl = buildMappings[relativeUrl]
+  return buildRelativeUrl
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const cssBundleRelativeUrl = getBundleRelativeUrl("style.css")
-const cssBundleUrl = resolveUrl(cssBundleRelativeUrl, buildDirectoryUrl)
-const cssString = await readFile(cssBundleUrl)
+const cssBuildRelativeUrl = getBuildRelativeUrl("style.css")
+const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
+const cssString = await readFile(cssBuildUrl)
 
 // ensure font urls properly updated in css file
 {
-  const cssUrls = await parseCssUrls(cssString, cssBundleUrl)
+  const cssUrls = await parseCssUrls(cssString, cssBuildUrl)
   const fontSpecifier = cssUrls.urlDeclarations[0].specifier
-  const fontBundleRelativeUrl = getBundleRelativeUrl("Roboto-Thin.ttf")
-  const fontBundleUrl = resolveUrl(fontBundleRelativeUrl, buildDirectoryUrl)
+  const fontBuildRelativeUrl = getBuildRelativeUrl("Roboto-Thin.ttf")
+  const fontBuildUrl = resolveUrl(fontBuildRelativeUrl, buildDirectoryUrl)
 
   const actual = fontSpecifier
-  const expected = urlToRelativeUrl(fontBundleUrl, cssBundleUrl)
+  const expected = urlToRelativeUrl(fontBuildUrl, cssBuildUrl)
   assert({ actual, expected })
 
-  await assertFilePresence(fontBundleUrl)
+  await assertFilePresence(fontBuildUrl)
 }
