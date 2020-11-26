@@ -14,10 +14,10 @@ import {
   getHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
-import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
+import { browserImportSystemJsBuild } from "../browserImportSystemJsBuild.js"
 import {
-  GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
+  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -31,7 +31,7 @@ const entryPointMap = {
 }
 
 const { bundleMappings } = await buildProject({
-  ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+  ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -80,8 +80,8 @@ const sourcemapBundleUrl = resolveUrl(sourcemapBundleRelativeUrl, buildDirectory
 }
 
 {
-  const { namespace } = await browserImportSystemJsBundle({
-    ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+  const { namespace } = await browserImportSystemJsBuild({
+    ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
     codeToRunInBrowser: "window.whatever",
     mainRelativeUrl: `./${scriptBundleUrl}`,

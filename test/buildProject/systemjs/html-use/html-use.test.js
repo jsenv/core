@@ -8,7 +8,7 @@ import {
   getHtmlNodeAttributeByName,
   findNodeByTagName,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
+import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -21,7 +21,7 @@ const entryPointMap = {
 }
 
 const { bundleMappings } = await buildProject({
-  ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+  ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,

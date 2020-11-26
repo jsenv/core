@@ -5,9 +5,9 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { buildProject } from "@jsenv/core/index.js"
 import {
-  GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
-  BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
-  NODE_IMPORT_BUNDLE_TEST_PARAMS,
+  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+  BROWSER_IMPORT_BUILD_TEST_PARAMS,
+  NODE_IMPORT_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 import { browserImportBundle } from "../browserImportBundle.js"
 import { nodeImportBundle } from "../nodeImportBundle.js"
@@ -20,7 +20,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
 await buildProject({
-  ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
+  ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
@@ -30,7 +30,7 @@ await buildProject({
 // top level await not supported in pupeteer for now
 try {
   await browserImportBundle({
-    ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
+    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
   })
   throw new Error("should throw")
@@ -44,7 +44,7 @@ try {
 if (SourceMap) {
   try {
     await nodeImportBundle({
-      ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
+      ...NODE_IMPORT_BUILD_TEST_PARAMS,
       buildDirectoryRelativeUrl,
     })
     throw new Error("should throw")

@@ -3,10 +3,10 @@ import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { buildProject, convertCommonJsWithRollup } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
+import { browserImportSystemJsBuild } from "../browserImportSystemJsBuild.js"
 import {
-  GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
+  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -17,7 +17,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.html`
 
 const { bundleMappings } = await buildProject({
-  ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+  ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // compileServerLogLevel: "debug",
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
@@ -35,8 +35,8 @@ const { bundleMappings } = await buildProject({
   },
 })
 const mainRelativeUrl = `./${bundleMappings[`${testDirectoryRelativeUrl}react.js`]}`
-const { namespace: actual } = await browserImportSystemJsBundle({
-  ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+const { namespace: actual } = await browserImportSystemJsBuild({
+  ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
   mainRelativeUrl,
   // headless: false,

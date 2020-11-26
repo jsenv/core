@@ -6,8 +6,8 @@ import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {
-  GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
-  REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+  GENERATE_COMMONJS_BUILD_TEST_PARAMS,
+  REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
 const transformTypeScript = require("@babel/plugin-transform-typescript")
@@ -20,9 +20,9 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
 const mainFilename = `${testDirectoryname}.ts`
 
 await buildProject({
-  ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
+  ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   babelPluginMap: {
-    ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS.babelPluginMap,
+    ...GENERATE_COMMONJS_BUILD_TEST_PARAMS.babelPluginMap,
     "transform-typescript": [transformTypeScript],
   },
   jsenvDirectoryRelativeUrl,
@@ -32,7 +32,7 @@ await buildProject({
   },
 })
 const { namespace: actual } = await requireCommonJsBuild({
-  ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+  ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
 })
 const expected = { value: "Hello, Jane User" }

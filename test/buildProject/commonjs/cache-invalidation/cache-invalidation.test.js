@@ -8,8 +8,8 @@ import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {
-  GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
-  REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+  GENERATE_COMMONJS_BUILD_TEST_PARAMS,
+  REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -23,7 +23,7 @@ const mainFileUrl = resolveUrl(mainFileRelativeUrl, jsenvCoreDirectoryUrl)
 
 const generate = () =>
   buildProject({
-    ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
+    ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
     // logLevel: "debug",
     // compileServerLogLevel: "debug",
     jsenvDirectoryRelativeUrl,
@@ -48,7 +48,7 @@ await writeFile(
 await generate()
 
 const { namespace: actual } = await requireCommonJsBuild({
-  ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+  ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
 })
 const expected = { value: 43 }

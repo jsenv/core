@@ -3,10 +3,10 @@ import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
+import { browserImportSystemJsBuild } from "../browserImportSystemJsBuild.js"
 import {
-  GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
+  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -20,7 +20,7 @@ const entryPointMap = {
 }
 
 const { bundleMappings } = await buildProject({
-  ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+  ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -36,8 +36,8 @@ const getBundleRelativeUrl = (urlRelativeToTestDirectory) => {
 
 const inlineScriptBundleRelativeUrl = getBundleRelativeUrl("html-script-module-inline.10.js")
 
-const { namespace: actual } = await browserImportSystemJsBundle({
-  ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+const { namespace: actual } = await browserImportSystemJsBuild({
+  ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
   mainRelativeUrl: `./${inlineScriptBundleRelativeUrl}`,
   // debug: true,

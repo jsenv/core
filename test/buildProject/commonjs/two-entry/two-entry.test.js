@@ -4,8 +4,8 @@ import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {
-  GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
-  REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+  GENERATE_COMMONJS_BUILD_TEST_PARAMS,
+  REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -16,7 +16,7 @@ const firstEntryRelativeUrl = `${testDirectoryRelativeUrl}a.js`
 const secondEntryRelativeUrl = `${testDirectoryRelativeUrl}b.js`
 
 const { bundleManifest, bundleMappings } = await buildProject({
-  ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
+  ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
@@ -59,7 +59,7 @@ const { bundleManifest, bundleMappings } = await buildProject({
 }
 {
   const { namespace: actual } = await requireCommonJsBuild({
-    ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+    ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
     mainRelativeUrl: "./a.cjs",
   })
@@ -68,7 +68,7 @@ const { bundleManifest, bundleMappings } = await buildProject({
 }
 {
   const { namespace: actual } = await requireCommonJsBuild({
-    ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+    ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
     mainRelativeUrl: "./b.cjs",
   })

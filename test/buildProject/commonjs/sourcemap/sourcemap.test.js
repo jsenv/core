@@ -5,7 +5,7 @@ import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { bundleToCompilationResult } from "@jsenv/core/src/internal/building/bundleToCompilationResult.js"
 import { buildProject } from "@jsenv/core/index.js"
-import { GENERATE_COMMONJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
+import { GENERATE_COMMONJS_BUILD_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const { SourceMapConsumer } = require("source-map")
 
@@ -17,7 +17,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`
 
 const bundle = await buildProject({
-  ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
+  ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,

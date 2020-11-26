@@ -5,9 +5,9 @@ import { resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { buildProject } from "@jsenv/core/index.js"
 import {
-  GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
-  BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
-  NODE_IMPORT_BUNDLE_TEST_PARAMS,
+  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+  BROWSER_IMPORT_BUILD_TEST_PARAMS,
+  NODE_IMPORT_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 import { browserImportBundle } from "../browserImportBundle.js"
 import { nodeImportBundle } from "../nodeImportBundle.js"
@@ -20,7 +20,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
 await buildProject({
-  ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
+  ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
@@ -32,7 +32,7 @@ await assertFilePresence(resolveUrl("./dist/esmodule/assets/jsenv-25e95a00.png",
 
 {
   const { value: actual, serverOrigin } = await browserImportBundle({
-    ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
+    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
   })
   const expected = new URL("./assets/jsenv-25e95a00.png", serverOrigin).href
@@ -42,7 +42,7 @@ await assertFilePresence(resolveUrl("./dist/esmodule/assets/jsenv-25e95a00.png",
 // node 13.8 test
 if (SourceMap) {
   const { value: actual } = await nodeImportBundle({
-    ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
+    ...NODE_IMPORT_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
   })
   const expected = new URL("./dist/esmodule/assets/jsenv-25e95a00.png", import.meta.url).href

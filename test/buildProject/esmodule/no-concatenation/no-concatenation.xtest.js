@@ -6,8 +6,8 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { buildProject } from "@jsenv/core/index.js"
 import {
-  GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
-  BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
+  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+  BROWSER_IMPORT_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 import { browserImportBundle } from "../browserImportBundle.js"
 
@@ -19,7 +19,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
 const { bundleMappings } = await buildProject({
-  ...GENERATE_ESMODULE_BUNDLE_TEST_PARAMS,
+  ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
@@ -38,7 +38,7 @@ const indexRelativeUrl = getBundleRelativeUrl("index.js")
 
 {
   const { value: actual } = await browserImportBundle({
-    ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
+    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
     mainRelativeUrl: `./${indexRelativeUrl}`,
     headless: false,

@@ -2,7 +2,7 @@ import { resolveDirectoryUrl, resolveUrl } from "@jsenv/util"
 import { createNodeSystem } from "@jsenv/core/src/internal/runtime/createNodeRuntime/createNodeSystem.js"
 import { fetchSource } from "@jsenv/core/src/internal/runtime/createNodeRuntime/fetchSource.js"
 
-export const nodeImportSystemJsBundle = async ({
+export const nodeImportSystemJsBuild = async ({
   projectDirectoryUrl,
   testDirectoryRelativeUrl,
   mainRelativeUrl,

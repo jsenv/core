@@ -5,7 +5,7 @@ import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireGlobalBundle } from "../requireGlobalBundle.js"
 import {
-  GENERATE_GLOBAL_BUNDLE_TEST_PARAMS,
+  GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   REQUIRE_GLOBAL_BUNDLE_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
@@ -16,7 +16,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/global/`
 const mainFilename = `${testDirectoryBasename}.js`
 
 await buildProject({
-  ...GENERATE_GLOBAL_BUNDLE_TEST_PARAMS,
+  ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
   entryPointMap: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",

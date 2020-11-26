@@ -5,8 +5,8 @@ import { buildProject, getBabelPluginMapForNode } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {
-  GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
-  REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+  GENERATE_COMMONJS_BUILD_TEST_PARAMS,
+  REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -17,8 +17,8 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
 const mainFilename = `${testDirectoryname}.js`
 
 await buildProject({
-  ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
-  babelPluginMap: getBabelPluginMapForNode(GENERATE_COMMONJS_BUNDLE_TEST_PARAMS.babelPluginMap),
+  ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
+  babelPluginMap: getBabelPluginMapForNode(GENERATE_COMMONJS_BUILD_TEST_PARAMS.babelPluginMap),
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
@@ -28,7 +28,7 @@ await buildProject({
 const {
   namespace: { ask },
 } = await requireCommonJsBuild({
-  ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+  ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
 })
 const actual = await ask()

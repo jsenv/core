@@ -6,7 +6,7 @@ const { chromium } = require("playwright-chromium")
 
 const SYSTEM_PATH = require.resolve("systemjs/dist/system.js")
 
-export const browserImportSystemJsBundle = async ({
+export const browserImportSystemJsBuild = async ({
   projectDirectoryUrl,
   testDirectoryRelativeUrl,
   htmlFileRelativeUrl = "./dist/systemjs/main.html",

@@ -5,8 +5,8 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import { buildProject } from "@jsenv/core/index.js"
 import { scriptLoadGlobalBundle } from "../scriptLoadGlobalBundle.js"
 import {
-  GENERATE_GLOBAL_BUNDLE_TEST_PARAMS,
-  SCRIPT_LOAD_GLOBAL_BUNDLE_TEST_PARAMS,
+  GENERATE_GLOBAL_BUILD_TEST_PARAMS,
+  SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -17,7 +17,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`
 
 await buildProject({
-  ...GENERATE_GLOBAL_BUNDLE_TEST_PARAMS,
+  ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
@@ -25,7 +25,7 @@ await buildProject({
   },
 })
 const { globalValue: actual } = await scriptLoadGlobalBundle({
-  ...SCRIPT_LOAD_GLOBAL_BUNDLE_TEST_PARAMS,
+  ...SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
 })
 const expected = [0, 1]

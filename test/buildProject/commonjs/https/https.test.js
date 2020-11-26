@@ -15,8 +15,8 @@ import { bundleToCompilationResult } from "@jsenv/core/src/internal/building/bun
 import { buildProject } from "@jsenv/core/index.js"
 import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {
-  GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
-  REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+  GENERATE_COMMONJS_BUILD_TEST_PARAMS,
+  REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -29,7 +29,7 @@ const mainFileRelativeUrl = `./${testDirectoryRelativeUrl}${mainFilename}`
 const mainFileUrl = resolveUrl("./https.js", import.meta.url)
 
 const bundle = await buildProject({
-  ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
+  ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
@@ -72,7 +72,7 @@ const compilationResult = bundleToCompilationResult(bundle, {
 
 try {
   await requireCommonJsBuild({
-    ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+    ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
   })
 } catch (e) {

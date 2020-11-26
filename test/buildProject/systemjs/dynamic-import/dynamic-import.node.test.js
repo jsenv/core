@@ -3,10 +3,10 @@ import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { buildProject } from "@jsenv/core/index.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { nodeImportSystemJsBundle } from "../nodeImportSystemJsBundle.js"
+import { nodeImportSystemJsBuild } from "../nodeImportSystemJsBuild.js"
 import {
-  GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
+  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -17,7 +17,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.js`
 
 const bundle = await buildProject({
-  ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+  ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   useImportMapToImproveLongTermCaching: false,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -25,8 +25,8 @@ const bundle = await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
   },
 })
-const { namespace: actual } = await nodeImportSystemJsBundle({
-  ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+const { namespace: actual } = await nodeImportSystemJsBuild({
+  ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
 })
 const expected = {
@@ -37,7 +37,7 @@ assert({ actual, expected })
 // ensure file hash does not change when runned twice
 {
   const secondBundle = await buildProject({
-    ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+    ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
     useImportMapToImproveLongTermCaching: false,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
