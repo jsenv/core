@@ -327,7 +327,7 @@ await buildProject({
 })
 ```
 
-> For be explicit `entryPointMap` is shown in the code above but you could omit it. This is the default value when format is `commonjs`
+> To be explicit `entryPointMap` is shown in the code above, but you could omit it. This is the default value when format is `commonjs`
 
 </details>
 
