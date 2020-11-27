@@ -8,7 +8,9 @@
     - [import maps](#import-maps)
     - [top level await](#top-level-await)
 - [Concatenation](#Concatenation)
-- [Build for Node.js](#Build-for-nodejs)
+- [Building a frontend](#Building-a-frontend)
+  - [Embed frontend](#Embed-frontend)
+- [Building a Node.js package](#Building-a-nodejs-package)
 - [API](./build-api.md)
 
 # Presentation
@@ -19,8 +21,6 @@ Building consists into taking one or many input files to generate one or many ou
 - Minify file content to reduce file size
 - Hash url to enable long term caching
 - Transform file content to support more execution environments (old browsers for instance)
-
-Building for the web means generating files that will be executed by a web browser (Chrome, Firefox, and so on). To do that provide your main html file to a function called `buildProject`. It will collect all the files used directly or indirectly by the html file. Once all the files are known they are eventually minified, concatenated and file urls are replaced with a unique url identifier to enable long term caching.
 
 # Minification
 
@@ -92,7 +92,7 @@ await buildProject({
 — link to PostCSS on GitHub: https://github.com/postcss/postcss<br />
 — link to parse5 on GitHub: https://github.com/inikulin/parse5
 
-# JavaScript modules
+## JavaScript modules
 
 JavaScript modules, also called ES modules, refers to the browser support for the `import` and `export` keywords.
 
@@ -100,7 +100,7 @@ JavaScript modules, also called ES modules, refers to the browser support for th
 
 By default jsenv generates files assuming the browser will support JavaScript modules. But for reasons detailed below you might want to output files using the [SystemJS format](#SystemJS-format)
 
-## SystemJS format
+### SystemJS format
 
 If you want any of the benefits of [import maps](#import-maps) and/or [top level await](#top-level-await), you must use SystemJS format until browser supports them natively.
 
@@ -157,9 +157,11 @@ When using this format the html generated is a bit different:
 
 — Link to SystemJS on GitHub: https://github.com/systemjs
 
-### import maps
+#### import maps
 
-Browser does not yet support import maps while they drastically improve reuse of files configured with [Long term caching](#Long-term-caching). Without import maps `1` modification invalidates `n` files in cache. With import maps `1` modification invalidates `1` file in cache. They also enable a standard way to remap imports that improves developper experience.
+Import maps is a standard that is starting to be supported by runtimes such as Node.js, deno, and Web browsers. It is the future proof way of controlling how js imports are resolved.
+
+Import maps drastically improve reuse of files configured with [Long term caching](#Long-term-caching). Without import maps `1` modification invalidates `n` files in cache. With import maps `1` modification invalidates `1` file in cache. They also enable a standard way to remap imports that improves developper experience.
 
 <details>
   <summary>See details on how import maps improves cache reuse</summary>
@@ -236,7 +238,7 @@ The following html will be supported natively by browsers:
 
 — Link to import maps specifications on GitHub: https://github.com/WICG/import-maps
 
-### top level await
+#### top level await
 
 Top level await is the ability to write `await` at the top level of your program.
 
@@ -248,7 +250,7 @@ export default a
 
 Top level await, depites being useful, is not yet supported by browsers as reported in chrome platform status: https://www.chromestatus.com/feature/5767881411264512. By using SystemJS format it becomes possible to use it right now.
 
-# Concatenation
+## Concatenation
 
 By default js files are concatenated as much as possible. There is legitimates reasons to disable this behaviour. Merging `n` files into chunks poses two issues:
 
@@ -277,6 +279,81 @@ await buildProject({
 })
 ```
 
-# Build for Node.js
+# Building a frontend
 
-TODO
+A frontend is composed of files that will be executed by a browser (Chrome, Firefox, ...). In other words you need to generate an html file and the files needed by this html file.
+
+To do that provide your main html to jsenv. It will collect all the files used directly or indirectly by the html file. Once all the files are known they are eventually minified, concatenated and file urls are replaced with a unique url identifier to enable long term caching.
+
+```js
+import { buildProject } from "@jsenv/core"
+
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  format: "systemjs",
+})
+```
+
+## Embed front end
+
+Embed refers to a product that is meant to be injected into website you don't own, like a video embed for instance. In that case, developper using your product can inject it in their web page using an iframe.
+
+```html
+<iframe src="dist/main.html"></iframe>
+```
+
+# Building a Node.js package
+
+A Node.js package does not have the same constraints than the web. If you are targeting recent Node.js versions you can even skip the build step completely and serve your files untouched.
+
+## Building a commonjs package
+
+If you want to publish a version of your files compatible with commonjs you can use the following script.
+
+> If any of your js file uses on top level await, jsenv will throw an error because it's not supported.
+
+<details>
+  <summary>generate-commonjs-build.js</summary>
+
+```js
+import { buildProject } from "@jsenv/core"
+
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  entryPointMap: {
+    "./main.js": "./main.cjs",
+  },
+  format: "commonjs",
+})
+```
+
+> For be explicit `entryPointMap` is shown in the code above but you could omit it. This is the default value when format is `commonjs`
+
+</details>
+
+You can even generate a commonjs build to be compatible with a specific node version with the following script.
+
+<details>
+  <summary>generate-commonjs-build-advanced.js</summary>
+
+```js
+import { buildProject, getBabelPluginMapForNode } from "@jsenv/core"
+
+// you can enable a subset of babel plugins transformations
+// to get only thoose required to work with node 8
+const babelPluginMapForNode8 = getBabelPluginMapForNode({
+  nodeMinimumVersion: "8.0.0",
+})
+
+// calling getBabelPluginMapForNode() without specifying nodeMinimumVersion
+// returns a babel plugin map computed from process.version
+const babelPluginMapForCurrentNodeVersion = getBabelPluginMapForNode()
+
+buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  format: "commonjs",
+  babelPluginMap: babelPluginMapForNode8,
+})
+```
+
+</details>

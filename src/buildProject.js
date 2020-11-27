@@ -10,9 +10,9 @@ import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 const FORMAT_ENTRY_POINTS = {
   commonjs: { "./main.js": "./main.cjs" },
-  systemjs: { "./main.html": "./main.html" },
-  global: { "./main.js": "./main.js" },
   esmodule: { "./main.html": "./main.html" },
+  global: { "./main.js": "./main.js" },
+  systemjs: { "./main.html": "./main.html" },
 }
 
 export const buildProject = async ({

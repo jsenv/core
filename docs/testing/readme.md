@@ -232,7 +232,7 @@ To integrate it properly in your own project, take inspiration from the [basic p
 import { executeTestPlan, launchNode } from "@jsenv/core"
 
 executeTestPlan({
-  projectDirectoryUrl: __dirname,
+  projectDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./test/**/*.test.js": {
       node: {

@@ -93,6 +93,8 @@ executeTestPlan({
 })
 ```
 
+> Note how `projectDirectoryUrl` parameter uses [import.meta.url](https://nodejs.org/docs/latest-v15.x/api/esm.html#esm_import_meta_url) to tell jsenv where is the root of your project. You might want to share that logic using [jsenv.config.js](#jsenvconfigjs).
+
 </details>
 
 ![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
@@ -123,6 +125,8 @@ startExploring({
   compileServerPort: 3456,
 })
 ```
+
+> Note how `projectDirectoryUrl` parameter uses [import.meta.url](https://nodejs.org/docs/latest-v15.x/api/esm.html#esm_import_meta_url) to tell jsenv where is the root of your project. You might want to share that logic using [jsenv.config.js](#jsenvconfigjs).
 
 </details>
 
@@ -187,6 +191,8 @@ Jsenv only needs to know your main html file and where to write the builded file
 
 The script below would parse `index.html`, optimize it for production and write it at `dist/main.html`.
 
+> To keep example concise, only `build-project.js`, `index.html` and `dist/main.html` file content is shown.
+
 <details>
   <summary>build-project.js</summary>
 
@@ -202,6 +208,8 @@ await buildProject({
   minify: false,
 })
 ```
+
+> Note how `projectDirectoryUrl` parameter uses [import.meta.url](https://nodejs.org/docs/latest-v15.x/api/esm.html#esm_import_meta_url) to tell jsenv where is the root of your project. You might want to share that logic using [jsenv.config.js](#jsenvconfigjs).
 
 </details>
 
@@ -248,8 +256,6 @@ await buildProject({
 ```
 
 </details>
-
-> To keep example concise, the following files content is not shown: `favicon.ico`, `project.importmap`, `main.css` and `index.js`.
 
 Read more [building documentation](./docs/building/readme.md)
 

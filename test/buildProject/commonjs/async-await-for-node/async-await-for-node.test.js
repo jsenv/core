@@ -18,7 +18,9 @@ const mainFilename = `${testDirectoryname}.js`
 
 await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
-  babelPluginMap: getBabelPluginMapForNode(GENERATE_COMMONJS_BUILD_TEST_PARAMS.babelPluginMap),
+  babelPluginMap: getBabelPluginMapForNode({
+    babelPluginMap: GENERATE_COMMONJS_BUILD_TEST_PARAMS.babelPluginMap,
+  }),
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {

@@ -145,7 +145,7 @@ For instance you might want to have a tab for source files and one for test file
 
 `livereloading` parameter is a boolean controlling if the browser will auto reload when a file is saved. This is an optional parameter enabled by default.
 
-Note that any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file load assets such as image or css these asset files will also trigger livereloading when saved.
+> Any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file load assets such as image or css these asset files will also trigger livereloading when saved.
 
 ## watchConfig
 
@@ -168,6 +168,8 @@ Example of a custom `watchConfig`:
 The image below is a screenshot of this toolbar.
 
 ![jsenv toolbar screenshot](./toolbar.png)
+
+> The toolbar is inside an iframe meaning that it cannot conflict with your page css or js.
 
 The toolbar is composed as shown in the following image:
 
@@ -205,7 +207,7 @@ This component is an icon representing the server connection state. The icon can
 
 #### connecting
 
-You should rarely see this in practice because connection is almost instant.
+> You should rarely see this in practice because connection is almost instant.
 
 ![server indicator connecting screenshot](./server-connecting.png)
 
@@ -279,29 +281,16 @@ This button closes the toolbar to keep only the website. It does not disable the
 
 ## Server parameters
 
-Exploring uses two server:
-
-- A server used by jsenv to compile file dynamically called `compile server`.
-- A server used to explore your project files called `exploring server`.
-
-The defaults values let you use exploring right away but you might want to configure the exploring server port or use your own https certificate for instance.
+Exploring use a server call compile server. Compile server parameters are configured to let you use exploring right away. You might want to configure some of them to use a specific port or your own https certificate.
 
 The following parameter controls the exploring server:
 
-- [protocol](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#protocol)
-- [privateKey](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#privateKey)
-- [certificate](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#certificate)
-- [ip](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#ip)
-- [port](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port)
-- [forcePort](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#forcePort)
-- [logLevel](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel)
-
-The following parameter controls the compile server:
-
-- [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
-- [compileServerPort](../shared-parameters.md#compileServerPort)
-
-In order to communicate exploring server and compile server must use the same protocol (http or https). For that reason compile server reuses `protocol`, `ip`, `privateKey`, and `certificate` of the exploring server.
+- [compileServerProtocol](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#protocol)
+- [compileServerPrivateKey](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#privateKey)
+- [compileServerCertificate](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#certificate)
+- [compileServerIp](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#ip)
+- [compileServerPort](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port)
+- [compileServerLogLevel](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel)
 
 # Shared parameters
 
@@ -318,9 +307,9 @@ To avoid duplication some parameter are linked to a generic documentation.
 
 Using the return value is an advanced use case, in theory you should not need this.
 
-`startExploring` return signature is `exploringServer`.
+`startExploring` returns the `compileServer`.
 
-`exploringServer` is created by `@jsenv/server`. You can read the `@jsenv/server` documentation on the return value to see the shape of these objects.
+`compileServer` is created by `@jsenv/server`. You can read the `@jsenv/server` documentation on the return value to see the shape of these objects.
 https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#startServer-return-value.
 
 Code below shows how you might use return value.
@@ -328,9 +317,9 @@ Code below shows how you might use return value.
 ```js
 import { startExploring } from "@jsenv/core"
 
-const exploringServer = await startExploring({
+const compileServer = await startExploring({
   projectDirectoryUrl: new URL("./", import.meta.url),
 })
 
-exploringServer.stop()
+compileServer.stop()
 ```
