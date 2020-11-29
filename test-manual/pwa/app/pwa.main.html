@@ -20,33 +20,32 @@
   </head>
   <body>
     <main>
-      <h1>Title</h1>
-      <p class="description">Hello world</p>
+      <h1>file.txt</h1>
+      <button id="file-fetch">Get file.txt</button>
+      <input id="file-input" type="text" />
+      <button id="file-update">Update file.txt</button>
 
-      <!--
-      faudrais se faire un bouton pour fetch quelque chose
-      et voir ce que le service worker répond
-      voir si on est capable de le débrancher
-       -->
-      <button id="clear-logs">Clear logs</button>
-      <br />
-      <fieldset>
-        <legend>service worker controlling navigator</legend>
-        <span id="controller">none</span>
-      </fieldset>
-      <fieldset>
-        <legend>Service worker state</legend>
+      <p>response status: <span id="file-response-status"></span></p>
+      <p>response text: <span id="file-response-text"></span></p>
+
+      <h1>Service worker</h1>
+      <button id="check-update">Check for update</button>
+      <button id="update-manifest">Update manifest</button>
+      <button id="skip-waiting" disabled>Skip waiting (activate right now)</button>
+      <button id="ping">Ping service worker</button>
+
+      <p>Service worker controlling navigator: <span id="controller">none</span></p>
+      <p>
+        Service worker state:
         <button id="installing" disabled>installing</button>
         <button id="installed" disabled>installed</button>
         <button id="activating" disabled>activating</button>
         <button id="activated" disabled>activated</button>
         <button id="redundant" disabled>redundant</button>
-      </fieldset>
-      <button id="check-update">Check for update</button>
-      <button id="update-manifest">Update manifest</button>
-      <button id="update-style">Update style</button>
-      <button id="skip-waiting" disabled>Skip waiting (activate right now)</button>
-      <button id="ping">Ping service worker</button>
+      </p>
+
+      <h1>Logs</h1>
+      <button id="clear-logs">Clear logs</button>
       <p id="logs"></p>
     </main>
     <script type="module">
@@ -61,8 +60,21 @@
         document.querySelector(`#logs`).innerHTML += `${message}<br />`
       }
 
-      document.querySelector("#clear-logs").onclick = async () => {
-        document.querySelector("#logs").innerHTML = ""
+      document.querySelector("#file-fetch").onclick = async () => {
+        printLog("fetch file.txt...")
+        const response = await fetch("./file.txt")
+        document.querySelector("#file-response-status").innerHTML = response.status
+        const bodyAsText = await response.text()
+        document.querySelector("#file-response-text").innerHTML = bodyAsText
+      }
+
+      document.querySelector("#file-update").onclick = async () => {
+        printLog("updating file.txt...")
+        await fetch("./actions/update-file", {
+          method: "POST",
+          body: document.querySelector("#file-input").value,
+        })
+        printLog("file.txt updated !")
       }
 
       observeServiceWorkerController((controller) => {
@@ -108,17 +120,14 @@
         printLog("webmanifest file updated !")
       }
 
-      document.querySelector("#update-style").onclick = async () => {
-        printLog("updating style file...")
-        await fetch("./actions/update-style", { method: "POST" })
-        printLog("style file updated !")
-      }
-
       document.querySelector("#ping").onclick = async () => {
         printLog("> ping service worker")
         const result = await sendMessageToServiceWorkerControllingPage("ping")
-        console.log(result)
         printLog(`< ${result}`)
+      }
+
+      document.querySelector("#clear-logs").onclick = async () => {
+        document.querySelector("#logs").innerHTML = ""
       }
     </script>
   </body>

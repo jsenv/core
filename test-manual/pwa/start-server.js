@@ -1,5 +1,5 @@
 import { resolveUrl, readFile, writeFile } from "@jsenv/util"
-import { startServer, serveFile, firstService } from "@jsenv/server"
+import { startServer, serveFile, firstService, readRequestBodyAsString } from "@jsenv/server"
 
 const directoryUrl = resolveUrl("./app/", import.meta.url)
 
@@ -23,15 +23,11 @@ startServer({
       }
     },
     async (request) => {
-      if (request.ressource !== "/actions/update-style") return null
+      if (request.ressource !== "/actions/update-file") return null
 
-      const styleFileUrl = resolveUrl("./pwa.style.css", directoryUrl)
-      const styleFileContent = await readFile(styleFileUrl)
-      await writeFile(
-        styleFileUrl,
-        `${styleFileContent}
-/* toto */`,
-      )
+      const fileContent = await readRequestBodyAsString(request.body)
+      const fileUrl = resolveUrl("./file.txt", directoryUrl)
+      await writeFile(fileUrl, fileContent)
 
       return { status: 200 }
     },

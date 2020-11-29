@@ -13,7 +13,6 @@
 const urlsToCache = ["pwa.style.css"]
 const cacheName = `pwa-cache-${urlsToCache.length}`
 const caches = self.caches
-let cache
 
 // il y a certaines urls a considérer avant qu'un
 // service worker puisse dire "hey c'est bon je suis ready"
@@ -29,12 +28,13 @@ let cache
 
 const install = async () => {
   console.log("[Service Worker] Install")
-  cache = await caches.open(cacheName)
+  const cache = await caches.open(cacheName)
   console.log("[Service Worker] Caching app files", urlsToCache)
   await cache.addAll(urlsToCache)
 }
 
 const handleRequest = async (request) => {
+  const cache = await caches.open(cacheName)
   console.log(`[Service Worker] Received fetch event for ${request.url}`)
   try {
     const responseFromCache = await caches.match(request)
@@ -59,6 +59,7 @@ const handleRequest = async (request) => {
 }
 
 const activate = async () => {
+  const cache = await caches.open(cacheName)
   const cacheRequests = await cache.keys()
   await Promise.all(
     cacheRequests.map(async (cacheRequest) => {
@@ -75,9 +76,12 @@ self.addEventListener("install", (installEvent) => {
 })
 
 self.addEventListener("fetch", (fetchEvent) => {
-  const responsePromise = handleRequest(fetchEvent.request)
-  if (responsePromise) {
-    fetchEvent.respondWith(responsePromise)
+  const { request } = fetchEvent
+  if (request.method === "GET" || request.method === "HEAD") {
+    const responsePromise = handleRequest(request)
+    if (responsePromise) {
+      fetchEvent.respondWith(responsePromise)
+    }
   }
 })
 
