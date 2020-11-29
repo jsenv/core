@@ -10,59 +10,64 @@
 
 /* globals self */
 
-// cacheName et urls to cache on voudra ptet générer ça automatiquement avec
-// la fonction buildProject de jsenv
-
 const urlsToCache = ["pwa.style.css"]
 const cacheName = `pwa-cache-${urlsToCache.length}`
+const caches = self.caches
+let cache
 
-let handleFetchEvent = () => null
-
-let handleActivateEvent = () => null
+// il y a certaines urls a considérer avant qu'un
+// service worker puisse dire "hey c'est bon je suis ready"
+// c'est le concept de coque minimale pour que ça marche dont
+// parle la doc
+// ensuite, on peut vouloir pre-cache certaines urls
+// (en vérité toutes les urls du site)
+// pour qu'il fonctionne hors-ligne
+// et ensuite si le site a besoin de plus d'urls c'est ok
+// le truc qui pre-cache les urls c'est pas super important je dirais
+// ou alors il faut considérer que l'ensemble du site doit etre la
+// pour simplifier, au lieu de séparer en deux
 
 const install = async () => {
   console.log("[Service Worker] Install")
-
-  const cache = await self.caches.open(cacheName)
+  cache = await caches.open(cacheName)
   console.log("[Service Worker] Caching app files", urlsToCache)
   await cache.addAll(urlsToCache)
+}
 
-  handleFetchEvent = async (fetchEvent) => {
-    const { request } = fetchEvent
-    console.log(`[Service Worker] Received fetch event for ${request.url}`)
-    try {
-      const responseFromCache = await self.caches.match(request)
+const handleRequest = async (request) => {
+  console.log(`[Service Worker] Received fetch event for ${request.url}`)
+  try {
+    const responseFromCache = await caches.match(request)
 
-      if (responseFromCache) {
-        console.log(`[Service Worker] Return response in cache for ${request.url}`)
-        return responseFromCache
-      }
-
-      console.log(`[Service Worker] No cache for ${request.url}, fetching it`)
-      const response = await fetch(request)
-      cache.put(request, response.clone())
-      console.log(`[Service Worker] Caching new resource: ${request.url}`)
-      return response
-    } catch (error) {
-      console.warn(
-        `[Service Worker] Error while trying to serve response for ${request.url} from cache`,
-        error.stack,
-      )
-      return fetch(request)
+    if (responseFromCache) {
+      console.log(`[Service Worker] Return response in cache for ${request.url}`)
+      return responseFromCache
     }
-  }
 
-  handleActivateEvent = async () => {
-    const cacheRequests = await cache.keys()
-    await Promise.all(
-      cacheRequests.map(async (cacheRequest) => {
-        if (!urlsToCache.includes(cacheRequest.url)) {
-          console.log(`[Service Worker] Delete  resource: ${cacheRequest.url}`)
-          await cache.delete(cacheRequest)
-        }
-      }),
+    console.log(`[Service Worker] No cache for ${request.url}, fetching it`)
+    const response = await fetch(request)
+    cache.put(request, response.clone())
+    console.log(`[Service Worker] Caching new resource: ${request.url}`)
+    return response
+  } catch (error) {
+    console.warn(
+      `[Service Worker] Error while trying to serve response for ${request.url} from cache`,
+      error.stack,
     )
+    return fetch(request)
   }
+}
+
+const activate = async () => {
+  const cacheRequests = await cache.keys()
+  await Promise.all(
+    cacheRequests.map(async (cacheRequest) => {
+      if (!urlsToCache.includes(cacheRequest.url)) {
+        console.log(`[Service Worker] Delete resource: ${cacheRequest.url}`)
+        await cache.delete(cacheRequest)
+      }
+    }),
+  )
 }
 
 self.addEventListener("install", (installEvent) => {
@@ -70,17 +75,14 @@ self.addEventListener("install", (installEvent) => {
 })
 
 self.addEventListener("fetch", (fetchEvent) => {
-  if (!urlsToCache.includes(fetchEvent.request.url)) {
-    return
-  }
-  const responsePromise = handleFetchEvent(fetchEvent)
+  const responsePromise = handleRequest(fetchEvent.request)
   if (responsePromise) {
     fetchEvent.respondWith(responsePromise)
   }
 })
 
 self.addEventListener("activate", (activateEvent) => {
-  const activatePromise = handleActivateEvent(activateEvent)
+  const activatePromise = activate(activateEvent)
   if (activatePromise) {
     activateEvent.waitUntil(activatePromise)
   }
@@ -94,10 +96,3 @@ self.addEventListener("message", function (messageEvent) {
     messageEvent.ports[0].postMessage("pong")
   }
 })
-
-// toto
-// toto
-// toto
-// toto
-// toto
-// toto
