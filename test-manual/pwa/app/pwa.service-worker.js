@@ -13,11 +13,7 @@
 // cacheName et urls to cache on voudra ptet générer ça automatiquement avec
 // la fonction buildProject de jsenv
 
-const urlsToCache = [
-  "pwa.style.css",
-  // comment this line below to to fake update of service worker
-  // "pwa.favicon.png",
-]
+const urlsToCache = ["pwa.style.css"]
 const cacheName = `pwa-cache-${urlsToCache.length}`
 
 let handleFetchEvent = () => null
@@ -94,4 +90,14 @@ self.addEventListener("message", function (messageEvent) {
   if (messageEvent.data.action === "skipWaiting") {
     self.skipWaiting()
   }
+  if (messageEvent.data === "ping") {
+    messageEvent.ports[0].postMessage("pong")
+  }
 })
+
+// toto
+// toto
+// toto
+// toto
+// toto
+// toto

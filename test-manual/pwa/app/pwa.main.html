@@ -22,10 +22,18 @@
     <main>
       <h1>Title</h1>
       <p class="description">Hello world</p>
+
+      <!--
+      faudrais se faire un bouton pour fetch quelque chose
+      et voir ce que le service worker répond
+      voir si on est capable de le débrancher
+       -->
       <button id="clear-logs">Clear logs</button>
-      <button id="register">Register service worker</button>
-      <button id="unregister">Unregister service worker</button>
       <br />
+      <fieldset>
+        <legend>service worker controlling navigator</legend>
+        <span id="controller">none</span>
+      </fieldset>
       <fieldset>
         <legend>Service worker state</legend>
         <button id="installing" disabled>installing</button>
@@ -34,54 +42,64 @@
         <button id="activated" disabled>activated</button>
         <button id="redundant" disabled>redundant</button>
       </fieldset>
-
       <button id="check-update">Check for update</button>
       <button id="update-manifest">Update manifest</button>
       <button id="update-style">Update style</button>
-      <button id="skip-waiting" disabled>Skip waiting (update right now)</button>
+      <button id="skip-waiting" disabled>Skip waiting (activate right now)</button>
+      <button id="ping">Ping service worker</button>
       <p id="logs"></p>
     </main>
     <script type="module">
-      import { createServiceWorker } from "./pwa.util.js"
+      import {
+        observeServiceWorkerController,
+        registerServiceWorker,
+        checkServiceWorkerUpdate,
+        sendMessageToServiceWorkerControllingPage,
+      } from "./pwa.util.js"
 
       const printLog = (message) => {
         document.querySelector(`#logs`).innerHTML += `${message}<br />`
       }
 
-      const updateServiceWorkerStateIndicator = (state) => {
-        const buttons = Array.from(document.querySelectorAll(`fieldset button`))
-        buttons.forEach((button) => {
-          if (button.id === state) {
-            button.disabled = false
-          } else {
-            button.disabled = true
+      document.querySelector("#clear-logs").onclick = async () => {
+        document.querySelector("#logs").innerHTML = ""
+      }
+
+      observeServiceWorkerController((controller) => {
+        document.querySelector("#controller").innerHTML = controller ? controller.scriptURL : "none"
+      })
+
+      registerServiceWorker("./pwa.service-worker.js", {
+        onstatechange: (state) => {
+          const buttons = Array.from(document.querySelectorAll(`fieldset button`))
+          buttons.forEach((button) => {
+            if (button.id === state) {
+              button.disabled = false
+            } else {
+              button.disabled = true
+            }
+          })
+
+          printLog(`service worker ${state}`)
+        },
+        onupdate: ({ skipWaiting }) => {
+          printLog("Update available!")
+          document.querySelector("#skip-waiting").disabled = false
+          document.querySelector("#skip-waiting").onclick = () => {
+            document.querySelector("#skip-waiting").disabled = true
+            skipWaiting()
           }
-        })
+        },
+      })
 
-        printLog(`service worker ${state}`)
-        // printLog(`service worker installed`)
-        //   document.querySelector("#skip-waiting").disabled = false
-        //   document.querySelector("#skip-waiting").onclick = () => {
-        //     skipWaiting()
-        //   }
-      }
-
-      const { register, unregister, checkForUpdate, observeState } = createServiceWorker(
-        "./pwa.service-worker.js",
-      )
-
-      observeState(updateServiceWorkerStateIndicator)
-
-      document.querySelector("#register").onclick = async () => {
-        printLog("registering service worker...")
-        await register()
-        printLog("service worker registered!")
-      }
-
-      document.querySelector("#unregister").onclick = async () => {
-        printLog("unregistering service worker...")
-        const result = await unregister()
-        printLog(`service worker unregistered -> ${result}`)
+      document.querySelector("#check-update").onclick = async () => {
+        printLog("Checking for update...")
+        const updateCheckResult = await checkServiceWorkerUpdate()
+        if (updateCheckResult.updateAvailable) {
+          printLog("Update found !")
+        } else {
+          printLog("No update")
+        }
       }
 
       document.querySelector("#update-manifest").onclick = async () => {
@@ -96,18 +114,11 @@
         printLog("style file updated !")
       }
 
-      document.querySelector("#clear-logs").onclick = async () => {
-        document.querySelector("#logs").innerHTML = ""
-      }
-
-      document.querySelector("#check-update").onclick = async () => {
-        printLog("Checking for update...")
-        const updateCheckResult = await checkForUpdate()
-        if (updateCheckResult.found) {
-          printLog("Update found !")
-        } else {
-          printLog("No update")
-        }
+      document.querySelector("#ping").onclick = async () => {
+        printLog("> ping service worker")
+        const result = await sendMessageToServiceWorkerControllingPage("ping")
+        console.log(result)
+        printLog(`< ${result}`)
       }
     </script>
   </body>
