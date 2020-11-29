@@ -1,20 +1,13 @@
 /**
- *
- *
+ * https://stackoverflow.com/questions/33262385/service-worker-force-update-of-new-assets/64880568#64880568
+ * https://gomakethings.com/how-to-set-an-expiration-date-for-items-in-a-service-worker-cache/
+
  * https://developers.google.com/web/fundamentals/primers/service-workers/lifecycle
  * https://github.com/deanhume/pwa-update-available
  * https://deanhume.com/displaying-a-new-version-available-progressive-web-app/
  * https://raw.githubusercontent.com/GoogleChromeLabs/sw-precache/master/service-worker.tmpl
  *
-
- ok pour connecter ceci a mille-sabords
- on veut que cachename soit update lorsque urlsToCache
- change en gros
- a-t-on besoin que urlToCache soit en dur ici?
- non pas vraiment on pourrait le fetch depuis dist/build.manifest.json
-
- ptet faire ca aussi: https://stackoverflow.com/a/64880568 pendant l'install
- */
+*/
 
 /* globals self */
 self.importScripts("./pwa.manifest.js")
@@ -67,6 +60,22 @@ const install = async () => {
   }
 }
 
+// attention: il ne faudra pas mettre en cache tout
+// ou plus exactement pour index.html il faudrait une approche
+// network-first-with-fallback-to-cache
+// https://developers.google.com/web/ilt/pwa/caching-files-with-service-worker
+/*
+hum je sais pas trop, le html on en a besoin pour le offline
+donc on veut l'avoir direct
+
+mais s'il a été modifié on veut le dire au user
+sauf que si seulement le html est modifié, la liste d'url ne contient pas le html
+et surtout pas le hash du fichier html donc pour le browser rien n'a changé
+
+pour fixer ça il faudrait mettre le hash du fichier html
+dans pwa.manifest.js comme ça le fichier est changé
+meme si le fichier html ne l'est pas
+*/
 const handleRequest = async (request) => {
   console.log(`[Service Worker] Received fetch event for ${request.url}`)
   try {
@@ -91,16 +100,17 @@ const handleRequest = async (request) => {
 }
 
 const activate = async () => {
-  // const cache = await caches.open(cacheName)
-  // const cacheRequests = await cache.keys()
-  // await Promise.all(
-  //   cacheRequests.map(async (cacheRequest) => {
-  //     if (!urlsToCache.includes(cacheRequest.url)) {
-  //       console.log(`[Service Worker] Delete resource: ${cacheRequest.url}`)
-  //       await cache.delete(cacheRequest)
-  //     }
-  //   }),
-  // )
+  await Promise.all([deleteOtherCaches(), deleteOtherUrls()])
+}
+
+// idéalement on ne supprimerais pas TOUT les autres caches
+// on surppimerais que ce qui ressemble a ce qu'on connait
+// (un prefix qui permettrais de se rassurer qu'on ne supprime pas quelque chose
+// qu'on ne controle pas comme une lib externe qui utilise aussi le cache)
+// comme par exemple: https://github.com/GoogleChromeLabs/sw-precache/blob/b202ca04fe87555d7fe9ca338f87fbcf76812c39/lib/functions.js#L68
+// et ensuite il ne supprime que ce qui ressemble a quelque chose qu'il a lui meme mis en cache
+// ah non il font pas ça pour ça mais on pourrait faire ça
+const deleteOtherCaches = async () => {
   const cacheKeys = await caches.keys()
   await Promise.all(
     cacheKeys.map((cacheKey) => {
@@ -109,6 +119,19 @@ const activate = async () => {
       }
       console.log(`[Service Worker] Delete cache named: ${cacheKey}`)
       return caches.delete(cacheKey)
+    }),
+  )
+}
+
+const deleteOtherUrls = async () => {
+  const cache = await caches.open(cacheName)
+  const cacheRequests = await cache.keys()
+  await Promise.all(
+    cacheRequests.map(async (cacheRequest) => {
+      if (!urlsToCache.includes(cacheRequest.url)) {
+        console.log(`[Service Worker] Delete resource: ${cacheRequest.url}`)
+        await cache.delete(cacheRequest)
+      }
     }),
   )
 }
