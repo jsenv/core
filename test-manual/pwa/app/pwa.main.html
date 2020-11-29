@@ -1,0 +1,114 @@
+<!-- https://github.com/pwa-builder/pwa-starter/blob/master/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>PWA example</title>
+    <meta name="description" content="Meta description" />
+    <meta name="author" content="Meta autho" />
+    <meta name="theme-color" content="#B12A34" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta property="og:image" content="pwa.favicon.png" />
+    <link rel="shortcut icon" href="pwa.favicon.png" />
+    <link rel="stylesheet" href="pwa.style.css" />
+    <link rel="manifest" href="pwa.webmanifest" />
+
+    <!-- These meta tags are Apple-specific, and set the web application to run in full-screen mode with a black status bar. Learn more at https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariHTMLRef/Articles/MetaTags.html-->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="PWA Starter" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  </head>
+  <body>
+    <main>
+      <h1>Title</h1>
+      <p class="description">Hello world</p>
+      <button id="clear-logs">Clear logs</button>
+      <button id="register">Register service worker</button>
+      <button id="unregister">Unregister service worker</button>
+      <br />
+      <fieldset>
+        <legend>Service worker state</legend>
+        <button id="installing" disabled>installing</button>
+        <button id="installed" disabled>installed</button>
+        <button id="activating" disabled>activating</button>
+        <button id="activated" disabled>activated</button>
+        <button id="redundant" disabled>redundant</button>
+      </fieldset>
+
+      <button id="check-update">Check for update</button>
+      <button id="update-manifest">Update manifest</button>
+      <button id="update-style">Update style</button>
+      <button id="skip-waiting" disabled>Skip waiting (update right now)</button>
+      <p id="logs"></p>
+    </main>
+    <script type="module">
+      import { createServiceWorker } from "./pwa.util.js"
+
+      const printLog = (message) => {
+        document.querySelector(`#logs`).innerHTML += `${message}<br />`
+      }
+
+      const updateServiceWorkerStateIndicator = (state) => {
+        const buttons = Array.from(document.querySelectorAll(`fieldset button`))
+        buttons.forEach((button) => {
+          if (button.id === state) {
+            button.disabled = false
+          } else {
+            button.disabled = true
+          }
+        })
+
+        printLog(`service worker ${state}`)
+        // printLog(`service worker installed`)
+        //   document.querySelector("#skip-waiting").disabled = false
+        //   document.querySelector("#skip-waiting").onclick = () => {
+        //     skipWaiting()
+        //   }
+      }
+
+      const { register, unregister, checkForUpdate, observeState } = createServiceWorker(
+        "./pwa.service-worker.js",
+      )
+
+      observeState(updateServiceWorkerStateIndicator)
+
+      document.querySelector("#register").onclick = async () => {
+        printLog("registering service worker...")
+        await register()
+        printLog("service worker registered!")
+      }
+
+      document.querySelector("#unregister").onclick = async () => {
+        printLog("unregistering service worker...")
+        const result = await unregister()
+        printLog(`service worker unregistered -> ${result}`)
+      }
+
+      document.querySelector("#update-manifest").onclick = async () => {
+        printLog("updating webmanifest file...")
+        await fetch("./actions/update-manifest", { method: "POST" })
+        printLog("webmanifest file updated !")
+      }
+
+      document.querySelector("#update-style").onclick = async () => {
+        printLog("updating style file...")
+        await fetch("./actions/update-style", { method: "POST" })
+        printLog("style file updated !")
+      }
+
+      document.querySelector("#clear-logs").onclick = async () => {
+        document.querySelector("#logs").innerHTML = ""
+      }
+
+      document.querySelector("#check-update").onclick = async () => {
+        printLog("Checking for update...")
+        const updateCheckResult = await checkForUpdate()
+        if (updateCheckResult.found) {
+          printLog("Update found !")
+        } else {
+          printLog("No update")
+        }
+      }
+    </script>
+  </body>
+</html>

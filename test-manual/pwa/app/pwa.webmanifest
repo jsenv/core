@@ -1,0 +1,31 @@
+{
+  "name": "webmanifest name",
+  "short_name": "webmanifest short_name",
+  "description": "webmanifest description",
+  "icons": [
+    {
+      "src": "pwa.favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "pwa.favicon.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "pwa.favicon.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "pwa.favicon.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "display": "fullscreen",
+  "theme_color": "green",
+  "background_color": "orange"
+}
