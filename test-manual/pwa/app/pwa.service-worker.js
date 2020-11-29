@@ -59,14 +59,24 @@ const handleRequest = async (request) => {
 }
 
 const activate = async () => {
-  const cache = await caches.open(cacheName)
-  const cacheRequests = await cache.keys()
+  // const cache = await caches.open(cacheName)
+  // const cacheRequests = await cache.keys()
+  // await Promise.all(
+  //   cacheRequests.map(async (cacheRequest) => {
+  //     if (!urlsToCache.includes(cacheRequest.url)) {
+  //       console.log(`[Service Worker] Delete resource: ${cacheRequest.url}`)
+  //       await cache.delete(cacheRequest)
+  //     }
+  //   }),
+  // )
+  const cacheKeys = await caches.keys()
   await Promise.all(
-    cacheRequests.map(async (cacheRequest) => {
-      if (!urlsToCache.includes(cacheRequest.url)) {
-        console.log(`[Service Worker] Delete resource: ${cacheRequest.url}`)
-        await cache.delete(cacheRequest)
+    cacheKeys.map((cacheKey) => {
+      if (cacheKey === cacheName) {
+        return null
       }
+      console.log(`[Service Worker] Delete cache named: ${cacheKey}`)
+      return caches.delete(cacheKey)
     }),
   )
 }
