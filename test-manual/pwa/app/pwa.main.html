@@ -99,6 +99,8 @@
           document.querySelector("#skip-waiting").disabled = false
           document.querySelector("#skip-waiting").onclick = () => {
             document.querySelector("#skip-waiting").disabled = true
+            // en vrai on voudra surement reload la page tout simplement
+            // de sorte que on utilise le nouvequ service worker
             skipWaiting()
           }
         },
