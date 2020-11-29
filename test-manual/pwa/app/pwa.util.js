@@ -9,7 +9,7 @@ const canUseServiceWorker = Boolean(window.navigator.serviceWorker)
 
 export const registerServiceWorker = async (
   url,
-  { onstatechange = () => {}, onupdate = () => {} } = {},
+  { scope, onstatechange = () => {}, onupdate = () => {} } = {},
 ) => {
   if (!canUseServiceWorker) {
     return () => {}
@@ -24,14 +24,10 @@ export const registerServiceWorker = async (
     }
   }
 
-  window.addEventListener("message", (data) => {
-    console.log("received message", data)
-  })
-
   const serviceWorkerControllingPage = getServiceWorkerControllingPage()
 
   try {
-    const registration = await navigatorServiceWorker.register(url)
+    const registration = await navigatorServiceWorker.register(url, { scope })
     const { installing, waiting, active } = registration
     console.log({
       installing: registration.installing,
@@ -96,10 +92,6 @@ export const observeServiceWorkerController = (callback) => {
   }
 }
 
-export const pageIsControlledByServiceWorker = () => {
-  return Boolean(getServiceWorkerControllingPage())
-}
-
 export const sendMessageToServiceWorkerControllingPage = async (message) => {
   const serviceWorkerControllingPage = getServiceWorkerControllingPage()
   if (!serviceWorkerControllingPage) {
@@ -119,6 +111,10 @@ export const checkServiceWorkerUpdate = async () => {
   if (!installing && !waiting) return false
 
   return true
+}
+
+const pageIsControlledByServiceWorker = () => {
+  return Boolean(getServiceWorkerControllingPage())
 }
 
 const getServiceWorkerControllingPage = () => {

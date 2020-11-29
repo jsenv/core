@@ -35,7 +35,7 @@
       <button id="ping">Ping service worker</button>
 
       <p>Service worker controlling navigator: <span id="controller">none</span></p>
-      <p>
+      <p id="state-buttons">
         Service worker state:
         <button id="installing" disabled>installing</button>
         <button id="installed" disabled>installed</button>
@@ -83,7 +83,7 @@
 
       registerServiceWorker("./pwa.service-worker.js", {
         onstatechange: (state) => {
-          const buttons = Array.from(document.querySelectorAll(`fieldset button`))
+          const buttons = Array.from(document.querySelectorAll(`#state-buttons button`))
           buttons.forEach((button) => {
             if (button.id === state) {
               button.disabled = false
