@@ -7,3 +7,5 @@ self.cacheName = `pwa-cache-1`
 
 // ce fichier pourrait etre généré par jsenv lors du build
 self.urlsToCache = ["pwa.style.css"]
+
+self.logsEnabled = true

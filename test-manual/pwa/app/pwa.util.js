@@ -29,11 +29,6 @@ export const registerServiceWorker = async (
   try {
     const registration = await navigatorServiceWorker.register(url, { scope })
     const { installing, waiting, active } = registration
-    console.log({
-      installing: registration.installing,
-      waiting: registration.waiting,
-      active: registration.active,
-    })
 
     if (serviceWorkerControllingPage) {
       installStateChangeCallback(serviceWorkerControllingPage)
@@ -126,7 +121,6 @@ const sendMessageUsingChannel = (message, objectWithPostMessage) => {
   const { port1, port2 } = new MessageChannel()
   return new Promise((resolve, reject) => {
     port1.onmessage = function (event) {
-      console.log("received", event)
       if (event.data.error) {
         reject(event.data.error)
       } else {

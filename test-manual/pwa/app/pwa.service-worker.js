@@ -12,51 +12,78 @@
 /* globals self */
 self.importScripts("./pwa.manifest.js")
 
-const urlsToCache = self.urlsToCache
 const cacheName = self.cacheName
+const urlsToCache = self.urlsToCache
+const logsEnabled = self.logsEnabled
+
+const createLogMethod = (method) =>
+  logsEnabled ? (...args) => console[method](...prefixArgs(...args)) : () => {}
+const info = createLogMethod("info")
+// const debug = createLogMethod("debug")
+const warn = createLogMethod("warn")
+// const error = createLogMethod("error")
+
+const backgroundColor = "#ffdc00" // nice yellow
+const prefixArgs = (...args) => {
+  return [
+    `%csw`,
+    `background: ${backgroundColor}; color: black; padding: 1px 3px; margin: 0 1px`,
+    ...args,
+  ]
+}
+
 const caches = self.caches
 
+const fetchUsingNetwork = async (request) => {
+  const controller = new AbortController()
+  const { signal } = controller
+
+  try {
+    const response = await fetch(request, { signal })
+    return response
+  } catch (e) {
+    // abort request in any case
+    // I don't know how useful this is ?
+    controller.abort()
+    throw e
+  }
+}
+
 const install = async () => {
-  console.info("[Service Worker] Install start")
+  info("install start")
   try {
     const cache = await caches.open(cacheName)
 
     const total = urlsToCache.length
     let installed = 0
-
     await Promise.all(
       urlsToCache.map(async (url) => {
-        let controller
         try {
-          controller = new AbortController()
-          const { signal } = controller
           // the cache option set to reload will force the browser to
           // request any of these resources via the network,
           // which avoids caching older files again
           const request = new Request(url, { cache: "reload" })
-          const response = await fetch(request, { signal })
+          const response = await fetchUsingNetwork(request)
 
           if (response && response.status === 200) {
+            info(`put ${url} in cache`)
             await cache.put(request, response.clone())
             installed += 1
           } else {
-            console.info(`unable to fetch ${url} (${response.status})`)
+            info(`cannot put ${url} in cache due to response status (${response.status})`)
           }
         } catch (e) {
-          console.info(`Error while fetching ${url}: ${e.stack}`)
-          // abort request in any case
-          controller.abort()
+          info(`cannot put ${url} in cache due to error while fetching: ${e.stack}`)
         }
       }),
     )
-
     if (installed === total) {
-      console.info(`[Service Worker] Install done (${total} urls added in cache)`)
+      info(`install done (${total} urls added in cache)`)
     } else {
-      console.info(`[Service Worker] Install done (${installed}/${total} urls added in cache)`)
+      info(`install done (${installed}/${total} urls added in cache)`)
     }
   } catch (error) {
-    console.error(`[Service Worker] Install error: ${error.stack}`)
+    error(`install error: ${error.stack}`)
   }
 }
 
@@ -77,25 +104,26 @@ dans pwa.manifest.js comme ça le fichier est changé
 meme si le fichier html ne l'est pas
 */
 const handleRequest = async (request) => {
-  console.log(`[Service Worker] Received fetch event for ${request.url}`)
+  info(`received fetch event for ${request.url}`)
   try {
     const responseFromCache = await caches.match(request)
     if (responseFromCache) {
-      console.log(`[Service Worker] Return response in cache for ${request.url}`)
+      info(`respond with response from cache for ${request.url}`)
       return responseFromCache
     }
   } catch (error) {
-    console.warn(
-      `[Service Worker] Error while trying to serve response for ${request.url} from cache`,
-      error.stack,
-    )
+    warn(`error while trying to use cache for ${request.url}`, error.stack)
     return fetch(request)
   }
 
-  console.log(`[Service Worker] No cache for ${request.url}, fetching it`)
-  const [response, cache] = await Promise.all([fetch(request), caches.open(cacheName)])
-  cache.put(request, response.clone())
-  console.log(`[Service Worker] Caching new resource: ${request.url}`)
+  info(`no cache for ${request.url}, fetching it`)
+  const [response, cache] = await Promise.all([fetchUsingNetwork(request), caches.open(cacheName)])
+  if (response.status === 200) {
+    info(`fresh response found for ${request.url}, put it in cache and respond with it`)
+    cache.put(request, response.clone())
+    return response
+  }
+  info(`cannot put ${request.url} in cache due to response status (${response.status})`)
   return response
 }
 
@@ -117,7 +145,7 @@ const deleteOtherCaches = async () => {
       if (cacheKey === cacheName) {
         return null
       }
-      console.log(`[Service Worker] Delete cache named: ${cacheKey}`)
+      info(`delete cache ${cacheKey}`)
       return caches.delete(cacheKey)
     }),
   )
@@ -129,7 +157,7 @@ const deleteOtherUrls = async () => {
   await Promise.all(
     cacheRequests.map(async (cacheRequest) => {
       if (!urlsToCache.includes(cacheRequest.url)) {
-        console.log(`[Service Worker] Delete resource: ${cacheRequest.url}`)
+        info(`delete ${cacheRequest.url}`)
         await cache.delete(cacheRequest)
       }
     }),
