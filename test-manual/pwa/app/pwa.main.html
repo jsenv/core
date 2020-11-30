@@ -81,7 +81,7 @@
         document.querySelector("#controller").innerHTML = controller ? controller.scriptURL : "none"
       })
 
-      registerServiceWorker("./pwa.service-worker.js", {
+      registerServiceWorker("./sw.js", {
         onstatechange: (state) => {
           const buttons = Array.from(document.querySelectorAll(`#state-buttons button`))
           buttons.forEach((button) => {

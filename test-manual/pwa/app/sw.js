@@ -10,10 +10,10 @@
 */
 
 /* globals self */
-self.importScripts("./pwa.manifest.js")
+self.importScripts("./sw.config.js")
 
 const cacheName = self.cacheName
-const urlsToCache = self.urlsToCache
+const urlsToCacheOnInstall = self.urlsToCacheOnInstall
 const logsEnabled = self.logsEnabled
 
 const createLogMethod = (method) =>
@@ -54,10 +54,10 @@ const install = async () => {
   try {
     const cache = await caches.open(cacheName)
 
-    const total = urlsToCache.length
+    const total = urlsToCacheOnInstall.length
     let installed = 0
     await Promise.all(
-      urlsToCache.map(async (url) => {
+      urlsToCacheOnInstall.map(async (url) => {
         try {
           // the cache option set to reload will force the browser to
           // request any of these resources via the network,
@@ -87,22 +87,6 @@ const install = async () => {
   }
 }
 
-// attention: il ne faudra pas mettre en cache tout
-// ou plus exactement pour index.html il faudrait une approche
-// network-first-with-fallback-to-cache
-// https://developers.google.com/web/ilt/pwa/caching-files-with-service-worker
-/*
-hum je sais pas trop, le html on en a besoin pour le offline
-donc on veut l'avoir direct
-
-mais s'il a été modifié on veut le dire au user
-sauf que si seulement le html est modifié, la liste d'url ne contient pas le html
-et surtout pas le hash du fichier html donc pour le browser rien n'a changé
-
-pour fixer ça il faudrait mettre le hash du fichier html
-dans pwa.manifest.js comme ça le fichier est changé
-meme si le fichier html ne l'est pas
-*/
 const handleRequest = async (request) => {
   info(`received fetch event for ${request.url}`)
   try {
@@ -141,12 +125,11 @@ const activate = async () => {
 const deleteOtherCaches = async () => {
   const cacheKeys = await caches.keys()
   await Promise.all(
-    cacheKeys.map((cacheKey) => {
-      if (cacheKey === cacheName) {
-        return null
+    cacheKeys.map(async (cacheKey) => {
+      if (cacheKey !== self.cacheName && self.shouldDeleteCacheOnActivation(cacheKey)) {
+        info(`delete cache ${cacheKey}`)
+        await caches.delete(cacheKey)
       }
-      info(`delete cache ${cacheKey}`)
-      return caches.delete(cacheKey)
     }),
   )
 }
@@ -156,7 +139,7 @@ const deleteOtherUrls = async () => {
   const cacheRequests = await cache.keys()
   await Promise.all(
     cacheRequests.map(async (cacheRequest) => {
-      if (!urlsToCache.includes(cacheRequest.url)) {
+      if (self.shouldDeleteRequestCacheOnActivation(cacheRequest)) {
         info(`delete ${cacheRequest.url}`)
         await cache.delete(cacheRequest)
       }
@@ -170,7 +153,7 @@ self.addEventListener("install", (installEvent) => {
 
 self.addEventListener("fetch", (fetchEvent) => {
   const { request } = fetchEvent
-  if (request.method === "GET" || request.method === "HEAD") {
+  if (self.shouldCacheRequest(request)) {
     const responsePromise = handleRequest(request)
     if (responsePromise) {
       fetchEvent.respondWith(responsePromise)
