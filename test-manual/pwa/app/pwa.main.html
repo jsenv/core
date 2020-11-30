@@ -1,17 +1,17 @@
-<!-- https://github.com/pwa-builder/pwa-starter/blob/master/index.html -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>PWA example</title>
+    <!-- https://github.com/pwa-builder/pwa-starter/blob/master/index.html -->
     <meta name="description" content="Meta description" />
     <meta name="author" content="Meta autho" />
     <meta name="theme-color" content="#B12A34" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta property="og:image" content="pwa.favicon.png" />
+    <link rel="manifest" href="pwa.webmanifest" />
     <link rel="shortcut icon" href="pwa.favicon.png" />
     <link rel="stylesheet" href="pwa.style.css" />
-    <link rel="manifest" href="pwa.webmanifest" />
 
     <!-- These meta tags are Apple-specific, and set the web application to run in full-screen mode with a black status bar. Learn more at https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariHTMLRef/Articles/MetaTags.html-->
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -20,6 +20,10 @@
   </head>
   <body>
     <main>
+      <h1>Add to home screen</h1>
+      <button id="install" disabled>Install application</button>
+      <p>display mode: <span id="display-mode"></span></p>
+
       <h1>file.txt</h1>
       <button id="file-fetch">Get file.txt</button>
       <input id="file-input" type="text" />
@@ -48,6 +52,54 @@
       <button id="clear-logs">Clear logs</button>
       <p id="logs"></p>
     </main>
+    <script type="module">
+      const listenDisplayMode = (callback) => {
+        const checkDisplayMode = () => {
+          const displayModeIsStandalone =
+            window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches
+          callback(displayModeIsStandalone ? "standalone" : "browser tab")
+        }
+        checkDisplayMode()
+
+        window.matchMedia("(display-mode: standalone)").addListener(() => {
+          checkDisplayMode()
+        })
+      }
+
+      listenDisplayMode((displayMode) => {
+        document.querySelector("#display-mode").innerHTML = displayMode
+      })
+
+      const listenInstallPromptAvailable = (callback) => {
+        window.addEventListener("beforeinstallprompt", (beforeinstallpromptEvent) => {
+          const prompt = async () => {
+            beforeinstallpromptEvent.prompt()
+            const choiceResult = await beforeinstallpromptEvent.userChoice
+            if (choiceResult.outcome === "accepted") {
+              beforeinstallpromptEvent = undefined
+              return true
+            }
+            return false
+          }
+          callback({ prompt })
+        })
+      }
+
+      window.addEventListener("appinstalled", () => {
+        // app was installed by user (maybe from browser toolbar, maybe from our button)
+        document.querySelector("#install").disabled = true
+      })
+
+      listenInstallPromptAvailable(({ prompt }) => {
+        document.querySelector("#install").disabled = false
+        document.querySelector("#install").onclick = async () => {
+          const accepted = await prompt()
+          if (accepted) {
+            document.querySelector("#install").disabled = true
+          }
+        }
+      })
+    </script>
     <script type="module">
       import {
         observeServiceWorkerController,
