@@ -81,7 +81,7 @@
         document.querySelector("#controller").innerHTML = controller ? controller.scriptURL : "none"
       })
 
-      registerServiceWorker("./sw.js", {
+      registerServiceWorker("./jsenv-sw.js", {
         onstatechange: (state) => {
           const buttons = Array.from(document.querySelectorAll(`#state-buttons button`))
           buttons.forEach((button) => {

@@ -8,10 +8,10 @@ Here is an high level overview of what happens from the very first visit of a us
 
 ## 1) User first visit
 
-- Some code inside that page calls `navigator.serviceWorker.register("./sw.js")`.
-- Browser fetch/parse/execute `"./sw.js"` and trigger `install` event on it.
-- `sw.js` pre fetch all urls declared in `self.urlsToCacheOnInstall` and puts them into browser cache. It puts them info a cache named after `self.cacheName`. See https://developer.mozilla.org/en-US/docs/Web/API/CacheStorage/open. These url will be cached as long as this service worker lives.
-- Browser trigger `activate` on `"./sw.js"`
+- Some code inside that page calls `navigator.serviceWorker.register("./jsenv-sw.js")`.
+- Browser fetch/parse/execute `"./jsenv-sw.js"` and trigger `install` event on it.
+- `jsenv-sw.js` pre fetch all urls declared in `self.urlsToCacheOnInstall` and puts them into browser cache. It puts them info a cache named after `self.cacheName`. See https://developer.mozilla.org/en-US/docs/Web/API/CacheStorage/open. These url will be cached as long as this service worker lives.
+- Browser trigger `activate` on `"./jsenv-sw.js"`
 
 At this point service worker does not control the page. And **it's expected**. The intent of this service worker is that service worker will handle networks for the next visit. For that next visit, page loads instantly and could work offline.
 
@@ -28,7 +28,7 @@ At this point service worker does not control the page. And **it's expected**. T
 
 ## 3) You update the service worker
 
-You update `sw.config.js` or `sw.js` files.
+You update `jsenv-sw.config.js` or `jsenv-sw.js` files.
 
 ## 4) Browser sees service worker has changed
 
@@ -48,20 +48,20 @@ Browser periodically fetches (every 24h) the url that was passed to `navigator.s
 
 ## Usage
 
-During build all urls used by your html file are known. This list of urls is put into a file in the build directory: `sw.jsenv_build_urls.js`.
+During build all urls used by your html file are known. This list of urls is put into a file in the build directory: `jsenv-sw.build_urls.js`.
 
-Jsenv also copy `sw.js` and `sw.config.js` files into the build directory.
+Jsenv also copy `jsenv-sw.js` and `jsenv-sw.config.js` files into the build directory.
 
-If a given build outputs exactly the same `sw.jsenv_build_urls.js` and you haven't modified `sw.js` or `sw.config.js` then your service worker is the same meaning user will use their current service worker implementation. Otherwise browser will see that something has changed and start the process to update the service worker.
+If a given build outputs exactly the same `jsenv-sw.build_urls.js` and you haven't modified `jsenv-sw.js` or `jsenv-sw.config.js` then your service worker is the same meaning user will use their current service worker implementation. Otherwise browser will see that something has changed and start the process to update the service worker.
 
 All that means:
 
-- if any of your file changes, `sw.jsenv_build_urls.js` changes, browser engages a service worker update.
+- if any of your file changes, `jsenv-sw.build_urls.js` changes, browser engages a service worker update.
 - The way service worker updates favor cache reuse. As long as `self.cacheName` is the same between workers, cache will be reused and user will redownload only and exactly the files you modified.
-- If you want to cache urls that does not appear in `sw.jsenv_build_urls.js`, add them manually in `sw.config.js` inside `self.urlsToCacheOnInstall`.
+- If you want to cache urls that does not appear in `jsenv-sw.build_urls.js`, add them manually in `jsenv-sw.config.js` inside `self.urlsToCacheOnInstall`.
 
 Important notes:
 
-- If you load urls that are not explicitely referenced in your html/css/js/svg files they won't appear in `sw.jsenv_build_urls.js`. To fix that, reference them somewhere or add them manually in `sw.config.js` as suggested. Referencing an url looks like `import url from "src/img.png"` for a js file or `<link rel="preload" href="./src/img.png" />` for an html file.
+- If you load urls that are not explicitely referenced in your html/css/js/svg files they won't appear in `jsenv-sw.build_urls.js`. To fix that, reference them somewhere or add them manually in `jsenv-sw.config.js` as suggested. Referencing an url looks like `import url from "src/img.png"` for a js file or `<link rel="preload" href="./src/img.png" />` for an html file.
 
-- Jsenv does not put external urls into `sw.jsenv_build_urls.js`. An external url contains an origin different from your website. This happens if you load a font from Google CDN for instance. An external url (that you want to cache) must be added manually to `sw.config.js`.
+- Jsenv does not put external urls into `jsenv-sw.build_urls.js`. An external url contains an origin different from your website. This happens if you load a font from Google CDN for instance. An external url (that you want to cache) must be added manually to `jsenv-sw.config.js`.

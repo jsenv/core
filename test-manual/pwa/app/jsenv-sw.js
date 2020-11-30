@@ -10,7 +10,7 @@
 */
 
 /* globals self */
-self.importScripts("./sw.config.js")
+self.importScripts("./jsenv-sw.config.js")
 
 const cacheName = self.cacheName
 const urlsToCacheOnInstall = self.urlsToCacheOnInstall
@@ -59,10 +59,18 @@ const install = async () => {
     await Promise.all(
       urlsToCacheOnInstall.map(async (url) => {
         try {
-          // the cache option set to reload will force the browser to
-          // request any of these resources via the network,
-          // which avoids caching older files again
-          const request = new Request(url, { cache: "reload" })
+          const request = new Request(url, {
+            // here, it's possible that fetchUsingNetwork hits cache
+            // from the previous worker. Or even that url is already in cache.
+            // We could ensure we get a fresh response by passing cache: "reload"
+            // option to the request constructor.
+            // But that would defeat the cache meaning everytime a user
+            // visit the website after an update it has to redownload
+            // all the files, not only the one you modified.
+            // so keep it commented
+            // cache: "reload",
+          })
+
           const response = await fetchUsingNetwork(request)
 
           if (response && response.status === 200) {
@@ -115,13 +123,6 @@ const activate = async () => {
   await Promise.all([deleteOtherCaches(), deleteOtherUrls()])
 }
 
-// idéalement on ne supprimerais pas TOUT les autres caches
-// on surppimerais que ce qui ressemble a ce qu'on connait
-// (un prefix qui permettrais de se rassurer qu'on ne supprime pas quelque chose
-// qu'on ne controle pas comme une lib externe qui utilise aussi le cache)
-// comme par exemple: https://github.com/GoogleChromeLabs/sw-precache/blob/b202ca04fe87555d7fe9ca338f87fbcf76812c39/lib/functions.js#L68
-// et ensuite il ne supprime que ce qui ressemble a quelque chose qu'il a lui meme mis en cache
-// ah non il font pas ça pour ça mais on pourrait faire ça
 const deleteOtherCaches = async () => {
   const cacheKeys = await caches.keys()
   await Promise.all(

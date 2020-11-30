@@ -1,5 +1,7 @@
 /* globals self */
 
+self.importScripts("./jsenv-sw.build_urls.js")
+
 self.cacheName = `pwa-cache-1`
 
 /**
@@ -8,7 +10,7 @@ self.cacheName = `pwa-cache-1`
  * Putting an url in that list means it is mandatory for the website to work offline
  * and that it will be cached as long as service worker is alive.
  */
-self.urlsToCacheOnInstall = [...[], ...["pwa.style.css"]]
+self.urlsToCacheOnInstall = [...self.jsenvBuildUrls, "pwa.style.css"]
 
 /*
   Decides if the request must be cached or not.
@@ -16,12 +18,13 @@ self.urlsToCacheOnInstall = [...[], ...["pwa.style.css"]]
   When returning true, the response for that request will be stored into cache
 */
 self.shouldCacheRequest = (request) => {
+  if (!self.urlsToCacheOnInstall.includes(request.url)) return false
   return request.method === "GET" || request.method === "HEAD"
 }
 
 /*
   Whenever you change something in this file, such as self.cacheName
-  or self.urlsToCache, browser reinstalls the service worker.
+  or self.urlsToCacheOnInstall, browser reinstalls the service worker.
   When service worker activates, it is responsible to clean the cache
   used by the previous service worker version.
 
@@ -36,8 +39,8 @@ self.shouldCacheRequest = (request) => {
   shouldDeleteRequestCacheOnActivation is a function that will be used to decide
   if a cached request must be deleted or not when service worker activates.
   The implementation below tells to delete request if it's not
-  in self.urlsToCache.
-  It means if you depend on an url that is not listed by self.urlsToCache
+  in self.urlsToCacheOnInstall.
+  It means if you depend on an url that is not listed by self.urlsToCacheOnInstall
   it will be re-fetched (and put into cache) every time your update the service worker.
 */
 self.shouldDeleteCacheOnActivation = (cacheKey) => cacheKey.startsWith("pwa-cache")
