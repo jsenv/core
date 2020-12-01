@@ -44,30 +44,36 @@ const fetchUsingNetwork = async (request) => {
   }
 }
 
+let cache
+const getCache = async () => {
+  if (cache) return cache
+  cache = await caches.open(config.cacheName)
+  return cache
+}
+
+const fetchAndCache = async (request, { oncache } = {}) => {
+  const [response, cache] = await Promise.all([fetchUsingNetwork(request), getCache()])
+
+  if (response.status === 200) {
+    info(`fresh response found for ${request.url}, put it in cache and respond with it`)
+
+    const cacheWrittenPromise = cache.put(request, response.clone())
+    if (oncache) {
+      await cacheWrittenPromise
+      oncache()
+    }
+
+    return response
+  }
+  info(`cannot put ${request.url} in cache due to response status (${response.status})`)
+  return response
+}
+
 const install = async () => {
   info("install start")
   try {
     const total = config.urlsToCacheOnInstall.length
     let installed = 0
-
-    let cache
-    const getCache = async () => {
-      if (cache) return cache
-      cache = await caches.open(config.cacheName)
-      return cache
-    }
-
-    const putIntoCache = async (request, response) => {
-      if (response && response.status === 200) {
-        info(`put ${request.url} in cache`)
-        const cache = await getCache()
-        await cache.put(request, response.clone())
-        installed += 1
-        return true
-      }
-      info(`cannot put ${request.url} in cache due to response status (${response.status})`)
-      return false
-    }
 
     await Promise.all(
       config.urlsToCacheOnInstall.map(async (url) => {
@@ -82,15 +88,21 @@ const install = async () => {
             if (shouldReload) {
               info(`${request.url} in cache but should be reloaded`)
               const requestByPassingCache = new Request(url, { cache: "reload" })
-              const responseFromNetwork = await fetchUsingNetwork(requestByPassingCache)
-              await putIntoCache(request, responseFromNetwork)
+              await fetchAndCache(requestByPassingCache, {
+                oncache: () => {
+                  installed += 1
+                },
+              })
             } else {
               info(`${request.url} already in cache`)
               installed += 1
             }
           } else {
-            const responseFromNetwork = await fetchUsingNetwork(request)
-            await putIntoCache(request, responseFromNetwork)
+            await fetchAndCache(request, {
+              oncache: () => {
+                installed += 1
+              },
+            })
           }
         } catch (e) {
           info(`cannot put ${url} in cache due to error while fetching: ${e.stack}`)
@@ -121,17 +133,7 @@ const handleRequest = async (request) => {
   }
 
   info(`no cache for ${request.url}, fetching it`)
-  const [response, cache] = await Promise.all([
-    fetchUsingNetwork(request),
-    caches.open(config.cacheName),
-  ])
-  if (response.status === 200) {
-    info(`fresh response found for ${request.url}, put it in cache and respond with it`)
-    cache.put(request, response.clone())
-    return response
-  }
-  info(`cannot put ${request.url} in cache due to response status (${response.status})`)
-  return response
+  return fetchAndCache(request)
 }
 
 const activate = async () => {
@@ -187,14 +189,51 @@ self.addEventListener("activate", (activateEvent) => {
   }
 })
 
-self.addEventListener("message", function (messageEvent) {
-  if (messageEvent.data.action === "skipWaiting") {
-    self.skipWaiting()
+self.addEventListener("message", async (messageEvent) => {
+  const { data } = messageEvent
+  if (typeof data !== "object") return
+  const { action } = data
+  const actionFn = actions[action]
+  if (!actionFn) return
+
+  const { args = [] } = data
+
+  let status
+  let value
+  try {
+    const actionFnReturnValue = await actionFn(...args)
+    status = "resolved"
+    value = actionFnReturnValue
+  } catch (e) {
+    status = "rejected"
+    value = e
   }
-  if (messageEvent.data === "ping") {
-    messageEvent.ports[0].postMessage("pong")
-  }
+
+  messageEvent.ports[0].postMessage({ status, value })
 })
+
+const actions = {
+  skipWaiting: () => {
+    self.skipWaiting()
+  },
+  ping: () => "pong",
+  refreshCacheKey: async (url) => {
+    url = String(new URL(url, self.location))
+    const response = await fetchAndCache(new Request(url, { cache: "reload" }))
+    return response.status
+  },
+  addCacheKey: async (url) => {
+    url = String(new URL(url, self.location))
+    const response = await fetchAndCache(url)
+    return response.status
+  },
+  removeCacheKey: async (url) => {
+    url = String(new URL(url, self.location))
+    const cache = await caches.open(config.cacheName)
+    const deleted = await cache.delete(url)
+    return deleted
+  },
+}
 
 const responseCacheIsValid = (responseInCache) => {
   const cacheControlResponseHeader = responseInCache.headers.get("cache-control")

@@ -121,10 +121,10 @@ const sendMessageUsingChannel = (message, objectWithPostMessage) => {
   const { port1, port2 } = new MessageChannel()
   return new Promise((resolve, reject) => {
     port1.onmessage = function (event) {
-      if (event.data.error) {
-        reject(event.data.error)
+      if (event.data.status === "rejected") {
+        reject(event.data.value)
       } else {
-        resolve(event.data)
+        resolve(event.data.value)
       }
     }
     objectWithPostMessage.postMessage(message, [port2])

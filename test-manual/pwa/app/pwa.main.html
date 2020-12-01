@@ -36,7 +36,10 @@
       <button id="check-update">Check for update</button>
       <button id="update-manifest">Update manifest</button>
       <button id="skip-waiting" disabled>Skip waiting (activate right now)</button>
+      <br />
       <button id="ping">Ping service worker</button>
+      <button id="remove">Remove file.txt cache</button>
+      <button id="refresh">Refresh file.txt cache</button>
 
       <p>Service worker controlling navigator: <span id="controller">none</span></p>
       <p id="state-buttons">
@@ -176,7 +179,25 @@
 
       document.querySelector("#ping").onclick = async () => {
         printLog("> ping service worker")
-        const result = await sendMessageToServiceWorkerControllingPage("ping")
+        const result = await sendMessageToServiceWorkerControllingPage({ action: "ping" })
+        printLog(`< ${result}`)
+      }
+
+      document.querySelector("#remove").onclick = async () => {
+        printLog("> remove file.txt cache")
+        const result = await sendMessageToServiceWorkerControllingPage({
+          action: "removeCacheKey",
+          args: ["file.txt"],
+        })
+        printLog(`< ${result}`)
+      }
+
+      document.querySelector("#refresh").onclick = async () => {
+        printLog("> refresh file.txt cache in service worker")
+        const result = await sendMessageToServiceWorkerControllingPage({
+          action: "refreshCacheKey",
+          args: ["file.txt"],
+        })
         printLog(`< ${result}`)
       }
 
