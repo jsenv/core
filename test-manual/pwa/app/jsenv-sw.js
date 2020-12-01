@@ -52,33 +52,50 @@ const fetchUsingNetwork = async (request) => {
 const install = async () => {
   info("install start")
   try {
-    const cache = await caches.open(cacheName)
-
     const total = urlsToCacheOnInstall.length
     let installed = 0
+
+    let cache
+    const getCache = async () => {
+      if (cache) return cache
+      cache = await caches.open(cacheName)
+      return cache
+    }
+
+    const putIntoCache = async (request, response) => {
+      if (response && response.status === 200) {
+        info(`put ${request.url} in cache`)
+        const cache = await getCache()
+        await cache.put(request, response.clone())
+        installed += 1
+        return true
+      }
+      info(`cannot put ${request.url} in cache due to response status (${response.status})`)
+      return false
+    }
+
     await Promise.all(
       urlsToCacheOnInstall.map(async (url) => {
         try {
-          const request = new Request(url, {
-            // here, it's possible that fetchUsingNetwork hits cache
-            // from the previous worker. Or even that url is already in cache.
-            // We could ensure we get a fresh response by passing cache: "reload"
-            // option to the request constructor.
-            // But that would defeat the cache meaning everytime a user
-            // visit the website after an update it has to redownload
-            // all the files, not only the one you modified.
-            // so keep it commented
-            // cache: "reload",
-          })
+          const request = new Request(url)
+          const responseInCache = await caches.match(request)
 
-          const response = await fetchUsingNetwork(request)
-
-          if (response && response.status === 200) {
-            info(`put ${url} in cache`)
-            await cache.put(request, response.clone())
-            installed += 1
+          if (responseInCache) {
+            const shouldReload = responseCacheIsValid(responseInCache)
+              ? false
+              : self.shouldReloadOnInstall(responseInCache, request)
+            if (shouldReload) {
+              info(`${request.url} in cache but should be reloaded`)
+              const requestByPassingCache = new Request(url, { cache: "reload" })
+              const responseFromNetwork = await fetchUsingNetwork(requestByPassingCache)
+              await putIntoCache(request, responseFromNetwork)
+            } else {
+              info(`${request.url} already in cache`)
+              installed += 1
+            }
           } else {
-            info(`cannot put ${url} in cache due to response status (${response.status})`)
+            const responseFromNetwork = await fetchUsingNetwork(request)
+            await putIntoCache(request, responseFromNetwork)
           }
         } catch (e) {
           info(`cannot put ${url} in cache due to error while fetching: ${e.stack}`)
@@ -120,29 +137,32 @@ const handleRequest = async (request) => {
 }
 
 const activate = async () => {
-  await Promise.all([deleteOtherCaches(), deleteOtherUrls()])
+  info("activate start")
+  await Promise.all([deleteOtherUrls(), deleteOtherCaches()])
+  info("activate done")
+}
+
+const deleteOtherUrls = async () => {
+  const cache = await caches.open(cacheName)
+  const requestsInCache = await cache.keys()
+  await Promise.all(
+    requestsInCache.map(async (requestInCache) => {
+      const responseInCache = await cache.match(requestInCache)
+      if (self.shouldCleanOnActivate(responseInCache, requestInCache)) {
+        info(`delete ${requestInCache.url}`)
+        await cache.delete(requestInCache)
+      }
+    }),
+  )
 }
 
 const deleteOtherCaches = async () => {
   const cacheKeys = await caches.keys()
   await Promise.all(
     cacheKeys.map(async (cacheKey) => {
-      if (cacheKey !== self.cacheName && self.shouldDeleteCacheOnActivation(cacheKey)) {
+      if (cacheKey !== self.cacheName && self.shouldCleanOtherCacheOnActivate(cacheKey)) {
         info(`delete cache ${cacheKey}`)
         await caches.delete(cacheKey)
-      }
-    }),
-  )
-}
-
-const deleteOtherUrls = async () => {
-  const cache = await caches.open(cacheName)
-  const cacheRequests = await cache.keys()
-  await Promise.all(
-    cacheRequests.map(async (cacheRequest) => {
-      if (self.shouldDeleteRequestCacheOnActivation(cacheRequest)) {
-        info(`delete ${cacheRequest.url}`)
-        await cache.delete(cacheRequest)
       }
     }),
   )
@@ -177,3 +197,47 @@ self.addEventListener("message", function (messageEvent) {
     messageEvent.ports[0].postMessage("pong")
   }
 })
+
+const responseCacheIsValid = (responseInCache) => {
+  const cacheControlResponseHeader = responseInCache.headers.get("cache-control")
+  const maxAge = parseMaxAge(cacheControlResponseHeader)
+  return maxAge && maxAge > 0
+}
+
+// https://github.com/tusbar/cache-control
+const parseMaxAge = (cacheControlHeader) => {
+  if (!cacheControlHeader || cacheControlHeader.length === 0) return null
+
+  const HEADER_REGEXP = /([a-zA-Z][a-zA-Z_-]*)\s*(?:=(?:"([^"]*)"|([^ \t",;]*)))?/g
+  const matches = cacheControlHeader.match(HEADER_REGEXP) || []
+
+  const values = {}
+  Array.from(matches).forEach((match) => {
+    const tokens = match.split("=", 2)
+
+    const [key] = tokens
+    let value = null
+
+    if (tokens.length > 1) {
+      value = tokens[1].trim()
+    }
+
+    values[key.toLowerCase()] = value
+  })
+
+  return parseDuration(values["max-age"])
+}
+
+const parseDuration = (value) => {
+  if (!value) {
+    return null
+  }
+
+  const duration = Number.parseInt(value, 10)
+
+  if (!Number.isFinite(duration) || duration < 0) {
+    return null
+  }
+
+  return duration
+}
