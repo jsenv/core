@@ -38,6 +38,8 @@ export const buildUsingRollup = async ({
   minifyHtmlOptions,
   manifestFile = false,
 
+  serviceWorkerFileRelativeUrls,
+
   writeOnFileSystem,
 }) => {
   const { jsenvRollupPlugin, getResult } = await createJsenvRollupPlugin({
@@ -69,6 +71,7 @@ export const buildUsingRollup = async ({
 
     manifestFile,
     writeOnFileSystem,
+    serviceWorkerFileRelativeUrls,
   })
 
   await useRollup({

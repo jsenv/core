@@ -80,6 +80,187 @@ const urlsToCacheOnInstall = [
   ...config.extraUrlsToCacheOnInstall,
 ].map((url) => String(new URL(url, self.location)))
 
+// --- installation phase ---
+const install = async () => {
+  info("install start")
+  try {
+    const total = urlsToCacheOnInstall.length
+    let installed = 0
+
+    await Promise.all(
+      urlsToCacheOnInstall.map(async (url) => {
+        try {
+          const request = new Request(url)
+          const responseInCache = await caches.match(request)
+
+          if (responseInCache) {
+            const shouldReload = responseCacheIsValid(responseInCache)
+              ? false
+              : config.shouldReloadOnInstall(responseInCache, request, {
+                  requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
+                })
+            if (shouldReload) {
+              info(`${request.url} in cache but should be reloaded`)
+              const requestByPassingCache = new Request(url, { cache: "reload" })
+              await fetchAndCache(requestByPassingCache, {
+                oncache: () => {
+                  installed += 1
+                },
+              })
+            } else {
+              info(`${request.url} already in cache`)
+              installed += 1
+            }
+          } else {
+            await fetchAndCache(request, {
+              oncache: () => {
+                installed += 1
+              },
+            })
+          }
+        } catch (e) {
+          info(`cannot put ${url} in cache due to error while fetching: ${e.stack}`)
+        }
+      }),
+    )
+    if (installed === total) {
+      info(`install done (${total} urls added in cache)`)
+    } else {
+      info(`install done (${installed}/${total} urls added in cache)`)
+    }
+  } catch (error) {
+    error(`install error: ${error.stack}`)
+  }
+}
+
+self.addEventListener("install", (installEvent) => {
+  installEvent.waitUntil(install(installEvent))
+})
+
+// --- fetch implementation ---
+const handleRequest = async (request) => {
+  info(`received fetch event for ${request.url}`)
+  try {
+    const responseFromCache = await caches.match(request)
+    if (responseFromCache) {
+      info(`respond with response from cache for ${request.url}`)
+      return responseFromCache
+    }
+  } catch (error) {
+    warn(`error while trying to use cache for ${request.url}`, error.stack)
+    return fetch(request)
+  }
+
+  info(`no cache for ${request.url}, fetching it`)
+  return fetchAndCache(request)
+}
+
+self.addEventListener("fetch", (fetchEvent) => {
+  const { request } = fetchEvent
+  if (
+    config.shouldHandleRequest(request, {
+      requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
+    })
+  ) {
+    const responsePromise = handleRequest(request)
+    if (responsePromise) {
+      fetchEvent.respondWith(responsePromise)
+    }
+  }
+})
+
+// --- activation phase ---
+const activate = async () => {
+  info("activate start")
+  await Promise.all([deleteOtherUrls(), deleteOtherCaches()])
+  info("activate done")
+}
+
+const deleteOtherUrls = async () => {
+  const cache = await caches.open(config.cacheName)
+  const requestsInCache = await cache.keys()
+  await Promise.all(
+    requestsInCache.map(async (requestInCache) => {
+      const responseInCache = await cache.match(requestInCache)
+      if (
+        config.shouldCleanOnActivate(responseInCache, requestInCache, {
+          requestWasCachedOnInstall: urlsToCacheOnInstall.includes(requestInCache.url),
+        })
+      ) {
+        info(`delete ${requestInCache.url}`)
+        await cache.delete(requestInCache)
+      }
+    }),
+  )
+}
+
+const deleteOtherCaches = async () => {
+  const cacheKeys = await caches.keys()
+  await Promise.all(
+    cacheKeys.map(async (cacheKey) => {
+      if (cacheKey !== config.cacheName && config.shouldCleanOtherCacheOnActivate(cacheKey)) {
+        info(`delete cache ${cacheKey}`)
+        await caches.delete(cacheKey)
+      }
+    }),
+  )
+}
+
+self.addEventListener("activate", (activateEvent) => {
+  const activatePromise = activate(activateEvent)
+  if (activatePromise) {
+    activateEvent.waitUntil(activatePromise)
+  }
+})
+
+// --- postMessage communication ---
+const actions = {
+  skipWaiting: () => {
+    self.skipWaiting()
+  },
+  ping: () => "pong",
+  refreshCacheKey: async (url) => {
+    url = String(new URL(url, self.location))
+    const response = await fetchAndCache(new Request(url, { cache: "reload" }))
+    return response.status
+  },
+  addCacheKey: async (url) => {
+    url = String(new URL(url, self.location))
+    const response = await fetchAndCache(url)
+    return response.status
+  },
+  removeCacheKey: async (url) => {
+    url = String(new URL(url, self.location))
+    const cache = await caches.open(config.cacheName)
+    const deleted = await cache.delete(url)
+    return deleted
+  },
+}
+
+self.addEventListener("message", async (messageEvent) => {
+  const { data } = messageEvent
+  if (typeof data !== "object") return
+  const { action } = data
+  const actionFn = actions[action]
+  if (!actionFn) return
+
+  const { args = [] } = data
+
+  let status
+  let value
+  try {
+    const actionFnReturnValue = await actionFn(...args)
+    status = "resolved"
+    value = actionFnReturnValue
+  } catch (e) {
+    status = "rejected"
+    value = e
+  }
+
+  messageEvent.ports[0].postMessage({ status, value })
+})
+
+// ---- utils ----
 const createLogMethod = (method) =>
   config.logsEnabled ? (...args) => console[method](...prefixArgs(...args)) : () => {}
 const info = createLogMethod("info")
@@ -135,182 +316,6 @@ const fetchAndCache = async (request, { oncache } = {}) => {
   }
   info(`cannot put ${request.url} in cache due to response status (${response.status})`)
   return response
-}
-
-const install = async () => {
-  info("install start")
-  try {
-    const total = urlsToCacheOnInstall.length
-    let installed = 0
-
-    await Promise.all(
-      urlsToCacheOnInstall.map(async (url) => {
-        try {
-          const request = new Request(url)
-          const responseInCache = await caches.match(request)
-
-          if (responseInCache) {
-            const shouldReload = responseCacheIsValid(responseInCache)
-              ? false
-              : config.shouldReloadOnInstall(responseInCache, request, {
-                  requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
-                })
-            if (shouldReload) {
-              info(`${request.url} in cache but should be reloaded`)
-              const requestByPassingCache = new Request(url, { cache: "reload" })
-              await fetchAndCache(requestByPassingCache, {
-                oncache: () => {
-                  installed += 1
-                },
-              })
-            } else {
-              info(`${request.url} already in cache`)
-              installed += 1
-            }
-          } else {
-            await fetchAndCache(request, {
-              oncache: () => {
-                installed += 1
-              },
-            })
-          }
-        } catch (e) {
-          info(`cannot put ${url} in cache due to error while fetching: ${e.stack}`)
-        }
-      }),
-    )
-    if (installed === total) {
-      info(`install done (${total} urls added in cache)`)
-    } else {
-      info(`install done (${installed}/${total} urls added in cache)`)
-    }
-  } catch (error) {
-    error(`install error: ${error.stack}`)
-  }
-}
-
-const handleRequest = async (request) => {
-  info(`received fetch event for ${request.url}`)
-  try {
-    const responseFromCache = await caches.match(request)
-    if (responseFromCache) {
-      info(`respond with response from cache for ${request.url}`)
-      return responseFromCache
-    }
-  } catch (error) {
-    warn(`error while trying to use cache for ${request.url}`, error.stack)
-    return fetch(request)
-  }
-
-  info(`no cache for ${request.url}, fetching it`)
-  return fetchAndCache(request)
-}
-
-const activate = async () => {
-  info("activate start")
-  await Promise.all([deleteOtherUrls(), deleteOtherCaches()])
-  info("activate done")
-}
-
-const deleteOtherUrls = async () => {
-  const cache = await caches.open(config.cacheName)
-  const requestsInCache = await cache.keys()
-  await Promise.all(
-    requestsInCache.map(async (requestInCache) => {
-      const responseInCache = await cache.match(requestInCache)
-      if (
-        config.shouldCleanOnActivate(responseInCache, requestInCache, {
-          requestWasCachedOnInstall: urlsToCacheOnInstall.includes(requestInCache.url),
-        })
-      ) {
-        info(`delete ${requestInCache.url}`)
-        await cache.delete(requestInCache)
-      }
-    }),
-  )
-}
-
-const deleteOtherCaches = async () => {
-  const cacheKeys = await caches.keys()
-  await Promise.all(
-    cacheKeys.map(async (cacheKey) => {
-      if (cacheKey !== config.cacheName && config.shouldCleanOtherCacheOnActivate(cacheKey)) {
-        info(`delete cache ${cacheKey}`)
-        await caches.delete(cacheKey)
-      }
-    }),
-  )
-}
-
-self.addEventListener("install", (installEvent) => {
-  installEvent.waitUntil(install(installEvent))
-})
-
-self.addEventListener("fetch", (fetchEvent) => {
-  const { request } = fetchEvent
-  if (
-    config.shouldHandleRequest(request, {
-      requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
-    })
-  ) {
-    const responsePromise = handleRequest(request)
-    if (responsePromise) {
-      fetchEvent.respondWith(responsePromise)
-    }
-  }
-})
-
-self.addEventListener("activate", (activateEvent) => {
-  const activatePromise = activate(activateEvent)
-  if (activatePromise) {
-    activateEvent.waitUntil(activatePromise)
-  }
-})
-
-self.addEventListener("message", async (messageEvent) => {
-  const { data } = messageEvent
-  if (typeof data !== "object") return
-  const { action } = data
-  const actionFn = actions[action]
-  if (!actionFn) return
-
-  const { args = [] } = data
-
-  let status
-  let value
-  try {
-    const actionFnReturnValue = await actionFn(...args)
-    status = "resolved"
-    value = actionFnReturnValue
-  } catch (e) {
-    status = "rejected"
-    value = e
-  }
-
-  messageEvent.ports[0].postMessage({ status, value })
-})
-
-const actions = {
-  skipWaiting: () => {
-    self.skipWaiting()
-  },
-  ping: () => "pong",
-  refreshCacheKey: async (url) => {
-    url = String(new URL(url, self.location))
-    const response = await fetchAndCache(new Request(url, { cache: "reload" }))
-    return response.status
-  },
-  addCacheKey: async (url) => {
-    url = String(new URL(url, self.location))
-    const response = await fetchAndCache(url)
-    return response.status
-  },
-  removeCacheKey: async (url) => {
-    url = String(new URL(url, self.location))
-    const cache = await caches.open(config.cacheName)
-    const deleted = await cache.delete(url)
-    return deleted
-  },
 }
 
 const responseCacheIsValid = (responseInCache) => {

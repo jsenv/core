@@ -82,6 +82,20 @@ export const buildProject = async ({
   // (to fix that sourcemap could be inlined)
   filesystemCache = true,
 
+  // si un project utilise le service worker de jsenv
+  // il contiendra ceci:
+  /**
+self.importScripts("./sw.preconfig.js")
+
+config.cacheName = "toto"
+
+self.importScripts("./sw.jsenv.js")
+  */
+  // et il faut alors copier-coller manuellement si jamais jsenv
+  // fait une maj, mais c'est mieux ainsi -> le dev reste en controle
+  // et en plus on évite les soucis de fichier relatifs
+  serviceWorkerFileRelativeUrls = ["./sw.js", "./sw.preconfig.js", "./sw.jsenv.js"],
+
   ...rest
 }) => {
   return executeJsenvAsyncFunction(async () => {
@@ -209,7 +223,10 @@ export const buildProject = async ({
         minifyHtmlOptions,
         minifyJsOptions,
         minifyCssOptions,
+
+        serviceWorkerFileRelativeUrls,
       })
+
       return result
     } finally {
       compileServer.stop("build generated")

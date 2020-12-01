@@ -16,6 +16,7 @@ import {
   metaMapToSpecifierMetaMap,
   normalizeSpecifierMetaMap,
   urlToMeta,
+  copyFileSystemNode,
 } from "@jsenv/util"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
@@ -83,6 +84,7 @@ export const createJsenvRollupPlugin = async ({
   writeOnFileSystem,
 
   buildDirectoryUrl,
+  serviceWorkerFileRelativeUrls,
 }) => {
   const urlImporterMap = {}
   const urlResponseBodyMap = {}
@@ -854,6 +856,30 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
             }
           }),
         )
+
+        // ne faire que pour un fichier html en main
+        // et si il contient un rel="manifest" ?
+        // on peut vouloir un service worker indépendament d'une PWA
+        // et d'un manifest mais bon ignorons pour le moment
+        // -> donc oui que pour rel manifest et si on le détecte
+        // et dans ce cas on veut écrire le fichier sw.build_urls.js
+        // dans le build directory
+        // il ne faudra pas oublier d'y mettre l'url du fichier html
+        // et le hash du fichier html au cas ou seulement lui soit modifié
+        // et aussi de dire dans sw.js que ce fichier html doit etre reload on install
+        await Promise.all([
+          serviceWorkerFileRelativeUrls.map(async (serviceWorkerFileRelativeUrl) => {
+            const serviceWorkerFileUrl = resolveUrl(
+              serviceWorkerFileRelativeUrl,
+              projectDirectoryUrl,
+            )
+            const serviceWorkerFileBuildUrl = resolveUrl(
+              serviceWorkerFileRelativeUrl,
+              buildDirectoryUrl,
+            )
+            await copyFileSystemNode(serviceWorkerFileUrl, serviceWorkerFileBuildUrl)
+          }),
+        ])
       }
     },
   }
