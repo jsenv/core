@@ -9,12 +9,76 @@
  *
 */
 
-/* globals self */
+/* globals self, config */
 
-self.config = {}
-const { config } = self
+if (typeof config === undefined) {
+  throw new Error(`config is not in scope, be sure to import sw.config.js before sw.jsenv.js`)
+}
 
-self.importScripts("./jsenv-sw.config.js")
+const { buildUrlsFile } = config
+if (typeof buildUrlsFile !== "string") {
+  throw new Error(`config.buildUrlsFile should be a string, got ${buildUrlsFile}`)
+}
+self.importScripts(buildUrlsFile)
+const { jsenvBuildUrls } = self
+if (!Array.isArray(jsenvBuildUrls)) {
+  throw new TypeError(
+    `${buildUrlsFile} should write an array in self.jsenvBuildUrls, got ${jsenvBuildUrls}`,
+  )
+}
+
+const { cacheName } = config
+if (typeof cacheName !== "string") {
+  throw new TypeError(`config.cacheName shoul be a string, got ${cacheName}`)
+}
+
+const { extraUrlsToCacheOnInstall } = config
+if (!Array.isArray(extraUrlsToCacheOnInstall)) {
+  throw new TypeError(
+    `config.extraUrlsToCacheOnInstall should be an array, got ${extraUrlsToCacheOnInstall}`,
+  )
+}
+
+const { shouldReloadOnInstall } = config
+if (typeof shouldReloadOnInstall !== "function") {
+  throw new TypeError(
+    `config.shouldReloadOnInstall should be a function, got ${shouldReloadOnInstall}`,
+  )
+}
+
+const { shouldCleanOnActivate } = config
+if (typeof shouldCleanOnActivate !== "function") {
+  throw new TypeError(
+    `config.shouldCleanOnActivate should be a function, got ${shouldCleanOnActivate}`,
+  )
+}
+
+const { shouldCleanOtherCacheOnActivate } = config
+if (typeof shouldCleanOtherCacheOnActivate !== "function") {
+  throw new TypeError(
+    `config.shouldCleanOtherCacheOnActivate should be a function, got ${shouldCleanOtherCacheOnActivate}`,
+  )
+}
+
+const { shouldHandleRequest } = config
+if (typeof shouldHandleRequest !== "function") {
+  throw new TypeError(`config.shouldHandleRequest should be a function, got ${shouldHandleRequest}`)
+}
+
+const { logsEnabled } = config
+if (typeof logsEnabled !== "boolean") {
+  throw new TypeError(`config.logsEnabled should be a boolean, got ${logsEnabled}`)
+}
+
+const { logsBackgroundColor } = config
+if (typeof logsBackgroundColor !== "string") {
+  throw new TypeError(`config.logsBackgroundColor should be a string, got ${logsBackgroundColor}`)
+}
+
+const urlsToCacheOnInstall = [
+  ...self.jsenvBuildUrls,
+  ...config.extraUrlsToCacheOnInstall,
+].map((url) => String(new URL(url, self.location)))
 
 const createLogMethod = (method) =>
   config.logsEnabled ? (...args) => console[method](...prefixArgs(...args)) : () => {}
@@ -76,11 +140,11 @@ const fetchAndCache = async (request, { oncache } = {}) => {
 const install = async () => {
   info("install start")
   try {
-    const total = config.urlsToCacheOnInstall.length
+    const total = urlsToCacheOnInstall.length
     let installed = 0
 
     await Promise.all(
-      config.urlsToCacheOnInstall.map(async (url) => {
+      urlsToCacheOnInstall.map(async (url) => {
         try {
           const request = new Request(url)
           const responseInCache = await caches.match(request)
@@ -88,7 +152,9 @@ const install = async () => {
           if (responseInCache) {
             const shouldReload = responseCacheIsValid(responseInCache)
               ? false
-              : config.shouldReloadOnInstall(responseInCache, request)
+              : config.shouldReloadOnInstall(responseInCache, request, {
+                  requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
+                })
             if (shouldReload) {
               info(`${request.url} in cache but should be reloaded`)
               const requestByPassingCache = new Request(url, { cache: "reload" })
@@ -152,7 +218,11 @@ const deleteOtherUrls = async () => {
   await Promise.all(
     requestsInCache.map(async (requestInCache) => {
       const responseInCache = await cache.match(requestInCache)
-      if (config.shouldCleanOnActivate(responseInCache, requestInCache)) {
+      if (
+        config.shouldCleanOnActivate(responseInCache, requestInCache, {
+          requestWasCachedOnInstall: urlsToCacheOnInstall.includes(requestInCache.url),
+        })
+      ) {
         info(`delete ${requestInCache.url}`)
         await cache.delete(requestInCache)
       }
@@ -178,7 +248,11 @@ self.addEventListener("install", (installEvent) => {
 
 self.addEventListener("fetch", (fetchEvent) => {
   const { request } = fetchEvent
-  if (config.shouldCacheRequest(request)) {
+  if (
+    config.shouldHandleRequest(request, {
+      requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
+    })
+  ) {
     const responsePromise = handleRequest(request)
     if (responsePromise) {
       fetchEvent.respondWith(responsePromise)

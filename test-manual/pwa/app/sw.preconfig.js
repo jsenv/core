@@ -1,29 +1,28 @@
-/* globals self, config  */
+/* globals self */
 
-self.importScripts("./jsenv-sw.build_urls.js")
+self.config = {}
+const { config } = self
 
-config.cacheName = `pwa-cache-1`
+config.buildUrlsFile = "./sw.build_urls.js"
+
+config.cacheName = `jsenv-sw-1`
 
 /**
- * Service worker will try to put all config.urlsToCacheOnInstall into browser cache
+ * Service worker will try to put all config.extraUrlsToCacheOnInstall into browser cache
  * when it is installed (installation happens once).
  * Putting an url in that list means it is mandatory for the website to work offline
  * and that it will be cached as long as service worker is alive.
  */
-config.urlsToCacheOnInstall = self.jsenvBuildUrls
-// Ensure url are absolute
-config.urlsToCacheOnInstall = config.urlsToCacheOnInstall.map((url) =>
-  String(new URL(url, self.location)),
-)
+config.extraUrlsToCacheOnInstall = []
 
 /*
   Decides if the request must be cached or not.
 
   When returning true, the response for that request will be stored into cache
 */
-config.shouldCacheRequest = (request) => {
-  if (!config.urlsToCacheOnInstall.includes(request.url)) return false
-  return request.method === "GET" || request.method === "HEAD"
+config.shouldHandleRequest = (request, { requestWasCachedOnInstall }) => {
+  if (request.method !== "GET" && request.method !== "HEAD") return false
+  return requestWasCachedOnInstall
 }
 
 /*
@@ -60,11 +59,11 @@ config.shouldReloadOnInstall = () => false
   The implementation below tells to delete cache for any request not listed
   in config.urlsToCacheOnInstall. It means that if an url was listed in the previous worker
   but is not anymore it will be deleted. It also means that if a request returns true for
-  config.shouldCacheRequest and is not listed in config.urlsToCacheOnInstall, that request
+  config.shouldHandleRequest and is not listed in config.urlsToCacheOnInstall, that request
   cache will be deleted every time service worker is activated after an update.
 */
-config.shouldCleanOnActivate = (response, request) =>
-  !config.urlsToCacheOnInstall.includes(request.url)
+config.shouldCleanOnActivate = (response, request, { requestWasCachedOnInstall }) =>
+  !requestWasCachedOnInstall
 
 /*
   shouldCleanOtherCacheOnActivate(cacheKey)
@@ -72,12 +71,12 @@ config.shouldCleanOnActivate = (response, request) =>
   It is a function that will be used to decide if an existing cache must be deleted
   when the service worker activates.
 
-  The implementation below tells to delete cache only if it starts by "pwa-cache"
+  The implementation below tells to delete cache only if it starts by "jsenv-sw"
   to ensure we delete only cache the we have created. It means that if you want to
-  update config.cacheName you should update pwa-cache-1 to pwa-cache-2 and so on. Or update
+  update config.cacheName you should update jsenv-sw-1 to pjsenv-sw-2 and so on. Or update
   shouldCleanOtherCacheOnActivate to match your custom logic.
 */
-config.shouldCleanOtherCacheOnActivate = (cacheKey) => cacheKey.startsWith("pwa-cache")
+config.shouldCleanOtherCacheOnActivate = (cacheKey) => cacheKey.startsWith("jsenv-sw")
 
 config.logsEnabled = true
 config.logsBackgroundColor = "#ffdc00" // nice yellow
