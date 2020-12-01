@@ -122,7 +122,7 @@ Then, cache for that url is reused even after service worker updates. When you d
 It's simpler to keep that responsability to the service worker but you might need/want to control that from your code. It's possible to control service worker cache as shown below:
 
 ```js
-import { sendMessageToServiceWorkerControllingPage } from "somewhere" // TODO: decide where this will be exposed
+import { sendMessageToServiceWorkerControllingPage } from "@jsenv/core/src/service-worker.js"
 
 const result = await sendMessageToServiceWorkerControllingPage({
   action: "removeCacheKey",
