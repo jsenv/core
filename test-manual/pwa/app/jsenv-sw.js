@@ -9,25 +9,20 @@
  *
 */
 
-/* globals self */
+/* globals self, config */
 self.importScripts("./jsenv-sw.config.js")
 
-const cacheName = self.cacheName
-const urlsToCacheOnInstall = self.urlsToCacheOnInstall
-const logsEnabled = self.logsEnabled
-
 const createLogMethod = (method) =>
-  logsEnabled ? (...args) => console[method](...prefixArgs(...args)) : () => {}
+  config.logsEnabled ? (...args) => console[method](...prefixArgs(...args)) : () => {}
 const info = createLogMethod("info")
 // const debug = createLogMethod("debug")
 const warn = createLogMethod("warn")
 // const error = createLogMethod("error")
 
-const backgroundColor = "#ffdc00" // nice yellow
 const prefixArgs = (...args) => {
   return [
     `%csw`,
-    `background: ${backgroundColor}; color: black; padding: 1px 3px; margin: 0 1px`,
+    `background: ${config.logsBackgroundColor}; color: black; padding: 1px 3px; margin: 0 1px`,
     ...args,
   ]
 }
@@ -52,13 +47,13 @@ const fetchUsingNetwork = async (request) => {
 const install = async () => {
   info("install start")
   try {
-    const total = urlsToCacheOnInstall.length
+    const total = config.urlsToCacheOnInstall.length
     let installed = 0
 
     let cache
     const getCache = async () => {
       if (cache) return cache
-      cache = await caches.open(cacheName)
+      cache = await caches.open(config.cacheName)
       return cache
     }
 
@@ -75,7 +70,7 @@ const install = async () => {
     }
 
     await Promise.all(
-      urlsToCacheOnInstall.map(async (url) => {
+      config.urlsToCacheOnInstall.map(async (url) => {
         try {
           const request = new Request(url)
           const responseInCache = await caches.match(request)
@@ -83,7 +78,7 @@ const install = async () => {
           if (responseInCache) {
             const shouldReload = responseCacheIsValid(responseInCache)
               ? false
-              : self.shouldReloadOnInstall(responseInCache, request)
+              : config.shouldReloadOnInstall(responseInCache, request)
             if (shouldReload) {
               info(`${request.url} in cache but should be reloaded`)
               const requestByPassingCache = new Request(url, { cache: "reload" })
@@ -126,7 +121,10 @@ const handleRequest = async (request) => {
   }
 
   info(`no cache for ${request.url}, fetching it`)
-  const [response, cache] = await Promise.all([fetchUsingNetwork(request), caches.open(cacheName)])
+  const [response, cache] = await Promise.all([
+    fetchUsingNetwork(request),
+    caches.open(config.cacheName),
+  ])
   if (response.status === 200) {
     info(`fresh response found for ${request.url}, put it in cache and respond with it`)
     cache.put(request, response.clone())
@@ -143,12 +141,12 @@ const activate = async () => {
 }
 
 const deleteOtherUrls = async () => {
-  const cache = await caches.open(cacheName)
+  const cache = await caches.open(config.cacheName)
   const requestsInCache = await cache.keys()
   await Promise.all(
     requestsInCache.map(async (requestInCache) => {
       const responseInCache = await cache.match(requestInCache)
-      if (self.shouldCleanOnActivate(responseInCache, requestInCache)) {
+      if (config.shouldCleanOnActivate(responseInCache, requestInCache)) {
         info(`delete ${requestInCache.url}`)
         await cache.delete(requestInCache)
       }
@@ -160,7 +158,7 @@ const deleteOtherCaches = async () => {
   const cacheKeys = await caches.keys()
   await Promise.all(
     cacheKeys.map(async (cacheKey) => {
-      if (cacheKey !== self.cacheName && self.shouldCleanOtherCacheOnActivate(cacheKey)) {
+      if (cacheKey !== config.cacheName && config.shouldCleanOtherCacheOnActivate(cacheKey)) {
         info(`delete cache ${cacheKey}`)
         await caches.delete(cacheKey)
       }
@@ -174,7 +172,7 @@ self.addEventListener("install", (installEvent) => {
 
 self.addEventListener("fetch", (fetchEvent) => {
   const { request } = fetchEvent
-  if (self.shouldCacheRequest(request)) {
+  if (config.shouldCacheRequest(request)) {
     const responsePromise = handleRequest(request)
     if (responsePromise) {
       fetchEvent.respondWith(responsePromise)
