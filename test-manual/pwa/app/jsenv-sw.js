@@ -9,7 +9,11 @@
  *
 */
 
-/* globals self, config */
+/* globals self */
+
+self.config = {}
+const { config } = self
+
 self.importScripts("./jsenv-sw.config.js")
 
 const createLogMethod = (method) =>

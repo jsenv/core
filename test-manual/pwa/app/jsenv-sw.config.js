@@ -1,9 +1,6 @@
-/* globals self */
+/* globals self, config  */
 
 self.importScripts("./jsenv-sw.build_urls.js")
-
-self.config = {}
-const { config } = self
 
 config.cacheName = `pwa-cache-1`
 
@@ -13,7 +10,9 @@ config.cacheName = `pwa-cache-1`
  * Putting an url in that list means it is mandatory for the website to work offline
  * and that it will be cached as long as service worker is alive.
  */
-config.urlsToCacheOnInstall = [...self.jsenvBuildUrls, "file.txt"].map((url) =>
+config.urlsToCacheOnInstall = self.jsenvBuildUrls
+// Ensure url are absolute
+config.urlsToCacheOnInstall = config.urlsToCacheOnInstall.map((url) =>
   String(new URL(url, self.location)),
 )
 

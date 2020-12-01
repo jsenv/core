@@ -1,3 +1,3 @@
 /* globals self */
 
-self.jsenvBuildUrls = []
+self.jsenvBuildUrls = ['file.txt']
