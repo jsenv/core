@@ -1,7 +1,7 @@
 import { resolveUrl, readFile, writeFile } from "@jsenv/util"
 import { startServer, serveFile, firstService, readRequestBodyAsString } from "@jsenv/server"
 
-const directoryUrl = resolveUrl("./app/", import.meta.url)
+const directoryUrl = resolveUrl("./app/dist/", import.meta.url)
 
 startServer({
   protocol: "https",
@@ -10,7 +10,7 @@ startServer({
     async (request) => {
       if (request.ressource !== "/actions/update-manifest") return null
 
-      const serviceWorkerFileUrl = resolveUrl("./pwa.service-worker.js", directoryUrl)
+      const serviceWorkerFileUrl = resolveUrl("./sw.js", directoryUrl)
       const serviceWorkerFileContent = await readFile(serviceWorkerFileUrl)
       await writeFile(
         serviceWorkerFileUrl,
@@ -34,7 +34,7 @@ startServer({
     (request) => {
       let { ressource } = request
       if (ressource === "/") {
-        ressource = "/pwa.main.html"
+        ressource = "/main.html"
       }
       const requestUrl = resolveUrl(ressource.slice(1), directoryUrl)
       return serveFile(requestUrl, {

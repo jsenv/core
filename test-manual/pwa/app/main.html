@@ -56,37 +56,14 @@
       <p id="logs"></p>
     </main>
     <script type="module">
-      const listenDisplayMode = (callback) => {
-        const checkDisplayMode = () => {
-          const displayModeIsStandalone =
-            window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches
-          callback(displayModeIsStandalone ? "standalone" : "browser tab")
-        }
-        checkDisplayMode()
-
-        window.matchMedia("(display-mode: standalone)").addListener(() => {
-          checkDisplayMode()
-        })
-      }
+      import {
+        listenDisplayMode,
+        listenInstallPromptAvailable,
+      } from "../../../src/app-installation.js"
 
       listenDisplayMode((displayMode) => {
         document.querySelector("#display-mode").innerHTML = displayMode
       })
-
-      const listenInstallPromptAvailable = (callback) => {
-        window.addEventListener("beforeinstallprompt", (beforeinstallpromptEvent) => {
-          const prompt = async () => {
-            beforeinstallpromptEvent.prompt()
-            const choiceResult = await beforeinstallpromptEvent.userChoice
-            if (choiceResult.outcome === "accepted") {
-              beforeinstallpromptEvent = undefined
-              return true
-            }
-            return false
-          }
-          callback({ prompt })
-        })
-      }
 
       window.addEventListener("appinstalled", () => {
         // app was installed by user (maybe from browser toolbar, maybe from our button)
@@ -109,7 +86,7 @@
         registerServiceWorker,
         checkServiceWorkerUpdate,
         sendMessageToServiceWorkerControllingPage,
-      } from "./pwa.util.js"
+      } from "../../../src/service-worker.js"
 
       const printLog = (message) => {
         document.querySelector(`#logs`).innerHTML += `${message}<br />`
