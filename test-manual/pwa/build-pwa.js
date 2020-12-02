@@ -16,4 +16,5 @@ buildProject({
     [`${pwaDirectoryRelativeUrl}sw.js`]: "sw.js",
   },
   buildDirectoryClean: true,
+  minify: true,
 })

@@ -112,7 +112,7 @@ const install = async () => {
             })
           }
         } catch (e) {
-          info(`cannot put ${url} in cache due to error while fetching: ${e.stack}`)
+          warn(`cannot put ${url} in cache due to error while fetching: ${e.stack}`)
         }
       }),
     )
