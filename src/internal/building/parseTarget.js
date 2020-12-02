@@ -107,8 +107,8 @@ export const parseTarget = (
   }
 
   if (
-    contentType === "application/webmanifest+json" ||
-    target.importers[0].contentType === "application/webmanifest+json"
+    contentType === "application/manifest+json" ||
+    target.importers[0].contentType === "application/manifest+json"
   ) {
     return parseWebmanifest(target, notifiers, { minify })
   }

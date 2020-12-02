@@ -383,7 +383,7 @@ const linkHrefVisitor = (link, { notifyReferenceFound }) => {
     contentType,
     specifier: hrefAttribute.value,
     ...getHtmlNodeLocation(link),
-    disableHash: contentType === "application/webmanifest+json",
+    disableHash: contentType === "application/manifest+json",
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     const { isInline } = reference.target
@@ -405,7 +405,7 @@ const linkToContentType = (link) => {
   const relAttribute = getHtmlNodeAttributeByName(link, "rel")
   if (relAttribute) {
     if (relAttribute.value === "manifest") {
-      return "application/webmanifest+json"
+      return "application/manifest+json"
     }
   }
   return undefined
