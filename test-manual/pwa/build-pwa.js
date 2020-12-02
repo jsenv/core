@@ -6,13 +6,11 @@ const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const pwaDirectoryRelativeUrl = "./test-manual/pwa/app/"
 const buildDirectoryRelativeUrl = "./test-manual/pwa/app/dist/"
 
-// https://web.dev/manifest-updates/
-
 buildProject({
   projectDirectoryUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
-    [`${pwaDirectoryRelativeUrl}main.html`]: "main.html",
+    [`${pwaDirectoryRelativeUrl}main.html`]: "./main.html",
   },
   serviceWorkers: {
     [`${pwaDirectoryRelativeUrl}sw.js`]: "sw.js",

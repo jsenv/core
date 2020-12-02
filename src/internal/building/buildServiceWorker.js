@@ -50,9 +50,24 @@ ${transformSwScript(serviceWorkerProjectUrl)}`
   ])
 }
 
-const transformSwScript = (scriptUrl) => {
+const transformSwScript = (scriptUrl, importerUrl) => {
   const scriptPath = urlToFileSystemPath(scriptUrl)
-  const scriptContent = readFileSync(scriptPath)
+  let scriptContent
+  try {
+    scriptContent = String(readFileSync(scriptPath))
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      if (importerUrl) {
+        throw new Error(`no file found for an import in a service worker.
+--- service worker url ---
+${importerUrl}.
+--- imported url ---
+${scriptUrl}`)
+      }
+      throw new Error(`no service worker file at ${scriptUrl}`)
+    }
+    throw e
+  }
   const { code } = transformSync(scriptContent, {
     filename: scriptPath,
     configFile: false,
@@ -89,7 +104,7 @@ const babelPluginInlineImportScripts = (api) => {
               throw new Error(`cannot inline dynamic importScripts`)
             }
             const importedUrl = resolveUrl(arg.node.value, fileUrl)
-            const importedSource = transformSwScript(importedUrl)
+            const importedSource = transformSwScript(importedUrl, fileUrl)
             const importedSourceAst = parse(importedSource)
             return [...previous, ...importedSourceAst.program.body]
           }, [])

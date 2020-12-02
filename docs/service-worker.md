@@ -1,3 +1,5 @@
+https://web.dev/manifest-updates/
+
 # Jsenv service worker
 
 Jsenv service worker goal is to make the website capable to work offline.

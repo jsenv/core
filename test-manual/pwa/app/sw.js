@@ -1,8 +1,8 @@
 /* globals self, config */
 
-self.importScripts("./sw.preconfig.js")
+self.importScripts("../../../src/sw.preconfig.js")
 
 config.cacheName = "toto"
 config.extraUrlsToCacheOnInstall = ["file.txt"]
 
-self.importScripts("./sw.jsenv.js")
+self.importScripts("../../../src/sw.jsenv.js")
