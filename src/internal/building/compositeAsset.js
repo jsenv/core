@@ -78,6 +78,8 @@ export const createCompositeAssetHandler = (
       },
       {
         isEntry: true,
+        // don't hash asset entry points
+        fileNamePattern: entryBuildRelativeUrl,
         url: entryUrl,
         ...(entrySource
           ? {
@@ -87,8 +89,6 @@ export const createCompositeAssetHandler = (
               },
             }
           : {}),
-        // don't hash asset entry points
-        fileNamePattern: entryBuildRelativeUrl,
       },
     )
 
@@ -188,6 +188,7 @@ export const createCompositeAssetHandler = (
     isEntry = false,
     isJsModule = false,
     isInline = false,
+    disableHash = false,
     content,
     sourceAfterTransformation,
     fileNamePattern,
@@ -199,6 +200,7 @@ export const createCompositeAssetHandler = (
       isEntry,
       isJsModule,
       isInline,
+      disableHash,
       content,
       sourceAfterTransformation,
       fileNamePattern,
@@ -226,6 +228,7 @@ export const createCompositeAssetHandler = (
       let parsingDone = false
       const notifyDependencyFound = ({
         isJsModule = false,
+        disableHash = false,
         contentType,
         specifier,
         line,
@@ -306,6 +309,7 @@ export const createCompositeAssetHandler = (
             isExternal,
             isJsModule,
             isInline,
+            disableHash,
             content,
             fileNamePattern,
           },
@@ -569,13 +573,32 @@ ${showSourceLocation(referenceSource, {
 }
 
 const assetFileNamePattern = "assets/[name]-[hash][extname]"
+const assetFileNamePatternWithoutHash = "assets/[name][extname]"
 
 const computeBuildRelativeUrlForTarget = (target) => {
   return computeBuildRelativeUrl(
     target.url,
     target.sourceAfterTransformation,
-    target.fileNamePattern || assetFileNamePattern,
+    targetToFileNamePattern(target),
   )
+}
+
+const targetToFileNamePattern = (target) => {
+  if (target.fileNamePattern) {
+    return target.fileNamePattern
+  }
+
+  if (target.disableHash) {
+    if (target.isEntry) {
+      return `[name][extname]`
+    }
+    return assetFileNamePatternWithoutHash
+  }
+
+  if (target.isEntry) {
+    return `[name]-[hash][extname]`
+  }
+  return assetFileNamePattern
 }
 
 const precomputeBuildRelativeUrlForTarget = (target, sourceAfterTransformation = "") => {

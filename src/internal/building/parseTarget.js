@@ -13,6 +13,7 @@ import { parseSvgAsset } from "./svg/parseSvgAsset.js"
 import { parseCssAsset } from "./css/parseCssAsset.js"
 import { parseJsAsset } from "./js/parseJsAsset.js"
 import { parseJsonAsset } from "./json/parseJsonAsset.js"
+import { parseWebmanifest } from "./webmanifest/parseWebmanifest.js"
 
 export const parseTarget = (
   target,
@@ -105,7 +106,11 @@ export const parseTarget = (
     return parseImportmapAsset(target, notifiers, { minify })
   }
 
-  if (contentType === "application/webmanifest+json") {
+  if (
+    contentType === "application/webmanifest+json" ||
+    target.importers[0].contentType === "application/webmanifest+json"
+  ) {
+    return parseWebmanifest(target, notifiers, { minify })
   }
 
   if (contentType === "text/javascript" || contentType === "application/javascript") {

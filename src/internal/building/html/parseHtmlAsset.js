@@ -377,11 +377,13 @@ const linkHrefVisitor = (link, { notifyReferenceFound }) => {
     return null
   }
 
-  const typeAttribute = getHtmlNodeAttributeByName(link, "type")
+  const contentType = linkToContentType(link)
+
   const reference = notifyReferenceFound({
-    contentType: typeAttribute ? typeAttribute.value : undefined,
+    contentType,
     specifier: hrefAttribute.value,
     ...getHtmlNodeLocation(link),
+    disableHash: contentType === "application/webmanifest+json",
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     const { isInline } = reference.target
@@ -393,6 +395,20 @@ const linkHrefVisitor = (link, { notifyReferenceFound }) => {
       hrefAttribute.value = urlRelativeToImporter
     }
   }
+}
+
+const linkToContentType = (link) => {
+  const typeAttribute = getHtmlNodeAttributeByName(link, "type")
+  if (typeAttribute) {
+    return typeAttribute.value
+  }
+  const relAttribute = getHtmlNodeAttributeByName(link, "rel")
+  if (relAttribute) {
+    if (relAttribute.value === "manifest") {
+      return "application/webmanifest+json"
+    }
+  }
+  return undefined
 }
 
 const styleTextNodeVisitor = (style, { notifyReferenceFound }, target, styles) => {
