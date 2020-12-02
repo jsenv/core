@@ -78,3 +78,5 @@ config.shouldCleanOtherCacheOnActivate = (cacheKey) => cacheKey.startsWith("jsen
 
 config.logsEnabled = true
 config.logsBackgroundColor = "#ffdc00" // nice yellow
+
+config.disableNavigationPreload = false

@@ -68,6 +68,13 @@ if (typeof logsBackgroundColor !== "string") {
   throw new TypeError(`config.logsBackgroundColor should be a string, got ${logsBackgroundColor}`)
 }
 
+const { disableNavigationPreload } = config
+if (typeof disableNavigationPreload !== "boolean") {
+  throw new TypeError(
+    `config.disableNavigationPreload should be a boolean, got ${disableNavigationPreload}`,
+  )
+}
+
 const urlsToCacheOnInstall = [
   ...self.jsenvBuildUrls,
   ...config.extraUrlsToCacheOnInstall,
@@ -131,13 +138,19 @@ self.addEventListener("install", (installEvent) => {
 })
 
 // --- fetch implementation ---
-const handleRequest = async (request) => {
+const handleRequest = async (request, fetchEvent) => {
   info(`received fetch event for ${request.url}`)
   try {
     const responseFromCache = await caches.match(request)
     if (responseFromCache) {
       info(`respond with response from cache for ${request.url}`)
       return responseFromCache
+    }
+
+    const responsePreloaded = await fetchEvent.preloadResponse
+    if (responsePreloaded) {
+      info(`respond with preloaded response for ${request.url}`)
+      return responsePreloaded
     }
   } catch (error) {
     warn(`error while trying to use cache for ${request.url}`, error.stack)
@@ -155,7 +168,7 @@ self.addEventListener("fetch", (fetchEvent) => {
       requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
     })
   ) {
-    const responsePromise = handleRequest(request)
+    const responsePromise = handleRequest(request, fetchEvent)
     if (responsePromise) {
       fetchEvent.respondWith(responsePromise)
     }
@@ -165,8 +178,16 @@ self.addEventListener("fetch", (fetchEvent) => {
 // --- activation phase ---
 const activate = async () => {
   info("activate start")
-  await Promise.all([deleteOtherUrls(), deleteOtherCaches()])
+
+  await Promise.all([enableNavigationPreloadIfPossible(), deleteOtherUrls(), deleteOtherCaches()])
   info("activate done")
+}
+
+const enableNavigationPreloadIfPossible = async () => {
+  if (!config.disableNavigationPreload && self.registration.navigationPreload) {
+    // Enable navigation preloads!
+    await self.registration.navigationPreload.enable()
+  }
 }
 
 const deleteOtherUrls = async () => {
