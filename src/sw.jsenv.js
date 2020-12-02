@@ -11,25 +11,18 @@
 
 /* globals self, config */
 
-if (typeof config === undefined) {
-  throw new Error(`config is not in scope, be sure to import sw.config.js before sw.jsenv.js`)
+const { jsenvBuildUrls = [] } = self
+if (!Array.isArray(jsenvBuildUrls)) {
+  throw new TypeError(`self.jsenvBuildUrls should be an array, got ${jsenvBuildUrls}`)
 }
 
-const { buildUrlsFile } = config
-if (typeof buildUrlsFile !== "string") {
-  throw new Error(`config.buildUrlsFile should be a string, got ${buildUrlsFile}`)
-}
-self.importScripts(buildUrlsFile)
-const { jsenvBuildUrls } = self
-if (!Array.isArray(jsenvBuildUrls)) {
-  throw new TypeError(
-    `${buildUrlsFile} should write an array in self.jsenvBuildUrls, got ${jsenvBuildUrls}`,
-  )
+if (typeof config === undefined) {
+  throw new Error(`config is not in scope, be sure to import sw.preconfig.js before sw.jsenv.js`)
 }
 
 const { cacheName } = config
 if (typeof cacheName !== "string") {
-  throw new TypeError(`config.cacheName shoul be a string, got ${cacheName}`)
+  throw new TypeError(`config.cacheName should be a string, got ${cacheName}`)
 }
 
 const { extraUrlsToCacheOnInstall } = config

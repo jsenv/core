@@ -3,8 +3,6 @@
 self.config = {}
 const { config } = self
 
-config.buildUrlsFile = "./sw.build_urls.js"
-
 config.cacheName = `jsenv-sw-1`
 
 /**
