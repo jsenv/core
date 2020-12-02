@@ -18,12 +18,15 @@ export const buildServiceWorker = async ({
   buildDirectoryUrl,
   serviceWorkerProjectRelativeUrl,
   serviceWorkerBuildRelativeUrl = serviceWorkerProjectRelativeUrl,
+  codeToInjectBeforeServiceWorker = "",
   minify = false,
 }) => {
   const serviceWorkerProjectUrl = resolveUrl(serviceWorkerProjectRelativeUrl, projectDirectoryUrl)
   const serviceWorkerBuildUrl = resolveUrl(serviceWorkerBuildRelativeUrl, buildDirectoryUrl)
 
-  let serviceWorkerCode = transformSwScript(serviceWorkerProjectUrl)
+  let serviceWorkerCode = `
+${codeToInjectBeforeServiceWorker}
+${transformSwScript(serviceWorkerProjectUrl)}`
   if (minify) {
     const minifyResult = await minifyJs(serviceWorkerCode, serviceWorkerProjectRelativeUrl, {
       sourceMap: {
