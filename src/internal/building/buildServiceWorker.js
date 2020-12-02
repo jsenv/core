@@ -121,8 +121,11 @@ const babelPluginInlineImportScripts = (api) => {
           const calleeObject = calleePath.get("object")
           const isSelf = types.isIdentifier(calleeObject.node, { name: "self" })
           if (isSelf) {
-            replaceImportScriptsWithFileContents()
-            return
+            const propertyPath = calleePath.get("property")
+            if (types.isIdentifier(propertyPath.node, { name: "importScripts" })) {
+              replaceImportScriptsWithFileContents()
+              return
+            }
           }
         }
       },
