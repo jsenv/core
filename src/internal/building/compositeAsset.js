@@ -131,7 +131,13 @@ export const createCompositeAssetHandler = (
 
   const getAllAssetEntryEmittedPromise = async () => {
     const urlToWait = Object.keys(targetMap).filter((url) => targetMap[url].isEntry)
-    await Promise.all(urlToWait.map((url) => targetMap[url].getRollupReferenceIdAvailablePromise()))
+    return Promise.all(
+      urlToWait.map(async (url) => {
+        const target = targetMap[url]
+        await target.getRollupReferenceIdAvailablePromise()
+        return target
+      }),
+    )
   }
 
   const targetMap = {}

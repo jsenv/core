@@ -27,24 +27,27 @@ export const buildServiceWorker = async ({
   let serviceWorkerCode = `
 ${codeToInjectBeforeServiceWorker}
 ${transformSwScript(serviceWorkerProjectUrl)}`
-  if (minify) {
-    const minifyResult = await minifyJs(serviceWorkerCode, serviceWorkerProjectRelativeUrl, {
-      sourceMap: {
-        asObject: true,
-      },
-    })
 
-    const filename = urlToFilename(serviceWorkerBuildUrl)
-    const sourcemapFilename = `${filename}.map`
-    const sourcemapBuildUrl = `${urlToParentUrl(serviceWorkerBuildUrl)}${sourcemapFilename}`
-    serviceWorkerCode = setJavaScriptSourceMappingUrl(minifyResult.code, sourcemapFilename)
-    await Promise.all([
-      writeFile(serviceWorkerBuildUrl, serviceWorkerCode),
-      writeFile(sourcemapBuildUrl, JSON.stringify(minifyResult.map, null, "  ")),
-    ])
-  } else {
+  if (!minify) {
     await writeFile(serviceWorkerBuildUrl, serviceWorkerCode)
+    return
   }
+
+  const minifyResult = await minifyJs(serviceWorkerCode, serviceWorkerProjectRelativeUrl, {
+    sourceMap: {
+      asObject: true,
+    },
+  })
+  serviceWorkerCode = minifyResult.code
+
+  const filename = urlToFilename(serviceWorkerBuildUrl)
+  const sourcemapFilename = `${filename}.map`
+  const sourcemapBuildUrl = `${urlToParentUrl(serviceWorkerBuildUrl)}${sourcemapFilename}`
+  serviceWorkerCode = setJavaScriptSourceMappingUrl(serviceWorkerCode, sourcemapFilename)
+  await Promise.all([
+    writeFile(serviceWorkerBuildUrl, serviceWorkerCode),
+    writeFile(sourcemapBuildUrl, JSON.stringify(minifyResult.map, null, "  ")),
+  ])
 }
 
 const transformSwScript = (scriptUrl) => {
@@ -62,11 +65,8 @@ const transformSwScript = (scriptUrl) => {
   return code
 }
 
-const babelPluginInlineImportScripts = (api, options) => {
+const babelPluginInlineImportScripts = (api) => {
   const { types, parse } = api
-  // options
-  // const {} = options
-
   return {
     name: "transform-inline-import-scripts",
 

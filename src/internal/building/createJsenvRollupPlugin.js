@@ -16,7 +16,6 @@ import {
   metaMapToSpecifierMetaMap,
   normalizeSpecifierMetaMap,
   urlToMeta,
-  copyFileSystemNode,
 } from "@jsenv/util"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
@@ -33,6 +32,9 @@ import {
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
+import { generateServiceWorkerCodeToInject } from "@jsenv/core/src/internal/building/generateServiceWorkerCodeToInject.js"
+import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 
 import { showSourceLocation } from "./showSourceLocation.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
@@ -84,7 +86,7 @@ export const createJsenvRollupPlugin = async ({
   writeOnFileSystem,
 
   buildDirectoryUrl,
-  serviceWorkerFileRelativeUrls,
+  serviceWorkers,
 }) => {
   const urlImporterMap = {}
   const urlResponseBodyMap = {}
@@ -750,7 +752,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
         })
       })
       // wait html files to be emitted
-      await compositeAssetHandler.getAllAssetEntryEmittedPromise()
+      const htmlTargets = await compositeAssetHandler.getAllAssetEntryEmittedPromise()
 
       const assetBuild = {}
       const buildRelativeUrlsToClean = compositeAssetHandler.getBuildRelativeUrlsToClean()
@@ -857,29 +859,22 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
           }),
         )
 
-        // ne faire que pour un fichier html en main
-        // et si il contient un rel="manifest" ?
-        // on peut vouloir un service worker indépendament d'une PWA
-        // et d'un manifest mais bon ignorons pour le moment
-        // -> donc oui que pour rel manifest et si on le détecte
-        // et dans ce cas on veut écrire le fichier sw.build_urls.js
-        // dans le build directory
-        // il ne faudra pas oublier d'y mettre l'url du fichier html
-        // et le hash du fichier html au cas ou seulement lui soit modifié
-        // et aussi de dire dans sw.js que ce fichier html doit etre reload on install
-        await Promise.all([
-          serviceWorkerFileRelativeUrls.map(async (serviceWorkerFileRelativeUrl) => {
-            const serviceWorkerFileUrl = resolveUrl(
-              serviceWorkerFileRelativeUrl,
+        await Promise.all(
+          Object.keys(serviceWorkers).map(async (serviceWorkerProjectRelativeUrl) => {
+            const serviceWorkerBuildRelativeUrl = serviceWorkers[serviceWorkerProjectRelativeUrl]
+            await buildServiceWorker({
               projectDirectoryUrl,
-            )
-            const serviceWorkerFileBuildUrl = resolveUrl(
-              serviceWorkerFileRelativeUrl,
               buildDirectoryUrl,
-            )
-            await copyFileSystemNode(serviceWorkerFileUrl, serviceWorkerFileBuildUrl)
+              serviceWorkerProjectRelativeUrl,
+              serviceWorkerBuildRelativeUrl,
+              codeToInjectBeforeServiceWorker: generateServiceWorkerCodeToInject(
+                buildManifest,
+                htmlTargets,
+              ),
+              minify,
+            })
           }),
-        ])
+        )
       }
     },
   }
@@ -1198,15 +1193,6 @@ const formatBuildDoneDetails = (build) => {
     ...(assetDescription ? { [assetDescription]: assetFilenames } : {}),
     ...(chunkDescription ? { [chunkDescription]: chunkFilenames } : {}),
   }
-}
-
-const sortObjectByPathnames = (object) => {
-  const objectSorted = {}
-  const keysSorted = Object.keys(object).sort(comparePathnames)
-  keysSorted.forEach((key) => {
-    objectSorted[key] = object[key]
-  })
-  return objectSorted
 }
 
 const rollupFileNameWithoutHash = (fileName) => {

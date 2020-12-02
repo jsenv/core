@@ -38,7 +38,7 @@ export const buildUsingRollup = async ({
   minifyHtmlOptions,
   manifestFile = false,
 
-  serviceWorkerFileRelativeUrls,
+  serviceWorkers,
 
   writeOnFileSystem,
 }) => {
@@ -71,7 +71,7 @@ export const buildUsingRollup = async ({
 
     manifestFile,
     writeOnFileSystem,
-    serviceWorkerFileRelativeUrls,
+    serviceWorkers,
   })
 
   await useRollup({
