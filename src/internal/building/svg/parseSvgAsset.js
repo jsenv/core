@@ -7,7 +7,7 @@ import {
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { collectNodesMutations } from "../parsing.utils.js"
 import { getTargetAsBase64Url } from "../getTargetAsBase64Url.js"
-import { minifyHtml } from "./minifyHtml.js"
+import { minifyHtml } from "../html/minifyHtml.js"
 
 export const parseSvgAsset = async (target, notifiers, { minify, minifyHtmlOptions }) => {
   const svgString = String(target.content.value)

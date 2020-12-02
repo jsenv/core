@@ -33,10 +33,10 @@ import {
   parseSrcset,
   stringifySrcset,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { minifyHtml } from "./minifyHtml.js"
+import { collectSvgMutations } from "../svg/parseSvgAsset.js"
 import { getTargetAsBase64Url } from "../getTargetAsBase64Url.js"
 import { collectNodesMutations } from "../parsing.utils.js"
-import { collectSvgMutations } from "./parseSvgAsset.js"
+import { minifyHtml } from "./minifyHtml.js"
 
 export const parseHtmlAsset = async (
   target,
