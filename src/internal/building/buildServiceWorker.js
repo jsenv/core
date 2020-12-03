@@ -36,6 +36,7 @@ ${transformSwScript(serviceWorkerProjectUrl)}`
   const minifyResult = await minifyJs(serviceWorkerCode, serviceWorkerProjectRelativeUrl, {
     sourceMap: {
       asObject: true,
+      includeSources: true,
     },
   })
   serviceWorkerCode = minifyResult.code
