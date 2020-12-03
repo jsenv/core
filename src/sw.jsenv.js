@@ -1,6 +1,8 @@
 /**
+ * https://web.dev/service-worker-caching-and-http-caching/
  * https://stackoverflow.com/questions/33262385/service-worker-force-update-of-new-assets/64880568#64880568
  * https://gomakethings.com/how-to-set-an-expiration-date-for-items-in-a-service-worker-cache/
+ * https://phyks.me/2019/01/manage-expiration-of-cached-assets-with-service-worker-caching.html
 
  * https://developers.google.com/web/fundamentals/primers/service-workers/lifecycle
  * https://github.com/deanhume/pwa-update-available
@@ -30,6 +32,11 @@ if (!Array.isArray(extraUrlsToCacheOnInstall)) {
   throw new TypeError(
     `config.extraUrlsToCacheOnInstall should be an array, got ${extraUrlsToCacheOnInstall}`,
   )
+}
+
+const { urlMap } = config
+if (typeof urlMap !== "object") {
+  throw new TypeError(`config.urlMap should be an object, got ${urlMap}`)
 }
 
 const { shouldReloadOnInstall } = config
@@ -75,10 +82,13 @@ if (typeof disableNavigationPreload !== "boolean") {
   )
 }
 
-const urlsToCacheOnInstall = [
-  ...self.jsenvBuildUrls,
-  ...config.extraUrlsToCacheOnInstall,
-].map((url) => String(new URL(url, self.location)))
+const urlsToCacheOnInstall = [...self.jsenvBuildUrls, ...config.extraUrlsToCacheOnInstall].map(
+  resolveUrl,
+)
+const urlMapping = {}
+Object.keys(urlMap).forEach((key) => {
+  urlMapping[resolveUrl(key)] = resolveUrl(urlMap[key])
+})
 
 // --- installation phase ---
 const install = async () => {
@@ -161,8 +171,17 @@ const handleRequest = async (request, fetchEvent) => {
   return fetchAndCache(request)
 }
 
+const remapRequest = (request) => {
+  if (Object.prototype.hasOwnProperty.call(urlMapping, request.url)) {
+    const requestRemapped = new Request(urlMapping[request.url], request)
+    return requestRemapped
+  }
+  return request
+}
+
 self.addEventListener("fetch", (fetchEvent) => {
-  const { request } = fetchEvent
+  const request = remapRequest(fetchEvent.request)
+
   if (
     config.shouldHandleRequest(request, {
       requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
@@ -185,7 +204,6 @@ const activate = async () => {
 
 const enableNavigationPreloadIfPossible = async () => {
   if (!config.disableNavigationPreload && self.registration.navigationPreload) {
-    // Enable navigation preloads!
     await self.registration.navigationPreload.enable()
   }
 }
@@ -375,3 +393,5 @@ const parseDuration = (value) => {
 
   return duration
 }
+
+const resolveUrl = (string) => String(new URL(string, self.location))

@@ -13,9 +13,15 @@ config.cacheName = `jsenv-sw-1`
  */
 config.extraUrlsToCacheOnInstall = []
 
+/**
+ * Remap urls to others.
+ * Was created to ensure a request at / can be configured to
+ * read and write cache at /main.html
+ */
+config.urlMap = {}
+
 /*
   Decides if the request must be cached or not.
-
   When returning true, the response for that request will be stored into cache
 */
 config.shouldHandleRequest = (request, { requestWasCachedOnInstall }) => {
