@@ -1,3 +1,0 @@
-/* globals self */
-
-self.jsenvBuildUrls = []
