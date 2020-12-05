@@ -38,7 +38,7 @@ if (process.platform !== "win32") {
   const actual = global.self
   const expected = {
     // these urls will be put into browser cache
-    jsenvBuildUrls: ["assets/style-b126d686.css", "html-with-service-worker.11-4f59ed7a.js"],
+    jsenvBuildDynamicUrls: ["assets/style-b126d686.css", "html-with-service-worker.11-4f59ed7a.js"],
     jsenvBuildStaticUrls: ["main.html"],
     // because when html file is modified, it's url is not
     // if you update only the html file, browser won't update the service worker.
