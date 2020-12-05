@@ -665,7 +665,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
         })
       })
       // wait html files to be emitted
-      const htmlTargets = await compositeAssetHandler.getAllAssetEntryEmittedPromise()
+      await compositeAssetHandler.getAllAssetEntryEmittedPromise()
 
       const assetBuild = {}
       const buildRelativeUrlsToClean = compositeAssetHandler.getBuildRelativeUrlsToClean()
@@ -780,10 +780,11 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
               buildDirectoryUrl,
               serviceWorkerProjectRelativeUrl,
               serviceWorkerBuildRelativeUrl,
-              codeToInjectBeforeServiceWorker: generateServiceWorkerCodeToInject(
+              codeToInjectBeforeServiceWorker: generateServiceWorkerCodeToInject({
                 buildManifest,
-                htmlTargets,
-              ),
+                buildMappings,
+                rollupBuild,
+              }),
               minify,
             })
           }),

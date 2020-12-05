@@ -56,13 +56,12 @@
       <p id="logs"></p>
     </main>
     <script type="module">
-      import {
-        listenDisplayMode,
-        listenInstallPromptAvailable,
-      } from "../../../src/app-installation.js"
+      import { displayModeStandalone } from "../../../node_modules/@jsenv/pwa/main.js"
 
-      listenDisplayMode((displayMode) => {
-        document.querySelector("#display-mode").innerHTML = displayMode
+      displayModeStandalone.listen(() => {
+        document.querySelector("#display-mode").innerHTML = displayModeStandalone.get()
+          ? "standalone"
+          : "browser tab"
       })
 
       window.addEventListener("appinstalled", () => {
@@ -70,23 +69,31 @@
         document.querySelector("#install").disabled = true
       })
 
-      listenInstallPromptAvailable(({ prompt }) => {
+      window.addEventListener("beforeinstallprompt", (ev) => {
+        window.beforeinstallpromptEvent = ev
+      })
+
+      setTimeout(() => {
         document.querySelector("#install").disabled = false
+        const prompt = async () => {
+          window.beforeinstallpromptEvent.prompt()
+          await window.beforeinstallpromptEvent.userChoice
+          return false
+        }
         document.querySelector("#install").onclick = async () => {
           const accepted = await prompt()
           if (accepted) {
             document.querySelector("#install").disabled = true
           }
         }
-      })
+      }, 3000)
     </script>
     <script type="module">
       import {
-        observeServiceWorkerController,
         registerServiceWorker,
         checkServiceWorkerUpdate,
-        sendMessageToServiceWorkerControllingPage,
-      } from "../../../src/service-worker.js"
+        sendMessageToServiceWorker,
+      } from "../../../node_modules/@jsenv/pwa/main.js"
 
       const printLog = (message) => {
         document.querySelector(`#logs`).innerHTML += `${message}<br />`
@@ -108,10 +115,6 @@
         })
         printLog("file.txt updated !")
       }
-
-      observeServiceWorkerController((controller) => {
-        document.querySelector("#controller").innerHTML = controller ? controller.scriptURL : "none"
-      })
 
       registerServiceWorker("./sw.js", {
         onstatechange: (state) => {
@@ -141,7 +144,7 @@
       document.querySelector("#check-update").onclick = async () => {
         printLog("Checking for update...")
         const updateCheckResult = await checkServiceWorkerUpdate()
-        if (updateCheckResult.updateAvailable) {
+        if (updateCheckResult) {
           printLog("Update found !")
         } else {
           printLog("No update")
@@ -156,13 +159,13 @@
 
       document.querySelector("#ping").onclick = async () => {
         printLog("> ping service worker")
-        const result = await sendMessageToServiceWorkerControllingPage({ action: "ping" })
+        const result = await sendMessageToServiceWorker({ action: "ping" })
         printLog(`< ${result}`)
       }
 
       document.querySelector("#remove").onclick = async () => {
         printLog("> remove file.txt cache")
-        const result = await sendMessageToServiceWorkerControllingPage({
+        const result = await sendMessageToServiceWorker({
           action: "removeCacheKey",
           args: ["file.txt"],
         })
@@ -171,7 +174,7 @@
 
       document.querySelector("#refresh").onclick = async () => {
         printLog("> refresh file.txt cache in service worker")
-        const result = await sendMessageToServiceWorkerControllingPage({
+        const result = await sendMessageToServiceWorker({
           action: "refreshCacheKey",
           args: ["file.txt"],
         })

@@ -78,6 +78,7 @@ export const createCompositeAssetHandler = (
       },
       {
         isEntry: true,
+        disableHash: true,
         // don't hash asset entry points
         fileNamePattern: entryBuildRelativeUrl,
         url: entryUrl,
