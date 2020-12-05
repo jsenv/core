@@ -2,7 +2,7 @@ import { generateAssetHash } from "./computeBuildRelativeUrl.js"
 import { sortObjectByPathnames } from "./sortObjectByPathnames.js"
 
 export const generateServiceWorkerCodeToInject = ({ buildManifest, rollupBuild }) => {
-  const jsenvBuildUrls = []
+  const jsenvBuildDynamicUrls = []
   const jsenvBuildStaticUrls = []
   let jsenvStaticUrlsHash = {}
   Object.keys(buildManifest).forEach((projectRelativeUrl) => {
@@ -10,9 +10,10 @@ export const generateServiceWorkerCodeToInject = ({ buildManifest, rollupBuild }
       return
     }
     const buildRelativeUrl = buildManifest[projectRelativeUrl]
-    jsenvBuildUrls.push(buildRelativeUrl)
 
-    if (!fileNameContainsHash(buildRelativeUrl)) {
+    if (fileNameContainsHash(buildRelativeUrl)) {
+      jsenvBuildDynamicUrls.push(buildRelativeUrl)
+    } else {
       jsenvBuildStaticUrls.push(buildRelativeUrl)
       const rollupFile = rollupBuild[buildRelativeUrl]
       jsenvStaticUrlsHash[buildRelativeUrl] = generateAssetHash(
@@ -27,7 +28,7 @@ export const generateServiceWorkerCodeToInject = ({ buildManifest, rollupBuild }
   jsenvStaticUrlsHash = sortObjectByPathnames(jsenvStaticUrlsHash)
 
   return `
-self.jsenvBuildUrls = ${JSON.stringify(jsenvBuildUrls, null, "  ")}
+self.jsenvBuildDynamicUrls = ${JSON.stringify(jsenvBuildDynamicUrls, null, "  ")}
 self.jsenvBuildStaticUrls = ${JSON.stringify(jsenvBuildStaticUrls, null, "  ")}
 self.jsenvStaticUrlsHash = ${JSON.stringify(jsenvStaticUrlsHash, null, "  ")}
 `
