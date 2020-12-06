@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "17.1.0-alpha.2",
+  "version": "17.1.0-alpha.3",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {
@@ -16,18 +16,18 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./index.js",
+      "import": "./main.js",
       "require": "./dist/commonjs/main.cjs"
     },
     "./": "./"
   },
-  "module": "index.js",
+  "module": "main.js",
   "main": "dist/commonjs/main.cjs",
   "files": [
     "/dist/",
     "/helpers/",
     "/src/",
-    "/index.js"
+    "/main.js"
   ],
   "scripts": {
     "start-exploring": "node ./script/start-exploring/start-exploring.js",
