@@ -84,7 +84,7 @@ export const buildProject = async ({
   filesystemCache = true,
 
   serviceWorkers = {},
-  serviceWorkerFinalizer = jsenvServiceWorkerFinalizer,
+  serviceWorkerFinalizer,
 
   ...rest
 }) => {

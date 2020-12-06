@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
-import { buildProject } from "@jsenv/core/index.js"
+import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "../TEST_PARAMS.js"
@@ -25,6 +25,7 @@ await buildProject({
   serviceWorkers: {
     [`${testDirectoryRelativeUrl}sw.js`]: "sw.cjs",
   },
+  serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
   // minify: true,
 })
 
