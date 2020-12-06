@@ -11,6 +11,7 @@ export { jsenvCoverageConfig } from "./src/jsenvCoverageConfig.js"
 export { jsenvExplorableConfig } from "./src/jsenvExplorableConfig.js"
 export { jsenvNodeVersionScoreMap } from "./src/jsenvNodeVersionScoreMap.js"
 export { jsenvPluginCompatMap } from "./src/jsenvPluginCompatMap.js"
+export { jsenvServiceWorkerFinalizer } from "./src/jsenvServiceWorkerFinalizer.js"
 export {
   launchChromium,
   launchChromiumTab,

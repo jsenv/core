@@ -17,7 +17,7 @@ export const computeBuildRelativeUrl = (
 }
 
 // https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
-const generateAssetHash = (assetSource) => {
+export const generateAssetHash = (assetSource) => {
   const hash = createHash("sha256")
   hash.update(assetSource)
   return hash.digest("hex").slice(0, 8)

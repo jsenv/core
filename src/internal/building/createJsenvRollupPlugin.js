@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { extname } from "path"
-import { composeTwoImportMaps, normalizeImportMap, resolveImport } from "@jsenv/import-map"
+import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import { loggerToLogLevel } from "@jsenv/logger"
 import {
   isFileSystemPath,
@@ -22,17 +22,15 @@ import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import {
-  parseHtmlString,
-  htmlAstContains,
-  htmlNodeIsScriptModule,
-  manipulateHtmlAst,
   findFirstImportmapNode,
   getHtmlNodeLocation,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 
+import { parseTarget } from "./parseTarget.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
@@ -40,11 +38,6 @@ import { createCompositeAssetHandler } from "./compositeAsset.js"
 import { computeBuildRelativeUrl } from "./computeBuildRelativeUrl.js"
 import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
 
-import { parseHtmlAsset } from "./html/parseHtmlAsset.js"
-import { parseImportmapAsset } from "./parseImportmapAsset.js"
-import { parseSvgAsset } from "./html/parseSvgAsset.js"
-import { parseCssAsset } from "./css/parseCssAsset.js"
-import { parseJsAsset } from "./js/parseJsAsset.js"
 import { minifyJs } from "./js/minifyJs.js"
 
 // use a fake and predictable compile server origin
@@ -303,95 +296,16 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       compositeAssetHandler = createCompositeAssetHandler(
         {
           parse: async (target, notifiers) => {
-            const contentType = target.content.type
-            if (contentType === "text/html") {
-              return parseHtmlAsset(target, notifiers, {
-                minify,
-                minifyHtmlOptions,
-                htmlStringToHtmlAst: (htmlString) => {
-                  const htmlAst = parseHtmlString(htmlString)
-
-                  // force presence of systemjs script if html contains a module script
-                  const injectSystemJsScriptIfNeeded = (htmlAst) => {
-                    if (format !== "systemjs") {
-                      return
-                    }
-
-                    const htmlContainsModuleScript = htmlAstContains(
-                      htmlAst,
-                      htmlNodeIsScriptModule,
-                    )
-                    if (!htmlContainsModuleScript) {
-                      return
-                    }
-
-                    manipulateHtmlAst(htmlAst, {
-                      scriptInjections: [
-                        {
-                          src: systemJsUrl,
-                        },
-                      ],
-                    })
-                  }
-
-                  // force the presence of a fake+inline+empty importmap script
-                  // if html contains no importmap and we useImportMapToImproveLongTermCaching
-                  // this inline importmap will be transformed later to have top level remapping
-                  // required to target hashed js urls
-                  const injectImportMapScriptIfNeeded = (htmlAst) => {
-                    if (!useImportMapToImproveLongTermCaching) {
-                      return
-                    }
-                    if (findFirstImportmapNode(htmlAst)) {
-                      return
-                    }
-
-                    manipulateHtmlAst(htmlAst, {
-                      scriptInjections: [
-                        {
-                          type: "importmap",
-                          id: "jsenv-build-importmap",
-                          text: "{}",
-                        },
-                      ],
-                    })
-                  }
-
-                  injectSystemJsScriptIfNeeded(htmlAst)
-                  injectImportMapScriptIfNeeded(htmlAst)
-
-                  return htmlAst
-                },
-                transformImportmapTarget: (importmapTarget) => {
-                  if (!useImportMapToImproveLongTermCaching) {
-                    return
-                  }
-                  injectImportedFilesIntoImportMapTarget(
-                    importmapTarget,
-                    createImportMapForFilesUsedInJs(),
-                    minify,
-                  )
-                },
-              })
-            }
-
-            if (contentType === "text/css") {
-              return parseCssAsset(target, notifiers, { minify, minifyCssOptions })
-            }
-
-            if (contentType === "application/importmap+json") {
-              return parseImportmapAsset(target, notifiers, { minify })
-            }
-
-            if (contentType === "text/javascript" || contentType === "application/javascript") {
-              return parseJsAsset(target, notifiers, { minify, minifyJsOptions })
-            }
-
-            if (contentType === "image/svg+xml") {
-              return parseSvgAsset(target, notifiers, { minify, minifyHtmlOptions })
-            }
-
-            return null
+            return parseTarget(target, notifiers, {
+              format,
+              systemJsUrl,
+              useImportMapToImproveLongTermCaching,
+              createImportMapForFilesUsedInJs,
+              minify,
+              minifyHtmlOptions,
+              minifyCssOptions,
+              minifyJsOptions,
+            })
           },
           fetch: async (url, importer) => {
             const moduleResponse = await fetchModule(url, importer)
@@ -1174,30 +1088,9 @@ const formatBuildDoneDetails = (build) => {
   }
 }
 
-const sortObjectByPathnames = (object) => {
-  const objectSorted = {}
-  const keysSorted = Object.keys(object).sort(comparePathnames)
-  keysSorted.forEach((key) => {
-    objectSorted[key] = object[key]
-  })
-  return objectSorted
-}
-
 const rollupFileNameWithoutHash = (fileName) => {
   return fileName.replace(/-[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
     return afterHash
-  })
-}
-
-const injectImportedFilesIntoImportMapTarget = (importmapTarget, importMapToInject, minify) => {
-  const { sourceAfterTransformation } = importmapTarget
-  const importMapOriginal = JSON.parse(sourceAfterTransformation)
-
-  const importMap = composeTwoImportMaps(importMapOriginal, importMapToInject)
-  importmapTarget.updateOnceReady({
-    sourceAfterTransformation: minify
-      ? JSON.stringify(importMap)
-      : JSON.stringify(importMap, null, "  "),
   })
 }
 

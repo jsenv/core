@@ -2,12 +2,7 @@ import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { require } from "../../../src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  executeTestPlan,
-  launchNode,
-  launchChromium,
-  convertCommonJsWithRollup,
-} from "../../../index.js"
+import { executeTestPlan, launchNode, launchChromium, convertCommonJsWithRollup } from "@jsenv/core"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const transformReactJSX = require("@babel/plugin-transform-react-jsx")

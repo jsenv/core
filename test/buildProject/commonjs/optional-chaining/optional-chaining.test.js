@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { buildProject } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {

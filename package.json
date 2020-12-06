@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "17.0.1",
+  "version": "17.1.0",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {
@@ -16,18 +16,18 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./index.js",
+      "import": "./main.js",
       "require": "./dist/commonjs/main.cjs"
     },
     "./": "./"
   },
-  "module": "index.js",
+  "module": "main.js",
   "main": "dist/commonjs/main.cjs",
   "files": [
     "/dist/",
     "/helpers/",
     "/src/",
-    "/index.js"
+    "/main.js"
   ],
   "scripts": {
     "start-exploring": "node ./script/start-exploring/start-exploring.js",
@@ -104,7 +104,7 @@
     "@jsenv/logger": "3.4.0",
     "@jsenv/node-module-import-map": "12.2.1",
     "@jsenv/node-signals": "2.0.1",
-    "@jsenv/server": "4.2.0",
+    "@jsenv/server": "4.2.3",
     "@jsenv/uneval": "1.4.0",
     "@jsenv/util": "3.10.0",
     "@rollup/plugin-commonjs": "16.0.0",
@@ -152,6 +152,7 @@
     "@jsenv/github-release-package": "1.2.2",
     "@jsenv/package-publish": "1.5.1",
     "@jsenv/prettier-check-project": "5.6.1",
+    "@jsenv/pwa": "3.0.3",
     "eslint": "7.13.0",
     "playwright-chromium": "1.6.2",
     "playwright-firefox": "1.6.2",

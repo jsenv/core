@@ -1,5 +1,6 @@
 import { createOperation } from "@jsenv/cancellation"
 import { urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/util"
+import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 import { require } from "../require.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
@@ -37,6 +38,9 @@ export const buildUsingRollup = async ({
   minifyCssOptions,
   minifyHtmlOptions,
   manifestFile = false,
+
+  serviceWorkers,
+  serviceWorkerFinalizer,
 
   writeOnFileSystem,
 }) => {
@@ -85,7 +89,26 @@ export const buildUsingRollup = async ({
     buildDirectoryClean,
   })
 
-  return getResult()
+  const jsenvBuild = getResult()
+
+  if (writeOnFileSystem) {
+    await Promise.all(
+      Object.keys(serviceWorkers).map(async (serviceWorkerProjectRelativeUrl) => {
+        const serviceWorkerBuildRelativeUrl = serviceWorkers[serviceWorkerProjectRelativeUrl]
+        await buildServiceWorker({
+          projectDirectoryUrl,
+          buildDirectoryUrl,
+          serviceWorkerProjectRelativeUrl,
+          serviceWorkerBuildRelativeUrl,
+          serviceWorkerTransformer: (code) => serviceWorkerFinalizer(code, jsenvBuild),
+
+          minify,
+        })
+      }),
+    )
+  }
+
+  return jsenvBuild
 }
 
 const useRollup = async ({

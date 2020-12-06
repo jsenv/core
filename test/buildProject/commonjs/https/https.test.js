@@ -12,7 +12,7 @@ import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { buildToCompilationResult } from "@jsenv/core/src/internal/building/buildToCompilationResult.js"
-import { buildProject } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core"
 import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {
   GENERATE_COMMONJS_BUILD_TEST_PARAMS,

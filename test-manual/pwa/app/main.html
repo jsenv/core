@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>PWA example</title>
+    <!-- https://github.com/pwa-builder/pwa-starter/blob/master/index.html -->
+    <meta name="description" content="Meta description" />
+    <meta name="author" content="Meta autho" />
+    <meta name="theme-color" content="#B12A34" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta property="og:image" content="pwa.favicon.png" />
+    <link rel="manifest" href="pwa.webmanifest" />
+    <link rel="shortcut icon" href="pwa.favicon.png" />
+    <link rel="stylesheet" href="pwa.style.css" />
+
+    <!-- These meta tags are Apple-specific, and set the web application to run in full-screen mode with a black status bar. Learn more at https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariHTMLRef/Articles/MetaTags.html-->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="PWA Starter" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  </head>
+  <body>
+    <main>
+      <h1>Add to home screen</h1>
+      <button id="install" disabled>Install application</button>
+      <p>display mode: <span id="display-mode"></span></p>
+
+      <h1>file.txt</h1>
+      <button id="file-fetch">Get file.txt</button>
+      <input id="file-input" type="text" />
+      <button id="file-update">Update file.txt</button>
+
+      <p>response status: <span id="file-response-status"></span></p>
+      <p>response text: <span id="file-response-text"></span></p>
+
+      <h1>Service worker</h1>
+      <button id="check-update">Check for update</button>
+      <button id="activate-update" disabled>Activate update</button>
+      <button id="update-manifest">Update manifest</button>
+      <br />
+      <button id="ping">Ping service worker</button>
+      <button id="remove">Remove file.txt cache</button>
+      <button id="refresh">Refresh file.txt cache</button>
+
+      <p>Service worker controlling navigator: <span id="controller">none</span></p>
+      <p id="state-buttons">
+        Service worker state:
+        <button id="installing" disabled>installing</button>
+        <button id="installed" disabled>installed</button>
+        <button id="activating" disabled>activating</button>
+        <button id="activated" disabled>activated</button>
+        <button id="redundant" disabled>redundant</button>
+      </p>
+
+      <h1>Logs</h1>
+      <button id="clear-logs">Clear logs</button>
+      <p id="logs"></p>
+    </main>
+    <script type="module">
+      import {
+        listenAddToHomescreenAvailable,
+        promptAddToHomescreen,
+        displayModeStandalone,
+      } from "../../../node_modules/@jsenv/pwa/main.js"
+
+      displayModeStandalone.listen(() => {
+        document.querySelector("#display-mode").innerHTML = displayModeStandalone.get()
+          ? "standalone"
+          : "browser tab"
+      })
+
+      listenAddToHomescreenAvailable((available) => {
+        // app was installed by user (maybe from browser toolbar, maybe from our button)
+        document.querySelector("#install").disabled = !available
+      })
+
+      document.querySelector("#install").onclick = async () => {
+        const accepted = await promptAddToHomescreen()
+        if (accepted) {
+          document.querySelector("#install").disabled = true
+        }
+      }
+      //
+    </script>
+    <script type="module">
+      import fileUrl from "./file.txt"
+      import {
+        registerServiceWorker,
+        checkServiceWorkerUpdate,
+        sendMessageToServiceWorker,
+        listenServiceWorkerUpdate,
+        getServiceWorkerUpdate,
+        activateServiceWorkerUpdate,
+        disableAutoReloadAfterUpdate,
+      } from "../../../node_modules/@jsenv/pwa/main.js"
+
+      disableAutoReloadAfterUpdate()
+
+      const printLog = (message) => {
+        document.querySelector(`#logs`).innerHTML += `${message}<br />`
+      }
+
+      document.querySelector("#file-fetch").onclick = async () => {
+        printLog("fetch file.txt...")
+        const response = await fetch(fileUrl)
+        document.querySelector("#file-response-status").innerHTML = response.status
+        const bodyAsText = await response.text()
+        document.querySelector("#file-response-text").innerHTML = bodyAsText
+      }
+
+      document.querySelector("#file-update").onclick = async () => {
+        printLog("updating file.txt...")
+        await fetch("./actions/update-file", {
+          method: "POST",
+          body: document.querySelector("#file-input").value,
+        })
+        printLog("file.txt updated !")
+      }
+
+      registerServiceWorker("./sw.js")
+
+      document.querySelector("#check-update").onclick = async () => {
+        printLog("Checking for update...")
+        const updateCheckResult = await checkServiceWorkerUpdate()
+        if (updateCheckResult) {
+          printLog("Update found !")
+        } else {
+          printLog("No update")
+        }
+      }
+
+      listenServiceWorkerUpdate(() => {
+        const available = Boolean(getServiceWorkerUpdate())
+        document.querySelector("#activate-update").disabled = !available
+      })
+
+      document.querySelector("#activate-update").onclick = async () => {
+        activateServiceWorkerUpdate()
+      }
+
+      document.querySelector("#update-manifest").onclick = async () => {
+        printLog("updating webmanifest file...")
+        await fetch("./actions/update-manifest", { method: "POST" })
+        printLog("webmanifest file updated !")
+      }
+
+      document.querySelector("#ping").onclick = async () => {
+        printLog("> ping service worker")
+        const result = await sendMessageToServiceWorker({ action: "ping" })
+        printLog(`< ${result}`)
+      }
+
+      document.querySelector("#remove").onclick = async () => {
+        printLog("> remove file.txt cache")
+        const result = await sendMessageToServiceWorker({
+          action: "removeCacheKey",
+          payload: fileUrl,
+        })
+        printLog(`< ${result}`)
+      }
+
+      document.querySelector("#refresh").onclick = async () => {
+        printLog("> refresh file.txt cache in service worker")
+        const result = await sendMessageToServiceWorker({
+          action: "refreshCacheKey",
+          payload: fileUrl,
+        })
+        printLog(`< ${result}`)
+      }
+
+      document.querySelector("#clear-logs").onclick = async () => {
+        document.querySelector("#logs").innerHTML = ""
+      }
+    </script>
+  </body>
+</html>

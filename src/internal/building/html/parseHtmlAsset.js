@@ -33,10 +33,10 @@ import {
   parseSrcset,
   stringifySrcset,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { minifyHtml } from "./minifyHtml.js"
+import { collectSvgMutations } from "../svg/parseSvgAsset.js"
 import { getTargetAsBase64Url } from "../getTargetAsBase64Url.js"
 import { collectNodesMutations } from "../parsing.utils.js"
-import { collectSvgMutations } from "./parseSvgAsset.js"
+import { minifyHtml } from "./minifyHtml.js"
 
 export const parseHtmlAsset = async (
   target,
@@ -377,11 +377,13 @@ const linkHrefVisitor = (link, { notifyReferenceFound }) => {
     return null
   }
 
-  const typeAttribute = getHtmlNodeAttributeByName(link, "type")
+  const contentType = linkToContentType(link)
+
   const reference = notifyReferenceFound({
-    contentType: typeAttribute ? typeAttribute.value : undefined,
+    contentType,
     specifier: hrefAttribute.value,
     ...getHtmlNodeLocation(link),
+    disableHash: contentType === "application/manifest+json",
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     const { isInline } = reference.target
@@ -393,6 +395,20 @@ const linkHrefVisitor = (link, { notifyReferenceFound }) => {
       hrefAttribute.value = urlRelativeToImporter
     }
   }
+}
+
+const linkToContentType = (link) => {
+  const typeAttribute = getHtmlNodeAttributeByName(link, "type")
+  if (typeAttribute) {
+    return typeAttribute.value
+  }
+  const relAttribute = getHtmlNodeAttributeByName(link, "rel")
+  if (relAttribute) {
+    if (relAttribute.value === "manifest") {
+      return "application/manifest+json"
+    }
+  }
+  return undefined
 }
 
 const styleTextNodeVisitor = (style, { notifyReferenceFound }, target, styles) => {

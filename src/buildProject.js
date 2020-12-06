@@ -82,6 +82,9 @@ export const buildProject = async ({
   // (to fix that sourcemap could be inlined)
   filesystemCache = true,
 
+  serviceWorkers = {},
+  serviceWorkerFinalizer,
+
   ...rest
 }) => {
   return executeJsenvAsyncFunction(async () => {
@@ -209,7 +212,11 @@ export const buildProject = async ({
         minifyHtmlOptions,
         minifyJsOptions,
         minifyCssOptions,
+
+        serviceWorkers,
+        serviceWorkerFinalizer,
       })
+
       return result
     } finally {
       compileServer.stop("build generated")

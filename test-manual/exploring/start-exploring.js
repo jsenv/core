@@ -20,7 +20,7 @@ https://softwareengineering.stackexchange.com/questions/278778/why-are-native-es
 */
 
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { startExploring } from "../../index.js"
+import { startExploring } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "../../src/internal/jsenvCoreDirectoryUrl.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)

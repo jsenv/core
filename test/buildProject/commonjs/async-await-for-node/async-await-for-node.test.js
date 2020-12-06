@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { buildProject, getBabelPluginMapForNode } from "@jsenv/core/index.js"
+import { buildProject, getBabelPluginMapForNode } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {

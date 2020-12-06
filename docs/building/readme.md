@@ -10,6 +10,7 @@
 - [Concatenation](#Concatenation)
 - [Building a frontend](#Building-a-frontend)
   - [Embed frontend](#Embed-frontend)
+  - [Progressive Web Application (PWA)](#Progressive-Web-Application-PWA)
 - [Building a Node.js package](#Building-a-nodejs-package)
 - [API](./build-api.md)
 
@@ -294,13 +295,56 @@ await buildProject({
 })
 ```
 
-## Embed front end
+## Embed frontend
 
 Embed refers to a product that is meant to be injected into website you don't own, like a video embed for instance. In that case, developper using your product can inject it in their web page using an iframe.
 
 ```html
 <iframe src="dist/main.html"></iframe>
 ```
+
+## Progressive Web Application (PWA)
+
+If you want to build a PWA, you certainly got a service worker file. In that case use `serviceWorkers` parameter. Otherwise, your service worker file is ignored and does not appear in the build directory. For each service worker file specified in `serviceWorkers` a corresponding file will be written to the build directory. Building a service worker is almost equivalent to copying files from project directory to build directory. Two optimizations are still peformed:
+
+- `self.importScripts` are inlined
+- The final service worker file is minified
+
+Your service worker file must be written in a way browser can understand. Service worker are totally different from js executing in a browser tab. They don't have `import` or `export` keywords for instance and jsenv won't transform them for you.
+
+> Service workers and regular js are very different. Trying to blur these differences would be hard to do AND complex AND confusing.
+
+```js
+import { buildProject } from "@jsenv/core"
+
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  serviceWorkers: {
+    "./sw.js": "./sw.js",
+  },
+})
+```
+
+### Jsenv service worker
+
+If you want, jsenv has its own service worker. Read more at https://github.com/jsenv/jsenv-pwa/blob/master/docs/jsenv-service-worker.md
+
+If you use it be sure to add `serviceWorkerFinalizer` parameter to buildProject:
+
+```diff
+- import { buildProject } from "@jsenv/core"
++ import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
+
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  serviceWorkers: {
+    "./sw.js": "./sw.js",
+  },
++ serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
+})
+```
+
+[jsenvServiceWorkerFinalizer](../../src/jsenvServiceWorkerFinalizer.js) configure service worker with the list of urls to cache and if they are versioned or not.
 
 # Building a Node.js package
 
