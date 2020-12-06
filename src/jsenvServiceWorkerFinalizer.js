@@ -1,6 +1,6 @@
-import { generateAssetHash } from "./computeBuildRelativeUrl.js"
+import { generateAssetHash } from "./internal/building/computeBuildRelativeUrl.js"
 
-export const generateServiceWorkerCodeToInject = ({ buildManifest, rollupBuild }) => {
+export const jsenvServiceWorkerFinalizer = (code, { buildManifest, rollupBuild }) => {
   const generatedUrlsConfig = {}
   Object.keys(buildManifest).forEach((projectRelativeUrl) => {
     if (projectRelativeUrl.endsWith(".map")) {
@@ -27,6 +27,7 @@ export const generateServiceWorkerCodeToInject = ({ buildManifest, rollupBuild }
 
   return `
 self.generatedUrlsConfig = ${JSON.stringify(generatedUrlsConfig, null, "  ")}
+${code}
 `
 }
 

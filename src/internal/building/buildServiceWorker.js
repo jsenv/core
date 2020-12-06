@@ -18,15 +18,14 @@ export const buildServiceWorker = async ({
   buildDirectoryUrl,
   serviceWorkerProjectRelativeUrl,
   serviceWorkerBuildRelativeUrl = serviceWorkerProjectRelativeUrl,
-  codeToInjectBeforeServiceWorker = "",
   minify = false,
+  serviceWorkerTransformer = (code) => code,
 }) => {
   const serviceWorkerProjectUrl = resolveUrl(serviceWorkerProjectRelativeUrl, projectDirectoryUrl)
   const serviceWorkerBuildUrl = resolveUrl(serviceWorkerBuildRelativeUrl, buildDirectoryUrl)
 
-  let serviceWorkerCode = `
-${codeToInjectBeforeServiceWorker}
-${transformSwScript(serviceWorkerProjectUrl)}`
+  let serviceWorkerCode = transformSwScript(serviceWorkerProjectUrl)
+  serviceWorkerCode = serviceWorkerTransformer(serviceWorkerCode)
 
   if (!minify) {
     await writeFile(serviceWorkerBuildUrl, serviceWorkerCode)

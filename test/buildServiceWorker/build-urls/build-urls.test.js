@@ -13,7 +13,9 @@ await buildServiceWorker({
   buildDirectoryUrl,
   serviceWorkerProjectRelativeUrl: "sw.js",
   serviceWorkerBuildRelativeUrl: "sw.cjs",
-  codeToInjectBeforeServiceWorker: `self.jsenvBuildUrls = ["style-ef345.css"]`,
+  serviceWorkerTransformer: (code) => `
+self.jsenvBuildUrls = ["style-ef345.css"]
+${code}`,
 })
 
 global.self = {}

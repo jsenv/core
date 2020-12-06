@@ -28,8 +28,6 @@ import {
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
-import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
-import { generateServiceWorkerCodeToInject } from "@jsenv/core/src/internal/building/generateServiceWorkerCodeToInject.js"
 import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 
 import { parseTarget } from "./parseTarget.js"
@@ -78,7 +76,6 @@ export const createJsenvRollupPlugin = async ({
   writeOnFileSystem,
 
   buildDirectoryUrl,
-  serviceWorkers,
 }) => {
   const urlImporterMap = {}
   const urlResponseBodyMap = {}
@@ -769,24 +766,6 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
             } else {
               await writeFile(fileBuildUrl, file.source)
             }
-          }),
-        )
-
-        await Promise.all(
-          Object.keys(serviceWorkers).map(async (serviceWorkerProjectRelativeUrl) => {
-            const serviceWorkerBuildRelativeUrl = serviceWorkers[serviceWorkerProjectRelativeUrl]
-            await buildServiceWorker({
-              projectDirectoryUrl,
-              buildDirectoryUrl,
-              serviceWorkerProjectRelativeUrl,
-              serviceWorkerBuildRelativeUrl,
-              codeToInjectBeforeServiceWorker: generateServiceWorkerCodeToInject({
-                buildManifest,
-                buildMappings,
-                rollupBuild,
-              }),
-              minify,
-            })
           }),
         )
       }
