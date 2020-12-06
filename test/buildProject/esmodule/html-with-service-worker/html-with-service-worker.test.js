@@ -37,16 +37,18 @@ if (process.platform !== "win32") {
   require(urlToFileSystemPath(serviceWorkerBuildUrl))
   const actual = global.self
   const expected = {
-    // these urls will be put into browser cache
-    jsenvBuildDynamicUrls: ["assets/style-b126d686.css", "html-with-service-worker.11-4f59ed7a.js"],
-    jsenvBuildStaticUrls: ["main.html"],
-    // because when html file is modified, it's url is not
-    // if you update only the html file, browser won't update the service worker.
-    // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
-    // to include a hash for the html file.
-    // -> when html file changes -> hash changes -> worker updates
-    jsenvStaticUrlsHash: {
-      "main.html": "c690629a",
+    generatedUrlsConfig: {
+      "assets/style-b126d686.css": { versioned: true },
+      "html-with-service-worker.11-4f59ed7a.js": { versioned: true },
+      "main.html": {
+        versioned: false,
+        // because when html file is modified, it's url is not
+        // if you update only the html file, browser won't update the service worker.
+        // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
+        // to include a hash for the html file.
+        // -> when html file changes -> hash changes -> worker updates
+        version: "c690629a",
+      },
     },
   }
   assert({ actual, expected })
