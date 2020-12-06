@@ -59,7 +59,7 @@ export const buildProject = async ({
   writeOnFileSystem = true,
   manifestFile = false,
 
-  longTermCaching = true,
+  urlVersioning = true,
   useImportMapToImproveLongTermCaching = format === "systemjs",
   preserveEntrySignatures,
   jsConcatenation = true,
@@ -204,7 +204,7 @@ export const buildProject = async ({
         buildDirectoryClean,
         manifestFile,
 
-        longTermCaching,
+        urlVersioning,
         useImportMapToImproveLongTermCaching,
         preserveEntrySignatures,
         jsConcatenation,

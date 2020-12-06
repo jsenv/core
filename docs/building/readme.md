@@ -40,7 +40,7 @@ await buildProject({
 
 # Long term caching
 
-Long term caching consists into configuring a web server to send a `cache-control` header when serving your files. When doing so, browser caches the file for the duration configured by the server and won't even ask the server if the file changed for subsequent requests.
+Long term caching consists into configuring a web server to send a `cache-control` header when serving your files. When doing so, browser caches the file for the duration configured by the server. As long as it is valid, browser will not even ask server if the file changed.
 
 The screenshot belows shows how a 144kB file takes 1ms for the browser to fetch in that scenario.
 
@@ -48,7 +48,7 @@ The screenshot belows shows how a 144kB file takes 1ms for the browser to fetch 
 
 > An article to explain long term caching: https://jakearchibald.com/2016/caching-best-practices/#pattern-1-immutable-content--long-max-age
 
-This is a massive boost in performance but can be tricky to setup because you need to know how and when to invalidate browser cache. Jsenv allows you to use long term caching if you want because it computes a unique url for each file and update any reference to that url accordingly.
+This is a massive boost in performance but can be tricky to setup because you need to know how and when to invalidate browser cache. Jsenv is versioning urls based on their content during build. Thanks to this you can enable long term caching of your files.
 
 For instance, if you write this in an html file:
 
@@ -78,14 +78,14 @@ body {
 }
 ```
 
-If you don't want to change urls to enable long term caching use `longTermCaching` parameter.
+You can disable url versioning if you don't want it using `urlVersioning` parameter as shown below:
 
 ```js
 import { buildProject } from "@jsenv/core"
 
 await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
-  longTermCaching: false,
+  urlVersioning: false,
 })
 ```
 

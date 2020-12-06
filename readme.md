@@ -23,17 +23,15 @@ Covers core needs of a JavaScript project.
 
 # Presentation
 
-`@jsenv/core` was first created to be able to write tests that could be executed in different browsers and even Node.js. As a result it is a tool capable of executing any js file in browsers and Node.js.
+`@jsenv/core` was first created to be able to write tests that could be executed in different browsers and even Node.js. In the end it became a tool covering the core needs of a JavaScript project:
 
-`@jsenv/core` covers core needs of a JavaScript project:
+- A developer friendly environment
+- A build process to optimize files for production
+- A test runner to execute non regression test.
 
-- A developer friendly environment with livereloading
-- A function to build files for production
-- A function to run your test files for non regression.
+> Using jsenv entirely is simpler but you can use it only as a test runner or to build files for production.
 
-> Note that it can be used only as a test runner. Or only to build files for production. However using it entirely is simpler for you, prefer this if you can.
-
-Jsenv integrates naturally with standard html, css and js. It can be configured to work with non-standard approaches such as TypeScript or React.
+Jsenv integrates naturally with standard html, css and js. It can be configured to work TypeScript and React.
 
 # Testing
 
@@ -41,15 +39,12 @@ Testing can be described as: executing many files in parallel and report how it 
 
 Here is a simplified example showing how you can test your code using jsenv:
 
-- Create a test file
-- Write js inside
-- Create a file to configure and run your test file
-- Run it and see colorful logs in your terminal!
-
 <details>
-  <summary>Math.max.test.html</summary>
+  <summary>1. Create a test file and write js inside</summary>
 
 > In order to show code unrelated to a specific codebase the example below is testing `Math.max`. In reality you wouldn't test `Math.max`.
+
+`Math.max.test.html`
 
 ```html
 <!DOCTYPE html>
@@ -73,7 +68,9 @@ Here is a simplified example showing how you can test your code using jsenv:
 </details>
 
 <details>
-  <summary>execute-test-plan.js</summary>
+  <summary>2. Create a file to configure and run your test file</summary>
+
+`execute-test-plan.js`
 
 ```js
 import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
@@ -97,7 +94,12 @@ executeTestPlan({
 
 </details>
 
+<details>
+  <summary>3. Run it and see colorful logs in your terminal!</summary>
+
 ![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
+
+</details>
 
 Read more on [testing documentation](./docs/testing/readme.md)
 

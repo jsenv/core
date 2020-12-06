@@ -29,7 +29,7 @@ export const buildUsingRollup = async ({
   buildDirectoryUrl,
   buildDirectoryClean,
 
-  longTermCaching,
+  urlVersioning,
   useImportMapToImproveLongTermCaching,
   preserveEntrySignatures,
   jsConcatenation,
@@ -64,7 +64,7 @@ export const buildUsingRollup = async ({
     systemJsUrl,
     buildDirectoryUrl,
 
-    longTermCaching,
+    urlVersioning,
     useImportMapToImproveLongTermCaching,
     minify,
     minifyJsOptions,

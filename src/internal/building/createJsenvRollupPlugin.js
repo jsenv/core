@@ -65,7 +65,7 @@ export const createJsenvRollupPlugin = async ({
   browser,
 
   format,
-  longTermCaching,
+  urlVersioning,
   useImportMapToImproveLongTermCaching,
   systemJsUrl,
   minify,
@@ -608,7 +608,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
         if (file.type === "chunk") {
           let buildRelativeUrl
           const canBeHashed = file.facadeModuleId in jsModulesInHtml || !file.isEntry
-          if (longTermCaching && useImportMapToImproveLongTermCaching) {
+          if (urlVersioning && useImportMapToImproveLongTermCaching) {
             if (canBeHashed) {
               buildRelativeUrl = computeBuildRelativeUrl(
                 resolveUrl(fileName, buildDirectoryUrl),
@@ -650,7 +650,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
         const file = jsBuild[buildRelativeUrl]
         const sourceAfterTransformation = file.code
         const fileName =
-          useImportMapToImproveLongTermCaching || !longTermCaching
+          useImportMapToImproveLongTermCaching || !urlVersioning
             ? buildRelativeUrlToFileName(buildRelativeUrl)
             : buildRelativeUrl
 
