@@ -2,7 +2,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
-import { buildProject } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {

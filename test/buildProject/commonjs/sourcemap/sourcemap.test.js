@@ -4,7 +4,7 @@ import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { buildToCompilationResult } from "@jsenv/core/src/internal/building/buildToCompilationResult.js"
-import { buildProject } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core"
 import { GENERATE_COMMONJS_BUILD_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const { SourceMapConsumer } = require("source-map")

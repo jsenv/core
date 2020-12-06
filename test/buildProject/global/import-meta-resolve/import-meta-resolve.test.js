@@ -2,7 +2,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { buildProject } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core"
 import { scriptLoadGlobalBuild } from "../scriptLoadGlobalBuild.js"
 import {
   GENERATE_GLOBAL_BUILD_TEST_PARAMS,

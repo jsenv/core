@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "17.1.0-alpha.4",
+  "version": "17.1.0",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {

@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { buildProject } from "@jsenv/core/index.js"
+import { buildProject } from "@jsenv/core"
 import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
