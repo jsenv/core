@@ -7,7 +7,6 @@ import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./inter
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { buildUsingRollup } from "./internal/building/buildUsingRollup.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
-import { jsenvServiceWorkerFinalizer } from "./jsenvServiceWorkerFinalizer.js"
 
 const FORMAT_ENTRY_POINTS = {
   commonjs: { "./main.js": "./main.cjs" },
