@@ -1,36 +1,32 @@
 import { generateAssetHash } from "./computeBuildRelativeUrl.js"
-import { sortObjectByPathnames } from "./sortObjectByPathnames.js"
 
 export const generateServiceWorkerCodeToInject = ({ buildManifest, rollupBuild }) => {
-  const jsenvBuildDynamicUrls = []
-  const jsenvBuildStaticUrls = []
-  let jsenvStaticUrlsHash = {}
+  const generatedUrlsConfig = {}
   Object.keys(buildManifest).forEach((projectRelativeUrl) => {
     if (projectRelativeUrl.endsWith(".map")) {
       return
     }
     const buildRelativeUrl = buildManifest[projectRelativeUrl]
+    const versioned = fileNameContainsHash(buildRelativeUrl)
+    const rollupFile = rollupBuild[buildRelativeUrl]
 
-    if (fileNameContainsHash(buildRelativeUrl)) {
-      jsenvBuildDynamicUrls.push(buildRelativeUrl)
-    } else {
-      jsenvBuildStaticUrls.push(buildRelativeUrl)
-      const rollupFile = rollupBuild[buildRelativeUrl]
-      jsenvStaticUrlsHash[buildRelativeUrl] = generateAssetHash(
-        rollupFile.type === "chunk" ? rollupFile.code : rollupFile.source,
-      )
+    generatedUrlsConfig[buildRelativeUrl] = {
+      versioned,
+      ...(versioned
+        ? {}
+        : {
+            // when url is not versioned we compute a "version" for that url anyway
+            // so that service worker source still changes and navigator
+            // detect there is a change
+            version: generateAssetHash(
+              rollupFile.type === "chunk" ? rollupFile.code : rollupFile.source,
+            ),
+          }),
     }
   })
 
-  // the order of hash is not important, it must be predictable
-  // otherwise it could trigger a service worker update even
-  // if the file did not change.
-  jsenvStaticUrlsHash = sortObjectByPathnames(jsenvStaticUrlsHash)
-
   return `
-self.jsenvBuildDynamicUrls = ${JSON.stringify(jsenvBuildDynamicUrls, null, "  ")}
-self.jsenvBuildStaticUrls = ${JSON.stringify(jsenvBuildStaticUrls, null, "  ")}
-self.jsenvStaticUrlsHash = ${JSON.stringify(jsenvStaticUrlsHash, null, "  ")}
+self.generatedUrlsConfig = ${JSON.stringify(generatedUrlsConfig, null, "  ")}
 `
 }
 

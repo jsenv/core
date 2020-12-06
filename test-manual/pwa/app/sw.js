@@ -2,8 +2,7 @@
 
 self.importScripts("../../../node_modules/@jsenv/pwa/src/service-worker.setup.js")
 
-config.cacheName = "toto"
-config.urlMap = { "/": "main.html" }
-config.extraUrlsToCacheOnInstall = ["file.txt"]
+config.cachePrefix = "toto"
+config.logLevel = "debug"
 
 self.importScripts("../../../node_modules/@jsenv/pwa/src/service-worker.main.js")

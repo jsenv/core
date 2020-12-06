@@ -34,8 +34,8 @@
 
       <h1>Service worker</h1>
       <button id="check-update">Check for update</button>
+      <button id="activate-update" disabled>Activate update</button>
       <button id="update-manifest">Update manifest</button>
-      <button id="skip-waiting" disabled>Skip waiting (activate right now)</button>
       <br />
       <button id="ping">Ping service worker</button>
       <button id="remove">Remove file.txt cache</button>
@@ -56,7 +56,11 @@
       <p id="logs"></p>
     </main>
     <script type="module">
-      import { displayModeStandalone } from "../../../node_modules/@jsenv/pwa/main.js"
+      import {
+        listenAddToHomescreenAvailable,
+        promptAddToHomescreen,
+        displayModeStandalone,
+      } from "../../../node_modules/@jsenv/pwa/main.js"
 
       displayModeStandalone.listen(() => {
         document.querySelector("#display-mode").innerHTML = displayModeStandalone.get()
@@ -64,36 +68,32 @@
           : "browser tab"
       })
 
-      window.addEventListener("appinstalled", () => {
+      listenAddToHomescreenAvailable((available) => {
         // app was installed by user (maybe from browser toolbar, maybe from our button)
-        document.querySelector("#install").disabled = true
+        document.querySelector("#install").disabled = !available
       })
 
-      window.addEventListener("beforeinstallprompt", (ev) => {
-        window.beforeinstallpromptEvent = ev
-      })
-
-      setTimeout(() => {
-        document.querySelector("#install").disabled = false
-        const prompt = async () => {
-          window.beforeinstallpromptEvent.prompt()
-          await window.beforeinstallpromptEvent.userChoice
-          return false
+      document.querySelector("#install").onclick = async () => {
+        const accepted = await promptAddToHomescreen()
+        if (accepted) {
+          document.querySelector("#install").disabled = true
         }
-        document.querySelector("#install").onclick = async () => {
-          const accepted = await prompt()
-          if (accepted) {
-            document.querySelector("#install").disabled = true
-          }
-        }
-      }, 3000)
+      }
+      //
     </script>
     <script type="module">
+      import fileUrl from "./file.txt"
       import {
         registerServiceWorker,
         checkServiceWorkerUpdate,
         sendMessageToServiceWorker,
+        listenServiceWorkerUpdate,
+        getServiceWorkerUpdate,
+        activateServiceWorkerUpdate,
+        disableAutoReloadAfterUpdate,
       } from "../../../node_modules/@jsenv/pwa/main.js"
+
+      disableAutoReloadAfterUpdate()
 
       const printLog = (message) => {
         document.querySelector(`#logs`).innerHTML += `${message}<br />`
@@ -101,7 +101,7 @@
 
       document.querySelector("#file-fetch").onclick = async () => {
         printLog("fetch file.txt...")
-        const response = await fetch("./file.txt")
+        const response = await fetch(fileUrl)
         document.querySelector("#file-response-status").innerHTML = response.status
         const bodyAsText = await response.text()
         document.querySelector("#file-response-text").innerHTML = bodyAsText
@@ -116,30 +116,7 @@
         printLog("file.txt updated !")
       }
 
-      registerServiceWorker("./sw.js", {
-        onstatechange: (state) => {
-          const buttons = Array.from(document.querySelectorAll(`#state-buttons button`))
-          buttons.forEach((button) => {
-            if (button.id === state) {
-              button.disabled = false
-            } else {
-              button.disabled = true
-            }
-          })
-
-          printLog(`service worker ${state}`)
-        },
-        onupdate: ({ skipWaiting }) => {
-          printLog("Update available!")
-          document.querySelector("#skip-waiting").disabled = false
-          document.querySelector("#skip-waiting").onclick = () => {
-            document.querySelector("#skip-waiting").disabled = true
-            // en vrai on voudra surement reload la page tout simplement
-            // de sorte que on utilise le nouvequ service worker
-            skipWaiting()
-          }
-        },
-      })
+      registerServiceWorker("./sw.js")
 
       document.querySelector("#check-update").onclick = async () => {
         printLog("Checking for update...")
@@ -149,6 +126,15 @@
         } else {
           printLog("No update")
         }
+      }
+
+      listenServiceWorkerUpdate(() => {
+        const available = Boolean(getServiceWorkerUpdate())
+        document.querySelector("#activate-update").disabled = !available
+      })
+
+      document.querySelector("#activate-update").onclick = async () => {
+        activateServiceWorkerUpdate()
       }
 
       document.querySelector("#update-manifest").onclick = async () => {
@@ -167,7 +153,7 @@
         printLog("> remove file.txt cache")
         const result = await sendMessageToServiceWorker({
           action: "removeCacheKey",
-          args: ["file.txt"],
+          payload: fileUrl,
         })
         printLog(`< ${result}`)
       }
@@ -176,7 +162,7 @@
         printLog("> refresh file.txt cache in service worker")
         const result = await sendMessageToServiceWorker({
           action: "refreshCacheKey",
-          args: ["file.txt"],
+          payload: fileUrl,
         })
         printLog(`< ${result}`)
       }
