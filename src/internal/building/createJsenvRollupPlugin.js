@@ -171,7 +171,7 @@ export const createJsenvRollupPlugin = async ({
 
   const emitAsset = ({ source, fileName }) => {
     const buildRelativeUrl = fileName
-    if (useImportMapToImproveLongTermCaching || !longTermCaching) {
+    if (useImportMapToImproveLongTermCaching || !urlVersioning) {
       fileName = rollupFileNameWithoutHash(buildRelativeUrl)
     } else {
       fileName = buildRelativeUrl
@@ -542,7 +542,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
 
       outputOptions.entryFileNames = `[name]${outputExtension}`
       outputOptions.chunkFileNames =
-        useImportMapToImproveLongTermCaching || !longTermCaching
+        useImportMapToImproveLongTermCaching || !urlVersioning
           ? `[name]${outputExtension}`
           : `[name]-[hash]${outputExtension}`
 
