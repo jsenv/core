@@ -2,7 +2,7 @@ import { assert } from "@jsenv/assert"
 import { generateGroupMap } from "../../src/internal/generateGroupMap/generateGroupMap.js"
 import { jsenvBrowserScoreMap } from "../../src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "../../src/jsenvNodeVersionScoreMap.js"
-import { jsenvBabelPluginMap } from "../../index.js"
+import { jsenvBabelPluginMap } from "@jsenv/core"
 
 {
   const babelPluginMap = { "transform-block-scoping": true }
