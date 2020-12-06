@@ -7,7 +7,7 @@ import {
   launchChromium,
   launchFirefox,
   launchWebkit,
-} from "../../../index.js"
+} from "@jsenv/core"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)

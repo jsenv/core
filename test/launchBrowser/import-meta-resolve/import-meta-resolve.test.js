@@ -4,7 +4,7 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
-import { launchChromium } from "../../../index.js"
+import { launchChromium } from "@jsenv/core"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTION_TEST_PARAMS,

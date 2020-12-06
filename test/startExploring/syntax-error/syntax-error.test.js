@@ -2,7 +2,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startExploring } from "../../../index.js"
+import { startExploring } from "@jsenv/core"
 import { openBrowserPage } from "../openBrowserPage.js"
 import { START_EXPLORING_TEST_PARAMS } from "../TEST_PARAMS.js"
 
