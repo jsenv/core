@@ -270,9 +270,10 @@ Jsenv focuses on one thing: developer experience. Everything was carefully craft
 
 One of the thing jsenv does well is to decrease harm caused by context switching.
 
-> Context switching: You are writing js that you are used to write every day for your project, then, you switch to unit tests. And, suddenly, you must adapt to new constraints imposed by the testing framework.<br />
-> — Read more in [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05)<br />
-> Jsenv provides a unified approach to this problem as described in [exploring](#exploring)
+Context switching: You are writing js that you are used to write every day for your project, then, you switch to unit tests. And, suddenly, you must adapt to new constraints imposed by the testing framework.<br />
+— Read more in [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05)
+
+Jsenv provides a unified approach to this problem as described in [exploring](#exploring)
 
 ## Explicitness over magic
 
