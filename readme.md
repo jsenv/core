@@ -26,12 +26,12 @@ Covers core needs of a JavaScript project.
 `@jsenv/core` was first created to be able to write tests that could be executed in different browsers and even Node.js. In the end it became a tool covering the core needs of a JavaScript project:
 
 - A developer friendly environment
-- A build process to optimize files for production
+- A bundler to optimize files for production
 - A test runner to execute non regression test.
 
 > Using jsenv entirely is simpler but you can use it only as a test runner or to build files for production.
 
-Jsenv integrates naturally with standard html, css and js. It can be configured to work TypeScript and React.
+Jsenv integrates naturally with standard html, css and js. It can be configured to work with TypeScript and React.
 
 # Testing
 
@@ -40,7 +40,7 @@ Testing can be described as: executing many files in parallel and report how it 
 Here is a simplified example showing how you can test your code using jsenv:
 
 <details>
-  <summary>1. Create a test file and write js inside</summary>
+  <summary>1. Create a test file</summary>
 
 > In order to show code unrelated to a specific codebase the example below is testing `Math.max`. In reality you wouldn't test `Math.max`.
 
@@ -68,7 +68,7 @@ Here is a simplified example showing how you can test your code using jsenv:
 </details>
 
 <details>
-  <summary>2. Create a file to configure and run your test file</summary>
+  <summary>2. Create a an other file to execute your test</summary>
 
 `execute-test-plan.js`
 
@@ -95,7 +95,7 @@ executeTestPlan({
 </details>
 
 <details>
-  <summary>3. Run it and see colorful logs in your terminal!</summary>
+  <summary>3. Run your tests and see colorful logs in your terminal!</summary>
 
 ![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
 
