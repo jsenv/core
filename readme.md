@@ -284,7 +284,7 @@ Jsenv also don't like blackboxes. `@jsenv/core` functions always choose explicit
 
 Jsenv is **dispensable** by default. As long as your code is using only standards, you could remove jsenv from your project and still be able to run your code. You can double click your html file to open it inside your browser -> it works. Or if this is a Node.js file execute it directly using the `node` command.
 
-Being dispensable by default highlights jsenv philosophy and means there is no new concept to learn.
+Being dispensable by default highlights jsenv philosophy: no new concept to learn. It also means you can switch to an other tool easily as no part of your code is specific to jsenv.
 
 > But, of course, as soon as you use something like jsx or ts your code needs jsenv to run.
 
