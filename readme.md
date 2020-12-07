@@ -258,7 +258,7 @@ await buildProject({
 
 Read more [building documentation](./docs/building/readme.md)
 
-# Why jsenv ?
+# Why jsenv?
 
 Jsenv focuses on one thing: developer experience. Everything was carefully crafted to get explicit and coherent apis.
 
