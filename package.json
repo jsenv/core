@@ -1,7 +1,7 @@
 {
   "name": "@jsenv/core",
-  "version": "17.1.1",
-  "description": "Execute JavaScript on multiple environments for testing.",
+  "version": "17.1.2",
+  "description": "Likable builder of JavaScript projects.",
   "license": "MIT",
   "repository": {
     "type": "git",

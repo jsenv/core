@@ -1,6 +1,6 @@
 # core
 
-Covers core needs of a JavaScript project.
+Likable builder of JavaScript projects.
 
 [![github package](https://img.shields.io/github/package-json/v/jsenv/jsenv-core.svg?logo=github&label=package)](https://github.com/jsenv/jsenv-core/packages)
 [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
@@ -13,6 +13,7 @@ Covers core needs of a JavaScript project.
 - [Testing](#Testing)
 - [Exploring](#Exploring)
 - [Building](#Building)
+- [Why jsenv?](#Why-jsenv)
 - [Installation](#Installation)
 - [Configuration](#Configuration)
   - [jsenv.config.js](#jsenvconfigjs)
@@ -261,6 +262,34 @@ await buildProject({
 
 Read more [building documentation](./docs/building/readme.md)
 
+# Why jsenv ?
+
+Jsenv focuses on one thing: developer experience. Everything was carefully crafted to get explicit and coherent apis.
+
+## Less context switching
+
+One of the thing jsenv does well is to decrease harm caused by context switching.
+
+> Context switching: You are writing js that you are used to write every day for your project, then, you switch to unit tests. And, suddenly, you must adapt to new constraints imposed by the testing framework.<br />
+> — Read more in [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05)<br />
+> Jsenv provides a unified approach to this problem as described in [exploring](#exploring)
+
+## Explicitness over magic
+
+Jsenv also don't like blackboxes. `@jsenv/core` functions always choose expliciteness over magic. It makes things much simpler to understand and follow both for jsenv and for you.
+
+> One example of expliciteness over magic: You control and tell jsenv where is your project directory. Jsenv don't try to guess or assume where it is.
+
+## Dispensable by default
+
+Jsenv is **dispensable** by default. As long as your code is using only standards, you could remove jsenv from your project and still be able to run your code. You can double click your html file to open it inside your browser -> it works. Or if this is a Node.js file execute it directly using the `node` command.
+
+Being dispensable by default highlights jsenv philosophy and means there is no new concept to learn.
+
+> But, of course, as soon as you use something like jsx or ts your code needs jsenv to run.
+
+> If you use js features already standard but not yet implemented by browsers and Node.js such as top level await or import maps for instance, your code also needs jsenv to run.
+
 # Installation
 
 ```console
@@ -356,5 +385,4 @@ See also
 
 # See also
 
-- [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05): A medium article to write simpler tests introducing jsenv as test runner.
 - [@jsenv/assert](https://github.com/jsenv/jsenv-assert): Test anything using one assertion.
