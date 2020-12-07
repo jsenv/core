@@ -16,10 +16,6 @@ Likable builder of JavaScript projects.
 - [Why jsenv?](#Why-jsenv)
 - [Installation](#Installation)
 - [Configuration](#Configuration)
-  - [jsenv.config.js](#jsenvconfigjs)
-  - [CommonJS](#CommonJS)
-  - [React](#React)
-  - [TypeScript](#TypeScript)
 - [See also](#See-also)
 
 # Presentation
