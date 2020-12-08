@@ -2346,14 +2346,13 @@
       message = errorToHTML(error);
     }
 
-    var css = "\n    .jsenv-console pre {\n      overflow: auto;\n      /* avoid scrollbar to hide the text behind it */\n      padding-top: 20px;\n      padding-right: 20px;\n      padding-bottom: 20px;\n    }\n\n    .jsenv-console pre[data-theme=\"dark\"] {\n      background: transparent;\n      border: 1px solid black;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] {\n      background: #1E1E1E;\n      border: 1px solid white;\n      color: #EEEEEE;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] a {\n      color: inherit;\n    }\n    "; // it could be a sort of dialog on top of document with
-    // a slight opacity
-    // or it should replace what is inside the document.
-    // To know what to do we must test with some code having UI
-    // and ensure error are still visible
+    var css = "\n    .jsenv-console {\n      position: static;\n      left: 0;\n      top: 0;\n      z-index: 1000;\n    }\n\n    #button-close-jsenv-console {\n      position: absolute;\n      right: 8px;\n    }\n\n    .jsenv-console pre {\n      overflow: auto;\n      /* avoid scrollbar to hide the text behind it */\n      padding-top: 20px;\n      padding-right: 20px;\n      padding-bottom: 20px;\n    }\n\n    .jsenv-console pre[data-theme=\"dark\"] {\n      background: transparent;\n      border: 1px solid black;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] {\n      background: #1E1E1E;\n      border: 1px solid white;\n      color: #EEEEEE;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] a {\n      color: inherit;\n    }\n    ";
+    var html = "\n      <style type=\"text/css\">".concat(css, "></style>\n      <div class=\"jsenv-console\">\n        <h1>").concat(title, " <button id=\"button-close-jsenv-console\">X</button></h1>\n        <pre data-theme=\"").concat(theme, "\">").concat(message, "</pre>\n      </div>\n      ");
+    var removeJsenvConsole = appendHMTLInside(html, document.body);
 
-    var html = "\n      <style type=\"text/css\">".concat(css, "></style>\n      <div class=\"jsenv-console\">\n        <h1>").concat(title, "</h1>\n        <pre data-theme=\"").concat(theme, "\">").concat(message, "</pre>\n      </div>\n      ");
-    appendHMTLInside(html, document.body);
+    document.querySelector("#button-close-jsenv-console").onclick = function () {
+      removeJsenvConsole();
+    };
   };
 
   var escapeHtml = function escapeHtml(string) {
@@ -2483,13 +2482,26 @@
   var appendHMTLInside = function appendHMTLInside(html, parentNode) {
     var temoraryParent = document.createElement("div");
     temoraryParent.innerHTML = html;
-    transferChildren(temoraryParent, parentNode);
+    return transferChildren(temoraryParent, parentNode);
   };
 
   var transferChildren = function transferChildren(fromNode, toNode) {
-    while (fromNode.firstChild) {
-      toNode.appendChild(fromNode.firstChild);
+    var childNodes = [].slice.call(fromNode.childNodes, 0);
+    var i = 0;
+
+    while (i < childNodes.length) {
+      toNode.appendChild(childNodes[i]);
+      i++;
     }
+
+    return function () {
+      var c = 0;
+
+      while (c < childNodes.length) {
+        fromNode.appendChild(childNodes[c]);
+        c++;
+      }
+    };
   };
 
   function _await$1(value, then, direct) {

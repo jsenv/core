@@ -13,6 +13,18 @@ export const displayErrorInDocument = (error) => {
   }
 
   const css = `
+    .jsenv-console {
+      position: static;
+      left: 0;
+      top: 0;
+      z-index: 1000;
+    }
+
+    #button-close-jsenv-console {
+      position: absolute;
+      right: 8px;
+    }
+
     .jsenv-console pre {
       overflow: auto;
       /* avoid scrollbar to hide the text behind it */
@@ -36,20 +48,18 @@ export const displayErrorInDocument = (error) => {
       color: inherit;
     }
     `
-
-  // it could be a sort of dialog on top of document with
-  // a slight opacity
-  // or it should replace what is inside the document.
-  // To know what to do we must test with some code having UI
-  // and ensure error are still visible
   const html = `
       <style type="text/css">${css}></style>
       <div class="jsenv-console">
-        <h1>${title}</h1>
+        <h1>${title} <button id="button-close-jsenv-console">X</button></h1>
         <pre data-theme="${theme}">${message}</pre>
       </div>
       `
-  appendHMTLInside(html, document.body)
+  const removeJsenvConsole = appendHMTLInside(html, document.body)
+
+  document.querySelector("#button-close-jsenv-console").onclick = () => {
+    removeJsenvConsole()
+  }
 }
 
 const escapeHtml = (string) => {
@@ -157,11 +167,21 @@ const link = ({ href, text = href }) => `<a href="${href}">${text}</a>`
 const appendHMTLInside = (html, parentNode) => {
   const temoraryParent = document.createElement("div")
   temoraryParent.innerHTML = html
-  transferChildren(temoraryParent, parentNode)
+  return transferChildren(temoraryParent, parentNode)
 }
 
 const transferChildren = (fromNode, toNode) => {
-  while (fromNode.firstChild) {
-    toNode.appendChild(fromNode.firstChild)
+  const childNodes = [].slice.call(fromNode.childNodes, 0)
+  let i = 0
+  while (i < childNodes.length) {
+    toNode.appendChild(childNodes[i])
+    i++
+  }
+  return () => {
+    let c = 0
+    while (c < childNodes.length) {
+      fromNode.appendChild(childNodes[c])
+      c++
+    }
   }
 }
