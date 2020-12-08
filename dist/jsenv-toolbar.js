@@ -1901,9 +1901,11 @@
       cancelCurrentConnection();
     };
 
-    window.addEventListener("beforeunload", disconnect);
+    var removePageUnloadListener = listenPageUnload(function () {
+      disconnect();
+    });
     return function () {
-      window.removeEventListener("beforeunload", disconnect);
+      removePageUnloadListener();
       disconnect();
     };
   };
@@ -1916,6 +1918,53 @@
     }
 
     return "".concat(url, "last-event-id=").concat(encodeURIComponent(lastEventId));
+  }; // const listenPageMightFreeze = (callback) => {
+  //   const removePageHideListener = listenEvent(window, "pagehide", (pageHideEvent) => {
+  //     if (pageHideEvent.persisted === true) {
+  //       callback(pageHideEvent)
+  //     }
+  //   })
+  //   return removePageHideListener
+  // }
+  // const listenPageFreeze = (callback) => {
+  //   const removeFreezeListener = listenEvent(document, "freeze", (freezeEvent) => {
+  //     callback(freezeEvent)
+  //   })
+  //   return removeFreezeListener
+  // }
+  // const listenPageIsRestored = (callback) => {
+  //   const removeResumeListener = listenEvent(document, "resume", (resumeEvent) => {
+  //     removePageshowListener()
+  //     callback(resumeEvent)
+  //   })
+  //   const removePageshowListener = listenEvent(window, "pageshow", (pageshowEvent) => {
+  //     if (pageshowEvent.persisted === true) {
+  //       removePageshowListener()
+  //       removeResumeListener()
+  //       callback(pageshowEvent)
+  //     }
+  //   })
+  //   return () => {
+  //     removeResumeListener()
+  //     removePageshowListener()
+  //   }
+  // }
+
+
+  var listenPageUnload = function listenPageUnload(callback) {
+    var removePageHideListener = listenEvent(window, "pagehide", function (pageHideEvent) {
+      if (pageHideEvent.persisted !== true) {
+        callback(pageHideEvent);
+      }
+    });
+    return removePageHideListener;
+  };
+
+  var listenEvent = function listenEvent(emitter, event, callback) {
+    emitter.addEventListener(event, callback);
+    return function () {
+      emitter.removeEventListener(event, callback);
+    };
   };
 
   var jsenvLogger = {
