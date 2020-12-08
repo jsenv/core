@@ -139,9 +139,12 @@ export const connectEventSource = (
     cancelCurrentConnection()
   }
 
-  window.addEventListener(`beforeunload`, disconnect)
+  const removePageUnloadListener = listenPageUnload(() => {
+    disconnect()
+  })
+
   return () => {
-    window.removeEventListener(`beforeunload`, disconnect)
+    removePageUnloadListener()
     disconnect()
   }
 }
@@ -153,4 +156,54 @@ const addLastEventIdIntoUrlSearchParams = (url, lastEventId) => {
     url += "&"
   }
   return `${url}last-event-id=${encodeURIComponent(lastEventId)}`
+}
+
+// const listenPageMightFreeze = (callback) => {
+//   const removePageHideListener = listenEvent(window, "pagehide", (pageHideEvent) => {
+//     if (pageHideEvent.persisted === true) {
+//       callback(pageHideEvent)
+//     }
+//   })
+//   return removePageHideListener
+// }
+
+// const listenPageFreeze = (callback) => {
+//   const removeFreezeListener = listenEvent(document, "freeze", (freezeEvent) => {
+//     callback(freezeEvent)
+//   })
+//   return removeFreezeListener
+// }
+
+// const listenPageIsRestored = (callback) => {
+//   const removeResumeListener = listenEvent(document, "resume", (resumeEvent) => {
+//     removePageshowListener()
+//     callback(resumeEvent)
+//   })
+//   const removePageshowListener = listenEvent(window, "pageshow", (pageshowEvent) => {
+//     if (pageshowEvent.persisted === true) {
+//       removePageshowListener()
+//       removeResumeListener()
+//       callback(pageshowEvent)
+//     }
+//   })
+//   return () => {
+//     removeResumeListener()
+//     removePageshowListener()
+//   }
+// }
+
+const listenPageUnload = (callback) => {
+  const removePageHideListener = listenEvent(window, "pagehide", (pageHideEvent) => {
+    if (pageHideEvent.persisted !== true) {
+      callback(pageHideEvent)
+    }
+  })
+  return removePageHideListener
+}
+
+const listenEvent = (emitter, event, callback) => {
+  emitter.addEventListener(event, callback)
+  return () => {
+    emitter.removeEventListener(event, callback)
+  }
 }
