@@ -1,5 +1,5 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
-import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import { resolveDirectoryUrl } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 
 const { chromium } = require("playwright-chromium")
@@ -87,8 +87,7 @@ const generateIndexPage = () => `<!doctype html>
 
 </html>`
 
-const serveBuildDirectory = ({ buildDirectoryUrl, request: { ressource, method, headers } }) =>
-  serveFile(urlToFileSystemPath(resolveUrl(ressource.slice(1), buildDirectoryUrl)), {
-    method,
-    headers,
+const serveBuildDirectory = ({ buildDirectoryUrl, request }) =>
+  serveFile(request, {
+    rootDirectoryUrl: buildDirectoryUrl,
   })

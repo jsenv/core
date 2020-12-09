@@ -224,15 +224,13 @@ export const startCompileServer = async ({
 
     protocol: compileServerProtocol,
     http2: compileServerProtocol === "https",
-    // disabled because it does not work with http2
-    redirectHttpToHttps: false,
     privateKey: compileServerPrivateKey,
     certificate: compileServerCertificate,
     ip: compileServerIp,
     port: compileServerPort,
     sendServerTiming: true,
     nagle: false,
-    sendInternalErrorStack: true,
+    sendServerInternalErrorDetails: true,
     requestToResponse: firstServiceWithTiming({
       ...customServices,
       "service:asset files": serveAssetFile,
@@ -693,12 +691,11 @@ const urlToOriginalRelativeUrl = (url, outDirectoryRemoteUrl) => {
 
 const createAssetFileService = ({ projectDirectoryUrl }) => {
   return (request) => {
-    const { origin, ressource, method, headers } = request
+    const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
     if (urlIsAsset(requestUrl)) {
-      return serveFile(resolveUrl(ressource.slice(1), projectDirectoryUrl), {
-        method,
-        headers,
+      return serveFile(request, {
+        rootDirectoryUrl: projectDirectoryUrl,
         etagEnabled: true,
       })
     }
@@ -747,16 +744,12 @@ const createProjectFileService = ({
   projectFileEtagEnabled,
 }) => {
   return (request) => {
-    const { ressource, method, headers } = request
+    const { ressource } = request
     const relativeUrl = ressource.slice(1)
     projectFileRequestedCallback(relativeUrl, request)
 
-    const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
-    const filePath = urlToFileSystemPath(fileUrl)
-
-    const responsePromise = serveFile(filePath, {
-      method,
-      headers,
+    const responsePromise = serveFile(request, {
+      rootDirectoryUrl: projectDirectoryUrl,
       etagEnabled: projectFileEtagEnabled,
     })
 

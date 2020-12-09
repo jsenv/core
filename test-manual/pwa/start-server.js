@@ -36,9 +36,8 @@ startServer({
       if (ressource === "/") {
         ressource = "/main.html"
       }
-      const requestUrl = resolveUrl(ressource.slice(1), directoryUrl)
-      return serveFile(requestUrl, {
-        ...request,
+      return serveFile(request, {
+        rootDirectoryUrl: directoryUrl,
         canReadDirectory: true,
       })
     },
