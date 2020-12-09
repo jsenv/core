@@ -1,5 +1,5 @@
 import { resolveUrl, readFile, writeFile } from "@jsenv/util"
-import { startServer, serveFile, firstService, readRequestBodyAsString } from "@jsenv/server"
+import { startServer, serveFile, firstService, readRequestBody } from "@jsenv/server"
 
 const directoryUrl = resolveUrl("./app/dist/", import.meta.url)
 
@@ -25,7 +25,7 @@ startServer({
     async (request) => {
       if (request.ressource !== "/actions/update-file") return null
 
-      const fileContent = await readRequestBodyAsString(request.body)
+      const fileContent = await readRequestBody(request.body)
       const fileUrl = resolveUrl("./file.txt", directoryUrl)
       await writeFile(fileUrl, fileContent)
 
