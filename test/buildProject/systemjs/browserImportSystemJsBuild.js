@@ -91,8 +91,7 @@ const serveSystemJS = async ({ request: { ressource } }) => {
   }
 }
 
-const serveTestDirectory = ({ testDirectoryUrl, request: { ressource, method, headers } }) =>
-  serveFile(resolveUrl(ressource.slice(1), testDirectoryUrl), {
-    method,
-    headers,
+const serveTestDirectory = ({ testDirectoryUrl, request }) =>
+  serveFile(request, {
+    rootDirectoryUrl: testDirectoryUrl,
   })

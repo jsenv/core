@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "17.1.5",
+  "version": "17.1.6",
   "description": "Likable builder of JavaScript projects.",
   "license": "MIT",
   "repository": {
@@ -104,9 +104,9 @@
     "@jsenv/logger": "3.4.0",
     "@jsenv/node-module-import-map": "12.2.1",
     "@jsenv/node-signals": "2.0.1",
-    "@jsenv/server": "4.2.3",
+    "@jsenv/server": "5.0.0",
     "@jsenv/uneval": "1.4.0",
-    "@jsenv/util": "3.10.0",
+    "@jsenv/util": "3.11.0",
     "@rollup/plugin-commonjs": "17.0.0",
     "@rollup/plugin-json": "4.1.0",
     "@rollup/plugin-node-resolve": "11.0.0",
@@ -127,7 +127,7 @@
     "node-notifier": "8.0.0",
     "parse5": "6.0.1",
     "playwright-core": "1.6.2",
-    "postcss": "8.2.0",
+    "postcss": "8.2.1",
     "postcss-value-parser": "4.1.0",
     "proper-lockfile": "4.1.1",
     "regenerator-runtime": "0.13.7",

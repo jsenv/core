@@ -59,7 +59,7 @@ export const createCompiledFileService = ({
   )
 
   return (request) => {
-    const { origin, ressource, method, headers } = request
+    const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
     const outDirectoryRemoteUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, origin)
     // not inside compile directory -> nothing to compile
@@ -73,9 +73,8 @@ export const createCompiledFileService = ({
     // this is just to allow some files to be written inside outDirectory and read directly
     // if asked by the client (such as env.json, groupMap.json, meta.json)
     if (!afterOutDirectory.includes("/") || afterOutDirectory[0] === "/") {
-      return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
-        method,
-        headers,
+      return serveFile(request, {
+        rootDirectoryUrl: projectDirectoryUrl,
         etagEnabled: true,
       })
     }

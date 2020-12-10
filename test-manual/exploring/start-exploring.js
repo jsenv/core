@@ -17,6 +17,8 @@ https://softwareengineering.stackexchange.com/questions/278778/why-are-native-es
 - node --heap-prof ./test-manual/exploring/start-exploring-2.js
 - node ./test-manual/exploring/start-exploring-2.js
 
+node --inspect test-manual/exploring/start-exploring.js
+
 */
 
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
