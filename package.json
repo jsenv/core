@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "17.1.6",
+  "version": "17.1.7",
   "description": "Likable builder of JavaScript projects.",
   "license": "MIT",
   "repository": {
@@ -104,7 +104,7 @@
     "@jsenv/logger": "3.4.0",
     "@jsenv/node-module-import-map": "12.2.1",
     "@jsenv/node-signals": "2.0.1",
-    "@jsenv/server": "5.0.0",
+    "@jsenv/server": "5.2.2",
     "@jsenv/uneval": "1.4.0",
     "@jsenv/util": "3.11.0",
     "@rollup/plugin-commonjs": "17.0.0",

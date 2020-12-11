@@ -90,7 +90,7 @@ export const compileFile = async ({
         headers: {
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
-          "eTag": bufferToEtag(Buffer.from(compiledSource)),
+          "etag": bufferToEtag(Buffer.from(compiledSource)),
         },
         body: compiledSource,
         timing,

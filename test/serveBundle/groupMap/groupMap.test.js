@@ -115,7 +115,7 @@ const babelPluginMap = jsenvBabelPluginMap
       ...serveBuildParams.request,
       headers: {
         ...(compileCacheStrategy === "etag"
-          ? { "if-none-match": response.headers.eTag }
+          ? { "if-none-match": response.headers.etag }
           : {
               "if-modified-since": response.headers["last-modified"],
             }),
