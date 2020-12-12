@@ -203,13 +203,15 @@ const createExplorableListAsJsonService = ({
       request.method === "GET" &&
       "x-jsenv" in request.headers
     ) {
-      const structuredMetaMapRelativeForExplorable = {
-        explorable: {
+      const structuredMetaMapRelativeForExplorable = {}
+      Object.keys(explorableConfig).forEach((explorableGroup) => {
+        const explorableGroupConfig = explorableConfig[explorableGroup]
+        structuredMetaMapRelativeForExplorable[explorableGroup] = {
           "**/.jsenv/": false, // temporary (in theory) to avoid visting .jsenv directory in jsenv itself
-          ...explorableConfig,
+          ...explorableGroupConfig,
           [outDirectoryRelativeUrl]: false,
-        },
-      }
+        }
+      })
       const structuredMetaMapForExplorable = normalizeStructuredMetaMap(
         structuredMetaMapRelativeForExplorable,
         projectDirectoryUrl,
@@ -217,7 +219,8 @@ const createExplorableListAsJsonService = ({
       const matchingFileResultArray = await collectFiles({
         directoryUrl: projectDirectoryUrl,
         structuredMetaMap: structuredMetaMapForExplorable,
-        predicate: ({ explorable }) => Boolean(explorable),
+        predicate: (meta) =>
+          Object.keys(meta).some((explorableGroup) => Boolean(meta[explorableGroup])),
       })
       const explorableFiles = matchingFileResultArray.map(({ relativeUrl, meta }) => ({
         relativeUrl,
