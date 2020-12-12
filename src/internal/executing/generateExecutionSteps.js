@@ -1,15 +1,15 @@
-import { collectFiles, metaMapToSpecifierMetaMap } from "@jsenv/util"
+import { collectFiles } from "@jsenv/util"
 import { generateFileExecutionSteps } from "./generateFileExecutionSteps.js"
 
 export const generateExecutionSteps = async (plan, { cancellationToken, projectDirectoryUrl }) => {
-  const specifierMetaMap = metaMapToSpecifierMetaMap({
+  const structuredMetaMap = {
     filePlan: plan,
-  })
+  }
 
   const fileResultArray = await collectFiles({
     cancellationToken,
     directoryUrl: projectDirectoryUrl,
-    specifierMetaMap,
+    structuredMetaMap,
     predicate: ({ filePlan }) => filePlan,
   })
 

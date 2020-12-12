@@ -13,8 +13,7 @@ import {
   urlIsInsideOf,
   urlToFileSystemPath,
   urlToBasename,
-  metaMapToSpecifierMetaMap,
-  normalizeSpecifierMetaMap,
+  normalizeStructuredMetaMap,
   urlToMeta,
 } from "@jsenv/util"
 
@@ -1124,19 +1123,21 @@ const externalImportUrlPatternsToExternalUrlPredicate = (
   externalImportUrlPatterns,
   projectDirectoryUrl,
 ) => {
-  const externalImportUrlMetaMap = metaMapToSpecifierMetaMap({
-    external: {
-      ...externalImportUrlPatterns,
-      "node_modules/@jsenv/core/src/internal/import-meta/": false,
-      "node_modules/@jsenv/core/helpers/": false,
+  const externalImportUrlStructuredMetaMap = normalizeStructuredMetaMap(
+    {
+      external: {
+        ...externalImportUrlPatterns,
+        "node_modules/@jsenv/core/src/internal/import-meta/": false,
+        "node_modules/@jsenv/core/helpers/": false,
+      },
     },
-  })
-  const externalImportUrlMetaMapNormalized = normalizeSpecifierMetaMap(
-    externalImportUrlMetaMap,
     projectDirectoryUrl,
   )
   return (url) => {
-    const meta = urlToMeta({ url, specifierMetaMap: externalImportUrlMetaMapNormalized })
+    const meta = urlToMeta({
+      url,
+      structuredMetaMap: externalImportUrlStructuredMetaMap,
+    })
     return Boolean(meta.external)
   }
 }

@@ -2,8 +2,7 @@ import {
   resolveUrl,
   urlToFileSystemPath,
   urlToRelativeUrl,
-  metaMapToSpecifierMetaMap,
-  normalizeSpecifierMetaMap,
+  normalizeStructuredMetaMap,
   urlToMeta,
 } from "@jsenv/util"
 import { jsenvTransform } from "./jsenvTransform.js"
@@ -89,13 +88,13 @@ const computeInputCodeAndInputMap = async ({
   remap,
   allowTopLevelAwait,
 }) => {
-  const specifierMetaMap = normalizeSpecifierMetaMap(
-    metaMapToSpecifierMetaMap({
+  const structuredMetaMap = normalizeStructuredMetaMap(
+    {
       convert: convertMap,
-    }),
+    },
     projectDirectoryUrl,
   )
-  const { convert } = urlToMeta({ url, specifierMetaMap })
+  const { convert } = urlToMeta({ url, structuredMetaMap })
   if (!convert) {
     return { inputCode: code, inputMap: map }
   }

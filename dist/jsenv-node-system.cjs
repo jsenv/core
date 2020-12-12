@@ -142,21 +142,18 @@ https.globalAgent.options.rejectUnauthorized = false;
 var fetchUrl = _async(function (url) {
   var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
-  var _ref$simplified = _ref.simplified,
-      simplified = _ref$simplified === void 0 ? false : _ref$simplified,
-      _ref$ignoreHttpsError = _ref.ignoreHttpsError,
+  var _ref$ignoreHttpsError = _ref.ignoreHttpsError,
       ignoreHttpsError = _ref$ignoreHttpsError === void 0 ? true : _ref$ignoreHttpsError,
-      rest = _objectWithoutProperties(_ref, ["simplified", "ignoreHttpsError"]);
+      rest = _objectWithoutProperties(_ref, ["ignoreHttpsError"]);
 
   return _await(server.fetchUrl(url, _objectSpread({
-    simplified: simplified,
     ignoreHttpsError: ignoreHttpsError
   }, rest)), function (response) {
     return {
       url: response.url,
       status: response.status,
       statusText: response.statusText,
-      headers: responseToHeaders(response),
+      headers: server.headersToObject(response.headers),
       text: response.text.bind(response),
       json: response.json.bind(response),
       blob: response.blob.bind(response),
@@ -164,14 +161,6 @@ var fetchUrl = _async(function (url) {
     };
   });
 });
-
-var responseToHeaders = function responseToHeaders(response) {
-  var headers = {};
-  response.headers.forEach(function (value, name) {
-    headers[name] = value;
-  });
-  return headers;
-};
 
 /* eslint-disable no-eq-null, eqeqeq */
 function arrayLikeToArray(arr, len) {
