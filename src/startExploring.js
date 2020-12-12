@@ -1,10 +1,5 @@
 import { createCancellationTokenForProcess } from "@jsenv/cancellation"
-import {
-  metaMapToSpecifierMetaMap,
-  normalizeSpecifierMetaMap,
-  collectFiles,
-  urlToRelativeUrl,
-} from "@jsenv/util"
+import { normalizeStructuredMetaMap, collectFiles, urlToRelativeUrl } from "@jsenv/util"
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
@@ -208,29 +203,21 @@ const createExplorableListAsJsonService = ({
       request.method === "GET" &&
       "x-jsenv" in request.headers
     ) {
-      const metaMap = {}
-      Object.keys(explorableConfig).forEach((key) => {
-        metaMap[key] = {
-          ["**/.jsenv/"]: false, // temporary (in theory) to avoid visting .jsenv directory in jsenv itself
-          ...explorableConfig[key],
+      const structuredMetaMapRelativeForExplorable = {
+        explorable: {
+          "**/.jsenv/": false, // temporary (in theory) to avoid visting .jsenv directory in jsenv itself
+          ...explorableConfig,
           [outDirectoryRelativeUrl]: false,
-        }
-      })
-      const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap(metaMap)
-
-      const specifierMetaMapForExplorable = normalizeSpecifierMetaMap(
-        {
-          ...specifierMetaMapRelativeForExplorable,
-          // ensure outDirectoryRelativeUrl is last
-          // so that it forces not explorable files
-          [outDirectoryRelativeUrl]: specifierMetaMapRelativeForExplorable[outDirectoryRelativeUrl],
         },
+      }
+      const structuredMetaMapForExplorable = normalizeStructuredMetaMap(
+        structuredMetaMapRelativeForExplorable,
         projectDirectoryUrl,
       )
       const matchingFileResultArray = await collectFiles({
         directoryUrl: projectDirectoryUrl,
-        specifierMetaMap: specifierMetaMapForExplorable,
-        predicate: (meta) => Object.keys(meta).some((key) => Boolean(meta[key])),
+        structuredMetaMap: structuredMetaMapForExplorable,
+        predicate: ({ explorable }) => Boolean(explorable),
       })
       const explorableFiles = matchingFileResultArray.map(({ relativeUrl, meta }) => ({
         relativeUrl,

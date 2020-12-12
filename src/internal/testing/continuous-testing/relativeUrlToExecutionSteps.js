@@ -1,22 +1,17 @@
-import {
-  resolveUrl,
-  metaMapToSpecifierMetaMap,
-  normalizeSpecifierMetaMap,
-  urlToMeta,
-} from "@jsenv/util"
+import { resolveUrl, normalizeStructuredMetaMap, urlToMeta } from "@jsenv/util"
 import { generateFileExecutionSteps } from "../../executing/generateFileExecutionSteps.js"
 
 export const relativeUrlToExecutionSteps = (relativeUrl, { projectDirectoryUrl, plan }) => {
-  const specifierMetaMapForExecution = normalizeSpecifierMetaMap(
-    metaMapToSpecifierMetaMap({
+  const structuredMetaMapForExecution = normalizeStructuredMetaMap(
+    {
       filePlan: plan,
-    }),
+    },
     projectDirectoryUrl,
   )
 
   const meta = urlToMeta({
     url: resolveUrl(relativeUrl, projectDirectoryUrl),
-    specifierMetaMap: specifierMetaMapForExecution,
+    structuredMetaMap: structuredMetaMapForExecution,
   })
   if (meta.filePlan) {
     return generateFileExecutionSteps({

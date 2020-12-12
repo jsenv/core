@@ -1,9 +1,4 @@
-import {
-  resolveUrl,
-  metaMapToSpecifierMetaMap,
-  normalizeSpecifierMetaMap,
-  urlToMeta,
-} from "@jsenv/util"
+import { resolveUrl, normalizeStructuredMetaMap, urlToMeta } from "@jsenv/util"
 import { require } from "../../require.js"
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
@@ -18,16 +13,16 @@ export const babelPluginInstrument = (api, options) => {
     coverageConfig = { "./**/*": true },
   } = options
 
-  const specifierMetaMapForCover = normalizeSpecifierMetaMap(
-    metaMapToSpecifierMetaMap({
+  const structuredMetaMapForCover = normalizeStructuredMetaMap(
+    {
       cover: coverageConfig,
-    }),
+    },
     projectDirectoryUrl,
   )
   const shouldInstrument = (relativeUrl) => {
     return urlToMeta({
       url: resolveUrl(relativeUrl, projectDirectoryUrl),
-      specifierMetaMap: specifierMetaMapForCover,
+      specifierMetaMap: structuredMetaMapForCover,
     }).cover
   }
 

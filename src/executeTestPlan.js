@@ -1,8 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { createCancellationTokenForProcess } from "@jsenv/cancellation"
 import {
-  metaMapToSpecifierMetaMap,
-  normalizeSpecifierMetaMap,
+  normalizeStructuredMetaMap,
   urlToFileSystemPath,
   ensureEmptyDirectory,
   resolveDirectoryUrl,
@@ -96,35 +95,33 @@ export const executeTestPlan = async ({
         )
       }
       if (!coverageAndExecutionAllowed) {
-        const fileSpecifierMapForExecute = normalizeSpecifierMetaMap(
-          metaMapToSpecifierMetaMap({
+        const structuredMetaMapForExecute = normalizeStructuredMetaMap(
+          {
             execute: testPlan,
-          }),
+          },
           "file:///",
         )
-
-        const fileSpecifierMapForCover = normalizeSpecifierMetaMap(
-          metaMapToSpecifierMetaMap({
+        const structuredMetaMapForCover = normalizeStructuredMetaMap(
+          {
             cover: coverageConfig,
-          }),
+          },
           "file:///",
         )
-
-        const fileSpecifierMatchingCoverAndExecuteArray = Object.keys(
-          fileSpecifierMapForExecute,
-        ).filter((fileUrl) => {
+        const patternsMatchingCoverAndExecute = Object.keys(
+          structuredMetaMapForExecute.execute,
+        ).filter((testPlanPattern) => {
           return urlToMeta({
-            url: fileUrl,
-            specifierMetaMap: fileSpecifierMapForCover,
+            url: testPlanPattern,
+            structuredMetaMap: structuredMetaMapForCover,
           }).cover
         })
 
-        if (fileSpecifierMatchingCoverAndExecuteArray.length) {
+        if (patternsMatchingCoverAndExecute.length) {
           // I think it is an error, it would be strange, for a given file
           // to be both covered and executed
           throw new Error(`some file will be both covered and executed
---- specifiers ---
-${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
+--- patterns ---
+${patternsMatchingCoverAndExecute.join("\n")}`)
         }
       }
     }
