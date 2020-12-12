@@ -22,7 +22,7 @@ export const babelPluginInstrument = (api, options) => {
   const shouldInstrument = (relativeUrl) => {
     return urlToMeta({
       url: resolveUrl(relativeUrl, projectDirectoryUrl),
-      structuredMteaMap: structuredMetaMapForCover,
+      structuredMetaMap: structuredMetaMapForCover,
     }).cover
   }
 
