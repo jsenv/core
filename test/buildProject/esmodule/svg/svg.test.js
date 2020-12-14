@@ -39,7 +39,9 @@ await assertFilePresence(iconBuildUrl)
     testDirectoryRelativeUrl,
   })
   const actual = namespace
-  const expected = String(new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, serverOrigin))
+  const expected = {
+    default: String(new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, serverOrigin)),
+  }
   assert({ actual, expected })
 }
 
@@ -50,6 +52,8 @@ if (SourceMap) {
     testDirectoryRelativeUrl,
   })
   const actual = namespace
-  const expected = String(new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, import.meta.url))
+  const expected = {
+    default: String(new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, import.meta.url)),
+  }
   assert({ actual, expected })
 }
