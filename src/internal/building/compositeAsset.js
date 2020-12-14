@@ -72,12 +72,12 @@ export const createCompositeAssetHandler = (
     // so we could analyse stack trace here to put this function caller
     // as the reference to this target file
     const callerLocation = getCallerLocation()
-    const entryReference = createReference(
-      {
+    const entryReference = createReference({
+      referenceInfo: {
         ...callerLocation,
         contentType: entryContentType,
       },
-      {
+      targetInfo: {
         isEntry: true,
         disableHash: true,
         // don't hash asset entry points
@@ -92,7 +92,7 @@ export const createCompositeAssetHandler = (
             }
           : {}),
       },
-    )
+    })
 
     await entryReference.target.getDependenciesAvailablePromise()
     // start to wait internally for eventual chunks
@@ -102,14 +102,14 @@ export const createCompositeAssetHandler = (
   }
 
   const createReferenceForAsset = async (url, { contentType, importerUrl, source }) => {
-    const reference = createReference(
-      {
+    const reference = createReference({
+      referenceInfo: {
         url: importerUrl,
         column: undefined,
         line: undefined,
         contentType,
       },
-      {
+      targetInfo: {
         url,
         ...(source
           ? {
@@ -120,7 +120,7 @@ export const createCompositeAssetHandler = (
             }
           : {}),
       },
-    )
+    })
 
     logger.debug(formatReferenceFound(reference, { showReferenceSourceLocation }))
     await reference.target.getRollupReferenceIdAvailablePromise()
@@ -139,17 +139,17 @@ export const createCompositeAssetHandler = (
   }
 
   const targetMap = {}
-  const createReference = (referenceData, targetData) => {
-    const { url } = targetData
-    const reference = { ...referenceData }
+  const createReference = ({ referenceInfo, targetInfo }) => {
+    const reference = { ...referenceInfo }
 
+    const { url } = target
     if (url in targetMap) {
       const target = targetMap[url]
       connectReferenceAndTarget(reference, target)
       return reference
     }
 
-    const target = createTarget(targetData)
+    const target = createTarget(targetInfo)
     targetMap[url] = target
     connectReferenceAndTarget(reference, target)
     connectTarget(target)
@@ -294,15 +294,15 @@ export const createCompositeAssetHandler = (
           }
         }
 
-        const dependencyReference = createReference(
-          {
+        const dependencyReference = createReference({
+          referenceInfo: {
             url: target.url,
             line,
             column,
             contentType,
             previousJsDependency,
           },
-          {
+          targetInfo: {
             url: dependencyTargetUrl,
             isExternal,
             isJsModule,
@@ -311,7 +311,7 @@ export const createCompositeAssetHandler = (
             content,
             fileNamePattern,
           },
-        )
+        })
 
         dependencies.push(dependencyReference)
         if (isJsModule) {
@@ -494,7 +494,6 @@ export const createCompositeAssetHandler = (
 
     Object.assign(target, {
       connect,
-      createReference,
 
       getContentAvailablePromise,
       getDependenciesAvailablePromise,
