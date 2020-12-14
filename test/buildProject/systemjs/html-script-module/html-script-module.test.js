@@ -21,7 +21,7 @@ const entryPointMap = {
 
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  logLevel: "debug",
+  logLevel: "info",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,

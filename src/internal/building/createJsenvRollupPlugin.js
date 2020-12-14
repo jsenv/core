@@ -940,7 +940,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       }
     }
 
-    if (contentType === "application/json" || contentType === "application/importmap+json") {
+    if (contentType === "application/json" || contentType.endsWith("+json")) {
       const responseBodyAsString = await moduleResponse.text()
       // there is no need to minify the json string
       // because it becomes valid javascript
@@ -969,7 +969,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       targetBuffer: moduleResponseBodyAsBuffer,
     })
 
-    markBuildRelativeUrlAsUsedByJs(assetReferenceForImport.target.buildRelativeUrl)
+    markBuildRelativeUrlAsUsedByJs(assetReferenceForImport.target.targetBuildRelativeUrl)
     const content = `export default ${referenceToCodeForRollup(assetReferenceForImport)}`
 
     return {

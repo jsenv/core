@@ -134,12 +134,14 @@ export const parseTarget = (
 
 const injectImportedFilesIntoImportMapTarget = (importmapTarget, importMapToInject, minify) => {
   const { targetBufferAfterTransformation } = importmapTarget
-  const importMapOriginal = JSON.parse(targetBufferAfterTransformation)
 
-  const importMap = composeTwoImportMaps(importMapOriginal, importMapToInject)
+  const importmapOriginal = JSON.parse(targetBufferAfterTransformation)
+  const importmapFinal = composeTwoImportMaps(importmapOriginal, importMapToInject)
+  const importmapFinalContent = minify
+    ? JSON.stringify(importmapFinal)
+    : JSON.stringify(importmapFinal, null, "  ")
+
   importmapTarget.updateOnceReady({
-    targetBufferAfterTransformation: minify
-      ? JSON.stringify(importMap)
-      : JSON.stringify(importMap, null, "  "),
+    targetBufferAfterTransformation: importmapFinalContent,
   })
 }

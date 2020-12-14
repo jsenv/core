@@ -253,6 +253,7 @@ export const createAssetBuilder = (
         referenceLine,
         referenceColumn,
 
+        targetContentType,
         targetBuffer,
         targetIsJsModule = false,
         targetIsInline = false,
@@ -328,11 +329,13 @@ export const createAssetBuilder = (
 
           previousJsDependency,
 
+          targetContentType,
           targetUrl: dependencyTargetUrl,
           targetBuffer,
           targetIsJsModule,
           targetIsExternal,
           targetIsInline,
+
           targetUrlVersioningDisabled,
           targetFileNamePattern,
         })
