@@ -162,6 +162,18 @@ export const createAssetBuilder = (
             targetIsJsModule: true,
             targetBufferAfterTransformation: "",
           }
+
+    // for now we can only emit a chunk from an entry file as visible in
+    // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
+    // https://github.com/rollup/rollup/issues/2872
+    if (targetIsJsModule && !importerTarget.targetIsEntry) {
+      // it's not really possible
+      logger.warn(
+        `ignoring js reference found in an asset (it's only possible to reference js from entry asset)`,
+      )
+      return null
+    }
+
     const resolveTargetReturnValue = resolveTargetUrl({
       targetSpecifier: referenceTargetSpecifier,
       targetIsJsModule,
@@ -348,9 +360,11 @@ export const createAssetBuilder = (
           targetFileNamePattern,
         })
 
-        dependencies.push(dependencyReference)
-        if (targetIsJsModule) {
-          previousJsDependency = dependencyReference
+        if (dependencyReference) {
+          dependencies.push(dependencyReference)
+          if (targetIsJsModule) {
+            previousJsDependency = dependencyReference
+          }
         }
         return dependencyReference
       }

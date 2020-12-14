@@ -35,7 +35,7 @@ import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNo
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { createAssetBuilder, referenceToCodeForRollup } from "./asset-builder.js"
 import { computeBuildRelativeUrl } from "./url-versioning.js"
-// import { detectImportMetaUrlReferences } from "./detectImportMetaUrlReferences.js"
+import { detectImportMetaUrlReferences } from "./detectImportMetaUrlReferences.js"
 
 import { minifyJs } from "./js/minifyJs.js"
 
@@ -353,17 +353,6 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
 
             const { targetIsJsModule } = target
             if (targetIsJsModule) {
-              const { targetIsEntry } = target
-              // for now we can only emit a chunk from an entry file as visible in
-              // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
-              // https://github.com/rollup/rollup/issues/2872
-              if (!targetIsEntry) {
-                logger.warn(
-                  `ignoring js reference found in an asset (it's only possible to reference js from entry asset)`,
-                )
-                return
-              }
-
               target.connect(async () => {
                 const { targetUrl, targetBuffer } = target
 
@@ -556,18 +545,19 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       return { code: content, map }
     },
 
-    // async transform(code, id) {
-    //   const ast = this.parse(code)
-    //   // const moduleInfo = this.getModuleInfo(id)
-    //   const url = urlToServerUrl(id)
-    //   const importerUrl = urlImporterMap[url]
-    //   await detectImportMetaUrlReferences({
-    //     url,
-    //     importerUrl,
-    //     code,
-    //     ast,
-    //   })
-    // },
+    async transform(code, id) {
+      const ast = this.parse(code)
+      // const moduleInfo = this.getModuleInfo(id)
+      const url = urlToServerUrl(id)
+      const importerUrl = urlImporterMap[url]
+      await detectImportMetaUrlReferences({
+        url,
+        importerUrl,
+        code,
+        ast,
+        assetBuilder,
+      })
+    },
 
     // resolveImportMeta: () => {}
 
@@ -992,13 +982,21 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       targetContentType,
       targetBuffer: moduleResponseBodyAsBuffer,
     })
-    markBuildRelativeUrlAsUsedByJs(assetReferenceForImport.target.targetBuildRelativeUrl)
-    const content = `export default ${referenceToCodeForRollup(assetReferenceForImport)}`
+    if (assetReferenceForImport) {
+      markBuildRelativeUrlAsUsedByJs(assetReferenceForImport.target.targetBuildRelativeUrl)
+      const content = `export default ${referenceToCodeForRollup(assetReferenceForImport)}`
+
+      return {
+        ...commonData,
+        contentRaw: String(moduleResponseBodyAsBuffer),
+        content,
+      }
+    }
 
     return {
       ...commonData,
       contentRaw: String(moduleResponseBodyAsBuffer),
-      content,
+      content: String(moduleResponseBodyAsBuffer),
     }
   }
 
