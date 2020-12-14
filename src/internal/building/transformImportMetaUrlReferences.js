@@ -1,15 +1,18 @@
+import { resolveUrl } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { referenceToCodeForRollup } from "./asset-builder.js"
 
 const { asyncWalk } = require("estree-walker")
 const MagicString = require("magic-string")
 
-export const detectImportMetaUrlReferences = async ({
+export const transformImportMetaUrlReferences = async ({
   url,
   // importerUrl,
   code,
   ast,
   assetBuilder,
+  fetch,
+  markBuildRelativeUrlAsUsedByJs,
 }) => {
   const magicString = new MagicString(code)
 
@@ -19,20 +22,34 @@ export const detectImportMetaUrlReferences = async ({
         return
       }
       const relativeUrl = node.arguments[0].value
-      debugger
 
-      const reference = await assetBuilder.createReferenceForAsset({
-        referenceTargetSpecifier: relativeUrl,
-        referenceUrl: url,
-        // maybe we can get these info from node ?
-        referenceLine: undefined,
-        referenceColumn: undefined,
+      // hum on devrait le fetch pour obtenir l'url finale et le content-type
+      // par contre on y applique pas les import map
+      const targetUrl = resolveUrl(relativeUrl, url)
+      const response = await fetch(targetUrl, url)
+      const targetBuffer = Buffer.from(await response.arrayBuffer())
+
+      const reference = await assetBuilder.createReferenceForJs({
+        jsUrl: url,
+        ...(node.loc
+          ? {
+              jsLine: node.loc.start.line,
+              jsColumn: node.loc.start.column,
+            }
+          : {}),
+
+        targetSpecifier: response.url,
+        targetContentType: response.headers["content-type"],
+        targetBuffer,
       })
-      magicString.overwrite(
-        node.arguments[0].start,
-        node.arguments[0].end,
-        referenceToCodeForRollup(reference),
-      )
+      if (reference) {
+        magicString.overwrite(
+          node.arguments[0].start,
+          node.arguments[0].end,
+          referenceToCodeForRollup(reference),
+        )
+        markBuildRelativeUrlAsUsedByJs(reference.target.targetBuildRelativeUrl)
+      }
     },
   })
 

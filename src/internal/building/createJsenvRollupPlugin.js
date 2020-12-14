@@ -35,7 +35,7 @@ import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNo
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { createAssetBuilder, referenceToCodeForRollup } from "./asset-builder.js"
 import { computeBuildRelativeUrl } from "./url-versioning.js"
-import { detectImportMetaUrlReferences } from "./detectImportMetaUrlReferences.js"
+import { transformImportMetaUrlReferences } from "./transformImportMetaUrlReferences.js"
 
 import { minifyJs } from "./js/minifyJs.js"
 
@@ -171,6 +171,9 @@ export const createJsenvRollupPlugin = async ({
   const emitAsset = ({ source, fileName }) => {
     const buildRelativeUrl = fileName
     if (useImportMapToImproveLongTermCaching || !urlVersioning) {
+      // sauf dans le cas ou cet asset est référence avec
+      // new URL(relativeUrl, import.meta.url)
+      // quoique le fix ce serais d'avoir cet asset dans les import maps
       fileName = rollupFileNameWithoutHash(buildRelativeUrl)
     } else {
       fileName = buildRelativeUrl
@@ -546,16 +549,21 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
     },
 
     async transform(code, id) {
-      const ast = this.parse(code)
+      const ast = this.parse(code, {
+        // used to know node line and column
+        locations: true,
+      })
       // const moduleInfo = this.getModuleInfo(id)
       const url = urlToServerUrl(id)
       const importerUrl = urlImporterMap[url]
-      await detectImportMetaUrlReferences({
+      return transformImportMetaUrlReferences({
         url,
         importerUrl,
         code,
         ast,
         assetBuilder,
+        fetch: fetchModule,
+        markBuildRelativeUrlAsUsedByJs,
       })
     },
 

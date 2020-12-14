@@ -37,6 +37,7 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const jsBuildRelativeUrl = getBuildRelativeUrl("file.js")
 const imgRemapBuildRelativeUrl = getBuildRelativeUrl("img-remap.png")
+const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
 
 // check importmap content
 {
@@ -50,6 +51,7 @@ const imgRemapBuildRelativeUrl = getBuildRelativeUrl("img-remap.png")
       // the original importmap remapping are still there
       // ideally it should target `./${imgRemapBuildRelativeUrl}` but for now it's not supported
       "./img.png": "./img-remap.png",
+      "./assets/img.png": `./${imgBuildRelativeUrl}`,
       // the importmap for img-remap is available
       "./assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
       "./file.js": `./${jsBuildRelativeUrl}`,
@@ -61,10 +63,9 @@ const imgRemapBuildRelativeUrl = getBuildRelativeUrl("img-remap.png")
 
 // assert asset url is correct for css (hashed)
 {
-  const imgRelativeUrl = getBuildRelativeUrl("img.png")
   const cssBuildRelativeUrl = getBuildRelativeUrl("style.css")
   const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
-  const imgBuildUrl = resolveUrl(imgRelativeUrl, buildDirectoryUrl)
+  const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
   const cssString = await readFile(cssBuildUrl)
   const cssUrls = await parseCssUrls(cssString, cssBuildUrl)
   const actual = cssUrls.urlDeclarations[0].specifier
@@ -91,10 +92,14 @@ const imgRemapBuildRelativeUrl = getBuildRelativeUrl("img-remap.png")
     urlFromDynamicImport: {
       default: resolveUrl(`dist/systemjs/${imgRemapBuildRelativeUrl}`, serverOrigin),
     },
-    urlFromImportMetaNotation: resolveUrl(
-      `dist/systemjs/${imgRemapBuildRelativeUrl}`,
-      serverOrigin,
-    ),
+    // We MUST NOT introduce a build only importmap awareness
+    // otherwise it would introduce a difference between dev/after build.
+    // As new URL(relativeUrl, import.meta.url) is a standard url resolution where
+    // importmap does not apply. Dev does not change that, and files after build neither.
+    // That being said. when output format is systemjs we still use importmap to avoid
+    // having to invalidate the js because an asset changes.
+    // TODO: retest this whole stuff with an output format of esmodule
+    urlFromImportMetaNotation: resolveUrl(`dist/systemjs/${imgBuildRelativeUrl}`, serverOrigin),
   }
   assert({ actual, expected })
 }
