@@ -277,10 +277,14 @@ const importmapScriptSrcVisitor = (script, { format, notifyReferenceFound }) => 
     // the goal is to put the importmap at the same relative path
     // than in the project
     targetFileNamePattern: () => {
-      const importmapUrl = importmapReference.url
-      const importmapRelativeUrl = urlToRelativeUrl(importmapReference.target.url, importmapUrl)
+      const importmapReferenceUrl = importmapReference.referenceUrl
+      const importmapTargetUrl = importmapReference.target.targetUrl
+      const importmapUrlRelativeToImporter = urlToRelativeUrl(
+        importmapTargetUrl,
+        importmapReferenceUrl,
+      )
       const importmapParentRelativeUrl = urlToRelativeUrl(
-        urlToParentUrl(resolveUrl(importmapRelativeUrl, "file://")),
+        urlToParentUrl(resolveUrl(importmapUrlRelativeToImporter, "file://")),
         "file://",
       )
       return `${importmapParentRelativeUrl}[name]-[hash][extname]`

@@ -18,6 +18,7 @@
         "node_modules/@babel/template/**",
         "node_modules/@dmail/cancellation/**",
         "node_modules/playwright/**",
+        "node_modules/playwright-chromium/**",
         "<node_internals>/**"
       ]
     },

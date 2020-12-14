@@ -59,6 +59,10 @@ export const checkContentType = (reference, { logger, showReferenceSourceLocatio
   const { referenceExpectedContentType } = reference
   const { targetContentType } = reference.target
 
+  if (!referenceExpectedContentType) {
+    return
+  }
+
   if (compareContentType(referenceExpectedContentType, targetContentType)) {
     return
   }
