@@ -129,8 +129,8 @@ const regularScriptSrcVisitor = (script, { notifyReferenceFound }) => {
     ...htmlNodeToReferenceLocation(script),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
-    const { isInline } = remoteScriptReference.target
-    if (isInline) {
+    const { targetIsInline } = remoteScriptReference.target
+    if (targetIsInline) {
       removeHtmlNodeAttribute(script, srcAttribute)
       const { targetBufferAfterTransformation } = remoteScriptReference.target
       setHtmlNodeText(script, targetBufferAfterTransformation)
@@ -292,8 +292,8 @@ const importmapScriptSrcVisitor = (script, { format, notifyReferenceFound }) => 
     }
     transformImportmapTarget(importmapReference.target)
 
-    const { isInline } = importmapReference.target
-    if (isInline) {
+    const { targetIsInline } = importmapReference.target
+    if (targetIsInline) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
@@ -371,9 +371,9 @@ const linkStylesheetHrefVisitor = (link, { notifyReferenceFound }) => {
     ...htmlNodeToReferenceLocation(link),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
-    const { isInline } = cssReference.target
+    const { targetIsInline } = cssReference.target
 
-    if (isInline) {
+    if (targetIsInline) {
       const { targetBufferAfterTransformation } = cssReference.target
       replaceHtmlNode(link, `<style>${targetBufferAfterTransformation}</style>`)
     } else {
@@ -512,8 +512,8 @@ const sourceSrcVisitor = (source, { notifyReferenceFound }) => {
 }
 
 const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
-  const { isInline } = reference.target
-  if (isInline) {
+  const { targetIsInline } = reference.target
+  if (targetIsInline) {
     return getTargetAsBase64Url(reference.target)
   }
   return getReferenceUrlRelativeToImporter(reference)

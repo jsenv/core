@@ -393,13 +393,11 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
               }
 
               logger.debug(`emit asset for ${shortenUrl(targetUrl)}`)
-
               const fileName = targetBuildRelativeUrl
               const rollupReferenceId = emitAsset({
                 source: targetBufferAfterTransformation,
                 fileName,
               })
-
               logger.debug(`${shortenUrl(targetUrl)} ready -> ${targetBuildRelativeUrl}`)
               return { rollupReferenceId }
             })

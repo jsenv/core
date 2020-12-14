@@ -513,7 +513,7 @@ export const createAssetBuilder = (
       if (buildRelativeUrl !== undefined && buildRelativeUrl !== target.targetBuildRelativeUrl) {
         buildRelativeUrlsToClean.push(target.buildRelativeUrl)
         target.targetBuildRelativeUrl = buildRelativeUrl
-        if (!target.isInline) {
+        if (!target.targetIsInline) {
           emitAsset({
             source: target.targetBufferAfterTransformation,
             fileName: buildRelativeUrl,
