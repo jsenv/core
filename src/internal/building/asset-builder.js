@@ -30,7 +30,6 @@ duplicate them when imported more than once let's just not do it.
 
 */
 
-import { urlToContentType } from "@jsenv/server"
 import { resolveUrl, urlToRelativeUrl, urlIsInsideOf, urlToParentUrl } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
 import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
@@ -60,8 +59,8 @@ export const createAssetBuilder = (
     loadUrl = () => null,
     emitAsset,
     connectTarget = () => {},
-    resolveTargetUrl = (parentTarget, { referenceSpecifier }) =>
-      resolveUrl(referenceSpecifier, parentTarget.targetUrl),
+    resolveTargetUrl = ({ targetSpecifier, importerUrl }) =>
+      resolveUrl(targetSpecifier, importerUrl),
   },
 ) => {
   const logger = createLogger({ logLevel })
@@ -80,15 +79,17 @@ export const createAssetBuilder = (
     // as the reference to this target file
     const callerLocation = getCallerLocation()
     const entryReference = createReference({
+      referenceTargetSpecifier: entryUrl,
       referenceExpectedContentType: entryContentType,
       referenceUrl: callerLocation.url,
       referenceLine: callerLocation.line,
       referenceColumn: callerLocation.column,
 
       targetContentType: entryContentType,
-      targetUrl: entryUrl,
       targetBuffer: entryBuffer,
+
       targetIsEntry: true,
+
       // don't hash asset entry points
       targetUrlVersioningDisabled: true,
       targetFileNamePattern: entryBuildRelativeUrl,
@@ -102,26 +103,25 @@ export const createAssetBuilder = (
   }
 
   const createReferenceForAsset = async ({
+    referenceTargetSpecifier,
     referenceExpectedContentType,
     referenceUrl,
     referenceColumn,
     referenceLine,
 
     targetContentType,
-    targetUrl,
     targetBuffer,
   }) => {
     const reference = createReference({
+      referenceTargetSpecifier,
       referenceExpectedContentType,
       referenceUrl,
       referenceColumn,
       referenceLine,
 
       targetContentType,
-      targetUrl,
       targetBuffer,
     })
-    logger.debug(formatReferenceFound(reference, showReferenceSourceLocation(reference)))
     await reference.target.getRollupReferenceIdAvailablePromise()
     return reference
   }
@@ -139,13 +139,13 @@ export const createAssetBuilder = (
 
   const targetMap = {}
   const createReference = ({
+    referenceTargetSpecifier,
     referenceExpectedContentType,
     referenceUrl,
     referenceColumn,
     referenceLine,
 
     targetContentType,
-    targetUrl,
     targetBuffer,
     targetIsEntry,
     targetIsJsModule,
@@ -153,6 +153,58 @@ export const createAssetBuilder = (
     targetFileNamePattern,
     targetUrlVersioningDisabled,
   }) => {
+    const importerUrl = referenceUrl
+    const importerTarget =
+      importerUrl in targetMap
+        ? targetMap[importerUrl]
+        : {
+            targetIsEntry: false, // maybe
+            targetIsJsModule: true,
+          }
+    const resolveTargetReturnValue = resolveTargetUrl({
+      targetSpecifier: referenceTargetSpecifier,
+      targetIsJsModule,
+      importerUrl: referenceUrl,
+      importerIsEntry: importerTarget.targetIsEntry,
+      importerIsJsModule: importerTarget.targetIsJsModule,
+    })
+
+    let targetUrl
+    let targetIsExternal = false
+    if (typeof resolveTargetReturnValue === "object") {
+      if (resolveTargetReturnValue.external) {
+        targetIsExternal = true
+      }
+      targetUrl = resolveTargetReturnValue.url
+    } else {
+      targetUrl = resolveTargetReturnValue
+    }
+
+    if (targetUrl.startsWith("data:")) {
+      targetIsExternal = false
+      targetIsInline = true
+      const { mediaType, base64Flag, data } = parseDataUrl(targetUrl)
+      referenceExpectedContentType = mediaType
+      targetContentType = mediaType
+      targetBuffer = base64Flag ? Buffer.from(data, "base64") : decodeURI(data)
+    }
+
+    // any hash in the url would mess up with filenames
+    targetUrl = removePotentialUrlHash(targetUrl)
+
+    if (targetIsInline && targetFileNamePattern === undefined) {
+      // inherit parent directory location because it's an inline file
+      targetFileNamePattern = () => {
+        // il me faut utiliser le importerUrl pour savoir cela
+        const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(target)
+        const importerParentRelativeUrl = urlToRelativeUrl(
+          urlToParentUrl(resolveUrl(importerBuildRelativeUrl, "file://")),
+          "file://",
+        )
+        return `${importerParentRelativeUrl}[name]-[hash][extname]`
+      }
+    }
+
     const reference = {
       referenceExpectedContentType,
       referenceUrl,
@@ -163,23 +215,35 @@ export const createAssetBuilder = (
     if (targetUrl in targetMap) {
       const target = targetMap[targetUrl]
       connectReferenceAndTarget(reference, target)
-      return reference
+    } else {
+      const target = createTarget({
+        targetContentType,
+        targetUrl,
+        targetBuffer,
+
+        targetIsEntry,
+        targetIsJsModule,
+        targetIsExternal,
+        targetIsInline,
+        targetFileNamePattern,
+        targetUrlVersioningDisabled,
+      })
+      targetMap[targetUrl] = target
+      connectReferenceAndTarget(reference, target)
+      connectTarget(target)
     }
 
-    const target = createTarget({
-      targetContentType,
-      targetUrl,
-      targetBuffer,
+    if (targetIsExternal) {
+      logger.debug(
+        formatExternalReferenceLog(reference, {
+          showReferenceSourceLocation,
+          projectDirectoryUrl: urlToFileUrl(projectDirectoryUrl),
+        }),
+      )
+    } else {
+      logger.debug(formatReferenceFound(reference, showReferenceSourceLocation(reference)))
+    }
 
-      targetIsEntry,
-      targetIsJsModule,
-      targetIsInline,
-      targetFileNamePattern,
-      targetUrlVersioningDisabled,
-    })
-    targetMap[targetUrl] = target
-    connectReferenceAndTarget(reference, target)
-    connectTarget(target)
     return reference
   }
 
@@ -248,8 +312,8 @@ export const createAssetBuilder = (
       let previousJsDependency
       let parsingDone = false
       const notifyReferenceFound = ({
+        referenceTargetSpecifier,
         referenceExpectedContentType,
-        referenceSpecifier,
         referenceLine,
         referenceColumn,
 
@@ -266,62 +330,8 @@ export const createAssetBuilder = (
           )
         }
 
-        const resolveTargetReturnValue = resolveTargetUrl(target, {
-          referenceExpectedContentType,
-          referenceSpecifier,
-          targetIsInline,
-          targetIsJsModule,
-        })
-        let targetIsExternal = false
-        let dependencyTargetUrl
-        if (typeof resolveTargetReturnValue === "object") {
-          if (resolveTargetReturnValue.external) {
-            targetIsExternal = true
-          }
-          dependencyTargetUrl = resolveTargetReturnValue.url
-        } else {
-          dependencyTargetUrl = resolveTargetReturnValue
-        }
-
-        if (dependencyTargetUrl.startsWith("data:")) {
-          targetIsExternal = false
-          targetIsInline = true
-          const { mediaType, base64Flag, data } = parseDataUrl(dependencyTargetUrl)
-          referenceExpectedContentType = mediaType
-          targetContentType = mediaType
-          targetBuffer = base64Flag ? Buffer.from(data, "base64") : decodeURI(data)
-        }
-
-        // any hash in the url would mess up with filenames
-        dependencyTargetUrl = removePotentialUrlHash(dependencyTargetUrl)
-
-        if (referenceExpectedContentType === undefined) {
-          referenceExpectedContentType = urlToContentType(dependencyTargetUrl)
-        }
-
-        if (!targetIsEntry && targetIsJsModule) {
-          // for now we can only emit a chunk from an entry file as visible in
-          // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
-          // https://github.com/rollup/rollup/issues/2872
-          logger.warn(
-            `ignoring js reference found in an asset (it's only possible to reference js from entry asset)`,
-          )
-          return null
-        }
-
-        if (targetIsInline && targetFileNamePattern === undefined) {
-          // inherit parent directory location because it's an inline file
-          targetFileNamePattern = () => {
-            const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(target)
-            const importerParentRelativeUrl = urlToRelativeUrl(
-              urlToParentUrl(resolveUrl(importerBuildRelativeUrl, "file://")),
-              "file://",
-            )
-            return `${importerParentRelativeUrl}[name]-[hash][extname]`
-          }
-        }
-
         const dependencyReference = createReference({
+          referenceTargetSpecifier,
           referenceUrl: targetUrl,
           referenceLine,
           referenceColumn,
@@ -330,10 +340,8 @@ export const createAssetBuilder = (
           previousJsDependency,
 
           targetContentType,
-          targetUrl: dependencyTargetUrl,
           targetBuffer,
           targetIsJsModule,
-          targetIsExternal,
           targetIsInline,
 
           targetUrlVersioningDisabled,
@@ -343,21 +351,6 @@ export const createAssetBuilder = (
         dependencies.push(dependencyReference)
         if (targetIsJsModule) {
           previousJsDependency = dependencyReference
-        }
-        if (targetIsExternal) {
-          logger.debug(
-            formatExternalReferenceLog(dependencyReference, {
-              showReferenceSourceLocation,
-              projectDirectoryUrl: urlToFileUrl(projectDirectoryUrl),
-            }),
-          )
-        } else {
-          logger.debug(
-            formatReferenceFound(
-              dependencyReference,
-              showReferenceSourceLocation(dependencyReference),
-            ),
-          )
         }
         return dependencyReference
       }

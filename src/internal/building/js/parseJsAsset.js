@@ -19,7 +19,7 @@ export const parseJsAsset = async (
   if (jsSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
       referenceExpectedContentType: "application/json",
-      referenceSpecifier: jsSourcemapUrl,
+      referenceTargetSpecifier: jsSourcemapUrl,
       // we don't really know the line or column
       // but let's asusme it the last line and first column
       referenceLine: jsString.split(/\r?\n/).length - 1,

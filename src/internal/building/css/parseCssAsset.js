@@ -19,7 +19,7 @@ export const parseCssAsset = async (
   if (cssSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
       referenceExpectedContentType: "application/json",
-      referenceSpecifier: cssSourcemapUrl,
+      referenceTargetSpecifier: cssSourcemapUrl,
       // we don't really know the line or column
       // but let's asusme it the last line and first column
       referenceLine: cssString.split(/\r?\n/).length - 1,
@@ -32,14 +32,14 @@ export const parseCssAsset = async (
   const urlNodeReferenceMapping = new Map()
   atImports.forEach((atImport) => {
     const importReference = notifyReferenceFound({
-      referenceSpecifier: atImport.specifier,
+      referenceTargetSpecifier: atImport.specifier,
       ...cssNodeToReferenceLocation(atImport.urlDeclarationNode),
     })
     urlNodeReferenceMapping.set(atImport.urlNode, importReference)
   })
   urlDeclarations.forEach((urlDeclaration) => {
     const urlReference = notifyReferenceFound({
-      referenceSpecifier: urlDeclaration.specifier,
+      referenceTargetSpecifier: urlDeclaration.specifier,
       ...cssNodeToReferenceLocation(urlDeclaration.urlDeclarationNode),
     })
     urlNodeReferenceMapping.set(urlDeclaration.urlNode, urlReference)

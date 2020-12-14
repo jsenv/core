@@ -318,17 +318,23 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
           buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
           urlToFileUrl: urlToProjectUrl,
           loadUrl: (url) => urlResponseBodyMap[url],
-          resolveTargetUrl: (parentTarget, { referenceSpecifier, targetIsJsModule }) => {
-            const isHtmlEntryPoint = parentTarget.targetIsEntry && !parentTarget.targetIsJsModule
+          resolveTargetUrl: ({
+            targetSpecifier,
+            targetIsJsModule,
+            importerUrl,
+            importerIsEntry,
+            importerIsJsModule,
+          }) => {
+            const isHtmlEntryPoint = importerIsEntry && !importerIsJsModule
             const isHtmlEntryPointReferencingAJsModule = isHtmlEntryPoint && targetIsJsModule
             // when html references a js we must wait for the compiled version of js
             if (isHtmlEntryPointReferencingAJsModule) {
-              const htmlCompiledUrl = urlToCompiledUrl(parentTarget.targetUrl)
-              const jsModuleUrl = resolveUrl(referenceSpecifier, htmlCompiledUrl)
+              const htmlCompiledUrl = urlToCompiledUrl(importerUrl)
+              const jsModuleUrl = resolveUrl(targetSpecifier, htmlCompiledUrl)
               return jsModuleUrl
             }
 
-            const targetUrl = resolveUrl(referenceSpecifier, parentTarget.targetUrl)
+            const targetUrl = resolveUrl(targetSpecifier, importerUrl)
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl
             // and ignore them and console.info/debug about remote url (https, http, ...)
@@ -347,6 +353,17 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
 
             const { targetIsJsModule } = target
             if (targetIsJsModule) {
+              const { targetIsEntry } = target
+              // for now we can only emit a chunk from an entry file as visible in
+              // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
+              // https://github.com/rollup/rollup/issues/2872
+              if (!targetIsEntry) {
+                logger.warn(
+                  `ignoring js reference found in an asset (it's only possible to reference js from entry asset)`,
+                )
+                return
+              }
+
               target.connect(async () => {
                 const { targetUrl, targetBuffer } = target
 
@@ -525,7 +542,9 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       const url = urlToServerUrl(id)
 
       logger.debug(`loads ${url}`)
-      const { responseUrl, contentRaw, content = "", map } = await loadModule(url, moduleInfo)
+      const { responseUrl, contentRaw, content = "", map } = await loadModule(url, {
+        moduleInfo,
+      })
 
       saveUrlResponseBody(responseUrl, contentRaw)
       // handle redirection
@@ -539,10 +558,14 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
 
     // async transform(code, id) {
     //   const ast = this.parse(code)
+    //   // const moduleInfo = this.getModuleInfo(id)
+    //   const url = urlToServerUrl(id)
+    //   const importerUrl = urlImporterMap[url]
     //   await detectImportMetaUrlReferences({
+    //     url,
+    //     importerUrl,
     //     code,
     //     ast,
-    //     importerUrl: id,
     //   })
     // },
 
@@ -892,7 +915,9 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
 
   const loadModule = async (
     moduleUrl,
-    // moduleInfo
+    // {
+    //   moduleInfo
+    // },
   ) => {
     if (moduleUrl in virtualModules) {
       const codeInput = virtualModules[moduleUrl]
@@ -925,16 +950,17 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
 
     // keep this in sync with module-registration.js
     if (contentType === "application/javascript" || contentType === "text/javascript") {
-      const responseBodyAsString = await moduleResponse.text()
-      const js = responseBodyAsString
+      const jsModuleString = await moduleResponse.text()
+      const map = await fetchSourcemap(moduleUrl, jsModuleString, {
+        cancellationToken,
+        logger,
+      })
+
       return {
         ...commonData,
-        contentRaw: js,
-        content: js,
-        map: await fetchSourcemap(moduleUrl, js, {
-          cancellationToken,
-          logger,
-        }),
+        contentRaw: jsModuleString,
+        content: jsModuleString,
+        map,
       }
     }
 
@@ -966,7 +992,6 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       targetUrl: moduleResponse.url,
       targetBuffer: moduleResponseBodyAsBuffer,
     })
-
     markBuildRelativeUrlAsUsedByJs(assetReferenceForImport.target.targetBuildRelativeUrl)
     const content = `export default ${referenceToCodeForRollup(assetReferenceForImport)}`
 
