@@ -432,7 +432,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
           }) => {
             if (entryContentType === "text/html") {
               const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
-              await assetBuilder.createReferenceForAssetEntry({
+              await assetBuilder.createReferenceForHTMLEntry({
                 entryContentType,
                 entryUrl,
                 entryBuffer,
@@ -448,7 +448,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
               })
             } else {
               const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
-              await assetBuilder.createReferenceForAssetEntry({
+              await assetBuilder.createReferenceForHTMLEntry({
                 entryContentType,
                 entryUrl,
                 entryBuffer,
@@ -979,17 +979,17 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
 
     const moduleResponseBodyAsBuffer = Buffer.from(await moduleResponse.arrayBuffer())
     const targetContentType = moduleResponse.headers["content-type"]
-    const assetReferenceForImport = await assetBuilder.createReferenceForAsset({
+    const assetReferenceForImport = await assetBuilder.createReferenceForJs({
       // Reference to this target is corresponds to a static or dynamic import.
       // found in a given file (importerUrl).
       // But we don't know the line and colum because rollup
       // does not tell us that information
-      referenceUrl: importerUrl,
-      referenceLine: undefined,
-      referenceColumn: undefined,
+      jsUrl: importerUrl,
+      jsLine: undefined,
+      jsColumn: undefined,
 
+      targetSpecifier: moduleResponse.url,
       targetContentType,
-      targetUrl: moduleResponse.url,
       targetBuffer: moduleResponseBodyAsBuffer,
     })
     markBuildRelativeUrlAsUsedByJs(assetReferenceForImport.target.targetBuildRelativeUrl)

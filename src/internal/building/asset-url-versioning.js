@@ -17,13 +17,13 @@ const targetToFileNamePattern = (target) => {
   }
 
   if (target.targetUrlVersioningDisabled) {
-    if (target.targetIsEntry) {
+    if (target.targetIsEntry || target.targetIsJsModule) {
       return `[name][extname]`
     }
     return assetFileNamePatternWithoutHash
   }
 
-  if (target.targetIsEntry) {
+  if (target.targetIsEntry || target.isTargetIsJsModule) {
     return `[name]-[hash][extname]`
   }
   return assetFileNamePattern

@@ -67,7 +67,7 @@ export const createAssetBuilder = (
 
   const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
 
-  const createReferenceForAssetEntry = async ({
+  const createReferenceForHTMLEntry = async ({
     entryContentType,
     entryUrl,
     entryBuffer,
@@ -102,22 +102,21 @@ export const createAssetBuilder = (
     entryReference.target.getReadyPromise()
   }
 
-  const createReferenceForAsset = async ({
-    referenceTargetSpecifier,
-    referenceExpectedContentType,
-    referenceUrl,
-    referenceColumn,
-    referenceLine,
+  const createReferenceForJs = async ({
+    jsUrl,
+    jsLine,
+    jsColumn,
 
+    targetSpecifier,
     targetContentType,
     targetBuffer,
   }) => {
     const reference = createReference({
-      referenceTargetSpecifier,
-      referenceExpectedContentType,
-      referenceUrl,
-      referenceColumn,
-      referenceLine,
+      referenceTargetSpecifier: targetSpecifier,
+      referenceExpectedContentType: targetContentType,
+      referenceUrl: jsUrl,
+      referenceColumn: jsLine,
+      referenceLine: jsColumn,
 
       targetContentType,
       targetBuffer,
@@ -158,8 +157,10 @@ export const createAssetBuilder = (
       importerUrl in targetMap
         ? targetMap[importerUrl]
         : {
+            targetUrl: importerUrl,
             targetIsEntry: false, // maybe
             targetIsJsModule: true,
+            targetBufferAfterTransformation: "",
           }
     const resolveTargetReturnValue = resolveTargetUrl({
       targetSpecifier: referenceTargetSpecifier,
@@ -195,8 +196,7 @@ export const createAssetBuilder = (
     if (targetIsInline && targetFileNamePattern === undefined) {
       // inherit parent directory location because it's an inline file
       targetFileNamePattern = () => {
-        // il me faut utiliser le importerUrl pour savoir cela
-        const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(target)
+        const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(importerTarget)
         const importerParentRelativeUrl = urlToRelativeUrl(
           urlToParentUrl(resolveUrl(importerBuildRelativeUrl, "file://")),
           "file://",
@@ -576,8 +576,8 @@ ${showSourceLocation(referenceSource, {
   }
 
   return {
-    createReferenceForAssetEntry,
-    createReferenceForAsset,
+    createReferenceForHTMLEntry,
+    createReferenceForJs,
 
     getRollupChunkReadyCallbackMap,
     getAllAssetEntryEmittedPromise,
