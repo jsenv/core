@@ -43,6 +43,7 @@ import { createLogger } from "@jsenv/logger"
 import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import { computeBuildRelativeUrl } from "./computeBuildRelativeUrl.js"
 import { showSourceLocation } from "./showSourceLocation.js"
+import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
 
 export const createCompositeAssetHandler = (
   { fetch, parse },
@@ -100,16 +101,8 @@ export const createCompositeAssetHandler = (
     entryReference.target.getReadyPromise()
   }
 
-  const createReferenceForJsModuleImport = async (response, { importerUrl } = {}) => {
-    const contentType = response.headers["content-type"] || ""
-    // const targetUrl = resolveTargetUrl({ specifier: response.url, contentType })
-    const targetUrl = response.url
-    const responseBodyAsBuffer = Buffer.from(await response.arrayBuffer())
+  const createReferenceForAsset = async (url, { contentType, importerUrl, source }) => {
     const reference = createReference(
-      // the reference to this target comes from a static or dynamic import
-      // parsed by rollup.
-      // but we don't really know the line and column
-      // because rollup does not share this information
       {
         url: importerUrl,
         column: undefined,
@@ -117,11 +110,15 @@ export const createCompositeAssetHandler = (
         contentType,
       },
       {
-        url: targetUrl,
-        content: {
-          type: contentType,
-          value: responseBodyAsBuffer,
-        },
+        url,
+        ...(source
+          ? {
+              content: {
+                type: contentType,
+                value: source,
+              },
+            }
+          : {}),
       },
     )
 
@@ -558,7 +555,7 @@ ${showSourceLocation(referenceSource, {
 
   return {
     createReferenceForAssetEntry,
-    createReferenceForJsModuleImport,
+    createReferenceForAsset,
 
     getRollupChunkReadyCallbackMap,
     getAllAssetEntryEmittedPromise,
@@ -571,6 +568,15 @@ ${showSourceLocation(referenceSource, {
       }
     },
   }
+}
+
+export const assetReferenceToCodeForRollup = (reference) => {
+  const target = reference.target
+  if (target.isInline) {
+    return getTargetAsBase64Url(target)
+  }
+
+  return `import.meta.ROLLUP_FILE_URL_${target.rollupReferenceId}`
 }
 
 const assetFileNamePattern = "assets/[name]-[hash][extname]"

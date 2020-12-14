@@ -33,9 +33,9 @@ import { parseTarget } from "./parseTarget.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
-import { createCompositeAssetHandler } from "./compositeAsset.js"
+import { createCompositeAssetHandler, assetReferenceToCodeForRollup } from "./compositeAsset.js"
 import { computeBuildRelativeUrl } from "./computeBuildRelativeUrl.js"
-import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
+// import { detectImportMetaUrlReferences } from "./detectImportMetaUrlReferences.js"
 
 import { minifyJs } from "./js/minifyJs.js"
 
@@ -529,6 +529,15 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       return { code: content, map }
     },
 
+    // async transform(code, id) {
+    //   const ast = this.parse(code)
+    //   await detectImportMetaUrlReferences({
+    //     code,
+    //     ast,
+    //     importerUrl: id,
+    //   })
+    // },
+
     // resolveImportMeta: () => {}
 
     // transform should not be required anymore as
@@ -873,7 +882,10 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
     return null
   }
 
-  const loadModule = async (moduleUrl, moduleInfo) => {
+  const loadModule = async (
+    moduleUrl,
+    // moduleInfo
+  ) => {
     if (moduleUrl in virtualModules) {
       const codeInput = virtualModules[moduleUrl]
 
@@ -931,22 +943,28 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       }
     }
 
-    const importReference = await compositeAssetHandler.createReferenceForJsModuleImport(
-      moduleResponse,
+    const assetContent = Buffer.from(await moduleResponse.arrayBuffer())
+    const assetReferenceForImport = await compositeAssetHandler.createReferenceForAsset(
+      moduleResponse.url,
       {
-        moduleInfo,
         importerUrl,
+        // Reference to this target is corresponds to a static or dynamic import.
+        // found in the code. We don't really know the line and colum
+        // because rollup does not tell us that information
+        line: undefined,
+        column: undefined,
+
+        contentType: moduleResponse.headers["content-type"],
+        content: assetContent,
       },
     )
-    const importTarget = importReference.target
-    markBuildRelativeUrlAsUsedByJs(importTarget.buildRelativeUrl)
-    const content = importTarget.isInline
-      ? `export default ${getTargetAsBase64Url(importTarget)}`
-      : `export default import.meta.ROLLUP_FILE_URL_${importTarget.rollupReferenceId}`
+
+    markBuildRelativeUrlAsUsedByJs(assetReferenceForImport.target.buildRelativeUrl)
+    const content = `export default ${assetReferenceToCodeForRollup(assetReferenceForImport)}`
 
     return {
       ...commonData,
-      contentRaw: String(importTarget.content.value),
+      contentRaw: String(assetContent),
       content,
     }
   }
