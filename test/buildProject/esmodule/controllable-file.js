@@ -1,8 +1,18 @@
-process.on("message", async ({ url, namespaceProperty }) => {
+process.on("message", async ({ url, awaitNamespace }) => {
   try {
     const namespace = await import(url)
-    const value = await namespace[namespaceProperty]
-    process.send({ value })
+    if (!awaitNamespace) {
+      process.send({ namespace })
+      return
+    }
+
+    const namespaceAwaited = {}
+    await Promise.all(
+      Object.keys(namespace).map(async (key) => {
+        namespaceAwaited[key] = await namespace[key]
+      }),
+    )
+    process.send({ namespace: namespaceAwaited })
   } catch (error) {
     process.send({
       error: {

@@ -1,0 +1,5 @@
+{
+ "imports": {
+   "./img.png": "./img-remap.png"
+ }
+}

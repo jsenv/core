@@ -9,8 +9,8 @@ import {
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
   NODE_IMPORT_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
-import { browserImportBuild } from "../browserImportBuild.js"
-import { nodeImportBuild } from "../nodeImportBuild.js"
+import { browserImportEsModuleBuild } from "../browserImportEsModuleBuild.js"
+import { nodeImportEsModuleBuild } from "../nodeImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -34,20 +34,22 @@ const iconBuildUrl = resolveUrl(`./dist/esmodule/${iconBuildRelativeUrl}`, impor
 await assertFilePresence(iconBuildUrl)
 
 {
-  const { value: actual, serverOrigin } = await browserImportBuild({
+  const { namespace, serverOrigin } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-    buildDirectoryRelativeUrl,
+    testDirectoryRelativeUrl,
   })
-  const expected = new URL(iconBuildRelativeUrl, serverOrigin).href
+  const actual = namespace
+  const expected = String(new URL(`./dist/esmodule/${iconBuildRelativeUrl}` serverOrigin))
   assert({ actual, expected })
 }
 
 // node 13.8 test
 if (SourceMap) {
-  const { value: actual } = await nodeImportBuild({
+  const { namespace } = await nodeImportEsModuleBuild({
     ...NODE_IMPORT_BUILD_TEST_PARAMS,
-    buildDirectoryRelativeUrl,
+    testDirectoryRelativeUrl,
   })
-  const expected = new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, import.meta.url).href
+  const actual = namespace
+  const expected = String(new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, import.meta.url))
   assert({ actual, expected })
 }

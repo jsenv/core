@@ -9,8 +9,8 @@ import {
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
   NODE_IMPORT_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
-import { browserImportBuild } from "../browserImportBuild.js"
-import { nodeImportBuild } from "../nodeImportBuild.js"
+import { browserImportEsModuleBuild } from "../browserImportEsModuleBuild.js"
+import { nodeImportEsModuleBuild } from "../nodeImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -28,21 +28,22 @@ await buildProject({
   },
 })
 {
-  const { value: actual } = await browserImportBuild({
+  const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-    buildDirectoryRelativeUrl,
-    // headless: false,
-    // stopAfterImport: false,
+    testDirectoryRelativeUrl,
+    // debug: true,
   })
-  const expected = 42
+  const actual = namespace
+  const expected = { value: 42 }
   assert({ actual, expected })
 }
 // SourceMap added in 13.7, used to test only if we got dynamic import
 if (SourceMap) {
-  const { value: actual } = await nodeImportBuild({
+  const { namespace } = await nodeImportEsModuleBuild({
     ...NODE_IMPORT_BUILD_TEST_PARAMS,
-    buildDirectoryRelativeUrl,
+    testDirectoryRelativeUrl,
   })
-  const expected = 42
+  const actual = namespace
+  const expected = { value: 42 }
   assert({ actual, expected })
 }

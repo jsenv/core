@@ -4,14 +4,14 @@ import { createChildExecArgv } from "@jsenv/core/src/internal/node-launcher/crea
 
 const CONTROLLABLE_FILE_URL = resolveUrl("./controllable-file.js", import.meta.url)
 
-export const nodeImportBuild = async ({
+export const nodeImportEsModuleBuild = async ({
   projectDirectoryUrl,
-  buildDirectoryRelativeUrl,
+  testDirectoryRelativeUrl,
   mainRelativeUrl,
-  namespaceProperty = "default",
+  awaitNamespace = true,
 }) => {
-  const buildDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
-  const mainFileUrl = resolveUrl(mainRelativeUrl, buildDirectoryUrl)
+  const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
+  const mainFileUrl = resolveUrl(mainRelativeUrl, testDirectoryUrl)
 
   const child = fork(urlToFileSystemPath(CONTROLLABLE_FILE_URL), {
     execArgv: await createChildExecArgv(),
@@ -19,17 +19,17 @@ export const nodeImportBuild = async ({
 
   return new Promise((resolve, reject) => {
     child.once("message", () => {
-      child.once("message", ({ error, value }) => {
+      child.once("message", ({ error, namespace }) => {
         child.kill()
         if (error) {
           reject(error)
         } else {
-          resolve({ value })
+          resolve({ namespace })
         }
       })
       child.send({
         url: mainFileUrl,
-        namespaceProperty,
+        awaitNamespace,
       })
     })
   })
