@@ -262,7 +262,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
               entryContentType,
               entryProjectRelativeUrl,
               entryBuildRelativeUrl,
-              entrySource: htmlSource,
+              entryBuffer: Buffer.from(htmlSource),
             })
           } else if (
             entryContentType === "application/javascript" ||
@@ -278,7 +278,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
               entryContentType,
               entryProjectRelativeUrl,
               entryBuildRelativeUrl,
-              entrySource: Buffer.from(await entryResponse.arrayBuffer()),
+              entryBuffer: Buffer.from(await entryResponse.arrayBuffer()),
             })
           }
         }),
@@ -318,42 +318,48 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
           buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
           urlToFileUrl: urlToProjectUrl,
           loadUrl: (url) => urlResponseBodyMap[url],
-          resolveTargetUrl: ({ specifier, isJsModule }, target) => {
-            if (target.isEntry && !target.isJsModule && isJsModule) {
-              // html entry point
-              // when html references a js we must wait for the compiled version of js
-              const htmlCompiledUrl = urlToCompiledUrl(target.url)
-              const jsAssetUrl = resolveUrl(specifier, htmlCompiledUrl)
-              return jsAssetUrl
+          resolveTargetUrl: (parentTarget, { referenceSpecifier, targetIsJsModule }) => {
+            const isHtmlEntryPoint = parentTarget.targetIsEntry && !parentTarget.targetIsJsModule
+            const isHtmlEntryPointReferencingAJsModule = isHtmlEntryPoint && targetIsJsModule
+            // when html references a js we must wait for the compiled version of js
+            if (isHtmlEntryPointReferencingAJsModule) {
+              const htmlCompiledUrl = urlToCompiledUrl(parentTarget.targetUrl)
+              const jsModuleUrl = resolveUrl(referenceSpecifier, htmlCompiledUrl)
+              return jsModuleUrl
             }
-            const url = resolveUrl(specifier, target.url)
+
+            const targetUrl = resolveUrl(referenceSpecifier, parentTarget.targetUrl)
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl
             // and ignore them and console.info/debug about remote url (https, http, ...)
-            const projectUrl = urlToProjectUrl(url)
+            const projectUrl = urlToProjectUrl(targetUrl)
             if (!projectUrl) {
-              return { external: true, url }
+              return { external: true, url: targetUrl }
             }
-            return url
+            return targetUrl
           },
           emitAsset,
           connectTarget: (target) => {
-            if (target.isExternal) {
-              return null
+            const { targetIsExternal } = target
+            if (targetIsExternal) {
+              return
             }
 
-            if (target.isJsModule) {
+            const { targetIsJsModule } = target
+            if (targetIsJsModule) {
               target.connect(async () => {
-                const id = target.url
-                if (typeof target.content !== "undefined") {
-                  virtualModules[id] = String(target.content.value)
+                const { targetUrl, targetBuffer } = target
+
+                const id = targetUrl
+                if (typeof targetBuffer !== "undefined") {
+                  virtualModules[id] = String(targetBuffer)
                 }
 
-                logger.debug(`emit chunk for ${shortenUrl(target.url)}`)
+                logger.debug(`emit chunk for ${shortenUrl(targetUrl)}`)
                 atleastOneChunkEmitted = true
                 const name = urlToRelativeUrl(
                   // get basename url
-                  resolveUrl(urlToBasename(target.url), target.url),
+                  resolveUrl(urlToBasename(targetUrl), targetUrl),
                   // get importer url
                   urlToCompiledUrl(target.targetReferences[0].referenceUrl),
                 )
@@ -363,36 +369,40 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
                   name,
                   ...(target.previousJsReference
                     ? {
-                        implicitlyLoadedAfterOneOf: [target.previousJsReference.url],
+                        implicitlyLoadedAfterOneOf: [target.previousJsReference.referenceUrl],
                       }
                     : {}),
                 })
 
                 return { rollupReferenceId }
               })
-            } else {
-              target.connect(async () => {
-                await target.getReadyPromise()
-                const { sourceAfterTransformation, buildRelativeUrl } = target
-
-                if (target.isInline) {
-                  return {}
-                }
-
-                logger.debug(`emit asset for ${shortenUrl(target.url)}`)
-
-                const fileName = buildRelativeUrl
-                const rollupReferenceId = emitAsset({
-                  source: sourceAfterTransformation,
-                  fileName,
-                })
-
-                logger.debug(`${shortenUrl(target.url)} ready -> ${buildRelativeUrl}`)
-                return { rollupReferenceId }
-              })
+              return
             }
 
-            return null
+            target.connect(async () => {
+              await target.getReadyPromise()
+              const {
+                targetUrl,
+                targetIsInline,
+                targetBufferAfterTransformation,
+                targetBuildRelativeUrl,
+              } = target
+
+              if (targetIsInline) {
+                return {}
+              }
+
+              logger.debug(`emit asset for ${shortenUrl(targetUrl)}`)
+
+              const fileName = targetBuildRelativeUrl
+              const rollupReferenceId = emitAsset({
+                source: targetBufferAfterTransformation,
+                fileName,
+              })
+
+              logger.debug(`${shortenUrl(targetUrl)} ready -> ${targetBuildRelativeUrl}`)
+              return { rollupReferenceId }
+            })
           },
         },
       )
@@ -403,15 +413,15 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
             entryContentType,
             entryProjectRelativeUrl,
             entryBuildRelativeUrl,
-            entrySource,
+            entryBuffer,
           }) => {
             if (entryContentType === "text/html") {
               const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
-              await assetBuilder.createReferenceForAssetEntry(entryUrl, {
+              await assetBuilder.createReferenceForAssetEntry({
                 entryContentType,
-                entryProjectRelativeUrl,
+                entryUrl,
+                entryBuffer,
                 entryBuildRelativeUrl,
-                entrySource,
               })
             } else if (entryContentType === "application/javascript") {
               atleastOneChunkEmitted = true
@@ -423,11 +433,11 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
               })
             } else {
               const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
-              await assetBuilder.createReferenceForAssetEntry(entryUrl, {
+              await assetBuilder.createReferenceForAssetEntry({
                 entryContentType,
-                entryProjectRelativeUrl,
+                entryUrl,
+                entryBuffer,
                 entryBuildRelativeUrl,
-                entrySource,
               })
             }
           },
@@ -650,23 +660,23 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       // et mettre a jour leur dépendance vers ce fichier js
       const rollupChunkReadyCallbackMap = assetBuilder.getRollupChunkReadyCallbackMap()
       Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
-        const buildRelativeUrl = Object.keys(jsBuild).find((buildRelativeUrlCandidate) => {
+        const targetBuildRelativeUrl = Object.keys(jsBuild).find((buildRelativeUrlCandidate) => {
           const file = jsBuild[buildRelativeUrlCandidate]
           const { facadeModuleId } = file
           return facadeModuleId && urlToServerUrl(facadeModuleId) === key
         })
-        const file = jsBuild[buildRelativeUrl]
-        const sourceAfterTransformation = file.code
-        const fileName =
+        const file = jsBuild[targetBuildRelativeUrl]
+        const targetBufferAfterTransformation = file.code
+        const targetFileName =
           useImportMapToImproveLongTermCaching || !urlVersioning
-            ? buildRelativeUrlToFileName(buildRelativeUrl)
-            : buildRelativeUrl
+            ? buildRelativeUrlToFileName(targetBuildRelativeUrl)
+            : targetBuildRelativeUrl
 
         logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
         rollupChunkReadyCallbackMap[key]({
-          sourceAfterTransformation,
-          buildRelativeUrl,
-          fileName,
+          targetBufferAfterTransformation,
+          targetBuildRelativeUrl,
+          targetFileName,
         })
       })
       // wait html files to be emitted
@@ -943,17 +953,19 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       }
     }
 
-    const assetContent = Buffer.from(await moduleResponse.arrayBuffer())
-    const assetReferenceForImport = await assetBuilder.createReferenceForAsset(moduleResponse.url, {
-      importerUrl,
+    const moduleResponseBodyAsBuffer = Buffer.from(await moduleResponse.arrayBuffer())
+    const assetReferenceForImport = await assetBuilder.createReferenceForAsset({
       // Reference to this target is corresponds to a static or dynamic import.
-      // found in the code. We don't really know the line and colum
-      // because rollup does not tell us that information
-      line: undefined,
-      column: undefined,
+      // found in a given file (importerUrl).
+      // But we don't know the line and colum because rollup
+      // does not tell us that information
+      referenceUrl: importerUrl,
+      referenceLine: undefined,
+      referenceColumn: undefined,
 
-      contentType: moduleResponse.headers["content-type"],
-      content: assetContent,
+      targetUrl: moduleResponse.url,
+      targetContentType: moduleResponse.headers["content-type"],
+      targetBuffer: moduleResponseBodyAsBuffer,
     })
 
     markBuildRelativeUrlAsUsedByJs(assetReferenceForImport.target.buildRelativeUrl)
@@ -961,7 +973,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
 
     return {
       ...commonData,
-      contentRaw: String(assetContent),
+      contentRaw: String(moduleResponseBodyAsBuffer),
       content,
     }
   }

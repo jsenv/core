@@ -60,8 +60,8 @@ export const createAssetBuilder = (
     loadUrl = () => null,
     emitAsset,
     connectTarget = () => {},
-    resolveTargetUrl = ({ referenceSpecifier }, target) =>
-      resolveUrl(referenceSpecifier, target.url),
+    resolveTargetUrl = (parentTarget, { referenceSpecifier }) =>
+      resolveUrl(referenceSpecifier, parentTarget.targetUrl),
   },
 ) => {
   const logger = createLogger({ logLevel })
@@ -69,8 +69,8 @@ export const createAssetBuilder = (
   const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
 
   const createReferenceForAssetEntry = async ({
-    entryUrl,
     entryContentType,
+    entryUrl,
     entryBuffer,
     entryBuildRelativeUrl,
   }) => {
@@ -80,13 +80,13 @@ export const createAssetBuilder = (
     // as the reference to this target file
     const callerLocation = getCallerLocation()
     const entryReference = createReference({
+      referenceExpectedContentType: entryContentType,
       referenceUrl: callerLocation.url,
       referenceLine: callerLocation.line,
       referenceColumn: callerLocation.column,
-      referenceExpectedContentType: entryContentType,
 
-      targetUrl: entryUrl,
       targetContentType: entryContentType,
+      targetUrl: entryUrl,
       targetBuffer: entryBuffer,
       targetIsEntry: true,
       // don't hash asset entry points
@@ -102,23 +102,23 @@ export const createAssetBuilder = (
   }
 
   const createReferenceForAsset = async ({
+    referenceExpectedContentType,
     referenceUrl,
     referenceColumn,
     referenceLine,
-    referenceExpectedContentType,
 
+    targetContentType,
     targetUrl,
-    targetContentType = referenceExpectedContentType,
     targetBuffer,
   }) => {
     const reference = createReference({
+      referenceExpectedContentType,
       referenceUrl,
       referenceColumn,
       referenceLine,
-      referenceExpectedContentType,
 
-      targetUrl,
       targetContentType,
+      targetUrl,
       targetBuffer,
     })
     logger.debug(formatReferenceFound(reference, { showReferenceSourceLocation }))
@@ -139,13 +139,13 @@ export const createAssetBuilder = (
 
   const targetMap = {}
   const createReference = ({
+    referenceExpectedContentType,
     referenceUrl,
     referenceColumn,
     referenceLine,
-    referenceExpectedContentType,
 
-    targetUrl,
     targetContentType,
+    targetUrl,
     targetBuffer,
     targetIsEntry,
     targetIsJsModule,
@@ -154,10 +154,10 @@ export const createAssetBuilder = (
     targetUrlVersioningDisabled,
   }) => {
     const reference = {
+      referenceExpectedContentType,
       referenceUrl,
       referenceColumn,
       referenceLine,
-      referenceExpectedContentType,
     }
 
     if (targetUrl in targetMap) {
@@ -167,8 +167,8 @@ export const createAssetBuilder = (
     }
 
     const target = createTarget({
-      targetUrl,
       targetContentType,
+      targetUrl,
       targetBuffer,
 
       targetIsEntry,
@@ -197,29 +197,30 @@ export const createAssetBuilder = (
   const getBuildRelativeUrlsToClean = () => buildRelativeUrlsToClean
 
   const createTarget = ({
-    targetUrl,
     targetContentType,
+    targetUrl,
     targetBuffer,
 
     targetIsEntry = false,
     targetIsJsModule = false,
     targetIsExternal = false,
     targetIsInline = false,
+
     targetFileNamePattern,
     targetUrlVersioningDisabled = false,
   }) => {
     const target = {
-      targetUrl,
       targetContentType,
+      targetUrl,
       targetBuffer,
       targetReferences: [],
-
-      targetUrlVersioningDisabled,
-      targetFileNamePattern,
 
       targetIsEntry,
       targetIsJsModule,
       targetIsInline,
+
+      targetUrlVersioningDisabled,
+      targetFileNamePattern,
 
       targetRelativeUrl: urlToRelativeUrl(targetUrl, projectDirectoryUrl),
       targetBufferAfterTransformation: undefined,
@@ -231,11 +232,11 @@ export const createAssetBuilder = (
         showReferenceSourceLocation(target.targetReferences[0]),
       )
 
-      const responseContentTypeHeader = response.headers["content-type"] || ""
+      const responseContentTypeHeader = response.headers["content-type"]
       target.targetContentType = responseContentTypeHeader
 
-      target.targetBuffer = Buffer.from(responseBodyAsArrayBuffer)
       const responseBodyAsArrayBuffer = await response.arrayBuffer()
+      target.targetBuffer = Buffer.from(responseBodyAsArrayBuffer)
     })
     if (targetBuffer !== undefined) {
       getBufferAvailablePromise.forceMemoization(Promise.resolve())
@@ -248,12 +249,14 @@ export const createAssetBuilder = (
       let previousJsDependency
       let parsingDone = false
       const notifyReferenceFound = ({
+        referenceExpectedContentType,
         referenceSpecifier,
         referenceLine,
         referenceColumn,
-        referenceExpectedContentType,
+
         targetBuffer,
         targetIsJsModule = false,
+        targetIsInline = false,
         targetUrlVersioningDisabled,
         targetFileNamePattern,
       }) => {
@@ -263,16 +266,12 @@ export const createAssetBuilder = (
           )
         }
 
-        let targetIsInline = typeof targetBuffer !== "undefined"
-        const resolveTargetReturnValue = resolveTargetUrl(
-          {
-            referenceSpecifier,
-            referenceExpectedContentType,
-            targetIsInline,
-            targetIsJsModule,
-          },
-          target,
-        )
+        const resolveTargetReturnValue = resolveTargetUrl(target, {
+          referenceExpectedContentType,
+          referenceSpecifier,
+          targetIsInline,
+          targetIsJsModule,
+        })
         let targetIsExternal = false
         let dependencyTargetUrl
         if (typeof resolveTargetReturnValue === "object") {

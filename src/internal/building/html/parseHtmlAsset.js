@@ -169,6 +169,7 @@ const regularScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, 
 
     targetContentType: "application/javascript",
     targetBuffer: Buffer.from(textNode.value),
+    targetIsInline: true,
   })
   return () => {
     const { sourceAfterTransformation } = jsReference.target
@@ -194,8 +195,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
     referenceSpecifier: srcAttribute.value,
     ...htmlNodeToReferenceLocation(script),
 
-    // it's not a type="module" js
-    targetIsJsModule: false,
+    targetIsJsModule: true,
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     if (format === "systemjs") {
@@ -233,9 +233,10 @@ const moduleScriptTextNodeVisitor = (script, { format, notifyReferenceFound }, t
     ),
     ...htmlNodeToReferenceLocation(script),
 
-    targetIsJsModule: true,
     targetContentType: "application/javascript",
     targetBuffer: textNode.value,
+    targetIsJsModule: true,
+    targetIsInline: true,
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     if (format === "systemjs") {
@@ -333,6 +334,7 @@ const importmapScriptTextNodeVisitor = (
 
     targetContentType: "application/importmap+json",
     targetBuffer: Buffer.from(textNode.value),
+    targetIsInline: true
   })
   return ({ transformImportmapTarget }) => {
     if (format === "systemjs") {
@@ -434,6 +436,7 @@ const styleTextNodeVisitor = (style, { notifyReferenceFound }, target, styles) =
 
     targetContentType: "text/css",
     targetBuffer: Buffer.from(textNode.value),
+    targetIsInline: true
   })
   return () => {
     const { sourceAfterTransformation } = inlineStyleReference.target
