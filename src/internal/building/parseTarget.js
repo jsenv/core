@@ -30,6 +30,10 @@ export const parseTarget = (
   },
 ) => {
   const { targetContentType } = target
+  if (!targetContentType) {
+    return null
+  }
+
   if (targetContentType === "text/html") {
     return parseHtmlAsset(target, notifiers, {
       minify,

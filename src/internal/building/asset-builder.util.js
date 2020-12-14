@@ -73,49 +73,57 @@ export const checkContentType = (reference, { logger, showReferenceSourceLocatio
     return
   }
 
-  logger.warn(formatContentTypeMismatchLog(reference, { showReferenceSourceLocation }))
+  logger.warn(
+    formatContentTypeMismatchLog(reference, {
+      showReferenceSourceLocation,
+    }),
+  )
 }
 
 const formatContentTypeMismatchLog = (reference, { showReferenceSourceLocation }) => {
-  return `A reference was expecting ${reference.contentType} but found ${
-    reference.target.content.type
-  } instead.
+  const { referenceExpectedContentType, target } = reference
+  const { targetContentType, targetUrl } = target
+
+  return `A reference was expecting ${referenceExpectedContentType} but found ${targetContentType} instead.
 --- reference ---
 ${showReferenceSourceLocation(reference)}
 --- target url ---
-${reference.target.url}`
+${targetUrl}`
 }
 
 export const formatExternalReferenceLog = (
   reference,
   { showReferenceSourceLocation, projectDirectoryUrl },
 ) => {
+  const { target } = reference
+  const { targetUrl } = target
   return `Found reference to an url outside project directory.
 ${showReferenceSourceLocation(reference)}
 --- target url ---
-${reference.target.url}
+${targetUrl}
 --- project directory url ---
 ${projectDirectoryUrl}`
 }
 
-export const formatReferenceFound = (reference, { showReferenceSourceLocation }) => {
+export const formatReferenceFound = (reference, referenceSourceLocation) => {
   const { target } = reference
+  const { targetIsInline, targetIsJsModule, targetRelativeUrl } = target
 
   let message
 
-  if (target.isInline && target.isJsModule) {
+  if (targetIsInline && targetIsJsModule) {
     message = `found inline js module.`
-  } else if (target.isInline) {
+  } else if (targetIsInline) {
     message = `found inline asset.`
-  } else if (target.isJsModule) {
-    message = `found js module reference to ${target.relativeUrl}.`
+  } else if (targetIsJsModule) {
+    message = `found js module reference to ${targetRelativeUrl}.`
   } else {
-    message = `found asset reference to ${target.relativeUrl}.`
+    message = `found asset reference to ${targetRelativeUrl}.`
   }
 
   message += `
-${showReferenceSourceLocation(reference)}
-`
+--- reference source ---
+${referenceSourceLocation}`
 
   return message
 }

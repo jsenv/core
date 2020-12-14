@@ -121,7 +121,7 @@ export const createAssetBuilder = (
       targetUrl,
       targetBuffer,
     })
-    logger.debug(formatReferenceFound(reference, { showReferenceSourceLocation }))
+    logger.debug(formatReferenceFound(reference, showReferenceSourceLocation(reference)))
     await reference.target.getRollupReferenceIdAvailablePromise()
     return reference
   }
@@ -186,7 +186,7 @@ export const createAssetBuilder = (
   const connectReferenceAndTarget = (reference, target) => {
     reference.target = target
     target.targetReferences.push(reference)
-    target.getContentAvailablePromise().then(() => {
+    target.getBufferAvailablePromise().then(() => {
       checkContentType(reference, { logger, showReferenceSourceLocation })
     })
   }
@@ -231,7 +231,6 @@ export const createAssetBuilder = (
         targetUrl,
         showReferenceSourceLocation(target.targetReferences[0]),
       )
-
       const responseContentTypeHeader = response.headers["content-type"]
       target.targetContentType = responseContentTypeHeader
 
@@ -351,9 +350,10 @@ export const createAssetBuilder = (
           )
         } else {
           logger.debug(
-            formatReferenceFound(dependencyReference, {
-              showReferenceSourceLocation,
-            }),
+            formatReferenceFound(
+              dependencyReference,
+              showReferenceSourceLocation(dependencyReference),
+            ),
           )
         }
         return dependencyReference
@@ -378,7 +378,7 @@ export const createAssetBuilder = (
           `${shortenUrl(
             targetUrl,
           )} dependencies collected -> ${dependencies.map((dependencyReference) =>
-            shortenUrl(dependencyReference.target.url),
+            shortenUrl(dependencyReference.target.targetUrl),
           )}`,
         )
       }
@@ -398,16 +398,16 @@ export const createAssetBuilder = (
         // l'url de l'asset est relative au fichier html source
         logger.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(targetUrl)}`)
         const rollupChunkReadyPromise = new Promise((resolve) => {
-          registerCallbackOnceRollupChunkIsReady(target.url, resolve)
+          registerCallbackOnceRollupChunkIsReady(target.targetUrl, resolve)
         })
         const {
           targetBufferAfterTransformation,
-          buildRelativeUrl,
-          fileName,
+          targetBuildRelativeUrl,
+          targetFileName,
         } = await rollupChunkReadyPromise
         target.targetBufferAfterTransformation = targetBufferAfterTransformation
-        target.targetBuildRelativeUrl = buildRelativeUrl
-        target.targetFileName = fileName
+        target.targetBuildRelativeUrl = targetBuildRelativeUrl
+        target.targetFileName = targetFileName
         return
       }
 
@@ -458,21 +458,21 @@ export const createAssetBuilder = (
       }
 
       let targetBufferAfterTransformation
-      let buildRelativeUrl
+      let targetBuildRelativeUrl
       if (typeof transformReturnValue === "string") {
         targetBufferAfterTransformation = transformReturnValue
       } else {
         targetBufferAfterTransformation = transformReturnValue.targetBufferAfterTransformation
-        if (transformReturnValue.buildRelativeUrl) {
-          buildRelativeUrl = transformReturnValue.buildRelativeUrl
+        if (transformReturnValue.targetBuildRelativeUrl) {
+          targetBuildRelativeUrl = transformReturnValue.targetBuildRelativeUrl
         }
       }
 
       target.targetBufferAfterTransformation = targetBufferAfterTransformation
-      if (buildRelativeUrl === undefined) {
-        buildRelativeUrl = computeBuildRelativeUrlForTarget(target)
+      if (targetBuildRelativeUrl === undefined) {
+        targetBuildRelativeUrl = computeBuildRelativeUrlForTarget(target)
       }
-      target.targetBuildRelativeUrl = buildRelativeUrl
+      target.targetBuildRelativeUrl = targetBuildRelativeUrl
 
       assetEmitters.forEach((callback) => {
         callback({
@@ -566,11 +566,11 @@ export const createAssetBuilder = (
       }
     }
 
-    if (referenceSource) {
+    if (referenceSource && typeof reference.referenceLine === "number") {
       return `${message}
 
 ${showSourceLocation(referenceSource, {
-  line: reference.refrenceLine,
+  line: reference.referenceLine,
   column: reference.referenceColumn,
 })}
 `

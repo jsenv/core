@@ -141,7 +141,7 @@ const regularScriptSrcVisitor = (script, { notifyReferenceFound }) => {
   }
 }
 
-const regularScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, scripts) => {
+const regularScriptTextNodeVisitor = (script, { notifyReferenceFound }, htmlTarget, scripts) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
   if (
     typeAttribute &&
@@ -163,7 +163,7 @@ const regularScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, 
     referenceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
-      `${urlToBasename(target.url)}.[id].js`,
+      `${urlToBasename(htmlTarget.targetUrl)}.[id].js`,
     ),
     ...htmlNodeToReferenceLocation(script),
 
@@ -191,7 +191,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
   }
 
   const remoteScriptReference = notifyReferenceFound({
-    referenceExpectedContentType: "text/javascript",
+    referenceExpectedContentType: "application/javascript",
     referenceSpecifier: srcAttribute.value,
     ...htmlNodeToReferenceLocation(script),
 
@@ -207,7 +207,12 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
   }
 }
 
-const moduleScriptTextNodeVisitor = (script, { format, notifyReferenceFound }, target, scripts) => {
+const moduleScriptTextNodeVisitor = (
+  script,
+  { format, notifyReferenceFound },
+  htmlTarget,
+  scripts,
+) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
   if (!typeAttribute) {
     return null
@@ -229,7 +234,7 @@ const moduleScriptTextNodeVisitor = (script, { format, notifyReferenceFound }, t
     referenceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
-      `${urlToBasename(target.url)}.[id].js`,
+      `${urlToBasename(htmlTarget.targetUrl)}.[id].js`,
     ),
     ...htmlNodeToReferenceLocation(script),
 
@@ -304,7 +309,7 @@ const importmapScriptSrcVisitor = (script, { format, notifyReferenceFound }) => 
 const importmapScriptTextNodeVisitor = (
   script,
   { format, notifyReferenceFound },
-  target,
+  htmlTarget,
   scripts,
 ) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
@@ -328,7 +333,7 @@ const importmapScriptTextNodeVisitor = (
     referenceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
-      `${urlToBasename(target.url)}.[id].importmap`,
+      `${urlToBasename(htmlTarget.targetUrl)}.[id].importmap`,
     ),
     ...htmlNodeToReferenceLocation(script),
 
@@ -419,7 +424,7 @@ const linkToContentType = (link) => {
   return undefined
 }
 
-const styleTextNodeVisitor = (style, { notifyReferenceFound }, target, styles) => {
+const styleTextNodeVisitor = (style, { notifyReferenceFound }, htmlTarget, styles) => {
   const textNode = getHtmlNodeTextNode(style)
   if (!textNode) {
     return null
@@ -430,7 +435,7 @@ const styleTextNodeVisitor = (style, { notifyReferenceFound }, target, styles) =
     referenceSpecifier: getUniqueNameForInlineHtmlNode(
       style,
       styles,
-      `${urlToBasename(target.url)}.[id].css`,
+      `${urlToBasename(htmlTarget.targetUrl)}.[id].css`,
     ),
     ...htmlNodeToReferenceLocation(style),
 

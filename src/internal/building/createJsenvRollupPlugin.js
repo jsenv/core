@@ -954,6 +954,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
     }
 
     const moduleResponseBodyAsBuffer = Buffer.from(await moduleResponse.arrayBuffer())
+    const targetContentType = moduleResponse.headers["content-type"]
     const assetReferenceForImport = await assetBuilder.createReferenceForAsset({
       // Reference to this target is corresponds to a static or dynamic import.
       // found in a given file (importerUrl).
@@ -963,8 +964,8 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       referenceLine: undefined,
       referenceColumn: undefined,
 
+      targetContentType,
       targetUrl: moduleResponse.url,
-      targetContentType: moduleResponse.headers["content-type"],
       targetBuffer: moduleResponseBodyAsBuffer,
     })
 
