@@ -81,9 +81,20 @@ const imgRemapBuildRelativeUrl = getBuildRelativeUrl("img-remap.png")
     mainRelativeUrl: `./${mainRelativeUrl}`,
     // debug: true,
   })
-  const actual = namespace
+  const actual = {
+    urlFromStaticImport: namespace.urlFromStaticImport,
+    urlFromDynamicImport: namespace.urlFromDynamicImport,
+    urlFromImportMetaNotation: namespace.urlFromImportMetaNotation,
+  }
   const expected = {
-    default: resolveUrl(`dist/systemjs/${imgRemapBuildRelativeUrl}`, serverOrigin),
+    urlFromStaticImport: resolveUrl(`dist/systemjs/${imgRemapBuildRelativeUrl}`, serverOrigin),
+    urlFromDynamicImport: {
+      default: resolveUrl(`dist/systemjs/${imgRemapBuildRelativeUrl}`, serverOrigin),
+    },
+    urlFromImportMetaNotation: resolveUrl(
+      `dist/systemjs/${imgRemapBuildRelativeUrl}`,
+      serverOrigin,
+    ),
   }
   assert({ actual, expected })
 }
