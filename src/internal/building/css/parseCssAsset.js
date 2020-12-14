@@ -74,7 +74,7 @@ export const parseCssAsset = async (
         cssMinification: minify,
         cssMinificationOptions: minifyCssOptions,
         sourcemapOptions: sourcemapReference
-          ? { prev: sourcemapReference.target.sourceAfterTransformation }
+          ? { prev: sourcemapReference.target.targetBufferAfterTransformation }
           : {},
       },
     )
@@ -111,7 +111,7 @@ export const parseCssAsset = async (
 
       if (sourcemapReference) {
         sourcemapReference.target.updateOnceReady({
-          sourceAfterTransformation: mapSource,
+          targetBufferAfterTransformation: mapSource,
           buildRelativeUrl,
         })
       } else {

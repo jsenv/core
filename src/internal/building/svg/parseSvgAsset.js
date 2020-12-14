@@ -20,11 +20,11 @@ export const parseSvgAsset = async (svgTarget, notifiers, { minify, minifyHtmlOp
     })
     const svgAfterTransformation = stringifyHtmlAst(svgAst)
     // could also benefit of minification https://github.com/svg/svgo
-    const sourceAfterTransformation = minify
+    const targetBufferAfterTransformation = minify
       ? minifyHtml(svgAfterTransformation, minifyHtmlOptions)
       : svgAfterTransformation
 
-    return { sourceAfterTransformation }
+    return { targetBufferAfterTransformation }
   }
 }
 

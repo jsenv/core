@@ -401,11 +401,11 @@ export const createAssetBuilder = (
           registerCallbackOnceRollupChunkIsReady(target.url, resolve)
         })
         const {
-          sourceAfterTransformation,
+          targetBufferAfterTransformation,
           buildRelativeUrl,
           fileName,
         } = await rollupChunkReadyPromise
-        target.targetBufferAfterTransformation = sourceAfterTransformation
+        target.targetBufferAfterTransformation = targetBufferAfterTransformation
         target.targetBuildRelativeUrl = buildRelativeUrl
         target.targetFileName = fileName
         return
@@ -439,8 +439,8 @@ export const createAssetBuilder = (
       const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(target)
       const assetEmitters = []
       const transformReturnValue = await transform({
-        precomputeBuildRelativeUrl: (sourceAfterTransformation) =>
-          precomputeBuildRelativeUrlForTarget(target, sourceAfterTransformation),
+        precomputeBuildRelativeUrl: (targetBufferAfterTransformation) =>
+          precomputeBuildRelativeUrlForTarget(target, targetBufferAfterTransformation),
         registerAssetEmitter: (callback) => {
           assetEmitters.push(callback)
         },
@@ -457,18 +457,18 @@ export const createAssetBuilder = (
         throw new Error(`transform must return an object {code, map}`)
       }
 
-      let sourceAfterTransformation
+      let targetBufferAfterTransformation
       let buildRelativeUrl
       if (typeof transformReturnValue === "string") {
-        sourceAfterTransformation = transformReturnValue
+        targetBufferAfterTransformation = transformReturnValue
       } else {
-        sourceAfterTransformation = transformReturnValue.sourceAfterTransformation
+        targetBufferAfterTransformation = transformReturnValue.targetBufferAfterTransformation
         if (transformReturnValue.buildRelativeUrl) {
           buildRelativeUrl = transformReturnValue.buildRelativeUrl
         }
       }
 
-      target.targetBufferAfterTransformation = sourceAfterTransformation
+      target.targetBufferAfterTransformation = targetBufferAfterTransformation
       if (buildRelativeUrl === undefined) {
         buildRelativeUrl = computeBuildRelativeUrlForTarget(target)
       }
@@ -494,13 +494,13 @@ export const createAssetBuilder = (
     // meant to be used only when asset is modified
     // after being emitted.
     // (sourcemap and importmap)
-    const updateOnceReady = ({ sourceAfterTransformation, buildRelativeUrl }) => {
+    const updateOnceReady = ({ targetBufferAfterTransformation, buildRelativeUrl }) => {
       // the source after transform has changed
       if (
-        sourceAfterTransformation !== undefined &&
-        sourceAfterTransformation !== target.targetBufferAfterTransformation
+        targetBufferAfterTransformation !== undefined &&
+        targetBufferAfterTransformation !== target.targetBufferAfterTransformation
       ) {
-        target.targetBufferAfterTransformation = sourceAfterTransformation
+        target.targetBufferAfterTransformation = targetBufferAfterTransformation
         if (buildRelativeUrl === undefined) {
           buildRelativeUrl = computeBuildRelativeUrlForTarget(target)
         }

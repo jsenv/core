@@ -1,11 +1,11 @@
 import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/util"
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
-export const getTargetAsBase64Url = ({ sourceAfterTransformation, content }) => {
+export const getTargetAsBase64Url = ({ targetBufferAfterTransformation, targetContentType }) => {
   return stringifyDataUrl({
-    data: sourceAfterTransformation,
+    data: targetBufferAfterTransformation,
     base64Flag: true,
-    mediaType: content.type,
+    mediaType: targetContentType,
   })
 }
 

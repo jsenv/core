@@ -101,11 +101,11 @@ export const parseHtmlAsset = async (
     })
 
     const htmlAfterTransformation = htmlAstToHtmlString(htmlAst)
-    const sourceAfterTransformation = minify
+    const targetBufferAfterTransformation = minify
       ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions)
       : htmlAfterTransformation
     return {
-      sourceAfterTransformation,
+      targetBufferAfterTransformation,
     }
   }
 }
@@ -132,8 +132,8 @@ const regularScriptSrcVisitor = (script, { notifyReferenceFound }) => {
     const { isInline } = remoteScriptReference.target
     if (isInline) {
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { sourceAfterTransformation } = remoteScriptReference.target
-      setHtmlNodeText(script, sourceAfterTransformation)
+      const { targetBufferAfterTransformation } = remoteScriptReference.target
+      setHtmlNodeText(script, targetBufferAfterTransformation)
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
       srcAttribute.value = urlRelativeToImporter
@@ -172,8 +172,8 @@ const regularScriptTextNodeVisitor = (script, { notifyReferenceFound }, target, 
     targetIsInline: true,
   })
   return () => {
-    const { sourceAfterTransformation } = jsReference.target
-    textNode.value = sourceAfterTransformation
+    const { targetBufferAfterTransformation } = jsReference.target
+    textNode.value = targetBufferAfterTransformation
   }
 }
 
@@ -292,8 +292,8 @@ const importmapScriptSrcVisitor = (script, { format, notifyReferenceFound }) => 
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { sourceAfterTransformation } = importmapReference.target
-      setHtmlNodeText(script, sourceAfterTransformation)
+      const { targetBufferAfterTransformation } = importmapReference.target
+      setHtmlNodeText(script, targetBufferAfterTransformation)
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(importmapReference)
       srcAttribute.value = urlRelativeToImporter
@@ -334,7 +334,7 @@ const importmapScriptTextNodeVisitor = (
 
     targetContentType: "application/importmap+json",
     targetBuffer: Buffer.from(textNode.value),
-    targetIsInline: true
+    targetIsInline: true,
   })
   return ({ transformImportmapTarget }) => {
     if (format === "systemjs") {
@@ -342,8 +342,8 @@ const importmapScriptTextNodeVisitor = (
     }
     transformImportmapTarget(importmapReference.target)
 
-    const { sourceAfterTransformation } = importmapReference.target
-    textNode.value = sourceAfterTransformation
+    const { targetBufferAfterTransformation } = importmapReference.target
+    textNode.value = targetBufferAfterTransformation
   }
 }
 
@@ -369,8 +369,8 @@ const linkStylesheetHrefVisitor = (link, { notifyReferenceFound }) => {
     const { isInline } = cssReference.target
 
     if (isInline) {
-      const { sourceAfterTransformation } = cssReference.target
-      replaceHtmlNode(link, `<style>${sourceAfterTransformation}</style>`)
+      const { targetBufferAfterTransformation } = cssReference.target
+      replaceHtmlNode(link, `<style>${targetBufferAfterTransformation}</style>`)
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(cssReference)
       hrefAttribute.value = urlRelativeToImporter
@@ -436,11 +436,11 @@ const styleTextNodeVisitor = (style, { notifyReferenceFound }, target, styles) =
 
     targetContentType: "text/css",
     targetBuffer: Buffer.from(textNode.value),
-    targetIsInline: true
+    targetIsInline: true,
   })
   return () => {
-    const { sourceAfterTransformation } = inlineStyleReference.target
-    textNode.value = sourceAfterTransformation
+    const { targetBufferAfterTransformation } = inlineStyleReference.target
+    textNode.value = targetBufferAfterTransformation
   }
 }
 

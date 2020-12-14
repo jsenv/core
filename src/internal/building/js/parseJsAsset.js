@@ -30,7 +30,7 @@ export const parseJsAsset = async (
   return async ({ precomputeBuildRelativeUrl, registerAssetEmitter }) => {
     let map
     if (sourcemapReference) {
-      map = JSON.parse(sourcemapReference.target.sourceAfterTransformation)
+      map = JSON.parse(sourcemapReference.target.targetBufferAfterTransformation)
     }
 
     let jsSourceAfterTransformation = jsString
@@ -83,7 +83,7 @@ export const parseJsAsset = async (
           // and emit a new one instead
           // when finding this asset in the rollup build we'll have to remove it
           sourcemapReference.target.updateOnceReady({
-            sourceAfterTransformation: mapSource,
+            targetBufferAfterTransformation: mapSource,
             buildRelativeUrl,
           })
         } else {
