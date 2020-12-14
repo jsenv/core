@@ -33,8 +33,8 @@ import { parseTarget } from "./parseTarget.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
-import { createCompositeAssetHandler, assetReferenceToCodeForRollup } from "./compositeAsset.js"
-import { computeBuildRelativeUrl } from "./computeBuildRelativeUrl.js"
+import { createAssetBuilder, referenceToCodeForRollup } from "./asset-builder.js"
+import { computeBuildRelativeUrl } from "./url-versioning.js"
 // import { detectImportMetaUrlReferences } from "./detectImportMetaUrlReferences.js"
 
 import { minifyJs } from "./js/minifyJs.js"
@@ -163,7 +163,7 @@ export const createJsenvRollupPlugin = async ({
     return importMap
   }
 
-  let compositeAssetHandler
+  let assetBuilder
   let emitFile = () => {}
   let fetchImportmap = fetchImportmapFromParameter
   let importMap
@@ -292,7 +292,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       // we emit an empty chunk, discards rollup warning about it and we manually remove
       // this chunk in buildProject hook
       let atleastOneChunkEmitted = false
-      compositeAssetHandler = createCompositeAssetHandler(
+      assetBuilder = createAssetBuilder(
         {
           parse: async (target, notifiers) => {
             return parseTarget(target, notifiers, {
@@ -355,7 +355,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
                   // get basename url
                   resolveUrl(urlToBasename(target.url), target.url),
                   // get importer url
-                  urlToCompiledUrl(target.importers[0].url),
+                  urlToCompiledUrl(target.targetReferences[0].referenceUrl),
                 )
                 jsModulesInHtml[urlToUrlForRollup(id)] = true
                 const rollupReferenceId = emitChunk({
@@ -407,7 +407,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
           }) => {
             if (entryContentType === "text/html") {
               const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
-              await compositeAssetHandler.createReferenceForAssetEntry(entryUrl, {
+              await assetBuilder.createReferenceForAssetEntry(entryUrl, {
                 entryContentType,
                 entryProjectRelativeUrl,
                 entryBuildRelativeUrl,
@@ -423,7 +423,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
               })
             } else {
               const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
-              await compositeAssetHandler.createReferenceForAssetEntry(entryUrl, {
+              await assetBuilder.createReferenceForAssetEntry(entryUrl, {
                 entryContentType,
                 entryProjectRelativeUrl,
                 entryBuildRelativeUrl,
@@ -648,7 +648,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
-      const rollupChunkReadyCallbackMap = compositeAssetHandler.getRollupChunkReadyCallbackMap()
+      const rollupChunkReadyCallbackMap = assetBuilder.getRollupChunkReadyCallbackMap()
       Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
         const buildRelativeUrl = Object.keys(jsBuild).find((buildRelativeUrlCandidate) => {
           const file = jsBuild[buildRelativeUrlCandidate]
@@ -670,10 +670,10 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
         })
       })
       // wait html files to be emitted
-      await compositeAssetHandler.getAllAssetEntryEmittedPromise()
+      await assetBuilder.getAllAssetEntryEmittedPromise()
 
       const assetBuild = {}
-      const buildRelativeUrlsToClean = compositeAssetHandler.getBuildRelativeUrlsToClean()
+      const buildRelativeUrlsToClean = assetBuilder.getBuildRelativeUrlsToClean()
       Object.keys(rollupResult).forEach((fileName) => {
         const file = rollupResult[fileName]
         if (file.type !== "asset") {
@@ -719,7 +719,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
             buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
           }
         } else {
-          const assetUrl = compositeAssetHandler.findAssetUrlByBuildRelativeUrl(buildRelativeUrl)
+          const assetUrl = assetBuilder.findAssetUrlByBuildRelativeUrl(buildRelativeUrl)
           if (assetUrl) {
             const originalProjectUrl = urlToOriginalProjectUrl(assetUrl)
             const originalProjectRelativeUrl = urlToRelativeUrl(
@@ -944,23 +944,20 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
     }
 
     const assetContent = Buffer.from(await moduleResponse.arrayBuffer())
-    const assetReferenceForImport = await compositeAssetHandler.createReferenceForAsset(
-      moduleResponse.url,
-      {
-        importerUrl,
-        // Reference to this target is corresponds to a static or dynamic import.
-        // found in the code. We don't really know the line and colum
-        // because rollup does not tell us that information
-        line: undefined,
-        column: undefined,
+    const assetReferenceForImport = await assetBuilder.createReferenceForAsset(moduleResponse.url, {
+      importerUrl,
+      // Reference to this target is corresponds to a static or dynamic import.
+      // found in the code. We don't really know the line and colum
+      // because rollup does not tell us that information
+      line: undefined,
+      column: undefined,
 
-        contentType: moduleResponse.headers["content-type"],
-        content: assetContent,
-      },
-    )
+      contentType: moduleResponse.headers["content-type"],
+      content: assetContent,
+    })
 
     markBuildRelativeUrlAsUsedByJs(assetReferenceForImport.target.buildRelativeUrl)
-    const content = `export default ${assetReferenceToCodeForRollup(assetReferenceForImport)}`
+    const content = `export default ${referenceToCodeForRollup(assetReferenceForImport)}`
 
     return {
       ...commonData,

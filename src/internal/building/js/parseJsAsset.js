@@ -11,19 +11,19 @@ export const parseJsAsset = async (
   { notifyReferenceFound },
   { minify, minifyJsOptions },
 ) => {
-  const jsUrl = jsTarget.url
-  const jsString = String(jsTarget.content.value)
+  const jsUrl = jsTarget.targetUrl
+  const jsString = String(jsTarget.targetBuffer)
   const jsSourcemapUrl = getJavaScriptSourceMappingUrl(jsString)
   let sourcemapReference
 
   if (jsSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
-      specifier: jsSourcemapUrl,
-      contentType: "application/json",
+      referenceExpectedContentType: "application/json",
+      referenceSpecifier: jsSourcemapUrl,
       // we don't really know the line or column
       // but let's asusme it the last line and first column
-      line: jsString.split(/\r?\n/).length - 1,
-      column: 0,
+      referenceLine: jsString.split(/\r?\n/).length - 1,
+      referenceColumn: 0,
     })
   }
 
@@ -36,9 +36,9 @@ export const parseJsAsset = async (
     let jsSourceAfterTransformation = jsString
 
     if (minify) {
-      const jsUrlRelativeToImporter = jsTarget.isInline
-        ? urlToRelativeUrl(jsTarget.url, jsTarget.importers[0].url)
-        : jsTarget.relativeUrl
+      const jsUrlRelativeToImporter = jsTarget.targetIsInline
+        ? urlToRelativeUrl(jsTarget.targetUrl, jsTarget.targetReferences[0].referenceUrl)
+        : jsTarget.targetRelativeUrl
       const result = await minifyJs(jsString, jsUrlRelativeToImporter, {
         sourceMap: {
           ...(map ? { content: JSON.stringify(map) } : {}),
@@ -63,7 +63,7 @@ export const parseJsAsset = async (
       )
 
       registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
-        const jsBuildUrl = resolveUrl(jsTarget.buildRelativeUrl, buildDirectoryUrl)
+        const jsBuildUrl = resolveUrl(jsTarget.targetBuildRelativeUrl, buildDirectoryUrl)
         const mapBuildUrl = resolveUrl(jsSourcemapFilename, jsBuildUrl)
         map.file = urlToFilename(jsBuildUrl)
         if (map.sources) {
@@ -95,8 +95,8 @@ export const parseJsAsset = async (
       })
 
       return {
-        sourceAfterTransformation: jsSourceAfterTransformation,
-        buildRelativeUrl: jsBuildRelativeUrl,
+        targetBufferAfterTransformation: jsSourceAfterTransformation,
+        targetBuildRelativeUrl: jsBuildRelativeUrl,
       }
     }
 

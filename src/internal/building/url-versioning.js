@@ -10,15 +10,15 @@ export const computeBuildRelativeUrl = (
   const buildRelativeUrl = renderNamePattern(typeof pattern === "function" ? pattern() : pattern, {
     dirname: () => urlToParentUrl(fileUrl),
     name: () => urlToBasename(fileUrl),
-    hash: () => generateAssetHash(fileContent),
+    hash: () => generateHash(fileContent),
     extname: () => urlToExtension(fileUrl),
   })
   return buildRelativeUrl
 }
 
 // https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
-export const generateAssetHash = (assetSource) => {
+export const generateHash = (stringOrBuffer) => {
   const hash = createHash("sha256")
-  hash.update(assetSource)
+  hash.update(stringOrBuffer)
   return hash.digest("hex").slice(0, 8)
 }

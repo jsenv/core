@@ -4,44 +4,43 @@ import {
   getCssSourceMappingUrl,
   setCssSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { getTargetAsBase64Url } from "../asset-builder.util.js"
 import { parseCssUrls } from "./parseCssUrls.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
-import { getTargetAsBase64Url } from "../getTargetAsBase64Url.js"
 
 export const parseCssAsset = async (
   cssTarget,
   { notifyReferenceFound },
   { minify, minifyCssOptions },
 ) => {
-  const cssUrl = cssTarget.url
-  const cssString = String(cssTarget.content.value)
+  const cssString = String(cssTarget.targetBuffer)
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
   let sourcemapReference
   if (cssSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
-      specifier: cssSourcemapUrl,
-      contentType: "application/json",
+      referenceExpectedContentType: "application/json",
+      referenceSpecifier: cssSourcemapUrl,
       // we don't really know the line or column
       // but let's asusme it the last line and first column
-      line: cssString.split(/\r?\n/).length - 1,
-      column: 0,
+      referenceLine: cssString.split(/\r?\n/).length - 1,
+      referenceColumn: 0,
     })
   }
 
-  const { atImports, urlDeclarations } = await parseCssUrls(cssString, cssUrl)
+  const { atImports, urlDeclarations } = await parseCssUrls(cssString, cssTarget.targetUrl)
 
   const urlNodeReferenceMapping = new Map()
   atImports.forEach((atImport) => {
     const importReference = notifyReferenceFound({
-      specifier: atImport.specifier,
-      ...cssNodeToSourceLocation(atImport.urlDeclarationNode),
+      referenceSpecifier: atImport.specifier,
+      ...cssNodeToReferenceLocation(atImport.urlDeclarationNode),
     })
     urlNodeReferenceMapping.set(atImport.urlNode, importReference)
   })
   urlDeclarations.forEach((urlDeclaration) => {
     const urlReference = notifyReferenceFound({
-      specifier: urlDeclaration.specifier,
-      ...cssNodeToSourceLocation(urlDeclaration.urlDeclarationNode),
+      referenceSpecifier: urlDeclaration.specifier,
+      ...cssNodeToReferenceLocation(urlDeclaration.urlDeclarationNode),
     })
     urlNodeReferenceMapping.set(urlDeclaration.urlNode, urlReference)
   })
@@ -53,7 +52,7 @@ export const parseCssAsset = async (
   }) => {
     const cssReplaceResult = await replaceCssUrls(
       cssString,
-      cssUrl,
+      cssTarget.targetUrl,
       ({ urlNode }) => {
         const nodeCandidates = Array.from(urlNodeReferenceMapping.keys())
         const urlNodeFound = nodeCandidates.find((urlNodeCandidate) =>
@@ -65,8 +64,8 @@ export const parseCssAsset = async (
 
         // url node nous dit quel réfrence y correspond
         const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
-        const { isInline } = urlNodeReference.target
-        if (isInline) {
+        const { targetIsInline } = urlNodeReference.target
+        if (targetIsInline) {
           return getTargetAsBase64Url(urlNodeReference.target)
         }
         return getReferenceUrlRelativeToImporter(urlNodeReference)
@@ -96,12 +95,12 @@ export const parseCssAsset = async (
     const cssSourceAfterTransformation = setCssSourceMappingUrl(code, cssSourcemapFilename)
 
     registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
-      const cssBuildUrl = resolveUrl(cssTarget.buildRelativeUrl, buildDirectoryUrl)
+      const cssBuildUrl = resolveUrl(cssTarget.targetBuildRelativeUrl, buildDirectoryUrl)
       const mapBuildUrl = resolveUrl(cssSourcemapFilename, cssBuildUrl)
       map.file = urlToFilename(cssBuildUrl)
       if (map.sources) {
         map.sources = map.sources.map((source) => {
-          const sourceUrl = resolveUrl(source, cssTarget.url)
+          const sourceUrl = resolveUrl(source, cssTarget.targetUrl)
           const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBuildUrl)
           return sourceUrlRelativeToSourceMap
         })
@@ -124,15 +123,18 @@ export const parseCssAsset = async (
     })
 
     return {
-      sourceAfterTransformation: cssSourceAfterTransformation,
-      buildRelativeUrl: cssBuildRelativeUrl,
+      targetBufferAfterTransformation: cssSourceAfterTransformation,
+      targetBuildRelativeUrl: cssBuildRelativeUrl,
     }
   }
 }
 
-const cssNodeToSourceLocation = (node) => {
+const cssNodeToReferenceLocation = (node) => {
   const { line, column } = node.source.start
-  return { line, column }
+  return {
+    referenceLine: line,
+    referenceColumn: column,
+  }
 }
 
 const isSameCssDocumentUrlNode = (firstUrlNode, secondUrlNode) => {

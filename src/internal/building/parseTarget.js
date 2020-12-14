@@ -29,8 +29,8 @@ export const parseTarget = (
     minifyJsOptions,
   },
 ) => {
-  const contentType = target.content.type
-  if (contentType === "text/html") {
+  const { targetContentType } = target
+  if (targetContentType === "text/html") {
     return parseHtmlAsset(target, notifiers, {
       minify,
       minifyHtmlOptions,
@@ -98,30 +98,30 @@ export const parseTarget = (
     })
   }
 
-  if (contentType === "text/css") {
+  if (targetContentType === "text/css") {
     return parseCssAsset(target, notifiers, { minify, minifyCssOptions })
   }
 
-  if (contentType === "application/importmap+json") {
+  if (targetContentType === "application/importmap+json") {
     return parseImportmapAsset(target, notifiers, { minify })
   }
 
   if (
-    contentType === "application/manifest+json" ||
-    target.importers[0].contentType === "application/manifest+json"
+    targetContentType === "application/manifest+json" ||
+    target.targetReferences[0].referenceExpectedContentType === "application/manifest+json"
   ) {
     return parseWebmanifest(target, notifiers, { minify })
   }
 
-  if (contentType === "text/javascript" || contentType === "application/javascript") {
+  if (targetContentType === "text/javascript" || targetContentType === "application/javascript") {
     return parseJsAsset(target, notifiers, { minify, minifyJsOptions })
   }
 
-  if (contentType === "image/svg+xml") {
+  if (targetContentType === "image/svg+xml") {
     return parseSvgAsset(target, notifiers, { minify, minifyHtmlOptions })
   }
 
-  if (contentType === "application/json" || contentType.endsWith("+json")) {
+  if (targetContentType === "application/json" || targetContentType.endsWith("+json")) {
     return parseJsonAsset(target, notifiers, { minify })
   }
 
@@ -129,12 +129,12 @@ export const parseTarget = (
 }
 
 const injectImportedFilesIntoImportMapTarget = (importmapTarget, importMapToInject, minify) => {
-  const { sourceAfterTransformation } = importmapTarget
-  const importMapOriginal = JSON.parse(sourceAfterTransformation)
+  const { targetBufferAfterTransformation } = importmapTarget
+  const importMapOriginal = JSON.parse(targetBufferAfterTransformation)
 
   const importMap = composeTwoImportMaps(importMapOriginal, importMapToInject)
   importmapTarget.updateOnceReady({
-    sourceAfterTransformation: minify
+    targetBufferAfterTransformation: minify
       ? JSON.stringify(importMap)
       : JSON.stringify(importMap, null, "  "),
   })

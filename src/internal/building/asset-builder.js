@@ -31,21 +31,25 @@ duplicate them when imported more than once let's just not do it.
 */
 
 import { urlToContentType } from "@jsenv/server"
-import {
-  resolveUrl,
-  urlToRelativeUrl,
-  urlIsInsideOf,
-  isFileSystemPath,
-  fileSystemPathToUrl,
-  urlToParentUrl,
-} from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlIsInsideOf, urlToParentUrl } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
 import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
-import { computeBuildRelativeUrl } from "./computeBuildRelativeUrl.js"
 import { showSourceLocation } from "./showSourceLocation.js"
-import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
 
-export const createCompositeAssetHandler = (
+import {
+  getTargetAsBase64Url,
+  memoize,
+  getCallerLocation,
+  formatReferenceFound,
+  formatExternalReferenceLog,
+  checkContentType,
+} from "./asset-builder.util.js"
+import {
+  computeBuildRelativeUrlForTarget,
+  precomputeBuildRelativeUrlForTarget,
+} from "./asset-url-versioning.js"
+
+export const createAssetBuilder = (
   { fetch, parse },
   {
     logLevel,
@@ -56,42 +60,38 @@ export const createCompositeAssetHandler = (
     loadUrl = () => null,
     emitAsset,
     connectTarget = () => {},
-    resolveTargetUrl = ({ specifier }, target) => resolveUrl(specifier, target.url),
+    resolveTargetUrl = ({ referenceSpecifier }, target) =>
+      resolveUrl(referenceSpecifier, target.url),
   },
 ) => {
   const logger = createLogger({ logLevel })
 
   const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
 
-  const createReferenceForAssetEntry = async (
+  const createReferenceForAssetEntry = async ({
     entryUrl,
-    { entryContentType, entryBuildRelativeUrl, entrySource },
-  ) => {
+    entryContentType,
+    entryBuffer,
+    entryBuildRelativeUrl,
+  }) => {
     // we don't really know where this reference to that asset file comes from
     // we could almost say it's from the script calling this function
     // so we could analyse stack trace here to put this function caller
     // as the reference to this target file
     const callerLocation = getCallerLocation()
     const entryReference = createReference({
-      referenceInfo: {
-        ...callerLocation,
-        contentType: entryContentType,
-      },
-      targetInfo: {
-        isEntry: true,
-        disableHash: true,
-        // don't hash asset entry points
-        fileNamePattern: entryBuildRelativeUrl,
-        url: entryUrl,
-        ...(entrySource
-          ? {
-              content: {
-                type: entryContentType,
-                value: entrySource,
-              },
-            }
-          : {}),
-      },
+      referenceUrl: callerLocation.url,
+      referenceLine: callerLocation.line,
+      referenceColumn: callerLocation.column,
+      referenceExpectedContentType: entryContentType,
+
+      targetUrl: entryUrl,
+      targetContentType: entryContentType,
+      targetBuffer: entryBuffer,
+      targetIsEntry: true,
+      // don't hash asset entry points
+      targetUrlVersioningDisabled: true,
+      targetFileNamePattern: entryBuildRelativeUrl,
     })
 
     await entryReference.target.getDependenciesAvailablePromise()
@@ -101,34 +101,33 @@ export const createCompositeAssetHandler = (
     entryReference.target.getReadyPromise()
   }
 
-  const createReferenceForAsset = async (url, { contentType, importerUrl, source }) => {
-    const reference = createReference({
-      referenceInfo: {
-        url: importerUrl,
-        column: undefined,
-        line: undefined,
-        contentType,
-      },
-      targetInfo: {
-        url,
-        ...(source
-          ? {
-              content: {
-                type: contentType,
-                value: source,
-              },
-            }
-          : {}),
-      },
-    })
+  const createReferenceForAsset = async ({
+    referenceUrl,
+    referenceColumn,
+    referenceLine,
+    referenceExpectedContentType,
 
+    targetUrl,
+    targetContentType = referenceExpectedContentType,
+    targetBuffer,
+  }) => {
+    const reference = createReference({
+      referenceUrl,
+      referenceColumn,
+      referenceLine,
+      referenceExpectedContentType,
+
+      targetUrl,
+      targetContentType,
+      targetBuffer,
+    })
     logger.debug(formatReferenceFound(reference, { showReferenceSourceLocation }))
     await reference.target.getRollupReferenceIdAvailablePromise()
     return reference
   }
 
   const getAllAssetEntryEmittedPromise = async () => {
-    const urlToWait = Object.keys(targetMap).filter((url) => targetMap[url].isEntry)
+    const urlToWait = Object.keys(targetMap).filter((url) => targetMap[url].targetIsEntry)
     return Promise.all(
       urlToWait.map(async (url) => {
         const target = targetMap[url]
@@ -139,18 +138,46 @@ export const createCompositeAssetHandler = (
   }
 
   const targetMap = {}
-  const createReference = ({ referenceInfo, targetInfo }) => {
-    const reference = { ...referenceInfo }
+  const createReference = ({
+    referenceUrl,
+    referenceColumn,
+    referenceLine,
+    referenceExpectedContentType,
 
-    const { url } = target
-    if (url in targetMap) {
-      const target = targetMap[url]
+    targetUrl,
+    targetContentType,
+    targetBuffer,
+    targetIsEntry,
+    targetIsJsModule,
+    targetIsInline,
+    targetFileNamePattern,
+    targetUrlVersioningDisabled,
+  }) => {
+    const reference = {
+      referenceUrl,
+      referenceColumn,
+      referenceLine,
+      referenceExpectedContentType,
+    }
+
+    if (targetUrl in targetMap) {
+      const target = targetMap[targetUrl]
       connectReferenceAndTarget(reference, target)
       return reference
     }
 
-    const target = createTarget(targetInfo)
-    targetMap[url] = target
+    const target = createTarget({
+      targetUrl,
+      targetContentType,
+      targetBuffer,
+
+      targetIsEntry,
+      targetIsJsModule,
+      targetIsInline,
+      targetFileNamePattern,
+      targetUrlVersioningDisabled,
+    })
+    targetMap[targetUrl] = target
     connectReferenceAndTarget(reference, target)
     connectTarget(target)
     return reference
@@ -158,21 +185,9 @@ export const createCompositeAssetHandler = (
 
   const connectReferenceAndTarget = (reference, target) => {
     reference.target = target
-    target.importers.push(reference)
+    target.targetReferences.push(reference)
     target.getContentAvailablePromise().then(() => {
-      const expectedContentType = reference.contentType
-      const actualContentType = target.content.type
-      if (!compareContentType(expectedContentType, actualContentType)) {
-        // sourcemap content type is fine if we got octet-stream too
-        if (
-          expectedContentType === "application/json" &&
-          actualContentType === "application/octet-stream" &&
-          target.url.endsWith(".map")
-        ) {
-          return
-        }
-        logger.warn(formatContentTypeMismatchLog(reference, { showReferenceSourceLocation }))
-      }
+      checkContentType(reference, { logger, showReferenceSourceLocation })
     })
   }
 
@@ -182,72 +197,87 @@ export const createCompositeAssetHandler = (
   const getBuildRelativeUrlsToClean = () => buildRelativeUrlsToClean
 
   const createTarget = ({
-    url,
-    isEntry = false,
-    isJsModule = false,
-    isInline = false,
-    disableHash = false,
-    content,
-    sourceAfterTransformation,
-    fileNamePattern,
-    importers = [],
+    targetUrl,
+    targetContentType,
+    targetBuffer,
+
+    targetIsEntry = false,
+    targetIsJsModule = false,
+    targetIsExternal = false,
+    targetIsInline = false,
+    targetFileNamePattern,
+    targetUrlVersioningDisabled = false,
   }) => {
     const target = {
-      url,
-      relativeUrl: urlToRelativeUrl(url, projectDirectoryUrl),
-      isEntry,
-      isJsModule,
-      isInline,
-      disableHash,
-      content,
-      sourceAfterTransformation,
-      fileNamePattern,
-      importers,
+      targetUrl,
+      targetContentType,
+      targetBuffer,
+      targetReferences: [],
+
+      targetUrlVersioningDisabled,
+      targetFileNamePattern,
+
+      targetIsEntry,
+      targetIsJsModule,
+      targetIsInline,
+
+      targetRelativeUrl: urlToRelativeUrl(targetUrl, projectDirectoryUrl),
+      targetBufferAfterTransformation: undefined,
     }
 
-    const getContentAvailablePromise = memoize(async () => {
-      const response = await fetch(url, showReferenceSourceLocation(importers[0]))
+    const getBufferAvailablePromise = memoize(async () => {
+      const response = await fetch(
+        targetUrl,
+        showReferenceSourceLocation(target.targetReferences[0]),
+      )
+
       const responseContentTypeHeader = response.headers["content-type"] || ""
+      target.targetContentType = responseContentTypeHeader
+
+      target.targetBuffer = Buffer.from(responseBodyAsArrayBuffer)
       const responseBodyAsArrayBuffer = await response.arrayBuffer()
-      target.content = {
-        type: responseContentTypeHeader,
-        value: Buffer.from(responseBodyAsArrayBuffer),
-      }
     })
-    if (content !== undefined) {
-      getContentAvailablePromise.forceMemoization(Promise.resolve())
+    if (targetBuffer !== undefined) {
+      getBufferAvailablePromise.forceMemoization(Promise.resolve())
     }
 
     const getDependenciesAvailablePromise = memoize(async () => {
-      await getContentAvailablePromise()
+      await getBufferAvailablePromise()
       const dependencies = []
 
       let previousJsDependency
       let parsingDone = false
-      const notifyDependencyFound = ({
-        isJsModule = false,
-        disableHash = false,
-        contentType,
-        specifier,
-        line,
-        column,
-        content,
-        fileNamePattern,
+      const notifyReferenceFound = ({
+        referenceSpecifier,
+        referenceLine,
+        referenceColumn,
+        referenceExpectedContentType,
+        targetBuffer,
+        targetIsJsModule = false,
+        targetUrlVersioningDisabled,
+        targetFileNamePattern,
       }) => {
         if (parsingDone) {
-          throw new Error(`notifyDependencyFound cannot be called once ${url} parsing is done.`)
+          throw new Error(
+            `notifyReferenceFound cannot be called once ${targetUrl} parsing is done.`,
+          )
         }
 
-        let isInline = typeof content !== "undefined"
+        let targetIsInline = typeof targetBuffer !== "undefined"
         const resolveTargetReturnValue = resolveTargetUrl(
-          { specifier, contentType, isInline, isJsModule },
+          {
+            referenceSpecifier,
+            referenceExpectedContentType,
+            targetIsInline,
+            targetIsJsModule,
+          },
           target,
         )
-        let isExternal = false
+        let targetIsExternal = false
         let dependencyTargetUrl
         if (typeof resolveTargetReturnValue === "object") {
           if (resolveTargetReturnValue.external) {
-            isExternal = true
+            targetIsExternal = true
           }
           dependencyTargetUrl = resolveTargetReturnValue.url
         } else {
@@ -255,24 +285,22 @@ export const createCompositeAssetHandler = (
         }
 
         if (dependencyTargetUrl.startsWith("data:")) {
-          isExternal = false
-          isInline = true
+          targetIsExternal = false
+          targetIsInline = true
           const { mediaType, base64Flag, data } = parseDataUrl(dependencyTargetUrl)
-          contentType = mediaType
-          content = {
-            type: mediaType,
-            value: base64Flag ? new Buffer(data, "base64").toString() : decodeURI(data),
-          }
+          referenceExpectedContentType = mediaType
+          targetContentType = mediaType
+          targetBuffer = base64Flag ? Buffer.from(data, "base64") : decodeURI(data)
         }
 
         // any hash in the url would mess up with filenames
         dependencyTargetUrl = removePotentialUrlHash(dependencyTargetUrl)
 
-        if (contentType === undefined) {
-          contentType = urlToContentType(dependencyTargetUrl)
+        if (referenceExpectedContentType === undefined) {
+          referenceExpectedContentType = urlToContentType(dependencyTargetUrl)
         }
 
-        if (!isEntry && isJsModule) {
+        if (!targetIsEntry && targetIsJsModule) {
           // for now we can only emit a chunk from an entry file as visible in
           // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
           // https://github.com/rollup/rollup/issues/2872
@@ -282,9 +310,9 @@ export const createCompositeAssetHandler = (
           return null
         }
 
-        if (isInline && fileNamePattern === undefined) {
+        if (targetIsInline && targetFileNamePattern === undefined) {
           // inherit parent directory location because it's an inline file
-          fileNamePattern = () => {
+          targetFileNamePattern = () => {
             const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(target)
             const importerParentRelativeUrl = urlToRelativeUrl(
               urlToParentUrl(resolveUrl(importerBuildRelativeUrl, "file://")),
@@ -295,29 +323,27 @@ export const createCompositeAssetHandler = (
         }
 
         const dependencyReference = createReference({
-          referenceInfo: {
-            url: target.url,
-            line,
-            column,
-            contentType,
-            previousJsDependency,
-          },
-          targetInfo: {
-            url: dependencyTargetUrl,
-            isExternal,
-            isJsModule,
-            isInline,
-            disableHash,
-            content,
-            fileNamePattern,
-          },
+          referenceUrl: targetUrl,
+          referenceLine,
+          referenceColumn,
+          referenceExpectedContentType,
+
+          previousJsDependency,
+
+          targetUrl: dependencyTargetUrl,
+          targetBuffer,
+          targetIsJsModule,
+          targetIsExternal,
+          targetIsInline,
+          targetUrlVersioningDisabled,
+          targetFileNamePattern,
         })
 
         dependencies.push(dependencyReference)
-        if (isJsModule) {
+        if (targetIsJsModule) {
           previousJsDependency = dependencyReference
         }
-        if (isExternal) {
+        if (targetIsExternal) {
           logger.debug(
             formatExternalReferenceLog(dependencyReference, {
               showReferenceSourceLocation,
@@ -336,7 +362,7 @@ export const createCompositeAssetHandler = (
 
       const parseReturnValue = await parse(target, {
         format,
-        notifyReferenceFound: notifyDependencyFound,
+        notifyReferenceFound,
       })
       parsingDone = true
 
@@ -346,11 +372,13 @@ export const createCompositeAssetHandler = (
         )
       }
       if (typeof parseReturnValue === "function") {
-        assetTransformMap[url] = parseReturnValue
+        assetTransformMap[targetUrl] = parseReturnValue
       }
       if (dependencies.length > 0) {
         logger.debug(
-          `${shortenUrl(url)} dependencies collected -> ${dependencies.map((dependencyReference) =>
+          `${shortenUrl(
+            targetUrl,
+          )} dependencies collected -> ${dependencies.map((dependencyReference) =>
             shortenUrl(dependencyReference.target.url),
           )}`,
         )
@@ -360,16 +388,16 @@ export const createCompositeAssetHandler = (
     })
 
     const getReadyPromise = memoize(async () => {
-      if (target.isExternal) {
+      if (targetIsExternal) {
         // external urls are immediatly available and not modified
         return
       }
 
       // une fois que les dépendances sont transformées on peut transformer cet asset
-      if (target.isJsModule) {
+      if (targetIsJsModule) {
         // ici l'url n'est pas top parce que
         // l'url de l'asset est relative au fichier html source
-        logger.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(url)}`)
+        logger.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(targetUrl)}`)
         const rollupChunkReadyPromise = new Promise((resolve) => {
           registerCallbackOnceRollupChunkIsReady(target.url, resolve)
         })
@@ -378,9 +406,9 @@ export const createCompositeAssetHandler = (
           buildRelativeUrl,
           fileName,
         } = await rollupChunkReadyPromise
-        target.sourceAfterTransformation = sourceAfterTransformation
-        target.buildRelativeUrl = buildRelativeUrl
-        target.fileName = fileName
+        target.targetBufferAfterTransformation = sourceAfterTransformation
+        target.targetBuildRelativeUrl = buildRelativeUrl
+        target.targetFileName = fileName
         return
       }
 
@@ -392,10 +420,10 @@ export const createCompositeAssetHandler = (
         dependencies.map((dependencyReference) => dependencyReference.target.getReadyPromise()),
       )
 
-      const transform = assetTransformMap[url]
+      const transform = assetTransformMap[targetUrl]
       if (typeof transform !== "function") {
-        target.sourceAfterTransformation = target.content.value
-        target.buildRelativeUrl = computeBuildRelativeUrlForTarget(target)
+        target.targetBufferAfterTransformation = target.targetBuffer
+        target.targetBuildRelativeUrl = computeBuildRelativeUrlForTarget(target)
         return
       }
 
@@ -420,7 +448,7 @@ export const createCompositeAssetHandler = (
         getReferenceUrlRelativeToImporter: (reference) => {
           const referenceTarget = reference.target
           const referenceTargetBuildRelativeUrl =
-            referenceTarget.fileName || referenceTarget.buildRelativeUrl
+            referenceTarget.targetFileName || referenceTarget.targetBuildRelativeUrl
           const referenceTargetBuildUrl = resolveUrl(referenceTargetBuildRelativeUrl, "file:///")
           const importerBuildUrl = resolveUrl(importerBuildRelativeUrl, "file:///")
           return urlToRelativeUrl(referenceTargetBuildUrl, importerBuildUrl)
@@ -441,11 +469,11 @@ export const createCompositeAssetHandler = (
         }
       }
 
-      target.sourceAfterTransformation = sourceAfterTransformation
+      target.targetBufferAfterTransformation = sourceAfterTransformation
       if (buildRelativeUrl === undefined) {
         buildRelativeUrl = computeBuildRelativeUrlForTarget(target)
       }
-      target.buildRelativeUrl = buildRelativeUrl
+      target.targetBuildRelativeUrl = buildRelativeUrl
 
       assetEmitters.forEach((callback) => {
         callback({
@@ -471,21 +499,21 @@ export const createCompositeAssetHandler = (
       // the source after transform has changed
       if (
         sourceAfterTransformation !== undefined &&
-        sourceAfterTransformation !== target.sourceAfterTransformation
+        sourceAfterTransformation !== target.targetBufferAfterTransformation
       ) {
-        target.sourceAfterTransformation = sourceAfterTransformation
+        target.targetBufferAfterTransformation = sourceAfterTransformation
         if (buildRelativeUrl === undefined) {
           buildRelativeUrl = computeBuildRelativeUrlForTarget(target)
         }
       }
 
       // the build relative url has changed
-      if (buildRelativeUrl !== undefined && buildRelativeUrl !== target.buildRelativeUrl) {
+      if (buildRelativeUrl !== undefined && buildRelativeUrl !== target.targetBuildRelativeUrl) {
         buildRelativeUrlsToClean.push(target.buildRelativeUrl)
-        target.buildRelativeUrl = buildRelativeUrl
+        target.targetBuildRelativeUrl = buildRelativeUrl
         if (!target.isInline) {
           emitAsset({
-            source: target.sourceAfterTransformation,
+            source: target.targetBufferAfterTransformation,
             fileName: buildRelativeUrl,
           })
         }
@@ -495,7 +523,7 @@ export const createCompositeAssetHandler = (
     Object.assign(target, {
       connect,
 
-      getContentAvailablePromise,
+      getBufferAvailablePromise,
       getDependenciesAvailablePromise,
       getReadyPromise,
       getRollupReferenceIdAvailablePromise,
@@ -514,7 +542,7 @@ export const createCompositeAssetHandler = (
 
   const findAssetUrlByBuildRelativeUrl = (buildRelativeUrl) => {
     const assetUrl = Object.keys(targetMap).find(
-      (url) => targetMap[url].buildRelativeUrl === buildRelativeUrl,
+      (url) => targetMap[url].targetBuildRelativeUrl === buildRelativeUrl,
     )
     return assetUrl
   }
@@ -526,9 +554,9 @@ export const createCompositeAssetHandler = (
   }
 
   const showReferenceSourceLocation = (reference) => {
-    const referenceUrl = reference.url
+    const referenceUrl = reference.referenceUrl
     const referenceSource = String(
-      referenceUrl in targetMap ? targetMap[referenceUrl].content.value : loadUrl(referenceUrl),
+      referenceUrl in targetMap ? targetMap[referenceUrl].targetBuffer : loadUrl(referenceUrl),
     )
 
     let message = `${urlToFileUrl(referenceUrl)}`
@@ -543,8 +571,8 @@ export const createCompositeAssetHandler = (
       return `${message}
 
 ${showSourceLocation(referenceSource, {
-  line: reference.line,
-  column: reference.column,
+  line: reference.refrenceLine,
+  column: reference.referenceColumn,
 })}
 `
     }
@@ -569,86 +597,13 @@ ${showSourceLocation(referenceSource, {
   }
 }
 
-export const assetReferenceToCodeForRollup = (reference) => {
+export const referenceToCodeForRollup = (reference) => {
   const target = reference.target
-  if (target.isInline) {
+  if (target.targetIsInline) {
     return getTargetAsBase64Url(target)
   }
 
   return `import.meta.ROLLUP_FILE_URL_${target.rollupReferenceId}`
-}
-
-const assetFileNamePattern = "assets/[name]-[hash][extname]"
-const assetFileNamePatternWithoutHash = "assets/[name][extname]"
-
-const computeBuildRelativeUrlForTarget = (target) => {
-  return computeBuildRelativeUrl(
-    target.url,
-    target.sourceAfterTransformation,
-    targetToFileNamePattern(target),
-  )
-}
-
-const targetToFileNamePattern = (target) => {
-  if (target.fileNamePattern) {
-    return target.fileNamePattern
-  }
-
-  if (target.disableHash) {
-    if (target.isEntry) {
-      return `[name][extname]`
-    }
-    return assetFileNamePatternWithoutHash
-  }
-
-  if (target.isEntry) {
-    return `[name]-[hash][extname]`
-  }
-  return assetFileNamePattern
-}
-
-const precomputeBuildRelativeUrlForTarget = (target, sourceAfterTransformation = "") => {
-  if (target.buildRelativeUrl) {
-    return target.buildRelativeUrl
-  }
-
-  target.sourceAfterTransformation = sourceAfterTransformation
-  const precomputedBuildRelativeUrl = computeBuildRelativeUrlForTarget(target)
-  target.sourceAfterTransformation = undefined
-  return precomputedBuildRelativeUrl
-}
-
-const memoize = (fn) => {
-  let called
-  let previousCallReturnValue
-  const memoized = (...args) => {
-    if (called) return previousCallReturnValue
-    previousCallReturnValue = fn(...args)
-    called = true
-    return previousCallReturnValue
-  }
-  memoized.forceMemoization = (value) => {
-    called = true
-    previousCallReturnValue = value
-  }
-  return memoized
-}
-
-const getCallerLocation = () => {
-  const { prepareStackTrace } = Error
-  Error.prepareStackTrace = (error, stack) => {
-    Error.prepareStackTrace = prepareStackTrace
-    return stack
-  }
-
-  const { stack } = new Error()
-  const callerCallsite = stack[2]
-  const fileName = callerCallsite.getFileName()
-  return {
-    url: fileName && isFileSystemPath(fileName) ? fileSystemPathToUrl(fileName) : fileName,
-    line: callerCallsite.getLineNumber(),
-    column: callerCallsite.getColumnNumber(),
-  }
 }
 
 const removePotentialUrlHash = (url) => {
@@ -656,71 +611,3 @@ const removePotentialUrlHash = (url) => {
   urlObject.hash = ""
   return String(urlObject)
 }
-
-const compareContentType = (leftContentType, rightContentType) => {
-  if (leftContentType === rightContentType) {
-    return true
-  }
-  if (leftContentType === "text/javascript" && rightContentType === "application/javascript") {
-    return true
-  }
-  if (leftContentType === "application/javascript" && rightContentType === "text/javascript") {
-    return true
-  }
-  return false
-}
-
-const formatContentTypeMismatchLog = (reference, { showReferenceSourceLocation }) => {
-  return `A reference was expecting ${reference.contentType} but found ${
-    reference.target.content.type
-  } instead.
---- reference ---
-${showReferenceSourceLocation(reference)}
---- target url ---
-${reference.target.url}`
-}
-
-const formatExternalReferenceLog = (
-  reference,
-  { showReferenceSourceLocation, projectDirectoryUrl },
-) => {
-  return `Found reference to an url outside project directory.
-${showReferenceSourceLocation(reference)}
---- target url ---
-${reference.target.url}
---- project directory url ---
-${projectDirectoryUrl}`
-}
-
-const formatReferenceFound = (reference, { showReferenceSourceLocation }) => {
-  const { target } = reference
-
-  let message
-
-  if (target.isInline && target.isJsModule) {
-    message = `found inline js module.`
-  } else if (target.isInline) {
-    message = `found inline asset.`
-  } else if (target.isJsModule) {
-    message = `found js module reference to ${target.relativeUrl}.`
-  } else {
-    message = `found asset reference to ${target.relativeUrl}.`
-  }
-
-  message += `
-${showReferenceSourceLocation(reference)}
-`
-
-  return message
-}
-
-// const textualContentTypes = ["text/html", "text/css", "image/svg+xml"]
-// const isTextualContentType = (contentType) => {
-//   if (textualContentTypes.includes(contentType)) {
-//     return true
-//   }
-//   if (contentType.startsWith("text/")) {
-//     return true
-//   }
-//   return false
-// }
