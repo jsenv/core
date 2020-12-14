@@ -27,26 +27,21 @@ export const browserImportEsModuleBuild = async ({
 
   try {
     const namespace = await page.evaluate(
-      /* istanbul ignore next */
-      ({ mainRelativeUrl, awaitNamespace }) => {
-        return (async () => {
-          const namespace = await import(mainRelativeUrl)
-          if (!awaitNamespace) {
-            return namespace
-          }
-          const namespaceAwaited = {}
-          await Promise.all(
-            Object.keys(namespace).map(async (key) => {
-              namespaceAwaited[key] = await namespace[key]
-            }),
-          )
-          return namespaceAwaited
-        })()
-      },
-      {
-        mainRelativeUrl,
-        awaitNamespace,
-      },
+      `(async () => {
+  const mainRelativeUrl = ${JSON.stringify(mainRelativeUrl)}
+  const awaitNamespace = ${JSON.stringify(awaitNamespace)}
+  const namespace = await import(mainRelativeUrl)
+  if (!awaitNamespace) {
+    return namespace
+  }
+  const namespaceAwaited = {}
+  await Promise.all(
+    Object.keys(namespace).map(async (key) => {
+      namespaceAwaited[key] = await namespace[key]
+    }),
+  )
+  return namespaceAwaited
+})()`,
     )
 
     return {

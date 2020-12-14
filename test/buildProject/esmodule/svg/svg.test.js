@@ -39,7 +39,7 @@ await assertFilePresence(iconBuildUrl)
     testDirectoryRelativeUrl,
   })
   const actual = namespace
-  const expected = String(new URL(`./dist/esmodule/${iconBuildRelativeUrl}` serverOrigin))
+  const expected = String(new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, serverOrigin))
   assert({ actual, expected })
 }
 
