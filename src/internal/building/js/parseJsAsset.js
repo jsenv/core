@@ -38,10 +38,17 @@ export const parseJsAsset = async (
     // importScripts are inlined which is good for:
     // - not breaking things (otherwise we would have to copy imported files in the build directory)
     // - perf (one less http request)
-    const workerScriptUrl = urlToOriginalProjectUrl(jsUrl)
-    const workerBundle = await bundleWorker({ workerScriptUrl })
+    const mightBeAWorkerScript = !jsTarget.targetIsInline
 
-    let jsSourceAfterTransformation = workerBundle.code
+    let jsSourceAfterTransformation
+    if (mightBeAWorkerScript) {
+      const workerScriptUrl = urlToOriginalProjectUrl(jsUrl)
+      const workerBundle = await bundleWorker({ workerScriptUrl })
+      jsSourceAfterTransformation = workerBundle.code
+      map = workerBundle.map
+    } else {
+      jsSourceAfterTransformation = jsString
+    }
 
     if (minify) {
       const jsUrlRelativeToImporter = jsTarget.targetIsInline
@@ -49,7 +56,7 @@ export const parseJsAsset = async (
         : jsTarget.targetRelativeUrl
       const result = await minifyJs(jsString, jsUrlRelativeToImporter, {
         sourceMap: {
-          content: JSON.stringify(workerBundle.map),
+          ...(map ? { content: JSON.stringify(map) } : {}),
           asObject: true,
         },
         toplevel: false,

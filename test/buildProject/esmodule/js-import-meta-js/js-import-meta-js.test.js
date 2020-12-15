@@ -30,9 +30,9 @@ const { buildMappings } = await buildProject({
 {
   const actual = Object.keys(buildMappings)
   const expected = [
-    `${testDirectoryRelativeUrl}/file.js`,
-    `${testDirectoryRelativeUrl}/file.js.map`,
-    `${testDirectoryRelativeUrl}/js-import-meta-js.js`,
+    `${testDirectoryRelativeUrl}file.js`,
+    `${testDirectoryRelativeUrl}file.js.map`,
+    `${testDirectoryRelativeUrl}js-import-meta-js.js`,
   ]
   assert({ actual, expected })
 }

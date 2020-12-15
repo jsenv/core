@@ -29,7 +29,7 @@ await buildProject({
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    debug: true,
+    // debug: true,
   })
   const actual = namespace
   const expected = {

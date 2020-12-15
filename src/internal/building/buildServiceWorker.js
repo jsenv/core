@@ -14,7 +14,7 @@ export const buildServiceWorker = async ({
 }) => {
   const serviceWorkerProjectUrl = resolveUrl(serviceWorkerProjectRelativeUrl, projectDirectoryUrl)
   const serviceWorkerBuildUrl = resolveUrl(serviceWorkerBuildRelativeUrl, buildDirectoryUrl)
-  const workerBundle = bundleWorker({ serviceWorkerProjectUrl })
+  const workerBundle = bundleWorker({ workerScriptUrl: serviceWorkerProjectUrl })
   const serviceWorkerCode = serviceWorkerTransformer(workerBundle.code)
 
   if (minify) {
