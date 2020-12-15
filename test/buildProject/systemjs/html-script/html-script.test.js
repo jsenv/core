@@ -71,10 +71,14 @@ const sourcemapBuildUrl = resolveUrl(sourcemapBuildRelativeUrl, buildDirectoryUr
 // souremap file content
 {
   const sourcemapString = await readFile(sourcemapBuildUrl)
-  const actual = JSON.parse(sourcemapString)
+  const sourcemap = JSON.parse(sourcemapString)
+  const actual = {
+    file: sourcemap.file,
+    sources: sourcemap.sources,
+  }
   const expected = {
     file: urlToFilename(scriptBuildUrl),
-    sources: ["../../../../../../whatever.js"],
+    sources: ["../../../index.source.js"],
   }
   assert({ actual, expected })
 }

@@ -1,6 +1,15 @@
 {
-  "file": "index.js",
+  "version": 3,
   "sources": [
-    "../../../whatever.js"
+    "index.source.js"
+  ],
+  "names": [
+    "value",
+    "window",
+    "whatever"
+  ],
+  "mappings": "AAAA,IAAMA,KAAK,GAAG,EAAd;AACAC,MAAM,CAACC,QAAP,GAAkBF,KAAlB",
+  "sourcesContent": [
+    "const value = 42\nwindow.whatever = value\n"
   ]
 }

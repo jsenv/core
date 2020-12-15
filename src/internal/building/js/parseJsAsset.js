@@ -43,7 +43,7 @@ export const parseJsAsset = async (
     let jsSourceAfterTransformation
     if (mightBeAWorkerScript) {
       const workerScriptUrl = urlToOriginalProjectUrl(jsUrl)
-      const workerBundle = await bundleWorker({ workerScriptUrl })
+      const workerBundle = await bundleWorker({ workerScriptUrl, workerScriptSourceMap: map })
       jsSourceAfterTransformation = workerBundle.code
       map = workerBundle.map
     } else {
