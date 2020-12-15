@@ -53,9 +53,12 @@ export const transformImportMetaUrlReferences = async ({
     },
   })
 
+  const codeOutput = magicString.toString()
+  const map = magicString.generateMap({ hires: true })
+
   return {
-    code: magicString.toString(),
-    map: magicString.generateMap(),
+    code: codeOutput,
+    map,
   }
 }
 
