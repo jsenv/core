@@ -4,19 +4,18 @@ import { require } from "@jsenv/core/src/internal/require.js"
 
 const { chromium } = require("playwright-chromium")
 
-export const browserImportBuild = async ({
+export const browserImportEsModuleBuild = async ({
   projectDirectoryUrl,
-  buildDirectoryRelativeUrl,
+  testDirectoryRelativeUrl,
   mainRelativeUrl,
-  namespaceProperty = "default",
-  headless = true,
-  stopAfterImport = true,
+  awaitNamespace = true,
+  debug = false,
 }) => {
-  const buildDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
+  const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
-    startTestServer({ buildDirectoryUrl }),
+    startTestServer({ testDirectoryUrl }),
     chromium.launch({
-      headless,
+      headless: !debug,
       // handleSIGINT: false,
       // handleSIGTERM: false,
       // handleSIGHUP: false,
@@ -27,32 +26,46 @@ export const browserImportBuild = async ({
   await page.goto(`${server.origin}/`)
 
   try {
-    const value = await page.evaluate(
+    const namespace = await page.evaluate(
       `(async () => {
-  const namespace = await import(${JSON.stringify(mainRelativeUrl)})
-  const value = await namespace[${JSON.stringify(namespaceProperty)}]
-  return value
+  const mainRelativeUrl = ${JSON.stringify(mainRelativeUrl)}
+  const awaitNamespace = ${JSON.stringify(awaitNamespace)}
+  const namespace = await import(mainRelativeUrl)
+  if (!awaitNamespace) {
+    return namespace
+  }
+  const namespaceAwaited = {}
+  await Promise.all(
+    Object.keys(namespace).map(async (key) => {
+      namespaceAwaited[key] = await namespace[key]
+    }),
+  )
+  return namespaceAwaited
 })()`,
     )
+
     return {
-      value,
+      namespace,
       serverOrigin: server.origin,
     }
   } finally {
-    if (stopAfterImport) {
+    if (!debug) {
       browser.close()
       server.stop()
     }
   }
 }
 
-const startTestServer = ({ buildDirectoryUrl }) => {
+const startTestServer = ({ testDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "https",
     requestToResponse: firstService(
       (request) => serveIndexPage({ request }),
-      (request) => serveBuildDirectory({ buildDirectoryUrl, request }),
+      (request) =>
+        serveFile(request, {
+          rootDirectoryUrl: testDirectoryUrl,
+        }),
     ),
   })
 }
@@ -86,8 +99,3 @@ const generateIndexPage = () => `<!doctype html>
 </body>
 
 </html>`
-
-const serveBuildDirectory = ({ buildDirectoryUrl, request }) =>
-  serveFile(request, {
-    rootDirectoryUrl: buildDirectoryUrl,
-  })

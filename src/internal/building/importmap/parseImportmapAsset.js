@@ -1,5 +1,5 @@
-export const parseImportmapAsset = ({ content }, notifiers, { minify }) => {
-  const importmapString = String(content.value)
+export const parseImportmapAsset = (importmapTarget, notifiers, { minify }) => {
+  const importmapString = String(importmapTarget.targetBuffer)
   return () => {
     if (minify) {
       // this is to remove eventual whitespaces

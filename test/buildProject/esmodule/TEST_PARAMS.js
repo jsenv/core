@@ -11,10 +11,10 @@ export const GENERATE_ESMODULE_BUILD_TEST_PARAMS = {
 
 export const BROWSER_IMPORT_BUILD_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  mainRelativeUrl: "./main.js",
+  mainRelativeUrl: "./dist/esmodule/main.js",
 }
 
 export const NODE_IMPORT_BUILD_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  mainRelativeUrl: "./main.js",
+  mainRelativeUrl: "./dist/esmodule/main.js",
 }

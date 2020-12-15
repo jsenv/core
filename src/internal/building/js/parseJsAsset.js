@@ -4,41 +4,56 @@ import {
   getJavaScriptSourceMappingUrl,
   setJavaScriptSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { bundleWorker } from "@jsenv/core/src/internal/building/bundleWorker.js"
 import { minifyJs } from "./minifyJs.js"
 
 export const parseJsAsset = async (
   jsTarget,
   { notifyReferenceFound },
-  { minify, minifyJsOptions },
+  { urlToOriginalProjectUrl, minify, minifyJsOptions },
 ) => {
-  const jsUrl = jsTarget.url
-  const jsString = String(jsTarget.content.value)
+  const jsUrl = jsTarget.targetUrl
+  const jsString = String(jsTarget.targetBuffer)
   const jsSourcemapUrl = getJavaScriptSourceMappingUrl(jsString)
   let sourcemapReference
 
   if (jsSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
-      specifier: jsSourcemapUrl,
-      contentType: "application/json",
+      referenceExpectedContentType: "application/json",
+      referenceTargetSpecifier: jsSourcemapUrl,
       // we don't really know the line or column
       // but let's asusme it the last line and first column
-      line: jsString.split(/\r?\n/).length - 1,
-      column: 0,
+      referenceLine: jsString.split(/\r?\n/).length - 1,
+      referenceColumn: 0,
     })
   }
 
   return async ({ precomputeBuildRelativeUrl, registerAssetEmitter }) => {
     let map
     if (sourcemapReference) {
-      map = JSON.parse(sourcemapReference.target.sourceAfterTransformation)
+      map = JSON.parse(sourcemapReference.target.targetBufferAfterTransformation)
     }
 
-    let jsSourceAfterTransformation = jsString
+    // in case this js asset is a worker, bundle it so that:
+    // importScripts are inlined which is good for:
+    // - not breaking things (otherwise we would have to copy imported files in the build directory)
+    // - perf (one less http request)
+    const mightBeAWorkerScript = !jsTarget.targetIsInline
+
+    let jsSourceAfterTransformation
+    if (mightBeAWorkerScript) {
+      const workerScriptUrl = urlToOriginalProjectUrl(jsUrl)
+      const workerBundle = await bundleWorker({ workerScriptUrl, workerScriptSourceMap: map })
+      jsSourceAfterTransformation = workerBundle.code
+      map = workerBundle.map
+    } else {
+      jsSourceAfterTransformation = jsString
+    }
 
     if (minify) {
-      const jsUrlRelativeToImporter = jsTarget.isInline
-        ? urlToRelativeUrl(jsTarget.url, jsTarget.importers[0].url)
-        : jsTarget.relativeUrl
+      const jsUrlRelativeToImporter = jsTarget.targetIsInline
+        ? urlToRelativeUrl(jsTarget.targetUrl, jsTarget.targetReferences[0].referenceUrl)
+        : jsTarget.targetRelativeUrl
       const result = await minifyJs(jsString, jsUrlRelativeToImporter, {
         sourceMap: {
           ...(map ? { content: JSON.stringify(map) } : {}),
@@ -63,7 +78,7 @@ export const parseJsAsset = async (
       )
 
       registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
-        const jsBuildUrl = resolveUrl(jsTarget.buildRelativeUrl, buildDirectoryUrl)
+        const jsBuildUrl = resolveUrl(jsTarget.targetBuildRelativeUrl, buildDirectoryUrl)
         const mapBuildUrl = resolveUrl(jsSourcemapFilename, jsBuildUrl)
         map.file = urlToFilename(jsBuildUrl)
         if (map.sources) {
@@ -83,7 +98,7 @@ export const parseJsAsset = async (
           // and emit a new one instead
           // when finding this asset in the rollup build we'll have to remove it
           sourcemapReference.target.updateOnceReady({
-            sourceAfterTransformation: mapSource,
+            targetBufferAfterTransformation: mapSource,
             buildRelativeUrl,
           })
         } else {
@@ -95,8 +110,8 @@ export const parseJsAsset = async (
       })
 
       return {
-        sourceAfterTransformation: jsSourceAfterTransformation,
-        buildRelativeUrl: jsBuildRelativeUrl,
+        targetBufferAfterTransformation: jsSourceAfterTransformation,
+        targetBuildRelativeUrl: jsBuildRelativeUrl,
       }
     }
 

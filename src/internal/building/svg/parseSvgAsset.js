@@ -2,18 +2,17 @@ import {
   parseSvgString,
   parseHtmlAstRessources,
   getHtmlNodeAttributeByName,
-  getHtmlNodeLocation,
   stringifyHtmlAst,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { collectNodesMutations } from "../parsing.utils.js"
-import { getTargetAsBase64Url } from "../getTargetAsBase64Url.js"
+import { collectNodesMutations, htmlNodeToReferenceLocation } from "../parsing.utils.js"
+import { getTargetAsBase64Url } from "../asset-builder.util.js"
 import { minifyHtml } from "../html/minifyHtml.js"
 
-export const parseSvgAsset = async (target, notifiers, { minify, minifyHtmlOptions }) => {
-  const svgString = String(target.content.value)
+export const parseSvgAsset = async (svgTarget, notifiers, { minify, minifyHtmlOptions }) => {
+  const svgString = String(svgTarget.targetBuffer)
   const svgAst = await parseSvgString(svgString)
   const htmlRessources = parseHtmlAstRessources(svgAst)
-  const mutations = collectSvgMutations(htmlRessources, notifiers, target)
+  const mutations = collectSvgMutations(htmlRessources, notifiers, svgTarget)
 
   return ({ getReferenceUrlRelativeToImporter }) => {
     mutations.forEach((mutationCallback) => {
@@ -21,17 +20,17 @@ export const parseSvgAsset = async (target, notifiers, { minify, minifyHtmlOptio
     })
     const svgAfterTransformation = stringifyHtmlAst(svgAst)
     // could also benefit of minification https://github.com/svg/svgo
-    const sourceAfterTransformation = minify
+    const targetBufferAfterTransformation = minify
       ? minifyHtml(svgAfterTransformation, minifyHtmlOptions)
       : svgAfterTransformation
 
-    return { sourceAfterTransformation }
+    return { targetBufferAfterTransformation }
   }
 }
 
-export const collectSvgMutations = ({ images, uses }, notifiers, target) => {
-  const imagesMutations = collectNodesMutations(images, notifiers, target, [imageHrefVisitor])
-  const usesMutations = collectNodesMutations(uses, notifiers, target, [useHrefVisitor])
+export const collectSvgMutations = ({ images, uses }, notifiers, svgTarget) => {
+  const imagesMutations = collectNodesMutations(images, notifiers, svgTarget, [imageHrefVisitor])
+  const usesMutations = collectNodesMutations(uses, notifiers, svgTarget, [useHrefVisitor])
   const svgMutations = [...imagesMutations, ...usesMutations]
   return svgMutations
 }
@@ -43,8 +42,8 @@ const imageHrefVisitor = (image, { notifyReferenceFound }) => {
   }
 
   const hrefReference = notifyReferenceFound({
-    specifier: hrefAttribute.value,
-    ...getHtmlNodeLocation(image),
+    referenceTargetSpecifier: hrefAttribute.value,
+    ...htmlNodeToReferenceLocation(image),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter)
@@ -64,8 +63,8 @@ const useHrefVisitor = (use, { notifyReferenceFound }) => {
 
   const { hash } = new URL(href, "file://")
   const hrefReference = notifyReferenceFound({
-    specifier: href,
-    ...getHtmlNodeLocation(use),
+    referenceTargetSpecifier: href,
+    ...htmlNodeToReferenceLocation(use),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter)
@@ -74,8 +73,8 @@ const useHrefVisitor = (use, { notifyReferenceFound }) => {
 }
 
 const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
-  const { isInline } = reference.target
-  if (isInline) {
+  const { targetIsInline } = reference.target
+  if (targetIsInline) {
     return getTargetAsBase64Url(reference.target)
   }
   return getReferenceUrlRelativeToImporter(reference)

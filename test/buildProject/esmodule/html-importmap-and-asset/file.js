@@ -1,6 +1,6 @@
 import urlFromStaticImport from "./img.png"
 
-const urlFromDynamicImport = await import("./img.png")
+const urlFromDynamicImport = import("./img.png")
 
 const urlFromImportMetaNotation = String(new URL("./img.png", import.meta.url))
 

@@ -4,24 +4,24 @@ import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, readFile } from "@js
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls.js"
-import { browserImportSystemJsBuild } from "../browserImportSystemJsBuild.js"
+import { browserImportEsModuleBuild } from "../browserImportEsModuleBuild.js"
 import {
-  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
+  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+  BROWSER_IMPORT_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
 
 const { buildMappings } = await buildProject({
-  ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
+  ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -46,16 +46,10 @@ const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
   const importmapString = await readFile(importmapBuildUrl)
   const importmap = JSON.parse(importmapString)
   const actual = importmap
+  // importmap is the same because non js files are remapped
   const expected = {
     imports: {
-      // the original importmap remapping are still there
-      // ideally it should target `./${imgRemapBuildRelativeUrl}` but for now it's not supported
       "./img.png": "./img-remap.png",
-      "./assets/img.png": `./${imgBuildRelativeUrl}`,
-      // the importmap for img-remap is available
-      "./assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
-      "./file.js": `./${jsBuildRelativeUrl}`,
-      // and nothing more because js is referencing only img-remap
     },
   }
   assert({ actual, expected })
@@ -75,11 +69,10 @@ const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
 
 // assert asset url is correct for javascript (remapped + hashed)
 {
-  const mainRelativeUrl = getBuildRelativeUrl("file.js")
-  const { namespace, serverOrigin } = await browserImportSystemJsBuild({
-    ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
+  const { namespace, serverOrigin } = await browserImportEsModuleBuild({
+    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    mainRelativeUrl: `./${mainRelativeUrl}`,
+    mainRelativeUrl: `./dist/esmodule/${jsBuildRelativeUrl}`,
     // debug: true,
   })
   const actual = {
@@ -88,18 +81,11 @@ const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
     urlFromImportMetaNotation: namespace.urlFromImportMetaNotation,
   }
   const expected = {
-    urlFromStaticImport: resolveUrl(`dist/systemjs/${imgRemapBuildRelativeUrl}`, serverOrigin),
+    urlFromStaticImport: resolveUrl(`dist/esmodule/${imgRemapBuildRelativeUrl}`, serverOrigin),
     urlFromDynamicImport: {
-      default: resolveUrl(`dist/systemjs/${imgRemapBuildRelativeUrl}`, serverOrigin),
+      default: resolveUrl(`dist/esmodule/${imgRemapBuildRelativeUrl}`, serverOrigin),
     },
-    // We MUST NOT introduce a build only importmap awareness
-    // otherwise it would introduce a difference between dev/after build.
-    // As new URL(relativeUrl, import.meta.url) is a standard url resolution where
-    // importmap does not apply. Dev does not change that, and files after build neither.
-    // That being said. when output format is systemjs we still use importmap to avoid
-    // having to invalidate the js because an asset changes.
-    // TODO: retest this whole stuff with an output format of esmodule
-    urlFromImportMetaNotation: resolveUrl(`dist/systemjs/${imgBuildRelativeUrl}`, serverOrigin),
+    urlFromImportMetaNotation: resolveUrl(`dist/esmodule/${imgBuildRelativeUrl}`, serverOrigin),
   }
   assert({ actual, expected })
 }

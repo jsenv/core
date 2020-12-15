@@ -1,4 +1,4 @@
-import { generateAssetHash } from "./internal/building/computeBuildRelativeUrl.js"
+import { generateContentHash } from "./internal/building/url-versioning.js"
 
 export const jsenvServiceWorkerFinalizer = (code, { buildManifest, rollupBuild }) => {
   const generatedUrlsConfig = {}
@@ -18,7 +18,7 @@ export const jsenvServiceWorkerFinalizer = (code, { buildManifest, rollupBuild }
             // when url is not versioned we compute a "version" for that url anyway
             // so that service worker source still changes and navigator
             // detect there is a change
-            version: generateAssetHash(
+            version: generateContentHash(
               rollupFile.type === "chunk" ? rollupFile.code : rollupFile.source,
             ),
           }),

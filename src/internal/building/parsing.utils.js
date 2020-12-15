@@ -1,9 +1,19 @@
+import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compiling/compileHtml.js"
+
 export const collectNodesMutations = (nodes, notifiers, target, candidates) => {
   const mutations = []
   nodes.forEach((node) => {
     mutations.push(...collectNodeMutations(node, notifiers, target, nodes, candidates))
   })
   return mutations
+}
+
+export const htmlNodeToReferenceLocation = (htmlNode) => {
+  const { line, column } = getHtmlNodeLocation(htmlNode)
+  return {
+    referenceLine: line,
+    referenceColumn: column,
+  }
 }
 
 const collectNodeMutations = (node, notifiers, target, nodes, candidates) => {

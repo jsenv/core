@@ -9,7 +9,7 @@ import {
   GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
-import { browserImportBuild } from "../browserImportBuild.js"
+import { browserImportEsModuleBuild } from "../browserImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -37,13 +37,14 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
 const indexRelativeUrl = getBuildRelativeUrl("index.js")
 
 {
-  const { value: actual } = await browserImportBuild({
+  const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
     mainRelativeUrl: `./${indexRelativeUrl}`,
     headless: false,
     stopAfterImport: false,
   })
+  const actual = namespace
   const expected = 42
   assert({ actual, expected })
 }

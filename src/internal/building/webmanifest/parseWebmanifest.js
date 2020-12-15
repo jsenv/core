@@ -1,13 +1,13 @@
-export const parseWebmanifest = (manifestTarget, { notifyReferenceFound }, { minify }) => {
+export const parseWebmanifest = (webmanifestTarget, { notifyReferenceFound }, { minify }) => {
   // const manifestUrl = manifestTarget.url
-  const manifestString = String(manifestTarget.content.value)
+  const manifestString = String(webmanifestTarget.targetBuffer)
 
   const manifest = JSON.parse(manifestString)
   const { icons = [] } = manifest
 
   const iconReferences = icons.map((icon) => {
     const iconReference = notifyReferenceFound({
-      specifier: icon.src,
+      referenceTargetSpecifier: icon.src,
     })
     return iconReference
   })

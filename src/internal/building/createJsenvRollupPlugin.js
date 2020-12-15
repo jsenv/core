@@ -33,9 +33,9 @@ import { parseTarget } from "./parseTarget.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
-import { createCompositeAssetHandler } from "./compositeAsset.js"
-import { computeBuildRelativeUrl } from "./computeBuildRelativeUrl.js"
-import { getTargetAsBase64Url } from "./getTargetAsBase64Url.js"
+import { createAssetBuilder, referenceToCodeForRollup } from "./asset-builder.js"
+import { computeBuildRelativeUrl } from "./url-versioning.js"
+import { transformImportMetaUrlReferences } from "./transformImportMetaUrlReferences.js"
 
 import { minifyJs } from "./js/minifyJs.js"
 
@@ -163,7 +163,7 @@ export const createJsenvRollupPlugin = async ({
     return importMap
   }
 
-  let compositeAssetHandler
+  let assetBuilder
   let emitFile = () => {}
   let fetchImportmap = fetchImportmapFromParameter
   let importMap
@@ -171,6 +171,9 @@ export const createJsenvRollupPlugin = async ({
   const emitAsset = ({ source, fileName }) => {
     const buildRelativeUrl = fileName
     if (useImportMapToImproveLongTermCaching || !urlVersioning) {
+      // sauf dans le cas ou cet asset est référence avec
+      // new URL(relativeUrl, import.meta.url)
+      // quoique le fix ce serais d'avoir cet asset dans les import maps
       fileName = rollupFileNameWithoutHash(buildRelativeUrl)
     } else {
       fileName = buildRelativeUrl
@@ -262,7 +265,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
               entryContentType,
               entryProjectRelativeUrl,
               entryBuildRelativeUrl,
-              entrySource: htmlSource,
+              entryBuffer: Buffer.from(htmlSource),
             })
           } else if (
             entryContentType === "application/javascript" ||
@@ -278,7 +281,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
               entryContentType,
               entryProjectRelativeUrl,
               entryBuildRelativeUrl,
-              entrySource: Buffer.from(await entryResponse.arrayBuffer()),
+              entryBuffer: Buffer.from(await entryResponse.arrayBuffer()),
             })
           }
         }),
@@ -292,10 +295,11 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       // we emit an empty chunk, discards rollup warning about it and we manually remove
       // this chunk in buildProject hook
       let atleastOneChunkEmitted = false
-      compositeAssetHandler = createCompositeAssetHandler(
+      assetBuilder = createAssetBuilder(
         {
           parse: async (target, notifiers) => {
             return parseTarget(target, notifiers, {
+              urlToOriginalProjectUrl,
               format,
               systemJsUrl,
               useImportMapToImproveLongTermCaching,
@@ -318,44 +322,56 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
           buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
           urlToFileUrl: urlToProjectUrl,
           loadUrl: (url) => urlResponseBodyMap[url],
-          resolveTargetUrl: ({ specifier, isJsModule }, target) => {
-            if (target.isEntry && !target.isJsModule && isJsModule) {
-              // html entry point
-              // when html references a js we must wait for the compiled version of js
-              const htmlCompiledUrl = urlToCompiledUrl(target.url)
-              const jsAssetUrl = resolveUrl(specifier, htmlCompiledUrl)
-              return jsAssetUrl
+          resolveTargetUrl: ({
+            targetSpecifier,
+            targetIsJsModule,
+            importerUrl,
+            importerIsEntry,
+            importerIsJsModule,
+          }) => {
+            const isHtmlEntryPoint = importerIsEntry && !importerIsJsModule
+            const isHtmlEntryPointReferencingAJsModule = isHtmlEntryPoint && targetIsJsModule
+            // when html references a js we must wait for the compiled version of js
+            if (isHtmlEntryPointReferencingAJsModule) {
+              const htmlCompiledUrl = urlToCompiledUrl(importerUrl)
+              const jsModuleUrl = resolveUrl(targetSpecifier, htmlCompiledUrl)
+              return jsModuleUrl
             }
-            const url = resolveUrl(specifier, target.url)
+
+            const targetUrl = resolveUrl(targetSpecifier, importerUrl)
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl
             // and ignore them and console.info/debug about remote url (https, http, ...)
-            const projectUrl = urlToProjectUrl(url)
+            const projectUrl = urlToProjectUrl(targetUrl)
             if (!projectUrl) {
-              return { external: true, url }
+              return { external: true, url: targetUrl }
             }
-            return url
+            return targetUrl
           },
           emitAsset,
           connectTarget: (target) => {
-            if (target.isExternal) {
-              return null
+            const { targetIsExternal } = target
+            if (targetIsExternal) {
+              return
             }
 
-            if (target.isJsModule) {
+            const { targetIsJsModule } = target
+            if (targetIsJsModule) {
               target.connect(async () => {
-                const id = target.url
-                if (typeof target.content !== "undefined") {
-                  virtualModules[id] = String(target.content.value)
+                const { targetUrl, targetBuffer } = target
+
+                const id = targetUrl
+                if (typeof targetBuffer !== "undefined") {
+                  virtualModules[id] = String(targetBuffer)
                 }
 
-                logger.debug(`emit chunk for ${shortenUrl(target.url)}`)
+                logger.debug(`emit chunk for ${shortenUrl(targetUrl)}`)
                 atleastOneChunkEmitted = true
                 const name = urlToRelativeUrl(
                   // get basename url
-                  resolveUrl(urlToBasename(target.url), target.url),
+                  resolveUrl(urlToBasename(targetUrl), targetUrl),
                   // get importer url
-                  urlToCompiledUrl(target.importers[0].url),
+                  urlToCompiledUrl(target.targetReferences[0].referenceUrl),
                 )
                 jsModulesInHtml[urlToUrlForRollup(id)] = true
                 const rollupReferenceId = emitChunk({
@@ -363,36 +379,38 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
                   name,
                   ...(target.previousJsReference
                     ? {
-                        implicitlyLoadedAfterOneOf: [target.previousJsReference.url],
+                        implicitlyLoadedAfterOneOf: [target.previousJsReference.referenceUrl],
                       }
                     : {}),
                 })
 
                 return { rollupReferenceId }
               })
-            } else {
-              target.connect(async () => {
-                await target.getReadyPromise()
-                const { sourceAfterTransformation, buildRelativeUrl } = target
-
-                if (target.isInline) {
-                  return {}
-                }
-
-                logger.debug(`emit asset for ${shortenUrl(target.url)}`)
-
-                const fileName = buildRelativeUrl
-                const rollupReferenceId = emitAsset({
-                  source: sourceAfterTransformation,
-                  fileName,
-                })
-
-                logger.debug(`${shortenUrl(target.url)} ready -> ${buildRelativeUrl}`)
-                return { rollupReferenceId }
-              })
+              return
             }
 
-            return null
+            target.connect(async () => {
+              await target.getReadyPromise()
+              const {
+                targetUrl,
+                targetIsInline,
+                targetBufferAfterTransformation,
+                targetBuildRelativeUrl,
+              } = target
+
+              if (targetIsInline) {
+                return {}
+              }
+
+              logger.debug(`emit asset for ${shortenUrl(targetUrl)}`)
+              const fileName = targetBuildRelativeUrl
+              const rollupReferenceId = emitAsset({
+                source: targetBufferAfterTransformation,
+                fileName,
+              })
+              logger.debug(`${shortenUrl(targetUrl)} ready -> ${targetBuildRelativeUrl}`)
+              return { rollupReferenceId }
+            })
           },
         },
       )
@@ -403,15 +421,15 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
             entryContentType,
             entryProjectRelativeUrl,
             entryBuildRelativeUrl,
-            entrySource,
+            entryBuffer,
           }) => {
             if (entryContentType === "text/html") {
               const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
-              await compositeAssetHandler.createReferenceForAssetEntry(entryUrl, {
+              await assetBuilder.createReferenceForHTMLEntry({
                 entryContentType,
-                entryProjectRelativeUrl,
+                entryUrl,
+                entryBuffer,
                 entryBuildRelativeUrl,
-                entrySource,
               })
             } else if (entryContentType === "application/javascript") {
               atleastOneChunkEmitted = true
@@ -423,11 +441,11 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
               })
             } else {
               const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
-              await compositeAssetHandler.createReferenceForAssetEntry(entryUrl, {
+              await assetBuilder.createReferenceForHTMLEntry({
                 entryContentType,
-                entryProjectRelativeUrl,
+                entryUrl,
+                entryBuffer,
                 entryBuildRelativeUrl,
-                entrySource,
               })
             }
           },
@@ -517,7 +535,9 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       const url = urlToServerUrl(id)
 
       logger.debug(`loads ${url}`)
-      const { responseUrl, contentRaw, content = "", map } = await loadModule(url, moduleInfo)
+      const { responseUrl, contentRaw, content = "", map } = await loadModule(url, {
+        moduleInfo,
+      })
 
       saveUrlResponseBody(responseUrl, contentRaw)
       // handle redirection
@@ -527,6 +547,25 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       }
 
       return { code: content, map }
+    },
+
+    async transform(code, id) {
+      const ast = this.parse(code, {
+        // used to know node line and column
+        locations: true,
+      })
+      // const moduleInfo = this.getModuleInfo(id)
+      const url = urlToServerUrl(id)
+      const importerUrl = urlImporterMap[url]
+      return transformImportMetaUrlReferences({
+        url,
+        importerUrl,
+        code,
+        ast,
+        assetBuilder,
+        fetch: fetchModule,
+        markBuildRelativeUrlAsUsedByJs,
+      })
     },
 
     // resolveImportMeta: () => {}
@@ -639,32 +678,32 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
-      const rollupChunkReadyCallbackMap = compositeAssetHandler.getRollupChunkReadyCallbackMap()
+      const rollupChunkReadyCallbackMap = assetBuilder.getRollupChunkReadyCallbackMap()
       Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
-        const buildRelativeUrl = Object.keys(jsBuild).find((buildRelativeUrlCandidate) => {
+        const targetBuildRelativeUrl = Object.keys(jsBuild).find((buildRelativeUrlCandidate) => {
           const file = jsBuild[buildRelativeUrlCandidate]
           const { facadeModuleId } = file
           return facadeModuleId && urlToServerUrl(facadeModuleId) === key
         })
-        const file = jsBuild[buildRelativeUrl]
-        const sourceAfterTransformation = file.code
-        const fileName =
+        const file = jsBuild[targetBuildRelativeUrl]
+        const targetBufferAfterTransformation = file.code
+        const targetFileName =
           useImportMapToImproveLongTermCaching || !urlVersioning
-            ? buildRelativeUrlToFileName(buildRelativeUrl)
-            : buildRelativeUrl
+            ? buildRelativeUrlToFileName(targetBuildRelativeUrl)
+            : targetBuildRelativeUrl
 
         logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
         rollupChunkReadyCallbackMap[key]({
-          sourceAfterTransformation,
-          buildRelativeUrl,
-          fileName,
+          targetBufferAfterTransformation,
+          targetBuildRelativeUrl,
+          targetFileName,
         })
       })
       // wait html files to be emitted
-      await compositeAssetHandler.getAllAssetEntryEmittedPromise()
+      await assetBuilder.getAllAssetEntryEmittedPromise()
 
       const assetBuild = {}
-      const buildRelativeUrlsToClean = compositeAssetHandler.getBuildRelativeUrlsToClean()
+      const buildRelativeUrlsToClean = assetBuilder.getBuildRelativeUrlsToClean()
       Object.keys(rollupResult).forEach((fileName) => {
         const file = rollupResult[fileName]
         if (file.type !== "asset") {
@@ -710,7 +749,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
             buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
           }
         } else {
-          const assetUrl = compositeAssetHandler.findAssetUrlByBuildRelativeUrl(buildRelativeUrl)
+          const assetUrl = assetBuilder.findAssetUrlByBuildRelativeUrl(buildRelativeUrl)
           if (assetUrl) {
             const originalProjectUrl = urlToOriginalProjectUrl(assetUrl)
             const originalProjectRelativeUrl = urlToRelativeUrl(
@@ -873,7 +912,12 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
     return null
   }
 
-  const loadModule = async (moduleUrl, moduleInfo) => {
+  const loadModule = async (
+    moduleUrl,
+    // {
+    //   moduleInfo
+    // },
+  ) => {
     if (moduleUrl in virtualModules) {
       const codeInput = virtualModules[moduleUrl]
 
@@ -905,20 +949,21 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
 
     // keep this in sync with module-registration.js
     if (contentType === "application/javascript" || contentType === "text/javascript") {
-      const responseBodyAsString = await moduleResponse.text()
-      const js = responseBodyAsString
+      const jsModuleString = await moduleResponse.text()
+      const map = await fetchSourcemap(moduleUrl, jsModuleString, {
+        cancellationToken,
+        logger,
+      })
+
       return {
         ...commonData,
-        contentRaw: js,
-        content: js,
-        map: await fetchSourcemap(moduleUrl, js, {
-          cancellationToken,
-          logger,
-        }),
+        contentRaw: jsModuleString,
+        content: jsModuleString,
+        map,
       }
     }
 
-    if (contentType === "application/json" || contentType === "application/importmap+json") {
+    if (contentType === "application/json" || contentType.endsWith("+json")) {
       const responseBodyAsString = await moduleResponse.text()
       // there is no need to minify the json string
       // because it becomes valid javascript
@@ -931,23 +976,36 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       }
     }
 
-    const importReference = await compositeAssetHandler.createReferenceForJsModuleImport(
-      moduleResponse,
-      {
-        moduleInfo,
-        importerUrl,
-      },
-    )
-    const importTarget = importReference.target
-    markBuildRelativeUrlAsUsedByJs(importTarget.buildRelativeUrl)
-    const content = importTarget.isInline
-      ? `export default ${getTargetAsBase64Url(importTarget)}`
-      : `export default import.meta.ROLLUP_FILE_URL_${importTarget.rollupReferenceId}`
+    const moduleResponseBodyAsBuffer = Buffer.from(await moduleResponse.arrayBuffer())
+    const targetContentType = moduleResponse.headers["content-type"]
+    const assetReferenceForImport = await assetBuilder.createReferenceForJs({
+      // Reference to this target is corresponds to a static or dynamic import.
+      // found in a given file (importerUrl).
+      // But we don't know the line and colum because rollup
+      // does not tell us that information
+      jsUrl: importerUrl,
+      jsLine: undefined,
+      jsColumn: undefined,
+
+      targetSpecifier: moduleResponse.url,
+      targetContentType,
+      targetBuffer: moduleResponseBodyAsBuffer,
+    })
+    if (assetReferenceForImport) {
+      markBuildRelativeUrlAsUsedByJs(assetReferenceForImport.target.targetBuildRelativeUrl)
+      const content = `export default ${referenceToCodeForRollup(assetReferenceForImport)}`
+
+      return {
+        ...commonData,
+        contentRaw: String(moduleResponseBodyAsBuffer),
+        content,
+      }
+    }
 
     return {
       ...commonData,
-      contentRaw: String(importTarget.content.value),
-      content,
+      contentRaw: String(moduleResponseBodyAsBuffer),
+      content: String(moduleResponseBodyAsBuffer),
     }
   }
 

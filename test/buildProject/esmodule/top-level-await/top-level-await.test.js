@@ -9,8 +9,8 @@ import {
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
   NODE_IMPORT_BUILD_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
-import { browserImportBuild } from "../browserImportBuild.js"
-import { nodeImportBuild } from "../nodeImportBuild.js"
+import { browserImportEsModuleBuild } from "../browserImportEsModuleBuild.js"
+import { nodeImportEsModuleBuild } from "../nodeImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -29,9 +29,9 @@ await buildProject({
 })
 // top level await not supported in pupeteer for now
 try {
-  await browserImportBuild({
+  await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-    buildDirectoryRelativeUrl,
+    testDirectoryRelativeUrl,
   })
   throw new Error("should throw")
 } catch (actual) {
@@ -43,9 +43,9 @@ try {
 // top level await not supported in node 13.8 for now (SourceMap test because added in 13.7)
 if (SourceMap) {
   try {
-    await nodeImportBuild({
+    await nodeImportEsModuleBuild({
       ...NODE_IMPORT_BUILD_TEST_PARAMS,
-      buildDirectoryRelativeUrl,
+      testDirectoryRelativeUrl,
     })
     throw new Error("should throw")
   } catch (error) {
