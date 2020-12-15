@@ -24,6 +24,7 @@ const { buildManifest, buildMappings } = await buildProject({
     [`./${secondEntryRelativeUrl}`]: "./b.cjs",
   },
   assetManifestFile: true,
+  assetManifestFileRelativeUrl: "manifest.json",
 })
 
 {
