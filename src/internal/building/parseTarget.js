@@ -19,6 +19,7 @@ export const parseTarget = (
   target,
   notifiers,
   {
+    urlToOriginalProjectUrl,
     format,
     systemJsUrl,
     useImportMapToImproveLongTermCaching,
@@ -117,8 +118,8 @@ export const parseTarget = (
     return parseWebmanifest(target, notifiers, { minify })
   }
 
-  if (targetContentType === "text/javascript" || targetContentType === "application/javascript") {
-    return parseJsAsset(target, notifiers, { minify, minifyJsOptions })
+  if (targetContentType === "application/javascript" || targetContentType === "text/javascript") {
+    return parseJsAsset(target, notifiers, { urlToOriginalProjectUrl, minify, minifyJsOptions })
   }
 
   if (targetContentType === "image/svg+xml") {

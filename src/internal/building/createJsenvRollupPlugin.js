@@ -299,6 +299,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
         {
           parse: async (target, notifiers) => {
             return parseTarget(target, notifiers, {
+              urlToOriginalProjectUrl,
               format,
               systemJsUrl,
               useImportMapToImproveLongTermCaching,

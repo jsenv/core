@@ -16,7 +16,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
-const { buildMappings } = await buildProject({
+await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -25,28 +25,15 @@ const { buildMappings } = await buildProject({
   },
 })
 
-// assert build mappings does not contains dep.js
-// -> js was handled like an asset (no parsing)
 {
-  const actual = Object.keys(buildMappings)
-  const expected = [
-    `${testDirectoryRelativeUrl}/file.js`,
-    `${testDirectoryRelativeUrl}/file.js.map`,
-    `${testDirectoryRelativeUrl}/js-import-meta-js.js`,
-  ]
-  assert({ actual, expected })
-}
-
-{
-  const { namespace, serverOrigin } = await browserImportEsModuleBuild({
+  const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    // debug: true,
+    debug: true,
   })
-  const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
   const actual = namespace
   const expected = {
-    jsUrl: String(new URL(`./dist/esmodule/${fileBuildRelativeUrl}`, serverOrigin)),
+    workerPingPromise: "pong",
   }
   assert({ actual, expected })
 }

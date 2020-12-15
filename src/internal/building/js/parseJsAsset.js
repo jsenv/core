@@ -4,12 +4,13 @@ import {
   getJavaScriptSourceMappingUrl,
   setJavaScriptSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { bundleWorker } from "@jsenv/core/src/internal/building/bundleWorker.js"
 import { minifyJs } from "./minifyJs.js"
 
 export const parseJsAsset = async (
   jsTarget,
   { notifyReferenceFound },
-  { minify, minifyJsOptions },
+  { urlToOriginalProjectUrl, minify, minifyJsOptions },
 ) => {
   const jsUrl = jsTarget.targetUrl
   const jsString = String(jsTarget.targetBuffer)
@@ -33,7 +34,14 @@ export const parseJsAsset = async (
       map = JSON.parse(sourcemapReference.target.targetBufferAfterTransformation)
     }
 
-    let jsSourceAfterTransformation = jsString
+    // in case this js asset is a worker, bundle it so that:
+    // importScripts are inlined which is good for:
+    // - not breaking things (otherwise we would have to copy imported files in the build directory)
+    // - perf (one less http request)
+    const workerScriptUrl = urlToOriginalProjectUrl(jsUrl)
+    const workerBundle = await bundleWorker({ workerScriptUrl })
+
+    let jsSourceAfterTransformation = workerBundle.code
 
     if (minify) {
       const jsUrlRelativeToImporter = jsTarget.targetIsInline
@@ -41,7 +49,7 @@ export const parseJsAsset = async (
         : jsTarget.targetRelativeUrl
       const result = await minifyJs(jsString, jsUrlRelativeToImporter, {
         sourceMap: {
-          ...(map ? { content: JSON.stringify(map) } : {}),
+          content: JSON.stringify(workerBundle.map),
           asObject: true,
         },
         toplevel: false,
