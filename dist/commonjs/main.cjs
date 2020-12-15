@@ -26,7 +26,7 @@ var readline__default = /*#__PURE__*/_interopDefaultLegacy(readline);
 
 const executeJsenvAsyncFunction = fn => cancellation.executeAsyncFunction(fn, {
   catchCancellation: true,
-  unhandledRejectionStrict: true
+  considerUnhandledRejectionsAsExceptions: true
 });
 
 const COMPILE_ID_BEST = "best";
@@ -2038,14 +2038,14 @@ const computeInputCodeAndInputMap = async ({
   remap,
   allowTopLevelAwait
 }) => {
-  const specifierMetaMap = util.normalizeSpecifierMetaMap(util.metaMapToSpecifierMetaMap({
+  const structuredMetaMap = util.normalizeStructuredMetaMap({
     convert: convertMap
-  }), projectDirectoryUrl);
+  }, projectDirectoryUrl);
   const {
     convert
   } = util.urlToMeta({
     url,
-    specifierMetaMap
+    structuredMetaMap
   });
 
   if (!convert) {
@@ -3207,7 +3207,7 @@ const compileFile = async ({
         headers: {
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
-          "eTag": util.bufferToEtag(Buffer.from(compiledSource))
+          "etag": util.bufferToEtag(Buffer.from(compiledSource))
         },
         body: compiledSource,
         timing
@@ -3286,39 +3286,26 @@ const {
   transformSync
 } = require$1("@babel/core");
 
-const buildServiceWorker = async ({
-  projectDirectoryUrl,
-  buildDirectoryUrl,
-  serviceWorkerProjectRelativeUrl,
-  serviceWorkerBuildRelativeUrl = serviceWorkerProjectRelativeUrl,
-  minify = false,
-  serviceWorkerTransformer = code => code
+const bundleWorker = ({
+  workerScriptUrl,
+  workerScriptSourceMap
 }) => {
-  const serviceWorkerProjectUrl = util.resolveUrl(serviceWorkerProjectRelativeUrl, projectDirectoryUrl);
-  const serviceWorkerBuildUrl = util.resolveUrl(serviceWorkerBuildRelativeUrl, buildDirectoryUrl);
-  let serviceWorkerCode = transformSwScript(serviceWorkerProjectUrl);
-  serviceWorkerCode = serviceWorkerTransformer(serviceWorkerCode);
-
-  if (!minify) {
-    await util.writeFile(serviceWorkerBuildUrl, serviceWorkerCode);
-    return;
-  }
-
-  const minifyResult = await minifyJs(serviceWorkerCode, serviceWorkerProjectRelativeUrl, {
-    sourceMap: {
-      asObject: true,
-      includeSources: true
-    }
+  const {
+    code,
+    map
+  } = transformWorkerScript(workerScriptUrl, {
+    workerScriptSourceMap
   });
-  serviceWorkerCode = minifyResult.code;
-  const filename = util.urlToFilename(serviceWorkerBuildUrl);
-  const sourcemapFilename = `${filename}.map`;
-  const sourcemapBuildUrl = `${util.urlToParentUrl(serviceWorkerBuildUrl)}${sourcemapFilename}`;
-  serviceWorkerCode = setJavaScriptSourceMappingUrl(serviceWorkerCode, sourcemapFilename);
-  await Promise.all([util.writeFile(serviceWorkerBuildUrl, serviceWorkerCode), util.writeFile(sourcemapBuildUrl, JSON.stringify(minifyResult.map, null, "  "))]);
+  return {
+    code,
+    map
+  };
 };
 
-const transformSwScript = (scriptUrl, importerUrl) => {
+const transformWorkerScript = (scriptUrl, {
+  workerScriptSourceMap,
+  importerUrl
+}) => {
   const scriptPath = util.urlToFileSystemPath(scriptUrl);
   let scriptContent;
 
@@ -3327,32 +3314,37 @@ const transformSwScript = (scriptUrl, importerUrl) => {
   } catch (e) {
     if (e.code === "ENOENT") {
       if (importerUrl) {
-        throw new Error(`no file found for an import in a service worker.
---- service worker url ---
+        throw new Error(`no file found for an import in a worker.
+--- worker url ---
 ${importerUrl}.
 --- imported url ---
 ${scriptUrl}`);
       }
 
-      throw new Error(`no service worker file at ${scriptUrl}`);
+      throw new Error(`no worker file at ${scriptUrl}`);
     }
 
     throw e;
   }
 
   const {
-    code
+    code,
+    map
   } = transformSync(scriptContent, {
     filename: scriptPath,
     configFile: false,
     babelrc: false,
     // trust only these options, do not read any babelrc config file
     ast: false,
-    sourceMaps: false,
+    inputSourceMap: workerScriptSourceMap,
+    sourceMaps: true,
     // sourceFileName: scriptPath,
     plugins: [[babelPluginInlineImportScripts, {}]]
   });
-  return code;
+  return {
+    code,
+    map
+  };
 };
 
 const babelPluginInlineImportScripts = api => {
@@ -3374,17 +3366,42 @@ const babelPluginInlineImportScripts = api => {
 
         const replaceImportScriptsWithFileContents = () => {
           const fileUrl = util.fileSystemPathToUrl(filename);
-          const nodes = path.get("arguments").reduce((previous, arg) => {
+          let previousArgType = "";
+          const importedUrls = path.get("arguments").map((arg, index) => {
             if (!types.isStringLiteral(arg)) {
-              throw new Error(`cannot inline dynamic importScripts`);
+              if (previousArgType && previousArgType !== "dynamic") {
+                throw new Error(`importScript mixed arguments: arg number ${index} is dynamic while previous arg was ${previousArgType}`);
+              }
+
+              previousArgType = "dynamic";
+              return arg;
             }
 
             const importedUrl = util.resolveUrl(arg.node.value, fileUrl);
-            const importedSource = transformSwScript(importedUrl, fileUrl);
-            const importedSourceAst = parse(importedSource);
-            return [...previous, ...importedSourceAst.program.body];
-          }, []);
-          calleePath.parentPath.replaceWithMultiple(nodes);
+
+            if (!importedUrl.startsWith("file://")) {
+              if (previousArgType && previousArgType !== "remote") {
+                throw new Error(`importScript mixed arguments: arg number ${index} targets a remote url while previous arg was ${previousArgType}`);
+              }
+
+              previousArgType = "remote";
+              return arg;
+            }
+
+            previousArgType = "local";
+            return importedUrl;
+          });
+
+          if (previousArgType === "local") {
+            const nodes = importedUrls.reduce((previous, importedUrl) => {
+              const importedScriptResult = transformWorkerScript(importedUrl, {
+                importerUrl: fileUrl
+              });
+              const importedSourceAst = parse(importedScriptResult.code);
+              return [...previous, ...importedSourceAst.program.body];
+            }, []);
+            calleePath.parentPath.replaceWithMultiple(nodes);
+          }
         };
 
         if (types.isIdentifier(calleePath.node, {
@@ -3416,14 +3433,50 @@ const babelPluginInlineImportScripts = api => {
   };
 };
 
+const buildServiceWorker = async ({
+  projectDirectoryUrl,
+  buildDirectoryUrl,
+  serviceWorkerProjectRelativeUrl,
+  serviceWorkerBuildRelativeUrl = serviceWorkerProjectRelativeUrl,
+  minify = false,
+  serviceWorkerTransformer = code => code
+}) => {
+  const serviceWorkerProjectUrl = util.resolveUrl(serviceWorkerProjectRelativeUrl, projectDirectoryUrl);
+  const serviceWorkerBuildUrl = util.resolveUrl(serviceWorkerBuildRelativeUrl, buildDirectoryUrl);
+  const workerBundle = bundleWorker({
+    workerScriptUrl: serviceWorkerProjectUrl
+  });
+  const serviceWorkerCode = serviceWorkerTransformer(workerBundle.code);
+
+  if (minify) {
+    const minifyResult = await minifyJs(serviceWorkerCode, serviceWorkerProjectRelativeUrl, {
+      sourceMap: { ...(workerBundle.map ? {
+          content: JSON.stringify(workerBundle.map)
+        } : {}),
+        asObject: true,
+        includeSources: true
+      }
+    });
+    await writeJsAndSourcemap(serviceWorkerBuildUrl, minifyResult.code, minifyResult.map);
+  } else {
+    await writeJsAndSourcemap(serviceWorkerBuildUrl, serviceWorkerCode, workerBundle.map);
+  }
+};
+
+const writeJsAndSourcemap = async (serviceWorkerBuildUrl, serviceWorkerCode, serviceWorkerSourceMap) => {
+  const filename = util.urlToFilename(serviceWorkerBuildUrl);
+  const sourcemapFilename = `${filename}.map`;
+  const sourcemapBuildUrl = `${util.urlToParentUrl(serviceWorkerBuildUrl)}${sourcemapFilename}`;
+  serviceWorkerCode = setJavaScriptSourceMappingUrl(serviceWorkerCode, sourcemapFilename);
+  await Promise.all([util.writeFile(serviceWorkerBuildUrl, serviceWorkerCode), util.writeFile(sourcemapBuildUrl, JSON.stringify(serviceWorkerSourceMap, null, "  "))]);
+};
+
 https.globalAgent.options.rejectUnauthorized = false;
 const fetchUrl = async (url, {
-  simplified = false,
   ignoreHttpsError = true,
   ...rest
 } = {}) => {
   const response = await server.fetchUrl(url, {
-    simplified,
     ignoreHttpsError,
     ...rest
   });
@@ -3431,20 +3484,12 @@ const fetchUrl = async (url, {
     url: response.url,
     status: response.status,
     statusText: response.statusText,
-    headers: responseToHeaders(response),
+    headers: server.headersToObject(response.headers),
     text: response.text.bind(response),
     json: response.json.bind(response),
     blob: response.blob.bind(response),
     arrayBuffer: response.arrayBuffer.bind(response)
   };
-};
-
-const responseToHeaders = response => {
-  const headers = {};
-  response.headers.forEach((value, name) => {
-    headers[name] = value;
-  });
-  return headers;
 };
 
 const validateResponseStatusIsOk = ({
@@ -3934,38 +3979,6 @@ const sortObjectByPathnames = object => {
   return objectSorted;
 };
 
-const collectNodesMutations = (nodes, notifiers, target, candidates) => {
-  const mutations = [];
-  nodes.forEach(node => {
-    mutations.push(...collectNodeMutations(node, notifiers, target, nodes, candidates));
-  });
-  return mutations;
-};
-
-const collectNodeMutations = (node, notifiers, target, nodes, candidates) => {
-  let firstValueReturned;
-  candidates.find(candidate => {
-    const returnValue = candidate(node, notifiers, target, nodes);
-
-    if (returnValue === null || returnValue === undefined) {
-      return false;
-    }
-
-    firstValueReturned = returnValue;
-    return true;
-  });
-
-  if (typeof firstValueReturned === "function") {
-    return [firstValueReturned];
-  }
-
-  if (Array.isArray(firstValueReturned)) {
-    return firstValueReturned;
-  }
-
-  return [];
-};
-
 const parseDataUrl = dataUrl => {
   const afterDataProtocol = dataUrl.slice("data:".length);
   const commaIndex = afterDataProtocol.indexOf(",");
@@ -4022,14 +4035,213 @@ const dataToBase64 = typeof window === "object" ? window.atob : data => Buffer.f
 const base64ToString = typeof window === "object" ? window.btoa : base64String => Buffer.from(base64String, "base64").toString("utf8");
 
 const getTargetAsBase64Url = ({
-  sourceAfterTransformation,
-  content
+  targetBufferAfterTransformation,
+  targetContentType
 }) => {
   return stringifyDataUrl({
-    data: sourceAfterTransformation,
+    data: targetBufferAfterTransformation,
     base64Flag: true,
-    mediaType: content.type
+    mediaType: targetContentType
   });
+};
+const memoize = fn => {
+  let called;
+  let previousCallReturnValue;
+
+  const memoized = (...args) => {
+    if (called) return previousCallReturnValue;
+    previousCallReturnValue = fn(...args);
+    called = true;
+    return previousCallReturnValue;
+  };
+
+  memoized.forceMemoization = value => {
+    called = true;
+    previousCallReturnValue = value;
+  };
+
+  return memoized;
+};
+const getCallerLocation = () => {
+  const {
+    prepareStackTrace
+  } = Error;
+
+  Error.prepareStackTrace = (error, stack) => {
+    Error.prepareStackTrace = prepareStackTrace;
+    return stack;
+  };
+
+  const {
+    stack
+  } = new Error();
+  const callerCallsite = stack[2];
+  const fileName = callerCallsite.getFileName();
+  return {
+    url: fileName && util.isFileSystemPath(fileName) ? util.fileSystemPathToUrl(fileName) : fileName,
+    line: callerCallsite.getLineNumber(),
+    column: callerCallsite.getColumnNumber()
+  };
+};
+const compareContentType = (leftContentType, rightContentType) => {
+  if (leftContentType === rightContentType) {
+    return true;
+  }
+
+  if (leftContentType === "text/javascript" && rightContentType === "application/javascript") {
+    return true;
+  }
+
+  if (leftContentType === "application/javascript" && rightContentType === "text/javascript") {
+    return true;
+  }
+
+  return false;
+};
+const checkContentType = (reference, {
+  logger,
+  showReferenceSourceLocation
+}) => {
+  const {
+    referenceExpectedContentType
+  } = reference;
+  const {
+    targetContentType
+  } = reference.target;
+
+  if (!referenceExpectedContentType) {
+    return;
+  }
+
+  if (compareContentType(referenceExpectedContentType, targetContentType)) {
+    return;
+  } // sourcemap content type is fine if we got octet-stream too
+
+
+  const {
+    targetUrl
+  } = reference.target;
+
+  if (referenceExpectedContentType === "application/json" && targetContentType === "application/octet-stream" && targetUrl.endsWith(".map")) {
+    return;
+  }
+
+  logger.warn(formatContentTypeMismatchLog(reference, {
+    showReferenceSourceLocation
+  }));
+};
+
+const formatContentTypeMismatchLog = (reference, {
+  showReferenceSourceLocation
+}) => {
+  const {
+    referenceExpectedContentType,
+    target
+  } = reference;
+  const {
+    targetContentType,
+    targetUrl
+  } = target;
+  return `A reference was expecting ${referenceExpectedContentType} but found ${targetContentType} instead.
+--- reference ---
+${showReferenceSourceLocation(reference)}
+--- target url ---
+${targetUrl}`;
+};
+
+const formatExternalReferenceLog = (reference, {
+  showReferenceSourceLocation,
+  projectDirectoryUrl
+}) => {
+  const {
+    target
+  } = reference;
+  const {
+    targetUrl
+  } = target;
+  return `Found reference to an url outside project directory.
+${showReferenceSourceLocation(reference)}
+--- target url ---
+${targetUrl}
+--- project directory url ---
+${projectDirectoryUrl}`;
+};
+const formatReferenceFound = (reference, referenceSourceLocation) => {
+  const {
+    target
+  } = reference;
+  const {
+    targetIsInline,
+    targetIsJsModule,
+    targetRelativeUrl
+  } = target;
+  let message;
+
+  if (targetIsInline && targetIsJsModule) {
+    message = `found inline js module.`;
+  } else if (targetIsInline) {
+    message = `found inline asset.`;
+  } else if (targetIsJsModule) {
+    message = `found js module reference to ${targetRelativeUrl}.`;
+  } else {
+    message = `found asset reference to ${targetRelativeUrl}.`;
+  }
+
+  message += `
+--- reference source ---
+${referenceSourceLocation}`;
+  return message;
+}; // const textualContentTypes = ["text/html", "text/css", "image/svg+xml"]
+// const isTextualContentType = (contentType) => {
+//   if (textualContentTypes.includes(contentType)) {
+//     return true
+//   }
+//   if (contentType.startsWith("text/")) {
+//     return true
+//   }
+//   return false
+// }
+
+const collectNodesMutations = (nodes, notifiers, target, candidates) => {
+  const mutations = [];
+  nodes.forEach(node => {
+    mutations.push(...collectNodeMutations(node, notifiers, target, nodes, candidates));
+  });
+  return mutations;
+};
+const htmlNodeToReferenceLocation = htmlNode => {
+  const {
+    line,
+    column
+  } = getHtmlNodeLocation(htmlNode);
+  return {
+    referenceLine: line,
+    referenceColumn: column
+  };
+};
+
+const collectNodeMutations = (node, notifiers, target, nodes, candidates) => {
+  let firstValueReturned;
+  candidates.find(candidate => {
+    const returnValue = candidate(node, notifiers, target, nodes);
+
+    if (returnValue === null || returnValue === undefined) {
+      return false;
+    }
+
+    firstValueReturned = returnValue;
+    return true;
+  });
+
+  if (typeof firstValueReturned === "function") {
+    return [firstValueReturned];
+  }
+
+  if (Array.isArray(firstValueReturned)) {
+    return firstValueReturned;
+  }
+
+  return [];
 };
 
 const minifyHtml = (htmlString, options) => {
@@ -4040,14 +4252,14 @@ const minifyHtml = (htmlString, options) => {
   return minify(htmlString, options);
 };
 
-const parseSvgAsset = async (target, notifiers, {
+const parseSvgAsset = async (svgTarget, notifiers, {
   minify,
   minifyHtmlOptions
 }) => {
-  const svgString = String(target.content.value);
+  const svgString = String(svgTarget.targetBuffer);
   const svgAst = await parseSvgString(svgString);
   const htmlRessources = parseHtmlAstRessources(svgAst);
-  const mutations = collectSvgMutations(htmlRessources, notifiers, target);
+  const mutations = collectSvgMutations(htmlRessources, notifiers, svgTarget);
   return ({
     getReferenceUrlRelativeToImporter
   }) => {
@@ -4058,18 +4270,18 @@ const parseSvgAsset = async (target, notifiers, {
     });
     const svgAfterTransformation = stringifyHtmlAst(svgAst); // could also benefit of minification https://github.com/svg/svgo
 
-    const sourceAfterTransformation = minify ? minifyHtml(svgAfterTransformation, minifyHtmlOptions) : svgAfterTransformation;
+    const targetBufferAfterTransformation = minify ? minifyHtml(svgAfterTransformation, minifyHtmlOptions) : svgAfterTransformation;
     return {
-      sourceAfterTransformation
+      targetBufferAfterTransformation
     };
   };
 };
 const collectSvgMutations = ({
   images,
   uses
-}, notifiers, target) => {
-  const imagesMutations = collectNodesMutations(images, notifiers, target, [imageHrefVisitor]);
-  const usesMutations = collectNodesMutations(uses, notifiers, target, [useHrefVisitor]);
+}, notifiers, svgTarget) => {
+  const imagesMutations = collectNodesMutations(images, notifiers, svgTarget, [imageHrefVisitor]);
+  const usesMutations = collectNodesMutations(uses, notifiers, svgTarget, [useHrefVisitor]);
   const svgMutations = [...imagesMutations, ...usesMutations];
   return svgMutations;
 };
@@ -4084,8 +4296,8 @@ const imageHrefVisitor = (image, {
   }
 
   const hrefReference = notifyReferenceFound({
-    specifier: hrefAttribute.value,
-    ...getHtmlNodeLocation(image)
+    referenceTargetSpecifier: hrefAttribute.value,
+    ...htmlNodeToReferenceLocation(image)
   });
   return ({
     getReferenceUrlRelativeToImporter
@@ -4114,8 +4326,8 @@ const useHrefVisitor = (use, {
     hash
   } = new URL(href, "file://");
   const hrefReference = notifyReferenceFound({
-    specifier: href,
-    ...getHtmlNodeLocation(use)
+    referenceTargetSpecifier: href,
+    ...htmlNodeToReferenceLocation(use)
   });
   return ({
     getReferenceUrlRelativeToImporter
@@ -4127,10 +4339,10 @@ const useHrefVisitor = (use, {
 
 const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
   const {
-    isInline
+    targetIsInline
   } = reference.target;
 
-  if (isInline) {
+  if (targetIsInline) {
     return getTargetAsBase64Url(reference.target);
   }
 
@@ -4154,14 +4366,14 @@ Or be sure to also reference this url somewhere in the html file like
 <link rel="preload" href="img.png" />
 
 */
-const parseHtmlAsset = async (target, notifiers, {
+const parseHtmlAsset = async (htmlTarget, notifiers, {
   minify,
   minifyHtmlOptions,
   transformImportmapTarget = () => {},
   htmlStringToHtmlAst = htmlString => parseHtmlString(htmlString),
   htmlAstToHtmlString = htmlAst => stringifyHtmlAst(htmlAst)
 } = {}) => {
-  const htmlString = String(target.content.value);
+  const htmlString = String(htmlTarget.targetBuffer);
   const htmlAst = await htmlStringToHtmlAst(htmlString);
   const {
     links,
@@ -4172,21 +4384,21 @@ const parseHtmlAsset = async (target, notifiers, {
     uses,
     sources
   } = parseHtmlAstRessources(htmlAst);
-  const scriptsMutations = collectNodesMutations(scripts, notifiers, target, [// regular javascript are not parseable by rollup
+  const scriptsMutations = collectNodesMutations(scripts, notifiers, htmlTarget, [// regular javascript are not parseable by rollup
   // and we don't really care about there content
   // we will handle them as regular asset
   // but we still want to inline/minify/hash them for performance
   regularScriptSrcVisitor, regularScriptTextNodeVisitor, moduleScriptSrcVisitor, moduleScriptTextNodeVisitor, importmapScriptSrcVisitor, importmapScriptTextNodeVisitor]);
-  const linksMutations = collectNodesMutations(links, notifiers, target, [linkStylesheetHrefVisitor, linkHrefVisitor]);
-  const stylesMutations = collectNodesMutations(styles, notifiers, target, [styleTextNodeVisitor]);
-  const imgsSrcMutations = collectNodesMutations(imgs, notifiers, target, [imgSrcVisitor]);
-  const imgsSrcsetMutations = collectNodesMutations(imgs, notifiers, target, [srcsetVisitor]);
-  const sourcesSrcMutations = collectNodesMutations(sources, notifiers, target, [sourceSrcVisitor]);
-  const sourcesSrcsetMutations = collectNodesMutations(sources, notifiers, target, [srcsetVisitor]);
+  const linksMutations = collectNodesMutations(links, notifiers, htmlTarget, [linkStylesheetHrefVisitor, linkHrefVisitor]);
+  const stylesMutations = collectNodesMutations(styles, notifiers, htmlTarget, [styleTextNodeVisitor]);
+  const imgsSrcMutations = collectNodesMutations(imgs, notifiers, htmlTarget, [imgSrcVisitor]);
+  const imgsSrcsetMutations = collectNodesMutations(imgs, notifiers, htmlTarget, [srcsetVisitor]);
+  const sourcesSrcMutations = collectNodesMutations(sources, notifiers, htmlTarget, [sourceSrcVisitor]);
+  const sourcesSrcsetMutations = collectNodesMutations(sources, notifiers, htmlTarget, [srcsetVisitor]);
   const svgMutations = collectSvgMutations({
     images,
     uses
-  }, notifiers, target);
+  }, notifiers, htmlTarget);
   const htmlMutations = [...scriptsMutations, ...linksMutations, ...stylesMutations, ...imgsSrcMutations, ...imgsSrcsetMutations, ...sourcesSrcMutations, ...sourcesSrcsetMutations, ...svgMutations];
   return async params => {
     htmlMutations.forEach(mutationCallback => {
@@ -4195,9 +4407,9 @@ const parseHtmlAsset = async (target, notifiers, {
       });
     });
     const htmlAfterTransformation = htmlAstToHtmlString(htmlAst);
-    const sourceAfterTransformation = minify ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions) : htmlAfterTransformation;
+    const targetBufferAfterTransformation = minify ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions) : htmlAfterTransformation;
     return {
-      sourceAfterTransformation
+      targetBufferAfterTransformation
     };
   };
 };
@@ -4218,23 +4430,23 @@ const regularScriptSrcVisitor = (script, {
   }
 
   const remoteScriptReference = notifyReferenceFound({
-    contentType: "text/javascript",
-    specifier: srcAttribute.value,
-    ...getHtmlNodeLocation(script)
+    referenceExpectedContentType: "application/javascript",
+    referenceTargetSpecifier: srcAttribute.value,
+    ...htmlNodeToReferenceLocation(script)
   });
   return ({
     getReferenceUrlRelativeToImporter
   }) => {
     const {
-      isInline
+      targetIsInline
     } = remoteScriptReference.target;
 
-    if (isInline) {
+    if (targetIsInline) {
       removeHtmlNodeAttribute(script, srcAttribute);
       const {
-        sourceAfterTransformation
+        targetBufferAfterTransformation
       } = remoteScriptReference.target;
-      setHtmlNodeText(script, sourceAfterTransformation);
+      setHtmlNodeText(script, targetBufferAfterTransformation);
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference);
       srcAttribute.value = urlRelativeToImporter;
@@ -4244,7 +4456,7 @@ const regularScriptSrcVisitor = (script, {
 
 const regularScriptTextNodeVisitor = (script, {
   notifyReferenceFound
-}, target, scripts) => {
+}, htmlTarget, scripts) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type");
 
   if (typeAttribute && (typeAttribute.value !== "text/javascript" || typeAttribute.value !== "application/javascript")) {
@@ -4264,19 +4476,18 @@ const regularScriptTextNodeVisitor = (script, {
   }
 
   const jsReference = notifyReferenceFound({
-    contentType: "text/javascript",
-    specifier: getUniqueNameForInlineHtmlNode(script, scripts, `${util.urlToBasename(target.url)}.[id].js`),
-    ...getHtmlNodeLocation(script),
-    content: {
-      type: "text/javascript",
-      value: textNode.value
-    }
+    referenceExpectedContentType: "application/javascript",
+    referenceTargetSpecifier: getUniqueNameForInlineHtmlNode(script, scripts, `${util.urlToBasename(htmlTarget.targetUrl)}.[id].js`),
+    ...htmlNodeToReferenceLocation(script),
+    targetContentType: "application/javascript",
+    targetBuffer: Buffer.from(textNode.value),
+    targetIsInline: true
   });
   return () => {
     const {
-      sourceAfterTransformation
+      targetBufferAfterTransformation
     } = jsReference.target;
-    textNode.value = sourceAfterTransformation;
+    textNode.value = targetBufferAfterTransformation;
   };
 };
 
@@ -4301,10 +4512,10 @@ const moduleScriptSrcVisitor = (script, {
   }
 
   const remoteScriptReference = notifyReferenceFound({
-    isJsModule: true,
-    contentType: "text/javascript",
-    specifier: srcAttribute.value,
-    ...getHtmlNodeLocation(script)
+    referenceExpectedContentType: "application/javascript",
+    referenceTargetSpecifier: srcAttribute.value,
+    ...htmlNodeToReferenceLocation(script),
+    targetIsJsModule: true
   });
   return ({
     getReferenceUrlRelativeToImporter
@@ -4322,7 +4533,7 @@ const moduleScriptSrcVisitor = (script, {
 const moduleScriptTextNodeVisitor = (script, {
   format,
   notifyReferenceFound
-}, target, scripts) => {
+}, htmlTarget, scripts) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type");
 
   if (!typeAttribute) {
@@ -4346,14 +4557,13 @@ const moduleScriptTextNodeVisitor = (script, {
   }
 
   const jsReference = notifyReferenceFound({
-    isJsModule: true,
-    contentType: "text/javascript",
-    specifier: getUniqueNameForInlineHtmlNode(script, scripts, `${util.urlToBasename(target.url)}.[id].js`),
-    ...getHtmlNodeLocation(script),
-    content: {
-      type: "text/javascript",
-      value: textNode.value
-    }
+    referenceExpectedContentType: "application/javascript",
+    referenceTargetSpecifier: getUniqueNameForInlineHtmlNode(script, scripts, `${util.urlToBasename(htmlTarget.targetUrl)}.[id].js`),
+    ...htmlNodeToReferenceLocation(script),
+    targetContentType: "application/javascript",
+    targetBuffer: textNode.value,
+    targetIsJsModule: true,
+    targetIsInline: true
   });
   return ({
     getReferenceUrlRelativeToImporter
@@ -4393,17 +4603,18 @@ const importmapScriptSrcVisitor = (script, {
   }
 
   const importmapReference = notifyReferenceFound({
-    contentType: "application/importmap+json",
-    specifier: srcAttribute.value,
-    ...getHtmlNodeLocation(script),
+    referenceExpectedContentType: "application/importmap+json",
+    referenceTargetSpecifier: srcAttribute.value,
+    ...htmlNodeToReferenceLocation(script),
     // here we want to force the fileName for the importmap
     // so that we don't have to rewrite its content
     // the goal is to put the importmap at the same relative path
     // than in the project
-    fileNamePattern: () => {
-      const importmapUrl = importmapReference.url;
-      const importmapRelativeUrl = util.urlToRelativeUrl(importmapReference.target.url, importmapUrl);
-      const importmapParentRelativeUrl = util.urlToRelativeUrl(util.urlToParentUrl(util.resolveUrl(importmapRelativeUrl, "file://")), "file://");
+    targetFileNamePattern: () => {
+      const importmapReferenceUrl = importmapReference.referenceUrl;
+      const importmapTargetUrl = importmapReference.target.targetUrl;
+      const importmapUrlRelativeToImporter = util.urlToRelativeUrl(importmapTargetUrl, importmapReferenceUrl);
+      const importmapParentRelativeUrl = util.urlToRelativeUrl(util.urlToParentUrl(util.resolveUrl(importmapUrlRelativeToImporter, "file://")), "file://");
       return `${importmapParentRelativeUrl}[name]-[hash][extname]`;
     }
   });
@@ -4417,17 +4628,17 @@ const importmapScriptSrcVisitor = (script, {
 
     transformImportmapTarget(importmapReference.target);
     const {
-      isInline
+      targetIsInline
     } = importmapReference.target;
 
-    if (isInline) {
+    if (targetIsInline) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute);
       const {
-        sourceAfterTransformation
+        targetBufferAfterTransformation
       } = importmapReference.target;
-      setHtmlNodeText(script, sourceAfterTransformation);
+      setHtmlNodeText(script, targetBufferAfterTransformation);
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(importmapReference);
       srcAttribute.value = urlRelativeToImporter;
@@ -4438,7 +4649,7 @@ const importmapScriptSrcVisitor = (script, {
 const importmapScriptTextNodeVisitor = (script, {
   format,
   notifyReferenceFound
-}, target, scripts) => {
+}, htmlTarget, scripts) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type");
 
   if (!typeAttribute) {
@@ -4462,13 +4673,12 @@ const importmapScriptTextNodeVisitor = (script, {
   }
 
   const importmapReference = notifyReferenceFound({
-    contentType: "application/importmap+json",
-    specifier: getUniqueNameForInlineHtmlNode(script, scripts, `${util.urlToBasename(target.url)}.[id].importmap`),
-    ...getHtmlNodeLocation(script),
-    content: {
-      type: "application/importmap+json",
-      value: textNode.value
-    }
+    referenceExpectedContentType: "application/importmap+json",
+    referenceTargetSpecifier: getUniqueNameForInlineHtmlNode(script, scripts, `${util.urlToBasename(htmlTarget.targetUrl)}.[id].importmap`),
+    ...htmlNodeToReferenceLocation(script),
+    targetContentType: "application/importmap+json",
+    targetBuffer: Buffer.from(textNode.value),
+    targetIsInline: true
   });
   return ({
     transformImportmapTarget
@@ -4479,9 +4689,9 @@ const importmapScriptTextNodeVisitor = (script, {
 
     transformImportmapTarget(importmapReference.target);
     const {
-      sourceAfterTransformation
+      targetBufferAfterTransformation
     } = importmapReference.target;
-    textNode.value = sourceAfterTransformation;
+    textNode.value = targetBufferAfterTransformation;
   };
 };
 
@@ -4505,22 +4715,22 @@ const linkStylesheetHrefVisitor = (link, {
   }
 
   const cssReference = notifyReferenceFound({
-    contentType: "text/css",
-    specifier: hrefAttribute.value,
-    ...getHtmlNodeLocation(link)
+    referenceExpectedContentType: "text/css",
+    referenceTargetSpecifier: hrefAttribute.value,
+    ...htmlNodeToReferenceLocation(link)
   });
   return ({
     getReferenceUrlRelativeToImporter
   }) => {
     const {
-      isInline
+      targetIsInline
     } = cssReference.target;
 
-    if (isInline) {
+    if (targetIsInline) {
       const {
-        sourceAfterTransformation
+        targetBufferAfterTransformation
       } = cssReference.target;
-      replaceHtmlNode(link, `<style>${sourceAfterTransformation}</style>`);
+      replaceHtmlNode(link, `<style>${targetBufferAfterTransformation}</style>`);
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(cssReference);
       hrefAttribute.value = urlRelativeToImporter;
@@ -4539,19 +4749,19 @@ const linkHrefVisitor = (link, {
 
   const contentType = linkToContentType(link);
   const reference = notifyReferenceFound({
-    contentType,
-    specifier: hrefAttribute.value,
-    ...getHtmlNodeLocation(link),
-    disableHash: contentType === "application/manifest+json"
+    referenceExpectedContentType: contentType,
+    referenceTargetSpecifier: hrefAttribute.value,
+    ...htmlNodeToReferenceLocation(link),
+    targetUrlVersioningDisabled: contentType === "application/manifest+json"
   });
   return ({
     getReferenceUrlRelativeToImporter
   }) => {
     const {
-      isInline
+      targetIsInline
     } = reference.target;
 
-    if (isInline) {
+    if (targetIsInline) {
       replaceHtmlNode(link, `<link href="${getTargetAsBase64Url(reference.target)}" />`);
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(reference);
@@ -4580,7 +4790,7 @@ const linkToContentType = link => {
 
 const styleTextNodeVisitor = (style, {
   notifyReferenceFound
-}, target, styles) => {
+}, htmlTarget, styles) => {
   const textNode = getHtmlNodeTextNode(style);
 
   if (!textNode) {
@@ -4588,19 +4798,18 @@ const styleTextNodeVisitor = (style, {
   }
 
   const inlineStyleReference = notifyReferenceFound({
-    contentType: "text/css",
-    specifier: getUniqueNameForInlineHtmlNode(style, styles, `${util.urlToBasename(target.url)}.[id].css`),
-    ...getHtmlNodeLocation(style),
-    content: {
-      type: "text/css",
-      value: textNode.value
-    }
+    referenceExpectedContentType: "text/css",
+    referenceTargetSpecifier: getUniqueNameForInlineHtmlNode(style, styles, `${util.urlToBasename(htmlTarget.targetUrl)}.[id].css`),
+    ...htmlNodeToReferenceLocation(style),
+    targetContentType: "text/css",
+    targetBuffer: Buffer.from(textNode.value),
+    targetIsInline: true
   });
   return () => {
     const {
-      sourceAfterTransformation
+      targetBufferAfterTransformation
     } = inlineStyleReference.target;
-    textNode.value = sourceAfterTransformation;
+    textNode.value = targetBufferAfterTransformation;
   };
 };
 
@@ -4614,8 +4823,8 @@ const imgSrcVisitor = (img, {
   }
 
   const srcReference = notifyReferenceFound({
-    specifier: srcAttribute.value,
-    ...getHtmlNodeLocation(img)
+    referenceTargetSpecifier: srcAttribute.value,
+    ...htmlNodeToReferenceLocation(img)
   });
   return ({
     getReferenceUrlRelativeToImporter
@@ -4638,8 +4847,8 @@ const srcsetVisitor = (htmlNode, {
   const srcsetPartsReferences = srcsetParts.map(({
     specifier
   }) => notifyReferenceFound({
-    specifier,
-    ...getHtmlNodeLocation(htmlNode)
+    referenceTargetSpecifier: specifier,
+    ...htmlNodeToReferenceLocation(htmlNode)
   }));
 
   if (srcsetParts.length === 0) {
@@ -4669,9 +4878,9 @@ const sourceSrcVisitor = (source, {
 
   const typeAttribute = getHtmlNodeAttributeByName(source, "type");
   const srcReference = notifyReferenceFound({
-    contentType: typeAttribute ? typeAttribute.value : undefined,
-    specifier: srcAttribute.value,
-    ...getHtmlNodeLocation(source)
+    referenceExpectedContentType: typeAttribute ? typeAttribute.value : undefined,
+    referenceTargetSpecifier: srcAttribute.value,
+    ...htmlNodeToReferenceLocation(source)
   });
   return ({
     getReferenceUrlRelativeToImporter
@@ -4683,10 +4892,10 @@ const sourceSrcVisitor = (source, {
 
 const referenceToUrl$1 = (reference, getReferenceUrlRelativeToImporter) => {
   const {
-    isInline
+    targetIsInline
   } = reference.target;
 
-  if (isInline) {
+  if (targetIsInline) {
     return getTargetAsBase64Url(reference.target);
   }
 
@@ -4702,12 +4911,10 @@ const ensureRelativeUrlNotation = relativeUrl => {
   return `./${relativeUrl}`;
 };
 
-const parseImportmapAsset = ({
-  content
-}, notifiers, {
+const parseImportmapAsset = (importmapTarget, notifiers, {
   minify
 }) => {
-  const importmapString = String(content.value);
+  const importmapString = String(importmapTarget.targetBuffer);
   return () => {
     if (minify) {
       // this is to remove eventual whitespaces
@@ -5041,38 +5248,37 @@ const parseCssAsset = async (cssTarget, {
   minify,
   minifyCssOptions
 }) => {
-  const cssUrl = cssTarget.url;
-  const cssString = String(cssTarget.content.value);
+  const cssString = String(cssTarget.targetBuffer);
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString);
   let sourcemapReference;
 
   if (cssSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
-      specifier: cssSourcemapUrl,
-      contentType: "application/json",
+      referenceExpectedContentType: "application/json",
+      referenceTargetSpecifier: cssSourcemapUrl,
       // we don't really know the line or column
       // but let's asusme it the last line and first column
-      line: cssString.split(/\r?\n/).length - 1,
-      column: 0
+      referenceLine: cssString.split(/\r?\n/).length - 1,
+      referenceColumn: 0
     });
   }
 
   const {
     atImports,
     urlDeclarations
-  } = await parseCssUrls(cssString, cssUrl);
+  } = await parseCssUrls(cssString, cssTarget.targetUrl);
   const urlNodeReferenceMapping = new Map();
   atImports.forEach(atImport => {
     const importReference = notifyReferenceFound({
-      specifier: atImport.specifier,
-      ...cssNodeToSourceLocation(atImport.urlDeclarationNode)
+      referenceTargetSpecifier: atImport.specifier,
+      ...cssNodeToReferenceLocation(atImport.urlDeclarationNode)
     });
     urlNodeReferenceMapping.set(atImport.urlNode, importReference);
   });
   urlDeclarations.forEach(urlDeclaration => {
     const urlReference = notifyReferenceFound({
-      specifier: urlDeclaration.specifier,
-      ...cssNodeToSourceLocation(urlDeclaration.urlDeclarationNode)
+      referenceTargetSpecifier: urlDeclaration.specifier,
+      ...cssNodeToReferenceLocation(urlDeclaration.urlDeclarationNode)
     });
     urlNodeReferenceMapping.set(urlDeclaration.urlNode, urlReference);
   });
@@ -5081,7 +5287,7 @@ const parseCssAsset = async (cssTarget, {
     precomputeBuildRelativeUrl,
     registerAssetEmitter
   }) => {
-    const cssReplaceResult = await replaceCssUrls(cssString, cssUrl, ({
+    const cssReplaceResult = await replaceCssUrls(cssString, cssTarget.targetUrl, ({
       urlNode
     }) => {
       const nodeCandidates = Array.from(urlNodeReferenceMapping.keys());
@@ -5094,10 +5300,10 @@ const parseCssAsset = async (cssTarget, {
 
       const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound);
       const {
-        isInline
+        targetIsInline
       } = urlNodeReference.target;
 
-      if (isInline) {
+      if (targetIsInline) {
         return getTargetAsBase64Url(urlNodeReference.target);
       }
 
@@ -5106,7 +5312,7 @@ const parseCssAsset = async (cssTarget, {
       cssMinification: minify,
       cssMinificationOptions: minifyCssOptions,
       sourcemapOptions: sourcemapReference ? {
-        prev: sourcemapReference.target.sourceAfterTransformation
+        prev: sourcemapReference.target.targetBufferAfterTransformation
       } : {}
     });
     const code = cssReplaceResult.css;
@@ -5126,13 +5332,13 @@ const parseCssAsset = async (cssTarget, {
       buildDirectoryUrl,
       emitAsset
     }) => {
-      const cssBuildUrl = util.resolveUrl(cssTarget.buildRelativeUrl, buildDirectoryUrl);
+      const cssBuildUrl = util.resolveUrl(cssTarget.targetBuildRelativeUrl, buildDirectoryUrl);
       const mapBuildUrl = util.resolveUrl(cssSourcemapFilename, cssBuildUrl);
       map.file = util.urlToFilename(cssBuildUrl);
 
       if (map.sources) {
         map.sources = map.sources.map(source => {
-          const sourceUrl = util.resolveUrl(source, cssTarget.url);
+          const sourceUrl = util.resolveUrl(source, cssTarget.targetUrl);
           const sourceUrlRelativeToSourceMap = util.urlToRelativeUrl(sourceUrl, mapBuildUrl);
           return sourceUrlRelativeToSourceMap;
         });
@@ -5143,7 +5349,7 @@ const parseCssAsset = async (cssTarget, {
 
       if (sourcemapReference) {
         sourcemapReference.target.updateOnceReady({
-          sourceAfterTransformation: mapSource,
+          targetBufferAfterTransformation: mapSource,
           buildRelativeUrl
         });
       } else {
@@ -5154,20 +5360,20 @@ const parseCssAsset = async (cssTarget, {
       }
     });
     return {
-      sourceAfterTransformation: cssSourceAfterTransformation,
-      buildRelativeUrl: cssBuildRelativeUrl
+      targetBufferAfterTransformation: cssSourceAfterTransformation,
+      targetBuildRelativeUrl: cssBuildRelativeUrl
     };
   };
 };
 
-const cssNodeToSourceLocation = node => {
+const cssNodeToReferenceLocation = node => {
   const {
     line,
     column
   } = node.source.start;
   return {
-    line,
-    column
+    referenceLine: line,
+    referenceColumn: column
   };
 };
 
@@ -5218,22 +5424,23 @@ const compareUrlNodeValue = (firstUrlNodeValue, secondUrlNodeValue) => {
 const parseJsAsset = async (jsTarget, {
   notifyReferenceFound
 }, {
+  urlToOriginalProjectUrl,
   minify,
   minifyJsOptions
 }) => {
-  const jsUrl = jsTarget.url;
-  const jsString = String(jsTarget.content.value);
+  const jsUrl = jsTarget.targetUrl;
+  const jsString = String(jsTarget.targetBuffer);
   const jsSourcemapUrl = getJavaScriptSourceMappingUrl(jsString);
   let sourcemapReference;
 
   if (jsSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
-      specifier: jsSourcemapUrl,
-      contentType: "application/json",
+      referenceExpectedContentType: "application/json",
+      referenceTargetSpecifier: jsSourcemapUrl,
       // we don't really know the line or column
       // but let's asusme it the last line and first column
-      line: jsString.split(/\r?\n/).length - 1,
-      column: 0
+      referenceLine: jsString.split(/\r?\n/).length - 1,
+      referenceColumn: 0
     });
   }
 
@@ -5244,13 +5451,30 @@ const parseJsAsset = async (jsTarget, {
     let map;
 
     if (sourcemapReference) {
-      map = JSON.parse(sourcemapReference.target.sourceAfterTransformation);
+      map = JSON.parse(sourcemapReference.target.targetBufferAfterTransformation);
+    } // in case this js asset is a worker, bundle it so that:
+    // importScripts are inlined which is good for:
+    // - not breaking things (otherwise we would have to copy imported files in the build directory)
+    // - perf (one less http request)
+
+
+    const mightBeAWorkerScript = !jsTarget.targetIsInline;
+    let jsSourceAfterTransformation;
+
+    if (mightBeAWorkerScript) {
+      const workerScriptUrl = urlToOriginalProjectUrl(jsUrl);
+      const workerBundle = await bundleWorker({
+        workerScriptUrl,
+        workerScriptSourceMap: map
+      });
+      jsSourceAfterTransformation = workerBundle.code;
+      map = workerBundle.map;
+    } else {
+      jsSourceAfterTransformation = jsString;
     }
 
-    let jsSourceAfterTransformation = jsString;
-
     if (minify) {
-      const jsUrlRelativeToImporter = jsTarget.isInline ? util.urlToRelativeUrl(jsTarget.url, jsTarget.importers[0].url) : jsTarget.relativeUrl;
+      const jsUrlRelativeToImporter = jsTarget.targetIsInline ? util.urlToRelativeUrl(jsTarget.targetUrl, jsTarget.targetReferences[0].referenceUrl) : jsTarget.targetRelativeUrl;
       const result = await minifyJs(jsString, jsUrlRelativeToImporter, {
         sourceMap: { ...(map ? {
             content: JSON.stringify(map)
@@ -5276,7 +5500,7 @@ const parseJsAsset = async (jsTarget, {
         buildDirectoryUrl,
         emitAsset
       }) => {
-        const jsBuildUrl = util.resolveUrl(jsTarget.buildRelativeUrl, buildDirectoryUrl);
+        const jsBuildUrl = util.resolveUrl(jsTarget.targetBuildRelativeUrl, buildDirectoryUrl);
         const mapBuildUrl = util.resolveUrl(jsSourcemapFilename, jsBuildUrl);
         map.file = util.urlToFilename(jsBuildUrl);
 
@@ -5297,7 +5521,7 @@ const parseJsAsset = async (jsTarget, {
           // and emit a new one instead
           // when finding this asset in the rollup build we'll have to remove it
           sourcemapReference.target.updateOnceReady({
-            sourceAfterTransformation: mapSource,
+            targetBufferAfterTransformation: mapSource,
             buildRelativeUrl
           });
         } else {
@@ -5308,8 +5532,8 @@ const parseJsAsset = async (jsTarget, {
         }
       });
       return {
-        sourceAfterTransformation: jsSourceAfterTransformation,
-        buildRelativeUrl: jsBuildRelativeUrl
+        targetBufferAfterTransformation: jsSourceAfterTransformation,
+        targetBuildRelativeUrl: jsBuildRelativeUrl
       };
     }
 
@@ -5317,12 +5541,10 @@ const parseJsAsset = async (jsTarget, {
   };
 };
 
-const parseJsonAsset = ({
-  content
-}, notifiers, {
+const parseJsonAsset = (jsonTarget, notifiers, {
   minify
 }) => {
-  const jsonString = String(content.value);
+  const jsonString = String(jsonTarget.targetBuffer);
   return () => {
     if (minify) {
       // this is to remove eventual whitespaces
@@ -5333,20 +5555,20 @@ const parseJsonAsset = ({
   };
 };
 
-const parseWebmanifest = (manifestTarget, {
+const parseWebmanifest = (webmanifestTarget, {
   notifyReferenceFound
 }, {
   minify
 }) => {
   // const manifestUrl = manifestTarget.url
-  const manifestString = String(manifestTarget.content.value);
+  const manifestString = String(webmanifestTarget.targetBuffer);
   const manifest = JSON.parse(manifestString);
   const {
     icons = []
   } = manifest;
   const iconReferences = icons.map(icon => {
     const iconReference = notifyReferenceFound({
-      specifier: icon.src
+      referenceTargetSpecifier: icon.src
     });
     return iconReference;
   });
@@ -5381,6 +5603,7 @@ const parseWebmanifest = (manifestTarget, {
 };
 
 const parseTarget = (target, notifiers, {
+  urlToOriginalProjectUrl,
   format,
   systemJsUrl,
   useImportMapToImproveLongTermCaching,
@@ -5390,9 +5613,15 @@ const parseTarget = (target, notifiers, {
   minifyCssOptions,
   minifyJsOptions
 }) => {
-  const contentType = target.content.type;
+  const {
+    targetContentType
+  } = target;
 
-  if (contentType === "text/html") {
+  if (!targetContentType) {
+    return null;
+  }
+
+  if (targetContentType === "text/html") {
     return parseHtmlAsset(target, notifiers, {
       minify,
       minifyHtmlOptions,
@@ -5453,40 +5682,41 @@ const parseTarget = (target, notifiers, {
     });
   }
 
-  if (contentType === "text/css") {
+  if (targetContentType === "text/css") {
     return parseCssAsset(target, notifiers, {
       minify,
       minifyCssOptions
     });
   }
 
-  if (contentType === "application/importmap+json") {
+  if (targetContentType === "application/importmap+json") {
     return parseImportmapAsset(target, notifiers, {
       minify
     });
   }
 
-  if (contentType === "application/manifest+json" || target.importers[0].contentType === "application/manifest+json") {
+  if (targetContentType === "application/manifest+json" || target.targetReferences[0].referenceExpectedContentType === "application/manifest+json") {
     return parseWebmanifest(target, notifiers, {
       minify
     });
   }
 
-  if (contentType === "text/javascript" || contentType === "application/javascript") {
+  if (targetContentType === "application/javascript" || targetContentType === "text/javascript") {
     return parseJsAsset(target, notifiers, {
+      urlToOriginalProjectUrl,
       minify,
       minifyJsOptions
     });
   }
 
-  if (contentType === "image/svg+xml") {
+  if (targetContentType === "image/svg+xml") {
     return parseSvgAsset(target, notifiers, {
       minify,
       minifyHtmlOptions
     });
   }
 
-  if (contentType === "application/json" || contentType.endsWith("+json")) {
+  if (targetContentType === "application/json" || targetContentType.endsWith("+json")) {
     return parseJsonAsset(target, notifiers, {
       minify
     });
@@ -5497,12 +5727,13 @@ const parseTarget = (target, notifiers, {
 
 const injectImportedFilesIntoImportMapTarget = (importmapTarget, importMapToInject, minify) => {
   const {
-    sourceAfterTransformation
+    targetBufferAfterTransformation
   } = importmapTarget;
-  const importMapOriginal = JSON.parse(sourceAfterTransformation);
-  const importMap$1 = importMap.composeTwoImportMaps(importMapOriginal, importMapToInject);
+  const importmapOriginal = JSON.parse(targetBufferAfterTransformation);
+  const importmapFinal = importMap.composeTwoImportMaps(importmapOriginal, importMapToInject);
+  const importmapFinalContent = minify ? JSON.stringify(importmapFinal) : JSON.stringify(importmapFinal, null, "  ");
   importmapTarget.updateOnceReady({
-    sourceAfterTransformation: minify ? JSON.stringify(importMap$1) : JSON.stringify(importMap$1, null, "  ")
+    targetBufferAfterTransformation: importmapFinalContent
   });
 };
 
@@ -5746,16 +5977,53 @@ const computeBuildRelativeUrl = (fileUrl, fileContent, pattern = "[name]-[hash][
   const buildRelativeUrl = renderNamePattern(typeof pattern === "function" ? pattern() : pattern, {
     dirname: () => util.urlToParentUrl(fileUrl),
     name: () => util.urlToBasename(fileUrl),
-    hash: () => generateAssetHash(fileContent),
+    hash: () => generateContentHash(fileContent),
     extname: () => util.urlToExtension(fileUrl)
   });
   return buildRelativeUrl;
 }; // https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
 
-const generateAssetHash = assetSource => {
+const generateContentHash = stringOrBuffer => {
   const hash = crypto.createHash("sha256");
-  hash.update(assetSource);
+  hash.update(stringOrBuffer);
   return hash.digest("hex").slice(0, 8);
+};
+
+const computeBuildRelativeUrlForTarget = target => {
+  return computeBuildRelativeUrl(target.targetUrl, target.targetBufferAfterTransformation, targetToFileNamePattern(target));
+};
+const assetFileNamePattern = "assets/[name]-[hash][extname]";
+const assetFileNamePatternWithoutHash = "assets/[name][extname]";
+
+const targetToFileNamePattern = target => {
+  if (target.targetFileNamePattern) {
+    return target.targetFileNamePattern;
+  }
+
+  if (target.targetUrlVersioningDisabled) {
+    if (target.targetIsEntry || target.targetIsJsModule) {
+      return `[name][extname]`;
+    }
+
+    return assetFileNamePatternWithoutHash;
+  }
+
+  if (target.targetIsEntry || target.isTargetIsJsModule) {
+    return `[name]-[hash][extname]`;
+  }
+
+  return assetFileNamePattern;
+};
+
+const precomputeBuildRelativeUrlForTarget = (target, targetBufferAfterTransformation = "") => {
+  if (target.targetBuildRelativeUrl) {
+    return target.targetBuildRelativeUrl;
+  }
+
+  target.targetBufferAfterTransformation = targetBufferAfterTransformation;
+  const precomputedBuildRelativeUrl = computeBuildRelativeUrlForTarget(target);
+  target.targetBufferAfterTransformation = undefined;
+  return precomputedBuildRelativeUrl;
 };
 
 /**
@@ -5789,7 +6057,7 @@ Considering that inlining is not that worth it and might
 duplicate them when imported more than once let's just not do it.
 
 */
-const createCompositeAssetHandler = ({
+const createAssetBuilder = ({
   fetch,
   parse
 }, {
@@ -5804,38 +6072,38 @@ const createCompositeAssetHandler = ({
   emitAsset,
   connectTarget = () => {},
   resolveTargetUrl = ({
-    specifier
-  }, target) => util.resolveUrl(specifier, target.url)
+    targetSpecifier,
+    importerUrl
+  }) => util.resolveUrl(targetSpecifier, importerUrl)
 }) => {
   const logger$1 = logger.createLogger({
     logLevel
   });
   const buildDirectoryUrl = util.resolveUrl(buildDirectoryRelativeUrl, projectDirectoryUrl);
 
-  const createReferenceForAssetEntry = async (entryUrl, {
+  const createReferenceForHTMLEntry = async ({
     entryContentType,
-    entryBuildRelativeUrl,
-    entrySource
+    entryUrl,
+    entryBuffer,
+    entryBuildRelativeUrl
   }) => {
     // we don't really know where this reference to that asset file comes from
     // we could almost say it's from the script calling this function
     // so we could analyse stack trace here to put this function caller
     // as the reference to this target file
     const callerLocation = getCallerLocation();
-    const entryReference = createReference({ ...callerLocation,
-      contentType: entryContentType
-    }, {
-      isEntry: true,
-      disableHash: true,
+    const entryReference = createReference({
+      referenceTargetSpecifier: entryUrl,
+      referenceExpectedContentType: entryContentType,
+      referenceUrl: callerLocation.url,
+      referenceLine: callerLocation.line,
+      referenceColumn: callerLocation.column,
+      targetContentType: entryContentType,
+      targetBuffer: entryBuffer,
+      targetIsEntry: true,
       // don't hash asset entry points
-      fileNamePattern: entryBuildRelativeUrl,
-      url: entryUrl,
-      ...(entrySource ? {
-        content: {
-          type: entryContentType,
-          value: entrySource
-        }
-      } : {})
+      targetUrlVersioningDisabled: true,
+      targetFileNamePattern: entryBuildRelativeUrl
     });
     await entryReference.target.getDependenciesAvailablePromise(); // start to wait internally for eventual chunks
     // but don't await here because this function will be awaited by rollup before starting
@@ -5844,38 +6112,29 @@ const createCompositeAssetHandler = ({
     entryReference.target.getReadyPromise();
   };
 
-  const createReferenceForJsModuleImport = async (response, {
-    importerUrl
-  } = {}) => {
-    const contentType = response.headers["content-type"] || ""; // const targetUrl = resolveTargetUrl({ specifier: response.url, contentType })
-
-    const targetUrl = response.url;
-    const responseBodyAsBuffer = Buffer.from(await response.arrayBuffer());
-    const reference = createReference( // the reference to this target comes from a static or dynamic import
-    // parsed by rollup.
-    // but we don't really know the line and column
-    // because rollup does not share this information
-    {
-      url: importerUrl,
-      column: undefined,
-      line: undefined,
-      contentType
-    }, {
-      url: targetUrl,
-      content: {
-        type: contentType,
-        value: responseBodyAsBuffer
-      }
+  const createReferenceForJs = async ({
+    jsUrl,
+    jsLine,
+    jsColumn,
+    targetSpecifier,
+    targetContentType,
+    targetBuffer
+  }) => {
+    const reference = createReference({
+      referenceTargetSpecifier: targetSpecifier,
+      referenceExpectedContentType: targetContentType,
+      referenceUrl: jsUrl,
+      referenceColumn: jsLine,
+      referenceLine: jsColumn,
+      targetContentType,
+      targetBuffer
     });
-    logger$1.debug(formatReferenceFound(reference, {
-      showReferenceSourceLocation
-    }));
     await reference.target.getRollupReferenceIdAvailablePromise();
     return reference;
   };
 
   const getAllAssetEntryEmittedPromise = async () => {
-    const urlToWait = Object.keys(targetMap).filter(url => targetMap[url].isEntry);
+    const urlToWait = Object.keys(targetMap).filter(url => targetMap[url].targetIsEntry);
     return Promise.all(urlToWait.map(async url => {
       const target = targetMap[url];
       await target.getRollupReferenceIdAvailablePromise();
@@ -5885,43 +6144,129 @@ const createCompositeAssetHandler = ({
 
   const targetMap = {};
 
-  const createReference = (referenceData, targetData) => {
-    const {
-      url
-    } = targetData;
-    const reference = { ...referenceData
-    };
+  const createReference = ({
+    referenceTargetSpecifier,
+    referenceExpectedContentType,
+    referenceUrl,
+    referenceColumn,
+    referenceLine,
+    targetContentType,
+    targetBuffer,
+    targetIsEntry,
+    targetIsJsModule,
+    targetIsInline,
+    targetFileNamePattern,
+    targetUrlVersioningDisabled
+  }) => {
+    const importerUrl = referenceUrl;
+    const importerTarget = importerUrl in targetMap ? targetMap[importerUrl] : {
+      targetUrl: importerUrl,
+      targetIsEntry: false,
+      // maybe
+      targetIsJsModule: true,
+      targetBufferAfterTransformation: ""
+    }; // for now we can only emit a chunk from an entry file as visible in
+    // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
+    // https://github.com/rollup/rollup/issues/2872
 
-    if (url in targetMap) {
-      const target = targetMap[url];
-      connectReferenceAndTarget(reference, target);
-      return reference;
+    if (targetIsJsModule && !importerTarget.targetIsEntry) {
+      // it's not really possible
+      logger$1.warn(`ignoring js reference found in an asset (it's only possible to reference js from entry asset)`);
+      return null;
     }
 
-    const target = createTarget(targetData);
-    targetMap[url] = target;
-    connectReferenceAndTarget(reference, target);
-    connectTarget(target);
+    const resolveTargetReturnValue = resolveTargetUrl({
+      targetSpecifier: referenceTargetSpecifier,
+      targetIsJsModule,
+      importerUrl: referenceUrl,
+      importerIsEntry: importerTarget.targetIsEntry,
+      importerIsJsModule: importerTarget.targetIsJsModule
+    });
+    let targetUrl;
+    let targetIsExternal = false;
+
+    if (typeof resolveTargetReturnValue === "object") {
+      if (resolveTargetReturnValue.external) {
+        targetIsExternal = true;
+      }
+
+      targetUrl = resolveTargetReturnValue.url;
+    } else {
+      targetUrl = resolveTargetReturnValue;
+    }
+
+    if (targetUrl.startsWith("data:")) {
+      targetIsExternal = false;
+      targetIsInline = true;
+      const {
+        mediaType,
+        base64Flag,
+        data
+      } = parseDataUrl(targetUrl);
+      referenceExpectedContentType = mediaType;
+      targetContentType = mediaType;
+      targetBuffer = base64Flag ? Buffer.from(data, "base64") : decodeURI(data);
+    } // any hash in the url would mess up with filenames
+
+
+    targetUrl = removePotentialUrlHash(targetUrl);
+
+    if (targetIsInline && targetFileNamePattern === undefined) {
+      // inherit parent directory location because it's an inline file
+      targetFileNamePattern = () => {
+        const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(importerTarget);
+        const importerParentRelativeUrl = util.urlToRelativeUrl(util.urlToParentUrl(util.resolveUrl(importerBuildRelativeUrl, "file://")), "file://");
+        return `${importerParentRelativeUrl}[name]-[hash][extname]`;
+      };
+    }
+
+    const reference = {
+      referenceExpectedContentType,
+      referenceUrl,
+      referenceColumn,
+      referenceLine
+    };
+
+    if (targetUrl in targetMap) {
+      const target = targetMap[targetUrl];
+      connectReferenceAndTarget(reference, target);
+    } else {
+      const target = createTarget({
+        targetContentType,
+        targetUrl,
+        targetBuffer,
+        targetIsEntry,
+        targetIsJsModule,
+        targetIsExternal,
+        targetIsInline,
+        targetFileNamePattern,
+        targetUrlVersioningDisabled
+      });
+      targetMap[targetUrl] = target;
+      connectReferenceAndTarget(reference, target);
+      connectTarget(target);
+    }
+
+    if (targetIsExternal) {
+      logger$1.debug(formatExternalReferenceLog(reference, {
+        showReferenceSourceLocation,
+        projectDirectoryUrl: urlToFileUrl(projectDirectoryUrl)
+      }));
+    } else {
+      logger$1.debug(formatReferenceFound(reference, showReferenceSourceLocation(reference)));
+    }
+
     return reference;
   };
 
   const connectReferenceAndTarget = (reference, target) => {
     reference.target = target;
-    target.importers.push(reference);
-    target.getContentAvailablePromise().then(() => {
-      const expectedContentType = reference.contentType;
-      const actualContentType = target.content.type;
-
-      if (!compareContentType(expectedContentType, actualContentType)) {
-        // sourcemap content type is fine if we got octet-stream too
-        if (expectedContentType === "application/json" && actualContentType === "application/octet-stream" && target.url.endsWith(".map")) {
-          return;
-        }
-
-        logger$1.warn(formatContentTypeMismatchLog(reference, {
-          showReferenceSourceLocation
-        }));
-      }
+    target.targetReferences.push(reference);
+    target.getBufferAvailablePromise().then(() => {
+      checkContentType(reference, {
+        logger: logger$1,
+        showReferenceSourceLocation
+      });
     });
   };
 
@@ -5932,151 +6277,84 @@ const createCompositeAssetHandler = ({
   const getBuildRelativeUrlsToClean = () => buildRelativeUrlsToClean;
 
   const createTarget = ({
-    url,
-    isEntry = false,
-    isJsModule = false,
-    isInline = false,
-    disableHash = false,
-    content,
-    sourceAfterTransformation,
-    fileNamePattern,
-    importers = []
+    targetContentType,
+    targetUrl,
+    targetBuffer,
+    targetIsEntry = false,
+    targetIsJsModule = false,
+    targetIsExternal = false,
+    targetIsInline = false,
+    targetFileNamePattern,
+    targetUrlVersioningDisabled = false
   }) => {
     const target = {
-      url,
-      relativeUrl: util.urlToRelativeUrl(url, projectDirectoryUrl),
-      isEntry,
-      isJsModule,
-      isInline,
-      disableHash,
-      content,
-      sourceAfterTransformation,
-      fileNamePattern,
-      importers
+      targetContentType,
+      targetUrl,
+      targetBuffer,
+      targetReferences: [],
+      targetIsEntry,
+      targetIsJsModule,
+      targetIsInline,
+      targetUrlVersioningDisabled,
+      targetFileNamePattern,
+      targetRelativeUrl: util.urlToRelativeUrl(targetUrl, projectDirectoryUrl),
+      targetBufferAfterTransformation: undefined
     };
-    const getContentAvailablePromise = memoize(async () => {
-      const response = await fetch(url, showReferenceSourceLocation(importers[0]));
-      const responseContentTypeHeader = response.headers["content-type"] || "";
+    const getBufferAvailablePromise = memoize(async () => {
+      const response = await fetch(targetUrl, showReferenceSourceLocation(target.targetReferences[0]));
+      const responseContentTypeHeader = response.headers["content-type"];
+      target.targetContentType = responseContentTypeHeader;
       const responseBodyAsArrayBuffer = await response.arrayBuffer();
-      target.content = {
-        type: responseContentTypeHeader,
-        value: Buffer.from(responseBodyAsArrayBuffer)
-      };
+      target.targetBuffer = Buffer.from(responseBodyAsArrayBuffer);
     });
 
-    if (content !== undefined) {
-      getContentAvailablePromise.forceMemoization(Promise.resolve());
+    if (targetBuffer !== undefined) {
+      getBufferAvailablePromise.forceMemoization(Promise.resolve());
     }
 
     const getDependenciesAvailablePromise = memoize(async () => {
-      await getContentAvailablePromise();
+      await getBufferAvailablePromise();
       const dependencies = [];
       let previousJsDependency;
       let parsingDone = false;
 
-      const notifyDependencyFound = ({
-        isJsModule = false,
-        disableHash = false,
-        contentType,
-        specifier,
-        line,
-        column,
-        content,
-        fileNamePattern
+      const notifyReferenceFound = ({
+        referenceTargetSpecifier,
+        referenceExpectedContentType,
+        referenceLine,
+        referenceColumn,
+        targetContentType,
+        targetBuffer,
+        targetIsJsModule = false,
+        targetIsInline = false,
+        targetUrlVersioningDisabled,
+        targetFileNamePattern
       }) => {
         if (parsingDone) {
-          throw new Error(`notifyDependencyFound cannot be called once ${url} parsing is done.`);
-        }
-
-        let isInline = typeof content !== "undefined";
-        const resolveTargetReturnValue = resolveTargetUrl({
-          specifier,
-          contentType,
-          isInline,
-          isJsModule
-        }, target);
-        let isExternal = false;
-        let dependencyTargetUrl;
-
-        if (typeof resolveTargetReturnValue === "object") {
-          if (resolveTargetReturnValue.external) {
-            isExternal = true;
-          }
-
-          dependencyTargetUrl = resolveTargetReturnValue.url;
-        } else {
-          dependencyTargetUrl = resolveTargetReturnValue;
-        }
-
-        if (dependencyTargetUrl.startsWith("data:")) {
-          isExternal = false;
-          isInline = true;
-          const {
-            mediaType,
-            base64Flag,
-            data
-          } = parseDataUrl(dependencyTargetUrl);
-          contentType = mediaType;
-          content = {
-            type: mediaType,
-            value: base64Flag ? new Buffer(data, "base64").toString() : decodeURI(data)
-          };
-        } // any hash in the url would mess up with filenames
-
-
-        dependencyTargetUrl = removePotentialUrlHash(dependencyTargetUrl);
-
-        if (contentType === undefined) {
-          contentType = server.urlToContentType(dependencyTargetUrl);
-        }
-
-        if (!isEntry && isJsModule) {
-          // for now we can only emit a chunk from an entry file as visible in
-          // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
-          // https://github.com/rollup/rollup/issues/2872
-          logger$1.warn(`ignoring js reference found in an asset (it's only possible to reference js from entry asset)`);
-          return null;
-        }
-
-        if (isInline && fileNamePattern === undefined) {
-          // inherit parent directory location because it's an inline file
-          fileNamePattern = () => {
-            const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(target);
-            const importerParentRelativeUrl = util.urlToRelativeUrl(util.urlToParentUrl(util.resolveUrl(importerBuildRelativeUrl, "file://")), "file://");
-            return `${importerParentRelativeUrl}[name]-[hash][extname]`;
-          };
+          throw new Error(`notifyReferenceFound cannot be called once ${targetUrl} parsing is done.`);
         }
 
         const dependencyReference = createReference({
-          url: target.url,
-          line,
-          column,
-          contentType,
-          previousJsDependency
-        }, {
-          url: dependencyTargetUrl,
-          isExternal,
-          isJsModule,
-          isInline,
-          disableHash,
-          content,
-          fileNamePattern
+          referenceTargetSpecifier,
+          referenceUrl: targetUrl,
+          referenceLine,
+          referenceColumn,
+          referenceExpectedContentType,
+          previousJsDependency,
+          targetContentType,
+          targetBuffer,
+          targetIsJsModule,
+          targetIsInline,
+          targetUrlVersioningDisabled,
+          targetFileNamePattern
         });
-        dependencies.push(dependencyReference);
 
-        if (isJsModule) {
-          previousJsDependency = dependencyReference;
-        }
+        if (dependencyReference) {
+          dependencies.push(dependencyReference);
 
-        if (isExternal) {
-          logger$1.debug(formatExternalReferenceLog(dependencyReference, {
-            showReferenceSourceLocation,
-            projectDirectoryUrl: urlToFileUrl(projectDirectoryUrl)
-          }));
-        } else {
-          logger$1.debug(formatReferenceFound(dependencyReference, {
-            showReferenceSourceLocation
-          }));
+          if (targetIsJsModule) {
+            previousJsDependency = dependencyReference;
+          }
         }
 
         return dependencyReference;
@@ -6084,7 +6362,7 @@ const createCompositeAssetHandler = ({
 
       const parseReturnValue = await parse(target, {
         format,
-        notifyReferenceFound: notifyDependencyFound
+        notifyReferenceFound
       });
       parsingDone = true;
 
@@ -6093,37 +6371,37 @@ const createCompositeAssetHandler = ({
       }
 
       if (typeof parseReturnValue === "function") {
-        assetTransformMap[url] = parseReturnValue;
+        assetTransformMap[targetUrl] = parseReturnValue;
       }
 
       if (dependencies.length > 0) {
-        logger$1.debug(`${shortenUrl(url)} dependencies collected -> ${dependencies.map(dependencyReference => shortenUrl(dependencyReference.target.url))}`);
+        logger$1.debug(`${shortenUrl(targetUrl)} dependencies collected -> ${dependencies.map(dependencyReference => shortenUrl(dependencyReference.target.targetUrl))}`);
       }
 
       target.dependencies = dependencies;
     });
     const getReadyPromise = memoize(async () => {
-      if (target.isExternal) {
+      if (targetIsExternal) {
         // external urls are immediatly available and not modified
         return;
       } // une fois que les dépendances sont transformées on peut transformer cet asset
 
 
-      if (target.isJsModule) {
+      if (targetIsJsModule) {
         // ici l'url n'est pas top parce que
         // l'url de l'asset est relative au fichier html source
-        logger$1.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(url)}`);
+        logger$1.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(targetUrl)}`);
         const rollupChunkReadyPromise = new Promise(resolve => {
-          registerCallbackOnceRollupChunkIsReady(target.url, resolve);
+          registerCallbackOnceRollupChunkIsReady(target.targetUrl, resolve);
         });
         const {
-          sourceAfterTransformation,
-          buildRelativeUrl,
-          fileName
+          targetBufferAfterTransformation,
+          targetBuildRelativeUrl,
+          targetFileName
         } = await rollupChunkReadyPromise;
-        target.sourceAfterTransformation = sourceAfterTransformation;
-        target.buildRelativeUrl = buildRelativeUrl;
-        target.fileName = fileName;
+        target.targetBufferAfterTransformation = targetBufferAfterTransformation;
+        target.targetBuildRelativeUrl = targetBuildRelativeUrl;
+        target.targetFileName = targetFileName;
         return;
       } // la transformation d'un asset c'est avant tout la transformation de ses dépendances
       // mais si on a rien a transformer, on a pas vraiment besoin de tout ça
@@ -6132,11 +6410,11 @@ const createCompositeAssetHandler = ({
       await getDependenciesAvailablePromise();
       const dependencies = target.dependencies;
       await Promise.all(dependencies.map(dependencyReference => dependencyReference.target.getReadyPromise()));
-      const transform = assetTransformMap[url];
+      const transform = assetTransformMap[targetUrl];
 
       if (typeof transform !== "function") {
-        target.sourceAfterTransformation = target.content.value;
-        target.buildRelativeUrl = computeBuildRelativeUrlForTarget(target);
+        target.targetBufferAfterTransformation = target.targetBuffer;
+        target.targetBuildRelativeUrl = computeBuildRelativeUrlForTarget(target);
         return;
       } // assetDependenciesMapping contains all dependencies for an asset
       // each key is the absolute url to the dependency file
@@ -6152,13 +6430,13 @@ const createCompositeAssetHandler = ({
       const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(target);
       const assetEmitters = [];
       const transformReturnValue = await transform({
-        precomputeBuildRelativeUrl: sourceAfterTransformation => precomputeBuildRelativeUrlForTarget(target, sourceAfterTransformation),
+        precomputeBuildRelativeUrl: targetBufferAfterTransformation => precomputeBuildRelativeUrlForTarget(target, targetBufferAfterTransformation),
         registerAssetEmitter: callback => {
           assetEmitters.push(callback);
         },
         getReferenceUrlRelativeToImporter: reference => {
           const referenceTarget = reference.target;
-          const referenceTargetBuildRelativeUrl = referenceTarget.fileName || referenceTarget.buildRelativeUrl;
+          const referenceTargetBuildRelativeUrl = referenceTarget.targetFileName || referenceTarget.targetBuildRelativeUrl;
           const referenceTargetBuildUrl = util.resolveUrl(referenceTargetBuildRelativeUrl, "file:///");
           const importerBuildUrl = util.resolveUrl(importerBuildRelativeUrl, "file:///");
           return util.urlToRelativeUrl(referenceTargetBuildUrl, importerBuildUrl);
@@ -6169,26 +6447,26 @@ const createCompositeAssetHandler = ({
         throw new Error(`transform must return an object {code, map}`);
       }
 
-      let sourceAfterTransformation;
-      let buildRelativeUrl;
+      let targetBufferAfterTransformation;
+      let targetBuildRelativeUrl;
 
       if (typeof transformReturnValue === "string") {
-        sourceAfterTransformation = transformReturnValue;
+        targetBufferAfterTransformation = transformReturnValue;
       } else {
-        sourceAfterTransformation = transformReturnValue.sourceAfterTransformation;
+        targetBufferAfterTransformation = transformReturnValue.targetBufferAfterTransformation;
 
-        if (transformReturnValue.buildRelativeUrl) {
-          buildRelativeUrl = transformReturnValue.buildRelativeUrl;
+        if (transformReturnValue.targetBuildRelativeUrl) {
+          targetBuildRelativeUrl = transformReturnValue.targetBuildRelativeUrl;
         }
       }
 
-      target.sourceAfterTransformation = sourceAfterTransformation;
+      target.targetBufferAfterTransformation = targetBufferAfterTransformation;
 
-      if (buildRelativeUrl === undefined) {
-        buildRelativeUrl = computeBuildRelativeUrlForTarget(target);
+      if (targetBuildRelativeUrl === undefined) {
+        targetBuildRelativeUrl = computeBuildRelativeUrlForTarget(target);
       }
 
-      target.buildRelativeUrl = buildRelativeUrl;
+      target.targetBuildRelativeUrl = targetBuildRelativeUrl;
       assetEmitters.forEach(callback => {
         callback({
           emitAsset,
@@ -6210,12 +6488,12 @@ const createCompositeAssetHandler = ({
 
 
     const updateOnceReady = ({
-      sourceAfterTransformation,
+      targetBufferAfterTransformation,
       buildRelativeUrl
     }) => {
       // the source after transform has changed
-      if (sourceAfterTransformation !== undefined && sourceAfterTransformation !== target.sourceAfterTransformation) {
-        target.sourceAfterTransformation = sourceAfterTransformation;
+      if (targetBufferAfterTransformation !== undefined && targetBufferAfterTransformation !== target.targetBufferAfterTransformation) {
+        target.targetBufferAfterTransformation = targetBufferAfterTransformation;
 
         if (buildRelativeUrl === undefined) {
           buildRelativeUrl = computeBuildRelativeUrlForTarget(target);
@@ -6223,13 +6501,13 @@ const createCompositeAssetHandler = ({
       } // the build relative url has changed
 
 
-      if (buildRelativeUrl !== undefined && buildRelativeUrl !== target.buildRelativeUrl) {
+      if (buildRelativeUrl !== undefined && buildRelativeUrl !== target.targetBuildRelativeUrl) {
         buildRelativeUrlsToClean.push(target.buildRelativeUrl);
-        target.buildRelativeUrl = buildRelativeUrl;
+        target.targetBuildRelativeUrl = buildRelativeUrl;
 
-        if (!target.isInline) {
+        if (!target.targetIsInline) {
           emitAsset({
-            source: target.sourceAfterTransformation,
+            source: target.targetBufferAfterTransformation,
             fileName: buildRelativeUrl
           });
         }
@@ -6238,8 +6516,7 @@ const createCompositeAssetHandler = ({
 
     Object.assign(target, {
       connect,
-      createReference,
-      getContentAvailablePromise,
+      getBufferAvailablePromise,
       getDependenciesAvailablePromise,
       getReadyPromise,
       getRollupReferenceIdAvailablePromise,
@@ -6257,7 +6534,7 @@ const createCompositeAssetHandler = ({
   const getRollupChunkReadyCallbackMap = () => rollupChunkReadyCallbackMap;
 
   const findAssetUrlByBuildRelativeUrl = buildRelativeUrl => {
-    const assetUrl = Object.keys(targetMap).find(url => targetMap[url].buildRelativeUrl === buildRelativeUrl);
+    const assetUrl = Object.keys(targetMap).find(url => targetMap[url].targetBuildRelativeUrl === buildRelativeUrl);
     return assetUrl;
   };
 
@@ -6266,8 +6543,8 @@ const createCompositeAssetHandler = ({
   };
 
   const showReferenceSourceLocation = reference => {
-    const referenceUrl = reference.url;
-    const referenceSource = String(referenceUrl in targetMap ? targetMap[referenceUrl].content.value : loadUrl(referenceUrl));
+    const referenceUrl = reference.referenceUrl;
+    const referenceSource = String(referenceUrl in targetMap ? targetMap[referenceUrl].targetBuffer : loadUrl(referenceUrl));
     let message = `${urlToFileUrl(referenceUrl)}`;
 
     if (typeof reference.line === "number") {
@@ -6278,12 +6555,12 @@ const createCompositeAssetHandler = ({
       }
     }
 
-    if (referenceSource) {
+    if (referenceSource && typeof reference.referenceLine === "number") {
       return `${message}
 
 ${showSourceLocation(referenceSource, {
-        line: reference.line,
-        column: reference.column
+        line: reference.referenceLine,
+        column: reference.referenceColumn
       })}
 `;
     }
@@ -6292,8 +6569,8 @@ ${showSourceLocation(referenceSource, {
   };
 
   return {
-    createReferenceForAssetEntry,
-    createReferenceForJsModuleImport,
+    createReferenceForHTMLEntry,
+    createReferenceForJs,
     getRollupChunkReadyCallbackMap,
     getAllAssetEntryEmittedPromise,
     getBuildRelativeUrlsToClean,
@@ -6305,83 +6582,14 @@ ${showSourceLocation(referenceSource, {
     }
   };
 };
-const assetFileNamePattern = "assets/[name]-[hash][extname]";
-const assetFileNamePatternWithoutHash = "assets/[name][extname]";
+const referenceToCodeForRollup = reference => {
+  const target = reference.target;
 
-const computeBuildRelativeUrlForTarget = target => {
-  return computeBuildRelativeUrl(target.url, target.sourceAfterTransformation, targetToFileNamePattern(target));
-};
-
-const targetToFileNamePattern = target => {
-  if (target.fileNamePattern) {
-    return target.fileNamePattern;
+  if (target.targetIsInline) {
+    return getTargetAsBase64Url(target);
   }
 
-  if (target.disableHash) {
-    if (target.isEntry) {
-      return `[name][extname]`;
-    }
-
-    return assetFileNamePatternWithoutHash;
-  }
-
-  if (target.isEntry) {
-    return `[name]-[hash][extname]`;
-  }
-
-  return assetFileNamePattern;
-};
-
-const precomputeBuildRelativeUrlForTarget = (target, sourceAfterTransformation = "") => {
-  if (target.buildRelativeUrl) {
-    return target.buildRelativeUrl;
-  }
-
-  target.sourceAfterTransformation = sourceAfterTransformation;
-  const precomputedBuildRelativeUrl = computeBuildRelativeUrlForTarget(target);
-  target.sourceAfterTransformation = undefined;
-  return precomputedBuildRelativeUrl;
-};
-
-const memoize = fn => {
-  let called;
-  let previousCallReturnValue;
-
-  const memoized = (...args) => {
-    if (called) return previousCallReturnValue;
-    previousCallReturnValue = fn(...args);
-    called = true;
-    return previousCallReturnValue;
-  };
-
-  memoized.forceMemoization = value => {
-    called = true;
-    previousCallReturnValue = value;
-  };
-
-  return memoized;
-};
-
-const getCallerLocation = () => {
-  const {
-    prepareStackTrace
-  } = Error;
-
-  Error.prepareStackTrace = (error, stack) => {
-    Error.prepareStackTrace = prepareStackTrace;
-    return stack;
-  };
-
-  const {
-    stack
-  } = new Error();
-  const callerCallsite = stack[2];
-  const fileName = callerCallsite.getFileName();
-  return {
-    url: fileName && util.isFileSystemPath(fileName) ? util.fileSystemPathToUrl(fileName) : fileName,
-    line: callerCallsite.getLineNumber(),
-    column: callerCallsite.getColumnNumber()
-  };
+  return `import.meta.ROLLUP_FILE_URL_${target.rollupReferenceId}`;
 };
 
 const removePotentialUrlHash = url => {
@@ -6390,76 +6598,64 @@ const removePotentialUrlHash = url => {
   return String(urlObject);
 };
 
-const compareContentType = (leftContentType, rightContentType) => {
-  if (leftContentType === rightContentType) {
-    return true;
-  }
+const {
+  asyncWalk
+} = require$1("estree-walker");
 
-  if (leftContentType === "text/javascript" && rightContentType === "application/javascript") {
-    return true;
-  }
+const MagicString = require$1("magic-string");
 
-  if (leftContentType === "application/javascript" && rightContentType === "text/javascript") {
-    return true;
-  }
+const transformImportMetaUrlReferences = async ({
+  url,
+  // importerUrl,
+  code,
+  ast,
+  assetBuilder,
+  fetch,
+  markBuildRelativeUrlAsUsedByJs
+}) => {
+  const magicString = new MagicString(code);
+  await asyncWalk(ast, {
+    enter: async node => {
+      if (!isNewUrlImportMetaUrl(node)) {
+        return;
+      }
 
-  return false;
+      const relativeUrl = node.arguments[0].value; // hum on devrait le fetch pour obtenir l'url finale et le content-type
+      // par contre on y applique pas les import map
+
+      const targetUrl = util.resolveUrl(relativeUrl, url);
+      const response = await fetch(targetUrl, url);
+      const targetBuffer = Buffer.from(await response.arrayBuffer());
+      const reference = await assetBuilder.createReferenceForJs({
+        jsUrl: url,
+        ...(node.loc ? {
+          jsLine: node.loc.start.line,
+          jsColumn: node.loc.start.column
+        } : {}),
+        targetSpecifier: response.url,
+        targetContentType: response.headers["content-type"],
+        targetBuffer
+      });
+
+      if (reference) {
+        magicString.overwrite(node.arguments[0].start, node.arguments[0].end, referenceToCodeForRollup(reference));
+        markBuildRelativeUrlAsUsedByJs(reference.target.targetBuildRelativeUrl);
+      }
+    }
+  });
+  const codeOutput = magicString.toString();
+  const map = magicString.generateMap({
+    hires: true
+  });
+  return {
+    code: codeOutput,
+    map
+  };
 };
 
-const formatContentTypeMismatchLog = (reference, {
-  showReferenceSourceLocation
-}) => {
-  return `A reference was expecting ${reference.contentType} but found ${reference.target.content.type} instead.
---- reference ---
-${showReferenceSourceLocation(reference)}
---- target url ---
-${reference.target.url}`;
+const isNewUrlImportMetaUrl = node => {
+  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "URL" && node.arguments.length === 2 && node.arguments[0].type === "Literal" && typeof node.arguments[0].value === "string" && node.arguments[1].type === "MemberExpression" && node.arguments[1].object.type === "MetaProperty" && node.arguments[1].property.type === "Identifier" && node.arguments[1].property.name === "url";
 };
-
-const formatExternalReferenceLog = (reference, {
-  showReferenceSourceLocation,
-  projectDirectoryUrl
-}) => {
-  return `Found reference to an url outside project directory.
-${showReferenceSourceLocation(reference)}
---- target url ---
-${reference.target.url}
---- project directory url ---
-${projectDirectoryUrl}`;
-};
-
-const formatReferenceFound = (reference, {
-  showReferenceSourceLocation
-}) => {
-  const {
-    target
-  } = reference;
-  let message;
-
-  if (target.isInline && target.isJsModule) {
-    message = `found inline js module.`;
-  } else if (target.isInline) {
-    message = `found inline asset.`;
-  } else if (target.isJsModule) {
-    message = `found js module reference to ${target.relativeUrl}.`;
-  } else {
-    message = `found asset reference to ${target.relativeUrl}.`;
-  }
-
-  message += `
-${showReferenceSourceLocation(reference)}
-`;
-  return message;
-}; // const textualContentTypes = ["text/html", "text/css", "image/svg+xml"]
-// const isTextualContentType = (contentType) => {
-//   if (textualContentTypes.includes(contentType)) {
-//     return true
-//   }
-//   if (contentType.startsWith("text/")) {
-//     return true
-//   }
-//   return false
-// }
 
 /* eslint-disable import/max-dependencies */
 // because rollup will check the dependencies url
@@ -6484,7 +6680,7 @@ const createJsenvRollupPlugin = async ({
   node,
   browser,
   format,
-  longTermCaching,
+  urlVersioning,
   useImportMapToImproveLongTermCaching,
   systemJsUrl,
   minify,
@@ -6577,7 +6773,7 @@ const createJsenvRollupPlugin = async ({
     return importMap;
   };
 
-  let compositeAssetHandler;
+  let assetBuilder;
 
   let emitFile = () => {};
 
@@ -6590,7 +6786,10 @@ const createJsenvRollupPlugin = async ({
   }) => {
     const buildRelativeUrl = fileName;
 
-    if (useImportMapToImproveLongTermCaching || !longTermCaching) {
+    if (useImportMapToImproveLongTermCaching || !urlVersioning) {
+      // sauf dans le cas ou cet asset est référence avec
+      // new URL(relativeUrl, import.meta.url)
+      // quoique le fix ce serais d'avoir cet asset dans les import maps
       fileName = rollupFileNameWithoutHash(buildRelativeUrl);
     } else {
       fileName = buildRelativeUrl;
@@ -6676,7 +6875,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
             entryContentType,
             entryProjectRelativeUrl,
             entryBuildRelativeUrl,
-            entrySource: htmlSource
+            entryBuffer: Buffer.from(htmlSource)
           });
         } else if (entryContentType === "application/javascript" || entryContentType === "text/javascript") {
           entryPointsPrepared.push({
@@ -6689,7 +6888,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
             entryContentType,
             entryProjectRelativeUrl,
             entryBuildRelativeUrl,
-            entrySource: Buffer.from(await entryResponse.arrayBuffer())
+            entryBuffer: Buffer.from(await entryResponse.arrayBuffer())
           });
         }
       }));
@@ -6701,9 +6900,10 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
       // this chunk in buildProject hook
 
       let atleastOneChunkEmitted = false;
-      compositeAssetHandler = createCompositeAssetHandler({
+      assetBuilder = createAssetBuilder({
         parse: async (target, notifiers) => {
           return parseTarget(target, notifiers, {
+            urlToOriginalProjectUrl,
             format,
             systemJsUrl,
             useImportMapToImproveLongTermCaching,
@@ -6726,104 +6926,121 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
         urlToFileUrl: urlToProjectUrl,
         loadUrl: url => urlResponseBodyMap[url],
         resolveTargetUrl: ({
-          specifier,
-          isJsModule
-        }, target) => {
-          if (target.isEntry && !target.isJsModule && isJsModule) {
-            // html entry point
-            // when html references a js we must wait for the compiled version of js
-            const htmlCompiledUrl = urlToCompiledUrl(target.url);
-            const jsAssetUrl = util.resolveUrl(specifier, htmlCompiledUrl);
-            return jsAssetUrl;
+          targetSpecifier,
+          targetIsJsModule,
+          importerUrl,
+          importerIsEntry,
+          importerIsJsModule
+        }) => {
+          const isHtmlEntryPoint = importerIsEntry && !importerIsJsModule;
+          const isHtmlEntryPointReferencingAJsModule = isHtmlEntryPoint && targetIsJsModule; // when html references a js we must wait for the compiled version of js
+
+          if (isHtmlEntryPointReferencingAJsModule) {
+            const htmlCompiledUrl = urlToCompiledUrl(importerUrl);
+            const jsModuleUrl = util.resolveUrl(targetSpecifier, htmlCompiledUrl);
+            return jsModuleUrl;
           }
 
-          const url = util.resolveUrl(specifier, target.url); // ignore url outside project directory
+          const targetUrl = util.resolveUrl(targetSpecifier, importerUrl); // ignore url outside project directory
           // a better version would console.warn about file url outside projectDirectoryUrl
           // and ignore them and console.info/debug about remote url (https, http, ...)
 
-          const projectUrl = urlToProjectUrl(url);
+          const projectUrl = urlToProjectUrl(targetUrl);
 
           if (!projectUrl) {
             return {
               external: true,
-              url
+              url: targetUrl
             };
           }
 
-          return url;
+          return targetUrl;
         },
         emitAsset,
         connectTarget: target => {
-          if (target.isExternal) {
-            return null;
+          const {
+            targetIsExternal
+          } = target;
+
+          if (targetIsExternal) {
+            return;
           }
 
-          if (target.isJsModule) {
-            target.connect(async () => {
-              const id = target.url;
+          const {
+            targetIsJsModule
+          } = target;
 
-              if (typeof target.content !== "undefined") {
-                virtualModules[id] = String(target.content.value);
+          if (targetIsJsModule) {
+            target.connect(async () => {
+              const {
+                targetUrl,
+                targetBuffer
+              } = target;
+              const id = targetUrl;
+
+              if (typeof targetBuffer !== "undefined") {
+                virtualModules[id] = String(targetBuffer);
               }
 
-              logger$1.debug(`emit chunk for ${shortenUrl(target.url)}`);
+              logger$1.debug(`emit chunk for ${shortenUrl(targetUrl)}`);
               atleastOneChunkEmitted = true;
               const name = util.urlToRelativeUrl( // get basename url
-              util.resolveUrl(util.urlToBasename(target.url), target.url), // get importer url
-              urlToCompiledUrl(target.importers[0].url));
+              util.resolveUrl(util.urlToBasename(targetUrl), targetUrl), // get importer url
+              urlToCompiledUrl(target.targetReferences[0].referenceUrl));
               jsModulesInHtml[urlToUrlForRollup(id)] = true;
               const rollupReferenceId = emitChunk({
                 id,
                 name,
                 ...(target.previousJsReference ? {
-                  implicitlyLoadedAfterOneOf: [target.previousJsReference.url]
+                  implicitlyLoadedAfterOneOf: [target.previousJsReference.referenceUrl]
                 } : {})
               });
               return {
                 rollupReferenceId
               };
             });
-          } else {
-            target.connect(async () => {
-              await target.getReadyPromise();
-              const {
-                sourceAfterTransformation,
-                buildRelativeUrl
-              } = target;
-
-              if (target.isInline) {
-                return {};
-              }
-
-              logger$1.debug(`emit asset for ${shortenUrl(target.url)}`);
-              const fileName = buildRelativeUrl;
-              const rollupReferenceId = emitAsset({
-                source: sourceAfterTransformation,
-                fileName
-              });
-              logger$1.debug(`${shortenUrl(target.url)} ready -> ${buildRelativeUrl}`);
-              return {
-                rollupReferenceId
-              };
-            });
+            return;
           }
 
-          return null;
+          target.connect(async () => {
+            await target.getReadyPromise();
+            const {
+              targetUrl,
+              targetIsInline,
+              targetBufferAfterTransformation,
+              targetBuildRelativeUrl
+            } = target;
+
+            if (targetIsInline) {
+              return {};
+            }
+
+            logger$1.debug(`emit asset for ${shortenUrl(targetUrl)}`);
+            const fileName = targetBuildRelativeUrl;
+            const rollupReferenceId = emitAsset({
+              source: targetBufferAfterTransformation,
+              fileName
+            });
+            logger$1.debug(`${shortenUrl(targetUrl)} ready -> ${targetBuildRelativeUrl}`);
+            return {
+              rollupReferenceId
+            };
+          });
         }
       });
       await Promise.all(entryPointsPrepared.map(async ({
         entryContentType,
         entryProjectRelativeUrl,
         entryBuildRelativeUrl,
-        entrySource
+        entryBuffer
       }) => {
         if (entryContentType === "text/html") {
           const entryUrl = util.resolveUrl(entryProjectRelativeUrl, compileServerOrigin);
-          await compositeAssetHandler.createReferenceForAssetEntry(entryUrl, {
+          await assetBuilder.createReferenceForHTMLEntry({
             entryContentType,
-            entryProjectRelativeUrl,
-            entryBuildRelativeUrl,
-            entrySource
+            entryUrl,
+            entryBuffer,
+            entryBuildRelativeUrl
           });
         } else if (entryContentType === "application/javascript") {
           atleastOneChunkEmitted = true;
@@ -6835,11 +7052,11 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
           });
         } else {
           const entryUrl = util.resolveUrl(entryProjectRelativeUrl, compileServerOrigin);
-          await compositeAssetHandler.createReferenceForAssetEntry(entryUrl, {
+          await assetBuilder.createReferenceForHTMLEntry({
             entryContentType,
-            entryProjectRelativeUrl,
-            entryBuildRelativeUrl,
-            entrySource
+            entryUrl,
+            entryBuffer,
+            entryBuildRelativeUrl
           });
         }
       }));
@@ -6941,7 +7158,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
         contentRaw,
         content = "",
         map
-      } = await loadModule(url, moduleInfo);
+      } = await loadModule(url);
       saveUrlResponseBody(responseUrl, contentRaw); // handle redirection
 
       if (responseUrl !== url) {
@@ -6955,6 +7172,25 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
       };
     },
 
+    async transform(code, id) {
+      const ast = this.parse(code, {
+        // used to know node line and column
+        locations: true
+      }); // const moduleInfo = this.getModuleInfo(id)
+
+      const url = urlToServerUrl(id);
+      const importerUrl = urlImporterMap[url];
+      return transformImportMetaUrlReferences({
+        url,
+        importerUrl,
+        code,
+        ast,
+        assetBuilder,
+        fetch: fetchModule,
+        markBuildRelativeUrlAsUsedByJs
+      });
+    },
+
     // resolveImportMeta: () => {}
     // transform should not be required anymore as
     // we will receive
@@ -6963,7 +7199,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
       const extension = path.extname(entryPointMap[Object.keys(entryPointMap)[0]]);
       const outputExtension = extension === ".html" ? ".js" : extension;
       outputOptions.entryFileNames = `[name]${outputExtension}`;
-      outputOptions.chunkFileNames = useImportMapToImproveLongTermCaching || !longTermCaching ? `[name]${outputExtension}` : `[name]-[hash]${outputExtension}`; // rollup does not expects to have http dependency in the mix: fix them
+      outputOptions.chunkFileNames = useImportMapToImproveLongTermCaching || !urlVersioning ? `[name]${outputExtension}` : `[name]-[hash]${outputExtension}`; // rollup does not expects to have http dependency in the mix: fix them
 
       outputOptions.sourcemapPathTransform = (relativePath, sourcemapPath) => {
         const sourcemapUrl = util.fileSystemPathToUrl(sourcemapPath);
@@ -7032,7 +7268,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
           let buildRelativeUrl;
           const canBeHashed = file.facadeModuleId in jsModulesInHtml || !file.isEntry;
 
-          if (longTermCaching && useImportMapToImproveLongTermCaching) {
+          if (urlVersioning && useImportMapToImproveLongTermCaching) {
             if (canBeHashed) {
               buildRelativeUrl = computeBuildRelativeUrl(util.resolveUrl(fileName, buildDirectoryUrl), file.code, `[name]-[hash][extname]`);
             } else {
@@ -7060,29 +7296,29 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
       // et mettre a jour leur dépendance vers ce fichier js
 
 
-      const rollupChunkReadyCallbackMap = compositeAssetHandler.getRollupChunkReadyCallbackMap();
+      const rollupChunkReadyCallbackMap = assetBuilder.getRollupChunkReadyCallbackMap();
       Object.keys(rollupChunkReadyCallbackMap).forEach(key => {
-        const buildRelativeUrl = Object.keys(jsBuild).find(buildRelativeUrlCandidate => {
+        const targetBuildRelativeUrl = Object.keys(jsBuild).find(buildRelativeUrlCandidate => {
           const file = jsBuild[buildRelativeUrlCandidate];
           const {
             facadeModuleId
           } = file;
           return facadeModuleId && urlToServerUrl(facadeModuleId) === key;
         });
-        const file = jsBuild[buildRelativeUrl];
-        const sourceAfterTransformation = file.code;
-        const fileName = useImportMapToImproveLongTermCaching || !longTermCaching ? buildRelativeUrlToFileName(buildRelativeUrl) : buildRelativeUrl;
+        const file = jsBuild[targetBuildRelativeUrl];
+        const targetBufferAfterTransformation = file.code;
+        const targetFileName = useImportMapToImproveLongTermCaching || !urlVersioning ? buildRelativeUrlToFileName(targetBuildRelativeUrl) : targetBuildRelativeUrl;
         logger$1.debug(`resolve rollup chunk ${shortenUrl(key)}`);
         rollupChunkReadyCallbackMap[key]({
-          sourceAfterTransformation,
-          buildRelativeUrl,
-          fileName
+          targetBufferAfterTransformation,
+          targetBuildRelativeUrl,
+          targetFileName
         });
       }); // wait html files to be emitted
 
-      await compositeAssetHandler.getAllAssetEntryEmittedPromise();
+      await assetBuilder.getAllAssetEntryEmittedPromise();
       const assetBuild = {};
-      const buildRelativeUrlsToClean = compositeAssetHandler.getBuildRelativeUrlsToClean();
+      const buildRelativeUrlsToClean = assetBuilder.getBuildRelativeUrlsToClean();
       Object.keys(rollupResult).forEach(fileName => {
         const file = rollupResult[fileName];
 
@@ -7121,7 +7357,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
             buildMappings[originalProjectRelativeUrl] = buildRelativeUrl;
           }
         } else {
-          const assetUrl = compositeAssetHandler.findAssetUrlByBuildRelativeUrl(buildRelativeUrl);
+          const assetUrl = assetBuilder.findAssetUrlByBuildRelativeUrl(buildRelativeUrl);
 
           if (assetUrl) {
             const originalProjectUrl = urlToOriginalProjectUrl(assetUrl);
@@ -7278,7 +7514,10 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
     return null;
   };
 
-  const loadModule = async (moduleUrl, moduleInfo) => {
+  const loadModule = async (moduleUrl // {
+  //   moduleInfo
+  // },
+  ) => {
     if (moduleUrl in virtualModules) {
       const codeInput = virtualModules[moduleUrl];
       const {
@@ -7308,19 +7547,19 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
     }; // keep this in sync with module-registration.js
 
     if (contentType === "application/javascript" || contentType === "text/javascript") {
-      const responseBodyAsString = await moduleResponse.text();
-      const js = responseBodyAsString;
+      const jsModuleString = await moduleResponse.text();
+      const map = await fetchSourcemap(moduleUrl, jsModuleString, {
+        cancellationToken,
+        logger: logger$1
+      });
       return { ...commonData,
-        contentRaw: js,
-        content: js,
-        map: await fetchSourcemap(moduleUrl, js, {
-          cancellationToken,
-          logger: logger$1
-        })
+        contentRaw: jsModuleString,
+        content: jsModuleString,
+        map
       };
     }
 
-    if (contentType === "application/json" || contentType === "application/importmap+json") {
+    if (contentType === "application/json" || contentType.endsWith("+json")) {
       const responseBodyAsString = await moduleResponse.text(); // there is no need to minify the json string
       // because it becomes valid javascript
       // that will be minified by minifyJs inside renderChunk
@@ -7332,16 +7571,33 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
       };
     }
 
-    const importReference = await compositeAssetHandler.createReferenceForJsModuleImport(moduleResponse, {
-      moduleInfo,
-      importerUrl
+    const moduleResponseBodyAsBuffer = Buffer.from(await moduleResponse.arrayBuffer());
+    const targetContentType = moduleResponse.headers["content-type"];
+    const assetReferenceForImport = await assetBuilder.createReferenceForJs({
+      // Reference to this target is corresponds to a static or dynamic import.
+      // found in a given file (importerUrl).
+      // But we don't know the line and colum because rollup
+      // does not tell us that information
+      jsUrl: importerUrl,
+      jsLine: undefined,
+      jsColumn: undefined,
+      targetSpecifier: moduleResponse.url,
+      targetContentType,
+      targetBuffer: moduleResponseBodyAsBuffer
     });
-    const importTarget = importReference.target;
-    markBuildRelativeUrlAsUsedByJs(importTarget.buildRelativeUrl);
-    const content = importTarget.isInline ? `export default ${getTargetAsBase64Url(importTarget)}` : `export default import.meta.ROLLUP_FILE_URL_${importTarget.rollupReferenceId}`;
+
+    if (assetReferenceForImport) {
+      markBuildRelativeUrlAsUsedByJs(assetReferenceForImport.target.targetBuildRelativeUrl);
+      const content = `export default ${referenceToCodeForRollup(assetReferenceForImport)}`;
+      return { ...commonData,
+        contentRaw: String(moduleResponseBodyAsBuffer),
+        content
+      };
+    }
+
     return { ...commonData,
-      contentRaw: String(importTarget.content.value),
-      content
+      contentRaw: String(moduleResponseBodyAsBuffer),
+      content: String(moduleResponseBodyAsBuffer)
     };
   };
 
@@ -7506,17 +7762,16 @@ const ensureRelativeUrlNotation$1 = relativeUrl => {
 };
 
 const externalImportUrlPatternsToExternalUrlPredicate = (externalImportUrlPatterns, projectDirectoryUrl) => {
-  const externalImportUrlMetaMap = util.metaMapToSpecifierMetaMap({
+  const externalImportUrlStructuredMetaMap = util.normalizeStructuredMetaMap({
     external: { ...externalImportUrlPatterns,
       "node_modules/@jsenv/core/src/internal/import-meta/": false,
       "node_modules/@jsenv/core/helpers/": false
     }
-  });
-  const externalImportUrlMetaMapNormalized = util.normalizeSpecifierMetaMap(externalImportUrlMetaMap, projectDirectoryUrl);
+  }, projectDirectoryUrl);
   return url => {
     const meta = util.urlToMeta({
       url,
-      specifierMetaMap: externalImportUrlMetaMapNormalized
+      structuredMetaMap: externalImportUrlStructuredMetaMap
     });
     return Boolean(meta.external);
   };
@@ -7543,7 +7798,7 @@ const buildUsingRollup = async ({
   sourcemapExcludeSources,
   buildDirectoryUrl,
   buildDirectoryClean,
-  longTermCaching,
+  urlVersioning,
   useImportMapToImproveLongTermCaching,
   preserveEntrySignatures,
   jsConcatenation,
@@ -7576,7 +7831,7 @@ const buildUsingRollup = async ({
     format,
     systemJsUrl,
     buildDirectoryUrl,
-    longTermCaching,
+    urlVersioning,
     useImportMapToImproveLongTermCaching,
     minify,
     minifyJsOptions,
@@ -7961,9 +8216,7 @@ const createCompiledFileService = ({
   return request => {
     const {
       origin,
-      ressource,
-      method,
-      headers
+      ressource
     } = request;
     const requestUrl = `${origin}${ressource}`;
     const outDirectoryRemoteUrl = util.resolveDirectoryUrl(outDirectoryRelativeUrl, origin); // not inside compile directory -> nothing to compile
@@ -7977,9 +8230,8 @@ const createCompiledFileService = ({
     // if asked by the client (such as env.json, groupMap.json, meta.json)
 
     if (!afterOutDirectory.includes("/") || afterOutDirectory[0] === "/") {
-      return server.serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
-        method,
-        headers,
+      return server.serveFile(request, {
+        rootDirectoryUrl: projectDirectoryUrl,
         etagEnabled: true
       });
     }
@@ -8467,15 +8719,13 @@ const startCompileServer = async ({
     logLevel: compileServerLogLevel,
     protocol: compileServerProtocol,
     http2: compileServerProtocol === "https",
-    // disabled because it does not work with http2
-    redirectHttpToHttps: false,
     privateKey: compileServerPrivateKey,
     certificate: compileServerCertificate,
     ip: compileServerIp,
     port: compileServerPort,
     sendServerTiming: true,
     nagle: false,
-    sendInternalErrorStack: true,
+    sendServerInternalErrorDetails: true,
     requestToResponse: server.firstServiceWithTiming({ ...customServices,
       "service:asset files": serveAssetFile,
       "service:browser script": serveBrowserScript,
@@ -8962,16 +9212,13 @@ const createAssetFileService = ({
   return request => {
     const {
       origin,
-      ressource,
-      method,
-      headers
+      ressource
     } = request;
     const requestUrl = `${origin}${ressource}`;
 
     if (urlIsAsset(requestUrl)) {
-      return server.serveFile(util.resolveUrl(ressource.slice(1), projectDirectoryUrl), {
-        method,
-        headers,
+      return server.serveFile(request, {
+        rootDirectoryUrl: projectDirectoryUrl,
         etagEnabled: true
       });
     }
@@ -9016,17 +9263,12 @@ const createProjectFileService = ({
 }) => {
   return request => {
     const {
-      ressource,
-      method,
-      headers
+      ressource
     } = request;
     const relativeUrl = ressource.slice(1);
     projectFileRequestedCallback(relativeUrl, request);
-    const fileUrl = util.resolveUrl(relativeUrl, projectDirectoryUrl);
-    const filePath = util.urlToFileSystemPath(fileUrl);
-    const responsePromise = server.serveFile(filePath, {
-      method,
-      headers,
+    const responsePromise = server.serveFile(request, {
+      rootDirectoryUrl: projectDirectoryUrl,
       etagEnabled: projectFileEtagEnabled
     });
     return responsePromise;
@@ -9175,7 +9417,7 @@ const buildProject = async ({
   buildDirectoryClean = false,
   writeOnFileSystem = true,
   manifestFile = false,
-  longTermCaching = true,
+  urlVersioning = true,
   useImportMapToImproveLongTermCaching = format === "systemjs",
   preserveEntrySignatures,
   jsConcatenation = true,
@@ -9324,7 +9566,7 @@ const buildProject = async ({
         buildDirectoryUrl,
         buildDirectoryClean,
         manifestFile,
-        longTermCaching,
+        urlVersioning,
         useImportMapToImproveLongTermCaching,
         preserveEntrySignatures,
         jsConcatenation,
@@ -10149,14 +10391,14 @@ const babelPluginInstrument = (api, options) => {
       "./**/*": true
     }
   } = options;
-  const specifierMetaMapForCover = util.normalizeSpecifierMetaMap(util.metaMapToSpecifierMetaMap({
+  const structuredMetaMapForCover = util.normalizeStructuredMetaMap({
     cover: coverageConfig
-  }), projectDirectoryUrl);
+  }, projectDirectoryUrl);
 
   const shouldInstrument = relativeUrl => {
     return util.urlToMeta({
       url: util.resolveUrl(relativeUrl, projectDirectoryUrl),
-      specifierMetaMap: specifierMetaMapForCover
+      structuredMetaMap: structuredMetaMapForCover
     }).cover;
   };
 
@@ -10255,13 +10497,13 @@ const generateExecutionSteps = async (plan, {
   cancellationToken,
   projectDirectoryUrl
 }) => {
-  const specifierMetaMap = util.metaMapToSpecifierMetaMap({
+  const structuredMetaMap = {
     filePlan: plan
-  });
+  };
   const fileResultArray = await util.collectFiles({
     cancellationToken,
     directoryUrl: projectDirectoryUrl,
-    specifierMetaMap,
+    structuredMetaMap,
     predicate: ({
       filePlan
     }) => filePlan
@@ -10400,13 +10642,13 @@ const listRelativeFileUrlToCover = async ({
   projectDirectoryUrl,
   coverageConfig
 }) => {
-  const specifierMetaMapForCoverage = util.metaMapToSpecifierMetaMap({
+  const structuredMetaMapForCoverage = {
     cover: coverageConfig
-  });
+  };
   const matchingFileResultArray = await util.collectFiles({
     cancellationToken,
     directoryUrl: projectDirectoryUrl,
-    specifierMetaMap: specifierMetaMapForCoverage,
+    structuredMetaMap: structuredMetaMapForCoverage,
     predicate: ({
       cover
     }) => cover
@@ -11253,25 +11495,25 @@ const executeTestPlan = async ({
       }
 
       if (!coverageAndExecutionAllowed) {
-        const fileSpecifierMapForExecute = util.normalizeSpecifierMetaMap(util.metaMapToSpecifierMetaMap({
+        const structuredMetaMapForExecute = util.normalizeStructuredMetaMap({
           execute: testPlan
-        }), "file:///");
-        const fileSpecifierMapForCover = util.normalizeSpecifierMetaMap(util.metaMapToSpecifierMetaMap({
+        }, "file:///");
+        const structuredMetaMapForCover = util.normalizeStructuredMetaMap({
           cover: coverageConfig
-        }), "file:///");
-        const fileSpecifierMatchingCoverAndExecuteArray = Object.keys(fileSpecifierMapForExecute).filter(fileUrl => {
+        }, "file:///");
+        const patternsMatchingCoverAndExecute = Object.keys(structuredMetaMapForExecute.execute).filter(testPlanPattern => {
           return util.urlToMeta({
-            url: fileUrl,
-            specifierMetaMap: fileSpecifierMapForCover
+            url: testPlanPattern,
+            structuredMetaMap: structuredMetaMapForCover
           }).cover;
         });
 
-        if (fileSpecifierMatchingCoverAndExecuteArray.length) {
+        if (patternsMatchingCoverAndExecute.length) {
           // I think it is an error, it would be strange, for a given file
           // to be both covered and executed
           throw new Error(`some file will be both covered and executed
---- specifiers ---
-${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
+--- patterns ---
+${patternsMatchingCoverAndExecute.join("\n")}`);
         }
       }
     }
@@ -11390,7 +11632,7 @@ const jsenvServiceWorkerFinalizer = (code, {
         // when url is not versioned we compute a "version" for that url anyway
         // so that service worker source still changes and navigator
         // detect there is a change
-        version: generateAssetHash(rollupFile.type === "chunk" ? rollupFile.code : rollupFile.source)
+        version: generateContentHash(rollupFile.type === "chunk" ? rollupFile.code : rollupFile.source)
       })
     };
   });
@@ -12928,25 +13170,21 @@ const createExplorableListAsJsonService = ({
 }) => {
   return async request => {
     if (request.ressource === "/.jsenv/explorables.json" && request.method === "GET" && "x-jsenv" in request.headers) {
-      const metaMap = {};
-      Object.keys(explorableConfig).forEach(key => {
-        metaMap[key] = {
-          ["**/.jsenv/"]: false,
+      const structuredMetaMapRelativeForExplorable = {};
+      Object.keys(explorableConfig).forEach(explorableGroup => {
+        const explorableGroupConfig = explorableConfig[explorableGroup];
+        structuredMetaMapRelativeForExplorable[explorableGroup] = {
+          "**/.jsenv/": false,
           // temporary (in theory) to avoid visting .jsenv directory in jsenv itself
-          ...explorableConfig[key],
+          ...explorableGroupConfig,
           [outDirectoryRelativeUrl]: false
         };
       });
-      const specifierMetaMapRelativeForExplorable = util.metaMapToSpecifierMetaMap(metaMap);
-      const specifierMetaMapForExplorable = util.normalizeSpecifierMetaMap({ ...specifierMetaMapRelativeForExplorable,
-        // ensure outDirectoryRelativeUrl is last
-        // so that it forces not explorable files
-        [outDirectoryRelativeUrl]: specifierMetaMapRelativeForExplorable[outDirectoryRelativeUrl]
-      }, projectDirectoryUrl);
+      const structuredMetaMapForExplorable = util.normalizeStructuredMetaMap(structuredMetaMapRelativeForExplorable, projectDirectoryUrl);
       const matchingFileResultArray = await util.collectFiles({
         directoryUrl: projectDirectoryUrl,
-        specifierMetaMap: specifierMetaMapForExplorable,
-        predicate: meta => Object.keys(meta).some(key => Boolean(meta[key]))
+        structuredMetaMap: structuredMetaMapForExplorable,
+        predicate: meta => Object.keys(meta).some(explorableGroup => Boolean(meta[explorableGroup]))
       });
       const explorableFiles = matchingFileResultArray.map(({
         relativeUrl,
