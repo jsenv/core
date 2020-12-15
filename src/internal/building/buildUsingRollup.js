@@ -37,7 +37,8 @@ export const buildUsingRollup = async ({
   minifyJsOptions,
   minifyCssOptions,
   minifyHtmlOptions,
-  manifestFile = false,
+  assetManifestFile = false,
+  assetManifestFileRelativeUrl,
 
   serviceWorkers,
   serviceWorkerFinalizer,
@@ -71,7 +72,8 @@ export const buildUsingRollup = async ({
     minifyCssOptions,
     minifyHtmlOptions,
 
-    manifestFile,
+    assetManifestFile,
+    assetManifestFileRelativeUrl,
     writeOnFileSystem,
   })
 

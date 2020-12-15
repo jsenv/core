@@ -23,7 +23,7 @@ const { buildManifest, buildMappings } = await buildProject({
     [`./${firstEntryRelativeUrl}`]: "./a.cjs",
     [`./${secondEntryRelativeUrl}`]: "./b.cjs",
   },
-  manifestFile: true,
+  assetManifestFile: true,
 })
 
 {

@@ -57,7 +57,8 @@ export const buildProject = async ({
   buildDirectoryRelativeUrl,
   buildDirectoryClean = false,
   writeOnFileSystem = true,
-  manifestFile = false,
+  assetManifestFile = false,
+  assetManifestFileRelativeUrl = "asset-manifest.json",
 
   urlVersioning = true,
   useImportMapToImproveLongTermCaching = format === "systemjs",
@@ -202,7 +203,8 @@ export const buildProject = async ({
 
         buildDirectoryUrl,
         buildDirectoryClean,
-        manifestFile,
+        assetManifestFile,
+        assetManifestFileRelativeUrl,
 
         urlVersioning,
         useImportMapToImproveLongTermCaching,

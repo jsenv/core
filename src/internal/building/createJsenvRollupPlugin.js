@@ -71,7 +71,8 @@ export const createJsenvRollupPlugin = async ({
   minifyJsOptions,
   minifyCssOptions,
   minifyHtmlOptions,
-  manifestFile,
+  assetManifestFile,
+  assetManifestFileRelativeUrl,
   writeOnFileSystem,
 
   buildDirectoryUrl,
@@ -768,9 +769,9 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       buildManifest = sortObjectByPathnames(buildManifest)
       buildMappings = sortObjectByPathnames(buildMappings)
 
-      if (manifestFile) {
-        const manifestFileUrl = resolveUrl("manifest.json", buildDirectoryUrl)
-        await writeFile(manifestFileUrl, JSON.stringify(buildManifest, null, "  "))
+      if (assetManifestFile) {
+        const assetManifestFileUrl = resolveUrl(assetManifestFileRelativeUrl, buildDirectoryUrl)
+        await writeFile(assetManifestFileUrl, JSON.stringify(buildManifest, null, "  "))
       }
 
       logger.info(createDetailedMessage(`build done`, formatBuildDoneDetails(rollupBuild)))

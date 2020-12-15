@@ -66,7 +66,7 @@ export const serveBuild = async ({
       buildDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
       writeOnFileSystem: false,
       sourcemapExcludeSources: true,
-      manifestFile: false,
+      assetManifestFile: false,
     })
 
     const sourcemapFileUrl = `${compiledFileUrl}.map`
