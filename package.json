@@ -1,7 +1,7 @@
 {
   "name": "@jsenv/core",
-  "version": "17.3.0",
-  "description": "Likable builder of JavaScript projects.",
+  "version": "17.3.1",
+  "description": "Holistic likable builder.",
   "license": "MIT",
   "repository": {
     "type": "git",

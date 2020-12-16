@@ -1,6 +1,6 @@
 # core
 
-Likable builder of JavaScript projects.
+Holistic likable builder.
 
 [![github package](https://img.shields.io/github/package-json/v/jsenv/jsenv-core.svg?logo=github&label=package)](https://github.com/jsenv/jsenv-core/packages)
 [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
@@ -20,7 +20,7 @@ Likable builder of JavaScript projects.
 
 # Presentation
 
-`@jsenv/core` was first created to be able to write tests that could be executed in different browsers and even Node.js. In the end it became a tool covering the core needs of a JavaScript project:
+`@jsenv/core` was first created to be able to write tests that could be executed in different browsers AND Node.js. In the end it became a tool covering the core needs of a JavaScript project:
 
 - A developer friendly environment
 - A bundler to optimize files for production
