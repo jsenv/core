@@ -87,6 +87,7 @@ export const launchNode = async ({
   })
 
   env.COVERAGE_ENABLED = collectCoverage
+  env.JSENV = true
 
   const childProcess = forkChildProcess(urlToFileSystemPath(nodeControllableFileUrl), {
     execArgv,
