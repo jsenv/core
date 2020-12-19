@@ -2,7 +2,6 @@
 
 Enable scss and sass files in jsenv.
 
-[![github package](https://img.shields.io/github/package-json/v/jsenv/jsenv-sass.svg?logo=github&label=package)](https://github.com/jsenv/jsenv-sass/packages)
 [![npm package](https://img.shields.io/npm/v/@jsenv/sass.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/sass)
 
 # Usage
