@@ -1,7 +1,9 @@
 @import "./file.scss";
 
+$color: violet;
+
 body {
-  background: violet;
+  background: $color;
 
   p {
     background: yellow;
