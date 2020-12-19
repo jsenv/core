@@ -1,0 +1,23 @@
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <p>Paragraph before vue</p>
+    <div id="app"></div>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+    <script type="module">
+      import Main from "./main.vue"
+
+      // eslint-disable-next-line no-new
+      new window.Vue({
+        el: "#app",
+        template: `<Main text="Text rendered by Vue.js"/>`,
+        components: { Main },
+      })
+    </script>
+  </body>
+</html>

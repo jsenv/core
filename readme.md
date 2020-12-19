@@ -401,3 +401,4 @@ See also
 
 - [@jsenv/assert](https://github.com/jsenv/jsenv-assert): Test anything using one assertion.
 - [@jsenv/sass](./packages/jsenv-sass): Add support for .scss and .sass in jsenv.
+- [@jsenv/vue](./packages/jsenv-vue): Add support for .vue in jsenv.

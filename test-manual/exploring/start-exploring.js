@@ -24,7 +24,8 @@ node --inspect test-manual/exploring/start-exploring.js
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { startExploring } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { jsenvCompilerForSass } from "../../packages/jsenv-sass/main.js"
+import { jsenvCompilerForSass } from "@jsenv/core/packages/jsenv-sass/main.js"
+import { jsenvCompilerForVue } from "@jsenv/core/packages/jsenv-vue/main.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -37,7 +38,7 @@ startExploring({
       [`./${testDirectoryRelativeUrl}**/*.html`]: true,
     },
   },
-  customCompilers: [jsenvCompilerForSass],
+  customCompilers: [jsenvCompilerForSass, jsenvCompilerForVue],
   jsenvDirectoryRelativeUrl,
   compileServerProtocol: "https",
   compileServerPort: 3456,

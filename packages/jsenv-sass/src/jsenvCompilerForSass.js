@@ -1,7 +1,7 @@
 import { createRequire } from "module"
 import { urlToContentType } from "@jsenv/server"
 import { urlToFileSystemPath } from "@jsenv/util"
-import { transformResultToCompilationResult } from "../../../src/internal/compiling/transformResultToCompilationResult.js"
+import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
 
 const require = createRequire(import.meta.url)
 

@@ -155,6 +155,7 @@
     "@jsenv/package-publish": "1.5.1",
     "@jsenv/prettier-check-project": "5.6.1",
     "@jsenv/pwa": "3.0.3",
+    "@vue/component-compiler": "4.2.3",
     "eslint": "7.15.0",
     "playwright-chromium": "1.7.0",
     "playwright-firefox": "1.7.0",
@@ -162,6 +163,7 @@
     "prettier": "2.2.1",
     "react": "17.0.1",
     "redux": "4.0.5",
-    "sass": "1.30.0"
+    "sass": "1.30.0",
+    "vue-template-compiler": "2.6.12"
   }
 }
