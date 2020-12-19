@@ -17,8 +17,8 @@ import {
 } from "../CONSTANTS.js"
 import { buildUsingRollup } from "../building/buildUsingRollup.js"
 import { buildToCompilationResult } from "../building/buildToCompilationResult.js"
+import { transformResultToCompilationResult } from "./transformResultToCompilationResult.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
-import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { compileIdToBabelPluginMap } from "./jsenvCompilerForJavaScript.js"
 
 export const jsenvCompilerForDynamicBuild = ({ compileId, originalFileUrl, ...rest }) => {

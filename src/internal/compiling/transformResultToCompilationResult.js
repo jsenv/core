@@ -3,14 +3,18 @@ import {
   replaceBackSlashesWithSlashes,
   startsWithWindowsDriveLetter,
   windowsFilePathToUrl,
-} from "../../filePathUtils.js"
-import { setJavaScriptSourceMappingUrl, sourcemapToBase64Url } from "../../sourceMappingURLUtils.js"
-import { generateCompiledFileAssetUrl } from "../compile-directory/compile-asset.js"
+} from "../filePathUtils.js"
+import {
+  setJavaScriptSourceMappingUrl,
+  setCssSourceMappingUrl,
+  sourcemapToBase64Url,
+} from "../sourceMappingURLUtils.js"
+import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
 const isWindows = process.platform === "win32"
 
 export const transformResultToCompilationResult = async (
-  { code, map, metadata = {} },
+  { code, map, contentType = "application/javascript", metadata = {} },
   {
     projectDirectoryUrl,
     originalFileContent,
@@ -100,11 +104,16 @@ export const transformResultToCompilationResult = async (
     // we could comment this line because it is not set by babel because not passed during transform
     delete map.sourceRoot
 
+    const setSourceMappingUrl =
+      contentType === "application/javascript"
+        ? setJavaScriptSourceMappingUrl
+        : setCssSourceMappingUrl
+
     if (sourcemapMethod === "inline") {
-      output = setJavaScriptSourceMappingUrl(output, sourcemapToBase64Url(map))
+      output = setSourceMappingUrl(output, sourcemapToBase64Url(map))
     } else if (sourcemapMethod === "comment") {
       const sourcemapFileRelativePathForModule = urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl)
-      output = setJavaScriptSourceMappingUrl(output, sourcemapFileRelativePathForModule)
+      output = setSourceMappingUrl(output, sourcemapFileRelativePathForModule)
       assets.push(sourcemapFileUrl)
       assetsContent.push(stringifyMap(map))
     }
@@ -122,7 +131,7 @@ export const transformResultToCompilationResult = async (
 
   return {
     compiledSource: output,
-    contentType: "application/javascript",
+    contentType,
     sources,
     sourcesContent,
     assets,
