@@ -37,6 +37,7 @@ export const createCompiledFileService = ({
   babelPluginMap,
   groupMap,
   convertMap,
+  customCompilers,
   scriptInjections,
 
   projectFileRequestedCallback,
@@ -138,11 +139,7 @@ export const createCompiledFileService = ({
       jsenvBrowserBuildUrlRelativeToProject,
       scriptInjections,
     }
-    const compilerCandidates = [
-      ...jsenvCompilerCandidates,
-      // scss it non standard so it's not available by default
-      // but it will be possible to put more compiler here to allow scss compilation.
-    ]
+    const compilerCandidates = [...jsenvCompilerCandidates, ...customCompilers]
     compilerCandidates.find((compilerCandidate) => {
       const returnValue = compilerCandidate(compilerCandidateParams)
       if (returnValue && typeof returnValue === "object") {
