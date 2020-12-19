@@ -1117,6 +1117,15 @@ const fetchAndNormalizeImportmap = async (importmapUrl, { allow404 = false } = {
   if (allow404 && importmapResponse.status === 404) {
     return null
   }
+  if (importmapResponse.status < 200 || importmapResponse.status > 299) {
+    throw new Error(`Unexpected response status for importmap.
+--- response status ---
+${importmapResponse.status}
+--- response text ---
+${await importmapResponse.text()}
+--- importmap url ---
+${importmapUrl}`)
+  }
   const importmap = await importmapResponse.json()
   const importmapNormalized = normalizeImportMap(importmap, importmapUrl)
   return importmapNormalized

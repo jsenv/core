@@ -8,8 +8,17 @@ import {
 } from "../CONSTANTS.js"
 import { jsenvBrowserSystemBuildUrl } from "../jsenvInternalFiles.js"
 import { compileFile } from "./compileFile.js"
+import { jsenvCompilerForDynamicBuild } from "./jsenvCompilerForDynamicBuild.js"
+import { jsenvCompilerForHtml } from "./jsenvCompilerForHtml.js"
+import { jsenvCompilerForImportmap } from "./jsenvCompilerForImportmap.js"
+import { jsenvCompilerForJavaScript } from "./jsenvCompilerForJavaScript.js"
 
-const compilerCandidates = []
+const jsenvCompilerCandidates = [
+  jsenvCompilerForDynamicBuild,
+  jsenvCompilerForJavaScript,
+  jsenvCompilerForHtml,
+  jsenvCompilerForImportmap,
+]
 
 export const createCompiledFileService = ({
   cancellationToken,
@@ -103,6 +112,9 @@ export const createCompiledFileService = ({
 
     let compilerOptions = null
     const compilerCandidateParams = {
+      cancellationToken,
+      logger,
+
       compileServerOrigin: request.origin,
       projectDirectoryUrl,
       originalFileUrl,
@@ -126,6 +138,11 @@ export const createCompiledFileService = ({
       jsenvBrowserBuildUrlRelativeToProject,
       scriptInjections,
     }
+    const compilerCandidates = [
+      ...jsenvCompilerCandidates,
+      // scss it non standard so it's not available by default
+      // but it will be possible to put more compiler here to allow scss compilation.
+    ]
     compilerCandidates.find((compilerCandidate) => {
       const returnValue = compilerCandidate(compilerCandidateParams)
       if (returnValue && typeof returnValue === "object") {
@@ -154,11 +171,12 @@ export const createCompiledFileService = ({
       })
     }
 
-    // json, css etc does not need to be compiled, they are redirected to their source version that will be served as file
+    // no compiler ? -> redirect to source version that will be served as file
+    const originalFileServerUrl = resolveUrl(originalFileRelativeUrl, origin)
     return {
       status: 307,
       headers: {
-        location: resolveUrl(originalFileRelativeUrl, origin),
+        location: originalFileServerUrl,
       },
     }
   }

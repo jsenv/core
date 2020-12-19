@@ -32,7 +32,7 @@ const buildDirectoryRelativeUrl = `${compileServer.outDirectoryRelativeUrl}${COM
 const fileBuildServerUrl = `${compileServer.origin}/${buildDirectoryRelativeUrl}${fileRelativeUrl}`
 const fileBuildUrl = `${projectDirectoryUrl}${buildDirectoryRelativeUrl}${fileRelativeUrl}`
 
-const response = await fetchUrl(fileBuildServerUrl)
+const response = await fetchUrl(fileBuildServerUrl, { ignoreHttpsError: true })
 {
   const actual = response.status
   const expected = 200

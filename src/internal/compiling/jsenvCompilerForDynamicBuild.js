@@ -6,6 +6,7 @@ import {
   urlToBasename,
   urlToFilename,
 } from "@jsenv/util"
+import { urlToContentType } from "@jsenv/server"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
@@ -20,10 +21,17 @@ import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { compileIdToBabelPluginMap } from "./jsenvCompilerForJavaScript.js"
 
-export const jsenvCompiledForDynamicBuild = ({ compileId, ...rest }) => {
+export const jsenvCompilerForDynamicBuild = ({ compileId, originalFileUrl, ...rest }) => {
+  const contentType = urlToContentType(originalFileUrl)
+
+  if (contentType !== "application/javascript" && contentType !== "text/javascript") {
+    return null
+  }
+
   if (compileId === COMPILE_ID_BUILD_GLOBAL || compileId === COMPILE_ID_BUILD_COMMONJS) {
     return handleDynamicBuild({
       compileId,
+      originalFileUrl,
       ...rest,
     })
   }
@@ -34,6 +42,7 @@ export const jsenvCompiledForDynamicBuild = ({ compileId, ...rest }) => {
   ) {
     return handleDynamicBuildFile({
       compileId,
+      originalFileUrl,
       ...rest,
     })
   }
@@ -69,7 +78,7 @@ const handleDynamicBuild = ({
     compileCacheSourcesValidation: !isJenvInternalFile,
     compileCacheAssetsValidation: !isJenvInternalFile,
     compile: async () => {
-      const compileId =
+      const compileIdForFiles =
         format === "global" ? COMPILE_ID_BUILD_GLOBAL_FILES : COMPILE_ID_BUILD_COMMONJS_FILES
 
       const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
@@ -82,6 +91,8 @@ const handleDynamicBuild = ({
         [`./${originalFileRelativeUrl}`]: `./${buildRelativeUrl}`,
       }
 
+      const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileIdForFiles}/`
+
       const build = await buildUsingRollup({
         cancellationToken,
         logger,
@@ -89,7 +100,7 @@ const handleDynamicBuild = ({
         entryPointMap,
         projectDirectoryUrl,
         importMapFileRelativeUrl,
-        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
+        compileDirectoryRelativeUrl,
         compileServerOrigin,
         importDefaultExtension,
         externalImportSpecifiers: [],
@@ -119,7 +130,7 @@ const handleDynamicBuild = ({
   }
 }
 
-const handleDynamicBuildFile = async ({
+const handleDynamicBuildFile = ({
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
