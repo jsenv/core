@@ -6,7 +6,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "@jsenv/core/test/startCompileServer/TEST_PARAMS.js"
 import { getCssSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
-import { jsenvCompilerForSass } from "./jsenvCompilerForSass.js"
+import { jsenvCompilerForSass } from "@jsenv/core/packages/jsenv-sass/main.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
