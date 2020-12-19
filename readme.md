@@ -383,3 +383,4 @@ See also
 # See also
 
 - [@jsenv/assert](https://github.com/jsenv/jsenv-assert): Test anything using one assertion.
+- [@jsenv/sass](https://github.com/jsenv/jsenv-core/packages/jsenv-sass): Add support for .scss and .sass in jsenv.

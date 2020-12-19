@@ -19,18 +19,8 @@ import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
 export const transformImportmap = async (
   importmapBeforeTransformation,
-  {
-    logger,
-    projectDirectoryUrl,
-    outDirectoryRelativeUrl,
-    originalFileUrl,
-    compiledFileUrl,
-    projectFileRequestedCallback,
-    request,
-  },
+  { logger, projectDirectoryUrl, outDirectoryRelativeUrl, originalFileUrl, compiledFileUrl },
 ) => {
-  projectFileRequestedCallback(urlToRelativeUrl(originalFileUrl, projectDirectoryUrl), request)
-
   const importMapForProject = JSON.parse(importmapBeforeTransformation)
   const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
 

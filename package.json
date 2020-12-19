@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "17.3.2",
+  "version": "17.4.0",
   "description": "Holistic likable builder.",
   "license": "MIT",
   "repository": {
@@ -99,14 +99,14 @@
     "@babel/plugin-transform-template-literals": "7.12.1",
     "@babel/plugin-transform-typeof-symbol": "7.12.1",
     "@babel/plugin-transform-unicode-regex": "7.12.1",
-    "@jsenv/cancellation": "2.0.2",
+    "@jsenv/cancellation": "2.0.3",
     "@jsenv/import-map": "6.9.2",
     "@jsenv/logger": "3.4.0",
     "@jsenv/node-module-import-map": "12.2.1",
     "@jsenv/node-signals": "2.0.1",
-    "@jsenv/server": "5.2.2",
+    "@jsenv/server": "5.4.2",
     "@jsenv/uneval": "1.4.0",
-    "@jsenv/util": "4.0.3",
+    "@jsenv/util": "4.0.4",
     "@rollup/plugin-commonjs": "17.0.0",
     "@rollup/plugin-json": "4.1.0",
     "@rollup/plugin-node-resolve": "11.0.0",
@@ -128,7 +128,7 @@
     "magic-string": "0.25.7",
     "node-notifier": "9.0.0",
     "parse5": "6.0.1",
-    "playwright-core": "1.6.2",
+    "playwright-core": "1.7.0",
     "postcss": "8.2.1",
     "postcss-value-parser": "4.1.0",
     "proper-lockfile": "4.1.1",
@@ -156,11 +156,12 @@
     "@jsenv/prettier-check-project": "5.6.1",
     "@jsenv/pwa": "3.0.3",
     "eslint": "7.15.0",
-    "playwright-chromium": "1.6.2",
-    "playwright-firefox": "1.6.2",
-    "playwright-webkit": "1.6.2",
+    "playwright-chromium": "1.7.0",
+    "playwright-firefox": "1.7.0",
+    "playwright-webkit": "1.7.0",
     "prettier": "2.2.1",
     "react": "17.0.1",
-    "redux": "4.0.5"
+    "redux": "4.0.5",
+    "sass": "1.30.0"
   }
 }

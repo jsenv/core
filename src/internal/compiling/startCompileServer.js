@@ -73,6 +73,7 @@ export const startCompileServer = async ({
   replaceMap = {},
   babelPluginMap = jsenvBabelPluginMap,
   convertMap = {},
+  customCompilers = [],
 
   // options related to the server itself
   compileServerProtocol = "https",
@@ -83,7 +84,7 @@ export const startCompileServer = async ({
   keepProcessAlive = false,
   stopOnPackageVersionChange = false,
 
-  // remaining options are complex or private
+  // remaining options
   compileGroupCount = 1,
   babelCompatMap = jsenvBabelPluginCompatMap,
   browserScoreMap = jsenvBrowserScoreMap,
@@ -202,6 +203,7 @@ export const startCompileServer = async ({
     groupMap: compileServerGroupMap,
     babelPluginMap,
     convertMap,
+    customCompilers,
     moduleOutFormat,
     importMetaFormat,
     scriptInjections,

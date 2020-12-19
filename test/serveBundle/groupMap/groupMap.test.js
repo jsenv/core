@@ -1,28 +1,25 @@
-/* eslint-disable import/max-dependencies */
 import { readFileSync } from "fs"
 import { assert } from "@jsenv/assert"
-import { createLogger } from "@jsenv/logger"
-import { createCancellationToken } from "@jsenv/cancellation"
+import { fetchUrl } from "@jsenv/server"
 import {
   resolveUrl,
   urlToRelativeUrl,
   urlToFileSystemPath,
   readFile,
   bufferToEtag,
+  readFileSystemNodeModificationTime,
 } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { COMPILE_ID_BUILD_COMMONJS } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { serveBuild } from "@jsenv/core/src/internal/compiling/serveBuild.js"
-import { jsenvBabelPluginMap } from "@jsenv/core/src/jsenvBabelPluginMap.js"
 
-const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const originalFileUrl = resolveUrl("./file.cjs", import.meta.url)
-const compiledFileUrl = resolveUrl("./.jsenv/file.cjs", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const projectDirectoryUrl = jsenvCoreDirectoryUrl
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const babelPluginMap = jsenvBabelPluginMap
+const fileRelativeUrl = `${testDirectoryRelativeUrl}file.cjs`
+const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
 
 ;["etag", "mtime"].reduce(async (previous, compileCacheStrategy) => {
   await previous
@@ -31,71 +28,95 @@ const babelPluginMap = jsenvBabelPluginMap
     compileServerLogLevel: "warn",
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
+    compileCacheStrategy,
     jsenvDirectoryClean: true,
-    babelPluginMap,
     env: {
       whatever: 42,
     },
   })
-  const ressource = `/${compileServer.outDirectoryRelativeUrl}file.cjs`
-  const serveBuildParams = {
-    cancellationToken: createCancellationToken(),
-    logger: createLogger({ logLevel: "warn" }),
 
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
-    outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
-    originalFileUrl,
-    compiledFileUrl,
-    compileServerOrigin: compileServer.origin,
-    compileCacheStrategy,
+  const buildDirectoryRelativeUrl = `${compileServer.outDirectoryRelativeUrl}${COMPILE_ID_BUILD_COMMONJS}/`
+  const fileBuildServerUrl = `${compileServer.origin}/${buildDirectoryRelativeUrl}${fileRelativeUrl}`
+  const fileBuildUrl = `${projectDirectoryUrl}${buildDirectoryRelativeUrl}${fileRelativeUrl}`
 
-    format: "commonjs",
-    projectFileRequestedCallback: () => {},
-    request: {
-      origin: compileServer.origin,
-      ressource,
-      method: "GET",
-      headers: {},
-    },
-    babelPluginMap,
-  }
-
-  const response = await serveBuild(serveBuildParams)
-  {
-    const { status: actual } = response
-    const expected = 200
+  const response = await fetchUrl(fileBuildServerUrl)
+  if (compileCacheStrategy === "etag") {
+    const actual = {
+      status: response.status,
+      etag: response.headers.get("etag"),
+    }
+    const expected = {
+      status: 200,
+      etag: bufferToEtag(await readFile(fileBuildUrl, { as: "buffer" })),
+    }
     assert({ actual, expected })
+
+    // ensure etag cache works
+    {
+      const secondResponse = await fetchUrl(fileBuildServerUrl, {
+        headers: {
+          "if-none-match": response.headers.get("etag"),
+        },
+      })
+      const actual = secondResponse.status
+      const expected = 304
+      assert({ actual, expected })
+    }
   }
+  if (compileCacheStrategy === "mtime") {
+    const actual = {
+      status: response.status,
+      lastModified: response.headers.get("last-modified"),
+    }
+    const expected = {
+      status: 200,
+      lastModified: new Date(await readFileSystemNodeModificationTime(fileBuildUrl)).toUTCString(),
+    }
+    assert({ actual, expected })
+
+    // ensure mtime cache works
+    {
+      const secondResponse = await fetchUrl(fileBuildServerUrl, {
+        headers: {
+          "if-modified-since": response.headers.get("last-modified"),
+        },
+      })
+      const actual = secondResponse.status
+      const expected = 304
+      assert({ actual, expected })
+    }
+  }
+
+  const sourcemapFileUrl = `${fileBuildUrl}.map`
   {
-    const sourcemapFileUrl = `${compiledFileUrl}.map`
-    const actual = JSON.parse(await readFile(sourcemapFileUrl))
+    const actual = await readFile(sourcemapFileUrl, { as: "json" })
     const expected = {
       version: 3,
       file: "file.cjs",
-      sources: ["out/groupMap.json", "../file.cjs"],
+      sources: ["../../../../groupMap.json", "../../../../../../file.cjs"],
       sourcesContent: null,
       names: actual.names,
       mappings: actual.mappings,
     }
     assert({ actual, expected })
   }
+
+  const fileBuildMetaUrl = `${fileBuildUrl}__asset__meta.json`
+  const groupMapFileUrl = resolveUrl(
+    "groupMap.json",
+    `${projectDirectoryUrl}${compileServer.outDirectoryRelativeUrl}`,
+  )
   {
-    const metaFileUrl = `${compiledFileUrl}__asset__meta.json`
-    const actual = JSON.parse(await readFile(metaFileUrl))
+    const actual = await readFile(fileBuildMetaUrl, { as: "json" })
     const expected = {
       contentType: "application/javascript",
-      sources: ["out/groupMap.json", "../file.cjs"],
+      sources: ["../../../../groupMap.json", "../../../../../../file.cjs"],
       sourcesEtag: [
-        bufferToEtag(
-          readFileSync(urlToFileSystemPath(resolveUrl("out/groupMap.json", metaFileUrl))),
-        ),
-        bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../file.cjs", metaFileUrl)))),
+        bufferToEtag(readFileSync(urlToFileSystemPath(groupMapFileUrl))),
+        bufferToEtag(readFileSync(urlToFileSystemPath(fileUrl))),
       ],
       assets: ["file.cjs.map"],
-      assetsEtag: [
-        bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("file.cjs.map", metaFileUrl)))),
-      ],
+      assetsEtag: [bufferToEtag(readFileSync(urlToFileSystemPath(sourcemapFileUrl)))],
       createdMs: actual.createdMs,
       lastModifiedMs: actual.lastModifiedMs,
     }
@@ -103,26 +124,8 @@ const babelPluginMap = jsenvBabelPluginMap
   }
   {
     // eslint-disable-next-line import/no-dynamic-require
-    const actual = typeof require(urlToFileSystemPath(compiledFileUrl)).value
+    const actual = typeof require(urlToFileSystemPath(fileBuildUrl)).value
     const expected = "object"
     assert({ actual, expected })
   }
-
-  // ensure serveBuild cache works
-  const secondResponse = await serveBuild({
-    ...serveBuildParams,
-    request: {
-      ...serveBuildParams.request,
-      headers: {
-        ...(compileCacheStrategy === "etag"
-          ? { "if-none-match": response.headers.etag }
-          : {
-              "if-modified-since": response.headers["last-modified"],
-            }),
-      },
-    },
-  })
-  const actual = secondResponse.status
-  const expected = 304
-  assert({ actual, expected })
 }, Promise.resolve())
