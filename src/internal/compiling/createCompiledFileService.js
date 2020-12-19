@@ -158,6 +158,7 @@ export const createCompiledFileService = ({
           outDirectoryRelativeUrl,
           compileServerOrigin: request.origin,
           importDefaultExtension,
+          compileCacheStrategy,
 
           babelPluginMap,
           projectFileRequestedCallback,
