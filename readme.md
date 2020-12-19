@@ -1,6 +1,6 @@
 # core
 
-Holistic likable builder of JavaSript projects.
+Holistic likable builder of JavaScript projects.
 
 [![github package](https://img.shields.io/github/package-json/v/jsenv/jsenv-core.svg?logo=github&label=package)](https://github.com/jsenv/jsenv-core/packages)
 [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
