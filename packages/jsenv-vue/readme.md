@@ -2,7 +2,7 @@
 
 Enable vue files in jsenv.
 
-[![npm package](https://img.shields.io/npm/v/@jsenv/sass.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/vue)
+[![npm package](https://img.shields.io/npm/v/@jsenv/vue.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/vue)
 
 **WARNING:** My experience with Vue.js is non existent. Consequently I have no idea how it would integrate with a codebase written in Vue.js. I made this package as a proof of concept to ensure jsenv is capable to run `.vue` files.
 
