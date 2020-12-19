@@ -315,7 +315,12 @@ That being said it's only a recommendation. There is nothing enforcing or checki
 
 ## CommonJS
 
-CommonJS module format is not standard JavaScript. Using it requires some configuration. The following `jsenv.config.js` makes Jsenv compatible with a package written in CommonJS (`module.exports` and `require`).
+CommonJS module format rely on `module.exports` and `require`. It was invented by Node.js and is not standard JavaScript. If your code or one of your dependency uses it, it requires some configuration.
+
+<details>
+  <summary><code>jsenv.config.js</code> to use code written in CommonJS</summary>
+
+> The following `jsenv.config.js` makes Jsenv compatible with a package named `whatever` that would be written in CommonJS.
 
 ```js
 import { jsenvBabelPluginMap, convertCommonJsWithRollup } from "@jsenv/core"
@@ -325,9 +330,14 @@ export const convertMap = {
 }
 ```
 
+</details>
+
 ## React
 
-React is written in CommonJS and comes with JSX. If you use them it requires some configuration. The following `jsenv.config.js` enables react and JSX.
+React is written in CommonJS and comes with JSX. If you use them it requires some configuration.
+
+<details>
+  <summary><code>jsenv.config.js</code> for react and jsx</summary>
 
 ```js
 import { createRequire } from "module"
@@ -358,9 +368,14 @@ See also
 - [convertMap](./docs/shared-parameters.md#convertMap)
 - [transform-react-jsx on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-react-jsx.html)
 
+</details>
+
 ## TypeScript
 
-TypeScript needs some configuration if you use it. The following `jsenv.config.js` enable TypeScript.
+TypeScript needs some configuration if you use it.
+
+<details>
+  <summary><code>jsenv.config.js</code> for TypeScript</summary>
 
 ```js
 import { createRequire } from "module"
@@ -379,6 +394,8 @@ See also
 
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
 - [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
+
+</details>
 
 # See also
 
