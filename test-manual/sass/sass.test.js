@@ -14,4 +14,4 @@ const result = sass.renderSync({
 })
 const css = String(result.css)
 const map = JSON.parse(String(result.map))
-debugger
+console.log({ css, map })
