@@ -65,7 +65,7 @@ Here is a simplified example showing how you can test your code using jsenv:
 </details>
 
 <details>
-  <summary>2. Create a an other file to execute your test</summary>
+  <summary>2. Create an other file to execute your test</summary>
 
 `execute-test-plan.js`
 
