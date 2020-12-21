@@ -94,6 +94,7 @@ export const startCompileServer = async ({
   livereloadWatchConfig = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
+    "./dist/": false,
     "./**/node_modules/": false,
   },
   livereloadLogLevel = "info",
