@@ -1,6 +1,6 @@
 import { urlToFilename } from "@jsenv/util"
 
-export const urlIsAsset = (url) => {
+export const urlIsCompilationAsset = (url) => {
   const filename = urlToFilename(url)
 
   // sourcemap are not inside the asset folder because
