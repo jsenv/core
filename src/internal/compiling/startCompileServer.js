@@ -36,7 +36,7 @@ import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
 import { createCallbackList } from "../createCallbackList.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
-import { urlIsAsset } from "./compile-directory/compile-asset.js"
+import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
 import { sourcemapMainFileUrl, sourcemapMappingFileUrl } from "../jsenvInternalFiles.js"
 
 export const startCompileServer = async ({
@@ -184,7 +184,7 @@ export const startCompileServer = async ({
     }
   }
 
-  const serveAssetFile = createAssetFileService({ projectDirectoryUrl })
+  const serveCompilationAssetFile = createCompilationAssetFileService({ projectDirectoryUrl })
   const serveBrowserScript = createBrowserScriptService({
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
@@ -236,10 +236,10 @@ export const startCompileServer = async ({
     sendServerInternalErrorDetails: true,
     requestToResponse: firstServiceWithTiming({
       ...customServices,
-      "service:asset files": serveAssetFile,
+      "service:compilation asset": serveCompilationAssetFile,
       "service:browser script": serveBrowserScript,
-      "service:compiled files": serveCompiledFile,
-      "service:project files": serveProjectFile,
+      "service:compiled file": serveCompiledFile,
+      "service:project file": serveProjectFile,
     }),
     accessControlAllowRequestOrigin: true,
     accessControlAllowRequestMethod: true,
@@ -445,11 +445,11 @@ const setupServerSentEventsForLivereload = ({
   const projectFileAdded = createCallbackList()
 
   const projectFileRequestedCallback = (relativeUrl, request) => {
-    // I doubt an asset like .js.map will change
+    // I doubt a compilation asset like .js.map will change
     // in theory a compilation asset should not change
     // if the source file did not change
     // so we can avoid watching compilation asset
-    if (urlIsAsset(`${projectDirectoryUrl}${relativeUrl}`)) {
+    if (urlIsCompilationAsset(`${projectDirectoryUrl}${relativeUrl}`)) {
       return
     }
 
@@ -702,11 +702,11 @@ const urlToOriginalRelativeUrl = (url, outDirectoryRemoteUrl) => {
   return new URL(url).pathname.slice(1)
 }
 
-const createAssetFileService = ({ projectDirectoryUrl }) => {
+const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {
   return (request) => {
     const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
-    if (urlIsAsset(requestUrl)) {
+    if (urlIsCompilationAsset(requestUrl)) {
       return serveFile(request, {
         rootDirectoryUrl: projectDirectoryUrl,
         etagEnabled: true,
