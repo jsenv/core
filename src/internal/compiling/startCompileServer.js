@@ -653,13 +653,23 @@ const createSSEForLivereloadService = ({
     })
 
     sseRoom.start()
-    cancellationToken.register(() => {
+    const cancelRegistration = cancellationToken.register(() => {
+      cancelRegistration()
       sseRoom.stop()
       stopTracking()
     })
-    cache.push({ mainFileRelativeUrl, sseRoom })
+    cache.push({
+      mainFileRelativeUrl,
+      sseRoom,
+      cleanup: () => {
+        cancelRegistration()
+        sseRoom.stop()
+        stopTracking()
+      },
+    })
     if (cache.length >= sseRoomLimit) {
-      cache.shift()
+      const firstCacheEntry = cache.shift()
+      firstCacheEntry.cleanup()
     }
     return sseRoom
   }
