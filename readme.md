@@ -33,11 +33,9 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
 `@jsenv/core` provides a test runner: A function executing test files to know if some are failing. This function is called `executeTestPlan`. Check steps below to get an idea of its usage.
 
 <details>
-  <summary>1. Create a test file</summary>
+  <summary>1. Create <code>Math.max.test.html</code></summary>
 
 > In order to show code unrelated to a specific codebase the example below is testing `Math.max`. In reality you wouldn't test `Math.max`.
-
-`Math.max.test.html`
 
 ```html
 <!DOCTYPE html>
@@ -61,9 +59,7 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
 </details>
 
 <details>
-  <summary>2. Create an other file with your <code>test plan</code></summary>
-
-`execute-test-plan.js`
+  <summary>2. Create <code>execute-test-plan.js</code></summary>
 
 ```js
 import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
