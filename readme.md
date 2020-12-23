@@ -16,6 +16,7 @@ Holistic likable builder of JavaScript projects.
 - [Why jsenv?](#Why-jsenv)
 - [Installation](#Installation)
 - [Configuration](#Configuration)
+- [About](#About)
 - [See also](#See-also)
 
 # Presentation
@@ -411,6 +412,31 @@ See also
 
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
 - [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
+
+</details>
+
+# About
+
+## Name
+
+The name `jsenv` stands for JavaScript environments. This is because the original purpose of `jsenv` was to blur the differences between two JavaScript runtimes: web browsers and Node.js. This aspect of `jsenv` is not highlighted in the documentation but it exists.
+
+A more accurate name would be `jsruntime` but `jsenv` is lovely.
+
+Maybe `jsenv` should be written `JSEnv`? It's too boring to hold `shift` on keyboard while typing `JSE`, then release `shift`, then type `nv`, so it's a no.
+
+## Logo
+
+The logo is composed by the name at the center and two circles orbiting around it. One of the circle is web browsers, the other is Node.js. It represents the two JavaScript environments supported by jsenv.
+
+![jsenv logo with legend](./docs/jsenv-logo-legend.png)
+
+<details>
+  <summary>Jsenv logo origin explained</summary>
+
+![jsenv logo origin explained](./docs/jsenv-logo-origin-explained.jpg)
+
+> **Warning**: This is a joke
 
 </details>
 
