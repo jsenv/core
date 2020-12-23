@@ -24,17 +24,13 @@ Holistic likable builder of JavaScript projects.
 
 - A developer friendly environment
 - A bundler to optimize files for production
-- A test runner to execute non regression test.
-
-> Using jsenv entirely is simpler but you can use it only as a test runner or to build files for production.
+- A test runner to execute test files.
 
 Jsenv integrates naturally with standard html, css and js. It can be configured to work with TypeScript and React.
 
 # Testing
 
-Testing can be described as: executing many files in parallel and report how it goes.
-
-Here is a simplified example showing how you can test your code using jsenv:
+`@jsenv/core` provides a test runner: A function executing test files to know if some are failing. This function is called `executeTestPlan`. Check steps below to get an idea of its usage.
 
 <details>
   <summary>1. Create a test file</summary>
@@ -87,7 +83,7 @@ executeTestPlan({
 })
 ```
 
-> Note how `projectDirectoryUrl` parameter uses [import.meta.url](https://nodejs.org/docs/latest-v15.x/api/esm.html#esm_import_meta_url) to tell jsenv where is the root of your project. You might want to share that logic using [jsenv.config.js](#jsenvconfigjs).
+> This code above translates into the following sentence "Execute all files in my project that ends with `test.html` on Chrome and Firefox."
 
 </details>
 
@@ -102,14 +98,12 @@ Read more on [testing documentation](./docs/testing/readme.md)
 
 # Exploring
 
-Exploring feature can be described as: a developer friendly environment helpful to code faster thanks to livereloading and jsenv toolbar. It can be seen as a storybook of all your html files including tests.
+`@jsenv/core` provides a server capable to turn any html file into an entry point. This power can used to create a storybook, debug a file in isolation and more. This server is called `exploring server`. This server is designed for development: it provides livereloading out of the box and does not bundle files.
 
-> In other words you have the same experience when you are coding for a test file or your application. No context switching, relax.
-
-You can start this environment by creating a script as the one below and executing it with node.
+The following example shows how it can be used to execute a single test file. As mentioned previously it can execute any html file, not only test files.
 
 <details>
-  <summary>start-exploring.js</summary>
+  <summary>1. Create <code>start-exploring.js</code></summary>
 
 ```js
 import { startExploring } from "@jsenv/core"
@@ -125,26 +119,39 @@ startExploring({
 })
 ```
 
-> Note how `projectDirectoryUrl` parameter uses [import.meta.url](https://nodejs.org/docs/latest-v15.x/api/esm.html#esm_import_meta_url) to tell jsenv where is the root of your project. You might want to share that logic using [jsenv.config.js](#jsenvconfigjs).
-
 </details>
+
+<details>
+  <summary>2. Execute <code>start-exploring.js</code></summary>
 
 ![exploring command terminal screenshot](./docs/main/main-example-exploring-terminal.png)
 
-When you open that url in a browser, a page called jsenv exploring index is shown. It displays a list of all your html files. You can click a file to execute it inside the browser. In our previous example we created `Math.max.test.html`, clicking it will load an empty blank page because `Math.max.test.html` displays nothing and does not throw.
+</details>
 
 <details>
-    <summary>Exploring screenshots</summary>
+    <summary>3. Open exploring server in a browser</summary>
 
-  <img src="./docs/main/main-example-exploring-index.png" alt="jsenv exploring index page screenshot" />
+When you open `https://localhost:3456` in a browser, a page called jsenv exploring index is shown. It displays a list of all your html files. You can click a file to execute it inside the browser. In our previous example we created `Math.max.test.html` so it is displayed in that list.
 
-![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
+![jsenv exploring index page screenshot](./docs/main/main-example-exploring-index.png)
 
 > Maybe you noticed the black toolbar at the bottom of the page? We'll see that further in the documentation.
 
 </details>
 
-If you update `Math.max.test.html` to make it fail
+<details>
+  <summary>4. Open <code>Math.max.test.html</code></summary>
+
+Clicking `Math.max.test.html` load an empty blank page because code inside this html file display nothing and does not throw.
+
+![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
+
+</details>
+
+To get a better idea of how this would integrate in everyday workflow, let's go a bit further and see what happens if we make test file throw. After that we'll revert the changes.
+
+<details>
+  <summary>5. Make <code>Math.max.test.html</code> fail</summary>
 
 ```diff
 - const expected = 4
@@ -153,16 +160,14 @@ If you update `Math.max.test.html` to make it fail
 
 The browser page is reloaded and page displays the failure. Jsenv also uses [Notification API](https://developer.mozilla.org/en-US/docs/Web/API/Notification) to display a system notification.
 
-<details>
-    <summary>Failure screenshot</summary>
-
 ![test file failing page screenshot](./docs/main/main-example-exploring-failing.png)
 
 ![test file failing notification screenshot](./docs/main/main-example-failing-notif.png)
 
 </details>
 
-If you revert you changes
+<details>
+  <summary>6. Fix <code>Math.max.test.html</code></summary>
 
 ```diff
 - const expected = 3
@@ -170,9 +175,6 @@ If you revert you changes
 ```
 
 Browser livereloads again and error is gone together with a system notification.
-
-<details>
-    <summary>Fixed screenshot</summary>
 
 ![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
 
@@ -188,12 +190,39 @@ Building can be described as: generating files optimized for production thanks t
 
 Jsenv only needs to know your main html file and where to write the builded files. You can create a script and execute it with node.
 
-The script below would parse `index.html`, optimize it for production and write it at `dist/main.html`.
-
-> To keep example concise, only `build-project.js`, `index.html` and `dist/main.html` file content is shown.
+Following the simplified steps below turns `index.html` into a production optimized `dist/main.html`.
 
 <details>
-  <summary>build-project.js</summary>
+  <summary>1. Create <code>index.html</code></summary>
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="./favicon.ico" />
+    <script type="importmap" src="./import-map.importmap"></script>
+    <link rel="stylesheet" type="text/css" href="./main.css" />
+  </head>
+
+  <body>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
+```
+
+> To keep example concise, the content of the following files is not shown:
+>
+> - `favicon.ico`
+> - `import-map.importmap`
+> - `main.css`
+> - `main.js`
+
+</details>
+
+<details>
+  <summary>2. Create <code>build-project.js</code></summary>
 
 ```js
 import { buildProject } from "@jsenv/core"
@@ -208,34 +237,19 @@ await buildProject({
 })
 ```
 
-> Note how `projectDirectoryUrl` parameter uses [import.meta.url](https://nodejs.org/docs/latest-v15.x/api/esm.html#esm_import_meta_url) to tell jsenv where is the root of your project. You might want to share that logic using [jsenv.config.js](#jsenvconfigjs).
-
 </details>
 
 <details>
-  <summary>index.html</summary>
+  <summary>3. Execute <code>build-project.js</code></summary>
 
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="./favicon.ico" />
-    <script type="importmap" src="./project.importmap"></script>
-    <link rel="stylesheet" type="text/css" href="./main.css" />
-  </head>
-
-  <body>
-    <script type="module" src="./main.js"></script>
-  </body>
-</html>
+```console
+node ./build-project.js
 ```
 
 </details>
 
 <details>
-  <summary>dist/main.html</summary>
+  <summary>4. Open <code>dist/index.html</code></summary>
 
 ```html
 <!DOCTYPE html>
@@ -254,6 +268,13 @@ await buildProject({
 </html>
 ```
 
+> To keep example concise, the content of the following files is not shown:
+>
+> - `dist/assets/favicon-5340s4789a.ico`
+> - `dist/import-map-b237a334.importmap`
+> - `dist/assets/main-3b329ff0.css`
+> - `dist/main-f7379e10.js`
+
 </details>
 
 Read more [building documentation](./docs/building/readme.md)
@@ -269,7 +290,7 @@ One of the thing jsenv does well is to decrease harm caused by context switching
 Context switching: You are writing js that you are used to write every day for your project, then, you switch to unit tests. And, suddenly, you must adapt to new constraints imposed by the testing framework.<br />
 — Read more in [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05)
 
-Jsenv provides a unified approach to this problem as described in [exploring](#exploring)
+Jsenv provides a unified approach to this: [exploring](#exploring)
 
 ## Explicitness over magic
 
@@ -282,10 +303,6 @@ Jsenv also don't like blackboxes. `@jsenv/core` functions always choose explicit
 Jsenv is **dispensable** by default. As long as your code is using only standards, you could remove jsenv from your project and still be able to run your code. You can double click your html file to open it inside your browser -> it works. Or if this is a Node.js file execute it directly using the `node` command.
 
 Being dispensable by default highlights jsenv philosophy: no new concept to learn. It also means you can switch to an other tool easily as no part of your code is specific to jsenv.
-
-> But, of course, as soon as you use something like jsx or ts your code needs jsenv to run.
-
-> If you use js features already standard but not yet implemented by browsers and Node.js such as top level await or import maps for instance, your code also needs jsenv to run.
 
 # Installation
 
