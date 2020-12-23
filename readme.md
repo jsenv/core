@@ -33,9 +33,11 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
 `@jsenv/core` provides a test runner: A function executing test files to know if some are failing. This function is called `executeTestPlan`. Check steps below to get an idea of its usage.
 
 <details>
-  <summary>1. Create <code>Math.max.test.html</code></summary>
+  <summary>1. Create a test file</summary>
 
 > In order to show code unrelated to a specific codebase the example below is testing `Math.max`. In reality you wouldn't test `Math.max`.
+
+`Math.max.test.html`
 
 ```html
 <!DOCTYPE html>
@@ -59,7 +61,9 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
 </details>
 
 <details>
-  <summary>2. Create <code>execute-test-plan.js</code></summary>
+  <summary>2. Create an other file to execute your test</summary>
+
+`execute-test-plan.js`
 
 ```js
 import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
@@ -84,7 +88,7 @@ executeTestPlan({
 </details>
 
 <details>
-  <summary>3. Execute your <code>test plan</code></summary>
+  <summary>3. Execute your tests</summary>
 
 ![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
 
@@ -99,7 +103,7 @@ Read more on [testing documentation](./docs/testing/readme.md)
 The following example shows how it can be used to execute a single test file. As mentioned previously it can execute any html file, not only test files.
 
 <details>
-  <summary>1. Create <code>start-exploring.js</code></summary>
+  <summary>1. Create a file to start exploring server</summary>
 
 ```js
 import { startExploring } from "@jsenv/core"
@@ -118,7 +122,7 @@ startExploring({
 </details>
 
 <details>
-  <summary>2. Execute <code>start-exploring.js</code></summary>
+  <summary>2. Start exploring server</summary>
 
 ![exploring command terminal screenshot](./docs/main/main-example-exploring-terminal.png)
 
