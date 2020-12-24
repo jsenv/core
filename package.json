@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "17.4.1",
+  "version": "17.4.2",
   "description": "Holistic likable builder.",
   "license": "MIT",
   "repository": {
@@ -53,7 +53,8 @@
     "prettier-format-stage": "npm run prettier-format -- --staged",
     "prettier-check": "npm run prettier-format -- --dry-run",
     "upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
-    "postinstall": "npm run generate-import-map",
+    "link-packages": "node --experimental-top-level-await ./script/link-packages/link-packages.js",
+    "postinstall": "npm run generate-import-map && npm run link-packages",
     "prepublishOnly": "node ./script/transform-package/remove-postinstall.js && npm run dist",
     "postpublish": "node ./script/transform-package/restore-postinstall.js"
   },

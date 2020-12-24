@@ -37,6 +37,9 @@
   "devDependencies": {
     "@jsenv/node-module-import-map": "12.2.2"
   },
+  "peerDependencies": {
+    "@jsenv/core": "*"
+  },
   "scripts": {
     "generate-commonjs-build": "node ./script/generate-commonjs-build/generate-commonjs-build.js",
     "generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
