@@ -233,7 +233,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
               if (fetchImportmap === fetchImportmapFromParameter) {
                 const srcAttribute = getHtmlNodeAttributeByName(importmapHtmlNode, "src")
                 if (srcAttribute) {
-                  logger.info(formatUseImportMap(importmapHtmlNode, entryProjectUrl, htmlSource))
+                  logger.debug(formatUseImportMap(importmapHtmlNode, entryProjectUrl, htmlSource))
                   const importmapUrl = resolveUrl(srcAttribute.value, entryCompiledUrl)
                   if (!urlIsInsideOf(importmapUrl, compileDirectoryRemoteUrl)) {
                     logger.warn(
@@ -301,6 +301,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
           parse: async (target, notifiers) => {
             return parseTarget(target, notifiers, {
               urlToOriginalProjectUrl,
+              urlToOriginalServerUrl,
               format,
               systemJsUrl,
               useImportMapToImproveLongTermCaching,
@@ -332,6 +333,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
           }) => {
             const isHtmlEntryPoint = importerIsEntry && !importerIsJsModule
             const isHtmlEntryPointReferencingAJsModule = isHtmlEntryPoint && targetIsJsModule
+
             // when html references a js we must wait for the compiled version of js
             if (isHtmlEntryPointReferencingAJsModule) {
               const htmlCompiledUrl = urlToCompiledUrl(importerUrl)
@@ -339,7 +341,17 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
               return jsModuleUrl
             }
 
-            const targetUrl = resolveUrl(targetSpecifier, importerUrl)
+            let targetUrl
+            if (
+              isHtmlEntryPoint &&
+              // parse and handle the untransformed importmap, not the one from compile server
+              !targetSpecifier.endsWith(".importmap")
+            ) {
+              const htmlCompiledUrl = urlToCompiledUrl(importerUrl)
+              targetUrl = resolveUrl(targetSpecifier, htmlCompiledUrl)
+            } else {
+              targetUrl = resolveUrl(targetSpecifier, importerUrl)
+            }
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl
             // and ignore them and console.info/debug about remote url (https, http, ...)
@@ -865,19 +877,10 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
     return null
   }
 
-  // const urlToOriginalServerUrl = (url) => {
-  //   const serverUrl = urlToServerUrl(url)
-  //   if (!serverUrl) {
-  //     return null
-  //   }
-
-  //   if (!urlIsInsideOf(serverUrl, compileDirectoryRemoteUrl)) {
-  //     return serverUrl
-  //   }
-
-  //   const relativeUrl = urlToRelativeUrl(serverUrl, compileDirectoryRemoteUrl)
-  //   return resolveUrl(relativeUrl, compileServerOrigin)
-  // }
+  const urlToOriginalServerUrl = (url) => {
+    const originalProjectUrl = urlToOriginalProjectUrl(url)
+    return originalProjectUrl ? urlToServerUrl(originalProjectUrl) : null
+  }
 
   // take any url string and try to return a file url inside project directory url
   // prefer the source url if the url is inside compile directory

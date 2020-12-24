@@ -442,6 +442,8 @@ The logo is composed by the name at the center and two circles orbiting around i
 
 # See also
 
+- [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa): GitHub repository template for a progressive web application.
+- [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-pwa): GitHub repository template for node package.
 - [@jsenv/assert](https://github.com/jsenv/jsenv-assert): Test anything using one assertion.
 - [@jsenv/sass](./packages/jsenv-sass): Add support for .scss and .sass in jsenv.
 - [@jsenv/vue](./packages/jsenv-vue): Add support for .vue in jsenv.

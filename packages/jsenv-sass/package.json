@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/sass",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Enable sass in jsenv.",
   "license": "MIT",
   "repository": {
@@ -36,6 +36,9 @@
   },
   "devDependencies": {
     "@jsenv/node-module-import-map": "12.2.2"
+  },
+  "peerDependencies": {
+    "@jsenv/core": "*"
   },
   "scripts": {
     "generate-commonjs-build": "node ./script/generate-commonjs-build/generate-commonjs-build.js",

@@ -33,7 +33,7 @@ const handleFileChange = (file, type) => {
   updateEventSourceIndicator()
   const livereloadingEnabled = getLivereloadingPreference()
   if (livereloadingEnabled) {
-    if (file.endsWith(".css")) {
+    if (file.endsWith(".css") || file.endsWith(".scss") || file.endsWith(".sass")) {
       reloadAllCss()
       delete latestChangeMap[file]
       updateEventSourceIndicator()

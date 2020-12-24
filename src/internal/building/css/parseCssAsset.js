@@ -11,7 +11,7 @@ import { replaceCssUrls } from "./replaceCssUrls.js"
 export const parseCssAsset = async (
   cssTarget,
   { notifyReferenceFound },
-  { minify, minifyCssOptions },
+  { urlToOriginalServerUrl, minify, minifyCssOptions },
 ) => {
   const cssString = String(cssTarget.targetBuffer)
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
@@ -73,8 +73,9 @@ export const parseCssAsset = async (
       {
         cssMinification: minify,
         cssMinificationOptions: minifyCssOptions,
+        // https://postcss.org/api/#sourcemapoptions
         sourcemapOptions: sourcemapReference
-          ? { prev: sourcemapReference.target.targetBufferAfterTransformation }
+          ? { prev: String(sourcemapReference.target.targetBufferAfterTransformation) }
           : {},
       },
     )
@@ -99,8 +100,13 @@ export const parseCssAsset = async (
       const mapBuildUrl = resolveUrl(cssSourcemapFilename, cssBuildUrl)
       map.file = urlToFilename(cssBuildUrl)
       if (map.sources) {
+        // hum en fait si css est inline, alors la source n'est pas le fichier compilé
+        // mais bien le fichier html compilé ?
+        const importerUrl = cssTarget.targetIsInline
+          ? urlToOriginalServerUrl(cssTarget.targetUrl)
+          : cssTarget.targetUrl
         map.sources = map.sources.map((source) => {
-          const sourceUrl = resolveUrl(source, cssTarget.targetUrl)
+          const sourceUrl = resolveUrl(source, importerUrl)
           const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBuildUrl)
           return sourceUrlRelativeToSourceMap
         })

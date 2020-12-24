@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/vue",
-  "version": "1.0.0-alpha",
+  "version": "1.0.1-alpha",
   "description": "Enable vue in jsenv.",
   "license": "MIT",
   "repository": {
@@ -37,6 +37,9 @@
   },
   "devDependencies": {
     "@jsenv/node-module-import-map": "12.2.2"
+  },
+  "peerDependencies": {
+    "@jsenv/core": "*"
   },
   "scripts": {
     "generate-commonjs-build": "node ./script/generate-commonjs-build/generate-commonjs-build.js",
