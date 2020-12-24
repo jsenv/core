@@ -518,7 +518,7 @@ export const createAssetBuilder = (
 
       // the build relative url has changed
       if (buildRelativeUrl !== undefined && buildRelativeUrl !== target.targetBuildRelativeUrl) {
-        buildRelativeUrlsToClean.push(target.buildRelativeUrl)
+        buildRelativeUrlsToClean.push(target.targetBuildRelativeUrl)
         target.targetBuildRelativeUrl = buildRelativeUrl
         if (!target.targetIsInline) {
           emitAsset({

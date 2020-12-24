@@ -73,8 +73,9 @@ export const parseCssAsset = async (
       {
         cssMinification: minify,
         cssMinificationOptions: minifyCssOptions,
+        // https://postcss.org/api/#sourcemapoptions
         sourcemapOptions: sourcemapReference
-          ? { prev: sourcemapReference.target.targetBufferAfterTransformation }
+          ? { prev: String(sourcemapReference.target.targetBufferAfterTransformation) }
           : {},
       },
     )
