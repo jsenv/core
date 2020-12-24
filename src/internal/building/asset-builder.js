@@ -175,6 +175,7 @@ export const createAssetBuilder = (
     const resolveTargetReturnValue = resolveTargetUrl({
       targetSpecifier: referenceTargetSpecifier,
       targetIsJsModule,
+      targetIsInline,
       importerUrl: referenceUrl,
       importerIsEntry: importerTarget.targetIsEntry,
       importerIsJsModule: importerTarget.targetIsJsModule,

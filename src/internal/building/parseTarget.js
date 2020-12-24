@@ -20,6 +20,7 @@ export const parseTarget = (
   notifiers,
   {
     urlToOriginalProjectUrl,
+    urlToOriginalServerUrl,
     format,
     systemJsUrl,
     useImportMapToImproveLongTermCaching,
@@ -104,7 +105,11 @@ export const parseTarget = (
   }
 
   if (targetContentType === "text/css") {
-    return parseCssAsset(target, notifiers, { minify, minifyCssOptions })
+    return parseCssAsset(target, notifiers, {
+      urlToOriginalServerUrl,
+      minify,
+      minifyCssOptions,
+    })
   }
 
   if (targetContentType === "application/importmap+json") {

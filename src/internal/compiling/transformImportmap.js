@@ -15,6 +15,11 @@ import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
  * (if importMap file does not exists an empty object is returned)
  * (if project uses a custom importMapFileRelativeUrl jsenv that file is returned)
  *
+ * An other idea: instead we should create a @jsenv/helpers package with the source code
+ * that might end up in the project files. Then you will have to add this to your package.json
+ * in "dependencies" instead of "devDependencies" so that it ends in the importmap
+ * compile server would almost no touch the importmap as it's the case today.
+ *
  */
 
 export const transformImportmap = async (

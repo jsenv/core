@@ -34,7 +34,7 @@ const { buildMappings } = await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
-  minify: false,
+  minify: true,
 })
 
 const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {

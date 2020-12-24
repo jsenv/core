@@ -301,6 +301,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
           parse: async (target, notifiers) => {
             return parseTarget(target, notifiers, {
               urlToOriginalProjectUrl,
+              urlToOriginalServerUrl,
               format,
               systemJsUrl,
               useImportMapToImproveLongTermCaching,
@@ -341,7 +342,11 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
             }
 
             let targetUrl
-            if (isHtmlEntryPoint) {
+            if (
+              isHtmlEntryPoint &&
+              // parse and handle the untransformed importmap, not the one from compile server
+              !targetSpecifier.endsWith(".importmap")
+            ) {
               const htmlCompiledUrl = urlToCompiledUrl(importerUrl)
               targetUrl = resolveUrl(targetSpecifier, htmlCompiledUrl)
             } else {
@@ -872,19 +877,10 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
     return null
   }
 
-  // const urlToOriginalServerUrl = (url) => {
-  //   const serverUrl = urlToServerUrl(url)
-  //   if (!serverUrl) {
-  //     return null
-  //   }
-
-  //   if (!urlIsInsideOf(serverUrl, compileDirectoryRemoteUrl)) {
-  //     return serverUrl
-  //   }
-
-  //   const relativeUrl = urlToRelativeUrl(serverUrl, compileDirectoryRemoteUrl)
-  //   return resolveUrl(relativeUrl, compileServerOrigin)
-  // }
+  const urlToOriginalServerUrl = (url) => {
+    const originalProjectUrl = urlToOriginalProjectUrl(url)
+    return originalProjectUrl ? urlToServerUrl(originalProjectUrl) : null
+  }
 
   // take any url string and try to return a file url inside project directory url
   // prefer the source url if the url is inside compile directory
