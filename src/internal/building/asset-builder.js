@@ -137,6 +137,7 @@ export const createAssetBuilder = (
   }
 
   const targetMap = {}
+  const targetRedirectionMap = {}
   const createReference = ({
     referenceTargetSpecifier,
     referenceExpectedContentType,
@@ -153,15 +154,12 @@ export const createAssetBuilder = (
     targetUrlVersioningDisabled,
   }) => {
     const importerUrl = referenceUrl
-    const importerTarget =
-      importerUrl in targetMap
-        ? targetMap[importerUrl]
-        : {
-            targetUrl: importerUrl,
-            targetIsEntry: false, // maybe
-            targetIsJsModule: true,
-            targetBufferAfterTransformation: "",
-          }
+    const importerTarget = getTargetFromUrl(importerUrl) || {
+      targetUrl: importerUrl,
+      targetIsEntry: false, // maybe
+      targetIsJsModule: true,
+      targetBufferAfterTransformation: "",
+    }
 
     // for now we can only emit a chunk from an entry file as visible in
     // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
@@ -224,9 +222,10 @@ export const createAssetBuilder = (
       referenceLine,
     }
 
-    if (targetUrl in targetMap) {
-      const target = targetMap[targetUrl]
-      connectReferenceAndTarget(reference, target)
+    const existingTarget = getTargetFromUrl(targetUrl)
+
+    if (existingTarget) {
+      connectReferenceAndTarget(reference, existingTarget)
     } else {
       const target = createTarget({
         targetContentType,
@@ -307,6 +306,11 @@ export const createAssetBuilder = (
         targetUrl,
         showReferenceSourceLocation(target.targetReferences[0]),
       )
+      if (response.url !== targetUrl) {
+        targetRedirectionMap[targetUrl] = response.url
+        target.targetUrl = response.url
+      }
+
       const responseContentTypeHeader = response.headers["content-type"]
       target.targetContentType = responseContentTypeHeader
 
@@ -549,6 +553,16 @@ export const createAssetBuilder = (
   }
   const getRollupChunkReadyCallbackMap = () => rollupChunkReadyCallbackMap
 
+  const getTargetFromUrl = (url) => {
+    if (url in targetMap) {
+      return targetMap[url]
+    }
+    if (url in targetRedirectionMap) {
+      return getTargetFromUrl(targetRedirectionMap[url])
+    }
+    return null
+  }
+
   const findAssetUrlByBuildRelativeUrl = (buildRelativeUrl) => {
     const assetUrl = Object.keys(targetMap).find(
       (url) => targetMap[url].targetBuildRelativeUrl === buildRelativeUrl,
@@ -564,8 +578,9 @@ export const createAssetBuilder = (
 
   const showReferenceSourceLocation = (reference) => {
     const referenceUrl = reference.referenceUrl
+    const referenceTarget = getTargetFromUrl(referenceUrl)
     const referenceSource = String(
-      referenceUrl in targetMap ? targetMap[referenceUrl].targetBuffer : loadUrl(referenceUrl),
+      referenceTarget ? referenceTarget.targetBuffer : loadUrl(referenceUrl),
     )
 
     let message = `${urlToFileUrl(referenceUrl)}`
@@ -601,6 +616,7 @@ ${showSourceLocation(referenceSource, {
     inspect: () => {
       return {
         targetMap,
+        targetRedirectionMap,
       }
     },
   }

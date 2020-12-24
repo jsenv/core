@@ -100,6 +100,8 @@ export const parseCssAsset = async (
       const mapBuildUrl = resolveUrl(cssSourcemapFilename, cssBuildUrl)
       map.file = urlToFilename(cssBuildUrl)
       if (map.sources) {
+        // hum en fait si css est inline, alors la source n'est pas le fichier compilé
+        // mais bien le fichier html compilé ?
         map.sources = map.sources.map((source) => {
           const sourceUrl = resolveUrl(source, cssTarget.targetUrl)
           const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBuildUrl)
