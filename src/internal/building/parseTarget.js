@@ -124,7 +124,12 @@ export const parseTarget = (
   }
 
   if (targetContentType === "application/javascript" || targetContentType === "text/javascript") {
-    return parseJsAsset(target, notifiers, { urlToOriginalProjectUrl, minify, minifyJsOptions })
+    return parseJsAsset(target, notifiers, {
+      urlToOriginalProjectUrl,
+      urlToOriginalServerUrl,
+      minify,
+      minifyJsOptions,
+    })
   }
 
   if (targetContentType === "image/svg+xml") {

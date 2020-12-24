@@ -10,7 +10,7 @@ import { minifyJs } from "./minifyJs.js"
 export const parseJsAsset = async (
   jsTarget,
   { notifyReferenceFound },
-  { urlToOriginalProjectUrl, minify, minifyJsOptions },
+  { urlToOriginalProjectUrl, urlToOriginalServerUrl, minify, minifyJsOptions },
 ) => {
   const jsUrl = jsTarget.targetUrl
   const jsString = String(jsTarget.targetBuffer)
@@ -82,9 +82,16 @@ export const parseJsAsset = async (
         const mapBuildUrl = resolveUrl(jsSourcemapFilename, jsBuildUrl)
         map.file = urlToFilename(jsBuildUrl)
         if (map.sources) {
+          const importerUrl = jsTarget.targetIsInline
+            ? urlToOriginalServerUrl(jsTarget.targetUrl)
+            : jsTarget.targetUrl
+
           map.sources = map.sources.map((source) => {
-            const sourceUrl = resolveUrl(source, jsUrl)
-            const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBuildUrl)
+            const sourceUrl = resolveUrl(source, importerUrl)
+            const sourceUrlRelativeToSourceMap = urlToRelativeUrl(
+              urlToOriginalServerUrl(sourceUrl),
+              mapBuildUrl,
+            )
             return sourceUrlRelativeToSourceMap
           })
         }
