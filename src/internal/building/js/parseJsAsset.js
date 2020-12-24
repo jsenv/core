@@ -31,7 +31,8 @@ export const parseJsAsset = async (
   return async ({ precomputeBuildRelativeUrl, registerAssetEmitter }) => {
     let map
     if (sourcemapReference) {
-      map = JSON.parse(sourcemapReference.target.targetBufferAfterTransformation)
+      const sourcemapString = String(sourcemapReference.target.targetBufferAfterTransformation)
+      map = JSON.parse(sourcemapString)
     }
 
     // in case this js asset is a worker, bundle it so that:

@@ -345,7 +345,11 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
             if (
               isHtmlEntryPoint &&
               // parse and handle the untransformed importmap, not the one from compile server
-              !targetSpecifier.endsWith(".importmap")
+              !targetSpecifier.endsWith(".importmap") &&
+              // handle js that is not type="module" as an asset
+              // and to have this it must requested as a compiled version of that js or it
+              // might get converted to Systemjs for instance.
+              !targetSpecifier.endsWith(".js")
             ) {
               const htmlCompiledUrl = urlToCompiledUrl(importerUrl)
               targetUrl = resolveUrl(targetSpecifier, htmlCompiledUrl)
