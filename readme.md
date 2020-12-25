@@ -13,7 +13,7 @@ Holistic likable builder of JavaScript projects.
 - [Testing](#Testing)
 - [Exploring](#Exploring)
 - [Building](#Building)
-- [Why jsenv?](#Why-jsenv)
+- [Features](#Features)
 - [Installation](#Installation)
 - [Configuration](#Configuration)
 - [About](#About)
@@ -280,11 +280,12 @@ node ./build-project.js
 
 Read more [building documentation](./docs/building/readme.md)
 
-# Why jsenv?
+# Features
 
-Jsenv focuses on one thing: developer experience. Everything was carefully crafted to get explicit and coherent apis.
+Jsenv focuses on one thing: developer experience. Everything was carefully crafted to get explicit and coherent apis. This section list most important features provided by jsenv. Click them to get more details.
 
-## Less context switching
+<details>
+  <summary>Less context switching</summary>
 
 One of the thing jsenv does well is to decrease harm caused by context switching.
 
@@ -293,17 +294,137 @@ Context switching: You are writing js that you are used to write every day for y
 
 Jsenv provides a unified approach to this: [exploring](#exploring)
 
-## Explicitness over magic
+</details>
+
+<details>
+  <summary>Explicitness over magic</summary>
 
 Jsenv also don't like blackboxes. `@jsenv/core` functions always choose expliciteness over magic. It makes things much simpler to understand and follow both for jsenv and for you.
 
 > One example of expliciteness over magic: You control and tell jsenv where is your project directory. Jsenv don't try to guess or assume where it is.
 
-## Dispensable by default
+</details>
+
+<details>
+  <summary>Dispensable by default</summary>
 
 Jsenv is **dispensable** by default. As long as your code is using only standards, you could remove jsenv from your project and still be able to run your code. You can double click your html file to open it inside your browser -> it works. Or if this is a Node.js file execute it directly using the `node` command.
 
 Being dispensable by default highlights jsenv philosophy: no new concept to learn. It also means you can switch to an other tool easily as no part of your code is specific to jsenv.
+
+</details>
+
+<details>
+  <summary>Import maps</summary>
+
+> This proposal allows control over what URLs get fetched by JavaScript import statements and import() expressions. This allows "bare import specifiers", such as import moment from "moment", to work.
+>
+> — Domenic Denicola in [WICG/import-maps](https://github.com/WICG/import-maps)
+
+Jsenv supports import maps out of the box. The following html can be used with jsenv:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <script type="importmap" src="./project.importmap"></script>
+  </head>
+
+  <body>
+    <script type="module">
+      import moment from "moment"
+      console.log(moment)
+    </script>
+  </body>
+</html>
+```
+
+</details>
+
+<details>
+  <summary>Top level await</summary>
+
+> Top-Level await has moved to stage 3, so the answer to your question How can I use async/await at the top level? is to just add await the call to main()
+>
+> — Taro in [How can I use async/await at the top level?](https://stackoverflow.com/a/56590390/2634179)
+
+Jsenv supports top level await out of the box. Top level await allow jsenv to know when a file code is done executing. This is used to kill a file that is too long to execute and know when to collect code coverage.
+
+</details>
+
+<details>
+  <summary>Dynamic import</summary>
+
+> The lazy-loading capabilities enabled by dynamic import() can be quite powerful when applied correctly. For demonstration purposes, Addy modified an example Hacker News PWA that statically imported all its dependencies, including comments, on first load. The updated version uses dynamic import() to lazily load the comments, avoiding the load, parse, and compile cost until the user really needs them.
+>
+> — Mathias Bynens on [Dynamic import()](https://v8.dev/features/dynamic-import#dynamic)
+
+Dynamic import are supported by jsenv. When building project using `buildProject`, dynamic import are turned into separate chunks.
+
+</details>
+
+<details>
+  <summary>import.meta.url</summary>
+
+> It's a proposal to add the ability for ES modules to figure out what their file name or full path is. This behaves similarly to \_\_dirname in Node which prints out the file path to the current module. According to caniuse, most browsers already support it (including the latest Chromium Edge)
+>
+> — Jake Deichert on [A Super Hacky Alternative to import.meta.url](https://jakedeichert.com/blog/2020/02/a-super-hacky-alternative-to-import-meta-url/)
+
+Jsenv supports `import.meta.url`.
+
+</details>
+
+<details>
+  <summary>Asset reference by url</summary>
+
+A common pattern to reference an asset is to use an import statement. This import would actually return an url to the asset.
+
+```js
+import imageUrl from "./img.png"
+```
+
+As it's not standard, and will likely never be, it doesn't work in the browser without transformation. Using `import.meta.url` does work in the browser.
+
+```js
+const imageUrl = new URL("./img.png", import.meta.url)
+```
+
+You can use both patterns to reference an asset in jsenv. Prefer the one relying on `import.meta.url` because it would work without transformation.
+
+</details>
+
+<details>
+  <summary>import.meta.dev</summary>
+
+A common pattern to write code specific to dev environment consists into using `process.env.NODE_ENV` and rely on dead code elimination provided by tree shaking.
+
+```js
+if (process.env.NODE_ENV !== "production") {
+  console.log("log visible only in dev")
+}
+```
+
+Is transformed, when building for production, into a `false` constant and eliminated by tree shaking.
+
+```js
+if (false) {
+  console.log("log visible only in dev")
+}
+```
+
+But `process.env.NODE_ENV` is specific to Node.js. It would not work in a browser without transformation. Using `import.meta` it's possible to write something browser can understand.
+
+```js
+if (import.meta.dev) {
+  console.log("log visible only in dev")
+}
+```
+
+</details>
+
+> The list above is non exaustive, there is more like long term caching, livereloading without configuration, service worker/worker support, ...
 
 # Installation
 
@@ -442,6 +563,7 @@ The logo is composed by the name at the center and two circles orbiting around i
 
 # See also
 
+- [Jsenv compile server explained](./docs/compile-server-explained.md): Document how jsenv works internally to compile on demand with a filesystem cache.
 - [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa): GitHub repository template for a progressive web application.
 - [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-pwa): GitHub repository template for node package.
 - [@jsenv/assert](https://github.com/jsenv/jsenv-assert): Test anything using one assertion.
