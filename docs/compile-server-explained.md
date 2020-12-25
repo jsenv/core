@@ -66,7 +66,7 @@ So be sure to use relative notation instead: `"./index.js"`. In that case browse
 
 > You can use [import maps](https://github.com/jsenv/jsenv-template-pwa/blob/e06356f9df4c0e063b8f8275cf80433d56853f92/project.importmap#L3) to avoid ../../ hell in js files
 
-That being said, you can use this behaviour on purpose to prevent compilation of some files.
+You can also decide to use an url starting with `/` on purpose to avoid compilation of that file.
 
 ## What happens for assets?
 
