@@ -10,6 +10,9 @@ _An high level overview of how jsenv server works internally_.
   - compiled once until source file is modified
   - next run is fast as it reuse the compiled version right away
   - **you can see the compiled file version with your own eyes**
+- Two compilation profile
+  - Compatible with an old browser
+  - Compile less for a recent browser
 
 # How it works
 
