@@ -24,11 +24,20 @@ import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
 export const transformImportmap = async (
   importmapBeforeTransformation,
-  { logger, projectDirectoryUrl, originalFileUrl, compiledFileUrl },
+  { logger, projectDirectoryUrl, originalFileUrl },
 ) => {
   const importMapForProject = JSON.parse(importmapBeforeTransformation)
   const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
 
+  // we do this "just" so that import.meta.resolve dependencies to
+  // @jsenv/import-map and @jsenv/cancellation are found
+  // in theory we don't need to do this because user should have @jsenv/core in its devDependencies
+  // which should pull what I just said. However
+  // when building for production one could ignore dev dependencies
+  // and end up without these important remappings
+  // so remapping for jsenv should always be there, that's
+  // what we are doing here.
+  // ideally we should do this also on 404 (no importmap file created in the project for now)
   const importMapForJsenvCore = await getImportMapFromNodeModules({
     logLevel: loggerToLogLevel(logger),
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
@@ -98,8 +107,6 @@ const generateJsenvCoreScopes = ({ importMapForProject, topLevelRemappingForJsen
   // "/": "/"
   // "/": "/folder/"
   // to achieve this, we set jsenvCoreImports into every scope
-  // they can still be overriden by importMapForProject
-  // even if I see no use case for that
   const scopesForJsenvCore = {}
   Object.keys(scopes).forEach((scopeKey) => {
     scopesForJsenvCore[scopeKey] = topLevelRemappingForJsenvCore

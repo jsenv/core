@@ -18,6 +18,8 @@ const mainFilename = `${testDirectoryname}.js`
 
 await buildProject({
   ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
+  babelPluginMap: {},
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   importMapFileRelativeUrl: `${testDirectoryRelativeUrl}test.importmap`,
@@ -28,6 +30,7 @@ await buildProject({
 const { globalValue, serverOrigin } = await scriptLoadGlobalBuild({
   ...SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
+  // debug: true,
 })
 const actual = {
   relative: globalValue[0],

@@ -9,11 +9,14 @@ export const scriptLoadGlobalBuild = async ({
   buildDirectoryRelativeUrl,
   mainRelativeUrl,
   globalName,
+  debug = false,
 }) => {
   const buildDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
     startTestServer({ buildDirectoryUrl }),
-    chromium.launch(),
+    chromium.launch({
+      headless: !debug,
+    }),
   ])
 
   const page = await browser.newPage({ ignoreHTTPSErrors: true })
@@ -34,8 +37,10 @@ export const scriptLoadGlobalBuild = async ({
       serverOrigin: server.origin,
     }
   } finally {
-    browser.close()
-    server.stop()
+    if (!debug) {
+      browser.close()
+      server.stop()
+    }
   }
 }
 

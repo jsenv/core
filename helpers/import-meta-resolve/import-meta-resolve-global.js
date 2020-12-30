@@ -1,13 +1,16 @@
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
-import { fetchUrl } from "@jsenv/core/src/internal/toolbar/util/fetching.js"
-import url from "../import-meta-url/import-meta-url-global.js"
+// import { fetchUrl } from "@jsenv/core/src/internal/toolbar/util/fetching.js"
+import { fetchUsingXHR } from "@jsenv/core/src/internal/fetchUsingXHR.js"
+
+const importMapFileRelativeUrl = import.meta.jsenv.importmapFileRelativeUrl
+const importmapUrl = new URL(importMapFileRelativeUrl, import.meta.url)
 
 const resolve = (specifier) => {
   return Promise.resolve(
     resolveImport({
       specifier,
-      importer: url,
+      importer: import.meta.url,
       importMap: memoizedGetImportMap(),
       defaultExtension: false,
     }),
@@ -21,10 +24,9 @@ const memoizedGetImportMap = () => {
   if (importmapPromise) {
     return importmapPromise
   }
-  const importMapFileRelativeUrl = import.meta.jsenv.importmapFileRelativeUrl
+
   importmapPromise = (async () => {
-    const importmapUrl = new URL(importMapFileRelativeUrl, window.location).href
-    const response = await fetchUrl(importmapUrl)
+    const response = await fetchUsingXHR(importmapUrl)
     const importmap = await response.json()
     const importmapNormalized = normalizeImportMap(importmap, importmapUrl)
     return importmapNormalized
