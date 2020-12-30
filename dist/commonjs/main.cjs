@@ -2964,14 +2964,14 @@ const jsenvTransform = async ({
 
           if (importMetaFormat === "commonjs") {
             replaceWithImport({
-              from: `@jsenv/core/src/internal/import-meta/import-meta-url-commonjs.js`
+              from: `@jsenv/core/helpers/import-meta-url/import-meta-url-commonjs.js`
             });
             return;
           }
 
           if (importMetaFormat === "global") {
             replaceWithImport({
-              from: `@jsenv/core/src/internal/import-meta/import-meta-url-global.js`
+              from: `@jsenv/core/helpers/import-meta-url/import-meta-url-global.js`
             });
             return;
           }
@@ -2992,14 +2992,14 @@ const jsenvTransform = async ({
 
           if (importMetaFormat === "commonjs") {
             replaceWithImport({
-              from: `@jsenv/core/src/internal/import-meta/import-meta-resolve-commonjs.js`
+              from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-commonjs.js`
             });
             return;
           }
 
           if (importMetaFormat === "global") {
             replaceWithImport({
-              from: `@jsenv/core/src/internal/import-meta/import-meta-resolve-global.js`
+              from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-global.js`
             });
             return;
           }
@@ -7526,7 +7526,6 @@ const ensureRelativeUrlNotation$1 = relativeUrl => {
 const externalImportUrlPatternsToExternalUrlPredicate = (externalImportUrlPatterns, projectDirectoryUrl) => {
   const externalImportUrlStructuredMetaMap = util.normalizeStructuredMetaMap({
     external: { ...externalImportUrlPatterns,
-      "node_modules/@jsenv/core/src/internal/import-meta/": false,
       "node_modules/@jsenv/core/helpers/": false
     }
   }, projectDirectoryUrl);
@@ -8412,7 +8411,6 @@ const jsenvCompilerForHtml = ({
 const transformImportmap = async (importmapBeforeTransformation, {
   logger: logger$1,
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
   originalFileUrl,
   compiledFileUrl
 }) => {
@@ -8435,14 +8433,7 @@ const transformImportmap = async (importmapBeforeTransformation, {
       topLevelRemappingForJsenvCore
     })
   };
-  const outDirectoryUrl = util.resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl);
-  const importMapInternal = {
-    imports: {
-      "/.jsenv/out/": urlToRelativeUrlRemapping(outDirectoryUrl, compiledFileUrl),
-      "/jsenv.importmap": urlToRelativeUrlRemapping(originalFileUrl, compiledFileUrl)
-    }
-  };
-  const importMap$1 = [importMapForJsenvCore, importmapForSelfImport, importMapInternal, importMapForProject].reduce((previous, current) => importMap.composeTwoImportMaps(previous, current), {});
+  const importMap$1 = [importMapForJsenvCore, importmapForSelfImport, importMapForProject].reduce((previous, current) => importMap.composeTwoImportMaps(previous, current), {});
   const scopes = importMap$1.scopes || {};
   const projectTopLevelMappings = importMapForProject.imports || {};
   Object.keys(scopes).forEach(scope => {
@@ -8533,6 +8524,7 @@ const createCompiledFileService = ({
   cancellationToken,
   logger,
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   importMapFileRelativeUrl,
   importMetaEnvFileRelativeUrl,
@@ -8553,6 +8545,15 @@ const createCompiledFileService = ({
   sourcemapExcludeSources
 }) => {
   const jsenvBrowserBuildUrlRelativeToProject = util.urlToRelativeUrl(jsenvBrowserSystemBuildUrl, projectDirectoryUrl);
+  importMeta = {
+    jsenv: {
+      importMapFileRelativeUrl,
+      jsenvDirectoryRelativeUrl,
+      outDirectoryRelativeUrl,
+      groupMap
+    },
+    ...importMeta
+  };
   return request => {
     const {
       origin,
@@ -8677,9 +8678,7 @@ const startCompileServer = async ({
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
   importMetaEnvFileRelativeUrl = "env.js",
-  importMeta = {
-    dev: "undefined" !== "production"
-  },
+  importMeta = {},
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
@@ -8822,6 +8821,7 @@ const startCompileServer = async ({
     logger: logger$1,
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     importMapFileRelativeUrl,
     importDefaultExtension,
     importMetaEnvFileRelativeUrl,

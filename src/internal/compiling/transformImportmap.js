@@ -1,5 +1,5 @@
 import { loggerToLogLevel } from "@jsenv/logger"
-import { urlToRelativeUrl, urlIsInsideOf, resolveUrl } from "@jsenv/util"
+import { urlToRelativeUrl, urlIsInsideOf } from "@jsenv/util"
 import { composeTwoImportMaps } from "@jsenv/import-map"
 import { getImportMapFromNodeModules } from "@jsenv/node-module-import-map"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
@@ -46,18 +46,10 @@ export const transformImportmap = async (
     scopes: generateJsenvCoreScopes({ importMapForProject, topLevelRemappingForJsenvCore }),
   }
 
-  const importMapInternal = {
-    imports: {
-      "/jsenv.importmap": urlToRelativeUrlRemapping(originalFileUrl, compiledFileUrl),
-    },
-  }
-
-  const importMap = [
-    importMapForJsenvCore,
-    importmapForSelfImport,
-    importMapInternal,
-    importMapForProject,
-  ].reduce((previous, current) => composeTwoImportMaps(previous, current), {})
+  const importMap = [importMapForJsenvCore, importmapForSelfImport, importMapForProject].reduce(
+    (previous, current) => composeTwoImportMaps(previous, current),
+    {},
+  )
 
   const scopes = importMap.scopes || {}
   const projectTopLevelMappings = importMapForProject.imports || {}
