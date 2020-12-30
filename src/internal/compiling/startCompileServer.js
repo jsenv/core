@@ -12,7 +12,7 @@ import {
   createSSERoom,
   firstServiceWithTiming,
 } from "@jsenv/server"
-import { createLogger } from "@jsenv/logger"
+import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import {
   resolveUrl,
   urlToFileSystemPath,
@@ -333,11 +333,12 @@ const assertArguments = ({
   const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
 
   if (!jsenvDirectoryUrl.startsWith(projectDirectoryUrl)) {
-    throw new TypeError(`jsenv directory must be inside project directory
---- jsenv directory url ---
-${jsenvDirectoryUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
+    throw new TypeError(
+      createDetailedMessage(`jsenv directory must be inside project directory`, {
+        ["jsenv directory url"]: jsenvDirectoryUrl,
+        ["project directory url"]: projectDirectoryUrl,
+      }),
+    )
   }
 
   if (typeof outDirectoryName !== "string") {

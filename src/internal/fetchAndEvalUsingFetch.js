@@ -1,3 +1,4 @@
+import { createDetailedMessage } from "@jsenv/logger"
 import { fetchUrl } from "./fetch-browser.js"
 
 export const fetchAndEvalUsingFetch = async (url) => {
@@ -9,13 +10,13 @@ export const fetchAndEvalUsingFetch = async (url) => {
     window.eval(appendSourceURL(text, url))
   } else {
     const text = await response.text()
-    throw new Error(`Unexpected response for script.
---- script url ---
-${url}
---- response body ---
-${text}
---- response status ---
-${response.status}`)
+    throw new Error(
+      createDetailedMessage(`Unexpected response for script.`, {
+        ["script url"]: url,
+        ["response body"]: text,
+        ["response status"]: response.status,
+      }),
+    )
   }
 }
 

@@ -1,4 +1,5 @@
 import { urlToFileSystemPath } from "@jsenv/util"
+import { createDetailedMessage } from "@jsenv/logger"
 import { getMetaJsonFileUrl } from "./compile-asset.js"
 import { readFileContent } from "./fs-optimized-for-cache.js"
 
@@ -11,19 +12,20 @@ export const readMeta = async ({ logger, compiledFileUrl }) => {
     return metaJsonObject
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.debug(`no meta.json.
---- meta.json path ---
-${urlToFileSystemPath(metaJsonFileUrl)}
---- compiled file ---
-${urlToFileSystemPath(compiledFileUrl)}`)
+      logger.debug(
+        createDetailedMessage(`no meta.json.`, {
+          ["meta.json path"]: urlToFileSystemPath(metaJsonFileUrl),
+          ["compiled file"]: urlToFileSystemPath(compiledFileUrl),
+        }),
+      )
       return null
     }
 
     if (error && error.name === "SyntaxError") {
       logger.error(
-        createCacheSyntaxErrorMessage({
-          syntaxError: error,
-          metaJsonFileUrl,
+        createDetailedMessage(`meta.json syntax error.`, {
+          ["syntax error stack"]: error.stack,
+          ["meta.json path"]: urlToFileSystemPath(metaJsonFileUrl),
         }),
       )
       return null
@@ -32,9 +34,3 @@ ${urlToFileSystemPath(compiledFileUrl)}`)
     throw error
   }
 }
-
-const createCacheSyntaxErrorMessage = ({ syntaxError, metaJsonFileUrl }) => `meta.json syntax error.
---- syntax error stack ---
-${syntaxError.stack}
---- meta.json path ---
-${urlToFileSystemPath(metaJsonFileUrl)}`

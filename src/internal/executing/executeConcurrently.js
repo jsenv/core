@@ -6,7 +6,7 @@ import {
   createCancellationSource,
   composeCancellationToken,
 } from "@jsenv/cancellation"
-import { loggerToLevels } from "@jsenv/logger"
+import { loggerToLevels, createDetailedMessage } from "@jsenv/logger"
 import { urlToFileSystemPath } from "@jsenv/util"
 import { require } from "../require.js"
 import { launchAndExecute } from "../executing/launchAndExecute.js"
@@ -61,9 +61,11 @@ export const executeConcurrently = async (
 
     mainFileNotFoundCallback: ({ fileRelativeUrl }) => {
       logger.error(
-        new Error(`an execution main file does not exists.
---- file relative path ---
-${fileRelativeUrl}`),
+        new Error(
+          createDetailedMessage(`an execution main file does not exists.`, {
+            ["file relative path"]: fileRelativeUrl,
+          }),
+        ),
       )
     },
     beforeExecutionCallback: () => {},

@@ -1,3 +1,4 @@
+import { createDetailedMessage } from "@jsenv/logger"
 import { isCancelError } from "@jsenv/cancellation/main.browser.js"
 import { fetchUrl } from "../fetch-browser.js"
 
@@ -13,8 +14,10 @@ export const fetchExploringJson = async ({ cancellationToken } = {}) => {
     if (isCancelError(e)) {
       throw e
     }
-    throw new Error(`Cannot communicate with exploring server due to a network error
---- error stack ---
-${e.stack}`)
+    throw new Error(
+      createDetailedMessage(`Cannot communicate with exploring server due to a network error`, {
+        ["error stack"]: e.stack,
+      }),
+    )
   }
 }

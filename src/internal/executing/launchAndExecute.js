@@ -6,7 +6,7 @@ import {
   composeCancellationToken,
   errorToCancelReason,
 } from "@jsenv/cancellation"
-import { createLogger } from "@jsenv/logger"
+import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { composeCoverageMap } from "./coverage/composeCoverageMap.js"
 
 const TIMING_BEFORE_EXECUTION = "before-execution"
@@ -314,9 +314,11 @@ const computeExecutionResult = async ({
 
   const runtime = `${runtimeName}/${runtimeVersion}`
 
-  logger.debug(`${fileRelativeUrl} ${runtime}: runtime launched.
---- options ---
-options: ${JSON.stringify(options, null, "  ")}`)
+  logger.debug(
+    createDetailedMessage(`${fileRelativeUrl} ${runtime}: runtime launched.`, {
+      options: JSON.stringify(options, null, "  "),
+    }),
+  )
 
   logger.debug(`${fileRelativeUrl} ${runtime}: start file execution.`)
   registerConsoleCallback(runtimeConsoleCallback)
@@ -335,13 +337,13 @@ options: ${JSON.stringify(options, null, "  ")}`)
       timing = TIMING_DURING_EXECUTION
 
       registerErrorCallback((error) => {
-        logger.error(`error ${timing}.
---- error stack ---
-${error.stack}
---- file executed ---
-${fileRelativeUrl}
---- runtime ---
-${runtime}`)
+        logger.error(
+          createDetailedMessage(`error ${timing}.`, {
+            ["error stack"]: error.stack,
+            ["file executed"]: fileRelativeUrl,
+            ["runtime"]: runtime,
+          }),
+        )
         runtimeErrorCallback({ error, timing })
       })
 
@@ -363,13 +365,13 @@ ${runtime}`)
         // there is no need to log it.
         // the code will know the execution errored because it receives
         // an errored execution result
-        logger.debug(`error ${TIMING_DURING_EXECUTION}.
---- error stack ---
-${executionResult.error.stack}
---- file executed ---
-${fileRelativeUrl}
---- runtime ---
-${runtime}`)
+        logger.debug(
+          createDetailedMessage(`error ${TIMING_DURING_EXECUTION}.`, {
+            ["error stack"]: executionResult.error.stack,
+            ["file executed"]: fileRelativeUrl,
+            ["runtime"]: runtime,
+          }),
+        )
         return createErroredExecutionResult(executionResult, rest)
       }
 

@@ -1,3 +1,4 @@
+import { createDetailedMessage } from "@jsenv/logger"
 import { stackToString } from "./stackToString.js"
 import { getOriginalCallsites } from "./getOriginalCallsites.js"
 
@@ -104,11 +105,12 @@ export const installErrorStackRemapping = ({
         }
         return stackToString(originalCallsites, { error, indent })
       } catch (e) {
-        onFailure(`error while computing original stack.
---- stack from error while computing ---
-${readErrorStack(e)}
---- stack from error to remap ---
-${stack}`)
+        onFailure(
+          createDetailedMessage(`error while computing original stack.`, {
+            ["stack from error while computing"]: readErrorStack(e),
+            ["stack from error to remap"]: stack,
+          }),
+        )
         return stack
       }
     }

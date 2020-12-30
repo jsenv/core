@@ -1,4 +1,4 @@
-import { createLogger } from "@jsenv/logger"
+import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { createCancellationTokenForProcess } from "@jsenv/cancellation"
 import { resolveDirectoryUrl } from "@jsenv/util"
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
@@ -262,10 +262,11 @@ const assertBuildDirectoryRelativeUrl = ({ buildDirectoryRelativeUrl }) => {
 
 const assertBuildDirectoryInsideProject = ({ buildDirectoryUrl, projectDirectoryUrl }) => {
   if (!buildDirectoryUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`build directory must be inside project directory
---- build directory url ---
-${buildDirectoryUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
+    throw new Error(
+      createDetailedMessage(`build directory must be inside project directory`, {
+        ["build directory url"]: buildDirectoryUrl,
+        ["project directory url"]: projectDirectoryUrl,
+      }),
+    )
   }
 }

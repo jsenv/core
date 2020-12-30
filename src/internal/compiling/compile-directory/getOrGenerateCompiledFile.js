@@ -1,4 +1,5 @@
 import { urlToFileSystemPath, ensureParentDirectories } from "@jsenv/util"
+import { createDetailedMessage } from "@jsenv/logger"
 import { timeStart, timeFunction } from "@jsenv/server"
 import { require } from "../../require.js"
 import { readFileContent } from "./fs-optimized-for-cache.js"
@@ -33,21 +34,23 @@ export const getOrGenerateCompiledFile = async ({
     throw new TypeError(`originalFileUrl must be a string, got ${originalFileUrl}`)
   }
   if (!originalFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`origin file must be inside project
---- original file url ---
-${originalFileUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
+    throw new Error(
+      createDetailedMessage(`origin file must be inside project`, {
+        ["original file url"]: originalFileUrl,
+        ["project directory url"]: projectDirectoryUrl,
+      }),
+    )
   }
   if (typeof compiledFileUrl !== "string") {
     throw new TypeError(`compiledFileUrl must be a string, got ${compiledFileUrl}`)
   }
   if (!compiledFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`compiled file must be inside project
---- compiled file url ---
-${compiledFileUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
+    throw new Error(
+      createDetailedMessage(`compiled file must be inside project`, {
+        ["compiled file url"]: compiledFileUrl,
+        ["project directory url"]: projectDirectoryUrl,
+      }),
+    )
   }
   if (typeof compile !== "function") {
     throw new TypeError(`compile must be a function, got ${compile}`)

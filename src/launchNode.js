@@ -2,6 +2,7 @@
 import { Script } from "vm"
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
+import { createDetailedMessage } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { urlToFileSystemPath, resolveUrl, assertFilePresence } from "@jsenv/util"
 import {
@@ -190,11 +191,12 @@ export const launchNode = async ({
             return
           }
 
-          logger.error(`error while killing process tree with ${signal}
-    --- error stack ---
-    ${error.stack}
-    --- process.pid ---
-    ${childProcess.pid}`)
+          logger.error(
+            createDetailedMessage(`error while killing process tree with ${signal}`, {
+              ["error stack"]: error.stack,
+              ["process.pid"]: childProcess.pid,
+            }),
+          )
 
           // even if we could not kill the child
           // we will ask it to disconnect
@@ -228,11 +230,12 @@ export const launchNode = async ({
     const execute = async () => {
       return new Promise(async (resolve, reject) => {
         onceProcessMessage(childProcess, "evaluate-result", ({ status, value }) => {
-          logger.debug(`child process sent the following evaluation result.
---- status ---
-${status}
---- value ---
-${value}`)
+          logger.debug(
+            createDetailedMessage(`child process sent the following evaluation result.`, {
+              status,
+              value,
+            }),
+          )
           if (status === EVALUATION_STATUS_OK) resolve(value)
           else reject(value)
         })
@@ -258,17 +261,21 @@ ${value}`)
           executeParams,
         })
 
-        logger.debug(`ask child process to evaluate
---- source ---
-${source}`)
+        logger.debug(
+          createDetailedMessage(`ask child process to evaluate`, {
+            source,
+          }),
+        )
 
         await childProcessReadyPromise
         try {
           await sendToProcess(childProcess, "evaluate", source)
         } catch (e) {
-          logger.error(`error while sending message to child
---- error stack ---
-${e.stack}`)
+          logger.error(
+            createDetailedMessage(`error while sending message to child`, {
+              ["error stack"]: e.stack,
+            }),
+          )
           throw e
         }
       })

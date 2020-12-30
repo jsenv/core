@@ -1,4 +1,5 @@
 import { assertAndNormalizeDirectoryUrl, assertDirectoryPresence, urlIsInsideOf } from "@jsenv/util"
+import { createDetailedMessage } from "@jsenv/logger"
 
 export const assertProjectDirectoryUrl = ({ projectDirectoryUrl }) => {
   return assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
@@ -21,10 +22,11 @@ export const assertImportMapFileRelativeUrl = ({ importMapFileRelativeUrl }) => 
 
 export const assertImportMapFileInsideProject = ({ importMapFileUrl, projectDirectoryUrl }) => {
   if (!urlIsInsideOf(importMapFileUrl, projectDirectoryUrl)) {
-    throw new Error(`importmap file must be inside project directory
---- import map file url ---
-${importMapFileUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
+    throw new Error(
+      createDetailedMessage(`importmap file must be inside project directory`, {
+        ["import map file url"]: importMapFileUrl,
+        ["project directory url"]: projectDirectoryUrl,
+      }),
+    )
   }
 }
