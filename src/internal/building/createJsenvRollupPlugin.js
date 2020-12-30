@@ -1178,7 +1178,6 @@ const externalImportUrlPatternsToExternalUrlPredicate = (
     {
       external: {
         ...externalImportUrlPatterns,
-        "node_modules/@jsenv/core/src/internal/import-meta/": false,
         "node_modules/@jsenv/core/helpers/": false,
       },
     },

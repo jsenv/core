@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/jsenv.importmap"
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
-import url from "./import-meta-url-commonjs.js"
+import url from "../import-meta-url/import-meta-url-commonjs.js"
 
 const resolve = (specifier) => {
   return Promise.resolve(
