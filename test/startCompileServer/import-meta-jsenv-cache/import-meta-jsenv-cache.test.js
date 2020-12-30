@@ -93,7 +93,7 @@ const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
     const expected = {
       version: 3,
       file: "file.cjs",
-      sources: ["../../../../groupMap.json", "../../../../../../file.cjs"],
+      sources: ["../../../../../../file.cjs"],
       sourcesContent: null,
       names: actual.names,
       mappings: actual.mappings,
@@ -102,19 +102,12 @@ const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
   }
 
   const fileBuildMetaUrl = `${fileBuildUrl}__asset__meta.json`
-  const groupMapFileUrl = resolveUrl(
-    "groupMap.json",
-    `${projectDirectoryUrl}${compileServer.outDirectoryRelativeUrl}`,
-  )
   {
     const actual = await readFile(fileBuildMetaUrl, { as: "json" })
     const expected = {
       contentType: "application/javascript",
-      sources: ["../../../../groupMap.json", "../../../../../../file.cjs"],
-      sourcesEtag: [
-        bufferToEtag(readFileSync(urlToFileSystemPath(groupMapFileUrl))),
-        bufferToEtag(readFileSync(urlToFileSystemPath(fileUrl))),
-      ],
+      sources: ["../../../../../../file.cjs"],
+      sourcesEtag: [bufferToEtag(readFileSync(urlToFileSystemPath(fileUrl)))],
       assets: ["file.cjs.map"],
       assetsEtag: [bufferToEtag(readFileSync(urlToFileSystemPath(sourcemapFileUrl)))],
       createdMs: actual.createdMs,
@@ -124,7 +117,8 @@ const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
   }
   {
     // eslint-disable-next-line import/no-dynamic-require
-    const actual = typeof require(urlToFileSystemPath(fileBuildUrl)).value
+    const namespace = require(urlToFileSystemPath(fileBuildUrl))
+    const actual = typeof namespace.groupMap
     const expected = "object"
     assert({ actual, expected })
   }

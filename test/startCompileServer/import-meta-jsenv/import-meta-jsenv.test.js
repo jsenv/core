@@ -24,9 +24,6 @@ const compileServer = await startCompileServer({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean: true,
-  env: {
-    whatever: 42,
-  },
 })
 const buildDirectoryRelativeUrl = `${compileServer.outDirectoryRelativeUrl}${COMPILE_ID_BUILD_COMMONJS}/`
 const fileBuildServerUrl = `${compileServer.origin}/${buildDirectoryRelativeUrl}${fileRelativeUrl}`
@@ -45,7 +42,7 @@ const sourcemapFileUrl = `${fileBuildUrl}.map`
   const expected = {
     version: 3,
     file: "file.cjs",
-    sources: ["../../../../env.json", "../../../../../../file.cjs"],
+    sources: ["../../../../../../file.cjs"],
     sourcesContent: null,
     names: actual.names,
     mappings: actual.mappings,
@@ -54,20 +51,13 @@ const sourcemapFileUrl = `${fileBuildUrl}.map`
 }
 
 const fileBuildMetaUrl = `${fileBuildUrl}__asset__meta.json`
-const envFileUrl = resolveUrl(
-  "env.json",
-  `${projectDirectoryUrl}${compileServer.outDirectoryRelativeUrl}`,
-)
 const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
 {
   const actual = await readFile(fileBuildMetaUrl, { as: "json" })
   const expected = {
     contentType: "application/javascript",
-    sources: ["../../../../env.json", "../../../../../../file.cjs"],
-    sourcesEtag: [
-      bufferToEtag(readFileSync(urlToFileSystemPath(envFileUrl))),
-      bufferToEtag(readFileSync(urlToFileSystemPath(fileUrl))),
-    ],
+    sources: ["../../../../../../file.cjs"],
+    sourcesEtag: [bufferToEtag(readFileSync(urlToFileSystemPath(fileUrl)))],
     assets: ["file.cjs.map"],
     assetsEtag: [bufferToEtag(readFileSync(urlToFileSystemPath(sourcemapFileUrl)))],
     createdMs: actual.createdMs,
@@ -77,12 +67,19 @@ const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
 }
 {
   // eslint-disable-next-line import/no-dynamic-require
-  const actual = require(urlToFileSystemPath(fileBuildUrl)).value
+  const namespace = require(urlToFileSystemPath(fileBuildUrl))
+  const actual = namespace.importMetaJsenv
   const expected = {
-    whatever: 42,
+    importMapFileRelativeUrl: "import-map.importmap",
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
-    importMapFileRelativeUrl: "import-map.importmap",
+    groupMap: {
+      otherwise: {
+        babelPluginRequiredNameArray: actual.groupMap.otherwise.babelPluginRequiredNameArray,
+        jsenvPluginRequiredNameArray: [],
+        runtimeCompatMap: {},
+      },
+    },
   }
   assert({ actual, expected })
 }

@@ -24,7 +24,7 @@ import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
 export const transformImportmap = async (
   importmapBeforeTransformation,
-  { logger, projectDirectoryUrl, outDirectoryRelativeUrl, originalFileUrl, compiledFileUrl },
+  { logger, projectDirectoryUrl, originalFileUrl, compiledFileUrl },
 ) => {
   const importMapForProject = JSON.parse(importmapBeforeTransformation)
   const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
@@ -46,10 +46,8 @@ export const transformImportmap = async (
     scopes: generateJsenvCoreScopes({ importMapForProject, topLevelRemappingForJsenvCore }),
   }
 
-  const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
   const importMapInternal = {
     imports: {
-      "/.jsenv/out/": urlToRelativeUrlRemapping(outDirectoryUrl, compiledFileUrl),
       "/jsenv.importmap": urlToRelativeUrlRemapping(originalFileUrl, compiledFileUrl),
     },
   }

@@ -25,6 +25,7 @@ export const createCompiledFileService = ({
   logger,
 
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   importMapFileRelativeUrl,
   importMetaEnvFileRelativeUrl,
@@ -50,6 +51,16 @@ export const createCompiledFileService = ({
     jsenvBrowserSystemBuildUrl,
     projectDirectoryUrl,
   )
+
+  importMeta = {
+    jsenv: {
+      importMapFileRelativeUrl,
+      jsenvDirectoryRelativeUrl,
+      outDirectoryRelativeUrl,
+      groupMap,
+    },
+    ...importMeta,
+  }
 
   return (request) => {
     const { origin, ressource } = request
