@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
-import { generateGroupMap } from "../../src/internal/generateGroupMap/generateGroupMap.js"
-import { jsenvBrowserScoreMap } from "../../src/jsenvBrowserScoreMap.js"
-import { jsenvNodeVersionScoreMap } from "../../src/jsenvNodeVersionScoreMap.js"
+import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
+import { jsenvBrowserScoreMap } from "@jsenv/core/src/jsenvBrowserScoreMap.js"
+import { jsenvNodeVersionScoreMap } from "@jsenv/core/src/jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "@jsenv/core"
 
 {
