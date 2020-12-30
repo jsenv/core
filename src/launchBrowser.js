@@ -69,7 +69,7 @@ export const launchChromium = async ({
       cancellationToken,
       ignoreHttpsError: true,
     })
-    const { valid, message } = validateResponseStatusIsOk(browserResponse)
+    const { valid, message } = await validateResponseStatusIsOk(browserResponse)
     if (!valid) {
       throw new Error(message)
     }

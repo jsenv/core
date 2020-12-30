@@ -27,7 +27,7 @@ export const fetchSourcemap = async (
     cancellationToken,
     ignoreHttpsError: true,
   })
-  const okValidation = validateResponseStatusIsOk(sourcemapResponse, jsUrl)
+  const okValidation = await validateResponseStatusIsOk(sourcemapResponse, jsUrl)
 
   if (!okValidation.valid) {
     logger.warn(`unexpected response for sourcemap file:

@@ -1033,7 +1033,7 @@ export const createJsenvRollupPlugin = async ({
       throw new Error(formatFileNotFound(urlToProjectUrl(response.url), importer))
     }
 
-    const okValidation = validateResponseStatusIsOk(response, importer)
+    const okValidation = await validateResponseStatusIsOk(response, importer)
 
     if (!okValidation.valid) {
       throw new Error(okValidation.message)

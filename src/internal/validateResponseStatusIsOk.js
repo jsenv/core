@@ -1,6 +1,8 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
-export const validateResponseStatusIsOk = ({ status, url }, importer) => {
+export const validateResponseStatusIsOk = async (response, importer) => {
+  const { status, url } = response
+
   if (status === 404) {
     return {
       valid: false,
@@ -8,6 +10,19 @@ export const validateResponseStatusIsOk = ({ status, url }, importer) => {
         url,
         ["imported by"]: importer,
       }),
+    }
+  }
+
+  if (status === 500) {
+    if (response.headers["content-type"] === "application/json") {
+      return {
+        valid: false,
+        message: createDetailedMessage(`Error: error on url.`, {
+          url,
+          "imported by": importer,
+          "parse error": JSON.stringify(await response.json(), null, "  "),
+        }),
+      }
     }
   }
 
