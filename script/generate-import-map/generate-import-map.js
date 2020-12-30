@@ -8,6 +8,7 @@ generateImportMapForProject(
   [
     getImportMapFromNodeModules({
       projectDirectoryUrl,
+      packagesExportsPreference: ["import", "node", "require"],
     }),
   ],
   {
