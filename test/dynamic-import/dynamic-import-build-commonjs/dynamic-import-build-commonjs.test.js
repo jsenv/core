@@ -3,11 +3,11 @@ import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {
   GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
-} from "../TEST_PARAMS.js"
+} from "@jsenv/core/test/TEST_PARAMS_BUILD_COMMONJS.js"
+import { requireCommonJsBuild } from "@jsenv/core/test/requireCommonJsBuild.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -24,12 +24,11 @@ await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
   },
 })
-const {
-  namespace: { ask },
-} = await requireCommonJsBuild({
+
+const { namespace } = await requireCommonJsBuild({
   ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
 })
-const actual = await ask()
-const expected = 42
+const actual = await namespace.value
+const expected = { default: 42 }
 assert({ actual, expected })

@@ -32,7 +32,7 @@ const { buildMappings } = await buildProject({
   const expected = [
     `${testDirectoryRelativeUrl}file.js`,
     `${testDirectoryRelativeUrl}file.js.map`,
-    `${testDirectoryRelativeUrl}js-import-meta-js-esmodule.js`,
+    `${testDirectoryRelativeUrl}js-import-meta-js-build-esmodule.js`,
   ]
   assert({ actual, expected })
 }
