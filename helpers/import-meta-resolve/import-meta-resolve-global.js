@@ -2,7 +2,7 @@
 import importMap from "/jsenv.importmap"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
-import url from "../import-meta-url/import-meta-url-commonjs.js"
+import url from "../import-meta-url/import-meta-url-global.js"
 
 const resolve = (specifier) => {
   return Promise.resolve(
