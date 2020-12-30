@@ -9,7 +9,7 @@
       window.System.createContext = (parentId) => {
         return {
           url: parentId,
-          resolve: (id) => System.resolve(id, parentId),
+          resolve: (id) => window.System.resolve(id, parentId),
         }
       }
     </script>
