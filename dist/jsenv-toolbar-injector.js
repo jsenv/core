@@ -11,6 +11,36 @@
 
   var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
+  var _defineProperty = (function (obj, key, value) {
+    // Shortcircuit the slow defineProperty path when possible.
+    // We are trying to avoid issues where setters defined on the
+    // prototype cause side effects under the fast path of simple
+    // assignment. By checking for existence of the property with
+    // the in operator, we can optimize most of this overhead away.
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+
+    return obj;
+  });
+
+  var createDetailedMessage = function createDetailedMessage(message) {
+    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var string = "".concat(message);
+    Object.keys(details).forEach(function (key) {
+      var value = details[key];
+      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    });
+    return string;
+  };
+
   var objectWithoutPropertiesLoose = (function (source, excluded) {
     if (source === null) return {};
     var target = {};
@@ -74,26 +104,6 @@
     return value && _typeof(value) === "object" && value.name === "CANCEL_ERROR";
   };
 
-  var defineProperty = (function (obj, key, value) {
-    // Shortcircuit the slow defineProperty path when possible.
-    // We are trying to avoid issues where setters defined on the
-    // prototype cause side effects under the fast path of simple
-    // assignment. By checking for existence of the property with
-    // the in operator, we can optimize most of this overhead away.
-    if (key in obj) {
-      Object.defineProperty(obj, key, {
-        value: value,
-        enumerable: true,
-        configurable: true,
-        writable: true
-      });
-    } else {
-      obj[key] = value;
-    }
-
-    return obj;
-  });
-
   function _objectSpread (target) {
     for (var i = 1; i < arguments.length; i++) {
       // eslint-disable-next-line prefer-rest-params
@@ -102,7 +112,7 @@
       if (i % 2) {
         // eslint-disable-next-line no-loop-func
         ownKeys(Object(source), true).forEach(function (key) {
-          defineProperty(target, key, source[key]);
+          _defineProperty(target, key, source[key]);
         });
       } else if (Object.getOwnPropertyDescriptors) {
         Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
@@ -382,7 +392,7 @@
 
   var createRequestError = function createRequestError(error, _ref5) {
     var url = _ref5.url;
-    return new Error("error during xhr request on ".concat(url, ".\n--- error stack ---\n").concat(error.stack, "\n"));
+    return new Error(createDetailedMessage("error during xhr request on ".concat(url, "."), _defineProperty({}, "error stack", error.stack)));
   };
 
   var createPromiseAndHooks = function createPromiseAndHooks() {
@@ -737,7 +747,7 @@
         throw e;
       }
 
-      throw new Error("Cannot communicate with exploring server due to a network error\n--- error stack ---\n".concat(e.stack));
+      throw new Error(createDetailedMessage("Cannot communicate with exploring server due to a network error", _defineProperty({}, "error stack", e.stack)));
     });
   });
 
