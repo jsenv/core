@@ -4,11 +4,11 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {
   GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+} from "@jsenv/core/test/TEST_PARAMS_BUILD_COMMONJS.js"
+import { requireCommonJsBuild } from "@jsenv/core/test/requireCommonJsBuild.js"
 
 const transformTypeScript = require("@babel/plugin-transform-typescript")
 

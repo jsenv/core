@@ -12,12 +12,12 @@ import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { buildToCompilationResult } from "@jsenv/core/src/internal/building/buildToCompilationResult.js"
-import { buildProject } from "@jsenv/core"
-import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {
   GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+} from "@jsenv/core/test/TEST_PARAMS_BUILD_COMMONJS.js"
+import { requireCommonJsBuild } from "@jsenv/core/test/requireCommonJsBuild.js"
+import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -62,7 +62,7 @@ const compilationResult = buildToCompilationResult(build, {
   const expected = {
     version: actual.version,
     file: "main.cjs",
-    sources: ["../../https.js"],
+    sources: [`../../${testDirectoryname}.js`],
     sourcesContent: [await readFile(mainFileUrl)],
     names: actual.names,
     mappings: actual.mappings,

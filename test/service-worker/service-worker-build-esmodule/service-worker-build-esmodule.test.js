@@ -1,10 +1,10 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
-import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { require } from "@jsenv/core/src/internal/require.js"
-import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -40,7 +40,7 @@ if (process.platform !== "win32") {
   const expected = {
     generatedUrlsConfig: {
       "assets/style-b126d686.css": { versioned: true },
-      "html-with-service-worker.11-4f59ed7a.js": { versioned: true },
+      [`${testDirectoryname}.11-4f59ed7a.js`]: { versioned: true },
       "main.html": {
         versioned: false,
         // because when html file is modified, it's url is not
