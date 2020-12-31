@@ -2,17 +2,17 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLORING.js"
+import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
 import { startExploring } from "@jsenv/core"
-import { openBrowserPage } from "../openBrowserPage.js"
-import { START_EXPLORING_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFilename = `${testDirectoryname}.main.html`
+const htmlFilename = `${testDirectoryname}.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
-const importedFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.main.js`
+const importedFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
 const importedFileUrl = resolveUrl(importedFileRelativeUrl, jsenvCoreDirectoryUrl)
 const importedFilePath = urlToFileSystemPath(importedFileUrl)
 const compileId = `best`
@@ -72,7 +72,7 @@ const expected = {
     startTime: assert.any(Number),
     endTime: assert.any(Number),
     fileExecutionResultMap: {
-      "./syntax-error.main.js": {
+      "./syntax-error-js-exploring.js": {
         status: "errored",
         exceptionSource: assert.any(String),
       },

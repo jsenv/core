@@ -1,7 +1,7 @@
-import { require } from "../../src/internal/require.js"
-import { composeCoverageMap } from "../../src/internal/executing/coverage/composeCoverageMap.js"
-import { evalSource } from "../../src/internal/runtime/createNodeRuntime/evalSource.js"
-import { coverageIsEnabled } from "../coverageIsEnabled.js"
+import { require } from "@jsenv/core/src/internal/require.js"
+import { composeCoverageMap } from "@jsenv/core/src/internal/executing/coverage/composeCoverageMap.js"
+import { evalSource } from "@jsenv/core/src/internal/runtime/createNodeRuntime/evalSource.js"
+import { coverageIsEnabled } from "./coverageIsEnabled.js"
 
 const { chromium } = require("playwright-chromium")
 
