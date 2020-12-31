@@ -1,13 +1,13 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { requireGlobalBuild } from "../requireGlobalBuild.js"
 import {
   GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   REQUIRE_GLOBAL_BUILD_TEST_PARAMS,
-} from "../TEST_PARAMS.js"
+} from "@jsenv/core/test/TEST_PARAMS_BUILD_GLOBAL.js"
+import { requireGlobalBuild } from "@jsenv/core/test/requireGlobalBuild.js"
+import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
