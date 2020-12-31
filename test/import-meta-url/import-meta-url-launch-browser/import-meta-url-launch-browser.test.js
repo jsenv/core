@@ -41,7 +41,7 @@ await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launc
   const expected = {
     status: "completed",
     namespace: {
-      "./import-meta-url.js": {
+      [`./${testDirectoryBasename}.js`]: {
         status: "completed",
         namespace: {
           default: `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`,
