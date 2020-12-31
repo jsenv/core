@@ -26,7 +26,7 @@ export const execute = async ({
   convertMap,
   compileGroupCount = 2,
   importMetaDev,
-  importMetaFileRelativeUrl,
+  importMetaEnvFileRelativeUrl,
   importMeta,
 
   launch,
@@ -59,7 +59,7 @@ export const execute = async ({
         importMapFileRelativeUrl,
         importDefaultExtension,
         importMetaDev,
-        importMetaFileRelativeUrl,
+        importMetaEnvFileRelativeUrl,
         importMeta,
 
         compileServerProtocol,

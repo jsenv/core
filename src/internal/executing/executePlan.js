@@ -17,7 +17,7 @@ export const executePlan = async (
     importMapFileRelativeUrl,
     importDefaultExtension,
     importMetaDev,
-    importMetaFileRelativeUrl,
+    importMetaEnvFileRelativeUrl,
     importMeta,
 
     compileServerProtocol,
@@ -61,7 +61,7 @@ export const executePlan = async (
     importMapFileRelativeUrl,
     importDefaultExtension,
     importMetaDev,
-    importMetaFileRelativeUrl,
+    importMetaEnvFileRelativeUrl,
     importMeta,
 
     compileServerProtocol,
