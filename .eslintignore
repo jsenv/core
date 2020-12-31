@@ -8,4 +8,6 @@ dist/
 /src/**/system.js
 /**/syntax-error*.js
 !/**/syntax-error*.test.js
+/**/error-syntax*.js
+!/**/error-syntax*.test.js
 !.eslintrc.js
