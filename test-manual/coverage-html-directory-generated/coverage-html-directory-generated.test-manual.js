@@ -1,7 +1,7 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
 import { executeTestPlan, launchChromium } from "@jsenv/core"
-import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TEST_PLAN.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -16,7 +16,7 @@ const testPlan = {
 }
 
 executeTestPlan({
-  ...EXECUTE_TEST_PARAMS,
+  ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   logLevel: "info",
   jsenvDirectoryRelativeUrl,
   testPlan,

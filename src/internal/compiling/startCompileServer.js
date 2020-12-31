@@ -654,7 +654,8 @@ const createSSEForLivereloadService = ({
 
     sseRoom.start()
     const cancelRegistration = cancellationToken.register(() => {
-      cancelRegistration()
+      cancelRegistration.unregister()
+
       sseRoom.stop()
       stopTracking()
     })
@@ -662,7 +663,7 @@ const createSSEForLivereloadService = ({
       mainFileRelativeUrl,
       sseRoom,
       cleanup: () => {
-        cancelRegistration()
+        cancelRegistration.unregister()
         sseRoom.stop()
         stopTracking()
       },

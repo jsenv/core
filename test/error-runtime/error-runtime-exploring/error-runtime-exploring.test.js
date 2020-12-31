@@ -50,8 +50,8 @@ const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage
 {
   const stack = executionResult.error.stack
   const expected = `Error: error
-  at triggerError (${exploringServer.origin}${testDirectoryRelativeUrl}/trigger-error.js:2:9)
-  at Object.triggerError (${exploringServer.origin}${testDirectoryRelativeUrl}/${testDirectoryname}.js:3:1)`
+  at triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}trigger-error.js:2:9)
+  at Object.triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}${testDirectoryname}.js:3:1)`
   const actual = stack.slice(0, expected.length)
   assert({ actual, expected })
 }

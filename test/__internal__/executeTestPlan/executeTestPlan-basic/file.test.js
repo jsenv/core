@@ -8,7 +8,7 @@ import {
   launchFirefox,
   launchWebkit,
 } from "@jsenv/core"
-import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TEST_PLAN.js"
+import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -35,7 +35,7 @@ const testPlan = {
 }
 
 const actual = await executeTestPlan({
-  ...EXECUTE_TEST_PARAMS,
+  ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
   compileGroupCount: 1,
