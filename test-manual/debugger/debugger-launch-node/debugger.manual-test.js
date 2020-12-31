@@ -7,7 +7,7 @@ import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndEx
 import { launchNode } from "@jsenv/core"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
-  EXECUTE_TEST_PARAMS,
+  LAUNCH_AND_EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 
@@ -23,7 +23,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 })
 
 const actual = await launchAndExecute({
-  ...EXECUTE_TEST_PARAMS,
+  ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
   launch: (options) =>
     launchNode({
       ...LAUNCH_TEST_PARAMS,

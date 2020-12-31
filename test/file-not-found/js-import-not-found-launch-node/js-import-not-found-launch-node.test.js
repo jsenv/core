@@ -6,7 +6,7 @@ import { startCompileServer } from "@jsenv/core/src/internal/compiling/startComp
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
-  EXECUTE_TEST_PARAMS,
+  LAUNCH_AND_EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 import { launchNode } from "@jsenv/core"
@@ -29,7 +29,7 @@ const importedFileUrl = resolveUrl(
 )
 
 const actual = await launchAndExecute({
-  ...EXECUTE_TEST_PARAMS,
+  ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
   executionLogLevel: "off",
   fileRelativeUrl,
   launch: (options) =>
