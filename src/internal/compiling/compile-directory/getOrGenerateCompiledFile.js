@@ -24,6 +24,7 @@ export const getOrGenerateCompiledFile = async ({
   cacheInterProcessLocking = false,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
+  fileContentFallbackIfNotFound,
   ifEtagMatch,
   ifModifiedSinceDate,
   compile,
@@ -65,6 +66,7 @@ export const getOrGenerateCompiledFile = async ({
         originalFileUrl,
         compiledFileUrl,
         compile,
+        fileContentFallbackIfNotFound,
         ifEtagMatch,
         ifModifiedSinceDate,
         useFilesystemAsCache,
@@ -111,6 +113,7 @@ const computeCompileReport = async ({
   originalFileUrl,
   compiledFileUrl,
   compile,
+  fileContentFallbackIfNotFound,
   ifEtagMatch,
   ifModifiedSinceDate,
   useFilesystemAsCache,
@@ -133,6 +136,7 @@ const computeCompileReport = async ({
       callCompile({
         logger,
         originalFileUrl,
+        fileContentFallbackIfNotFound,
         compile,
       }),
     )
@@ -163,6 +167,7 @@ const computeCompileReport = async ({
       callCompile({
         logger,
         originalFileUrl,
+        fileContentFallbackIfNotFound,
         compile,
       }),
     )
@@ -198,8 +203,13 @@ const computeCompileReport = async ({
   }
 }
 
-const callCompile = async ({ logger, originalFileUrl, compile }) => {
+const callCompile = async ({ logger, originalFileUrl, fileContentFallbackIfNotFound, compile }) => {
   logger.debug(`compile ${originalFileUrl}`)
+
+  const compileArgs =
+    compile.length === 0
+      ? []
+      : await getArgumentsForCompile({ originalFileUrl, fileContentFallbackIfNotFound })
 
   const {
     sources = [],
@@ -209,7 +219,7 @@ const callCompile = async ({ logger, originalFileUrl, compile }) => {
     contentType,
     compiledSource,
     ...rest
-  } = await compile(compile.length ? await readFileContent(originalFileUrl) : undefined)
+  } = await compile(...compileArgs)
 
   if (typeof contentType !== "string") {
     throw new TypeError(`compile must return a contentType string, got ${contentType}`)
@@ -227,6 +237,24 @@ const callCompile = async ({ logger, originalFileUrl, compile }) => {
     assetsContent,
     ...rest,
   }
+}
+
+const getArgumentsForCompile = async ({ originalFileUrl, fileContentFallbackIfNotFound }) => {
+  let fileContent
+  if (fileContentFallbackIfNotFound) {
+    try {
+      fileContent = await readFileContent(originalFileUrl)
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        fileContent = fileContentFallbackIfNotFound
+      } else {
+        throw e
+      }
+    }
+  } else {
+    fileContent = await readFileContent(originalFileUrl)
+  }
+  return [fileContent]
 }
 
 const startAsap = async (fn, { logger, compiledFileUrl, cacheInterProcessLocking }) => {

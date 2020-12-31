@@ -19,6 +19,10 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
 }
 
+// if it does not throw, it means `@jsenv/core/helpers/babel/typeof/typeof.js` was
+// properly resolved.
+// It's possible because jsenv server returns a minimal importmap with @jsenv/core/* remapping
+// even if the project has no importmap file.
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   importMapFileRelativeUrl: "./not-found.importmap",
