@@ -12,7 +12,6 @@ var path = require('path');
 var importMap = require('@jsenv/import-map');
 var https = require('https');
 var crypto = require('crypto');
-var nodeModuleImportMap = require('@jsenv/node-module-import-map');
 var os = require('os');
 var readline = require('readline');
 var nodeSignals = require('@jsenv/node-signals');
@@ -1302,6 +1301,8 @@ const jsenvToolbarJsRelativeUrl = "./src/internal/toolbar/toolbar.main.js";
 const jsenvToolbarJsBuildRelativeUrl = "dist/jsenv-toolbar.js";
 const jsenvToolbarJsUrl = util.resolveUrl(jsenvToolbarJsRelativeUrl, jsenvCoreDirectoryUrl);
 const jsenvToolbarJsBuildUrl = util.resolveUrl(jsenvToolbarJsBuildRelativeUrl, jsenvCoreDirectoryUrl);
+const jsenvImportMetaResolveGlobalUrl = util.resolveUrl("helpers/import-meta-resolve/import-meta-resolve-global.js", jsenvCoreDirectoryUrl);
+const jsenvImportMetaResolveCommonjsUrl = util.resolveUrl("helpers/import-meta-resolve/import-meta-resolve-commonjs.js", jsenvCoreDirectoryUrl);
 
 // and in our case we are talking about a dev server
 // in other words it's not super important to handle concurrent connections
@@ -1817,6 +1818,7 @@ const createLockRegistry = () => {
   };
 };
 
+/* eslint-disable import/max-dependencies */
 const {
   lockForRessource
 } = createLockRegistry();
@@ -1831,6 +1833,7 @@ const getOrGenerateCompiledFile = async ({
   cacheInterProcessLocking = false,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
+  fileContentFallbackIfNotFound,
   ifEtagMatch,
   ifModifiedSinceDate,
   compile
@@ -1877,6 +1880,7 @@ const getOrGenerateCompiledFile = async ({
       originalFileUrl,
       compiledFileUrl,
       compile,
+      fileContentFallbackIfNotFound,
       ifEtagMatch,
       ifModifiedSinceDate,
       useFilesystemAsCache,
@@ -1918,6 +1922,7 @@ const computeCompileReport = async ({
   originalFileUrl,
   compiledFileUrl,
   compile,
+  fileContentFallbackIfNotFound,
   ifEtagMatch,
   ifModifiedSinceDate,
   useFilesystemAsCache,
@@ -1940,6 +1945,7 @@ const computeCompileReport = async ({
     const [compileTiming, compileResult] = await server.timeFunction("compile", () => callCompile({
       logger,
       originalFileUrl,
+      fileContentFallbackIfNotFound,
       compile
     }));
     return {
@@ -1966,6 +1972,7 @@ const computeCompileReport = async ({
     const [compileTiming, compileResult] = await server.timeFunction("compile", () => callCompile({
       logger,
       originalFileUrl,
+      fileContentFallbackIfNotFound,
       compile
     }));
     return {
@@ -2009,9 +2016,14 @@ const computeCompileReport = async ({
 const callCompile = async ({
   logger,
   originalFileUrl,
+  fileContentFallbackIfNotFound,
   compile
 }) => {
   logger.debug(`compile ${originalFileUrl}`);
+  const compileArgs = compile.length === 0 ? [] : await getArgumentsForCompile({
+    originalFileUrl,
+    fileContentFallbackIfNotFound
+  });
   const {
     sources = [],
     sourcesContent = [],
@@ -2020,7 +2032,7 @@ const callCompile = async ({
     contentType,
     compiledSource,
     ...rest
-  } = await compile(compile.length ? await readFileContent(originalFileUrl) : undefined);
+  } = await compile(...compileArgs);
 
   if (typeof contentType !== "string") {
     throw new TypeError(`compile must return a contentType string, got ${contentType}`);
@@ -2039,6 +2051,29 @@ const callCompile = async ({
     assetsContent,
     ...rest
   };
+};
+
+const getArgumentsForCompile = async ({
+  originalFileUrl,
+  fileContentFallbackIfNotFound
+}) => {
+  let fileContent;
+
+  if (fileContentFallbackIfNotFound) {
+    try {
+      fileContent = await readFileContent(originalFileUrl);
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        fileContent = fileContentFallbackIfNotFound;
+      } else {
+        throw e;
+      }
+    }
+  } else {
+    fileContent = await readFileContent(originalFileUrl);
+  }
+
+  return [fileContent];
 };
 
 const startAsap = async (fn, {
@@ -2093,6 +2128,7 @@ const compileFile = async ({
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
+  fileContentFallbackIfNotFound,
   projectFileRequestedCallback = () => {},
   request,
   compile,
@@ -2145,6 +2181,7 @@ const compileFile = async ({
       projectDirectoryUrl,
       originalFileUrl,
       compiledFileUrl,
+      fileContentFallbackIfNotFound,
       ifEtagMatch,
       ifModifiedSinceDate,
       writeOnFilesystem,
@@ -2215,10 +2252,20 @@ const compileFile = async ({
     };
   } catch (error) {
     if (error && error.code === "PARSE_ERROR") {
-      const relativeUrl = util.urlToRelativeUrl(util.fileSystemPathToUrl(error.data.filename), projectDirectoryUrl);
-      projectFileRequestedCallback(relativeUrl, request); // on the correspondig file
+      const {
+        data
+      } = error;
+      const {
+        filename
+      } = data;
 
-      const json = JSON.stringify(error.data);
+      if (filename) {
+        const relativeUrl = util.urlToRelativeUrl(util.fileSystemPathToUrl(filename), projectDirectoryUrl);
+        projectFileRequestedCallback(relativeUrl, request);
+      } // on the correspondig file
+
+
+      const json = JSON.stringify(data);
       return {
         status: 500,
         statusText: "parse error",
@@ -2536,10 +2583,12 @@ const fetchUrl = async (url, {
   };
 };
 
-const validateResponseStatusIsOk = ({
-  status,
-  url
-}, importer) => {
+const validateResponseStatusIsOk = async (response, importer) => {
+  const {
+    status,
+    url
+  } = response;
+
   if (status === 404) {
     return {
       valid: false,
@@ -2548,6 +2597,19 @@ const validateResponseStatusIsOk = ({
         ["imported by"]: importer
       })
     };
+  }
+
+  if (status === 500) {
+    if (response.headers["content-type"] === "application/json") {
+      return {
+        valid: false,
+        message: logger.createDetailedMessage(`Error: error on url.`, {
+          url,
+          "imported by": importer,
+          "parse error": JSON.stringify(await response.json(), null, "  ")
+        })
+      };
+    }
   }
 
   if (responseStatusIsOk(status)) {
@@ -2991,17 +3053,21 @@ const jsenvTransform = async ({
           }
 
           if (importMetaFormat === "commonjs") {
-            replaceWithImport({
-              from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-commonjs.js`
-            });
-            return;
+            throw createParseError({
+              message: `import.meta.resolve() not supported with commonjs format`
+            }); // replaceWithImport({
+            //   from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-commonjs.js`,
+            // })
+            // return
           }
 
           if (importMetaFormat === "global") {
-            replaceWithImport({
-              from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-global.js`
-            });
-            return;
+            throw createParseError({
+              message: `import.meta.resolve() not supported with global format`
+            }); // replaceWithImport({
+            //   from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-global.js`,
+            // })
+            // return
           }
 
           return;
@@ -5685,7 +5751,7 @@ const fetchSourcemap = async (jsUrl, jsString, {
     cancellationToken,
     ignoreHttpsError: true
   });
-  const okValidation = validateResponseStatusIsOk(sourcemapResponse, jsUrl);
+  const okValidation = await validateResponseStatusIsOk(sourcemapResponse, jsUrl);
 
   if (!okValidation.valid) {
     logger$1.warn(`unexpected response for sourcemap file:
@@ -6924,7 +6990,16 @@ const createJsenvRollupPlugin = async ({
       }
 
       const moduleInfo = this.getModuleInfo(id);
-      const url = urlToServerUrl(id);
+      const url = urlToServerUrl(id); // const originalProjectUrl = urlToOriginalProjectUrl(url)
+      // if (originalProjectUrl === jsenvImportMetaResolveGlobalUrl) {
+      //   await assetBuilder.createReferenceForJs({
+      //     jsUrl: url,
+      //     targetSpecifier: importMapFileRelativeUrl,
+      //     targetContentType: "application/importmap+json",
+      //     // targetBuffer,
+      //   })
+      // }
+
       logger$1.debug(`loads ${url}`);
       const {
         responseUrl,
@@ -7378,7 +7453,7 @@ const createJsenvRollupPlugin = async ({
       throw new Error(formatFileNotFound(urlToProjectUrl(response.url), importer));
     }
 
-    const okValidation = validateResponseStatusIsOk(response, importer);
+    const okValidation = await validateResponseStatusIsOk(response, importer);
 
     if (!okValidation.valid) {
       throw new Error(okValidation.message);
@@ -8396,33 +8471,11 @@ const jsenvCompilerForHtml = ({
  * import "@jsenv/core/helpers/regenerator-runtime/regenerator-runtime.js"
  * -> searches a file inside @jsenv/core/*
  *
- * import importMap from "/jsenv.importmap"
- * -> searches project importMap at importMapFileRelativeUrl
- * (if importMap file does not exists an empty object is returned)
- * (if project uses a custom importMapFileRelativeUrl jsenv that file is returned)
- *
- * An other idea: instead we should create a @jsenv/helpers package with the source code
- * that might end up in the project files. Then you will have to add this to your package.json
- * in "dependencies" instead of "devDependencies" so that it ends in the importmap
- * compile server would almost no touch the importmap as it's the case today.
- *
  */
-
 const transformImportmap = async (importmapBeforeTransformation, {
-  logger: logger$1,
-  projectDirectoryUrl,
-  originalFileUrl,
-  compiledFileUrl
+  originalFileUrl
 }) => {
   const importMapForProject = JSON.parse(importmapBeforeTransformation);
-  const originalFileRelativeUrl = util.urlToRelativeUrl(originalFileUrl, projectDirectoryUrl);
-  const importMapForJsenvCore = await nodeModuleImportMap.getImportMapFromNodeModules({
-    logLevel: logger.loggerToLogLevel(logger$1),
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    rootProjectDirectoryUrl: projectDirectoryUrl,
-    importMapFileRelativeUrl: originalFileRelativeUrl,
-    projectPackageDevDependenciesIncluded: false
-  });
   const topLevelRemappingForJsenvCore = {
     "@jsenv/core/": urlToRelativeUrlRemapping(jsenvCoreDirectoryUrl, originalFileUrl)
   };
@@ -8433,7 +8486,7 @@ const transformImportmap = async (importmapBeforeTransformation, {
       topLevelRemappingForJsenvCore
     })
   };
-  const importMap$1 = [importMapForJsenvCore, importmapForSelfImport, importMapForProject].reduce((previous, current) => importMap.composeTwoImportMaps(previous, current), {});
+  const importMap$1 = [importmapForSelfImport, importMapForProject].reduce((previous, current) => importMap.composeTwoImportMaps(previous, current), {});
   const scopes = importMap$1.scopes || {};
   const projectTopLevelMappings = importMapForProject.imports || {};
   Object.keys(scopes).forEach(scope => {
@@ -8482,8 +8535,6 @@ const generateJsenvCoreScopes = ({
   // "/": "/"
   // "/": "/folder/"
   // to achieve this, we set jsenvCoreImports into every scope
-  // they can still be overriden by importMapForProject
-  // even if I see no use case for that
 
 
   const scopesForJsenvCore = {};
@@ -8494,11 +8545,9 @@ const generateJsenvCoreScopes = ({
 };
 
 const jsenvCompilerForImportmap = ({
-  logger,
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  originalFileUrl,
-  compiledFileUrl
+  importMapFileRelativeUrl,
+  originalFileUrl
 }) => {
   const contentType = server.urlToContentType(originalFileUrl);
 
@@ -8506,14 +8555,13 @@ const jsenvCompilerForImportmap = ({
     return null;
   }
 
+  const importMapFileUrl = util.resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
   return {
+    // allow project to have no importmap
+    fileContentFallbackIfNotFound: originalFileUrl === importMapFileUrl ? "{}" : undefined,
     compile: importmapBeforeTransformation => {
       return transformImportmap(importmapBeforeTransformation, {
-        logger,
-        projectDirectoryUrl,
-        outDirectoryRelativeUrl,
-        originalFileUrl,
-        compiledFileUrl
+        originalFileUrl
       });
     }
   };
@@ -8545,15 +8593,6 @@ const createCompiledFileService = ({
   sourcemapExcludeSources
 }) => {
   const jsenvBrowserBuildUrlRelativeToProject = util.urlToRelativeUrl(jsenvBrowserSystemBuildUrl, projectDirectoryUrl);
-  importMeta = {
-    jsenv: {
-      importMapFileRelativeUrl,
-      jsenvDirectoryRelativeUrl,
-      outDirectoryRelativeUrl,
-      groupMap
-    },
-    ...importMeta
-  };
   return request => {
     const {
       origin,
@@ -8605,6 +8644,17 @@ const createCompiledFileService = ({
     const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`;
     const compileDirectoryUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl);
     const compiledFileUrl = util.resolveUrl(originalFileRelativeUrl, compileDirectoryUrl);
+    importMeta = {
+      jsenv: createJsenvImportMetaForFile(compiledFileUrl, {
+        projectDirectoryUrl,
+        compileDirectoryUrl,
+        importMapFileRelativeUrl,
+        jsenvDirectoryRelativeUrl,
+        outDirectoryRelativeUrl,
+        groupMap
+      }),
+      ...importMeta
+    };
     let compilerOptions = null;
     const compilerCandidateParams = {
       cancellationToken,
@@ -8667,6 +8717,28 @@ const createCompiledFileService = ({
         location: originalFileServerUrl
       }
     };
+  };
+};
+
+const createJsenvImportMetaForFile = (compiledFileUrl, {
+  // projectDirectoryUrl,
+  // compileDirectoryUrl,
+  importMapFileRelativeUrl,
+  jsenvDirectoryRelativeUrl,
+  outDirectoryRelativeUrl,
+  groupMap
+}) => {
+  // const importMapCompiledUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryUrl)
+  // const jsenvDirectoryUrl = resolveUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
+  // const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
+  // importMapFileRelativeUrl = urlToRelativeUrl(importMapCompiledUrl, compiledFileUrl)
+  // jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, compiledFileUrl)
+  // outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, compiledFileUrl)
+  return {
+    importMapFileRelativeUrl,
+    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
+    groupMap
   };
 };
 
@@ -9296,7 +9368,7 @@ const createSSEForLivereloadService = ({
     });
     sseRoom.start();
     const cancelRegistration = cancellationToken.register(() => {
-      cancelRegistration();
+      cancelRegistration.unregister();
       sseRoom.stop();
       stopTracking();
     });
@@ -9304,7 +9376,7 @@ const createSSEForLivereloadService = ({
       mainFileRelativeUrl,
       sseRoom,
       cleanup: () => {
-        cancelRegistration();
+        cancelRegistration.unregister();
         sseRoom.stop();
         stopTracking();
       }
@@ -10879,7 +10951,8 @@ const writeLog = (string, {
 
   const update = newString => {
     if (updated) {
-      throw new Error(`cannot update twice`);
+      console.warn(`cannot update twice`);
+      return null;
     }
 
     updated = true;
@@ -12153,7 +12226,7 @@ const launchChromium = async ({
     const {
       valid,
       message
-    } = validateResponseStatusIsOk(browserResponse);
+    } = await validateResponseStatusIsOk(browserResponse);
 
     if (!valid) {
       throw new Error(message);
