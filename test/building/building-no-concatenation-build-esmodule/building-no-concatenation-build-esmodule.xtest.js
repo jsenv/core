@@ -8,8 +8,8 @@ import { buildProject } from "@jsenv/core"
 import {
   GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
-import { browserImportEsModuleBuild } from "../browserImportEsModuleBuild.js"
+} from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
