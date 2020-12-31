@@ -9,7 +9,7 @@ import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+} from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)

@@ -8,8 +8,8 @@ import {
 } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startExploring } from "@jsenv/core"
-import { openBrowserPage, getHtmlExecutionResult } from "../openBrowserPage.js"
-import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { openBrowserPage, getHtmlExecutionResult } from "@jsenv/core/test/openBrowserPage.js"
+import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLORING.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
