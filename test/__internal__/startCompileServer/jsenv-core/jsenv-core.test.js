@@ -2,12 +2,12 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
-import { require } from "../../../src/internal/require.js"
-import { COMPILE_ID_BUILD_COMMONJS } from "../../../src/internal/CONSTANTS.js"
+import { require } from "@jsenv/core/src/internal/require.js"
+import { COMPILE_ID_BUILD_COMMONJS } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { jsenvBabelPluginMap } from "../../../src/jsenvBabelPluginMap.js"
-import { COMPILE_SERVER_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { jsenvBabelPluginMap } from "@jsenv/core/src/jsenvBabelPluginMap.js"
+import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)

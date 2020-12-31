@@ -2,13 +2,13 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { babelPluginInstrument } from "../../../src/internal/executing/coverage/babel-plugin-instrument.js"
+import { babelPluginInstrument } from "@jsenv/core/src/internal/executing/coverage/babel-plugin-instrument.js"
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import {
   TRANSFORM_JS_TEST_PARAMS,
   TRANSFORM_RESULT_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+} from "../TEST_PARAMS_TRANSFORM_JS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)

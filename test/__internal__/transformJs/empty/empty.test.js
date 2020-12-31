@@ -7,7 +7,7 @@ import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-s
 import {
   TRANSFORM_JS_TEST_PARAMS,
   TRANSFORM_RESULT_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+} from "../TEST_PARAMS_TRANSFORM_JS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)

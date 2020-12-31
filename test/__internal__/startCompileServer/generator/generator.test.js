@@ -2,10 +2,10 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
-import { COMPILE_ID_OTHERWISE } from "../../../src/internal/CONSTANTS.js"
+import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { COMPILE_SERVER_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)

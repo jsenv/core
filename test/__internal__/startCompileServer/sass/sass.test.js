@@ -4,9 +4,9 @@ import { fetchUrl } from "@jsenv/server"
 import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { COMPILE_SERVER_TEST_PARAMS } from "@jsenv/core/test/startCompileServer/TEST_PARAMS.js"
 import { getCssSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { jsenvCompilerForSass } from "@jsenv/core/packages/jsenv-sass/main.js"
+import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
