@@ -2,9 +2,9 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLORING.js"
+import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
 import { startExploring } from "@jsenv/core"
-import { openBrowserPage } from "../openBrowserPage.js"
-import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -34,7 +34,7 @@ const expected = {
     startTime: actual.executionResult.startTime,
     endTime: actual.executionResult.endTime,
     fileExecutionResultMap: {
-      "./import-meta-env.js": {
+      [`./${testDirectoryname}.js`]: {
         status: "completed",
         namespace: {
           env: { whatever: 42, test: true },
