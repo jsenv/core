@@ -42,7 +42,7 @@ const sourcemapFileUrl = `${fileBuildUrl}.map`
   const expected = {
     version: 3,
     file: "file.cjs",
-    sources: ["../../../../../../file.cjs"],
+    sources: ["../../../../../../../file.cjs"],
     sourcesContent: null,
     names: actual.names,
     mappings: actual.mappings,
@@ -56,7 +56,7 @@ const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
   const actual = await readFile(fileBuildMetaUrl, { as: "json" })
   const expected = {
     contentType: "application/javascript",
-    sources: ["../../../../../../file.cjs"],
+    sources: ["../../../../../../../file.cjs"],
     sourcesEtag: [bufferToEtag(readFileSync(urlToFileSystemPath(fileUrl)))],
     assets: ["file.cjs.map"],
     assetsEtag: [bufferToEtag(readFileSync(urlToFileSystemPath(sourcemapFileUrl)))],

@@ -34,7 +34,7 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   return buildRelativeUrl
 }
 
-const inlinescriptBuildRelativeUrl = getBuildRelativeUrl("html-script-module-inline.10.js")
+const inlinescriptBuildRelativeUrl = getBuildRelativeUrl(`${testDirectoryname}.10.js`)
 
 const { namespace: actual } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,

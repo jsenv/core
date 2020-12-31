@@ -62,7 +62,7 @@ const text = textNode.value
   const actual = sourcemap
   const expected = {
     version: 3,
-    sources: ["../../html-script-inline.10.js"],
+    sources: [`../../${testDirectoryname}.10.js`],
     names: actual.names,
     mappings: actual.mappings,
     sourcesContent: [sourceContent],

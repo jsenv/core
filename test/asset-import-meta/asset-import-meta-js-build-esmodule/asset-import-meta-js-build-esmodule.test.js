@@ -15,14 +15,15 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
+const entryPointMap = {
+  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
+}
 
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
-  },
+  entryPointMap,
 })
 
 // assert build mappings does not contains dep.js
@@ -30,9 +31,9 @@ const { buildMappings } = await buildProject({
 {
   const actual = Object.keys(buildMappings)
   const expected = [
+    `${testDirectoryRelativeUrl}${testDirectoryname}.js`,
     `${testDirectoryRelativeUrl}file.js`,
     `${testDirectoryRelativeUrl}file.js.map`,
-    `${testDirectoryRelativeUrl}${testDirectoryname}.js`,
   ]
   assert({ actual, expected })
 }

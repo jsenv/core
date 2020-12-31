@@ -38,7 +38,7 @@ const expected = {
   contentType: "application/json",
   body: {
     contentType: "application/javascript",
-    sources: [`../../../../../../${filename}`],
+    sources: [`../../../../../../../${filename}`],
     sourcesEtag: [bufferToEtag(await readFile(fileUrl, { as: "buffer" }))],
     assets: [`${filename}.map`],
     assetsEtag: [bufferToEtag(await readFile(mapCompiledUrl, { as: "buffer" }))],
