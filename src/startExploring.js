@@ -26,6 +26,7 @@ export const startExploring = async ({
   outDirectoryName,
   toolbar = true,
   livereloading = true,
+  importMetaDev = true,
   ...rest
 }) => {
   return executeJsenvAsyncFunction(async () => {
@@ -86,6 +87,7 @@ export const startExploring = async ({
       },
       jsenvDirectoryRelativeUrl,
       outDirectoryName,
+      importMetaDev,
       ...rest,
     })
 

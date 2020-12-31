@@ -46,6 +46,7 @@ export const startCompileServer = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
+  importMetaDev = false,
   importMetaEnvFileRelativeUrl = "env.js",
   importMeta = {},
   jsenvDirectoryRelativeUrl = ".jsenv",
@@ -141,6 +142,11 @@ export const startCompileServer = async ({
     groupCount: compileGroupCount,
     runtimeAlwaysInsideRuntimeScoreMap,
   })
+
+  importMeta = {
+    dev: importMetaDev,
+    ...importMeta,
+  }
 
   await setupOutDirectory(outDirectoryUrl, {
     logger,

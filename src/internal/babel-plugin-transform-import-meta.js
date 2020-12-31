@@ -87,7 +87,10 @@ export const babelPluginTransformImportMeta = (api, pluginOptions) => {
               })
             },
             replaceWithValue: (value) => {
-              const valueAst = jsValueToAst(JSON.stringify(value))
+              const valueAst = jsValueToAst(
+                // eslint-disable-next-line no-nested-ternary
+                value === undefined ? "undefined" : value === null ? "null" : JSON.stringify(value),
+              )
               metaPropertyPathMap[importMetaPropertyName].forEach((path) => {
                 path.replaceWith(valueAst)
               })

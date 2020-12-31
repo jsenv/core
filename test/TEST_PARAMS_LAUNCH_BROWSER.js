@@ -10,6 +10,17 @@ export const START_COMPILE_SERVER_TEST_PARAMS = {
   babelPluginMap: testBabelPluginMap,
 }
 
+export const EXECUTE_TEST_PARAMS = {
+  projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  jsenvDirectoryClean: true,
+  compileServerLogLevel: "warn",
+  babelPluginMap: testBabelPluginMap,
+  compileGroupCount: 2,
+
+  executionLogLevel: "warn",
+  inheritCoverage: coverageIsEnabled(),
+}
+
 export const EXECUTION_TEST_PARAMS = {
   executionLogLevel: "warn",
   stopAfterExecute: true,
