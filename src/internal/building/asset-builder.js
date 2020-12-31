@@ -99,7 +99,7 @@ export const createAssetBuilder = (
     // start to wait internally for eventual chunks
     // but don't await here because this function will be awaited by rollup before starting
     // to parse chunks
-    const htmlReadyPromise = entryReference.target.getReadyPromise().catch((e) => {})
+    const htmlReadyPromise = entryReference.target.getReadyPromise().catch(() => {})
     return { htmlReadyPromise }
   }
 
@@ -501,14 +501,17 @@ export const createAssetBuilder = (
       })
     })
 
-    const connect = memoize(async (connectFn) => {
-      const { rollupReferenceId } = await connectFn()
-      target.rollupReferenceId = rollupReferenceId
+    let connectFn
+    const connect = memoize((value) => {
+      connectFn = value
     })
 
     // the idea is to return the connect promise here
     // because connect is memoized and called immediatly after target is created
-    const getRollupReferenceIdAvailablePromise = () => connect()
+    const getRollupReferenceIdAvailablePromise = memoize(async () => {
+      const { rollupReferenceId } = await connectFn()
+      target.rollupReferenceId = rollupReferenceId
+    })
 
     // meant to be used only when asset is modified
     // after being emitted.
