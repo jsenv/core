@@ -4,8 +4,8 @@ import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { buildToCompilationResult } from "@jsenv/core/src/internal/building/buildToCompilationResult.js"
+import { GENERATE_COMMONJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_COMMONJS.js"
 import { buildProject } from "@jsenv/core"
-import { GENERATE_COMMONJS_BUILD_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const { SourceMapConsumer } = require("source-map")
 
@@ -15,15 +15,16 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`
+const entryPointMap = {
+  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
+}
 
 const build = await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
-  },
+  entryPointMap,
 })
 const compilationResult = buildToCompilationResult(build, {
   projectDirectoryUrl: testDirectoryUrl,
