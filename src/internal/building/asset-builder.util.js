@@ -1,4 +1,5 @@
 import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/util"
+import { createDetailedMessage } from "@jsenv/logger"
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
 export const getTargetAsBase64Url = ({ targetBufferAfterTransformation, targetContentType }) => {
@@ -88,11 +89,13 @@ const formatContentTypeMismatchLog = (reference, { showReferenceSourceLocation }
   const { referenceExpectedContentType, target } = reference
   const { targetContentType, targetUrl } = target
 
-  return `A reference was expecting ${referenceExpectedContentType} but found ${targetContentType} instead.
---- reference ---
-${showReferenceSourceLocation(reference)}
---- target url ---
-${targetUrl}`
+  return createDetailedMessage(
+    `A reference was expecting ${referenceExpectedContentType} but found ${targetContentType} instead.`,
+    {
+      ["reference"]: showReferenceSourceLocation(reference),
+      ["target url"]: targetUrl,
+    },
+  )
 }
 
 export const formatExternalReferenceLog = (
@@ -101,12 +104,14 @@ export const formatExternalReferenceLog = (
 ) => {
   const { target } = reference
   const { targetUrl } = target
-  return `Found reference to an url outside project directory.
-${showReferenceSourceLocation(reference)}
---- target url ---
-${targetUrl}
---- project directory url ---
-${projectDirectoryUrl}`
+  return createDetailedMessage(
+    `Found reference to an url outside project directory.
+${showReferenceSourceLocation(reference)}`,
+    {
+      ["target url"]: targetUrl,
+      ["project directory url"]: projectDirectoryUrl,
+    },
+  )
 }
 
 export const formatReferenceFound = (reference, referenceSourceLocation) => {

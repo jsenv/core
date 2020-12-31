@@ -1,3 +1,4 @@
+import { createDetailedMessage } from "@jsenv/logger"
 import { COMPILE_ID_OTHERWISE } from "../CONSTANTS.js"
 
 export const computeCompileIdFromGroupId = ({ groupId, groupMap }) => {
@@ -16,8 +17,8 @@ export const computeCompileIdFromGroupId = ({ groupId, groupMap }) => {
   return groupId
 }
 
-const createUnexpectedGroupIdMessage = ({ compileId, groupMap }) => `unexpected groupId.
---- expected compiled id ----
-${Object.keys(groupMap)}
---- received compile id ---
-${compileId}`
+const createUnexpectedGroupIdMessage = ({ compileId, groupMap }) =>
+  createDetailedMessage(`unexpected groupId.`, {
+    ["expected compiled id"]: Object.keys(groupMap),
+    ["received compile id"]: compileId,
+  })

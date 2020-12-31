@@ -1,3 +1,5 @@
+import { createDetailedMessage } from "@jsenv/logger"
+
 export const fromFunctionReturningNamespace = (fn, data) => {
   return fromFunctionReturningRegisteredModule(() => {
     // should we compute the namespace here
@@ -22,14 +24,19 @@ const fromFunctionReturningRegisteredModule = (fn, data) => {
     return fn()
   } catch (error) {
     if (error.name === "SyntaxError") {
-      throw new Error(`Syntax error in module.
-${getModuleDetails(data)}
---- syntax error stack ---
-${error.stack}`)
+      throw new Error(
+        createDetailedMessage(`Syntax error in module.`, {
+          "syntax error stack": error.stack,
+          ...getModuleDetails(data),
+        }),
+      )
     }
-    throw new Error(`Module instantiation error.
---- instantiation error stack ---
-${error.stack}${getModuleDetails(data)}`)
+    throw new Error(
+      createDetailedMessage(`Module instantiation error.`, {
+        ["instantiation error stack"]: error.stack,
+        ...getModuleDetails(data),
+      }),
+    )
   }
 }
 
@@ -49,14 +56,16 @@ export const fromUrl = async ({
 
     if (moduleResponse.status === 404) {
       throw new Error(
-        `Module file cannot be found.
-${getModuleDetails({
-  url,
-  importerUrl,
-  compileServerOrigin,
-  outDirectoryRelativeUrl,
-  notFound: true,
-})}`,
+        createDetailedMessage(
+          `Module file cannot be found.`,
+          getModuleDetails({
+            url,
+            importerUrl,
+            compileServerOrigin,
+            outDirectoryRelativeUrl,
+            notFound: true,
+          }),
+        ),
       )
     }
   } catch (e) {
@@ -69,24 +78,26 @@ ${getModuleDetails({
   if (moduleResponse.status === 500 && contentType === "application/json") {
     const bodyAsJson = await moduleResponse.json()
     if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
-      const error = new Error(`Module file cannot be parsed.
---- parsing error message ---
-${bodyAsJson.message}
-${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
+      const error = new Error(
+        createDetailedMessage(`Module file cannot be parsed.`, {
+          ["parsing error message"]: bodyAsJson.message,
+          ...getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl }),
+        }),
+      )
       error.parsingError = bodyAsJson
       throw error
     }
   }
 
   if (moduleResponse.status < 200 || moduleResponse.status >= 300) {
-    throw new Error(`Module file response status is unexpected.
---- status ---
-${moduleResponse.status}
---- allowed status
-200 to 299
---- statusText ---
-${moduleResponse.statusText}
-${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
+    throw new Error(
+      createDetailedMessage(`Module file response status is unexpected.`, {
+        ["status"]: moduleResponse.status,
+        ["allowed status"]: "200 to 299",
+        ["statusText"]: moduleResponse.statusText,
+        ...getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl }),
+      }),
+    )
   }
 
   // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
@@ -144,20 +155,16 @@ ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelative
     // new URL('./whatever', import.meta.url)
     // or import.meta.resolve('./whatever')
     //     console.warn(`Module content-type is unusual.
-    // --- content-type ---
-    // ${contentType}
-    // --- allowed content-type ---
-    // application/javascript
+    // ['content-type']:   // ${contentType}
+    // ['allowed content-type']:   // application/javascript
     // application/json
     // text/*
     // ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
   } else {
-    console.warn(`Module content-type is missing.
---- allowed content-type ---
-application/javascript
-application/json
-text/*
-${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
+    console.warn(`Module content-type is missing.`, {
+      ["allowed content-type"]: ["aplication/javascript", "application/json", "text/*"],
+      ...getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl }),
+    })
   }
 
   return fromFunctionReturningNamespace(
@@ -219,11 +226,7 @@ const getModuleDetails = ({
         ...(importerUrl ? { ["imported by"]: importerRelativeUrl || importerUrl } : {}),
       }
 
-  return Object.keys(details).map((key) => {
-    return `--- ${key} ---
-${details[key]}`
-  }).join(`
-`)
+  return details
 }
 
 const tryToFindProjectRelativeUrl = (url, { compileServerOrigin, outDirectoryRelativeUrl }) => {

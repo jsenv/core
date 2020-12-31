@@ -1,12 +1,11 @@
 import { urlToContentType } from "@jsenv/server"
+import { resolveUrl } from "@jsenv/util"
 import { transformImportmap } from "./transformImportmap.js"
 
 export const jsenvCompilerForImportmap = ({
-  logger,
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
+  importMapFileRelativeUrl,
   originalFileUrl,
-  compiledFileUrl,
 }) => {
   const contentType = urlToContentType(originalFileUrl)
 
@@ -14,14 +13,14 @@ export const jsenvCompilerForImportmap = ({
     return null
   }
 
+  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
+
   return {
+    // allow project to have no importmap
+    fileContentFallbackIfNotFound: originalFileUrl === importMapFileUrl ? "{}" : undefined,
     compile: (importmapBeforeTransformation) => {
       return transformImportmap(importmapBeforeTransformation, {
-        logger,
-        projectDirectoryUrl,
-        outDirectoryRelativeUrl,
         originalFileUrl,
-        compiledFileUrl,
       })
     },
   }

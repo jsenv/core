@@ -8,7 +8,7 @@ import {
   urlToMeta,
   resolveUrl,
 } from "@jsenv/util"
-import { createLogger } from "@jsenv/logger"
+import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { executePlan } from "./internal/executing/executePlan.js"
@@ -119,9 +119,11 @@ export const executeTestPlan = async ({
         if (patternsMatchingCoverAndExecute.length) {
           // I think it is an error, it would be strange, for a given file
           // to be both covered and executed
-          throw new Error(`some file will be both covered and executed
---- patterns ---
-${patternsMatchingCoverAndExecute.join("\n")}`)
+          throw new Error(
+            createDetailedMessage(`some file will be both covered and executed`, {
+              patterns: patternsMatchingCoverAndExecute,
+            }),
+          )
         }
       }
     }

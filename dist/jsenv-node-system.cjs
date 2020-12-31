@@ -6,6 +6,7 @@ var util = require('@jsenv/util');
 var module$1 = require('module');
 var https = require('https');
 var server = require('@jsenv/server');
+var logger = require('@jsenv/logger');
 var importMap = require('@jsenv/import-map');
 var _uneval = require('@jsenv/uneval');
 var vm = require('vm');
@@ -620,7 +621,9 @@ var remapSourcePosition = _async$1(function (_ref4) {
       });
       return originalPosition;
     } catch (e) {
-      onFailure("error while remapping position.\n--- error stack ---\n".concat(readErrorStack(e), "\n--- source ---\n").concat(source, "\n--- line ---\n").concat(line, "\n--- column ---\n").concat(column));
+      var _createDetailedMessag;
+
+      onFailure(logger.createDetailedMessage("error while remapping position.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag, "source", source), _defineProperty(_createDetailedMessag, "line", line), _defineProperty(_createDetailedMessag, "column", column), _createDetailedMessag)));
       return position;
     }
   }) : position;
@@ -742,7 +745,9 @@ var getOriginalCallsites = _async$2(function (_ref) {
             if (status === 404) {
               onFailure("stack trace file not found at ".concat(stackTraceFileUrl));
             } else {
-              onFailure("unexpected response fetching stack trace file.\n--- response status ---\n".concat(status, "\n--- response text ---\n").concat(fileResponse.body, "\n--- stack trace file ---\n").concat(stackTraceFileUrl));
+              var _createDetailedMessag;
+
+              onFailure(logger.createDetailedMessage("unexpected response fetching stack trace file.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "response status", status), _defineProperty(_createDetailedMessag, "response text", fileResponse.body), _defineProperty(_createDetailedMessag, "stack trace file", stackTraceFileUrl), _createDetailedMessag)));
             }
 
             _exit = true;
@@ -754,7 +759,9 @@ var getOriginalCallsites = _async$2(function (_ref) {
           });
         });
       }, function (e) {
-        onFailure("error while fetching stack trace file.\n--- fetch error stack ---\n".concat(readErrorStack(e), "\n--- stack trace file ---\n").concat(stackTraceFileUrl));
+        var _createDetailedMessag2;
+
+        onFailure(logger.createDetailedMessage("error while fetching stack trace file.", (_createDetailedMessag2 = {}, _defineProperty(_createDetailedMessag2, "fetch error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag2, "stack trace file", stackTraceFileUrl), _createDetailedMessag2)));
         _exit = true;
         return null;
       }), function (_result) {
@@ -786,8 +793,11 @@ var getOriginalCallsites = _async$2(function (_ref) {
                       if (status === 404) {
                         onFailure("sourcemap file not found at ".concat(sourcemapUrl));
                       } else {
+                        var _temp2 = "unexpected response for sourcemap file.";
                         return _await$2(sourcemapResponse.text(), function (_sourcemapResponse$te) {
-                          onFailure("unexpected response for sourcemap file.\n--- response status ---\n".concat(status, "\n--- response text ---\n").concat(_sourcemapResponse$te, "\n--- sourcemap url ---\n").concat(sourcemapUrl));
+                          var _createDetailedMessag3;
+
+                          onFailure(logger.createDetailedMessage(_temp2, (_createDetailedMessag3 = {}, _defineProperty(_createDetailedMessag3, "response status", status), _defineProperty(_createDetailedMessag3, "response text", _sourcemapResponse$te), _defineProperty(_createDetailedMessag3, "sourcemap url", sourcemapUrl), _createDetailedMessag3)));
                         });
                       }
                     }, function () {
@@ -802,7 +812,9 @@ var getOriginalCallsites = _async$2(function (_ref) {
                 });
               });
             }, function (e) {
-              onFailure("error while fetching sourcemap.\n--- fetch error stack ---\n".concat(readErrorStack(e), "\n--- sourcemap url ---\n").concat(sourcemapUrl));
+              var _createDetailedMessag4;
+
+              onFailure(logger.createDetailedMessage("error while fetching sourcemap.", (_createDetailedMessag4 = {}, _defineProperty(_createDetailedMessag4, "fetch error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag4, "sourcemap url", sourcemapUrl), _createDetailedMessag4)));
               _exit2 = true;
               return null;
             });
@@ -814,7 +826,9 @@ var getOriginalCallsites = _async$2(function (_ref) {
           try {
             sourceMap = JSON.parse(sourcemapString);
           } catch (e) {
-            onFailure("error while parsing sourcemap.\n--- parse error stack ---\n".concat(readErrorStack(e), "\n--- sourcemap url ---\n").concat(sourcemapUrl));
+            var _createDetailedMessag5;
+
+            onFailure(logger.createDetailedMessage("error while parsing sourcemap.", (_createDetailedMessag5 = {}, _defineProperty(_createDetailedMessag5, "parse error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag5, "sourcemap url", sourcemapUrl), _createDetailedMessag5)));
             return null;
           }
 
@@ -844,13 +858,18 @@ var getOriginalCallsites = _async$2(function (_ref) {
                     }
 
                     if (status === 404) {
-                      firstSourceMapSourceFailure = "sourcemap source not found.\n--- sourcemap source url ---\n".concat(sourcemapSourceUrl, "\n--- sourcemap url ---\n").concat(sourcemapUrl);
+                      var _createDetailedMessag6;
+
+                      firstSourceMapSourceFailure = logger.createDetailedMessage("sourcemap source not found.", (_createDetailedMessag6 = {}, _defineProperty(_createDetailedMessag6, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag6, "sourcemap url", sourcemapUrl), _createDetailedMessag6));
                       _exit4 = true;
                       return;
                     }
 
+                    var _temp4 = "unexpected response for sourcemap source.";
                     return _await$2(sourceResponse.text(), function (_sourceResponse$text) {
-                      firstSourceMapSourceFailure = "unexpected response for sourcemap source.\n  --- response status ---\n  ".concat(status, "\n  --- response text ---\n  ").concat(_sourceResponse$text, "\n  --- sourcemap source url ---\n  ").concat(sourcemapSourceUrl, "\n  --- sourcemap url ---\n  ").concat(sourcemapUrl);
+                      var _createDetailedMessag7;
+
+                      firstSourceMapSourceFailure = logger.createDetailedMessage(_temp4, (_createDetailedMessag7 = {}, _defineProperty(_createDetailedMessag7, "response status", status), _defineProperty(_createDetailedMessag7, "response text", _sourceResponse$text), _defineProperty(_createDetailedMessag7, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag7, "sourcemap url", sourcemapUrl), _createDetailedMessag7));
                       _exit4 = true;
                     });
                   }
@@ -861,8 +880,10 @@ var getOriginalCallsites = _async$2(function (_ref) {
                 });
               });
             }, function (e) {
+              var _createDetailedMessag8;
+
               if (firstSourceMapSourceFailure) return;
-              firstSourceMapSourceFailure = "error while fetching sourcemap source.\n--- fetch error stack ---\n".concat(readErrorStack(e), "\n--- sourcemap source url ---\n").concat(sourcemapSourceUrl, "\n--- sourcemap url ---\n").concat(sourcemapUrl);
+              firstSourceMapSourceFailure = logger.createDetailedMessage("error while fetching sourcemap source.", (_createDetailedMessag8 = {}, _defineProperty(_createDetailedMessag8, "fetch error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag8, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag8, "sourcemap url", sourcemapUrl), _createDetailedMessag8));
             });
           }))), function () {
             if (firstSourceMapSourceFailure) {
@@ -875,7 +896,9 @@ var getOriginalCallsites = _async$2(function (_ref) {
         });
       });
     }, function (e) {
-      onFailure("error while preparing a sourceMap consumer for a stack trace file.\n--- error stack ---\n".concat(readErrorStack(e), "\n--- stack trace file ---\n").concat(stackTraceFileUrl));
+      var _createDetailedMessag9;
+
+      onFailure(logger.createDetailedMessage("error while preparing a sourceMap consumer for a stack trace file.", (_createDetailedMessag9 = {}, _defineProperty(_createDetailedMessag9, "error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag9, "stack trace file", stackTraceFileUrl), _createDetailedMessag9)));
       return null;
     });
   }));
@@ -1068,7 +1091,9 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
             });
           });
         }, function (e) {
-          onFailure("error while computing original stack.\n--- stack from error while computing ---\n".concat(readErrorStack(e), "\n--- stack from error to remap ---\n").concat(stack));
+          var _createDetailedMessag;
+
+          onFailure(logger.createDetailedMessage("error while computing original stack.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "stack from error while computing", readErrorStack(e)), _defineProperty(_createDetailedMessag, "stack from error to remap", stack), _createDetailedMessag)));
           _exit = true;
           return stack;
         });
@@ -1231,9 +1256,11 @@ var computeCompileIdFromGroupId = function computeCompileIdFromGroupId(_ref) {
 };
 
 var createUnexpectedGroupIdMessage = function createUnexpectedGroupIdMessage(_ref2) {
+  var _createDetailedMessag;
+
   var compileId = _ref2.compileId,
       groupMap = _ref2.groupMap;
-  return "unexpected groupId.\n--- expected compiled id ----\n".concat(Object.keys(groupMap), "\n--- received compile id ---\n").concat(compileId);
+  return logger.createDetailedMessage("unexpected groupId.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "expected compiled id", Object.keys(groupMap)), _defineProperty(_createDetailedMessag, "received compile id", compileId), _createDetailedMessag));
 };
 
 var detectNode = function detectNode() {
@@ -2112,10 +2139,12 @@ var fromFunctionReturningRegisteredModule = function fromFunctionReturningRegist
     return fn();
   } catch (error) {
     if (error.name === "SyntaxError") {
-      throw new Error("Syntax error in module.\n".concat(getModuleDetails(data), "\n--- syntax error stack ---\n").concat(error.stack));
+      throw new Error(logger.createDetailedMessage("Syntax error in module.", _objectSpread({
+        "syntax error stack": error.stack
+      }, getModuleDetails(data))));
     }
 
-    throw new Error("Module instantiation error.\n--- instantiation error stack ---\n".concat(error.stack).concat(getModuleDetails(data)));
+    throw new Error(logger.createDetailedMessage("Module instantiation error.", _objectSpread(_defineProperty({}, "instantiation error stack", error.stack), getModuleDetails(data))));
   }
 };
 
@@ -2134,7 +2163,7 @@ var fromUrl = _async$4(function (_ref) {
       moduleResponse = _fetchSource;
 
       if (moduleResponse.status === 404) {
-        throw new Error("Module file cannot be found.\n".concat(getModuleDetails({
+        throw new Error(logger.createDetailedMessage("Module file cannot be found.", getModuleDetails({
           url: url,
           importerUrl: importerUrl,
           compileServerOrigin: compileServerOrigin,
@@ -2152,12 +2181,12 @@ var fromUrl = _async$4(function (_ref) {
       if (moduleResponse.status === 500 && contentType === "application/json") {
         return _await$4(moduleResponse.json(), function (bodyAsJson) {
           if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
-            var error = new Error("Module file cannot be parsed.\n--- parsing error message ---\n".concat(bodyAsJson.message, "\n").concat(getModuleDetails({
+            var error = new Error(logger.createDetailedMessage("Module file cannot be parsed.", _objectSpread(_defineProperty({}, "parsing error message", bodyAsJson.message), getModuleDetails({
               url: url,
               importerUrl: importerUrl,
               compileServerOrigin: compileServerOrigin,
               outDirectoryRelativeUrl: outDirectoryRelativeUrl
-            })));
+            }))));
             error.parsingError = bodyAsJson;
             throw error;
           }
@@ -2167,12 +2196,14 @@ var fromUrl = _async$4(function (_ref) {
       var _exit3 = false;
 
       if (moduleResponse.status < 200 || moduleResponse.status >= 300) {
-        throw new Error("Module file response status is unexpected.\n--- status ---\n".concat(moduleResponse.status, "\n--- allowed status\n200 to 299\n--- statusText ---\n").concat(moduleResponse.statusText, "\n").concat(getModuleDetails({
+        var _objectSpread4;
+
+        throw new Error(logger.createDetailedMessage("Module file response status is unexpected.", _objectSpread((_objectSpread4 = {}, _defineProperty(_objectSpread4, "status", moduleResponse.status), _defineProperty(_objectSpread4, "allowed status", "200 to 299"), _defineProperty(_objectSpread4, "statusText", moduleResponse.statusText), _objectSpread4), getModuleDetails({
           url: url,
           importerUrl: importerUrl,
           compileServerOrigin: compileServerOrigin,
           outDirectoryRelativeUrl: outDirectoryRelativeUrl
-        })));
+        }))));
       } // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
       // and in sync with loadModule in createJsenvRollupPlugin.js
 
@@ -2227,7 +2258,7 @@ var fromUrl = _async$4(function (_ref) {
           }
 
           if (contentType) ; else {
-            console.warn("Module content-type is missing.\n--- allowed content-type ---\napplication/javascript\napplication/json\ntext/*\n".concat(getModuleDetails({
+            console.warn("Module content-type is missing.", _objectSpread(_defineProperty({}, "allowed content-type", ["aplication/javascript", "application/json", "text/*"]), getModuleDetails({
               url: url,
               importerUrl: importerUrl,
               compileServerOrigin: compileServerOrigin,
@@ -2287,9 +2318,7 @@ var getModuleDetails = function getModuleDetails(_ref2) {
   } : {}), {}, _defineProperty({}, "file url", url)) : _objectSpread(_objectSpread({}, relativeUrl ? {
     file: relativeUrl
   } : {}), {}, _defineProperty({}, "file url", url), importerUrl ? _defineProperty({}, "imported by", importerRelativeUrl || importerUrl) : {});
-  return Object.keys(details).map(function (key) {
-    return "--- ".concat(key, " ---\n").concat(details[key]);
-  }).join("\n");
+  return details;
 };
 
 var tryToFindProjectRelativeUrl = function tryToFindProjectRelativeUrl(url, _ref5) {

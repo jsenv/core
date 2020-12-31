@@ -1,3 +1,4 @@
+import { createDetailedMessage } from "@jsenv/logger"
 import { parseDataUrl, dataUrlToRawData } from "../dataUrl.utils.js"
 import { getJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { remapCallSite } from "./remapCallSite.js"
@@ -20,23 +21,24 @@ export const getOriginalCallsites = async ({
           if (status === 404) {
             onFailure(`stack trace file not found at ${stackTraceFileUrl}`)
           } else {
-            onFailure(`unexpected response fetching stack trace file.
---- response status ---
-${status}
---- response text ---
-${fileResponse.body}
---- stack trace file ---
-${stackTraceFileUrl}`)
+            onFailure(
+              createDetailedMessage(`unexpected response fetching stack trace file.`, {
+                ["response status"]: status,
+                ["response text"]: fileResponse.body,
+                ["stack trace file"]: stackTraceFileUrl,
+              }),
+            )
           }
           return null
         }
         text = await fileResponse.text()
       } catch (e) {
-        onFailure(`error while fetching stack trace file.
---- fetch error stack ---
-${readErrorStack(e)}
---- stack trace file ---
-${stackTraceFileUrl}`)
+        onFailure(
+          createDetailedMessage(`error while fetching stack trace file.`, {
+            ["fetch error stack"]: readErrorStack(e),
+            ["stack trace file"]: stackTraceFileUrl,
+          }),
+        )
 
         return null
       }
@@ -63,23 +65,24 @@ ${stackTraceFileUrl}`)
             if (status === 404) {
               onFailure(`sourcemap file not found at ${sourcemapUrl}`)
             } else {
-              onFailure(`unexpected response for sourcemap file.
---- response status ---
-${status}
---- response text ---
-${await sourcemapResponse.text()}
---- sourcemap url ---
-${sourcemapUrl}`)
+              onFailure(
+                createDetailedMessage(`unexpected response for sourcemap file.`, {
+                  ["response status"]: status,
+                  ["response text"]: await sourcemapResponse.text(),
+                  ["sourcemap url"]: sourcemapUrl,
+                }),
+              )
             }
             return null
           }
           sourcemapString = await sourcemapResponse.text()
         } catch (e) {
-          onFailure(`error while fetching sourcemap.
---- fetch error stack ---
-${readErrorStack(e)}
---- sourcemap url ---
-${sourcemapUrl}`)
+          onFailure(
+            createDetailedMessage(`error while fetching sourcemap.`, {
+              ["fetch error stack"]: readErrorStack(e),
+              ["sourcemap url"]: sourcemapUrl,
+            }),
+          )
           return null
         }
       }
@@ -88,11 +91,12 @@ ${sourcemapUrl}`)
       try {
         sourceMap = JSON.parse(sourcemapString)
       } catch (e) {
-        onFailure(`error while parsing sourcemap.
---- parse error stack ---
-${readErrorStack(e)}
---- sourcemap url ---
-${sourcemapUrl}`)
+        onFailure(
+          createDetailedMessage(`error while parsing sourcemap.`, {
+            ["parse error stack"]: readErrorStack(e),
+            ["sourcemap url"]: sourcemapUrl,
+          }),
+        )
         return null
       }
 
@@ -117,22 +121,21 @@ ${sourcemapUrl}`)
               if (firstSourceMapSourceFailure) return
 
               if (status === 404) {
-                firstSourceMapSourceFailure = `sourcemap source not found.
---- sourcemap source url ---
-${sourcemapSourceUrl}
---- sourcemap url ---
-${sourcemapUrl}`
+                firstSourceMapSourceFailure = createDetailedMessage(`sourcemap source not found.`, {
+                  ["sourcemap source url"]: sourcemapSourceUrl,
+                  ["sourcemap url"]: sourcemapUrl,
+                })
                 return
               }
-              firstSourceMapSourceFailure = `unexpected response for sourcemap source.
-  --- response status ---
-  ${status}
-  --- response text ---
-  ${await sourceResponse.text()}
-  --- sourcemap source url ---
-  ${sourcemapSourceUrl}
-  --- sourcemap url ---
-  ${sourcemapUrl}`
+              firstSourceMapSourceFailure = createDetailedMessage(
+                `unexpected response for sourcemap source.`,
+                {
+                  ["response status"]: status,
+                  ["response text"]: await sourceResponse.text(),
+                  ["sourcemap source url"]: sourcemapSourceUrl,
+                  ["sourcemap url"]: sourcemapUrl,
+                },
+              )
               return
             }
 
@@ -140,13 +143,14 @@ ${sourcemapUrl}`
             sourcesContent[index] = sourceString
           } catch (e) {
             if (firstSourceMapSourceFailure) return
-            firstSourceMapSourceFailure = `error while fetching sourcemap source.
---- fetch error stack ---
-${readErrorStack(e)}
---- sourcemap source url ---
-${sourcemapSourceUrl}
---- sourcemap url ---
-${sourcemapUrl}`
+            firstSourceMapSourceFailure = createDetailedMessage(
+              `error while fetching sourcemap source.`,
+              {
+                ["fetch error stack"]: readErrorStack(e),
+                ["sourcemap source url"]: sourcemapSourceUrl,
+                ["sourcemap url"]: sourcemapUrl,
+              },
+            )
           }
         }),
       )
@@ -158,11 +162,15 @@ ${sourcemapUrl}`
 
       return new SourceMapConsumer(sourceMap)
     } catch (e) {
-      onFailure(`error while preparing a sourceMap consumer for a stack trace file.
---- error stack ---
-${readErrorStack(e)}
---- stack trace file ---
-${stackTraceFileUrl}`)
+      onFailure(
+        createDetailedMessage(
+          `error while preparing a sourceMap consumer for a stack trace file.`,
+          {
+            ["error stack"]: readErrorStack(e),
+            ["stack trace file"]: stackTraceFileUrl,
+          },
+        ),
+      )
       return null
     }
   })

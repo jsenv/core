@@ -51,7 +51,8 @@ export const writeLog = (string, { stream = process.stdout } = {}) => {
   let updated = false
   const update = (newString) => {
     if (updated) {
-      throw new Error(`cannot update twice`)
+      console.warn(`cannot update twice`)
+      return null
     }
     updated = true
 

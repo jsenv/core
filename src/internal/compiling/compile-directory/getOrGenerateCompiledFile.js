@@ -1,4 +1,6 @@
+/* eslint-disable import/max-dependencies */
 import { urlToFileSystemPath, ensureParentDirectories } from "@jsenv/util"
+import { createDetailedMessage } from "@jsenv/logger"
 import { timeStart, timeFunction } from "@jsenv/server"
 import { require } from "../../require.js"
 import { readFileContent } from "./fs-optimized-for-cache.js"
@@ -22,6 +24,7 @@ export const getOrGenerateCompiledFile = async ({
   cacheInterProcessLocking = false,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
+  fileContentFallbackIfNotFound,
   ifEtagMatch,
   ifModifiedSinceDate,
   compile,
@@ -33,21 +36,23 @@ export const getOrGenerateCompiledFile = async ({
     throw new TypeError(`originalFileUrl must be a string, got ${originalFileUrl}`)
   }
   if (!originalFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`origin file must be inside project
---- original file url ---
-${originalFileUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
+    throw new Error(
+      createDetailedMessage(`origin file must be inside project`, {
+        ["original file url"]: originalFileUrl,
+        ["project directory url"]: projectDirectoryUrl,
+      }),
+    )
   }
   if (typeof compiledFileUrl !== "string") {
     throw new TypeError(`compiledFileUrl must be a string, got ${compiledFileUrl}`)
   }
   if (!compiledFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`compiled file must be inside project
---- compiled file url ---
-${compiledFileUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
+    throw new Error(
+      createDetailedMessage(`compiled file must be inside project`, {
+        ["compiled file url"]: compiledFileUrl,
+        ["project directory url"]: projectDirectoryUrl,
+      }),
+    )
   }
   if (typeof compile !== "function") {
     throw new TypeError(`compile must be a function, got ${compile}`)
@@ -61,6 +66,7 @@ ${projectDirectoryUrl}`)
         originalFileUrl,
         compiledFileUrl,
         compile,
+        fileContentFallbackIfNotFound,
         ifEtagMatch,
         ifModifiedSinceDate,
         useFilesystemAsCache,
@@ -107,6 +113,7 @@ const computeCompileReport = async ({
   originalFileUrl,
   compiledFileUrl,
   compile,
+  fileContentFallbackIfNotFound,
   ifEtagMatch,
   ifModifiedSinceDate,
   useFilesystemAsCache,
@@ -129,6 +136,7 @@ const computeCompileReport = async ({
       callCompile({
         logger,
         originalFileUrl,
+        fileContentFallbackIfNotFound,
         compile,
       }),
     )
@@ -159,6 +167,7 @@ const computeCompileReport = async ({
       callCompile({
         logger,
         originalFileUrl,
+        fileContentFallbackIfNotFound,
         compile,
       }),
     )
@@ -194,8 +203,13 @@ const computeCompileReport = async ({
   }
 }
 
-const callCompile = async ({ logger, originalFileUrl, compile }) => {
+const callCompile = async ({ logger, originalFileUrl, fileContentFallbackIfNotFound, compile }) => {
   logger.debug(`compile ${originalFileUrl}`)
+
+  const compileArgs =
+    compile.length === 0
+      ? []
+      : await getArgumentsForCompile({ originalFileUrl, fileContentFallbackIfNotFound })
 
   const {
     sources = [],
@@ -205,7 +219,7 @@ const callCompile = async ({ logger, originalFileUrl, compile }) => {
     contentType,
     compiledSource,
     ...rest
-  } = await compile(compile.length ? await readFileContent(originalFileUrl) : undefined)
+  } = await compile(...compileArgs)
 
   if (typeof contentType !== "string") {
     throw new TypeError(`compile must return a contentType string, got ${contentType}`)
@@ -223,6 +237,24 @@ const callCompile = async ({ logger, originalFileUrl, compile }) => {
     assetsContent,
     ...rest,
   }
+}
+
+const getArgumentsForCompile = async ({ originalFileUrl, fileContentFallbackIfNotFound }) => {
+  let fileContent
+  if (fileContentFallbackIfNotFound) {
+    try {
+      fileContent = await readFileContent(originalFileUrl)
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        fileContent = fileContentFallbackIfNotFound
+      } else {
+        throw e
+      }
+    }
+  } else {
+    fileContent = await readFileContent(originalFileUrl)
+  }
+  return [fileContent]
 }
 
 const startAsap = async (fn, { logger, compiledFileUrl, cacheInterProcessLocking }) => {

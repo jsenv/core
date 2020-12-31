@@ -4,7 +4,7 @@ import * as jsenvConfig from "../../jsenv.config.js"
 executeTestPlan({
   ...jsenvConfig,
   testPlan: {
-    "test/buildProject/commonjs/**/*.test.js": {
+    "test/**/*-build-commonjs/*.test.js": {
       node: {
         launch: launchNode,
       },

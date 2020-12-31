@@ -62,11 +62,10 @@ const assertImportMapFileInsideProject = ({
   projectDirectoryUrl
 }) => {
   if (!util.urlIsInsideOf(importMapFileUrl, projectDirectoryUrl)) {
-    throw new Error(`importmap file must be inside project directory
---- import map file url ---
-${importMapFileUrl}
---- project directory url ---
-${projectDirectoryUrl}`);
+    throw new Error(logger.createDetailedMessage(`importmap file must be inside project directory`, {
+      ["import map file url"]: importMapFileUrl,
+      ["project directory url"]: projectDirectoryUrl
+    }));
   }
 };
 
@@ -1357,7 +1356,7 @@ const testFilePresence = async url => {
   return fs.existsSync(util.urlToFileSystemPath(url));
 };
 
-const urlIsAsset = url => {
+const urlIsCompilationAsset = url => {
   const filename = util.urlToFilename(url); // sourcemap are not inside the asset folder because
   // of https://github.com/microsoft/vscode-chrome-debug-core/issues/544
 
@@ -1373,7 +1372,7 @@ const generateCompiledFileAssetUrl = (compiledFileUrl, assetName) => {
 };
 
 const readMeta = async ({
-  logger,
+  logger: logger$1,
   compiledFileUrl
 }) => {
   const metaJsonFileUrl = getMetaJsonFileUrl(compiledFileUrl);
@@ -1384,18 +1383,17 @@ const readMeta = async ({
     return metaJsonObject;
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.debug(`no meta.json.
---- meta.json path ---
-${util.urlToFileSystemPath(metaJsonFileUrl)}
---- compiled file ---
-${util.urlToFileSystemPath(compiledFileUrl)}`);
+      logger$1.debug(logger.createDetailedMessage(`no meta.json.`, {
+        ["meta.json path"]: util.urlToFileSystemPath(metaJsonFileUrl),
+        ["compiled file"]: util.urlToFileSystemPath(compiledFileUrl)
+      }));
       return null;
     }
 
     if (error && error.name === "SyntaxError") {
-      logger.error(createCacheSyntaxErrorMessage({
-        syntaxError: error,
-        metaJsonFileUrl
+      logger$1.error(logger.createDetailedMessage(`meta.json syntax error.`, {
+        ["syntax error stack"]: error.stack,
+        ["meta.json path"]: util.urlToFileSystemPath(metaJsonFileUrl)
       }));
       return null;
     }
@@ -1403,15 +1401,6 @@ ${util.urlToFileSystemPath(compiledFileUrl)}`);
     throw error;
   }
 };
-
-const createCacheSyntaxErrorMessage = ({
-  syntaxError,
-  metaJsonFileUrl
-}) => `meta.json syntax error.
---- syntax error stack ---
-${syntaxError.stack}
---- meta.json path ---
-${util.urlToFileSystemPath(metaJsonFileUrl)}`;
 
 const validateMeta = async ({
   logger,
@@ -1832,7 +1821,7 @@ const {
   lockForRessource
 } = createLockRegistry();
 const getOrGenerateCompiledFile = async ({
-  logger,
+  logger: logger$1,
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl = originalFileUrl,
@@ -1855,11 +1844,10 @@ const getOrGenerateCompiledFile = async ({
   }
 
   if (!originalFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`origin file must be inside project
---- original file url ---
-${originalFileUrl}
---- project directory url ---
-${projectDirectoryUrl}`);
+    throw new Error(logger.createDetailedMessage(`origin file must be inside project`, {
+      ["original file url"]: originalFileUrl,
+      ["project directory url"]: projectDirectoryUrl
+    }));
   }
 
   if (typeof compiledFileUrl !== "string") {
@@ -1867,11 +1855,10 @@ ${projectDirectoryUrl}`);
   }
 
   if (!compiledFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`compiled file must be inside project
---- compiled file url ---
-${compiledFileUrl}
---- project directory url ---
-${projectDirectoryUrl}`);
+    throw new Error(logger.createDetailedMessage(`compiled file must be inside project`, {
+      ["compiled file url"]: compiledFileUrl,
+      ["project directory url"]: projectDirectoryUrl
+    }));
   }
 
   if (typeof compile !== "function") {
@@ -1895,13 +1882,13 @@ ${projectDirectoryUrl}`);
       useFilesystemAsCache,
       compileCacheSourcesValidation,
       compileCacheAssetsValidation,
-      logger
+      logger: logger$1
     });
     let cacheWriteTiming = {};
 
     if (writeOnFilesystem) {
       const result = await server.timeFunction("cache write", () => updateMeta({
-        logger,
+        logger: logger$1,
         meta,
         compileResult,
         compileResultStatus,
@@ -1923,7 +1910,7 @@ ${projectDirectoryUrl}`);
   }, {
     compiledFileUrl,
     cacheInterProcessLocking,
-    logger
+    logger: logger$1
   });
 };
 
@@ -2168,7 +2155,6 @@ const compileFile = async ({
       compileCacheAssetsValidation,
       compile
     });
-    projectFileRequestedCallback(util.urlToRelativeUrl(originalFileUrl, projectDirectoryUrl), request);
     compileResult.sources.forEach(source => {
       const sourceFileUrl = util.resolveUrl(source, compiledFileUrl);
       projectFileRequestedCallback(util.urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl), request);
@@ -2373,11 +2359,10 @@ const transformWorkerScript = (scriptUrl, {
   } catch (e) {
     if (e.code === "ENOENT") {
       if (importerUrl) {
-        throw new Error(`no file found for an import in a worker.
---- worker url ---
-${importerUrl}.
---- imported url ---
-${scriptUrl}`);
+        throw new Error(logger.createDetailedMessage(`no file found for an import in a worker.`, {
+          ["worker url"]: importerUrl,
+          ["imported url"]: scriptUrl
+        }));
       }
 
       throw new Error(`no worker file at ${scriptUrl}`);
@@ -2558,11 +2543,10 @@ const validateResponseStatusIsOk = ({
   if (status === 404) {
     return {
       valid: false,
-      message: `Error: got 404 on url.
---- url ---
-${url}
---- imported by ---
-${importer}`
+      message: logger.createDetailedMessage(`Error: got 404 on url.`, {
+        url,
+        ["imported by"]: importer
+      })
     };
   }
 
@@ -2574,15 +2558,12 @@ ${importer}`
 
   return {
     valid: false,
-    message: `unexpected response status.
---- response status ---
-${status}
---- expected status ---
-200 to 299
---- url ---
-${url}
---- imported by ---
-${importer}`
+    message: logger.createDetailedMessage(`unexpected response status.`, {
+      ["response status"]: status,
+      ["expected status"]: "200 to 299",
+      url,
+      ["imported by"]: importer
+    })
   };
 };
 
@@ -2983,14 +2964,14 @@ const jsenvTransform = async ({
 
           if (importMetaFormat === "commonjs") {
             replaceWithImport({
-              from: `@jsenv/core/src/internal/import-meta/import-meta-url-commonjs.js`
+              from: `@jsenv/core/helpers/import-meta-url/import-meta-url-commonjs.js`
             });
             return;
           }
 
           if (importMetaFormat === "global") {
             replaceWithImport({
-              from: `@jsenv/core/src/internal/import-meta/import-meta-url-global.js`
+              from: `@jsenv/core/helpers/import-meta-url/import-meta-url-global.js`
             });
             return;
           }
@@ -3011,14 +2992,14 @@ const jsenvTransform = async ({
 
           if (importMetaFormat === "commonjs") {
             replaceWithImport({
-              from: `@jsenv/core/src/internal/import-meta/import-meta-resolve-commonjs.js`
+              from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-commonjs.js`
             });
             return;
           }
 
           if (importMetaFormat === "global") {
             replaceWithImport({
-              from: `@jsenv/core/src/internal/import-meta/import-meta-resolve-global.js`
+              from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-global.js`
             });
             return;
           }
@@ -3897,11 +3878,10 @@ const formatContentTypeMismatchLog = (reference, {
     targetContentType,
     targetUrl
   } = target;
-  return `A reference was expecting ${referenceExpectedContentType} but found ${targetContentType} instead.
---- reference ---
-${showReferenceSourceLocation(reference)}
---- target url ---
-${targetUrl}`;
+  return logger.createDetailedMessage(`A reference was expecting ${referenceExpectedContentType} but found ${targetContentType} instead.`, {
+    ["reference"]: showReferenceSourceLocation(reference),
+    ["target url"]: targetUrl
+  });
 };
 
 const formatExternalReferenceLog = (reference, {
@@ -3914,12 +3894,11 @@ const formatExternalReferenceLog = (reference, {
   const {
     targetUrl
   } = target;
-  return `Found reference to an url outside project directory.
-${showReferenceSourceLocation(reference)}
---- target url ---
-${targetUrl}
---- project directory url ---
-${projectDirectoryUrl}`;
+  return logger.createDetailedMessage(`Found reference to an url outside project directory.
+${showReferenceSourceLocation(reference)}`, {
+    ["target url"]: targetUrl,
+    ["project directory url"]: projectDirectoryUrl
+  });
 };
 const formatReferenceFound = (reference, referenceSourceLocation) => {
   const {
@@ -5000,6 +4979,7 @@ const getCssMinificationPlugin = async (cssMinificationOptions = {}) => {
 const parseCssAsset = async (cssTarget, {
   notifyReferenceFound
 }, {
+  urlToOriginalServerUrl,
   minify,
   minifyCssOptions
 }) => {
@@ -5066,8 +5046,9 @@ const parseCssAsset = async (cssTarget, {
     }, {
       cssMinification: minify,
       cssMinificationOptions: minifyCssOptions,
+      // https://postcss.org/api/#sourcemapoptions
       sourcemapOptions: sourcemapReference ? {
-        prev: sourcemapReference.target.targetBufferAfterTransformation
+        prev: String(sourcemapReference.target.targetBufferAfterTransformation)
       } : {}
     });
     const code = cssReplaceResult.css;
@@ -5092,8 +5073,11 @@ const parseCssAsset = async (cssTarget, {
       map.file = util.urlToFilename(cssBuildUrl);
 
       if (map.sources) {
+        // hum en fait si css est inline, alors la source n'est pas le fichier compilé
+        // mais bien le fichier html compilé ?
+        const importerUrl = cssTarget.targetIsInline ? urlToOriginalServerUrl(cssTarget.targetUrl) : cssTarget.targetUrl;
         map.sources = map.sources.map(source => {
-          const sourceUrl = util.resolveUrl(source, cssTarget.targetUrl);
+          const sourceUrl = util.resolveUrl(source, importerUrl);
           const sourceUrlRelativeToSourceMap = util.urlToRelativeUrl(sourceUrl, mapBuildUrl);
           return sourceUrlRelativeToSourceMap;
         });
@@ -5180,6 +5164,7 @@ const parseJsAsset = async (jsTarget, {
   notifyReferenceFound
 }, {
   urlToOriginalProjectUrl,
+  urlToOriginalServerUrl,
   minify,
   minifyJsOptions
 }) => {
@@ -5206,7 +5191,8 @@ const parseJsAsset = async (jsTarget, {
     let map;
 
     if (sourcemapReference) {
-      map = JSON.parse(sourcemapReference.target.targetBufferAfterTransformation);
+      const sourcemapString = String(sourcemapReference.target.targetBufferAfterTransformation);
+      map = JSON.parse(sourcemapString);
     } // in case this js asset is a worker, bundle it so that:
     // importScripts are inlined which is good for:
     // - not breaking things (otherwise we would have to copy imported files in the build directory)
@@ -5260,9 +5246,10 @@ const parseJsAsset = async (jsTarget, {
         map.file = util.urlToFilename(jsBuildUrl);
 
         if (map.sources) {
+          const importerUrl = jsTarget.targetIsInline ? urlToOriginalServerUrl(jsTarget.targetUrl) : jsTarget.targetUrl;
           map.sources = map.sources.map(source => {
-            const sourceUrl = util.resolveUrl(source, jsUrl);
-            const sourceUrlRelativeToSourceMap = util.urlToRelativeUrl(sourceUrl, mapBuildUrl);
+            const sourceUrl = util.resolveUrl(source, importerUrl);
+            const sourceUrlRelativeToSourceMap = util.urlToRelativeUrl(urlToOriginalServerUrl(sourceUrl), mapBuildUrl);
             return sourceUrlRelativeToSourceMap;
           });
         }
@@ -5359,6 +5346,7 @@ const parseWebmanifest = (webmanifestTarget, {
 
 const parseTarget = (target, notifiers, {
   urlToOriginalProjectUrl,
+  urlToOriginalServerUrl,
   format,
   systemJsUrl,
   useImportMapToImproveLongTermCaching,
@@ -5439,6 +5427,7 @@ const parseTarget = (target, notifiers, {
 
   if (targetContentType === "text/css") {
     return parseCssAsset(target, notifiers, {
+      urlToOriginalServerUrl,
       minify,
       minifyCssOptions
     });
@@ -5459,6 +5448,7 @@ const parseTarget = (target, notifiers, {
   if (targetContentType === "application/javascript" || targetContentType === "text/javascript") {
     return parseJsAsset(target, notifiers, {
       urlToOriginalProjectUrl,
+      urlToOriginalServerUrl,
       minify,
       minifyJsOptions
     });
@@ -5714,13 +5704,11 @@ const parseSourcemapString = (sourcemapString, sourcemapUrl, importer) => {
     return JSON.parse(sourcemapString);
   } catch (e) {
     if (e.name === "SyntaxError") {
-      console.error(`syntax error while parsing sourcemap.
---- syntax error stack ---
-${e.stack}
---- sourcemap url ---
-${sourcemapUrl}
---- imported by ---
-${importer}`);
+      console.error(logger.createDetailedMessage(`syntax error while parsing sourcemap.`, {
+        ["syntax error stack"]: e.stack,
+        ["sourcemap url"]: sourcemapUrl,
+        ["imported by"]: importer
+      }));
       return null;
     }
 
@@ -5898,6 +5886,7 @@ const createAssetBuilder = ({
   };
 
   const targetMap = {};
+  const targetRedirectionMap = {};
 
   const createReference = ({
     referenceTargetSpecifier,
@@ -5914,7 +5903,7 @@ const createAssetBuilder = ({
     targetUrlVersioningDisabled
   }) => {
     const importerUrl = referenceUrl;
-    const importerTarget = importerUrl in targetMap ? targetMap[importerUrl] : {
+    const importerTarget = getTargetFromUrl(importerUrl) || {
       targetUrl: importerUrl,
       targetIsEntry: false,
       // maybe
@@ -5933,6 +5922,7 @@ const createAssetBuilder = ({
     const resolveTargetReturnValue = resolveTargetUrl({
       targetSpecifier: referenceTargetSpecifier,
       targetIsJsModule,
+      targetIsInline,
       importerUrl: referenceUrl,
       importerIsEntry: importerTarget.targetIsEntry,
       importerIsJsModule: importerTarget.targetIsJsModule
@@ -5981,10 +5971,10 @@ const createAssetBuilder = ({
       referenceColumn,
       referenceLine
     };
+    const existingTarget = getTargetFromUrl(targetUrl);
 
-    if (targetUrl in targetMap) {
-      const target = targetMap[targetUrl];
-      connectReferenceAndTarget(reference, target);
+    if (existingTarget) {
+      connectReferenceAndTarget(reference, existingTarget);
     } else {
       const target = createTarget({
         targetContentType,
@@ -6057,6 +6047,12 @@ const createAssetBuilder = ({
     };
     const getBufferAvailablePromise = memoize(async () => {
       const response = await fetch(targetUrl, showReferenceSourceLocation(target.targetReferences[0]));
+
+      if (response.url !== targetUrl) {
+        targetRedirectionMap[targetUrl] = response.url;
+        target.targetUrl = response.url;
+      }
+
       const responseContentTypeHeader = response.headers["content-type"];
       target.targetContentType = responseContentTypeHeader;
       const responseBodyAsArrayBuffer = await response.arrayBuffer();
@@ -6257,7 +6253,7 @@ const createAssetBuilder = ({
 
 
       if (buildRelativeUrl !== undefined && buildRelativeUrl !== target.targetBuildRelativeUrl) {
-        buildRelativeUrlsToClean.push(target.buildRelativeUrl);
+        buildRelativeUrlsToClean.push(target.targetBuildRelativeUrl);
         target.targetBuildRelativeUrl = buildRelativeUrl;
 
         if (!target.targetIsInline) {
@@ -6288,6 +6284,18 @@ const createAssetBuilder = ({
 
   const getRollupChunkReadyCallbackMap = () => rollupChunkReadyCallbackMap;
 
+  const getTargetFromUrl = url => {
+    if (url in targetMap) {
+      return targetMap[url];
+    }
+
+    if (url in targetRedirectionMap) {
+      return getTargetFromUrl(targetRedirectionMap[url]);
+    }
+
+    return null;
+  };
+
   const findAssetUrlByBuildRelativeUrl = buildRelativeUrl => {
     const assetUrl = Object.keys(targetMap).find(url => targetMap[url].targetBuildRelativeUrl === buildRelativeUrl);
     return assetUrl;
@@ -6299,7 +6307,8 @@ const createAssetBuilder = ({
 
   const showReferenceSourceLocation = reference => {
     const referenceUrl = reference.referenceUrl;
-    const referenceSource = String(referenceUrl in targetMap ? targetMap[referenceUrl].targetBuffer : loadUrl(referenceUrl));
+    const referenceTarget = getTargetFromUrl(referenceUrl);
+    const referenceSource = String(referenceTarget ? referenceTarget.targetBuffer : loadUrl(referenceUrl));
     let message = `${urlToFileUrl(referenceUrl)}`;
 
     if (typeof reference.line === "number") {
@@ -6332,7 +6341,8 @@ ${showSourceLocation(referenceSource, {
     findAssetUrlByBuildRelativeUrl,
     inspect: () => {
       return {
-        targetMap
+        targetMap,
+        targetRedirectionMap
       };
     }
   };
@@ -6568,14 +6578,11 @@ const createJsenvRollupPlugin = async ({
     name: "jsenv",
 
     async buildStart() {
-      logger$1.info(`
-start building project
---- project directory path ---
-${util.urlToFileSystemPath(projectDirectoryUrl)}
---- build directory path ---
-${util.urlToFileSystemPath(buildDirectoryUrl)}
---- entry point map ---
-${JSON.stringify(entryPointMap, null, "  ")}`);
+      logger$1.info(logger.createDetailedMessage(`start building project`, {
+        ["project directory path"]: util.urlToFileSystemPath(projectDirectoryUrl),
+        ["build directory path"]: util.urlToFileSystemPath(buildDirectoryUrl),
+        ["entry point map"]: JSON.stringify(entryPointMap, null, "  ")
+      }));
 
       emitFile = (...args) => this.emitFile(...args); // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
       // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
@@ -6601,7 +6608,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
               const srcAttribute = getHtmlNodeAttributeByName(importmapHtmlNode, "src");
 
               if (srcAttribute) {
-                logger$1.info(formatUseImportMap(importmapHtmlNode, entryProjectUrl, htmlSource));
+                logger$1.debug(formatUseImportMap(importmapHtmlNode, entryProjectUrl, htmlSource));
                 const importmapUrl = util.resolveUrl(srcAttribute.value, entryCompiledUrl);
 
                 if (!util.urlIsInsideOf(importmapUrl, compileDirectoryRemoteUrl)) {
@@ -6660,6 +6667,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
         parse: async (target, notifiers) => {
           return parseTarget(target, notifiers, {
             urlToOriginalProjectUrl,
+            urlToOriginalServerUrl,
             format,
             systemJsUrl,
             useImportMapToImproveLongTermCaching,
@@ -6697,9 +6705,18 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
             return jsModuleUrl;
           }
 
-          const targetUrl = util.resolveUrl(targetSpecifier, importerUrl); // ignore url outside project directory
+          let targetUrl;
+
+          if (isHtmlEntryPoint && // parse and handle the untransformed importmap, not the one from compile server
+          !targetSpecifier.endsWith(".importmap")) {
+            const htmlCompiledUrl = urlToCompiledUrl(importerUrl);
+            targetUrl = util.resolveUrl(targetSpecifier, htmlCompiledUrl);
+          } else {
+            targetUrl = util.resolveUrl(targetSpecifier, importerUrl);
+          } // ignore url outside project directory
           // a better version would console.warn about file url outside projectDirectoryUrl
           // and ignore them and console.info/debug about remote url (https, http, ...)
+
 
           const projectUrl = urlToProjectUrl(targetUrl);
 
@@ -7131,7 +7148,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
         await util.writeFile(assetManifestFileUrl, JSON.stringify(buildManifest, null, "  "));
       }
 
-      logger$1.info(createDetailedMessage(`build done`, formatBuildDoneDetails(rollupBuild)));
+      logger$1.info(logger.createDetailedMessage(`build done`, formatBuildDoneDetails(rollupBuild)));
 
       if (writeOnFileSystem) {
         await Promise.all(Object.keys(rollupBuild).map(async buildRelativeUrl => {
@@ -7220,18 +7237,12 @@ ${JSON.stringify(entryPointMap, null, "  ")}`);
     }
 
     return null;
-  }; // const urlToOriginalServerUrl = (url) => {
-  //   const serverUrl = urlToServerUrl(url)
-  //   if (!serverUrl) {
-  //     return null
-  //   }
-  //   if (!urlIsInsideOf(serverUrl, compileDirectoryRemoteUrl)) {
-  //     return serverUrl
-  //   }
-  //   const relativeUrl = urlToRelativeUrl(serverUrl, compileDirectoryRemoteUrl)
-  //   return resolveUrl(relativeUrl, compileServerOrigin)
-  // }
-  // take any url string and try to return a file url inside project directory url
+  };
+
+  const urlToOriginalServerUrl = url => {
+    const originalProjectUrl = urlToOriginalProjectUrl(url);
+    return originalProjectUrl ? urlToServerUrl(originalProjectUrl) : null;
+  }; // take any url string and try to return a file url inside project directory url
   // prefer the source url if the url is inside compile directory
 
 
@@ -7418,11 +7429,10 @@ const fixRollupUrl = rollupUrl => {
 };
 
 const formatFileNotFound = (url, importer) => {
-  return `A file cannot be found.
---- file ---
-${util.urlToFileSystemPath(url)}
---- imported by ---
-${importer}`;
+  return logger.createDetailedMessage(`A file cannot be found.`, {
+    file: util.urlToFileSystemPath(url),
+    ["imported by"]: importer
+  });
 };
 
 const showImportmapSourceLocation = (importmapHtmlNode, htmlUrl, htmlSource) => {
@@ -7468,13 +7478,11 @@ const fetchAndNormalizeImportmap = async (importmapUrl, {
   }
 
   if (importmapResponse.status < 200 || importmapResponse.status > 299) {
-    throw new Error(`Unexpected response status for importmap.
---- response status ---
-${importmapResponse.status}
---- response text ---
-${await importmapResponse.text()}
---- importmap url ---
-${importmapUrl}`);
+    throw new Error(logger.createDetailedMessage(`Unexpected response status for importmap.`, {
+      ["response status"]: importmapResponse.status,
+      ["response text"]: await importmapResponse.text(),
+      ["importmap url"]: importmapUrl
+    }));
   }
 
   const importmap = await importmapResponse.json();
@@ -7504,18 +7512,6 @@ const rollupFileNameWithoutHash = fileName => {
   return fileName.replace(/-[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
     return afterHash;
   });
-};
-
-const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`;
-  Object.keys(details).forEach(key => {
-    const value = details[key];
-    string += `
---- ${key} ---
-${Array.isArray(value) ? value.join(`
-`) : value}`;
-  });
-  return string;
 }; // otherwise importmap handle it as a bare import
 
 
@@ -7530,7 +7526,6 @@ const ensureRelativeUrlNotation$1 = relativeUrl => {
 const externalImportUrlPatternsToExternalUrlPredicate = (externalImportUrlPatterns, projectDirectoryUrl) => {
   const externalImportUrlStructuredMetaMap = util.normalizeStructuredMetaMap({
     external: { ...externalImportUrlPatterns,
-      "node_modules/@jsenv/core/src/internal/import-meta/": false,
       "node_modules/@jsenv/core/helpers/": false
     }
   }, projectDirectoryUrl);
@@ -8406,12 +8401,16 @@ const jsenvCompilerForHtml = ({
  * (if importMap file does not exists an empty object is returned)
  * (if project uses a custom importMapFileRelativeUrl jsenv that file is returned)
  *
+ * An other idea: instead we should create a @jsenv/helpers package with the source code
+ * that might end up in the project files. Then you will have to add this to your package.json
+ * in "dependencies" instead of "devDependencies" so that it ends in the importmap
+ * compile server would almost no touch the importmap as it's the case today.
+ *
  */
 
 const transformImportmap = async (importmapBeforeTransformation, {
   logger: logger$1,
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
   originalFileUrl,
   compiledFileUrl
 }) => {
@@ -8434,14 +8433,7 @@ const transformImportmap = async (importmapBeforeTransformation, {
       topLevelRemappingForJsenvCore
     })
   };
-  const outDirectoryUrl = util.resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl);
-  const importMapInternal = {
-    imports: {
-      "/.jsenv/out/": urlToRelativeUrlRemapping(outDirectoryUrl, compiledFileUrl),
-      "/jsenv.importmap": urlToRelativeUrlRemapping(originalFileUrl, compiledFileUrl)
-    }
-  };
-  const importMap$1 = [importMapForJsenvCore, importmapForSelfImport, importMapInternal, importMapForProject].reduce((previous, current) => importMap.composeTwoImportMaps(previous, current), {});
+  const importMap$1 = [importMapForJsenvCore, importmapForSelfImport, importMapForProject].reduce((previous, current) => importMap.composeTwoImportMaps(previous, current), {});
   const scopes = importMap$1.scopes || {};
   const projectTopLevelMappings = importMapForProject.imports || {};
   Object.keys(scopes).forEach(scope => {
@@ -8532,6 +8524,7 @@ const createCompiledFileService = ({
   cancellationToken,
   logger,
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   importMapFileRelativeUrl,
   importMetaEnvFileRelativeUrl,
@@ -8552,6 +8545,15 @@ const createCompiledFileService = ({
   sourcemapExcludeSources
 }) => {
   const jsenvBrowserBuildUrlRelativeToProject = util.urlToRelativeUrl(jsenvBrowserSystemBuildUrl, projectDirectoryUrl);
+  importMeta = {
+    jsenv: {
+      importMapFileRelativeUrl,
+      jsenvDirectoryRelativeUrl,
+      outDirectoryRelativeUrl,
+      groupMap
+    },
+    ...importMeta
+  };
   return request => {
     const {
       origin,
@@ -8676,9 +8678,7 @@ const startCompileServer = async ({
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
   importMetaEnvFileRelativeUrl = "env.js",
-  importMeta = {
-    dev: "undefined" !== "production"
-  },
+  importMeta = {},
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
@@ -8720,6 +8720,7 @@ const startCompileServer = async ({
     "./**": true,
     "./**/.*/": false,
     // any folder starting with a dot is ignored (includes .git for instance)
+    "./dist/": false,
     "./**/node_modules/": false
   },
   livereloadLogLevel = "info",
@@ -8808,7 +8809,7 @@ const startCompileServer = async ({
     };
   }
 
-  const serveAssetFile = createAssetFileService({
+  const serveCompilationAssetFile = createCompilationAssetFileService({
     projectDirectoryUrl
   });
   const serveBrowserScript = createBrowserScriptService({
@@ -8820,6 +8821,7 @@ const startCompileServer = async ({
     logger: logger$1,
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     importMapFileRelativeUrl,
     importDefaultExtension,
     importMetaEnvFileRelativeUrl,
@@ -8856,10 +8858,10 @@ const startCompileServer = async ({
     nagle: false,
     sendServerInternalErrorDetails: true,
     requestToResponse: server.firstServiceWithTiming({ ...customServices,
-      "service:asset files": serveAssetFile,
+      "service:compilation asset": serveCompilationAssetFile,
       "service:browser script": serveBrowserScript,
-      "service:compiled files": serveCompiledFile,
-      "service:project files": serveProjectFile
+      "service:compiled file": serveCompiledFile,
+      "service:project file": serveProjectFile
     }),
     accessControlAllowRequestOrigin: true,
     accessControlAllowRequestMethod: true,
@@ -8948,11 +8950,10 @@ const assertArguments = ({
   const jsenvDirectoryUrl = util.resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl);
 
   if (!jsenvDirectoryUrl.startsWith(projectDirectoryUrl)) {
-    throw new TypeError(`jsenv directory must be inside project directory
---- jsenv directory url ---
-${jsenvDirectoryUrl}
---- project directory url ---
-${projectDirectoryUrl}`);
+    throw new TypeError(logger.createDetailedMessage(`jsenv directory must be inside project directory`, {
+      ["jsenv directory url"]: jsenvDirectoryUrl,
+      ["project directory url"]: projectDirectoryUrl
+    }));
   }
 
   if (typeof outDirectoryName !== "string") {
@@ -9063,11 +9064,11 @@ const setupServerSentEventsForLivereload = ({
   const projectFileAdded = createCallbackList();
 
   const projectFileRequestedCallback = (relativeUrl, request) => {
-    // I doubt an asset like .js.map will change
+    // I doubt a compilation asset like .js.map will change
     // in theory a compilation asset should not change
     // if the source file did not change
     // so we can avoid watching compilation asset
-    if (urlIsAsset(`${projectDirectoryUrl}${relativeUrl}`)) {
+    if (urlIsCompilationAsset(`${projectDirectoryUrl}${relativeUrl}`)) {
       return;
     }
 
@@ -9294,17 +9295,24 @@ const createSSEForLivereloadService = ({
       }
     });
     sseRoom.start();
-    cancellationToken.register(() => {
+    const cancelRegistration = cancellationToken.register(() => {
+      cancelRegistration();
       sseRoom.stop();
       stopTracking();
     });
     cache.push({
       mainFileRelativeUrl,
-      sseRoom
+      sseRoom,
+      cleanup: () => {
+        cancelRegistration();
+        sseRoom.stop();
+        stopTracking();
+      }
     });
 
     if (cache.length >= sseRoomLimit) {
-      cache.shift();
+      const firstCacheEntry = cache.shift();
+      firstCacheEntry.cleanup();
     }
 
     return sseRoom;
@@ -9335,7 +9343,7 @@ const urlToOriginalRelativeUrl = (url, outDirectoryRemoteUrl) => {
   return new URL(url).pathname.slice(1);
 };
 
-const createAssetFileService = ({
+const createCompilationAssetFileService = ({
   projectDirectoryUrl
 }) => {
   return request => {
@@ -9345,7 +9353,7 @@ const createAssetFileService = ({
     } = request;
     const requestUrl = `${origin}${ressource}`;
 
-    if (urlIsAsset(requestUrl)) {
+    if (urlIsCompilationAsset(requestUrl)) {
       return server.serveFile(request, {
         rootDirectoryUrl: projectDirectoryUrl,
         etagEnabled: true
@@ -9753,11 +9761,10 @@ const assertBuildDirectoryInsideProject = ({
   projectDirectoryUrl
 }) => {
   if (!buildDirectoryUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`build directory must be inside project directory
---- build directory url ---
-${buildDirectoryUrl}
---- project directory url ---
-${projectDirectoryUrl}`);
+    throw new Error(logger.createDetailedMessage(`build directory must be inside project directory`, {
+      ["build directory url"]: buildDirectoryUrl,
+      ["project directory url"]: projectDirectoryUrl
+    }));
   }
 };
 
@@ -10150,7 +10157,7 @@ const computeRawExecutionResult = async ({
 
 const computeExecutionResult = async ({
   cancellationToken,
-  logger,
+  logger: logger$1,
   fileRelativeUrl,
   launch,
   stopAfterExecute,
@@ -10163,13 +10170,13 @@ const computeExecutionResult = async ({
   runtimeDisconnectCallback,
   ...rest
 }) => {
-  logger.debug(`launch runtime environment for ${fileRelativeUrl}`);
+  logger$1.debug(`launch runtime environment for ${fileRelativeUrl}`);
   const launchOperation = cancellation.createStoppableOperation({
     cancellationToken,
     start: async () => {
       const value = await launch({
         cancellationToken,
-        logger,
+        logger: logger$1,
         ...rest
       });
       runtimeStartedCallback({
@@ -10192,7 +10199,7 @@ const computeExecutionResult = async ({
       let stoppedGracefully;
 
       if (gracefulStop && gracefulStopAllocatedMs) {
-        logger.debug(`${fileRelativeUrl} ${runtime}: runtime.gracefulStop() because ${reason}`);
+        logger$1.debug(`${fileRelativeUrl} ${runtime}: runtime.gracefulStop() because ${reason}`);
 
         const gracefulStopPromise = (async () => {
           await gracefulStop({
@@ -10219,7 +10226,7 @@ const computeExecutionResult = async ({
             return stoppedGracefully;
           }
 
-          logger.debug(`${fileRelativeUrl} ${runtime}: runtime.stop() because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`);
+          logger$1.debug(`${fileRelativeUrl} ${runtime}: runtime.stop() because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`);
           await stop({
             reason,
             gracefulFailed: true
@@ -10236,7 +10243,7 @@ const computeExecutionResult = async ({
         stoppedGracefully = false;
       }
 
-      logger.debug(`${fileRelativeUrl} ${runtime}: runtime stopped${stoppedGracefully ? " gracefully" : ""}`);
+      logger$1.debug(`${fileRelativeUrl} ${runtime}: runtime stopped${stoppedGracefully ? " gracefully" : ""}`);
       runtimeStoppedCallback({
         stoppedGracefully
       });
@@ -10252,17 +10259,17 @@ const computeExecutionResult = async ({
     disconnected
   } = await launchOperation;
   const runtime = `${runtimeName}/${runtimeVersion}`;
-  logger.debug(`${fileRelativeUrl} ${runtime}: runtime launched.
---- options ---
-options: ${JSON.stringify(options, null, "  ")}`);
-  logger.debug(`${fileRelativeUrl} ${runtime}: start file execution.`);
+  logger$1.debug(logger.createDetailedMessage(`${fileRelativeUrl} ${runtime}: runtime launched.`, {
+    options: JSON.stringify(options, null, "  ")
+  }));
+  logger$1.debug(`${fileRelativeUrl} ${runtime}: start file execution.`);
   registerConsoleCallback(runtimeConsoleCallback);
   const executeOperation = cancellation.createOperation({
     cancellationToken,
     start: async () => {
       let timing = TIMING_BEFORE_EXECUTION;
       disconnected.then(() => {
-        logger.debug(`${fileRelativeUrl} ${runtime}: runtime disconnected ${timing}.`);
+        logger$1.debug(`${fileRelativeUrl} ${runtime}: runtime disconnected ${timing}.`);
         runtimeDisconnectCallback({
           timing
         });
@@ -10270,13 +10277,11 @@ options: ${JSON.stringify(options, null, "  ")}`);
       const executed = executeFile(fileRelativeUrl, rest);
       timing = TIMING_DURING_EXECUTION;
       registerErrorCallback(error => {
-        logger.error(`error ${timing}.
---- error stack ---
-${error.stack}
---- file executed ---
-${fileRelativeUrl}
---- runtime ---
-${runtime}`);
+        logger$1.error(logger.createDetailedMessage(`error ${timing}.`, {
+          ["error stack"]: error.stack,
+          ["file executed"]: fileRelativeUrl,
+          ["runtime"]: runtime
+        }));
         runtimeErrorCallback({
           error,
           timing
@@ -10303,17 +10308,15 @@ ${runtime}`);
         // there is no need to log it.
         // the code will know the execution errored because it receives
         // an errored execution result
-        logger.debug(`error ${TIMING_DURING_EXECUTION}.
---- error stack ---
-${executionResult.error.stack}
---- file executed ---
-${fileRelativeUrl}
---- runtime ---
-${runtime}`);
+        logger$1.debug(logger.createDetailedMessage(`error ${TIMING_DURING_EXECUTION}.`, {
+          ["error stack"]: executionResult.error.stack,
+          ["file executed"]: fileRelativeUrl,
+          ["runtime"]: runtime
+        }));
         return createErroredExecutionResult(executionResult, rest);
       }
 
-      logger.debug(`${fileRelativeUrl} ${runtime}: execution completed.`);
+      logger$1.debug(`${fileRelativeUrl} ${runtime}: execution completed.`);
       return createCompletedExecutionResult(executionResult, rest);
     }
   });
@@ -10606,13 +10609,11 @@ const generateFileExecutionSteps = ({
     }
 
     if (typeof stepConfig !== "object") {
-      throw new TypeError(`found unexpected value in plan, they must be object.
---- file relative path ---
-${fileRelativeUrl}
---- name ---
-${name}
---- value ---
-${stepConfig}`);
+      throw new TypeError(logger.createDetailedMessage(`found unexpected value in plan, they must be object.`, {
+        ["file relative path"]: fileRelativeUrl,
+        ["name"]: name,
+        ["value"]: stepConfig
+      }));
     }
 
     fileExecutionSteps.push({
@@ -11182,9 +11183,9 @@ const executeConcurrently = async (executionSteps, {
     mainFileNotFoundCallback: ({
       fileRelativeUrl
     }) => {
-      logger$1.error(new Error(`an execution main file does not exists.
---- file relative path ---
-${fileRelativeUrl}`));
+      logger$1.error(new Error(logger.createDetailedMessage(`an execution main file does not exists.`, {
+        ["file relative path"]: fileRelativeUrl
+      })));
     },
     beforeExecutionCallback: () => {},
     afterExecutionCallback: () => {},
@@ -11642,9 +11643,9 @@ const executeTestPlan = async ({
         if (patternsMatchingCoverAndExecute.length) {
           // I think it is an error, it would be strange, for a given file
           // to be both covered and executed
-          throw new Error(`some file will be both covered and executed
---- patterns ---
-${patternsMatchingCoverAndExecute.join("\n")}`);
+          throw new Error(logger.createDetailedMessage(`some file will be both covered and executed`, {
+            patterns: patternsMatchingCoverAndExecute
+          }));
         }
       }
     }
@@ -12436,7 +12437,7 @@ const isTargetClosedError = error => {
     return true;
   }
 
-  if (error.message.match(/Protocol error \(.*?\): Browser has been closed/)) {
+  if (error.message.match(/Protocol error \(.*?\): Browser.*?closed/)) {
     return true;
   }
 
@@ -12514,11 +12515,10 @@ const createChildExecArgv = async ({
   jsonModules = "inherit"
 } = {}) => {
   if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
-    throw new TypeError(`unexpected debug mode.
---- debug mode ---
-${debugMode}
---- allowed debug mode ---
-${AVAILABLE_DEBUG_MODE}`);
+    throw new TypeError(logger.createDetailedMessage(`unexpected debug mode.`, {
+      ["debug mode"]: debugMode,
+      ["allowed debug mode"]: AVAILABLE_DEBUG_MODE
+    }));
   }
 
   let childExecArgv = processExecArgv.slice();
@@ -12688,7 +12688,7 @@ const STOP_SIGNAL = "SIGKILL"; // it would be more correct if GRACEFUL_STOP_FAIL
 const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
 const launchNode = async ({
   cancellationToken = cancellation.createCancellationToken(),
-  logger,
+  logger: logger$1,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
@@ -12741,7 +12741,7 @@ const launchNode = async ({
     stdio: "pipe",
     env
   });
-  logger.debug(`${process.argv[0]} ${execArgv.join(" ")} ${util.urlToFileSystemPath(nodeControllableFileUrl)}`);
+  logger$1.debug(`${process.argv[0]} ${execArgv.join(" ")} ${util.urlToFileSystemPath(nodeControllableFileUrl)}`);
   const childProcessReadyPromise = new Promise(resolve => {
     onceProcessMessage(childProcess, "ready", resolve);
   });
@@ -12821,7 +12821,7 @@ const launchNode = async ({
     signal
   }) => {
     killing = true;
-    logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`);
+    logger$1.debug(`send ${signal} to child process with pid ${childProcess.pid}`);
     await new Promise(resolve => {
       killProcessTree(childProcess.pid, signal, error => {
         if (error) {
@@ -12843,11 +12843,10 @@ const launchNode = async ({
             return;
           }
 
-          logger.error(`error while killing process tree with ${signal}
-    --- error stack ---
-    ${error.stack}
-    --- process.pid ---
-    ${childProcess.pid}`); // even if we could not kill the child
+          logger$1.error(logger.createDetailedMessage(`error while killing process tree with ${signal}`, {
+            ["error stack"]: error.stack,
+            ["process.pid"]: childProcess.pid
+          })); // even if we could not kill the child
           // we will ask it to disconnect
 
           resolve();
@@ -12889,11 +12888,10 @@ const launchNode = async ({
           status,
           value
         }) => {
-          logger.debug(`child process sent the following evaluation result.
---- status ---
-${status}
---- value ---
-${value}`);
+          logger$1.debug(logger.createDetailedMessage(`child process sent the following evaluation result.`, {
+            status,
+            value
+          }));
           if (status === EVALUATION_STATUS_OK) resolve(value);else reject(value);
         });
         const executeParams = {
@@ -12914,17 +12912,17 @@ ${value}`);
           compileServerOrigin,
           executeParams
         });
-        logger.debug(`ask child process to evaluate
---- source ---
-${source}`);
+        logger$1.debug(logger.createDetailedMessage(`ask child process to evaluate`, {
+          source
+        }));
         await childProcessReadyPromise;
 
         try {
           await sendToProcess(childProcess, "evaluate", source);
         } catch (e) {
-          logger.error(`error while sending message to child
---- error stack ---
-${e.stack}`);
+          logger$1.error(logger.createDetailedMessage(`error while sending message to child`, {
+            ["error stack"]: e.stack
+          }));
           throw e;
         }
       });

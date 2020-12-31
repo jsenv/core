@@ -1,3 +1,4 @@
+import { createDetailedMessage } from "@jsenv/logger"
 import { startsWithWindowsDriveLetter, windowsFilePathToUrl } from "../filePathUtils.js"
 
 export const remapCallSite = async (
@@ -245,15 +246,14 @@ const remapSourcePosition = async ({
 
     return originalPosition
   } catch (e) {
-    onFailure(`error while remapping position.
---- error stack ---
-${readErrorStack(e)}
---- source ---
-${source}
---- line ---
-${line}
---- column ---
-${column}`)
+    onFailure(
+      createDetailedMessage(`error while remapping position.`, {
+        ["error stack"]: readErrorStack(e),
+        ["source"]: source,
+        ["line"]: line,
+        ["column"]: column,
+      }),
+    )
     return position
   }
 }

@@ -1,5 +1,6 @@
 import { createCancellationToken } from "@jsenv/cancellation"
 import { findFreePort } from "@jsenv/server"
+import { createDetailedMessage } from "@jsenv/logger"
 import { getCommandArgument, removeCommandArgument } from "./commandArguments.js"
 
 const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"]
@@ -18,11 +19,12 @@ export const createChildExecArgv = async ({
   jsonModules = "inherit",
 } = {}) => {
   if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
-    throw new TypeError(`unexpected debug mode.
---- debug mode ---
-${debugMode}
---- allowed debug mode ---
-${AVAILABLE_DEBUG_MODE}`)
+    throw new TypeError(
+      createDetailedMessage(`unexpected debug mode.`, {
+        ["debug mode"]: debugMode,
+        ["allowed debug mode"]: AVAILABLE_DEBUG_MODE,
+      }),
+    )
   }
 
   let childExecArgv = processExecArgv.slice()

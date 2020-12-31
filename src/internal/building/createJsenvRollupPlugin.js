@@ -1,7 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { extname } from "path"
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
-import { loggerToLogLevel } from "@jsenv/logger"
+import { loggerToLogLevel, createDetailedMessage } from "@jsenv/logger"
 import {
   isFileSystemPath,
   fileSystemPathToUrl,
@@ -17,6 +17,7 @@ import {
   urlToMeta,
 } from "@jsenv/util"
 
+// import { jsenvImportMetaResolveGlobalUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
@@ -197,14 +198,13 @@ export const createJsenvRollupPlugin = async ({
     name: "jsenv",
 
     async buildStart() {
-      logger.info(`
-start building project
---- project directory path ---
-${urlToFileSystemPath(projectDirectoryUrl)}
---- build directory path ---
-${urlToFileSystemPath(buildDirectoryUrl)}
---- entry point map ---
-${JSON.stringify(entryPointMap, null, "  ")}`)
+      logger.info(
+        createDetailedMessage(`start building project`, {
+          ["project directory path"]: urlToFileSystemPath(projectDirectoryUrl),
+          ["build directory path"]: urlToFileSystemPath(buildDirectoryUrl),
+          ["entry point map"]: JSON.stringify(entryPointMap, null, "  "),
+        }),
+      )
 
       emitFile = (...args) => this.emitFile(...args)
 
@@ -546,6 +546,17 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
 
       const moduleInfo = this.getModuleInfo(id)
       const url = urlToServerUrl(id)
+
+      // const originalProjectUrl = urlToOriginalProjectUrl(url)
+      // if (originalProjectUrl === jsenvImportMetaResolveGlobalUrl) {
+      //   await assetBuilder.createReferenceForJs({
+      //     jsUrl: url,
+
+      //     targetSpecifier: importMapFileRelativeUrl,
+      //     targetContentType: "application/importmap+json",
+      //     // targetBuffer,
+      //   })
+      // }
 
       logger.debug(`loads ${url}`)
       const { responseUrl, contentRaw, content = "", map } = await loadModule(url, {
@@ -1022,7 +1033,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}`)
       throw new Error(formatFileNotFound(urlToProjectUrl(response.url), importer))
     }
 
-    const okValidation = validateResponseStatusIsOk(response, importer)
+    const okValidation = await validateResponseStatusIsOk(response, importer)
 
     if (!okValidation.valid) {
       throw new Error(okValidation.message)
@@ -1072,11 +1083,10 @@ const fixRollupUrl = (rollupUrl) => {
 }
 
 const formatFileNotFound = (url, importer) => {
-  return `A file cannot be found.
---- file ---
-${urlToFileSystemPath(url)}
---- imported by ---
-${importer}`
+  return createDetailedMessage(`A file cannot be found.`, {
+    file: urlToFileSystemPath(url),
+    ["imported by"]: importer,
+  })
 }
 
 const showImportmapSourceLocation = (importmapHtmlNode, htmlUrl, htmlSource) => {
@@ -1121,13 +1131,13 @@ const fetchAndNormalizeImportmap = async (importmapUrl, { allow404 = false } = {
     return null
   }
   if (importmapResponse.status < 200 || importmapResponse.status > 299) {
-    throw new Error(`Unexpected response status for importmap.
---- response status ---
-${importmapResponse.status}
---- response text ---
-${await importmapResponse.text()}
---- importmap url ---
-${importmapUrl}`)
+    throw new Error(
+      createDetailedMessage(`Unexpected response status for importmap.`, {
+        ["response status"]: importmapResponse.status,
+        ["response text"]: await importmapResponse.text(),
+        ["importmap url"]: importmapUrl,
+      }),
+    )
   }
   const importmap = await importmapResponse.json()
   const importmapNormalized = normalizeImportMap(importmap, importmapUrl)
@@ -1164,24 +1174,6 @@ const rollupFileNameWithoutHash = (fileName) => {
   })
 }
 
-const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`
-
-  Object.keys(details).forEach((key) => {
-    const value = details[key]
-    string += `
---- ${key} ---
-${
-  Array.isArray(value)
-    ? value.join(`
-`)
-    : value
-}`
-  })
-
-  return string
-}
-
 // otherwise importmap handle it as a bare import
 const ensureRelativeUrlNotation = (relativeUrl) => {
   if (relativeUrl.startsWith("../")) {
@@ -1198,7 +1190,6 @@ const externalImportUrlPatternsToExternalUrlPredicate = (
     {
       external: {
         ...externalImportUrlPatterns,
-        "node_modules/@jsenv/core/src/internal/import-meta/": false,
         "node_modules/@jsenv/core/helpers/": false,
       },
     },

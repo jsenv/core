@@ -1,5 +1,6 @@
 import { readFileSync } from "fs"
 import { resolveUrl, urlToFileSystemPath, fileSystemPathToUrl } from "@jsenv/util"
+import { createDetailedMessage } from "@jsenv/logger"
 import { require } from "@jsenv/core/src/internal/require.js"
 
 const { transformSync } = require("@babel/core")
@@ -17,11 +18,12 @@ const transformWorkerScript = (scriptUrl, { workerScriptSourceMap, importerUrl }
   } catch (e) {
     if (e.code === "ENOENT") {
       if (importerUrl) {
-        throw new Error(`no file found for an import in a worker.
---- worker url ---
-${importerUrl}.
---- imported url ---
-${scriptUrl}`)
+        throw new Error(
+          createDetailedMessage(`no file found for an import in a worker.`, {
+            ["worker url"]: importerUrl,
+            ["imported url"]: scriptUrl,
+          }),
+        )
       }
       throw new Error(`no worker file at ${scriptUrl}`)
     }

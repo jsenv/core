@@ -12,7 +12,7 @@ import {
   createSSERoom,
   firstServiceWithTiming,
 } from "@jsenv/server"
-import { createLogger } from "@jsenv/logger"
+import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import {
   resolveUrl,
   urlToFileSystemPath,
@@ -47,9 +47,7 @@ export const startCompileServer = async ({
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
   importMetaEnvFileRelativeUrl = "env.js",
-  importMeta = {
-    dev: process.env.NODE_ENV !== "production",
-  },
+  importMeta = {},
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
@@ -195,6 +193,7 @@ export const startCompileServer = async ({
 
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     importMapFileRelativeUrl,
     importDefaultExtension,
     importMetaEnvFileRelativeUrl,
@@ -333,11 +332,12 @@ const assertArguments = ({
   const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
 
   if (!jsenvDirectoryUrl.startsWith(projectDirectoryUrl)) {
-    throw new TypeError(`jsenv directory must be inside project directory
---- jsenv directory url ---
-${jsenvDirectoryUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
+    throw new TypeError(
+      createDetailedMessage(`jsenv directory must be inside project directory`, {
+        ["jsenv directory url"]: jsenvDirectoryUrl,
+        ["project directory url"]: projectDirectoryUrl,
+      }),
+    )
   }
 
   if (typeof outDirectoryName !== "string") {
@@ -654,7 +654,8 @@ const createSSEForLivereloadService = ({
 
     sseRoom.start()
     const cancelRegistration = cancellationToken.register(() => {
-      cancelRegistration()
+      cancelRegistration.unregister()
+
       sseRoom.stop()
       stopTracking()
     })
@@ -662,7 +663,7 @@ const createSSEForLivereloadService = ({
       mainFileRelativeUrl,
       sseRoom,
       cleanup: () => {
-        cancelRegistration()
+        cancelRegistration.unregister()
         sseRoom.stop()
         stopTracking()
       },

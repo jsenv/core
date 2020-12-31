@@ -1,6 +1,6 @@
 import { createCancellationToken } from "@jsenv/cancellation"
 import { resolveUrl } from "@jsenv/util"
-import { createLogger } from "@jsenv/logger"
+import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { dataUrlToRawData, parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
@@ -27,7 +27,7 @@ export const fetchSourcemap = async (
     cancellationToken,
     ignoreHttpsError: true,
   })
-  const okValidation = validateResponseStatusIsOk(sourcemapResponse, jsUrl)
+  const okValidation = await validateResponseStatusIsOk(sourcemapResponse, jsUrl)
 
   if (!okValidation.valid) {
     logger.warn(`unexpected response for sourcemap file:
@@ -47,13 +47,11 @@ const parseSourcemapString = (sourcemapString, sourcemapUrl, importer) => {
   } catch (e) {
     if (e.name === "SyntaxError") {
       console.error(
-        `syntax error while parsing sourcemap.
---- syntax error stack ---
-${e.stack}
---- sourcemap url ---
-${sourcemapUrl}
---- imported by ---
-${importer}`,
+        createDetailedMessage(`syntax error while parsing sourcemap.`, {
+          ["syntax error stack"]: e.stack,
+          ["sourcemap url"]: sourcemapUrl,
+          ["imported by"]: importer,
+        }),
       )
       return null
     }

@@ -1,4 +1,5 @@
 import { createCancellationToken } from "@jsenv/cancellation/main.browser.js"
+import { createDetailedMessage } from "@jsenv/logger"
 // ideally we should do some window.fetch detection (ensuring it has cancellation) and accordingly
 // fallback to this polyfill (or even use an existing polyfill would be better)
 // https://github.com/github/fetch/blob/master/fetch.js
@@ -205,10 +206,11 @@ const hasArrayBuffer = typeof window.ArrayBuffer === "function"
 const hasSearchParams = typeof window.URLSearchParams === "function"
 
 const createRequestError = (error, { url }) => {
-  return new Error(`error during xhr request on ${url}.
---- error stack ---
-${error.stack}
-`)
+  return new Error(
+    createDetailedMessage(`error during xhr request on ${url}.`, {
+      ["error stack"]: error.stack,
+    }),
+  )
 }
 
 const createPromiseAndHooks = () => {

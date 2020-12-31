@@ -97,13 +97,13 @@ export const jsenvTransform = async ({
             }
             if (importMetaFormat === "commonjs") {
               replaceWithImport({
-                from: `@jsenv/core/src/internal/import-meta/import-meta-url-commonjs.js`,
+                from: `@jsenv/core/helpers/import-meta-url/import-meta-url-commonjs.js`,
               })
               return
             }
             if (importMetaFormat === "global") {
               replaceWithImport({
-                from: `@jsenv/core/src/internal/import-meta/import-meta-url-global.js`,
+                from: `@jsenv/core/helpers/import-meta-url/import-meta-url-global.js`,
               })
               return
             }
@@ -120,16 +120,22 @@ export const jsenvTransform = async ({
               return
             }
             if (importMetaFormat === "commonjs") {
-              replaceWithImport({
-                from: `@jsenv/core/src/internal/import-meta/import-meta-resolve-commonjs.js`,
+              throw createParseError({
+                message: `import.meta.resolve() not supported with commonjs format`,
               })
-              return
+              // replaceWithImport({
+              //   from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-commonjs.js`,
+              // })
+              // return
             }
             if (importMetaFormat === "global") {
-              replaceWithImport({
-                from: `@jsenv/core/src/internal/import-meta/import-meta-resolve-global.js`,
+              throw createParseError({
+                message: `import.meta.resolve() not supported with global format`,
               })
-              return
+              // replaceWithImport({
+              //   from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-global.js`,
+              // })
+              // return
             }
             return
           }

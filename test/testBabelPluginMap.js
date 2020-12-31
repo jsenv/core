@@ -4,7 +4,9 @@ import { jsenvCoreDirectoryUrl } from "../src/internal/jsenvCoreDirectoryUrl.js"
 import { coverageIsEnabled } from "./coverageIsEnabled.js"
 
 const computeTestBabelPluginMap = ({ coverageEnabled }) => {
-  if (!coverageEnabled) return jsenvBabelPluginMap
+  if (!coverageEnabled) {
+    return jsenvBabelPluginMap
+  }
 
   return {
     ...jsenvBabelPluginMap,

@@ -1,41 +1,17 @@
-import { loggerToLogLevel } from "@jsenv/logger"
-import { urlToRelativeUrl, urlIsInsideOf, resolveUrl } from "@jsenv/util"
-import { composeTwoImportMaps } from "@jsenv/import-map"
-import { getImportMapFromNodeModules } from "@jsenv/node-module-import-map"
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-
 /**
  * allows the following:
  *
  * import "@jsenv/core/helpers/regenerator-runtime/regenerator-runtime.js"
  * -> searches a file inside @jsenv/core/*
  *
- * import importMap from "/jsenv.importmap"
- * -> searches project importMap at importMapFileRelativeUrl
- * (if importMap file does not exists an empty object is returned)
- * (if project uses a custom importMapFileRelativeUrl jsenv that file is returned)
- *
- * An other idea: instead we should create a @jsenv/helpers package with the source code
- * that might end up in the project files. Then you will have to add this to your package.json
- * in "dependencies" instead of "devDependencies" so that it ends in the importmap
- * compile server would almost no touch the importmap as it's the case today.
- *
  */
 
-export const transformImportmap = async (
-  importmapBeforeTransformation,
-  { logger, projectDirectoryUrl, outDirectoryRelativeUrl, originalFileUrl, compiledFileUrl },
-) => {
-  const importMapForProject = JSON.parse(importmapBeforeTransformation)
-  const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
+import { urlToRelativeUrl, urlIsInsideOf } from "@jsenv/util"
+import { composeTwoImportMaps } from "@jsenv/import-map"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
-  const importMapForJsenvCore = await getImportMapFromNodeModules({
-    logLevel: loggerToLogLevel(logger),
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    rootProjectDirectoryUrl: projectDirectoryUrl,
-    importMapFileRelativeUrl: originalFileRelativeUrl,
-    projectPackageDevDependenciesIncluded: false,
-  })
+export const transformImportmap = async (importmapBeforeTransformation, { originalFileUrl }) => {
+  const importMapForProject = JSON.parse(importmapBeforeTransformation)
 
   const topLevelRemappingForJsenvCore = {
     "@jsenv/core/": urlToRelativeUrlRemapping(jsenvCoreDirectoryUrl, originalFileUrl),
@@ -46,20 +22,10 @@ export const transformImportmap = async (
     scopes: generateJsenvCoreScopes({ importMapForProject, topLevelRemappingForJsenvCore }),
   }
 
-  const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
-  const importMapInternal = {
-    imports: {
-      "/.jsenv/out/": urlToRelativeUrlRemapping(outDirectoryUrl, compiledFileUrl),
-      "/jsenv.importmap": urlToRelativeUrlRemapping(originalFileUrl, compiledFileUrl),
-    },
-  }
-
-  const importMap = [
-    importMapForJsenvCore,
-    importmapForSelfImport,
-    importMapInternal,
-    importMapForProject,
-  ].reduce((previous, current) => composeTwoImportMaps(previous, current), {})
+  const importMap = [importmapForSelfImport, importMapForProject].reduce(
+    (previous, current) => composeTwoImportMaps(previous, current),
+    {},
+  )
 
   const scopes = importMap.scopes || {}
   const projectTopLevelMappings = importMapForProject.imports || {}
@@ -108,8 +74,6 @@ const generateJsenvCoreScopes = ({ importMapForProject, topLevelRemappingForJsen
   // "/": "/"
   // "/": "/folder/"
   // to achieve this, we set jsenvCoreImports into every scope
-  // they can still be overriden by importMapForProject
-  // even if I see no use case for that
   const scopesForJsenvCore = {}
   Object.keys(scopes).forEach((scopeKey) => {
     scopesForJsenvCore[scopeKey] = topLevelRemappingForJsenvCore

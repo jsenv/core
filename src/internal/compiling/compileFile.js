@@ -15,6 +15,7 @@ export const compileFile = async ({
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
+  fileContentFallbackIfNotFound,
   projectFileRequestedCallback = () => {},
   request,
   compile,
@@ -59,6 +60,7 @@ export const compileFile = async ({
       projectDirectoryUrl,
       originalFileUrl,
       compiledFileUrl,
+      fileContentFallbackIfNotFound,
       ifEtagMatch,
       ifModifiedSinceDate,
       writeOnFilesystem,
@@ -128,13 +130,14 @@ export const compileFile = async ({
     }
   } catch (error) {
     if (error && error.code === "PARSE_ERROR") {
-      const relativeUrl = urlToRelativeUrl(
-        fileSystemPathToUrl(error.data.filename),
-        projectDirectoryUrl,
-      )
-      projectFileRequestedCallback(relativeUrl, request)
+      const { data } = error
+      const { filename } = data
+      if (filename) {
+        const relativeUrl = urlToRelativeUrl(fileSystemPathToUrl(filename), projectDirectoryUrl)
+        projectFileRequestedCallback(relativeUrl, request)
+      }
       // on the correspondig file
-      const json = JSON.stringify(error.data)
+      const json = JSON.stringify(data)
 
       return {
         status: 500,

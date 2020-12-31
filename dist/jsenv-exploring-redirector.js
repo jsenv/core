@@ -134,6 +134,16 @@
     return value && _typeof(value) === "object" && value.name === "CANCEL_ERROR";
   };
 
+  var createDetailedMessage = function createDetailedMessage(message) {
+    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var string = "".concat(message);
+    Object.keys(details).forEach(function (key) {
+      var value = details[key];
+      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    });
+    return string;
+  };
+
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
@@ -382,7 +392,7 @@
 
   var createRequestError = function createRequestError(error, _ref5) {
     var url = _ref5.url;
-    return new Error("error during xhr request on ".concat(url, ".\n--- error stack ---\n").concat(error.stack, "\n"));
+    return new Error(createDetailedMessage("error during xhr request on ".concat(url, "."), _defineProperty({}, "error stack", error.stack)));
   };
 
   var createPromiseAndHooks = function createPromiseAndHooks() {
@@ -737,7 +747,7 @@
         throw e;
       }
 
-      throw new Error("Cannot communicate with exploring server due to a network error\n--- error stack ---\n".concat(e.stack));
+      throw new Error(createDetailedMessage("Cannot communicate with exploring server due to a network error", _defineProperty({}, "error stack", e.stack)));
     });
   });
 
@@ -764,9 +774,11 @@
   };
 
   var createUnexpectedGroupIdMessage = function createUnexpectedGroupIdMessage(_ref2) {
+    var _createDetailedMessag;
+
     var compileId = _ref2.compileId,
         groupMap = _ref2.groupMap;
-    return "unexpected groupId.\n--- expected compiled id ----\n".concat(Object.keys(groupMap), "\n--- received compile id ---\n").concat(compileId);
+    return createDetailedMessage("unexpected groupId.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "expected compiled id", Object.keys(groupMap)), _defineProperty(_createDetailedMessag, "received compile id", compileId), _createDetailedMessag));
   };
 
   var firstMatch = function firstMatch(regexp, string) {
