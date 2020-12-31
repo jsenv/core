@@ -1,31 +1,29 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { buildProject, getBabelPluginMapForNode } from "@jsenv/core"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
+import { requireCommonJsBuild } from "@jsenv/core/test/requireCommonJsBuild.js"
 import {
   GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
-} from "../TEST_PARAMS.js"
+} from "@jsenv/core/test/TEST_PARAMS_BUILD_COMMONJS.js"
 
-const testDirectoryUrl = resolveUrl("./", import.meta.url)
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
 const mainFilename = `${testDirectoryname}.js`
+const entryPointMap = {
+  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
+}
 
 await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
-  babelPluginMap: getBabelPluginMapForNode({
-    babelPluginMap: GENERATE_COMMONJS_BUILD_TEST_PARAMS.babelPluginMap,
-  }),
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
-  },
+  entryPointMap,
 })
 const {
   namespace: { ask },
