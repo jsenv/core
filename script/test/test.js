@@ -11,25 +11,25 @@ executeTestPlan({
       },
     },
     // give more time to the first test because it generates many file cached afterwards
-    "test/execute/alive-after-execution/*.test.js": {
+    "test/__internal__/buildServiceWorker/basic/*.test.js": {
       node: {
         launch: launchNode,
         allocatedMs: 180 * 1000,
       },
     },
-    "test/execute/basic/file.chromium.test.js": {
+    "test/**/execute-basic/*.browser.test.js": {
       node: {
         launch: launchNode,
         allocatedMs: 80 * 1000,
       },
     },
-    "test/launchBrowser/**/*.test.js": {
+    "test/**/*-launch-browser/**/*.test.js": {
       node: {
         launch: launchNode,
         allocatedMs: process.platform === "win32" ? 120 * 1000 : 60 * 1000,
       },
     },
-    "test/startExploring/**/*.test.js": {
+    "test/**/*-exploring/**/*.test.js": {
       node: {
         launch: launchNode,
         // allocate more time (60s) for these tests, they can be long
