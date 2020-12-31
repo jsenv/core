@@ -3,14 +3,14 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { buildProject } from "@jsenv/core"
 import {
   GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
   NODE_IMPORT_BUILD_TEST_PARAMS,
-} from "../TEST_PARAMS.js"
-import { browserImportEsModuleBuild } from "../browserImportEsModuleBuild.js"
-import { nodeImportEsModuleBuild } from "../nodeImportEsModuleBuild.js"
+} from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
+import { nodeImportEsModuleBuild } from "@jsenv/core/test/nodeImportEsModuleBuild.js"
+import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -19,7 +19,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 
-await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -28,7 +28,10 @@ await buildProject({
   },
 })
 
-await assertFilePresence(resolveUrl("./dist/esmodule/assets/jsenv-25e95a00.png", import.meta.url))
+const iconBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}icon.svg`]
+const iconBuildUrl = resolveUrl(`./dist/esmodule/${iconBuildRelativeUrl}`, import.meta.url)
+
+await assertFilePresence(iconBuildUrl)
 
 {
   const { namespace, serverOrigin } = await browserImportEsModuleBuild({
@@ -37,7 +40,7 @@ await assertFilePresence(resolveUrl("./dist/esmodule/assets/jsenv-25e95a00.png",
   })
   const actual = namespace
   const expected = {
-    default: String(new URL("./dist/esmodule/assets/jsenv-25e95a00.png", serverOrigin)),
+    default: String(new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, serverOrigin)),
   }
   assert({ actual, expected })
 }
@@ -50,7 +53,7 @@ if (SourceMap) {
   })
   const actual = namespace
   const expected = {
-    default: String(new URL("./dist/esmodule/assets/jsenv-25e95a00.png", import.meta.url)),
+    default: String(new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, import.meta.url)),
   }
   assert({ actual, expected })
 }

@@ -1,13 +1,27 @@
+/**
+
+Here the idea is to test that
+
+import htmlText from "./file.html"
+
+works properly inside a build but let's keep this in a grey area for now.
+-> meaning no documentation nor official support for this
+
+Inside jsenv it would work ok (but html being transformed could be unexpected)
+but in production you would get 404 on jsenv-browser-system.js.
+
+*/
+
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
-import { buildProject } from "@jsenv/core"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { browserImportSystemJsBuild } from "../browserImportSystemJsBuild.js"
 import {
   GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-} from "../TEST_PARAMS.js"
+} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
+import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -16,34 +30,26 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.js`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
+  main: `./${testDirectoryRelativeUrl}${mainFilename}`,
 }
 
-const { buildMappings } = await buildProject({
+await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  useImportMapToImproveLongTermCaching: false,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
   minify: true,
+  minifyHtmlOptions: {
+    collapseWhitespace: true,
+  },
 })
 
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-const cssBuildRelativeUrl = getBuildRelativeUrl("style.css")
-
-const { namespace, serverOrigin } = await browserImportSystemJsBuild({
+const { namespace: actual } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
-  htmlFileRelativeUrl: "./index.html",
-  // headless: false,
-  // autoStop: false,
 })
-const actual = namespace
 const expected = {
-  cssUrl: resolveUrl(`/dist/systemjs/${cssBuildRelativeUrl}`, serverOrigin),
+  htmlText: `<button>Hello world</button>`,
+  innerText: "Hello world",
 }
 assert({ actual, expected })
