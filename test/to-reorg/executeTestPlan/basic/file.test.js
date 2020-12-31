@@ -8,7 +8,7 @@ import {
   launchFirefox,
   launchWebkit,
 } from "@jsenv/core"
-import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
+import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)

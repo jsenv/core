@@ -7,7 +7,7 @@ import { COMPILE_ID_BUILD_COMMONJS } from "../../../src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { jsenvBabelPluginMap } from "../../../src/jsenvBabelPluginMap.js"
-import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
+import { COMPILE_SERVER_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)

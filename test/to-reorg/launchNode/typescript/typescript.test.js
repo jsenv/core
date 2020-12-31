@@ -10,7 +10,7 @@ import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
-} from "../TEST_PARAMS.js"
+} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const transformTypeScript = require("@babel/plugin-transform-typescript")
 

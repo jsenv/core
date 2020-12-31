@@ -5,7 +5,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { jsenvBrowserSystemRelativeUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { COMPILE_ID_BUILD_GLOBAL } from "@jsenv/core/src/internal/CONSTANTS.js"
-import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
+import { COMPILE_SERVER_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)

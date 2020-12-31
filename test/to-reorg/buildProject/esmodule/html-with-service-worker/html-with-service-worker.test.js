@@ -4,7 +4,7 @@ import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, urlToFileSystemPath 
 import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { require } from "@jsenv/core/src/internal/require.js"
-import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "../TEST_PARAMS.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
