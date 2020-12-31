@@ -4,13 +4,13 @@ import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
-import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
-import { launchBrowsers } from "../launchBrowsers.js"
+import { launchBrowsers } from "@jsenv/core/test/launchBrowsers.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTION_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
-} from "../TEST_PARAMS.js"
+} from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
+import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
