@@ -2,7 +2,7 @@ import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { executeTestPlan, launchNode } from "@jsenv/core"
-import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TEST_PLAN.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
