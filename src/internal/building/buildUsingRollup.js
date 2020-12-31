@@ -45,7 +45,7 @@ export const buildUsingRollup = async ({
 
   writeOnFileSystem,
 }) => {
-  const { jsenvRollupPlugin, getResult } = await createJsenvRollupPlugin({
+  const { jsenvRollupPlugin, getLastErrorMessage, getResult } = await createJsenvRollupPlugin({
     cancellationToken,
     logger,
 
@@ -77,19 +77,30 @@ export const buildUsingRollup = async ({
     writeOnFileSystem,
   })
 
-  await useRollup({
-    cancellationToken,
-    jsenvRollupPlugin,
+  try {
+    await useRollup({
+      cancellationToken,
+      jsenvRollupPlugin,
 
-    format,
-    globals,
-    globalName,
-    sourcemapExcludeSources,
-    preserveEntrySignatures,
-    jsConcatenation,
-    buildDirectoryUrl,
-    buildDirectoryClean,
-  })
+      format,
+      globals,
+      globalName,
+      sourcemapExcludeSources,
+      preserveEntrySignatures,
+      jsConcatenation,
+      buildDirectoryUrl,
+      buildDirectoryClean,
+    })
+  } catch (e) {
+    if (e.plugin === "jsenv") {
+      const jsenvPluginErrorMessage = getLastErrorMessage()
+      if (jsenvPluginErrorMessage) {
+        e.message = jsenvPluginErrorMessage
+      }
+      throw e
+    }
+    throw e
+  }
 
   const jsenvBuild = getResult()
 

@@ -84,6 +84,13 @@ export const createJsenvRollupPlugin = async ({
   const urlRedirectionMap = {}
   const jsModulesInHtml = {}
 
+  let lastErrorMessage
+  const createJsenvPluginError = (message) => {
+    const error = new Error(message)
+    lastErrorMessage = message
+    return error
+  }
+
   const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(
     externalImportUrlPatterns,
     projectDirectoryUrl,
@@ -149,6 +156,25 @@ export const createJsenvRollupPlugin = async ({
     // and we don't know how we will handle that
     if (browser) return false
     return false
+  }
+
+  const fetchAndNormalizeImportmap = async (importmapUrl, { allow404 = false } = {}) => {
+    const importmapResponse = await fetchUrl(importmapUrl)
+    if (allow404 && importmapResponse.status === 404) {
+      return null
+    }
+    if (importmapResponse.status < 200 || importmapResponse.status > 299) {
+      throw createJsenvPluginError(
+        createDetailedMessage(`Unexpected response status for importmap.`, {
+          ["response status"]: importmapResponse.status,
+          ["response text"]: await importmapResponse.text(),
+          ["importmap url"]: importmapUrl,
+        }),
+      )
+    }
+    const importmap = await importmapResponse.json()
+    const importmapNormalized = normalizeImportMap(importmap, importmapUrl)
+    return importmapNormalized
   }
 
   const fetchImportmapFromParameter = async () => {
@@ -953,10 +979,7 @@ export const createJsenvRollupPlugin = async ({
     }
 
     const importerUrl = urlImporterMap[moduleUrl]
-    const moduleResponse = await fetchModule(
-      moduleUrl,
-      urlToFileSystemPath(urlToProjectUrl(importerUrl) || importerUrl),
-    )
+    const moduleResponse = await fetchModule(moduleUrl, urlToProjectUrl(importerUrl) || importerUrl)
     const contentType = moduleResponse.headers["content-type"] || ""
     const commonData = {
       responseUrl: moduleResponse.url,
@@ -1029,14 +1052,22 @@ export const createJsenvRollupPlugin = async ({
       cancellationToken,
       ignoreHttpsError: true,
     })
+
+    importer = urlToOriginalProjectUrl(importer) || urlToProjectUrl(importer) || importer
+
     if (response.status === 404) {
-      throw new Error(formatFileNotFound(urlToProjectUrl(response.url), importer))
+      throw createJsenvPluginError(
+        formatFileNotFound(
+          urlToOriginalProjectUrl(response.url) || urlToProjectUrl(response.url) || response.url,
+          importer,
+        ),
+      )
     }
 
     const okValidation = await validateResponseStatusIsOk(response, importer)
 
     if (!okValidation.valid) {
-      throw new Error(okValidation.message)
+      throw createJsenvPluginError(okValidation.message)
     }
 
     return response
@@ -1050,6 +1081,7 @@ export const createJsenvRollupPlugin = async ({
 
   return {
     jsenvRollupPlugin,
+    getLastErrorMessage: () => lastErrorMessage,
     getResult: () => {
       return {
         rollupBuild,
@@ -1085,7 +1117,10 @@ const fixRollupUrl = (rollupUrl) => {
 const formatFileNotFound = (url, importer) => {
   return createDetailedMessage(`A file cannot be found.`, {
     file: urlToFileSystemPath(url),
-    ["imported by"]: importer,
+    ["imported by"]:
+      importer.startsWith("file://") && !importer.includes("\n")
+        ? urlToFileSystemPath(importer)
+        : importer,
   })
 }
 
@@ -1123,25 +1158,6 @@ You should make importmap source relative.
 ${showImportmapSourceLocation(importmapHtmlNode, htmlUrl, htmlSource)}
 --- compile directory url ---
 ${compileDirectoryUrl}`
-}
-
-const fetchAndNormalizeImportmap = async (importmapUrl, { allow404 = false } = {}) => {
-  const importmapResponse = await fetchUrl(importmapUrl)
-  if (allow404 && importmapResponse.status === 404) {
-    return null
-  }
-  if (importmapResponse.status < 200 || importmapResponse.status > 299) {
-    throw new Error(
-      createDetailedMessage(`Unexpected response status for importmap.`, {
-        ["response status"]: importmapResponse.status,
-        ["response text"]: await importmapResponse.text(),
-        ["importmap url"]: importmapUrl,
-      }),
-    )
-  }
-  const importmap = await importmapResponse.json()
-  const importmapNormalized = normalizeImportMap(importmap, importmapUrl)
-  return importmapNormalized
 }
 
 const formatBuildDoneDetails = (build) => {

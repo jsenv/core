@@ -99,7 +99,8 @@ export const createAssetBuilder = (
     // start to wait internally for eventual chunks
     // but don't await here because this function will be awaited by rollup before starting
     // to parse chunks
-    entryReference.target.getReadyPromise()
+    const htmlReadyPromise = entryReference.target.getReadyPromise().catch((e) => {})
+    return { htmlReadyPromise }
   }
 
   const createReferenceForJs = async ({
@@ -262,9 +263,12 @@ export const createAssetBuilder = (
   const connectReferenceAndTarget = (reference, target) => {
     reference.target = target
     target.targetReferences.push(reference)
-    target.getBufferAvailablePromise().then(() => {
-      checkContentType(reference, { logger, showReferenceSourceLocation })
-    })
+    target.getBufferAvailablePromise().then(
+      () => {
+        checkContentType(reference, { logger, showReferenceSourceLocation })
+      },
+      () => {},
+    )
   }
 
   const assetTransformMap = {}
