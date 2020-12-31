@@ -21,6 +21,7 @@ const entryPointMap = {
 
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+  importMapFileRelativeUrl: "./not-found.importmap",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,

@@ -1,7 +1,5 @@
-import { loggerToLogLevel } from "@jsenv/logger"
 import { urlToRelativeUrl, urlIsInsideOf } from "@jsenv/util"
 import { composeTwoImportMaps } from "@jsenv/import-map"
-import { getImportMapFromNodeModules } from "@jsenv/node-module-import-map"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
 /**
@@ -22,12 +20,8 @@ import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
  *
  */
 
-export const transformImportmap = async (
-  importmapBeforeTransformation,
-  { logger, projectDirectoryUrl, originalFileUrl },
-) => {
+export const transformImportmap = async (importmapBeforeTransformation, { originalFileUrl }) => {
   const importMapForProject = JSON.parse(importmapBeforeTransformation)
-  const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
 
   // we do this "just" so that import.meta.resolve dependencies to
   // @jsenv/import-map and @jsenv/cancellation are found
@@ -38,13 +32,13 @@ export const transformImportmap = async (
   // so remapping for jsenv should always be there, that's
   // what we are doing here.
   // ideally we should do this also on 404 (no importmap file created in the project for now)
-  const importMapForJsenvCore = await getImportMapFromNodeModules({
-    logLevel: loggerToLogLevel(logger),
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    rootProjectDirectoryUrl: projectDirectoryUrl,
-    importMapFileRelativeUrl: originalFileRelativeUrl,
-    projectPackageDevDependenciesIncluded: false,
-  })
+  // const importMapForJsenvCore = await getImportMapFromNodeModules({
+  //   logLevel: loggerToLogLevel(logger),
+  //   projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  //   rootProjectDirectoryUrl: projectDirectoryUrl,
+  //   importMapFileRelativeUrl: originalFileRelativeUrl,
+  //   projectPackageDevDependenciesIncluded: false,
+  // })
 
   const topLevelRemappingForJsenvCore = {
     "@jsenv/core/": urlToRelativeUrlRemapping(jsenvCoreDirectoryUrl, originalFileUrl),
@@ -55,7 +49,7 @@ export const transformImportmap = async (
     scopes: generateJsenvCoreScopes({ importMapForProject, topLevelRemappingForJsenvCore }),
   }
 
-  const importMap = [importMapForJsenvCore, importmapForSelfImport, importMapForProject].reduce(
+  const importMap = [importmapForSelfImport, importMapForProject].reduce(
     (previous, current) => composeTwoImportMaps(previous, current),
     {},
   )
