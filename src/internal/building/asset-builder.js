@@ -99,7 +99,7 @@ export const createAssetBuilder = (
     // start to wait internally for eventual chunks
     // but don't await here because this function will be awaited by rollup before starting
     // to parse chunks
-    const htmlReadyPromise = entryReference.target.getReadyPromise().catch(() => {})
+    const htmlReadyPromise = entryReference.target.getReadyPromise()
     return { htmlReadyPromise }
   }
 
@@ -502,9 +502,9 @@ export const createAssetBuilder = (
     })
 
     let connectFn
-    const connect = memoize((value) => {
+    const connect = (value) => {
       connectFn = value
-    })
+    }
 
     // the idea is to return the connect promise here
     // because connect is memoized and called immediatly after target is created
@@ -592,10 +592,10 @@ export const createAssetBuilder = (
     )
 
     let message = `${urlToFileUrl(referenceUrl)}`
-    if (typeof reference.line === "number") {
-      message += `:${reference.line}`
-      if (typeof reference.column === "number") {
-        message += `:${reference.column}`
+    if (typeof reference.referenceLine === "number") {
+      message += `:${reference.referenceLine}`
+      if (typeof reference.referenceColumn === "number") {
+        message += `:${reference.referenceColumn}`
       }
     }
 

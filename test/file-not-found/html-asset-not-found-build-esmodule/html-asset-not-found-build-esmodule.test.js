@@ -32,7 +32,7 @@ try {
 --- file ---
 ${urlToFileSystemPath(imgUrl)}
 --- imported by ---
-${fileUrl}
+${fileUrl}:9:5
 
   8  |   <body>
 > 9  |     <img src="./img.png" />
