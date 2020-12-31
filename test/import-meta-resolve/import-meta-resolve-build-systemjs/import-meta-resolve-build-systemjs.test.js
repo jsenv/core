@@ -1,13 +1,13 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { browserImportSystemJsBuild } from "../browserImportSystemJsBuild.js"
 import {
   GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-} from "../TEST_PARAMS.js"
+} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
+import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -15,15 +15,17 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.js`
+const entryPointMap = {
+  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
+}
+const importMapFileRelativeUrl = `${testDirectoryRelativeUrl}test.importmap`
 
 await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  importMapFileRelativeUrl: `${testDirectoryRelativeUrl}test.importmap`,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
-  },
+  importMapFileRelativeUrl,
+  entryPointMap,
 })
 const { namespace: actual, serverOrigin } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
