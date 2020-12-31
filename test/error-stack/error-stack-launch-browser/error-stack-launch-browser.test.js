@@ -4,13 +4,13 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
-import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
-import { launchBrowsers } from "../launchBrowsers.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTION_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
-} from "../TEST_PARAMS.js"
+} from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
+import { launchBrowsers } from "@jsenv/core/test/launchBrowsers.js"
+import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -47,7 +47,7 @@ await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launc
   if (launchBrowser === launchChromium) {
     const expected = `Error: error
   at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
-  at Object.triggerError (${testDirectoryUrl}error-stack.js:3:1)`
+  at Object.triggerError (${testDirectoryUrl}${testDirectoryBasename}.js:3:1)`
     const actual = stack.slice(0, expected.length)
     assert({ actual, expected })
   } else if (launchBrowser === launchFirefox) {

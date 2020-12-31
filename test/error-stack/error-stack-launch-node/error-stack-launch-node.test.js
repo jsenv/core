@@ -4,12 +4,12 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
-import { launchNode } from "@jsenv/core"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
-} from "../TEST_PARAMS.js"
+} from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
+import { launchNode } from "@jsenv/core"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -39,6 +39,6 @@ const result = await launchAndExecute({
 const stack = result.error.stack
 const expected = `Error: error
   at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
-  at Object.triggerError (${testDirectoryUrl}error-stack.js:3:1)`
+  at Object.triggerError (${testDirectoryUrl}${testDirectoryname}.js:3:1)`
 const actual = stack.slice(0, expected.length)
 assert({ actual, expected })
