@@ -19,7 +19,6 @@ const exploringServer = await startExploring({
 })
 const compileDirectoryServerUrl = `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/`
 const htmlCompiledServerUrl = `${compileDirectoryServerUrl}${fileRelativeUrl}`
-const jsCompiledServerUrl = `${compileDirectoryServerUrl}${testDirectoryRelativeUrl}${testDirectoryname}.js`
 const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
   htmlCompiledServerUrl,
   // { headless: false },
@@ -36,8 +35,7 @@ const expected = {
       [`./${testDirectoryname}.js`]: {
         status: "completed",
         namespace: {
-          env: { whatever: 42, test: true },
-          url: jsCompiledServerUrl,
+          importMetaDev: true,
         },
       },
     },
