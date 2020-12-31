@@ -30,7 +30,7 @@ export const executeTestPlan = async ({
   importMapFileRelativeUrl,
   importDefaultExtension,
   importMetaDev = true,
-  importMetaFileRelativeUrl,
+  importMetaFileRelativeUrlForTest = "env.dev.js",
   importMeta,
 
   compileServerProtocol,
@@ -143,7 +143,7 @@ export const executeTestPlan = async ({
       importMapFileRelativeUrl,
       importDefaultExtension,
       importMetaDev,
-      importMetaFileRelativeUrl,
+      importMetaFileRelativeUrl: importMetaFileRelativeUrlForTest,
       importMeta,
 
       compileServerProtocol,

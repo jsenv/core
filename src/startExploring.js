@@ -27,6 +27,7 @@ export const startExploring = async ({
   toolbar = true,
   livereloading = true,
   importMetaDev = true,
+  importMetaFileRelativeUrlForExploring = "env.dev.js",
   ...rest
 }) => {
   return executeJsenvAsyncFunction(async () => {
@@ -88,6 +89,7 @@ export const startExploring = async ({
       jsenvDirectoryRelativeUrl,
       outDirectoryName,
       importMetaDev,
+      importMetaFileRelativeUrl: importMetaFileRelativeUrlForExploring,
       ...rest,
     })
 
