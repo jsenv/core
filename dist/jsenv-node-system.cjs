@@ -2163,7 +2163,7 @@ var fromUrl = _async$4(function (_ref) {
       moduleResponse = _fetchSource;
 
       if (moduleResponse.status === 404) {
-        throw new Error("Module file cannot be found.\n".concat(getModuleDetails({
+        throw new Error(logger.createDetailedMessage("Module file cannot be found.", getModuleDetails({
           url: url,
           importerUrl: importerUrl,
           compileServerOrigin: compileServerOrigin,

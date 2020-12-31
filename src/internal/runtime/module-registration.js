@@ -56,14 +56,16 @@ export const fromUrl = async ({
 
     if (moduleResponse.status === 404) {
       throw new Error(
-        `Module file cannot be found.
-${getModuleDetails({
-  url,
-  importerUrl,
-  compileServerOrigin,
-  outDirectoryRelativeUrl,
-  notFound: true,
-})}`,
+        createDetailedMessage(
+          `Module file cannot be found.`,
+          getModuleDetails({
+            url,
+            importerUrl,
+            compileServerOrigin,
+            outDirectoryRelativeUrl,
+            notFound: true,
+          }),
+        ),
       )
     }
   } catch (e) {

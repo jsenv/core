@@ -1,4 +1,4 @@
-const workerUrl = String(new URL("/worker.js", import.meta.url))
+const workerUrl = String(new URL("./worker.js", import.meta.url))
 
 const worker = new Worker(workerUrl)
 

@@ -39,7 +39,7 @@ const actual = await launchAndExecute({
 const expected = {
   status: "completed",
   namespace: {
-    "./import-meta-resolve.js": {
+    [`./${testDirectoryBasename}.js`]: {
       status: "completed",
       namespace: {
         basic: `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}file.js`,

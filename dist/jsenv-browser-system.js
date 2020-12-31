@@ -2073,7 +2073,7 @@
         moduleResponse = _fetchSource;
 
         if (moduleResponse.status === 404) {
-          throw new Error("Module file cannot be found.\n".concat(getModuleDetails({
+          throw new Error(createDetailedMessage("Module file cannot be found.", getModuleDetails({
             url: url,
             importerUrl: importerUrl,
             compileServerOrigin: compileServerOrigin,
