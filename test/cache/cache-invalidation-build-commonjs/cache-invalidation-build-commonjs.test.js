@@ -1,16 +1,19 @@
-// here I want to test that, when cache, I can change source file
-// and cache i invalidated
+/*
+
+here I want to test that cache is invalidated when a source file is modified.
+
+*/
 
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl, writeFile } from "@jsenv/util"
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { requireCommonJsBuild } from "../requireCommonJsBuild.js"
 import {
   GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+} from "@jsenv/core/test/TEST_PARAMS_BUILD_COMMONJS.js"
+import { requireCommonJsBuild } from "@jsenv/core/test/requireCommonJsBuild.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
