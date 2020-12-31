@@ -1,6 +1,8 @@
+import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TEST_PLAN.js"
 import {
   executeTestPlan,
   launchNode,
@@ -8,13 +10,13 @@ import {
   launchFirefox,
   launchWebkit,
 } from "@jsenv/core"
-import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}coverage-basic.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}coverage-basic.js`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.html`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
 const testPlan = {
   [htmlFileRelativeUrl]: {
     chromium: {

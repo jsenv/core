@@ -10,4 +10,5 @@ dist/
 !/**/syntax-error*.test.js
 /**/error-syntax*.js
 !/**/error-syntax*.test.js
+/test-manual/**/coverage/
 !.eslintrc.js

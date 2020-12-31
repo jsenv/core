@@ -1,17 +1,19 @@
+import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { require } from "../../../src/internal/require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { executeTestPlan, launchNode, launchChromium, convertCommonJsWithRollup } from "@jsenv/core"
-import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
+import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TEST_PLAN.js"
 
 const transformReactJSX = require("@babel/plugin-transform-react-jsx")
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}import-jsx.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}import-jsx.js`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.html`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
 const { coverageMap: actual } = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
