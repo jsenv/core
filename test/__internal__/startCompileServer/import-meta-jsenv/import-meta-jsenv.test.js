@@ -73,13 +73,6 @@ const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
     importMapFileRelativeUrl: "import-map.importmap",
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
-    groupMap: {
-      otherwise: {
-        babelPluginRequiredNameArray: actual.groupMap.otherwise.babelPluginRequiredNameArray,
-        jsenvPluginRequiredNameArray: [],
-        runtimeCompatMap: {},
-      },
-    },
   }
   assert({ actual, expected })
 }

@@ -15,7 +15,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
 const exploringServer = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
-  importMetaEnvFileRelativeUrl: `${testDirectoryRelativeUrl}env.js`,
+  importMetaEnvFileRelativeUrlForExploring: `${testDirectoryRelativeUrl}env.js`,
   jsenvDirectoryRelativeUrl,
 })
 const compileDirectoryServerUrl = `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/`

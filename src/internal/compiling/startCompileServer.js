@@ -47,7 +47,7 @@ export const startCompileServer = async ({
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
   importMetaDev = false,
-  importMetaEnvFileRelativeUrl = "env.js",
+  importMetaEnvFileRelativeUrl,
   importMeta = {},
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
