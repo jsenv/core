@@ -479,13 +479,9 @@ export const createJsenvRollupPlugin = async ({
                 fileName: entryBuildRelativeUrl,
               })
             } else {
-              const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
-              await assetBuilder.createReferenceForHTMLEntry({
-                entryContentType,
-                entryUrl,
-                entryBuffer,
-                entryBuildRelativeUrl,
-              })
+              console.warn(
+                `unsupport entry content type ${entryProjectRelativeUrl}, got ${entryContentType}`,
+              )
             }
           },
         ),
