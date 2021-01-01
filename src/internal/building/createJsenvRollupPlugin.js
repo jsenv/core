@@ -388,68 +388,56 @@ export const createJsenvRollupPlugin = async ({
             return targetUrl
           },
           emitAsset,
-          connectTarget: (target) => {
-            const { targetIsExternal } = target
-            if (targetIsExternal) {
-              return
+          connectJsModuleTarget: (target) => {
+            const { targetUrl, targetBuffer } = target
+
+            const id = targetUrl
+            if (typeof targetBuffer !== "undefined") {
+              virtualModules[id] = String(targetBuffer)
             }
 
-            const { targetIsJsModule } = target
-            if (targetIsJsModule) {
-              target.connect(async () => {
-                const { targetUrl, targetBuffer } = target
-
-                const id = targetUrl
-                if (typeof targetBuffer !== "undefined") {
-                  virtualModules[id] = String(targetBuffer)
-                }
-
-                logger.debug(`emit chunk for ${shortenUrl(targetUrl)}`)
-                atleastOneChunkEmitted = true
-                const name = urlToRelativeUrl(
-                  // get basename url
-                  resolveUrl(urlToBasename(targetUrl), targetUrl),
-                  // get importer url
-                  urlToCompiledUrl(target.targetReferences[0].referenceUrl),
-                )
-                jsModulesInHtml[urlToUrlForRollup(id)] = true
-                const rollupReferenceId = emitChunk({
-                  id,
-                  name,
-                  ...(target.previousJsReference
-                    ? {
-                        implicitlyLoadedAfterOneOf: [target.previousJsReference.referenceUrl],
-                      }
-                    : {}),
-                })
-
-                return { rollupReferenceId }
-              })
-              return
-            }
-
-            target.connect(async () => {
-              await target.getReadyPromise()
-              const {
-                targetUrl,
-                targetIsInline,
-                targetBufferAfterTransformation,
-                targetBuildRelativeUrl,
-              } = target
-
-              if (targetIsInline) {
-                return {}
-              }
-
-              logger.debug(`emit asset for ${shortenUrl(targetUrl)}`)
-              const fileName = targetBuildRelativeUrl
-              const rollupReferenceId = emitAsset({
-                source: targetBufferAfterTransformation,
-                fileName,
-              })
-              logger.debug(`${shortenUrl(targetUrl)} ready -> ${targetBuildRelativeUrl}`)
-              return { rollupReferenceId }
+            logger.debug(`emit chunk for ${shortenUrl(targetUrl)}`)
+            atleastOneChunkEmitted = true
+            const name = urlToRelativeUrl(
+              // get basename url
+              resolveUrl(urlToBasename(targetUrl), targetUrl),
+              // get importer url
+              urlToCompiledUrl(target.targetReferences[0].referenceUrl),
+            )
+            jsModulesInHtml[urlToUrlForRollup(id)] = true
+            const rollupReferenceId = emitChunk({
+              id,
+              name,
+              ...(target.previousJsReference
+                ? {
+                    implicitlyLoadedAfterOneOf: [target.previousJsReference.referenceUrl],
+                  }
+                : {}),
             })
+
+            return { rollupReferenceId }
+          },
+          connectAssetTarget: async (target) => {
+            await target.getReadyPromise()
+            const {
+              targetUrl,
+              targetIsInline,
+              targetBufferAfterTransformation,
+              targetBuildRelativeUrl,
+            } = target
+
+            if (targetIsInline) {
+              return {}
+            }
+
+            logger.debug(`emit asset for ${shortenUrl(targetUrl)}`)
+            const fileName = targetBuildRelativeUrl
+            const rollupReferenceId = emitAsset({
+              source: targetBufferAfterTransformation,
+              fileName,
+            })
+            logger.debug(`${shortenUrl(targetUrl)} ready -> ${targetBuildRelativeUrl}`)
+            return { rollupReferenceId }
           },
         },
       )

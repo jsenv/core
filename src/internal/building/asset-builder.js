@@ -31,7 +31,7 @@ duplicate them when imported more than once let's just not do it.
 */
 
 import { resolveUrl, urlToRelativeUrl, urlIsInsideOf, urlToParentUrl } from "@jsenv/util"
-import { createLogger } from "@jsenv/logger"
+import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 
@@ -58,12 +58,15 @@ export const createAssetBuilder = (
     urlToFileUrl, // get a file url from an eventual http url
     loadUrl = () => null,
     emitAsset,
-    connectTarget = () => {},
+    connectJsModuleTarget = () => {},
+    connectAssetTarget = () => {},
     resolveTargetUrl = ({ targetSpecifier, importerUrl }) =>
       resolveUrl(targetSpecifier, importerUrl),
   },
 ) => {
-  const logger = createLogger({ logLevel })
+  const logger = createLogger({
+    logLevel,
+  })
 
   const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
 
@@ -96,10 +99,10 @@ export const createAssetBuilder = (
     })
 
     await entryReference.target.getDependenciesAvailablePromise()
-    // start to wait internally for eventual chunks
+    // start to wait internally for eventual js references
     // but don't await here because this function will be awaited by rollup before starting
-    // to parse chunks
-    const htmlReadyPromise = entryReference.target.getReadyPromise()
+    // to parse js chunks
+    const htmlReadyPromise = entryReference.target.getRollupReferenceIdAvailablePromise()
     return { htmlReadyPromise }
   }
 
@@ -168,7 +171,7 @@ export const createAssetBuilder = (
     if (targetIsJsModule && !importerTarget.targetIsEntry) {
       // it's not really possible
       logger.warn(
-        `ignoring js reference found in an asset (it's only possible to reference js from entry asset)`,
+        `ignoring js reference found in an asset (js can be referenced only from an html entry point)`,
       )
       return null
     }
@@ -243,7 +246,14 @@ export const createAssetBuilder = (
       })
       targetMap[targetUrl] = target
       connectReferenceAndTarget(reference, target)
-      connectTarget(target)
+
+      // on veut émettre le chunk js immédiatement
+      // pour les assets dans le html on peut attendre
+      if (targetIsJsModule && !targetIsExternal) {
+        const { rollupReferenceId } = connectJsModuleTarget(target)
+        target.rollupReferenceId = rollupReferenceId
+        target.getRollupReferenceIdAvailablePromise.forceMemoization(Promise.resolve())
+      }
     }
 
     if (targetIsExternal) {
@@ -394,11 +404,11 @@ export const createAssetBuilder = (
       }
       if (dependencies.length > 0) {
         logger.debug(
-          `${shortenUrl(
-            targetUrl,
-          )} dependencies collected -> ${dependencies.map((dependencyReference) =>
-            shortenUrl(dependencyReference.target.targetUrl),
-          )}`,
+          createDetailedMessage(`${shortenUrl(targetUrl)} dependencies collected`, {
+            dependencies: dependencies.map((dependencyReference) =>
+              shortenUrl(dependencyReference.target.targetUrl),
+            ),
+          }),
         )
       }
 
@@ -435,7 +445,9 @@ export const createAssetBuilder = (
       await getDependenciesAvailablePromise()
       const dependencies = target.dependencies
       await Promise.all(
-        dependencies.map((dependencyReference) => dependencyReference.target.getReadyPromise()),
+        dependencies.map((dependencyReference) =>
+          dependencyReference.target.getRollupReferenceIdAvailablePromise(),
+        ),
       )
 
       const transform = assetTransformMap[targetUrl]
@@ -501,15 +513,8 @@ export const createAssetBuilder = (
       })
     })
 
-    let connectFn
-    const connect = (value) => {
-      connectFn = value
-    }
-
-    // the idea is to return the connect promise here
-    // because connect is memoized and called immediatly after target is created
     const getRollupReferenceIdAvailablePromise = memoize(async () => {
-      const { rollupReferenceId } = await connectFn()
+      const { rollupReferenceId } = await connectAssetTarget(target)
       target.rollupReferenceId = rollupReferenceId
     })
 
@@ -542,8 +547,6 @@ export const createAssetBuilder = (
     }
 
     Object.assign(target, {
-      connect,
-
       getBufferAvailablePromise,
       getDependenciesAvailablePromise,
       getReadyPromise,
@@ -587,9 +590,8 @@ export const createAssetBuilder = (
   const showReferenceSourceLocation = (reference) => {
     const referenceUrl = reference.referenceUrl
     const referenceTarget = getTargetFromUrl(referenceUrl)
-    const referenceSource = String(
-      referenceTarget ? referenceTarget.targetBuffer : loadUrl(referenceUrl),
-    )
+    const referenceSource = referenceTarget ? referenceTarget.targetBuffer : loadUrl(referenceUrl)
+    const referenceSourceAsString = referenceSource ? String(referenceSource) : ""
 
     let message = `${urlToFileUrl(referenceUrl)}`
     if (typeof reference.referenceLine === "number") {
@@ -599,10 +601,10 @@ export const createAssetBuilder = (
       }
     }
 
-    if (referenceSource && typeof reference.referenceLine === "number") {
+    if (referenceSourceAsString && typeof reference.referenceLine === "number") {
       return `${message}
 
-${showSourceLocation(referenceSource, {
+${showSourceLocation(referenceSourceAsString, {
   line: reference.referenceLine,
   column: reference.referenceColumn,
 })}
