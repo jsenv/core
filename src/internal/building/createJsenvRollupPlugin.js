@@ -468,8 +468,15 @@ export const createJsenvRollupPlugin = async ({
               })
             } else {
               console.warn(
-                `unsupport entry content type ${entryProjectRelativeUrl}, got ${entryContentType}`,
+                `entry content type ${entryProjectRelativeUrl} is unusual, got ${entryContentType}`,
               )
+              const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
+              await assetBuilder.createReferenceForHTMLEntry({
+                entryContentType,
+                entryUrl,
+                entryBuffer,
+                entryBuildRelativeUrl,
+              })
             }
           },
         ),
