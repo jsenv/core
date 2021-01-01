@@ -146,7 +146,7 @@
     "@babel/eslint-parser": "7.12.1",
     "@babel/plugin-transform-react-jsx": "7.12.11",
     "@babel/plugin-transform-typescript": "7.12.1",
-    "@jsenv/assert": "2.2.2",
+    "@jsenv/assert": "2.2.3",
     "@jsenv/codecov-upload": "3.4.3",
     "@jsenv/eslint-config": "12.8.0",
     "@jsenv/github-release-package": "1.2.2",
