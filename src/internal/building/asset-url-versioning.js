@@ -3,7 +3,7 @@ import { computeBuildRelativeUrl } from "./url-versioning.js"
 export const computeBuildRelativeUrlForTarget = (target) => {
   return computeBuildRelativeUrl(
     target.targetUrl,
-    target.targetBufferAfterTransformation,
+    target.targetBuildBuffer,
     targetToFileNamePattern(target),
   )
 }
@@ -31,14 +31,14 @@ const targetToFileNamePattern = (target) => {
 
 export const precomputeBuildRelativeUrlForTarget = (
   target,
-  targetBufferAfterTransformation = "",
+  targetBuildBuffer = "",
 ) => {
   if (target.targetBuildRelativeUrl) {
     return target.targetBuildRelativeUrl
   }
 
-  target.targetBufferAfterTransformation = targetBufferAfterTransformation
+  target.targetBuildBuffer = targetBuildBuffer
   const precomputedBuildRelativeUrl = computeBuildRelativeUrlForTarget(target)
-  target.targetBufferAfterTransformation = undefined
+  target.targetBuildBuffer = undefined
   return precomputedBuildRelativeUrl
 }

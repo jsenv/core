@@ -43,7 +43,6 @@ export const parseHtmlAsset = async (
   {
     minify,
     minifyHtmlOptions,
-    transformImportmapTarget = () => {},
     htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString),
     htmlAstToHtmlString = (htmlAst) => stringifyHtmlAst(htmlAst),
   } = {},
@@ -96,17 +95,11 @@ export const parseHtmlAsset = async (
     htmlMutations.forEach((mutationCallback) => {
       mutationCallback({
         ...params,
-        transformImportmapTarget,
       })
     })
 
     const htmlAfterTransformation = htmlAstToHtmlString(htmlAst)
-    const targetBufferAfterTransformation = minify
-      ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions)
-      : htmlAfterTransformation
-    return {
-      targetBufferAfterTransformation,
-    }
+    return minify ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions) : htmlAfterTransformation
   }
 }
 
@@ -132,8 +125,8 @@ const regularScriptSrcVisitor = (script, { notifyReferenceFound }) => {
     const { targetIsInline } = remoteScriptReference.target
     if (targetIsInline) {
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { targetBufferAfterTransformation } = remoteScriptReference.target
-      setHtmlNodeText(script, targetBufferAfterTransformation)
+      const { targetBuildBuffer } = remoteScriptReference.target
+      setHtmlNodeText(script, targetBuildBuffer)
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
       srcAttribute.value = urlRelativeToImporter
@@ -172,8 +165,8 @@ const regularScriptTextNodeVisitor = (script, { notifyReferenceFound }, htmlTarg
     targetIsInline: true,
   })
   return () => {
-    const { targetBufferAfterTransformation } = jsReference.target
-    textNode.value = targetBufferAfterTransformation
+    const { targetBuildBuffer } = jsReference.target
+    textNode.value = targetBuildBuffer
   }
 }
 
@@ -290,19 +283,18 @@ const importmapScriptSrcVisitor = (script, { format, notifyReferenceFound }) => 
       return `${importmapParentRelativeUrl}[name]-[hash][extname]`
     },
   })
-  return ({ getReferenceUrlRelativeToImporter, transformImportmapTarget }) => {
+  return ({ getReferenceUrlRelativeToImporter }) => {
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-importmap"
     }
-    transformImportmapTarget(importmapReference.target)
 
     const { targetIsInline } = importmapReference.target
     if (targetIsInline) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { targetBufferAfterTransformation } = importmapReference.target
-      setHtmlNodeText(script, targetBufferAfterTransformation)
+      const { targetBuildBuffer } = importmapReference.target
+      setHtmlNodeText(script, targetBuildBuffer)
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(importmapReference)
       srcAttribute.value = urlRelativeToImporter
@@ -345,14 +337,13 @@ const importmapScriptTextNodeVisitor = (
     targetBuffer: Buffer.from(textNode.value),
     targetIsInline: true,
   })
-  return ({ transformImportmapTarget }) => {
+  return () => {
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-importmap"
     }
-    transformImportmapTarget(importmapReference.target)
 
-    const { targetBufferAfterTransformation } = importmapReference.target
-    textNode.value = targetBufferAfterTransformation
+    const { targetBuildBuffer } = importmapReference.target
+    textNode.value = targetBuildBuffer
   }
 }
 
@@ -378,8 +369,8 @@ const linkStylesheetHrefVisitor = (link, { notifyReferenceFound }) => {
     const { targetIsInline } = cssReference.target
 
     if (targetIsInline) {
-      const { targetBufferAfterTransformation } = cssReference.target
-      replaceHtmlNode(link, `<style>${targetBufferAfterTransformation}</style>`)
+      const { targetBuildBuffer } = cssReference.target
+      replaceHtmlNode(link, `<style>${targetBuildBuffer}</style>`)
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(cssReference)
       hrefAttribute.value = urlRelativeToImporter
@@ -448,8 +439,8 @@ const styleTextNodeVisitor = (style, { notifyReferenceFound }, htmlTarget, style
     targetIsInline: true,
   })
   return () => {
-    const { targetBufferAfterTransformation } = inlineStyleReference.target
-    textNode.value = targetBufferAfterTransformation
+    const { targetBuildBuffer } = inlineStyleReference.target
+    textNode.value = targetBuildBuffer
   }
 }
 

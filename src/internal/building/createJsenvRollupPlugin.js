@@ -12,7 +12,6 @@ import {
   comparePathnames,
   urlIsInsideOf,
   urlToFileSystemPath,
-  urlToBasename,
   normalizeStructuredMetaMap,
   urlToMeta,
 } from "@jsenv/util"
@@ -192,7 +191,8 @@ export const createJsenvRollupPlugin = async ({
   }
 
   let assetBuilder
-  let emitFile = () => {}
+  let rollupEmitFile = () => {}
+  let rollupSetAssetSource = () => {}
   let fetchImportmap = fetchImportmapFromParameter
   let importMap
 
@@ -208,17 +208,19 @@ export const createJsenvRollupPlugin = async ({
     }
     addFileNameMapping(fileName, buildRelativeUrl)
 
-    return emitFile({
+    return rollupEmitFile({
       type: "asset",
       source,
       fileName,
     })
   }
   const emitChunk = (chunk) =>
-    emitFile({
+    rollupEmitFile({
       type: "chunk",
       ...chunk,
     })
+  const setAssetSource = (rollupReferenceId, assetSource) =>
+    rollupSetAssetSource(rollupReferenceId, assetSource)
 
   const jsenvRollupPlugin = {
     name: "jsenv",
@@ -232,7 +234,8 @@ export const createJsenvRollupPlugin = async ({
         }),
       )
 
-      emitFile = (...args) => this.emitFile(...args)
+      rollupEmitFile = (...args) => this.emitFile(...args)
+      rollupSetAssetSource = (...args) => this.setAssetSource(...args)
 
       // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
       // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
@@ -349,6 +352,7 @@ export const createJsenvRollupPlugin = async ({
           projectDirectoryUrl: `${compileServerOrigin}`,
           buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
           urlToFileUrl: urlToProjectUrl,
+          urlToCompiledUrl,
           loadUrl: (url) => urlResponseBodyMap[url],
           resolveTargetUrl: ({
             targetSpecifier,
@@ -387,57 +391,15 @@ export const createJsenvRollupPlugin = async ({
             }
             return targetUrl
           },
+          emitChunk,
           emitAsset,
-          connectJsModuleTarget: (target) => {
-            const { targetUrl, targetBuffer } = target
-
-            const id = targetUrl
-            if (typeof targetBuffer !== "undefined") {
-              virtualModules[id] = String(targetBuffer)
-            }
-
-            logger.debug(`emit chunk for ${shortenUrl(targetUrl)}`)
+          setAssetSource,
+          onJsModuleReferencedInHtml: ({ jsModuleUrl, jsModuleIsInline, jsModuleSource }) => {
             atleastOneChunkEmitted = true
-            const name = urlToRelativeUrl(
-              // get basename url
-              resolveUrl(urlToBasename(targetUrl), targetUrl),
-              // get importer url
-              urlToCompiledUrl(target.targetReferences[0].referenceUrl),
-            )
-            jsModulesInHtml[urlToUrlForRollup(id)] = true
-            const rollupReferenceId = emitChunk({
-              id,
-              name,
-              ...(target.previousJsReference
-                ? {
-                    implicitlyLoadedAfterOneOf: [target.previousJsReference.referenceUrl],
-                  }
-                : {}),
-            })
-
-            return { rollupReferenceId }
-          },
-          connectAssetTarget: async (target) => {
-            await target.getReadyPromise()
-            const {
-              targetUrl,
-              targetIsInline,
-              targetBufferAfterTransformation,
-              targetBuildRelativeUrl,
-            } = target
-
-            if (targetIsInline) {
-              return {}
+            if (jsModuleIsInline) {
+              virtualModules[jsModuleUrl] = jsModuleSource
             }
-
-            logger.debug(`emit asset for ${shortenUrl(targetUrl)}`)
-            const fileName = targetBuildRelativeUrl
-            const rollupReferenceId = emitAsset({
-              source: targetBufferAfterTransformation,
-              fileName,
-            })
-            logger.debug(`${shortenUrl(targetUrl)} ready -> ${targetBuildRelativeUrl}`)
-            return { rollupReferenceId }
+            jsModulesInHtml[urlToUrlForRollup(jsModuleUrl)] = true
           },
         },
       )
@@ -713,7 +675,8 @@ export const createJsenvRollupPlugin = async ({
       })
 
       // it's important to do this to emit late asset
-      emitFile = (...args) => this.emitFile(...args)
+      rollupEmitFile = (...args) => this.emitFile(...args)
+      rollupSetAssetSource = (...args) => this.setAssetSource(...args)
 
       // malheureusement rollup ne permet pas de savoir lorsqu'un chunk
       // a fini d'etre résolu (parsing des imports statiques et dynamiques recursivement)
@@ -729,7 +692,7 @@ export const createJsenvRollupPlugin = async ({
           return facadeModuleId && urlToServerUrl(facadeModuleId) === key
         })
         const file = jsBuild[targetBuildRelativeUrl]
-        const targetBufferAfterTransformation = file.code
+        const targetBuildBuffer = file.code
         const targetFileName =
           useImportMapToImproveLongTermCaching || !urlVersioning
             ? buildRelativeUrlToFileName(targetBuildRelativeUrl)
@@ -737,7 +700,7 @@ export const createJsenvRollupPlugin = async ({
 
         logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
         rollupChunkReadyCallbackMap[key]({
-          targetBufferAfterTransformation,
+          targetBuildBuffer,
           targetBuildRelativeUrl,
           targetFileName,
         })
