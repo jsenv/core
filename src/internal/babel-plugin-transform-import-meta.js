@@ -21,28 +21,30 @@ export const babelPluginTransformImportMeta = (api, pluginOptions) => {
       babelState = state
     },
 
-    // visitor: {
-    //   Program(path) {
-    //     const metas = []
-    //     const identifiers = new Set()
+    //  visitor: {
+    //     Program(programPath) {
+    //       const paths = []
+    //       programPath.traverse({
+    //         MetaProperty(metaPropertyPath) {
+    //           const metaPropertyNode = metaPropertyPath.node
+    //           if (!metaPropertyNode.meta) {
+    //             return
+    //           }
+    //           if (metaPropertyNode.meta.name !== "import") {
+    //             return
+    //           }
+    //           if (metaPropertyNode.property.name !== "meta") {
+    //             return
+    //           }
+    //           paths.push(metaPropertyPath)
+    //         },
+    //       })
 
-    //     path.traverse({
-    //       MetaProperty(path) {
-    //         const node = path.node
-    //         if (node.meta && node.meta.name === "import" && node.property.name === "meta") {
-    //           metas.push(path)
-    //           Object.keys(path.scope.getAllBindings()).forEach((name) => {
-    //             identifiers.add(name)
-    //           })
-    //         }
-    //       },
-    //     })
-
-    //     if (metas.length === 0) {
-    //       return
-    //     }
-    //   },
-    // },
+    //       const importAst = addNamespace(programPath, importMetaSpecifier)
+    //       paths.forEach((path) => {
+    //         path.replaceWith(importAst)
+    //       })
+    //     },
 
     visitor: {
       Program(programPath) {
@@ -73,14 +75,18 @@ export const babelPluginTransformImportMeta = (api, pluginOptions) => {
 
         Object.keys(metaPropertyPathMap).forEach((importMetaPropertyName) => {
           replaceImportMeta(importMetaPropertyName, {
-            replaceWithImport: ({ namespace, name, from }) => {
+            replaceWithImport: ({ namespace, name, from, nameHint }) => {
               let importAst
               if (namespace) {
-                importAst = addNamespace(programPath, from)
+                importAst = addNamespace(programPath, from, {
+                  nameHint,
+                })
               } else if (name) {
                 importAst = addNamed(programPath, name, from)
               } else {
-                importAst = addDefault(programPath, from)
+                importAst = addDefault(programPath, from, {
+                  nameHint,
+                })
               }
               metaPropertyPathMap[importMetaPropertyName].forEach((path) => {
                 path.replaceWith(importAst)

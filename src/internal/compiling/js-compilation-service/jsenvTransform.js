@@ -1,4 +1,5 @@
 /* eslint-disable import/max-dependencies */
+import { basename } from "path"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { minimalBabelPluginArray } from "@jsenv/core/src/internal/minimalBabelPluginArray.js"
 import { babelPluginTransformImportMeta } from "@jsenv/core/src/internal/babel-plugin-transform-import-meta.js"
@@ -97,13 +98,13 @@ export const jsenvTransform = async ({
             }
             if (importMetaFormat === "commonjs") {
               replaceWithImport({
-                from: `@jsenv/core/helpers/import-meta-url/import-meta-url-commonjs.js`,
+                from: `@jsenv/core/helpers/import-meta/import-meta-url-commonjs.js`,
               })
               return
             }
             if (importMetaFormat === "global") {
               replaceWithImport({
-                from: `@jsenv/core/helpers/import-meta-url/import-meta-url-global.js`,
+                from: `@jsenv/core/helpers/import-meta/import-meta-url-global.js`,
               })
               return
             }
@@ -124,7 +125,7 @@ export const jsenvTransform = async ({
                 message: `import.meta.resolve() not supported with commonjs format`,
               })
               // replaceWithImport({
-              //   from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-commonjs.js`,
+              //   from: `@jsenv/core/helpers/import-meta/import-meta-resolve-commonjs.js`,
               // })
               // return
             }
@@ -133,7 +134,7 @@ export const jsenvTransform = async ({
                 message: `import.meta.resolve() not supported with global format`,
               })
               // replaceWithImport({
-              //   from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-global.js`,
+              //   from: `@jsenv/core/helpers/import-meta/import-meta-resolve-global.js`,
               // })
               // return
             }
@@ -144,6 +145,7 @@ export const jsenvTransform = async ({
             replaceWithImport({
               namespace: true,
               from: importMetaEnvFileSpecifier,
+              nameHint: basename(importMetaEnvFileSpecifier),
             })
             return
           }
