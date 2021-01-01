@@ -112,6 +112,12 @@ export const createAssetBuilder = (
     await Promise.all(
       entryReference.target.dependencies.map(async (dependency) => {
         if (dependency.target.targetIsJsModule) {
+          // await internally for rollup to be done with these js files
+          // but don't await explicitely or rollup build cannot end
+          // because rollup would wait for this promise in "buildStart" hook
+          // and never go to the "generateBundle' hook where
+          // a js module ready promise gets resolved
+          dependency.target.getReadyPromise()
           return
         }
         await dependency.target.getReadyPromise()
@@ -442,7 +448,7 @@ export const createAssetBuilder = (
 
       const transform = assetTransformMap[targetUrl]
       if (typeof transform !== "function") {
-        target.targetBuildEnd(targetBuffer)
+        target.targetBuildEnd(target.targetBuffer)
         return
       }
 

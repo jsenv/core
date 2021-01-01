@@ -196,18 +196,7 @@ export const createJsenvRollupPlugin = async ({
   let fetchImportmap = fetchImportmapFromParameter
   let importMap
 
-  const emitAsset = ({ source, fileName }) => {
-    const buildRelativeUrl = fileName
-    if (useImportMapToImproveLongTermCaching || !urlVersioning) {
-      // sauf dans le cas ou cet asset est référence avec
-      // new URL(relativeUrl, import.meta.url)
-      // quoique le fix ce serais d'avoir cet asset dans les import maps
-      fileName = rollupFileNameWithoutHash(buildRelativeUrl)
-    } else {
-      fileName = buildRelativeUrl
-    }
-    addFileNameMapping(fileName, buildRelativeUrl)
-
+  const emitAsset = ({ fileName, source }) => {
     return rollupEmitFile({
       type: "asset",
       source,
@@ -753,9 +742,8 @@ export const createJsenvRollupPlugin = async ({
           return
         }
         const buildRelativeUrl = assetBuilder.getAssetBuildRelativeUrl(rollupFileId)
+        assetBuild[buildRelativeUrl] = file
         if (buildRelativeUrl) {
-          assetBuild[buildRelativeUrl] = file
-
           const originalProjectUrl = urlToOriginalProjectUrl(rollupFileId)
           const originalProjectRelativeUrl = urlToRelativeUrl(
             originalProjectUrl,
