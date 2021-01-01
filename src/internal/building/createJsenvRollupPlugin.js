@@ -97,12 +97,12 @@ export const createJsenvRollupPlugin = async ({
 
   // map fileName (build relative urls without hash) to build relative url
   let buildManifest = {}
-  const fileNameToBuildRelativeUrl = (fileName) => {
-    if (fileName in buildManifest) {
-      return buildManifest[fileName]
-    }
-    return null
-  }
+  // const fileNameToBuildRelativeUrl = (fileName) => {
+  //   if (fileName in buildManifest) {
+  //     return buildManifest[fileName]
+  //   }
+  //   return null
+  // }
   const buildRelativeUrlToFileName = (buildRelativeUrl) => {
     const fileName = Object.keys(buildManifest).find(
       (key) => buildManifest[key] === buildRelativeUrl,
@@ -505,13 +505,25 @@ export const createJsenvRollupPlugin = async ({
       return urlToUrlForRollup(importUrl)
     },
 
-    ...(format === "systemjs"
-      ? {
-          resolveFileUrl: ({ fileName }) => {
-            return `System.resolve("./${fileName}", module.meta.url)`
-          },
-        }
-      : {}),
+    resolveFileUrl: ({
+      // chunkId, moduleId, referenceId,
+      fileName,
+    }) => {
+      const buildRelativeUrl = assetBuilder.getAssetBuildRelativeUrl(fileName) || fileName
+      if (format === "esmodule") {
+        return `new URL("${buildRelativeUrl}", import.meta.url).href`
+      }
+      if (format === "systemjs") {
+        return `System.resolve("./${buildRelativeUrl}", module.meta.url)`
+      }
+      if (format === "global") {
+        return `new URL("${buildRelativeUrl}", document.currentScript && document.currentScript.src || document.baseURI).href`
+      }
+      if (format === "commonjs") {
+        return `new URL("${buildRelativeUrl}", "file:///" + __filename.replace(/\\/g, "/")).href`
+      }
+      return null
+    },
 
     // https://rollupjs.org/guide/en#resolvedynamicimport
     // resolveDynamicImport: (specifier, importer) => {
@@ -672,6 +684,25 @@ export const createJsenvRollupPlugin = async ({
         }
         addFileNameMapping(fileName, buildRelativeUrl)
         jsBuild[buildRelativeUrl] = file
+
+        const id = file.facadeModuleId
+        if (id) {
+          const originalProjectUrl = urlToOriginalProjectUrl(id)
+          const originalProjectRelativeUrl = urlToRelativeUrl(
+            originalProjectUrl,
+            projectDirectoryUrl,
+          )
+          buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
+        } else {
+          const sourcePath = file.map.sources[file.map.sources.length - 1]
+          const fileBuildUrl = resolveUrl(file.fileName, buildDirectoryUrl)
+          const originalProjectUrl = resolveUrl(sourcePath, fileBuildUrl)
+          const originalProjectRelativeUrl = urlToRelativeUrl(
+            originalProjectUrl,
+            projectDirectoryUrl,
+          )
+          buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
+        }
       })
 
       // it's important to do this to emit late asset
@@ -709,66 +740,38 @@ export const createJsenvRollupPlugin = async ({
       await assetBuilder.getAllAssetEntryEmittedPromise()
 
       const assetBuild = {}
-      const buildRelativeUrlsToClean = assetBuilder.getBuildRelativeUrlsToClean()
-      Object.keys(rollupResult).forEach((fileName) => {
-        const file = rollupResult[fileName]
+      Object.keys(rollupResult).forEach((rollupFileId) => {
+        const file = rollupResult[rollupFileId]
         if (file.type !== "asset") {
           return
         }
 
-        const buildRelativeUrl = fileNameToBuildRelativeUrl(fileName)
         // ignore potential useless assets which happens when:
         // - sourcemap re-emitted
         // - importmap re-emitted to have buildRelativeUrlMap
-        if (buildRelativeUrlsToClean.includes(buildRelativeUrl)) {
+        if (assetBuilder.getAssetUrlShouldBeIgnored(rollupFileId)) {
           return
         }
+        const buildRelativeUrl = assetBuilder.getAssetBuildRelativeUrl(rollupFileId)
+        if (buildRelativeUrl) {
+          assetBuild[buildRelativeUrl] = file
 
-        assetBuild[buildRelativeUrl] = file
+          const originalProjectUrl = urlToOriginalProjectUrl(rollupFileId)
+          const originalProjectRelativeUrl = urlToRelativeUrl(
+            originalProjectUrl,
+            projectDirectoryUrl,
+          )
+          buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
+        } else {
+          // the asset does not exists in the project it was generated during building
+          // ici il est possible de trouver un asset ayant été redirigé ailleurs (sourcemap)
+        }
       })
 
       rollupBuild = {
         ...jsBuild,
         ...assetBuild,
       }
-
-      Object.keys(rollupBuild).forEach((buildRelativeUrl) => {
-        const file = rollupBuild[buildRelativeUrl]
-
-        if (file.type === "chunk") {
-          const id = file.facadeModuleId
-          if (id) {
-            const originalProjectUrl = urlToOriginalProjectUrl(id)
-            const originalProjectRelativeUrl = urlToRelativeUrl(
-              originalProjectUrl,
-              projectDirectoryUrl,
-            )
-            buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
-          } else {
-            const sourcePath = file.map.sources[file.map.sources.length - 1]
-            const fileBuildUrl = resolveUrl(file.fileName, buildDirectoryUrl)
-            const originalProjectUrl = resolveUrl(sourcePath, fileBuildUrl)
-            const originalProjectRelativeUrl = urlToRelativeUrl(
-              originalProjectUrl,
-              projectDirectoryUrl,
-            )
-            buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
-          }
-        } else {
-          const assetUrl = assetBuilder.findAssetUrlByBuildRelativeUrl(buildRelativeUrl)
-          if (assetUrl) {
-            const originalProjectUrl = urlToOriginalProjectUrl(assetUrl)
-            const originalProjectRelativeUrl = urlToRelativeUrl(
-              originalProjectUrl,
-              projectDirectoryUrl,
-            )
-            buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
-          } else {
-            // the asset does not exists in the project it was generated during building
-            // ici il est possible de trouver un asset ayant été redirigé ailleurs (sourcemap)
-          }
-        }
-      })
 
       rollupBuild = sortObjectByPathnames(rollupBuild)
       buildManifest = sortObjectByPathnames(buildManifest)

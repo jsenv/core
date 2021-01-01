@@ -289,9 +289,6 @@ export const createAssetBuilder = (
   }
 
   const assetTransformMap = {}
-  // used to remove sourcemap files that are renamed after they are emitted
-  const buildRelativeUrlsToClean = []
-  const getBuildRelativeUrlsToClean = () => buildRelativeUrlsToClean
 
   const createTarget = ({
     importerReference,
@@ -512,9 +509,7 @@ export const createAssetBuilder = (
     })
 
     const remove = () => {
-      if (target.targetBuildRelativeUrl) {
-        buildRelativeUrlsToClean.push(target.targetBuildRelativeUrl)
-      }
+      target.shouldBeIgnored = true
     }
 
     const targetBuildEnd = (targetBuildBuffer, targetBuildRelativeUrl) => {
@@ -559,9 +554,8 @@ export const createAssetBuilder = (
       // nothing to do
     } else {
       logger.debug(`emit asset for ${shortenUrl(targetUrl)}`)
-      const fileName = target.targetRelativeUrl
       const rollupReferenceId = emitAsset({
-        fileName,
+        fileName: targetUrl,
       })
       target.rollupReferenceId = rollupReferenceId
     }
@@ -593,11 +587,21 @@ export const createAssetBuilder = (
     return null
   }
 
-  const findAssetUrlByBuildRelativeUrl = (buildRelativeUrl) => {
-    const assetUrl = Object.keys(targetMap).find(
-      (url) => targetMap[url].targetBuildRelativeUrl === buildRelativeUrl,
-    )
-    return assetUrl
+  const getAssetBuildRelativeUrl = (assetUrl) => {
+    const target = targetMap[assetUrl]
+    if (target) {
+      return target.targetBuildRelativeUrl
+    }
+    return null
+  }
+
+  // used to remove sourcemap files that are renamed after they are emitted
+  const getAssetUrlShouldBeIgnored = (assetUrl) => {
+    const target = targetMap[assetUrl]
+    if (target) {
+      return target.shouldBeIgnored
+    }
+    return false
   }
 
   const shortenUrl = (url) => {
@@ -639,8 +643,8 @@ ${showSourceLocation(referenceSourceAsString, {
 
     getRollupChunkReadyCallbackMap,
     getAllAssetEntryEmittedPromise,
-    getBuildRelativeUrlsToClean,
-    findAssetUrlByBuildRelativeUrl,
+    getAssetUrlShouldBeIgnored,
+    getAssetBuildRelativeUrl,
 
     inspect: () => {
       return {
