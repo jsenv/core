@@ -680,34 +680,36 @@ export const createJsenvRollupPlugin = async ({
       const jsBuild = {}
       Object.keys(rollupResult).forEach((fileName) => {
         const file = rollupResult[fileName]
-        if (file.type === "chunk" && file.facadeModuleId === EMPTY_CHUNK_URL) {
+        if (file.type !== "chunk") {
           return
         }
 
-        if (file.type === "chunk") {
-          let buildRelativeUrl
-          const canBeHashed = file.facadeModuleId in jsModulesInHtml || !file.isEntry
-          if (urlVersioning && useImportMapToImproveLongTermCaching) {
-            if (canBeHashed) {
-              buildRelativeUrl = computeBuildRelativeUrl(
-                resolveUrl(fileName, buildDirectoryUrl),
-                file.code,
-                `[name]-[hash][extname]`,
-              )
-            } else {
-              buildRelativeUrl = fileName
-            }
+        if (file.facadeModuleId === EMPTY_CHUNK_URL) {
+          return
+        }
+
+        let buildRelativeUrl
+        const canBeHashed = file.facadeModuleId in jsModulesInHtml || !file.isEntry
+        if (urlVersioning && useImportMapToImproveLongTermCaching) {
+          if (canBeHashed) {
+            buildRelativeUrl = computeBuildRelativeUrl(
+              resolveUrl(fileName, buildDirectoryUrl),
+              file.code,
+              `[name]-[hash][extname]`,
+            )
           } else {
             buildRelativeUrl = fileName
-            fileName = rollupFileNameWithoutHash(fileName)
           }
-
-          if (canBeHashed) {
-            markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
-          }
-          addFileNameMapping(fileName, buildRelativeUrl)
-          jsBuild[buildRelativeUrl] = file
+        } else {
+          buildRelativeUrl = fileName
+          fileName = rollupFileNameWithoutHash(fileName)
         }
+
+        if (canBeHashed) {
+          markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
+        }
+        addFileNameMapping(fileName, buildRelativeUrl)
+        jsBuild[buildRelativeUrl] = file
       })
 
       // it's important to do this to emit late asset
