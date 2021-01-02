@@ -514,6 +514,7 @@ export const createAssetBuilder = (
       })
     })
 
+    // used to remove sourcemap files that are renamed after they are emitted
     const remove = () => {
       target.shouldBeIgnored = true
     }
@@ -593,21 +594,8 @@ export const createAssetBuilder = (
     return null
   }
 
-  const getAssetBuildRelativeUrl = (assetUrl) => {
-    const target = targetMap[assetUrl]
-    if (target) {
-      return target.targetBuildRelativeUrl
-    }
-    return null
-  }
-
-  // used to remove sourcemap files that are renamed after they are emitted
-  const getAssetUrlShouldBeIgnored = (assetUrl) => {
-    const target = targetMap[assetUrl]
-    if (target) {
-      return target.shouldBeIgnored
-    }
-    return false
+  const getAssetByUrl = (assetUrl) => {
+    return targetMap[assetUrl] || null
   }
 
   const shortenUrl = (url) => {
@@ -649,8 +637,7 @@ ${showSourceLocation(referenceSourceAsString, {
 
     getRollupChunkReadyCallbackMap,
     getAllAssetEntryEmittedPromise,
-    getAssetUrlShouldBeIgnored,
-    getAssetBuildRelativeUrl,
+    getAssetByUrl,
 
     inspect: () => {
       return {
