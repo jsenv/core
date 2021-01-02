@@ -424,7 +424,7 @@ if (import.meta.dev) {
 
 </details>
 
-> The list above is non exaustive, there is more like long term caching, livereloading without configuration, service worker/worker support, ...
+The list above is non exaustive, there is more like long term caching, livereloading without configuration, service worker/worker support, ...
 
 # Installation
 
@@ -541,8 +541,6 @@ See also
 ## Name
 
 The name `jsenv` stands for JavaScript environments. This is because the original purpose of `jsenv` was to blur the differences between two JavaScript runtimes: web browsers and Node.js. This aspect of `jsenv` is not highlighted in the documentation but it exists.
-
-A more accurate name would be `jsruntime` but `jsenv` is lovely.
 
 Maybe `jsenv` should be written `JSEnv`? It's too boring to hold `shift` on keyboard while typing `JSE`, then release `shift`, then type `nv`, so it's a no.
 
