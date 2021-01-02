@@ -1,3 +1,3 @@
 var value = 42;
 window.whatever = value;
-// # sourceMappingURL=index.js.map
+// # sourceMappingURL=index.es5.js.map
