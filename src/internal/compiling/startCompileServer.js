@@ -46,7 +46,8 @@ export const startCompileServer = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
-  importMetaEnvFileRelativeUrl = "env.js",
+  importMetaDev = false,
+  importMetaEnvFileRelativeUrl,
   importMeta = {},
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
@@ -141,6 +142,11 @@ export const startCompileServer = async ({
     groupCount: compileGroupCount,
     runtimeAlwaysInsideRuntimeScoreMap,
   })
+
+  importMeta = {
+    dev: importMetaDev,
+    ...importMeta,
+  }
 
   await setupOutDirectory(outDirectoryUrl, {
     logger,
@@ -362,7 +368,7 @@ const setupOutDirectory = async (
   },
 ) => {
   if (jsenvDirectoryClean) {
-    logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`)
+    logger.info(`Cleaning jsenv directory because jsenvDirectoryClean parameter enabled`)
     await ensureEmptyDirectory(jsenvDirectoryUrl)
   }
   if (useFilesystemAsCache) {
@@ -394,11 +400,21 @@ const setupOutDirectory = async (
     }
 
     if (previousOutDirectoryMeta !== null) {
-      const previousMetaString = JSON.stringify(previousOutDirectoryMeta, null, "  ")
-      const metaString = JSON.stringify(outDirectoryMeta, null, "  ")
-      if (previousMetaString !== metaString) {
+      const outDirectoryChanges = getOutDirectoryChanges(previousOutDirectoryMeta, outDirectoryMeta)
+
+      if (outDirectoryChanges) {
         if (!jsenvDirectoryClean) {
-          logger.warn(`clean out directory at ${urlToFileSystemPath(outDirectoryUrl)}`)
+          logger.warn(
+            createDetailedMessage(
+              `Cleaning jsenv out directory because configuration has changed.`,
+              {
+                "changes": outDirectoryChanges.namedChanges
+                  ? outDirectoryChanges.namedChanges
+                  : `something`,
+                "out directory": urlToFileSystemPath(outDirectoryUrl),
+              },
+            ),
+          )
         }
         await ensureEmptyDirectory(outDirectoryUrl)
       }
@@ -406,6 +422,33 @@ const setupOutDirectory = async (
 
     await writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "))
   }
+}
+
+const getOutDirectoryChanges = (previousOutDirectoryMeta, outDirectoryMeta) => {
+  const changes = []
+
+  Object.keys(outDirectoryMeta).forEach((key) => {
+    const now = outDirectoryMeta[key]
+    const previous = previousOutDirectoryMeta[key]
+    if (!compareValueJson(now, previous)) {
+      changes.push(key)
+    }
+  })
+
+  if (changes.length > 0) {
+    return { namedChanges: changes }
+  }
+
+  // in case basic comparison from above is not enough
+  if (!compareValueJson(previousOutDirectoryMeta, outDirectoryMeta)) {
+    return { somethingChanged: true }
+  }
+
+  return null
+}
+
+const compareValueJson = (left, right) => {
+  return JSON.stringify(left) === JSON.stringify(right)
 }
 
 // eslint-disable-next-line valid-jsdoc

@@ -328,7 +328,7 @@ const { startMs, endMs } = await execute({
 import { execute } from "@jsenv/core"
 
 const { runtimeName } = await execute({
-  projectDirectoryUrl: new URL('./', import.meta.url),
+  projectDirectoryUrl: new URL("./", import.meta.url),
   fileRelativeUrl: "./index.js",
   collectRuntimeName: true, // without this runtimeName is undefined
 })

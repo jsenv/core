@@ -138,6 +138,10 @@ const computeInputRelativePath = (url, projectDirectoryUrl) => {
 }
 
 const relativeUrlToSpecifier = (relativeUrl) => {
+  if (relativeUrl.startsWith("data:")) return relativeUrl
+  if (relativeUrl.startsWith("http:")) return relativeUrl
+  if (relativeUrl.startsWith("https:")) return relativeUrl
+  if (relativeUrl.startsWith("file:")) return relativeUrl
   if (relativeUrl.startsWith("../")) return relativeUrl
   if (relativeUrl.startsWith("./")) return relativeUrl
   return `./${relativeUrl}`

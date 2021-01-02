@@ -1,4 +1,3 @@
-import { composeTwoImportMaps } from "@jsenv/import-map"
 import {
   parseHtmlString,
   htmlAstContains,
@@ -91,16 +90,6 @@ export const parseTarget = (
 
         return htmlAst
       },
-      transformImportmapTarget: (importmapTarget) => {
-        if (!useImportMapToImproveLongTermCaching) {
-          return
-        }
-        injectImportedFilesIntoImportMapTarget(
-          importmapTarget,
-          createImportMapForFilesUsedInJs(),
-          minify,
-        )
-      },
     })
   }
 
@@ -113,7 +102,12 @@ export const parseTarget = (
   }
 
   if (targetContentType === "application/importmap+json") {
-    return parseImportmapAsset(target, notifiers, { minify })
+    return parseImportmapAsset(target, notifiers, {
+      minify,
+      importMapToInject: useImportMapToImproveLongTermCaching
+        ? createImportMapForFilesUsedInJs()
+        : undefined,
+    })
   }
 
   if (
@@ -141,18 +135,4 @@ export const parseTarget = (
   }
 
   return null
-}
-
-const injectImportedFilesIntoImportMapTarget = (importmapTarget, importMapToInject, minify) => {
-  const { targetBufferAfterTransformation } = importmapTarget
-
-  const importmapOriginal = JSON.parse(targetBufferAfterTransformation)
-  const importmapFinal = composeTwoImportMaps(importmapOriginal, importMapToInject)
-  const importmapFinalContent = minify
-    ? JSON.stringify(importmapFinal)
-    : JSON.stringify(importmapFinal, null, "  ")
-
-  importmapTarget.updateOnceReady({
-    targetBufferAfterTransformation: importmapFinalContent,
-  })
 }

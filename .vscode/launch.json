@@ -42,7 +42,7 @@
         // force-array-multiline
         // "node_modules/**",
         "node_modules/@babel/template/**",
-        "node_modules/@dmail/cancellation/**",
+        "node_modules/@jsenv/cancellation/**",
         "node_modules/@rollup/**",
         "node_modules/playwright/**",
         "node_modules/playwright-chromium/**",

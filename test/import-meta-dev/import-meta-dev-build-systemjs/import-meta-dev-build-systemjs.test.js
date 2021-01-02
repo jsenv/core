@@ -19,7 +19,6 @@ const { buildManifest } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  importMetaEnvFileRelativeUrl: `${testDirectoryRelativeUrl}env.js`,
   entryPointMap,
 })
 const actual = buildManifest

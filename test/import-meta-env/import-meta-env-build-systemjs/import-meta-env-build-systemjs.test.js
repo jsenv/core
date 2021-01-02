@@ -23,7 +23,7 @@ await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  importMetaEnvFileRelativeUrl: `${testDirectoryRelativeUrl}env.js`,
+  importMetaEnvFileRelativeUrlForBuild: `${testDirectoryRelativeUrl}env.js`,
   entryPointMap,
 })
 const { namespace: actual, serverOrigin } = await browserImportSystemJsBuild({

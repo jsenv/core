@@ -1116,23 +1116,23 @@ const arrayWithoutValue = (array, value) => array.filter(valueCandidate => value
 const jsenvBrowserScoreMap = {
   android: 0.001,
   chrome: {
-    "71": 0.3,
-    "69": 0.19,
-    "0": 0.01 // it means oldest version of chrome will get a score of 0.01
+    71: 0.3,
+    69: 0.19,
+    0: 0.01 // it means oldest version of chrome will get a score of 0.01
 
   },
   firefox: {
-    "61": 0.3
+    61: 0.3
   },
   edge: {
-    "12": 0.1
+    12: 0.1
   },
   electron: 0.001,
   ios: 0.001,
   opera: 0.001,
   other: 0.001,
   safari: {
-    "10": 0.1
+    10: 0.1
   }
 };
 
@@ -1140,13 +1140,13 @@ const jsenvBrowserScoreMap = {
 const jsenvNodeVersionScoreMap = {
   "0.10": 0.02,
   "0.12": 0.01,
-  4: 0.1,
-  6: 0.25,
-  7: 0.1,
-  8: 1,
-  9: 0.1,
-  10: 0.5,
-  11: 0.25
+  "4": 0.1,
+  "6": 0.25,
+  "7": 0.1,
+  "8": 1,
+  "9": 0.1,
+  "10": 0.5,
+  "11": 0.25
 };
 
 const require$1 = module$1.createRequire(url);
@@ -2673,26 +2673,29 @@ const babelPluginTransformImportMeta = (api, pluginOptions) => {
     pre: state => {
       babelState = state;
     },
-    // visitor: {
-    //   Program(path) {
-    //     const metas = []
-    //     const identifiers = new Set()
-    //     path.traverse({
-    //       MetaProperty(path) {
-    //         const node = path.node
-    //         if (node.meta && node.meta.name === "import" && node.property.name === "meta") {
-    //           metas.push(path)
-    //           Object.keys(path.scope.getAllBindings()).forEach((name) => {
-    //             identifiers.add(name)
-    //           })
-    //         }
-    //       },
-    //     })
-    //     if (metas.length === 0) {
-    //       return
-    //     }
-    //   },
-    // },
+    //  visitor: {
+    //     Program(programPath) {
+    //       const paths = []
+    //       programPath.traverse({
+    //         MetaProperty(metaPropertyPath) {
+    //           const metaPropertyNode = metaPropertyPath.node
+    //           if (!metaPropertyNode.meta) {
+    //             return
+    //           }
+    //           if (metaPropertyNode.meta.name !== "import") {
+    //             return
+    //           }
+    //           if (metaPropertyNode.property.name !== "meta") {
+    //             return
+    //           }
+    //           paths.push(metaPropertyPath)
+    //         },
+    //       })
+    //       const importAst = addNamespace(programPath, importMetaSpecifier)
+    //       paths.forEach((path) => {
+    //         path.replaceWith(importAst)
+    //       })
+    //     },
     visitor: {
       Program(programPath) {
         const metaPropertyPathMap = {};
@@ -2737,16 +2740,21 @@ const babelPluginTransformImportMeta = (api, pluginOptions) => {
             replaceWithImport: ({
               namespace,
               name,
-              from
+              from,
+              nameHint
             }) => {
               let importAst;
 
               if (namespace) {
-                importAst = addNamespace(programPath, from);
+                importAst = addNamespace(programPath, from, {
+                  nameHint
+                });
               } else if (name) {
                 importAst = addNamed(programPath, name, from);
               } else {
-                importAst = addDefault(programPath, from);
+                importAst = addDefault(programPath, from, {
+                  nameHint
+                });
               }
 
               metaPropertyPathMap[importMetaPropertyName].forEach(path => {
@@ -2754,7 +2762,8 @@ const babelPluginTransformImportMeta = (api, pluginOptions) => {
               });
             },
             replaceWithValue: value => {
-              const valueAst = jsValueToAst(JSON.stringify(value));
+              const valueAst = jsValueToAst( // eslint-disable-next-line no-nested-ternary
+              value === undefined ? "undefined" : value === null ? "null" : JSON.stringify(value));
               metaPropertyPathMap[importMetaPropertyName].forEach(path => {
                 path.replaceWith(valueAst);
               });
@@ -3026,14 +3035,14 @@ const jsenvTransform = async ({
 
           if (importMetaFormat === "commonjs") {
             replaceWithImport({
-              from: `@jsenv/core/helpers/import-meta-url/import-meta-url-commonjs.js`
+              from: `@jsenv/core/helpers/import-meta/import-meta-url-commonjs.js`
             });
             return;
           }
 
           if (importMetaFormat === "global") {
             replaceWithImport({
-              from: `@jsenv/core/helpers/import-meta-url/import-meta-url-global.js`
+              from: `@jsenv/core/helpers/import-meta/import-meta-url-global.js`
             });
             return;
           }
@@ -3056,7 +3065,7 @@ const jsenvTransform = async ({
             throw createParseError({
               message: `import.meta.resolve() not supported with commonjs format`
             }); // replaceWithImport({
-            //   from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-commonjs.js`,
+            //   from: `@jsenv/core/helpers/import-meta/import-meta-resolve-commonjs.js`,
             // })
             // return
           }
@@ -3065,7 +3074,7 @@ const jsenvTransform = async ({
             throw createParseError({
               message: `import.meta.resolve() not supported with global format`
             }); // replaceWithImport({
-            //   from: `@jsenv/core/helpers/import-meta-resolve/import-meta-resolve-global.js`,
+            //   from: `@jsenv/core/helpers/import-meta/import-meta-resolve-global.js`,
             // })
             // return
           }
@@ -3076,7 +3085,8 @@ const jsenvTransform = async ({
         if (metaPropertyName === "env") {
           replaceWithImport({
             namespace: true,
-            from: importMetaEnvFileSpecifier
+            from: importMetaEnvFileSpecifier,
+            nameHint: path.basename(importMetaEnvFileSpecifier)
           });
           return;
         }
@@ -3326,6 +3336,10 @@ const computeInputRelativePath = (url, projectDirectoryUrl) => {
 };
 
 const relativeUrlToSpecifier = relativeUrl => {
+  if (relativeUrl.startsWith("data:")) return relativeUrl;
+  if (relativeUrl.startsWith("http:")) return relativeUrl;
+  if (relativeUrl.startsWith("https:")) return relativeUrl;
+  if (relativeUrl.startsWith("file:")) return relativeUrl;
   if (relativeUrl.startsWith("../")) return relativeUrl;
   if (relativeUrl.startsWith("./")) return relativeUrl;
   return `./${relativeUrl}`;
@@ -3837,11 +3851,11 @@ const dataToBase64 = typeof window === "object" ? window.atob : data => Buffer.f
 const base64ToString = typeof window === "object" ? window.btoa : base64String => Buffer.from(base64String, "base64").toString("utf8");
 
 const getTargetAsBase64Url = ({
-  targetBufferAfterTransformation,
+  targetBuildBuffer,
   targetContentType
 }) => {
   return stringifyDataUrl({
-    data: targetBufferAfterTransformation,
+    data: targetBuildBuffer,
     base64Flag: true,
     mediaType: targetContentType
   });
@@ -4070,10 +4084,7 @@ const parseSvgAsset = async (svgTarget, notifiers, {
     });
     const svgAfterTransformation = stringifyHtmlAst(svgAst); // could also benefit of minification https://github.com/svg/svgo
 
-    const targetBufferAfterTransformation = minify ? minifyHtml(svgAfterTransformation, minifyHtmlOptions) : svgAfterTransformation;
-    return {
-      targetBufferAfterTransformation
-    };
+    return minify ? minifyHtml(svgAfterTransformation, minifyHtmlOptions) : svgAfterTransformation;
   };
 };
 const collectSvgMutations = ({
@@ -4169,7 +4180,6 @@ Or be sure to also reference this url somewhere in the html file like
 const parseHtmlAsset = async (htmlTarget, notifiers, {
   minify,
   minifyHtmlOptions,
-  transformImportmapTarget = () => {},
   htmlStringToHtmlAst = htmlString => parseHtmlString(htmlString),
   htmlAstToHtmlString = htmlAst => stringifyHtmlAst(htmlAst)
 } = {}) => {
@@ -4202,15 +4212,11 @@ const parseHtmlAsset = async (htmlTarget, notifiers, {
   const htmlMutations = [...scriptsMutations, ...linksMutations, ...stylesMutations, ...imgsSrcMutations, ...imgsSrcsetMutations, ...sourcesSrcMutations, ...sourcesSrcsetMutations, ...svgMutations];
   return async params => {
     htmlMutations.forEach(mutationCallback => {
-      mutationCallback({ ...params,
-        transformImportmapTarget
+      mutationCallback({ ...params
       });
     });
     const htmlAfterTransformation = htmlAstToHtmlString(htmlAst);
-    const targetBufferAfterTransformation = minify ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions) : htmlAfterTransformation;
-    return {
-      targetBufferAfterTransformation
-    };
+    return minify ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions) : htmlAfterTransformation;
   };
 };
 
@@ -4244,9 +4250,9 @@ const regularScriptSrcVisitor = (script, {
     if (targetIsInline) {
       removeHtmlNodeAttribute(script, srcAttribute);
       const {
-        targetBufferAfterTransformation
+        targetBuildBuffer
       } = remoteScriptReference.target;
-      setHtmlNodeText(script, targetBufferAfterTransformation);
+      setHtmlNodeText(script, targetBuildBuffer);
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference);
       srcAttribute.value = urlRelativeToImporter;
@@ -4285,9 +4291,9 @@ const regularScriptTextNodeVisitor = (script, {
   });
   return () => {
     const {
-      targetBufferAfterTransformation
+      targetBuildBuffer
     } = jsReference.target;
-    textNode.value = targetBufferAfterTransformation;
+    textNode.value = targetBuildBuffer;
   };
 };
 
@@ -4419,14 +4425,12 @@ const importmapScriptSrcVisitor = (script, {
     }
   });
   return ({
-    getReferenceUrlRelativeToImporter,
-    transformImportmapTarget
+    getReferenceUrlRelativeToImporter
   }) => {
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-importmap";
     }
 
-    transformImportmapTarget(importmapReference.target);
     const {
       targetIsInline
     } = importmapReference.target;
@@ -4436,9 +4440,9 @@ const importmapScriptSrcVisitor = (script, {
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute);
       const {
-        targetBufferAfterTransformation
+        targetBuildBuffer
       } = importmapReference.target;
-      setHtmlNodeText(script, targetBufferAfterTransformation);
+      setHtmlNodeText(script, targetBuildBuffer);
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(importmapReference);
       srcAttribute.value = urlRelativeToImporter;
@@ -4480,18 +4484,15 @@ const importmapScriptTextNodeVisitor = (script, {
     targetBuffer: Buffer.from(textNode.value),
     targetIsInline: true
   });
-  return ({
-    transformImportmapTarget
-  }) => {
+  return () => {
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-importmap";
     }
 
-    transformImportmapTarget(importmapReference.target);
     const {
-      targetBufferAfterTransformation
+      targetBuildBuffer
     } = importmapReference.target;
-    textNode.value = targetBufferAfterTransformation;
+    textNode.value = targetBuildBuffer;
   };
 };
 
@@ -4528,9 +4529,9 @@ const linkStylesheetHrefVisitor = (link, {
 
     if (targetIsInline) {
       const {
-        targetBufferAfterTransformation
+        targetBuildBuffer
       } = cssReference.target;
-      replaceHtmlNode(link, `<style>${targetBufferAfterTransformation}</style>`);
+      replaceHtmlNode(link, `<style>${targetBuildBuffer}</style>`);
     } else {
       const urlRelativeToImporter = getReferenceUrlRelativeToImporter(cssReference);
       hrefAttribute.value = urlRelativeToImporter;
@@ -4607,9 +4608,9 @@ const styleTextNodeVisitor = (style, {
   });
   return () => {
     const {
-      targetBufferAfterTransformation
+      targetBuildBuffer
     } = inlineStyleReference.target;
-    textNode.value = targetBufferAfterTransformation;
+    textNode.value = targetBuildBuffer;
   };
 };
 
@@ -4712,18 +4713,25 @@ const ensureRelativeUrlNotation = relativeUrl => {
 };
 
 const parseImportmapAsset = (importmapTarget, notifiers, {
-  minify
+  minify,
+  importMapToInject
 }) => {
   const importmapString = String(importmapTarget.targetBuffer);
   return () => {
-    if (minify) {
-      // this is to remove eventual whitespaces
-      return JSON.stringify(JSON.parse(importmapString));
+    if (importMapToInject) {
+      const importmapOriginal = JSON.parse(importmapString);
+      const importmapFinal = importMap.composeTwoImportMaps(importmapOriginal, importMapToInject);
+      return minify ? valueToCompactJsonString(importmapFinal) : valueToReadableJsonString(importmapFinal);
     }
 
-    return importmapString;
+    return minify ? valueToCompactJsonString(JSON.parse(importmapString)) : importmapString;
   };
-};
+}; // removes eventual whitespace in json
+
+const valueToCompactJsonString = json => JSON.stringify(json); // prefer a readable json when minification is disabled
+
+
+const valueToReadableJsonString = json => JSON.stringify(json, null, "  ");
 
 const applyPostCss = async (cssString, cssUrl, plugins, // https://github.com/postcss/postcss#options
 options = {}) => {
@@ -5114,7 +5122,7 @@ const parseCssAsset = async (cssTarget, {
       cssMinificationOptions: minifyCssOptions,
       // https://postcss.org/api/#sourcemapoptions
       sourcemapOptions: sourcemapReference ? {
-        prev: String(sourcemapReference.target.targetBufferAfterTransformation)
+        prev: String(sourcemapReference.target.targetBuildBuffer)
       } : {}
     });
     const code = cssReplaceResult.css;
@@ -5153,20 +5161,18 @@ const parseCssAsset = async (cssTarget, {
       const buildRelativeUrl = util.urlToRelativeUrl(mapBuildUrl, buildDirectoryUrl);
 
       if (sourcemapReference) {
-        sourcemapReference.target.updateOnceReady({
-          targetBufferAfterTransformation: mapSource,
-          buildRelativeUrl
-        });
+        sourcemapReference.target.targetBuildRelativeUrl = buildRelativeUrl;
+        sourcemapReference.target.targetBuildBuffer = mapSource;
       } else {
         emitAsset({
-          source: mapSource,
-          fileName: buildRelativeUrl
+          fileName: buildRelativeUrl,
+          source: mapSource
         });
       }
     });
     return {
-      targetBufferAfterTransformation: cssSourceAfterTransformation,
-      targetBuildRelativeUrl: cssBuildRelativeUrl
+      targetBuildRelativeUrl: cssBuildRelativeUrl,
+      targetBuildBuffer: cssSourceAfterTransformation
     };
   };
 };
@@ -5257,7 +5263,7 @@ const parseJsAsset = async (jsTarget, {
     let map;
 
     if (sourcemapReference) {
-      const sourcemapString = String(sourcemapReference.target.targetBufferAfterTransformation);
+      const sourcemapString = String(sourcemapReference.target.targetBuildBuffer);
       map = JSON.parse(sourcemapString);
     } // in case this js asset is a worker, bundle it so that:
     // importScripts are inlined which is good for:
@@ -5324,24 +5330,18 @@ const parseJsAsset = async (jsTarget, {
         const buildRelativeUrl = util.urlToRelativeUrl(mapBuildUrl, buildDirectoryUrl);
 
         if (sourcemapReference) {
-          // redirect original sourcemap from build to a new file
-          // we'll need to remove the old asset from rollup build
-          // and emit a new one instead
-          // when finding this asset in the rollup build we'll have to remove it
-          sourcemapReference.target.updateOnceReady({
-            targetBufferAfterTransformation: mapSource,
-            buildRelativeUrl
-          });
+          sourcemapReference.target.targetBuildRelativeUrl = buildRelativeUrl;
+          sourcemapReference.target.targetBuildBuffer = mapSource;
         } else {
           emitAsset({
-            source: mapSource,
-            fileName: buildRelativeUrl
+            fileName: buildRelativeUrl,
+            source: mapSource
           });
         }
       });
       return {
-        targetBufferAfterTransformation: jsSourceAfterTransformation,
-        targetBuildRelativeUrl: jsBuildRelativeUrl
+        targetBuildRelativeUrl: jsBuildRelativeUrl,
+        targetBuildBuffer: jsSourceAfterTransformation
       };
     }
 
@@ -5480,13 +5480,6 @@ const parseTarget = (target, notifiers, {
         injectSystemJsScriptIfNeeded(htmlAst);
         injectImportMapScriptIfNeeded(htmlAst);
         return htmlAst;
-      },
-      transformImportmapTarget: importmapTarget => {
-        if (!useImportMapToImproveLongTermCaching) {
-          return;
-        }
-
-        injectImportedFilesIntoImportMapTarget(importmapTarget, createImportMapForFilesUsedInJs(), minify);
       }
     });
   }
@@ -5501,7 +5494,8 @@ const parseTarget = (target, notifiers, {
 
   if (targetContentType === "application/importmap+json") {
     return parseImportmapAsset(target, notifiers, {
-      minify
+      minify,
+      importMapToInject: useImportMapToImproveLongTermCaching ? createImportMapForFilesUsedInJs() : undefined
     });
   }
 
@@ -5534,18 +5528,6 @@ const parseTarget = (target, notifiers, {
   }
 
   return null;
-};
-
-const injectImportedFilesIntoImportMapTarget = (importmapTarget, importMapToInject, minify) => {
-  const {
-    targetBufferAfterTransformation
-  } = importmapTarget;
-  const importmapOriginal = JSON.parse(targetBufferAfterTransformation);
-  const importmapFinal = importMap.composeTwoImportMaps(importmapOriginal, importMapToInject);
-  const importmapFinalContent = minify ? JSON.stringify(importmapFinal) : JSON.stringify(importmapFinal, null, "  ");
-  importmapTarget.updateOnceReady({
-    targetBufferAfterTransformation: importmapFinalContent
-  });
 };
 
 const cross = "☓"; // "\u2613"
@@ -5799,7 +5781,7 @@ const generateContentHash = stringOrBuffer => {
 };
 
 const computeBuildRelativeUrlForTarget = target => {
-  return computeBuildRelativeUrl(target.targetUrl, target.targetBufferAfterTransformation, targetToFileNamePattern(target));
+  return computeBuildRelativeUrl(target.targetUrl, target.targetBuildBuffer, targetToFileNamePattern(target));
 };
 const assetFileNamePattern = "assets/[name]-[hash][extname]";
 const assetFileNamePatternWithoutHash = "assets/[name][extname]";
@@ -5824,14 +5806,14 @@ const targetToFileNamePattern = target => {
   return assetFileNamePattern;
 };
 
-const precomputeBuildRelativeUrlForTarget = (target, targetBufferAfterTransformation = "") => {
+const precomputeBuildRelativeUrlForTarget = (target, targetBuildBuffer = "") => {
   if (target.targetBuildRelativeUrl) {
     return target.targetBuildRelativeUrl;
   }
 
-  target.targetBufferAfterTransformation = targetBufferAfterTransformation;
+  target.targetBuildBuffer = targetBuildBuffer;
   const precomputedBuildRelativeUrl = computeBuildRelativeUrlForTarget(target);
-  target.targetBufferAfterTransformation = undefined;
+  target.targetBuildBuffer = undefined;
   return precomputedBuildRelativeUrl;
 };
 
@@ -5877,9 +5859,12 @@ const createAssetBuilder = ({
   buildDirectoryRelativeUrl,
   urlToFileUrl,
   // get a file url from an eventual http url
+  urlToCompiledUrl,
   loadUrl = () => null,
+  emitChunk,
   emitAsset,
-  connectTarget = () => {},
+  setAssetSource,
+  onJsModuleReferencedInHtml = () => {},
   resolveTargetUrl = ({
     targetSpecifier,
     importerUrl
@@ -5914,11 +5899,30 @@ const createAssetBuilder = ({
       targetUrlVersioningDisabled: true,
       targetFileNamePattern: entryBuildRelativeUrl
     });
-    await entryReference.target.getDependenciesAvailablePromise(); // start to wait internally for eventual chunks
-    // but don't await here because this function will be awaited by rollup before starting
-    // to parse chunks
+    await entryReference.target.getDependenciesAvailablePromise(); // on await que les assets, pour le js rollup s'en occupe
 
-    entryReference.target.getReadyPromise();
+    await Promise.all(entryReference.target.dependencies.map(async dependency => {
+      if (dependency.referenceExpectedContentType === "application/importmap+json") {
+        // don't await for importmap right away, it must be handled as the very last asset
+        // to be aware of build mappings.
+        // getReadyPromise() for that importmap will be called during getAllAssetEntryEmittedPromise
+        // (a simpler approach could keep importmap untouched and override it late
+        // (but that means updating html hash and importmap hash)
+        return;
+      }
+
+      if (dependency.target.targetIsJsModule) {
+        // await internally for rollup to be done with these js files
+        // but don't await explicitely or rollup build cannot end
+        // because rollup would wait for this promise in "buildStart" hook
+        // and never go to the "generateBundle' hook where
+        // a js module ready promise gets resolved
+        dependency.target.getReadyPromise();
+        return;
+      }
+
+      await dependency.target.getReadyPromise();
+    }));
   };
 
   const createReferenceForJs = async ({
@@ -5938,7 +5942,7 @@ const createAssetBuilder = ({
       targetContentType,
       targetBuffer
     });
-    await reference.target.getRollupReferenceIdAvailablePromise();
+    await reference.target.getReadyPromise();
     return reference;
   };
 
@@ -5946,7 +5950,7 @@ const createAssetBuilder = ({
     const urlToWait = Object.keys(targetMap).filter(url => targetMap[url].targetIsEntry);
     return Promise.all(urlToWait.map(async url => {
       const target = targetMap[url];
-      await target.getRollupReferenceIdAvailablePromise();
+      await target.getReadyPromise();
       return target;
     }));
   };
@@ -5974,14 +5978,14 @@ const createAssetBuilder = ({
       targetIsEntry: false,
       // maybe
       targetIsJsModule: true,
-      targetBufferAfterTransformation: ""
+      targetBuildBuffer: ""
     }; // for now we can only emit a chunk from an entry file as visible in
     // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
     // https://github.com/rollup/rollup/issues/2872
 
     if (targetIsJsModule && !importerTarget.targetIsEntry) {
       // it's not really possible
-      logger$1.warn(`ignoring js reference found in an asset (it's only possible to reference js from entry asset)`);
+      logger$1.warn(`ignoring js reference found in an asset (js can be referenced only from an html entry point)`);
       return null;
     }
 
@@ -6043,6 +6047,7 @@ const createAssetBuilder = ({
       connectReferenceAndTarget(reference, existingTarget);
     } else {
       const target = createTarget({
+        importerReference: reference,
         targetContentType,
         targetUrl,
         targetBuffer,
@@ -6055,7 +6060,6 @@ const createAssetBuilder = ({
       });
       targetMap[targetUrl] = target;
       connectReferenceAndTarget(reference, target);
-      connectTarget(target);
     }
 
     if (targetIsExternal) {
@@ -6078,16 +6082,13 @@ const createAssetBuilder = ({
         logger: logger$1,
         showReferenceSourceLocation
       });
-    });
+    }, () => {});
   };
 
-  const assetTransformMap = {}; // used to remove sourcemap files that are renamed after they are emitted
-
-  const buildRelativeUrlsToClean = [];
-
-  const getBuildRelativeUrlsToClean = () => buildRelativeUrlsToClean;
+  const assetTransformMap = {};
 
   const createTarget = ({
+    importerReference,
     targetContentType,
     targetUrl,
     targetBuffer,
@@ -6109,10 +6110,10 @@ const createAssetBuilder = ({
       targetUrlVersioningDisabled,
       targetFileNamePattern,
       targetRelativeUrl: util.urlToRelativeUrl(targetUrl, projectDirectoryUrl),
-      targetBufferAfterTransformation: undefined
+      targetBuildBuffer: undefined
     };
     const getBufferAvailablePromise = memoize(async () => {
-      const response = await fetch(targetUrl, showReferenceSourceLocation(target.targetReferences[0]));
+      const response = await fetch(targetUrl, showReferenceSourceLocation(importerReference));
 
       if (response.url !== targetUrl) {
         targetRedirectionMap[targetUrl] = response.url;
@@ -6132,7 +6133,6 @@ const createAssetBuilder = ({
     const getDependenciesAvailablePromise = memoize(async () => {
       await getBufferAvailablePromise();
       const dependencies = [];
-      let previousJsDependency;
       let parsingDone = false;
 
       const notifyReferenceFound = ({
@@ -6157,7 +6157,6 @@ const createAssetBuilder = ({
           referenceLine,
           referenceColumn,
           referenceExpectedContentType,
-          previousJsDependency,
           targetContentType,
           targetBuffer,
           targetIsJsModule,
@@ -6168,10 +6167,6 @@ const createAssetBuilder = ({
 
         if (dependencyReference) {
           dependencies.push(dependencyReference);
-
-          if (targetIsJsModule) {
-            previousJsDependency = dependencyReference;
-          }
         }
 
         return dependencyReference;
@@ -6192,7 +6187,9 @@ const createAssetBuilder = ({
       }
 
       if (dependencies.length > 0) {
-        logger$1.debug(`${shortenUrl(targetUrl)} dependencies collected -> ${dependencies.map(dependencyReference => shortenUrl(dependencyReference.target.targetUrl))}`);
+        logger$1.debug(logger.createDetailedMessage(`${shortenUrl(targetUrl)} dependencies collected`, {
+          dependencies: dependencies.map(dependencyReference => shortenUrl(dependencyReference.target.targetUrl))
+        }));
       }
 
       target.dependencies = dependencies;
@@ -6201,27 +6198,23 @@ const createAssetBuilder = ({
       if (targetIsExternal) {
         // external urls are immediatly available and not modified
         return;
-      } // une fois que les dépendances sont transformées on peut transformer cet asset
+      } // once rollup is done with that module we know it's final url
 
 
       if (targetIsJsModule) {
-        // ici l'url n'est pas top parce que
-        // l'url de l'asset est relative au fichier html source
         logger$1.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(targetUrl)}`);
         const rollupChunkReadyPromise = new Promise(resolve => {
           registerCallbackOnceRollupChunkIsReady(target.targetUrl, resolve);
         });
         const {
-          targetBufferAfterTransformation,
+          targetBuildBuffer,
           targetBuildRelativeUrl,
           targetFileName
         } = await rollupChunkReadyPromise;
-        target.targetBufferAfterTransformation = targetBufferAfterTransformation;
-        target.targetBuildRelativeUrl = targetBuildRelativeUrl;
         target.targetFileName = targetFileName;
+        target.targetBuildEnd(targetBuildBuffer, targetBuildRelativeUrl);
         return;
       } // la transformation d'un asset c'est avant tout la transformation de ses dépendances
-      // mais si on a rien a transformer, on a pas vraiment besoin de tout ça
 
 
       await getDependenciesAvailablePromise();
@@ -6230,8 +6223,7 @@ const createAssetBuilder = ({
       const transform = assetTransformMap[targetUrl];
 
       if (typeof transform !== "function") {
-        target.targetBufferAfterTransformation = target.targetBuffer;
-        target.targetBuildRelativeUrl = computeBuildRelativeUrlForTarget(target);
+        target.targetBuildEnd(target.targetBuffer);
         return;
       } // assetDependenciesMapping contains all dependencies for an asset
       // each key is the absolute url to the dependency file
@@ -6247,13 +6239,23 @@ const createAssetBuilder = ({
       const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(target);
       const assetEmitters = [];
       const transformReturnValue = await transform({
-        precomputeBuildRelativeUrl: targetBufferAfterTransformation => precomputeBuildRelativeUrlForTarget(target, targetBufferAfterTransformation),
+        precomputeBuildRelativeUrl: targetBuildBuffer => precomputeBuildRelativeUrlForTarget(target, targetBuildBuffer),
         registerAssetEmitter: callback => {
           assetEmitters.push(callback);
         },
         getReferenceUrlRelativeToImporter: reference => {
+          const importerTarget = target;
           const referenceTarget = reference.target;
-          const referenceTargetBuildRelativeUrl = referenceTarget.targetFileName || referenceTarget.targetBuildRelativeUrl;
+          let referenceTargetBuildRelativeUrl; // only js can reference an other file by url without versionning
+          // and be able to actually fetch an other url with versioning using importmap
+          // html needs the exact filename
+
+          if (importerTarget.targetIsJsModule) {
+            referenceTargetBuildRelativeUrl = referenceTarget.targetFileName || referenceTarget.targetBuildRelativeUrl;
+          } else {
+            referenceTargetBuildRelativeUrl = referenceTarget.targetBuildRelativeUrl;
+          }
+
           const referenceTargetBuildUrl = util.resolveUrl(referenceTargetBuildRelativeUrl, "file:///");
           const importerBuildUrl = util.resolveUrl(importerBuildRelativeUrl, "file:///");
           return util.urlToRelativeUrl(referenceTargetBuildUrl, importerBuildUrl);
@@ -6264,80 +6266,81 @@ const createAssetBuilder = ({
         throw new Error(`transform must return an object {code, map}`);
       }
 
-      let targetBufferAfterTransformation;
+      let targetBuildBuffer;
       let targetBuildRelativeUrl;
 
       if (typeof transformReturnValue === "string") {
-        targetBufferAfterTransformation = transformReturnValue;
+        targetBuildBuffer = transformReturnValue;
       } else {
-        targetBufferAfterTransformation = transformReturnValue.targetBufferAfterTransformation;
+        targetBuildBuffer = transformReturnValue.targetBuildBuffer;
 
         if (transformReturnValue.targetBuildRelativeUrl) {
           targetBuildRelativeUrl = transformReturnValue.targetBuildRelativeUrl;
         }
       }
 
-      target.targetBufferAfterTransformation = targetBufferAfterTransformation;
-
-      if (targetBuildRelativeUrl === undefined) {
-        targetBuildRelativeUrl = computeBuildRelativeUrlForTarget(target);
-      }
-
-      target.targetBuildRelativeUrl = targetBuildRelativeUrl;
+      target.targetBuildEnd(targetBuildBuffer, targetBuildRelativeUrl);
       assetEmitters.forEach(callback => {
         callback({
           emitAsset,
           buildDirectoryUrl
         });
       });
-    });
-    const connect = memoize(async connectFn => {
-      const {
-        rollupReferenceId
-      } = await connectFn();
-      target.rollupReferenceId = rollupReferenceId;
-    }); // the idea is to return the connect promise here
-    // because connect is memoized and called immediatly after target is created
+    }); // was used to remove sourcemap files that are renamed after they are emitted
+    // could be useful one day in case an asset is finally discarded
 
-    const getRollupReferenceIdAvailablePromise = () => connect(); // meant to be used only when asset is modified
-    // after being emitted.
-    // (sourcemap and importmap)
+    const remove = () => {
+      target.shouldBeIgnored = true;
+    };
 
+    const targetBuildEnd = (targetBuildBuffer, targetBuildRelativeUrl) => {
+      if (targetBuildBuffer !== undefined) {
+        target.targetBuildBuffer = targetBuildBuffer;
 
-    const updateOnceReady = ({
-      targetBufferAfterTransformation,
-      buildRelativeUrl
-    }) => {
-      // the source after transform has changed
-      if (targetBufferAfterTransformation !== undefined && targetBufferAfterTransformation !== target.targetBufferAfterTransformation) {
-        target.targetBufferAfterTransformation = targetBufferAfterTransformation;
-
-        if (buildRelativeUrl === undefined) {
-          buildRelativeUrl = computeBuildRelativeUrlForTarget(target);
+        if (targetBuildRelativeUrl === undefined) {
+          target.targetBuildRelativeUrl = computeBuildRelativeUrlForTarget(target);
         }
-      } // the build relative url has changed
+      }
 
+      if (targetBuildRelativeUrl !== undefined) {
+        target.targetBuildRelativeUrl = targetBuildRelativeUrl;
+      }
 
-      if (buildRelativeUrl !== undefined && buildRelativeUrl !== target.targetBuildRelativeUrl) {
-        buildRelativeUrlsToClean.push(target.targetBuildRelativeUrl);
-        target.targetBuildRelativeUrl = buildRelativeUrl;
-
-        if (!target.targetIsInline) {
-          emitAsset({
-            source: target.targetBufferAfterTransformation,
-            fileName: buildRelativeUrl
-          });
-        }
+      if (!target.targetIsInline && !target.targetIsJsModule) {
+        setAssetSource(target.rollupReferenceId, target.targetBuildBuffer);
       }
     };
 
+    if (targetIsJsModule) {
+      const jsModuleUrl = targetUrl;
+      onJsModuleReferencedInHtml({
+        jsModuleUrl,
+        jsModuleIsInline: targetIsInline,
+        jsModuleSource: String(targetBuffer)
+      });
+      const name = util.urlToRelativeUrl( // get basename url
+      util.resolveUrl(util.urlToBasename(jsModuleUrl), jsModuleUrl), // get importer url
+      urlToCompiledUrl(importerReference.referenceUrl));
+      logger$1.debug(`emit chunk for ${shortenUrl(jsModuleUrl)}`);
+      const rollupReferenceId = emitChunk({
+        id: jsModuleUrl,
+        name
+      });
+      target.rollupReferenceId = rollupReferenceId;
+    } else if (targetIsInline) ; else {
+      logger$1.debug(`emit asset for ${shortenUrl(targetUrl)}`);
+      const rollupReferenceId = emitAsset({
+        fileName: targetUrl
+      });
+      target.rollupReferenceId = rollupReferenceId;
+    }
+
     Object.assign(target, {
-      connect,
       getBufferAvailablePromise,
       getDependenciesAvailablePromise,
       getReadyPromise,
-      getRollupReferenceIdAvailablePromise,
-      updateOnceReady
+      remove,
+      targetBuildEnd
     });
     return target;
   };
@@ -6362,9 +6365,8 @@ const createAssetBuilder = ({
     return null;
   };
 
-  const findAssetUrlByBuildRelativeUrl = buildRelativeUrl => {
-    const assetUrl = Object.keys(targetMap).find(url => targetMap[url].targetBuildRelativeUrl === buildRelativeUrl);
-    return assetUrl;
+  const getAssetByUrl = assetUrl => {
+    return targetMap[assetUrl] || null;
   };
 
   const shortenUrl = url => {
@@ -6374,21 +6376,22 @@ const createAssetBuilder = ({
   const showReferenceSourceLocation = reference => {
     const referenceUrl = reference.referenceUrl;
     const referenceTarget = getTargetFromUrl(referenceUrl);
-    const referenceSource = String(referenceTarget ? referenceTarget.targetBuffer : loadUrl(referenceUrl));
+    const referenceSource = referenceTarget ? referenceTarget.targetBuffer : loadUrl(referenceUrl);
+    const referenceSourceAsString = referenceSource ? String(referenceSource) : "";
     let message = `${urlToFileUrl(referenceUrl)}`;
 
-    if (typeof reference.line === "number") {
-      message += `:${reference.line}`;
+    if (typeof reference.referenceLine === "number") {
+      message += `:${reference.referenceLine}`;
 
-      if (typeof reference.column === "number") {
-        message += `:${reference.column}`;
+      if (typeof reference.referenceColumn === "number") {
+        message += `:${reference.referenceColumn}`;
       }
     }
 
-    if (referenceSource && typeof reference.referenceLine === "number") {
+    if (referenceSourceAsString && typeof reference.referenceLine === "number") {
       return `${message}
 
-${showSourceLocation(referenceSource, {
+${showSourceLocation(referenceSourceAsString, {
         line: reference.referenceLine,
         column: reference.referenceColumn
       })}
@@ -6403,8 +6406,7 @@ ${showSourceLocation(referenceSource, {
     createReferenceForJs,
     getRollupChunkReadyCallbackMap,
     getAllAssetEntryEmittedPromise,
-    getBuildRelativeUrlsToClean,
-    findAssetUrlByBuildRelativeUrl,
+    getAssetByUrl,
     inspect: () => {
       return {
         targetMap,
@@ -6528,31 +6530,28 @@ const createJsenvRollupPlugin = async ({
   const virtualModules = {};
   const urlRedirectionMap = {};
   const jsModulesInHtml = {};
+  let lastErrorMessage;
+
+  const createJsenvPluginError = message => {
+    const error = new Error(message);
+    lastErrorMessage = message;
+    return error;
+  };
+
   const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(externalImportUrlPatterns, projectDirectoryUrl); // map fileName (build relative urls without hash) to build relative url
 
   let buildManifest = {};
-
-  const fileNameToBuildRelativeUrl = fileName => {
-    if (fileName in buildManifest) {
-      return buildManifest[fileName];
-    }
-
-    return null;
-  };
 
   const buildRelativeUrlToFileName = buildRelativeUrl => {
     const fileName = Object.keys(buildManifest).find(key => buildManifest[key] === buildRelativeUrl);
     return fileName;
   };
 
-  const addFileNameMapping = (fileName, buildRelativeUrl) => {
-    buildManifest[fileName] = buildRelativeUrl;
-  };
-
   const buildRelativeUrlsUsedInJs = [];
 
   const markBuildRelativeUrlAsUsedByJs = buildRelativeUrl => {
     buildRelativeUrlsUsedInJs.push(buildRelativeUrl);
+    buildManifest[rollupFileNameWithoutHash(buildRelativeUrl)] = buildRelativeUrl;
   };
 
   const createImportMapForFilesUsedInJs = () => {
@@ -6589,6 +6588,28 @@ const createJsenvRollupPlugin = async ({
     return false;
   };
 
+  const fetchAndNormalizeImportmap = async (importmapUrl, {
+    allow404 = false
+  } = {}) => {
+    const importmapResponse = await fetchUrl(importmapUrl);
+
+    if (allow404 && importmapResponse.status === 404) {
+      return null;
+    }
+
+    if (importmapResponse.status < 200 || importmapResponse.status > 299) {
+      throw createJsenvPluginError(logger.createDetailedMessage(`Unexpected response status for importmap.`, {
+        ["response status"]: importmapResponse.status,
+        ["response text"]: await importmapResponse.text(),
+        ["importmap url"]: importmapUrl
+      }));
+    }
+
+    const importmap = await importmapResponse.json();
+    const importmapNormalized = importMap.normalizeImportMap(importmap, importmapUrl);
+    return importmapNormalized;
+  };
+
   const fetchImportmapFromParameter = async () => {
     const importmapProjectUrl = util.resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
     const importMapFileCompiledUrl = util.resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl);
@@ -6607,38 +6628,30 @@ const createJsenvRollupPlugin = async ({
 
   let assetBuilder;
 
-  let emitFile = () => {};
+  let rollupEmitFile = () => {};
+
+  let rollupSetAssetSource = () => {};
 
   let fetchImportmap = fetchImportmapFromParameter;
   let importMap$1;
 
   const emitAsset = ({
-    source,
-    fileName
+    fileName,
+    source
   }) => {
-    const buildRelativeUrl = fileName;
-
-    if (useImportMapToImproveLongTermCaching || !urlVersioning) {
-      // sauf dans le cas ou cet asset est référence avec
-      // new URL(relativeUrl, import.meta.url)
-      // quoique le fix ce serais d'avoir cet asset dans les import maps
-      fileName = rollupFileNameWithoutHash(buildRelativeUrl);
-    } else {
-      fileName = buildRelativeUrl;
-    }
-
-    addFileNameMapping(fileName, buildRelativeUrl);
-    return emitFile({
+    return rollupEmitFile({
       type: "asset",
       source,
       fileName
     });
   };
 
-  const emitChunk = chunk => emitFile({
+  const emitChunk = chunk => rollupEmitFile({
     type: "chunk",
     ...chunk
   });
+
+  const setAssetSource = (rollupReferenceId, assetSource) => rollupSetAssetSource(rollupReferenceId, assetSource);
 
   const jsenvRollupPlugin = {
     name: "jsenv",
@@ -6650,7 +6663,9 @@ const createJsenvRollupPlugin = async ({
         ["entry point map"]: JSON.stringify(entryPointMap, null, "  ")
       }));
 
-      emitFile = (...args) => this.emitFile(...args); // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
+      rollupEmitFile = (...args) => this.emitFile(...args);
+
+      rollupSetAssetSource = (...args) => this.setAssetSource(...args); // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
       // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
 
 
@@ -6754,6 +6769,7 @@ const createJsenvRollupPlugin = async ({
         projectDirectoryUrl: `${compileServerOrigin}`,
         buildDirectoryRelativeUrl: util.urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
         urlToFileUrl: urlToProjectUrl,
+        urlToCompiledUrl,
         loadUrl: url => urlResponseBodyMap[url],
         resolveTargetUrl: ({
           targetSpecifier,
@@ -6795,76 +6811,21 @@ const createJsenvRollupPlugin = async ({
 
           return targetUrl;
         },
+        emitChunk,
         emitAsset,
-        connectTarget: target => {
-          const {
-            targetIsExternal
-          } = target;
+        setAssetSource,
+        onJsModuleReferencedInHtml: ({
+          jsModuleUrl,
+          jsModuleIsInline,
+          jsModuleSource
+        }) => {
+          atleastOneChunkEmitted = true;
 
-          if (targetIsExternal) {
-            return;
+          if (jsModuleIsInline) {
+            virtualModules[jsModuleUrl] = jsModuleSource;
           }
 
-          const {
-            targetIsJsModule
-          } = target;
-
-          if (targetIsJsModule) {
-            target.connect(async () => {
-              const {
-                targetUrl,
-                targetBuffer
-              } = target;
-              const id = targetUrl;
-
-              if (typeof targetBuffer !== "undefined") {
-                virtualModules[id] = String(targetBuffer);
-              }
-
-              logger$1.debug(`emit chunk for ${shortenUrl(targetUrl)}`);
-              atleastOneChunkEmitted = true;
-              const name = util.urlToRelativeUrl( // get basename url
-              util.resolveUrl(util.urlToBasename(targetUrl), targetUrl), // get importer url
-              urlToCompiledUrl(target.targetReferences[0].referenceUrl));
-              jsModulesInHtml[urlToUrlForRollup(id)] = true;
-              const rollupReferenceId = emitChunk({
-                id,
-                name,
-                ...(target.previousJsReference ? {
-                  implicitlyLoadedAfterOneOf: [target.previousJsReference.referenceUrl]
-                } : {})
-              });
-              return {
-                rollupReferenceId
-              };
-            });
-            return;
-          }
-
-          target.connect(async () => {
-            await target.getReadyPromise();
-            const {
-              targetUrl,
-              targetIsInline,
-              targetBufferAfterTransformation,
-              targetBuildRelativeUrl
-            } = target;
-
-            if (targetIsInline) {
-              return {};
-            }
-
-            logger$1.debug(`emit asset for ${shortenUrl(targetUrl)}`);
-            const fileName = targetBuildRelativeUrl;
-            const rollupReferenceId = emitAsset({
-              source: targetBufferAfterTransformation,
-              fileName
-            });
-            logger$1.debug(`${shortenUrl(targetUrl)} ready -> ${targetBuildRelativeUrl}`);
-            return {
-              rollupReferenceId
-            };
-          });
+          jsModulesInHtml[urlToUrlForRollup(jsModuleUrl)] = true;
         }
       });
       await Promise.all(entryPointsPrepared.map(async ({
@@ -6890,6 +6851,7 @@ const createJsenvRollupPlugin = async ({
             fileName: entryBuildRelativeUrl
           });
         } else {
+          console.warn(`entry content type ${entryProjectRelativeUrl} is unusual, got ${entryContentType}`);
           const entryUrl = util.resolveUrl(entryProjectRelativeUrl, compileServerOrigin);
           await assetBuilder.createReferenceForHTMLEntry({
             entryContentType,
@@ -6973,13 +6935,31 @@ const createJsenvRollupPlugin = async ({
       return urlToUrlForRollup(importUrl);
     },
 
-    ...(format === "systemjs" ? {
-      resolveFileUrl: ({
-        fileName
-      }) => {
-        return `System.resolve("./${fileName}", module.meta.url)`;
+    resolveFileUrl: ({
+      // chunkId, moduleId, referenceId,
+      fileName
+    }) => {
+      const assetTarget = assetBuilder.getAssetByUrl(fileName);
+      const buildRelativeUrl = assetTarget ? assetTarget.targetBuildRelativeUrl : fileName;
+
+      if (format === "esmodule") {
+        return `new URL("${buildRelativeUrl}", import.meta.url).href`;
       }
-    } : {}),
+
+      if (format === "systemjs") {
+        return `System.resolve("./${buildRelativeUrl}", module.meta.url)`;
+      }
+
+      if (format === "global") {
+        return `new URL("${buildRelativeUrl}", document.currentScript && document.currentScript.src || document.baseURI).href`;
+      }
+
+      if (format === "commonjs") {
+        return `new URL("${buildRelativeUrl}", "file:///" + __filename.replace(/\\/g, "/")).href`;
+      }
+
+      return null;
+    },
 
     // https://rollupjs.org/guide/en#resolvedynamicimport
     // resolveDynamicImport: (specifier, importer) => {
@@ -7108,35 +7088,53 @@ const createJsenvRollupPlugin = async ({
       Object.keys(rollupResult).forEach(fileName => {
         const file = rollupResult[fileName];
 
-        if (file.type === "chunk" && file.facadeModuleId === EMPTY_CHUNK_URL) {
+        if (file.type !== "chunk") {
           return;
         }
 
-        if (file.type === "chunk") {
-          let buildRelativeUrl;
-          const canBeHashed = file.facadeModuleId in jsModulesInHtml || !file.isEntry;
+        if (file.facadeModuleId === EMPTY_CHUNK_URL) {
+          return;
+        }
 
-          if (urlVersioning && useImportMapToImproveLongTermCaching) {
-            if (canBeHashed) {
-              buildRelativeUrl = computeBuildRelativeUrl(util.resolveUrl(fileName, buildDirectoryUrl), file.code, `[name]-[hash][extname]`);
-            } else {
-              buildRelativeUrl = fileName;
-            }
+        let buildRelativeUrl;
+        const canBeVersioned = file.facadeModuleId in jsModulesInHtml || !file.isEntry;
+
+        if (urlVersioning && useImportMapToImproveLongTermCaching) {
+          if (canBeVersioned) {
+            buildRelativeUrl = computeBuildRelativeUrl(util.resolveUrl(fileName, buildDirectoryUrl), file.code, `[name]-[hash][extname]`);
           } else {
             buildRelativeUrl = fileName;
-            fileName = rollupFileNameWithoutHash(fileName);
           }
-
-          if (canBeHashed) {
-            markBuildRelativeUrlAsUsedByJs(buildRelativeUrl);
-          }
-
-          addFileNameMapping(fileName, buildRelativeUrl);
-          jsBuild[buildRelativeUrl] = file;
+        } else {
+          buildRelativeUrl = fileName;
+          fileName = rollupFileNameWithoutHash(fileName);
         }
+
+        let originalProjectUrl;
+        const id = file.facadeModuleId;
+
+        if (id) {
+          originalProjectUrl = urlToOriginalProjectUrl(id);
+        } else {
+          const sourcePath = file.map.sources[file.map.sources.length - 1];
+          const fileBuildUrl = util.resolveUrl(file.fileName, buildDirectoryUrl);
+          originalProjectUrl = util.resolveUrl(sourcePath, fileBuildUrl);
+        }
+
+        const originalProjectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl);
+
+        if (canBeVersioned) {
+          markBuildRelativeUrlAsUsedByJs(buildRelativeUrl);
+        }
+
+        jsBuild[buildRelativeUrl] = file;
+        buildManifest[fileName] = buildRelativeUrl;
+        buildMappings[originalProjectRelativeUrl] = buildRelativeUrl;
       }); // it's important to do this to emit late asset
 
-      emitFile = (...args) => this.emitFile(...args); // malheureusement rollup ne permet pas de savoir lorsqu'un chunk
+      rollupEmitFile = (...args) => this.emitFile(...args);
+
+      rollupSetAssetSource = (...args) => this.setAssetSource(...args); // malheureusement rollup ne permet pas de savoir lorsqu'un chunk
       // a fini d'etre résolu (parsing des imports statiques et dynamiques recursivement)
       // donc lorsque le build se termine on va indiquer
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
@@ -7154,11 +7152,11 @@ const createJsenvRollupPlugin = async ({
           return facadeModuleId && urlToServerUrl(facadeModuleId) === key;
         });
         const file = jsBuild[targetBuildRelativeUrl];
-        const targetBufferAfterTransformation = file.code;
+        const targetBuildBuffer = file.code;
         const targetFileName = useImportMapToImproveLongTermCaching || !urlVersioning ? buildRelativeUrlToFileName(targetBuildRelativeUrl) : targetBuildRelativeUrl;
         logger$1.debug(`resolve rollup chunk ${shortenUrl(key)}`);
         rollupChunkReadyCallbackMap[key]({
-          targetBufferAfterTransformation,
+          targetBuildBuffer,
           targetBuildRelativeUrl,
           targetFileName
         });
@@ -7166,54 +7164,45 @@ const createJsenvRollupPlugin = async ({
 
       await assetBuilder.getAllAssetEntryEmittedPromise();
       const assetBuild = {};
-      const buildRelativeUrlsToClean = assetBuilder.getBuildRelativeUrlsToClean();
-      Object.keys(rollupResult).forEach(fileName => {
-        const file = rollupResult[fileName];
+      Object.keys(rollupResult).forEach(rollupFileId => {
+        const file = rollupResult[rollupFileId];
 
         if (file.type !== "asset") {
           return;
         }
 
-        const buildRelativeUrl = fileNameToBuildRelativeUrl(fileName); // ignore potential useless assets which happens when:
+        const assetTarget = assetBuilder.getAssetByUrl(rollupFileId);
+
+        if (!assetTarget) {
+          const buildRelativeUrl = rollupFileId;
+          const fileName = rollupFileNameWithoutHash(buildRelativeUrl);
+          assetBuild[buildRelativeUrl] = file;
+          buildManifest[fileName] = buildRelativeUrl; // the asset does not exists in the project it was generated during building
+          // happens for sourcemap
+
+          return;
+        } // ignore potential useless assets which happens when:
         // - sourcemap re-emitted
         // - importmap re-emitted to have buildRelativeUrlMap
 
-        if (buildRelativeUrlsToClean.includes(buildRelativeUrl)) {
+
+        if (assetTarget.shouldBeIgnored) {
           return;
         }
 
+        const buildRelativeUrl = assetTarget.targetBuildRelativeUrl;
+        const fileName = rollupFileNameWithoutHash(buildRelativeUrl);
+        const originalProjectUrl = urlToOriginalProjectUrl(rollupFileId);
+        const originalProjectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl); // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
+
+        file.source = String(assetTarget.targetBuildBuffer);
         assetBuild[buildRelativeUrl] = file;
+        buildMappings[originalProjectRelativeUrl] = buildRelativeUrl;
+        buildManifest[fileName] = buildRelativeUrl;
       });
       rollupBuild = { ...jsBuild,
         ...assetBuild
       };
-      Object.keys(rollupBuild).forEach(buildRelativeUrl => {
-        const file = rollupBuild[buildRelativeUrl];
-
-        if (file.type === "chunk") {
-          const id = file.facadeModuleId;
-
-          if (id) {
-            const originalProjectUrl = urlToOriginalProjectUrl(id);
-            const originalProjectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl);
-            buildMappings[originalProjectRelativeUrl] = buildRelativeUrl;
-          } else {
-            const sourcePath = file.map.sources[file.map.sources.length - 1];
-            const fileBuildUrl = util.resolveUrl(file.fileName, buildDirectoryUrl);
-            const originalProjectUrl = util.resolveUrl(sourcePath, fileBuildUrl);
-            const originalProjectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl);
-            buildMappings[originalProjectRelativeUrl] = buildRelativeUrl;
-          }
-        } else {
-          const assetUrl = assetBuilder.findAssetUrlByBuildRelativeUrl(buildRelativeUrl);
-
-          if (assetUrl) {
-            const originalProjectUrl = urlToOriginalProjectUrl(assetUrl);
-            const originalProjectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl);
-            buildMappings[originalProjectRelativeUrl] = buildRelativeUrl;
-          }
-        }
-      });
       rollupBuild = sortObjectByPathnames(rollupBuild);
       buildManifest = sortObjectByPathnames(buildManifest);
       buildMappings = sortObjectByPathnames(buildMappings);
@@ -7382,7 +7371,7 @@ const createJsenvRollupPlugin = async ({
     }
 
     const importerUrl = urlImporterMap[moduleUrl];
-    const moduleResponse = await fetchModule(moduleUrl, util.urlToFileSystemPath(urlToProjectUrl(importerUrl) || importerUrl));
+    const moduleResponse = await fetchModule(moduleUrl, urlToProjectUrl(importerUrl) || importerUrl);
     const contentType = moduleResponse.headers["content-type"] || "";
     const commonData = {
       responseUrl: moduleResponse.url
@@ -7448,15 +7437,16 @@ const createJsenvRollupPlugin = async ({
       cancellationToken,
       ignoreHttpsError: true
     });
+    importer = urlToOriginalProjectUrl(importer) || urlToProjectUrl(importer) || importer;
 
     if (response.status === 404) {
-      throw new Error(formatFileNotFound(urlToProjectUrl(response.url), importer));
+      throw createJsenvPluginError(formatFileNotFound(urlToOriginalProjectUrl(response.url) || urlToProjectUrl(response.url) || response.url, importer));
     }
 
     const okValidation = await validateResponseStatusIsOk(response, importer);
 
     if (!okValidation.valid) {
-      throw new Error(okValidation.message);
+      throw createJsenvPluginError(okValidation.message);
     }
 
     return response;
@@ -7468,6 +7458,7 @@ const createJsenvRollupPlugin = async ({
 
   return {
     jsenvRollupPlugin,
+    getLastErrorMessage: () => lastErrorMessage,
     getResult: () => {
       return {
         rollupBuild,
@@ -7506,7 +7497,7 @@ const fixRollupUrl = rollupUrl => {
 const formatFileNotFound = (url, importer) => {
   return logger.createDetailedMessage(`A file cannot be found.`, {
     file: util.urlToFileSystemPath(url),
-    ["imported by"]: importer
+    ["imported by"]: importer.startsWith("file://") && !importer.includes("\n") ? util.urlToFileSystemPath(importer) : importer
   });
 };
 
@@ -7541,28 +7532,6 @@ You should make importmap source relative.
 ${showImportmapSourceLocation(importmapHtmlNode, htmlUrl, htmlSource)}
 --- compile directory url ---
 ${compileDirectoryUrl}`;
-};
-
-const fetchAndNormalizeImportmap = async (importmapUrl, {
-  allow404 = false
-} = {}) => {
-  const importmapResponse = await fetchUrl(importmapUrl);
-
-  if (allow404 && importmapResponse.status === 404) {
-    return null;
-  }
-
-  if (importmapResponse.status < 200 || importmapResponse.status > 299) {
-    throw new Error(logger.createDetailedMessage(`Unexpected response status for importmap.`, {
-      ["response status"]: importmapResponse.status,
-      ["response text"]: await importmapResponse.text(),
-      ["importmap url"]: importmapUrl
-    }));
-  }
-
-  const importmap = await importmapResponse.json();
-  const importmapNormalized = importMap.normalizeImportMap(importmap, importmapUrl);
-  return importmapNormalized;
 };
 
 const formatBuildDoneDetails = build => {
@@ -7650,6 +7619,7 @@ const buildUsingRollup = async ({
 }) => {
   const {
     jsenvRollupPlugin,
+    getLastErrorMessage,
     getResult
   } = await createJsenvRollupPlugin({
     cancellationToken,
@@ -7678,18 +7648,34 @@ const buildUsingRollup = async ({
     assetManifestFileRelativeUrl,
     writeOnFileSystem
   });
-  await useRollup({
-    cancellationToken,
-    jsenvRollupPlugin,
-    format,
-    globals,
-    globalName,
-    sourcemapExcludeSources,
-    preserveEntrySignatures,
-    jsConcatenation,
-    buildDirectoryUrl,
-    buildDirectoryClean
-  });
+
+  try {
+    await useRollup({
+      cancellationToken,
+      jsenvRollupPlugin,
+      format,
+      globals,
+      globalName,
+      sourcemapExcludeSources,
+      preserveEntrySignatures,
+      jsConcatenation,
+      buildDirectoryUrl,
+      buildDirectoryClean
+    });
+  } catch (e) {
+    if (e.plugin === "jsenv") {
+      const jsenvPluginErrorMessage = getLastErrorMessage();
+
+      if (jsenvPluginErrorMessage) {
+        e.message = jsenvPluginErrorMessage;
+      }
+
+      throw e;
+    }
+
+    throw e;
+  }
+
   const jsenvBuild = getResult();
 
   if (writeOnFileSystem) {
@@ -8645,14 +8631,11 @@ const createCompiledFileService = ({
     const compileDirectoryUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl);
     const compiledFileUrl = util.resolveUrl(originalFileRelativeUrl, compileDirectoryUrl);
     importMeta = {
-      jsenv: createJsenvImportMetaForFile(compiledFileUrl, {
-        projectDirectoryUrl,
-        compileDirectoryUrl,
+      jsenv: {
         importMapFileRelativeUrl,
         jsenvDirectoryRelativeUrl,
-        outDirectoryRelativeUrl,
-        groupMap
-      }),
+        outDirectoryRelativeUrl
+      },
       ...importMeta
     };
     let compilerOptions = null;
@@ -8720,28 +8703,6 @@ const createCompiledFileService = ({
   };
 };
 
-const createJsenvImportMetaForFile = (compiledFileUrl, {
-  // projectDirectoryUrl,
-  // compileDirectoryUrl,
-  importMapFileRelativeUrl,
-  jsenvDirectoryRelativeUrl,
-  outDirectoryRelativeUrl,
-  groupMap
-}) => {
-  // const importMapCompiledUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryUrl)
-  // const jsenvDirectoryUrl = resolveUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
-  // const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
-  // importMapFileRelativeUrl = urlToRelativeUrl(importMapCompiledUrl, compiledFileUrl)
-  // jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, compiledFileUrl)
-  // outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, compiledFileUrl)
-  return {
-    importMapFileRelativeUrl,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    groupMap
-  };
-};
-
 /* eslint-disable import/max-dependencies */
 const startCompileServer = async ({
   cancellationToken = cancellation.createCancellationToken(),
@@ -8749,7 +8710,8 @@ const startCompileServer = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
-  importMetaEnvFileRelativeUrl = "env.js",
+  importMetaDev = false,
+  importMetaEnvFileRelativeUrl,
   importMeta = {},
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
@@ -8845,6 +8807,10 @@ const startCompileServer = async ({
     groupCount: compileGroupCount,
     runtimeAlwaysInsideRuntimeScoreMap
   });
+  importMeta = {
+    dev: importMetaDev,
+    ...importMeta
+  };
   await setupOutDirectory(outDirectoryUrl, {
     logger: logger$1,
     jsenvDirectoryUrl,
@@ -9034,7 +9000,7 @@ const assertArguments = ({
 };
 
 const setupOutDirectory = async (outDirectoryUrl, {
-  logger,
+  logger: logger$1,
   jsenvDirectoryClean,
   jsenvDirectoryUrl,
   useFilesystemAsCache,
@@ -9047,7 +9013,7 @@ const setupOutDirectory = async (outDirectoryUrl, {
   processEnvNodeEnv
 }) => {
   if (jsenvDirectoryClean) {
-    logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`);
+    logger$1.info(`Cleaning jsenv directory because jsenvDirectoryClean parameter enabled`);
     await util.ensureEmptyDirectory(jsenvDirectoryUrl);
   }
 
@@ -9080,12 +9046,14 @@ const setupOutDirectory = async (outDirectoryUrl, {
     }
 
     if (previousOutDirectoryMeta !== null) {
-      const previousMetaString = JSON.stringify(previousOutDirectoryMeta, null, "  ");
-      const metaString = JSON.stringify(outDirectoryMeta, null, "  ");
+      const outDirectoryChanges = getOutDirectoryChanges(previousOutDirectoryMeta, outDirectoryMeta);
 
-      if (previousMetaString !== metaString) {
+      if (outDirectoryChanges) {
         if (!jsenvDirectoryClean) {
-          logger.warn(`clean out directory at ${util.urlToFileSystemPath(outDirectoryUrl)}`);
+          logger$1.warn(logger.createDetailedMessage(`Cleaning jsenv out directory because configuration has changed.`, {
+            "changes": outDirectoryChanges.namedChanges ? outDirectoryChanges.namedChanges : `something`,
+            "out directory": util.urlToFileSystemPath(outDirectoryUrl)
+          }));
         }
 
         await util.ensureEmptyDirectory(outDirectoryUrl);
@@ -9094,6 +9062,33 @@ const setupOutDirectory = async (outDirectoryUrl, {
 
     await util.writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "));
   }
+};
+
+const getOutDirectoryChanges = (previousOutDirectoryMeta, outDirectoryMeta) => {
+  const changes = Object.keys(outDirectoryMeta).filter(key => {
+    const now = outDirectoryMeta[key];
+    const previous = previousOutDirectoryMeta[key];
+    return !compareValueJson(now, previous);
+  });
+
+  if (changes.length > 0) {
+    return {
+      namedChanges: changes
+    };
+  } // in case basic comparison from above is not enough
+
+
+  if (!compareValueJson(previousOutDirectoryMeta, outDirectoryMeta)) {
+    return {
+      somethingChanged: true
+    };
+  }
+
+  return null;
+};
+
+const compareValueJson = (left, right) => {
+  return JSON.stringify(left) === JSON.stringify(right);
 }; // eslint-disable-next-line valid-jsdoc
 
 /**
@@ -9598,7 +9593,7 @@ const buildProject = async ({
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
-  importMetaEnvFileRelativeUrl,
+  importMetaEnvFileRelativeUrlForBuild = "env.prod.js",
   importMeta = {
     dev: false
   },
@@ -9729,7 +9724,7 @@ const buildProject = async ({
       outDirectoryName: "out-build",
       importMapFileRelativeUrl,
       importDefaultExtension,
-      importMetaEnvFileRelativeUrl,
+      importMetaEnvFileRelativeUrl: importMetaEnvFileRelativeUrlForBuild,
       importMeta,
       moduleOutFormat: "esmodule",
       // rollup will transform into systemjs
@@ -10493,6 +10488,9 @@ const execute = async ({
   babelPluginMap,
   convertMap,
   compileGroupCount = 2,
+  importMetaDev,
+  importMetaEnvFileRelativeUrl,
+  importMeta,
   launch,
   mirrorConsole = true,
   stopAfterExecute = false,
@@ -10530,6 +10528,9 @@ const execute = async ({
       jsenvDirectoryClean,
       importMapFileRelativeUrl,
       importDefaultExtension,
+      importMetaDev,
+      importMetaEnvFileRelativeUrl,
+      importMeta,
       compileServerProtocol,
       compileServerPrivateKey,
       compileServerCertificate,
@@ -11475,6 +11476,9 @@ const executePlan = async (plan, {
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
   importDefaultExtension,
+  importMetaDev,
+  importMetaEnvFileRelativeUrl,
+  importMeta,
   compileServerProtocol,
   compileServerPrivateKey,
   compileServerCertificate,
@@ -11516,6 +11520,9 @@ const executePlan = async (plan, {
     jsenvDirectoryClean,
     importMapFileRelativeUrl,
     importDefaultExtension,
+    importMetaDev,
+    importMetaEnvFileRelativeUrl,
+    importMeta,
     compileServerProtocol,
     compileServerPrivateKey,
     compileServerCertificate,
@@ -11634,6 +11641,9 @@ const executeTestPlan = async ({
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
   importDefaultExtension,
+  importMetaDev = true,
+  importMetaEnvFileRelativeUrlForTest = "env.dev.js",
+  importMeta,
   compileServerProtocol,
   compileServerPrivateKey,
   compileServerCertificate,
@@ -11733,6 +11743,9 @@ const executeTestPlan = async ({
       jsenvDirectoryClean,
       importMapFileRelativeUrl,
       importDefaultExtension,
+      importMetaDev,
+      importMetaEnvFileRelativeUrl: importMetaEnvFileRelativeUrlForTest,
+      importMeta,
       compileServerProtocol,
       compileServerPrivateKey,
       compileServerCertificate,
@@ -13220,6 +13233,8 @@ const startExploring = async ({
   outDirectoryName,
   toolbar = true,
   livereloading = true,
+  importMetaDev = true,
+  importMetaEnvFileRelativeUrlForExploring = "env.dev.js",
   ...rest
 }) => {
   return executeJsenvAsyncFunction(async () => {
@@ -13272,6 +13287,8 @@ const startExploring = async ({
       },
       jsenvDirectoryRelativeUrl,
       outDirectoryName,
+      importMetaDev,
+      importMetaEnvFileRelativeUrl: importMetaEnvFileRelativeUrlForExploring,
       ...rest
     });
     return compileServer;

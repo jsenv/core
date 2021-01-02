@@ -93,7 +93,7 @@ const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
     const expected = {
       version: 3,
       file: "file.cjs",
-      sources: ["../../../../../../file.cjs"],
+      sources: ["../../../../../../../file.cjs"],
       sourcesContent: null,
       names: actual.names,
       mappings: actual.mappings,
@@ -106,7 +106,7 @@ const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
     const actual = await readFile(fileBuildMetaUrl, { as: "json" })
     const expected = {
       contentType: "application/javascript",
-      sources: ["../../../../../../file.cjs"],
+      sources: ["../../../../../../../file.cjs"],
       sourcesEtag: [bufferToEtag(readFileSync(urlToFileSystemPath(fileUrl)))],
       assets: ["file.cjs.map"],
       assetsEtag: [bufferToEtag(readFileSync(urlToFileSystemPath(sourcemapFileUrl)))],
@@ -119,7 +119,7 @@ const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
     // eslint-disable-next-line import/no-dynamic-require
     const namespace = require(urlToFileSystemPath(fileBuildUrl))
     const actual = typeof namespace.groupMap
-    const expected = "object"
+    const expected = "undefined"
     assert({ actual, expected })
   }
 }, Promise.resolve())

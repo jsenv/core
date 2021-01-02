@@ -45,12 +45,12 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const scriptBuildRelativeUrl = getBuildRelativeUrl("index.js")
+const scriptBuildRelativeUrl = getBuildRelativeUrl("index.es5.js")
 const scriptBuildUrl = resolveUrl(scriptBuildRelativeUrl, buildDirectoryUrl)
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const scriptNode = findNodeByTagName(htmlString, "script")
-const sourcemapBuildRelativeUrl = getBuildRelativeUrl("index.js.map")
+const sourcemapBuildRelativeUrl = getBuildRelativeUrl("index.es5.js.map")
 const sourcemapBuildUrl = resolveUrl(sourcemapBuildRelativeUrl, buildDirectoryUrl)
 
 {

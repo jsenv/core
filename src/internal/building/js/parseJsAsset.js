@@ -31,7 +31,7 @@ export const parseJsAsset = async (
   return async ({ precomputeBuildRelativeUrl, registerAssetEmitter }) => {
     let map
     if (sourcemapReference) {
-      const sourcemapString = String(sourcemapReference.target.targetBufferAfterTransformation)
+      const sourcemapString = String(sourcemapReference.target.targetBuildBuffer)
       map = JSON.parse(sourcemapString)
     }
 
@@ -101,25 +101,19 @@ export const parseJsAsset = async (
         const buildRelativeUrl = urlToRelativeUrl(mapBuildUrl, buildDirectoryUrl)
 
         if (sourcemapReference) {
-          // redirect original sourcemap from build to a new file
-          // we'll need to remove the old asset from rollup build
-          // and emit a new one instead
-          // when finding this asset in the rollup build we'll have to remove it
-          sourcemapReference.target.updateOnceReady({
-            targetBufferAfterTransformation: mapSource,
-            buildRelativeUrl,
-          })
+          sourcemapReference.target.targetBuildRelativeUrl = buildRelativeUrl
+          sourcemapReference.target.targetBuildBuffer = mapSource
         } else {
           emitAsset({
-            source: mapSource,
             fileName: buildRelativeUrl,
+            source: mapSource,
           })
         }
       })
 
       return {
-        targetBufferAfterTransformation: jsSourceAfterTransformation,
         targetBuildRelativeUrl: jsBuildRelativeUrl,
+        targetBuildBuffer: jsSourceAfterTransformation,
       }
     }
 

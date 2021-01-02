@@ -7,21 +7,21 @@
 export const jsenvBrowserScoreMap = {
   android: 0.001,
   chrome: {
-    "71": 0.3,
-    "69": 0.19,
-    "0": 0.01, // it means oldest version of chrome will get a score of 0.01
+    71: 0.3,
+    69: 0.19,
+    0: 0.01, // it means oldest version of chrome will get a score of 0.01
   },
   firefox: {
-    "61": 0.3,
+    61: 0.3,
   },
   edge: {
-    "12": 0.1,
+    12: 0.1,
   },
   electron: 0.001,
   ios: 0.001,
   opera: 0.001,
   other: 0.001,
   safari: {
-    "10": 0.1,
+    10: 0.1,
   },
 }

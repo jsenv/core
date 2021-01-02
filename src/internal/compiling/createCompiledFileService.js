@@ -113,14 +113,11 @@ export const createCompiledFileService = ({
     const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl)
 
     importMeta = {
-      jsenv: createJsenvImportMetaForFile(compiledFileUrl, {
-        projectDirectoryUrl,
-        compileDirectoryUrl,
+      jsenv: {
         importMapFileRelativeUrl,
         jsenvDirectoryRelativeUrl,
         outDirectoryRelativeUrl,
-        groupMap,
-      }),
+      },
       ...importMeta,
     }
 
@@ -189,31 +186,5 @@ export const createCompiledFileService = ({
         location: originalFileServerUrl,
       },
     }
-  }
-}
-
-const createJsenvImportMetaForFile = (
-  compiledFileUrl,
-  {
-    // projectDirectoryUrl,
-    // compileDirectoryUrl,
-    importMapFileRelativeUrl,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    groupMap,
-  },
-) => {
-  // const importMapCompiledUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryUrl)
-  // const jsenvDirectoryUrl = resolveUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
-  // const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
-
-  // importMapFileRelativeUrl = urlToRelativeUrl(importMapCompiledUrl, compiledFileUrl)
-  // jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, compiledFileUrl)
-  // outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, compiledFileUrl)
-  return {
-    importMapFileRelativeUrl,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    groupMap,
   }
 }

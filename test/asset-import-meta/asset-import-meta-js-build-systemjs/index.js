@@ -1,1 +1,1 @@
-  export const jsUrl = String(new URL("./file.js", import.meta.url))
+export const jsUrl = String(new URL("./file.js", import.meta.url))

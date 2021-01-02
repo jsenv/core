@@ -2,9 +2,9 @@ import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/util"
 import { createDetailedMessage } from "@jsenv/logger"
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
-export const getTargetAsBase64Url = ({ targetBufferAfterTransformation, targetContentType }) => {
+export const getTargetAsBase64Url = ({ targetBuildBuffer, targetContentType }) => {
   return stringifyDataUrl({
-    data: targetBufferAfterTransformation,
+    data: targetBuildBuffer,
     base64Flag: true,
     mediaType: targetContentType,
   })
