@@ -368,9 +368,7 @@ const setupOutDirectory = async (
   },
 ) => {
   if (jsenvDirectoryClean) {
-    logger.info(
-      `Cleaning jsenv directory because jsenvDirectoryClean parameter enabled`,
-    )
+    logger.info(`Cleaning jsenv directory because jsenvDirectoryClean parameter enabled`)
     await ensureEmptyDirectory(jsenvDirectoryUrl)
   }
   if (useFilesystemAsCache) {
@@ -402,7 +400,7 @@ const setupOutDirectory = async (
     }
 
     if (previousOutDirectoryMeta !== null) {
-      const outDirectoryChanges = getOutDirectoryChanges()
+      const outDirectoryChanges = getOutDirectoryChanges(previousOutDirectoryMeta, outDirectoryMeta)
 
       if (outDirectoryChanges) {
         if (!jsenvDirectoryClean) {
@@ -430,7 +428,7 @@ const getOutDirectoryChanges = (previousOutDirectoryMeta, outDirectoryMeta) => {
   const changes = Object.keys(outDirectoryMeta).filter((key) => {
     const now = outDirectoryMeta[key]
     const previous = previousOutDirectoryMeta[key]
-    return now !== previous
+    return !compareValueJson(now, previous)
   })
 
   if (changes.length > 0) {
@@ -438,13 +436,15 @@ const getOutDirectoryChanges = (previousOutDirectoryMeta, outDirectoryMeta) => {
   }
 
   // in case basic comparison from above is not enough
-  const previousMetaString = JSON.stringify(previousOutDirectoryMeta, null, "  ")
-  const metaString = JSON.stringify(outDirectoryMeta, null, "  ")
-  if (previousMetaString !== metaString) {
+  if (!compareValueJson(previousOutDirectoryMeta, outDirectoryMeta)) {
     return { somethingChanged: true }
   }
 
   return null
+}
+
+const compareValueJson = (left, right) => {
+  return JSON.stringify(left) === JSON.stringify(right)
 }
 
 // eslint-disable-next-line valid-jsdoc
