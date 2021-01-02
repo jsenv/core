@@ -97,12 +97,6 @@ export const createJsenvRollupPlugin = async ({
 
   // map fileName (build relative urls without hash) to build relative url
   let buildManifest = {}
-  // const fileNameToBuildRelativeUrl = (fileName) => {
-  //   if (fileName in buildManifest) {
-  //     return buildManifest[fileName]
-  //   }
-  //   return null
-  // }
   const buildRelativeUrlToFileName = (buildRelativeUrl) => {
     const fileName = Object.keys(buildManifest).find(
       (key) => buildManifest[key] === buildRelativeUrl,
@@ -112,6 +106,7 @@ export const createJsenvRollupPlugin = async ({
   const buildRelativeUrlsUsedInJs = []
   const markBuildRelativeUrlAsUsedByJs = (buildRelativeUrl) => {
     buildRelativeUrlsUsedInJs.push(buildRelativeUrl)
+    buildManifest[rollupFileNameWithoutHash(buildRelativeUrl)] = buildRelativeUrl
   }
   const createImportMapForFilesUsedInJs = () => {
     const topLevelMappings = {}
@@ -495,7 +490,8 @@ export const createJsenvRollupPlugin = async ({
       // chunkId, moduleId, referenceId,
       fileName,
     }) => {
-      const buildRelativeUrl = assetBuilder.getAssetBuildRelativeUrl(fileName) || fileName
+      const assetTarget = assetBuilder.getAssetByUrl(fileName)
+      const buildRelativeUrl = assetTarget ? assetTarget.targetBuildRelativeUrl : fileName
       if (format === "esmodule") {
         return `new URL("${buildRelativeUrl}", import.meta.url).href`
       }
