@@ -6,7 +6,7 @@
     "../helpers/babel/objectSpread2/objectSpread2.js",
     "../helpers/babel/objectWithoutPropertiesLoose/objectWithoutPropertiesLoose.js",
     "../helpers/babel/objectWithoutProperties/objectWithoutProperties.js",
-    "../helpers/import-meta-url/import-meta-url-commonjs.js",
+    "../helpers/import-meta/import-meta-url-commonjs.js",
     "../src/internal/require.js",
     "../src/internal/fetchUrl.js",
     "../helpers/babel/arrayLikeToArray/arrayLikeToArray.js",
