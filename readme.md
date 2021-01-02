@@ -38,6 +38,16 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
 
 > In order to show code unrelated to a specific codebase the example below is testing `Math.max`. In reality you wouldn't test `Math.max`.
 
+`Math.max.test.js`
+
+```js
+const actual = Math.max(2, 4)
+const expected = 4
+if (actual !== expected) {
+  throw new Error(`Math.max(2, 4) should return ${expected}, got ${actual}`)
+}
+```
+
 `Math.max.test.html`
 
 ```html
@@ -48,13 +58,7 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
     <link rel="icon" href="data:," />
   </head>
   <body>
-    <script type="module">
-      const actual = Math.max(2, 4)
-      const expected = 4
-      if (actual !== expected) {
-        throw new Error(`Math.max(2, 4) should return ${expected}, got ${actual}`)
-      }
-    </script>
+    <script type="module" src="./Math.max.test.js"></script>
   </body>
 </html>
 ```
@@ -67,7 +71,7 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
 `execute-test-plan.js`
 
 ```js
-import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
+import { executeTestPlan, launchChromiumTab, launchFirefoxTab, launchNode } from "@jsenv/core"
 
 executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),
@@ -80,11 +84,16 @@ executeTestPlan({
         launch: launchFirefoxTab,
       },
     },
+    "**/*.test.js": {
+      node: {
+        launchNode,
+      },
+    },
   },
 })
 ```
 
-> This code above translates into the following sentence "Execute all files in my project that ends with `test.html` on Chrome and Firefox."
+> Code above translates into the following sentence: "Execute all files in my project that ends with `test.html` on Chrome and Firefox AND execute all files that ends with `test.js` on Node.js"
 
 </details>
 
@@ -99,7 +108,7 @@ Read more on [testing documentation](./docs/testing/readme.md)
 
 # Exploring
 
-`@jsenv/core` provides a server capable to turn any html file into an entry point. This power can used to create a storybook, debug a file in isolation and more. This server is called `exploring server`. This server is designed for development: it provides livereloading out of the box and does not bundle files.
+`@jsenv/core` provides a server capable to turn any html file into an entry point. This power can be used to create a storybook, debug a file in isolation and more. This server is called `exploring server`. This server is designed for development: it provides livereloading out of the box and does not bundle files.
 
 The following example shows how it can be used to execute a single test file. As mentioned previously it can execute any html file, not only test files.
 
@@ -285,14 +294,11 @@ Read more [building documentation](./docs/building/readme.md)
 Jsenv focuses on one thing: developer experience. Everything was carefully crafted to get explicit and coherent apis. This section list most important features provided by jsenv. Click them to get more details.
 
 <details>
-  <summary>Less context switching</summary>
+  <summary>Dispensable by default</summary>
 
-One of the thing jsenv does well is to decrease harm caused by context switching.
+Jsenv is **dispensable** by default. As long as your code is using only standards, you could remove jsenv from your project and still be able to run your code. You can double click your html file to open it inside your browser -> it works. Or if this is a Node.js file execute it directly using the `node` command.
 
-Context switching: You are writing js that you are used to write every day for your project, then, you switch to unit tests. And, suddenly, you must adapt to new constraints imposed by the testing framework.<br />
-— Read more in [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05)
-
-Jsenv provides a unified approach to this: [exploring](#exploring)
+Being dispensable by default highlights jsenv philosophy: no new concept to learn. It also means you can switch to an other tool easily as no part of your code is specific to jsenv.
 
 </details>
 
@@ -306,11 +312,21 @@ Jsenv also don't like blackboxes. `@jsenv/core` functions always choose explicit
 </details>
 
 <details>
-  <summary>Dispensable by default</summary>
+  <summary>Less context switching</summary>
 
-Jsenv is **dispensable** by default. As long as your code is using only standards, you could remove jsenv from your project and still be able to run your code. You can double click your html file to open it inside your browser -> it works. Or if this is a Node.js file execute it directly using the `node` command.
+Context switching happens when you are in context A and switch to context B. The more context A differ from context B, the harder it is to switch.
 
-Being dispensable by default highlights jsenv philosophy: no new concept to learn. It also means you can switch to an other tool easily as no part of your code is specific to jsenv.
+Some example where context switching occurs:
+
+- switching from a regular file to a unit test file
+- switching from a file written for web browsers to file written for Node.js
+
+With jsenv context switching almost vanishes because:
+
+- [exploring](#exploring) provides a unified experience regardless of the file being executed (unit test, web page, reduced test case, experimentation, ...)
+- [testing](#testing) and [building](building) are both capable to handle files written for browsers and/or Node.js
+
+Less context switching saves lot of energy making a project codebase faster to write and easier to maintain.
 
 </details>
 
@@ -414,7 +430,7 @@ if (false) {
 }
 ```
 
-But `process.env.NODE_ENV` is specific to Node.js. It would not work in a browser without transformation. Using `import.meta` it's possible to write something browser can understand.
+But `process.env.NODE_ENV` is specific to Node.js. It would not work in a browser without transformation. Using `import.meta.dev` it's possible to write something browser can understand.
 
 ```js
 if (import.meta.dev) {
@@ -562,6 +578,7 @@ The logo is composed by the name at the center and two circles orbiting around i
 # See also
 
 - [Jsenv compile server explained](./docs/compile-server-explained.md): Document how jsenv works internally to compile on demand with a filesystem cache.
+- [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05): Article showing a new testing experience and proposing jsenv to obtain it.
 - [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa): GitHub repository template for a progressive web application.
 - [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-pwa): GitHub repository template for node package.
 - [@jsenv/assert](https://github.com/jsenv/jsenv-assert): Test anything using one assertion.
