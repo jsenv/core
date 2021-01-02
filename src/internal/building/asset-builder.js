@@ -111,6 +111,14 @@ export const createAssetBuilder = (
     // on await que les assets, pour le js rollup s'en occupe
     await Promise.all(
       entryReference.target.dependencies.map(async (dependency) => {
+        if (dependency.referenceExpectedContentType === "application/importmap+json") {
+          // don't await for importmap right away, it must be handled as the very last asset
+          // to be aware of build mappings.
+          // getReadyPromise() for that importmap will be called during getAllAssetEntryEmittedPromise
+          // (a simpler approach could keep importmap untouched and override it late
+          // (but that means updating html hash and importmap hash)
+          return
+        }
         if (dependency.target.targetIsJsModule) {
           // await internally for rollup to be done with these js files
           // but don't await explicitely or rollup build cannot end

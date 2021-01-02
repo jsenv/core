@@ -7,13 +7,17 @@ export const parseImportmapAsset = (importmapTarget, notifiers, { minify, import
     if (importMapToInject) {
       const importmapOriginal = JSON.parse(importmapString)
       const importmapFinal = composeTwoImportMaps(importmapOriginal, importMapToInject)
-      return minify ? JSON.stringify(importmapFinal) : JSON.stringify(importmapFinal, null, "  ")
+      return minify
+        ? valueToCompactJsonString(importmapFinal)
+        : valueToReadableJsonString(importmapFinal)
     }
 
-    if (minify) {
-      // this is to remove eventual whitespaces
-      return JSON.stringify(JSON.parse(importmapString))
-    }
-    return importmapString
+    return minify ? valueToCompactJsonString(JSON.parse(importmapString)) : importmapString
   }
 }
+
+// removes eventual whitespace in json
+const valueToCompactJsonString = (json) => JSON.stringify(json)
+
+// prefer a readable json when minification is disabled
+const valueToReadableJsonString = (json) => JSON.stringify(json, null, "  ")
