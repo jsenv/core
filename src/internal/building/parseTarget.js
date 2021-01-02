@@ -1,4 +1,3 @@
-
 import {
   parseHtmlString,
   htmlAstContains,

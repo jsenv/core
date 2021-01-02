@@ -29,10 +29,7 @@ const targetToFileNamePattern = (target) => {
   return assetFileNamePattern
 }
 
-export const precomputeBuildRelativeUrlForTarget = (
-  target,
-  targetBuildBuffer = "",
-) => {
+export const precomputeBuildRelativeUrlForTarget = (target, targetBuildBuffer = "") => {
   if (target.targetBuildRelativeUrl) {
     return target.targetBuildRelativeUrl
   }

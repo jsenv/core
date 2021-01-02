@@ -7,7 +7,10 @@
 /node_modules/
 **/s.js
 /src/**/system.js
-/**/syntax-error.js
-/**/syntax-error.main.js
+/**/*syntax-error*.js
+!/**/*syntax-error*.test.js
+/**/*error-syntax*.js
+!/**/*error-syntax*.test.js
+/**/*.es5.js
 /jsconfig.json
 /package-lock.json
