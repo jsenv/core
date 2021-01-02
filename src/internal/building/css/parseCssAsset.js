@@ -114,14 +114,15 @@ export const parseCssAsset = async (
 
       const mapSource = JSON.stringify(map, null, "  ")
       const buildRelativeUrl = urlToRelativeUrl(mapBuildUrl, buildDirectoryUrl)
-
       if (sourcemapReference) {
-        sourcemapReference.target.remove()
+        sourcemapReference.target.targetBuildRelativeUrl = buildRelativeUrl
+        sourcemapReference.target.targetBuildBuffer = mapSource
+      } else {
+        emitAsset({
+          fileName: buildRelativeUrl,
+          source: mapSource,
+        })
       }
-      emitAsset({
-        fileName: buildRelativeUrl,
-        source: mapSource,
-      })
     })
 
     return {

@@ -101,12 +101,14 @@ export const parseJsAsset = async (
         const buildRelativeUrl = urlToRelativeUrl(mapBuildUrl, buildDirectoryUrl)
 
         if (sourcemapReference) {
-          sourcemapReference.target.remove()
+          sourcemapReference.target.targetBuildRelativeUrl = buildRelativeUrl
+          sourcemapReference.target.targetBuildBuffer = mapSource
+        } else {
+          emitAsset({
+            fileName: buildRelativeUrl,
+            source: mapSource,
+          })
         }
-        emitAsset({
-          fileName: buildRelativeUrl,
-          source: mapSource,
-        })
       })
 
       return {

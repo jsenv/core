@@ -522,7 +522,8 @@ export const createAssetBuilder = (
       })
     })
 
-    // used to remove sourcemap files that are renamed after they are emitted
+    // was used to remove sourcemap files that are renamed after they are emitted
+    // could be useful one day in case an asset is finally discarded
     const remove = () => {
       target.shouldBeIgnored = true
     }
