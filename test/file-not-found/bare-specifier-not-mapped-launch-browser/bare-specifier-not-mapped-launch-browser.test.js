@@ -21,6 +21,7 @@ const executionResult = await execute({
   jsenvDirectoryRelativeUrl,
   fileRelativeUrl,
   launch: launchChromium,
+  stopAfterExecute: true,
 })
 const actual = executionResult
 const expected = {
@@ -30,10 +31,14 @@ const expected = {
 assert({ actual, expected })
 {
   const actual = executionResult.error.message
-  const expected = `Unmapped bare specifier.
+  const expected = `Error: Unmapped bare specifier.
 --- specifier ---
 foo
 --- importer ---
-${importerRelativeUrl}`
+${importerRelativeUrl}
+--- how to fix ---
+Add a mapping for "foo" into the importmap file at ${importMapFileRelativeUrl}
+--- suggestion ---
+Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map`
   assert({ actual, expected })
 }

@@ -17,6 +17,7 @@ import {
 } from "@jsenv/util"
 
 // import { jsenvImportMetaResolveGlobalUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { createBareSpecifierError } from "@jsenv/core/src/internal/createBareSpecifierError.js"
 import {
   urlToServerUrl,
   urlToProjectUrl,
@@ -222,8 +223,8 @@ export const createJsenvRollupPlugin = async ({
 
   const fetchImportmapFromParameter = async () => {
     const importmapProjectUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-    const importMapFileCompiledUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
-    const importMap = await fetchAndNormalizeImportmap(importMapFileCompiledUrl, { allow404: true })
+    importMapUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
+    const importMap = await fetchAndNormalizeImportmap(importMapUrl, { allow404: true })
     if (importMap === null) {
       logger.warn(
         `WARNING: no importmap found following importMapRelativeUrl at ${importmapProjectUrl}`,
@@ -239,6 +240,7 @@ export const createJsenvRollupPlugin = async ({
   let rollupSetAssetSource = () => {}
   let fetchImportmap = fetchImportmapFromParameter
   let importMap
+  let importMapUrl
 
   const emitAsset = ({ fileName, source }) => {
     return rollupEmitFile({
@@ -296,8 +298,8 @@ export const createJsenvRollupPlugin = async ({
                 const srcAttribute = getHtmlNodeAttributeByName(importmapHtmlNode, "src")
                 if (srcAttribute) {
                   logger.debug(formatUseImportMap(importmapHtmlNode, entryProjectUrl, htmlSource))
-                  const importmapUrl = resolveUrl(srcAttribute.value, entryCompiledUrl)
-                  if (!urlIsInsideOf(importmapUrl, compileDirectoryRemoteUrl)) {
+                  importMapUrl = resolveUrl(srcAttribute.value, entryCompiledUrl)
+                  if (!urlIsInsideOf(importMapUrl, compileDirectoryRemoteUrl)) {
                     logger.warn(
                       formatImportmapOutsideCompileDirectory(
                         importmapHtmlNode,
@@ -307,7 +309,7 @@ export const createJsenvRollupPlugin = async ({
                       ),
                     )
                   }
-                  fetchImportmap = () => fetchAndNormalizeImportmap(importmapUrl)
+                  fetchImportmap = () => fetchAndNormalizeImportmap(importMapUrl)
                 } else {
                   const textNode = getHtmlNodeTextNode(importmapHtmlNode)
                   if (textNode) {
@@ -517,6 +519,21 @@ export const createJsenvRollupPlugin = async ({
         importer,
         importMap,
         defaultExtension: importDefaultExtension,
+        createBareSpecifierError: ({ specifier, importer }) => {
+          const importerOriginalProjectUrl = rollupUrlToOriginalProjectUrl(importer)
+          const importMapOriginalProjectUrl = rollupUrlToOriginalProjectUrl(importMapUrl)
+          const message = createBareSpecifierError({
+            specifier,
+            importer: importerOriginalProjectUrl
+              ? urlToRelativeUrl(importerOriginalProjectUrl, projectDirectoryUrl)
+              : importer,
+            importMapUrl: importMapOriginalProjectUrl
+              ? urlToRelativeUrl(importMapOriginalProjectUrl, projectDirectoryUrl)
+              : importMapUrl,
+            importMap,
+          }).message
+          return createJsenvPluginError(message)
+        },
       })
 
       if (importer !== projectDirectoryUrl) {

@@ -1130,30 +1130,35 @@
     var importMap = _ref.importMap,
         specifier = _ref.specifier,
         importer = _ref.importer,
-        _ref$formatImporterFo = _ref.formatImporterForError,
-        formatImporterForError = _ref$formatImporterFo === void 0 ? function (importer) {
-      return importer;
-    } : _ref$formatImporterFo;
+        _ref$createBareSpecif = _ref.createBareSpecifierError,
+        createBareSpecifierError = _ref$createBareSpecif === void 0 ? function (_ref2) {
+      var specifier = _ref2.specifier,
+          importer = _ref2.importer;
+      return new Error(createDetailedMessage("Unmapped bare specifier.", {
+        specifier: specifier,
+        importer: importer
+      }));
+    } : _ref$createBareSpecif;
     assertImportMap(importMap);
 
     if (typeof specifier !== "string") {
       throw new TypeError(createDetailedMessage("specifier must be a string.", {
         specifier: specifier,
-        importer: formatImporterForError(importer)
+        importer: importer
       }));
     }
 
     if (importer) {
       if (typeof importer !== "string") {
         throw new TypeError(createDetailedMessage("importer must be a string.", {
-          importer: formatImporterForError(importer),
+          importer: importer,
           specifier: specifier
         }));
       }
 
       if (!hasScheme(importer)) {
         throw new Error(createDetailedMessage("importer must be an absolute url.", {
-          importer: formatImporterForError(importer),
+          importer: importer,
           specifier: specifier
         }));
       }
@@ -1192,9 +1197,9 @@
       return specifierUrl;
     }
 
-    throw new Error(createDetailedMessage("Unmapped bare specifier.", {
+    throw new Error(createBareSpecifierError({
       specifier: specifier,
-      importer: formatImporterForError(importer)
+      importer: importer
     }));
   };
 
@@ -1231,13 +1236,13 @@
         importMap = _ref.importMap,
         _ref$defaultExtension = _ref.defaultExtension,
         defaultExtension = _ref$defaultExtension === void 0 ? true : _ref$defaultExtension,
-        formatImporterForError = _ref.formatImporterForError;
+        createBareSpecifierError = _ref.createBareSpecifierError;
     return applyDefaultExtension({
       url: importMap ? applyImportMap({
         importMap: importMap,
         specifier: specifier,
         importer: importer,
-        formatImporterForError: formatImporterForError
+        createBareSpecifierError: createBareSpecifierError
       }) : resolveUrl(specifier, importer),
       importer: importer,
       defaultExtension: defaultExtension
@@ -1274,6 +1279,19 @@
     }
 
     return url;
+  };
+
+  var createBareSpecifierError = function createBareSpecifierError(_ref) {
+    var specifier = _ref.specifier,
+        importer = _ref.importer,
+        importMapUrl = _ref.importMapUrl;
+    var detailedMessage = createDetailedMessage("Unmapped bare specifier.", {
+      specifier: specifier,
+      importer: importer,
+      "how to fix": "Add a mapping for \"".concat(specifier, "\" into the importmap file at ").concat(importMapUrl),
+      "suggestion": "Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map"
+    });
+    return new Error(detailedMessage);
   };
 
   /*
@@ -2259,6 +2277,7 @@
   var createBrowserSystem = function createBrowserSystem(_ref) {
     var compileServerOrigin = _ref.compileServerOrigin,
         outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
+        importMapUrl = _ref.importMapUrl,
         importMap = _ref.importMap,
         importDefaultExtension = _ref.importDefaultExtension,
         fetchSource = _ref.fetchSource;
@@ -2281,12 +2300,21 @@
         importer: importer,
         importMap: importMap,
         defaultExtension: importDefaultExtension,
-        formatImporterForError: function formatImporterForError(importer) {
-          var importerProjectRelativeUrl = tryToFindProjectRelativeUrl(importer, {
-            compileServerOrigin: compileServerOrigin,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl
+        createBareSpecifierError: function createBareSpecifierError$1(_ref2) {
+          var specifier = _ref2.specifier,
+              importer = _ref2.importer;
+          return createBareSpecifierError({
+            specifier: specifier,
+            importer: tryToFindProjectRelativeUrl(importer, {
+              compileServerOrigin: compileServerOrigin,
+              outDirectoryRelativeUrl: outDirectoryRelativeUrl
+            }) || importer,
+            importMapUrl: tryToFindProjectRelativeUrl(importMapUrl, {
+              compileServerOrigin: compileServerOrigin,
+              outDirectoryRelativeUrl: outDirectoryRelativeUrl
+            }) || importMapUrl,
+            importMap: importMap
           });
-          return importerProjectRelativeUrl || importer;
         }
       });
     };
@@ -3251,14 +3279,14 @@
 
       var importmapScript = document.querySelector("script[type=\"jsenv-importmap\"]");
       var importMap;
+      var importMapUrl;
       return _invoke$1(function () {
         if (importmapScript) {
           var importmapRaw;
-          var importmapFileUrl;
           return _invoke$1(function () {
             if (importmapScript.src) {
-              importmapFileUrl = importmapScript.src;
-              return _await$4(fetchSource(importmapFileUrl), function (importmapFileResponse) {
+              importMapUrl = importmapScript.src;
+              return _await$4(fetchSource(importMapUrl), function (importmapFileResponse) {
                 var _temp = importmapFileResponse.status === 404;
 
                 return _await$4(_temp ? {} : importmapFileResponse.json(), function (_importmapFileRespons) {
@@ -3266,11 +3294,11 @@
                 }, _temp);
               });
             } else {
-              importmapFileUrl = document.location.href;
+              importMapUrl = document.location.href;
               importmapRaw = JSON.parse(importmapScript.textContent) || {};
             }
           }, function () {
-            importMap = normalizeImportMap(importmapRaw, importmapFileUrl);
+            importMap = normalizeImportMap(importmapRaw, importMapUrl);
           });
         }
       }, function () {
@@ -3278,6 +3306,7 @@
           return _await$4(memoizedCreateBrowserSystem({
             compileServerOrigin: compileServerOrigin,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            importMapUrl: importMapUrl,
             importMap: importMap,
             importDefaultExtension: importDefaultExtension,
             fetchSource: fetchSource
@@ -3306,6 +3335,7 @@
           return _await$4(memoizedCreateBrowserSystem({
             compileServerOrigin: compileServerOrigin,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            importMapUrl: importMapUrl,
             importMap: importMap,
             importDefaultExtension: importDefaultExtension,
             fetchSource: fetchSource

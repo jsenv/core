@@ -1,6 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { resolveImport } from "@jsenv/import-map"
+import { createBareSpecifierError } from "@jsenv/core/src/internal/createBareSpecifierError.js"
 import { require } from "../../require.js"
 import "../s.js"
 import {
@@ -18,6 +19,7 @@ export const createNodeSystem = ({
   projectDirectoryUrl,
   compileServerOrigin,
   outDirectoryRelativeUrl,
+  importMapUrl,
   importMap,
   importDefaultExtension,
   fetchSource,
@@ -42,12 +44,21 @@ export const createNodeSystem = ({
       importer,
       importMap,
       defaultExtension: importDefaultExtension,
-      formatImporterForError: (importer) => {
-        const importerProjectRelativeUrl = tryToFindProjectRelativeUrl(importer, {
-          compileServerOrigin,
-          outDirectoryRelativeUrl,
+      createBareSpecifierError: ({ specifier, importer }) => {
+        return createBareSpecifierError({
+          specifier,
+          importer:
+            tryToFindProjectRelativeUrl(importer, {
+              compileServerOrigin,
+              outDirectoryRelativeUrl,
+            }) || importer,
+          importMapUrl:
+            tryToFindProjectRelativeUrl(importMapUrl, {
+              compileServerOrigin,
+              outDirectoryRelativeUrl,
+            }) || importMapUrl,
+          importMap,
         })
-        return importerProjectRelativeUrl || importer
       },
     })
   }

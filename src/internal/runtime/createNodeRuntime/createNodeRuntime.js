@@ -29,11 +29,12 @@ export const createNodeRuntime = async ({
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
 
   let importMap
+  let importMapUrl
   if (importMapFileRelativeUrl) {
-    const importmapFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
-    const importmapFileResponse = await fetchUrl(importmapFileUrl)
+    importMapUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${importMapFileRelativeUrl}`
+    const importmapFileResponse = await fetchUrl(importMapUrl)
     const importmap = importmapFileResponse.status === 404 ? {} : await importmapFileResponse.json()
-    const importmapNormalized = normalizeImportMap(importmap, importmapFileUrl)
+    const importmapNormalized = normalizeImportMap(importmap, importMapUrl)
     importMap = importmapNormalized
   }
 
@@ -42,6 +43,7 @@ export const createNodeRuntime = async ({
       projectDirectoryUrl,
       compileServerOrigin,
       outDirectoryRelativeUrl,
+      importMapUrl,
       importMap,
       importDefaultExtension,
       fetchSource,
@@ -57,6 +59,7 @@ export const createNodeRuntime = async ({
       projectDirectoryUrl,
       compileServerOrigin,
       outDirectoryRelativeUrl,
+      importMapUrl,
       importMap,
       importDefaultExtension,
       fetchSource,

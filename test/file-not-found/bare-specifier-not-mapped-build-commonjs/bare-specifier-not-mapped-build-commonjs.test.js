@@ -33,6 +33,10 @@ try {
 --- specifier ---
 foo
 --- importer ---
-https://localhost:4567/${testDirectoryRelativeUrl}.jsenv/out-build/otherwise/${fileRelativeUrl}`
+${fileRelativeUrl}
+--- how to fix ---
+Add a mapping for "foo" into the importmap file at ${importMapFileRelativeUrl}
+--- suggestion ---
+Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map`
   assert({ actual, expected })
 }

@@ -1397,6 +1397,19 @@ var resolveNodeGroup = function resolveNodeGroup(groupMap) {
   return resolveGroup(detectNode(), groupMap);
 };
 
+var createBareSpecifierError = function createBareSpecifierError(_ref) {
+  var specifier = _ref.specifier,
+      importer = _ref.importer,
+      importMapUrl = _ref.importMapUrl;
+  var detailedMessage = logger.createDetailedMessage("Unmapped bare specifier.", {
+    specifier: specifier,
+    importer: importer,
+    "how to fix": "Add a mapping for \"".concat(specifier, "\" into the importmap file at ").concat(importMapUrl),
+    "suggestion": "Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map"
+  });
+  return new Error(detailedMessage);
+};
+
 /*
 * SJS 6.7.1
 * Minimal SystemJS Build
@@ -2400,6 +2413,7 @@ var createNodeSystem = function createNodeSystem() {
       projectDirectoryUrl = _ref.projectDirectoryUrl,
       compileServerOrigin = _ref.compileServerOrigin,
       outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
+      importMapUrl = _ref.importMapUrl,
       importMap$1 = _ref.importMap,
       importDefaultExtension = _ref.importDefaultExtension,
       fetchSource = _ref.fetchSource;
@@ -2424,12 +2438,21 @@ var createNodeSystem = function createNodeSystem() {
       importer: importer,
       importMap: importMap$1,
       defaultExtension: importDefaultExtension,
-      formatImporterForError: function formatImporterForError(importer) {
-        var importerProjectRelativeUrl = tryToFindProjectRelativeUrl(importer, {
-          compileServerOrigin: compileServerOrigin,
-          outDirectoryRelativeUrl: outDirectoryRelativeUrl
+      createBareSpecifierError: function createBareSpecifierError$1(_ref2) {
+        var specifier = _ref2.specifier,
+            importer = _ref2.importer;
+        return createBareSpecifierError({
+          specifier: specifier,
+          importer: tryToFindProjectRelativeUrl(importer, {
+            compileServerOrigin: compileServerOrigin,
+            outDirectoryRelativeUrl: outDirectoryRelativeUrl
+          }) || importer,
+          importMapUrl: tryToFindProjectRelativeUrl(importMapUrl, {
+            compileServerOrigin: compileServerOrigin,
+            outDirectoryRelativeUrl: outDirectoryRelativeUrl
+          }) || importMapUrl,
+          importMap: importMap$1
         });
-        return importerProjectRelativeUrl || importer;
       }
     });
   };
@@ -2503,9 +2526,9 @@ var createNodeSystem = function createNodeSystem() {
   return nodeSystem;
 };
 
-var responseUrlToSourceUrl = function responseUrlToSourceUrl(responseUrl, _ref2) {
-  var compileServerOrigin = _ref2.compileServerOrigin,
-      projectDirectoryUrl = _ref2.projectDirectoryUrl;
+var responseUrlToSourceUrl = function responseUrlToSourceUrl(responseUrl, _ref3) {
+  var compileServerOrigin = _ref3.compileServerOrigin,
+      projectDirectoryUrl = _ref3.projectDirectoryUrl;
 
   if (responseUrl.startsWith("file://")) {
     return util.urlToFileSystemPath(responseUrl);
@@ -2523,10 +2546,10 @@ var responseUrlToSourceUrl = function responseUrlToSourceUrl(responseUrl, _ref2)
   return responseUrl;
 };
 
-var urlToOriginalUrl = function urlToOriginalUrl(url, _ref3) {
-  var projectDirectoryUrl = _ref3.projectDirectoryUrl,
-      outDirectoryRelativeUrl = _ref3.outDirectoryRelativeUrl,
-      compileServerOrigin = _ref3.compileServerOrigin;
+var urlToOriginalUrl = function urlToOriginalUrl(url, _ref4) {
+  var projectDirectoryUrl = _ref4.projectDirectoryUrl,
+      outDirectoryRelativeUrl = _ref4.outDirectoryRelativeUrl,
+      compileServerOrigin = _ref4.compileServerOrigin;
 
   if (!url.startsWith("".concat(compileServerOrigin, "/"))) {
     return url;
@@ -2659,14 +2682,15 @@ var createNodeRuntime = _async$6(function (_ref) {
     });
     var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/");
     var importMap$1;
+    var importMapUrl;
     return _invoke$4(function () {
       if (importMapFileRelativeUrl) {
-        var importmapFileUrl = "".concat(compileServerOrigin, "/").concat(compileDirectoryRelativeUrl).concat(importMapFileRelativeUrl);
-        return _await$5(fetchUrl(importmapFileUrl), function (importmapFileResponse) {
+        importMapUrl = "".concat(compileServerOrigin, "/").concat(compileDirectoryRelativeUrl).concat(importMapFileRelativeUrl);
+        return _await$5(fetchUrl(importMapUrl), function (importmapFileResponse) {
           var _temp = importmapFileResponse.status === 404;
 
           return _await$5(_temp ? {} : importmapFileResponse.json(), function (importmap) {
-            var importmapNormalized = importMap.normalizeImportMap(importmap, importmapFileUrl);
+            var importmapNormalized = importMap.normalizeImportMap(importmap, importMapUrl);
             importMap$1 = importmapNormalized;
           }, _temp);
         });
@@ -2677,6 +2701,7 @@ var createNodeRuntime = _async$6(function (_ref) {
           projectDirectoryUrl: projectDirectoryUrl,
           compileServerOrigin: compileServerOrigin,
           outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+          importMapUrl: importMapUrl,
           importMap: importMap$1,
           importDefaultExtension: importDefaultExtension,
           fetchSource: fetchSource
@@ -2698,6 +2723,7 @@ var createNodeRuntime = _async$6(function (_ref) {
           projectDirectoryUrl: projectDirectoryUrl,
           compileServerOrigin: compileServerOrigin,
           outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+          importMapUrl: importMapUrl,
           importMap: importMap$1,
           importDefaultExtension: importDefaultExtension,
           fetchSource: fetchSource

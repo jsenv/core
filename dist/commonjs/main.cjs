@@ -2763,6 +2763,20 @@ const writeJsAndSourcemap = async (serviceWorkerBuildUrl, serviceWorkerCode, ser
   await Promise.all([util.writeFile(serviceWorkerBuildUrl, serviceWorkerCode), util.writeFile(sourcemapBuildUrl, JSON.stringify(serviceWorkerSourceMap, null, "  "))]);
 };
 
+const createBareSpecifierError = ({
+  specifier,
+  importer,
+  importMapUrl
+}) => {
+  const detailedMessage = logger.createDetailedMessage("Unmapped bare specifier.", {
+    specifier,
+    importer,
+    "how to fix": `Add a mapping for "${specifier}" into the importmap file at ${importMapUrl}`,
+    "suggestion": `Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map`
+  });
+  return new Error(detailedMessage);
+};
+
 https.globalAgent.options.rejectUnauthorized = false;
 const fetchUrl = async (url, {
   ignoreHttpsError = true,
@@ -6864,8 +6878,8 @@ const createJsenvRollupPlugin = async ({
 
   const fetchImportmapFromParameter = async () => {
     const importmapProjectUrl = util.resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
-    const importMapFileCompiledUrl = util.resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl);
-    const importMap = await fetchAndNormalizeImportmap(importMapFileCompiledUrl, {
+    importMapUrl = util.resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl);
+    const importMap = await fetchAndNormalizeImportmap(importMapUrl, {
       allow404: true
     });
 
@@ -6886,6 +6900,7 @@ const createJsenvRollupPlugin = async ({
 
   let fetchImportmap = fetchImportmapFromParameter;
   let importMap$1;
+  let importMapUrl;
 
   const emitAsset = ({
     fileName,
@@ -6942,13 +6957,13 @@ const createJsenvRollupPlugin = async ({
 
               if (srcAttribute) {
                 logger$1.debug(formatUseImportMap(importmapHtmlNode, entryProjectUrl, htmlSource));
-                const importmapUrl = util.resolveUrl(srcAttribute.value, entryCompiledUrl);
+                importMapUrl = util.resolveUrl(srcAttribute.value, entryCompiledUrl);
 
-                if (!util.urlIsInsideOf(importmapUrl, compileDirectoryRemoteUrl)) {
+                if (!util.urlIsInsideOf(importMapUrl, compileDirectoryRemoteUrl)) {
                   logger$1.warn(formatImportmapOutsideCompileDirectory(importmapHtmlNode, entryProjectUrl, htmlSource, compileDirectoryUrl));
                 }
 
-                fetchImportmap = () => fetchAndNormalizeImportmap(importmapUrl);
+                fetchImportmap = () => fetchAndNormalizeImportmap(importMapUrl);
               } else {
                 const textNode = getHtmlNodeTextNode(importmapHtmlNode);
 
@@ -7158,7 +7173,21 @@ const createJsenvRollupPlugin = async ({
         specifier,
         importer,
         importMap: importMap$1,
-        defaultExtension: importDefaultExtension
+        defaultExtension: importDefaultExtension,
+        createBareSpecifierError: ({
+          specifier,
+          importer
+        }) => {
+          const importerOriginalProjectUrl = rollupUrlToOriginalProjectUrl(importer);
+          const importMapOriginalProjectUrl = rollupUrlToOriginalProjectUrl(importMapUrl);
+          const message = createBareSpecifierError({
+            specifier,
+            importer: importerOriginalProjectUrl ? util.urlToRelativeUrl(importerOriginalProjectUrl, projectDirectoryUrl) : importer,
+            importMapUrl: importMapOriginalProjectUrl ? util.urlToRelativeUrl(importMapOriginalProjectUrl, projectDirectoryUrl) : importMapUrl,
+            importMap: importMap$1
+          }).message;
+          return createJsenvPluginError(message);
+        }
       });
 
       if (importer !== projectDirectoryUrl) {
