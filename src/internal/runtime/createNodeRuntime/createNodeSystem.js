@@ -3,7 +3,11 @@ import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { resolveImport } from "@jsenv/import-map"
 import { require } from "../../require.js"
 import "../s.js"
-import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
+import {
+  fromFunctionReturningNamespace,
+  fromUrl,
+  tryToFindProjectRelativeUrl,
+} from "../module-registration.js"
 import { valueInstall } from "../valueInstall.js"
 import { isNativeNodeModuleBareSpecifier } from "./isNativeNodeModuleBareSpecifier.js"
 import { evalSource } from "./evalSource.js"
@@ -38,12 +42,13 @@ export const createNodeSystem = ({
       importer,
       importMap,
       defaultExtension: importDefaultExtension,
-      formatImporterForError: (importer) =>
-        urlToOriginalUrl(importer, {
-          projectDirectoryUrl,
-          outDirectoryRelativeUrl,
+      formatImporterForError: (importer) => {
+        const importerProjectRelativeUrl = tryToFindProjectRelativeUrl(importer, {
           compileServerOrigin,
-        }),
+          outDirectoryRelativeUrl,
+        })
+        return importerProjectRelativeUrl || importer
+      },
     })
   }
 

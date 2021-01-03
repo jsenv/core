@@ -1116,30 +1116,44 @@
     return pathname.slice(dotLastIndex);
   };
 
+  var createDetailedMessage = function createDetailedMessage(message) {
+    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var string = "".concat(message);
+    Object.keys(details).forEach(function (key) {
+      var value = details[key];
+      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    });
+    return string;
+  };
+
   var applyImportMap = function applyImportMap(_ref) {
     var importMap = _ref.importMap,
         specifier = _ref.specifier,
-        importer = _ref.importer;
+        importer = _ref.importer,
+        _ref$formatImporterFo = _ref.formatImporterForError,
+        formatImporterForError = _ref$formatImporterFo === void 0 ? function (importer) {
+      return importer;
+    } : _ref$formatImporterFo;
     assertImportMap(importMap);
 
     if (typeof specifier !== "string") {
-      throw new TypeError(writeSpecifierMustBeAString({
+      throw new TypeError(createDetailedMessage("specifier must be a string.", {
         specifier: specifier,
-        importer: importer
+        importer: formatImporterForError(importer)
       }));
     }
 
     if (importer) {
       if (typeof importer !== "string") {
-        throw new TypeError(writeImporterMustBeAString({
-          importer: importer,
+        throw new TypeError(createDetailedMessage("importer must be a string.", {
+          importer: formatImporterForError(importer),
           specifier: specifier
         }));
       }
 
       if (!hasScheme(importer)) {
-        throw new Error(writeImporterMustBeAbsolute({
-          importer: importer,
+        throw new Error(createDetailedMessage("importer must be an absolute url.", {
+          importer: formatImporterForError(importer),
           specifier: specifier
         }));
       }
@@ -1178,9 +1192,9 @@
       return specifierUrl;
     }
 
-    throw new Error(writeBareSpecifierMustBeRemapped({
+    throw new Error(createDetailedMessage("Unmapped bare specifier.", {
       specifier: specifier,
-      importer: importer
+      importer: formatImporterForError(importer)
     }));
   };
 
@@ -1211,41 +1225,19 @@
     return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
   };
 
-  var writeSpecifierMustBeAString = function writeSpecifierMustBeAString(_ref2) {
-    var specifier = _ref2.specifier,
-        importer = _ref2.importer;
-    return "specifier must be a string.\n--- specifier ---\n".concat(specifier, "\n--- importer ---\n").concat(importer);
-  };
-
-  var writeImporterMustBeAString = function writeImporterMustBeAString(_ref3) {
-    var importer = _ref3.importer,
-        specifier = _ref3.specifier;
-    return "importer must be a string.\n--- importer ---\n".concat(importer, "\n--- specifier ---\n").concat(specifier);
-  };
-
-  var writeImporterMustBeAbsolute = function writeImporterMustBeAbsolute(_ref4) {
-    var importer = _ref4.importer,
-        specifier = _ref4.specifier;
-    return "importer must be an absolute url.\n--- importer ---\n".concat(importer, "\n--- specifier ---\n").concat(specifier);
-  };
-
-  var writeBareSpecifierMustBeRemapped = function writeBareSpecifierMustBeRemapped(_ref5) {
-    var specifier = _ref5.specifier,
-        importer = _ref5.importer;
-    return "Unmapped bare specifier.\n--- specifier ---\n".concat(specifier, "\n--- importer ---\n").concat(importer);
-  };
-
   var resolveImport = function resolveImport(_ref) {
     var specifier = _ref.specifier,
         importer = _ref.importer,
         importMap = _ref.importMap,
         _ref$defaultExtension = _ref.defaultExtension,
-        defaultExtension = _ref$defaultExtension === void 0 ? true : _ref$defaultExtension;
+        defaultExtension = _ref$defaultExtension === void 0 ? true : _ref$defaultExtension,
+        formatImporterForError = _ref.formatImporterForError;
     return applyDefaultExtension({
       url: importMap ? applyImportMap({
         importMap: importMap,
         specifier: specifier,
-        importer: importer
+        importer: importer,
+        formatImporterForError: formatImporterForError
       }) : resolveUrl(specifier, importer),
       importer: importer,
       defaultExtension: defaultExtension
@@ -1963,16 +1955,6 @@
     };
   };
 
-  var createDetailedMessage = function createDetailedMessage(message) {
-    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var string = "".concat(message);
-    Object.keys(details).forEach(function (key) {
-      var value = details[key];
-      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-    });
-    return string;
-  };
-
   function _await(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -2298,7 +2280,14 @@
         specifier: specifier,
         importer: importer,
         importMap: importMap,
-        defaultExtension: importDefaultExtension
+        defaultExtension: importDefaultExtension,
+        formatImporterForError: function formatImporterForError(importer) {
+          var importerProjectRelativeUrl = tryToFindProjectRelativeUrl(importer, {
+            compileServerOrigin: compileServerOrigin,
+            outDirectoryRelativeUrl: outDirectoryRelativeUrl
+          });
+          return importerProjectRelativeUrl || importer;
+        }
       });
     };
 

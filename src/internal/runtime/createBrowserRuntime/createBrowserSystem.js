@@ -1,7 +1,11 @@
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
 import "../s.js"
 import { valueInstall } from "../valueInstall.js"
-import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
+import {
+  fromFunctionReturningNamespace,
+  fromUrl,
+  tryToFindProjectRelativeUrl,
+} from "../module-registration.js"
 import { evalSource } from "./evalSource.js"
 
 const GLOBAL_SPECIFIER = "global"
@@ -29,6 +33,13 @@ export const createBrowserSystem = ({
       importer,
       importMap,
       defaultExtension: importDefaultExtension,
+      formatImporterForError: (importer) => {
+        const importerProjectRelativeUrl = tryToFindProjectRelativeUrl(importer, {
+          compileServerOrigin,
+          outDirectoryRelativeUrl,
+        })
+        return importerProjectRelativeUrl || importer
+      },
     })
   }
 

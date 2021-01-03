@@ -2423,7 +2423,14 @@ var createNodeSystem = function createNodeSystem() {
       specifier: specifier,
       importer: importer,
       importMap: importMap$1,
-      defaultExtension: importDefaultExtension
+      defaultExtension: importDefaultExtension,
+      formatImporterForError: function formatImporterForError(importer) {
+        var importerProjectRelativeUrl = tryToFindProjectRelativeUrl(importer, {
+          compileServerOrigin: compileServerOrigin,
+          outDirectoryRelativeUrl: outDirectoryRelativeUrl
+        });
+        return importerProjectRelativeUrl || importer;
+      }
     });
   };
 
