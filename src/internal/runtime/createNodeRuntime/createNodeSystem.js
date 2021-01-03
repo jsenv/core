@@ -38,6 +38,12 @@ export const createNodeSystem = ({
       importer,
       importMap,
       defaultExtension: importDefaultExtension,
+      formatImporterForError: (importer) =>
+        urlToOriginalUrl(importer, {
+          projectDirectoryUrl,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+        }),
     })
   }
 
