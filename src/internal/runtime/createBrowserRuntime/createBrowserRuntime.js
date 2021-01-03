@@ -40,24 +40,25 @@ export const createBrowserRuntime = async ({
   // systemjs style with systemjs-importmap
   const importmapScript = document.querySelector(`script[type="jsenv-importmap"]`)
   let importMap
+  let importMapUrl
   if (importmapScript) {
     let importmapRaw
-    let importmapFileUrl
     if (importmapScript.src) {
-      importmapFileUrl = importmapScript.src
-      const importmapFileResponse = await fetchSource(importmapFileUrl)
+      importMapUrl = importmapScript.src
+      const importmapFileResponse = await fetchSource(importMapUrl)
       importmapRaw = importmapFileResponse.status === 404 ? {} : await importmapFileResponse.json()
     } else {
-      importmapFileUrl = document.location.href
+      importMapUrl = document.location.href
       importmapRaw = JSON.parse(importmapScript.textContent) || {}
     }
-    importMap = normalizeImportMap(importmapRaw, importmapFileUrl)
+    importMap = normalizeImportMap(importmapRaw, importMapUrl)
   }
 
   const importFile = async (specifier) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
       outDirectoryRelativeUrl,
+      importMapUrl,
       importMap,
       importDefaultExtension,
       fetchSource,
@@ -79,6 +80,7 @@ export const createBrowserRuntime = async ({
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
       outDirectoryRelativeUrl,
+      importMapUrl,
       importMap,
       importDefaultExtension,
       fetchSource,

@@ -229,7 +229,10 @@ const getModuleDetails = ({
   return details
 }
 
-const tryToFindProjectRelativeUrl = (url, { compileServerOrigin, outDirectoryRelativeUrl }) => {
+export const tryToFindProjectRelativeUrl = (
+  url,
+  { compileServerOrigin, outDirectoryRelativeUrl },
+) => {
   if (!url) {
     return null
   }

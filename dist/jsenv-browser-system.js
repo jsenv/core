@@ -1116,14 +1116,33 @@
     return pathname.slice(dotLastIndex);
   };
 
+  var createDetailedMessage = function createDetailedMessage(message) {
+    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var string = "".concat(message);
+    Object.keys(details).forEach(function (key) {
+      var value = details[key];
+      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    });
+    return string;
+  };
+
   var applyImportMap = function applyImportMap(_ref) {
     var importMap = _ref.importMap,
         specifier = _ref.specifier,
-        importer = _ref.importer;
+        importer = _ref.importer,
+        _ref$createBareSpecif = _ref.createBareSpecifierError,
+        createBareSpecifierError = _ref$createBareSpecif === void 0 ? function (_ref2) {
+      var specifier = _ref2.specifier,
+          importer = _ref2.importer;
+      return new Error(createDetailedMessage("Unmapped bare specifier.", {
+        specifier: specifier,
+        importer: importer
+      }));
+    } : _ref$createBareSpecif;
     assertImportMap(importMap);
 
     if (typeof specifier !== "string") {
-      throw new TypeError(writeSpecifierMustBeAString({
+      throw new TypeError(createDetailedMessage("specifier must be a string.", {
         specifier: specifier,
         importer: importer
       }));
@@ -1131,14 +1150,14 @@
 
     if (importer) {
       if (typeof importer !== "string") {
-        throw new TypeError(writeImporterMustBeAString({
+        throw new TypeError(createDetailedMessage("importer must be a string.", {
           importer: importer,
           specifier: specifier
         }));
       }
 
       if (!hasScheme(importer)) {
-        throw new Error(writeImporterMustBeAbsolute({
+        throw new Error(createDetailedMessage("importer must be an absolute url.", {
           importer: importer,
           specifier: specifier
         }));
@@ -1178,7 +1197,7 @@
       return specifierUrl;
     }
 
-    throw new Error(writeBareSpecifierMustBeRemapped({
+    throw new Error(createBareSpecifierError({
       specifier: specifier,
       importer: importer
     }));
@@ -1211,41 +1230,19 @@
     return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
   };
 
-  var writeSpecifierMustBeAString = function writeSpecifierMustBeAString(_ref2) {
-    var specifier = _ref2.specifier,
-        importer = _ref2.importer;
-    return "specifier must be a string.\n--- specifier ---\n".concat(specifier, "\n--- importer ---\n").concat(importer);
-  };
-
-  var writeImporterMustBeAString = function writeImporterMustBeAString(_ref3) {
-    var importer = _ref3.importer,
-        specifier = _ref3.specifier;
-    return "importer must be a string.\n--- importer ---\n".concat(importer, "\n--- specifier ---\n").concat(specifier);
-  };
-
-  var writeImporterMustBeAbsolute = function writeImporterMustBeAbsolute(_ref4) {
-    var importer = _ref4.importer,
-        specifier = _ref4.specifier;
-    return "importer must be an absolute url.\n--- importer ---\n".concat(importer, "\n--- specifier ---\n").concat(specifier);
-  };
-
-  var writeBareSpecifierMustBeRemapped = function writeBareSpecifierMustBeRemapped(_ref5) {
-    var specifier = _ref5.specifier,
-        importer = _ref5.importer;
-    return "Unmapped bare specifier.\n--- specifier ---\n".concat(specifier, "\n--- importer ---\n").concat(importer);
-  };
-
   var resolveImport = function resolveImport(_ref) {
     var specifier = _ref.specifier,
         importer = _ref.importer,
         importMap = _ref.importMap,
         _ref$defaultExtension = _ref.defaultExtension,
-        defaultExtension = _ref$defaultExtension === void 0 ? true : _ref$defaultExtension;
+        defaultExtension = _ref$defaultExtension === void 0 ? true : _ref$defaultExtension,
+        createBareSpecifierError = _ref.createBareSpecifierError;
     return applyDefaultExtension({
       url: importMap ? applyImportMap({
         importMap: importMap,
         specifier: specifier,
-        importer: importer
+        importer: importer,
+        createBareSpecifierError: createBareSpecifierError
       }) : resolveUrl(specifier, importer),
       importer: importer,
       defaultExtension: defaultExtension
@@ -1282,6 +1279,19 @@
     }
 
     return url;
+  };
+
+  var createBareSpecifierError = function createBareSpecifierError(_ref) {
+    var specifier = _ref.specifier,
+        importer = _ref.importer,
+        importMapUrl = _ref.importMapUrl;
+    var detailedMessage = createDetailedMessage("Unmapped bare specifier.", {
+      specifier: specifier,
+      importer: importer,
+      "how to fix": "Add a mapping for \"".concat(specifier, "\" into the importmap file at ").concat(importMapUrl),
+      "suggestion": "Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map"
+    });
+    return new Error(detailedMessage);
   };
 
   /*
@@ -1963,16 +1973,6 @@
     };
   };
 
-  var createDetailedMessage = function createDetailedMessage(message) {
-    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var string = "".concat(message);
-    Object.keys(details).forEach(function (key) {
-      var value = details[key];
-      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-    });
-    return string;
-  };
-
   function _await(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -2277,6 +2277,7 @@
   var createBrowserSystem = function createBrowserSystem(_ref) {
     var compileServerOrigin = _ref.compileServerOrigin,
         outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
+        importMapUrl = _ref.importMapUrl,
         importMap = _ref.importMap,
         importDefaultExtension = _ref.importDefaultExtension,
         fetchSource = _ref.fetchSource;
@@ -2289,12 +2290,32 @@
 
     var _resolve = function resolve(specifier) {
       var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : document.location.href;
-      if (specifier === GLOBAL_SPECIFIER) return specifier;
+
+      if (specifier === GLOBAL_SPECIFIER) {
+        return specifier;
+      }
+
       return resolveImport({
         specifier: specifier,
         importer: importer,
         importMap: importMap,
-        defaultExtension: importDefaultExtension
+        defaultExtension: importDefaultExtension,
+        createBareSpecifierError: function createBareSpecifierError$1(_ref2) {
+          var specifier = _ref2.specifier,
+              importer = _ref2.importer;
+          return createBareSpecifierError({
+            specifier: specifier,
+            importer: tryToFindProjectRelativeUrl(importer, {
+              compileServerOrigin: compileServerOrigin,
+              outDirectoryRelativeUrl: outDirectoryRelativeUrl
+            }) || importer,
+            importMapUrl: tryToFindProjectRelativeUrl(importMapUrl, {
+              compileServerOrigin: compileServerOrigin,
+              outDirectoryRelativeUrl: outDirectoryRelativeUrl
+            }) || importMapUrl,
+            importMap: importMap
+          });
+        }
       });
     };
 
@@ -3258,14 +3279,14 @@
 
       var importmapScript = document.querySelector("script[type=\"jsenv-importmap\"]");
       var importMap;
+      var importMapUrl;
       return _invoke$1(function () {
         if (importmapScript) {
           var importmapRaw;
-          var importmapFileUrl;
           return _invoke$1(function () {
             if (importmapScript.src) {
-              importmapFileUrl = importmapScript.src;
-              return _await$4(fetchSource(importmapFileUrl), function (importmapFileResponse) {
+              importMapUrl = importmapScript.src;
+              return _await$4(fetchSource(importMapUrl), function (importmapFileResponse) {
                 var _temp = importmapFileResponse.status === 404;
 
                 return _await$4(_temp ? {} : importmapFileResponse.json(), function (_importmapFileRespons) {
@@ -3273,11 +3294,11 @@
                 }, _temp);
               });
             } else {
-              importmapFileUrl = document.location.href;
+              importMapUrl = document.location.href;
               importmapRaw = JSON.parse(importmapScript.textContent) || {};
             }
           }, function () {
-            importMap = normalizeImportMap(importmapRaw, importmapFileUrl);
+            importMap = normalizeImportMap(importmapRaw, importMapUrl);
           });
         }
       }, function () {
@@ -3285,6 +3306,7 @@
           return _await$4(memoizedCreateBrowserSystem({
             compileServerOrigin: compileServerOrigin,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            importMapUrl: importMapUrl,
             importMap: importMap,
             importDefaultExtension: importDefaultExtension,
             fetchSource: fetchSource
@@ -3313,6 +3335,7 @@
           return _await$4(memoizedCreateBrowserSystem({
             compileServerOrigin: compileServerOrigin,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            importMapUrl: importMapUrl,
             importMap: importMap,
             importDefaultExtension: importDefaultExtension,
             fetchSource: fetchSource

@@ -326,9 +326,12 @@ const evalException = (exceptionSource, { compileServerOrigin, projectDirectoryU
       escapeRegexpSpecialCharacters(`${compileServerOrigin}/`),
       "g",
     )
-
-    error.stack = error.stack.replace(compileServerOriginRegexp, projectDirectoryUrl)
+    // const serverUrlRegExp = new RegExp(
+    //   `(${escapeRegexpSpecialCharacters(`${compileServerOrigin}/`)}[^\\s]+)`,
+    //   "g",
+    // )
     error.message = error.message.replace(compileServerOriginRegexp, projectDirectoryUrl)
+    error.stack = error.stack.replace(compileServerOriginRegexp, projectDirectoryUrl)
 
     // const projectDirectoryPath = urlToFileSystemPath(projectDirectoryUrl)
     // const projectDirectoryPathRegexp = new RegExp(

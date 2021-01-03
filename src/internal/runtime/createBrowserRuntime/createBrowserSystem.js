@@ -1,7 +1,12 @@
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
+import { createBareSpecifierError } from "@jsenv/core/src/internal/createBareSpecifierError.js"
 import "../s.js"
 import { valueInstall } from "../valueInstall.js"
-import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
+import {
+  fromFunctionReturningNamespace,
+  fromUrl,
+  tryToFindProjectRelativeUrl,
+} from "../module-registration.js"
 import { evalSource } from "./evalSource.js"
 
 const GLOBAL_SPECIFIER = "global"
@@ -9,6 +14,7 @@ const GLOBAL_SPECIFIER = "global"
 export const createBrowserSystem = ({
   compileServerOrigin,
   outDirectoryRelativeUrl,
+  importMapUrl,
   importMap,
   importDefaultExtension,
   fetchSource,
@@ -20,12 +26,31 @@ export const createBrowserSystem = ({
   const browserSystem = new window.System.constructor()
 
   const resolve = (specifier, importer = document.location.href) => {
-    if (specifier === GLOBAL_SPECIFIER) return specifier
+    if (specifier === GLOBAL_SPECIFIER) {
+      return specifier
+    }
+
     return resolveImport({
       specifier,
       importer,
       importMap,
       defaultExtension: importDefaultExtension,
+      createBareSpecifierError: ({ specifier, importer }) => {
+        return createBareSpecifierError({
+          specifier,
+          importer:
+            tryToFindProjectRelativeUrl(importer, {
+              compileServerOrigin,
+              outDirectoryRelativeUrl,
+            }) || importer,
+          importMapUrl:
+            tryToFindProjectRelativeUrl(importMapUrl, {
+              compileServerOrigin,
+              outDirectoryRelativeUrl,
+            }) || importMapUrl,
+          importMap,
+        })
+      },
     })
   }
 
