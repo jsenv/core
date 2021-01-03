@@ -570,7 +570,7 @@ An overview of the main dependencies used by `@jsenv/core`.
 
 ## Name
 
-The name `jsenv` stands for JavaScript environments. This is because the original purpose of `jsenv` was to blur the differences between two JavaScript runtimes: web browsers and Node.js. This aspect of `jsenv` is not highlighted in the documentation but it exists.
+The name `jsenv` stands for JavaScript environments. This is because the original purpose of `jsenv` was to bring closer two JavaScript runtimes: web browsers and Node.js. This aspect of `jsenv` is not highlighted in the documentation but it exists.
 
 Maybe `jsenv` should be written `JSEnv`? It's too boring to hold `shift` on keyboard while typing `JSE`, then release `shift`, then type `nv`, so it's a no.
 
@@ -591,8 +591,8 @@ The logo is composed by the name at the center and two circles orbiting around i
 
 # See also
 
-- [Jsenv compile server explained](./docs/compile-server-explained.md): Document how jsenv works internally to compile on demand with a filesystem cache.
-- [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05): Article showing a new testing experience and proposing jsenv to obtain it.
+- [Jsenv compile server](./docs/jsenv-compile-server.md): Document how jsenv works internally to compile on demand with a filesystem cache.
+- [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05): Article presenting a straightforward testing experience and proposing jsenv to obtain it.
 - [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa): GitHub repository template for a progressive web application.
 - [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-pwa): GitHub repository template for node package.
 - [@jsenv/assert](https://github.com/jsenv/jsenv-assert): Test anything using one assertion.

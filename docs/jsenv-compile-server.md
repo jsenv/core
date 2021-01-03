@@ -1,8 +1,8 @@
-# Jsenv compile server explained
+# Jsenv compile server
 
 _An high level overview of how jsenv server works internally_.
 
-# Features
+# What it does
 
 - Compiles exactly what is needed on demand
   - server starts very quickly
