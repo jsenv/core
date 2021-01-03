@@ -17,6 +17,13 @@ import {
 } from "@jsenv/util"
 
 // import { jsenvImportMetaResolveGlobalUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import {
+  urlToServerUrl,
+  urlToProjectUrl,
+  urlToOriginalServerUrl,
+  urlToOriginalProjectUrl,
+  urlToCompiledServerUrl,
+} from "@jsenv/core/src/internal/url-conversion.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
@@ -132,6 +139,50 @@ export const createJsenvRollupPlugin = async ({
   const compileServerOriginForRollup = String(
     new URL(STATIC_COMPILE_SERVER_AUTHORITY, compileServerOrigin),
   ).slice(0, -1)
+
+  const urlToUrlForRollup = (url) => {
+    if (url.startsWith(`${compileServerOrigin}/`)) {
+      return `${compileServerOriginForRollup}/${url.slice(`${compileServerOrigin}/`.length)}`
+    }
+    return url
+  }
+
+  const rollupUrlToServerUrl = (url) => {
+    if (url.startsWith(`${compileServerOriginForRollup}/`)) {
+      return `${compileServerOrigin}/${url.slice(`${compileServerOriginForRollup}/`.length)}`
+    }
+    return urlToServerUrl(url, { projectDirectoryUrl, compileServerOrigin })
+  }
+
+  const rollupUrlToProjectUrl = (url) => {
+    return urlToProjectUrl(rollupUrlToServerUrl(url) || url, {
+      projectDirectoryUrl,
+      compileServerOrigin,
+    })
+  }
+
+  const rollupUrlToOriginalServerUrl = (url) => {
+    return urlToOriginalServerUrl(rollupUrlToServerUrl(url) || url, {
+      projectDirectoryUrl,
+      compileServerOrigin,
+    })
+  }
+
+  const rollupUrlToOriginalProjectUrl = (url) => {
+    return urlToOriginalProjectUrl(rollupUrlToServerUrl(url) || url, {
+      projectDirectoryUrl,
+      compileServerOrigin,
+      compileDirectoryRelativeUrl,
+    })
+  }
+
+  const rollupUrlToCompiledServerUrl = (url) => {
+    return urlToCompiledServerUrl(url, {
+      projectDirectoryUrl,
+      compileServerOrigin,
+      compileDirectoryRelativeUrl,
+    })
+  }
 
   const EMPTY_CHUNK_URL = resolveUrl("__empty__", projectDirectoryUrl)
 
@@ -310,8 +361,8 @@ export const createJsenvRollupPlugin = async ({
         {
           parse: async (target, notifiers) => {
             return parseTarget(target, notifiers, {
-              urlToOriginalProjectUrl,
-              urlToOriginalServerUrl,
+              urlToOriginalProjectUrl: rollupUrlToOriginalProjectUrl,
+              urlToOriginalServerUrl: rollupUrlToOriginalServerUrl,
               format,
               systemJsUrl,
               useImportMapToImproveLongTermCaching,
@@ -332,8 +383,8 @@ export const createJsenvRollupPlugin = async ({
           format,
           projectDirectoryUrl: `${compileServerOrigin}`,
           buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
-          urlToFileUrl: urlToProjectUrl,
-          urlToCompiledUrl,
+          urlToFileUrl: rollupUrlToProjectUrl,
+          urlToCompiledServerUrl: rollupUrlToCompiledServerUrl,
           loadUrl: (url) => urlResponseBodyMap[url],
           resolveTargetUrl: ({
             targetSpecifier,
@@ -347,7 +398,7 @@ export const createJsenvRollupPlugin = async ({
 
             // when html references a js we must wait for the compiled version of js
             if (isHtmlEntryPointReferencingAJsModule) {
-              const htmlCompiledUrl = urlToCompiledUrl(importerUrl)
+              const htmlCompiledUrl = rollupUrlToCompiledServerUrl(importerUrl)
               const jsModuleUrl = resolveUrl(targetSpecifier, htmlCompiledUrl)
               return jsModuleUrl
             }
@@ -358,7 +409,7 @@ export const createJsenvRollupPlugin = async ({
               // parse and handle the untransformed importmap, not the one from compile server
               !targetSpecifier.endsWith(".importmap")
             ) {
-              const htmlCompiledUrl = urlToCompiledUrl(importerUrl)
+              const htmlCompiledUrl = rollupUrlToCompiledServerUrl(importerUrl)
               targetUrl = resolveUrl(targetSpecifier, htmlCompiledUrl)
             } else {
               targetUrl = resolveUrl(targetSpecifier, importerUrl)
@@ -366,7 +417,7 @@ export const createJsenvRollupPlugin = async ({
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl
             // and ignore them and console.info/debug about remote url (https, http, ...)
-            const projectUrl = urlToProjectUrl(targetUrl)
+            const projectUrl = rollupUrlToProjectUrl(targetUrl)
             if (!projectUrl) {
               return { external: true, url: targetUrl }
             }
@@ -440,7 +491,7 @@ export const createJsenvRollupPlugin = async ({
           importer = compileDirectoryRemoteUrl
         }
       } else {
-        importer = urlToServerUrl(importer)
+        importer = rollupUrlToServerUrl(importer)
       }
 
       if (nativeModulePredicate(specifier)) {
@@ -472,7 +523,7 @@ export const createJsenvRollupPlugin = async ({
       }
 
       // keep external url intact
-      const importProjectUrl = urlToProjectUrl(importUrl)
+      const importProjectUrl = rollupUrlToProjectUrl(importUrl)
       if (!importProjectUrl) {
         return { id: specifier, external: true }
       }
@@ -518,7 +569,7 @@ export const createJsenvRollupPlugin = async ({
       }
 
       const moduleInfo = this.getModuleInfo(id)
-      const url = urlToServerUrl(id)
+      const url = rollupUrlToServerUrl(id)
 
       // const originalProjectUrl = urlToOriginalProjectUrl(url)
       // if (originalProjectUrl === jsenvImportMetaResolveGlobalUrl) {
@@ -552,7 +603,7 @@ export const createJsenvRollupPlugin = async ({
         locations: true,
       })
       // const moduleInfo = this.getModuleInfo(id)
-      const url = urlToServerUrl(id)
+      const url = rollupUrlToServerUrl(id)
       const importerUrl = urlImporterMap[url]
       return transformImportMetaUrlReferences({
         url,
@@ -585,9 +636,9 @@ export const createJsenvRollupPlugin = async ({
       outputOptions.sourcemapPathTransform = (relativePath, sourcemapPath) => {
         const sourcemapUrl = fileSystemPathToUrl(sourcemapPath)
         const url = relativePathToUrl(relativePath, sourcemapUrl)
-        const serverUrl = urlToServerUrl(url)
+        const serverUrl = rollupUrlToServerUrl(url)
         const finalUrl = serverUrl in urlRedirectionMap ? urlRedirectionMap[serverUrl] : serverUrl
-        const projectUrl = urlToProjectUrl(finalUrl)
+        const projectUrl = rollupUrlToProjectUrl(finalUrl)
 
         if (projectUrl) {
           relativePath = urlToRelativeUrl(projectUrl, sourcemapUrl)
@@ -695,7 +746,7 @@ export const createJsenvRollupPlugin = async ({
         const targetBuildRelativeUrl = Object.keys(jsBuild).find((buildRelativeUrlCandidate) => {
           const file = jsBuild[buildRelativeUrlCandidate]
           const { facadeModuleId } = file
-          return facadeModuleId && urlToServerUrl(facadeModuleId) === key
+          return facadeModuleId && rollupUrlToServerUrl(facadeModuleId) === key
         })
         const file = jsBuild[targetBuildRelativeUrl]
         const targetBuildBuffer = file.code
@@ -804,95 +855,10 @@ export const createJsenvRollupPlugin = async ({
 
   const saveUrlResponseBody = (url, responseBody) => {
     urlResponseBodyMap[url] = responseBody
-    const projectUrl = urlToProjectUrl(url)
+    const projectUrl = rollupUrlToProjectUrl(url)
     if (projectUrl && projectUrl !== url) {
       urlResponseBodyMap[projectUrl] = responseBody
     }
-  }
-
-  // take any url string and try to return a file url (an url inside projectDirectoryUrl)
-  const urlToProjectUrl = (url) => {
-    if (url.startsWith(projectDirectoryUrl)) {
-      return url
-    }
-
-    const serverUrl = urlToServerUrl(url)
-    if (serverUrl) {
-      return `${projectDirectoryUrl}${serverUrl.slice(`${compileServerOrigin}/`.length)}`
-    }
-
-    return null
-  }
-
-  const urlToUrlForRollup = (url) => {
-    if (url.startsWith(`${compileServerOrigin}/`)) {
-      return `${compileServerOriginForRollup}/${url.slice(`${compileServerOrigin}/`.length)}`
-    }
-    return url
-  }
-
-  const urlToProjectRelativeUrl = (url) => {
-    const projectUrl = urlToProjectUrl(url)
-    if (!projectUrl) {
-      return null
-    }
-    return urlToRelativeUrl(projectUrl, projectDirectoryUrl)
-  }
-
-  // take any url string and try to return the corresponding remote url (an url inside compileServerOrigin)
-  const urlToServerUrl = (url) => {
-    if (url.startsWith(`${compileServerOrigin}/`)) {
-      return url
-    }
-
-    if (url.startsWith(`${compileServerOriginForRollup}/`)) {
-      return `${compileServerOrigin}/${url.slice(`${compileServerOriginForRollup}/`.length)}`
-    }
-
-    if (url.startsWith(projectDirectoryUrl)) {
-      return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
-    }
-
-    return null
-  }
-
-  const urlToOriginalServerUrl = (url) => {
-    const originalProjectUrl = urlToOriginalProjectUrl(url)
-    return originalProjectUrl ? urlToServerUrl(originalProjectUrl) : null
-  }
-
-  // take any url string and try to return a file url inside project directory url
-  // prefer the source url if the url is inside compile directory
-  const urlToOriginalProjectUrl = (url) => {
-    const projectUrl = urlToProjectUrl(url)
-    if (!projectUrl) {
-      return null
-    }
-
-    if (!urlIsInsideOf(projectUrl, compileDirectoryUrl)) {
-      return projectUrl
-    }
-
-    const relativeUrl = urlToRelativeUrl(projectUrl, compileDirectoryUrl)
-    return resolveUrl(relativeUrl, projectDirectoryUrl)
-  }
-
-  const urlToCompiledUrl = (url) => {
-    const projectUrl = urlToProjectUrl(url)
-    if (!projectUrl) {
-      return null
-    }
-
-    if (urlIsInsideOf(projectUrl, compileDirectoryUrl)) {
-      return projectUrl
-    }
-
-    const projectRelativeUrl = urlToProjectRelativeUrl(projectUrl)
-    if (projectRelativeUrl) {
-      return resolveUrl(projectRelativeUrl, compileDirectoryRemoteUrl)
-    }
-
-    return null
   }
 
   const loadModule = async (
@@ -908,7 +874,7 @@ export const createJsenvRollupPlugin = async ({
         projectDirectoryUrl,
         importMetaEnvFileRelativeUrl,
         code: codeInput,
-        url: urlToProjectUrl(moduleUrl), // transformJs expect a file:// url
+        url: rollupUrlToProjectUrl(moduleUrl), // transformJs expect a file:// url
         babelPluginMap,
       })
 
@@ -921,7 +887,10 @@ export const createJsenvRollupPlugin = async ({
     }
 
     const importerUrl = urlImporterMap[moduleUrl]
-    const moduleResponse = await fetchModule(moduleUrl, urlToProjectUrl(importerUrl) || importerUrl)
+    const moduleResponse = await fetchModule(
+      moduleUrl,
+      rollupUrlToProjectUrl(importerUrl) || importerUrl,
+    )
     const contentType = moduleResponse.headers["content-type"] || ""
     const commonData = {
       responseUrl: moduleResponse.url,
@@ -995,12 +964,14 @@ export const createJsenvRollupPlugin = async ({
       ignoreHttpsError: true,
     })
 
-    importer = urlToOriginalProjectUrl(importer) || urlToProjectUrl(importer) || importer
+    importer = urlToOriginalProjectUrl(importer) || rollupUrlToProjectUrl(importer) || importer
 
     if (response.status === 404) {
       throw createJsenvPluginError(
         formatFileNotFound(
-          urlToOriginalProjectUrl(response.url) || urlToProjectUrl(response.url) || response.url,
+          urlToOriginalProjectUrl(response.url) ||
+            rollupUrlToProjectUrl(response.url) ||
+            response.url,
           importer,
         ),
       )

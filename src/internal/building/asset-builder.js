@@ -62,7 +62,7 @@ export const createAssetBuilder = (
     projectDirectoryUrl, // project url but it can be an http url
     buildDirectoryRelativeUrl,
     urlToFileUrl, // get a file url from an eventual http url
-    urlToCompiledUrl,
+    urlToCompiledServerUrl,
     loadUrl = () => null,
     emitChunk,
     emitAsset,
@@ -558,7 +558,7 @@ export const createAssetBuilder = (
         // get basename url
         resolveUrl(urlToBasename(jsModuleUrl), jsModuleUrl),
         // get importer url
-        urlToCompiledUrl(importerReference.referenceUrl),
+        urlToCompiledServerUrl(importerReference.referenceUrl),
       )
       logger.debug(`emit chunk for ${shortenUrl(jsModuleUrl)}`)
       const rollupReferenceId = emitChunk({
