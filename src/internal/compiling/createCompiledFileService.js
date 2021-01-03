@@ -1,5 +1,6 @@
 import { serveFile } from "@jsenv/server"
 import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { urlToCompileInfo } from "@jsenv/core/src/internal/url-conversion.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
   COMPILE_ID_BUILD_GLOBAL_FILES,
@@ -55,30 +56,26 @@ export const createCompiledFileService = ({
   return (request) => {
     const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
-    const outDirectoryRemoteUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, origin)
+
+    const requestCompileInfo = urlToCompileInfo(requestUrl, {
+      outDirectoryRelativeUrl,
+      compileServerOrigin: origin,
+    })
+
     // not inside compile directory -> nothing to compile
-    if (!requestUrl.startsWith(outDirectoryRemoteUrl)) {
+    if (!requestCompileInfo.insideCompileDirectory) {
       return null
     }
 
-    const afterOutDirectory = requestUrl.slice(outDirectoryRemoteUrl.length)
-
+    const { compileId, afterCompileId } = requestCompileInfo
     // serve files inside /.jsenv/out/* directly without compilation
     // this is just to allow some files to be written inside outDirectory and read directly
     // if asked by the client (such as env.json, groupMap.json, meta.json)
-    if (!afterOutDirectory.includes("/") || afterOutDirectory[0] === "/") {
+    if (!compileId) {
       return serveFile(request, {
         rootDirectoryUrl: projectDirectoryUrl,
         etagEnabled: true,
       })
-    }
-
-    const parts = afterOutDirectory.split("/")
-    const compileId = parts[0]
-    const remaining = parts.slice(1).join("/")
-    // no compileId, we don't know what to compile (not supposed so happen)
-    if (compileId === "") {
-      return null
     }
 
     const allowedCompileIds = [
@@ -88,7 +85,6 @@ export const createCompiledFileService = ({
       COMPILE_ID_BUILD_COMMONJS,
       COMPILE_ID_BUILD_COMMONJS_FILES,
     ]
-
     if (!allowedCompileIds.includes(compileId)) {
       return {
         status: 400,
@@ -97,11 +93,11 @@ export const createCompiledFileService = ({
     }
 
     // nothing after compileId, we don't know what to compile (not supposed to happen)
-    if (remaining === "") {
+    if (afterCompileId === "") {
       return null
     }
 
-    const originalFileRelativeUrl = remaining
+    const originalFileRelativeUrl = afterCompileId
     projectFileRequestedCallback(originalFileRelativeUrl, request)
 
     const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`

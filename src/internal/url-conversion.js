@@ -1,4 +1,32 @@
-import { urlToRelativeUrl, urlIsInsideOf, resolveUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, urlIsInsideOf, resolveUrl } from "@jsenv/util"
+
+export const urlToCompileInfo = (url, { compileServerOrigin, outDirectoryRelativeUrl }) => {
+  const outDirectoryServerUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, compileServerOrigin)
+  // not inside compile directory -> nothing to compile
+  if (!url.startsWith(outDirectoryServerUrl)) {
+    return { insideCompileDirectory: false }
+  }
+
+  const afterOutDirectory = url.slice(outDirectoryServerUrl.length)
+
+  // serve files inside /.jsenv/out/* directly without compilation
+  // this is just to allow some files to be written inside outDirectory and read directly
+  // if asked by the client (such as env.json, groupMap.json, meta.json)
+  if (!afterOutDirectory.includes("/") || afterOutDirectory[0] === "/") {
+    return { insideCompileDirectory: true }
+  }
+
+  const parts = afterOutDirectory.split("/")
+  const compileId = parts[0]
+  // no compileId, we don't know what to compile (not supposed so happen)
+  if (compileId === "") {
+    return { insideCompileDirectory: true, compileId: null }
+  }
+
+  const afterCompileId = parts.slice(1).join("/")
+  // note: afterCompileId can be '' (but not supposed to happen)
+  return { insideCompileDirectory: true, compileId, afterCompileId }
+}
 
 // take any url string and try to return a file url (an url inside projectDirectoryUrl)
 export const urlToProjectUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
@@ -38,11 +66,17 @@ export const urlToServerUrl = (url, { projectDirectoryUrl, compileServerOrigin }
 
 export const urlToOriginalServerUrl = (
   url,
-  { projectDirectoryUrl, compileServerOrigin, compileDirectoryRelativeUrl },
+  {
+    projectDirectoryUrl,
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+    compileDirectoryRelativeUrl,
+  },
 ) => {
   const originalProjectUrl = urlToOriginalProjectUrl(url, {
     projectDirectoryUrl,
     compileServerOrigin,
+    outDirectoryRelativeUrl,
     compileDirectoryRelativeUrl,
   })
   if (!originalProjectUrl) {
@@ -56,11 +90,26 @@ export const urlToOriginalServerUrl = (
 // prefer the source url if the url is inside compile directory
 export const urlToOriginalProjectUrl = (
   url,
-  { projectDirectoryUrl, compileServerOrigin, compileDirectoryRelativeUrl },
+  {
+    projectDirectoryUrl,
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+    compileDirectoryRelativeUrl,
+  },
 ) => {
   const projectUrl = urlToProjectUrl(url, { projectDirectoryUrl, compileServerOrigin })
   if (!projectUrl) {
     return null
+  }
+
+  if (!compileDirectoryRelativeUrl) {
+    compileDirectoryRelativeUrl = serverUrlToCompileDirectoryRelativeUrl(
+      urlToServerUrl(projectUrl, { projectDirectoryUrl, compileServerOrigin }),
+      { compileServerOrigin, outDirectoryRelativeUrl },
+    )
+    if (!compileDirectoryRelativeUrl) {
+      return projectUrl
+    }
   }
 
   const compileDirectoryUrl = resolveUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
@@ -70,6 +119,17 @@ export const urlToOriginalProjectUrl = (
 
   const relativeUrl = urlToRelativeUrl(projectUrl, compileDirectoryUrl)
   return resolveUrl(relativeUrl, projectDirectoryUrl)
+}
+
+const serverUrlToCompileDirectoryRelativeUrl = (
+  serverUrl,
+  { compileServerOrigin, outDirectoryRelativeUrl },
+) => {
+  const compileInfo = urlToCompileInfo(serverUrl, { compileServerOrigin, outDirectoryRelativeUrl })
+  if (compileInfo.compiledId) {
+    return `${outDirectoryRelativeUrl}${compileInfo.compileId}/`
+  }
+  return null
 }
 
 export const urlToCompiledServerUrl = (
