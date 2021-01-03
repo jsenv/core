@@ -454,9 +454,9 @@ npm install --save-dev @jsenv/core
 
 Jsenv can execute standard JavaScript and be configured to run non-standard JavaScript.
 
-Jsenv support standard JavaScript by default: [JavaScript Modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules), destructuring, optional chaining and so on.
+Standard corresponds to [JavaScript Modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules), destructuring, optional chaining and so on.
 
-Jsenv can be configured to execute non-standard JavaScript. For instance using [CommonJS modules](https://code-trotter.com/web/understand-the-different-javascript-modules-formats/#commonjs-cjs), [JSX](https://reactjs.org/docs/introducing-jsx.html) or [TypeScript](https://www.typescriptlang.org).
+Non-standard corresponds to [CommonJS modules](https://code-trotter.com/web/understand-the-different-javascript-modules-formats/#commonjs-cjs), [JSX](https://reactjs.org/docs/introducing-jsx.html) or [TypeScript](https://www.typescriptlang.org).
 
 > Keep in mind one of your dependency may use non-standard JavaScript. For instance react uses CommonJS modules.
 
@@ -464,7 +464,16 @@ Jsenv can be configured to execute non-standard JavaScript. For instance using [
 
 We recommend to regroup configuration in a `jsenv.config.js` file at the root of your working directory.
 
-To get a better idea see [jsenv.config.js](./jsenv.config.js). The file is imported by [script/test/test.js](https://github.com/jsenv/jsenv-core/blob/e44e362241e8e2142010322cb4552983b3bc9744/script/test/test.js#L2) and configuration is passed [using spread operator](https://github.com/jsenv/jsenv-core/blob/e44e362241e8e2142010322cb4552983b3bc9744/script/test/test.js#L5). This technic helps to see jsenv custom configuration quickly and share it between files.
+To get a better idea see [jsenv.config.js](./jsenv.config.js). The file can be imported and passed using the spread operator. This technic helps to see jsenv custom configuration quickly and share it between files.
+
+<details>
+  <summary>Example of jsenv config passed using spread operator</summary>
+
+![screenshot about jsenv config import and spread operator](./docs/jsenv-config-spread.png)
+
+— See [script/test/test.js](https://github.com/jsenv/jsenv-core/blob/e44e362241e8e2142010322cb4552983b3bc9744/script/test/test.js#L2)
+
+</details>
 
 That being said it's only a recommendation. There is nothing enforcing or checking the presence of `jsenv.config.js`.
 
