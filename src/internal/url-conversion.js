@@ -36,8 +36,15 @@ export const urlToServerUrl = (url, { projectDirectoryUrl, compileServerOrigin }
   return null
 }
 
-export const urlToOriginalServerUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
-  const originalProjectUrl = urlToOriginalProjectUrl(url)
+export const urlToOriginalServerUrl = (
+  url,
+  { projectDirectoryUrl, compileServerOrigin, compileDirectoryRelativeUrl },
+) => {
+  const originalProjectUrl = urlToOriginalProjectUrl(url, {
+    projectDirectoryUrl,
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
+  })
   if (!originalProjectUrl) {
     return null
   }
