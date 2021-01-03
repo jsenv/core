@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 import { launchNode, execute } from "@jsenv/core"
