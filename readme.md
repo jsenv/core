@@ -554,6 +554,20 @@ See also
 
 # About
 
+## Main dependencies
+
+An overview of the main dependencies used by `@jsenv/core`.
+
+| Dependency                                            | How it is used by jsenv                     |
+| ----------------------------------------------------- | ------------------------------------------- |
+| [systemjs](https://github.com/systemjs/systemjs)      | "Polyfill" js modules, import maps and more |
+| [playwright](https://github.com/microsoft/playwright) | Launch Chromium, Firefox and WebKit         |
+| [istanbul](https://github.com/gotwarlost/istanbul)    | Collect and generate code coverage          |
+| [rollup](https://github.com/rollup/rollup)            | Tree shaking when building                  |
+| [babel](https://github.com/babel/babel)               | Parse and transform js                      |
+| [parse5](https://github.com/inikulin/parse5)          | Parse and transform html                    |
+| [postCSS](https://github.com/postcss/postcss)         | Parse and transform css                     |
+
 ## Name
 
 The name `jsenv` stands for JavaScript environments. This is because the original purpose of `jsenv` was to blur the differences between two JavaScript runtimes: web browsers and Node.js. This aspect of `jsenv` is not highlighted in the documentation but it exists.

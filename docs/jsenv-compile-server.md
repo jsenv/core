@@ -79,17 +79,32 @@ If server is requested to compile a file but has no compiler associated, it will
 <link rel="favicon" href="./favicon.ico" />
 ```
 
-## Why `.jsenv/out/best/` and not just `.jsenv/` or `.compiled/`?
-
-The answer is jsenv needs 3 directories:
-
-`.jsenv` in case jsenv server needs to write some files unrelated to the compilation.<br/>
-`.jsenv/out` is used to write some meta information about the compilation.<br/>
-`.jsenv/best` or `.jsenv/otherwise`: used to write the compiled file version cache.<br/>
-
-> It's possible to control `.jsenv` directory name using an undocumented parameter called `jsenvDirectoryRelativeUrl`
-
 ## What is `best` in `.jsenv/out/best/`?
 
 It represent a compilation profile. Depending on the browser you are using, you will be redirected either to `.jsenv/out/best` or `.jsenv/out/otherwise`. `otherwise` applies all babel plugin to transform js and make it compatible with old browsers. `best` applies less transformation. It's an implementation detail and not really important to be aware of.
 In practice if you use chrome you will be redirected to `.jsenv/out/best`, but you can still manually enter `otherwise` in the url to see the js that would be served to old browsers.
+
+## Why `.jsenv/out/best/` and not just `.jsenv/` or `.compiled/`?
+
+The compiled version of a given file depends on the parameters given to the compile server.
+The best example of this would be that some babel plugins are enabled or not. So if you ever change the list of babel plugin enabled, the compiled files must be invalidated to be re-generated.
+
+Whenever the compile server is started, it save parameters like babel plugins into `.jsenv/out/meta.json`. Next time the compile server is started it compare its parameters with `.jsenv/out/meta.json` and if something has changed, the cache is cleaned.
+
+When file are builded, the compile server parameters are different. So if compile server had only one directory the following would happen:
+
+- You execute your test -> cache generated for files without minification
+- You build your project -> cache invalidated because parameters have changed
+- You execute tour test -> cache invalidated again
+
+To maximize cache reuse, compile server has two directory: `out` and `out-build`.
+
+`.jsenv/out/best` is composed by the following parts.
+
+`.jsenv`: used to contain `out` and `out-build`.
+
+> It's possible to control `.jsenv` directory name using an undocumented parameter called `jsenvDirectoryRelativeUrl`
+
+`.jsenv/out`: contains multiple directory like `best` or `otherwise`.
+
+`.jsenv/out/best` or `.jsenv/out/otherwise`: contains compiled file version cache.
