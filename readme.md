@@ -484,8 +484,6 @@ CommonJS module format rely on `module.exports` and `require`. It was invented b
 <details>
   <summary><code>jsenv.config.js</code> to use code written in CommonJS</summary>
 
-> The following `jsenv.config.js` makes Jsenv compatible with a package named `whatever` that would be written in CommonJS.
-
 ```js
 import { jsenvBabelPluginMap, convertCommonJsWithRollup } from "@jsenv/core"
 
@@ -493,6 +491,8 @@ export const convertMap = {
   "./node_modules/whatever/index.js": convertCommonJsWithRollup,
 }
 ```
+
+`jsenv.config.js` above makes jsenv compatible with a package named `whatever` that would be written in CommonJS.
 
 </details>
 
