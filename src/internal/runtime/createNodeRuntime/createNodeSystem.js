@@ -25,9 +25,13 @@ export const createNodeSystem = ({
   const nodeSystem = new global.System.constructor()
 
   const resolve = (specifier, importer) => {
-    if (specifier === GLOBAL_SPECIFIER) return specifier
+    if (specifier === GLOBAL_SPECIFIER) {
+      return specifier
+    }
 
-    if (isNativeNodeModuleBareSpecifier(specifier)) return specifier
+    if (isNativeNodeModuleBareSpecifier(specifier)) {
+      return specifier
+    }
 
     return resolveImport({
       specifier,

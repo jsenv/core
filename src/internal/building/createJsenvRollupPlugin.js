@@ -528,7 +528,7 @@ export const createJsenvRollupPlugin = async ({
         return { id: specifier, external: true }
       }
 
-      if (externalUrlPredicate(urlToOriginalProjectUrl(importProjectUrl))) {
+      if (externalUrlPredicate(rollupUrlToOriginalProjectUrl(importProjectUrl))) {
         return { id: specifier, external: true }
       }
 
@@ -715,7 +715,7 @@ export const createJsenvRollupPlugin = async ({
         let originalProjectUrl
         const id = file.facadeModuleId
         if (id) {
-          originalProjectUrl = urlToOriginalProjectUrl(id)
+          originalProjectUrl = rollupUrlToOriginalProjectUrl(id)
         } else {
           const sourcePath = file.map.sources[file.map.sources.length - 1]
           const fileBuildUrl = resolveUrl(file.fileName, buildDirectoryUrl)
@@ -792,7 +792,7 @@ export const createJsenvRollupPlugin = async ({
 
         const buildRelativeUrl = assetTarget.targetBuildRelativeUrl
         const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
-        const originalProjectUrl = urlToOriginalProjectUrl(rollupFileId)
+        const originalProjectUrl = rollupUrlToOriginalProjectUrl(rollupFileId)
         const originalProjectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
         // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
         file.source = String(assetTarget.targetBuildBuffer)
@@ -964,12 +964,13 @@ export const createJsenvRollupPlugin = async ({
       ignoreHttpsError: true,
     })
 
-    importer = urlToOriginalProjectUrl(importer) || rollupUrlToProjectUrl(importer) || importer
+    importer =
+      rollupUrlToOriginalProjectUrl(importer) || rollupUrlToProjectUrl(importer) || importer
 
     if (response.status === 404) {
       throw createJsenvPluginError(
         formatFileNotFound(
-          urlToOriginalProjectUrl(response.url) ||
+          rollupUrlToOriginalProjectUrl(response.url) ||
             rollupUrlToProjectUrl(response.url) ||
             response.url,
           importer,

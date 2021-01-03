@@ -2419,16 +2419,12 @@ var createNodeSystem = function createNodeSystem() {
       return specifier;
     }
 
-    try {
-      return importMap.resolveImport({
-        specifier: specifier,
-        importer: importer,
-        importMap: importMap$1,
-        defaultExtension: importDefaultExtension
-      });
-    } catch (e) {
-      debugger;
-    }
+    return importMap.resolveImport({
+      specifier: specifier,
+      importer: importer,
+      importMap: importMap$1,
+      defaultExtension: importDefaultExtension
+    });
   };
 
   nodeSystem.resolve = _resolve;

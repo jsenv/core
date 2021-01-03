@@ -25,6 +25,7 @@ import {
   registerFileLifecycle,
   registerDirectoryLifecycle,
   urlIsInsideOf,
+  urlToBasename,
 } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { assertImportMapFileRelativeUrl, assertImportMapFileInsideProject } from "../argUtils.js"
@@ -406,7 +407,9 @@ const setupOutDirectory = async (
         if (!jsenvDirectoryClean) {
           logger.warn(
             createDetailedMessage(
-              `Cleaning jsenv out directory because configuration has changed.`,
+              `Cleaning jsenv ${urlToBasename(
+                outDirectoryUrl.slice(0, -1),
+              )} directory because configuration has changed.`,
               {
                 "changes": outDirectoryChanges.namedChanges
                   ? outDirectoryChanges.namedChanges

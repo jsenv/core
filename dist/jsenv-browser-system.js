@@ -2294,14 +2294,12 @@
         return specifier;
       }
 
-      try {
-        return resolveImport({
-          specifier: specifier,
-          importer: importer,
-          importMap: importMap,
-          defaultExtension: importDefaultExtension
-        });
-      } catch (e) {}
+      return resolveImport({
+        specifier: specifier,
+        importer: importer,
+        importMap: importMap,
+        defaultExtension: importDefaultExtension
+      });
     };
 
     browserSystem.resolve = _resolve;
