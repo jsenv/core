@@ -177,7 +177,7 @@ export const createJsenvRollupPlugin = async ({
   }
 
   const rollupUrlToCompiledServerUrl = (url) => {
-    return urlToCompiledServerUrl(url, {
+    return urlToCompiledServerUrl(rollupUrlToServerUrl(url) || url, {
       projectDirectoryUrl,
       compileServerOrigin,
       compileDirectoryRelativeUrl,
