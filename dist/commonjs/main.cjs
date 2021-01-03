@@ -9065,10 +9065,14 @@ const setupOutDirectory = async (outDirectoryUrl, {
 };
 
 const getOutDirectoryChanges = (previousOutDirectoryMeta, outDirectoryMeta) => {
-  const changes = Object.keys(outDirectoryMeta).filter(key => {
+  const changes = [];
+  Object.keys(outDirectoryMeta).forEach(key => {
     const now = outDirectoryMeta[key];
     const previous = previousOutDirectoryMeta[key];
-    return !compareValueJson(now, previous);
+
+    if (!compareValueJson(now, previous)) {
+      changes.push(key);
+    }
   });
 
   if (changes.length > 0) {

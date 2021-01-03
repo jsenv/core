@@ -2289,13 +2289,19 @@
 
     var _resolve = function resolve(specifier) {
       var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : document.location.href;
-      if (specifier === GLOBAL_SPECIFIER) return specifier;
-      return resolveImport({
-        specifier: specifier,
-        importer: importer,
-        importMap: importMap,
-        defaultExtension: importDefaultExtension
-      });
+
+      if (specifier === GLOBAL_SPECIFIER) {
+        return specifier;
+      }
+
+      try {
+        return resolveImport({
+          specifier: specifier,
+          importer: importer,
+          importMap: importMap,
+          defaultExtension: importDefaultExtension
+        });
+      } catch (e) {}
     };
 
     browserSystem.resolve = _resolve;

@@ -2411,14 +2411,24 @@ var createNodeSystem = function createNodeSystem() {
   var nodeSystem = new global.System.constructor();
 
   var _resolve = function resolve(specifier, importer) {
-    if (specifier === GLOBAL_SPECIFIER) return specifier;
-    if (isNativeNodeModuleBareSpecifier(specifier)) return specifier;
-    return importMap.resolveImport({
-      specifier: specifier,
-      importer: importer,
-      importMap: importMap$1,
-      defaultExtension: importDefaultExtension
-    });
+    if (specifier === GLOBAL_SPECIFIER) {
+      return specifier;
+    }
+
+    if (isNativeNodeModuleBareSpecifier(specifier)) {
+      return specifier;
+    }
+
+    try {
+      return importMap.resolveImport({
+        specifier: specifier,
+        importer: importer,
+        importMap: importMap$1,
+        defaultExtension: importDefaultExtension
+      });
+    } catch (e) {
+      debugger;
+    }
   };
 
   nodeSystem.resolve = _resolve;
