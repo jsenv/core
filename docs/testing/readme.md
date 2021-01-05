@@ -5,8 +5,6 @@
   - [1 - Setup basic project](#1---setup-basic-project)
   - [2 - Execute tests](#2---execute-tests)
   - [3 - Generate test coverage](#3---generate-test-coverage)
-    - [coverage/index.html](#coverageindexhtml)
-    - [coverage/coverage.json](#coveragecoveragejson)
 - [Test execution](#Test-execution)
   - [How test is executed](#How-test-is-executed)
   - [Execution error](#Execution-error)
@@ -17,31 +15,11 @@
 - [executeTestPlan example](#executeTestPlan-example)
 - [executeTestPlan parameters](#executeTestPlan-parameters)
   - [testPlan](#testPlan)
-    - [specifier](#specifier)
-    - [executionName](#executionName)
-    - [executionOptions](#executionOptions)
-      - [launch](#launch)
-      - [allocatedMs](#allocatedMs)
-      - [measureDuration](#measureDuration)
-      - [captureConsole](#captureConsole)
-      - [collectCoverage](#collectCoverage)
-      - [logSuccess](#logSuccess)
   - [executionDefaultOptions](#executionDefaultOptions)
   - [completedExecutionLogAbbreviation](#completedExecutionLogAbbreviation)
   - [completedExecutionLogMerging](#completedExecutionLogMerging)
   - [concurrencyLimit](#concurrencyLimit)
   - [coverage parameters](#coverage-parameters)
-    - [coverage](#coverage)
-    - [coverageConfig](#coverageConfig)
-    - [coverageIncludeMissing](#coverageIncludeMissing)
-    - [coverageAndExecutionAllowed](#coverageAndExecutionAllowed)
-    - [coverageTextLog](#coverageTextLog)
-    - [coverageJsonFile](#coverageJsonFile)
-    - [coverageJsonFileLog](#coverageJsonFileLog)
-    - [coverageJsonFileRelativeUrl](#coverageJsonFileRelativeUrl)
-    - [coverageHtmlDirectory](#coverageHtmlDirectory)
-    - [coverageHtmlDirectoryRelativeUrl](#coverageHtmlDirectoryRelativeUrl)
-    - [coverageHtmlDirectoryIndexLog](#coverageHtmlDirectoryIndexLog)
   - [Shared parameters](#shared-parameters)
 - [executeTestPlan return value](#executeTestPlan-return-value)
   - [testPlanSummary](#testPlanSummary)
@@ -53,7 +31,7 @@
 A test runs your code to ensure it works as expected.
 
 Test are putting you in the shoes of someone using your code. In that perspective they document how to use your code and the variety of scenarios your code supports.<br />
-Finally test helps to prevent accidentally breaking in the future what is working today.
+Finally testing mitigates the risk of breaking in the future what is working today.
 
 Jsenv provides an api to execute your test files inside one or many environments. It means you can execute a given test file inside chromium and Node.js as long as code inside test file can executes in both.
 
