@@ -401,13 +401,13 @@ A common pattern to reference an asset is to use an import statement. This impor
 import imageUrl from "./img.png"
 ```
 
-As it's not standard, and will likely never be, it doesn't work in the browser without transformation. Using `import.meta.url` does work in the browser.
+As it's not standard, it doesn't work in the browser without transformation. However, `import.meta.url` does work in the browser.
 
 ```js
 const imageUrl = new URL("./img.png", import.meta.url)
 ```
 
-You can use both patterns to reference an asset in jsenv. Prefer the one relying on `import.meta.url` because it would work without transformation.
+You can use both patterns to reference an asset but prefer the one relying on `import.meta.url`.
 
 </details>
 
@@ -440,7 +440,7 @@ if (import.meta.dev) {
 
 </details>
 
-The list above is non exaustive, there is more like long term caching, livereloading without configuration, service worker/worker support, ...
+The list above is non exaustive, there is more like long term caching, livereload without configuration, service workers, ...
 
 # Installation
 
