@@ -5,6 +5,7 @@
 
 const NATIVE_NODE_MODULE_SPECIFIER_ARRAY = [
   "assert",
+  "assert/strict",
   "async_hooks",
   "buffer_ieee754",
   "buffer",
@@ -53,6 +54,7 @@ const NATIVE_NODE_MODULE_SPECIFIER_ARRAY = [
   "_stream_readable",
   "_stream_writable",
   "stream",
+  "stream/promises",
   "string_decoder",
   "sys",
   "timers",
