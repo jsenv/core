@@ -5,6 +5,7 @@ import {
   jsenvNodeSystemRelativeUrl,
   jsenvBrowserSystemRelativeUrl,
   jsenvExploringRedirectorJsRelativeUrl,
+  jsenvExploringIndexJsRelativeUrl,
   jsenvToolbarInjectorRelativeUrl,
   jsenvToolbarJsRelativeUrl,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
@@ -32,6 +33,14 @@ const buildsToGenerate = [
     format: "global",
     entryPointMap: {
       [jsenvExploringRedirectorJsRelativeUrl]: "./jsenv-exploring-redirector.js",
+    },
+  },
+  {
+    projectDirectoryUrl: jsenvCoreDirectoryUrl,
+    buildDirectoryRelativeUrl: "dist",
+    format: "global",
+    entryPointMap: {
+      [jsenvExploringIndexJsRelativeUrl]: "./jsenv-exploring-index.js",
     },
   },
   {
