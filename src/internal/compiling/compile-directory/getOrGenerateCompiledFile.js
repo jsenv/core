@@ -24,7 +24,7 @@ export const getOrGenerateCompiledFile = async ({
   cacheInterProcessLocking = false,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
-  fileContentFallbackIfNotFound,
+  fileContentFallback,
   ifEtagMatch,
   ifModifiedSinceDate,
   compile,
@@ -66,7 +66,7 @@ export const getOrGenerateCompiledFile = async ({
         originalFileUrl,
         compiledFileUrl,
         compile,
-        fileContentFallbackIfNotFound,
+        fileContentFallback,
         ifEtagMatch,
         ifModifiedSinceDate,
         useFilesystemAsCache,
@@ -113,7 +113,7 @@ const computeCompileReport = async ({
   originalFileUrl,
   compiledFileUrl,
   compile,
-  fileContentFallbackIfNotFound,
+  fileContentFallback,
   ifEtagMatch,
   ifModifiedSinceDate,
   useFilesystemAsCache,
@@ -136,7 +136,7 @@ const computeCompileReport = async ({
       callCompile({
         logger,
         originalFileUrl,
-        fileContentFallbackIfNotFound,
+        fileContentFallback,
         compile,
       }),
     )
@@ -167,7 +167,7 @@ const computeCompileReport = async ({
       callCompile({
         logger,
         originalFileUrl,
-        fileContentFallbackIfNotFound,
+        fileContentFallback,
         compile,
       }),
     )
@@ -203,13 +203,13 @@ const computeCompileReport = async ({
   }
 }
 
-const callCompile = async ({ logger, originalFileUrl, fileContentFallbackIfNotFound, compile }) => {
+const callCompile = async ({ logger, originalFileUrl, fileContentFallback, compile }) => {
   logger.debug(`compile ${originalFileUrl}`)
 
   const compileArgs =
     compile.length === 0
       ? []
-      : await getArgumentsForCompile({ originalFileUrl, fileContentFallbackIfNotFound })
+      : await getArgumentsForCompile({ originalFileUrl, fileContentFallback })
 
   const {
     sources = [],
@@ -239,14 +239,14 @@ const callCompile = async ({ logger, originalFileUrl, fileContentFallbackIfNotFo
   }
 }
 
-const getArgumentsForCompile = async ({ originalFileUrl, fileContentFallbackIfNotFound }) => {
+const getArgumentsForCompile = async ({ originalFileUrl, fileContentFallback }) => {
   let fileContent
-  if (fileContentFallbackIfNotFound) {
+  if (fileContentFallback) {
     try {
       fileContent = await readFileContent(originalFileUrl)
     } catch (e) {
       if (e.code === "ENOENT") {
-        fileContent = fileContentFallbackIfNotFound
+        fileContent = await fileContentFallback()
       } else {
         throw e
       }

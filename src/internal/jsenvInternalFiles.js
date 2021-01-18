@@ -49,7 +49,12 @@ export const jsenvExploringRedirectorJsBuildUrl = resolveUrl(
 )
 
 // Exploring index and toolbar
-export const jsenvExploringHtmlUrl = resolveUrl(
+export const jsenvExploringIndexJsRelativeUrl = "./src/internal/exploring/exploring.js"
+export const jsenvExploringIndexJsBuildUrl = resolveUrl(
+  "./dist/jsenv-exploring-index.js",
+  jsenvCoreDirectoryUrl,
+)
+export const jsenvExploringIndexHtmlUrl = resolveUrl(
   "./src/internal/exploring/exploring.html",
   jsenvCoreDirectoryUrl,
 )

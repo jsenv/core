@@ -8,10 +8,11 @@ const { chromium } = require("playwright-chromium")
 export const openBrowserPage = async (
   url,
   {
-    headless = true,
     inheritCoverage = coverageIsEnabled(),
     collectConsole = true,
     collectErrors = true,
+    debug = false,
+    headless = !debug,
   } = {},
 ) => {
   const browser = await chromium.launch({

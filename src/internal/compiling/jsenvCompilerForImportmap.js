@@ -17,7 +17,9 @@ export const jsenvCompilerForImportmap = ({
 
   return {
     // allow project to have no importmap
-    fileContentFallbackIfNotFound: originalFileUrl === importMapFileUrl ? "{}" : undefined,
+    fileContentFallback: () => {
+      return originalFileUrl === importMapFileUrl ? "{}" : undefined
+    },
     compile: (importmapBeforeTransformation) => {
       return transformImportmap(importmapBeforeTransformation, {
         originalFileUrl,
