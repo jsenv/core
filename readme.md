@@ -21,7 +21,7 @@ Holistic likable builder of JavaScript projects.
 
 # Presentation
 
-`@jsenv/core` was first created to be able to write tests that could be executed in different browsers AND Node.js. In the end it became a tool covering the core needs of a JavaScript project:
+`@jsenv/core` was first created to write tests that could be executed in different browsers AND Node.js. In the end it became a tool covering the core needs of a JavaScript project:
 
 - A test runner to execute test files.
 - A developer friendly environment
@@ -68,6 +68,8 @@ if (actual !== expected) {
 <details>
   <summary>2. Create an other file to execute your test</summary>
 
+> The code in file below translates into the following sentence: "Execute all files in my project that ends with `test.html` on Chrome and Firefox AND execute all files that ends with `test.js` on Node.js"
+
 `execute-test-plan.js`
 
 ```js
@@ -93,8 +95,6 @@ executeTestPlan({
 })
 ```
 
-> Code above translates into the following sentence: "Execute all files in my project that ends with `test.html` on Chrome and Firefox AND execute all files that ends with `test.js` on Node.js"
-
 </details>
 
 <details>
@@ -108,9 +108,9 @@ Read more on [testing documentation](./docs/testing/readme.md)
 
 # Exploring
 
-`@jsenv/core` provides a server capable to turn any html file into an entry point. This power can be used to create a storybook, debug a file in isolation and more. This server is called `exploring server`. This server is designed for development: it provides livereloading out of the box and does not bundle files.
+`@jsenv/core` provides a server capable to turn any html file into an entry point. This power can be used to create a storybook, debug a file in isolation and more. It is called `exploring server`. This server is designed for development: it provides livereloading out of the box and does not bundle files.
 
-The following example shows how it can be used to execute a single test file. As mentioned previously it can execute any html file, not only test files.
+The following example shows how it can be used to execute a single test file. As mentioned previously it can execute any html file, in this example we'll use it only to run a test file.
 
 <details>
   <summary>1. Create a file to start exploring server</summary>
@@ -345,7 +345,13 @@ Jsenv supports import maps out of the box. The following html can be used with j
   <head>
     <title>Title</title>
     <meta charset="utf-8" />
-    <script type="importmap" src="./project.importmap"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "moment": "./node_modules/moment/index.js"
+        }
+      }
+    </script>
   </head>
 
   <body>

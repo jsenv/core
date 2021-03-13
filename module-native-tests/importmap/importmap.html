@@ -20,13 +20,12 @@
 
         const scriptModule = document.createElement("script")
         scriptModule.type = "module"
-        scriptModule.src = jsToTextUrl(`import supported from "${specifier}"
-      window.__jsenv__importmap_supported = supported`)
+        scriptModule.src = jsToTextUrl(`import supported from "${specifier}"; window.__importmap_supported = supported`)
 
         return new Promise((resolve) => {
           scriptModule.onload = () => {
-            const supported = window.__jsenv__importmap_supported
-            delete window.__jsenv__importmap_supported
+            const supported = window.__importmap_supported
+            delete window.__importmap_supported
             resolve(supported)
           }
           scriptModule.onerror = () => {
