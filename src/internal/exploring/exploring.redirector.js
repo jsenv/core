@@ -16,13 +16,27 @@ const decideExploringIndexUrl = async ({
   outDirectoryRelativeUrl,
   exploringHtmlFileRelativeUrl,
 }) => {
-  const supports = await Promise.all([
-    supportsDynamicImport(),
-    supportsTopLevelAwait(),
-    supportsImportmap(),
-  ])
-  if (supports.every(Boolean)) {
-    return `/${exploringHtmlFileRelativeUrl}`
+  // for now it's not possible to avoid compilation
+  // I need to list what is needed to support that
+  // for instance it means we should collect coverage from chrome devtools
+  // instead of instrumenting source code.
+  // It also means we should be able somehow to collect namespace of module imported
+  // by the html page
+  const canAvoidCompilation = false
+
+  if (canAvoidCompilation) {
+    // start testing importmap support first and not in paralell
+    // so that there is not module script loaded beore importmap is injected
+    // it would log an error in chrome console and return undefined
+    const importmap = await supportsImportmap()
+    const supports = await Promise.all([
+      importmap,
+      supportsDynamicImport(),
+      supportsTopLevelAwait(),
+    ])
+    if (supports.every(Boolean)) {
+      return `/${exploringHtmlFileRelativeUrl}`
+    }
   }
   const compileId = await decideCompileId({ outDirectoryRelativeUrl })
   return `/${outDirectoryRelativeUrl}${compileId}/${exploringHtmlFileRelativeUrl}`
@@ -59,17 +73,18 @@ const supportsImportmap = async () => {
 
   const scriptModule = document.createElement("script")
   scriptModule.type = "module"
-  scriptModule.src = jsToTextUrl(`import supported from "${specifier}"
-window.__jsenv__importmap_supported = supported`)
+  scriptModule.src = jsToTextUrl(
+    `import supported from "${specifier}"; window.__importmap_supported = supported`,
+  )
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     scriptModule.onload = () => {
-      const supported = window.__jsenv__importmap_supported
-      delete window.__jsenv__importmap_supported
+      const supported = window.__importmap_supported
+      delete window.__importmap_supported
       resolve(supported)
     }
     scriptModule.onerror = () => {
-      resolve(false)
+      reject()
     }
     insertAfter(scriptModule)
   })

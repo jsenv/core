@@ -22,15 +22,13 @@ const executionResult = await execute({
   fileRelativeUrl,
   launch: launchNode,
 })
-const actual = executionResult
-const expected = {
-  status: "errored",
-  error: actual.error,
+const actual = {
+  executionResultStatus: executionResult.status,
+  executionResultErrorMessage: executionResult.error.message,
 }
-assert({ actual, expected })
-{
-  const actual = executionResult.error.message
-  const expected = `Error: Unmapped bare specifier.
+const expected = {
+  executionResultStatus: "errored",
+  executionResultErrorMessage: `Unmapped bare specifier.
 --- specifier ---
 foo
 --- importer ---
@@ -38,6 +36,6 @@ ${fileRelativeUrl}
 --- how to fix ---
 Add a mapping for "foo" into the importmap file at ${importMapFileRelativeUrl}
 --- suggestion ---
-Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map`
-  assert({ actual, expected })
+Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map`,
 }
+assert({ actual, expected })

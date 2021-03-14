@@ -14,10 +14,10 @@
   };
 
   var detectAndroid = function detectAndroid() {
-    return navigatorToBrowser(window.navigator);
+    return navigatorToBrowser$1(window.navigator);
   };
 
-  var navigatorToBrowser = function navigatorToBrowser(_ref) {
+  var navigatorToBrowser$1 = function navigatorToBrowser(_ref) {
     var userAgent = _ref.userAgent,
         appVersion = _ref.appVersion;
 
@@ -32,10 +32,10 @@
   };
 
   var detectInternetExplorer = function detectInternetExplorer() {
-    return userAgentToBrowser(window.navigator.userAgent);
+    return userAgentToBrowser$5(window.navigator.userAgent);
   };
 
-  var userAgentToBrowser = function userAgentToBrowser(userAgent) {
+  var userAgentToBrowser$5 = function userAgentToBrowser(userAgent) {
     if (/msie|trident/i.test(userAgent)) {
       return {
         name: "ie",
@@ -47,10 +47,10 @@
   };
 
   var detectOpera = function detectOpera() {
-    return userAgentToBrowser$1(window.navigator.userAgent);
+    return userAgentToBrowser$4(window.navigator.userAgent);
   };
 
-  var userAgentToBrowser$1 = function userAgentToBrowser(userAgent) {
+  var userAgentToBrowser$4 = function userAgentToBrowser(userAgent) {
     // opera below 13
     if (/opera/i.test(userAgent)) {
       return {
@@ -71,10 +71,10 @@
   };
 
   var detectEdge = function detectEdge() {
-    return userAgentToBrowser$2(window.navigator.userAgent);
+    return userAgentToBrowser$3(window.navigator.userAgent);
   };
 
-  var userAgentToBrowser$2 = function userAgentToBrowser(userAgent) {
+  var userAgentToBrowser$3 = function userAgentToBrowser(userAgent) {
     if (/edg([ea]|ios)/i.test(userAgent)) {
       return {
         name: "edge",
@@ -86,10 +86,10 @@
   };
 
   var detectFirefox = function detectFirefox() {
-    return userAgentToBrowser$3(window.navigator.userAgent);
+    return userAgentToBrowser$2(window.navigator.userAgent);
   };
 
-  var userAgentToBrowser$3 = function userAgentToBrowser(userAgent) {
+  var userAgentToBrowser$2 = function userAgentToBrowser(userAgent) {
     if (/firefox|iceweasel|fxios/i.test(userAgent)) {
       return {
         name: "firefox",
@@ -101,10 +101,10 @@
   };
 
   var detectChrome = function detectChrome() {
-    return userAgentToBrowser$4(window.navigator.userAgent);
+    return userAgentToBrowser$1(window.navigator.userAgent);
   };
 
-  var userAgentToBrowser$4 = function userAgentToBrowser(userAgent) {
+  var userAgentToBrowser$1 = function userAgentToBrowser(userAgent) {
     if (/chromium/i.test(userAgent)) {
       return {
         name: "chrome",
@@ -123,10 +123,10 @@
   };
 
   var detectSafari = function detectSafari() {
-    return userAgentToBrowser$5(window.navigator.userAgent);
+    return userAgentToBrowser(window.navigator.userAgent);
   };
 
-  var userAgentToBrowser$5 = function userAgentToBrowser(userAgent) {
+  var userAgentToBrowser = function userAgentToBrowser(userAgent) {
     if (/safari|applewebkit/i.test(userAgent)) {
       return {
         name: "safari",
@@ -142,10 +142,10 @@
   }; // TODO
 
   var detectIOS = function detectIOS() {
-    return navigatorToBrowser$1(window.navigator);
+    return navigatorToBrowser(window.navigator);
   };
 
-  var navigatorToBrowser$1 = function navigatorToBrowser(_ref) {
+  var navigatorToBrowser = function navigatorToBrowser(_ref) {
     var userAgent = _ref.userAgent,
         appVersion = _ref.appVersion;
 
@@ -548,7 +548,7 @@
     return fnWithMemoization;
   };
 
-  function _await(value, then, direct) {
+  function _await$4(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -560,7 +560,7 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchNative = _async(function (url) {
+  var fetchNative$1 = _async$4(function (url) {
 
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -575,8 +575,8 @@
       abortController.abort(reason);
     });
     var response;
-    return _continue(_catch(function () {
-      return _await(window.fetch(url, _objectSpread({
+    return _continue$1(_catch$2(function () {
+      return _await$4(window.fetch(url, _objectSpread({
         signal: abortController.signal
       }, options)), function (_window$fetch) {
         response = _window$fetch;
@@ -588,11 +588,11 @@
 
       throw e;
     }), function (_result) {
-      return  response;
+      return response;
     });
   });
 
-  function _catch(body, recover) {
+  function _catch$2(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -611,13 +611,13 @@
       args[_key] = arguments[_key];
     }
 
-    return _call(loadPolyfill, function (_ref2) {
+    return _call$2(loadPolyfill, function (_ref2) {
       var fetchUsingXHR = _ref2.fetchUsingXHR;
       return fetchUsingXHR.apply(void 0, args);
     });
   };
 
-  function _continue(value, then) {
+  function _continue$1(value, then) {
     return value && value.then ? value.then(then) : then(value);
   }
 
@@ -625,7 +625,7 @@
     return Promise.resolve().then(function () { return fetchUsingXHR$1; });
   });
 
-  function _async(f) {
+  function _async$4(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -639,7 +639,7 @@
     };
   }
 
-  function _call(body, then, direct) {
+  function _call$2(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -652,12 +652,12 @@
     }
   }
 
-  var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchPolyfill;
+  var fetchUrl$1 = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative$1 : fetchPolyfill;
 
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
-  function _await$1(value, then, direct) {
+  function _await$3(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -669,7 +669,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$1(f) {
+  function _async$3(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -696,7 +696,7 @@
     }
   }
 
-  var fetchUsingXHR = _async$1(function (url) {
+  var fetchUsingXHR = _async$3(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         _ref$cancellationToke = _ref.cancellationToken,
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
@@ -779,7 +779,7 @@
     }
 
     xhr.send(body);
-    return _await$1(headersPromise, function () {
+    return _await$3(headersPromise, function () {
       // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
       var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
       var responseStatus = xhr.status;
@@ -787,7 +787,7 @@
       var responseHeaders = getHeadersFromXHR(xhr);
 
       var readBody = function readBody() {
-        return _await$1(bodyPromise, function () {
+        return _await$3(bodyPromise, function () {
           var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
           if (status === 0) {
@@ -823,7 +823,7 @@
         return _call$1(text, JSON.parse);
       };
 
-      var blob = _async$1(function () {
+      var blob = _async$3(function () {
         if (!hasBlob) {
           throw new Error("blob not supported");
         }
@@ -860,7 +860,7 @@
         });
       };
 
-      var formData = _async$1(function () {
+      var formData = _async$3(function () {
         if (!hasFormData) {
           throw new Error("formData not supported");
         }
@@ -1041,7 +1041,7 @@
     return form;
   };
 
-  var blobToArrayBuffer = _async$1(function (blob) {
+  var blobToArrayBuffer = _async$3(function (blob) {
     var reader = new FileReader();
     var promise = fileReaderReady(reader);
     reader.readAsArrayBuffer(blob);
@@ -1107,7 +1107,7 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchNative$1 = _async$2(function (url) {
+  var fetchNative = _async$2(function (url) {
 
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -1124,7 +1124,7 @@
       abortController.abort(reason);
     });
     var response;
-    return _continue$1(_catch$1(function () {
+    return _continue(_catch$1(function () {
       return _await$2(window.fetch(url, _objectSpread({
         signal: abortController.signal,
         mode: mode
@@ -1138,7 +1138,7 @@
 
       throw e;
     }), function (_result) {
-      return  {
+      return {
         url: response.url,
         status: response.status,
         statusText: "",
@@ -1184,7 +1184,7 @@
     return headers;
   };
 
-  function _continue$1(value, then) {
+  function _continue(value, then) {
     return value && value.then ? value.then(then) : then(value);
   }
 
@@ -1202,9 +1202,9 @@
     };
   }
 
-  var fetchUrl$1 = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative$1 : fetchUsingXHR;
+  var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-  function _await$3(value, then, direct) {
+  function _await$1(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -1216,7 +1216,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _catch$2(body, recover) {
+  function _catch(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -1230,7 +1230,7 @@
     return result;
   }
 
-  function _async$3(f) {
+  function _async$1(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -1244,18 +1244,18 @@
     };
   }
 
-  var fetchExploringJson = _async$3(function () {
+  var fetchExploringJson = _async$1(function () {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         cancellationToken = _ref.cancellationToken;
 
-    return _catch$2(function () {
-      return _await$3(fetchUrl$1("/.jsenv/exploring.json", {
+    return _catch(function () {
+      return _await$1(fetchUrl("/.jsenv/exploring.json", {
         headers: {
           "x-jsenv": "1"
         },
         cancellationToken: cancellationToken
       }), function (exploringJsonResponse) {
-        return _await$3(exploringJsonResponse.json());
+        return _await$1(exploringJsonResponse.json());
       });
     }, function (e) {
       if (isCancelError(e)) {
@@ -1345,7 +1345,7 @@
     return stop;
   };
 
-  function _await$4(value, then, direct) {
+  function _await(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -1357,13 +1357,13 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchJSON = _async$4(function (url, options) {
-    return _await$4(fetchUrl(url, options), function (response) {
-      return _await$4(response.json());
+  var fetchJSON = _async(function (url, options) {
+    return _await(fetchUrl$1(url, options), function (response) {
+      return _await(response.json());
     });
   });
 
-  function _async$4(f) {
+  function _async(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -1379,7 +1379,7 @@
 
   var groupPreference = createPreference("group");
 
-  function _call$2(body, then, direct) {
+  function _call(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -1393,11 +1393,11 @@
   }
 
   var run = function run() {
-    return _call$2(fetchExploringJson, function (_ref) {
+    return _call(fetchExploringJson, function (_ref) {
       var projectDirectoryUrl = _ref.projectDirectoryUrl,
           explorableConfig = _ref.explorableConfig,
           outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
-      return _await$4(fetchJSON("/.jsenv/explorables.json", {
+      return _await(fetchJSON("/.jsenv/explorables.json", {
         method: "GET",
         headers: {
           "x-jsenv": "1"
@@ -1406,7 +1406,7 @@
         var compileServerOrigin = document.location.origin;
         var outDirectoryUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
         var groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl));
-        return _await$4(fetchJSON(groupMapUrl), function (groupMap) {
+        return _await(fetchJSON(groupMapUrl), function (groupMap) {
           var compileId = computeCompileIdFromGroupId({
             groupId: resolveBrowserGroup(groupMap),
             groupMap: groupMap
