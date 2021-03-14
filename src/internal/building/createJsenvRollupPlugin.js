@@ -684,6 +684,7 @@ export const createJsenvRollupPlugin = async ({
         return null
       }
 
+      // TODO: maybe replace chunk.fileName with chunk.facadeModuleId?
       const result = await minifyJs(code, chunk.fileName, {
         sourceMap: {
           ...(map ? { content: JSON.stringify(map) } : {}),
@@ -811,7 +812,12 @@ export const createJsenvRollupPlugin = async ({
 
         const buildRelativeUrl = assetTarget.targetBuildRelativeUrl
         const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
-        const originalProjectRelativeUrl = assetTarget.targetRelativeUrl
+        const originalProjectUrl = urlToOriginalProjectUrl(assetTarget.targetUrl, {
+          projectDirectoryUrl,
+          compileServerOrigin,
+          compileDirectoryRelativeUrl,
+        })
+        const originalProjectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
         // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
         file.source = String(assetTarget.targetBuildBuffer)
 
