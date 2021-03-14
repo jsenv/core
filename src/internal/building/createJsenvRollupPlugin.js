@@ -555,11 +555,10 @@ export const createJsenvRollupPlugin = async ({
       return urlToUrlForRollup(importUrl)
     },
 
-    resolveFileUrl: ({
-      // chunkId, moduleId, referenceId,
-      fileName,
-    }) => {
-      const assetTarget = assetBuilder.getAssetByUrl(fileName)
+    resolveFileUrl: ({ referenceId, fileName }) => {
+      const assetTarget = assetBuilder.findAsset((asset) => {
+        return asset.rollupReferenceId === referenceId
+      })
       const buildRelativeUrl = assetTarget ? assetTarget.targetBuildRelativeUrl : fileName
       if (format === "esmodule") {
         return `new URL("${buildRelativeUrl}", import.meta.url).href`
@@ -790,7 +789,9 @@ export const createJsenvRollupPlugin = async ({
           return
         }
 
-        const assetTarget = assetBuilder.getAssetByUrl(rollupFileId)
+        const assetTarget = assetBuilder.findAsset(
+          (asset) => asset.targetRelativeUrl === rollupFileId,
+        )
         if (!assetTarget) {
           const buildRelativeUrl = rollupFileId
           const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
@@ -810,8 +811,7 @@ export const createJsenvRollupPlugin = async ({
 
         const buildRelativeUrl = assetTarget.targetBuildRelativeUrl
         const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
-        const originalProjectUrl = rollupUrlToOriginalProjectUrl(rollupFileId)
-        const originalProjectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
+        const originalProjectRelativeUrl = assetTarget.targetRelativeUrl
         // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
         file.source = String(assetTarget.targetBuildBuffer)
 
