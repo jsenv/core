@@ -109,7 +109,7 @@ export const jsenvCompilerForHtml = ({
         manipulateHtmlAst(htmlAst, {
           scriptInjections: [
             {
-              type: "toto",
+              type: "jsenv-importmap",
               // in case there is no importmap, use a top level one
               src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
             },
