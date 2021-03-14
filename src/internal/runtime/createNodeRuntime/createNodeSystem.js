@@ -1,6 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { resolveImport } from "@jsenv/import-map"
+import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
 import { createBareSpecifierError } from "@jsenv/core/src/internal/createBareSpecifierError.js"
 import { require } from "../../require.js"
 import "../s.js"
@@ -10,7 +11,6 @@ import {
   tryToFindProjectRelativeUrl,
 } from "../module-registration.js"
 import { valueInstall } from "../valueInstall.js"
-import { isNativeNodeModuleBareSpecifier } from "./isNativeNodeModuleBareSpecifier.js"
 import { evalSource } from "./evalSource.js"
 
 const GLOBAL_SPECIFIER = "global"
@@ -35,7 +35,7 @@ export const createNodeSystem = ({
       return specifier
     }
 
-    if (isNativeNodeModuleBareSpecifier(specifier)) {
+    if (isSpecifierForNodeCoreModule(specifier)) {
       return specifier
     }
 
@@ -75,7 +75,7 @@ export const createNodeSystem = ({
       })
     }
 
-    if (isNativeNodeModuleBareSpecifier(url)) {
+    if (isSpecifierForNodeCoreModule(url)) {
       return fromFunctionReturningNamespace(
         () => {
           // eslint-disable-next-line import/no-dynamic-require
