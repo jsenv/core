@@ -1,6 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { extname } from "path"
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
+import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
 import { loggerToLogLevel, createDetailedMessage } from "@jsenv/logger"
 import {
   isFileSystemPath,
@@ -39,7 +40,6 @@ import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObj
 
 import { parseTarget } from "./parseTarget.js"
 import { showSourceLocation } from "./showSourceLocation.js"
-import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { createAssetBuilder, referenceToCodeForRollup } from "./asset-builder.js"
 import { computeBuildRelativeUrl } from "./url-versioning.js"
@@ -195,7 +195,7 @@ export const createJsenvRollupPlugin = async ({
   )
 
   const nativeModulePredicate = (specifier) => {
-    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
+    if (node && isSpecifierForNodeCoreModule(specifier)) return true
     // for now browser have no native module
     // and we don't know how we will handle that
     if (browser) return false
