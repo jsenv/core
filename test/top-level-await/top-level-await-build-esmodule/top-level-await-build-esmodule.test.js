@@ -27,36 +27,26 @@ await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
   },
 })
-// top level await not supported in pupeteer for now
-try {
-  await browserImportEsModuleBuild({
+
+{
+  const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
   })
-  throw new Error("should throw")
-} catch (actual) {
-  const expected = new Error(
-    "page.evaluate: Evaluation failed: SyntaxError: Unexpected reserved word",
-  )
+  const actual = namespace
+  const expected = { default: 42 }
   assert({ actual, expected })
 }
+
 // top level await not supported in node 13.8 for now (SourceMap test because added in 13.7)
 if (SourceMap) {
-  try {
-    await nodeImportEsModuleBuild({
-      ...NODE_IMPORT_BUILD_TEST_PARAMS,
-      testDirectoryRelativeUrl,
-    })
-    throw new Error("should throw")
-  } catch (error) {
-    const actual = {
-      name: error.name,
-      message: error.message,
-    }
-    const expected = {
-      name: "SyntaxError",
-      message: "Unexpected reserved word",
-    }
-    assert({ actual, expected })
-  }
+  const { namespace } = await nodeImportEsModuleBuild({
+    ...NODE_IMPORT_BUILD_TEST_PARAMS,
+    testDirectoryRelativeUrl,
+    topLevelAwait: true,
+  })
+
+  const actual = namespace
+  const expected = { default: 42 }
+  assert({ actual, expected })
 }

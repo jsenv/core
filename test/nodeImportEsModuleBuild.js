@@ -9,12 +9,15 @@ export const nodeImportEsModuleBuild = async ({
   testDirectoryRelativeUrl,
   mainRelativeUrl,
   awaitNamespace = true,
+  topLevelAwait,
 }) => {
   const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
   const mainFileUrl = resolveUrl(mainRelativeUrl, testDirectoryUrl)
-
+  const execArgv = await createChildExecArgv({
+    topLevelAwait,
+  })
   const child = fork(urlToFileSystemPath(CONTROLLABLE_FILE_URL), {
-    execArgv: await createChildExecArgv(),
+    execArgv,
   })
 
   return new Promise((resolve, reject) => {

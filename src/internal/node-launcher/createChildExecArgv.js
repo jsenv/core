@@ -17,6 +17,7 @@ export const createChildExecArgv = async ({
   traceWarnings = "inherit",
   unhandledRejection = "inherit",
   jsonModules = "inherit",
+  topLevelAwait,
 } = {}) => {
   if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
     throw new TypeError(
@@ -111,6 +112,15 @@ export const createChildExecArgv = async ({
       childExecArgv.push(`--experimental-json-modules`)
     } else if (!jsonModules && jsonModulesArg) {
       childExecArgv.splice(jsonModulesArg.index, 1)
+    }
+  }
+
+  if (topLevelAwait !== undefined) {
+    const topLevelAwaitFlag = getCommandArgument(childExecArgv, "--experimental-top-level-await")
+    if (topLevelAwait === true && !topLevelAwaitFlag) {
+      childExecArgv.push(`--experimental-top-level-await`)
+    } else if (topLevelAwait === false && topLevelAwaitFlag) {
+      childExecArgv.splice(topLevelAwaitFlag.index, 1)
     }
   }
 
