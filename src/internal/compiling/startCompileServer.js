@@ -10,7 +10,7 @@ import {
   startServer,
   serveFile,
   createSSERoom,
-  firstServiceWithTiming,
+  composeServiceWithTiming,
 } from "@jsenv/server"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import {
@@ -241,7 +241,7 @@ export const startCompileServer = async ({
     sendServerTiming: true,
     nagle: false,
     sendServerInternalErrorDetails: true,
-    requestToResponse: firstServiceWithTiming({
+    requestToResponse: composeServiceWithTiming({
       ...customServices,
       "service:compilation asset": serveCompilationAssetFile,
       "service:browser script": serveBrowserScript,
@@ -683,7 +683,7 @@ const createSSEForLivereloadService = ({
     const sseRoom = createSSERoom({
       retryDuration: 2000,
       historyLength: 100,
-      welcomeEvent: true,
+      welcomeEventEnabled: true,
     })
 
     // each time something is modified or removed we send event to the room
@@ -699,11 +699,10 @@ const createSSEForLivereloadService = ({
       },
     })
 
-    sseRoom.start()
     const cancelRegistration = cancellationToken.register(() => {
       cancelRegistration.unregister()
 
-      sseRoom.stop()
+      sseRoom.close()
       stopTracking()
     })
     cache.push({
@@ -711,7 +710,7 @@ const createSSEForLivereloadService = ({
       sseRoom,
       cleanup: () => {
         cancelRegistration.unregister()
-        sseRoom.stop()
+        sseRoom.close()
         stopTracking()
       },
     })
@@ -734,10 +733,7 @@ const createSSEForLivereloadService = ({
     )
 
     const room = getOrCreateSSERoom(fileRelativeUrl)
-    return room.connect(
-      request.headers["last-event-id"] ||
-        new URL(request.ressource, request.origin).searchParams.get("last-event-id"),
-    )
+    return room.join(request)
   }
 }
 

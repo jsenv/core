@@ -30,7 +30,7 @@
     "/main.js"
   ],
   "dependencies": {
-    "@jsenv/server": "5.4.2",
+    "@jsenv/server": "6.0.0",
     "@jsenv/util": "4.0.4",
     "sass": "1.30.0"
   },

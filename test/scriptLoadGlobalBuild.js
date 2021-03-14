@@ -1,4 +1,4 @@
-import { startServer, firstService, serveFile } from "@jsenv/server"
+import { startServer, composeService, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 
@@ -48,7 +48,7 @@ const startTestServer = ({ buildDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "https",
-    requestToResponse: firstService(
+    requestToResponse: composeService(
       (request) => serveIndexPage({ request }),
       (request) => serveBuildDirectory({ buildDirectoryUrl, request }),
     ),

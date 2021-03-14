@@ -1,4 +1,4 @@
-import { startServer, firstService, serveFile } from "@jsenv/server"
+import { startServer, composeService, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl, readFile } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 
@@ -68,7 +68,7 @@ const startTestServer = ({ testDirectoryUrl }) => {
   return startServer({
     logLevel: "error",
     protocol: "https",
-    requestToResponse: firstService(
+    requestToResponse: composeService(
       (request) => serveSystemJS({ request }),
       (request) => serveTestDirectory({ testDirectoryUrl, request }),
     ),
