@@ -1,6 +1,6 @@
-export default function (receiver, privateSet, fn) {
-  if (!privateSet.has(receiver)) {
-    throw new TypeError("attempted to get private field on non-instance")
-  }
-  return fn
+import classCheckPrivateStaticAccess from "../classCheckPrivateStaticAccess/classCheckPrivateStaticAccess.js"
+
+export default function _classStaticPrivateMethodGet(receiver, classConstructor, method) {
+  classCheckPrivateStaticAccess(receiver, classConstructor)
+  return method
 }

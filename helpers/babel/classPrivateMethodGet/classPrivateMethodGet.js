@@ -1,6 +1,6 @@
-export default function _classStaticPrivateMethodGet(receiver, classConstructor, method) {
-  if (receiver !== classConstructor) {
-    throw new TypeError("Private static access of wrong provenance")
+export default function _classPrivateMethodGet(receiver, privateSet, fn) {
+  if (!privateSet.has(receiver)) {
+    throw new TypeError("attempted to get private field on non-instance")
   }
-  return method
+  return fn
 }

@@ -18,7 +18,13 @@ const babelHelperNameInsideJsenvCoreArray = [
   "asyncToGenerator",
   "awaitAsyncGenerator",
   "AwaitValue",
+  "classApplyDescriptorDestructureSet",
+  "classApplyDescriptorGet",
+  "classApplyDescriptorSet",
   "classCallCheck",
+  "classCheckPrivateStaticAccess",
+  "classCheckPrivateStaticFieldDescriptor",
+  "classExtractFieldDescriptor",
   "classNameTDZError",
   "classPrivateFieldDestructureSet",
   "classPrivateFieldGet",
@@ -86,6 +92,7 @@ const babelHelperNameInsideJsenvCoreArray = [
   "wrapAsyncGenerator",
   "wrapNativeSuper",
   "wrapRegExp",
+  "writeOnlyError",
 ]
 
 const babelHelperScope = "@jsenv/core/helpers/babel/"
