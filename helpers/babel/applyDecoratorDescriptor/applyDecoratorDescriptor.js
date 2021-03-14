@@ -26,8 +26,6 @@ export default function _applyDecoratedDescriptor(
     desc.initializer = undefined
   }
   if (desc.initializer === void 0) {
-    // This is a hack to avoid this being processed by 'transform-runtime'.
-    // See issue #9.
     Object.defineProperty(target, property, desc)
     desc = null
   }

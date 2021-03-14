@@ -310,16 +310,16 @@
   };
 
   var sortImports = function sortImports(imports) {
-    var importsSorted = {};
+    var mappingsSorted = {};
     Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(function (name) {
-      importsSorted[name] = imports[name];
+      mappingsSorted[name] = imports[name];
     });
-    return importsSorted;
+    return mappingsSorted;
   };
   var sortScopes = function sortScopes(scopes) {
     var scopesSorted = {};
-    Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(function (scopeName) {
-      scopesSorted[scopeName] = sortImports(scopes[scopeName]);
+    Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(function (scopeSpecifier) {
+      scopesSorted[scopeSpecifier] = sortImports(scopes[scopeSpecifier]);
     });
     return scopesSorted;
   };
@@ -340,15 +340,15 @@
     var imports = importMap.imports,
         scopes = importMap.scopes;
     return {
-      imports: imports ? normalizeImports(imports, baseUrl) : undefined,
+      imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
       scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
     };
   };
 
-  var normalizeImports = function normalizeImports(imports, baseUrl) {
-    var importsNormalized = {};
-    Object.keys(imports).forEach(function (specifier) {
-      var address = imports[specifier];
+  var normalizeMappings = function normalizeMappings(mappings, baseUrl) {
+    var mappingsNormalized = {};
+    Object.keys(mappings).forEach(function (specifier) {
+      var address = mappings[specifier];
 
       if (typeof address !== "string") {
         console.warn(formulateAddressMustBeAString({
@@ -379,26 +379,26 @@
         return;
       }
 
-      importsNormalized[specifierResolved] = addressUrl;
+      mappingsNormalized[specifierResolved] = addressUrl;
     });
-    return sortImports(importsNormalized);
+    return sortImports(mappingsNormalized);
   };
 
   var normalizeScopes = function normalizeScopes(scopes, baseUrl) {
     var scopesNormalized = {};
-    Object.keys(scopes).forEach(function (scope) {
-      var scopeValue = scopes[scope];
-      var scopeUrl = tryUrlResolution(scope, baseUrl);
+    Object.keys(scopes).forEach(function (scopeSpecifier) {
+      var scopeMappings = scopes[scopeSpecifier];
+      var scopeUrl = tryUrlResolution(scopeSpecifier, baseUrl);
 
       if (scopeUrl === null) {
         console.warn(formulateScopeResolutionFailed({
-          scope: scope,
+          scope: scopeSpecifier,
           baseUrl: baseUrl
         }));
         return;
       }
 
-      var scopeValueNormalized = normalizeImports(scopeValue, baseUrl);
+      var scopeValueNormalized = normalizeMappings(scopeMappings, baseUrl);
       scopesNormalized[scopeUrl] = scopeValueNormalized;
     });
     return sortScopes(scopesNormalized);
@@ -437,12 +437,20 @@
 
   // https://developer.mozilla.org/en-US/docs/Glossary/Primitive
   var isComposite = function isComposite(value) {
-    if (value === null) return false;
+    if (value === null) {
+      return false;
+    }
 
     var type = _typeof(value);
 
-    if (type === "object") return true;
-    if (type === "function") return true;
+    if (type === "object") {
+      return true;
+    }
+
+    if (type === "function") {
+      return true;
+    }
+
     return false;
   };
 
@@ -458,7 +466,10 @@
   var visitGlobalObject = function visitGlobalObject(value) {
     var visitValue = function visitValue(value, path) {
       if (isComposite(value)) {
-        if (compositeWellKnownMap.has(value)) return; // prevent infinite recursion
+        // prevent infinite recursion
+        if (compositeWellKnownMap.has(value)) {
+          return;
+        }
 
         compositeWellKnownMap.set(value, path);
 
@@ -519,7 +530,9 @@
       if (!isComposite(value)) {
         var _existingIdentifier = identifierForPrimitive(value);
 
-        if (_existingIdentifier !== undefined) return _existingIdentifier;
+        if (_existingIdentifier !== undefined) {
+          return _existingIdentifier;
+        }
 
         var _identifier = identifierForNewValue(value);
 
@@ -527,20 +540,36 @@
         return _identifier;
       }
 
-      if (typeof Promise === "function" && value instanceof Promise) throw new Error(createPromiseAreNotSupportedMessage({
-        path: path
-      }));
-      if (typeof WeakSet === "function" && value instanceof WeakSet) throw new Error(createWeakSetAreNotSupportedMessage({
-        path: path
-      }));
-      if (typeof WeakMap === "function" && value instanceof WeakMap) throw new Error(createWeakMapAreNotSupportedMessage({
-        path: path
-      }));
-      if (typeof value === "function" && !functionAllowed) throw new Error(createForbiddenFunctionMessage({
-        path: path
-      }));
+      if (typeof Promise === "function" && value instanceof Promise) {
+        throw new Error(createPromiseAreNotSupportedMessage({
+          path: path
+        }));
+      }
+
+      if (typeof WeakSet === "function" && value instanceof WeakSet) {
+        throw new Error(createWeakSetAreNotSupportedMessage({
+          path: path
+        }));
+      }
+
+      if (typeof WeakMap === "function" && value instanceof WeakMap) {
+        throw new Error(createWeakMapAreNotSupportedMessage({
+          path: path
+        }));
+      }
+
+      if (typeof value === "function" && !functionAllowed) {
+        throw new Error(createForbiddenFunctionMessage({
+          path: path
+        }));
+      }
+
       var existingIdentifier = identifierForComposite(value);
-      if (existingIdentifier !== undefined) return existingIdentifier;
+
+      if (existingIdentifier !== undefined) {
+        return existingIdentifier;
+      }
+
       var identifier = identifierForNewValue(value);
       var compositeGlobalPath = getCompositeGlobalPath(value);
 
@@ -581,14 +610,20 @@
     };
 
     var computePropertyDescription = function computePropertyDescription(propertyDescriptor, propertyNameOrSymbol, path) {
-      if (propertyDescriptor.set && !functionAllowed) throw new Error(createForbiddenPropertySetterMessage({
-        path: path,
-        propertyNameOrSymbol: propertyNameOrSymbol
-      }));
-      if (propertyDescriptor.get && !functionAllowed) throw new Error(createForbiddenPropertyGetterMessage({
-        path: path,
-        propertyNameOrSymbol: propertyNameOrSymbol
-      }));
+      if (propertyDescriptor.set && !functionAllowed) {
+        throw new Error(createForbiddenPropertySetterMessage({
+          path: path,
+          propertyNameOrSymbol: propertyNameOrSymbol
+        }));
+      }
+
+      if (propertyDescriptor.get && !functionAllowed) {
+        throw new Error(createForbiddenPropertyGetterMessage({
+          path: path,
+          propertyNameOrSymbol: propertyNameOrSymbol
+        }));
+      }
+
       return {
         configurable: propertyDescriptor.configurable,
         writable: propertyDescriptor.writable,
@@ -665,10 +700,17 @@
 
     var prototypeValueToIdentifier = function prototypeValueToIdentifier(prototypeValue) {
       // prototype is null
-      if (prototypeValue === null) return valueToIdentifier(prototypeValue); // prototype found somewhere already
+      if (prototypeValue === null) {
+        return valueToIdentifier(prototypeValue);
+      } // prototype found somewhere already
+
 
       var prototypeExistingIdentifier = identifierForComposite(prototypeValue);
-      if (prototypeExistingIdentifier !== undefined) return prototypeExistingIdentifier; // mark prototype as visited
+
+      if (prototypeExistingIdentifier !== undefined) {
+        return prototypeExistingIdentifier;
+      } // mark prototype as visited
+
 
       var prototypeIdentifier = identifierForNewValue(prototypeValue); // prototype is a global reference ?
 
@@ -691,12 +733,29 @@
 
     var identifierForValueOf = function identifierForValueOf(value) {
       var path = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-      if (value instanceof Array) return valueToIdentifier(value.length, [].concat(_toConsumableArray(path), ["length"]));
-      if ("valueOf" in value === false) return undefined;
-      if (typeof value.valueOf !== "function") return undefined;
+
+      if (value instanceof Array) {
+        return valueToIdentifier(value.length, [].concat(_toConsumableArray(path), ["length"]));
+      }
+
+      if ("valueOf" in value === false) {
+        return undefined;
+      }
+
+      if (typeof value.valueOf !== "function") {
+        return undefined;
+      }
+
       var valueOfReturnValue = value.valueOf();
-      if (!isComposite(valueOfReturnValue)) return valueToIdentifier(valueOfReturnValue, [].concat(_toConsumableArray(path), ["valueOf()"]));
-      if (valueOfReturnValue === value) return undefined;
+
+      if (!isComposite(valueOfReturnValue)) {
+        return valueToIdentifier(valueOfReturnValue, [].concat(_toConsumableArray(path), ["valueOf()"]));
+      }
+
+      if (valueOfReturnValue === value) {
+        return undefined;
+      }
+
       throw new Error(createUnexpectedValueOfReturnValueMessage());
     };
 
@@ -739,17 +798,28 @@
   };
 
   var primitiveToRecipe = function primitiveToRecipe(value) {
-    if (_typeof(value) === "symbol") return symbolToRecipe(value);
+    if (_typeof(value) === "symbol") {
+      return symbolToRecipe(value);
+    }
+
     return createPimitiveRecipe(value);
   };
 
   var symbolToRecipe = function symbolToRecipe(symbol) {
     var globalSymbolKey = Symbol.keyFor(symbol);
-    if (globalSymbolKey !== undefined) return createGlobalSymbolRecipe(globalSymbolKey);
+
+    if (globalSymbolKey !== undefined) {
+      return createGlobalSymbolRecipe(globalSymbolKey);
+    }
+
     var symbolGlobalPath = getPrimitiveGlobalPath(symbol);
-    if (!symbolGlobalPath) throw new Error(createUnknownSymbolMessage({
-      symbol: symbol
-    }));
+
+    if (!symbolGlobalPath) {
+      throw new Error(createUnknownSymbolMessage({
+        symbol: symbol
+      }));
+    }
+
     return createGlobalReferenceRecipe(symbolGlobalPath);
   };
 
@@ -795,25 +865,41 @@
 
   var createPromiseAreNotSupportedMessage = function createPromiseAreNotSupportedMessage(_ref3) {
     var path = _ref3.path;
-    if (path.length === 0) return "promise are not supported.";
+
+    if (path.length === 0) {
+      return "promise are not supported.";
+    }
+
     return "promise are not supported.\npromise found at: ".concat(path.join(""));
   };
 
   var createWeakSetAreNotSupportedMessage = function createWeakSetAreNotSupportedMessage(_ref4) {
     var path = _ref4.path;
-    if (path.length === 0) return "weakSet are not supported.";
+
+    if (path.length === 0) {
+      return "weakSet are not supported.";
+    }
+
     return "weakSet are not supported.\nweakSet found at: ".concat(path.join(""));
   };
 
   var createWeakMapAreNotSupportedMessage = function createWeakMapAreNotSupportedMessage(_ref5) {
     var path = _ref5.path;
-    if (path.length === 0) return "weakMap are not supported.";
+
+    if (path.length === 0) {
+      return "weakMap are not supported.";
+    }
+
     return "weakMap are not supported.\nweakMap found at: ".concat(path.join(""));
   };
 
   var createForbiddenFunctionMessage = function createForbiddenFunctionMessage(_ref6) {
     var path = _ref6.path;
-    if (path.length === 0) return "function are not allowed.";
+
+    if (path.length === 0) {
+      return "function are not allowed.";
+    }
+
     return "function are not allowed.\nfunction found at: ".concat(path.join(""));
   };
 
@@ -851,11 +937,21 @@
       var currentRecipe = recipe; // eslint-disable-next-line no-constant-condition
 
       while (true) {
-        if (currentRecipe.type !== "composite") break;
+        if (currentRecipe.type !== "composite") {
+          break;
+        }
+
         var prototypeIdentifier = currentRecipe.prototypeIdentifier;
-        if (prototypeIdentifier === undefined) break;
+
+        if (prototypeIdentifier === undefined) {
+          break;
+        }
+
         currentRecipe = recipeArray[prototypeIdentifier];
-        if (callback(currentRecipe, prototypeIdentifier)) return prototypeIdentifier;
+
+        if (callback(currentRecipe, prototypeIdentifier)) {
+          return prototypeIdentifier;
+        }
       }
 
       return undefined;
@@ -871,25 +967,38 @@
           return recipeCandidate === rightRecipe;
         }); // if left recipe requires right recipe, left must be after right
 
-        if (rightRecipeIsInLeftRecipePrototypeChain) return 1;
+        if (rightRecipeIsInLeftRecipePrototypeChain) {
+          return 1;
+        }
+
         var leftRecipeIsInRightRecipePrototypeChain = findInRecipePrototypeChain(rightRecipe, function (recipeCandidate) {
           return recipeCandidate === leftRecipe;
         }); // if right recipe requires left recipe, right must be after left
 
-        if (leftRecipeIsInRightRecipePrototypeChain) return -1;
+        if (leftRecipeIsInRightRecipePrototypeChain) {
+          return -1;
+        }
       }
 
       if (leftType !== rightType) {
         // if left is a composite, left must be after right
-        if (leftType === "composite") return 1; // if right is a composite, right must be after left
+        if (leftType === "composite") {
+          return 1;
+        } // if right is a composite, right must be after left
 
-        if (rightType === "composite") return -1;
+
+        if (rightType === "composite") {
+          return -1;
+        }
       }
 
       var leftIndex = recipeArray.indexOf(leftRecipe);
       var rightIndex = recipeArray.indexOf(rightRecipe); // left was before right, don't change that
 
-      if (leftIndex < rightIndex) return -1; // right was after left, don't change that
+      if (leftIndex < rightIndex) {
+        return -1;
+      } // right was after left, don't change that
+
 
       return 1;
     });
@@ -965,8 +1074,21 @@
 
     var primitiveRecipeToSetupSource = function primitiveRecipeToSetupSource(_ref2) {
       var value = _ref2.value;
-      if (typeof value === "string") return "\"".concat(escapeString(value), "\";");
-      if (Object.is(value, -0)) return "-0;";
+
+      var type = _typeof(value);
+
+      if (type === "string") {
+        return "\"".concat(escapeString(value), "\";");
+      }
+
+      if (type === "bigint") {
+        return "".concat(value.toString(), "n");
+      }
+
+      if (Object.is(value, -0)) {
+        return "-0;";
+      }
+
       return "".concat(String(value), ";");
     };
 
@@ -984,12 +1106,31 @@
     var compositeRecipeToSetupSource = function compositeRecipeToSetupSource(_ref3) {
       var prototypeIdentifier = _ref3.prototypeIdentifier,
           valueOfIdentifier = _ref3.valueOfIdentifier;
-      if (prototypeIdentifier === undefined) return identifierToVariableName(valueOfIdentifier);
+
+      if (prototypeIdentifier === undefined) {
+        return identifierToVariableName(valueOfIdentifier);
+      }
+
       var prototypeValue = valueMap[prototypeIdentifier];
-      if (prototypeValue === null) return "Object.create(null);";
+
+      if (prototypeValue === null) {
+        return "Object.create(null);";
+      }
+
       var prototypeConstructor = prototypeValue.constructor;
-      if (prototypeConstructor === Object) return "Object.create(".concat(identifierToVariableName(prototypeIdentifier), ");");
-      if (valueOfIdentifier === undefined) return "new ".concat(prototypeConstructor.name, "();");
+
+      if (prototypeConstructor === Object) {
+        return "Object.create(".concat(identifierToVariableName(prototypeIdentifier), ");");
+      }
+
+      if (valueOfIdentifier === undefined) {
+        return "new ".concat(prototypeConstructor.name, "();");
+      }
+
+      if (prototypeConstructor.name === "BigInt") {
+        return "Object(".concat(identifierToVariableName(valueOfIdentifier), ")");
+      }
+
       return "new ".concat(prototypeConstructor.name, "(").concat(identifierToVariableName(valueOfIdentifier), ");");
     };
 
@@ -999,7 +1140,10 @@
     });
 
     var recipeToMutateSource = function recipeToMutateSource(recipe, recipeVariableName) {
-      if (recipe.type === "composite") return compositeRecipeToMutateSource(recipe, recipeVariableName);
+      if (recipe.type === "composite") {
+        return compositeRecipeToMutateSource(recipe, recipeVariableName);
+      }
+
       return "";
     };
 
@@ -1138,7 +1282,9 @@
         specifier: specifier,
         importer: importer
       }));
-    } : _ref$createBareSpecif;
+    } : _ref$createBareSpecif,
+        _ref$onImportMapping = _ref.onImportMapping,
+        onImportMapping = _ref$onImportMapping === void 0 ? function () {} : _ref$onImportMapping;
     assertImportMap(importMap);
 
     if (typeof specifier !== "string") {
@@ -1169,16 +1315,16 @@
     var scopes = importMap.scopes;
 
     if (scopes && importer) {
-      var scopeKeyMatching = Object.keys(scopes).find(function (scopeKey) {
-        return scopeKey === importer || specifierIsPrefixOf(scopeKey, importer);
+      var scopeSpecifierMatching = Object.keys(scopes).find(function (scopeSpecifier) {
+        return scopeSpecifier === importer || specifierIsPrefixOf(scopeSpecifier, importer);
       });
 
-      if (scopeKeyMatching) {
-        var scopeValue = scopes[scopeKeyMatching];
-        var remappingFromScopeImports = applyImports(specifierNormalized, scopeValue);
+      if (scopeSpecifierMatching) {
+        var scopeMappings = scopes[scopeSpecifierMatching];
+        var mappingFromScopes = applyMappings(scopeMappings, specifierNormalized, scopeSpecifierMatching, onImportMapping);
 
-        if (remappingFromScopeImports !== null) {
-          return remappingFromScopeImports;
+        if (mappingFromScopes !== null) {
+          return mappingFromScopes;
         }
       }
     }
@@ -1186,10 +1332,10 @@
     var imports = importMap.imports;
 
     if (imports) {
-      var remappingFromImports = applyImports(specifierNormalized, imports);
+      var mappingFromImports = applyMappings(imports, specifierNormalized, undefined, onImportMapping);
 
-      if (remappingFromImports !== null) {
-        return remappingFromImports;
+      if (mappingFromImports !== null) {
+        return mappingFromImports;
       }
     }
 
@@ -1197,29 +1343,44 @@
       return specifierUrl;
     }
 
-    throw new Error(createBareSpecifierError({
+    throw createBareSpecifierError({
       specifier: specifier,
       importer: importer
-    }));
+    });
   };
 
-  var applyImports = function applyImports(specifier, imports) {
-    var importKeyArray = Object.keys(imports);
+  var applyMappings = function applyMappings(mappings, specifierNormalized, scope, onImportMapping) {
+    var specifierCandidates = Object.keys(mappings);
     var i = 0;
 
-    while (i < importKeyArray.length) {
-      var importKey = importKeyArray[i];
+    while (i < specifierCandidates.length) {
+      var specifierCandidate = specifierCandidates[i];
       i++;
 
-      if (importKey === specifier) {
-        var importValue = imports[importKey];
-        return importValue;
+      if (specifierCandidate === specifierNormalized) {
+        var address = mappings[specifierCandidate];
+        onImportMapping({
+          scope: scope,
+          from: specifierCandidate,
+          to: address,
+          before: specifierNormalized,
+          after: address
+        });
+        return address;
       }
 
-      if (specifierIsPrefixOf(importKey, specifier)) {
-        var _importValue = imports[importKey];
-        var afterImportKey = specifier.slice(importKey.length);
-        return tryUrlResolution(afterImportKey, _importValue);
+      if (specifierIsPrefixOf(specifierCandidate, specifierNormalized)) {
+        var _address = mappings[specifierCandidate];
+        var afterSpecifier = specifierNormalized.slice(specifierCandidate.length);
+        var addressFinal = tryUrlResolution(afterSpecifier, _address);
+        onImportMapping({
+          scope: scope,
+          from: specifierCandidate,
+          to: _address,
+          before: specifierNormalized,
+          after: addressFinal
+        });
+        return addressFinal;
       }
     }
 
@@ -1236,13 +1397,16 @@
         importMap = _ref.importMap,
         _ref$defaultExtension = _ref.defaultExtension,
         defaultExtension = _ref$defaultExtension === void 0 ? true : _ref$defaultExtension,
-        createBareSpecifierError = _ref.createBareSpecifierError;
+        createBareSpecifierError = _ref.createBareSpecifierError,
+        _ref$onImportMapping = _ref.onImportMapping,
+        onImportMapping = _ref$onImportMapping === void 0 ? function () {} : _ref$onImportMapping;
     return applyDefaultExtension({
       url: importMap ? applyImportMap({
         importMap: importMap,
         specifier: specifier,
         importer: importer,
-        createBareSpecifierError: createBareSpecifierError
+        createBareSpecifierError: createBareSpecifierError,
+        onImportMapping: onImportMapping
       }) : resolveUrl(specifier, importer),
       importer: importer,
       defaultExtension: defaultExtension
@@ -1835,7 +1999,7 @@
     }; // Auto imports -> script tags can be inlined directly for load phase
 
 
-    var lastAutoImportUrl, lastAutoImportDeps, lastAutoImportTimeout;
+    var lastAutoImportDeps, lastAutoImportTimeout;
     var autoImportCandidates = {};
     var systemRegister = systemJSPrototype.register;
 
@@ -1845,7 +2009,7 @@
         var lastScript = scripts[scripts.length - 1];
 
         if (lastScript) {
-          lastAutoImportUrl = lastScript.src;
+          lastScript.src;
           lastAutoImportDeps = deps; // if this is already a System load, then the instantiate has already begun
           // so this re-import has no consequence
 
@@ -1973,7 +2137,7 @@
     };
   };
 
-  function _await(value, then, direct) {
+  function _await$a(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -1985,7 +2149,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _catch(body, recover) {
+  function _catch$4(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -1999,7 +2163,7 @@
     return result;
   }
 
-  function _invoke(body, then) {
+  function _invoke$5(body, then) {
     var result = body();
 
     if (result && result.then) {
@@ -2009,11 +2173,11 @@
     return then(result);
   }
 
-  function _continue(value, then) {
+  function _continue$3(value, then) {
     return value && value.then ? value.then(then) : then(value);
   }
 
-  function _async(f) {
+  function _async$a(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -2058,7 +2222,7 @@
     }
   };
 
-  var fromUrl = _async(function (_ref) {
+  var fromUrl = _async$a(function (_ref) {
     var url = _ref.url,
         importerUrl = _ref.importerUrl,
         fetchSource = _ref.fetchSource,
@@ -2066,8 +2230,8 @@
         compileServerOrigin = _ref.compileServerOrigin,
         outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
     var moduleResponse;
-    return _continue(_catch(function () {
-      return _await(fetchSource(url, {
+    return _continue$3(_catch$4(function () {
+      return _await$a(fetchSource(url, {
         importerUrl: importerUrl
       }), function (_fetchSource) {
         moduleResponse = _fetchSource;
@@ -2087,9 +2251,9 @@
       throw e;
     }), function (_result) {
       var contentType = moduleResponse.headers["content-type"] || "";
-      return _invoke(function () {
+      return _invoke$5(function () {
         if (moduleResponse.status === 500 && contentType === "application/json") {
-          return _await(moduleResponse.json(), function (bodyAsJson) {
+          return _await$a(moduleResponse.json(), function (bodyAsJson) {
             if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
               var error = new Error(createDetailedMessage("Module file cannot be parsed.", _objectSpread(_defineProperty({}, "parsing error message", bodyAsJson.message), getModuleDetails({
                 url: url,
@@ -2118,9 +2282,9 @@
         // and in sync with loadModule in createJsenvRollupPlugin.js
 
 
-        return _invoke(function () {
+        return _invoke$5(function () {
           if (contentType === "application/javascript" || contentType === "text/javascript") {
-            return _await(moduleResponse.text(), function (bodyAsText) {
+            return _await$a(moduleResponse.text(), function (bodyAsText) {
               _exit3 = true;
               return fromFunctionReturningRegisteredModule(function () {
                 return instantiateJavaScript(bodyAsText, moduleResponse.url);
@@ -2135,9 +2299,9 @@
         }, function (_result3) {
           var _exit4 = false;
           if (_exit3) return _result3;
-          return _invoke(function () {
+          return _invoke$5(function () {
             if (contentType === "application/json" || contentType === "application/importmap+json") {
-              return _await(moduleResponse.json(), function (bodyAsJson) {
+              return _await$a(moduleResponse.json(), function (bodyAsJson) {
                 _exit4 = true;
                 return fromFunctionReturningNamespace(function () {
                   return {
@@ -2266,10 +2430,10 @@
 
   // eslint-disable-next-line no-eval
   var evalSource = function evalSource(code, href) {
-    return window.eval(appendSourceURL(code, href));
+    return window.eval(appendSourceURL$1(code, href));
   };
 
-  var appendSourceURL = function appendSourceURL(code, sourceURL) {
+  var appendSourceURL$1 = function appendSourceURL(code, sourceURL) {
     return "".concat(code, "\n", "//#", " sourceURL=").concat(sourceURL);
   };
 
@@ -2537,7 +2701,7 @@
     };
   };
 
-  function _await$1(value, then, direct) {
+  function _await$9(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -2552,7 +2716,7 @@
   var _window = window,
       Notification = _window.Notification;
 
-  function _async$1(f) {
+  function _async$9(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -2568,11 +2732,11 @@
 
   var displayErrorNotificationNotAvailable = function displayErrorNotificationNotAvailable() {};
 
-  var displayErrorNotificationImplementation = _async$1(function (error) {
+  var displayErrorNotificationImplementation = _async$9(function (error) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         icon = _ref.icon;
 
-    return _await$1(Notification.requestPermission(), function (permission) {
+    return _await$9(Notification.requestPermission(), function (permission) {
       if (permission === "granted") {
         var notification = new Notification("An error occured", {
           lang: "en",
@@ -2651,7 +2815,7 @@
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
-  function _await$2(value, then, direct) {
+  function _await$8(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -2663,7 +2827,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$2(f) {
+  function _async$8(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -2677,7 +2841,7 @@
     };
   }
 
-  function _call(body, then, direct) {
+  function _call$1(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -2690,7 +2854,7 @@
     }
   }
 
-  var fetchUsingXHR = _async$2(function (url) {
+  var fetchUsingXHR = _async$8(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         _ref$cancellationToke = _ref.cancellationToken,
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
@@ -2773,7 +2937,7 @@
     }
 
     xhr.send(body);
-    return _await$2(headersPromise, function () {
+    return _await$8(headersPromise, function () {
       // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
       var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
       var responseStatus = xhr.status;
@@ -2781,7 +2945,7 @@
       var responseHeaders = getHeadersFromXHR(xhr);
 
       var readBody = function readBody() {
-        return _await$2(bodyPromise, function () {
+        return _await$8(bodyPromise, function () {
           var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
           if (status === 0) {
@@ -2797,7 +2961,7 @@
       };
 
       var text = function text() {
-        return _call(readBody, function (_ref2) {
+        return _call$1(readBody, function (_ref2) {
           var responseBody = _ref2.responseBody,
               responseBodyType = _ref2.responseBodyType;
 
@@ -2814,15 +2978,15 @@
       };
 
       var json = function json() {
-        return _call(text, JSON.parse);
+        return _call$1(text, JSON.parse);
       };
 
-      var blob = _async$2(function () {
+      var blob = _async$8(function () {
         if (!hasBlob) {
           throw new Error("blob not supported");
         }
 
-        return _call(readBody, function (_ref3) {
+        return _call$1(readBody, function (_ref3) {
           var responseBody = _ref3.responseBody,
               responseBodyType = _ref3.responseBodyType;
 
@@ -2847,19 +3011,19 @@
       });
 
       var arrayBuffer = function arrayBuffer() {
-        return _call(readBody, function (_ref4) {
+        return _call$1(readBody, function (_ref4) {
           var responseBody = _ref4.responseBody,
               responseBodyType = _ref4.responseBodyType;
-          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call(blob, blobToArrayBuffer);
+          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$1(blob, blobToArrayBuffer);
         });
       };
 
-      var formData = _async$2(function () {
+      var formData = _async$8(function () {
         if (!hasFormData) {
           throw new Error("formData not supported");
         }
 
-        return _call(text, textToFormData);
+        return _call$1(text, textToFormData);
       });
 
       return {
@@ -3035,7 +3199,7 @@
     return form;
   };
 
-  var blobToArrayBuffer = _async$2(function (blob) {
+  var blobToArrayBuffer = _async$8(function (blob) {
     var reader = new FileReader();
     var promise = fileReaderReady(reader);
     reader.readAsArrayBuffer(blob);
@@ -3084,7 +3248,7 @@
     return view.buffer;
   };
 
-  function _await$3(value, then, direct) {
+  function _await$7(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -3096,7 +3260,7 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchNative = _async$3(function (url) {
+  var fetchNative = _async$7(function (url) {
 
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -3113,8 +3277,8 @@
       abortController.abort(reason);
     });
     var response;
-    return _continue$1(_catch$1(function () {
-      return _await$3(window.fetch(url, _objectSpread({
+    return _continue$2(_catch$3(function () {
+      return _await$7(window.fetch(url, _objectSpread({
         signal: abortController.signal,
         mode: mode
       }, options)), function (_window$fetch) {
@@ -3127,11 +3291,11 @@
 
       throw e;
     }), function (_result) {
-      return  {
+      return {
         url: response.url,
         status: response.status,
         statusText: "",
-        headers: responseToHeaders(response),
+        headers: responseToHeaders$1(response),
         text: function text() {
           return response.text();
         },
@@ -3151,7 +3315,7 @@
     });
   });
 
-  function _catch$1(body, recover) {
+  function _catch$3(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -3165,7 +3329,7 @@
     return result;
   }
 
-  var responseToHeaders = function responseToHeaders(response) {
+  var responseToHeaders$1 = function responseToHeaders(response) {
     var headers = {};
     response.headers.forEach(function (value, name) {
       headers[name] = value;
@@ -3173,11 +3337,11 @@
     return headers;
   };
 
-  function _continue$1(value, then) {
+  function _continue$2(value, then) {
     return value && value.then ? value.then(then) : then(value);
   }
 
-  function _async$3(f) {
+  function _async$7(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -3193,7 +3357,7 @@
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-  function _await$4(value, then, direct) {
+  function _await$6(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -3207,7 +3371,7 @@
 
   var memoizedCreateBrowserSystem = memoize(createBrowserSystem);
 
-  function _invoke$1(body, then) {
+  function _invoke$4(body, then) {
     var result = body();
 
     if (result && result.then) {
@@ -3217,7 +3381,7 @@
     return then(result);
   }
 
-  function _async$4(f) {
+  function _async$6(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -3245,11 +3409,11 @@
     return result;
   }
 
-  function _continue$2(value, then) {
+  function _continue$1(value, then) {
     return value && value.then ? value.then(then) : then(value);
   }
 
-  var createBrowserRuntime = _async$4(function (_ref) {
+  var createBrowserRuntime = _async$6(function (_ref) {
     var compileServerOrigin = _ref.compileServerOrigin,
         outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
         compileId = _ref.compileId,
@@ -3264,15 +3428,15 @@
       });
     };
 
-    var fetchJson = _async$4(function (url) {
-      return _await$4(fetchSource(url), function (response) {
-        return _await$4(response.json());
+    var fetchJson = _async$6(function (url) {
+      return _await$6(fetchSource(url), function (response) {
+        return _await$6(response.json());
       });
     });
 
     var outDirectoryUrl = "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl);
     var envUrl = String(new URL("env.json", outDirectoryUrl));
-    return _await$4(fetchJson(envUrl), function (_ref2) {
+    return _await$6(fetchJson(envUrl), function (_ref2) {
       var importDefaultExtension = _ref2.importDefaultExtension;
       var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/"); // if there is an importmap in the document we should use it instead of fetching like this.
       // systemjs style with systemjs-importmap
@@ -3280,16 +3444,16 @@
       var importmapScript = document.querySelector("script[type=\"jsenv-importmap\"]");
       var importMap;
       var importMapUrl;
-      return _invoke$1(function () {
+      return _invoke$4(function () {
         if (importmapScript) {
           var importmapRaw;
-          return _invoke$1(function () {
+          return _invoke$4(function () {
             if (importmapScript.src) {
               importMapUrl = importmapScript.src;
-              return _await$4(fetchSource(importMapUrl), function (importmapFileResponse) {
+              return _await$6(fetchSource(importMapUrl), function (importmapFileResponse) {
                 var _temp = importmapFileResponse.status === 404;
 
-                return _await$4(_temp ? {} : importmapFileResponse.json(), function (_importmapFileRespons) {
+                return _await$6(_temp ? {} : importmapFileResponse.json(), function (_importmapFileRespons) {
                   importmapRaw = _importmapFileRespons;
                 }, _temp);
               });
@@ -3302,8 +3466,8 @@
           });
         }
       }, function () {
-        var importFile = _async$4(function (specifier) {
-          return _await$4(memoizedCreateBrowserSystem({
+        var importFile = _async$6(function (specifier) {
+          return _await$6(memoizedCreateBrowserSystem({
             compileServerOrigin: compileServerOrigin,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
             importMapUrl: importMapUrl,
@@ -3315,7 +3479,7 @@
           });
         });
 
-        var executeFile = _async$4(function (specifier) {
+        var executeFile = _async$6(function (specifier) {
           var _ref3 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
               _ref3$transferableNam = _ref3.transferableNamespace,
               transferableNamespace = _ref3$transferableNam === void 0 ? false : _ref3$transferableNam,
@@ -3332,7 +3496,7 @@
             return error;
           } : _ref3$errorTransform;
 
-          return _await$4(memoizedCreateBrowserSystem({
+          return _await$6(memoizedCreateBrowserSystem({
             compileServerOrigin: compileServerOrigin,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
             importMapUrl: importMapUrl,
@@ -3341,8 +3505,8 @@
             fetchSource: fetchSource
           }), function (browserSystem) {
             var executionResult;
-            return _continue$2(_catch$2(function () {
-              return _await$4(browserSystem.import(specifier), function (namespace) {
+            return _continue$1(_catch$2(function () {
+              return _await$6(browserSystem.import(specifier), function (namespace) {
                 if (transferableNamespace) {
                   namespace = makeNamespaceTransferable(namespace);
                 }
@@ -3355,8 +3519,8 @@
               });
             }, function (error) {
               var transformedError;
-              return _continue$2(_catch$2(function () {
-                return _await$4(errorTransform(error), function (_errorTransform) {
+              return _continue$1(_catch$2(function () {
+                return _await$6(errorTransform(error), function (_errorTransform) {
                   transformedError = _errorTransform;
                 });
               }, function () {
@@ -3519,7 +3683,7 @@
         data = _ref2.data;
     return base64Flag ? base64ToString(data) : data;
   };
-  var dataToBase64 = (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.atob : function (data) {
+  (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.atob : function (data) {
     return Buffer.from(data).toString("base64");
   };
   var base64ToString = (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.btoa : function (base64String) {
@@ -3582,7 +3746,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _invoke$2(body, then) {
+  function _invoke$3(body, then) {
     var result = body();
 
     if (result && result.then) {
@@ -3621,7 +3785,7 @@
 
 
     var source = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
-    return _invoke$2(function () {
+    return _invoke$3(function () {
       if (source) {
         var line = callSite.getLineNumber();
         var column = callSite.getColumnNumber() - 1;
@@ -3664,10 +3828,10 @@
       var _exit2 = false;
       if (_exit) return _result;
       // Code called using eval() needs special handling
-      return _invoke$2(function () {
+      return _invoke$3(function () {
         if (callSite.isEval()) {
           var origin = callSite.getEvalOrigin();
-          return _invoke$2(function () {
+          return _invoke$3(function () {
             if (origin) {
               var callSiteClone = cloneCallSite(callSite);
               return _await$5(remapEvalOrigin(origin, {
@@ -3818,7 +3982,7 @@
         onFailure = _ref3.onFailure;
     // Most eval() calls are in this format
     var topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(origin);
-    return _invoke$2(function () {
+    return _invoke$3(function () {
       if (topLevelEvalMatch) {
         var source = topLevelEvalMatch[2];
         var line = Number(topLevelEvalMatch[3]);
@@ -3840,7 +4004,7 @@
       if (_exit3) return _result4;
       // Parse nested eval() calls using recursion
       var nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
-      return _invoke$2(function () {
+      return _invoke$3(function () {
         if (nestedEvalMatch) {
           return _await$5(remapEvalOrigin(nestedEvalMatch[2], {
             resolveFile: resolveFile,
@@ -3941,7 +4105,7 @@
     return /^[a-zA-Z]{2,}:/.test(string);
   };
 
-  function _await$6(value, then, direct) {
+  function _await$4(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -3953,7 +4117,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$6(f) {
+  function _async$4(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -3967,7 +4131,7 @@
     };
   }
 
-  function _catch$3(body, recover) {
+  function _catch$1(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -3981,7 +4145,7 @@
     return result;
   }
 
-  function _invoke$3(body, then) {
+  function _invoke$2(body, then) {
     var result = body();
 
     if (result && result.then) {
@@ -3991,23 +4155,23 @@
     return then(result);
   }
 
-  function _continue$3(value, then) {
+  function _continue(value, then) {
     return value && value.then ? value.then(then) : then(value);
   }
 
-  var getOriginalCallsites = _async$6(function (_ref) {
+  var getOriginalCallsites = _async$4(function (_ref) {
     var stack = _ref.stack,
         resolveFile = _ref.resolveFile,
         fetchFile = _ref.fetchFile,
         SourceMapConsumer = _ref.SourceMapConsumer,
         readErrorStack = _ref.readErrorStack,
         onFailure = _ref.onFailure;
-    var urlToSourcemapConsumer = memoizeByFirstArgStringValue(_async$6(function (stackTraceFileUrl) {
+    var urlToSourcemapConsumer = memoizeByFirstArgStringValue(_async$4(function (stackTraceFileUrl) {
       var _exit = false;
-      return _catch$3(function () {
+      return _catch$1(function () {
         var text;
-        return _continue$3(_catch$3(function () {
-          return _await$6(fetchFile(stackTraceFileUrl), function (fileResponse) {
+        return _continue(_catch$1(function () {
+          return _await$4(fetchFile(stackTraceFileUrl), function (fileResponse) {
             var status = fileResponse.status;
 
             if (status !== 200) {
@@ -4023,7 +4187,7 @@
               return null;
             }
 
-            return _await$6(fileResponse.text(), function (_fileResponse$text) {
+            return _await$4(fileResponse.text(), function (_fileResponse$text) {
               text = _fileResponse$text;
             });
           });
@@ -4044,7 +4208,7 @@
 
           var sourcemapUrl;
           var sourcemapString;
-          return _invoke$3(function () {
+          return _invoke$2(function () {
             if (jsSourcemapUrl.startsWith("data:")) {
               sourcemapUrl = stackTraceFileUrl;
               sourcemapString = dataUrlToRawData(parseDataUrl(jsSourcemapUrl));
@@ -4052,18 +4216,18 @@
               sourcemapUrl = resolveFile(jsSourcemapUrl, stackTraceFileUrl, {
                 type: "source-map"
               });
-              return _catch$3(function () {
-                return _await$6(fetchFile(sourcemapUrl), function (sourcemapResponse) {
+              return _catch$1(function () {
+                return _await$4(fetchFile(sourcemapUrl), function (sourcemapResponse) {
                   var _exit3 = false;
                   var status = sourcemapResponse.status;
-                  return _invoke$3(function () {
+                  return _invoke$2(function () {
                     if (status !== 200) {
-                      return _invoke$3(function () {
+                      return _invoke$2(function () {
                         if (status === 404) {
                           onFailure("sourcemap file not found at ".concat(sourcemapUrl));
                         } else {
                           var _temp2 = "unexpected response for sourcemap file.";
-                          return _await$6(sourcemapResponse.text(), function (_sourcemapResponse$te) {
+                          return _await$4(sourcemapResponse.text(), function (_sourcemapResponse$te) {
                             var _createDetailedMessag3;
 
                             onFailure(createDetailedMessage(_temp2, (_createDetailedMessag3 = {}, _defineProperty(_createDetailedMessag3, "response status", status), _defineProperty(_createDetailedMessag3, "response text", _sourcemapResponse$te), _defineProperty(_createDetailedMessag3, "sourcemap url", sourcemapUrl), _createDetailedMessag3)));
@@ -4075,7 +4239,7 @@
                       });
                     }
                   }, function (_result3) {
-                    return _exit3 ? _result3 : _await$6(sourcemapResponse.text(), function (_sourcemapResponse$te2) {
+                    return _exit3 ? _result3 : _await$4(sourcemapResponse.text(), function (_sourcemapResponse$te2) {
                       sourcemapString = _sourcemapResponse$te2;
                     });
                   });
@@ -4110,16 +4274,16 @@
             }
 
             var firstSourceMapSourceFailure = null;
-            return _await$6(Promise.all(sourceMap.sources.map(_async$6(function (source, index) {
+            return _await$4(Promise.all(sourceMap.sources.map(_async$4(function (source, index) {
               if (index in sourcesContent) return;
               var sourcemapSourceUrl = resolveFile(source, sourcemapUrl, {
                 type: "source"
               });
-              return _catch$3(function () {
-                return _await$6(fetchFile(sourcemapSourceUrl), function (sourceResponse) {
+              return _catch$1(function () {
+                return _await$4(fetchFile(sourcemapSourceUrl), function (sourceResponse) {
                   var _exit4 = false;
                   var status = sourceResponse.status;
-                  return _invoke$3(function () {
+                  return _invoke$2(function () {
                     if (status !== 200) {
                       if (firstSourceMapSourceFailure) {
                         _exit4 = true;
@@ -4135,7 +4299,7 @@
                       }
 
                       var _temp4 = "unexpected response for sourcemap source.";
-                      return _await$6(sourceResponse.text(), function (_sourceResponse$text) {
+                      return _await$4(sourceResponse.text(), function (_sourceResponse$text) {
                         var _createDetailedMessag7;
 
                         firstSourceMapSourceFailure = createDetailedMessage(_temp4, (_createDetailedMessag7 = {}, _defineProperty(_createDetailedMessag7, "response status", status), _defineProperty(_createDetailedMessag7, "response text", _sourceResponse$text), _defineProperty(_createDetailedMessag7, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag7, "sourcemap url", sourcemapUrl), _createDetailedMessag7));
@@ -4143,7 +4307,7 @@
                       });
                     }
                   }, function (_result6) {
-                    return _exit4 ? _result6 : _await$6(sourceResponse.text(), function (sourceString) {
+                    return _exit4 ? _result6 : _await$4(sourceResponse.text(), function (sourceString) {
                       sourcesContent[index] = sourceString;
                     });
                   });
@@ -4191,7 +4355,7 @@
     };
   };
 
-  function _await$7(value, then, direct) {
+  function _await$3(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -4203,7 +4367,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _catch$4(body, recover) {
+  function _catch(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -4217,7 +4381,7 @@
     return result;
   }
 
-  function _invoke$4(body, then) {
+  function _invoke$1(body, then) {
     var result = body();
 
     if (result && result.then) {
@@ -4227,7 +4391,7 @@
     return then(result);
   }
 
-  function _async$7(f) {
+  function _async$3(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -4316,7 +4480,7 @@
       });
     };
 
-    var getErrorOriginalStackString = _async$7(function (error) {
+    var getErrorOriginalStackString = _async$3(function (error) {
       var _exit = false;
 
       var _ref2 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
@@ -4338,10 +4502,10 @@
 
       var stack = error.stack;
       var promise = errorRemappingCache.get(error);
-      return _invoke$4(function () {
+      return _invoke$1(function () {
         if (promise) {
-          return _catch$4(function () {
-            return _await$7(promise, function (originalCallsites) {
+          return _catch(function () {
+            return _await$3(promise, function (originalCallsites) {
               errorRemapFailureCallbackMap.get(error);
               var firstCall = originalCallsites[0];
 
@@ -4381,7 +4545,7 @@
 
   var memoizeFetch = function memoizeFetch(fetchUrl) {
     var urlCache = {};
-    return _async$7(function (url) {
+    return _async$3(function (url) {
       if (url in urlCache) {
         return urlCache[url];
       }
@@ -4392,7 +4556,7 @@
     });
   };
 
-  function _await$8(value, then, direct) {
+  function _await$2(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -4404,7 +4568,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$8(f) {
+  function _async$2(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -4421,20 +4585,20 @@
   var installBrowserErrorStackRemapping = function installBrowserErrorStackRemapping() {
     var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     return installErrorStackRemapping(_objectSpread({
-      fetchFile: _async$8(function (url) {
+      fetchFile: _async$2(function (url) {
         // browser having Error.captureStackTrace got window.fetch
         // and this executes only when Error.captureStackTrace exists
         // so no need for polyfill or whatever here
-        return _await$8(window.fetch(url), function (response) {
+        return _await$2(window.fetch(url), function (response) {
           // we read response test before anything because once memoized fetch
           // gets annoying preventing you to read
           // body multiple times, even using response.clone()
-          return _await$8(response.text(), function (_text) {
+          return _await$2(response.text(), function (_text) {
             return {
               status: response.status,
               url: response.url,
               statusText: response.statusText,
-              headers: responseToHeaders$1(response),
+              headers: responseToHeaders(response),
               text: function text() {
                 return _text;
               },
@@ -4454,7 +4618,7 @@
     }, options));
   };
 
-  var responseToHeaders$1 = function responseToHeaders(response) {
+  var responseToHeaders = function responseToHeaders(response) {
     var headers = {};
     response.headers.forEach(function (value, name) {
       headers[name] = value;
@@ -4462,7 +4626,7 @@
     return headers;
   };
 
-  function _await$9(value, then, direct) {
+  function _await$1(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -4474,7 +4638,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$9(f) {
+  function _async$1(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -4488,16 +4652,16 @@
     };
   }
 
-  var fetchAndEvalUsingFetch = _async$9(function (url) {
-    return _await$9(fetchUrl(url), function (response) {
+  var fetchAndEvalUsingFetch = _async$1(function (url) {
+    return _await$1(fetchUrl(url), function (response) {
       return function () {
         if (response.status >= 200 && response.status <= 299) {
-          return _await$9(response.text(), function (text) {
+          return _await$1(response.text(), function (text) {
             // eslint-disable-next-line no-eval
-            window.eval(appendSourceURL$1(text, url));
+            window.eval(appendSourceURL(text, url));
           });
         } else {
-          return _await$9(response.text(), function (text) {
+          return _await$1(response.text(), function (text) {
             var _createDetailedMessag;
 
             throw new Error(createDetailedMessage("Unexpected response for script.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "script url", url), _defineProperty(_createDetailedMessag, "response body", text), _defineProperty(_createDetailedMessag, "response status", response.status), _createDetailedMessag)));
@@ -4507,11 +4671,11 @@
     });
   });
 
-  var appendSourceURL$1 = function appendSourceURL(code, sourceURL) {
+  var appendSourceURL = function appendSourceURL(code, sourceURL) {
     return "".concat(code, "\n", "//#", " sourceURL=").concat(sourceURL);
   };
 
-  function _await$a(value, then, direct) {
+  function _await(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -4531,7 +4695,7 @@
     }
   };
 
-  function _async$a(f) {
+  function _async(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -4547,7 +4711,7 @@
 
   var navigationStartTime = getNavigationStartTime();
 
-  function _call$1(body, then, direct) {
+  function _call(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -4573,7 +4737,7 @@
     }
   });
 
-  function _invoke$5(body, then) {
+  function _invoke(body, then) {
     var result = body();
 
     if (result && result.then) {
@@ -4584,7 +4748,7 @@
   }
 
   var fileExecutionMap = {};
-  var executionResultPromise = readyPromise.then(_async$a(function () {
+  var executionResultPromise = readyPromise.then(_async(function () {
     var fileExecutionResultMap = {};
     var fileExecutionResultPromises = [];
     var status = "completed";
@@ -4603,7 +4767,7 @@
         }
       });
     });
-    return _await$a(Promise.all(fileExecutionResultPromises), function () {
+    return _await(Promise.all(fileExecutionResultPromises), function () {
       return _objectSpread(_objectSpread({
         status: status
       }, status === "errored" ? {
@@ -4624,8 +4788,8 @@
         currentScript = _document.currentScript;
 
     var fileExecutionResultPromise = function () {
-      return _call$1(getBrowserRuntime, function (browserRuntime) {
-        return _await$a(browserRuntime.executeFile(specifier, {}), function (executionResult) {
+      return _call(getBrowserRuntime, function (browserRuntime) {
+        return _await(browserRuntime.executeFile(specifier, {}), function (executionResult) {
           if (executionResult.status === "errored") {
             // eslint-disable-next-line no-eval
             var originalError = window.eval(executionResult.exceptionSource);
@@ -4664,14 +4828,14 @@
     return fileExecutionResultPromise;
   };
 
-  var getBrowserRuntime = memoize(_async$a(function () {
+  var getBrowserRuntime = memoize(_async(function () {
     var compileServerOrigin = document.location.origin;
-    return _await$a(fetchUrl("".concat(compileServerOrigin, "/.jsenv/compile-meta.json"), {
+    return _await(fetchUrl("".concat(compileServerOrigin, "/.jsenv/compile-meta.json"), {
       headers: {
         "x-jsenv": true
       }
     }), function (compileMetaResponse) {
-      return _await$a(compileMetaResponse.json(), function (compileMeta) {
+      return _await(compileMetaResponse.json(), function (compileMeta) {
         var outDirectoryRelativeUrl = compileMeta.outDirectoryRelativeUrl,
             errorStackRemapping = compileMeta.errorStackRemapping;
         var outDirectoryUrl = "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl);
@@ -4680,17 +4844,17 @@
         var compileId = parts[0];
         var remaining = parts.slice(1).join("/");
         var htmlFileRelativeUrl = remaining;
-        return _await$a(createBrowserRuntime({
+        return _await(createBrowserRuntime({
           compileServerOrigin: compileServerOrigin,
           outDirectoryRelativeUrl: outDirectoryRelativeUrl,
           compileId: compileId,
           htmlFileRelativeUrl: htmlFileRelativeUrl
         }), function (browserRuntime) {
-          return _invoke$5(function () {
+          return _invoke(function () {
             if (errorStackRemapping && Error.captureStackTrace) {
               var sourcemapMainFileRelativeUrl = compileMeta.sourcemapMainFileRelativeUrl,
                   sourcemapMappingFileRelativeUrl = compileMeta.sourcemapMappingFileRelativeUrl;
-              return _await$a(fetchAndEvalUsingFetch("".concat(compileServerOrigin, "/").concat(sourcemapMainFileRelativeUrl)), function () {
+              return _await(fetchAndEvalUsingFetch("".concat(compileServerOrigin, "/").concat(sourcemapMainFileRelativeUrl)), function () {
                 var SourceMapConsumer = window.sourceMap.SourceMapConsumer;
                 SourceMapConsumer.initialize({
                   "lib/mappings.wasm": "".concat(compileServerOrigin, "/").concat(sourcemapMappingFileRelativeUrl)
@@ -4701,8 +4865,8 @@
                 }),
                     getErrorOriginalStackString = _installBrowserErrorS.getErrorOriginalStackString;
 
-                var errorTransform = _async$a(function (error) {
-                  return !error || !(error instanceof Error) ? error : _await$a(getErrorOriginalStackString(error), function (originalStack) {
+                var errorTransform = _async(function (error) {
+                  return !error || !(error instanceof Error) ? error : _await(getErrorOriginalStackString(error), function (originalStack) {
                     error.stack = originalStack;
                     return error;
                   });

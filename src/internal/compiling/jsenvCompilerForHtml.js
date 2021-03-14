@@ -73,6 +73,7 @@ export const jsenvCompilerForHtml = ({
         const typeAttribute = getHtmlNodeAttributeByName(script, "type")
         const srcAttribute = getHtmlNodeAttributeByName(script, "src")
 
+        // remote
         if (typeAttribute && typeAttribute.value === "importmap" && srcAttribute) {
           hasImportmap = true
           typeAttribute.value = "jsenv-importmap"
@@ -87,6 +88,7 @@ export const jsenvCompilerForHtml = ({
           )
           return
         }
+        // inline
         const textNode = getHtmlNodeTextNode(script)
         if (typeAttribute && typeAttribute.value === "module" && textNode) {
           const scriptAssetUrl = generateCompiledFileAssetUrl(

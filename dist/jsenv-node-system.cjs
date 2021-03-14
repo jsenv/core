@@ -9,6 +9,7 @@ var server = require('@jsenv/server');
 var logger = require('@jsenv/logger');
 var importMap = require('@jsenv/import-map');
 var _uneval = require('@jsenv/uneval');
+var isSpecifierForNodeCoreModule_js = require('@jsenv/import-map/src/isSpecifierForNodeCoreModule.js');
 var vm = require('vm');
 
 var _defineProperty = (function (obj, key, value) {
@@ -113,7 +114,7 @@ var url = filenameContainsBackSlashes ? "file:///".concat(__filename.replace(/\\
 
 var require$1 = module$1.createRequire(url);
 
-function _await(value, then, direct) {
+function _await$6(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -125,7 +126,7 @@ function _await(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _async(f) {
+function _async$7(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -140,14 +141,14 @@ function _async(f) {
 }
 
 https.globalAgent.options.rejectUnauthorized = false;
-var fetchUrl = _async(function (url) {
+var fetchUrl = _async$7(function (url) {
   var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
   var _ref$ignoreHttpsError = _ref.ignoreHttpsError,
       ignoreHttpsError = _ref$ignoreHttpsError === void 0 ? true : _ref$ignoreHttpsError,
       rest = _objectWithoutProperties(_ref, ["ignoreHttpsError"]);
 
-  return _await(server.fetchUrl(url, _objectSpread({
+  return _await$6(server.fetchUrl(url, _objectSpread({
     ignoreHttpsError: ignoreHttpsError
   }, rest)), function (response) {
     return {
@@ -250,7 +251,7 @@ var dataUrlToRawData = function dataUrlToRawData(_ref2) {
       data = _ref2.data;
   return base64Flag ? base64ToString(data) : data;
 };
-var dataToBase64 = (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.atob : function (data) {
+(typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.atob : function (data) {
   return Buffer.from(data).toString("base64");
 };
 var base64ToString = (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.btoa : function (base64String) {
@@ -301,7 +302,7 @@ var replaceBackSlashesWithSlashes = function replaceBackSlashesWithSlashes(strin
   return string.replace(/\\/g, "/");
 };
 
-function _await$1(value, then, direct) {
+function _await$5(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -313,7 +314,7 @@ function _await$1(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _invoke(body, then) {
+function _invoke$4(body, then) {
   var result = body();
 
   if (result && result.then) {
@@ -323,7 +324,7 @@ function _invoke(body, then) {
   return then(result);
 }
 
-function _async$1(f) {
+function _async$6(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -337,7 +338,7 @@ function _async$1(f) {
   };
 }
 
-var remapCallSite = _async$1(function (callSite, _ref) {
+var remapCallSite = _async$6(function (callSite, _ref) {
   var _exit = false;
   var urlToSourcemapConsumer = _ref.urlToSourcemapConsumer,
       resolveFile = _ref.resolveFile,
@@ -352,11 +353,11 @@ var remapCallSite = _async$1(function (callSite, _ref) {
 
 
   var source = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
-  return _invoke(function () {
+  return _invoke$4(function () {
     if (source) {
       var line = callSite.getLineNumber();
       var column = callSite.getColumnNumber() - 1;
-      return _await$1(remapSourcePosition({
+      return _await$5(remapSourcePosition({
         source: source,
         line: line,
         column: column,
@@ -395,13 +396,13 @@ var remapCallSite = _async$1(function (callSite, _ref) {
     var _exit2 = false;
     if (_exit) return _result;
     // Code called using eval() needs special handling
-    return _invoke(function () {
+    return _invoke$4(function () {
       if (callSite.isEval()) {
         var origin = callSite.getEvalOrigin();
-        return _invoke(function () {
+        return _invoke$4(function () {
           if (origin) {
             var callSiteClone = cloneCallSite(callSite);
-            return _await$1(remapEvalOrigin(origin, {
+            return _await$5(remapEvalOrigin(origin, {
               resolveFile: resolveFile,
               urlToSourcemapConsumer: urlToSourcemapConsumer,
               readErrorStack: readErrorStack,
@@ -542,19 +543,19 @@ var callSiteToSourceFile = function callSiteToSourceFile(callSite) {
 // https://code.google.com/p/v8/source/browse/trunk/src/messages.js
 
 
-var remapEvalOrigin = _async$1(function (origin, _ref3) {
+var remapEvalOrigin = _async$6(function (origin, _ref3) {
   var _exit3 = false;
   var resolveFile = _ref3.resolveFile,
       urlToSourcemapConsumer = _ref3.urlToSourcemapConsumer,
       onFailure = _ref3.onFailure;
   // Most eval() calls are in this format
   var topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(origin);
-  return _invoke(function () {
+  return _invoke$4(function () {
     if (topLevelEvalMatch) {
       var source = topLevelEvalMatch[2];
       var line = Number(topLevelEvalMatch[3]);
       var column = topLevelEvalMatch[4] - 1;
-      return _await$1(remapSourcePosition({
+      return _await$5(remapSourcePosition({
         source: source,
         line: line,
         column: column,
@@ -571,9 +572,9 @@ var remapEvalOrigin = _async$1(function (origin, _ref3) {
     if (_exit3) return _result4;
     // Parse nested eval() calls using recursion
     var nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
-    return _invoke(function () {
+    return _invoke$4(function () {
       if (nestedEvalMatch) {
-        return _await$1(remapEvalOrigin(nestedEvalMatch[2], {
+        return _await$5(remapEvalOrigin(nestedEvalMatch[2], {
           resolveFile: resolveFile,
           urlToSourcemapConsumer: urlToSourcemapConsumer,
           onFailure: onFailure
@@ -588,7 +589,7 @@ var remapEvalOrigin = _async$1(function (origin, _ref3) {
   });
 });
 
-var remapSourcePosition = _async$1(function (_ref4) {
+var remapSourcePosition = _async$6(function (_ref4) {
   var source = _ref4.source,
       line = _ref4.line,
       column = _ref4.column,
@@ -604,7 +605,7 @@ var remapSourcePosition = _async$1(function (_ref4) {
   var url = sourceToUrl(source, {
     resolveFile: resolveFile
   });
-  return url ? _await$1(urlToSourcemapConsumer(url), function (sourceMapConsumer) {
+  return url ? _await$5(urlToSourcemapConsumer(url), function (sourceMapConsumer) {
     if (!sourceMapConsumer) return position;
 
     try {
@@ -672,7 +673,7 @@ var startsWithScheme = function startsWithScheme(string) {
   return /^[a-zA-Z]{2,}:/.test(string);
 };
 
-function _await$2(value, then, direct) {
+function _await$4(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -684,7 +685,7 @@ function _await$2(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _async$2(f) {
+function _async$5(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -698,7 +699,7 @@ function _async$2(f) {
   };
 }
 
-function _catch(body, recover) {
+function _catch$3(body, recover) {
   try {
     var result = body();
   } catch (e) {
@@ -712,7 +713,7 @@ function _catch(body, recover) {
   return result;
 }
 
-function _invoke$1(body, then) {
+function _invoke$3(body, then) {
   var result = body();
 
   if (result && result.then) {
@@ -722,23 +723,23 @@ function _invoke$1(body, then) {
   return then(result);
 }
 
-function _continue(value, then) {
+function _continue$2(value, then) {
   return value && value.then ? value.then(then) : then(value);
 }
 
-var getOriginalCallsites = _async$2(function (_ref) {
+var getOriginalCallsites = _async$5(function (_ref) {
   var stack = _ref.stack,
       resolveFile = _ref.resolveFile,
       fetchFile = _ref.fetchFile,
       SourceMapConsumer = _ref.SourceMapConsumer,
       readErrorStack = _ref.readErrorStack,
       onFailure = _ref.onFailure;
-  var urlToSourcemapConsumer = memoizeByFirstArgStringValue(_async$2(function (stackTraceFileUrl) {
+  var urlToSourcemapConsumer = memoizeByFirstArgStringValue(_async$5(function (stackTraceFileUrl) {
     var _exit = false;
-    return _catch(function () {
+    return _catch$3(function () {
       var text;
-      return _continue(_catch(function () {
-        return _await$2(fetchFile(stackTraceFileUrl), function (fileResponse) {
+      return _continue$2(_catch$3(function () {
+        return _await$4(fetchFile(stackTraceFileUrl), function (fileResponse) {
           var status = fileResponse.status;
 
           if (status !== 200) {
@@ -754,7 +755,7 @@ var getOriginalCallsites = _async$2(function (_ref) {
             return null;
           }
 
-          return _await$2(fileResponse.text(), function (_fileResponse$text) {
+          return _await$4(fileResponse.text(), function (_fileResponse$text) {
             text = _fileResponse$text;
           });
         });
@@ -775,7 +776,7 @@ var getOriginalCallsites = _async$2(function (_ref) {
 
         var sourcemapUrl;
         var sourcemapString;
-        return _invoke$1(function () {
+        return _invoke$3(function () {
           if (jsSourcemapUrl.startsWith("data:")) {
             sourcemapUrl = stackTraceFileUrl;
             sourcemapString = dataUrlToRawData(parseDataUrl(jsSourcemapUrl));
@@ -783,18 +784,18 @@ var getOriginalCallsites = _async$2(function (_ref) {
             sourcemapUrl = resolveFile(jsSourcemapUrl, stackTraceFileUrl, {
               type: "source-map"
             });
-            return _catch(function () {
-              return _await$2(fetchFile(sourcemapUrl), function (sourcemapResponse) {
+            return _catch$3(function () {
+              return _await$4(fetchFile(sourcemapUrl), function (sourcemapResponse) {
                 var _exit3 = false;
                 var status = sourcemapResponse.status;
-                return _invoke$1(function () {
+                return _invoke$3(function () {
                   if (status !== 200) {
-                    return _invoke$1(function () {
+                    return _invoke$3(function () {
                       if (status === 404) {
                         onFailure("sourcemap file not found at ".concat(sourcemapUrl));
                       } else {
                         var _temp2 = "unexpected response for sourcemap file.";
-                        return _await$2(sourcemapResponse.text(), function (_sourcemapResponse$te) {
+                        return _await$4(sourcemapResponse.text(), function (_sourcemapResponse$te) {
                           var _createDetailedMessag3;
 
                           onFailure(logger.createDetailedMessage(_temp2, (_createDetailedMessag3 = {}, _defineProperty(_createDetailedMessag3, "response status", status), _defineProperty(_createDetailedMessag3, "response text", _sourcemapResponse$te), _defineProperty(_createDetailedMessag3, "sourcemap url", sourcemapUrl), _createDetailedMessag3)));
@@ -806,7 +807,7 @@ var getOriginalCallsites = _async$2(function (_ref) {
                     });
                   }
                 }, function (_result3) {
-                  return _exit3 ? _result3 : _await$2(sourcemapResponse.text(), function (_sourcemapResponse$te2) {
+                  return _exit3 ? _result3 : _await$4(sourcemapResponse.text(), function (_sourcemapResponse$te2) {
                     sourcemapString = _sourcemapResponse$te2;
                   });
                 });
@@ -841,16 +842,16 @@ var getOriginalCallsites = _async$2(function (_ref) {
           }
 
           var firstSourceMapSourceFailure = null;
-          return _await$2(Promise.all(sourceMap.sources.map(_async$2(function (source, index) {
+          return _await$4(Promise.all(sourceMap.sources.map(_async$5(function (source, index) {
             if (index in sourcesContent) return;
             var sourcemapSourceUrl = resolveFile(source, sourcemapUrl, {
               type: "source"
             });
-            return _catch(function () {
-              return _await$2(fetchFile(sourcemapSourceUrl), function (sourceResponse) {
+            return _catch$3(function () {
+              return _await$4(fetchFile(sourcemapSourceUrl), function (sourceResponse) {
                 var _exit4 = false;
                 var status = sourceResponse.status;
-                return _invoke$1(function () {
+                return _invoke$3(function () {
                   if (status !== 200) {
                     if (firstSourceMapSourceFailure) {
                       _exit4 = true;
@@ -866,7 +867,7 @@ var getOriginalCallsites = _async$2(function (_ref) {
                     }
 
                     var _temp4 = "unexpected response for sourcemap source.";
-                    return _await$2(sourceResponse.text(), function (_sourceResponse$text) {
+                    return _await$4(sourceResponse.text(), function (_sourceResponse$text) {
                       var _createDetailedMessag7;
 
                       firstSourceMapSourceFailure = logger.createDetailedMessage(_temp4, (_createDetailedMessag7 = {}, _defineProperty(_createDetailedMessag7, "response status", status), _defineProperty(_createDetailedMessag7, "response text", _sourceResponse$text), _defineProperty(_createDetailedMessag7, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag7, "sourcemap url", sourcemapUrl), _createDetailedMessag7));
@@ -874,7 +875,7 @@ var getOriginalCallsites = _async$2(function (_ref) {
                     });
                   }
                 }, function (_result6) {
-                  return _exit4 ? _result6 : _await$2(sourceResponse.text(), function (sourceString) {
+                  return _exit4 ? _result6 : _await$4(sourceResponse.text(), function (sourceString) {
                     sourcesContent[index] = sourceString;
                   });
                 });
@@ -934,7 +935,7 @@ function _await$3(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _catch$1(body, recover) {
+function _catch$2(body, recover) {
   try {
     var result = body();
   } catch (e) {
@@ -958,7 +959,7 @@ function _invoke$2(body, then) {
   return then(result);
 }
 
-function _async$3(f) {
+function _async$4(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -1047,7 +1048,7 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
     });
   };
 
-  var getErrorOriginalStackString = _async$3(function (error) {
+  var getErrorOriginalStackString = _async$4(function (error) {
     var _exit = false;
 
     var _ref2 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
@@ -1071,7 +1072,7 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
     var promise = errorRemappingCache.get(error);
     return _invoke$2(function () {
       if (promise) {
-        return _catch$1(function () {
+        return _catch$2(function () {
           return _await$3(promise, function (originalCallsites) {
             errorRemapFailureCallbackMap.get(error);
             var firstCall = originalCallsites[0];
@@ -1112,7 +1113,7 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
 
 var memoizeFetch = function memoizeFetch(fetchUrl) {
   var urlCache = {};
-  return _async$3(function (url) {
+  return _async$4(function (url) {
     if (url in urlCache) {
       return urlCache[url];
     }
@@ -1951,7 +1952,7 @@ var createBareSpecifierError = function createBareSpecifierError(_ref) {
   }; // Auto imports -> script tags can be inlined directly for load phase
 
 
-  var lastAutoImportUrl, lastAutoImportDeps, lastAutoImportTimeout;
+  var lastAutoImportDeps, lastAutoImportTimeout;
   var autoImportCandidates = {};
   var systemRegister = systemJSPrototype.register;
 
@@ -1961,7 +1962,7 @@ var createBareSpecifierError = function createBareSpecifierError(_ref) {
       var lastScript = scripts[scripts.length - 1];
 
       if (lastScript) {
-        lastAutoImportUrl = lastScript.src;
+        lastScript.src;
         lastAutoImportDeps = deps; // if this is already a System load, then the instantiate has already begun
         // so this re-import has no consequence
 
@@ -2076,7 +2077,7 @@ var createBareSpecifierError = function createBareSpecifierError(_ref) {
   };
 })();
 
-function _await$4(value, then, direct) {
+function _await$2(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -2088,7 +2089,7 @@ function _await$4(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _catch$2(body, recover) {
+function _catch$1(body, recover) {
   try {
     var result = body();
   } catch (e) {
@@ -2102,7 +2103,7 @@ function _catch$2(body, recover) {
   return result;
 }
 
-function _invoke$3(body, then) {
+function _invoke$1(body, then) {
   var result = body();
 
   if (result && result.then) {
@@ -2116,7 +2117,7 @@ function _continue$1(value, then) {
   return value && value.then ? value.then(then) : then(value);
 }
 
-function _async$4(f) {
+function _async$3(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -2161,7 +2162,7 @@ var fromFunctionReturningRegisteredModule = function fromFunctionReturningRegist
   }
 };
 
-var fromUrl = _async$4(function (_ref) {
+var fromUrl = _async$3(function (_ref) {
   var url = _ref.url,
       importerUrl = _ref.importerUrl,
       fetchSource = _ref.fetchSource,
@@ -2169,8 +2170,8 @@ var fromUrl = _async$4(function (_ref) {
       compileServerOrigin = _ref.compileServerOrigin,
       outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
   var moduleResponse;
-  return _continue$1(_catch$2(function () {
-    return _await$4(fetchSource(url, {
+  return _continue$1(_catch$1(function () {
+    return _await$2(fetchSource(url, {
       importerUrl: importerUrl
     }), function (_fetchSource) {
       moduleResponse = _fetchSource;
@@ -2190,9 +2191,9 @@ var fromUrl = _async$4(function (_ref) {
     throw e;
   }), function (_result) {
     var contentType = moduleResponse.headers["content-type"] || "";
-    return _invoke$3(function () {
+    return _invoke$1(function () {
       if (moduleResponse.status === 500 && contentType === "application/json") {
-        return _await$4(moduleResponse.json(), function (bodyAsJson) {
+        return _await$2(moduleResponse.json(), function (bodyAsJson) {
           if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
             var error = new Error(logger.createDetailedMessage("Module file cannot be parsed.", _objectSpread(_defineProperty({}, "parsing error message", bodyAsJson.message), getModuleDetails({
               url: url,
@@ -2221,9 +2222,9 @@ var fromUrl = _async$4(function (_ref) {
       // and in sync with loadModule in createJsenvRollupPlugin.js
 
 
-      return _invoke$3(function () {
+      return _invoke$1(function () {
         if (contentType === "application/javascript" || contentType === "text/javascript") {
-          return _await$4(moduleResponse.text(), function (bodyAsText) {
+          return _await$2(moduleResponse.text(), function (bodyAsText) {
             _exit3 = true;
             return fromFunctionReturningRegisteredModule(function () {
               return instantiateJavaScript(bodyAsText, moduleResponse.url);
@@ -2238,9 +2239,9 @@ var fromUrl = _async$4(function (_ref) {
       }, function (_result3) {
         var _exit4 = false;
         if (_exit3) return _result3;
-        return _invoke$3(function () {
+        return _invoke$1(function () {
           if (contentType === "application/json" || contentType === "application/importmap+json") {
-            return _await$4(moduleResponse.json(), function (bodyAsJson) {
+            return _await$2(moduleResponse.json(), function (bodyAsJson) {
               _exit4 = true;
               return fromFunctionReturningNamespace(function () {
                 return {
@@ -2380,12 +2381,6 @@ var valueInstall = function valueInstall(object, name, value) {
   };
 };
 
-var NATIVE_NODE_MODULE_SPECIFIER_ARRAY = ["assert", "async_hooks", "buffer_ieee754", "buffer", "child_process", "cluster", "console", "constants", "crypto", "_debugger", "dgram", "dns", "domain", "events", "freelist", "fs", "fs/promises", "_http_agent", "_http_client", "_http_common", "_http_incoming", "_http_outgoing", "_http_server", "http", "http2", "https", "inspector", "_linklist", "module", "net", "node-inspect/lib/_inspect", "node-inspect/lib/internal/inspect_client", "node-inspect/lib/internal/inspect_repl", "os", "path", "perf_hooks", "process", "punycode", "querystring", "readline", "repl", "smalloc", "_stream_duplex", "_stream_transform", "_stream_wrap", "_stream_passthrough", "_stream_readable", "_stream_writable", "stream", "string_decoder", "sys", "timers", "_tls_common", "_tls_legacy", "_tls_wrap", "tls", "trace_events", "tty", "url", "util", "v8/tools/arguments", "v8/tools/codemap", "v8/tools/consarray", "v8/tools/csvparser", "v8/tools/logreader", "v8/tools/profile_view", "v8/tools/splaytree", "v8", "vm", "worker_threads", "zlib", // global is special
-"global"];
-var isNativeNodeModuleBareSpecifier = function isNativeNodeModuleBareSpecifier(specifier) {
-  return NATIVE_NODE_MODULE_SPECIFIER_ARRAY.includes(specifier);
-};
-
 var evalSource = function evalSource(code, filePath) {
   var script = new vm.Script(code, {
     filename: filePath
@@ -2393,7 +2388,7 @@ var evalSource = function evalSource(code, filePath) {
   return script.runInThisContext();
 };
 
-function _async$5(f) {
+function _async$2(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -2429,7 +2424,7 @@ var createNodeSystem = function createNodeSystem() {
       return specifier;
     }
 
-    if (isNativeNodeModuleBareSpecifier(specifier)) {
+    if (isSpecifierForNodeCoreModule_js.isSpecifierForNodeCoreModule(specifier)) {
       return specifier;
     }
 
@@ -2458,7 +2453,7 @@ var createNodeSystem = function createNodeSystem() {
   };
 
   nodeSystem.resolve = _resolve;
-  nodeSystem.instantiate = _async$5(function (url, importerUrl) {
+  nodeSystem.instantiate = _async$2(function (url, importerUrl) {
     if (url === GLOBAL_SPECIFIER) {
       return fromFunctionReturningNamespace(function () {
         return global;
@@ -2470,7 +2465,7 @@ var createNodeSystem = function createNodeSystem() {
       });
     }
 
-    return isNativeNodeModuleBareSpecifier(url) ? fromFunctionReturningNamespace(function () {
+    return isSpecifierForNodeCoreModule_js.isSpecifierForNodeCoreModule(url) ? fromFunctionReturningNamespace(function () {
       // eslint-disable-next-line import/no-dynamic-require
       var moduleExportsForNativeNodeModule = require$1(url);
 
@@ -2587,7 +2582,7 @@ var moduleExportsToModuleNamespace = function moduleExportsToModuleNamespace(mod
   });
 };
 
-function _await$5(value, then, direct) {
+function _await$1(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -2601,7 +2596,7 @@ function _await$5(value, then, direct) {
 
 var memoizedCreateNodeSystem = memoize(createNodeSystem);
 
-function _invoke$4(body, then) {
+function _invoke(body, then) {
   var result = body();
 
   if (result && result.then) {
@@ -2611,7 +2606,7 @@ function _invoke$4(body, then) {
   return then(result);
 }
 
-function _async$6(f) {
+function _async$1(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -2625,7 +2620,7 @@ function _async$6(f) {
   };
 }
 
-function _catch$3(body, recover) {
+function _catch(body, recover) {
   try {
     var result = body();
   } catch (e) {
@@ -2639,7 +2634,7 @@ function _catch$3(body, recover) {
   return result;
 }
 
-function _continue$2(value, then) {
+function _continue(value, then) {
   return value && value.then ? value.then(then) : then(value);
 }
 
@@ -2662,14 +2657,14 @@ function _finallyRethrows(body, finalizer) {
   return finalizer(false, result);
 }
 
-var createNodeRuntime = _async$6(function (_ref) {
+var createNodeRuntime = _async$1(function (_ref) {
   var projectDirectoryUrl = _ref.projectDirectoryUrl,
       compileServerOrigin = _ref.compileServerOrigin,
       outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
   var outDirectoryUrl = "".concat(projectDirectoryUrl).concat(outDirectoryRelativeUrl);
   var groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl));
   var envUrl = String(new URL("env.json", outDirectoryUrl));
-  return _await$5(Promise.all([importJson(groupMapUrl), importJson(envUrl)]), function (_ref2) {
+  return _await$1(Promise.all([importJson(groupMapUrl), importJson(envUrl)]), function (_ref2) {
     var _ref3 = _slicedToArray(_ref2, 2),
         groupMap = _ref3[0],
         _ref3$ = _ref3[1],
@@ -2683,21 +2678,21 @@ var createNodeRuntime = _async$6(function (_ref) {
     var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/");
     var importMap$1;
     var importMapUrl;
-    return _invoke$4(function () {
+    return _invoke(function () {
       if (importMapFileRelativeUrl) {
         importMapUrl = "".concat(compileServerOrigin, "/").concat(compileDirectoryRelativeUrl).concat(importMapFileRelativeUrl);
-        return _await$5(fetchUrl(importMapUrl), function (importmapFileResponse) {
+        return _await$1(fetchUrl(importMapUrl), function (importmapFileResponse) {
           var _temp = importmapFileResponse.status === 404;
 
-          return _await$5(_temp ? {} : importmapFileResponse.json(), function (importmap) {
+          return _await$1(_temp ? {} : importmapFileResponse.json(), function (importmap) {
             var importmapNormalized = importMap.normalizeImportMap(importmap, importMapUrl);
             importMap$1 = importmapNormalized;
           }, _temp);
         });
       }
     }, function () {
-      var importFile = _async$6(function (specifier) {
-        return _await$5(memoizedCreateNodeSystem({
+      var importFile = _async$1(function (specifier) {
+        return _await$1(memoizedCreateNodeSystem({
           projectDirectoryUrl: projectDirectoryUrl,
           compileServerOrigin: compileServerOrigin,
           outDirectoryRelativeUrl: outDirectoryRelativeUrl,
@@ -2710,7 +2705,7 @@ var createNodeRuntime = _async$6(function (_ref) {
         });
       });
 
-      var executeFile = _async$6(function (specifier) {
+      var executeFile = _async$1(function (specifier) {
         var _ref4 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
             _ref4$errorExposureIn = _ref4.errorExposureInConsole,
             errorExposureInConsole = _ref4$errorExposureIn === void 0 ? true : _ref4$errorExposureIn,
@@ -2719,7 +2714,7 @@ var createNodeRuntime = _async$6(function (_ref) {
           return error;
         } : _ref4$errorTransform;
 
-        return _await$5(memoizedCreateNodeSystem({
+        return _await$1(memoizedCreateNodeSystem({
           projectDirectoryUrl: projectDirectoryUrl,
           compileServerOrigin: compileServerOrigin,
           outDirectoryRelativeUrl: outDirectoryRelativeUrl,
@@ -2728,8 +2723,8 @@ var createNodeRuntime = _async$6(function (_ref) {
           importDefaultExtension: importDefaultExtension,
           fetchSource: fetchSource
         }), function (nodeSystem) {
-          return _catch$3(function () {
-            return _await$5(makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier)), function (namespace) {
+          return _catch(function () {
+            return _await$1(makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier)), function (namespace) {
               return {
                 status: "completed",
                 namespace: namespace,
@@ -2738,8 +2733,8 @@ var createNodeRuntime = _async$6(function (_ref) {
             });
           }, function (error) {
             var transformedError;
-            return _continue$2(_catch$3(function () {
-              return _await$5(errorTransform(error), function (_errorTransform) {
+            return _continue(_catch(function () {
+              return _await$1(errorTransform(error), function (_errorTransform) {
                 transformedError = _errorTransform;
               });
             }, function () {
@@ -2765,9 +2760,9 @@ var createNodeRuntime = _async$6(function (_ref) {
   });
 });
 
-var importJson = _async$6(function (url) {
-  return _await$5(fetchSource(url), function (response) {
-    return _await$5(response.json());
+var importJson = _async$1(function (url) {
+  return _await$1(fetchSource(url), function (response) {
+    return _await$1(response.json());
   });
 });
 
@@ -2779,10 +2774,10 @@ var readCoverage = function readCoverage() {
   return global.__coverage__;
 };
 
-var makePromiseKeepNodeProcessAlive = _async$6(function (promise) {
+var makePromiseKeepNodeProcessAlive = _async$1(function (promise) {
   var timerId = setInterval(function () {}, 10000);
   return _finallyRethrows(function () {
-    return _await$5(promise);
+    return _await$1(promise);
   }, function (_wasThrown, _result) {
     clearInterval(timerId);
     return _rethrow(_wasThrown, _result);
@@ -2793,7 +2788,7 @@ var nodeRuntime = {
   create: createNodeRuntime
 };
 
-function _await$6(value, then, direct) {
+function _await(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
   }
@@ -2805,7 +2800,7 @@ function _await$6(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-function _async$7(f) {
+function _async(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -2819,7 +2814,7 @@ function _async$7(f) {
   };
 }
 
-var execute = _async$7(function (_ref) {
+var execute = _async(function (_ref) {
   var projectDirectoryUrl = _ref.projectDirectoryUrl,
       fileRelativeUrl = _ref.fileRelativeUrl,
       compileServerOrigin = _ref.compileServerOrigin,
@@ -2827,7 +2822,7 @@ var execute = _async$7(function (_ref) {
       executionId = _ref.executionId,
       _ref$errorExposureInC = _ref.errorExposureInConsole,
       errorExposureInConsole = _ref$errorExposureInC === void 0 ? false : _ref$errorExposureInC;
-  return _await$6(nodeRuntime.create({
+  return _await(nodeRuntime.create({
     projectDirectoryUrl: projectDirectoryUrl,
     compileServerOrigin: compileServerOrigin,
     outDirectoryRelativeUrl: outDirectoryRelativeUrl
@@ -2843,8 +2838,8 @@ var execute = _async$7(function (_ref) {
     var compiledFileRemoteUrl = util.resolveUrl(fileRelativeUrl, "".concat(compileServerOrigin, "/").concat(compileDirectoryRelativeUrl));
     return executeFile(compiledFileRemoteUrl, {
       executionId: executionId,
-      errorTransform: _async$7(function (error) {
-        return !error || !(error instanceof Error) ? error : _await$6(getErrorOriginalStackString(error), function (originalStack) {
+      errorTransform: _async(function (error) {
+        return !error || !(error instanceof Error) ? error : _await(getErrorOriginalStackString(error), function (originalStack) {
           error.stack = originalStack;
           return error;
         });

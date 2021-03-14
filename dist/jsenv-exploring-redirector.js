@@ -147,7 +147,7 @@
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
-  function _await(value, then, direct) {
+  function _await$3(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -159,7 +159,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async(f) {
+  function _async$3(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -173,7 +173,7 @@
     };
   }
 
-  function _call(body, then, direct) {
+  function _call$1(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -186,7 +186,7 @@
     }
   }
 
-  var fetchUsingXHR = _async(function (url) {
+  var fetchUsingXHR = _async$3(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         _ref$cancellationToke = _ref.cancellationToken,
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
@@ -269,7 +269,7 @@
     }
 
     xhr.send(body);
-    return _await(headersPromise, function () {
+    return _await$3(headersPromise, function () {
       // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
       var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
       var responseStatus = xhr.status;
@@ -277,7 +277,7 @@
       var responseHeaders = getHeadersFromXHR(xhr);
 
       var readBody = function readBody() {
-        return _await(bodyPromise, function () {
+        return _await$3(bodyPromise, function () {
           var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
           if (status === 0) {
@@ -293,7 +293,7 @@
       };
 
       var text = function text() {
-        return _call(readBody, function (_ref2) {
+        return _call$1(readBody, function (_ref2) {
           var responseBody = _ref2.responseBody,
               responseBodyType = _ref2.responseBodyType;
 
@@ -310,15 +310,15 @@
       };
 
       var json = function json() {
-        return _call(text, JSON.parse);
+        return _call$1(text, JSON.parse);
       };
 
-      var blob = _async(function () {
+      var blob = _async$3(function () {
         if (!hasBlob) {
           throw new Error("blob not supported");
         }
 
-        return _call(readBody, function (_ref3) {
+        return _call$1(readBody, function (_ref3) {
           var responseBody = _ref3.responseBody,
               responseBodyType = _ref3.responseBodyType;
 
@@ -343,19 +343,19 @@
       });
 
       var arrayBuffer = function arrayBuffer() {
-        return _call(readBody, function (_ref4) {
+        return _call$1(readBody, function (_ref4) {
           var responseBody = _ref4.responseBody,
               responseBodyType = _ref4.responseBodyType;
-          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call(blob, blobToArrayBuffer);
+          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$1(blob, blobToArrayBuffer);
         });
       };
 
-      var formData = _async(function () {
+      var formData = _async$3(function () {
         if (!hasFormData) {
           throw new Error("formData not supported");
         }
 
-        return _call(text, textToFormData);
+        return _call$1(text, textToFormData);
       });
 
       return {
@@ -531,7 +531,7 @@
     return form;
   };
 
-  var blobToArrayBuffer = _async(function (blob) {
+  var blobToArrayBuffer = _async$3(function (blob) {
     var reader = new FileReader();
     var promise = fileReaderReady(reader);
     reader.readAsArrayBuffer(blob);
@@ -580,7 +580,7 @@
     return view.buffer;
   };
 
-  function _await$1(value, then, direct) {
+  function _await$2(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -592,7 +592,7 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchNative = _async$1(function (url) {
+  var fetchNative = _async$2(function (url) {
 
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -609,8 +609,8 @@
       abortController.abort(reason);
     });
     var response;
-    return _continue(_catch(function () {
-      return _await$1(window.fetch(url, _objectSpread({
+    return _continue(_catch$1(function () {
+      return _await$2(window.fetch(url, _objectSpread({
         signal: abortController.signal,
         mode: mode
       }, options)), function (_window$fetch) {
@@ -623,7 +623,7 @@
 
       throw e;
     }), function (_result) {
-      return  {
+      return {
         url: response.url,
         status: response.status,
         statusText: "",
@@ -647,7 +647,7 @@
     });
   });
 
-  function _catch(body, recover) {
+  function _catch$1(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -673,7 +673,7 @@
     return value && value.then ? value.then(then) : then(value);
   }
 
-  function _async$1(f) {
+  function _async$2(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -689,7 +689,7 @@
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-  function _await$2(value, then, direct) {
+  function _await$1(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -701,7 +701,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _catch$1(body, recover) {
+  function _catch(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -715,7 +715,7 @@
     return result;
   }
 
-  function _async$2(f) {
+  function _async$1(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -729,18 +729,18 @@
     };
   }
 
-  var fetchExploringJson = _async$2(function () {
+  var fetchExploringJson = _async$1(function () {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         cancellationToken = _ref.cancellationToken;
 
-    return _catch$1(function () {
-      return _await$2(fetchUrl("/.jsenv/exploring.json", {
+    return _catch(function () {
+      return _await$1(fetchUrl("/.jsenv/exploring.json", {
         headers: {
           "x-jsenv": "1"
         },
         cancellationToken: cancellationToken
       }), function (exploringJsonResponse) {
-        return _await$2(exploringJsonResponse.json());
+        return _await$1(exploringJsonResponse.json());
       });
     }, function (e) {
       if (isCancelError(e)) {
@@ -794,10 +794,10 @@
   };
 
   var detectAndroid = function detectAndroid() {
-    return navigatorToBrowser(window.navigator);
+    return navigatorToBrowser$1(window.navigator);
   };
 
-  var navigatorToBrowser = function navigatorToBrowser(_ref) {
+  var navigatorToBrowser$1 = function navigatorToBrowser(_ref) {
     var userAgent = _ref.userAgent,
         appVersion = _ref.appVersion;
 
@@ -812,10 +812,10 @@
   };
 
   var detectInternetExplorer = function detectInternetExplorer() {
-    return userAgentToBrowser(window.navigator.userAgent);
+    return userAgentToBrowser$5(window.navigator.userAgent);
   };
 
-  var userAgentToBrowser = function userAgentToBrowser(userAgent) {
+  var userAgentToBrowser$5 = function userAgentToBrowser(userAgent) {
     if (/msie|trident/i.test(userAgent)) {
       return {
         name: "ie",
@@ -827,10 +827,10 @@
   };
 
   var detectOpera = function detectOpera() {
-    return userAgentToBrowser$1(window.navigator.userAgent);
+    return userAgentToBrowser$4(window.navigator.userAgent);
   };
 
-  var userAgentToBrowser$1 = function userAgentToBrowser(userAgent) {
+  var userAgentToBrowser$4 = function userAgentToBrowser(userAgent) {
     // opera below 13
     if (/opera/i.test(userAgent)) {
       return {
@@ -851,10 +851,10 @@
   };
 
   var detectEdge = function detectEdge() {
-    return userAgentToBrowser$2(window.navigator.userAgent);
+    return userAgentToBrowser$3(window.navigator.userAgent);
   };
 
-  var userAgentToBrowser$2 = function userAgentToBrowser(userAgent) {
+  var userAgentToBrowser$3 = function userAgentToBrowser(userAgent) {
     if (/edg([ea]|ios)/i.test(userAgent)) {
       return {
         name: "edge",
@@ -866,10 +866,10 @@
   };
 
   var detectFirefox = function detectFirefox() {
-    return userAgentToBrowser$3(window.navigator.userAgent);
+    return userAgentToBrowser$2(window.navigator.userAgent);
   };
 
-  var userAgentToBrowser$3 = function userAgentToBrowser(userAgent) {
+  var userAgentToBrowser$2 = function userAgentToBrowser(userAgent) {
     if (/firefox|iceweasel|fxios/i.test(userAgent)) {
       return {
         name: "firefox",
@@ -881,10 +881,10 @@
   };
 
   var detectChrome = function detectChrome() {
-    return userAgentToBrowser$4(window.navigator.userAgent);
+    return userAgentToBrowser$1(window.navigator.userAgent);
   };
 
-  var userAgentToBrowser$4 = function userAgentToBrowser(userAgent) {
+  var userAgentToBrowser$1 = function userAgentToBrowser(userAgent) {
     if (/chromium/i.test(userAgent)) {
       return {
         name: "chrome",
@@ -903,10 +903,10 @@
   };
 
   var detectSafari = function detectSafari() {
-    return userAgentToBrowser$5(window.navigator.userAgent);
+    return userAgentToBrowser(window.navigator.userAgent);
   };
 
-  var userAgentToBrowser$5 = function userAgentToBrowser(userAgent) {
+  var userAgentToBrowser = function userAgentToBrowser(userAgent) {
     if (/safari|applewebkit/i.test(userAgent)) {
       return {
         name: "safari",
@@ -922,10 +922,10 @@
   }; // TODO
 
   var detectIOS = function detectIOS() {
-    return navigatorToBrowser$1(window.navigator);
+    return navigatorToBrowser(window.navigator);
   };
 
-  var navigatorToBrowser$1 = function navigatorToBrowser(_ref) {
+  var navigatorToBrowser = function navigatorToBrowser(_ref) {
     var userAgent = _ref.userAgent,
         appVersion = _ref.appVersion;
 
@@ -1129,7 +1129,7 @@
     return resolveGroup(detectBrowser(), groupMap);
   };
 
-  function _await$3(value, then, direct) {
+  function _await(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -1142,10 +1142,10 @@
   }
 
   var redirect = function redirect() {
-    return _call$1(fetchExploringJson, function (_ref) {
+    return _call(fetchExploringJson, function (_ref) {
       var outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
           exploringHtmlFileRelativeUrl = _ref.exploringHtmlFileRelativeUrl;
-      return _await$3(decideExploringIndexUrl({
+      return _await(decideExploringIndexUrl({
         outDirectoryRelativeUrl: outDirectoryRelativeUrl,
         exploringHtmlFileRelativeUrl: exploringHtmlFileRelativeUrl
       }), function (_decideExploringIndex) {
@@ -1154,7 +1154,7 @@
     });
   };
 
-  function _call$1(body, then, direct) {
+  function _call(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -1167,19 +1167,30 @@
     }
   }
 
-  var decideExploringIndexUrl = _async$3(function (_ref2) {
+  var decideExploringIndexUrl = function decideExploringIndexUrl(_ref2) {
     var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
         exploringHtmlFileRelativeUrl = _ref2.exploringHtmlFileRelativeUrl;
-    return _await$3(Promise.all([supportsDynamicImport(), supportsTopLevelAwait(), supportsImportmap()]), function (supports) {
-      return supports.every(Boolean) ? "/".concat(exploringHtmlFileRelativeUrl) : _await$3(decideCompileId({
+    return _await(_invoke(function () {
+    }, function (_result) {
+      return _await(decideCompileId({
         outDirectoryRelativeUrl: outDirectoryRelativeUrl
       }), function (compileId) {
         return "/".concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(exploringHtmlFileRelativeUrl);
       });
-    });
-  });
+    }));
+  };
 
-  function _async$3(f) {
+  function _invoke(body, then) {
+    var result = body();
+
+    if (result && result.then) {
+      return result.then(then);
+    }
+
+    return then(result);
+  }
+
+  function _async(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -1193,76 +1204,11 @@
     };
   }
 
-  var supportsDynamicImport = function supportsDynamicImport() {
-    var moduleSource = "data:text/javascript;base64,ZXhwb3J0IGRlZmF1bHQgNDI=";
-    return _await$3(_catch$2(function () {
-      return _await$3(import(moduleSource), function (namespace) {
-        return namespace.default === 42;
-      });
-    }, function () {
-      return false;
-    }));
-  };
-
-  function _catch$2(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  var supportsTopLevelAwait = function supportsTopLevelAwait() {
-    // don't know yet how to test this
-    return true;
-  };
-
-  var supportsImportmap = _async$3(function () {
-    var specifier = jsToTextUrl("export default false");
-    var importMap = {
-      imports: _defineProperty({}, specifier, jsToTextUrl("export default true"))
-    };
-    var importmapScript = document.createElement("script");
-    importmapScript.type = "importmap";
-    importmapScript.textContent = JSON.stringify(importMap, null, "  ");
-    insertAfter(importmapScript);
-    var scriptModule = document.createElement("script");
-    scriptModule.type = "module";
-    scriptModule.src = jsToTextUrl("import supported from \"".concat(specifier, "\"\nwindow.__jsenv__importmap_supported = supported"));
-    return new Promise(function (resolve) {
-      scriptModule.onload = function () {
-        var supported = window.__jsenv__importmap_supported;
-        delete window.__jsenv__importmap_supported;
-        resolve(supported);
-      };
-
-      scriptModule.onerror = function () {
-        resolve(false);
-      };
-
-      insertAfter(scriptModule);
-    });
-  });
-
-  var jsToTextUrl = function jsToTextUrl(js) {
-    return "data:text/javascript;base64,".concat(window.btoa(js));
-  };
-
-  var insertAfter = function insertAfter(element) {
-    document.body.appendChild(element);
-  };
-
-  var decideCompileId = _async$3(function (_ref3) {
+  var decideCompileId = _async(function (_ref3) {
     var outDirectoryRelativeUrl = _ref3.outDirectoryRelativeUrl;
     var compileServerGroupMapUrl = "/".concat(outDirectoryRelativeUrl, "groupMap.json");
-    return _await$3(fetchUrl(compileServerGroupMapUrl), function (compileServerGroupMapResponse) {
-      return _await$3(compileServerGroupMapResponse.json(), function (compileServerGroupMap) {
+    return _await(fetchUrl(compileServerGroupMapUrl), function (compileServerGroupMapResponse) {
+      return _await(compileServerGroupMapResponse.json(), function (compileServerGroupMap) {
         var compileId = computeCompileIdFromGroupId({
           groupId: resolveBrowserGroup(compileServerGroupMap),
           groupMap: compileServerGroupMap

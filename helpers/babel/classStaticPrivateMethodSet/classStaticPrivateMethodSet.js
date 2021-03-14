@@ -1,3 +1,3 @@
-export default function () {
-  throw new TypeError("attempted to reassign private method")
+export default function _classStaticPrivateMethodSet() {
+  throw new TypeError("attempted to set read only static private field")
 }

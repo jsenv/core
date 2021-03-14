@@ -1,6 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { extname } from "path"
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
+import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
 import { loggerToLogLevel, createDetailedMessage } from "@jsenv/logger"
 import {
   isFileSystemPath,
@@ -39,7 +40,6 @@ import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObj
 
 import { parseTarget } from "./parseTarget.js"
 import { showSourceLocation } from "./showSourceLocation.js"
-import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { createAssetBuilder, referenceToCodeForRollup } from "./asset-builder.js"
 import { computeBuildRelativeUrl } from "./url-versioning.js"
@@ -195,7 +195,7 @@ export const createJsenvRollupPlugin = async ({
   )
 
   const nativeModulePredicate = (specifier) => {
-    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
+    if (node && isSpecifierForNodeCoreModule(specifier)) return true
     // for now browser have no native module
     // and we don't know how we will handle that
     if (browser) return false
@@ -555,11 +555,10 @@ export const createJsenvRollupPlugin = async ({
       return urlToUrlForRollup(importUrl)
     },
 
-    resolveFileUrl: ({
-      // chunkId, moduleId, referenceId,
-      fileName,
-    }) => {
-      const assetTarget = assetBuilder.getAssetByUrl(fileName)
+    resolveFileUrl: ({ referenceId, fileName }) => {
+      const assetTarget = assetBuilder.findAsset((asset) => {
+        return asset.rollupReferenceId === referenceId
+      })
       const buildRelativeUrl = assetTarget ? assetTarget.targetBuildRelativeUrl : fileName
       if (format === "esmodule") {
         return `new URL("${buildRelativeUrl}", import.meta.url).href`
@@ -685,6 +684,7 @@ export const createJsenvRollupPlugin = async ({
         return null
       }
 
+      // TODO: maybe replace chunk.fileName with chunk.facadeModuleId?
       const result = await minifyJs(code, chunk.fileName, {
         sourceMap: {
           ...(map ? { content: JSON.stringify(map) } : {}),
@@ -790,7 +790,9 @@ export const createJsenvRollupPlugin = async ({
           return
         }
 
-        const assetTarget = assetBuilder.getAssetByUrl(rollupFileId)
+        const assetTarget = assetBuilder.findAsset(
+          (asset) => asset.targetRelativeUrl === rollupFileId,
+        )
         if (!assetTarget) {
           const buildRelativeUrl = rollupFileId
           const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
@@ -810,7 +812,11 @@ export const createJsenvRollupPlugin = async ({
 
         const buildRelativeUrl = assetTarget.targetBuildRelativeUrl
         const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
-        const originalProjectUrl = rollupUrlToOriginalProjectUrl(rollupFileId)
+        const originalProjectUrl = urlToOriginalProjectUrl(assetTarget.targetUrl, {
+          projectDirectoryUrl,
+          compileServerOrigin,
+          compileDirectoryRelativeUrl,
+        })
         const originalProjectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
         // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
         file.source = String(assetTarget.targetBuildBuffer)

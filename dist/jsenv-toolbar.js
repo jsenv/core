@@ -284,7 +284,7 @@
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
-  function _await(value, then, direct) {
+  function _await$3(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -296,7 +296,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async(f) {
+  function _async$4(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -310,7 +310,7 @@
     };
   }
 
-  function _call(body, then, direct) {
+  function _call$2(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -323,7 +323,7 @@
     }
   }
 
-  var fetchUsingXHR = _async(function (url) {
+  var fetchUsingXHR = _async$4(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         _ref$cancellationToke = _ref.cancellationToken,
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
@@ -336,8 +336,8 @@
         _ref$body = _ref.body,
         body = _ref$body === void 0 ? null : _ref$body;
 
-    var headersPromise = createPromiseAndHooks();
-    var bodyPromise = createPromiseAndHooks();
+    var headersPromise = createPromiseAndHooks$1();
+    var bodyPromise = createPromiseAndHooks$1();
     var xhr = new XMLHttpRequest();
 
     var failure = function failure(error) {
@@ -406,7 +406,7 @@
     }
 
     xhr.send(body);
-    return _await(headersPromise, function () {
+    return _await$3(headersPromise, function () {
       // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
       var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
       var responseStatus = xhr.status;
@@ -414,7 +414,7 @@
       var responseHeaders = getHeadersFromXHR(xhr);
 
       var readBody = function readBody() {
-        return _await(bodyPromise, function () {
+        return _await$3(bodyPromise, function () {
           var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
           if (status === 0) {
@@ -430,7 +430,7 @@
       };
 
       var text = function text() {
-        return _call(readBody, function (_ref2) {
+        return _call$2(readBody, function (_ref2) {
           var responseBody = _ref2.responseBody,
               responseBodyType = _ref2.responseBodyType;
 
@@ -447,15 +447,15 @@
       };
 
       var json = function json() {
-        return _call(text, JSON.parse);
+        return _call$2(text, JSON.parse);
       };
 
-      var blob = _async(function () {
+      var blob = _async$4(function () {
         if (!hasBlob) {
           throw new Error("blob not supported");
         }
 
-        return _call(readBody, function (_ref3) {
+        return _call$2(readBody, function (_ref3) {
           var responseBody = _ref3.responseBody,
               responseBodyType = _ref3.responseBodyType;
 
@@ -480,19 +480,19 @@
       });
 
       var arrayBuffer = function arrayBuffer() {
-        return _call(readBody, function (_ref4) {
+        return _call$2(readBody, function (_ref4) {
           var responseBody = _ref4.responseBody,
               responseBodyType = _ref4.responseBodyType;
-          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call(blob, blobToArrayBuffer);
+          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$2(blob, blobToArrayBuffer);
         });
       };
 
-      var formData = _async(function () {
+      var formData = _async$4(function () {
         if (!hasFormData) {
           throw new Error("formData not supported");
         }
 
-        return _call(text, textToFormData);
+        return _call$2(text, textToFormData);
       });
 
       return {
@@ -532,7 +532,7 @@
     return new Error(createDetailedMessage("error during xhr request on ".concat(url, "."), _defineProperty({}, "error stack", error.stack)));
   };
 
-  var createPromiseAndHooks = function createPromiseAndHooks() {
+  var createPromiseAndHooks$1 = function createPromiseAndHooks() {
     var resolve;
     var reject;
     var promise = new Promise(function (res, rej) {
@@ -668,7 +668,7 @@
     return form;
   };
 
-  var blobToArrayBuffer = _async(function (blob) {
+  var blobToArrayBuffer = _async$4(function (blob) {
     var reader = new FileReader();
     var promise = fileReaderReady(reader);
     reader.readAsArrayBuffer(blob);
@@ -717,7 +717,7 @@
     return view.buffer;
   };
 
-  function _await$1(value, then, direct) {
+  function _await$2(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -729,7 +729,7 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchNative = _async$1(function (url) {
+  var fetchNative = _async$3(function (url) {
 
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -746,8 +746,8 @@
       abortController.abort(reason);
     });
     var response;
-    return _continue(_catch(function () {
-      return _await$1(window.fetch(url, _objectSpread({
+    return _continue(_catch$1(function () {
+      return _await$2(window.fetch(url, _objectSpread({
         signal: abortController.signal,
         mode: mode
       }, options)), function (_window$fetch) {
@@ -760,7 +760,7 @@
 
       throw e;
     }), function (_result) {
-      return  {
+      return {
         url: response.url,
         status: response.status,
         statusText: "",
@@ -784,7 +784,7 @@
     });
   });
 
-  function _catch(body, recover) {
+  function _catch$1(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -810,7 +810,7 @@
     return value && value.then ? value.then(then) : then(value);
   }
 
-  function _async$1(f) {
+  function _async$3(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -826,7 +826,7 @@
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-  function _await$2(value, then, direct) {
+  function _await$1(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -838,7 +838,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _catch$1(body, recover) {
+  function _catch(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -870,14 +870,14 @@
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         cancellationToken = _ref.cancellationToken;
 
-    return _catch$1(function () {
-      return _await$2(fetchUrl("/.jsenv/exploring.json", {
+    return _catch(function () {
+      return _await$1(fetchUrl("/.jsenv/exploring.json", {
         headers: {
           "x-jsenv": "1"
         },
         cancellationToken: cancellationToken
       }), function (exploringJsonResponse) {
-        return _await$2(exploringJsonResponse.json());
+        return _await$1(exploringJsonResponse.json());
       });
     }, function (e) {
       if (isCancelError(e)) {
@@ -1195,7 +1195,7 @@
 
   var notificationPreference = createPreference("notification");
 
-  function _await$3(value, then, direct) {
+  function _await(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -1209,7 +1209,7 @@
 
   var arrayOfOpenedNotifications = [];
 
-  function _async$3(f) {
+  function _async$1(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -1332,10 +1332,10 @@
     });
   } : function () {};
   var permissionPromise;
-  var requestPermission = notificationAvailable ? _async$3(function () {
+  var requestPermission = notificationAvailable ? _async$1(function () {
     if (permissionPromise) return permissionPromise;
     permissionPromise = Notification.requestPermission();
-    return _await$3(permissionPromise, function (permission) {
+    return _await(permissionPromise, function (permission) {
       permissionPromise = undefined;
       return permission;
     });
@@ -1731,7 +1731,7 @@
     }
   };
 
-  var createPromiseAndHooks$1 = function createPromiseAndHooks() {
+  var createPromiseAndHooks = function createPromiseAndHooks() {
     var resolve;
     var reject;
     var promise = new Promise(function (res, rej) {
@@ -1743,7 +1743,7 @@
     return promise;
   };
 
-  var connectEventSource = function connectEventSource(eventSourceUrl) {
+  var connectEventSource$1 = function connectEventSource(eventSourceUrl) {
     var events = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
     var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
@@ -1998,7 +1998,7 @@
 
     var connect = function connect() {
       return new Promise(function (resolve) {
-        cancel = connectEventSource(eventSourceUrl, {
+        cancel = connectEventSource$1(eventSourceUrl, {
           "file-modified": function fileModified(_ref2) {
             var data = _ref2.data;
             jsenvLogger.debug("".concat(data, " modified"));
@@ -2064,7 +2064,7 @@
   var initToolbarEventSource = function initToolbarEventSource(_ref) {
     var executedFileRelativeUrl = _ref.executedFileRelativeUrl;
     removeForceHideElement(document.querySelector("#eventsource-indicator"));
-    connectEventSource$1(executedFileRelativeUrl);
+    connectEventSource(executedFileRelativeUrl);
     var livereloadCheckbox = document.querySelector("#toggle-livereload");
     livereloadCheckbox.checked = getLivereloadingPreference();
 
@@ -2141,9 +2141,9 @@
     }
   };
 
-  var connectEventSource$1 = function connectEventSource(executedFileRelativeUrl) {
+  var connectEventSource = function connectEventSource(executedFileRelativeUrl) {
     updateEventSourceIndicator();
-    connectionReadyPromise = createPromiseAndHooks$1();
+    connectionReadyPromise = createPromiseAndHooks();
     eventSourceConnection = connectCompileServerEventSource(executedFileRelativeUrl, {
       onFileModified: function onFileModified(file) {
         handleFileChange(file, "modified");
@@ -2335,7 +2335,7 @@
 
   /* eslint-disable import/max-dependencies */
 
-  function _call$2(body, then, direct) {
+  function _call(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -2350,7 +2350,7 @@
 
   var toolbarVisibilityPreference = createPreference("toolbar");
 
-  function _async$4(f) {
+  function _async(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -2364,11 +2364,11 @@
     };
   }
 
-  var renderToolbar = _async$4(function () {
+  var renderToolbar = _async(function () {
     var executedFileCompiledUrl = window.parent.location.href;
     var compileServerOrigin = window.parent.location.origin; // this should not block the whole toolbar rendering + interactivity
 
-    return _call$2(fetchExploringJson, function (exploringConfig) {
+    return _call(fetchExploringJson, function (exploringConfig) {
       var outDirectoryRelativeUrl = exploringConfig.outDirectoryRelativeUrl;
       var outDirectoryRemoteUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
       var executedFileRelativeUrl = urlToOriginalRelativeUrl(executedFileCompiledUrl, outDirectoryRemoteUrl);

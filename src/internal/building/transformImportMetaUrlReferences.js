@@ -1,8 +1,8 @@
+import { asyncWalk } from "estree-walker"
 import { resolveUrl } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { referenceToCodeForRollup } from "./asset-builder.js"
 
-const { asyncWalk } = require("estree-walker")
 const MagicString = require("magic-string")
 
 export const transformImportMetaUrlReferences = async ({

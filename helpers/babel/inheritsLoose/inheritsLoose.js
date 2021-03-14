@@ -1,6 +1,7 @@
+import setPrototypeOf from "../setPrototypeOf/setPrototypeOf.js"
+
 export default function (subClass, superClass) {
   subClass.prototype = Object.create(superClass.prototype)
   subClass.prototype.constructor = subClass
-  // eslint-disable-next-line no-proto
-  subClass.__proto__ = superClass
+  setPrototypeOf(subClass, superClass)
 }

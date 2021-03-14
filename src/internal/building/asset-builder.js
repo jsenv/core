@@ -571,7 +571,7 @@ export const createAssetBuilder = (
     } else {
       logger.debug(`emit asset for ${shortenUrl(targetUrl)}`)
       const rollupReferenceId = emitAsset({
-        fileName: targetUrl,
+        fileName: target.targetRelativeUrl,
       })
       target.rollupReferenceId = rollupReferenceId
     }
@@ -603,8 +603,17 @@ export const createAssetBuilder = (
     return null
   }
 
-  const getAssetByUrl = (assetUrl) => {
-    return targetMap[assetUrl] || null
+  const findAsset = (predicate) => {
+    let assetMatching = null
+    Object.keys(targetMap).find((assetUrl) => {
+      const assetCandidate = targetMap[assetUrl]
+      if (predicate(assetCandidate)) {
+        assetMatching = assetCandidate
+        return true
+      }
+      return false
+    })
+    return assetMatching
   }
 
   const shortenUrl = (url) => {
@@ -646,7 +655,7 @@ ${showSourceLocation(referenceSourceAsString, {
 
     getRollupChunkReadyCallbackMap,
     getAllAssetEntryEmittedPromise,
-    getAssetByUrl,
+    findAsset,
 
     inspect: () => {
       return {

@@ -147,7 +147,7 @@
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
-  function _await(value, then, direct) {
+  function _await$3(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -159,7 +159,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async(f) {
+  function _async$2(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -173,7 +173,7 @@
     };
   }
 
-  function _call(body, then, direct) {
+  function _call$1(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -186,7 +186,7 @@
     }
   }
 
-  var fetchUsingXHR = _async(function (url) {
+  var fetchUsingXHR = _async$2(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         _ref$cancellationToke = _ref.cancellationToken,
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
@@ -269,7 +269,7 @@
     }
 
     xhr.send(body);
-    return _await(headersPromise, function () {
+    return _await$3(headersPromise, function () {
       // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
       var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
       var responseStatus = xhr.status;
@@ -277,7 +277,7 @@
       var responseHeaders = getHeadersFromXHR(xhr);
 
       var readBody = function readBody() {
-        return _await(bodyPromise, function () {
+        return _await$3(bodyPromise, function () {
           var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
           if (status === 0) {
@@ -293,7 +293,7 @@
       };
 
       var text = function text() {
-        return _call(readBody, function (_ref2) {
+        return _call$1(readBody, function (_ref2) {
           var responseBody = _ref2.responseBody,
               responseBodyType = _ref2.responseBodyType;
 
@@ -310,15 +310,15 @@
       };
 
       var json = function json() {
-        return _call(text, JSON.parse);
+        return _call$1(text, JSON.parse);
       };
 
-      var blob = _async(function () {
+      var blob = _async$2(function () {
         if (!hasBlob) {
           throw new Error("blob not supported");
         }
 
-        return _call(readBody, function (_ref3) {
+        return _call$1(readBody, function (_ref3) {
           var responseBody = _ref3.responseBody,
               responseBodyType = _ref3.responseBodyType;
 
@@ -343,19 +343,19 @@
       });
 
       var arrayBuffer = function arrayBuffer() {
-        return _call(readBody, function (_ref4) {
+        return _call$1(readBody, function (_ref4) {
           var responseBody = _ref4.responseBody,
               responseBodyType = _ref4.responseBodyType;
-          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call(blob, blobToArrayBuffer);
+          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$1(blob, blobToArrayBuffer);
         });
       };
 
-      var formData = _async(function () {
+      var formData = _async$2(function () {
         if (!hasFormData) {
           throw new Error("formData not supported");
         }
 
-        return _call(text, textToFormData);
+        return _call$1(text, textToFormData);
       });
 
       return {
@@ -531,7 +531,7 @@
     return form;
   };
 
-  var blobToArrayBuffer = _async(function (blob) {
+  var blobToArrayBuffer = _async$2(function (blob) {
     var reader = new FileReader();
     var promise = fileReaderReady(reader);
     reader.readAsArrayBuffer(blob);
@@ -580,7 +580,7 @@
     return view.buffer;
   };
 
-  function _await$1(value, then, direct) {
+  function _await$2(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -609,8 +609,8 @@
       abortController.abort(reason);
     });
     var response;
-    return _continue(_catch(function () {
-      return _await$1(window.fetch(url, _objectSpread({
+    return _continue(_catch$1(function () {
+      return _await$2(window.fetch(url, _objectSpread({
         signal: abortController.signal,
         mode: mode
       }, options)), function (_window$fetch) {
@@ -623,7 +623,7 @@
 
       throw e;
     }), function (_result) {
-      return  {
+      return {
         url: response.url,
         status: response.status,
         statusText: "",
@@ -647,7 +647,7 @@
     });
   });
 
-  function _catch(body, recover) {
+  function _catch$1(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -689,7 +689,7 @@
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-  function _await$2(value, then, direct) {
+  function _await$1(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -701,7 +701,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _catch$1(body, recover) {
+  function _catch(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -715,7 +715,7 @@
     return result;
   }
 
-  function _async$2(f) {
+  function _async(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -729,18 +729,18 @@
     };
   }
 
-  var fetchExploringJson = _async$2(function () {
+  var fetchExploringJson = _async(function () {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         cancellationToken = _ref.cancellationToken;
 
-    return _catch$1(function () {
-      return _await$2(fetchUrl("/.jsenv/exploring.json", {
+    return _catch(function () {
+      return _await$1(fetchUrl("/.jsenv/exploring.json", {
         headers: {
           "x-jsenv": "1"
         },
         cancellationToken: cancellationToken
       }), function (exploringJsonResponse) {
-        return _await$2(exploringJsonResponse.json());
+        return _await$1(exploringJsonResponse.json());
       });
     }, function (e) {
       if (isCancelError(e)) {
@@ -793,7 +793,7 @@
   When toolbar is loaded it will open an other connection to server sent events and close this one.
   */
 
-  function _await$3(value, then, direct) {
+  function _await(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -888,7 +888,7 @@
   }; // eslint-disable-next-line camelcase
 
 
-  function _call$1(body, then, direct) {
+  function _call(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -904,7 +904,7 @@
   window.__jsenv_eventsource__ = connectLivereload();
 
   var injectToolbar = function injectToolbar() {
-    return _call$1(fetchExploringJson, function (_ref4) {
+    return _call(fetchExploringJson, function (_ref4) {
       var jsenvDirectoryRelativeUrl = _ref4.jsenvDirectoryRelativeUrl;
       var jsenvDirectoryServerUrl = resolveUrl(jsenvDirectoryRelativeUrl, document.location.origin);
       var placeholder = getToolbarPlaceholder();
@@ -934,7 +934,7 @@
 
       iframe.setAttribute("src", jsenvToolbarHtmlServerUrl);
       placeholder.parentNode.replaceChild(iframe, placeholder);
-      return _await$3(iframeLoadedPromise, function () {
+      return _await(iframeLoadedPromise, function () {
         iframe.removeAttribute("tabindex");
 
         var listenToolbarIframeEvent = function listenToolbarIframeEvent(event, fn) {
