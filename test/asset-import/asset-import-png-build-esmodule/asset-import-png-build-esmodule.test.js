@@ -1,7 +1,6 @@
 import { SourceMap } from "module"
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlToBasename, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   GENERATE_ESMODULE_BUILD_TEST_PARAMS,
@@ -14,7 +13,7 @@ import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
@@ -30,7 +29,13 @@ await buildProject({
   entryPointMap,
 })
 
-await assertFilePresence(resolveUrl("./dist/esmodule/assets/jsenv-25e95a00.png", import.meta.url))
+{
+  const imageUrl = resolveUrl("./jsenv.png", import.meta.url)
+  const imageBuildUrl = resolveUrl("./dist/esmodule/assets/jsenv-25e95a00.png", import.meta.url)
+  const actual = await readFile(imageUrl, { as: "buffer" })
+  const expected = await readFile(imageBuildUrl, { as: "buffer" })
+  assert({ actual, expected })
+}
 
 {
   const { namespace, serverOrigin } = await browserImportEsModuleBuild({

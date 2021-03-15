@@ -819,7 +819,7 @@ export const createJsenvRollupPlugin = async ({
         })
         const originalProjectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
         // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
-        file.source = String(assetTarget.targetBuildBuffer)
+        file.source = assetTarget.targetBuildBuffer
 
         assetBuild[buildRelativeUrl] = file
         buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
