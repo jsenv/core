@@ -56,13 +56,16 @@ export const convertCommonJsWithRollup = async ({
     plugins: [
       commonJsRollupPlugin,
       createReplaceRollupPlugin({
-        ...(replaceProcessEnvNodeEnv
-          ? { "process.env.NODE_ENV": JSON.stringify(processEnvNodeEnv) }
-          : {}),
-        ...(replaceGlobalObject ? { global: "globalThis" } : {}),
-        ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
-        ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
-        ...replaceMap,
+        preventAssignment: true,
+        values: {
+          ...(replaceProcessEnvNodeEnv
+            ? { "process.env.NODE_ENV": JSON.stringify(processEnvNodeEnv) }
+            : {}),
+          ...(replaceGlobalObject ? { global: "globalThis" } : {}),
+          ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
+          ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
+          ...replaceMap,
+        },
       }),
       nodeGlobalRollupPlugin,
       ...(convertBuiltinsToBrowser ? [nodeBuiltinsRollupPlugin] : []),
