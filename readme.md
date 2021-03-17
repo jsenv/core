@@ -23,8 +23,8 @@ Tool to develop, test and build js projects.
 
 `@jsenv/core` was first created to write tests that could be executed in different browsers AND Node.js. In the end it became a tool covering the core needs of a JavaScript project:
 
+- A development server
 - A test runner to execute test files.
-- A developer friendly environment
 - A builder/bundler to optimize files for production
 
 Jsenv integrates naturally with standard html, css and js. It can be configured to work with TypeScript and React.
@@ -110,7 +110,7 @@ Read more on [testing documentation](./docs/testing/readme.md)
 
 `@jsenv/core` provides a server capable to turn any html file into an entry point. This power can be used to create a storybook, debug a file in isolation and more. It is called `exploring server`. This server is designed for development: it provides livereloading out of the box and does not bundle files.
 
-The following example shows how it can be used to execute a single test file. As mentioned previously it can execute any html file, in this example we'll use it only to run a test file.
+The following example uses exploring server only to execute a single html file designed for testing. As mentionned earlier, it can execute any html file.
 
 <details>
   <summary>1. Create a file to start exploring server</summary>
