@@ -1,10 +1,6 @@
 # Table of contents
 
 - [Test presentation](#Test-presentation)
-- [Test concrete example](#Test-concrete-example)
-  - [1 - Setup basic project](#1---setup-basic-project)
-  - [2 - Execute tests](#2---execute-tests)
-  - [3 - Generate test coverage](#3---generate-test-coverage)
 - [Test execution](#Test-execution)
   - [How test is executed](#How-test-is-executed)
   - [Execution error](#Execution-error)
@@ -25,6 +21,10 @@
   - [testPlanSummary](#testPlanSummary)
   - [testPlanReport](#testPlanReport)
   - [testPlanCoverageMap](#testPlanCoverageMap)
+- [Test concrete example](#Test-concrete-example)
+  - [1 - Setup basic project](#1---setup-basic-project)
+  - [2 - Execute tests](#2---execute-tests)
+  - [3 - Generate test coverage](#3---generate-test-coverage)
 
 # Test presentation
 
@@ -35,65 +35,9 @@ Finally testing mitigates the risk of breaking in the future what is working tod
 
 Jsenv provides an api to execute your test files inside one or many environments. It means you can execute a given test file inside chromium and Node.js as long as code inside test file can executes in both.
 
-# Test concrete example
-
-This part helps you to setup a project on your machine to play with jsenv testing.<br />
-You can also reuse the project file structure to understand how to integrate jsenv to write and run your own project tests.
-
-## 1 - Setup basic project
-
-```console
-git clone https://github.com/jsenv/jsenv-core.git
-```
-
-```console
-cd ./jsenv-core/docs/testing/basic-project
-```
-
-```console
-npm install
-```
-
-## 2 - Execute tests
-
-```console
-node ./execute-test-plan.js
-```
-
-> You need node 13+
-
-It will execute all your tests.
-
-![basic project test execution terminal screenshot](./basic-project-terminal-screenshot.png)
-
-## 3 - Generate test coverage
-
-```console
-node ./execute-test-plan.js --cover
-```
-
-It will execute tests and generate `./coverage/` directory with files corresponding to your test coverage.
-
-### coverage/index.html
-
-You can explore your test coverage by opening `coverage/index.html` in your browser.
-
-![browsing coverage index](./coverage-index.png)
-![browsing coverage file](./coverage-file.png)
-
-### coverage/coverage.json
-
-It is your test plan coverage in JSON format. This format was created by [istanbul](https://github.com/gotwarlost/istanbul), a JS code coverage tool written in JS. This file exists to be provided to some code coverage tool.
-For instance you might want to send `coverage.json` to codecov.io inside continuous integration workflow.<br />
-— see [uploading coverage to codecov.io](./uploading-coverage-to-codecov.md)
-
 # Test execution
 
-Each test file will be executed in his own browser or node.js process.
-
-It reduces chances that a file execution have a side effect on an other file execution.
-For instance executing code with an infinite loop crashes browser or node.js process. In that scenario that file would not prevent other file executions.<br />
-It also allows to execute files concurrently increasing speed on machine with mutiple processors.
+Each test file will be executed in his own browser or node.js process. It reduces chances that a file execution have a side effect on an other file execution. For example if a test file creates an infinite loop, only this test file will be considered failing and other test can keep going.
 
 jsenv provides several test execution environments, called `runtime`.
 
@@ -546,3 +490,55 @@ const { coverageMap } = await executeTestPlan({
   }
 }
 ```
+
+# Test concrete example
+
+This part helps you to setup a project on your machine to play with jsenv testing.<br />
+You can also reuse the project file structure to understand how to integrate jsenv to write and run your own project tests.
+
+## 1 - Setup basic project
+
+```console
+git clone https://github.com/jsenv/jsenv-core.git
+```
+
+```console
+cd ./jsenv-core/docs/testing/basic-project
+```
+
+```console
+npm install
+```
+
+## 2 - Execute tests
+
+```console
+node ./execute-test-plan.js
+```
+
+> You need node 13+
+
+It will execute all your tests.
+
+![basic project test execution terminal screenshot](./basic-project-terminal-screenshot.png)
+
+## 3 - Generate test coverage
+
+```console
+node ./execute-test-plan.js --cover
+```
+
+It will execute tests and generate `./coverage/` directory with files corresponding to your test coverage.
+
+### coverage/index.html
+
+You can explore your test coverage by opening `coverage/index.html` in your browser.
+
+![browsing coverage index](./coverage-index.png)
+![browsing coverage file](./coverage-file.png)
+
+### coverage/coverage.json
+
+It is your test plan coverage in JSON format. This format was created by [istanbul](https://github.com/gotwarlost/istanbul), a JS code coverage tool written in JS. This file exists to be provided to some code coverage tool.
+For instance you might want to send `coverage.json` to codecov.io inside continuous integration workflow.<br />
+— see [uploading coverage to codecov.io](./uploading-coverage-to-codecov.md)
