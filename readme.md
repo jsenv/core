@@ -34,39 +34,7 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
 `@jsenv/core` provides a test runner: A function executing test files to know if some are failing. This function is called `executeTestPlan`. Check steps below to get an idea of its usage.
 
 <details>
-  <summary>1. Create a test file</summary>
-
-> In order to show code unrelated to a specific codebase the example below is testing `Math.max`. In reality you wouldn't test `Math.max`.
-
-`Math.max.test.js`
-
-```js
-const actual = Math.max(2, 4)
-const expected = 4
-if (actual !== expected) {
-  throw new Error(`Math.max(2, 4) should return ${expected}, got ${actual}`)
-}
-```
-
-`Math.max.test.html`
-
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf8" />
-    <link rel="icon" href="data:," />
-  </head>
-  <body>
-    <script type="module" src="./Math.max.test.js"></script>
-  </body>
-</html>
-```
-
-</details>
-
-<details>
-  <summary>2. Create an other file to execute your test</summary>
+  <summary>1. Create a file to execute your test</summary>
 
 > The code in file below translates into the following sentence: "Execute all files in my project that ends with `test.html` on Chrome and Firefox AND execute all files that ends with `test.js` on Node.js"
 
@@ -93,6 +61,38 @@ executeTestPlan({
     },
   },
 })
+```
+
+</details>
+
+<details>
+  <summary>2. Create a test file</summary>
+
+> In order to show code unrelated to a specific codebase the example below is testing `Math.max`. In reality you wouldn't test `Math.max`.
+
+`Math.max.test.js`
+
+```js
+const actual = Math.max(2, 4)
+const expected = 4
+if (actual !== expected) {
+  throw new Error(`Math.max(2, 4) should return ${expected}, got ${actual}`)
+}
+```
+
+`Math.max.test.html`
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <script type="module" src="./Math.max.test.js"></script>
+  </body>
+</html>
 ```
 
 </details>
