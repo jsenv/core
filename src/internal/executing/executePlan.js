@@ -35,6 +35,7 @@ export const executePlan = async (
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     logSummary,
+    measureGlobalDuration,
 
     // coverage parameters
     coverage,
@@ -105,6 +106,7 @@ export const executePlan = async (
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     logSummary,
+    measureGlobalDuration,
 
     coverage,
     coverageConfig,

@@ -36,6 +36,7 @@ export const executeConcurrently = async (
     logSummary,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
+    measureGlobalDuration = true,
 
     coverage,
     coverageConfig,
@@ -222,8 +223,10 @@ export const executeConcurrently = async (
   allExecutionDoneCancellationSource.cancel("all execution done")
 
   const summary = reportToSummary(report)
-  summary.startMs = startMs
-  summary.endMs = Date.now()
+  if (measureGlobalDuration) {
+    summary.startMs = startMs
+    summary.endMs = Date.now()
+  }
 
   if (logSummary) {
     logger.info(createSummaryLog(summary))

@@ -49,6 +49,7 @@ export const launchNode = async ({
   unhandledRejection,
   jsonModules,
   env,
+  commandLineOptions = [],
 
   remap = true,
   collectCoverage = false,
@@ -77,7 +78,7 @@ export const launchNode = async ({
   )
   await assertFilePresence(nodeControllableFileUrl)
 
-  const execArgv = await createChildExecArgv({
+  const childExecArgv = await createChildExecArgv({
     cancellationToken,
     debugPort,
     debugMode,
@@ -86,6 +87,7 @@ export const launchNode = async ({
     unhandledRejection,
     jsonModules,
   })
+  const execArgv = [...childExecArgv, ...commandLineOptions]
 
   env.COVERAGE_ENABLED = collectCoverage
   env.JSENV = true
