@@ -1,4 +1,4 @@
-import { magenta, yellow, red, green, ansiResetSequence } from "./ansi.js"
+import { setANSIColor, magenta, yellow, red, green } from "./ansi.js"
 import { formatDuration } from "./formatDuration.js"
 
 export const createSummaryLog = (summary) => `
@@ -14,7 +14,9 @@ const createSummaryMessage = ({
   erroredCount,
   completedCount,
 }) => {
-  if (executionCount === 0) return `0 execution.`
+  if (executionCount === 0) {
+    return `0 execution.`
+  }
 
   return `${executionCount} execution: ${createSummaryDetails({
     executionCount,
@@ -54,31 +56,31 @@ export const createSummaryDetails = ({
   })
 }
 
-const createAllDisconnectedDetails = () => `all ${magenta}disconnected${ansiResetSequence}`
+const createAllDisconnectedDetails = () => `all ${setANSIColor(`disconnected`, magenta)}`
 
-const createAllTimedoutDetails = () => `all ${yellow}timedout${ansiResetSequence}`
+const createAllTimedoutDetails = () => `all ${setANSIColor(`timed out`, yellow)}`
 
-const createAllErroredDetails = () => `all ${red}errored${ansiResetSequence}`
+const createAllErroredDetails = () => `all ${setANSIColor(`errored`, red)}`
 
-const createAllCompletedDetails = () => `all ${green}completed${ansiResetSequence}`
+const createAllCompletedDetails = () => `all ${setANSIColor(`completed`, green)}`
 
 const createMixedDetails = ({ disconnectedCount, timedoutCount, erroredCount, completedCount }) => {
   const parts = []
 
   if (disconnectedCount) {
-    parts.push(`${disconnectedCount} ${magenta}disconnected${ansiResetSequence}`)
+    parts.push(`${disconnectedCount} ${setANSIColor(`disconnected`, magenta)}`)
   }
 
   if (timedoutCount) {
-    parts.push(`${timedoutCount} ${yellow}timed out${ansiResetSequence}`)
+    parts.push(`${timedoutCount} ${setANSIColor(`timed out`, yellow)}`)
   }
 
   if (erroredCount) {
-    parts.push(`${erroredCount} ${red}errored${ansiResetSequence}`)
+    parts.push(`${erroredCount} ${setANSIColor(`errored`, red)}`)
   }
 
   if (completedCount) {
-    parts.push(`${completedCount} ${green}completed${ansiResetSequence}`)
+    parts.push(`${completedCount} ${setANSIColor(`completed`, green)}`)
   }
 
   return `${parts.join(", ")}`

@@ -50,6 +50,9 @@ export const launchNode = async ({
   jsonModules,
   env,
   commandLineOptions = [],
+  stdin = "pipe",
+  stdout = "pipe",
+  stderr = "pipe",
 
   remap = true,
   collectCoverage = false,
@@ -95,9 +98,19 @@ export const launchNode = async ({
   const childProcess = forkChildProcess(urlToFileSystemPath(nodeControllableFileUrl), {
     execArgv,
     // silent: true
-    stdio: "pipe",
+    stdio: ["pipe", "pipe", "pipe", "ipc"],
     env,
   })
+  // if we passe stream, pipe them https://github.com/sindresorhus/execa/issues/81
+  if (typeof stdin === "object") {
+    stdin.pipe(childProcess.stdin)
+  }
+  if (typeof stdout === "object") {
+    childProcess.stdout.pipe(stdout)
+  }
+  if (typeof stderr === "object") {
+    childProcess.stderr.pipe(stderr)
+  }
   logger.debug(
     `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(nodeControllableFileUrl)}`,
   )
