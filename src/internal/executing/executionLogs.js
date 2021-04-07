@@ -1,4 +1,4 @@
-import { magenta, cross, yellow, green, checkmark, grey, red, ansiResetSequence } from "./ansi.js"
+import { magenta, cross, yellow, green, checkmark, grey, red, setANSIColor } from "./ansi.js"
 import { formatDuration } from "./formatDuration.js"
 import { createSummaryDetails } from "./createSummaryLog.js"
 
@@ -25,6 +25,11 @@ export const createExecutionResultLog = (
   },
 ) => {
   const executionNumber = executionIndex + 1
+  const description = descriptionFormatters[status]({
+    executionNumber,
+    executionCount,
+    allocatedMs,
+  })
   const summary = `(${createSummaryDetails({
     executionCount: executionNumber,
     disconnectedCount,
@@ -33,50 +38,43 @@ export const createExecutionResultLog = (
     completedCount,
   })})`
 
+  if (completedExecutionLogAbbreviation && status === "completed") {
+    return `
+${description} ${summary}.`
+  }
+
   const runtime = `${runtimeName}/${runtimeVersion}`
-
-  if (status === "completed") {
-    if (completedExecutionLogAbbreviation) {
-      return `
-${green}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.`
-    }
-
-    return `
-${green}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.
-file: ${fileRelativeUrl}
-runtime: ${runtime}${appendDuration({
-      startMs,
-      endMs,
-    })}${appendConsole(consoleCalls)}${appendError(error)}`
-  }
-
-  if (status === "disconnected") {
-    return `
-${magenta}${cross} execution ${executionNumber} of ${executionCount} disconnected${ansiResetSequence} ${summary}.
-file: ${fileRelativeUrl}
-runtime: ${runtime}${appendDuration({
-      startMs,
-      endMs,
-    })}${appendConsole(consoleCalls)}${appendError(error)}`
-  }
-
-  if (status === "timedout") {
-    return `
-${yellow}${cross} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms${ansiResetSequence} ${summary}.
-file: ${fileRelativeUrl}
-runtime: ${runtime}${appendDuration({
-      startMs,
-      endMs,
-    })}${appendConsole(consoleCalls)}${appendError(error)}`
-  }
-
   return `
-${red}${cross} execution ${executionNumber} of ${executionCount} error${ansiResetSequence} ${summary}.
+${description} ${summary}.
 file: ${fileRelativeUrl}
 runtime: ${runtime}${appendDuration({
     startMs,
     endMs,
   })}${appendConsole(consoleCalls)}${appendError(error)}`
+}
+
+const descriptionFormatters = {
+  disconnected: ({ executionNumber, executionCount }) => {
+    return setANSIColor(
+      `${cross} execution ${executionNumber} of ${executionCount} disconnected`,
+      magenta,
+    )
+  },
+  timedout: ({ executionNumber, allocatedMs, executionCount }) => {
+    return setANSIColor(
+      `${cross} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms`,
+      yellow,
+    )
+  },
+  errored: ({ executionNumber, executionCount }) => {
+    return setANSIColor(`${cross} execution ${executionNumber} of ${executionCount} error`, red)
+  },
+  completed: ({ executionNumber, executionCount }) => {
+    return setANSIColor(
+      `${checkmark} execution ${executionNumber} of ${executionCount} completed`,
+      green,
+    )
+  },
 }
 
 const appendDuration = ({ endMs, startMs }) => {
@@ -97,9 +95,9 @@ const appendConsole = (consoleCalls) => {
   if (consoleOutputTrimmed === "") return ""
 
   return `
-${grey}-------- console --------${ansiResetSequence}
+${setANSIColor(`-------- console --------`, grey)}
 ${consoleOutputTrimmed}
-${grey}-------------------------${ansiResetSequence}`
+${setANSIColor(`-------------------------`, grey)}`
 }
 
 const appendError = (error) => {

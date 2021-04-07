@@ -54,6 +54,7 @@ export const executeTestPlan = async ({
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   logSummary = true,
+  measureGlobalDuration = true,
   updateProcessExitCode = true,
 
   coverage = process.argv.includes("--cover") || process.argv.includes("--coverage"),
@@ -161,6 +162,7 @@ export const executeTestPlan = async ({
       completedExecutionLogMerging,
       completedExecutionLogAbbreviation,
       logSummary,
+      measureGlobalDuration,
 
       coverage,
       coverageConfig,
