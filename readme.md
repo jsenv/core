@@ -569,6 +569,16 @@ See also
 
 # About
 
+## When to use it
+
+Amongst other use cases, the ease of use and flexibility of jsenv makes it a great tool to start and learn web development.
+
+Firstly because jsenv is a tool that was built to run raw js, html and css. It starts from the **simplest form of coding**. If a browser can run your code, so can jsenv without configuration or things to learn. There is no magic that will bite you right away or later. Jsenv can be configured to add react, typescript, whatever you need, later, on demand.
+
+Secondly because jsenv is compatible with the latest standards. Even some that are not yet mature in the js ecosystem, such as import maps. This will makes you at ease with technologies that will be part of the ecosystem once you are confortable with coding.
+
+To sum up, jsenv focuses on simplicity and flexibility making it a perfect candidate to learn the ecosystem gradually. In the end, you might even consider sticking to vanilla js if that makes sense for you and your project.
+
 ## Main dependencies
 
 An overview of the main dependencies used by `@jsenv/core`.
