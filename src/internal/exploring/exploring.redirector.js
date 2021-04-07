@@ -35,7 +35,14 @@ const browserSupportsAllFeatures = async () => {
   // start testing importmap support first and not in paralell
   // so that there is not module script loaded beore importmap is injected
   // it would log an error in chrome console and return undefined
-  const hasImportmap = await supportsImportmap()
+  const hasImportmap = await supportsImportmap({
+    // at this stage we won't know if the html file will use
+    // an importmap or not and if that importmap is inline or specified with an src
+    // so we test importmap support and the remote one
+    // because chrome supports inline but not remote
+    // https://github.com/WICG/import-maps/issues/235
+    remote: true,
+  })
   if (!hasImportmap) {
     return false
   }
@@ -53,7 +60,7 @@ const browserSupportsAllFeatures = async () => {
   return true
 }
 
-const supportsImportmap = async () => {
+const supportsImportmap = async ({ remote = true } = {}) => {
   const specifier = jsToTextUrl(`export default false`)
 
   const importMap = {
@@ -65,9 +72,12 @@ const supportsImportmap = async () => {
   const importmapScript = document.createElement("script")
   const importmapString = JSON.stringify(importMap, null, "  ")
   importmapScript.type = "importmap"
-  // test an external importmap
-  // https://github.com/WICG/import-maps/issues/235
-  importmapScript.src = `data:application/json;base64,${window.btoa(importmapString)}`
+  if (remote) {
+    importmapScript.src = `data:application/json;base64,${window.btoa(importmapString)}`
+  } else {
+    importmapScript.textContent = importmapString
+  }
+
   document.body.appendChild(importmapScript)
 
   const scriptModule = document.createElement("script")
