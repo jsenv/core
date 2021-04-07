@@ -587,7 +587,14 @@ An overview of the main dependencies used by `@jsenv/core`.
 
 The name `jsenv` stands for JavaScript environments. This is because the original purpose of `jsenv` was to bring closer two JavaScript runtimes: web browsers and Node.js. This aspect of `jsenv` is not highlighted in the documentation but it exists.
 
-Maybe `jsenv` should be written `JSEnv`? It's too boring to hold `shift` on keyboard while typing `JSE`, then release `shift`, then type `nv`, so it's a no.
+Maybe `jsenv` should be written `JSEnv`? That makes typing the name too complex:
+
+1. Hold `shift` on keyboard
+2. While holding `shift`, type `JSE`
+3. Release `shift`
+4. Finally, type `nv`.
+
+No one should have to do that, the prefered syntax is `jsenv`.
 
 ## Logo
 
