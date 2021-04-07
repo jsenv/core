@@ -17,6 +17,12 @@ executeTestPlan({
         allocatedMs: 180 * 1000,
       },
     },
+    "test/__internal__/executeTestPlan/**/*.test.js": {
+      node: {
+        launch: launchNode,
+        allocatedMs: 180 * 1000,
+      },
+    },
     "test/**/execute-basic/*.browser.test.js": {
       node: {
         launch: launchNode,
