@@ -625,7 +625,7 @@ The logo is composed by the name at the center and two circles orbiting around i
 
 - [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa): GitHub repository template for a progressive web application.
 - [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-node-package): GitHub repository template for node package.
-- [@jsenv/assert](https://github.com/jsenv/jsenv-assert): Test anything using one assertion.
+- [@jsenv/assert](https://github.com/jsenv/jsenv-assert): Test anything using one assertion. This library can be used on browsers and Node.js so feel free to reuse file structure to create your own library meant to run in browsers AND Node.js.
 - [@jsenv/sass](./packages/jsenv-sass): Add support for .scss and .sass in jsenv.
 - [@jsenv/vue](./packages/jsenv-vue): Add support for .vue in jsenv.
 - [Jsenv compile server](./docs/jsenv-compile-server.md): Document how jsenv works internally to compile on demand with a filesystem cache.
