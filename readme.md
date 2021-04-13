@@ -623,10 +623,10 @@ The logo is composed by the name at the center and two circles orbiting around i
 
 # See also
 
-- [Jsenv compile server](./docs/jsenv-compile-server.md): Document how jsenv works internally to compile on demand with a filesystem cache.
-- [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05): Article presenting a straightforward testing experience and proposing jsenv to obtain it.
 - [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa): GitHub repository template for a progressive web application.
-- [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-pwa): GitHub repository template for node package.
+- [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-node-package): GitHub repository template for node package.
 - [@jsenv/assert](https://github.com/jsenv/jsenv-assert): Test anything using one assertion.
 - [@jsenv/sass](./packages/jsenv-sass): Add support for .scss and .sass in jsenv.
 - [@jsenv/vue](./packages/jsenv-vue): Add support for .vue in jsenv.
+- [Jsenv compile server](./docs/jsenv-compile-server.md): Document how jsenv works internally to compile on demand with a filesystem cache.
+- [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05): Article presenting a straightforward testing experience and proposing jsenv to obtain it.
