@@ -22,14 +22,14 @@ export const createNodeRuntime = async ({
   const envUrl = String(new URL("env.json", outDirectoryUrl))
   const [groupMap, envJson] = await Promise.all([importJson(groupMapUrl), importJson(envUrl)])
 
-  const envAndArgs = {
-    ...envJson,
-    importMapFileRelativeUrl,
-    importDefaultExtension,
-  }
-
-  importMapFileRelativeUrl = envAndArgs.importMapFileRelativeUrl
-  importDefaultExtension = envAndArgs.importDefaultExtension
+  importMapFileRelativeUrl =
+    typeof importMapFileRelativeUrl === "undefined"
+      ? envJson.importMapFileRelativeUrl
+      : importMapFileRelativeUrl
+  importDefaultExtension =
+    typeof importDefaultExtension === "undefined"
+      ? envJson.importDefaultExtension
+      : importDefaultExtension
 
   const compileId = computeCompileIdFromGroupId({
     groupId: resolveNodeGroup(groupMap),
