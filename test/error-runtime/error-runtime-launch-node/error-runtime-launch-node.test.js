@@ -22,7 +22,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 
-const actual = await launchAndExecute({
+const result = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
   executionLogLevel: "off",
   launch: (options) =>
@@ -35,21 +35,20 @@ const actual = await launchAndExecute({
   fileRelativeUrl,
   captureConsole: true,
 })
+const actual = {
+  status: result.status,
+  error: result.error,
+  consoleCallsContainsString: result.consoleCalls.some(({ text }) =>
+    text.includes("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
+  ),
+}
 const expected = {
   status: "errored",
   error: Object.assign(new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"), {
-    filename: actual.error.filename,
-    lineno: actual.error.lineno,
-    columnno: actual.error.columnno,
+    filename: result.error.filename,
+    lineno: result.error.lineno,
+    columnno: result.error.columnno,
   }),
-  consoleCalls: actual.consoleCalls,
+  consoleCallsContainsString: false,
 }
 assert({ actual, expected })
-
-{
-  const actual = actual.consoleCalls.some(({ text }) =>
-    text.includes("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
-  )
-  const expected = false
-  assert({ actual, expected })
-}
