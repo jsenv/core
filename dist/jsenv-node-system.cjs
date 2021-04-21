@@ -2660,17 +2660,19 @@ function _finallyRethrows(body, finalizer) {
 var createNodeRuntime = _async$1(function (_ref) {
   var projectDirectoryUrl = _ref.projectDirectoryUrl,
       compileServerOrigin = _ref.compileServerOrigin,
-      outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
+      outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
+      importMapFileRelativeUrl = _ref.importMapFileRelativeUrl,
+      importDefaultExtension = _ref.importDefaultExtension;
   var outDirectoryUrl = "".concat(projectDirectoryUrl).concat(outDirectoryRelativeUrl);
   var groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl));
   var envUrl = String(new URL("env.json", outDirectoryUrl));
   return _await$1(Promise.all([importJson(groupMapUrl), importJson(envUrl)]), function (_ref2) {
     var _ref3 = _slicedToArray(_ref2, 2),
         groupMap = _ref3[0],
-        _ref3$ = _ref3[1],
-        importMapFileRelativeUrl = _ref3$.importMapFileRelativeUrl,
-        importDefaultExtension = _ref3$.importDefaultExtension;
+        envJson = _ref3[1];
 
+    importMapFileRelativeUrl = typeof importMapFileRelativeUrl === "undefined" ? envJson.importMapFileRelativeUrl : importMapFileRelativeUrl;
+    importDefaultExtension = typeof importDefaultExtension === "undefined" ? envJson.importDefaultExtension : importDefaultExtension;
     var compileId = computeCompileIdFromGroupId({
       groupId: resolveNodeGroup(groupMap),
       groupMap: groupMap
@@ -2819,13 +2821,17 @@ var execute = _async(function (_ref) {
       fileRelativeUrl = _ref.fileRelativeUrl,
       compileServerOrigin = _ref.compileServerOrigin,
       outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
+      importMapFileRelativeUrl = _ref.importMapFileRelativeUrl,
+      importDefaultExtension = _ref.importDefaultExtension,
       executionId = _ref.executionId,
       _ref$errorExposureInC = _ref.errorExposureInConsole,
       errorExposureInConsole = _ref$errorExposureInC === void 0 ? false : _ref$errorExposureInC;
   return _await(nodeRuntime.create({
     projectDirectoryUrl: projectDirectoryUrl,
     compileServerOrigin: compileServerOrigin,
-    outDirectoryRelativeUrl: outDirectoryRelativeUrl
+    outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+    importMapFileRelativeUrl: importMapFileRelativeUrl,
+    importDefaultExtension: importDefaultExtension
   }), function (_ref2) {
     var compileDirectoryRelativeUrl = _ref2.compileDirectoryRelativeUrl,
         executeFile = _ref2.executeFile;

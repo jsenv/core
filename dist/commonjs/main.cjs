@@ -10,8 +10,10 @@ var server = require('@jsenv/server');
 var module$1 = require('module');
 var path = require('path');
 var importMap = require('@jsenv/import-map');
+var isSpecifierForNodeCoreModule_js = require('@jsenv/import-map/src/isSpecifierForNodeCoreModule.js');
 var https = require('https');
 var crypto = require('crypto');
+var estreeWalker = require('estree-walker');
 var os = require('os');
 var readline = require('readline');
 var nodeSignals = require('@jsenv/node-signals');
@@ -719,7 +721,7 @@ const computeBabelPluginMapForRuntime = ({
 
   const babelPluginMapForRuntime = {};
   Object.keys(babelPluginMap).forEach(key => {
-    const compatible = runtimeIsCompatibleWithFeature({
+    const compatible = runtimeIsCompatibleWithFeature$1({
       runtimeName,
       runtimeVersion,
       runtimeCompatMap: key in babelPluginCompatMap ? babelPluginCompatMap[key] : {}
@@ -732,12 +734,12 @@ const computeBabelPluginMapForRuntime = ({
   return babelPluginMapForRuntime;
 };
 
-const runtimeIsCompatibleWithFeature = ({
+const runtimeIsCompatibleWithFeature$1 = ({
   runtimeName,
   runtimeVersion,
   runtimeCompatMap
 }) => {
-  const runtimeCompatibleVersion = computeRuntimeCompatibleVersion({
+  const runtimeCompatibleVersion = computeRuntimeCompatibleVersion$1({
     runtimeCompatMap,
     runtimeName
   });
@@ -745,7 +747,7 @@ const runtimeIsCompatibleWithFeature = ({
   return highestVersion === runtimeVersion;
 };
 
-const computeRuntimeCompatibleVersion = ({
+const computeRuntimeCompatibleVersion$1 = ({
   runtimeCompatMap,
   runtimeName
 }) => {
@@ -776,7 +778,7 @@ const computeJsenvPluginMapForRuntime = ({
 
   const jsenvPluginMapForRuntime = {};
   Object.keys(jsenvPluginMap).forEach(key => {
-    const compatible = runtimeIsCompatibleWithFeature$1({
+    const compatible = runtimeIsCompatibleWithFeature({
       runtimeName,
       runtimeVersion,
       featureCompat: key in jsenvPluginCompatMap$1 ? jsenvPluginCompatMap$1[key] : {}
@@ -789,12 +791,12 @@ const computeJsenvPluginMapForRuntime = ({
   return jsenvPluginMapForRuntime;
 };
 
-const runtimeIsCompatibleWithFeature$1 = ({
+const runtimeIsCompatibleWithFeature = ({
   runtimeName,
   runtimeVersion,
   featureCompat
 }) => {
-  const runtimeCompatibleVersion = computeRuntimeCompatibleVersion$1({
+  const runtimeCompatibleVersion = computeRuntimeCompatibleVersion({
     featureCompat,
     runtimeName
   });
@@ -802,7 +804,7 @@ const runtimeIsCompatibleWithFeature$1 = ({
   return highestVersion === runtimeVersion;
 };
 
-const computeRuntimeCompatibleVersion$1 = ({
+const computeRuntimeCompatibleVersion = ({
   featureCompat,
   runtimeName
 }) => {
@@ -1482,7 +1484,7 @@ const jsenvNodeSystemUrl = util.resolveUrl(jsenvNodeSystemRelativeUrl, jsenvCore
 const jsenvNodeSystemBuildUrl = util.resolveUrl(jsenvNodeSystemBuildRelativeUrl, jsenvCoreDirectoryUrl);
 const jsenvBrowserSystemRelativeUrl = "./src/internal/browser-launcher/jsenv-browser-system.js";
 const jsenvBrowserSystemBuildRelativeUrl = "./dist/jsenv-browser-system.js";
-const jsenvBrowserSystemUrl = util.resolveUrl(jsenvBrowserSystemRelativeUrl, jsenvCoreDirectoryUrl);
+util.resolveUrl(jsenvBrowserSystemRelativeUrl, jsenvCoreDirectoryUrl);
 const jsenvBrowserSystemBuildUrl = util.resolveUrl(jsenvBrowserSystemBuildRelativeUrl, jsenvCoreDirectoryUrl);
 const sourcemapMainFileUrl = util.fileSystemPathToUrl(require$1.resolve("source-map/dist/source-map.js"));
 const sourcemapMappingFileUrl = util.fileSystemPathToUrl(require$1.resolve("source-map/lib/mappings.wasm")); // Exploring redirection
@@ -1491,19 +1493,19 @@ const sourcemapMappingFileUrl = util.fileSystemPathToUrl(require$1.resolve("sour
 const jsenvExploringRedirectorHtmlUrl = util.resolveUrl("./src/internal/exploring/exploring.redirector.html", jsenvCoreDirectoryUrl);
 const jsenvExploringRedirectorJsRelativeUrl = "./src/internal/exploring/exploring.redirector.js";
 const jsenvExploringRedirectorJsBuildRelativeUrl = "./dist/jsenv-exploring-redirector.js";
-const jsenvExploringRedirectorJsUrl = util.resolveUrl(jsenvExploringRedirectorJsRelativeUrl, jsenvCoreDirectoryUrl);
+util.resolveUrl(jsenvExploringRedirectorJsRelativeUrl, jsenvCoreDirectoryUrl);
 const jsenvExploringRedirectorJsBuildUrl = util.resolveUrl(jsenvExploringRedirectorJsBuildRelativeUrl, jsenvCoreDirectoryUrl); // Exploring index and toolbar
-
-const jsenvExploringHtmlUrl = util.resolveUrl("./src/internal/exploring/exploring.html", jsenvCoreDirectoryUrl);
+const jsenvExploringIndexJsBuildUrl = util.resolveUrl("./dist/jsenv-exploring-index.js", jsenvCoreDirectoryUrl);
+const jsenvExploringIndexHtmlUrl = util.resolveUrl("./src/internal/exploring/exploring.html", jsenvCoreDirectoryUrl);
 const jsenvToolbarHtmlUrl = util.resolveUrl("./src/internal/toolbar/toolbar.html", jsenvCoreDirectoryUrl);
 const jsenvToolbarInjectorBuildRelativeUrl = "./dist/jsenv-toolbar-injector.js";
 const jsenvToolbarInjectorBuildUrl = util.resolveUrl(jsenvToolbarInjectorBuildRelativeUrl, jsenvCoreDirectoryUrl);
 const jsenvToolbarJsRelativeUrl = "./src/internal/toolbar/toolbar.main.js";
 const jsenvToolbarJsBuildRelativeUrl = "dist/jsenv-toolbar.js";
-const jsenvToolbarJsUrl = util.resolveUrl(jsenvToolbarJsRelativeUrl, jsenvCoreDirectoryUrl);
+util.resolveUrl(jsenvToolbarJsRelativeUrl, jsenvCoreDirectoryUrl);
 const jsenvToolbarJsBuildUrl = util.resolveUrl(jsenvToolbarJsBuildRelativeUrl, jsenvCoreDirectoryUrl);
-const jsenvImportMetaResolveGlobalUrl = util.resolveUrl("helpers/import-meta-resolve/import-meta-resolve-global.js", jsenvCoreDirectoryUrl);
-const jsenvImportMetaResolveCommonjsUrl = util.resolveUrl("helpers/import-meta-resolve/import-meta-resolve-commonjs.js", jsenvCoreDirectoryUrl);
+util.resolveUrl("helpers/import-meta-resolve/import-meta-resolve-global.js", jsenvCoreDirectoryUrl);
+util.resolveUrl("helpers/import-meta-resolve/import-meta-resolve-commonjs.js", jsenvCoreDirectoryUrl);
 
 // and in our case we are talking about a dev server
 // in other words it's not super important to handle concurrent connections
@@ -2034,7 +2036,7 @@ const getOrGenerateCompiledFile = async ({
   cacheInterProcessLocking = false,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
-  fileContentFallbackIfNotFound,
+  fileContentFallback,
   ifEtagMatch,
   ifModifiedSinceDate,
   compile
@@ -2081,7 +2083,7 @@ const getOrGenerateCompiledFile = async ({
       originalFileUrl,
       compiledFileUrl,
       compile,
-      fileContentFallbackIfNotFound,
+      fileContentFallback,
       ifEtagMatch,
       ifModifiedSinceDate,
       useFilesystemAsCache,
@@ -2123,7 +2125,7 @@ const computeCompileReport = async ({
   originalFileUrl,
   compiledFileUrl,
   compile,
-  fileContentFallbackIfNotFound,
+  fileContentFallback,
   ifEtagMatch,
   ifModifiedSinceDate,
   useFilesystemAsCache,
@@ -2146,7 +2148,7 @@ const computeCompileReport = async ({
     const [compileTiming, compileResult] = await server.timeFunction("compile", () => callCompile({
       logger,
       originalFileUrl,
-      fileContentFallbackIfNotFound,
+      fileContentFallback,
       compile
     }));
     return {
@@ -2173,7 +2175,7 @@ const computeCompileReport = async ({
     const [compileTiming, compileResult] = await server.timeFunction("compile", () => callCompile({
       logger,
       originalFileUrl,
-      fileContentFallbackIfNotFound,
+      fileContentFallback,
       compile
     }));
     return {
@@ -2217,13 +2219,13 @@ const computeCompileReport = async ({
 const callCompile = async ({
   logger,
   originalFileUrl,
-  fileContentFallbackIfNotFound,
+  fileContentFallback,
   compile
 }) => {
   logger.debug(`compile ${originalFileUrl}`);
   const compileArgs = compile.length === 0 ? [] : await getArgumentsForCompile({
     originalFileUrl,
-    fileContentFallbackIfNotFound
+    fileContentFallback
   });
   const {
     sources = [],
@@ -2256,16 +2258,16 @@ const callCompile = async ({
 
 const getArgumentsForCompile = async ({
   originalFileUrl,
-  fileContentFallbackIfNotFound
+  fileContentFallback
 }) => {
   let fileContent;
 
-  if (fileContentFallbackIfNotFound) {
+  if (fileContentFallback) {
     try {
       fileContent = await readFileContent(originalFileUrl);
     } catch (e) {
       if (e.code === "ENOENT") {
-        fileContent = fileContentFallbackIfNotFound;
+        fileContent = await fileContentFallback();
       } else {
         throw e;
       }
@@ -2329,7 +2331,7 @@ const compileFile = async ({
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
-  fileContentFallbackIfNotFound,
+  fileContentFallback,
   projectFileRequestedCallback = () => {},
   request,
   compile,
@@ -2382,7 +2384,7 @@ const compileFile = async ({
       projectDirectoryUrl,
       originalFileUrl,
       compiledFileUrl,
-      fileContentFallbackIfNotFound,
+      fileContentFallback,
       ifEtagMatch,
       ifModifiedSinceDate,
       writeOnFilesystem,
@@ -2865,7 +2867,7 @@ const minimalBabelPluginArray = [syntaxDynamicImport, syntaxImportMeta, syntaxNu
 
 const {
   addNamespace,
-  addDefault,
+  addDefault: addDefault$1,
   addNamed
 } = require$1("@babel/helper-module-imports");
 
@@ -2967,7 +2969,7 @@ const babelPluginTransformImportMeta = (api, pluginOptions) => {
               } else if (name) {
                 importAst = addNamed(programPath, name, from);
               } else {
-                importAst = addDefault(programPath, from, {
+                importAst = addDefault$1(programPath, from, {
                   nameHint
                 });
               }
@@ -3083,11 +3085,9 @@ const ensureGlobalThisImportBabelPlugin = (api, options) => {
 
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-core/src/tools/build-external-helpers.js
 
-const {
-  list
-} = require$1("@babel/helpers");
+require$1("@babel/helpers");
 
-const babelHelperNameInsideJsenvCoreArray = ["applyDecoratedDescriptor", "arrayLikeToArray", "arrayWithHoles", "arrayWithoutHoles", "assertThisInitialized", "AsyncGenerator", "asyncGeneratorDelegate", "asyncIterator", "asyncToGenerator", "awaitAsyncGenerator", "AwaitValue", "classCallCheck", "classNameTDZError", "classPrivateFieldDestructureSet", "classPrivateFieldGet", "classPrivateFieldLooseBase", "classPrivateFieldLooseKey", "classPrivateFieldSet", "classPrivateMethodGet", "classPrivateMethodSet", "classStaticPrivateFieldSpecGet", "classStaticPrivateFieldSpecSet", "classStaticPrivateMethodGet", "classStaticPrivateMethodSet", "construct", "createClass", "createForOfIteratorHelper", "createForOfIteratorHelperLoose", "createSuper", "decorate", "defaults", "defineEnumerableProperties", "defineProperty", "extends", "get", "getPrototypeOf", "inherits", "inheritsLoose", "initializerDefineProperty", "initializerWarningHelper", "instanceof", "interopRequireDefault", "interopRequireWildcard", "isNativeFunction", "isNativeReflectConstruct", "iterableToArray", "iterableToArrayLimit", "iterableToArrayLimitLoose", "jsx", "newArrowCheck", "nonIterableRest", "nonIterableSpread", "objectDestructuringEmpty", "objectSpread", "objectSpread2", "objectWithoutProperties", "objectWithoutPropertiesLoose", "possibleConstructorReturn", "readOnlyError", "set", "setPrototypeOf", "skipFirstGeneratorNext", "slicedToArray", "slicedToArrayLoose", "superPropBase", "taggedTemplateLiteral", "taggedTemplateLiteralLoose", "tdz", "temporalRef", "temporalUndefined", "toArray", "toConsumableArray", "toPrimitive", "toPropertyKey", "typeof", "unsupportedIterableToArray", "wrapAsyncGenerator", "wrapNativeSuper", "wrapRegExp"];
+const babelHelperNameInsideJsenvCoreArray = ["applyDecoratedDescriptor", "arrayLikeToArray", "arrayWithHoles", "arrayWithoutHoles", "assertThisInitialized", "AsyncGenerator", "asyncGeneratorDelegate", "asyncIterator", "asyncToGenerator", "awaitAsyncGenerator", "AwaitValue", "classApplyDescriptorDestructureSet", "classApplyDescriptorGet", "classApplyDescriptorSet", "classCallCheck", "classCheckPrivateStaticAccess", "classCheckPrivateStaticFieldDescriptor", "classExtractFieldDescriptor", "classNameTDZError", "classPrivateFieldDestructureSet", "classPrivateFieldGet", "classPrivateFieldLooseBase", "classPrivateFieldLooseKey", "classPrivateFieldSet", "classPrivateMethodGet", "classPrivateMethodSet", "classStaticPrivateFieldSpecGet", "classStaticPrivateFieldSpecSet", "classStaticPrivateMethodGet", "classStaticPrivateMethodSet", "construct", "createClass", "createForOfIteratorHelper", "createForOfIteratorHelperLoose", "createSuper", "decorate", "defaults", "defineEnumerableProperties", "defineProperty", "extends", "get", "getPrototypeOf", "inherits", "inheritsLoose", "initializerDefineProperty", "initializerWarningHelper", "instanceof", "interopRequireDefault", "interopRequireWildcard", "isNativeFunction", "isNativeReflectConstruct", "iterableToArray", "iterableToArrayLimit", "iterableToArrayLimitLoose", "jsx", "newArrowCheck", "nonIterableRest", "nonIterableSpread", "objectDestructuringEmpty", "objectSpread", "objectSpread2", "objectWithoutProperties", "objectWithoutPropertiesLoose", "possibleConstructorReturn", "readOnlyError", "set", "setPrototypeOf", "skipFirstGeneratorNext", "slicedToArray", "slicedToArrayLoose", "superPropBase", "taggedTemplateLiteral", "taggedTemplateLiteralLoose", "tdz", "temporalRef", "temporalUndefined", "toArray", "toConsumableArray", "toPrimitive", "toPropertyKey", "typeof", "unsupportedIterableToArray", "wrapAsyncGenerator", "wrapNativeSuper", "wrapRegExp", "writeOnlyError"];
 const babelHelperScope = "@jsenv/core/helpers/babel/"; // maybe we can put back / in front of .jsenv here because we will
 // "redirect" or at least transform everything inside .jsenv
 // not only everything inside .dist
@@ -3118,7 +3118,7 @@ const filePathToBabelHelperName = filePath => {
 };
 
 const {
-  addDefault: addDefault$1
+  addDefault
 } = require$1("@babel/helper-module-imports"); // named import approach found here:
 // https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
 // for reference this is how it's done to reference
@@ -3150,7 +3150,7 @@ const transformBabelHelperToImportBabelPlugin = api => {
           return undefined;
         }
 
-        const helper = addDefault$1(file.path, babelHelperImportSpecifier, {
+        const helper = addDefault(file.path, babelHelperImportSpecifier, {
           nameHint: `_${name}`
         });
         cachedHelpers[name] = helper;
@@ -4328,7 +4328,7 @@ const imageHrefVisitor = (image, {
   return ({
     getReferenceUrlRelativeToImporter
   }) => {
-    const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter);
+    const hrefNewValue = referenceToUrl$1(hrefReference, getReferenceUrlRelativeToImporter);
     hrefAttribute.value = hrefNewValue;
   };
 };
@@ -4358,12 +4358,12 @@ const useHrefVisitor = (use, {
   return ({
     getReferenceUrlRelativeToImporter
   }) => {
-    const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter);
+    const hrefNewValue = referenceToUrl$1(hrefReference, getReferenceUrlRelativeToImporter);
     hrefAttribute.value = `${hrefNewValue}${hash}`;
   };
 };
 
-const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
+const referenceToUrl$1 = (reference, getReferenceUrlRelativeToImporter) => {
   const {
     targetIsInline
   } = reference.target;
@@ -4546,7 +4546,7 @@ const moduleScriptSrcVisitor = (script, {
     }
 
     const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference);
-    const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter);
+    const relativeUrlNotation = ensureRelativeUrlNotation$1(urlRelativeToImporter);
     srcAttribute.value = relativeUrlNotation;
   };
 };
@@ -4594,7 +4594,7 @@ const moduleScriptTextNodeVisitor = (script, {
     }
 
     const urlRelativeToImporter = getReferenceUrlRelativeToImporter(jsReference);
-    const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter);
+    const relativeUrlNotation = ensureRelativeUrlNotation$1(urlRelativeToImporter);
     removeHtmlNodeText(script);
     addHtmlNodeAttribute(script, {
       name: "src",
@@ -4845,7 +4845,7 @@ const imgSrcVisitor = (img, {
   return ({
     getReferenceUrlRelativeToImporter
   }) => {
-    const srcNewValue = referenceToUrl$1(srcReference, getReferenceUrlRelativeToImporter);
+    const srcNewValue = referenceToUrl(srcReference, getReferenceUrlRelativeToImporter);
     srcAttribute.value = srcNewValue;
   };
 };
@@ -4876,7 +4876,7 @@ const srcsetVisitor = (htmlNode, {
   }) => {
     srcsetParts.forEach((srcsetPart, index) => {
       const reference = srcsetPartsReferences[index];
-      srcsetPart.specifier = referenceToUrl$1(reference, getReferenceUrlRelativeToImporter);
+      srcsetPart.specifier = referenceToUrl(reference, getReferenceUrlRelativeToImporter);
     });
     const srcsetNewValue = stringifySrcset(srcsetParts);
     srcsetAttribute.value = srcsetNewValue;
@@ -4901,12 +4901,12 @@ const sourceSrcVisitor = (source, {
   return ({
     getReferenceUrlRelativeToImporter
   }) => {
-    const srcNewValue = referenceToUrl$1(srcReference, getReferenceUrlRelativeToImporter);
+    const srcNewValue = referenceToUrl(srcReference, getReferenceUrlRelativeToImporter);
     srcAttribute.value = srcNewValue;
   };
 };
 
-const referenceToUrl$1 = (reference, getReferenceUrlRelativeToImporter) => {
+const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
   const {
     targetIsInline
   } = reference.target;
@@ -4919,7 +4919,7 @@ const referenceToUrl$1 = (reference, getReferenceUrlRelativeToImporter) => {
 }; // otherwise systemjs handle it as a bare import
 
 
-const ensureRelativeUrlNotation = relativeUrl => {
+const ensureRelativeUrlNotation$1 = relativeUrl => {
   if (relativeUrl.startsWith("../")) {
     return relativeUrl;
   }
@@ -5745,6 +5745,10 @@ const parseTarget = (target, notifiers, {
   return null;
 };
 
+const {
+  supportsColor
+} = require$1("supports-color");
+
 const cross = "☓"; // "\u2613"
 
 const checkmark = "✔"; // "\u2714"
@@ -5755,8 +5759,10 @@ const red = "\x1b[31m";
 const green = "\x1b[32m";
 const grey = "\x1b[39m";
 const ansiResetSequence = "\x1b[0m";
+const processSupportsBasicColor = supportsColor(process.stdout).hasBasic;
+const setANSIColor = processSupportsBasicColor ? (text, color) => `${color}${text}${ansiResetSequence}` : text => text;
 
-// https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/css-syntax-error.js#L43
+// consider switching to https://babeljs.io/docs/en/babel-code-frame
 const showSourceLocation = (source, {
   line,
   column,
@@ -5769,9 +5775,9 @@ const showSourceLocation = (source, {
   let aside = string => string;
 
   if (color) {
-    mark = string => `${red}${string}${ansiResetSequence}`;
+    mark = string => setANSIColor(string, red);
 
-    aside = string => `${grey}${string}${ansiResetSequence}`;
+    aside = string => setANSIColor(string, grey);
   }
 
   const lines = source.split(/\r?\n/);
@@ -5916,16 +5922,6 @@ const lineRangeWithinLines = ({
     start: start < 0 ? 0 : start,
     end: end > lines.length ? lines.length : end
   };
-};
-
-// https://github.com/browserify/resolve/blob/a09a2e7f16273970be4639313c83b913daea15d7/lib/core.json#L1
-// https://nodejs.org/api/modules.html#modules_module_builtinmodules
-// https://stackoverflow.com/a/35825896
-// https://github.com/browserify/resolve/blob/master/lib/core.json#L1
-const NATIVE_NODE_MODULE_SPECIFIER_ARRAY = ["assert", "async_hooks", "buffer_ieee754", "buffer", "child_process", "cluster", "console", "constants", "crypto", "_debugger", "dgram", "dns", "domain", "events", "freelist", "fs", "fs/promises", "_http_agent", "_http_client", "_http_common", "_http_incoming", "_http_outgoing", "_http_server", "http", "http2", "https", "inspector", "_linklist", "module", "net", "node-inspect/lib/_inspect", "node-inspect/lib/internal/inspect_client", "node-inspect/lib/internal/inspect_repl", "os", "path", "perf_hooks", "process", "punycode", "querystring", "readline", "repl", "smalloc", "_stream_duplex", "_stream_transform", "_stream_wrap", "_stream_passthrough", "_stream_readable", "_stream_writable", "stream", "string_decoder", "sys", "timers", "_tls_common", "_tls_legacy", "_tls_wrap", "tls", "trace_events", "tty", "url", "util", "v8/tools/arguments", "v8/tools/codemap", "v8/tools/consarray", "v8/tools/csvparser", "v8/tools/logreader", "v8/tools/profile_view", "v8/tools/splaytree", "v8", "vm", "worker_threads", "zlib", // global is special
-"global"];
-const isBareSpecifierForNativeNodeModule = specifier => {
-  return NATIVE_NODE_MODULE_SPECIFIER_ARRAY.includes(specifier);
 };
 
 const fetchSourcemap = async (jsUrl, jsString, {
@@ -6545,7 +6541,7 @@ const createAssetBuilder = ({
     } else if (targetIsInline) ; else {
       logger$1.debug(`emit asset for ${shortenUrl(targetUrl)}`);
       const rollupReferenceId = emitAsset({
-        fileName: targetUrl
+        fileName: target.targetRelativeUrl
       });
       target.rollupReferenceId = rollupReferenceId;
     }
@@ -6580,8 +6576,19 @@ const createAssetBuilder = ({
     return null;
   };
 
-  const getAssetByUrl = assetUrl => {
-    return targetMap[assetUrl] || null;
+  const findAsset = predicate => {
+    let assetMatching = null;
+    Object.keys(targetMap).find(assetUrl => {
+      const assetCandidate = targetMap[assetUrl];
+
+      if (predicate(assetCandidate)) {
+        assetMatching = assetCandidate;
+        return true;
+      }
+
+      return false;
+    });
+    return assetMatching;
   };
 
   const shortenUrl = url => {
@@ -6621,7 +6628,7 @@ ${showSourceLocation(referenceSourceAsString, {
     createReferenceForJs,
     getRollupChunkReadyCallbackMap,
     getAllAssetEntryEmittedPromise,
-    getAssetByUrl,
+    findAsset,
     inspect: () => {
       return {
         targetMap,
@@ -6646,10 +6653,6 @@ const removePotentialUrlHash = url => {
   return String(urlObject);
 };
 
-const {
-  asyncWalk
-} = require$1("estree-walker");
-
 const MagicString = require$1("magic-string");
 
 const transformImportMetaUrlReferences = async ({
@@ -6662,7 +6665,7 @@ const transformImportMetaUrlReferences = async ({
   markBuildRelativeUrlAsUsedByJs
 }) => {
   const magicString = new MagicString(code);
-  await asyncWalk(ast, {
+  await estreeWalker.asyncWalk(ast, {
     enter: async node => {
       if (!isNewUrlImportMetaUrl(node)) {
         return;
@@ -6847,7 +6850,7 @@ const createJsenvRollupPlugin = async ({
   const compileDirectoryRemoteUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, compileServerOrigin);
 
   const nativeModulePredicate = specifier => {
-    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true; // for now browser have no native module
+    if (node && isSpecifierForNodeCoreModule_js.isSpecifierForNodeCoreModule(specifier)) return true; // for now browser have no native module
     // and we don't know how we will handle that
 
     if (browser) return false;
@@ -7112,7 +7115,7 @@ const createJsenvRollupPlugin = async ({
         } else if (entryContentType === "application/javascript") {
           atleastOneChunkEmitted = true;
           emitChunk({
-            id: ensureRelativeUrlNotation$1(entryProjectRelativeUrl),
+            id: ensureRelativeUrlNotation(entryProjectRelativeUrl),
             name: entryBuildRelativeUrl,
             // don't hash js entry points
             fileName: entryBuildRelativeUrl
@@ -7217,10 +7220,12 @@ const createJsenvRollupPlugin = async ({
     },
 
     resolveFileUrl: ({
-      // chunkId, moduleId, referenceId,
+      referenceId,
       fileName
     }) => {
-      const assetTarget = assetBuilder.getAssetByUrl(fileName);
+      const assetTarget = assetBuilder.findAsset(asset => {
+        return asset.rollupReferenceId === referenceId;
+      });
       const buildRelativeUrl = assetTarget ? assetTarget.targetBuildRelativeUrl : fileName;
 
       if (format === "esmodule") {
@@ -7250,7 +7255,7 @@ const createJsenvRollupPlugin = async ({
         return "";
       }
 
-      const moduleInfo = this.getModuleInfo(id);
+      this.getModuleInfo(id);
       const url = rollupUrlToServerUrl(id); // const originalProjectUrl = urlToOriginalProjectUrl(url)
       // if (originalProjectUrl === jsenvImportMetaResolveGlobalUrl) {
       //   await assetBuilder.createReferenceForJs({
@@ -7341,7 +7346,8 @@ const createJsenvRollupPlugin = async ({
 
       if (!minify) {
         return null;
-      }
+      } // TODO: maybe replace chunk.fileName with chunk.facadeModuleId?
+
 
       const result = await minifyJs(code, chunk.fileName, {
         sourceMap: { ...(map ? {
@@ -7452,7 +7458,7 @@ const createJsenvRollupPlugin = async ({
           return;
         }
 
-        const assetTarget = assetBuilder.getAssetByUrl(rollupFileId);
+        const assetTarget = assetBuilder.findAsset(asset => asset.targetRelativeUrl === rollupFileId);
 
         if (!assetTarget) {
           const buildRelativeUrl = rollupFileId;
@@ -7473,10 +7479,14 @@ const createJsenvRollupPlugin = async ({
 
         const buildRelativeUrl = assetTarget.targetBuildRelativeUrl;
         const fileName = rollupFileNameWithoutHash(buildRelativeUrl);
-        const originalProjectUrl = rollupUrlToOriginalProjectUrl(rollupFileId);
+        const originalProjectUrl = urlToOriginalProjectUrl(assetTarget.targetUrl, {
+          projectDirectoryUrl,
+          compileServerOrigin,
+          compileDirectoryRelativeUrl
+        });
         const originalProjectRelativeUrl = util.urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl); // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
 
-        file.source = String(assetTarget.targetBuildBuffer);
+        file.source = assetTarget.targetBuildBuffer;
         assetBuild[buildRelativeUrl] = file;
         buildMappings[originalProjectRelativeUrl] = buildRelativeUrl;
         buildManifest[fileName] = buildRelativeUrl;
@@ -7748,7 +7758,7 @@ const rollupFileNameWithoutHash = fileName => {
 }; // otherwise importmap handle it as a bare import
 
 
-const ensureRelativeUrlNotation$1 = relativeUrl => {
+const ensureRelativeUrlNotation = relativeUrl => {
   if (relativeUrl.startsWith("../")) {
     return relativeUrl;
   }
@@ -8534,7 +8544,7 @@ const jsenvCompilerForHtml = ({
       const inlineScriptsContentMap = {};
       scripts.forEach(script => {
         const typeAttribute = getHtmlNodeAttributeByName(script, "type");
-        const srcAttribute = getHtmlNodeAttributeByName(script, "src");
+        const srcAttribute = getHtmlNodeAttributeByName(script, "src"); // remote
 
         if (typeAttribute && typeAttribute.value === "importmap" && srcAttribute) {
           hasImportmap = true;
@@ -8547,7 +8557,8 @@ const jsenvCompilerForHtml = ({
           removeHtmlNodeAttribute(script, srcAttribute);
           setHtmlNodeText(script, `window.__jsenv__.importFile(${JSON.stringify(srcAttribute.value)})`);
           return;
-        }
+        } // inline
+
 
         const textNode = getHtmlNodeTextNode(script);
 
@@ -8733,7 +8744,9 @@ const jsenvCompilerForImportmap = ({
   const importMapFileUrl = util.resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
   return {
     // allow project to have no importmap
-    fileContentFallbackIfNotFound: originalFileUrl === importMapFileUrl ? "{}" : undefined,
+    fileContentFallback: () => {
+      return originalFileUrl === importMapFileUrl ? "{}" : undefined;
+    },
     compile: importmapBeforeTransformation => {
       return transformImportmap(importmapBeforeTransformation, {
         originalFileUrl
@@ -8974,10 +8987,10 @@ const startCompileServer = async ({
           global: "globalThis"
         } : {}),
         ...(replaceGlobalFilename ? {
-          __filename: __filenameReplacement
+          __filename: __filenameReplacement$2
         } : {}),
         ...(replaceGlobalDirname ? {
-          __dirname: __dirnameReplacement
+          __dirname: __dirnameReplacement$2
         } : {}),
         ...replaceMap
       },
@@ -9082,7 +9095,7 @@ const startCompileServer = async ({
     sendServerTiming: true,
     nagle: false,
     sendServerInternalErrorDetails: true,
-    requestToResponse: server.firstServiceWithTiming({ ...customServices,
+    requestToResponse: server.composeServiceWithTiming({ ...customServices,
       "service:compilation asset": serveCompilationAssetFile,
       "service:browser script": serveBrowserScript,
       "service:compiled file": serveCompiledFile,
@@ -9529,7 +9542,7 @@ const createSSEForLivereloadService = ({
     const sseRoom = server.createSSERoom({
       retryDuration: 2000,
       historyLength: 100,
-      welcomeEvent: true
+      welcomeEventEnabled: true
     }); // each time something is modified or removed we send event to the room
 
     const stopTracking = trackMainAndDependencies(mainFileRelativeUrl, {
@@ -9552,10 +9565,9 @@ const createSSEForLivereloadService = ({
         });
       }
     });
-    sseRoom.start();
     const cancelRegistration = cancellationToken.register(() => {
       cancelRegistration.unregister();
-      sseRoom.stop();
+      sseRoom.close();
       stopTracking();
     });
     cache.push({
@@ -9563,7 +9575,7 @@ const createSSEForLivereloadService = ({
       sseRoom,
       cleanup: () => {
         cancelRegistration.unregister();
-        sseRoom.stop();
+        sseRoom.close();
         stopTracking();
       }
     });
@@ -9587,7 +9599,7 @@ const createSSEForLivereloadService = ({
 
     const fileRelativeUrl = urlToOriginalRelativeUrl(util.resolveUrl(request.ressource, request.origin), util.resolveUrl(outDirectoryRelativeUrl, request.origin));
     const room = getOrCreateSSERoom(fileRelativeUrl);
-    return room.connect(request.headers["last-event-id"] || new URL(request.ressource, request.origin).searchParams.get("last-event-id"));
+    return room.join(request);
   };
 };
 
@@ -9758,8 +9770,8 @@ const readPackage = packagePath => {
 const STOP_REASON_PACKAGE_VERSION_CHANGED = {
   toString: () => `package version changed`
 };
-const __filenameReplacement = `import.meta.url.slice('file:///'.length)`;
-const __dirnameReplacement = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`;
+const __filenameReplacement$2 = `import.meta.url.slice('file:///'.length)`;
+const __dirnameReplacement$2 = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`;
 
 const FORMAT_ENTRY_POINTS = {
   commonjs: {
@@ -10149,19 +10161,22 @@ const convertCommonJsWithRollup = async ({
     input: filePath,
     inlineDynamicImports: true,
     external,
-    plugins: [commonJsRollupPlugin, createReplaceRollupPlugin({ ...(replaceProcessEnvNodeEnv ? {
-        "process.env.NODE_ENV": JSON.stringify(processEnvNodeEnv)
-      } : {}),
-      ...(replaceGlobalObject ? {
-        global: "globalThis"
-      } : {}),
-      ...(replaceGlobalFilename ? {
-        __filename: __filenameReplacement$2
-      } : {}),
-      ...(replaceGlobalDirname ? {
-        __dirname: __dirnameReplacement$2
-      } : {}),
-      ...replaceMap
+    plugins: [commonJsRollupPlugin, createReplaceRollupPlugin({
+      preventAssignment: true,
+      values: { ...(replaceProcessEnvNodeEnv ? {
+          "process.env.NODE_ENV": JSON.stringify(processEnvNodeEnv)
+        } : {}),
+        ...(replaceGlobalObject ? {
+          global: "globalThis"
+        } : {}),
+        ...(replaceGlobalFilename ? {
+          __filename: __filenameReplacement
+        } : {}),
+        ...(replaceGlobalDirname ? {
+          __dirname: __dirnameReplacement
+        } : {}),
+        ...replaceMap
+      }
     }), nodeGlobalRollupPlugin, ...(convertBuiltinsToBrowser ? [nodeBuiltinsRollupPlugin] : []), nodeResolveRollupPlugin, jsonRollupPlugin]
   });
   const generateOptions = {
@@ -10178,11 +10193,11 @@ const convertCommonJsWithRollup = async ({
   const result = await rollupBuild.generate(generateOptions);
   return result.output[0];
 };
-const __filenameReplacement$2 = `import.meta.url.slice('file:///'.length)`;
-const __dirnameReplacement$2 = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`;
+const __filenameReplacement = `import.meta.url.slice('file:///'.length)`;
+const __dirnameReplacement = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`;
 
 const {
-  createFileCoverage
+  createFileCoverage: createFileCoverage$1
 } = require$1("istanbul-lib-coverage"); // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43
 
 
@@ -10198,7 +10213,7 @@ const composeCoverageMap = (...coverageMaps) => {
 };
 
 const merge = (coverageA, coverageB) => {
-  const fileCoverage = createFileCoverage(coverageA);
+  const fileCoverage = createFileCoverage$1(coverageA);
   fileCoverage.merge(coverageB);
   return fileCoverage.toJSON();
 };
@@ -10919,10 +10934,10 @@ const generateExecutionSteps = async (plan, {
 };
 
 const {
-  createFileCoverage: createFileCoverage$1
+  createFileCoverage
 } = require$1("istanbul-lib-coverage");
 
-const createEmptyCoverage = relativeUrl => createFileCoverage$1(relativeUrl).toJSON();
+const createEmptyCoverage = relativeUrl => createFileCoverage(relativeUrl).toJSON();
 
 const relativeUrlToEmptyCoverage = async (relativeUrl, {
   cancellationToken,
@@ -11219,7 +11234,10 @@ const createSummaryMessage = ({
   erroredCount,
   completedCount
 }) => {
-  if (executionCount === 0) return `0 execution.`;
+  if (executionCount === 0) {
+    return `0 execution.`;
+  }
+
   return `${executionCount} execution: ${createSummaryDetails({
     executionCount,
     disconnectedCount,
@@ -11261,13 +11279,13 @@ const createSummaryDetails = ({
   });
 };
 
-const createAllDisconnectedDetails = () => `all ${magenta}disconnected${ansiResetSequence}`;
+const createAllDisconnectedDetails = () => `all ${setANSIColor(`disconnected`, magenta)}`;
 
-const createAllTimedoutDetails = () => `all ${yellow}timedout${ansiResetSequence}`;
+const createAllTimedoutDetails = () => `all ${setANSIColor(`timed out`, yellow)}`;
 
-const createAllErroredDetails = () => `all ${red}errored${ansiResetSequence}`;
+const createAllErroredDetails = () => `all ${setANSIColor(`errored`, red)}`;
 
-const createAllCompletedDetails = () => `all ${green}completed${ansiResetSequence}`;
+const createAllCompletedDetails = () => `all ${setANSIColor(`completed`, green)}`;
 
 const createMixedDetails = ({
   disconnectedCount,
@@ -11278,19 +11296,19 @@ const createMixedDetails = ({
   const parts = [];
 
   if (disconnectedCount) {
-    parts.push(`${disconnectedCount} ${magenta}disconnected${ansiResetSequence}`);
+    parts.push(`${disconnectedCount} ${setANSIColor(`disconnected`, magenta)}`);
   }
 
   if (timedoutCount) {
-    parts.push(`${timedoutCount} ${yellow}timed out${ansiResetSequence}`);
+    parts.push(`${timedoutCount} ${setANSIColor(`timed out`, yellow)}`);
   }
 
   if (erroredCount) {
-    parts.push(`${erroredCount} ${red}errored${ansiResetSequence}`);
+    parts.push(`${erroredCount} ${setANSIColor(`errored`, red)}`);
   }
 
   if (completedCount) {
-    parts.push(`${completedCount} ${green}completed${ansiResetSequence}`);
+    parts.push(`${completedCount} ${setANSIColor(`completed`, green)}`);
   }
 
   return `${parts.join(", ")}`;
@@ -11325,6 +11343,11 @@ const createExecutionResultLog = ({
   completedCount
 }) => {
   const executionNumber = executionIndex + 1;
+  const description = descriptionFormatters[status]({
+    executionNumber,
+    executionCount,
+    allocatedMs
+  });
   const summary = `(${createSummaryDetails({
     executionCount: executionNumber,
     disconnectedCount,
@@ -11332,50 +11355,47 @@ const createExecutionResultLog = ({
     erroredCount,
     completedCount
   })})`;
+
+  if (completedExecutionLogAbbreviation && status === "completed") {
+    return `
+${description} ${summary}.`;
+  }
+
   const runtime = `${runtimeName}/${runtimeVersion}`;
-
-  if (status === "completed") {
-    if (completedExecutionLogAbbreviation) {
-      return `
-${green}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.`;
-    }
-
-    return `
-${green}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.
-file: ${fileRelativeUrl}
-runtime: ${runtime}${appendDuration({
-      startMs,
-      endMs
-    })}${appendConsole(consoleCalls)}${appendError(error)}`;
-  }
-
-  if (status === "disconnected") {
-    return `
-${magenta}${cross} execution ${executionNumber} of ${executionCount} disconnected${ansiResetSequence} ${summary}.
-file: ${fileRelativeUrl}
-runtime: ${runtime}${appendDuration({
-      startMs,
-      endMs
-    })}${appendConsole(consoleCalls)}${appendError(error)}`;
-  }
-
-  if (status === "timedout") {
-    return `
-${yellow}${cross} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms${ansiResetSequence} ${summary}.
-file: ${fileRelativeUrl}
-runtime: ${runtime}${appendDuration({
-      startMs,
-      endMs
-    })}${appendConsole(consoleCalls)}${appendError(error)}`;
-  }
-
   return `
-${red}${cross} execution ${executionNumber} of ${executionCount} error${ansiResetSequence} ${summary}.
+${description} ${summary}.
 file: ${fileRelativeUrl}
 runtime: ${runtime}${appendDuration({
     startMs,
     endMs
   })}${appendConsole(consoleCalls)}${appendError(error)}`;
+};
+const descriptionFormatters = {
+  disconnected: ({
+    executionNumber,
+    executionCount
+  }) => {
+    return setANSIColor(`${cross} execution ${executionNumber} of ${executionCount} disconnected`, magenta);
+  },
+  timedout: ({
+    executionNumber,
+    allocatedMs,
+    executionCount
+  }) => {
+    return setANSIColor(`${cross} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms`, yellow);
+  },
+  errored: ({
+    executionNumber,
+    executionCount
+  }) => {
+    return setANSIColor(`${cross} execution ${executionNumber} of ${executionCount} error`, red);
+  },
+  completed: ({
+    executionNumber,
+    executionCount
+  }) => {
+    return setANSIColor(`${checkmark} execution ${executionNumber} of ${executionCount} completed`, green);
+  }
 };
 
 const appendDuration = ({
@@ -11397,9 +11417,9 @@ const appendConsole = consoleCalls => {
   const consoleOutputTrimmed = consoleOutput.trim();
   if (consoleOutputTrimmed === "") return "";
   return `
-${grey}-------- console --------${ansiResetSequence}
+${setANSIColor(`-------- console --------`, grey)}
 ${consoleOutputTrimmed}
-${grey}-------------------------${ansiResetSequence}`;
+${setANSIColor(`-------------------------`, grey)}`;
 };
 
 const appendError = error => {
@@ -11426,6 +11446,7 @@ const executeConcurrently = async (executionSteps, {
   logSummary,
   completedExecutionLogMerging,
   completedExecutionLogAbbreviation,
+  measureGlobalDuration = true,
   coverage,
   coverageConfig,
   coverageIncludeMissing,
@@ -11584,8 +11605,11 @@ const executeConcurrently = async (executionSteps, {
 
   allExecutionDoneCancellationSource.cancel("all execution done");
   const summary = reportToSummary(report);
-  summary.startMs = startMs;
-  summary.endMs = Date.now();
+
+  if (measureGlobalDuration) {
+    summary.startMs = startMs;
+    summary.endMs = Date.now();
+  }
 
   if (logSummary) {
     logger$1.info(createSummaryLog(summary));
@@ -11684,6 +11708,7 @@ const executePlan = async (plan, {
   completedExecutionLogMerging,
   completedExecutionLogAbbreviation,
   logSummary,
+  measureGlobalDuration,
   // coverage parameters
   coverage,
   coverageConfig,
@@ -11747,6 +11772,7 @@ const executePlan = async (plan, {
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     logSummary,
+    measureGlobalDuration,
     coverage,
     coverageConfig,
     coverageIncludeMissing,
@@ -11855,6 +11881,7 @@ const executeTestPlan = async ({
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   logSummary = true,
+  measureGlobalDuration = true,
   updateProcessExitCode = true,
   coverage = process.argv.includes("--cover") || process.argv.includes("--coverage"),
   coverageConfig = jsenvCoverageConfig,
@@ -11951,6 +11978,7 @@ const executeTestPlan = async ({
       completedExecutionLogMerging,
       completedExecutionLogAbbreviation,
       logSummary,
+      measureGlobalDuration,
       coverage,
       coverageConfig,
       coverageIncludeMissing,
@@ -12234,7 +12262,7 @@ const createSharingToken = ({
 
 const argsToIdFallback = args => JSON.stringify(args);
 
-const evalSource = (code, filePath) => {
+const evalSource$2 = (code, filePath) => {
   const script = new vm.Script(code, {
     filename: filePath
   });
@@ -12327,7 +12355,7 @@ const executeHtmlFile = async (fileRelativeUrl, {
     } = fileExecutionResultMap[fileErrored];
     return {
       status: "errored",
-      error: evalException(exceptionSource, {
+      error: evalException$1(exceptionSource, {
         projectDirectoryUrl,
         compileServerOrigin
       }),
@@ -12354,11 +12382,11 @@ const generateCoverageForPage = fileExecutionResultMap => {
   return coverageMap;
 };
 
-const evalException = (exceptionSource, {
+const evalException$1 = (exceptionSource, {
   projectDirectoryUrl,
   compileServerOrigin
 }) => {
-  const error = evalSource(exceptionSource);
+  const error = evalSource$2(exceptionSource);
 
   if (error && error instanceof Error) {
     const remoteRootRegexp = new RegExp(escapeRegexpSpecialCharacters(`${compileServerOrigin}/`), "g");
@@ -12789,7 +12817,8 @@ const createChildExecArgv = async ({
   debugModeInheritBreak = true,
   traceWarnings = "inherit",
   unhandledRejection = "inherit",
-  jsonModules = "inherit"
+  jsonModules = "inherit",
+  topLevelAwait
 } = {}) => {
   if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
     throw new TypeError(logger.createDetailedMessage(`unexpected debug mode.`, {
@@ -12894,6 +12923,16 @@ const createChildExecArgv = async ({
     }
   }
 
+  if (topLevelAwait !== undefined) {
+    const topLevelAwaitFlag = getCommandArgument(childExecArgv, "--experimental-top-level-await");
+
+    if (topLevelAwait === true && !topLevelAwaitFlag) {
+      childExecArgv.push(`--experimental-top-level-await`);
+    } else if (topLevelAwait === false && topLevelAwaitFlag) {
+      childExecArgv.splice(topLevelAwaitFlag.index, 1);
+    }
+  }
+
   return childExecArgv;
 };
 
@@ -12969,6 +13008,8 @@ const launchNode = async ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
+  importMapFileRelativeUrl,
+  importDefaultExtension,
   debugPort,
   debugMode,
   debugModeInheritBreak,
@@ -12976,6 +13017,10 @@ const launchNode = async ({
   unhandledRejection,
   jsonModules,
   env,
+  commandLineOptions = [],
+  stdin = "pipe",
+  stdout = "pipe",
+  stderr = "pipe",
   remap = true,
   collectCoverage = false
 }) => {
@@ -13001,7 +13046,7 @@ const launchNode = async ({
   const dynamicImportSupported = await supportsDynamicImport();
   const nodeControllableFileUrl = util.resolveUrl(dynamicImportSupported ? "./src/internal/node-launcher/nodeControllableFile.js" : "./src/internal/node-launcher/nodeControllableFile.cjs", jsenvCoreDirectoryUrl);
   await util.assertFilePresence(nodeControllableFileUrl);
-  const execArgv = await createChildExecArgv({
+  const childExecArgv = await createChildExecArgv({
     cancellationToken,
     debugPort,
     debugMode,
@@ -13010,14 +13055,28 @@ const launchNode = async ({
     unhandledRejection,
     jsonModules
   });
+  const execArgv = [...childExecArgv, ...commandLineOptions];
   env.COVERAGE_ENABLED = collectCoverage;
   env.JSENV = true;
   const childProcess = child_process.fork(util.urlToFileSystemPath(nodeControllableFileUrl), {
     execArgv,
     // silent: true
-    stdio: "pipe",
+    stdio: ["pipe", "pipe", "pipe", "ipc"],
     env
-  });
+  }); // if we passe stream, pipe them https://github.com/sindresorhus/execa/issues/81
+
+  if (typeof stdin === "object") {
+    stdin.pipe(childProcess.stdin);
+  }
+
+  if (typeof stdout === "object") {
+    childProcess.stdout.pipe(stdout);
+  }
+
+  if (typeof stderr === "object") {
+    childProcess.stderr.pipe(stderr);
+  }
+
   logger$1.debug(`${process.argv[0]} ${execArgv.join(" ")} ${util.urlToFileSystemPath(nodeControllableFileUrl)}`);
   const childProcessReadyPromise = new Promise(resolve => {
     onceProcessMessage(childProcess, "ready", resolve);
@@ -13177,6 +13236,8 @@ const launchNode = async ({
           outDirectoryRelativeUrl,
           fileRelativeUrl,
           compileServerOrigin,
+          importMapFileRelativeUrl,
+          importDefaultExtension,
           collectCoverage,
           executionId,
           remap
@@ -13217,7 +13278,7 @@ const launchNode = async ({
       } = executionResult;
       return {
         status,
-        error: evalException$1(exceptionSource, {
+        error: evalException(exceptionSource, {
           compileServerOrigin,
           projectDirectoryUrl
         }),
@@ -13254,11 +13315,11 @@ const launchNode = async ({
   };
 };
 
-const evalException$1 = (exceptionSource, {
+const evalException = (exceptionSource, {
   compileServerOrigin,
   projectDirectoryUrl
 }) => {
-  const error = evalSource$2(exceptionSource);
+  const error = evalSource(exceptionSource);
 
   if (error && error instanceof Error) {
     const compileServerOriginRegexp = new RegExp(escapeRegexpSpecialCharacters(`${compileServerOrigin}/`), "g"); // const serverUrlRegExp = new RegExp(
@@ -13413,7 +13474,7 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`;
 })()`;
 };
 
-const evalSource$2 = (code, href) => {
+const evalSource = (code, href) => {
   const script = new vm.Script(code, {
     filename: href
   });
@@ -13495,8 +13556,10 @@ const createRedirectFilesService = ({
 }) => {
   const jsenvExploringRedirectorHtmlRelativeUrlForProject = util.urlToRelativeUrl(jsenvExploringRedirectorHtmlUrl, projectDirectoryUrl);
   const jsenvExploringRedirectorJsBuildRelativeUrlForProject = util.urlToRelativeUrl(jsenvExploringRedirectorJsBuildUrl, projectDirectoryUrl);
+  const jsenvExploringJsBuildRelativeUrlForProject = util.urlToRelativeUrl(jsenvExploringIndexJsBuildUrl, projectDirectoryUrl);
   const jsenvToolbarJsBuildRelativeUrlForProject = util.urlToRelativeUrl(jsenvToolbarJsBuildUrl, projectDirectoryUrl);
   return request => {
+    // exploring redirection
     if (request.ressource === "/") {
       const jsenvExploringRedirectorHtmlServerUrl = `${request.origin}/${jsenvExploringRedirectorHtmlRelativeUrlForProject}`;
       return {
@@ -13506,6 +13569,28 @@ const createRedirectFilesService = ({
         }
       };
     }
+
+    if (request.ressource === "/.jsenv/exploring.redirector.js") {
+      const jsenvExploringRedirectorBuildServerUrl = `${request.origin}/${jsenvExploringRedirectorJsBuildRelativeUrlForProject}`;
+      return {
+        status: 307,
+        headers: {
+          location: jsenvExploringRedirectorBuildServerUrl
+        }
+      };
+    } // exploring index
+
+
+    if (request.ressource === "/.jsenv/exploring.index.js") {
+      const jsenvExploringJsBuildServerUrl = `${request.origin}/${jsenvExploringJsBuildRelativeUrlForProject}`;
+      return {
+        status: 307,
+        headers: {
+          location: jsenvExploringJsBuildServerUrl
+        }
+      };
+    } // toolbar
+
 
     if (request.ressource === "/.jsenv/toolbar.main.js") {
       const jsenvToolbarJsBuildServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}`;
@@ -13532,16 +13617,6 @@ const createRedirectFilesService = ({
       };
     }
 
-    if (request.ressource === "/.jsenv/exploring.redirector.js") {
-      const jsenvExploringRedirectorBuildServerUrl = `${request.origin}/${jsenvExploringRedirectorJsBuildRelativeUrlForProject}`;
-      return {
-        status: 307,
-        headers: {
-          location: jsenvExploringRedirectorBuildServerUrl
-        }
-      };
-    }
-
     return null;
   };
 };
@@ -13557,7 +13632,7 @@ const createExploringDataService = ({
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
         jsenvDirectoryRelativeUrl: util.urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl),
-        exploringHtmlFileRelativeUrl: util.urlToRelativeUrl(jsenvExploringHtmlUrl, projectDirectoryUrl),
+        exploringHtmlFileRelativeUrl: util.urlToRelativeUrl(jsenvExploringIndexHtmlUrl, projectDirectoryUrl),
         sourcemapMainFileRelativeUrl: util.urlToRelativeUrl(sourcemapMainFileUrl, jsenvCoreDirectoryUrl),
         sourcemapMappingFileRelativeUrl: util.urlToRelativeUrl(sourcemapMappingFileUrl, jsenvCoreDirectoryUrl),
         explorableConfig

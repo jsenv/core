@@ -1977,13 +1977,6 @@
     };
   };
 
-  var jsenvLogger = {
-    log: function log() {
-    },
-    debug: function debug() {
-    }
-  }; // a nice yellow:ffdc00
-
   var connectCompileServerEventSource = function connectCompileServerEventSource(fileRelativeUrl, _ref) {
     var onFileModified = _ref.onFileModified,
         onFileRemoved = _ref.onFileRemoved,
@@ -2001,18 +1994,15 @@
         cancel = connectEventSource$1(eventSourceUrl, {
           "file-modified": function fileModified(_ref2) {
             var data = _ref2.data;
-            jsenvLogger.debug("".concat(data, " modified"));
             onFileModified(data);
           },
           "file-removed": function fileRemoved(_ref3) {
             var data = _ref3.data;
-            jsenvLogger.debug("".concat(data, " removed"));
             onFileRemoved(data);
           }
         }, {
           connecting: function connecting(_ref4) {
             var _cancel = _ref4.cancel;
-            jsenvLogger.debug("connecting to ".concat(eventSourceUrl));
             onConnecting({
               cancel: function cancel() {
                 _cancel();
@@ -2021,7 +2011,6 @@
           },
           connected: function connected(_ref5) {
             var _cancel2 = _ref5.cancel;
-            jsenvLogger.debug("connected to ".concat(eventSourceUrl));
             resolve(true);
             onConnected({
               cancel: function cancel() {
@@ -2031,7 +2020,6 @@
           },
           cancelled: function cancelled(_ref6) {
             var connect = _ref6.connect;
-            jsenvLogger.debug("disconnected from ".concat(eventSourceUrl));
             resolve(false);
             onConnectionCancelled({
               connect: connect
@@ -2039,7 +2027,6 @@
           },
           failed: function failed(_ref7) {
             var connect = _ref7.connect;
-            jsenvLogger.debug("disconnected from ".concat(eventSourceUrl));
             resolve(false);
             onConnectionFailed({
               connect: connect

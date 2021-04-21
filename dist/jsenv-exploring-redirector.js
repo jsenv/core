@@ -1167,28 +1167,28 @@
     }
   }
 
-  var decideExploringIndexUrl = function decideExploringIndexUrl(_ref2) {
+  var decideExploringIndexUrl = _async(function (_ref2) {
     var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
         exploringHtmlFileRelativeUrl = _ref2.exploringHtmlFileRelativeUrl;
-    return _await(_invoke(function () {
-    }, function (_result) {
+    // for now it's not possible to avoid compilation
+    // I need to list what is needed to support that
+    // for instance it means we should collect coverage from chrome devtools
+    // instead of instrumenting source code.
+    // It also means we should be able somehow to collect namespace of module imported
+    // by the html page
+    var canAvoidCompilation = false;
+    return _await(canAvoidCompilation , function (_browserSupportsAllFe) {
+      if (_browserSupportsAllFe) {
+        return "/".concat(exploringHtmlFileRelativeUrl);
+      }
+
       return _await(decideCompileId({
         outDirectoryRelativeUrl: outDirectoryRelativeUrl
       }), function (compileId) {
         return "/".concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(exploringHtmlFileRelativeUrl);
       });
-    }));
-  };
-
-  function _invoke(body, then) {
-    var result = body();
-
-    if (result && result.then) {
-      return result.then(then);
-    }
-
-    return then(result);
-  }
+    }, !canAvoidCompilation);
+  });
 
   function _async(f) {
     return function () {
@@ -1204,8 +1204,8 @@
     };
   }
 
-  var decideCompileId = _async(function (_ref3) {
-    var outDirectoryRelativeUrl = _ref3.outDirectoryRelativeUrl;
+  var decideCompileId = _async(function (_ref4) {
+    var outDirectoryRelativeUrl = _ref4.outDirectoryRelativeUrl;
     var compileServerGroupMapUrl = "/".concat(outDirectoryRelativeUrl, "groupMap.json");
     return _await(fetchUrl(compileServerGroupMapUrl), function (compileServerGroupMapResponse) {
       return _await(compileServerGroupMapResponse.json(), function (compileServerGroupMap) {
