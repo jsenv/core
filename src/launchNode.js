@@ -42,6 +42,9 @@ export const launchNode = async ({
   outDirectoryRelativeUrl,
   compileServerOrigin,
 
+  importMapFileRelativeUrl,
+  importDefaultExtension,
+
   debugPort,
   debugMode,
   debugModeInheritBreak,
@@ -261,6 +264,9 @@ export const launchNode = async ({
           outDirectoryRelativeUrl,
           fileRelativeUrl,
           compileServerOrigin,
+
+          importMapFileRelativeUrl,
+          importDefaultExtension,
 
           collectCoverage,
           executionId,
