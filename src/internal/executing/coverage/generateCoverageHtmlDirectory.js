@@ -5,8 +5,7 @@ const { readFileSync } = require("fs")
 
 export const generateCoverageHtmlDirectory = async (
   coverageMap,
-  htmlDirectoryRelativeUrl,
-  projectDirectoryUrl,
+  { projectDirectoryUrl, coverageHtmlDirectoryRelativeUrl, coverageSkipEmpty, coverageSkipFull },
 ) => {
   const libReport = require("istanbul-lib-report")
   const reports = require("istanbul-reports")
@@ -21,9 +20,9 @@ export const generateCoverageHtmlDirectory = async (
   })
 
   const report = reports.create("html", {
-    skipEmpty: true,
-    skipFull: true,
-    subdir: htmlDirectoryRelativeUrl,
+    skipEmpty: coverageSkipEmpty,
+    skipFull: coverageSkipFull,
+    subdir: coverageHtmlDirectoryRelativeUrl,
   })
   report.execute(context)
 }

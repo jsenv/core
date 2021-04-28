@@ -68,6 +68,10 @@ export const executeTestPlan = async ({
   coverageHtmlDirectory = !process.env.CI,
   coverageHtmlDirectoryRelativeUrl = "./coverage",
   coverageHtmlDirectoryIndexLog = true,
+  // skip empty means empty files won't appear in the coverage reports (log and html)
+  coverageSkipEmpty = false,
+  // skip full means file with 100% coverage won't appear in coverage reports (log and html)
+  coverageSkipFull = false,
 
   // for chromiumExecutablePath, firefoxExecutablePath and webkitExecutablePath
   // but we need something angostic that just forward the params hence using ...rest
@@ -190,11 +194,10 @@ export const executeTestPlan = async ({
         logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`)
       }
       promises.push(
-        generateCoverageHtmlDirectory(
-          result.coverageMap,
-          coverageHtmlDirectoryRelativeUrl,
+        generateCoverageHtmlDirectory(result.coverageMap, {
           projectDirectoryUrl,
-        ),
+          coverageHtmlDirectoryRelativeUrl,
+        }),
       )
     }
     if (coverage && coverageJsonFile) {
@@ -205,7 +208,9 @@ export const executeTestPlan = async ({
       promises.push(generateCoverageJsonFile(result.coverageMap, coverageJsonFileUrl))
     }
     if (coverage && coverageTextLog) {
-      promises.push(generateCoverageTextLog(result.coverageMap))
+      promises.push(
+        generateCoverageTextLog(result.coverageMap, { coverageSkipEmpty, coverageSkipFull }),
+      )
     }
     await Promise.all(promises)
 
