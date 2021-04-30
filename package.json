@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "17.10.0",
+  "version": "18.0.0-alpha.0",
   "description": "Tool to develop, test and build js projects.",
   "license": "MIT",
   "repository": {
@@ -99,7 +99,7 @@
     "@babel/plugin-transform-typeof-symbol": "7.12.13",
     "@babel/plugin-transform-unicode-regex": "7.12.13",
     "@jsenv/cancellation": "2.0.3",
-    "@jsenv/import-map": "6.13.0",
+    "@jsenv/import-map": "6.13.2",
     "@jsenv/logger": "4.0.0",
     "@jsenv/node-signals": "2.0.1",
     "@jsenv/server": "6.0.1",
@@ -147,9 +147,9 @@
     "@babel/plugin-transform-typescript": "7.13.0",
     "@jsenv/assert": "2.2.5",
     "@jsenv/codecov-upload": "3.4.3",
-    "@jsenv/eslint-config": "12.9.1",
+    "@jsenv/eslint-config": "12.10.0",
     "@jsenv/github-release-package": "1.2.2",
-    "@jsenv/node-module-import-map": "13.1.0",
+    "@jsenv/node-module-import-map": "13.4.1",
     "@jsenv/package-publish": "1.5.2",
     "@jsenv/prettier-check-project": "5.6.1",
     "@jsenv/pwa": "3.0.6",
