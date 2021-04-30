@@ -29,6 +29,7 @@ config.overrides = [
       require: true,
     },
   },
+  // several files are written for browsers, not Node.js
   {
     files: [
       "**/createBrowserRuntime/**/*.js",
