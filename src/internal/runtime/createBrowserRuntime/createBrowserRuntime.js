@@ -5,7 +5,7 @@ import { memoize } from "../../memoize.js"
 import { createBrowserSystem } from "./createBrowserSystem.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
-import { fetchUrl } from "../../fetch-browser.js"
+import { fetchUrl } from "../../browser-utils/fetch-browser.js"
 
 const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
 

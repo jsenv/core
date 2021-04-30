@@ -77,6 +77,7 @@ export const getHtmlExecutionResult = async (page) => {
   await page.waitForFunction(
     /* istanbul ignore next */
     () => {
+      // eslint-disable-next-line no-undef
       return Boolean(window.__jsenv__)
     },
   )
@@ -84,6 +85,7 @@ export const getHtmlExecutionResult = async (page) => {
   return page.evaluate(
     /* istanbul ignore next */
     () => {
+      // eslint-disable-next-line no-undef
       return window.__jsenv__.executionResultPromise
     },
   )

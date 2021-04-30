@@ -1,3 +1,4 @@
+/* eslint-env browser, node */
 import { detectBrowser } from "./detectBrowser/detectBrowser.js"
 import { detectNode } from "./detectNode/detectNode.js"
 import { resolveGroup } from "./resolveGroup.js"

@@ -1,3 +1,4 @@
+/* eslint-env browser, node */
 export default (() => {
   if (typeof window === "object") {
     return "browser"

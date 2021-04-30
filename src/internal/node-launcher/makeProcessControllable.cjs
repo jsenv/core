@@ -1,5 +1,3 @@
-/* global require */
-
 const { uneval } = require("@jsenv/uneval")
 
 const makeProcessControllable = ({ evaluate }) => {

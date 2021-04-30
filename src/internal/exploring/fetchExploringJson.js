@@ -1,6 +1,6 @@
 import { createDetailedMessage } from "@jsenv/logger"
 import { isCancelError } from "@jsenv/cancellation/main.browser.js"
-import { fetchUrl } from "../fetch-browser.js"
+import { fetchUrl } from "../browser-utils/fetch-browser.js"
 
 export const fetchExploringJson = async ({ cancellationToken } = {}) => {
   try {

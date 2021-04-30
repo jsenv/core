@@ -3,10 +3,12 @@ const { createEslintConfig } = require("@jsenv/eslint-config")
 const config = createEslintConfig({
   projectDirectoryUrl: __dirname,
   importResolutionMethod: "import-map",
+  importMapFileRelativeUrl: "./import-map.importmap",
   // importResolverOptions: {
   //   logLevel: "debug",
   // },
   node: true,
+  prettier: true,
 })
 
 // disable commonjs globals by default
@@ -25,6 +27,19 @@ config.overrides = [
       __filename: true,
       __dirname: true,
       require: true,
+    },
+  },
+  {
+    files: [
+      "**/createBrowserRuntime/**/*.js",
+      "**/exploring/**/*.js",
+      "**/toolbar/**/*.js",
+      "**/browser-utils/**/*.js",
+      "**/detectBrowser/**/*.js",
+    ],
+    env: {
+      browser: true,
+      node: false,
     },
   },
 ]

@@ -1,4 +1,3 @@
-/* global require */
 const { makeProcessControllable } = require("./makeProcessControllable.cjs")
 
 makeProcessControllable({

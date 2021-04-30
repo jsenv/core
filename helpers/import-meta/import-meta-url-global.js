@@ -1,3 +1,5 @@
+/* eslint-env browser */
+
 const getCurrentScriptSrc = () => {
   const { currentScript } = document
   if (currentScript) return currentScript.src

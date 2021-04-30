@@ -1,3 +1,5 @@
+/* eslint-env browser, node */
+
 export const parseDataUrl = (dataUrl) => {
   const afterDataProtocol = dataUrl.slice("data:".length)
   const commaIndex = afterDataProtocol.indexOf(",")

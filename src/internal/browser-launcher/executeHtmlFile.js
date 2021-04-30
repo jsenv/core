@@ -30,6 +30,7 @@ export const executeHtmlFile = async (
   await page.waitForFunction(
     /* istanbul ignore next */
     () => {
+      // eslint-disable-next-line no-undef
       return Boolean(window.__jsenv__)
     },
     [],
@@ -41,6 +42,7 @@ export const executeHtmlFile = async (
     executionResult = await page.evaluate(
       /* istanbul ignore next */
       () => {
+        // eslint-disable-next-line no-undef
         return window.__jsenv__.executionResultPromise
       },
     )

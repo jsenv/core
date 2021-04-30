@@ -1,4 +1,4 @@
-import { fetchUrl } from "../fetch-browser.js"
+import { fetchUrl } from "../browser-utils/fetch-browser.js"
 import { fetchExploringJson } from "./fetchExploringJson.js"
 import { computeCompileIdFromGroupId } from "../runtime/computeCompileIdFromGroupId.js"
 import { resolveBrowserGroup } from "../runtime/resolveBrowserGroup.js"
