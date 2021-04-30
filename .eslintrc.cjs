@@ -6,6 +6,7 @@ const config = createEslintConfig({
   // importResolverOptions: {
   //   logLevel: "debug",
   // },
+  node: true,
 })
 
 // disable commonjs globals by default

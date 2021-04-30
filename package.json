@@ -147,7 +147,7 @@
     "@babel/plugin-transform-typescript": "7.13.0",
     "@jsenv/assert": "2.2.5",
     "@jsenv/codecov-upload": "3.4.3",
-    "@jsenv/eslint-config": "12.10.0",
+    "@jsenv/eslint-config": "13.0.1",
     "@jsenv/github-release-package": "1.2.2",
     "@jsenv/node-module-import-map": "13.4.1",
     "@jsenv/package-publish": "1.5.2",
