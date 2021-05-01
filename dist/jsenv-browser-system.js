@@ -2240,7 +2240,7 @@
         fetchSource = _ref.fetchSource,
         instantiateJavaScript = _ref.instantiateJavaScript,
         compileServerOrigin = _ref.compileServerOrigin,
-        outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
+        compileDirectoryRelativeUrl = _ref.compileDirectoryRelativeUrl;
     var moduleResponse;
     return _continue$3(_catch$4(function () {
       return _await$a(fetchSource(url, {
@@ -2253,7 +2253,7 @@
             url: url,
             importerUrl: importerUrl,
             compileServerOrigin: compileServerOrigin,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
             notFound: true
           })));
         }
@@ -2271,7 +2271,7 @@
                 url: url,
                 importerUrl: importerUrl,
                 compileServerOrigin: compileServerOrigin,
-                outDirectoryRelativeUrl: outDirectoryRelativeUrl
+                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
               }))));
               error.parsingError = bodyAsJson;
               throw error;
@@ -2288,7 +2288,7 @@
             url: url,
             importerUrl: importerUrl,
             compileServerOrigin: compileServerOrigin,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl
+            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
           }))));
         } // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
         // and in sync with loadModule in createJsenvRollupPlugin.js
@@ -2304,7 +2304,7 @@
                 url: moduleResponse.url,
                 importerUrl: importerUrl,
                 compileServerOrigin: compileServerOrigin,
-                outDirectoryRelativeUrl: outDirectoryRelativeUrl
+                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
               });
             });
           }
@@ -2323,7 +2323,7 @@
                   url: moduleResponse.url,
                   importerUrl: importerUrl,
                   compileServerOrigin: compileServerOrigin,
-                  outDirectoryRelativeUrl: outDirectoryRelativeUrl
+                  compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
                 });
               });
             }
@@ -2339,7 +2339,7 @@
                 url: moduleResponse.url,
                 importerUrl: importerUrl,
                 compileServerOrigin: compileServerOrigin,
-                outDirectoryRelativeUrl: outDirectoryRelativeUrl
+                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
               });
             }
 
@@ -2348,7 +2348,7 @@
                 url: url,
                 importerUrl: importerUrl,
                 compileServerOrigin: compileServerOrigin,
-                outDirectoryRelativeUrl: outDirectoryRelativeUrl
+                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
               })));
             }
 
@@ -2360,7 +2360,7 @@
               url: moduleResponse.url,
               importerUrl: importerUrl,
               compileServerOrigin: compileServerOrigin,
-              outDirectoryRelativeUrl: outDirectoryRelativeUrl
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
             });
           });
         });
@@ -2388,16 +2388,16 @@
     var url = _ref2.url,
         importerUrl = _ref2.importerUrl,
         compileServerOrigin = _ref2.compileServerOrigin,
-        outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
+        compileDirectoryRelativeUrl = _ref2.compileDirectoryRelativeUrl,
         _ref2$notFound = _ref2.notFound,
         notFound = _ref2$notFound === void 0 ? false : _ref2$notFound;
     var relativeUrl = tryToFindProjectRelativeUrl(url, {
       compileServerOrigin: compileServerOrigin,
-      outDirectoryRelativeUrl: outDirectoryRelativeUrl
+      compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
     });
     var importerRelativeUrl = tryToFindProjectRelativeUrl(importerUrl, {
       compileServerOrigin: compileServerOrigin,
-      outDirectoryRelativeUrl: outDirectoryRelativeUrl
+      compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
     });
     var details = notFound ? _objectSpread(_objectSpread(_objectSpread({}, importerUrl ? _defineProperty({}, "import declared in", importerRelativeUrl || importerUrl) : {}), relativeUrl ? {
       file: relativeUrl
@@ -2409,7 +2409,7 @@
 
   var tryToFindProjectRelativeUrl = function tryToFindProjectRelativeUrl(url, _ref5) {
     var compileServerOrigin = _ref5.compileServerOrigin,
-        outDirectoryRelativeUrl = _ref5.outDirectoryRelativeUrl;
+        compileDirectoryRelativeUrl = _ref5.compileDirectoryRelativeUrl;
 
     if (!url) {
       return null;
@@ -2425,19 +2425,12 @@
 
     var afterOrigin = url.slice("".concat(compileServerOrigin, "/").length);
 
-    if (!afterOrigin.startsWith(outDirectoryRelativeUrl)) {
+    if (!afterOrigin.startsWith(compileDirectoryRelativeUrl)) {
       return null;
     }
 
-    var afterCompileDirectory = afterOrigin.slice(outDirectoryRelativeUrl.length);
-    var nextSlashIndex = afterCompileDirectory.indexOf("/");
-
-    if (nextSlashIndex === -1) {
-      return null;
-    }
-
-    var afterCompileId = afterCompileDirectory.slice(nextSlashIndex + 1);
-    return afterCompileId;
+    var afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length);
+    return afterCompileDirectory;
   };
 
   // eslint-disable-next-line no-eval
@@ -2452,7 +2445,7 @@
   var GLOBAL_SPECIFIER = "global";
   var createBrowserSystem = function createBrowserSystem(_ref) {
     var compileServerOrigin = _ref.compileServerOrigin,
-        outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
+        compileDirectoryRelativeUrl = _ref.compileDirectoryRelativeUrl,
         importMapUrl = _ref.importMapUrl,
         importMap = _ref.importMap,
         importDefaultExtension = _ref.importDefaultExtension,
@@ -2483,11 +2476,11 @@
             specifier: specifier,
             importer: tryToFindProjectRelativeUrl(importer, {
               compileServerOrigin: compileServerOrigin,
-              outDirectoryRelativeUrl: outDirectoryRelativeUrl
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
             }) || importer,
             importMapUrl: tryToFindProjectRelativeUrl(importMapUrl, {
               compileServerOrigin: compileServerOrigin,
-              outDirectoryRelativeUrl: outDirectoryRelativeUrl
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
             }) || importMapUrl,
             importMap: importMap
           });
@@ -2505,7 +2498,7 @@
           url: url,
           importerUrl: importerUrl,
           compileServerOrigin: compileServerOrigin,
-          outDirectoryRelativeUrl: outDirectoryRelativeUrl
+          compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
         });
       }
 
@@ -2525,7 +2518,7 @@
           return browserSystem.getRegister();
         },
         compileServerOrigin: compileServerOrigin,
-        outDirectoryRelativeUrl: outDirectoryRelativeUrl
+        compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
       });
     };
 
@@ -3481,7 +3474,7 @@
         var importFile = _async$6(function (specifier) {
           return _await$6(memoizedCreateBrowserSystem({
             compileServerOrigin: compileServerOrigin,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
             importMapUrl: importMapUrl,
             importMap: importMap,
             importDefaultExtension: importDefaultExtension,
@@ -3510,7 +3503,7 @@
 
           return _await$6(memoizedCreateBrowserSystem({
             compileServerOrigin: compileServerOrigin,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
             importMapUrl: importMapUrl,
             importMap: importMap,
             importDefaultExtension: importDefaultExtension,
@@ -4181,7 +4174,7 @@
         onFailure = _ref.onFailure;
     var urlToSourcemapConsumer = memoizeByFirstArgStringValue(_async$4(function (stackTraceFileUrl) {
       var _exit = false;
-      return _catch$1(function () {
+      return stackTraceFileUrl.startsWith("node:") ? null : _catch$1(function () {
         var text;
         return _continue(_catch$1(function () {
           return _await$4(fetchFile(stackTraceFileUrl), function (fileResponse) {
