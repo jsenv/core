@@ -486,7 +486,7 @@ export const createJsenvRollupPlugin = async ({
       }
     },
 
-    resolveId(specifier, importer) {
+    async resolveId(specifier, importer) {
       if (importer === undefined) {
         if (specifier.endsWith(".html")) {
           importer = compileServerOrigin
@@ -514,6 +514,7 @@ export const createJsenvRollupPlugin = async ({
       if (isFileSystemPath(importer)) {
         importer = fileSystemPathToUrl(importer)
       }
+
       const importUrl = resolveImport({
         specifier,
         importer,

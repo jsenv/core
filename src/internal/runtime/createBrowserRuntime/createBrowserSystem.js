@@ -13,7 +13,7 @@ const GLOBAL_SPECIFIER = "global"
 
 export const createBrowserSystem = ({
   compileServerOrigin,
-  outDirectoryRelativeUrl,
+  compileDirectoryRelativeUrl,
   importMapUrl,
   importMap,
   importDefaultExtension,
@@ -41,12 +41,12 @@ export const createBrowserSystem = ({
           importer:
             tryToFindProjectRelativeUrl(importer, {
               compileServerOrigin,
-              outDirectoryRelativeUrl,
+              compileDirectoryRelativeUrl,
             }) || importer,
           importMapUrl:
             tryToFindProjectRelativeUrl(importMapUrl, {
               compileServerOrigin,
-              outDirectoryRelativeUrl,
+              compileDirectoryRelativeUrl,
             }) || importMapUrl,
           importMap,
         })
@@ -62,7 +62,7 @@ export const createBrowserSystem = ({
         url,
         importerUrl,
         compileServerOrigin,
-        outDirectoryRelativeUrl,
+        compileDirectoryRelativeUrl,
       })
     }
 
@@ -81,7 +81,7 @@ export const createBrowserSystem = ({
         return browserSystem.getRegister()
       },
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
     })
   }
 

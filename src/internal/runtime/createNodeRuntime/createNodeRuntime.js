@@ -28,7 +28,7 @@ export const createNodeRuntime = async ({
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
       fetchSource,
       defaultNodeModuleResolution,
     })
@@ -42,7 +42,7 @@ export const createNodeRuntime = async ({
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
       fetchSource,
       defaultNodeModuleResolution,
     })

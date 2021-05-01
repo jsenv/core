@@ -57,7 +57,7 @@ export const createBrowserRuntime = async ({
   const importFile = async (specifier) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
       importMapUrl,
       importMap,
       importDefaultExtension,
@@ -79,7 +79,7 @@ export const createBrowserRuntime = async ({
   ) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
       importMapUrl,
       importMap,
       importDefaultExtension,

@@ -19,7 +19,7 @@ const GLOBAL_SPECIFIER = "global"
 export const createNodeSystem = ({
   projectDirectoryUrl,
   compileServerOrigin,
-  outDirectoryRelativeUrl,
+  compileDirectoryRelativeUrl,
   fetchSource,
   defaultNodeModuleResolution = "esm",
 } = {}) => {
@@ -42,20 +42,9 @@ export const createNodeSystem = ({
       return specifier
     }
 
-    let importerFileUrl
-    if (importer === undefined) {
-      importer = resolveUrl(outDirectoryRelativeUrl, compileServerOrigin)
-      importerFileUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
-    } else {
-      importerFileUrl = fileUrlFromUrl(importer, {
-        projectDirectoryUrl,
-        compileServerOrigin,
-        outDirectoryRelativeUrl,
-      })
-    }
-
-    const moduleResolution =
-      decideNodeModuleResolution(importerFileUrl) || defaultNodeModuleResolution
+    const moduleResolution = importer
+      ? decideNodeModuleResolution(importer) || defaultNodeModuleResolution
+      : defaultNodeModuleResolution
 
     // handle self reference inside jsenv itself, it is not allowed by Node.js
     // for some reason
@@ -63,7 +52,7 @@ export const createNodeSystem = ({
       specifier = resolveUrl(specifier.slice("@jsenv/core/".length), projectDirectoryUrl)
     }
 
-    if (urlToExtension(importer) === ".ts" || urlToExtension(importer) === ".tsx") {
+    if (importer && (urlToExtension(importer) === ".ts" || urlToExtension(importer) === ".tsx")) {
       const fakeUrl = resolveUrl(specifier, importer)
       // typescript extension magic
       if (urlToExtension(fakeUrl) === "") {
@@ -72,21 +61,18 @@ export const createNodeSystem = ({
     }
 
     if (moduleResolution === "commonjs") {
-      const require = createRequire(importerFileUrl)
-      const requireResolution = require.resolve(specifier)
-      return transformResolvedUrl(requireResolution, {
+      return resolveUsingNodeCommonJsAlgorithm(specifier, {
         importer,
         projectDirectoryUrl,
-        outDirectoryRelativeUrl,
+        compileDirectoryRelativeUrl,
         compileServerOrigin,
       })
     }
 
-    const importResolution = await import.meta.resolve(specifier, importerFileUrl)
-    return transformResolvedUrl(importResolution, {
+    return resolveUsingNodeEsModuleAlgorithm(specifier, {
       importer,
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
       compileServerOrigin,
     })
   }
@@ -99,7 +85,7 @@ export const createNodeSystem = ({
         url,
         importerUrl,
         compileServerOrigin,
-        outDirectoryRelativeUrl,
+        compileDirectoryRelativeUrl,
       })
     }
 
@@ -114,7 +100,7 @@ export const createNodeSystem = ({
           url,
           importerUrl,
           compileServerOrigin,
-          outDirectoryRelativeUrl,
+          compileDirectoryRelativeUrl,
         },
       )
     }
@@ -139,7 +125,7 @@ export const createNodeSystem = ({
 
         return nodeSystem.getRegister()
       },
-      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
       compileServerOrigin,
     })
   }
@@ -148,7 +134,7 @@ export const createNodeSystem = ({
   nodeSystem.createContext = (url) => {
     const fileUrl = fileUrlFromUrl(url, {
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
       compileServerOrigin,
     })
 
@@ -158,7 +144,7 @@ export const createNodeSystem = ({
         const urlResolved = await resolve(specifier, url)
         return fileUrlFromUrl(urlResolved, {
           projectDirectoryUrl,
-          outDirectoryRelativeUrl,
+          compileDirectoryRelativeUrl,
           compileServerOrigin,
         })
       },
@@ -168,14 +154,61 @@ export const createNodeSystem = ({
   return nodeSystem
 }
 
+const resolveUsingNodeEsModuleAlgorithm = async (
+  specifier,
+  {
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    compileServerOrigin,
+    importer = resolveUrl(outDirectoryRelativeUrl, compileServerOrigin),
+  },
+) => {
+  const importerFileUrl = fileUrlFromUrl(importer, {
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    compileServerOrigin,
+  })
+  const importResolution = await import.meta.resolve(specifier, importerFileUrl)
+  return transformResolvedUrl(importResolution, {
+    importer,
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    compileServerOrigin,
+  })
+}
+
+const resolveUsingNodeCommonJsAlgorithm = (
+  specifier,
+  {
+    projectDirectoryUrl,
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
+    importer = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin),
+  },
+) => {
+  const importerFileUrl = fileUrlFromUrl(importer, {
+    projectDirectoryUrl,
+    compileDirectoryRelativeUrl,
+    compileServerOrigin,
+  })
+  const require = createRequire(importerFileUrl)
+  const requireResolution = require.resolve(specifier)
+  return transformResolvedUrl(requireResolution, {
+    importer,
+    projectDirectoryUrl,
+    compileDirectoryRelativeUrl,
+    compileServerOrigin,
+  })
+}
+
 const transformResolvedUrl = (
   url,
-  { importer, projectDirectoryUrl, outDirectoryRelativeUrl, compileServerOrigin },
+  { importer, projectDirectoryUrl, compileServerOrigin, compileDirectoryRelativeUrl },
 ) => {
   const compileServerUrl = compileServerUrlFromOriginalUrl(url, {
     importer,
     projectDirectoryUrl,
-    outDirectoryRelativeUrl,
+    compileDirectoryRelativeUrl,
     compileServerOrigin,
   })
   return compileServerUrl
@@ -214,7 +247,7 @@ const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirec
 
 const fileUrlFromUrl = (
   url,
-  { projectDirectoryUrl, outDirectoryRelativeUrl, compileServerOrigin },
+  { projectDirectoryUrl, compileDirectoryRelativeUrl, compileServerOrigin },
 ) => {
   if (!url.startsWith(`${compileServerOrigin}/`)) {
     return url
@@ -225,41 +258,36 @@ const fileUrlFromUrl = (
   }
 
   const afterOrigin = url.slice(`${compileServerOrigin}/`.length)
-  if (!afterOrigin.startsWith(outDirectoryRelativeUrl)) {
+  if (!afterOrigin.startsWith(compileDirectoryRelativeUrl)) {
     return url
   }
 
-  const afterCompileDirectory = afterOrigin.slice(outDirectoryRelativeUrl.length)
+  const afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length)
   const nextSlashIndex = afterCompileDirectory.indexOf("/")
   if (nextSlashIndex === -1) {
     return url
   }
 
-  const afterCompileId = afterCompileDirectory.slice(nextSlashIndex + 1)
-  return resolveUrl(afterCompileId, projectDirectoryUrl)
+  return resolveUrl(afterCompileDirectory, projectDirectoryUrl)
 }
 
 const compileServerUrlFromOriginalUrl = (
   url,
-  { importer, projectDirectoryUrl, outDirectoryRelativeUrl, compileServerOrigin },
+  { importer, projectDirectoryUrl, compileDirectoryRelativeUrl, compileServerOrigin },
 ) => {
   if (!url.startsWith(projectDirectoryUrl)) {
     return url
   }
 
   // si l'importer était compilé, compile aussi le fichier
-  const outDirectoryServerUrl = resolveUrl(outDirectoryRelativeUrl, compileServerOrigin)
-  if (importer.startsWith(outDirectoryServerUrl)) {
-    const afterOutDirectory = importer.slice(outDirectoryServerUrl.length)
-    const parts = afterOutDirectory.split("/")
-    const importerCompileId = parts[0]
-    const importerCompileDirectory = resolveUrl(`${importerCompileId}/`, outDirectoryServerUrl)
+  const compileDirectoryServerUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
+  if (importer.startsWith(compileDirectoryServerUrl)) {
     const projectRelativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
-    return resolveUrl(projectRelativeUrl, importerCompileDirectory)
+    return resolveUrl(projectRelativeUrl, compileDirectoryServerUrl)
   }
 
   const projectRelativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
-  return resolveUrl(projectRelativeUrl, outDirectoryServerUrl)
+  return resolveUrl(projectRelativeUrl, compileDirectoryServerUrl)
 }
 
 const moduleExportsToModuleNamespace = (moduleExports) => {
