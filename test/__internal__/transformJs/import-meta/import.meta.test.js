@@ -20,7 +20,6 @@ const importMetaEnvFileRelativeUrl = `${testDirectoryRelativeUrl}env.js`
     ...TRANSFORM_JS_TEST_PARAMS,
     moduleOutFormat: "esmodule",
     importMetaEnvFileRelativeUrl,
-    importMeta: { dev: true },
     code: originalFileContent,
     url: originalFileUrl,
   })

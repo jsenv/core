@@ -24,7 +24,6 @@ export const jsenvTransform = async ({
   babelPluginMap,
   moduleOutFormat,
   importMetaFormat,
-  importMeta = {},
 
   allowTopLevelAwait,
   transformTopLevelAwait,
@@ -139,7 +138,7 @@ export const jsenvTransform = async ({
             return
           }
 
-          replaceWithValue(importMeta[metaPropertyName])
+          replaceWithValue(undefined)
         },
       },
     ],

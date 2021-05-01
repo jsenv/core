@@ -16,7 +16,6 @@ export const jsenvCompilerForVue = ({
   compiledFileUrl,
   compileId,
 
-  importMeta,
   groupMap,
   babelPluginMap,
   convertMap,
@@ -52,7 +51,6 @@ export const jsenvCompilerForVue = ({
 
       const transformResult = await transformJs({
         projectDirectoryUrl,
-        importMeta,
         code,
         map,
         url: originalFileUrl,

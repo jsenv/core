@@ -17,7 +17,6 @@ export const transformJs = async ({
   convertMap = {},
   moduleOutFormat = "esmodule",
   importMetaFormat = moduleOutFormat,
-  importMeta,
 
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
@@ -61,7 +60,6 @@ export const transformJs = async ({
     convertMap,
     moduleOutFormat,
     importMetaFormat,
-    importMeta,
 
     allowTopLevelAwait,
     transformTopLevelAwait,

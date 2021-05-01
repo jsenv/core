@@ -7,7 +7,6 @@ export const jsenvCompilerForJavaScript = ({
   originalFileUrl,
   compiledFileUrl,
   compileId,
-  importMeta,
   groupMap,
   babelPluginMap,
   convertMap,
@@ -27,7 +26,6 @@ export const jsenvCompilerForJavaScript = ({
     compile: async (originalFileContent) => {
       const transformResult = await transformJs({
         projectDirectoryUrl,
-        importMeta,
         code: originalFileContent,
         url: originalFileUrl,
         urlAfterTransform: compiledFileUrl,

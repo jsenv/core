@@ -48,7 +48,6 @@ export const startCompileServer = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
-  importMeta = {},
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
@@ -143,10 +142,6 @@ export const startCompileServer = async ({
     runtimeAlwaysInsideRuntimeScoreMap,
   })
 
-  importMeta = {
-    ...importMeta,
-  }
-
   await setupOutDirectory(outDirectoryUrl, {
     logger,
     jsenvDirectoryUrl,
@@ -154,7 +149,6 @@ export const startCompileServer = async ({
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
-    importMeta,
     compileServerGroupMap,
   })
 
@@ -197,10 +191,8 @@ export const startCompileServer = async ({
 
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
-    jsenvDirectoryRelativeUrl,
     importMapFileRelativeUrl,
     importDefaultExtension,
-    importMeta,
 
     transformTopLevelAwait,
     groupMap: compileServerGroupMap,
@@ -357,7 +349,6 @@ const setupOutDirectory = async (
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
-    importMeta,
     compileServerGroupMap,
     replaceProcessEnvNodeEnv,
     processEnvNodeEnv,
@@ -375,7 +366,6 @@ const setupOutDirectory = async (
       jsenvCorePackageVersion,
       babelPluginMap,
       convertMap,
-      importMeta,
       compileServerGroupMap,
       replaceProcessEnvNodeEnv,
       processEnvNodeEnv,
