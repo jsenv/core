@@ -102,7 +102,7 @@
     "@jsenv/import-map": "6.13.2",
     "@jsenv/logger": "4.0.0",
     "@jsenv/node-signals": "2.0.1",
-    "@jsenv/server": "6.0.1",
+    "@jsenv/server": "6.0.2",
     "@jsenv/uneval": "1.5.1",
     "@jsenv/util": "4.0.6",
     "@rollup/plugin-commonjs": "18.0.0",
