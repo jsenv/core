@@ -1,7 +1,14 @@
-import { urlToFileSystemPath, resolveUrl, urlToExtension } from "@jsenv/util"
+/**
+
+We could use https://nodejs.org/api/esm.html#esm_loaders once it gets stable
+
+*/
+
+import { urlToFileSystemPath, resolveUrl, urlToExtension, urlToRelativeUrl } from "@jsenv/util"
 import { createRequire } from "module"
 import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
 import { require } from "../../require.js"
+import { jsenvCoreDirectoryUrl } from "../../jsenvCoreDirectoryUrl.js"
 import "../s.js"
 import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
 import { valueInstall } from "../valueInstall.js"
@@ -22,7 +29,7 @@ export const createNodeSystem = ({
 
   const nodeSystem = new global.System.constructor()
 
-  const resolve = (specifier, importer) => {
+  const resolve = async (specifier, importer) => {
     if (specifier === GLOBAL_SPECIFIER) {
       return specifier
     }
@@ -31,19 +38,49 @@ export const createNodeSystem = ({
       return specifier
     }
 
-    const moduleResolution =
-      urlToExtension(importer) === ".cjs"
-        ? "commonjs"
-        : urlToExtension(importer) === ".mjs"
-        ? "esm"
-        : defaultNodeModuleResolution
-
-    if (moduleResolution === "commonjs") {
-      const require = createRequire(importer)
-      return require.resolve(specifier)
+    if (specifier.startsWith("http:") || specifier.startsWith("https:")) {
+      return specifier
     }
 
-    return import.meta.resolve(specifier, importer)
+    let importerFileUrl
+    if (importer === undefined) {
+      importer = resolveUrl(outDirectoryRelativeUrl, compileServerOrigin)
+      importerFileUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
+    } else {
+      importerFileUrl = fileUrlFromUrl(importer, {
+        projectDirectoryUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
+      })
+    }
+
+    const moduleResolution =
+      decideNodeModuleResolution(importerFileUrl) || defaultNodeModuleResolution
+
+    // handle self reference inside jsenv itself, it is not allowed by Node.js
+    // for some reason
+    if (projectDirectoryUrl === jsenvCoreDirectoryUrl && specifier.startsWith("@jsenv/core/")) {
+      specifier = resolveUrl(specifier.slice("@jsenv/core/".length), projectDirectoryUrl)
+    }
+
+    if (moduleResolution === "commonjs") {
+      const require = createRequire(importerFileUrl)
+      const requireResolution = require.resolve(specifier)
+      return compileServerUrlFromOriginalUrl(requireResolution, {
+        importer,
+        projectDirectoryUrl,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+      })
+    }
+
+    const importResolution = await import.meta.resolve(specifier, importerFileUrl)
+    return compileServerUrlFromOriginalUrl(importResolution, {
+      importer,
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+      compileServerOrigin,
+    })
   }
 
   nodeSystem.resolve = resolve
@@ -101,17 +138,17 @@ export const createNodeSystem = ({
 
   // https://github.com/systemjs/systemjs/blob/master/docs/hooks.md#createcontexturl---object
   nodeSystem.createContext = (url) => {
-    const originalUrl = urlToOriginalUrl(url, {
+    const fileUrl = fileUrlFromUrl(url, {
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
       compileServerOrigin,
     })
 
     return {
-      url: originalUrl,
-      resolve: (specifier) => {
-        const urlResolved = resolve(specifier, url)
-        return urlToOriginalUrl(urlResolved, {
+      url: fileUrl,
+      resolve: async (specifier) => {
+        const urlResolved = await resolve(specifier, url)
+        return fileUrlFromUrl(urlResolved, {
           projectDirectoryUrl,
           outDirectoryRelativeUrl,
           compileServerOrigin,
@@ -121,6 +158,22 @@ export const createNodeSystem = ({
   }
 
   return nodeSystem
+}
+
+const decideNodeModuleResolution = (importer) => {
+  if (!importer) {
+    return undefined
+  }
+
+  if (urlToExtension(importer) === ".cjs") {
+    return "commonjs"
+  }
+
+  if (urlToExtension(importer) === ".mjs") {
+    return "esm"
+  }
+
+  return undefined
 }
 
 const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirectoryUrl }) => {
@@ -138,7 +191,7 @@ const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirec
   return responseUrl
 }
 
-const urlToOriginalUrl = (
+const fileUrlFromUrl = (
   url,
   { projectDirectoryUrl, outDirectoryRelativeUrl, compileServerOrigin },
 ) => {
@@ -163,6 +216,29 @@ const urlToOriginalUrl = (
 
   const afterCompileId = afterCompileDirectory.slice(nextSlashIndex + 1)
   return resolveUrl(afterCompileId, projectDirectoryUrl)
+}
+
+const compileServerUrlFromOriginalUrl = (
+  url,
+  { importer, projectDirectoryUrl, outDirectoryRelativeUrl, compileServerOrigin },
+) => {
+  if (!url.startsWith(projectDirectoryUrl)) {
+    return url
+  }
+
+  // si l'importer était compilé, compile aussi le fichier
+  const outDirectoryServerUrl = resolveUrl(outDirectoryRelativeUrl, compileServerOrigin)
+  if (importer.startsWith(outDirectoryServerUrl)) {
+    const afterOutDirectory = importer.slice(outDirectoryServerUrl.length)
+    const parts = afterOutDirectory.split("/")
+    const importerCompileId = parts[0]
+    const importerCompileDirectory = resolveUrl(`${importerCompileId}/`, outDirectoryServerUrl)
+    const projectRelativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
+    return resolveUrl(projectRelativeUrl, importerCompileDirectory)
+  }
+
+  const projectRelativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
+  return resolveUrl(projectRelativeUrl, outDirectoryServerUrl)
 }
 
 const moduleExportsToModuleNamespace = (moduleExports) => {
