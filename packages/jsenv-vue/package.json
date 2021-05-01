@@ -9,7 +9,7 @@
     "directory": "packages/jsenv-vue"
   },
   "engines": {
-    "node": ">=15.0.0"
+    "node": ">=14.0.0"
   },
   "publishConfig": {
     "access": "public"
