@@ -6,6 +6,7 @@ import { jsenvNodeSystemUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
+import { readFile } from "@jsenv/util"
 
 export const launchNode = async ({
   cancellationToken = createCancellationToken(),
@@ -14,15 +15,13 @@ export const launchNode = async ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
-
-  importMapFileRelativeUrl,
-  importDefaultExtension,
+  defaultNodeModuleResolution,
 
   debugPort,
   debugMode,
   debugModeInheritBreak,
   env,
-  commandLineOptions,
+  commandLineOptions = [],
   stdin,
   stdout,
   stderr,
@@ -40,6 +39,10 @@ export const launchNode = async ({
     throw new TypeError(`outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`)
   }
 
+  defaultNodeModuleResolution =
+    defaultNodeModuleResolution ||
+    (await getDefaultNodeModuleResolutionFromProjectPackage(projectDirectoryUrl))
+
   const nodeProcess = await createControllableNodeProcess({
     cancellationToken,
     logLevel: loggerToLogLevel(logger),
@@ -51,7 +54,7 @@ export const launchNode = async ({
       COVERAGE_ENABLED: collectCoverage,
       JSENV: true,
     },
-    commandLineOptions,
+    commandLineOptions: ["--experimental-import-meta-resolve", ...commandLineOptions],
     stdin,
     stdout,
     stderr,
@@ -64,9 +67,7 @@ export const launchNode = async ({
       outDirectoryRelativeUrl,
       fileRelativeUrl,
       compileServerOrigin,
-
-      importMapFileRelativeUrl,
-      importDefaultExtension,
+      defaultNodeModuleResolution,
 
       collectCoverage,
       executionId,
@@ -156,4 +157,14 @@ const transformError = (error, { compileServerOrigin, projectDirectoryUrl }) => 
 const evalSource = (code, href) => {
   const script = new Script(code, { filename: href })
   return script.runInThisContext()
+}
+
+const getDefaultNodeModuleResolutionFromProjectPackage = async (projectDirectoryUrl) => {
+  const packageJson = await readFile(new URL("package.json", projectDirectoryUrl), {
+    as: "json",
+  })
+  if (packageJson.type === "module") {
+    return "esm"
+  }
+  return "commonjs"
 }

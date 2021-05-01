@@ -7,10 +7,7 @@ export const execute = async ({
   fileRelativeUrl,
   compileServerOrigin,
   outDirectoryRelativeUrl,
-
-  importMapFileRelativeUrl,
-  importDefaultExtension,
-
+  defaultNodeModuleResolution,
   executionId,
   // do not log in the console
   // because error handling becomes responsability
@@ -22,8 +19,7 @@ export const execute = async ({
     projectDirectoryUrl,
     compileServerOrigin,
     outDirectoryRelativeUrl,
-    importMapFileRelativeUrl,
-    importDefaultExtension,
+    defaultNodeModuleResolution,
   })
 
   const { getErrorOriginalStackString } = installNodeErrorStackRemapping({

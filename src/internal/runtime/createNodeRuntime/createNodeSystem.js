@@ -1,15 +1,9 @@
-/* eslint-disable import/max-dependencies */
-import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
-import { resolveImport } from "@jsenv/import-map"
+import { urlToFileSystemPath, resolveUrl, urlToExtension } from "@jsenv/util"
+import { createRequire } from "module"
 import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
-import { createBareSpecifierError } from "@jsenv/core/src/internal/createBareSpecifierError.js"
 import { require } from "../../require.js"
 import "../s.js"
-import {
-  fromFunctionReturningNamespace,
-  fromUrl,
-  tryToFindProjectRelativeUrl,
-} from "../module-registration.js"
+import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
 import { valueInstall } from "../valueInstall.js"
 import { evalSource } from "./evalSource.js"
 
@@ -19,10 +13,8 @@ export const createNodeSystem = ({
   projectDirectoryUrl,
   compileServerOrigin,
   outDirectoryRelativeUrl,
-  importMapUrl,
-  importMap,
-  importDefaultExtension,
   fetchSource,
+  defaultNodeModuleResolution = "esm",
 } = {}) => {
   if (typeof global.System === "undefined") {
     throw new Error(`global.System is undefined`)
@@ -39,28 +31,19 @@ export const createNodeSystem = ({
       return specifier
     }
 
-    return resolveImport({
-      specifier,
-      importer,
-      importMap,
-      defaultExtension: importDefaultExtension,
-      createBareSpecifierError: ({ specifier, importer }) => {
-        return createBareSpecifierError({
-          specifier,
-          importer:
-            tryToFindProjectRelativeUrl(importer, {
-              compileServerOrigin,
-              outDirectoryRelativeUrl,
-            }) || importer,
-          importMapUrl:
-            tryToFindProjectRelativeUrl(importMapUrl, {
-              compileServerOrigin,
-              outDirectoryRelativeUrl,
-            }) || importMapUrl,
-          importMap,
-        })
-      },
-    })
+    const moduleResolution =
+      urlToExtension(importer) === ".cjs"
+        ? "commonjs"
+        : urlToExtension(importer) === ".mjs"
+        ? "esm"
+        : defaultNodeModuleResolution
+
+    if (moduleResolution === "commonjs") {
+      const require = createRequire(importer)
+      return require.resolve(specifier)
+    }
+
+    return import.meta.resolve(specifier, importer)
   }
 
   nodeSystem.resolve = resolve
