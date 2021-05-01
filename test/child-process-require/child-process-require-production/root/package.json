@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "imports": {
+    "#env": {
+      "production": "./env.prod.cjs",
+      "default": "./env.dev.cjs"
+    }
+  }
+}

@@ -22,4 +22,5 @@ export {
   launchWebkitTab,
 } from "./src/launchBrowser.js"
 export { launchNode } from "./src/launchNode.js"
+export { requireUsingChildProcess } from "./src/requireUsingChildProcess.js"
 export { startExploring } from "./src/startExploring.js"
