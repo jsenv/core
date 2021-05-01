@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "imports": {
+    "#env": {
+      "production": "./env.prod.js",
+      "default": "./env.dev.js"
+    }
+  }
+}

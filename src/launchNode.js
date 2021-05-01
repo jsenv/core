@@ -105,22 +105,21 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})
 const transformExecutionResult = (evaluateResult, { compileServerOrigin, projectDirectoryUrl }) => {
   const { status } = evaluateResult
 
-  if (status !== "errored") {
-    const { namespace, coverageMap } = evaluateResult
-
+  if (status === "errored") {
+    const { exceptionSource, coverageMap } = evaluateResult
+    const error = evalSource(exceptionSource)
+    const errorTransformed = transformError(error, { compileServerOrigin, projectDirectoryUrl })
     return {
       status,
-      namespace,
+      error: errorTransformed,
       coverageMap,
     }
   }
 
-  const { exceptionSource, coverageMap } = evaluateResult
-  const error = evalSource(exceptionSource)
-
+  const { namespace, coverageMap } = evaluateResult
   return {
     status,
-    error: transformError(error, { compileServerOrigin, projectDirectoryUrl }),
+    namespace,
     coverageMap,
   }
 }
