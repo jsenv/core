@@ -1,5 +1,4 @@
 /* eslint-disable import/max-dependencies */
-import { basename } from "path"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { minimalBabelPluginArray } from "@jsenv/core/src/internal/minimalBabelPluginArray.js"
 import { babelPluginTransformImportMeta } from "@jsenv/core/src/internal/babel-plugin-transform-import-meta.js"
@@ -25,7 +24,6 @@ export const jsenvTransform = async ({
   babelPluginMap,
   moduleOutFormat,
   importMetaFormat,
-  importMetaEnvFileSpecifier,
   importMeta = {},
 
   allowTopLevelAwait,
@@ -138,15 +136,6 @@ export const jsenvTransform = async ({
               // })
               // return
             }
-            return
-          }
-
-          if (metaPropertyName === "env") {
-            replaceWithImport({
-              namespace: true,
-              from: importMetaEnvFileSpecifier,
-              nameHint: basename(importMetaEnvFileSpecifier),
-            })
             return
           }
 

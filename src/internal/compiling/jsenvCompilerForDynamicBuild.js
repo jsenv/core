@@ -135,7 +135,6 @@ const handleDynamicBuildFile = ({
   originalFileUrl,
   compiledFileUrl,
   compileId,
-  importMetaEnvFileRelativeUrl,
   importMeta,
   groupMap,
   babelPluginMap,
@@ -148,7 +147,6 @@ const handleDynamicBuildFile = ({
     compile: async (originalFileContent) => {
       const transformResult = await transformJs({
         projectDirectoryUrl,
-        importMetaEnvFileRelativeUrl,
         importMeta,
         code: originalFileContent,
         url: originalFileUrl,

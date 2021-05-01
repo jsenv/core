@@ -1,5 +1,4 @@
 import {
-  resolveUrl,
   urlToFileSystemPath,
   urlToRelativeUrl,
   normalizeStructuredMetaMap,
@@ -18,7 +17,6 @@ export const transformJs = async ({
   convertMap = {},
   moduleOutFormat = "esmodule",
   importMetaFormat = moduleOutFormat,
-  importMetaEnvFileRelativeUrl,
   importMeta,
 
   allowTopLevelAwait = true,
@@ -53,10 +51,6 @@ export const transformJs = async ({
   const inputPath = computeInputPath(url)
   const inputRelativePath = computeInputRelativePath(url, projectDirectoryUrl)
 
-  const importMetaEnvFileUrl = resolveUrl(importMetaEnvFileRelativeUrl, projectDirectoryUrl)
-  const importMetaEnvRelativeUrlForInput = urlToRelativeUrl(importMetaEnvFileUrl, url)
-  const importMetaEnvFileSpecifier = relativeUrlToSpecifier(importMetaEnvRelativeUrlForInput)
-
   return jsenvTransform({
     inputCode,
     inputMap,
@@ -67,7 +61,6 @@ export const transformJs = async ({
     convertMap,
     moduleOutFormat,
     importMetaFormat,
-    importMetaEnvFileSpecifier,
     importMeta,
 
     allowTopLevelAwait,
@@ -135,14 +128,4 @@ const computeInputRelativePath = (url, projectDirectoryUrl) => {
     return urlToRelativeUrl(url, projectDirectoryUrl)
   }
   return undefined
-}
-
-const relativeUrlToSpecifier = (relativeUrl) => {
-  if (relativeUrl.startsWith("data:")) return relativeUrl
-  if (relativeUrl.startsWith("http:")) return relativeUrl
-  if (relativeUrl.startsWith("https:")) return relativeUrl
-  if (relativeUrl.startsWith("file:")) return relativeUrl
-  if (relativeUrl.startsWith("../")) return relativeUrl
-  if (relativeUrl.startsWith("./")) return relativeUrl
-  return `./${relativeUrl}`
 }

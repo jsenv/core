@@ -48,7 +48,6 @@ export const startCompileServer = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
-  importMetaEnvFileRelativeUrl,
   importMeta = {},
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
@@ -156,7 +155,6 @@ export const startCompileServer = async ({
     babelPluginMap,
     convertMap,
     importMeta,
-    importMetaEnvFileRelativeUrl,
     compileServerGroupMap,
   })
 
@@ -202,7 +200,6 @@ export const startCompileServer = async ({
     jsenvDirectoryRelativeUrl,
     importMapFileRelativeUrl,
     importDefaultExtension,
-    importMetaEnvFileRelativeUrl,
     importMeta,
 
     transformTopLevelAwait,
@@ -361,7 +358,6 @@ const setupOutDirectory = async (
     babelPluginMap,
     convertMap,
     importMeta,
-    importMetaEnvFileRelativeUrl,
     compileServerGroupMap,
     replaceProcessEnvNodeEnv,
     processEnvNodeEnv,
@@ -380,7 +376,6 @@ const setupOutDirectory = async (
       babelPluginMap,
       convertMap,
       importMeta,
-      importMetaEnvFileRelativeUrl,
       compileServerGroupMap,
       replaceProcessEnvNodeEnv,
       processEnvNodeEnv,

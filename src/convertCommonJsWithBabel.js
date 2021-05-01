@@ -4,7 +4,6 @@ import { babelPluginReplaceExpressions } from "./internal/babel-plugin-replace-e
 
 export const convertCommonJsWithBabel = async ({
   projectDirectoryUrl,
-  importMetaEnvFileRelativeUrl,
   code,
   url,
   replaceGlobalObject = true,
@@ -19,7 +18,6 @@ export const convertCommonJsWithBabel = async ({
   // maybe we should use babel core here instead of transformJs
   const result = await transformJs({
     projectDirectoryUrl,
-    importMetaEnvFileRelativeUrl,
     code,
     url,
     babelPluginMap: {

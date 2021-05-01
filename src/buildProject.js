@@ -25,7 +25,6 @@ export const buildProject = async ({
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
-  importMetaEnvFileRelativeUrlForBuild = "env.prod.js",
   importMeta = {
     dev: false,
   },
@@ -155,7 +154,6 @@ export const buildProject = async ({
       outDirectoryName: "out-build",
       importMapFileRelativeUrl,
       importDefaultExtension,
-      importMetaEnvFileRelativeUrl: importMetaEnvFileRelativeUrlForBuild,
       importMeta,
       moduleOutFormat: "esmodule", // rollup will transform into systemjs
       importMetaFormat: format, // but ensure import.meta are correctly transformed into the right format

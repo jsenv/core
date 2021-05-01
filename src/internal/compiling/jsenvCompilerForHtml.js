@@ -29,7 +29,6 @@ export const jsenvCompilerForHtml = ({
   compileId,
   outDirectoryRelativeUrl,
   importMapFileRelativeUrl,
-  importMetaEnvFileRelativeUrl,
   importMeta,
   groupMap,
   babelPluginMap,
@@ -133,7 +132,6 @@ export const jsenvCompilerForHtml = ({
           try {
             scriptTransformResult = await transformJs({
               projectDirectoryUrl,
-              importMetaEnvFileRelativeUrl,
               importMeta,
               code: scriptBeforeCompilation,
               url: scriptOriginalFileUrl,

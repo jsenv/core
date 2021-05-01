@@ -29,7 +29,6 @@ export const createCompiledFileService = ({
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   importMapFileRelativeUrl,
-  importMetaEnvFileRelativeUrl,
   importMeta,
   importDefaultExtension,
 
@@ -129,7 +128,6 @@ export const createCompiledFileService = ({
       compileId,
       outDirectoryRelativeUrl,
       importMapFileRelativeUrl,
-      importMetaEnvFileRelativeUrl,
       importDefaultExtension,
 
       moduleOutFormat,
