@@ -266,10 +266,5 @@ export const tryToFindProjectRelativeUrl = (
   }
 
   const afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length)
-  const nextSlashIndex = afterCompileDirectory.indexOf("/")
-  if (nextSlashIndex === -1) {
-    return null
-  }
-
   return afterCompileDirectory
 }

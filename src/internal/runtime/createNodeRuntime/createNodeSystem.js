@@ -62,18 +62,18 @@ export const createNodeSystem = ({
 
     if (moduleResolution === "commonjs") {
       return resolveUsingNodeCommonJsAlgorithm(specifier, {
-        importer,
         projectDirectoryUrl,
-        compileDirectoryRelativeUrl,
         compileServerOrigin,
+        compileDirectoryRelativeUrl,
+        importer,
       })
     }
 
     return resolveUsingNodeEsModuleAlgorithm(specifier, {
       importer,
       projectDirectoryUrl,
-      compileDirectoryRelativeUrl,
       compileServerOrigin,
+      compileDirectoryRelativeUrl,
     })
   }
 
@@ -158,22 +158,23 @@ const resolveUsingNodeEsModuleAlgorithm = async (
   specifier,
   {
     projectDirectoryUrl,
-    outDirectoryRelativeUrl,
     compileServerOrigin,
-    importer = resolveUrl(outDirectoryRelativeUrl, compileServerOrigin),
+    compileDirectoryRelativeUrl,
+    importer = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin),
   },
 ) => {
   const importerFileUrl = fileUrlFromUrl(importer, {
     projectDirectoryUrl,
-    outDirectoryRelativeUrl,
     compileServerOrigin,
+    compileDirectoryRelativeUrl,
   })
+
   const importResolution = await import.meta.resolve(specifier, importerFileUrl)
   return transformResolvedUrl(importResolution, {
     importer,
     projectDirectoryUrl,
-    outDirectoryRelativeUrl,
     compileServerOrigin,
+    compileDirectoryRelativeUrl,
   })
 }
 
@@ -263,11 +264,6 @@ const fileUrlFromUrl = (
   }
 
   const afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length)
-  const nextSlashIndex = afterCompileDirectory.indexOf("/")
-  if (nextSlashIndex === -1) {
-    return url
-  }
-
   return resolveUrl(afterCompileDirectory, projectDirectoryUrl)
 }
 
