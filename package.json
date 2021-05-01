@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "18.0.0",
+  "version": "18.0.0-alpha.1",
   "description": "Tool to develop, test and build js projects.",
   "license": "MIT",
   "repository": {
@@ -16,13 +16,11 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./main.js",
-      "require": "./dist/commonjs/main.cjs"
+      "import": "./main.js"
     },
     "./": "./"
   },
-  "module": "main.js",
-  "main": "dist/commonjs/main.cjs",
+  "main": "main.js",
   "files": [
     "/dist/",
     "/helpers/",
@@ -33,8 +31,7 @@
     "eslint-check": "node ./node_modules/eslint/bin/eslint.js .",
     "generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
     "generate-internal-builds": "node --experimental-top-level-await ./script/generate-internal-builds/generate-internal-builds.js",
-    "generate-commonjs-build": "node ./script/generate-commonjs-build/generate-commonjs-build.js",
-    "dist": "npm run generate-commonjs-build && npm run generate-internal-builds",
+    "dist": "npm run generate-internal-builds",
     "test": "node ./script/test/test.js",
     "start-exploring": "node ./script/start-exploring/start-exploring.js",
     "test-with-coverage": "npm run test -- --coverage",

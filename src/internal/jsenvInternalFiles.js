@@ -3,12 +3,7 @@ import { require } from "./require.js"
 import { jsenvCoreDirectoryUrl } from "./jsenvCoreDirectoryUrl.js"
 
 export const jsenvNodeSystemRelativeUrl = "./src/internal/node-launcher/node-js-file.js"
-const jsenvNodeSystemBuildRelativeUrl = "./dist/jsenv-node-system.cjs"
 export const jsenvNodeSystemUrl = resolveUrl(jsenvNodeSystemRelativeUrl, jsenvCoreDirectoryUrl)
-export const jsenvNodeSystemBuildUrl = resolveUrl(
-  jsenvNodeSystemBuildRelativeUrl,
-  jsenvCoreDirectoryUrl,
-)
 
 export const jsenvBrowserSystemRelativeUrl =
   "./src/internal/browser-launcher/jsenv-browser-system.js"

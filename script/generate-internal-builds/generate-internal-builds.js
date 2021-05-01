@@ -14,14 +14,6 @@ const buildsToGenerate = [
   {
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
     buildDirectoryRelativeUrl: "dist",
-    format: "commonjs",
-    entryPointMap: {
-      [jsenvNodeSystemRelativeUrl]: "./jsenv-node-system.cjs",
-    },
-  },
-  {
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    buildDirectoryRelativeUrl: "dist",
     format: "global",
     entryPointMap: {
       [jsenvBrowserSystemRelativeUrl]: "./jsenv-browser-system.js",

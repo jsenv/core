@@ -97,7 +97,7 @@ To achieve that you need a `.vscode/launch.json` file with the following content
 And a file starting the server capable to execute any file
 
 ```js
-const { startExploring } = require("@jsenv/core")
+import { startExploring } from "@jsenv/core"
 
 startExploring({
   projectDirectoryUrl: __dirname,
