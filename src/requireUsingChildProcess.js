@@ -17,7 +17,7 @@ export const requireUsingChildProcess = async (
 ) => {
   const result = await launchAndExecute({
     stopAfterExecute: true,
-    fileRelativeUrl: fileUrl,
+    fileRelativeUrl: String(fileUrl),
     launch: async () => {
       const controllableNodeProcess = await createControllableNodeProcess({
         logLevel,
