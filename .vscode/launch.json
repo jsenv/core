@@ -23,7 +23,7 @@
       ]
     },
     {
-      "name": "node14",
+      "name": "node",
       "type": "node",
       "request": "launch",
       "protocol": "inspector",

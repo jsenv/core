@@ -43,9 +43,10 @@ export const launchNode = async ({
     defaultNodeModuleResolution ||
     (await getDefaultNodeModuleResolutionFromProjectPackage(projectDirectoryUrl))
 
+  const logLevel = loggerToLogLevel(logger)
   const nodeProcess = await createControllableNodeProcess({
     cancellationToken,
-    logLevel: loggerToLogLevel(logger),
+    logLevel,
     debugPort,
     debugMode,
     debugModeInheritBreak,

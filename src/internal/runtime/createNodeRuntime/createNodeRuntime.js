@@ -14,9 +14,9 @@ export const createNodeRuntime = async ({
   outDirectoryRelativeUrl,
   defaultNodeModuleResolution,
 }) => {
-  const outDirectoryUrl = `${projectDirectoryUrl}${outDirectoryRelativeUrl}`
-  const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
-  const groupMap = await importJson(groupMapUrl)
+  const outDirectoryServerUrl = `${projectDirectoryUrl}${outDirectoryRelativeUrl}`
+  const groupMapServerUrl = String(new URL("groupMap.json", outDirectoryServerUrl))
+  const groupMap = await importJson(groupMapServerUrl)
 
   const compileId = computeCompileIdFromGroupId({
     groupId: resolveNodeGroup(groupMap),
@@ -85,6 +85,9 @@ const importJson = async (url) => {
 }
 
 const unevalException = (value) => {
+  if (value.hasOwnProperty("toString")) {
+    delete value.toString
+  }
   return uneval(value)
 }
 

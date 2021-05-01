@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/util"
 import { require } from "../../../src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
@@ -30,7 +30,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 
-const actual = await launchAndExecute({
+const result = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
   fileRelativeUrl,
   launch: (options) =>
@@ -41,6 +41,10 @@ const actual = await launchAndExecute({
       compileServerOrigin,
     }),
 })
+const actual = {
+  status: result.status,
+  namespace: result.namespace,
+}
 const expected = {
   status: "completed",
   namespace: {

@@ -12,6 +12,10 @@ export const getOriginalCallsites = async ({
   onFailure,
 }) => {
   const urlToSourcemapConsumer = memoizeByFirstArgStringValue(async (stackTraceFileUrl) => {
+    if (stackTraceFileUrl.startsWith("node:")) {
+      return null
+    }
+
     try {
       let text
       try {

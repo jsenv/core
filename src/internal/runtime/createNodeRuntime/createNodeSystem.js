@@ -63,10 +63,18 @@ export const createNodeSystem = ({
       specifier = resolveUrl(specifier.slice("@jsenv/core/".length), projectDirectoryUrl)
     }
 
+    if (urlToExtension(importer) === ".ts" || urlToExtension(importer) === ".tsx") {
+      const fakeUrl = resolveUrl(specifier, importer)
+      // typescript extension magic
+      if (urlToExtension(fakeUrl) === "") {
+        specifier = `${specifier}.ts`
+      }
+    }
+
     if (moduleResolution === "commonjs") {
       const require = createRequire(importerFileUrl)
       const requireResolution = require.resolve(specifier)
-      return compileServerUrlFromOriginalUrl(requireResolution, {
+      return transformResolvedUrl(requireResolution, {
         importer,
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
@@ -75,7 +83,7 @@ export const createNodeSystem = ({
     }
 
     const importResolution = await import.meta.resolve(specifier, importerFileUrl)
-    return compileServerUrlFromOriginalUrl(importResolution, {
+    return transformResolvedUrl(importResolution, {
       importer,
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
@@ -158,6 +166,19 @@ export const createNodeSystem = ({
   }
 
   return nodeSystem
+}
+
+const transformResolvedUrl = (
+  url,
+  { importer, projectDirectoryUrl, outDirectoryRelativeUrl, compileServerOrigin },
+) => {
+  const compileServerUrl = compileServerUrlFromOriginalUrl(url, {
+    importer,
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    compileServerOrigin,
+  })
+  return compileServerUrl
 }
 
 const decideNodeModuleResolution = (importer) => {
