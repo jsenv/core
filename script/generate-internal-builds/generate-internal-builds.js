@@ -2,7 +2,6 @@
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  jsenvNodeSystemRelativeUrl,
   jsenvBrowserSystemRelativeUrl,
   jsenvExploringRedirectorJsRelativeUrl,
   jsenvExploringIndexJsRelativeUrl,
