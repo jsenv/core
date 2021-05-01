@@ -48,7 +48,6 @@ export const startCompileServer = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
-  importMetaDev = false,
   importMetaEnvFileRelativeUrl,
   importMeta = {},
   jsenvDirectoryRelativeUrl = ".jsenv",
@@ -146,7 +145,6 @@ export const startCompileServer = async ({
   })
 
   importMeta = {
-    dev: importMetaDev,
     ...importMeta,
   }
 

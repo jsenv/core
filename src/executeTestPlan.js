@@ -29,7 +29,6 @@ export const executeTestPlan = async ({
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
   importDefaultExtension,
-  importMetaDev = true,
   importMetaEnvFileRelativeUrlForTest = "env.dev.js",
   importMeta,
 
@@ -147,7 +146,6 @@ export const executeTestPlan = async ({
       jsenvDirectoryClean,
       importMapFileRelativeUrl,
       importDefaultExtension,
-      importMetaDev,
       importMetaEnvFileRelativeUrl: importMetaEnvFileRelativeUrlForTest,
       importMeta,
 

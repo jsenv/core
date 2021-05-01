@@ -16,7 +16,6 @@ export const executePlan = async (
     jsenvDirectoryClean,
     importMapFileRelativeUrl,
     importDefaultExtension,
-    importMetaDev,
     importMetaEnvFileRelativeUrl,
     importMeta,
 
@@ -61,7 +60,6 @@ export const executePlan = async (
     jsenvDirectoryClean,
     importMapFileRelativeUrl,
     importDefaultExtension,
-    importMetaDev,
     importMetaEnvFileRelativeUrl,
     importMeta,
 

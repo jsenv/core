@@ -25,7 +25,6 @@ export const execute = async ({
   babelPluginMap,
   convertMap,
   compileGroupCount = 2,
-  importMetaDev,
   importMetaEnvFileRelativeUrl,
   importMeta,
 
@@ -58,7 +57,6 @@ export const execute = async ({
         jsenvDirectoryClean,
         importMapFileRelativeUrl,
         importDefaultExtension,
-        importMetaDev,
         importMetaEnvFileRelativeUrl,
         importMeta,
 
