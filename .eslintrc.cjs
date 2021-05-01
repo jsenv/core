@@ -1,6 +1,6 @@
 const { createEslintConfig } = require("@jsenv/eslint-config")
 
-const config = createEslintConfig({
+const eslintConfig = createEslintConfig({
   projectDirectoryUrl: __dirname,
   importResolutionMethod: "import-map",
   importMapFileRelativeUrl: "./import-map.importmap",
@@ -13,36 +13,44 @@ const config = createEslintConfig({
 
 // disable commonjs globals by default
 // (package is "type": "module")
-Object.assign(config.globals, {
+Object.assign(eslintConfig.globals, {
   __filename: "off",
   __dirname: "off",
   require: "off",
 })
 
-config.overrides = [
+eslintConfig.overrides.push({
+  files: ["**/*.cjs"],
   // inside *.cjs files. restore commonJS "globals"
-  {
-    files: ["**/*.cjs"],
-    globals: {
-      __filename: true,
-      __dirname: true,
-      require: true,
+  globals: {
+    __filename: true,
+    __dirname: true,
+    require: true,
+  },
+  // inside *.cjs files, use commonjs module resolution
+  settings: {
+    "import/resolver": {
+      [Object.keys(eslintConfig.settings["import/resolver"])[0]]: {
+        node: true,
+        commonJsModuleResolution: true,
+      },
     },
   },
-  // several files are written for browsers, not Node.js
-  {
-    files: [
-      "**/createBrowserRuntime/**/*.js",
-      "**/exploring/**/*.js",
-      "**/toolbar/**/*.js",
-      "**/browser-utils/**/*.js",
-      "**/detectBrowser/**/*.js",
-    ],
-    env: {
-      browser: true,
-      node: false,
-    },
-  },
-]
+})
 
-module.exports = config
+eslintConfig.overrides.push({
+  // several files are written for browsers, not Node.js
+  files: [
+    "**/createBrowserRuntime/**/*.js",
+    "**/exploring/**/*.js",
+    "**/toolbar/**/*.js",
+    "**/browser-utils/**/*.js",
+    "**/detectBrowser/**/*.js",
+  ],
+  env: {
+    browser: true,
+    node: false,
+  },
+})
+
+module.exports = eslintConfig
