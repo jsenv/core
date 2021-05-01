@@ -1,3 +1,5 @@
+// disabled because it needs --experimental-import-meta-resolve to work
+
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"

@@ -20,7 +20,7 @@
       "import": "./main.js",
       "require": "./dist/commonjs/main.cjs"
     },
-    "./*": "./*"
+    "./": "./"
   },
   "module": "main.js",
   "main": "dist/commonjs/main.cjs",

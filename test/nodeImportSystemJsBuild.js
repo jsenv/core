@@ -11,6 +11,8 @@ export const nodeImportSystemJsBuild = async ({
   const mainFileUrl = resolveUrl(mainRelativeUrl, testDirectoryUrl)
   const nodeSystem = await createNodeSystem({
     fetchSource,
+    projectDirectoryUrl,
+    compileServerOrigin: "https://jsenv.com",
   })
   const namespace = await nodeSystem.import(mainFileUrl)
 
