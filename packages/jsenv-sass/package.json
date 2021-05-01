@@ -9,7 +9,7 @@
     "directory": "packages/jsenv-sass"
   },
   "engines": {
-    "node": ">=13.0.0"
+    "node": ">=15.0.0"
   },
   "publishConfig": {
     "access": "public"
@@ -20,7 +20,7 @@
       "import": "./main.js",
       "require": "./dist/commonjs/main.cjs"
     },
-    "./": "./"
+    "./*": "./*"
   },
   "module": "main.js",
   "main": "dist/commonjs/main.cjs",
