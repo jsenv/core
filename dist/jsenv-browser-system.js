@@ -331,8 +331,8 @@
   var normalizeImportMap = function normalizeImportMap(importMap, baseUrl) {
     assertImportMap(importMap);
 
-    if (typeof baseUrl !== "string") {
-      throw new TypeError(formulateBaseUrlMustBeAString({
+    if (!isStringOrUrl(baseUrl)) {
+      throw new TypeError(formulateBaseUrlMustBeStringOrUrl({
         baseUrl: baseUrl
       }));
     }
@@ -343,6 +343,18 @@
       imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
       scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
     };
+  };
+
+  var isStringOrUrl = function isStringOrUrl(value) {
+    if (typeof value === "string") {
+      return true;
+    }
+
+    if (typeof URL === "function" && value instanceof URL) {
+      return true;
+    }
+
+    return false;
   };
 
   var normalizeMappings = function normalizeMappings(mappings, baseUrl) {
@@ -404,9 +416,9 @@
     return sortScopes(scopesNormalized);
   };
 
-  var formulateBaseUrlMustBeAString = function formulateBaseUrlMustBeAString(_ref) {
+  var formulateBaseUrlMustBeStringOrUrl = function formulateBaseUrlMustBeStringOrUrl(_ref) {
     var baseUrl = _ref.baseUrl;
-    return "baseUrl must be a string.\n--- base url ---\n".concat(baseUrl);
+    return "baseUrl must be a string or an url.\n--- base url ---\n".concat(baseUrl);
   };
 
   var formulateAddressMustBeAString = function formulateAddressMustBeAString(_ref2) {
@@ -3656,6 +3668,7 @@
     return "".concat(name, ": ").concat(message).concat(stackString);
   };
 
+  /* eslint-env browser, node */
   var parseDataUrl = function parseDataUrl(dataUrl) {
     var afterDataProtocol = dataUrl.slice("data:".length);
     var commaIndex = afterDataProtocol.indexOf(",");
@@ -4613,7 +4626,7 @@
         var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window.location.href;
         // browsers having Error.captureStrackTrace got window.URL
         // and this executes only when Error.captureStackTrace exists
-        return String(new window.URL(specifier, importer));
+        return String(new URL(specifier, importer));
       }
     }, options));
   };

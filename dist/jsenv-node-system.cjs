@@ -224,6 +224,7 @@ var customTypeOf = function customTypeOf(obj) {
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
+/* eslint-env browser, node */
 var parseDataUrl = function parseDataUrl(dataUrl) {
   var afterDataProtocol = dataUrl.slice("data:".length);
   var commaIndex = afterDataProtocol.indexOf(",");

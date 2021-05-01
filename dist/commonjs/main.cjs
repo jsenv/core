@@ -16,10 +16,10 @@ var crypto = require('crypto');
 var estreeWalker = require('estree-walker');
 var os = require('os');
 var readline = require('readline');
-var nodeSignals = require('@jsenv/node-signals');
-var vm = require('vm');
 var child_process = require('child_process');
 var _uneval = require('@jsenv/uneval');
+var vm = require('vm');
+var nodeSignals = require('@jsenv/node-signals');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
@@ -1481,7 +1481,7 @@ const urlToCompiledServerUrl = (url, {
 const jsenvNodeSystemRelativeUrl = "./src/internal/node-launcher/node-js-file.js";
 const jsenvNodeSystemBuildRelativeUrl = "./dist/jsenv-node-system.cjs";
 const jsenvNodeSystemUrl = util.resolveUrl(jsenvNodeSystemRelativeUrl, jsenvCoreDirectoryUrl);
-const jsenvNodeSystemBuildUrl = util.resolveUrl(jsenvNodeSystemBuildRelativeUrl, jsenvCoreDirectoryUrl);
+util.resolveUrl(jsenvNodeSystemBuildRelativeUrl, jsenvCoreDirectoryUrl);
 const jsenvBrowserSystemRelativeUrl = "./src/internal/browser-launcher/jsenv-browser-system.js";
 const jsenvBrowserSystemBuildRelativeUrl = "./dist/jsenv-browser-system.js";
 util.resolveUrl(jsenvBrowserSystemRelativeUrl, jsenvCoreDirectoryUrl);
@@ -4010,6 +4010,7 @@ const sortObjectByPathnames = object => {
   return objectSorted;
 };
 
+/* eslint-env browser, node */
 const parseDataUrl = dataUrl => {
   const afterDataProtocol = dataUrl.slice("data:".length);
   const commaIndex = afterDataProtocol.indexOf(",");
@@ -11794,7 +11795,12 @@ const {
   readFileSync
 } = require$1("fs");
 
-const generateCoverageHtmlDirectory = async (coverageMap, htmlDirectoryRelativeUrl, projectDirectoryUrl) => {
+const generateCoverageHtmlDirectory = async (coverageMap, {
+  projectDirectoryUrl,
+  coverageHtmlDirectoryRelativeUrl,
+  coverageSkipEmpty,
+  coverageSkipFull
+}) => {
   const libReport = require$1("istanbul-lib-report");
 
   const reports = require$1("istanbul-reports");
@@ -11811,14 +11817,17 @@ const generateCoverageHtmlDirectory = async (coverageMap, htmlDirectoryRelativeU
     }
   });
   const report = reports.create("html", {
-    skipEmpty: true,
-    skipFull: true,
-    subdir: htmlDirectoryRelativeUrl
+    skipEmpty: coverageSkipEmpty,
+    skipFull: coverageSkipFull,
+    subdir: coverageHtmlDirectoryRelativeUrl
   });
   report.execute(context);
 };
 
-const generateCoverageTextLog = coverageMap => {
+const generateCoverageTextLog = (coverageMap, {
+  coverageSkipEmpty,
+  coverageSkipFull
+}) => {
   const libReport = require$1("istanbul-lib-report");
 
   const reports = require$1("istanbul-reports");
@@ -11831,8 +11840,8 @@ const generateCoverageTextLog = coverageMap => {
     coverageMap: createCoverageMap(coverageMap)
   });
   const report = reports.create("text", {
-    skipEmpty: true,
-    skipFull: true
+    skipEmpty: coverageSkipEmpty,
+    skipFull: coverageSkipFull
   });
   report.execute(context);
 };
@@ -11894,6 +11903,10 @@ const executeTestPlan = async ({
   coverageHtmlDirectory = !process.env.CI,
   coverageHtmlDirectoryRelativeUrl = "./coverage",
   coverageHtmlDirectoryIndexLog = true,
+  // skip empty means empty files won't appear in the coverage reports (log and html)
+  coverageSkipEmpty = false,
+  // skip full means file with 100% coverage won't appear in coverage reports (log and html)
+  coverageSkipFull = false,
   // for chromiumExecutablePath, firefoxExecutablePath and webkitExecutablePath
   // but we need something angostic that just forward the params hence using ...rest
   ...rest
@@ -12002,7 +12015,10 @@ const executeTestPlan = async ({
         logger$1.info(`-> ${util.urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
       }
 
-      promises.push(generateCoverageHtmlDirectory(result.coverageMap, coverageHtmlDirectoryRelativeUrl, projectDirectoryUrl));
+      promises.push(generateCoverageHtmlDirectory(result.coverageMap, {
+        projectDirectoryUrl,
+        coverageHtmlDirectoryRelativeUrl
+      }));
     }
 
     if (coverage && coverageJsonFile) {
@@ -12016,7 +12032,10 @@ const executeTestPlan = async ({
     }
 
     if (coverage && coverageTextLog) {
-      promises.push(generateCoverageTextLog(result.coverageMap));
+      promises.push(generateCoverageTextLog(result.coverageMap, {
+        coverageSkipEmpty,
+        coverageSkipFull
+      }));
     }
 
     await Promise.all(promises);
@@ -12038,6 +12057,648 @@ const getBabelPluginMapForNode = ({
 
 const decideNodeMinimumVersion = () => {
   return process.version.slice(1);
+};
+
+const supportsDynamicImport = util.memoize(async () => {
+  const fileUrl = util.resolveUrl("./src/internal/dynamicImportSource.js", jsenvCoreDirectoryUrl);
+  const filePath = util.urlToFileSystemPath(fileUrl);
+  const fileAsString = String(fs.readFileSync(filePath));
+
+  try {
+    return await evalSource$2(fileAsString, filePath);
+  } catch (e) {
+    return false;
+  }
+});
+
+const evalSource$2 = (code, filePath) => {
+  const script = new vm.Script(code, {
+    filename: filePath
+  });
+  return script.runInThisContext();
+};
+
+const processOptionsFromExecArgv = execArgv => {
+  const processOptions = {};
+  let i = 0;
+
+  while (i < execArgv.length) {
+    const execArg = execArgv[i];
+    const option = processOptionFromExecArg(execArg);
+    processOptions[option.name] = option.value;
+    i++;
+  }
+
+  return processOptions;
+};
+
+const processOptionFromExecArg = execArg => {
+  const equalCharIndex = execArg.indexOf("=");
+
+  if (equalCharIndex === -1) {
+    return {
+      name: execArg,
+      value: ""
+    };
+  }
+
+  const name = execArg.slice(0, equalCharIndex);
+  const value = execArg.slice(equalCharIndex + 1);
+  return {
+    name,
+    value
+  };
+};
+
+const execArgvFromProcessOptions = processOptions => {
+  return Object.keys(processOptions).map(processOptionName => {
+    const processOptionValue = processOptions[processOptionName];
+
+    if (processOptionValue === "") {
+      return processOptionName;
+    }
+
+    return `${processOptionName}=${processOptionValue}`;
+  });
+};
+
+const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"];
+const createChildProcessOptions = async ({
+  cancellationToken = cancellation.createCancellationToken(),
+  // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
+  processExecArgv = process.execArgv,
+  processDebugPort = process.debugPort,
+  debugPort = 0,
+  debugMode = "inherit",
+  debugModeInheritBreak = true
+} = {}) => {
+  if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
+    throw new TypeError(logger.createDetailedMessage(`unexpected debug mode.`, {
+      ["debug mode"]: debugMode,
+      ["allowed debug mode"]: AVAILABLE_DEBUG_MODE
+    }));
+  }
+
+  const childProcessOptions = processOptionsFromExecArgv(processExecArgv);
+  await mutateDebuggingOptions(childProcessOptions, {
+    cancellationToken,
+    processDebugPort,
+    debugMode,
+    debugPort,
+    debugModeInheritBreak
+  });
+  return childProcessOptions;
+};
+
+const mutateDebuggingOptions = async (childProcessOptions, {
+  // ensure multiline
+  cancellationToken,
+  processDebugPort,
+  debugMode,
+  debugPort,
+  debugModeInheritBreak
+}) => {
+  const parentDebugInfo = getDebugInfo(childProcessOptions);
+  const parentDebugModeOptionName = parentDebugInfo.debugModeOptionName;
+  const parentDebugPortOptionName = parentDebugInfo.debugPortOptionName;
+  const childDebugModeOptionName = getChildDebugModeOptionName({
+    parentDebugModeOptionName,
+    debugMode,
+    debugModeInheritBreak
+  });
+  const childDebugPortOptionName = `${childDebugModeOptionName}-port`;
+
+  if (!childDebugModeOptionName) {
+    // remove debug mode and debug port fron child options
+    if (parentDebugModeOptionName) {
+      delete childProcessOptions[parentDebugModeOptionName];
+    }
+
+    if (parentDebugPortOptionName) {
+      delete childProcessOptions[parentDebugPortOptionName];
+    }
+
+    return;
+  } // replace child debug mode
+
+
+  if (parentDebugModeOptionName && parentDebugModeOptionName !== childDebugModeOptionName) {
+    delete childProcessOptions[parentDebugModeOptionName];
+  }
+
+  childProcessOptions[childDebugModeOptionName] = ""; // this is required because vscode does not
+  // support assigning a child spawned without a specific port
+
+  const childDebugPortOptionValue = debugPort === 0 ? await server.findFreePort(processDebugPort + 1, {
+    cancellationToken
+  }) : debugPort; // replace child debug port
+
+  if (parentDebugPortOptionName && parentDebugPortOptionName !== childDebugPortOptionName) {
+    delete childProcessOptions[parentDebugPortOptionName];
+  }
+
+  childProcessOptions[childDebugPortOptionName] = portToArgValue(childDebugPortOptionValue);
+};
+
+const getChildDebugModeOptionName = ({
+  parentDebugModeOptionName,
+  debugMode,
+  debugModeInheritBreak
+}) => {
+  if (debugMode === "none") {
+    return undefined;
+  }
+
+  if (debugMode !== "inherit") {
+    return `--${debugMode}`;
+  }
+
+  if (!parentDebugModeOptionName) {
+    return undefined;
+  }
+
+  if (!debugModeInheritBreak && parentDebugModeOptionName === "--inspect-brk") {
+    return "--inspect";
+  }
+
+  if (!debugModeInheritBreak && parentDebugModeOptionName === "--debug-brk") {
+    return "--debug";
+  }
+
+  return parentDebugModeOptionName;
+};
+
+const portToArgValue = port => {
+  if (typeof port !== "number") return "";
+  if (port === 0) return "";
+  return port;
+}; // https://nodejs.org/en/docs/guides/debugging-getting-started/
+
+
+const getDebugInfo = processOptions => {
+  const inspectOption = processOptions["--inspect"];
+
+  if (inspectOption !== undefined) {
+    return {
+      debugModeOptionName: "--inspect",
+      debugPortOptionName: "--inspect-port"
+    };
+  }
+
+  const inspectBreakOption = processOptions["--inspect-brk"];
+
+  if (inspectBreakOption !== undefined) {
+    return {
+      debugModeOptionName: "--inspect-brk",
+      debugPortOptionName: "--inspect-port"
+    };
+  }
+
+  const debugOption = processOptions["--debug"];
+
+  if (debugOption !== undefined) {
+    return {
+      debugModeOptionName: "--debug",
+      debugPortOptionName: "--debug-port"
+    };
+  }
+
+  const debugBreakOption = processOptions["--debug-brk"];
+
+  if (debugBreakOption !== undefined) {
+    return {
+      debugModeOptionName: "--debug-brk",
+      debugPortOptionName: "--debug-port"
+    };
+  }
+
+  return {};
+};
+
+/* eslint-disable import/max-dependencies */
+
+const killProcessTree = require$1("tree-kill");
+
+const nodeControllableFileUrl = util.resolveUrl("./src/internal/node-launcher/nodeControllableFile.js", jsenvCoreDirectoryUrl);
+const EVALUATION_STATUS_OK = "evaluation-ok"; // https://nodejs.org/api/process.html#process_signal_events
+
+const SIGINT_SIGNAL_NUMBER = 2;
+const SIGABORT_SIGNAL_NUMBER = 6;
+const SIGTERM_SIGNAL_NUMBER = 15;
+const SIGINT_EXIT_CODE = 128 + SIGINT_SIGNAL_NUMBER;
+const SIGABORT_EXIT_CODE = 128 + SIGABORT_SIGNAL_NUMBER;
+const SIGTERM_EXIT_CODE = 128 + SIGTERM_SIGNAL_NUMBER; // http://man7.org/linux/man-pages/man7/signal.7.html
+// https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
+
+const GRACEFUL_STOP_SIGNAL = "SIGTERM";
+const STOP_SIGNAL = "SIGKILL"; // it would be more correct if GRACEFUL_STOP_FAILED_SIGNAL was SIGHUP instead of SIGKILL.
+// but I'm not sure and it changes nothing so just use SIGKILL
+
+const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
+const createControllableNodeProcess = async ({
+  cancellationToken = cancellation.createCancellationToken(),
+  logLevel,
+  debugPort,
+  debugMode,
+  debugModeInheritBreak,
+  commandLineOptions = [],
+  env,
+  stdin = "pipe",
+  stdout = "pipe",
+  stderr = "pipe"
+}) => {
+  const logger$1 = logger.createLogger({
+    logLevel
+  });
+  const dynamicImportSupported = await supportsDynamicImport();
+
+  if (!dynamicImportSupported) {
+    throw new Error(`node does not support dynamic import`);
+  }
+
+  const childProcessOptions = await createChildProcessOptions({
+    cancellationToken,
+    debugPort,
+    debugMode,
+    debugModeInheritBreak
+  });
+  const processOptions = { ...childProcessOptions,
+    ...processOptionsFromExecArgv(commandLineOptions)
+  };
+  const execArgv = execArgvFromProcessOptions(processOptions);
+
+  if (env === undefined) {
+    env = { ...process.env
+    };
+  } else if (typeof env !== "object") {
+    throw new TypeError(`env must be an object, got ${env}`);
+  }
+
+  await util.assertFilePresence(nodeControllableFileUrl);
+  const childProcess = child_process.fork(util.urlToFileSystemPath(nodeControllableFileUrl), {
+    execArgv,
+    // silent: true
+    stdio: ["pipe", "pipe", "pipe", "ipc"],
+    env
+  }); // if we passe stream, pipe them https://github.com/sindresorhus/execa/issues/81
+
+  if (typeof stdin === "object") {
+    stdin.pipe(childProcess.stdin);
+  }
+
+  if (typeof stdout === "object") {
+    childProcess.stdout.pipe(stdout);
+  }
+
+  if (typeof stderr === "object") {
+    childProcess.stderr.pipe(stderr);
+  }
+
+  logger$1.debug(`${process.argv[0]} ${execArgv.join(" ")} ${util.urlToFileSystemPath(nodeControllableFileUrl)}`);
+  const childProcessReadyPromise = new Promise(resolve => {
+    onceProcessMessage(childProcess, "ready", resolve);
+  });
+  const consoleCallbackArray = [];
+
+  const registerConsoleCallback = callback => {
+    consoleCallbackArray.push(callback);
+  };
+
+  installProcessOutputListener(childProcess, ({
+    type,
+    text
+  }) => {
+    consoleCallbackArray.forEach(callback => {
+      callback({
+        type,
+        text
+      });
+    });
+  }); // keep listening process outputs while child process is killed to catch
+  // outputs until it's actually disconnected
+  // registerCleanupCallback(removeProcessOutputListener)
+
+  const errorCallbackArray = [];
+
+  const registerErrorCallback = callback => {
+    errorCallbackArray.push(callback);
+  };
+
+  let killing = false;
+  installProcessErrorListener(childProcess, error => {
+    if (!childProcess.connected && error.code === "ERR_IPC_DISCONNECTED") {
+      return;
+    } // on windows killProcessTree uses taskkill which seems to kill the process
+    // with an exitCode of 1
+
+
+    if (process.platform === "win32" && killing && error.exitCode === 1) {
+      return;
+    }
+
+    errorCallbackArray.forEach(callback => {
+      callback(error);
+    });
+  }); // keep listening process errors while child process is killed to catch
+  // errors until it's actually disconnected
+  // registerCleanupCallback(removeProcessErrorListener)
+  // https://nodejs.org/api/child_process.html#child_process_event_disconnect
+
+  let resolveDisconnect;
+  const disconnected = new Promise(resolve => {
+    resolveDisconnect = resolve;
+    onceProcessMessage(childProcess, "disconnect", () => {
+      resolve();
+    });
+  }); // child might exit without disconnect apparently, exit is disconnect for us
+
+  childProcess.once("exit", () => {
+    disconnectChildProcess();
+  });
+
+  const disconnectChildProcess = () => {
+    try {
+      childProcess.disconnect();
+    } catch (e) {
+      if (e.code === "ERR_IPC_DISCONNECTED") {
+        resolveDisconnect();
+      } else {
+        throw e;
+      }
+    }
+
+    return disconnected;
+  };
+
+  const killChildProcess = async ({
+    signal
+  }) => {
+    killing = true;
+    logger$1.debug(`send ${signal} to child process with pid ${childProcess.pid}`);
+    await new Promise(resolve => {
+      killProcessTree(childProcess.pid, signal, error => {
+        if (error) {
+          // on windows: process with pid cannot be found
+          if (error.stack.includes(`The process "${childProcess.pid}" not found`)) {
+            resolve();
+            return;
+          } // on windows: child process with a pid cannot be found
+
+
+          if (error.stack.includes("Reason: There is no running instance of the task")) {
+            resolve();
+            return;
+          } // windows too
+
+
+          if (error.stack.includes("The operation attempted is not supported")) {
+            resolve();
+            return;
+          }
+
+          logger$1.error(logger.createDetailedMessage(`error while killing process tree with ${signal}`, {
+            ["error stack"]: error.stack,
+            ["process.pid"]: childProcess.pid
+          })); // even if we could not kill the child
+          // we will ask it to disconnect
+
+          resolve();
+          return;
+        }
+
+        resolve();
+      });
+    }); // in case the child process did not disconnect by itself at this point
+    // something is keeping it alive and it cannot be propely killed
+    // disconnect it manually.
+    // something inside makeProcessControllable.cjs ensure process.exit()
+    // when the child process is disconnected.
+
+    return disconnectChildProcess();
+  };
+
+  const stop = ({
+    gracefulFailed
+  } = {}) => {
+    return killChildProcess({
+      signal: gracefulFailed ? GRACEFUL_STOP_FAILED_SIGNAL : STOP_SIGNAL
+    });
+  };
+
+  const gracefulStop = () => {
+    return killChildProcess({
+      signal: GRACEFUL_STOP_SIGNAL
+    });
+  };
+
+  const evaluate = source => {
+    return new Promise(async (resolve, reject) => {
+      onceProcessMessage(childProcess, "evaluate-result", ({
+        status,
+        value
+      }) => {
+        logger$1.debug(logger.createDetailedMessage(`child process sent the following evaluation result.`, {
+          status,
+          value
+        }));
+        if (status === EVALUATION_STATUS_OK) resolve(value);else reject(value);
+      });
+      logger$1.debug(logger.createDetailedMessage(`ask child process to evaluate`, {
+        source
+      }));
+      await childProcessReadyPromise;
+
+      try {
+        await sendToProcess(childProcess, "evaluate", source);
+      } catch (e) {
+        logger$1.error(logger.createDetailedMessage(`error while sending message to child`, {
+          ["error stack"]: e.stack
+        }));
+        throw e;
+      }
+    });
+  };
+
+  return {
+    execArgv,
+    gracefulStop,
+    stop,
+    disconnected,
+    registerErrorCallback,
+    registerConsoleCallback,
+    evaluate
+  };
+};
+
+const sendToProcess = async (childProcess, type, data) => {
+  const source = _uneval.uneval(data, {
+    functionAllowed: true
+  });
+  return new Promise((resolve, reject) => {
+    childProcess.send({
+      type,
+      data: source
+    }, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const installProcessOutputListener = (childProcess, callback) => {
+  // beware that we may receive ansi output here, should not be a problem but keep that in mind
+  const stdoutDataCallback = chunk => {
+    callback({
+      type: "log",
+      text: String(chunk)
+    });
+  };
+
+  childProcess.stdout.on("data", stdoutDataCallback);
+
+  const stdErrorDataCallback = chunk => {
+    callback({
+      type: "error",
+      text: String(chunk)
+    });
+  };
+
+  childProcess.stderr.on("data", stdErrorDataCallback);
+  return () => {
+    childProcess.stdout.removeListener("data", stdoutDataCallback);
+    childProcess.stderr.removeListener("data", stdoutDataCallback);
+  };
+};
+
+const installProcessErrorListener = (childProcess, callback) => {
+  // https://nodejs.org/api/child_process.html#child_process_event_error
+  const errorListener = error => {
+    removeExitListener(); // if an error occured we ignore the child process exitCode
+
+    callback(error);
+    onceProcessMessage(childProcess, "error", errorListener);
+  };
+
+  const removeErrorListener = onceProcessMessage(childProcess, "error", errorListener); // process.exit(1) in child process or process.exitCode = 1 + process.exit()
+  // means there was an error even if we don't know exactly what.
+
+  const removeExitListener = onceProcessEvent(childProcess, "exit", code => {
+    if (code !== null && code !== 0 && code !== SIGINT_EXIT_CODE && code !== SIGTERM_EXIT_CODE && code !== SIGABORT_EXIT_CODE) {
+      removeErrorListener();
+      callback(createExitWithFailureCodeError(code));
+    }
+  });
+  return () => {
+    removeErrorListener();
+    removeExitListener();
+  };
+};
+
+const createExitWithFailureCodeError = code => {
+  if (code === 12) {
+    return new Error(`child exited with 12: forked child wanted to use a non available port for debug`);
+  }
+
+  const error = new Error(`child exited with ${code}`);
+  error.exitCode = code;
+  return error;
+};
+
+const onceProcessMessage = (childProcess, type, callback) => {
+  return onceProcessEvent(childProcess, "message", message => {
+    if (message.type === type) {
+      // eslint-disable-next-line no-eval
+      callback(message.data ? eval(`(${message.data})`) : "");
+    }
+  });
+};
+
+const onceProcessEvent = (childProcess, type, callback) => {
+  childProcess.on(type, callback);
+  return () => {
+    childProcess.removeListener(type, callback);
+  };
+};
+
+const importUsingChildProcess = async (fileUrl, {
+  logLevel,
+  debugPort,
+  debugMode,
+  debugModeInheritBreak,
+  commandLineOptions = [],
+  env,
+  stdin,
+  stdout,
+  stderr
+} = {}) => {
+  const result = await launchAndExecute({
+    stopAfterExecute: true,
+    fileRelativeUrl: fileUrl,
+    launch: async () => {
+      const controllableNodeProcess = await createControllableNodeProcess({
+        logLevel,
+        debugPort,
+        debugMode,
+        debugModeInheritBreak,
+        env,
+        commandLineOptions,
+        stdin,
+        stdout,
+        stderr
+      });
+      return { ...controllableNodeProcess,
+        executeFile: async () => {
+          try {
+            const namespace = await importInChildProcess({
+              controllableNodeProcess,
+              fileUrl
+            });
+            return {
+              status: "ok",
+              namespace
+            };
+          } catch (e) {
+            return {
+              status: "errored",
+              error: e
+            };
+          }
+        }
+      };
+    }
+  });
+
+  if (result.status === "errored") {
+    throw result.error;
+  }
+
+  return result.namespace;
+};
+
+const importInChildProcess = ({
+  controllableNodeProcess,
+  fileUrl
+}) => {
+  return controllableNodeProcess.evaluate(`
+const namespacePromise = import(${JSON.stringify(fileUrl)})
+
+const resolveNamespace = async (namespacePromise) => {
+  const namespace = await namespacePromise
+  const namespaceResolved = {}
+  await Promise.all([
+    ...Object.keys(namespace).map(async (key) => {
+      const value = await namespace[key]
+      namespaceResolved[key] = value
+    }),
+  ])
+  return namespaceResolved
+}
+
+export default resolveNamespace(namespacePromise)
+`);
 };
 
 const jsenvExplorableConfig = {
@@ -12262,7 +12923,7 @@ const createSharingToken = ({
 
 const argsToIdFallback = args => JSON.stringify(args);
 
-const evalSource$2 = (code, filePath) => {
+const evalSource$1 = (code, filePath) => {
   const script = new vm.Script(code, {
     filename: filePath
   });
@@ -12312,6 +12973,7 @@ const executeHtmlFile = async (fileRelativeUrl, {
   await page.waitForFunction(
   /* istanbul ignore next */
   () => {
+    // eslint-disable-next-line no-undef
     return Boolean(window.__jsenv__);
   }, [], {
     timeout: 0
@@ -12322,6 +12984,7 @@ const executeHtmlFile = async (fileRelativeUrl, {
     executionResult = await page.evaluate(
     /* istanbul ignore next */
     () => {
+      // eslint-disable-next-line no-undef
       return window.__jsenv__.executionResultPromise;
     });
   } catch (e) {
@@ -12355,7 +13018,7 @@ const executeHtmlFile = async (fileRelativeUrl, {
     } = fileExecutionResultMap[fileErrored];
     return {
       status: "errored",
-      error: evalException$1(exceptionSource, {
+      error: evalException(exceptionSource, {
         projectDirectoryUrl,
         compileServerOrigin
       }),
@@ -12382,11 +13045,11 @@ const generateCoverageForPage = fileExecutionResultMap => {
   return coverageMap;
 };
 
-const evalException$1 = (exceptionSource, {
+const evalException = (exceptionSource, {
   projectDirectoryUrl,
   compileServerOrigin
 }) => {
-  const error = evalSource$2(exceptionSource);
+  const error = evalSource$1(exceptionSource);
 
   if (error && error instanceof Error) {
     const remoteRootRegexp = new RegExp(escapeRegexpSpecialCharacters(`${compileServerOrigin}/`), "g");
@@ -12749,259 +13412,6 @@ const isTargetClosedError = error => {
   return false;
 };
 
-const supportsDynamicImport = util.memoize(async () => {
-  const fileUrl = util.resolveUrl("./src/internal/dynamicImportSource.js", jsenvCoreDirectoryUrl);
-  const filePath = util.urlToFileSystemPath(fileUrl);
-  const fileAsString = String(fs.readFileSync(filePath));
-
-  try {
-    return await evalSource$1(fileAsString, filePath);
-  } catch (e) {
-    return false;
-  }
-});
-
-const evalSource$1 = (code, filePath) => {
-  const script = new vm.Script(code, {
-    filename: filePath
-  });
-  return script.runInThisContext();
-};
-
-const getCommandArgument = (argv, name) => {
-  let i = 0;
-
-  while (i < argv.length) {
-    const arg = argv[i];
-
-    if (arg === name) {
-      return {
-        name,
-        index: i,
-        value: ""
-      };
-    }
-
-    if (arg.startsWith(`${name}=`)) {
-      return {
-        name,
-        index: i,
-        value: arg.slice(`${name}=`.length)
-      };
-    }
-
-    i++;
-  }
-
-  return null;
-};
-const removeCommandArgument = (argv, name) => {
-  const argvCopy = argv.slice();
-  const arg = getCommandArgument(argv, name);
-
-  if (arg) {
-    argvCopy.splice(arg.index, 1);
-  }
-
-  return argvCopy;
-};
-
-const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"];
-const createChildExecArgv = async ({
-  cancellationToken = cancellation.createCancellationToken(),
-  // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
-  processExecArgv = process.execArgv,
-  processDebugPort = process.debugPort,
-  debugPort = 0,
-  debugMode = "inherit",
-  debugModeInheritBreak = true,
-  traceWarnings = "inherit",
-  unhandledRejection = "inherit",
-  jsonModules = "inherit",
-  topLevelAwait
-} = {}) => {
-  if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
-    throw new TypeError(logger.createDetailedMessage(`unexpected debug mode.`, {
-      ["debug mode"]: debugMode,
-      ["allowed debug mode"]: AVAILABLE_DEBUG_MODE
-    }));
-  }
-
-  let childExecArgv = processExecArgv.slice();
-  const {
-    debugModeArg,
-    debugPortArg
-  } = getCommandDebugArgs(processExecArgv);
-  let childDebugMode;
-
-  if (debugMode === "inherit") {
-    if (debugModeArg) {
-      childDebugMode = debugModeArg.name.slice(2);
-
-      if (debugModeInheritBreak === false) {
-        if (childDebugMode === "--debug-brk") childDebugMode = "--debug";
-        if (childDebugMode === "--inspect-brk") childDebugMode = "--inspect";
-      }
-    } else {
-      childDebugMode = "none";
-    }
-  } else {
-    childDebugMode = debugMode;
-  }
-
-  if (childDebugMode === "none") {
-    // remove debug mode or debug port arg
-    if (debugModeArg) {
-      childExecArgv = removeCommandArgument(childExecArgv, debugModeArg.name);
-    }
-
-    if (debugPortArg) {
-      childExecArgv = removeCommandArgument(childExecArgv, debugPortArg.name);
-    }
-  } else {
-    // this is required because vscode does not
-    // support assigning a child spwaned without a specific port
-    const childDebugPort = debugPort === 0 ? await server.findFreePort(processDebugPort + 1, {
-      cancellationToken
-    }) : debugPort; // remove process debugMode, it will be replaced with the child debugMode
-
-    const childDebugModeArgName = `--${childDebugMode}`;
-
-    if (debugPortArg) {
-      // replace the debug port arg
-      const childDebugPortArgFull = `--${childDebugMode}-port${portToArgValue(childDebugPort)}`;
-      childExecArgv[debugPortArg.index] = childDebugPortArgFull; // replace debug mode or create it (would be strange to have to create it)
-
-      if (debugModeArg) {
-        childExecArgv[debugModeArg.index] = childDebugModeArgName;
-      } else {
-        childExecArgv.push(childDebugModeArgName);
-      }
-    } else {
-      const childDebugArgFull = `${childDebugModeArgName}${portToArgValue(childDebugPort)}`; // replace debug mode for child
-
-      if (debugModeArg) {
-        childExecArgv[debugModeArg.index] = childDebugArgFull;
-      } // add debug mode to child
-      else {
-          childExecArgv.push(childDebugArgFull);
-        }
-    }
-  }
-
-  if (traceWarnings !== "inherit") {
-    const traceWarningsArg = getCommandArgument(childExecArgv, "--trace-warnings");
-
-    if (traceWarnings && !traceWarningsArg) {
-      childExecArgv.push("--trace-warnings");
-    } else if (!traceWarnings && traceWarningsArg) {
-      childExecArgv.splice(traceWarningsArg.index, 1);
-    }
-  } // https://nodejs.org/api/cli.html#cli_unhandled_rejections_mode
-
-
-  if (unhandledRejection !== "inherit") {
-    const unhandledRejectionArg = getCommandArgument(childExecArgv, "--unhandled-rejections");
-
-    if (unhandledRejection && !unhandledRejectionArg) {
-      childExecArgv.push(`--unhandled-rejections=${unhandledRejection}`);
-    } else if (unhandledRejection && unhandledRejectionArg) {
-      childExecArgv[unhandledRejectionArg.index] = `--unhandled-rejections=${unhandledRejection}`;
-    } else if (!unhandledRejection && unhandledRejectionArg) {
-      childExecArgv.splice(unhandledRejectionArg.index, 1);
-    }
-  } // https://nodejs.org/api/cli.html#cli_experimental_json_modules
-
-
-  if (jsonModules !== "inherit") {
-    const jsonModulesArg = getCommandArgument(childExecArgv, "--experimental-json-modules");
-
-    if (jsonModules && !jsonModulesArg) {
-      childExecArgv.push(`--experimental-json-modules`);
-    } else if (!jsonModules && jsonModulesArg) {
-      childExecArgv.splice(jsonModulesArg.index, 1);
-    }
-  }
-
-  if (topLevelAwait !== undefined) {
-    const topLevelAwaitFlag = getCommandArgument(childExecArgv, "--experimental-top-level-await");
-
-    if (topLevelAwait === true && !topLevelAwaitFlag) {
-      childExecArgv.push(`--experimental-top-level-await`);
-    } else if (topLevelAwait === false && topLevelAwaitFlag) {
-      childExecArgv.splice(topLevelAwaitFlag.index, 1);
-    }
-  }
-
-  return childExecArgv;
-};
-
-const portToArgValue = port => {
-  if (typeof port !== "number") return "";
-  if (port === 0) return "";
-  return `=${port}`;
-}; // https://nodejs.org/en/docs/guides/debugging-getting-started/
-
-
-const getCommandDebugArgs = argv => {
-  const inspectArg = getCommandArgument(argv, "--inspect");
-
-  if (inspectArg) {
-    return {
-      debugModeArg: inspectArg,
-      debugPortArg: getCommandArgument(argv, "--inspect-port")
-    };
-  }
-
-  const inspectBreakArg = getCommandArgument(argv, "--inspect-brk");
-
-  if (inspectBreakArg) {
-    return {
-      debugModeArg: inspectBreakArg,
-      debugPortArg: getCommandArgument(argv, "--inspect-port")
-    };
-  }
-
-  const debugArg = getCommandArgument(argv, "--debug");
-
-  if (debugArg) {
-    return {
-      debugModeArg: debugArg,
-      debugPortArg: getCommandArgument(argv, "--debug-port")
-    };
-  }
-
-  const debugBreakArg = getCommandArgument(argv, "--debug-brk");
-
-  if (debugBreakArg) {
-    return {
-      debugModeArg: debugBreakArg,
-      debugPortArg: getCommandArgument(argv, "--debug-port")
-    };
-  }
-
-  return {};
-};
-
-/* eslint-disable import/max-dependencies */
-
-const killProcessTree = require$1("tree-kill");
-
-const EVALUATION_STATUS_OK = "evaluation-ok"; // https://nodejs.org/api/process.html#process_signal_events
-
-const SIGINT_SIGNAL_NUMBER = 2;
-const SIGABORT_SIGNAL_NUMBER = 6;
-const SIGTERM_SIGNAL_NUMBER = 15;
-const SIGINT_EXIT_CODE = 128 + SIGINT_SIGNAL_NUMBER;
-const SIGABORT_EXIT_CODE = 128 + SIGABORT_SIGNAL_NUMBER;
-const SIGTERM_EXIT_CODE = 128 + SIGTERM_SIGNAL_NUMBER; // http://man7.org/linux/man-pages/man7/signal.7.html
-// https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
-
-const GRACEFUL_STOP_SIGNAL = "SIGTERM";
-const STOP_SIGNAL = "SIGKILL"; // it would be more correct if GRACEFUL_STOP_FAILED_SIGNAL was SIGHUP instead of SIGKILL.
-// but I'm not sure and it changes nothing so just use SIGKILL
-
-const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
 const launchNode = async ({
   cancellationToken = cancellation.createCancellationToken(),
   logger: logger$1,
@@ -13013,14 +13423,11 @@ const launchNode = async ({
   debugPort,
   debugMode,
   debugModeInheritBreak,
-  traceWarnings,
-  unhandledRejection,
-  jsonModules,
   env,
-  commandLineOptions = [],
-  stdin = "pipe",
-  stdout = "pipe",
-  stderr = "pipe",
+  commandLineOptions,
+  stdin,
+  stdout,
+  stderr,
   remap = true,
   collectCoverage = false
 }) => {
@@ -13036,442 +13443,130 @@ const launchNode = async ({
     throw new TypeError(`outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`);
   }
 
-  if (env === undefined) {
-    env = { ...process.env
-    };
-  } else if (typeof env !== "object") {
-    throw new TypeError(`env must be an object, got ${env}`);
-  }
-
-  const dynamicImportSupported = await supportsDynamicImport();
-  const nodeControllableFileUrl = util.resolveUrl(dynamicImportSupported ? "./src/internal/node-launcher/nodeControllableFile.js" : "./src/internal/node-launcher/nodeControllableFile.cjs", jsenvCoreDirectoryUrl);
-  await util.assertFilePresence(nodeControllableFileUrl);
-  const childExecArgv = await createChildExecArgv({
+  const nodeProcess = await createControllableNodeProcess({
     cancellationToken,
+    logLevel: logger.loggerToLogLevel(logger$1),
     debugPort,
     debugMode,
     debugModeInheritBreak,
-    traceWarnings,
-    unhandledRejection,
-    jsonModules
+    env: { ...(env ? env : process.env),
+      COVERAGE_ENABLED: collectCoverage,
+      JSENV: true
+    },
+    commandLineOptions,
+    stdin,
+    stdout,
+    stderr
   });
-  const execArgv = [...childExecArgv, ...commandLineOptions];
-  env.COVERAGE_ENABLED = collectCoverage;
-  env.JSENV = true;
-  const childProcess = child_process.fork(util.urlToFileSystemPath(nodeControllableFileUrl), {
-    execArgv,
-    // silent: true
-    stdio: ["pipe", "pipe", "pipe", "ipc"],
-    env
-  }); // if we passe stream, pipe them https://github.com/sindresorhus/execa/issues/81
-
-  if (typeof stdin === "object") {
-    stdin.pipe(childProcess.stdin);
-  }
-
-  if (typeof stdout === "object") {
-    childProcess.stdout.pipe(stdout);
-  }
-
-  if (typeof stderr === "object") {
-    childProcess.stderr.pipe(stderr);
-  }
-
-  logger$1.debug(`${process.argv[0]} ${execArgv.join(" ")} ${util.urlToFileSystemPath(nodeControllableFileUrl)}`);
-  const childProcessReadyPromise = new Promise(resolve => {
-    onceProcessMessage(childProcess, "ready", resolve);
-  });
-  const consoleCallbackArray = [];
-
-  const registerConsoleCallback = callback => {
-    consoleCallbackArray.push(callback);
-  };
-
-  installProcessOutputListener(childProcess, ({
-    type,
-    text
-  }) => {
-    consoleCallbackArray.forEach(callback => {
-      callback({
-        type,
-        text
-      });
-    });
-  }); // keep listening process outputs while child process is killed to catch
-  // outputs until it's actually disconnected
-  // registerCleanupCallback(removeProcessOutputListener)
-
-  const errorCallbackArray = [];
-
-  const registerErrorCallback = callback => {
-    errorCallbackArray.push(callback);
-  };
-
-  let killing = false;
-  installProcessErrorListener(childProcess, error => {
-    if (!childProcess.connected && error.code === "ERR_IPC_DISCONNECTED") {
-      return;
-    } // on windows killProcessTree uses taskkill which seems to kill the process
-    // with an exitCode of 1
-
-
-    if (process.platform === "win32" && killing && error.exitCode === 1) {
-      return;
-    }
-
-    errorCallbackArray.forEach(callback => {
-      callback(error);
-    });
-  }); // keep listening process errors while child process is killed to catch
-  // errors until it's actually disconnected
-  // registerCleanupCallback(removeProcessErrorListener)
-  // https://nodejs.org/api/child_process.html#child_process_event_disconnect
-
-  let resolveDisconnect;
-  const disconnected = new Promise(resolve => {
-    resolveDisconnect = resolve;
-    onceProcessMessage(childProcess, "disconnect", () => {
-      resolve();
-    });
-  }); // child might exit without disconnect apparently, exit is disconnect for us
-
-  childProcess.once("exit", () => {
-    disconnectChildProcess();
-  });
-
-  const disconnectChildProcess = () => {
-    try {
-      childProcess.disconnect();
-    } catch (e) {
-      if (e.code === "ERR_IPC_DISCONNECTED") {
-        resolveDisconnect();
-      } else {
-        throw e;
-      }
-    }
-
-    return disconnected;
-  };
-
-  const killChildProcess = async ({
-    signal
-  }) => {
-    killing = true;
-    logger$1.debug(`send ${signal} to child process with pid ${childProcess.pid}`);
-    await new Promise(resolve => {
-      killProcessTree(childProcess.pid, signal, error => {
-        if (error) {
-          // on windows: process with pid cannot be found
-          if (error.stack.includes(`The process "${childProcess.pid}" not found`)) {
-            resolve();
-            return;
-          } // on windows: child process with a pid cannot be found
-
-
-          if (error.stack.includes("Reason: There is no running instance of the task")) {
-            resolve();
-            return;
-          } // windows too
-
-
-          if (error.stack.includes("The operation attempted is not supported")) {
-            resolve();
-            return;
-          }
-
-          logger$1.error(logger.createDetailedMessage(`error while killing process tree with ${signal}`, {
-            ["error stack"]: error.stack,
-            ["process.pid"]: childProcess.pid
-          })); // even if we could not kill the child
-          // we will ask it to disconnect
-
-          resolve();
-          return;
-        }
-
-        resolve();
-      });
-    }); // in case the child process did not disconnect by itself at this point
-    // something is keeping it alive and it cannot be propely killed
-    // disconnect it manually.
-    // something inside makeProcessControllable.cjs ensure process.exit()
-    // when the child process is disconnected.
-
-    return disconnectChildProcess();
-  };
-
-  const stop = ({
-    gracefulFailed
-  } = {}) => {
-    return killChildProcess({
-      signal: gracefulFailed ? GRACEFUL_STOP_FAILED_SIGNAL : STOP_SIGNAL
-    });
-  };
-
-  const gracefulStop = () => {
-    return killChildProcess({
-      signal: GRACEFUL_STOP_SIGNAL
-    });
-  };
 
   const executeFile = async (fileRelativeUrl, {
     collectCoverage,
     executionId
   }) => {
-    const execute = async () => {
-      return new Promise(async (resolve, reject) => {
-        onceProcessMessage(childProcess, "evaluate-result", ({
-          status,
-          value
-        }) => {
-          logger$1.debug(logger.createDetailedMessage(`child process sent the following evaluation result.`, {
-            status,
-            value
-          }));
-          if (status === EVALUATION_STATUS_OK) resolve(value);else reject(value);
-        });
-        const executeParams = {
-          jsenvCoreDirectoryUrl,
-          projectDirectoryUrl,
-          outDirectoryRelativeUrl,
-          fileRelativeUrl,
-          compileServerOrigin,
-          importMapFileRelativeUrl,
-          importDefaultExtension,
-          collectCoverage,
-          executionId,
-          remap
-        };
-        const source = await generateSourceToEvaluate({
-          dynamicImportSupported,
-          cancellationToken,
-          projectDirectoryUrl,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-          executeParams
-        });
-        logger$1.debug(logger.createDetailedMessage(`ask child process to evaluate`, {
-          source
-        }));
-        await childProcessReadyPromise;
-
-        try {
-          await sendToProcess(childProcess, "evaluate", source);
-        } catch (e) {
-          logger$1.error(logger.createDetailedMessage(`error while sending message to child`, {
-            ["error stack"]: e.stack
-          }));
-          throw e;
-        }
-      });
+    const executeParams = {
+      jsenvCoreDirectoryUrl,
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+      fileRelativeUrl,
+      compileServerOrigin,
+      importMapFileRelativeUrl,
+      importDefaultExtension,
+      collectCoverage,
+      executionId,
+      remap
     };
+    const result = await nodeProcess.evaluate(`
+import { execute } from ${JSON.stringify(jsenvNodeSystemUrl)}
 
-    const executionResult = await execute();
-    const {
-      status
-    } = executionResult;
-
-    if (status === "errored") {
-      const {
-        exceptionSource,
-        coverageMap
-      } = executionResult;
-      return {
-        status,
-        error: evalException(exceptionSource, {
-          compileServerOrigin,
-          projectDirectoryUrl
-        }),
-        coverageMap
-      };
-    }
-
-    const {
-      namespace,
-      coverageMap
-    } = executionResult;
-    return {
-      status,
-      namespace,
-      coverageMap
-    };
+export default execute(${JSON.stringify(executeParams, null, "    ")})
+`);
+    return transformExecutionResult(result, {
+      compileServerOrigin,
+      projectDirectoryUrl
+    });
   };
 
   return {
     name: "node",
     version: process.version.slice(1),
     options: {
-      execArgv // for now do not pass env, it make debug logs to verbose
+      execArgv: nodeProcess.execArgv // for now do not pass env, it make debug logs to verbose
       // because process.env is very big
       // env,
 
     },
-    gracefulStop,
-    stop,
-    disconnected,
-    registerErrorCallback,
-    registerConsoleCallback,
+    gracefulStop: nodeProcess.gracefulStop,
+    stop: nodeProcess.stop,
+    disconnected: nodeProcess.disconnected,
+    registerErrorCallback: nodeProcess.registerErrorCallback,
+    registerConsoleCallback: nodeProcess.registerConsoleCallback,
     executeFile
   };
 };
 
-const evalException = (exceptionSource, {
+const transformExecutionResult = (evaluateResult, {
   compileServerOrigin,
   projectDirectoryUrl
 }) => {
-  const error = evalSource(exceptionSource);
+  const {
+    status
+  } = evaluateResult;
 
-  if (error && error instanceof Error) {
-    const compileServerOriginRegexp = new RegExp(escapeRegexpSpecialCharacters(`${compileServerOrigin}/`), "g"); // const serverUrlRegExp = new RegExp(
-    //   `(${escapeRegexpSpecialCharacters(`${compileServerOrigin}/`)}[^\\s]+)`,
-    //   "g",
-    // )
-
-    error.message = error.message.replace(compileServerOriginRegexp, projectDirectoryUrl);
-    error.stack = error.stack.replace(compileServerOriginRegexp, projectDirectoryUrl); // const projectDirectoryPath = urlToFileSystemPath(projectDirectoryUrl)
-    // const projectDirectoryPathRegexp = new RegExp(
-    //   `(?<!file:\/\/)${escapeRegexpSpecialCharacters(projectDirectoryPath)}`,
-    //   "g",
-    // )
-    // error.stack = error.stack.replace(projectDirectoryPathRegexp, projectDirectoryUrl)
-    // error.message = error.message.replace(projectDirectoryPathRegexp, projectDirectoryUrl)
-  }
-
-  return error;
-};
-
-const sendToProcess = async (childProcess, type, data) => {
-  const source = _uneval.uneval(data, {
-    functionAllowed: true
-  });
-  return new Promise((resolve, reject) => {
-    childProcess.send({
-      type,
-      data: source
-    }, error => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
+  if (status === "errored") {
+    const {
+      exceptionSource,
+      coverageMap
+    } = evaluateResult;
+    const error = evalSource(exceptionSource);
+    const errorTransformed = transformError(error, {
+      compileServerOrigin,
+      projectDirectoryUrl
     });
-  });
-};
-
-const installProcessOutputListener = (childProcess, callback) => {
-  // beware that we may receive ansi output here, should not be a problem but keep that in mind
-  const stdoutDataCallback = chunk => {
-    callback({
-      type: "log",
-      text: String(chunk)
-    });
-  };
-
-  childProcess.stdout.on("data", stdoutDataCallback);
-
-  const stdErrorDataCallback = chunk => {
-    callback({
-      type: "error",
-      text: String(chunk)
-    });
-  };
-
-  childProcess.stderr.on("data", stdErrorDataCallback);
-  return () => {
-    childProcess.stdout.removeListener("data", stdoutDataCallback);
-    childProcess.stderr.removeListener("data", stdoutDataCallback);
-  };
-};
-
-const installProcessErrorListener = (childProcess, callback) => {
-  // https://nodejs.org/api/child_process.html#child_process_event_error
-  const errorListener = error => {
-    removeExitListener(); // if an error occured we ignore the child process exitCode
-
-    callback(error);
-    onceProcessMessage(childProcess, "error", errorListener);
-  };
-
-  const removeErrorListener = onceProcessMessage(childProcess, "error", errorListener); // process.exit(1) in child process or process.exitCode = 1 + process.exit()
-  // means there was an error even if we don't know exactly what.
-
-  const removeExitListener = onceProcessEvent(childProcess, "exit", code => {
-    if (code !== null && code !== 0 && code !== SIGINT_EXIT_CODE && code !== SIGTERM_EXIT_CODE && code !== SIGABORT_EXIT_CODE) {
-      removeErrorListener();
-      callback(createExitWithFailureCodeError(code));
-    }
-  });
-  return () => {
-    removeErrorListener();
-    removeExitListener();
-  };
-};
-
-const createExitWithFailureCodeError = code => {
-  if (code === 12) {
-    return new Error(`child exited with 12: forked child wanted to use a non available port for debug`);
+    return {
+      status,
+      error: errorTransformed,
+      coverageMap
+    };
   }
 
-  const error = new Error(`child exited with ${code}`);
-  error.exitCode = code;
-  return error;
-};
-
-const onceProcessMessage = (childProcess, type, callback) => {
-  return onceProcessEvent(childProcess, "message", message => {
-    if (message.type === type) {
-      // eslint-disable-next-line no-eval
-      callback(message.data ? eval(`(${message.data})`) : "");
-    }
-  });
-};
-
-const onceProcessEvent = (childProcess, type, callback) => {
-  childProcess.on(type, callback);
-  return () => {
-    childProcess.removeListener(type, callback);
-  };
-};
-
-const generateSourceToEvaluate = async ({
-  dynamicImportSupported,
-  executeParams
-}) => {
-  if (dynamicImportSupported) {
-    return `import { execute } from ${JSON.stringify(jsenvNodeSystemUrl)}
-
-export default execute(${JSON.stringify(executeParams, null, "    ")})`;
-  } // The compiled nodeRuntime file will be somewhere else in the filesystem
-  // than the original nodeRuntime file.
-  // It is important for the compiled file to be able to require
-  // node modules that original file could access
-  // hence the requireCompiledFileAsOriginalFile
-
-
-  return `(() => {
-  const { readFileSync } = require("fs")
-  const Module = require('module')
-  const { dirname } = require("path")
-
-  const run = async () => {
-    const nodeFilePath = ${JSON.stringify(util.urlToFileSystemPath(jsenvNodeSystemBuildUrl))}
-    const { execute } = requireCompiledFileAsOriginalFile(nodeFilePath, nodeFilePath)
-
-    return execute(${JSON.stringify(executeParams, null, "    ")})
-  }
-
-  const requireCompiledFileAsOriginalFile = (compiledFilePath, originalFilePath) => {
-    const fileContent = String(readFileSync(compiledFilePath))
-    const moduleObject = new Module(compiledFilePath)
-    moduleObject.paths = Module._nodeModulePaths(dirname(originalFilePath))
-    moduleObject._compile(fileContent, compiledFilePath)
-    return moduleObject.exports
-  }
-
+  const {
+    namespace,
+    coverageMap
+  } = evaluateResult;
   return {
-    default: run()
+    status,
+    namespace,
+    coverageMap
+  };
+};
+
+const transformError = (error, {
+  compileServerOrigin,
+  projectDirectoryUrl
+}) => {
+  if (!error) {
+    return error;
   }
-})()`;
+
+  if (!(error instanceof Error)) {
+    return error;
+  }
+
+  const compileServerOriginRegexp = new RegExp(escapeRegexpSpecialCharacters(`${compileServerOrigin}/`), "g"); // const serverUrlRegExp = new RegExp(
+  //   `(${escapeRegexpSpecialCharacters(`${compileServerOrigin}/`)}[^\\s]+)`,
+  //   "g",
+  // )
+
+  error.message = error.message.replace(compileServerOriginRegexp, projectDirectoryUrl);
+  error.stack = error.stack.replace(compileServerOriginRegexp, projectDirectoryUrl); // const projectDirectoryPath = urlToFileSystemPath(projectDirectoryUrl)
+  // const projectDirectoryPathRegexp = new RegExp(
+  //   `(?<!file:\/\/)${escapeRegexpSpecialCharacters(projectDirectoryPath)}`,
+  //   "g",
+  // )
+  // error.stack = error.stack.replace(projectDirectoryPathRegexp, projectDirectoryUrl)
+  // error.message = error.message.replace(projectDirectoryPathRegexp, projectDirectoryUrl)
+
+  return error;
 };
 
 const evalSource = (code, href) => {
@@ -13479,6 +13574,89 @@ const evalSource = (code, href) => {
     filename: href
   });
   return script.runInThisContext();
+};
+
+const requireUsingChildProcess = async (fileUrl, {
+  logLevel,
+  debugPort,
+  debugMode,
+  debugModeInheritBreak,
+  commandLineOptions = [],
+  env,
+  stdin,
+  stdout,
+  stderr
+} = {}) => {
+  const result = await launchAndExecute({
+    stopAfterExecute: true,
+    fileRelativeUrl: fileUrl,
+    launch: async () => {
+      const controllableNodeProcess = await createControllableNodeProcess({
+        logLevel,
+        debugPort,
+        debugMode,
+        debugModeInheritBreak,
+        env,
+        commandLineOptions,
+        stdin,
+        stdout,
+        stderr
+      });
+      return { ...controllableNodeProcess,
+        executeFile: async () => {
+          try {
+            const namespace = await requireInChildProcess({
+              controllableNodeProcess,
+              fileUrl
+            });
+            return {
+              status: "ok",
+              namespace
+            };
+          } catch (e) {
+            return {
+              status: "errored",
+              error: e
+            };
+          }
+        }
+      };
+    }
+  });
+
+  if (result.status === "errored") {
+    throw result.error;
+  }
+
+  return result.namespace;
+};
+
+const requireInChildProcess = ({
+  controllableNodeProcess,
+  fileUrl
+}) => {
+  return controllableNodeProcess.evaluate(`
+import { createRequire } from "module"
+import { fileURLToPath } from "url"
+
+const fileUrl = ${JSON.stringify(fileUrl)}
+const filePath = fileURLToPath(fileUrl)
+const require = createRequire(fileUrl)
+const namespace = require(filePath)
+
+const resolveNamespace = async (namespace) => {
+  const namespaceResolved = {}
+  await Promise.all([
+    ...Object.keys(namespace).map(async (key) => {
+      const value = await namespace[key]
+      namespaceResolved[key] = value
+    }),
+  ])
+  return namespaceResolved
+}
+
+export default resolveNamespace(namespace)
+`);
 };
 
 const startExploring = async ({
@@ -13705,6 +13883,7 @@ exports.convertCommonJsWithRollup = convertCommonJsWithRollup;
 exports.execute = execute;
 exports.executeTestPlan = executeTestPlan;
 exports.getBabelPluginMapForNode = getBabelPluginMapForNode;
+exports.importUsingChildProcess = importUsingChildProcess;
 exports.jsenvBabelPluginCompatMap = jsenvBabelPluginCompatMap;
 exports.jsenvBabelPluginMap = jsenvBabelPluginMap;
 exports.jsenvBrowserScoreMap = jsenvBrowserScoreMap;
@@ -13720,6 +13899,7 @@ exports.launchFirefoxTab = launchFirefoxTab;
 exports.launchNode = launchNode;
 exports.launchWebkit = launchWebkit;
 exports.launchWebkitTab = launchWebkitTab;
+exports.requireUsingChildProcess = requireUsingChildProcess;
 exports.startExploring = startExploring;
 
 //# sourceMappingURL=main.cjs.map

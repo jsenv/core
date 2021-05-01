@@ -34,7 +34,7 @@ const fetchPolyfill = async (...args) => {
   return fetchUsingXHR(...args)
 }
 
-const loadPolyfill = memoize(() => import("../../fetchUsingXHR.js"))
+const loadPolyfill = memoize(() => import("../../browser-utils/fetchUsingXHR.js"))
 
 export const fetchUrl =
   typeof window.fetch === "function" && typeof window.AbortController === "function"
