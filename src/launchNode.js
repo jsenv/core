@@ -3,10 +3,11 @@ import { Script } from "vm"
 import { loggerToLogLevel } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { jsenvNodeSystemUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { readFile, writeDirectory, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
-import { readFile } from "@jsenv/util"
+import cuid from "cuid"
 
 export const launchNode = async ({
   cancellationToken = createCancellationToken(),
@@ -43,6 +44,17 @@ export const launchNode = async ({
     defaultNodeModuleResolution ||
     (await getDefaultNodeModuleResolutionFromProjectPackage(projectDirectoryUrl))
 
+  env = {
+    ...(env ? env : process.env),
+    ...(collectCoverage
+      ? { NODE_V8_COVERAGE: await getNodeV8CoverageDir({ projectDirectoryUrl }) }
+      : {}),
+    COVERAGE_ENABLED: collectCoverage,
+    JSENV: true,
+  }
+
+  commandLineOptions = ["--experimental-import-meta-resolve", ...commandLineOptions]
+
   const logLevel = loggerToLogLevel(logger)
   const nodeProcess = await createControllableNodeProcess({
     cancellationToken,
@@ -50,12 +62,8 @@ export const launchNode = async ({
     debugPort,
     debugMode,
     debugModeInheritBreak,
-    env: {
-      ...(env ? env : process.env),
-      COVERAGE_ENABLED: collectCoverage,
-      JSENV: true,
-    },
-    commandLineOptions: ["--experimental-import-meta-resolve", ...commandLineOptions],
+    env,
+    commandLineOptions,
     stdin,
     stdout,
     stderr,
@@ -102,6 +110,12 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})
     registerConsoleCallback: nodeProcess.registerConsoleCallback,
     executeFile,
   }
+}
+
+const getNodeV8CoverageDir = async ({ projectDirectoryUrl }) => {
+  const v8CoverageDirectory = resolveUrl(`./coverage-v8/${cuid()}`, projectDirectoryUrl)
+  await writeDirectory(v8CoverageDirectory, { allowUseless: true })
+  return urlToFileSystemPath(v8CoverageDirectory)
 }
 
 const transformExecutionResult = (evaluateResult, { compileServerOrigin, projectDirectoryUrl }) => {

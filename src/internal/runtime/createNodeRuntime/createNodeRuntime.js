@@ -47,17 +47,12 @@ const importJson = async (url) => {
 }
 
 const nodeRuntimeSupportsAllFeatures = async (groupInfo) => {
-  // TODO: if only the codevrage instrumentation plugins exists
-  // and once we collect coverage using v8,
-  // we can consider it is not required
-
-  // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
-
-  if (Object.keys(groupInfo.babelPluginRequiredNameArray).length > 0) {
+  const requiredBabelPluginCount = countRequiredBabelPlugins(groupInfo)
+  if (requiredBabelPluginCount > 0) {
     return false
   }
 
-  if (Object.keys(groupInfo.jsenvPluginRequiredNameArray).length > 0) {
+  if (groupInfo.jsenvPluginRequiredNameArray.length > 0) {
     return false
   }
 
@@ -72,4 +67,18 @@ const nodeRuntimeSupportsAllFeatures = async (groupInfo) => {
   }
 
   return true
+}
+
+const countRequiredBabelPlugins = (groupInfo) => {
+  const { babelPluginRequiredNameArray } = groupInfo
+  let count = babelPluginRequiredNameArray.length
+
+  // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
+  // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
+  // "transform-instrument" becomes non mandatory
+  const transformInstrumentIndex = babelPluginRequiredNameArray.indexOf("transform-instrument")
+  if (transformInstrumentIndex > -1 && process.env.NODE_V8_COVERAGE) {
+    count--
+  }
+  return count
 }

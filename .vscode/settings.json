@@ -7,4 +7,5 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "eslint.validate": ["javascript", "html"],
   "eslint.runtime": "node"
+  // "debug.javascript.autoAttachFilter": "always"
 }

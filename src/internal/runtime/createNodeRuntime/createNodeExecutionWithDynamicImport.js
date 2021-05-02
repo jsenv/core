@@ -1,5 +1,5 @@
 import { uneval } from "@jsenv/uneval"
-import { resolveUrl } from "@jsenv/util"
+import { readDirectory, resolveUrl } from "@jsenv/util"
 
 export const createNodeExecutionWithDynamicImport = ({ projectDirectoryUrl }) => {
   const executeFile = async (specifier, { errorExposureInConsole = false } = {}) => {
@@ -42,8 +42,19 @@ const makePromiseKeepNodeProcessAlive = async (promise) => {
   }
 }
 
+// import { require } from "./internal/require.js"
+
+// const v8ToIstanbul = require("v8-to-istanbul")
+
 const readCoverage = async () => {
-  // TODO
+  const coverageV8Dir = process.env.NODE_V8_COVERAGE
+  if (!coverageV8Dir) {
+    return undefined
+  }
+
+  const dir = await readDirectory(coverageV8Dir)
+  debugger
+  return {}
 }
 
 const unevalException = (value) => {
