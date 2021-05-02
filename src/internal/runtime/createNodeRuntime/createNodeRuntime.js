@@ -10,7 +10,6 @@ export const createNodeRuntime = async ({
   projectDirectoryUrl,
   compileServerOrigin,
   outDirectoryRelativeUrl,
-  defaultNodeModuleResolution,
 }) => {
   const outDirectoryServerUrl = `${projectDirectoryUrl}${outDirectoryRelativeUrl}`
   const groupMapServerUrl = String(new URL("groupMap.json", outDirectoryServerUrl))
@@ -36,7 +35,6 @@ export const createNodeRuntime = async ({
     compileServerOrigin,
     outDirectoryRelativeUrl,
     compileId,
-    defaultNodeModuleResolution,
   })
 }
 

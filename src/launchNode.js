@@ -3,13 +3,7 @@ import { Script } from "vm"
 import { loggerToLogLevel } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { jsenvNodeSystemUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import {
-  readFile,
-  writeDirectory,
-  resolveUrl,
-  urlToFileSystemPath,
-  removeFileSystemNode,
-} from "@jsenv/util"
+import { writeDirectory, resolveUrl, urlToFileSystemPath, removeFileSystemNode } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
@@ -23,7 +17,6 @@ export const launchNode = async ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
-  defaultNodeModuleResolution,
 
   debugPort,
   debugMode,
@@ -47,10 +40,6 @@ export const launchNode = async ({
   if (typeof outDirectoryRelativeUrl !== "string") {
     throw new TypeError(`outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`)
   }
-
-  defaultNodeModuleResolution =
-    defaultNodeModuleResolution ||
-    (await getDefaultNodeModuleResolutionFromProjectPackage(projectDirectoryUrl))
 
   env = {
     ...(env ? env : process.env),
@@ -85,7 +74,6 @@ export const launchNode = async ({
       outDirectoryRelativeUrl,
       fileRelativeUrl,
       compileServerOrigin,
-      defaultNodeModuleResolution,
 
       collectCoverage,
       coverageConfig,
@@ -212,14 +200,4 @@ const transformError = (error, { compileServerOrigin, projectDirectoryUrl }) => 
 const evalSource = (code, href) => {
   const script = new Script(code, { filename: href })
   return script.runInThisContext()
-}
-
-const getDefaultNodeModuleResolutionFromProjectPackage = async (projectDirectoryUrl) => {
-  const packageJson = await readFile(new URL("package.json", projectDirectoryUrl), {
-    as: "json",
-  })
-  if (packageJson.type === "module") {
-    return "esm"
-  }
-  return "commonjs"
 }

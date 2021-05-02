@@ -5,7 +5,6 @@ export const execute = async ({
   fileRelativeUrl,
   compileServerOrigin,
   outDirectoryRelativeUrl,
-  defaultNodeModuleResolution,
   executionId,
   // do not log in the console
   // because error handling becomes responsability
@@ -18,7 +17,6 @@ export const execute = async ({
     projectDirectoryUrl,
     compileServerOrigin,
     outDirectoryRelativeUrl,
-    defaultNodeModuleResolution,
   })
 
   return executeFile(fileRelativeUrl, {

@@ -21,7 +21,6 @@ https://github.com/bcoe/c8/blob/58f23d1a3f8916b2be4af7f1c3cefa1c8ceea4b5/lib/rep
 on voudrai aussi surement exclure node:
 https://github.com/bcoe/c8/blob/58f23d1a3f8916b2be4af7f1c3cefa1c8ceea4b5/lib/report.js#L273
 
-
 on dirait que v8toIstanbul accept sources
 
 https://github.com/bcoe/c8/blob/58f23d1a3f8916b2be4af7f1c3cefa1c8ceea4b5/lib/report.js#L91
