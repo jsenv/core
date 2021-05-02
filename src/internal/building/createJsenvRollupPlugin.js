@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { extname } from "path"
-import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
+import { normalizeImportMap } from "@jsenv/import-map"
 import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
 import { loggerToLogLevel, createDetailedMessage } from "@jsenv/logger"
 import {
@@ -18,7 +18,6 @@ import {
 } from "@jsenv/util"
 
 // import { jsenvImportMetaResolveGlobalUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { createBareSpecifierError } from "@jsenv/core/src/internal/createBareSpecifierError.js"
 import {
   urlToServerUrl,
   urlToProjectUrl,
@@ -46,6 +45,8 @@ import { computeBuildRelativeUrl } from "./url-versioning.js"
 import { transformImportMetaUrlReferences } from "./transformImportMetaUrlReferences.js"
 
 import { minifyJs } from "./js/minifyJs.js"
+import { createImportResolverForNode } from "../import-resolution/import-resolver-node.js"
+import { createImportResolverForImportmap } from "../import-resolution/import-resolver-importmap.js"
 
 // use a fake and predictable compile server origin
 // because rollup will check the dependencies url
@@ -60,15 +61,17 @@ export const createJsenvRollupPlugin = async ({
 
   entryPointMap,
   projectDirectoryUrl,
-  importMapFileRelativeUrl,
-  compileDirectoryRelativeUrl,
   compileServerOrigin,
+  compileDirectoryRelativeUrl,
+
+  importResolutionMethod,
+  importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers,
   externalImportUrlPatterns,
+
   babelPluginMap,
   node,
-  browser,
 
   format,
   urlVersioning,
@@ -91,10 +94,8 @@ export const createJsenvRollupPlugin = async ({
   const jsModulesInHtml = {}
 
   let lastErrorMessage
-  const createJsenvPluginError = (message) => {
-    const error = new Error(message)
-    lastErrorMessage = message
-    return error
+  const storeLatestJsenvPluginError = (error) => {
+    lastErrorMessage = error.message
   }
 
   const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(
@@ -193,27 +194,21 @@ export const createJsenvRollupPlugin = async ({
     compileServerOrigin,
   )
 
-  const nativeModulePredicate = (specifier) => {
-    if (node && isSpecifierForNodeCoreModule(specifier)) return true
-    // for now browser have no native module
-    // and we don't know how we will handle that
-    if (browser) return false
-    return false
-  }
-
   const fetchAndNormalizeImportmap = async (importmapUrl, { allow404 = false } = {}) => {
     const importmapResponse = await fetchUrl(importmapUrl)
     if (allow404 && importmapResponse.status === 404) {
       return null
     }
     if (importmapResponse.status < 200 || importmapResponse.status > 299) {
-      throw createJsenvPluginError(
+      const jsenvPluginError = new Error(
         createDetailedMessage(`Unexpected response status for importmap.`, {
           ["response status"]: importmapResponse.status,
           ["response text"]: await importmapResponse.text(),
           ["importmap url"]: importmapUrl,
         }),
       )
+      storeLatestJsenvPluginError(jsenvPluginError)
+      throw jsenvPluginError
     }
     const importmap = await importmapResponse.json()
     const importmapNormalized = normalizeImportMap(importmap, importmapUrl)
@@ -238,8 +233,8 @@ export const createJsenvRollupPlugin = async ({
   let rollupEmitFile = () => {}
   let rollupSetAssetSource = () => {}
   let fetchImportmap = fetchImportmapFromParameter
-  let importMap
   let importMapUrl
+  let importResolver
 
   const emitAsset = ({ fileName, source }) => {
     return rollupEmitFile({
@@ -350,7 +345,26 @@ export const createJsenvRollupPlugin = async ({
           }
         }),
       )
-      importMap = await fetchImportmap()
+
+      if (importResolutionMethod === "node") {
+        importResolver = await createImportResolverForNode({
+          projectDirectoryUrl,
+          compileServerOrigin,
+          compileDirectoryRelativeUrl,
+        })
+      } else {
+        const importMap = await fetchImportmap()
+        importResolver = await createImportResolverForImportmap({
+          compileServerOrigin,
+          compileDirectoryRelativeUrl,
+          importMap,
+          importMapUrl,
+          importDefaultExtension,
+          onBareSpecifierError: (error) => {
+            storeLatestJsenvPluginError(error)
+          },
+        })
+      }
 
       // rollup will yell at us telling we did not provide an input option
       // if we provide only an html file without any script type module in it
@@ -496,7 +510,7 @@ export const createJsenvRollupPlugin = async ({
         importer = rollupUrlToServerUrl(importer)
       }
 
-      if (nativeModulePredicate(specifier)) {
+      if (node && isSpecifierForNodeCoreModule(specifier)) {
         logger.debug(`${specifier} is native module -> marked as external`)
         return false
       }
@@ -514,27 +528,7 @@ export const createJsenvRollupPlugin = async ({
         importer = fileSystemPathToUrl(importer)
       }
 
-      const importUrl = resolveImport({
-        specifier,
-        importer,
-        importMap,
-        defaultExtension: importDefaultExtension,
-        createBareSpecifierError: ({ specifier, importer }) => {
-          const importerOriginalProjectUrl = rollupUrlToOriginalProjectUrl(importer)
-          const importMapOriginalProjectUrl = rollupUrlToOriginalProjectUrl(importMapUrl)
-          const message = createBareSpecifierError({
-            specifier,
-            importer: importerOriginalProjectUrl
-              ? urlToRelativeUrl(importerOriginalProjectUrl, projectDirectoryUrl)
-              : importer,
-            importMapUrl: importMapOriginalProjectUrl
-              ? urlToRelativeUrl(importMapOriginalProjectUrl, projectDirectoryUrl)
-              : importMapUrl,
-            importMap,
-          }).message
-          return createJsenvPluginError(message)
-        },
-      })
+      const importUrl = await importResolver.resolveImport(specifier, importer)
 
       if (importer !== projectDirectoryUrl) {
         urlImporterMap[importUrl] = importer
@@ -991,7 +985,7 @@ export const createJsenvRollupPlugin = async ({
       rollupUrlToOriginalProjectUrl(importer) || rollupUrlToProjectUrl(importer) || importer
 
     if (response.status === 404) {
-      throw createJsenvPluginError(
+      const jsenvPluginError = new Error(
         formatFileNotFound(
           rollupUrlToOriginalProjectUrl(response.url) ||
             rollupUrlToProjectUrl(response.url) ||
@@ -999,12 +993,16 @@ export const createJsenvRollupPlugin = async ({
           importer,
         ),
       )
+      storeLatestJsenvPluginError(jsenvPluginError)
+      throw jsenvPluginError
     }
 
     const okValidation = await validateResponseStatusIsOk(response, importer)
 
     if (!okValidation.valid) {
-      throw createJsenvPluginError(okValidation.message)
+      const jsenvPluginError = new Error(okValidation.message)
+      storeLatestJsenvPluginError(jsenvPluginError)
+      throw jsenvPluginError
     }
 
     return response

@@ -14,6 +14,8 @@ export const executePlan = async (
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     jsenvDirectoryClean,
+
+    importResolutionMethod,
     importMapFileRelativeUrl,
     importDefaultExtension,
 
@@ -56,6 +58,8 @@ export const executePlan = async (
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     jsenvDirectoryClean,
+
+    importResolutionMethod,
     importMapFileRelativeUrl,
     importDefaultExtension,
 
@@ -89,6 +93,9 @@ export const executePlan = async (
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
     compileServerOrigin,
+
+    // not sure we actually have to pass import params to executeConcurrently
+    importResolutionMethod,
     importMapFileRelativeUrl,
     importDefaultExtension,
 

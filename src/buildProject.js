@@ -24,9 +24,26 @@ export const buildProject = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
+
+  format = "esmodule",
+
+  browser = format === "global" || format === "systemjs" || format === "esmodule",
+  node = format === "commonjs",
+  entryPointMap = FORMAT_ENTRY_POINTS[format],
+  systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
+  globalName,
+  globals = {},
+
+  importResolutionMethod,
   importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers = [],
+  externalImportUrlPatterns = format === "commonjs"
+    ? {
+        "node_modules/": true,
+      }
+    : {},
+
   env = {},
 
   compileServerProtocol,
@@ -36,18 +53,6 @@ export const buildProject = async ({
   compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
 
-  format = "esmodule",
-  externalImportUrlPatterns = format === "commonjs"
-    ? {
-        "node_modules/": true,
-      }
-    : {},
-  browser = format === "global" || format === "systemjs" || format === "esmodule",
-  node = format === "commonjs",
-  entryPointMap = FORMAT_ENTRY_POINTS[format],
-  systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
-  globalName,
-  globals = {},
   sourcemapExcludeSources = false,
 
   buildDirectoryRelativeUrl,
@@ -178,12 +183,15 @@ export const buildProject = async ({
 
         entryPointMap,
         projectDirectoryUrl,
-        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
-        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         compileServerOrigin,
+        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
+
+        importResolutionMethod,
+        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
         importDefaultExtension,
         externalImportSpecifiers,
         externalImportUrlPatterns,
+
         babelPluginMap,
         node,
         browser,

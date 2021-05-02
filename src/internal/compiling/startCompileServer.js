@@ -46,6 +46,8 @@ export const startCompileServer = async ({
   compileServerLogLevel,
 
   projectDirectoryUrl,
+
+  importResolutionMethod,
   importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
   jsenvDirectoryRelativeUrl = ".jsenv",
@@ -102,17 +104,22 @@ export const startCompileServer = async ({
 }) => {
   assertArguments({
     projectDirectoryUrl,
+    importResolutionMethod,
     importMapFileRelativeUrl,
     jsenvDirectoryRelativeUrl,
     outDirectoryName,
   })
 
-  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
+  if (importMapFileRelativeUrl) {
+    const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
+    // normalization
+    importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
+  }
+
   const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
   const outDirectoryUrl = resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl)
   const outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
   // normalization
-  importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
   jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl)
 
   const logger = createLogger({ logLevel: compileServerLogLevel })
@@ -308,6 +315,7 @@ export const computeOutDirectoryRelativeUrl = ({
 
 const assertArguments = ({
   projectDirectoryUrl,
+  importResolutionMethod,
   importMapFileRelativeUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryName,
@@ -316,9 +324,20 @@ const assertArguments = ({
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
   }
 
-  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
-  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
+  if (typeof importResolutionMethod !== "string") {
+    throw new TypeError(`importResolutionMethod must be a string. got ${importResolutionMethod}`)
+  }
+
+  if (importResolutionMethod === "importmap") {
+    assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
+    const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
+    assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
+  } else if (importResolutionMethod === "node") {
+  } else {
+    throw new TypeError(
+      `importResolutionMethod must be "importmap" or "node". got ${importResolutionMethod}`,
+    )
+  }
 
   if (typeof jsenvDirectoryRelativeUrl !== "string") {
     throw new TypeError(

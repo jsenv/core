@@ -13,8 +13,11 @@ export const execute = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
+
+  importResolutionMethod,
   importMapFileRelativeUrl,
   importDefaultExtension,
+
   fileRelativeUrl,
 
   compileServerProtocol,
@@ -53,6 +56,8 @@ export const execute = async ({
         projectDirectoryUrl,
         jsenvDirectoryRelativeUrl,
         jsenvDirectoryClean,
+
+        importResolutionMethod,
         importMapFileRelativeUrl,
         importDefaultExtension,
 

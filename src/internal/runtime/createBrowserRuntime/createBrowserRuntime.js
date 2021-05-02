@@ -6,6 +6,7 @@ import { createBrowserSystem } from "./createBrowserSystem.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
 import { fetchUrl } from "../../browser-utils/fetch-browser.js"
+import { createImportResolverForImportmap } from "../../import-resolution/import-resolver-importmap.js"
 
 const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
 
@@ -33,10 +34,8 @@ export const createBrowserRuntime = async ({
   const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
   const envUrl = String(new URL("env.json", outDirectoryUrl))
   const { importDefaultExtension } = await fetchJson(envUrl)
-
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
-
-  // if there is an importmap in the document we should use it instead of fetching like this.
+  // if there is an importmap in the document we use it instead of fetching.
   // systemjs style with systemjs-importmap
   const importmapScript = document.querySelector(`script[type="jsenv-importmap"]`)
   let importMap
@@ -54,14 +53,21 @@ export const createBrowserRuntime = async ({
     importMap = normalizeImportMap(importmapRaw, importMapUrl)
   }
 
+  const importResolver = await createImportResolverForImportmap({
+    // projectDirectoryUrl,
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
+    importMap,
+    importMapUrl,
+    importDefaultExtension,
+  })
+
   const importFile = async (specifier) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
       compileDirectoryRelativeUrl,
-      importMapUrl,
-      importMap,
-      importDefaultExtension,
       fetchSource,
+      importResolver,
     })
     return browserSystem.import(specifier)
   }
@@ -80,10 +86,8 @@ export const createBrowserRuntime = async ({
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
       compileDirectoryRelativeUrl,
-      importMapUrl,
-      importMap,
-      importDefaultExtension,
       fetchSource,
+      importResolver,
     })
 
     let executionResult

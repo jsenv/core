@@ -10,12 +10,15 @@ export const buildUsingRollup = async ({
 
   entryPointMap,
   projectDirectoryUrl,
-  importMapFileRelativeUrl,
-  compileDirectoryRelativeUrl,
   compileServerOrigin,
+  compileDirectoryRelativeUrl,
+
+  importResolutionMethod,
+  importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers,
   externalImportUrlPatterns,
+
   babelPluginMap,
   node,
   browser,
@@ -51,12 +54,15 @@ export const buildUsingRollup = async ({
 
     entryPointMap,
     projectDirectoryUrl,
-    importMapFileRelativeUrl,
-    compileDirectoryRelativeUrl,
     compileServerOrigin,
+    compileDirectoryRelativeUrl,
+
+    importResolutionMethod,
+    importMapFileRelativeUrl,
     importDefaultExtension,
     externalImportSpecifiers,
     externalImportUrlPatterns,
+
     babelPluginMap,
     node,
     browser,

@@ -27,6 +27,8 @@ export const executeTestPlan = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
+
+  importResolutionMethod,
   importMapFileRelativeUrl,
   importDefaultExtension,
 
@@ -142,6 +144,8 @@ export const executeTestPlan = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
+
+      importResolutionMethod,
       importMapFileRelativeUrl,
       importDefaultExtension,
 

@@ -43,6 +43,8 @@ export const createImportResolverForNode = async ({
       ? moduleResolutionFromImporter(importer) || defaultModuleResolution
       : defaultModuleResolution
 
+    importer = importer || resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
+
     if (moduleResolutionAlgorithm === "esm") {
       return resolveUsingNodeEsModuleAlgorithm(specifier, {
         projectDirectoryUrl,
@@ -95,12 +97,7 @@ const moduleResolutionFromImporter = (importer) => {
 
 const resolveUsingNodeEsModuleAlgorithm = async (
   specifier,
-  {
-    projectDirectoryUrl,
-    compileServerOrigin,
-    compileDirectoryRelativeUrl,
-    importer = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin),
-  },
+  { projectDirectoryUrl, compileServerOrigin, compileDirectoryRelativeUrl, importer },
 ) => {
   const importerFileUrl = fileUrlFromUrl(importer, {
     projectDirectoryUrl,
@@ -119,12 +116,7 @@ const resolveUsingNodeEsModuleAlgorithm = async (
 
 const resolveUsingNodeCommonJsAlgorithm = (
   specifier,
-  {
-    projectDirectoryUrl,
-    compileServerOrigin,
-    compileDirectoryRelativeUrl,
-    importer = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin),
-  },
+  { projectDirectoryUrl, compileServerOrigin, compileDirectoryRelativeUrl, importer },
 ) => {
   const importerFileUrl = fileUrlFromUrl(importer, {
     projectDirectoryUrl,
