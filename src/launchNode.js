@@ -96,7 +96,7 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})
 
     if (collectCoverage) {
       const { NODE_V8_COVERAGE } = env
-      if (executionResult.readCoverage === undefined) {
+      if (executionResult.coverageMap === undefined) {
         executionResult.readCoverage = async () => {
           try {
             await controllableNodeProcess.stop()
@@ -113,6 +113,7 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})
           }
         }
       } else {
+        executionResult.readCoverage = () => executionResult.coverageMap
         removeFileSystemNode(NODE_V8_COVERAGE, {
           recursive: true,
         })
