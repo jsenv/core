@@ -116,6 +116,14 @@ export const startCompileServer = async ({
   jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl)
 
   const logger = createLogger({ logLevel: compileServerLogLevel })
+  const compileServerGroupMap = generateGroupMap({
+    babelPluginMap,
+    babelCompatMap,
+    runtimeScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
+    groupCount: compileGroupCount,
+    runtimeAlwaysInsideRuntimeScoreMap,
+  })
+
   babelPluginMap = {
     "transform-replace-expressions": [
       babelPluginReplaceExpressions,
@@ -134,13 +142,6 @@ export const startCompileServer = async ({
     ],
     ...babelPluginMap,
   }
-  const compileServerGroupMap = generateGroupMap({
-    babelPluginMap,
-    babelCompatMap,
-    runtimeScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
-    groupCount: compileGroupCount,
-    runtimeAlwaysInsideRuntimeScoreMap,
-  })
 
   await setupOutDirectory(outDirectoryUrl, {
     logger,

@@ -1,6 +1,8 @@
 import { uneval } from "@jsenv/uneval"
 // do not use memoize from @jsenv/util to avoid pulling @jsenv/util code into the node build
 import { memoize } from "../../memoize.js"
+import { nodeSupportsDynamicImport } from "../node-feature-detect/nodeSupportsDynamicImport.js"
+import { nodeSupportsTopLevelAwait } from "../node-feature-detect/nodeSupportsTopLevelAwait.js"
 import { fetchSource } from "./fetchSource.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveNodeGroup } from "../resolveNodeGroup.js"
@@ -22,6 +24,11 @@ export const createNodeRuntime = async ({
     groupId: resolveNodeGroup(groupMap),
     groupMap,
   })
+  const groupInfo = groupMap[compileId]
+  // eslint-disable-next-line no-unused-vars
+  const canBypassCompilation = await nodeRuntimeSupportsAllFeatures(groupInfo)
+  // TODO: if can by pass compilation, bypass it
+
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
 
   const importFile = async (specifier) => {
@@ -102,4 +109,29 @@ const makePromiseKeepNodeProcessAlive = async (promise) => {
   } finally {
     clearInterval(timerId)
   }
+}
+
+const nodeRuntimeSupportsAllFeatures = async (groupInfo) => {
+  // TODO: if only the codevrage instrumentation plugins exists
+  // and once we collect coverage using v8,
+  // we can consider it is not required
+  if (Object.keys(groupInfo.babelPluginRequiredNameArray).length > 0) {
+    return false
+  }
+
+  if (Object.keys(groupInfo.jsenvPluginRequiredNameArray).length > 0) {
+    return false
+  }
+
+  const hasDynamicImport = await nodeSupportsDynamicImport()
+  if (!hasDynamicImport) {
+    return false
+  }
+
+  const hasTopLevelAwait = await nodeSupportsTopLevelAwait()
+  if (!hasTopLevelAwait) {
+    return false
+  }
+
+  return true
 }

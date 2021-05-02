@@ -5,7 +5,7 @@ import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { urlToFileSystemPath, resolveUrl, assertFilePresence } from "@jsenv/util"
-import { supportsDynamicImport } from "../supportsDynamicImport.js"
+import { nodeSupportsDynamicImport } from "../runtime/node-feature-detect/nodeSupportsDynamicImport.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { require } from "../require.js"
 import { createChildProcessOptions } from "./createChildProcessOptions.js"
@@ -49,7 +49,7 @@ export const createControllableNodeProcess = async ({
   stderr = "pipe",
 }) => {
   const logger = createLogger({ logLevel })
-  const dynamicImportSupported = await supportsDynamicImport()
+  const dynamicImportSupported = await nodeSupportsDynamicImport()
   if (!dynamicImportSupported) {
     throw new Error(`node does not support dynamic import`)
   }

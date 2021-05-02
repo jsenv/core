@@ -79,8 +79,7 @@
         "node_modules/playwright/**",
         "node_modules/playwright-core/**",
         "node_modules/rollup/**",
-        "src/internal/supportsDynamicImport.js",
-        "src/internal/dynamicImportSource.js",
+        "**/node-feature-detect/**",
         "src/execute.js",
         "script/run-node/**"
       ]
