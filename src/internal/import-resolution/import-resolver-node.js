@@ -65,6 +65,8 @@ export const createImportResolverForNode = async ({
   return { resolveImport, fileUrlFromUrl }
 }
 
+// TODO: implement same behaviour as Node.js to determinModuleSystem
+// https://nodejs.org/dist/latest-v16.x/docs/api/packages.html#packages_determining_module_system)
 const moduleResolutionFromProjectPackage = async (projectDirectoryUrl) => {
   const packageJsonFileUrl = new URL("package.json", projectDirectoryUrl)
   let packageJson

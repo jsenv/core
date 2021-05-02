@@ -1,17 +1,18 @@
 # Table of contents
 
 - [projectDirectoryUrl](#projectDirectoryUrl)
-- [jsenvDirectoryRelativeUrl](#jsenvDirectoryRelativeUrl)
-- [babelPluginMap](#babelPluginMap)
-- [convertMap](#convertMap)
+- [importResolutionMethod](#importResolutionMethod)
 - [importMapFileRelativeUrl](#importMapFileRelativeUrl)
 - [importDefaultExtension](#importDefaultExtension)
+- [babelPluginMap](#babelPluginMap)
+- [convertMap](#convertMap)
 - [compileServerLogLevel](#compileServerLogLevel)
 - [compileServerProtocol](#compileServerProtocol)
 - [compileServerPrivateKey](#compileServerPrivateKey)
 - [compileServerCertificate](#compileServerCertificate)
 - [compileServerIp](#compileServerIp)
 - [compileServerPort](#compileServerPort)
+- [jsenvDirectoryRelativeUrl](#jsenvDirectoryRelativeUrl)
 - [chromiumExecutablePath](#chromiumExecutablePath)
 - [firefoxExecutablePath](#firefoxExecutablePath)
 - [webkitExecutablePath](#webkitExecutablePath)
@@ -44,9 +45,42 @@ const projectDirectoryUrl = resolve("../", __dirname)
 
 Please note you can put a trailing slash in `projectDirectoryUrl` value if you want.
 
-# jsenvDirectoryRelativeUrl
+# importResolutionMethod
 
-`jsenvDirectoryRelativeUrl` parameter is a string leading to a directory used by jsenv to write compiled version of your files. This parameter is optional with a default value of `"./.jsenv/"`. Every time a file is compiled, the compiled version of the file is written into that directory. Alongside with the compiled file, some metadata on the source used to generate the compiled version is written. These metadata are used later to know if the compiled version is still valid. This directory should be added to your `.gitignore`.
+`importResolutionMethod` parameter is a string controlling which algorithm is used to resolve imports. This parameter is **required**.
+
+The accepted values are: `"importmap"`, `"node"`.
+
+## importmap resolution method
+
+The import will be resolved according to an importmap file. See [importmap specification](https://github.com/WICG/import-maps).
+
+## node resolution method
+
+The import will be resolved using Node.js algorithm. The module system will be determined as specified by Node.js in [determining module system](https://nodejs.org/dist/latest-v16.x/docs/api/packages.html#packages_determining_module_system). Then, each import will be resolved by [import.meta.resolve](https://nodejs.org/dist/latest-v16.x/docs/api/esm.html#esm_import_meta_resolve_specifier_parent) or [require.resolve](https://nodejs.org/dist/latest-v16.x/docs/api/modules.html#modules_require_resolve_request_options).
+
+# importMapFileRelativeUrl
+
+`importMapFileRelativeUrl` parameter is a string representing a relative url leading to an import map file. [importResolutionMethod](#importResolutionMethod) has an impact on this parameter behaviour:
+
+- `"node"`: `importMapFileRelativeUrl` param is **ignored**
+- `"importmap"`: `importMapFileRelativeUrl` param is optional and `undefined` by default.
+
+If you pass an `importMapFileRelativeUrl`, the importmap file presence becomes **required**.
+
+You can create the import map file manually and maintain it. If your project is written for browsers and use node module resolution, use [jsenv-node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map) to generate the importmap.
+
+See also [importmap specification](https://github.com/WICG/import-maps).
+
+# importDefaultExtension
+
+`importDefaultExtension` parameter is a boolean or a string controlling if an extension is added to import without any. This parameter is optional and enabled by default.
+
+When enabled extensionless import inherits file extension. When a string, extensionless import get suffixed by that string.
+
+As you are forced to rely on magic extension when one of your dependency contains one or more extensionless import, `importDefaultExtension` is `true` by default. But expecting a tool to guess extension introduces complexity and makes you dependent on magic extensions configuration and implementation.
+
+This parameter only adds an extension on extensionless import, it cannot try different extension and choose the right one.
 
 # babelPluginMap
 
@@ -78,28 +112,6 @@ const convertMap = {
 }
 ```
 
-# importMapFileRelativeUrl
-
-`importMapFileRelativeUrl` parameter is a string representing a relative url to a file containing import map. This parameter is optional with a default value of `"./import-map.importmap"`. This file becomes mandatory as soon as you use an import that is not explicitely targeting a file like:
-
-```js
-import whatever from "foo"
-```
-
-You can create the import map file manually and maintain it. If these remapping correspond to node modules you can use [jsenv-node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map) to generate the importmap file for you.
-
-See also [importmap specification](https://github.com/WICG/import-maps).
-
-# importDefaultExtension
-
-`importDefaultExtension` parameter is a boolean or a string controlling if an extension is added to import without any. This parameter is optional and enabled by default.
-
-When enabled extensionless import inherits file extension. When a string, extensionless import get suffixed by that string.
-
-As you are forced to rely on magic extension when one of your dependency contains one or more extensionless import, `importDefaultExtension` is `true` by default. But expecting a tool to guess extension introduces complexity and makes you dependent on magic extensions configuration and implementation.
-
-This parameter only adds an extension on extensionless import, it cannot try different extension and choose the right one.
-
 # compileServerLogLevel
 
 `compileServerLogLevel` parameter is a string controlling verbosity of the compile server. This parameter is optional with a default value of `"info"`. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel.
@@ -123,6 +135,10 @@ This parameter only adds an extension on extensionless import, it cannot try dif
 # compileServerPort
 
 `compileServerPort` parameter is a number controlling the port jsenv compile server will listen to. This parameter is optional with a default value of `0` meaning a random available port will be used. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port.
+
+# jsenvDirectoryRelativeUrl
+
+`jsenvDirectoryRelativeUrl` parameter is a string leading to a directory used by jsenv to write compiled version of your files. This parameter is optional with a default value of `"./.jsenv/"`. Every time a file is compiled, the compiled version of the file is written into that directory. Alongside with the compiled file, some metadata on the source used to generate the compiled version is written. These metadata are used later to know if the compiled version is still valid. This directory should be added to your `.gitignore`.
 
 # chromiumExecutablePath
 
