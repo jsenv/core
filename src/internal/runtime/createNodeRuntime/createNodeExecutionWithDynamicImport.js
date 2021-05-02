@@ -1,5 +1,5 @@
 import { uneval } from "@jsenv/uneval"
-import { readDirectory, resolveUrl } from "@jsenv/util"
+import { resolveUrl } from "@jsenv/util"
 
 export const createNodeExecutionWithDynamicImport = ({ projectDirectoryUrl }) => {
   const executeFile = async (specifier, { errorExposureInConsole = false } = {}) => {
@@ -8,22 +8,19 @@ export const createNodeExecutionWithDynamicImport = ({ projectDirectoryUrl }) =>
     const fileUrl = resolveUrl(specifier, projectDirectoryUrl)
 
     try {
+      const status = "completed"
       const namespace = await makePromiseKeepNodeProcessAlive(import(fileUrl))
-      const coverageMap = await readCoverage()
       return {
-        status: "completed",
+        status,
         namespace,
-        coverageMap,
       }
     } catch (error) {
       if (errorExposureInConsole) console.error(error)
-
-      const coverageMap = await readCoverage()
-
+      const status = "errored"
+      const exceptionSource = unevalException(error)
       return {
-        status: "errored",
-        exceptionSource: unevalException(error),
-        coverageMap,
+        status,
+        exceptionSource,
       }
     }
   }
@@ -40,21 +37,6 @@ const makePromiseKeepNodeProcessAlive = async (promise) => {
   } finally {
     clearInterval(timerId)
   }
-}
-
-// import { require } from "./internal/require.js"
-
-// const v8ToIstanbul = require("v8-to-istanbul")
-
-const readCoverage = async () => {
-  const coverageV8Dir = process.env.NODE_V8_COVERAGE
-  if (!coverageV8Dir) {
-    return undefined
-  }
-
-  const dir = await readDirectory(coverageV8Dir)
-  debugger
-  return {}
 }
 
 const unevalException = (value) => {

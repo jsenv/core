@@ -159,6 +159,7 @@ export const executeConcurrently = async (
         executionId,
         fileRelativeUrl,
         collectCoverage,
+        coverageConfig,
 
         ...rest,
       })

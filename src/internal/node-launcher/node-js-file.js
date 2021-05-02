@@ -12,6 +12,7 @@ export const execute = async ({
   // of node code launching node process
   // it avoids seeing error in runtime logs during testing
   errorExposureInConsole = false,
+  collectCoverage,
 }) => {
   const { executeFile } = await nodeRuntime.create({
     projectDirectoryUrl,
@@ -23,5 +24,6 @@ export const execute = async ({
   return executeFile(fileRelativeUrl, {
     executionId,
     errorExposureInConsole,
+    collectCoverage,
   })
 }

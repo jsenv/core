@@ -42,6 +42,7 @@ export const launchAndExecute = async ({
   collectRuntimeVersion = false,
   inheritCoverage = false,
   collectCoverage = false,
+  coverageConfig,
   ...rest
 } = {}) => {
   const logger = createLogger({ logLevel: executionLogLevel })
@@ -154,6 +155,7 @@ export const launchAndExecute = async ({
     runtimeStartedCallback,
     runtimeStoppedCallback,
     collectCoverage,
+    coverageConfig,
 
     ...rest,
   })

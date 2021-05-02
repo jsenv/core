@@ -3,10 +3,17 @@ import { Script } from "vm"
 import { loggerToLogLevel } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { jsenvNodeSystemUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { readFile, writeDirectory, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import {
+  readFile,
+  writeDirectory,
+  resolveUrl,
+  urlToFileSystemPath,
+  removeFileSystemNode,
+} from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
+import { coverageMapFromV8Coverage } from "./internal/executing/coverage/coverageMapFromV8Coverage.js"
 import cuid from "cuid"
 
 export const launchNode = async ({
@@ -29,6 +36,7 @@ export const launchNode = async ({
 
   remap = true,
   collectCoverage = false,
+  coverageConfig,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -46,11 +54,12 @@ export const launchNode = async ({
 
   env = {
     ...(env ? env : process.env),
-    ...(collectCoverage
-      ? { NODE_V8_COVERAGE: await getNodeV8CoverageDir({ projectDirectoryUrl }) }
-      : {}),
     COVERAGE_ENABLED: collectCoverage,
     JSENV: true,
+  }
+
+  if (collectCoverage) {
+    env.NODE_V8_COVERAGE = await getNodeV8CoverageDir({ projectDirectoryUrl })
   }
 
   commandLineOptions = ["--experimental-import-meta-resolve", ...commandLineOptions]
@@ -79,6 +88,7 @@ export const launchNode = async ({
       defaultNodeModuleResolution,
 
       collectCoverage,
+      coverageConfig,
       executionId,
       remap,
     }
@@ -108,8 +118,32 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})
     disconnected: nodeProcess.disconnected,
     registerErrorCallback: nodeProcess.registerErrorCallback,
     registerConsoleCallback: nodeProcess.registerConsoleCallback,
-    executeFile,
+    executeFile: collectCoverage
+      ? wrapExecutionToCollectCoverage(executeFile, { env, coverageConfig })
+      : executeFile,
   }
+}
+
+const wrapExecutionToCollectCoverage = (executeFile, { env, coverageConfig }) => {
+  return async (...args) => {
+    try {
+      const executionResult = await executeFile(...args)
+      if (executionResult.coverageMap === undefined) {
+        const coverageMap = await coverageMapFromV8Coverage({ env, coverageConfig })
+        executionResult.coverageMap = coverageMap
+      }
+      return executionResult
+    } finally {
+      removeNodeV8CoverageDir({ env })
+    }
+  }
+}
+
+const removeNodeV8CoverageDir = ({ env }) => {
+  removeFileSystemNode(env.NODE_V8_COVERAGE, {
+    recursive: true,
+    allowUseless: true,
+  })
 }
 
 const getNodeV8CoverageDir = async ({ projectDirectoryUrl }) => {
