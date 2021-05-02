@@ -235,6 +235,8 @@ const computeExecutionResult = async ({
   runtimeErrorCallback,
   runtimeDisconnectCallback,
 
+  collectCoverage,
+
   ...rest
 }) => {
   logger.debug(`launch runtime environment for ${fileRelativeUrl}`)
@@ -245,6 +247,7 @@ const computeExecutionResult = async ({
       const value = await launch({
         cancellationToken,
         logger,
+        collectCoverage,
         ...rest,
       })
       runtimeStartedCallback({ name: value.name, version: value.version })
@@ -335,7 +338,10 @@ const computeExecutionResult = async ({
         runtimeDisconnectCallback({ timing })
       })
 
-      const executed = executeFile(fileRelativeUrl, rest)
+      const executed = executeFile(fileRelativeUrl, {
+        collectCoverage,
+        ...rest,
+      })
       timing = TIMING_DURING_EXECUTION
 
       registerErrorCallback((error) => {
@@ -362,6 +368,7 @@ const computeExecutionResult = async ({
 
       const executionResult = raceResult.value
       const { status } = executionResult
+
       if (status === "errored") {
         // debug log level because this error happens during execution
         // there is no need to log it.
@@ -374,11 +381,17 @@ const computeExecutionResult = async ({
             ["runtime"]: runtime,
           }),
         )
-        return createErroredExecutionResult(executionResult, rest)
+        return {
+          ...createErroredExecutionResult(executionResult.error),
+          ...(collectCoverage ? { coverageMap: await executionResult.readCoverage() } : {}),
+        }
       }
 
       logger.debug(`${fileRelativeUrl} ${runtime}: execution completed.`)
-      return createCompletedExecutionResult(executionResult, rest)
+      return {
+        ...createCompletedExecutionResult(executionResult.namespace),
+        ...(collectCoverage ? { coverageMap: await executionResult.readCoverage() } : {}),
+      }
     },
   })
 
@@ -399,19 +412,17 @@ const createDisconnectedExecutionResult = () => {
   }
 }
 
-const createErroredExecutionResult = ({ error, coverageMap }, { collectCoverage }) => {
+const createErroredExecutionResult = (error) => {
   return {
     status: "errored",
     error,
-    ...(collectCoverage ? { coverageMap } : {}),
   }
 }
 
-const createCompletedExecutionResult = ({ namespace, coverageMap }, { collectCoverage }) => {
+const createCompletedExecutionResult = (namespace) => {
   return {
     status: "completed",
     namespace: normalizeNamespace(namespace),
-    ...(collectCoverage ? { coverageMap } : {}),
   }
 }
 

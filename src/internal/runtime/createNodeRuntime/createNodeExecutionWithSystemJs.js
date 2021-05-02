@@ -61,7 +61,7 @@ export const createNodeExecutionWithSystemJs = ({
       return {
         status: "completed",
         namespace,
-        coverageMap: readCoverage(),
+        readCoverage: () => global.__coverage__,
       }
     } catch (error) {
       let transformedError
@@ -76,7 +76,7 @@ export const createNodeExecutionWithSystemJs = ({
       return {
         status: "errored",
         exceptionSource: unevalException(transformedError),
-        coverageMap: readCoverage(),
+        readCoverage: () => global.__coverage__,
       }
     }
   }
@@ -105,5 +105,3 @@ const unevalException = (value) => {
   }
   return uneval(value)
 }
-
-const readCoverage = () => global.__coverage__

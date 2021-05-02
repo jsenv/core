@@ -65,7 +65,7 @@ export const launchNode = async ({
   commandLineOptions = ["--experimental-import-meta-resolve", ...commandLineOptions]
 
   const logLevel = loggerToLogLevel(logger)
-  const nodeProcess = await createControllableNodeProcess({
+  const controllableNodeProcess = await createControllableNodeProcess({
     cancellationToken,
     logLevel,
     debugPort,
@@ -93,7 +93,7 @@ export const launchNode = async ({
       remap,
     }
 
-    const result = await nodeProcess.evaluate(
+    let executionResult = await controllableNodeProcess.evaluate(
       `
 import { execute } from ${JSON.stringify(jsenvNodeSystemUrl)}
 
@@ -101,49 +101,55 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})
 `,
     )
 
-    return transformExecutionResult(result, { compileServerOrigin, projectDirectoryUrl })
+    executionResult = transformExecutionResult(executionResult, {
+      compileServerOrigin,
+      projectDirectoryUrl,
+    })
+
+    if (collectCoverage) {
+      const { NODE_V8_COVERAGE } = env
+      if (executionResult.readCoverage === undefined) {
+        executionResult.readCoverage = async () => {
+          try {
+            await controllableNodeProcess.stop()
+            const coverageMap = await coverageMapFromV8Coverage({
+              projectDirectoryUrl,
+              NODE_V8_COVERAGE,
+              coverageConfig,
+            })
+            return coverageMap
+          } finally {
+            removeFileSystemNode(NODE_V8_COVERAGE, {
+              recursive: true,
+            })
+          }
+        }
+      } else {
+        removeFileSystemNode(NODE_V8_COVERAGE, {
+          recursive: true,
+        })
+      }
+    }
+
+    return executionResult
   }
 
   return {
     name: "node",
     version: process.version.slice(1),
     options: {
-      execArgv: nodeProcess.execArgv,
+      execArgv: controllableNodeProcess.execArgv,
       // for now do not pass env, it make debug logs to verbose
       // because process.env is very big
       // env,
     },
-    gracefulStop: nodeProcess.gracefulStop,
-    stop: nodeProcess.stop,
-    disconnected: nodeProcess.disconnected,
-    registerErrorCallback: nodeProcess.registerErrorCallback,
-    registerConsoleCallback: nodeProcess.registerConsoleCallback,
-    executeFile: collectCoverage
-      ? wrapExecutionToCollectCoverage(executeFile, { env, coverageConfig })
-      : executeFile,
+    gracefulStop: controllableNodeProcess.gracefulStop,
+    stop: controllableNodeProcess.stop,
+    disconnected: controllableNodeProcess.disconnected,
+    registerErrorCallback: controllableNodeProcess.registerErrorCallback,
+    registerConsoleCallback: controllableNodeProcess.registerConsoleCallback,
+    executeFile,
   }
-}
-
-const wrapExecutionToCollectCoverage = (executeFile, { env, coverageConfig }) => {
-  return async (...args) => {
-    try {
-      const executionResult = await executeFile(...args)
-      if (executionResult.coverageMap === undefined) {
-        const coverageMap = await coverageMapFromV8Coverage({ env, coverageConfig })
-        executionResult.coverageMap = coverageMap
-      }
-      return executionResult
-    } finally {
-      removeNodeV8CoverageDir({ env })
-    }
-  }
-}
-
-const removeNodeV8CoverageDir = ({ env }) => {
-  removeFileSystemNode(env.NODE_V8_COVERAGE, {
-    recursive: true,
-    allowUseless: true,
-  })
 }
 
 const getNodeV8CoverageDir = async ({ projectDirectoryUrl }) => {

@@ -95,6 +95,7 @@
     "@babel/plugin-transform-template-literals": "7.13.0",
     "@babel/plugin-transform-typeof-symbol": "7.12.13",
     "@babel/plugin-transform-unicode-regex": "7.12.13",
+    "@c88/v8-coverage": "0.1.1",
     "@jsenv/cancellation": "2.0.3",
     "@jsenv/import-map": "6.13.2",
     "@jsenv/logger": "4.0.0",
