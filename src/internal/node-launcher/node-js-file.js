@@ -1,5 +1,3 @@
-import { resolveUrl } from "@jsenv/util"
-import { installNodeErrorStackRemapping } from "../error-stack-remapping/installNodeErrorStackRemapping.js"
 import { nodeRuntime } from "../../nodeRuntime.js"
 
 export const execute = async ({
@@ -15,32 +13,15 @@ export const execute = async ({
   // it avoids seeing error in runtime logs during testing
   errorExposureInConsole = false,
 }) => {
-  const { compileDirectoryRelativeUrl, executeFile } = await nodeRuntime.create({
+  const { executeFile } = await nodeRuntime.create({
     projectDirectoryUrl,
     compileServerOrigin,
     outDirectoryRelativeUrl,
     defaultNodeModuleResolution,
   })
 
-  const { getErrorOriginalStackString } = installNodeErrorStackRemapping({
-    projectDirectoryUrl,
-  })
-
-  const compiledFileRemoteUrl = resolveUrl(
-    fileRelativeUrl,
-    `${compileServerOrigin}/${compileDirectoryRelativeUrl}`,
-  )
-  return executeFile(compiledFileRemoteUrl, {
+  return executeFile(fileRelativeUrl, {
     executionId,
-    errorTransform: async (error) => {
-      // code can throw something else than an error
-      // in that case return it unchanged
-      if (!error || !(error instanceof Error)) return error
-
-      const originalStack = await getErrorOriginalStackString(error)
-      error.stack = originalStack
-      return error
-    },
     errorExposureInConsole,
   })
 }

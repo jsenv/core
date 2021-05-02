@@ -83,7 +83,7 @@ export const startCompileServer = async ({
   stopOnPackageVersionChange = false,
 
   // remaining options
-  compileGroupCount = 1,
+  compileGroupCount = 2,
   babelCompatMap = jsenvBabelPluginCompatMap,
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
