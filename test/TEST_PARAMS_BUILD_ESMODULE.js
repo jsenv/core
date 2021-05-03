@@ -2,6 +2,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import { testBabelPluginMap } from "./testBabelPluginMap.js"
 
 export const GENERATE_ESMODULE_BUILD_TEST_PARAMS = {
+  format: "esmodule",
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
   buildDirectoryClean: true,
