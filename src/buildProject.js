@@ -25,7 +25,7 @@ export const buildProject = async ({
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
 
-  format = "esmodule",
+  format,
 
   browser = format === "global" || format === "systemjs" || format === "esmodule",
   node = format === "commonjs",
@@ -115,7 +115,7 @@ export const buildProject = async ({
       }
     } else {
       throw new TypeError(
-        `unexpected format: ${format}. Must be esmodule, systemjs, commonjs or global.`,
+        `unexpected format: ${format}. Must be "esmodule", "systemjs", "commonjs" or "global".`,
       )
     }
 

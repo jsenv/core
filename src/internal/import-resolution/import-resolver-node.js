@@ -12,7 +12,7 @@ export const createImportResolverForNode = async ({
   compileDirectoryRelativeUrl,
   importDefaultExtension,
 }) => {
-  if (typeof import.meta.resolve === undefined) {
+  if (typeof import.meta.resolve === "undefined") {
     throw new Error(
       `import.meta.resolve is undefined, code must be executed with --experimental-import-meta-resolve`,
     )

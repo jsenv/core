@@ -33,7 +33,8 @@
         "--inspect",
         "--unhandled-rejections=strict",
         "--experimental-json-modules",
-        "--experimental-top-level-await"
+        "--experimental-top-level-await",
+        "--experimental-import-meta-resolve"
       ],
       // "args": ["--coverage"],
       "autoAttachChildProcesses": true,

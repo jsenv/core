@@ -32,7 +32,7 @@
     "generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
     "generate-internal-builds": "node --experimental-top-level-await ./script/generate-internal-builds/generate-internal-builds.js",
     "dist": "npm run generate-internal-builds",
-    "test": "node ./script/test/test.js",
+    "test": "node --experimental-import-meta-resolve ./script/test/test.js",
     "start-exploring": "node ./script/start-exploring/start-exploring.js",
     "test-with-coverage": "npm run test -- --coverage",
     "test-js-transform": "node ./script/test/test-js-transform.js",
