@@ -1,5 +1,5 @@
 import { require } from "@jsenv/core/src/internal/require.js"
-import { composeCoverageMap } from "@jsenv/core/src/internal/executing/coverage/composeCoverageMap.js"
+import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
 import { evalSource } from "@jsenv/core/src/internal/runtime/createNodeRuntime/evalSource.js"
 import { coverageIsEnabled } from "./coverageIsEnabled.js"
 
@@ -54,7 +54,7 @@ export const openBrowserPage = async (
 
   if (inheritCoverage) {
     const { coverageMap } = executionResult
-    global.__coverage__ = composeCoverageMap(global.__coverage__ || {}, coverageMap || {})
+    global.__coverage__ = composeIstanbulCoverages(global.__coverage__ || {}, coverageMap || {})
   }
 
   delete executionResult.coverageMap

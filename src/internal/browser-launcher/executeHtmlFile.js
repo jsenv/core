@@ -2,7 +2,7 @@ import { extname } from "path"
 import { resolveUrl, assertFilePresence } from "@jsenv/util"
 import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
-import { composeCoverageMap } from "../executing/coverage/composeCoverageMap.js"
+import { composeIstanbulCoverages } from "../executing/coverage/composeIstanbulCoverages.js"
 
 export const executeHtmlFile = async (
   fileRelativeUrl,
@@ -91,7 +91,7 @@ export const executeHtmlFile = async (
 }
 
 const generateCoverageForPage = (fileExecutionResultMap) => {
-  const coverageMap = composeCoverageMap(
+  const coverageMap = composeIstanbulCoverages(
     ...Object.keys(fileExecutionResultMap).map((fileRelativeUrl) => {
       return fileExecutionResultMap[fileRelativeUrl].coverageMap || {}
     }),

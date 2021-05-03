@@ -1,4 +1,4 @@
-import { composeCoverageMap } from "./composeCoverageMap.js"
+import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
 
 export const runtimeResultMapToCoverageMap = (runtimeResultMap) => {
   const coverageMapList = []
@@ -14,5 +14,5 @@ export const runtimeResultMapToCoverageMap = (runtimeResultMap) => {
     })
   })
 
-  return composeCoverageMap(...coverageMapList)
+  return composeIstanbulCoverages(...coverageMapList)
 }

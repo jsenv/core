@@ -1,6 +1,6 @@
 import { collectFiles } from "@jsenv/util"
 import { relativeUrlToEmptyCoverage } from "./relativeUrlToEmptyCoverage.js"
-import { composeCoverageMap } from "./composeCoverageMap.js"
+import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
 import { ensureRelativePathsInCoverage } from "./ensureRelativePathsInCoverage.js"
 
 export const reportToCoverageMap = async (
@@ -101,7 +101,7 @@ const executionReportToCoverageMap = (report) => {
     })
   })
 
-  const executionCoverageMap = composeCoverageMap(...coverageMapArray)
+  const executionCoverageMap = composeIstanbulCoverages(...coverageMapArray)
 
   return executionCoverageMap
 }

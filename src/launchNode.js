@@ -7,7 +7,7 @@ import { writeDirectory, resolveUrl, urlToFileSystemPath, removeFileSystemNode }
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
-import { coverageMapFromV8Coverage } from "./internal/executing/coverage/coverageMapFromV8Coverage.js"
+import { istanbulCoverageFromV8Coverage } from "./internal/executing/coverage/istanbulCoverageFromV8Coverage.js"
 import cuid from "cuid"
 
 export const launchNode = async ({
@@ -100,7 +100,7 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})
         executionResult.readCoverage = async () => {
           try {
             await controllableNodeProcess.stop()
-            const coverageMap = await coverageMapFromV8Coverage({
+            const coverageMap = await istanbulCoverageFromV8Coverage({
               projectDirectoryUrl,
               NODE_V8_COVERAGE,
               coverageConfig,

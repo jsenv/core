@@ -26,13 +26,25 @@ const result = await executeTestPlan({
   coverageConfig: {
     [`./${testDirectoryRelativeUrl}file.js`]: true,
   },
+  // coverageTextLog: true,
+  // coverageJsonFile: true,
+  // coverageHtmlDirectory: true,
 })
 const actual = result.coverageMap
 const expected = {
   [`${testDirectoryRelativeUrl}file.js`]: {
     ...actual[`${testDirectoryRelativeUrl}file.js`],
     path: `./${testDirectoryRelativeUrl}file.js`,
-    s: { 0: 5, 1: 3, 2: 2, 3: 2, 4: 0 },
+    s: {
+      0: 1,
+      1: 1,
+      2: 0,
+      3: 1,
+      4: 1,
+      5: 1,
+      6: 0,
+      7: 0,
+    },
   },
 }
 assert({ actual, expected })

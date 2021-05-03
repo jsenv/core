@@ -7,7 +7,7 @@ import {
   errorToCancelReason,
 } from "@jsenv/cancellation"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
-import { composeCoverageMap } from "./coverage/composeCoverageMap.js"
+import { composeIstanbulCoverages } from "./coverage/composeIstanbulCoverages.js"
 
 const TIMING_BEFORE_EXECUTION = "before-execution"
 const TIMING_DURING_EXECUTION = "during-execution"
@@ -125,7 +125,7 @@ export const launchAndExecute = async ({
       (executionResult) => {
         const { coverageMap, ...rest } = executionResult
         // ensure the coverage of the executed file is taken into account
-        global.__coverage__ = composeCoverageMap(global.__coverage__ || {}, coverageMap || {})
+        global.__coverage__ = composeIstanbulCoverages(global.__coverage__ || {}, coverageMap || {})
         if (collectCoverageSaved) {
           return executionResult
         }
