@@ -26,7 +26,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
     ...START_COMPILE_SERVER_TEST_PARAMS.babelPluginMap,
     "transform-typescript": [transformTypeScript],
   },
-  compileGroupCount: 1,
+  importDefaultExtension: true,
   jsenvDirectoryRelativeUrl,
 })
 
