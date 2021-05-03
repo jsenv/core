@@ -144,7 +144,7 @@ export const createControllableNodeProcess = async ({
       resolve()
     })
   })
-  // child might exit without disconnect apparently, exit is disconnect for us
+  // child might exit without disconnect apparently. We want to disconnect on exit
   childProcess.once("exit", () => {
     disconnectChildProcess()
   })
@@ -203,10 +203,8 @@ export const createControllableNodeProcess = async ({
     })
 
     // in case the child process did not disconnect by itself at this point
-    // something is keeping it alive and it cannot be propely killed
-    // disconnect it manually.
-    // something inside makeProcessControllable.cjs ensure process.exit()
-    // when the child process is disconnected.
+    // something is keeping it alive and it cannot be propely killed.
+    // wait for the child process to disconnect by itself
     return disconnectChildProcess()
   }
 
