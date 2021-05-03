@@ -1,8 +1,6 @@
 # Table of contents
 
 - [projectDirectoryUrl](#projectDirectoryUrl)
-- [importResolutionMethod](#importResolutionMethod)
-- [importMapFileRelativeUrl](#importMapFileRelativeUrl)
 - [importDefaultExtension](#importDefaultExtension)
 - [babelPluginMap](#babelPluginMap)
 - [convertMap](#convertMap)
@@ -44,33 +42,6 @@ const projectDirectoryUrl = resolve("../", __dirname)
 ```
 
 Please note you can put a trailing slash in `projectDirectoryUrl` value if you want.
-
-# importResolutionMethod
-
-`importResolutionMethod` parameter is a string controlling which algorithm is used to resolve imports. This parameter is **required**.
-
-The accepted values are: `"importmap"`, `"node"`.
-
-## importmap resolution method
-
-The import will be resolved according to an importmap file. See [importmap specification](https://github.com/WICG/import-maps).
-
-## node resolution method
-
-The import will be resolved using Node.js algorithm. The module system will be determined as specified by Node.js in [determining module system](https://nodejs.org/dist/latest-v16.x/docs/api/packages.html#packages_determining_module_system). Then, each import will be resolved by [import.meta.resolve](https://nodejs.org/dist/latest-v16.x/docs/api/esm.html#esm_import_meta_resolve_specifier_parent) or [require.resolve](https://nodejs.org/dist/latest-v16.x/docs/api/modules.html#modules_require_resolve_request_options).
-
-# importMapFileRelativeUrl
-
-`importMapFileRelativeUrl` parameter is a string representing a relative url leading to an import map file. [importResolutionMethod](#importResolutionMethod) has an impact on this parameter behaviour:
-
-- `"node"`: `importMapFileRelativeUrl` param is **ignored**
-- `"importmap"`: `importMapFileRelativeUrl` param is optional and `undefined` by default.
-
-If you pass an `importMapFileRelativeUrl`, the importmap file presence becomes **required**.
-
-You can create the import map file manually and maintain it. If your project is written for browsers and use node module resolution, use [jsenv-node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map) to generate the importmap.
-
-See also [importmap specification](https://github.com/WICG/import-maps).
 
 # importDefaultExtension
 

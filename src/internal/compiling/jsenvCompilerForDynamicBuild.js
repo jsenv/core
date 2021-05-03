@@ -55,7 +55,6 @@ const handleDynamicBuild = ({
   logger,
 
   projectDirectoryUrl,
-  importMapFileRelativeUrl,
   compileId,
   originalFileUrl,
   compiledFileUrl,
@@ -99,7 +98,6 @@ const handleDynamicBuild = ({
 
         entryPointMap,
         projectDirectoryUrl,
-        importMapFileRelativeUrl,
         compileDirectoryRelativeUrl,
         compileServerOrigin,
         importDefaultExtension,

@@ -27,7 +27,6 @@ export const createCompiledFileService = ({
 
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
-  importMapFileRelativeUrl,
   importDefaultExtension,
 
   transformTopLevelAwait,
@@ -116,7 +115,6 @@ export const createCompiledFileService = ({
       compiledFileUrl,
       compileId,
       outDirectoryRelativeUrl,
-      importMapFileRelativeUrl,
       importDefaultExtension,
 
       moduleOutFormat,

@@ -34,8 +34,7 @@ export const buildProject = async ({
   globalName,
   globals = {},
 
-  importResolutionMethod,
-  importMapFileRelativeUrl,
+  importResolutionMethod = format === "commonjs" ? "node" : "importmap",
   importDefaultExtension,
   externalImportSpecifiers = [],
   externalImportUrlPatterns = format === "commonjs"
@@ -154,7 +153,6 @@ export const buildProject = async ({
       // that is expecting esmodule format, not systemjs
       // + some more differences like import.meta.dev
       outDirectoryName: "out-build",
-      importMapFileRelativeUrl,
       importDefaultExtension,
       moduleOutFormat: "esmodule", // rollup will transform into systemjs
       importMetaFormat: format, // but ensure import.meta are correctly transformed into the right format
@@ -187,7 +185,6 @@ export const buildProject = async ({
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
 
         importResolutionMethod,
-        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
         importDefaultExtension,
         externalImportSpecifiers,
         externalImportUrlPatterns,

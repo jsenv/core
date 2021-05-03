@@ -16,7 +16,6 @@ export const executePlan = async (
     jsenvDirectoryClean,
 
     importResolutionMethod,
-    importMapFileRelativeUrl,
     importDefaultExtension,
 
     compileServerProtocol,
@@ -60,7 +59,6 @@ export const executePlan = async (
     jsenvDirectoryClean,
 
     importResolutionMethod,
-    importMapFileRelativeUrl,
     importDefaultExtension,
 
     compileServerProtocol,
@@ -96,7 +94,6 @@ export const executePlan = async (
 
     // not sure we actually have to pass import params to executeConcurrently
     importResolutionMethod,
-    importMapFileRelativeUrl,
     importDefaultExtension,
 
     babelPluginMap,

@@ -27,8 +27,6 @@ export const jsenvCompilerForHtml = ({
   originalFileUrl,
   compiledFileUrl,
   compileId,
-  outDirectoryRelativeUrl,
-  importMapFileRelativeUrl,
   groupMap,
   babelPluginMap,
   convertMap,
@@ -102,18 +100,6 @@ export const jsenvCompilerForHtml = ({
           return
         }
       })
-      // ensure there is at least the importmap needed for jsenv
-      if (hasImportmap === false) {
-        manipulateHtmlAst(htmlAst, {
-          scriptInjections: [
-            {
-              type: "jsenv-importmap",
-              // in case there is no importmap, use a top level one
-              src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
-            },
-          ],
-        })
-      }
 
       const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
 

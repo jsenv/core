@@ -297,11 +297,10 @@ The following parameter controls the exploring server:
 To avoid duplication some parameter are linked to a generic documentation.
 
 - [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
-- [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
 - [convertMap](../shared-parameters.md#convertMap)
-- [importMapFileRelativeUrl](../shared-parameters.md#importMapFileRelativeUrl)
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
+- [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
 
 # startExploring return value
 

@@ -1,4 +1,6 @@
 - [Building parameters](#Building-parameters)
+  - [format](#format)
+  - [importResolutionMethod](#importResolutionMethod)
   - [buildDirectoryRelativeUrl](#buildDirectoryRelativeUrl)
   - [entryPointMap](#entryPointMap)
   - [externalImportSpecifiers](#externalImportSpecifiers)
@@ -8,6 +10,10 @@
 # Building parameters
 
 This section present parameters available to every function generating files.
+
+## format
+
+## importResolutionMethod
 
 ## buildDirectoryRelativeUrl
 
@@ -136,14 +142,13 @@ If `externalImportSpecifiers` contains `foo` the generated files will keep that 
 To avoid duplication some parameter are linked to a generic documentation.
 
 - [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
-- [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
+- [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
 - [convertMap](../shared-parameters.md#convertMap)
-- [importMapFileRelativeUrl](../shared-parameters.md#importMapFileRelativeUrl)
-- [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
 - [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
 - [compileServerProtocol](../shared-parameters.md#compileServerProtocol)
 - [compileServerPrivateKey](../shared-parameters.md#compileServerPrivateKey)
 - [compileServerCertificate](../shared-parameters.md#compileServerCertificate)
 - [compileServerIp](../shared-parameters.md#compileServerIp)
 - [compileServerPort](../shared-parameters.md#compileServerPort)
+- [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)

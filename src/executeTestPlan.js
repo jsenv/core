@@ -29,7 +29,6 @@ export const executeTestPlan = async ({
   jsenvDirectoryClean,
 
   importResolutionMethod,
-  importMapFileRelativeUrl,
   importDefaultExtension,
 
   compileServerProtocol,
@@ -146,7 +145,6 @@ export const executeTestPlan = async ({
       jsenvDirectoryClean,
 
       importResolutionMethod,
-      importMapFileRelativeUrl,
       importDefaultExtension,
 
       compileServerProtocol,

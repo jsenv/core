@@ -382,10 +382,8 @@ Becomes
 To avoid duplication some parameter are linked to a generic documentation.
 
 - [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
-- [jsenvDirectoryRelativeUrl](../shared-parameters.md#compileDirectoryRelativeUrl)
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
 - [convertMap](../shared-parameters.md#convertMap)
-- [importMapFileRelativeUrl](../shared-parameters.md#importMapFileRelativeUrl)
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
 - [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
 - [compileServerProtocol](../shared-parameters.md#compileServerProtocol)
@@ -393,6 +391,7 @@ To avoid duplication some parameter are linked to a generic documentation.
 - [compileServerCertificate](../shared-parameters.md#compileServerCertificate)
 - [compileServerIp](../shared-parameters.md#compileServerIp)
 - [compileServerPort](../shared-parameters.md#compileServerPort)
+- [jsenvDirectoryRelativeUrl](../shared-parameters.md#compileDirectoryRelativeUrl)
 
 # executeTestPlan return value
 

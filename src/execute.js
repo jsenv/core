@@ -15,7 +15,6 @@ export const execute = async ({
   jsenvDirectoryClean,
 
   importResolutionMethod,
-  importMapFileRelativeUrl,
   importDefaultExtension,
 
   fileRelativeUrl,
@@ -58,7 +57,6 @@ export const execute = async ({
         jsenvDirectoryClean,
 
         importResolutionMethod,
-        importMapFileRelativeUrl,
         importDefaultExtension,
 
         compileServerProtocol,

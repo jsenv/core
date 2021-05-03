@@ -29,7 +29,6 @@ import {
 } from "@jsenv/util"
 
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { assertImportMapFileRelativeUrl, assertImportMapFileInsideProject } from "../argUtils.js"
 import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
@@ -48,8 +47,8 @@ export const startCompileServer = async ({
   projectDirectoryUrl,
 
   importResolutionMethod,
-  importMapFileRelativeUrl = "import-map.importmap",
   importDefaultExtension,
+
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
@@ -105,16 +104,9 @@ export const startCompileServer = async ({
   assertArguments({
     projectDirectoryUrl,
     importResolutionMethod,
-    importMapFileRelativeUrl,
     jsenvDirectoryRelativeUrl,
     outDirectoryName,
   })
-
-  if (importMapFileRelativeUrl) {
-    const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-    // normalization
-    importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
-  }
 
   const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
   const outDirectoryUrl = resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl)
@@ -199,7 +191,6 @@ export const startCompileServer = async ({
 
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
-    importMapFileRelativeUrl,
     importDefaultExtension,
 
     transformTopLevelAwait,
@@ -262,7 +253,6 @@ export const startCompileServer = async ({
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     importDefaultExtension,
-    importMapFileRelativeUrl,
     compileServerGroupMap,
     env,
     writeOnFilesystem,
@@ -295,7 +285,6 @@ export const startCompileServer = async ({
   return {
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
-    importMapFileRelativeUrl,
     ...compileServer,
     compileServerGroupMap,
   }
@@ -315,28 +304,11 @@ export const computeOutDirectoryRelativeUrl = ({
 
 const assertArguments = ({
   projectDirectoryUrl,
-  importResolutionMethod,
-  importMapFileRelativeUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryName,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
-  }
-
-  if (typeof importResolutionMethod !== "string") {
-    throw new TypeError(`importResolutionMethod must be a string. got ${importResolutionMethod}`)
-  }
-
-  if (importResolutionMethod === "importmap") {
-    assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
-    const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-    assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
-  } else if (importResolutionMethod === "node") {
-  } else {
-    throw new TypeError(
-      `importResolutionMethod must be "importmap" or "node". got ${importResolutionMethod}`,
-    )
   }
 
   if (typeof jsenvDirectoryRelativeUrl !== "string") {
@@ -822,7 +794,6 @@ const installOutFiles = async ({
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   importDefaultExtension,
-  importMapFileRelativeUrl,
   compileServerGroupMap,
   env,
   onOutFileWritten = () => {},
@@ -834,7 +805,6 @@ const installOutFiles = async ({
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     importDefaultExtension,
-    importMapFileRelativeUrl,
   }
 
   const groupMapToString = () => JSON.stringify(compileServerGroupMap, null, "  ")
