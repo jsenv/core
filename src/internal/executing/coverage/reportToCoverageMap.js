@@ -1,7 +1,7 @@
 import { collectFiles } from "@jsenv/util"
 import { relativeUrlToEmptyCoverage } from "./relativeUrlToEmptyCoverage.js"
 import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
-import { ensureRelativePathsInCoverage } from "./ensureRelativePathsInCoverage.js"
+import { normalizeIstanbulCoverage } from "./normalizeIstanbulCoverage.js"
 
 export const reportToCoverageMap = async (
   report,
@@ -16,7 +16,7 @@ export const reportToCoverageMap = async (
   const coverageMapForReport = executionReportToCoverageMap(report)
 
   if (!coverageIncludeMissing) {
-    return ensureRelativePathsInCoverage(coverageMapForReport)
+    return coverageMapForReport
   }
 
   const relativeFileUrlToCoverArray = await listRelativeFileUrlToCover({
@@ -26,7 +26,10 @@ export const reportToCoverageMap = async (
   })
 
   const relativeFileUrlMissingCoverageArray = relativeFileUrlToCoverArray.filter(
-    (relativeFileUrlToCover) => relativeFileUrlToCover in coverageMapForReport === false,
+    (relativeFileUrlToCover) =>
+      Object.keys(coverageMapForReport).every((key) => {
+        return key !== `./${relativeFileUrlToCover}`
+      }),
   )
 
   const coverageMapForMissedFiles = {}
@@ -42,10 +45,10 @@ export const reportToCoverageMap = async (
     }),
   )
 
-  return ensureRelativePathsInCoverage({
-    ...coverageMapForReport,
-    ...coverageMapForMissedFiles,
-  })
+  return {
+    ...coverageMapForReport, // already normalized
+    ...normalizeIstanbulCoverage(coverageMapForMissedFiles, projectDirectoryUrl),
+  }
 }
 
 const listRelativeFileUrlToCover = async ({
@@ -101,6 +104,7 @@ const executionReportToCoverageMap = (report) => {
     })
   })
 
+  debugger
   const executionCoverageMap = composeIstanbulCoverages(...coverageMapArray)
 
   return executionCoverageMap

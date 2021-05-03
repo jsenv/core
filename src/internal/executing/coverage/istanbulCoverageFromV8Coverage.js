@@ -9,7 +9,7 @@ import {
 } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
-import { makeIstanbulCoverageRelative } from "./makeIstanbulCoverageRelative.js"
+import { normalizeIstanbulCoverage } from "./normalizeIstanbulCoverage.js"
 
 const { mergeProcessCovs } = require("@c88/v8-coverage")
 
@@ -37,13 +37,11 @@ export const istanbulCoverageFromV8Coverage = async ({
   })
 
   const coverageReport = mergeCoverageReports(coverageReportsFiltered)
-  const instanbulCoverage = await convertV8CoverageToIstanbul(coverageReport, { sourceMapCache })
-  const istanbulCoverageRelative = makeIstanbulCoverageRelative(
-    instanbulCoverage,
+  const istanbulCoverage = await convertV8CoverageToIstanbul(coverageReport, {
     projectDirectoryUrl,
-  )
-
-  return istanbulCoverageRelative
+    sourceMapCache,
+  })
+  return istanbulCoverage
 }
 
 const readV8CoverageReportsFromDirectory = async (coverageDirectory) => {
@@ -93,11 +91,14 @@ const mergeCoverageReports = (coverageReports) => {
   return coverageReport
 }
 
-const convertV8CoverageToIstanbul = async (coverageReport, { sourceMapCache }) => {
+const convertV8CoverageToIstanbul = async (
+  coverageReport,
+  { projectDirectoryUrl, sourceMapCache },
+) => {
   const istanbulCoverages = await Promise.all(
-    coverageReport.result.map(async (fileReport) => {
-      const sources = sourcesFromSourceMapCache(fileReport.url, sourceMapCache)
-      const path = urlToFileSystemPath(fileReport.url)
+    coverageReport.result.map(async (fileV8Coverage) => {
+      const sources = sourcesFromSourceMapCache(fileV8Coverage.url, sourceMapCache)
+      const path = urlToFileSystemPath(fileV8Coverage.url)
       const converter = v8ToIstanbul(
         path,
         // wrapperLength is undefined we don't need it
@@ -107,14 +108,18 @@ const convertV8CoverageToIstanbul = async (coverageReport, { sourceMapCache }) =
       )
       await converter.load()
 
-      converter.applyCoverage(fileReport.functions)
-      const istanbulFileCoverage = converter.toIstanbul()
-      return istanbulFileCoverage
+      converter.applyCoverage(fileV8Coverage.functions)
+      const istanbulCoverage = converter.toIstanbul()
+      const istanbulCoverageNormalized = normalizeIstanbulCoverage(
+        istanbulCoverage,
+        projectDirectoryUrl,
+      )
+      return istanbulCoverageNormalized
     }),
   )
 
-  const istanbulCoverage = composeIstanbulCoverages(...istanbulCoverages)
-  return istanbulCoverage
+  const istanbulCoverageComposed = composeIstanbulCoverages(...istanbulCoverages)
+  return istanbulCoverageComposed
 }
 
 const sourcesFromSourceMapCache = (url, sourceMapCache) => {

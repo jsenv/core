@@ -1,8 +1,11 @@
 import { extname } from "path"
 import { resolveUrl, assertFilePresence } from "@jsenv/util"
+import { normalizeIstanbulCoverage } from "@jsenv/core/src/internal/executing/coverage/normalizeIstanbulCoverage.js"
+import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
+
 import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
-import { composeIstanbulCoverages } from "../executing/coverage/composeIstanbulCoverages.js"
+import { projectDirectoryUrl } from "@jsenv/core/jsenv.config.js"
 
 export const executeHtmlFile = async (
   fileRelativeUrl,
@@ -91,12 +94,19 @@ export const executeHtmlFile = async (
 }
 
 const generateCoverageForPage = (fileExecutionResultMap) => {
-  const coverageMap = composeIstanbulCoverages(
-    ...Object.keys(fileExecutionResultMap).map((fileRelativeUrl) => {
-      return fileExecutionResultMap[fileRelativeUrl].coverageMap || {}
-    }),
-  )
-  return coverageMap
+  const istanbulCoverages = []
+  Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
+    const istanbulCoverage = fileExecutionResultMap[fileRelativeUrl].coverageMap
+    if (istanbulCoverage) {
+      const istanbulCoverageNormalized = normalizeIstanbulCoverage(
+        istanbulCoverage,
+        projectDirectoryUrl,
+      )
+      istanbulCoverages.push(istanbulCoverageNormalized)
+    }
+  })
+  const istanbulCoverage = composeIstanbulCoverages(...istanbulCoverages)
+  return istanbulCoverage
 }
 
 const evalException = (exceptionSource, { projectDirectoryUrl, compileServerOrigin }) => {
