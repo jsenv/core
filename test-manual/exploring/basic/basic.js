@@ -7,4 +7,6 @@ console.log(value)
 
 console.log("bar")
 
+console.log(typeof window === "object")
+
 export default 42

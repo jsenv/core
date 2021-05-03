@@ -39,15 +39,6 @@ export const createImportResolverForNode = async ({
       specifier = resolveUrl(specifier.slice("@jsenv/core/".length), projectDirectoryUrl)
     }
 
-    if (importer && importDefaultExtension) {
-      const fakeUrl = resolveUrl(specifier, importer)
-      const importerExtension = urlToExtension(importer)
-      // extension magic, mostly for typescript
-      if (urlToExtension(fakeUrl) === "") {
-        specifier = `${specifier}${importerExtension}`
-      }
-    }
-
     const moduleResolutionAlgorithm = importer
       ? moduleResolutionFromImporter(importer) || defaultModuleResolution
       : defaultModuleResolution

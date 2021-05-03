@@ -1,6 +1,7 @@
 import { urlToContentType } from "@jsenv/server"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { jsenvToolbarHtmlUrl } from "../jsenvInternalFiles.js"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
@@ -24,6 +25,7 @@ export const jsenvCompilerForHtml = ({
   // request,
 
   projectDirectoryUrl,
+  outDirectoryRelativeUrl,
   originalFileUrl,
   compiledFileUrl,
   compileId,
@@ -100,6 +102,39 @@ export const jsenvCompilerForHtml = ({
           return
         }
       })
+      if (hasImportmap === false) {
+        const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
+        const compileDirectoryUrl = resolveUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
+        const jsenvCoreDirectoryRelativeUrl = urlToRelativeUrl(
+          jsenvCoreDirectoryUrl,
+          projectDirectoryUrl,
+        )
+        const jsenvCoreDirectoryCompileUrl = resolveUrl(
+          jsenvCoreDirectoryRelativeUrl,
+          compileDirectoryUrl,
+        )
+        const inlineImportMapUrl = compiledFileUrl
+        const jsenvCoreDirectoryUrlRelativeToImportMap = urlToRelativeUrl(
+          jsenvCoreDirectoryCompileUrl,
+          inlineImportMapUrl,
+        )
+
+        manipulateHtmlAst(htmlAst, {
+          scriptInjections: [
+            {
+              type: "jsenv-importmap",
+              // in case there is no importmap, force the presence
+              // so that '@jsenv/core/' are still remapped
+              text: JSON.stringify({
+                imports: {
+                  "@jsenv/core/": jsenvCoreDirectoryUrlRelativeToImportMap,
+                },
+              }),
+              // src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
+            },
+          ],
+        })
+      }
 
       const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
 
