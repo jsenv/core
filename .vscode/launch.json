@@ -48,6 +48,8 @@
         "node_modules/@rollup/**",
         "node_modules/playwright/**",
         "node_modules/playwright-chromium/**",
+        "node_modules/playwright-webkit/**",
+        "node_modules/playwright-firefox/**",
         "node_modules/playwright-core/**",
         "<node_internals>/**"
       ]

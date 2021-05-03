@@ -78,12 +78,14 @@ const mutateDebuggingOptions = async (
   // this is required because vscode does not
   // support assigning a child spawned without a specific port
   const childDebugPortOptionValue =
-    debugPort === 0 ? await findFreePort(processDebugPort + 1, { cancellationToken }) : debugPort
+    debugPort === 0 ? await findFreePort(processDebugPort + 12, { cancellationToken }) : debugPort
   // replace child debug port
-  if (parentDebugPortOptionName && parentDebugPortOptionName !== childDebugPortOptionName) {
-    delete childProcessOptions[parentDebugPortOptionName]
+  if (parentDebugPortOptionName) {
+    if (parentDebugPortOptionName !== childDebugPortOptionName) {
+      delete childProcessOptions[parentDebugPortOptionName]
+    }
   }
-  childProcessOptions[childDebugPortOptionName] = portToArgValue(childDebugPortOptionValue)
+  childProcessOptions[childDebugModeOptionName] = portToArgValue(childDebugPortOptionValue)
 }
 
 const getChildDebugModeOptionName = ({
