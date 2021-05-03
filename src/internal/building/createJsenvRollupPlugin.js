@@ -324,7 +324,12 @@ export const createJsenvRollupPlugin = async ({
           fetchImportMap = lastImportMapInfo.fetchImportmap
         }
 
-        importMap = await fetchImportMap()
+        try {
+          importMap = await fetchImportMap()
+        } catch (e) {
+          storeLatestJsenvPluginError(e)
+          throw e
+        }
         importResolver = await createImportResolverForImportmap({
           compileServerOrigin,
           compileDirectoryRelativeUrl,
@@ -1037,11 +1042,8 @@ const importMapInfoFromHtml = async ({ htmlUrl, htmlSource, htmlCompileUrl }) =>
   return null
 }
 
-const fetchImportMapFromUrl = async (importMapUrl, { allow404 = false } = {}) => {
+const fetchImportMapFromUrl = async (importMapUrl) => {
   const importMapResponse = await fetchUrl(importMapUrl)
-  if (allow404 && importMapResponse.status === 404) {
-    return null
-  }
   if (importMapResponse.status < 200 || importMapResponse.status > 299) {
     throw new Error(
       createDetailedMessage(`Unexpected response status for importmap.`, {
