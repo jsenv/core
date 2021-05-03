@@ -71,10 +71,10 @@ export const launchNode = async ({
     const executeParams = {
       jsenvCoreDirectoryUrl,
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-      fileRelativeUrl,
       compileServerOrigin,
+      outDirectoryRelativeUrl,
 
+      fileRelativeUrl,
       collectCoverage,
       coverageConfig,
       executionId,

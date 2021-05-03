@@ -12,6 +12,7 @@ export const createNodeExecutionWithSystemJs = ({
   compileServerOrigin,
   outDirectoryRelativeUrl,
   compileId,
+  importDefaultExtension,
 }) => {
   const { getErrorOriginalStackString } = installNodeErrorStackRemapping({
     projectDirectoryUrl,
@@ -25,6 +26,7 @@ export const createNodeExecutionWithSystemJs = ({
       compileServerOrigin,
       compileDirectoryRelativeUrl,
       fetchSource,
+      importDefaultExtension,
     })
     return makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
   }
@@ -50,6 +52,7 @@ export const createNodeExecutionWithSystemJs = ({
       compileServerOrigin,
       compileDirectoryRelativeUrl,
       fetchSource,
+      importDefaultExtension,
     })
     try {
       const namespace = await makePromiseKeepNodeProcessAlive(

@@ -18,6 +18,7 @@ export const createNodeSystem = async ({
   compileServerOrigin,
   compileDirectoryRelativeUrl,
   fetchSource,
+  importDefaultExtension,
 } = {}) => {
   if (typeof global.System === "undefined") {
     throw new Error(`global.System is undefined`)
@@ -28,6 +29,7 @@ export const createNodeSystem = async ({
     projectDirectoryUrl,
     compileServerOrigin,
     compileDirectoryRelativeUrl,
+    importDefaultExtension,
   })
 
   const resolve = async (specifier, importer) => {

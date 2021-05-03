@@ -60,7 +60,6 @@ const handleDynamicBuild = ({
   compiledFileUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
-  importDefaultExtension,
 
   babelPluginMap,
 }) => {
@@ -100,7 +99,6 @@ const handleDynamicBuild = ({
         projectDirectoryUrl,
         compileDirectoryRelativeUrl,
         compileServerOrigin,
-        importDefaultExtension,
         externalImportSpecifiers: [],
         babelPluginMap,
 

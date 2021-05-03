@@ -46,7 +46,6 @@ export const startCompileServer = async ({
 
   projectDirectoryUrl,
 
-  importResolutionMethod,
   importDefaultExtension,
 
   jsenvDirectoryRelativeUrl = ".jsenv",
@@ -103,7 +102,6 @@ export const startCompileServer = async ({
 }) => {
   assertArguments({
     projectDirectoryUrl,
-    importResolutionMethod,
     jsenvDirectoryRelativeUrl,
     outDirectoryName,
   })
@@ -191,6 +189,7 @@ export const startCompileServer = async ({
 
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
+
     importDefaultExtension,
 
     transformTopLevelAwait,
@@ -302,11 +301,7 @@ export const computeOutDirectoryRelativeUrl = ({
   return outDirectoryRelativeUrl
 }
 
-const assertArguments = ({
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  outDirectoryName,
-}) => {
+const assertArguments = ({ projectDirectoryUrl, jsenvDirectoryRelativeUrl, outDirectoryName }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
   }

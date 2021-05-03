@@ -3,6 +3,8 @@ import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
 
 import { tryToFindProjectRelativeUrl } from "@jsenv/core/src/internal/runtime/module-registration.js"
 
+import { applyDefaultExtension } from "./default-extension.js"
+
 export const createImportResolverForImportmap = async ({
   // projectDirectoryUrl,
   compileServerOrigin,
@@ -13,11 +15,13 @@ export const createImportResolverForImportmap = async ({
   onBareSpecifierError = () => {},
 }) => {
   const _resolveImport = (specifier, importer) => {
+    if (importDefaultExtension) {
+      specifier = applyDefaultExtension(specifier, importer)
+    }
     return resolveImport({
       specifier,
       importer,
       importMap,
-      defaultExtension: importDefaultExtension,
       createBareSpecifierError: ({ specifier, importer }) => {
         const bareSpecifierError = createBareSpecifierError({
           specifier,

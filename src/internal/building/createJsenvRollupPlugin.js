@@ -299,6 +299,7 @@ export const createJsenvRollupPlugin = async ({
           projectDirectoryUrl,
           compileServerOrigin,
           compileDirectoryRelativeUrl,
+          importDefaultExtension
         })
       } else {
         const importMapCount = importMapInfos.length

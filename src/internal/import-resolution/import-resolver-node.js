@@ -1,12 +1,16 @@
 import { createRequire } from "module"
-import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
 import { urlToExtension, resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
+import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
+
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+
+import { applyDefaultExtension } from "./default-extension.js"
 
 export const createImportResolverForNode = async ({
   projectDirectoryUrl,
   compileServerOrigin,
   compileDirectoryRelativeUrl,
+  importDefaultExtension,
 }) => {
   if (typeof import.meta.resolve === undefined) {
     throw new Error(
@@ -21,6 +25,10 @@ export const createImportResolverForNode = async ({
       return specifier
     }
 
+    if (importDefaultExtension) {
+      specifier = applyDefaultExtension(specifier, importer)
+    }
+
     if (specifier.startsWith("http:") || specifier.startsWith("https:")) {
       return specifier
     }
@@ -31,11 +39,12 @@ export const createImportResolverForNode = async ({
       specifier = resolveUrl(specifier.slice("@jsenv/core/".length), projectDirectoryUrl)
     }
 
-    if (importer && (urlToExtension(importer) === ".ts" || urlToExtension(importer) === ".tsx")) {
+    if (importer && importDefaultExtension) {
       const fakeUrl = resolveUrl(specifier, importer)
-      // typescript extension magic
+      const importerExtension = urlToExtension(importer)
+      // extension magic, mostly for typescript
       if (urlToExtension(fakeUrl) === "") {
-        specifier = `${specifier}.ts`
+        specifier = `${specifier}${importerExtension}`
       }
     }
 

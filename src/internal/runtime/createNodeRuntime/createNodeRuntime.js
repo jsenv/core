@@ -13,15 +13,22 @@ export const createNodeRuntime = async ({
 }) => {
   const outDirectoryServerUrl = `${projectDirectoryUrl}${outDirectoryRelativeUrl}`
   const groupMapServerUrl = String(new URL("groupMap.json", outDirectoryServerUrl))
-  const groupMap = await importJson(groupMapServerUrl)
+  const envFileServerUrl = String(new URL("env.json", outDirectoryRelativeUrl))
+  const [groupMap, envJson] = await Promise.all([
+    importJson(groupMapServerUrl),
+    importJson(envFileServerUrl),
+  ])
+
+  const { importDefaultExtension } = envJson
 
   const compileId = computeCompileIdFromGroupId({
     groupId: resolveNodeGroup(groupMap),
     groupMap,
   })
   const groupInfo = groupMap[compileId]
-  // eslint-disable-next-line no-unused-vars
-  const canBypassCompilation = await nodeRuntimeSupportsAllFeatures(groupInfo)
+  const canBypassCompilation = await nodeRuntimeSupportsAllFeatures(groupInfo, {
+    importDefaultExtension,
+  })
 
   if (canBypassCompilation) {
     return createNodeExecutionWithDynamicImport({
@@ -35,6 +42,7 @@ export const createNodeRuntime = async ({
     compileServerOrigin,
     outDirectoryRelativeUrl,
     compileId,
+    importDefaultExtension,
   })
 }
 
@@ -44,7 +52,12 @@ const importJson = async (url) => {
   return object
 }
 
-const nodeRuntimeSupportsAllFeatures = async (groupInfo) => {
+const nodeRuntimeSupportsAllFeatures = async (groupInfo, { importDefaultExtension }) => {
+  // node native resolution will not auto add extension
+  if (importDefaultExtension) {
+    return false
+  }
+
   const requiredBabelPluginCount = countRequiredBabelPlugins(groupInfo)
   if (requiredBabelPluginCount > 0) {
     return false
