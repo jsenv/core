@@ -39,6 +39,7 @@ const getLogs = async () => {
         compileServerOrigin,
       }),
     captureConsole: true,
+    stopAfterExecute: true,
     // mirrorConsole: false
   })
 
@@ -49,23 +50,6 @@ const getLogs = async () => {
     return `${previous}${text}`
   }, "")
   return logs
-}
-
-// execution with colors enabled
-if (process.platform !== "win32") {
-  process.env.FORCE_COLOR = 1
-  const actual = await getLogs()
-  const expected = `
-[32m✔ execution 1 of 1 completed[0m (all [32mcompleted[0m).
-file: ${testDirectoryRelativePath}file.js
-runtime: node/${process.version.slice(1)}
-
--------------- summary -----------------
-1 execution: all [32mcompleted[0m.
-----------------------------------------
-
-`
-  assert({ actual, expected })
 }
 
 // execution with colors disabled
@@ -79,6 +63,23 @@ runtime: node/${process.version.slice(1)}
 
 -------------- summary -----------------
 1 execution: all completed.
+----------------------------------------
+
+`
+  assert({ actual, expected })
+}
+
+// execution with colors enabled
+if (process.platform !== "win32") {
+  process.env.FORCE_COLOR = 1
+  const actual = await getLogs()
+  const expected = `
+[32m✔ execution 1 of 1 completed[0m (all [32mcompleted[0m).
+file: ${testDirectoryRelativePath}file.js
+runtime: node/${process.version.slice(1)}
+
+-------------- summary -----------------
+1 execution: all [32mcompleted[0m.
 ----------------------------------------
 
 `

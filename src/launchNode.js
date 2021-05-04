@@ -1,17 +1,18 @@
 /* eslint-disable import/max-dependencies */
 import { Script } from "vm"
 
-import cuid from "cuid"
-
 import { loggerToLogLevel } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { writeDirectory, resolveUrl, urlToFileSystemPath, removeFileSystemNode } from "@jsenv/util"
 
+import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvNodeSystemUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
 import { istanbulCoverageFromV8Coverage } from "./internal/executing/coverage/istanbulCoverageFromV8Coverage.js"
+
+const cuid = require("cuid")
 
 export const launchNode = async ({
   cancellationToken = createCancellationToken(),
@@ -51,8 +52,31 @@ export const launchNode = async ({
     JSENV: true,
   }
 
+  let finalizeExecutionResult
+
   if (collectCoverage && !coverageForceIstanbul) {
-    env.NODE_V8_COVERAGE = await getNodeV8CoverageDir({ projectDirectoryUrl })
+    const NODE_V8_COVERAGE = await getNodeV8CoverageDir({ projectDirectoryUrl })
+    env.NODE_V8_COVERAGE = NODE_V8_COVERAGE
+
+    // the v8 coverage directory is available once the child process is disconnected
+    finalizeExecutionResult = async (executionResult) => {
+      const coverageMap = await ensureV8CoverageDirRemoval(async () => {
+        // prefer istanbul if available
+        if (executionResult.coverageMap) {
+          return executionResult.coverageMap
+        }
+
+        await controllableNodeProcess.disconnected
+        const istanbulCoverage = await istanbulCoverageFromV8Coverage({
+          projectDirectoryUrl,
+          NODE_V8_COVERAGE,
+          coverageConfig,
+        })
+        return istanbulCoverage
+      }, NODE_V8_COVERAGE)
+      executionResult.coverageMap = coverageMap
+      return executionResult
+    }
   }
 
   commandLineOptions = ["--experimental-import-meta-resolve", ...commandLineOptions]
@@ -116,28 +140,7 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})
     registerErrorCallback: controllableNodeProcess.registerErrorCallback,
     registerConsoleCallback: controllableNodeProcess.registerConsoleCallback,
     executeFile,
-    finalizeExecutionResult: coverageForceIstanbul
-      ? (executionResult) => executionResult
-      : // the v8 coverage directory is available once the child process is disconnected
-        async (executionResult) => {
-          const { NODE_V8_COVERAGE } = env
-          const coverageMap = await ensureV8CoverageDirRemoval(async () => {
-            // prefer istanbul if available
-            if (executionResult.coverageMap) {
-              return executionResult.coverageMap
-            }
-
-            await controllableNodeProcess.disconnected
-            const istanbulCoverage = await istanbulCoverageFromV8Coverage({
-              projectDirectoryUrl,
-              NODE_V8_COVERAGE,
-              coverageConfig,
-            })
-            return istanbulCoverage
-          }, NODE_V8_COVERAGE)
-          executionResult.coverageMap = coverageMap
-          return executionResult
-        },
+    finalizeExecutionResult,
   }
 }
 

@@ -29,7 +29,7 @@ export const createNodeExecutionWithDynamicImport = ({ projectDirectoryUrl }) =>
 }
 
 const makePromiseKeepNodeProcessAlive = async (promise) => {
-  const timerId = setInterval(() => {}, 10000)
+  const timerId = setInterval(() => {}, 1000)
 
   try {
     const value = await promise

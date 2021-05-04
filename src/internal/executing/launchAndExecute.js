@@ -386,11 +386,15 @@ const computeExecutionResult = async ({
             ["runtime"]: runtime,
           }),
         )
-        return finalizeExecutionResult(createErroredExecutionResult(executionResult))
+        return finalizeExecutionResult(
+          createErroredExecutionResult(executionResult, { collectCoverage }),
+        )
       }
 
       logger.debug(`${fileRelativeUrl} ${runtime}: execution completed.`)
-      return finalizeExecutionResult(createCompletedExecutionResult(executionResult))
+      return finalizeExecutionResult(
+        createCompletedExecutionResult(executionResult, { collectCoverage }),
+      )
     },
   })
 
@@ -411,14 +415,28 @@ const createDisconnectedExecutionResult = () => {
   }
 }
 
-const createErroredExecutionResult = (executionResult) => {
+const createErroredExecutionResult = (executionResult, { collectCoverage }) => {
+  // as collectCoverage is disabled
+  // executionResult.coverageMap is undefined or {}
+  // we delete it just to have a cleaner object
+  if (!collectCoverage) {
+    delete executionResult.coverageMap
+  }
+
   return {
     ...executionResult,
     status: "errored",
   }
 }
 
-const createCompletedExecutionResult = (executionResult) => {
+const createCompletedExecutionResult = (executionResult, { collectCoverage }) => {
+  // as collectCoverage is disabled
+  // executionResult.coverageMap is undefined or {}
+  // we delete it just to have a cleaner object
+  if (!collectCoverage) {
+    delete executionResult.coverageMap
+  }
+
   return {
     ...executionResult,
     status: "completed",
