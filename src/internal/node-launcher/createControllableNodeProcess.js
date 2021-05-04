@@ -18,8 +18,6 @@ const nodeControllableFileUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 
-const EVALUATION_STATUS_OK = "evaluation-ok"
-
 // https://nodejs.org/api/process.html#process_signal_events
 const SIGINT_SIGNAL_NUMBER = 2
 const SIGABORT_SIGNAL_NUMBER = 6
@@ -218,28 +216,32 @@ export const createControllableNodeProcess = async ({
     return killChildProcess({ signal: GRACEFUL_STOP_SIGNAL })
   }
 
-  const evaluate = (source) => {
+  const requestActionOnChildProcess = ({ actionType, actionParams }) => {
     return new Promise(async (resolve, reject) => {
-      onceProcessMessage(childProcess, "evaluate-result", ({ status, value }) => {
+      onceProcessMessage(childProcess, "action-result", ({ status, value }) => {
         logger.debug(
-          createDetailedMessage(`child process sent the following evaluation result.`, {
+          createDetailedMessage(`child process sent an action result.`, {
             status,
             value,
           }),
         )
-        if (status === EVALUATION_STATUS_OK) resolve(value)
-        else reject(value)
+        if (status === "action-completed") {
+          resolve(value)
+        } else {
+          reject(value)
+        }
       })
 
       logger.debug(
-        createDetailedMessage(`ask child process to evaluate`, {
-          source,
+        createDetailedMessage(`ask child process to perform an action`, {
+          actionType,
+          actionParams,
         }),
       )
 
       await childProcessReadyPromise
       try {
-        await sendToProcess(childProcess, "evaluate", source)
+        await sendToProcess(childProcess, "action", { actionType, actionParams })
       } catch (e) {
         logger.error(
           createDetailedMessage(`error while sending message to child`, {
@@ -258,7 +260,7 @@ export const createControllableNodeProcess = async ({
     disconnected,
     registerErrorCallback,
     registerConsoleCallback,
-    evaluate,
+    requestActionOnChildProcess,
   }
 }
 

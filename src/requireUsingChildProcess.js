@@ -35,7 +35,11 @@ export const requireUsingChildProcess = async (
         ...controllableNodeProcess,
         executeFile: async () => {
           try {
-            const namespace = await requireInChildProcess({ controllableNodeProcess, fileUrl })
+            const namespace = await controllableNodeProcess.requestActionOnChildProcess({
+              actionType: "execute-using-require",
+              actionParams: { fileUrl },
+            })
+
             return {
               status: "ok",
               namespace,
@@ -54,29 +58,4 @@ export const requireUsingChildProcess = async (
     throw result.error
   }
   return result.namespace
-}
-
-const requireInChildProcess = ({ controllableNodeProcess, fileUrl }) => {
-  return controllableNodeProcess.evaluate(`
-import { createRequire } from "module"
-import { fileURLToPath } from "url"
-
-const fileUrl = ${JSON.stringify(fileUrl)}
-const filePath = fileURLToPath(fileUrl)
-const require = createRequire(fileUrl)
-const namespace = require(filePath)
-
-const resolveNamespace = async (namespace) => {
-  const namespaceResolved = {}
-  await Promise.all([
-    ...Object.keys(namespace).map(async (key) => {
-      const value = await namespace[key]
-      namespaceResolved[key] = value
-    }),
-  ])
-  return namespaceResolved
-}
-
-export default resolveNamespace(namespace)
-`)
 }

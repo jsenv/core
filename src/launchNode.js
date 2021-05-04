@@ -6,7 +6,6 @@ import { createCancellationToken } from "@jsenv/cancellation"
 import { writeDirectory, resolveUrl, urlToFileSystemPath, removeFileSystemNode } from "@jsenv/util"
 
 import { require } from "@jsenv/core/src/internal/require.js"
-import { jsenvNodeSystemUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
@@ -109,13 +108,10 @@ export const launchNode = async ({
       remap,
     }
 
-    let executionResult = await controllableNodeProcess.evaluate(
-      `
-import { execute } from ${JSON.stringify(jsenvNodeSystemUrl)}
-
-export default execute(${JSON.stringify(executeParams, null, "    ")})
-`,
-    )
+    let executionResult = await controllableNodeProcess.requestActionOnChildProcess({
+      actionType: "execute-using-systemjs",
+      actionParams: executeParams,
+    })
 
     executionResult = transformExecutionResult(executionResult, {
       compileServerOrigin,
