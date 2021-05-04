@@ -323,7 +323,7 @@ export const createJsenvRollupPlugin = async ({
           )
 
           importMapUrl = lastImportMapInfo.importMapUrl
-          fetchImportMap = lastImportMapInfo.fetchImportmap
+          fetchImportMap = lastImportMapInfo.fetchImportMap
         }
 
         try {
