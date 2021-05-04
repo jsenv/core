@@ -1,4 +1,6 @@
-const { uneval } = require("@jsenv/uneval")
+// il faut surement mettre .mjs a ce fichier
+
+import { uneval } from "@jsenv/uneval"
 
 const makeProcessControllable = ({ evaluate }) => {
   const EVALUATION_STATUS_OK = "evaluation-ok"
@@ -81,4 +83,11 @@ const onceSIGTERM = (callback) => {
   }
 }
 
-exports.makeProcessControllable = makeProcessControllable
+makeProcessControllable({
+  evaluate: async (expressionString) => {
+    const sourceAsBase64 = Buffer.from(expressionString).toString("base64")
+    const namespace = await import(`data:text/javascript;base64,${sourceAsBase64}`)
+    const value = await namespace.default
+    return value
+  },
+})

@@ -14,7 +14,7 @@ import { processOptionsFromExecArgv, execArgvFromProcessOptions } from "./proces
 const killProcessTree = require("tree-kill")
 
 const nodeControllableFileUrl = resolveUrl(
-  "./src/internal/node-launcher/nodeControllableFile.js",
+  "./src/internal/node-launcher/nodeControllableFile.mjs",
   jsenvCoreDirectoryUrl,
 )
 
