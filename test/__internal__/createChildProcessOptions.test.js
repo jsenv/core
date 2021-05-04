@@ -25,7 +25,7 @@ const test = async (params) => {
     debugMode: "inherit",
     debugPort: 10,
   })
-  const expected = ["--before", "--inspect", "--after", "--inspect-port=10"]
+  const expected = ["--before", "--inspect=10", "--after"]
   assert({ actual, expected })
 }
 
@@ -37,7 +37,7 @@ const test = async (params) => {
     debugMode: "inherit",
     debugPort: 11,
   })
-  const expected = ["--before", "--inspect", "--inspect-port=11", "--after"]
+  const expected = ["--before", "--inspect=11", "--after"]
   assert({ actual, expected })
 }
 
@@ -59,7 +59,7 @@ const test = async (params) => {
     debugMode: "inspect",
     debugPort: 10,
   })
-  const expected = ["--before", "--after", "--inspect", "--inspect-port=10"]
+  const expected = ["--before", "--after", "--inspect=10"]
   assert({ actual, expected })
 }
 
@@ -70,7 +70,7 @@ const test = async (params) => {
     debugMode: "inspect",
     debugPort: 10,
   })
-  const expected = ["--before", "--after", "--inspect", "--inspect-port=10"]
+  const expected = ["--before", "--after", "--inspect=10"]
   assert({ actual, expected })
 }
 

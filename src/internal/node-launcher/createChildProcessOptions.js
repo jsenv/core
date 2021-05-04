@@ -56,7 +56,6 @@ const mutateDebuggingOptions = async (
     debugMode,
     debugModeInheritBreak,
   })
-  const childDebugPortOptionName = `${childDebugModeOptionName}-port`
 
   if (!childDebugModeOptionName) {
     // remove debug mode and debug port fron child options
@@ -81,9 +80,7 @@ const mutateDebuggingOptions = async (
     debugPort === 0 ? await findFreePort(processDebugPort + 12, { cancellationToken }) : debugPort
   // replace child debug port
   if (parentDebugPortOptionName) {
-    if (parentDebugPortOptionName !== childDebugPortOptionName) {
-      delete childProcessOptions[parentDebugPortOptionName]
-    }
+    delete childProcessOptions[parentDebugPortOptionName]
   }
   childProcessOptions[childDebugModeOptionName] = portToArgValue(childDebugPortOptionValue)
 }
