@@ -34,6 +34,7 @@ export const launchNode = async ({
   collectCoverage = false,
   coverageConfig,
   coverageForceIstanbul = false,
+  logProcessCommand,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -92,6 +93,7 @@ export const launchNode = async ({
     stdin,
     stdout,
     stderr,
+    logProcessCommand,
   })
 
   const executeFile = async (fileRelativeUrl, { collectCoverage, executionId }) => {

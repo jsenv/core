@@ -45,6 +45,7 @@ export const createControllableNodeProcess = async ({
   stdin = "pipe",
   stdout = "pipe",
   stderr = "pipe",
+  logProcessCommand = false,
 }) => {
   const logger = createLogger({ logLevel })
   const dynamicImportSupported = await nodeSupportsDynamicImport()
@@ -88,9 +89,11 @@ export const createControllableNodeProcess = async ({
   if (typeof stderr === "object") {
     childProcess.stderr.pipe(stderr)
   }
-  logger.debug(
-    `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(nodeControllableFileUrl)}`,
-  )
+  if (logProcessCommand) {
+    console.log(
+      `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(nodeControllableFileUrl)}`,
+    )
+  }
 
   const childProcessReadyPromise = new Promise((resolve) => {
     onceProcessMessage(childProcess, "ready", resolve)

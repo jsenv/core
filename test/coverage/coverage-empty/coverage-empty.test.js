@@ -26,9 +26,15 @@ const { coverageMap } = await executeTestPlan({
 })
 const actual = coverageMap
 const expected = {
-  [`${testDirectoryRelativeUrl}coverage-empty.js`]: {
-    ...coverageMap[`${testDirectoryRelativeUrl}coverage-empty.js`],
-    s: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 },
+  [`./${testDirectoryRelativeUrl}coverage-empty.js`]: {
+    ...coverageMap[`./${testDirectoryRelativeUrl}coverage-empty.js`],
+    s: {
+      0: 0,
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+    },
   },
 }
 assert({ actual, expected })

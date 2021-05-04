@@ -11,7 +11,8 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
-const { coverageMap: actual } = await executeTestPlan({
+
+const result = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   executionLogLevel: "off",
   jsenvDirectoryRelativeUrl,
@@ -23,7 +24,11 @@ const { coverageMap: actual } = await executeTestPlan({
     },
     [fileRelativeUrl]: {
       node: {
-        launch: launchNode,
+        launch: (params) =>
+          launchNode({
+            ...params,
+            // logProcessCommand: true,
+          }),
       },
     },
   },
@@ -31,10 +36,12 @@ const { coverageMap: actual } = await executeTestPlan({
   coverageConfig: {
     [`${testDirectoryRelativeUrl}throw.js`]: true,
   },
+  coverageForceIstanbul: true,
 })
+const actual = result.coverageMap
 const expected = {
-  [`${testDirectoryRelativeUrl}throw.js`]: {
-    ...actual[`${testDirectoryRelativeUrl}throw.js`],
+  [`./${testDirectoryRelativeUrl}throw.js`]: {
+    ...actual[`./${testDirectoryRelativeUrl}throw.js`],
     s: { 0: 2, 1: 2 },
   },
 }
