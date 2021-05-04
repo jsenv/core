@@ -1,7 +1,7 @@
 import { urlToContentType } from "@jsenv/server"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
 import { jsenvToolbarHtmlUrl } from "../jsenvInternalFiles.js"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
@@ -103,21 +103,11 @@ export const jsenvCompilerForHtml = ({
         }
       })
       if (hasImportmap === false) {
-        const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
-        const compileDirectoryUrl = resolveUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
-        const jsenvCoreDirectoryRelativeUrl = urlToRelativeUrl(
-          jsenvCoreDirectoryUrl,
+        const defaultImportMap = getDefaultImportMap({
+          importMapFileUrl: compiledFileUrl,
           projectDirectoryUrl,
-        )
-        const jsenvCoreDirectoryCompileUrl = resolveUrl(
-          jsenvCoreDirectoryRelativeUrl,
-          compileDirectoryUrl,
-        )
-        const inlineImportMapUrl = compiledFileUrl
-        const jsenvCoreDirectoryUrlRelativeToImportMap = urlToRelativeUrl(
-          jsenvCoreDirectoryCompileUrl,
-          inlineImportMapUrl,
-        )
+          compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
+        })
 
         manipulateHtmlAst(htmlAst, {
           scriptInjections: [
@@ -125,12 +115,7 @@ export const jsenvCompilerForHtml = ({
               type: "jsenv-importmap",
               // in case there is no importmap, force the presence
               // so that '@jsenv/core/' are still remapped
-              text: JSON.stringify({
-                imports: {
-                  "@jsenv/core/": jsenvCoreDirectoryUrlRelativeToImportMap,
-                },
-              }),
-              // src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
+              text: JSON.stringify(defaultImportMap, null, "  "),
             },
           ],
         })

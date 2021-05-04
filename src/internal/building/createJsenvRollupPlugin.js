@@ -47,6 +47,7 @@ import { transformImportMetaUrlReferences } from "./transformImportMetaUrlRefere
 import { minifyJs } from "./js/minifyJs.js"
 import { createImportResolverForNode } from "../import-resolution/import-resolver-node.js"
 import { createImportResolverForImportmap } from "../import-resolution/import-resolver-importmap.js"
+import { getDefaultImportMap } from "../import-resolution/importmap-default.js"
 
 // use a fake and predictable compile server origin
 // because rollup will check the dependencies url
@@ -309,7 +310,20 @@ export const createJsenvRollupPlugin = async ({
         let fetchImportMap
         if (importMapCount === 0) {
           // there is no importmap, its' fine it's not mandatory to use one
-          fetchImportMap = () => null
+          fetchImportMap = () => {
+            const entryProjectRelativeUrl = Object.keys(entryPointMap)[0]
+            const entryCompileUrl = resolveUrl(entryProjectRelativeUrl, compileDirectoryUrl)
+            const defaultImportMap = getDefaultImportMap({
+              importMapFileUrl: entryCompileUrl,
+              projectDirectoryUrl,
+              compileDirectoryRelativeUrl,
+            })
+            const entryCompileServerUrl = resolveUrl(
+              entryProjectRelativeUrl,
+              compileDirectoryRemoteUrl,
+            )
+            return normalizeImportMap(defaultImportMap, entryCompileServerUrl)
+          }
         } else {
           if (importMapCount > 1) {
             logger.warn(formatMultipleImportMapWarning())
@@ -882,6 +896,7 @@ export const createJsenvRollupPlugin = async ({
     }
 
     const importerUrl = urlImporterMap[moduleUrl]
+    if (!importerUrl) debugger
     const moduleResponse = await fetchModule(
       moduleUrl,
       rollupUrlToProjectUrl(importerUrl) || importerUrl,

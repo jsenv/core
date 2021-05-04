@@ -35,8 +35,10 @@ export const createImportResolverForNode = async ({
 
     // handle self reference inside jsenv itself, it is not allowed by Node.js
     // for some reason
-    if (projectDirectoryUrl === jsenvCoreDirectoryUrl && specifier.startsWith("@jsenv/core/")) {
-      specifier = resolveUrl(specifier.slice("@jsenv/core/".length), projectDirectoryUrl)
+    if (specifier.startsWith("@jsenv/core/")) {
+      if (projectDirectoryUrl === jsenvCoreDirectoryUrl) {
+        specifier = resolveUrl(specifier.slice("@jsenv/core/".length), projectDirectoryUrl)
+      }
     }
 
     const moduleResolutionAlgorithm = importer
