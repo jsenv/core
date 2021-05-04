@@ -251,6 +251,7 @@ export const createJsenvRollupPlugin = async ({
             const htmlSource = await entryResponse.text()
             const importMapInfo = importMapInfoFromHtml({
               htmlUrl: entryProjectUrl,
+              htmlSource,
               htmlCompileUrl: entryCompiledUrl,
             })
 
@@ -299,7 +300,7 @@ export const createJsenvRollupPlugin = async ({
           projectDirectoryUrl,
           compileServerOrigin,
           compileDirectoryRelativeUrl,
-          importDefaultExtension
+          importDefaultExtension,
         })
       } else {
         const importMapCount = importMapInfos.length
@@ -1006,7 +1007,7 @@ export const createJsenvRollupPlugin = async ({
   }
 }
 
-const importMapInfoFromHtml = async ({ htmlUrl, htmlSource, htmlCompileUrl }) => {
+const importMapInfoFromHtml = ({ htmlUrl, htmlSource, htmlCompileUrl }) => {
   const importMapHtmlNode = findFirstImportmapNode(htmlSource)
   if (!importMapHtmlNode) {
     return null
