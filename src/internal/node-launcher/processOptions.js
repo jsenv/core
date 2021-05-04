@@ -30,11 +30,17 @@ const processOptionFromExecArg = (execArg) => {
 }
 
 export const execArgvFromProcessOptions = (processOptions) => {
-  return Object.keys(processOptions).map((processOptionName) => {
+  const execArgv = []
+  Object.keys(processOptions).forEach((processOptionName) => {
     const processOptionValue = processOptions[processOptionName]
-    if (processOptionValue === "") {
-      return processOptionName
+    if (processOptionValue === "unset") {
+      return
     }
-    return `${processOptionName}=${processOptionValue}`
+    if (processOptionValue === "") {
+      execArgv.push(processOptionName)
+      return
+    }
+    execArgv.push(`${processOptionName}=${processOptionValue}`)
   })
+  return execArgv
 }

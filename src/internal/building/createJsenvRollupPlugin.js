@@ -1033,7 +1033,7 @@ const importMapInfoFromHtml = ({ htmlUrl, htmlSource, htmlCompileUrl }) => {
       htmlSource,
       importMapHtmlNode,
       importMapUrl,
-      fetchImportmap: () => {
+      fetchImportMap: () => {
         const importMapRaw = JSON.parse(textNode.value)
         const importMap = normalizeImportMap(importMapRaw, htmlCompileUrl)
         return importMap
