@@ -22,24 +22,24 @@ const testPlan = {
     chromium: {
       launch: launchChromium,
     },
-    // firefox: {
-    //   launch: launchFirefox,
-    // },
-    // webkit: {
-    //   launch: launchWebkit,
-    // },
+    firefox: {
+      launch: launchFirefox,
+    },
+    webkit: {
+      launch: launchWebkit,
+    },
   },
   [fileRelativeUrl]: {
     node: {
       launch: launchNode,
     },
-    // node2: {
-    //   launch: launchNode,
-    // },
+    node2: {
+      launch: launchNode,
+    },
   },
 }
 
-const { coverageMap } = await executeTestPlan({
+const result = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
@@ -47,14 +47,15 @@ const { coverageMap } = await executeTestPlan({
   coverageConfig: {
     [`./${testDirectoryRelativeUrl}file.js`]: true,
   },
+  coverageForceIstanbul: true,
   // concurrencyLimit: 1,
-  logLevel: "info",
-  coverageHtmlDirectory: true,
+  // logLevel: "info",
+  // coverageHtmlDirectory: true,
 })
-const actual = coverageMap
+const actual = result.coverageMap
 const expected = {
   [`./${testDirectoryRelativeUrl}file.js`]: {
-    ...coverageMap[`${testDirectoryRelativeUrl}file.js`],
+    ...actual[`./${testDirectoryRelativeUrl}file.js`],
     path: `./${testDirectoryRelativeUrl}file.js`,
     s: { 0: 5, 1: 3, 2: 2, 3: 2, 4: 0 },
   },
