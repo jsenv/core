@@ -1,14 +1,17 @@
+/* eslint-disable import/max-dependencies */
 import { Script } from "vm"
+
+import cuid from "cuid"
 
 import { loggerToLogLevel } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
-import { jsenvNodeSystemUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { writeDirectory, resolveUrl, urlToFileSystemPath, removeFileSystemNode } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
+
+import { jsenvNodeSystemUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
 import { istanbulCoverageFromV8Coverage } from "./internal/executing/coverage/istanbulCoverageFromV8Coverage.js"
-import cuid from "cuid"
 
 export const launchNode = async ({
   cancellationToken = createCancellationToken(),
@@ -30,6 +33,7 @@ export const launchNode = async ({
   remap = true,
   collectCoverage = false,
   coverageConfig,
+  coverageForceIstanbul = false,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -47,7 +51,7 @@ export const launchNode = async ({
     JSENV: true,
   }
 
-  if (collectCoverage) {
+  if (collectCoverage && !coverageForceIstanbul) {
     env.NODE_V8_COVERAGE = await getNodeV8CoverageDir({ projectDirectoryUrl })
   }
 
@@ -94,32 +98,6 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})
       projectDirectoryUrl,
     })
 
-    if (collectCoverage) {
-      const { NODE_V8_COVERAGE } = env
-      if (executionResult.coverageMap === undefined) {
-        executionResult.readCoverage = async () => {
-          try {
-            await controllableNodeProcess.stop()
-            const coverageMap = await istanbulCoverageFromV8Coverage({
-              projectDirectoryUrl,
-              NODE_V8_COVERAGE,
-              coverageConfig,
-            })
-            return coverageMap
-          } finally {
-            removeFileSystemNode(NODE_V8_COVERAGE, {
-              recursive: true,
-            })
-          }
-        }
-      } else {
-        executionResult.readCoverage = () => executionResult.coverageMap
-        removeFileSystemNode(NODE_V8_COVERAGE, {
-          recursive: true,
-        })
-      }
-    }
-
     return executionResult
   }
 
@@ -138,6 +116,38 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})
     registerErrorCallback: controllableNodeProcess.registerErrorCallback,
     registerConsoleCallback: controllableNodeProcess.registerConsoleCallback,
     executeFile,
+    finalizeExecutionResult: coverageForceIstanbul
+      ? (executionResult) => executionResult
+      : // the v8 coverage directory is available once the child process is disconnected
+        async (executionResult) => {
+          const { NODE_V8_COVERAGE } = env
+          const coverageMap = await ensureV8CoverageDirRemoval(async () => {
+            // prefer istanbul if available
+            if (executionResult.coverageMap) {
+              return executionResult.coverageMap
+            }
+
+            await controllableNodeProcess.disconnected
+            const istanbulCoverage = await istanbulCoverageFromV8Coverage({
+              projectDirectoryUrl,
+              NODE_V8_COVERAGE,
+              coverageConfig,
+            })
+            return istanbulCoverage
+          }, NODE_V8_COVERAGE)
+          executionResult.coverageMap = coverageMap
+          return executionResult
+        },
+  }
+}
+
+const ensureV8CoverageDirRemoval = async (fn, NODE_V8_COVERAGE) => {
+  try {
+    return await fn()
+  } finally {
+    removeFileSystemNode(NODE_V8_COVERAGE, {
+      recursive: true,
+    })
   }
 }
 

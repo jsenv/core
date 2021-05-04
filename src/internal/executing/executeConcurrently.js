@@ -41,6 +41,7 @@ export const executeConcurrently = async (
     coverage,
     coverageConfig,
     coverageIncludeMissing,
+    coverageForceIstanbul,
 
     ...rest
   },
@@ -160,6 +161,7 @@ export const executeConcurrently = async (
         fileRelativeUrl,
         collectCoverage,
         coverageConfig,
+        coverageForceIstanbul,
 
         ...rest,
       })
@@ -239,6 +241,7 @@ export const executeConcurrently = async (
     ...(coverage
       ? {
           coverageMap: await reportToCoverageMap(report, {
+            logger,
             cancellationToken,
             projectDirectoryUrl,
             babelPluginMap,

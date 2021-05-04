@@ -43,6 +43,7 @@ export const launchAndExecute = async ({
   inheritCoverage = false,
   collectCoverage = false,
   coverageConfig,
+  coverageForceIstanbul,
   ...rest
 } = {}) => {
   const logger = createLogger({ logLevel: executionLogLevel })
@@ -156,6 +157,7 @@ export const launchAndExecute = async ({
     runtimeStoppedCallback,
     collectCoverage,
     coverageConfig,
+    coverageForceIstanbul,
 
     ...rest,
   })
@@ -236,6 +238,7 @@ const computeExecutionResult = async ({
   runtimeDisconnectCallback,
 
   collectCoverage,
+  coverageForceIstanbul,
 
   ...rest
 }) => {
@@ -248,6 +251,7 @@ const computeExecutionResult = async ({
         cancellationToken,
         logger,
         collectCoverage,
+        coverageForceIstanbul,
         ...rest,
       })
       runtimeStartedCallback({ name: value.name, version: value.version })
@@ -315,6 +319,7 @@ const computeExecutionResult = async ({
     registerErrorCallback,
     registerConsoleCallback,
     disconnected,
+    finalizeExecutionResult = (executionResult) => executionResult,
   } = await launchOperation
 
   const runtime = `${runtimeName}/${runtimeVersion}`
@@ -359,7 +364,7 @@ const computeExecutionResult = async ({
       timing = TIMING_AFTER_EXECUTION
 
       if (raceResult.winner === disconnected) {
-        return createDisconnectedExecutionResult({})
+        return createDisconnectedExecutionResult()
       }
 
       if (stopAfterExecute) {
@@ -381,17 +386,11 @@ const computeExecutionResult = async ({
             ["runtime"]: runtime,
           }),
         )
-        return {
-          ...createErroredExecutionResult(executionResult.error),
-          ...(collectCoverage ? { coverageMap: await executionResult.readCoverage() } : {}),
-        }
+        return finalizeExecutionResult(createErroredExecutionResult(executionResult))
       }
 
       logger.debug(`${fileRelativeUrl} ${runtime}: execution completed.`)
-      return {
-        ...createCompletedExecutionResult(executionResult.namespace),
-        ...(collectCoverage ? { coverageMap: await executionResult.readCoverage() } : {}),
-      }
+      return finalizeExecutionResult(createCompletedExecutionResult(executionResult))
     },
   })
 
@@ -412,17 +411,18 @@ const createDisconnectedExecutionResult = () => {
   }
 }
 
-const createErroredExecutionResult = (error) => {
+const createErroredExecutionResult = (executionResult) => {
   return {
+    ...executionResult,
     status: "errored",
-    error,
   }
 }
 
-const createCompletedExecutionResult = (namespace) => {
+const createCompletedExecutionResult = (executionResult) => {
   return {
+    ...executionResult,
     status: "completed",
-    namespace: normalizeNamespace(namespace),
+    namespace: normalizeNamespace(executionResult.namespace),
   }
 }
 

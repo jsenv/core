@@ -18,33 +18,62 @@ const testPlan = {
   },
 }
 
-const result = await executeTestPlan({
-  ...EXECUTE_TEST_PLAN_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-  testPlan,
-  coverage: true,
-  coverageConfig: {
-    [`./${testDirectoryRelativeUrl}file.js`]: true,
-  },
-  // coverageTextLog: true,
-  // coverageJsonFile: true,
-  // coverageHtmlDirectory: true,
-})
-const actual = result.coverageMap
-const expected = {
-  [`${testDirectoryRelativeUrl}file.js`]: {
-    ...actual[`${testDirectoryRelativeUrl}file.js`],
-    path: `./${testDirectoryRelativeUrl}file.js`,
-    s: {
-      0: 1,
-      1: 1,
-      2: 0,
-      3: 1,
-      4: 1,
-      5: 1,
-      6: 0,
-      7: 0,
+const getCoverage = async ({ coverageForceIstanbul = false } = {}) => {
+  const result = await executeTestPlan({
+    ...EXECUTE_TEST_PLAN_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    testPlan,
+    coverage: true,
+    coverageConfig: {
+      [`./${testDirectoryRelativeUrl}file.js`]: true,
     },
-  },
+    coverageForceIstanbul,
+    // coverageTextLog: true,
+    // coverageJsonFile: true,
+    // coverageHtmlDirectory: true,
+  })
+  return result.coverageMap
 }
-assert({ actual, expected })
+
+// v8
+{
+  const actual = await getCoverage()
+  const expected = {
+    [`./${testDirectoryRelativeUrl}file.js`]: {
+      ...actual[`./${testDirectoryRelativeUrl}file.js`],
+      path: `./${testDirectoryRelativeUrl}file.js`,
+      s: {
+        0: 1,
+        1: 1,
+        2: 0,
+        3: 1,
+        4: 1,
+        5: 1,
+        6: 0,
+        7: 0,
+      },
+    },
+  }
+  assert({ actual, expected })
+}
+
+// istanbul
+{
+  const actual = await getCoverage({
+    coverageForceIstanbul: true,
+  })
+  const expected = {
+    [`./${testDirectoryRelativeUrl}file.js`]: {
+      ...actual[`./${testDirectoryRelativeUrl}file.js`],
+      path: `./${testDirectoryRelativeUrl}file.js`,
+      s: {
+        0: 1,
+        1: 0,
+        2: 1,
+        3: 1,
+        4: 0,
+      },
+    },
+  }
+  assert({ actual, expected })
+}

@@ -9,7 +9,6 @@ import {
 } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
-import { normalizeIstanbulCoverage } from "./normalizeIstanbulCoverage.js"
 
 const { mergeProcessCovs } = require("@c88/v8-coverage")
 
@@ -38,7 +37,6 @@ export const istanbulCoverageFromV8Coverage = async ({
 
   const coverageReport = mergeCoverageReports(coverageReportsFiltered)
   const istanbulCoverage = await convertV8CoverageToIstanbul(coverageReport, {
-    projectDirectoryUrl,
     sourceMapCache,
   })
   return istanbulCoverage
@@ -91,10 +89,7 @@ const mergeCoverageReports = (coverageReports) => {
   return coverageReport
 }
 
-const convertV8CoverageToIstanbul = async (
-  coverageReport,
-  { projectDirectoryUrl, sourceMapCache },
-) => {
+const convertV8CoverageToIstanbul = async (coverageReport, { sourceMapCache }) => {
   const istanbulCoverages = await Promise.all(
     coverageReport.result.map(async (fileV8Coverage) => {
       const sources = sourcesFromSourceMapCache(fileV8Coverage.url, sourceMapCache)
@@ -110,11 +105,7 @@ const convertV8CoverageToIstanbul = async (
 
       converter.applyCoverage(fileV8Coverage.functions)
       const istanbulCoverage = converter.toIstanbul()
-      const istanbulCoverageNormalized = normalizeIstanbulCoverage(
-        istanbulCoverage,
-        projectDirectoryUrl,
-      )
-      return istanbulCoverageNormalized
+      return istanbulCoverage
     }),
   )
 

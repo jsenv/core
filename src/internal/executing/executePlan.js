@@ -35,10 +35,10 @@ export const executePlan = async (
     logSummary,
     measureGlobalDuration,
 
-    // coverage parameters
     coverage,
     coverageConfig,
     coverageIncludeMissing,
+    coverageForceIstanbul,
 
     ...rest
   } = {},
@@ -109,6 +109,7 @@ export const executePlan = async (
     coverage,
     coverageConfig,
     coverageIncludeMissing,
+    coverageForceIstanbul,
 
     ...rest,
   })

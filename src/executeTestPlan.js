@@ -59,6 +59,8 @@ export const executeTestPlan = async ({
   coverageConfig = jsenvCoverageConfig,
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
+  coverageForceIstanbul = false,
+
   coverageTextLog = true,
   coverageJsonFile = Boolean(process.env.CI),
   coverageJsonFileLog = true,
@@ -167,6 +169,7 @@ export const executeTestPlan = async ({
       coverage,
       coverageConfig,
       coverageIncludeMissing,
+      coverageForceIstanbul,
 
       ...rest,
     })
