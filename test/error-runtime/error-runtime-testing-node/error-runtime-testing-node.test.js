@@ -16,12 +16,20 @@ const testPlan = {
     },
   },
 }
-const actual = await executeTestPlan({
+const result = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
   executionLogLevel: "off",
 })
+
+const actual = {
+  summary: result.summary,
+  report: result.report,
+  errorInLogs: result.report[fileRelativeUrl].node.consoleCalls.some(({ text }) =>
+    text.includes(`should return 42`),
+  ),
+}
 const expected = {
   summary: {
     executionCount: 1,
@@ -36,25 +44,14 @@ const expected = {
     [fileRelativeUrl]: {
       node: {
         status: "errored",
-        error: Object.assign(new Error(`ask() should return 42, got 40`), {
-          filename: actual.report[fileRelativeUrl].node.error.filename,
-          lineno: actual.report[fileRelativeUrl].node.error.lineno,
-          columnno: actual.report[fileRelativeUrl].node.error.columnno,
-        }),
+        error: new Error(`ask() should return 42, got 40`),
         consoleCalls: actual.report[fileRelativeUrl].node.consoleCalls,
         runtimeName: "node",
         runtimeVersion: actual.report[fileRelativeUrl].node.runtimeVersion,
       },
     },
   },
+  // error should not be in logs
+  errorInLogs: false,
 }
 assert({ actual, expected })
-
-{
-  // error should not be in logs
-  const actual = actual.report[fileRelativeUrl].node.consoleCalls.some(({ text }) =>
-    text.includes(`should return 42`),
-  )
-  const expected = false
-  assert({ actual, expected })
-}
