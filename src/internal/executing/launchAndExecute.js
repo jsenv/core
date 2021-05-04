@@ -118,7 +118,12 @@ export const launchAndExecute = async ({
     })
   }
 
-  if (inheritCoverage) {
+  if (
+    inheritCoverage &&
+    // it's not possible to inherit istanbul coverage when v8 coverage is enabled
+    // because it's not possible to merge the coverage together
+    !process.env.NODE_V8_COVERAGE
+  ) {
     const collectCoverageSaved = collectCoverage
     collectCoverage = true
     executionResultTransformer = composeTransformer(
