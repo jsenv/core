@@ -46,6 +46,7 @@ const expected = {
           lineno: actual.report[htmlFileRelativeUrl].chromium.error.lineno,
           columnno: actual.report[htmlFileRelativeUrl].chromium.error.columnno,
         }),
+        namespace: actual.report[htmlFileRelativeUrl].chromium.namespace,
         consoleCalls: actual.report[htmlFileRelativeUrl].chromium.consoleCalls,
         runtimeName: "chromium",
         runtimeVersion: assert.any(String),

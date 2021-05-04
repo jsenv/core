@@ -896,7 +896,6 @@ export const createJsenvRollupPlugin = async ({
     }
 
     const importerUrl = urlImporterMap[moduleUrl]
-    if (!importerUrl) debugger
     const moduleResponse = await fetchModule(
       moduleUrl,
       rollupUrlToProjectUrl(importerUrl) || importerUrl,
