@@ -10,6 +10,7 @@ export const createNodeRuntime = async ({
   projectDirectoryUrl,
   compileServerOrigin,
   outDirectoryRelativeUrl,
+  nodeRuntimeDecision = "auto",
 }) => {
   const outDirectoryServerUrl = `${projectDirectoryUrl}${outDirectoryRelativeUrl}`
   const groupMapServerUrl = String(new URL("groupMap.json", outDirectoryServerUrl))
@@ -26,11 +27,15 @@ export const createNodeRuntime = async ({
     groupMap,
   })
   const groupInfo = groupMap[compileId]
-  const canBypassCompilation = await nodeRuntimeSupportsAllFeatures(groupInfo, {
-    importDefaultExtension,
-  })
+  const runtime =
+    nodeRuntimeDecision === "auto"
+      ? await decideNodeRuntime({
+          groupInfo,
+          importDefaultExtension,
+        })
+      : nodeRuntimeDecision
 
-  if (canBypassCompilation) {
+  if (runtime === "node") {
     return createNodeExecutionWithDynamicImport({
       projectDirectoryUrl,
       compileServerOrigin,
@@ -50,6 +55,16 @@ const importJson = async (url) => {
   const response = await fetchSource(url)
   const object = await response.json()
   return object
+}
+
+const decideNodeRuntime = async ({ groupInfo, importDefaultExtension }) => {
+  const canBypassCompilation = await nodeRuntimeSupportsAllFeatures(groupInfo, {
+    importDefaultExtension,
+  })
+  if (canBypassCompilation) {
+    return "node"
+  }
+  return "systemjs"
 }
 
 const nodeRuntimeSupportsAllFeatures = async (groupInfo, { importDefaultExtension }) => {

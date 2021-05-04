@@ -35,6 +35,7 @@ export const launchNode = async ({
   coverageConfig,
   coverageForceIstanbul = false,
   logProcessCommand,
+  nodeRuntimeDecision,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -108,10 +109,11 @@ export const launchNode = async ({
       coverageConfig,
       executionId,
       remap,
+      nodeRuntimeDecision,
     }
 
     let executionResult = await controllableNodeProcess.requestActionOnChildProcess({
-      actionType: "execute-using-systemjs",
+      actionType: "execute-using-dynamic-import-fallback-on-systemjs",
       actionParams: executeParams,
     })
 

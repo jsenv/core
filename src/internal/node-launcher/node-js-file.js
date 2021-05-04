@@ -12,11 +12,13 @@ export const execute = async ({
   // it avoids seeing error in runtime logs during testing
   errorExposureInConsole = false,
   collectCoverage,
+  nodeRuntimeDecision,
 }) => {
   const { executeFile } = await nodeRuntime.create({
     projectDirectoryUrl,
     compileServerOrigin,
     outDirectoryRelativeUrl,
+    nodeRuntimeDecision,
   })
 
   return executeFile(fileRelativeUrl, {
