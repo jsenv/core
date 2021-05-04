@@ -1,8 +1,12 @@
 import { assert } from "@jsenv/assert"
-import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
+
+import { jsenvBabelPluginMap } from "@jsenv/core"
+import {
+  generateGroupMap,
+  withoutSyntaxPlugins,
+} from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
 import { jsenvBrowserScoreMap } from "@jsenv/core/src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "@jsenv/core/src/jsenvNodeVersionScoreMap.js"
-import { jsenvBabelPluginMap } from "@jsenv/core"
 
 {
   const babelPluginMap = { "transform-block-scoping": true }
@@ -41,7 +45,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core"
         chrome: "49",
         firefox: "51",
         edge: "14",
-        electron: "1",
+        electron: "0.37",
         ios: "11",
         opera: "36",
         safari: "11",
@@ -74,7 +78,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core"
         chrome: "49",
         firefox: "51",
         edge: "14",
-        electron: "1",
+        electron: "0.37",
         ios: "11",
         opera: "36",
         safari: "11",
@@ -97,27 +101,20 @@ import { jsenvBabelPluginMap } from "@jsenv/core"
   })
   const expected = {
     best: {
-      babelPluginRequiredNameArray: [
-        "proposal-json-strings",
-        "proposal-numeric-separator",
-        "proposal-optional-catch-binding",
-        "proposal-optional-chaining",
-        "proposal-unicode-property-regex",
-        "syntax-object-rest-spread",
-        "syntax-optional-catch-binding",
-        "transform-dotall-regex",
-      ],
+      babelPluginRequiredNameArray: [],
       jsenvPluginRequiredNameArray: [],
       runtimeCompatMap: {
-        chrome: "60",
-        firefox: "55",
-        electron: "2.1",
-        opera: "47",
-        node: "8.3",
+        chrome: "80",
+        firefox: "78",
+        edge: "80",
+        electron: "8.1",
+        opera: "67",
+        safari: "13.1",
+        node: "14",
       },
     },
     otherwise: {
-      babelPluginRequiredNameArray: Object.keys(jsenvBabelPluginMap),
+      babelPluginRequiredNameArray: Object.keys(withoutSyntaxPlugins(jsenvBabelPluginMap)),
       jsenvPluginRequiredNameArray: [],
       runtimeCompatMap: {},
     },

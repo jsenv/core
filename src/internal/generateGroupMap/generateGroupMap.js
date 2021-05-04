@@ -137,7 +137,7 @@ export const generateGroupMap = ({
   return groupMap
 }
 
-const withoutSyntaxPlugins = (babelPluginMap) => {
+export const withoutSyntaxPlugins = (babelPluginMap) => {
   const babelPluginMapWithoutSyntaxPlugins = {}
   Object.keys(babelPluginMap).forEach((key) => {
     if (key.startsWith("syntax-")) {
