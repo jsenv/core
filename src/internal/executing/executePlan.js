@@ -39,6 +39,7 @@ export const executePlan = async (
     coverageConfig,
     coverageIncludeMissing,
     coverageForceIstanbul,
+    coverageV8MergeConflictIsExpected,
 
     ...rest
   } = {},
@@ -110,6 +111,7 @@ export const executePlan = async (
     coverageConfig,
     coverageIncludeMissing,
     coverageForceIstanbul,
+    coverageV8MergeConflictIsExpected,
 
     ...rest,
   })

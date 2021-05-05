@@ -3,7 +3,13 @@ import { Script } from "vm"
 
 import { loggerToLogLevel } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
-import { writeDirectory, resolveUrl, urlToFileSystemPath, removeFileSystemNode } from "@jsenv/util"
+import {
+  writeDirectory,
+  resolveUrl,
+  urlToFileSystemPath,
+  removeFileSystemNode,
+  moveDirectoryContent,
+} from "@jsenv/util"
 
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -55,28 +61,48 @@ export const launchNode = async ({
 
   let finalizeExecutionResult
 
-  if (collectCoverage && !coverageForceIstanbul) {
-    const NODE_V8_COVERAGE = await getNodeV8CoverageDir({ projectDirectoryUrl })
-    env.NODE_V8_COVERAGE = NODE_V8_COVERAGE
+  if (collectCoverage) {
+    // v8 coverage is written in a directoy and auto propagate to subprocesses
+    // through process.env.NODE_V8_COVERAGE.
 
-    // the v8 coverage directory is available once the child process is disconnected
-    finalizeExecutionResult = async (executionResult) => {
-      const coverageMap = await ensureV8CoverageDirRemoval(async () => {
-        // prefer istanbul if available
-        if (executionResult.coverageMap) {
-          return executionResult.coverageMap
-        }
+    if (coverageForceIstanbul) {
+      // if we want to force istanbul, we will set process.env.NODE_V8_COVERAGE = undefined
+      // into the child_process
+      env.NODE_V8_COVERAGE = undefined
+    }
+    // } else if (process.env.NODE_V8_COVERAGE) {
+    //   // The V8_COVERAGE was already set by a parent process or command line.
+    //   // It's the caller that is interested into coverage, it's not anymore this script
+    //   // responsability to set process.env.NODE_V8_COVERAGE nor to read
+    //   // coverage files in the v8 directory.
+    // }
+    // In fact it is so that it's possible to go coverageception:
+    // jsenv collect coverage for tests
+    // which are testing that coverage can be collected for tests
+    // this is possible because we overriding the child process NODE_V8_COVERAGE
+    else {
+      const NODE_V8_COVERAGE = await getNodeV8CoverageDir({ projectDirectoryUrl })
+      env.NODE_V8_COVERAGE = NODE_V8_COVERAGE
 
-        await controllableNodeProcess.disconnected
-        const istanbulCoverage = await istanbulCoverageFromV8Coverage({
-          projectDirectoryUrl,
-          NODE_V8_COVERAGE,
-          coverageConfig,
-        })
-        return istanbulCoverage
-      }, NODE_V8_COVERAGE)
-      executionResult.coverageMap = coverageMap
-      return executionResult
+      // the v8 coverage directory is available once the child process is disconnected
+      finalizeExecutionResult = async (executionResult) => {
+        const coverageMap = await ensureV8CoverageDirClean(async () => {
+          // prefer istanbul if available
+          if (executionResult.coverageMap) {
+            return executionResult.coverageMap
+          }
+
+          await controllableNodeProcess.disconnected
+          const istanbulCoverage = await istanbulCoverageFromV8Coverage({
+            projectDirectoryUrl,
+            NODE_V8_COVERAGE,
+            coverageConfig,
+          })
+          return istanbulCoverage
+        }, NODE_V8_COVERAGE)
+        executionResult.coverageMap = coverageMap
+        return executionResult
+      }
     }
   }
 
@@ -144,13 +170,18 @@ export const launchNode = async ({
   }
 }
 
-const ensureV8CoverageDirRemoval = async (fn, NODE_V8_COVERAGE) => {
+const ensureV8CoverageDirClean = async (fn, NODE_V8_COVERAGE) => {
   try {
     return await fn()
   } finally {
-    removeFileSystemNode(NODE_V8_COVERAGE, {
-      recursive: true,
-    })
+    if (process.env.NODE_V8_COVERAGE) {
+      await moveDirectoryContent(NODE_V8_COVERAGE, process.env.NODE_V8_COVERAGE)
+      removeFileSystemNode(NODE_V8_COVERAGE)
+    } else {
+      removeFileSystemNode(NODE_V8_COVERAGE, {
+        recursive: true,
+      })
+    }
   }
 }
 

@@ -54,7 +54,10 @@ export const openBrowserPage = async (
 
   if (inheritCoverage) {
     const { coverageMap } = executionResult
-    global.__coverage__ = composeIstanbulCoverages(global.__coverage__ || {}, coverageMap || {})
+    global.__indirectCoverage__ = composeIstanbulCoverages([
+      global.__indirectCoverage__ || {},
+      coverageMap || {},
+    ])
   }
 
   delete executionResult.coverageMap

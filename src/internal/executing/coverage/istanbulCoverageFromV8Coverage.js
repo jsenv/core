@@ -109,8 +109,19 @@ const convertV8CoverageToIstanbul = async (coverageReport, { sourceMapCache }) =
     }),
   )
 
-  const istanbulCoverageComposed = composeIstanbulCoverages(...istanbulCoverages)
-  return istanbulCoverageComposed
+  const istanbulCoverageComposed = composeIstanbulCoverages(istanbulCoverages)
+  return markCoverageAsConverted(istanbulCoverageComposed)
+}
+
+const markCoverageAsConverted = (istanbulCoverage) => {
+  const istanbulCoverageMarked = {}
+  Object.keys(istanbulCoverage).forEach((key) => {
+    istanbulCoverageMarked[key] = {
+      ...istanbulCoverage[key],
+      fromV8: true,
+    }
+  })
+  return istanbulCoverageMarked
 }
 
 const sourcesFromSourceMapCache = (url, sourceMapCache) => {

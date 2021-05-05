@@ -99,7 +99,7 @@ const generateCoverageForPage = (fileExecutionResultMap) => {
       istanbulCoverages.push(istanbulCoverage)
     }
   })
-  const istanbulCoverage = composeIstanbulCoverages(...istanbulCoverages)
+  const istanbulCoverage = composeIstanbulCoverages(istanbulCoverages)
   return istanbulCoverage
 }
 

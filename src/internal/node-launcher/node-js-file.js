@@ -21,9 +21,14 @@ export const execute = async ({
     nodeRuntimeDecision,
   })
 
-  return executeFile(fileRelativeUrl, {
+  const executionResult = await executeFile(fileRelativeUrl, {
     executionId,
     errorExposureInConsole,
     collectCoverage,
   })
+
+  return {
+    ...executionResult,
+    indirectCoverage: global.__indirectCoverage__,
+  }
 }

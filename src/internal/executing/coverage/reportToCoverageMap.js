@@ -12,13 +12,14 @@ export const reportToCoverageMap = async (
     babelPluginMap,
     coverageConfig,
     coverageIncludeMissing,
+    coverageV8MergeConflictIsExpected,
   },
 ) => {
-  const istanbulCoverageFromExecutionRaw = executionReportToCoverageMap(report, { logger })
-  const istanbulCoverageFromExecution = normalizeIstanbulCoverage(
-    istanbulCoverageFromExecutionRaw,
+  const istanbulCoverageFromExecution = executionReportToCoverageMap(report, {
+    logger,
     projectDirectoryUrl,
-  )
+    coverageV8MergeConflictIsExpected,
+  })
 
   if (!coverageIncludeMissing) {
     return istanbulCoverageFromExecution
@@ -75,7 +76,10 @@ const listRelativeFileUrlToCover = async ({
   return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl)
 }
 
-const executionReportToCoverageMap = (report, { logger }) => {
+const executionReportToCoverageMap = (
+  report,
+  { logger, projectDirectoryUrl, coverageV8MergeConflictIsExpected },
+) => {
   const istanbulCoverages = []
 
   Object.keys(report).forEach((file) => {
@@ -109,11 +113,14 @@ const executionReportToCoverageMap = (report, { logger }) => {
         return
       }
 
-      istanbulCoverages.push(coverageMap)
+      const istanbulCoverage = normalizeIstanbulCoverage(coverageMap, projectDirectoryUrl)
+      istanbulCoverages.push(istanbulCoverage)
     })
   })
 
-  const istanbulCoverage = composeIstanbulCoverages(...istanbulCoverages)
+  const istanbulCoverage = composeIstanbulCoverages(istanbulCoverages, {
+    coverageV8MergeConflictIsExpected,
+  })
 
   return istanbulCoverage
 }

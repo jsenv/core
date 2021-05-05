@@ -39,25 +39,58 @@ const testPlan = {
   },
 }
 
-const result = await executeTestPlan({
-  ...EXECUTE_TEST_PLAN_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-  testPlan,
-  coverage: true,
-  coverageConfig: {
-    [`./${testDirectoryRelativeUrl}file.js`]: true,
-  },
-  coverageForceIstanbul: true,
-  // concurrencyLimit: 1,
-  // logLevel: "info",
-  // coverageHtmlDirectory: true,
-})
-const actual = result.coverageMap
-const expected = {
-  [`./${testDirectoryRelativeUrl}file.js`]: {
-    ...actual[`./${testDirectoryRelativeUrl}file.js`],
-    path: `./${testDirectoryRelativeUrl}file.js`,
-    s: { 0: 5, 1: 3, 2: 2, 3: 2, 4: 0 },
-  },
+const test = async (options = {}) => {
+  const result = await executeTestPlan({
+    ...EXECUTE_TEST_PLAN_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    testPlan,
+    coverage: true,
+    coverageConfig: {
+      [`./${testDirectoryRelativeUrl}file.js`]: true,
+    },
+    ...options,
+    // concurrencyLimit: 1,
+    // logLevel: "info",
+    // coverageHtmlDirectory: true,
+  })
+  return result.coverageMap
 }
-assert({ actual, expected })
+
+// without forcing istanbul
+{
+  const actual = await test({
+    coverageV8MergeConflictIsExpected: true,
+  })
+  const expected = {
+    [`./${testDirectoryRelativeUrl}file.js`]: {
+      ...actual[`./${testDirectoryRelativeUrl}file.js`],
+      path: `./${testDirectoryRelativeUrl}file.js`,
+      s: {
+        0: 2,
+        1: 2,
+        2: 0,
+        3: 2,
+        4: 2,
+        5: 2,
+        6: 0,
+        7: 0,
+      },
+    },
+  }
+  assert({ actual, expected })
+}
+
+// forcing istanbul
+{
+  const actual = await test({
+    coverageForceIstanbul: true,
+  })
+  const expected = {
+    [`./${testDirectoryRelativeUrl}file.js`]: {
+      ...actual[`./${testDirectoryRelativeUrl}file.js`],
+      path: `./${testDirectoryRelativeUrl}file.js`,
+      s: { 0: 5, 1: 3, 2: 2, 3: 2, 4: 0 },
+    },
+  }
+  assert({ actual, expected })
+}

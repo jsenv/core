@@ -42,6 +42,7 @@ export const executeConcurrently = async (
     coverageConfig,
     coverageIncludeMissing,
     coverageForceIstanbul,
+    coverageV8MergeConflictIsExpected,
 
     ...rest
   },
@@ -120,6 +121,7 @@ export const executeConcurrently = async (
         beforeExecutionCallback,
         afterExecutionCallback,
         gracefulStopAllocatedMs,
+        ...executionRemainingOptions
       } = executionOptions
 
       const beforeExecutionInfo = {
@@ -147,6 +149,7 @@ export const executeConcurrently = async (
             outDirectoryRelativeUrl,
             compileServerOrigin,
             ...params,
+            ...executionRemainingOptions,
           }),
         allocatedMs,
         measureDuration,
@@ -162,6 +165,7 @@ export const executeConcurrently = async (
         collectCoverage,
         coverageConfig,
         coverageForceIstanbul,
+        coverageV8MergeConflictIsExpected,
 
         ...rest,
       })
@@ -247,6 +251,7 @@ export const executeConcurrently = async (
             babelPluginMap,
             coverageConfig,
             coverageIncludeMissing,
+            coverageV8MergeConflictIsExpected,
           }),
         }
       : {}),

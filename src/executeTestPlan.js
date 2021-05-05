@@ -60,6 +60,7 @@ export const executeTestPlan = async ({
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
   coverageForceIstanbul = false,
+  coverageV8MergeConflictIsExpected = false,
 
   coverageTextLog = true,
   coverageJsonFile = Boolean(process.env.CI),
@@ -170,6 +171,7 @@ export const executeTestPlan = async ({
       coverageConfig,
       coverageIncludeMissing,
       coverageForceIstanbul,
+      coverageV8MergeConflictIsExpected,
 
       ...rest,
     })
