@@ -50,9 +50,18 @@ const readV8CoverageReportsFromDirectory = async (coverageDirectory) => {
   await Promise.all(
     dirContent.map(async (dirEntry) => {
       const dirEntryUrl = resolveUrl(dirEntry, coverageDirectoryUrl)
-      const fileContent = await readFile(dirEntryUrl, { as: "json" })
-      if (fileContent) {
-        coverageReports.push(fileContent)
+      try {
+        const fileContent = await readFile(dirEntryUrl, { as: "json" })
+        if (fileContent) {
+          coverageReports.push(fileContent)
+        }
+      } catch (e) {
+        console.warn(`Error while reading coverage file
+--- error stack ---
+${e.stack}
+--- file ---
+${dirEntryUrl}`)
+        return
       }
     }),
   )
