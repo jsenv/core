@@ -1,17 +1,17 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/util"
+
+import { buildProject, convertCommonJsWithRollup } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
-import { buildProject, convertCommonJsWithRollup } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.html`
