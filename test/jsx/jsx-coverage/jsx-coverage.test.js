@@ -35,14 +35,15 @@ const { coverageMap: actual } = await executeTestPlan({
       },
     },
   },
+  coverageForceIstanbul: true,
   coverage: true,
   coverageConfig: {
     [`${testDirectoryRelativeUrl}file.jsx`]: true,
   },
 })
 const expected = {
-  [`${testDirectoryRelativeUrl}file.jsx`]: {
-    ...actual[`${testDirectoryRelativeUrl}file.jsx`],
+  [`./${testDirectoryRelativeUrl}file.jsx`]: {
+    ...actual[`./${testDirectoryRelativeUrl}file.jsx`],
     s: { 0: 2, 1: 2 },
   },
 }
