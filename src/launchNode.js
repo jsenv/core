@@ -189,7 +189,7 @@ const ensureV8CoverageDirClean = async (fn, NODE_V8_COVERAGE) => {
 }
 
 const getNodeV8CoverageDir = async ({ projectDirectoryUrl }) => {
-  const v8CoverageDirectory = resolveUrl(`./coverage-v8/toto`, projectDirectoryUrl)
+  const v8CoverageDirectory = resolveUrl(`./coverage-v8/${cuid()}`, projectDirectoryUrl)
   await writeDirectory(v8CoverageDirectory, { allowUseless: true })
   return urlToFileSystemPath(v8CoverageDirectory)
 }
