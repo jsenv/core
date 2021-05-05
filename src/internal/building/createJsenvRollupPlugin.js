@@ -66,6 +66,7 @@ export const createJsenvRollupPlugin = async ({
   compileDirectoryRelativeUrl,
 
   importResolutionMethod,
+  importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers,
   externalImportUrlPatterns,
@@ -309,20 +310,25 @@ export const createJsenvRollupPlugin = async ({
         let importMapUrl
         let fetchImportMap
         if (importMapCount === 0) {
-          // there is no importmap, its' fine it's not mandatory to use one
-          fetchImportMap = () => {
-            const entryProjectRelativeUrl = Object.keys(entryPointMap)[0]
-            const entryCompileUrl = resolveUrl(entryProjectRelativeUrl, compileDirectoryUrl)
-            const defaultImportMap = getDefaultImportMap({
-              importMapFileUrl: entryCompileUrl,
-              projectDirectoryUrl,
-              compileDirectoryRelativeUrl,
-            })
-            const entryCompileServerUrl = resolveUrl(
-              entryProjectRelativeUrl,
-              compileDirectoryRemoteUrl,
-            )
-            return normalizeImportMap(defaultImportMap, entryCompileServerUrl)
+          if (importMapFileRelativeUrl) {
+            importMapUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
+            fetchImportMap = () => fetchImportMapFromUrl(importMapUrl)
+          } else {
+            // there is no importmap, its' fine it's not mandatory to use one
+            fetchImportMap = () => {
+              const entryProjectRelativeUrl = Object.keys(entryPointMap)[0]
+              const entryCompileUrl = resolveUrl(entryProjectRelativeUrl, compileDirectoryUrl)
+              const defaultImportMap = getDefaultImportMap({
+                importMapFileUrl: entryCompileUrl,
+                projectDirectoryUrl,
+                compileDirectoryRelativeUrl,
+              })
+              const entryCompileServerUrl = resolveUrl(
+                entryProjectRelativeUrl,
+                compileDirectoryRemoteUrl,
+              )
+              return normalizeImportMap(defaultImportMap, entryCompileServerUrl)
+            }
           }
         } else {
           if (importMapCount > 1) {

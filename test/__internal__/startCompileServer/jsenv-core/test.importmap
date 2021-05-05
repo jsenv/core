@@ -1,5 +1,0 @@
-{
-  "imports": {
-    "@jsenv/core/": "./dir/"
-  }
-}

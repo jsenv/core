@@ -35,6 +35,7 @@ export const buildProject = async ({
   globals = {},
 
   importResolutionMethod = format === "commonjs" ? "node" : "importmap",
+  importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers = [],
   externalImportUrlPatterns = format === "commonjs"
@@ -185,6 +186,7 @@ export const buildProject = async ({
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
 
         importResolutionMethod,
+        importMapFileRelativeUrl,
         importDefaultExtension,
         externalImportSpecifiers,
         externalImportUrlPatterns,
