@@ -255,6 +255,9 @@ export const createJsenvRollupPlugin = async ({
               htmlUrl: entryProjectUrl,
               htmlSource,
               htmlCompileUrl: entryCompiledUrl,
+              projectDirectoryUrl,
+              compileServerOrigin,
+              compileDirectoryRelativeUrl,
             })
 
             if (importMapInfo) {
@@ -312,7 +315,15 @@ export const createJsenvRollupPlugin = async ({
         if (importMapCount === 0) {
           if (importMapFileRelativeUrl) {
             importMapUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
-            fetchImportMap = () => fetchImportMapFromUrl(importMapUrl)
+            fetchImportMap = () =>
+              fetchImportMapFromUrl(
+                importMapUrl,
+                urlToOriginalProjectUrl(importMapUrl, {
+                  projectDirectoryUrl,
+                  compileServerOrigin,
+                  compileDirectoryRelativeUrl,
+                }),
+              )
           } else {
             // there is no importmap, its' fine it's not mandatory to use one
             fetchImportMap = () => {
@@ -1027,7 +1038,14 @@ export const createJsenvRollupPlugin = async ({
   }
 }
 
-const importMapInfoFromHtml = ({ htmlUrl, htmlSource, htmlCompileUrl }) => {
+const importMapInfoFromHtml = ({
+  htmlUrl,
+  htmlSource,
+  htmlCompileUrl,
+  projectDirectoryUrl,
+  compileServerOrigin,
+  compileDirectoryRelativeUrl,
+}) => {
   const importMapHtmlNode = findFirstImportmapNode(htmlSource)
   if (!importMapHtmlNode) {
     return null
@@ -1041,7 +1059,15 @@ const importMapInfoFromHtml = ({ htmlUrl, htmlSource, htmlCompileUrl }) => {
       htmlSource,
       importMapHtmlNode,
       importMapUrl,
-      fetchImportMap: () => fetchImportMapFromUrl(importMapUrl),
+      fetchImportMap: () =>
+        fetchImportMapFromUrl(
+          importMapUrl,
+          urlToOriginalProjectUrl(importMapUrl, {
+            projectDirectoryUrl,
+            compileServerOrigin,
+            compileDirectoryRelativeUrl,
+          }),
+        ),
     }
   }
 
@@ -1064,14 +1090,14 @@ const importMapInfoFromHtml = ({ htmlUrl, htmlSource, htmlCompileUrl }) => {
   return null
 }
 
-const fetchImportMapFromUrl = async (importMapUrl) => {
+const fetchImportMapFromUrl = async (importMapUrl, importMapProjectUrl) => {
   const importMapResponse = await fetchUrl(importMapUrl)
   if (importMapResponse.status < 200 || importMapResponse.status > 299) {
     throw new Error(
       createDetailedMessage(`Unexpected response status for importmap.`, {
         ["response status"]: importMapResponse.status,
         ["response text"]: await importMapResponse.text(),
-        ["importmap url"]: importMapUrl,
+        ["importmap url"]: importMapProjectUrl || importMapUrl,
       }),
     )
   }
