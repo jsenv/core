@@ -46,9 +46,6 @@ const expected = {
     ),
     {
       code: "ERR_MODULE_NOT_FOUND",
-      filename: actual.error.filename,
-      lineno: actual.error.lineno,
-      columnno: actual.error.columnno,
     },
   ),
 }
