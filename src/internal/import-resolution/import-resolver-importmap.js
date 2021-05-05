@@ -50,7 +50,9 @@ const createBareSpecifierError = ({ specifier, importer, importMapUrl }) => {
   const detailedMessage = createDetailedMessage("Unmapped bare specifier.", {
     specifier,
     importer,
-    "how to fix": `Add a mapping for "${specifier}" into the importmap file at ${importMapUrl}`,
+    "how to fix": importMapUrl
+      ? `Add a mapping for "${specifier}" into the importmap file at ${importMapUrl}`
+      : `Add an importmap with a mapping for "${specifier}"`,
     "suggestion": `Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map`,
   })
 

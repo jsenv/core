@@ -1,4 +1,12 @@
-import { require } from "../../require.js"
+import { resolveUrl, fileSystemPathToUrl, urlIsInsideOf } from "@jsenv/util"
+
+import { require } from "@jsenv/core/src/internal/require.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+
+const regeneratorRuntimeHelperDirectoryUrl = resolveUrl(
+  "./helpers/regenerator-runtime/",
+  jsenvCoreDirectoryUrl,
+)
 
 export const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
   const { addSideEffect } = require("@babel/helper-module-imports")
@@ -14,8 +22,7 @@ export const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
     visitor: {
       Identifier(path, opts) {
         const { filename } = opts
-        const filepathname = filename.replace(/\\/g, "/")
-        if (filepathname.endsWith("node_modules/regenerator-runtime/runtime.js")) {
+        if (urlIsInsideOf(fileSystemPathToUrl(filename), regeneratorRuntimeHelperDirectoryUrl)) {
           return
         }
 

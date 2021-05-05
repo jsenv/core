@@ -4,6 +4,7 @@ node_modules/
 dist/
 /coverage/
 /helpers/chromium/
+/helpers/regenerator-runtime/
 **/s.js
 /src/**/system.js
 /**/*syntax-error*.js
