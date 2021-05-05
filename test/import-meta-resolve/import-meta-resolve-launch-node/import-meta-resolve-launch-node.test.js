@@ -36,8 +36,8 @@ const actual = await launchAndExecute({
 const expected = {
   status: "completed",
   namespace: {
-    relative: `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}file.js`,
     bare: `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}node_modules/foo/index.js`,
+    relative: `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}file.js`,
   },
 }
 assert({ actual, expected })

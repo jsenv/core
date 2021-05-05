@@ -7,6 +7,7 @@ const eslintConfig = createEslintConfig({
   // importResolverOptions: {
   //   logLevel: "debug",
   // },
+  html: true,
   node: true,
   prettier: true,
 })
