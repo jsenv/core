@@ -89,7 +89,13 @@ const test = async (options = {}) => {
     [`./${testDirectoryRelativeUrl}file.js`]: {
       ...actual[`./${testDirectoryRelativeUrl}file.js`],
       path: `./${testDirectoryRelativeUrl}file.js`,
-      s: { 0: 5, 1: 3, 2: 2, 3: 2, 4: 0 },
+      s: {
+        0: 5,
+        1: 3,
+        2: 2,
+        3: 2,
+        4: 0,
+      },
     },
   }
   assert({ actual, expected })

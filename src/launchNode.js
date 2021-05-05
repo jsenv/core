@@ -93,6 +93,7 @@ export const launchNode = async ({
           }
 
           await controllableNodeProcess.disconnected
+          await new Promise((resolve) => setTimeout(resolve, 300))
           const istanbulCoverage = await istanbulCoverageFromV8Coverage({
             projectDirectoryUrl,
             NODE_V8_COVERAGE,
@@ -174,7 +175,9 @@ const ensureV8CoverageDirClean = async (fn, NODE_V8_COVERAGE) => {
   try {
     return await fn()
   } finally {
-    if (process.env.NODE_V8_COVERAGE) {
+    if (process.env.NODE_V8_COVERAGE === NODE_V8_COVERAGE) {
+      // do not try to remove or copy coverage
+    } else if (process.env.NODE_V8_COVERAGE) {
       await moveDirectoryContent(NODE_V8_COVERAGE, process.env.NODE_V8_COVERAGE)
       removeFileSystemNode(NODE_V8_COVERAGE)
     } else {
@@ -186,7 +189,7 @@ const ensureV8CoverageDirClean = async (fn, NODE_V8_COVERAGE) => {
 }
 
 const getNodeV8CoverageDir = async ({ projectDirectoryUrl }) => {
-  const v8CoverageDirectory = resolveUrl(`./coverage-v8/${cuid()}`, projectDirectoryUrl)
+  const v8CoverageDirectory = resolveUrl(`./coverage-v8/toto`, projectDirectoryUrl)
   await writeDirectory(v8CoverageDirectory, { allowUseless: true })
   return urlToFileSystemPath(v8CoverageDirectory)
 }

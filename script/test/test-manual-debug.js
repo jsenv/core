@@ -4,8 +4,9 @@ import * as jsenvConfig from "../../jsenv.config.js"
 await executeTestPlan({
   ...jsenvConfig,
   coverage: true,
-  // missing coverage wil
-  coverageIncludeMissing: true,
+  coverageIncludeMissing: false,
+  coverageHtmlDirectory: null,
+  coverageTextLog: false,
   testPlan: {
     "test/**/coverage-node.test.js": {
       node: {
