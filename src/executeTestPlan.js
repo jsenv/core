@@ -215,6 +215,10 @@ export const executeTestPlan = async ({
     }
     await Promise.all(promises)
 
-    return result
+    return {
+      testPlanSummary: result.summary,
+      testPlanReport: result.report,
+      testPlanCoverage: result.coverageMap,
+    }
   })
 }

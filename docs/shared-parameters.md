@@ -11,9 +11,6 @@
 - [compileServerIp](#compileServerIp)
 - [compileServerPort](#compileServerPort)
 - [jsenvDirectoryRelativeUrl](#jsenvDirectoryRelativeUrl)
-- [chromiumExecutablePath](#chromiumExecutablePath)
-- [firefoxExecutablePath](#firefoxExecutablePath)
-- [webkitExecutablePath](#webkitExecutablePath)
 
 # projectDirectoryUrl
 
@@ -110,21 +107,3 @@ const convertMap = {
 # jsenvDirectoryRelativeUrl
 
 `jsenvDirectoryRelativeUrl` parameter is a string leading to a directory used by jsenv to write compiled version of your files. This parameter is optional with a default value of `"./.jsenv/"`. Every time a file is compiled, the compiled version of the file is written into that directory. Alongside with the compiled file, some metadata on the source used to generate the compiled version is written. These metadata are used later to know if the compiled version is still valid. This directory should be added to your `.gitignore`.
-
-# chromiumExecutablePath
-
-`chromiumExecutablePath` is a string leading to a chromium executable file. It is used internally by playwright to launch a chromium browser.
-
-It's easier to let `playwright-chromium` decide this value for you by adding it to your dependencies as documented in [Browser launchers](./launcher.md#Browser-launchers).
-
-# firefoxExecutablePath
-
-`firefoxExecutablePath` is a string leading to a firefox executable file. It is used internally by playwright to launch a firefox browser.
-
-It's easier to let `playwright-firefox` decide this value for you by adding it to your dependencies as documented in [Browser launchers](./launcher.md#Browser-launchers).
-
-# webkitExecutablePath
-
-`webkitExecutablePath` is a string leading to a webkit executable file. It is used internally by playwright to launch a webkit browser.
-
-It's easier to let `playwright-webkit` decide this value for you by adding it to your dependencies as documented in [Browser launchers](./launcher.md#Browser-launchers).
