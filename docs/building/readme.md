@@ -551,7 +551,6 @@ Example of an `asset-manifest.json` file content:
 ```json
 {
   "assets/home.css": "assets/home-2e7e167b.css",
-  "assets/home.css.map": "assets/home-2e7e167b.css.map",
   "assets/metal.jpg": "assets/metal-36435573.jpg",
   "importmap.prod.importmap": "importmap.prod-3837ea79.importmap",
   "main.js": "main-8de756b8.js",
@@ -564,7 +563,13 @@ Example of an `asset-manifest.json` file content:
 <details>
   <summary>importResolutionMethod parameter</summary>
 
-todo
+`importResolutionMethod` parameter is a string controlling how import will be resolved. This parameter is optional, the default value is infered from `format` parameter. When `format` is `"commonjs"` default resolution method is `"node"`, otherwise it is `"importmap'`.
+
+`"importmap"` means import are resolved by standard import resolution, the one used by web browsers.
+
+`"node"` means imports are resolved by Node.js module resolution.
+
+If you need, you can force node module resolution by passing `importResolutionMethod: "node"`.
 
 </details>
 
@@ -588,30 +593,47 @@ To avoid duplication some parameter are linked to a generic documentation.
 </details>
 
 <details>
-  <summary>buildMappings return value</summary>
-
-TODO
-
-</details>
-
-<details>
   <summary>buildManifest return value</summary>
 
 `buildManifest` is part of buildProject return value. This object will contain a key/value pair for each file written in the build directory.
 
-Keys and values are strings corresponding to files relative to the build directory. But keys are files without url versioning while values are files with url versionning.
+Keys and values are strings, both represent are file path relative to the build directory. But keys are paths without url versioning while values are paths with url versionning.
 
 Example of a `buildManifest` value.
 
 ```js
 {
-  "main.js": "main-8de756b8.js",
-  "main.html": "main.html"
+  "main.html": "main.html",
+  "assets/main.css": "assets/main-2e7e167b.css",
+  "main.js": "main-8de756b8.js"
 }
 ```
 
 The value above can be translated into the following sentence where build directory is assumed to be `dist`.
 
-> "Two files where written in `dist/`: `main.js` and `main.html`. <br /> `main.js` can be found at `dist/main-8de756b8.js` and `main.html` was not versioned."
+> "Three files where written in `dist/`: `main.html`, `assets/main.css` and `main.js`. <br /> `main.html` was not versioned but `assets/main.css` and `main.js` are versioned."
+
+</details>
+
+<details>
+  <summary>buildMappings return value</summary>
+
+`buildMappings` is part of buildProject return value. This object will contain a key/value pair for each file written in the build directory.
+
+Keys and values are strings, both are file path, keys are relative to project directory while values are relative to the build directory.
+
+Example of a `buildMappings` value.
+
+```js
+{
+  "main.html": "main.html",
+  "src/main.css": "assets/main-2e7e167b.css",
+  "src/main.js": "main-a340d0ae.js"
+}
+```
+
+The value above can be translated into the following sentence where build directory is assumed to be `dist`.
+
+> "Three files where written in `dist/` from project directory: `main.html`, `src/main.css` and `src/main.js`. <br /> `main.html` can be found at `dist/main.html`, `src/main.css` at `dist/assets/main-2e7e167b.css` and `src/main.js` at `dist/main-a340d0ae.js`
 
 </details>
