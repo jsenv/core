@@ -182,9 +182,7 @@ const result = await execute({
 
 # execute parameters
 
-`execute` uses named parameters documented here.
-
-Each parameter got a dedicated section to shortly explain what it does and if it's required or optional.
+`execute` uses named parameters documented below.
 
 <details>
   <summary>launch</summary>
