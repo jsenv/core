@@ -531,6 +531,37 @@ If `externalImportSpecifiers` contains `foo` the generated files will keep that 
 </details>
 
 <details>
+  <summary>urlVersioning parameter</summary>
+
+`urlVersioning` parameter is a boolean controlling the file written in the build directory will be versioned. This parameter is optional and enabled by default.
+
+When enabled, the files written in the build directory have dynamic names computed from the source file content. This allows to enable [long term caching](#long-term-caching) of your files.
+
+</details>
+
+<details>
+  <summary>assetManifestFile parameter</summary>
+
+`urlVersioning` parameter is a boolean controlling if an `asset-manifest.json` file will be written in the build directory. This parameter is optional and disabled by default.
+
+When `urlVersioning` is enabled, the files have dynamic names. Generating a manifest file can be important to be able to find the generated files.
+
+Example of an `asset-manifest.json` file content:
+
+```json
+{
+  "assets/home.css": "assets/home-2e7e167b.css",
+  "assets/home.css.map": "assets/home-2e7e167b.css.map",
+  "assets/metal.jpg": "assets/metal-36435573.jpg",
+  "importmap.prod.importmap": "importmap.prod-3837ea79.importmap",
+  "main.js": "main-8de756b8.js",
+  "main.html": "main.html"
+}
+```
+
+</details>
+
+<details>
   <summary>importResolutionMethod parameter</summary>
 
 todo
@@ -566,6 +597,21 @@ TODO
 <details>
   <summary>buildManifest return value</summary>
 
-TODO
+`buildManifest` is part of buildProject return value. This object will contain a key/value pair for each file written in the build directory.
+
+Keys and values are strings corresponding to files relative to the build directory. But keys are files without url versioning while values are files with url versionning.
+
+Example of a `buildManifest` value.
+
+```js
+{
+  "main.js": "main-8de756b8.js",
+  "main.html": "main.html"
+}
+```
+
+The value above can be translated into the following sentence where build directory is assumed to be `dist`.
+
+> "Two files where written in `dist/`: `main.js` and `main.html`. <br /> `main.js` can be found at `dist/main-8de756b8.js` and `main.html` was not versioned."
 
 </details>
