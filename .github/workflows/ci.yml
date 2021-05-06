@@ -29,11 +29,14 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - uses: microsoft/playwright-github-action@v1
-      - name: setup linux fs watchers
+      - name: set linux fs limits
         if: runner.os == 'Linux'
         run: |
           sudo sysctl fs.inotify.max_user_watches=524288
           sudo sysctl -p
+          sudo ulimit -Sn 65536
+          sudo ulimit -n
+        # sudo ulimit should prevent npm link failure
       - name: npm install
         run: |
           npm config set //npm.pkg.github.com/:_authToken ${{ secrets.GITHUB_TOKEN }}
@@ -62,6 +65,11 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: "15.x"
+      - name: set linux fs limits
+        run: |
+          sudo ulimit -Sn 65536
+          sudo ulimit -n
+        # sudo ulimit should prevent npm link failure
       - name: npm install
         run: |
           npm config set //npm.pkg.github.com/:_authToken ${{ secrets.GITHUB_TOKEN }}
