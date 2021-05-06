@@ -34,7 +34,7 @@ jobs:
         run: |
           sudo sysctl fs.inotify.max_user_watches=524288
           sudo sysctl -p
-          sudo ulimit -Sn 65536
+          sudo sh -c "ulimit -n 65536 && exec su $LOGNAME"
           sudo ulimit -n
         # sudo ulimit should prevent npm link failure
       - name: npm install
@@ -67,7 +67,7 @@ jobs:
           node-version: "15.x"
       - name: set linux fs limits
         run: |
-          sudo ulimit -Sn 65536
+          sudo sh -c "ulimit -n 65536 && exec su $LOGNAME"
           sudo ulimit -n
         # sudo ulimit should prevent npm link failure
       - name: npm install
