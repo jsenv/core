@@ -2,24 +2,9 @@
 
 - [Exploring presentation](#Exploring-presentation)
 - [Exploring concrete example](#Exploring-concrete-example)
-  - [1 - Setup basic project](#1---Setup-basic-project)
-  - [2 - Explore basic project](#2---Explore-basic-project)
 - [Exploring integration](#Exploring-integration)
-- [startExploring example](#startExploring-example)
-- [startExploring parameters](#startExploring-parameters)
-  - [explorableConfig](#ExplorableConfig)
-  - [livereloading](#livereloading)
-  - [watchConfig](#watchConfig)
-  - [toolbar](#toolbar)
-    - [back button](#back-button)
-    - [file input](#file-input)
-    - [execution indicator](#execution-indicator)
-    - [server indicator](#server-indicator)
-    - [settings button](#settings-button)
-    - [close button](#close-button)
-  - [Server parameters](#Server-parameters)
-  - [Shared parameters](#Shared-parameters)
-- [startExploring return value](#startExploring-return-value)
+- [startExploring](#startExploring)
+- [jsenv toolbar](#jsenv-toolbar)
 
 # Exploring presentation
 
@@ -36,7 +21,8 @@ Jsenv call this `exploring`.
 This part helps you to setup a project on your machine to play with jsenv exploring.<br />
 You can also reuse the project file structure to understand how to integrate jsenv to explore your own project files.
 
-## 1 - Setup basic project
+<details>
+  <summary>1 - Setup basic project</summary>
 
 ```console
 git clone https://github.com/jsenv/jsenv-core.git
@@ -50,7 +36,10 @@ cd ./jsenv-core/docs/exploring/basic-project
 npm install
 ```
 
-## 2 - Explore basic project
+</details>
+
+<details>
+  <summary>2 - Explore basic project</summary>
 
 If your node version is anterior to 13 please upgrade to node 13+ before going further. You can get this information by running the following command.
 
@@ -78,33 +67,47 @@ It shows that if your file execution renders something, you can see the effect i
 
 Now you have seen a basic example it's time to integrate it in your own project.
 
+</details>
+
 # Exploring integration
 
-1. Go to your project root directory
+<details>
+  <summary>1. Go to your project root directory</summary>
 
-   ```console
-   cd /your-project
-   ```
+```console
+cd /your-project
+```
 
-2. Install `@jsenv/core` to your dependencies.
+</details>
 
-   ```console
-   npm install --save-dev @jsenv/core
-   ```
+<details>
+  <summary>2. Install <code>@jsenv/core</code> to your dependencies.</summary>
 
-3. Create a file to start the exploring server
+```console
+npm install --save-dev @jsenv/core
+```
 
-   Copy [jsenv-core/docs/exploring/basic-project/start-exploring.js](./basic-project/start-exploring.js) into your project.
+</details>
 
-   If your node version is above 13 and your `package.json` contains `"type": "module"` it's fine, go to step 4.
+<details>
+  <summary>3. Create a file to start the exploring server</summary>
 
-   Otherwise be sure to change `start-exploring.js` file extension from `.js` to `.mjs`.
+Copy [jsenv-core/docs/exploring/basic-project/start-exploring.js](./basic-project/start-exploring.js) into your project.
 
-4. Execute start exploring file
+If your node version is above 13 and your `package.json` contains `"type": "module"` it's fine, go to step 4.
 
-   At this point exploring server will start in your project. Check `startExploring` documentation below.
+Otherwise be sure to change `start-exploring.js` file extension from `.js` to `.mjs`.
 
-# startExploring example
+</details>
+
+<details>
+  <summary>4. Execute start exploring file </summary>
+
+At this point exploring server will start in your project. Check `startExploring` documentation below.
+
+</details>
+
+# startExploring
 
 `startExploring` is an async function starting a development server that transforms project files configured as explorable into an executable html page.
 
@@ -126,11 +129,12 @@ startExploring({
 
 # startExploring parameters
 
-Each named parameter got a dedicated section to shortly explain what it does and if it's required or optional.
+`startExploring` uses named parameters documented below.
 
-When you change a parameter don't forget to restart the server.
+To keep in mind: when you change a parameter don't forget to restart the server.
 
-## explorableConfig
+<details>
+  <summary>explorableConfig</summary>
 
 `explorableConfig` parameter is an object used to configure what files are explorable in your project. This is an optional parameter with a default value configured to match jsenv file structure. The exact value can be found in [src/jsenvExplorableConfig.js](../../src/jsenvExplorableConfig.js).
 
@@ -141,13 +145,19 @@ For instance you might want to have a tab for source files and one for test file
 
 ![explorableConfig and tabs screenshot](./exploring-tabs.png)
 
-## livereloading
+</details>
+
+<details>
+  <summary>livereloading</summary>
 
 `livereloading` parameter is a boolean controlling if the browser will auto reload when a file is saved. This is an optional parameter enabled by default.
 
-> Any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file load assets such as image or css these asset files will also trigger livereloading when saved.
+Any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file load assets such as image or css these asset files will also trigger livereloading when saved.
 
-## watchConfig
+</details>
+
+<details>
+  <summary>watchConfig</summary>
 
 `watchConfig` parameter is an object configuring which files are watched to trigger livereloading. This is an optional parameter with a default value configured to watch everything except git and node_modules directories. `watchConfig` reuse [explorableConfig](#explorableConfig) shape meaning keys are urls with pattern matching.
 
@@ -161,7 +171,10 @@ Example of a custom `watchConfig`:
 }
 ```
 
-## toolbar
+</details>
+
+<details>
+  <summary>toolbar</summary>
 
 `toolbar` parameter is a boolean controlling if a script loading jsenv toolbar will be injected into html files. This parameter is optional and enabled by default.
 
@@ -169,119 +182,14 @@ The image below is a screenshot of this toolbar.
 
 ![jsenv toolbar screenshot](./toolbar.png)
 
-> The toolbar is inside an iframe meaning that it cannot conflict with your page css or js.
+For more details check [jsenv toolbar](#jsenv-toolbar) section.
 
-The toolbar is composed as shown in the following image:
+</details>
 
-![jsenv toolbar legend](./toolbar-legend.png)
+<details>
+  <summary>Server parameters</summary>
 
-Each component is documented below:
-
-### back button
-
-This button is convenient to go back to exploring index.
-
-### file input
-
-This component display the file being executed. Useful to have it visible to remember what we are talking about.
-
-### execution indicator
-
-This component is an icon representing the html file execution state. The icon can be clicked to get more information as shown in the images below.
-
-- executing: html file assets and imports are being loaded, parsed and executed.
-
-  ![execution indicator running state screenshot](./execution-variant-running.png)
-
-- failed: a script with type module in the html file has thrown an error.
-
-  ![execution indicator failed state screenshot](./execution-variant-failed.png)
-
-- completed: html file execution is done without error.
-
-  ![execution indicator completed state screenshot](./execution-variant-completed.png)
-
-### server indicator
-
-This component is an icon representing the server connection state. The icon can be clicked to get more information.
-
-#### connecting
-
-> You should rarely see this in practice because connection is almost instant.
-
-![server indicator connecting screenshot](./server-connecting.png)
-
-#### connected with livereloading
-
-Exploring server works correctly and livereload is fully functionnal.
-
-![server indicator connected screenshot](./server-connected-and-livereloading.png)
-
-You can disable livereloading using [livereload settings](#livereload-setting)
-
-#### connected without livereloading
-
-Exploring server works correctly and livereload is disabled.
-
-![server indicator connected without livereloading screenshot](./server-connected-without-livereloading.png)
-
-If files are modified while livereload is disabled the component is updated to give the information:
-
-- This icon is different
-- Number of changes is displayed and can be clicked to see what has changed since page was loaded.
-- There is a reload link to encourage reloading the page
-
-![server indicator connected without livereloading screenshot](./server-connected-and-changes.png)
-
-You can enable livereloading using [livereload settings](#livereload-setting)
-
-#### disconnected
-
-Happens after you click disconnect button
-
-![server indicator disconnected screenshot](./server-disconnected.png)
-
-#### failed
-
-Exploring server is down. Livereload will not work. You should check the terminal where exploring server was started.
-
-![server indicator failed screenshot](./server-failed.png)
-
-### settings button
-
-This component is a button opening a setting panel when clicked. Each setting is saved in the browser localStorage.
-
-![settings panel screenshot](./settings.png)
-
-#### Notification setting
-
-Show a notification when file execution fails, is still failing or is fixed.
-
-#### Livereload setting
-
-Useful to disable temporarily livereload for any legit reason you may have. This button switches server indicator between [connected with livereloading](#connected-with-livereloading) and [connected without livereloading](#connected-without-livereloading) states.
-
-#### Animation setting
-
-Useful in case the toolbar animation are annoying to you. There is very few of them like when it's opened or closed. It exists mostly because they more animation than that in the past.
-
-#### Dark mode setting
-
-Toogle between dark theme and light theme. Use this to keep a good contrast between the toolbar and the website behind it.
-
-### close button
-
-This button closes the toolbar to keep only the website. It does not disable the toolbar that is just hidden and can be shown back using a discrete box at the bottom right.
-
-![toolbar discrete box screenshot](./toolbar-trigger.png)
-
-> You can also execute `window.__jsenv__.toolbar.show()` for the same effect
-
-> When you close toolbar this information is kept in browser localStorage to keep it hidden.
-
-## Server parameters
-
-Exploring use a server call compile server. Compile server parameters are configured to let you use exploring right away. You might want to configure some of them to use a specific port or your own https certificate.
+Exploring server parameters are configured to let you use exploring right away. You might want to configure some of them to use a specific port or your own https certificate.
 
 The following parameter controls the exploring server:
 
@@ -292,7 +200,10 @@ The following parameter controls the exploring server:
 - [compileServerPort](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port)
 - [compileServerLogLevel](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel)
 
-# Shared parameters
+</details>
+
+<details>
+  <summary>Shared parameters</summary>
 
 To avoid duplication some parameter are linked to a generic documentation.
 
@@ -301,6 +212,8 @@ To avoid duplication some parameter are linked to a generic documentation.
 - [convertMap](../shared-parameters.md#convertMap)
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
 - [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
+
+</details>
 
 # startExploring return value
 
@@ -322,3 +235,135 @@ const compileServer = await startExploring({
 
 compileServer.stop()
 ```
+
+# jsenv toolbar
+
+The jsenv toolbar is injected at the bottom of the page by the exploring server. It is inside an iframe so that it cannot conflict with your css or js.
+
+The toolbar is composed as shown in the following image:
+
+![jsenv toolbar legend](./toolbar-legend.png)
+
+<details>
+  <summary>back button</summary>
+
+This button is convenient to go back to exploring index.
+
+</details>
+
+<details>
+  <summary>file input</summary>
+
+This component display the file being executed. Useful to have it visible to remember what we are talking about.
+
+</details>
+
+<details>
+  <summary>execution indicator</summary>
+
+This component is an icon representing the html file execution state. The icon can be clicked to get more information as shown in the images below.
+
+**executing**
+
+html file assets and imports are being loaded, parsed and executed.
+
+![execution indicator running state screenshot](./execution-variant-running.png)
+
+**failed**
+
+a script with type module in the html file has thrown an error.
+
+![execution indicator failed state screenshot](./execution-variant-failed.png)
+
+**completed**
+
+html file execution is done without error.
+
+![execution indicator completed state screenshot](./execution-variant-completed.png)
+
+</details>
+
+<details>
+  <summary>livereload indicator</summary>
+
+This component is an icon representing the server connection state. The icon can be clicked to get more information.
+
+**connecting**
+
+![server indicator connecting screenshot](./server-connecting.png)
+
+> You should rarely see this in practice because connection is almost instant.
+
+**connected with livereloading**
+
+Exploring server works correctly and livereload is fully functionnal.
+
+![server indicator connected screenshot](./server-connected-and-livereloading.png)
+
+You can disable livereloading using `settings button`
+
+**connected without livereloading**
+
+Exploring server works correctly and livereload is disabled.
+
+![server indicator connected without livereloading screenshot](./server-connected-without-livereloading.png)
+
+If files are modified while livereload is disabled the component is updated to give the information:
+
+- This icon is different
+- Number of changes is displayed and can be clicked to see what has changed since page was loaded.
+- There is a reload link to encourage reloading the page
+
+![server indicator connected without livereloading screenshot](./server-connected-and-changes.png)
+
+You can enable livereloading using `settings button`
+
+**disconnected**
+
+Happens after you click disconnect button
+
+![server indicator disconnected screenshot](./server-disconnected.png)
+
+**failed**
+
+Exploring server is down. Livereload will not work. You should check the terminal where exploring server was started.
+
+![server indicator failed screenshot](./server-failed.png)
+
+</details>
+
+<details>
+  <summary>settings button</summary>
+
+This component is a button opening a setting panel when clicked. Each setting is saved in the browser localStorage.
+
+![settings panel screenshot](./settings.png)
+
+**Notification setting**
+
+Show a notification when file execution fails, is still failing or is fixed.
+
+**Livereload setting**
+
+Useful to disable temporarily livereload for any legit reason you may have.
+
+**Animation setting**
+
+Useful in case the toolbar animation are annoying to you. There is very few of them like when it's opened or closed. It exists mostly because they more animation than that in the past.
+
+**Dark mode setting**
+
+Toogle between dark theme and light theme. Use this to keep a good contrast between the toolbar and the website behind it.
+
+</details>
+
+<details>
+ <summary>close button</summary>
+
+This button closes the toolbar to keep only the website. The toolbar can be shown back using a discrete box at the bottom right.
+
+![toolbar discrete box screenshot](./toolbar-trigger.png)
+
+When you close toolbar this information is kept in browser localStorage to keep it hidden.
+
+</details>
