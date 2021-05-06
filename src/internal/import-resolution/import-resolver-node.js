@@ -18,7 +18,7 @@ export const createImportResolverForNode = async ({
     )
   }
 
-  const defaultModuleResolution = await moduleResolutionFromProjectPackage(projectDirectoryUrl)
+  const defaultModuleResolution = await determineModuleSystem(projectDirectoryUrl)
 
   const resolveImport = async (specifier, importer) => {
     if (isSpecifierForNodeCoreModule(specifier)) {
@@ -67,8 +67,16 @@ export const createImportResolverForNode = async ({
   return { resolveImport, fileUrlFromUrl }
 }
 
-// TODO: implement same behaviour as Node.js to determinModuleSystem
 // https://nodejs.org/dist/latest-v16.x/docs/api/packages.html#packages_determining_module_system)
+const determineModuleSystem = async (projectDirectoryUrl) => {
+  const inputTypeIsModule = process.execArgv.some((argv) => argv === "--input-type=module")
+  if (inputTypeIsModule) {
+    return "esm"
+  }
+
+  return moduleResolutionFromProjectPackage(projectDirectoryUrl)
+}
+
 const moduleResolutionFromProjectPackage = async (projectDirectoryUrl) => {
   const packageJsonFileUrl = new URL("package.json", projectDirectoryUrl)
   let packageJson
@@ -96,6 +104,7 @@ const moduleResolutionFromImporter = (importer) => {
     return "esm"
   }
 
+  // we should read the nearest package.json and search for type
   return undefined
 }
 
