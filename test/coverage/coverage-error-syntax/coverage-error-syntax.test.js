@@ -1,7 +1,5 @@
-import { basename } from "path"
-
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/util"
 
 import { executeTestPlan } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -10,9 +8,9 @@ import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TEST
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
-const result = await executeTestPlan({
+const { testPlanCoverage } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   executionLogLevel: "off",
   jsenvDirectoryRelativeUrl,
@@ -23,7 +21,7 @@ const result = await executeTestPlan({
   },
 })
 
-const actual = result.coverageMap
+const actual = testPlanCoverage
 const expected = {
   [`./${fileRelativeUrl}`]: {
     ...actual[`./${fileRelativeUrl}`],

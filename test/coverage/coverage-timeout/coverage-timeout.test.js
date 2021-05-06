@@ -24,7 +24,7 @@ const testPlan = {
   },
 }
 
-const result = await executeTestPlan({
+const { testPlanCoverage } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
@@ -35,7 +35,7 @@ const result = await executeTestPlan({
   },
 })
 
-const actual = result.coverageMap
+const actual = testPlanCoverage
 const expected = {
   [`./${fileRelativeUrl}`]: {
     ...actual[`./${fileRelativeUrl}`],

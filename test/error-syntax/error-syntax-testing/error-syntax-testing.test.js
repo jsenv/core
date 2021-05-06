@@ -11,7 +11,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
-const { coverageMap: actual } = await executeTestPlan({
+const { testPlanCoverage } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   executionLogLevel: "off",
   jsenvDirectoryRelativeUrl,
@@ -32,6 +32,7 @@ const { coverageMap: actual } = await executeTestPlan({
     [`${testDirectoryRelativeUrl}error-syntax.js`]: true,
   },
 })
+const actual = testPlanCoverage
 const expected = {
   [`./${testDirectoryRelativeUrl}error-syntax.js`]: {
     ...actual[`./${testDirectoryRelativeUrl}error-syntax.js`],
