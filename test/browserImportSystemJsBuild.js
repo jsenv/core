@@ -35,6 +35,8 @@ export const browserImportSystemJsBuild = async ({
     const namespace = await page.evaluate(
       /* istanbul ignore next */
       ({ codeToRunInBrowser, debug, specifier }) => {
+        /* globals window */
+
         if (codeToRunInBrowser) {
           // eslint-disable-next-line no-eval
           return window.eval(codeToRunInBrowser)

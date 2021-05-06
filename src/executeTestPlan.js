@@ -27,11 +27,9 @@ export const executeTestPlan = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
-  importMapFileRelativeUrl,
+
+  importResolutionMethod,
   importDefaultExtension,
-  importMetaDev = true,
-  importMetaEnvFileRelativeUrlForTest = "env.dev.js",
-  importMeta,
 
   compileServerProtocol,
   compileServerPrivateKey,
@@ -61,6 +59,9 @@ export const executeTestPlan = async ({
   coverageConfig = jsenvCoverageConfig,
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
+  coverageForceIstanbul = false,
+  coverageV8MergeConflictIsExpected = false,
+
   coverageTextLog = true,
   coverageJsonFile = Boolean(process.env.CI),
   coverageJsonFileLog = true,
@@ -145,11 +146,9 @@ export const executeTestPlan = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      importMapFileRelativeUrl,
+
+      importResolutionMethod,
       importDefaultExtension,
-      importMetaDev,
-      importMetaEnvFileRelativeUrl: importMetaEnvFileRelativeUrlForTest,
-      importMeta,
 
       compileServerProtocol,
       compileServerPrivateKey,
@@ -171,6 +170,8 @@ export const executeTestPlan = async ({
       coverage,
       coverageConfig,
       coverageIncludeMissing,
+      coverageForceIstanbul,
+      coverageV8MergeConflictIsExpected,
 
       ...rest,
     })
@@ -214,6 +215,10 @@ export const executeTestPlan = async ({
     }
     await Promise.all(promises)
 
-    return result
+    return {
+      testPlanSummary: result.summary,
+      testPlanReport: result.report,
+      testPlanCoverage: result.coverageMap,
+    }
   })
 }

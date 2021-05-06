@@ -136,7 +136,7 @@
     return urlString.slice(0, colonIndex);
   };
 
-  var urlToPathname = function urlToPathname(urlString) {
+  var urlToPathname$1 = function urlToPathname(urlString) {
     return ressourceToPathname(urlToRessource(urlString));
   };
 
@@ -229,7 +229,7 @@
     }
 
     var baseOrigin = urlToOrigin(baseUrl);
-    var basePathname = urlToPathname(baseUrl);
+    var basePathname = urlToPathname$1(baseUrl);
 
     if (specifier === ".") {
       var baseDirectoryPathname = pathnameToParentPathname(basePathname);
@@ -331,8 +331,8 @@
   var normalizeImportMap = function normalizeImportMap(importMap, baseUrl) {
     assertImportMap(importMap);
 
-    if (typeof baseUrl !== "string") {
-      throw new TypeError(formulateBaseUrlMustBeAString({
+    if (!isStringOrUrl(baseUrl)) {
+      throw new TypeError(formulateBaseUrlMustBeStringOrUrl({
         baseUrl: baseUrl
       }));
     }
@@ -343,6 +343,18 @@
       imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
       scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
     };
+  };
+
+  var isStringOrUrl = function isStringOrUrl(value) {
+    if (typeof value === "string") {
+      return true;
+    }
+
+    if (typeof URL === "function" && value instanceof URL) {
+      return true;
+    }
+
+    return false;
   };
 
   var normalizeMappings = function normalizeMappings(mappings, baseUrl) {
@@ -404,9 +416,9 @@
     return sortScopes(scopesNormalized);
   };
 
-  var formulateBaseUrlMustBeAString = function formulateBaseUrlMustBeAString(_ref) {
+  var formulateBaseUrlMustBeStringOrUrl = function formulateBaseUrlMustBeStringOrUrl(_ref) {
     var baseUrl = _ref.baseUrl;
-    return "baseUrl must be a string.\n--- base url ---\n".concat(baseUrl);
+    return "baseUrl must be a string or an url.\n--- base url ---\n".concat(baseUrl);
   };
 
   var formulateAddressMustBeAString = function formulateAddressMustBeAString(_ref2) {
@@ -1247,217 +1259,6 @@
     return fnWithMemoization;
   };
 
-  var pathnameToExtension = function pathnameToExtension(pathname) {
-    var slashLastIndex = pathname.lastIndexOf("/");
-
-    if (slashLastIndex !== -1) {
-      pathname = pathname.slice(slashLastIndex + 1);
-    }
-
-    var dotLastIndex = pathname.lastIndexOf(".");
-    if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
-
-    return pathname.slice(dotLastIndex);
-  };
-
-  var createDetailedMessage = function createDetailedMessage(message) {
-    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var string = "".concat(message);
-    Object.keys(details).forEach(function (key) {
-      var value = details[key];
-      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-    });
-    return string;
-  };
-
-  var applyImportMap = function applyImportMap(_ref) {
-    var importMap = _ref.importMap,
-        specifier = _ref.specifier,
-        importer = _ref.importer,
-        _ref$createBareSpecif = _ref.createBareSpecifierError,
-        createBareSpecifierError = _ref$createBareSpecif === void 0 ? function (_ref2) {
-      var specifier = _ref2.specifier,
-          importer = _ref2.importer;
-      return new Error(createDetailedMessage("Unmapped bare specifier.", {
-        specifier: specifier,
-        importer: importer
-      }));
-    } : _ref$createBareSpecif,
-        _ref$onImportMapping = _ref.onImportMapping,
-        onImportMapping = _ref$onImportMapping === void 0 ? function () {} : _ref$onImportMapping;
-    assertImportMap(importMap);
-
-    if (typeof specifier !== "string") {
-      throw new TypeError(createDetailedMessage("specifier must be a string.", {
-        specifier: specifier,
-        importer: importer
-      }));
-    }
-
-    if (importer) {
-      if (typeof importer !== "string") {
-        throw new TypeError(createDetailedMessage("importer must be a string.", {
-          importer: importer,
-          specifier: specifier
-        }));
-      }
-
-      if (!hasScheme(importer)) {
-        throw new Error(createDetailedMessage("importer must be an absolute url.", {
-          importer: importer,
-          specifier: specifier
-        }));
-      }
-    }
-
-    var specifierUrl = resolveSpecifier(specifier, importer);
-    var specifierNormalized = specifierUrl || specifier;
-    var scopes = importMap.scopes;
-
-    if (scopes && importer) {
-      var scopeSpecifierMatching = Object.keys(scopes).find(function (scopeSpecifier) {
-        return scopeSpecifier === importer || specifierIsPrefixOf(scopeSpecifier, importer);
-      });
-
-      if (scopeSpecifierMatching) {
-        var scopeMappings = scopes[scopeSpecifierMatching];
-        var mappingFromScopes = applyMappings(scopeMappings, specifierNormalized, scopeSpecifierMatching, onImportMapping);
-
-        if (mappingFromScopes !== null) {
-          return mappingFromScopes;
-        }
-      }
-    }
-
-    var imports = importMap.imports;
-
-    if (imports) {
-      var mappingFromImports = applyMappings(imports, specifierNormalized, undefined, onImportMapping);
-
-      if (mappingFromImports !== null) {
-        return mappingFromImports;
-      }
-    }
-
-    if (specifierUrl) {
-      return specifierUrl;
-    }
-
-    throw createBareSpecifierError({
-      specifier: specifier,
-      importer: importer
-    });
-  };
-
-  var applyMappings = function applyMappings(mappings, specifierNormalized, scope, onImportMapping) {
-    var specifierCandidates = Object.keys(mappings);
-    var i = 0;
-
-    while (i < specifierCandidates.length) {
-      var specifierCandidate = specifierCandidates[i];
-      i++;
-
-      if (specifierCandidate === specifierNormalized) {
-        var address = mappings[specifierCandidate];
-        onImportMapping({
-          scope: scope,
-          from: specifierCandidate,
-          to: address,
-          before: specifierNormalized,
-          after: address
-        });
-        return address;
-      }
-
-      if (specifierIsPrefixOf(specifierCandidate, specifierNormalized)) {
-        var _address = mappings[specifierCandidate];
-        var afterSpecifier = specifierNormalized.slice(specifierCandidate.length);
-        var addressFinal = tryUrlResolution(afterSpecifier, _address);
-        onImportMapping({
-          scope: scope,
-          from: specifierCandidate,
-          to: _address,
-          before: specifierNormalized,
-          after: addressFinal
-        });
-        return addressFinal;
-      }
-    }
-
-    return null;
-  };
-
-  var specifierIsPrefixOf = function specifierIsPrefixOf(specifierHref, href) {
-    return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
-  };
-
-  var resolveImport = function resolveImport(_ref) {
-    var specifier = _ref.specifier,
-        importer = _ref.importer,
-        importMap = _ref.importMap,
-        _ref$defaultExtension = _ref.defaultExtension,
-        defaultExtension = _ref$defaultExtension === void 0 ? true : _ref$defaultExtension,
-        createBareSpecifierError = _ref.createBareSpecifierError,
-        _ref$onImportMapping = _ref.onImportMapping,
-        onImportMapping = _ref$onImportMapping === void 0 ? function () {} : _ref$onImportMapping;
-    return applyDefaultExtension({
-      url: importMap ? applyImportMap({
-        importMap: importMap,
-        specifier: specifier,
-        importer: importer,
-        createBareSpecifierError: createBareSpecifierError,
-        onImportMapping: onImportMapping
-      }) : resolveUrl(specifier, importer),
-      importer: importer,
-      defaultExtension: defaultExtension
-    });
-  };
-
-  var applyDefaultExtension = function applyDefaultExtension(_ref2) {
-    var url = _ref2.url,
-        importer = _ref2.importer,
-        defaultExtension = _ref2.defaultExtension;
-
-    if (urlToPathname(url).endsWith("/")) {
-      return url;
-    }
-
-    if (typeof defaultExtension === "string") {
-      var extension = pathnameToExtension(url);
-
-      if (extension === "") {
-        return "".concat(url).concat(defaultExtension);
-      }
-
-      return url;
-    }
-
-    if (defaultExtension === true) {
-      var _extension = pathnameToExtension(url);
-
-      if (_extension === "" && importer) {
-        var importerPathname = urlToPathname(importer);
-        var importerExtension = pathnameToExtension(importerPathname);
-        return "".concat(url).concat(importerExtension);
-      }
-    }
-
-    return url;
-  };
-
-  var createBareSpecifierError = function createBareSpecifierError(_ref) {
-    var specifier = _ref.specifier,
-        importer = _ref.importer,
-        importMapUrl = _ref.importMapUrl;
-    var detailedMessage = createDetailedMessage("Unmapped bare specifier.", {
-      specifier: specifier,
-      importer: importer,
-      "how to fix": "Add a mapping for \"".concat(specifier, "\" into the importmap file at ").concat(importMapUrl),
-      "suggestion": "Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map"
-    });
-    return new Error(detailedMessage);
-  };
-
   /*
   * SJS 6.7.1
   * Minimal SystemJS Build
@@ -2137,7 +1938,17 @@
     };
   };
 
-  function _await$a(value, then, direct) {
+  var createDetailedMessage = function createDetailedMessage(message) {
+    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var string = "".concat(message);
+    Object.keys(details).forEach(function (key) {
+      var value = details[key];
+      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    });
+    return string;
+  };
+
+  function _await$b(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -2228,10 +2039,10 @@
         fetchSource = _ref.fetchSource,
         instantiateJavaScript = _ref.instantiateJavaScript,
         compileServerOrigin = _ref.compileServerOrigin,
-        outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
+        compileDirectoryRelativeUrl = _ref.compileDirectoryRelativeUrl;
     var moduleResponse;
     return _continue$3(_catch$4(function () {
-      return _await$a(fetchSource(url, {
+      return _await$b(fetchSource(url, {
         importerUrl: importerUrl
       }), function (_fetchSource) {
         moduleResponse = _fetchSource;
@@ -2241,7 +2052,7 @@
             url: url,
             importerUrl: importerUrl,
             compileServerOrigin: compileServerOrigin,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
             notFound: true
           })));
         }
@@ -2253,13 +2064,13 @@
       var contentType = moduleResponse.headers["content-type"] || "";
       return _invoke$5(function () {
         if (moduleResponse.status === 500 && contentType === "application/json") {
-          return _await$a(moduleResponse.json(), function (bodyAsJson) {
+          return _await$b(moduleResponse.json(), function (bodyAsJson) {
             if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
               var error = new Error(createDetailedMessage("Module file cannot be parsed.", _objectSpread(_defineProperty({}, "parsing error message", bodyAsJson.message), getModuleDetails({
                 url: url,
                 importerUrl: importerUrl,
                 compileServerOrigin: compileServerOrigin,
-                outDirectoryRelativeUrl: outDirectoryRelativeUrl
+                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
               }))));
               error.parsingError = bodyAsJson;
               throw error;
@@ -2276,7 +2087,7 @@
             url: url,
             importerUrl: importerUrl,
             compileServerOrigin: compileServerOrigin,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl
+            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
           }))));
         } // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
         // and in sync with loadModule in createJsenvRollupPlugin.js
@@ -2284,7 +2095,7 @@
 
         return _invoke$5(function () {
           if (contentType === "application/javascript" || contentType === "text/javascript") {
-            return _await$a(moduleResponse.text(), function (bodyAsText) {
+            return _await$b(moduleResponse.text(), function (bodyAsText) {
               _exit3 = true;
               return fromFunctionReturningRegisteredModule(function () {
                 return instantiateJavaScript(bodyAsText, moduleResponse.url);
@@ -2292,7 +2103,7 @@
                 url: moduleResponse.url,
                 importerUrl: importerUrl,
                 compileServerOrigin: compileServerOrigin,
-                outDirectoryRelativeUrl: outDirectoryRelativeUrl
+                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
               });
             });
           }
@@ -2301,7 +2112,7 @@
           if (_exit3) return _result3;
           return _invoke$5(function () {
             if (contentType === "application/json" || contentType === "application/importmap+json") {
-              return _await$a(moduleResponse.json(), function (bodyAsJson) {
+              return _await$b(moduleResponse.json(), function (bodyAsJson) {
                 _exit4 = true;
                 return fromFunctionReturningNamespace(function () {
                   return {
@@ -2311,7 +2122,7 @@
                   url: moduleResponse.url,
                   importerUrl: importerUrl,
                   compileServerOrigin: compileServerOrigin,
-                  outDirectoryRelativeUrl: outDirectoryRelativeUrl
+                  compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
                 });
               });
             }
@@ -2327,7 +2138,7 @@
                 url: moduleResponse.url,
                 importerUrl: importerUrl,
                 compileServerOrigin: compileServerOrigin,
-                outDirectoryRelativeUrl: outDirectoryRelativeUrl
+                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
               });
             }
 
@@ -2336,7 +2147,7 @@
                 url: url,
                 importerUrl: importerUrl,
                 compileServerOrigin: compileServerOrigin,
-                outDirectoryRelativeUrl: outDirectoryRelativeUrl
+                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
               })));
             }
 
@@ -2348,7 +2159,7 @@
               url: moduleResponse.url,
               importerUrl: importerUrl,
               compileServerOrigin: compileServerOrigin,
-              outDirectoryRelativeUrl: outDirectoryRelativeUrl
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
             });
           });
         });
@@ -2376,16 +2187,16 @@
     var url = _ref2.url,
         importerUrl = _ref2.importerUrl,
         compileServerOrigin = _ref2.compileServerOrigin,
-        outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
+        compileDirectoryRelativeUrl = _ref2.compileDirectoryRelativeUrl,
         _ref2$notFound = _ref2.notFound,
         notFound = _ref2$notFound === void 0 ? false : _ref2$notFound;
     var relativeUrl = tryToFindProjectRelativeUrl(url, {
       compileServerOrigin: compileServerOrigin,
-      outDirectoryRelativeUrl: outDirectoryRelativeUrl
+      compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
     });
     var importerRelativeUrl = tryToFindProjectRelativeUrl(importerUrl, {
       compileServerOrigin: compileServerOrigin,
-      outDirectoryRelativeUrl: outDirectoryRelativeUrl
+      compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
     });
     var details = notFound ? _objectSpread(_objectSpread(_objectSpread({}, importerUrl ? _defineProperty({}, "import declared in", importerRelativeUrl || importerUrl) : {}), relativeUrl ? {
       file: relativeUrl
@@ -2397,7 +2208,7 @@
 
   var tryToFindProjectRelativeUrl = function tryToFindProjectRelativeUrl(url, _ref5) {
     var compileServerOrigin = _ref5.compileServerOrigin,
-        outDirectoryRelativeUrl = _ref5.outDirectoryRelativeUrl;
+        compileDirectoryRelativeUrl = _ref5.compileDirectoryRelativeUrl;
 
     if (!url) {
       return null;
@@ -2413,19 +2224,12 @@
 
     var afterOrigin = url.slice("".concat(compileServerOrigin, "/").length);
 
-    if (!afterOrigin.startsWith(outDirectoryRelativeUrl)) {
+    if (!afterOrigin.startsWith(compileDirectoryRelativeUrl)) {
       return null;
     }
 
-    var afterCompileDirectory = afterOrigin.slice(outDirectoryRelativeUrl.length);
-    var nextSlashIndex = afterCompileDirectory.indexOf("/");
-
-    if (nextSlashIndex === -1) {
-      return null;
-    }
-
-    var afterCompileId = afterCompileDirectory.slice(nextSlashIndex + 1);
-    return afterCompileId;
+    var afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length);
+    return afterCompileDirectory;
   };
 
   // eslint-disable-next-line no-eval
@@ -2437,13 +2241,10 @@
     return "".concat(code, "\n", "//#", " sourceURL=").concat(sourceURL);
   };
 
-  var GLOBAL_SPECIFIER = "global";
   var createBrowserSystem = function createBrowserSystem(_ref) {
     var compileServerOrigin = _ref.compileServerOrigin,
-        outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
-        importMapUrl = _ref.importMapUrl,
-        importMap = _ref.importMap,
-        importDefaultExtension = _ref.importDefaultExtension,
+        compileDirectoryRelativeUrl = _ref.compileDirectoryRelativeUrl,
+        importResolver = _ref.importResolver,
         fetchSource = _ref.fetchSource;
 
     if (typeof window.System === "undefined") {
@@ -2454,49 +2255,12 @@
 
     var _resolve = function resolve(specifier) {
       var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : document.location.href;
-
-      if (specifier === GLOBAL_SPECIFIER) {
-        return specifier;
-      }
-
-      return resolveImport({
-        specifier: specifier,
-        importer: importer,
-        importMap: importMap,
-        defaultExtension: importDefaultExtension,
-        createBareSpecifierError: function createBareSpecifierError$1(_ref2) {
-          var specifier = _ref2.specifier,
-              importer = _ref2.importer;
-          return createBareSpecifierError({
-            specifier: specifier,
-            importer: tryToFindProjectRelativeUrl(importer, {
-              compileServerOrigin: compileServerOrigin,
-              outDirectoryRelativeUrl: outDirectoryRelativeUrl
-            }) || importer,
-            importMapUrl: tryToFindProjectRelativeUrl(importMapUrl, {
-              compileServerOrigin: compileServerOrigin,
-              outDirectoryRelativeUrl: outDirectoryRelativeUrl
-            }) || importMapUrl,
-            importMap: importMap
-          });
-        }
-      });
+      return importResolver.resolveImport(specifier, importer);
     };
 
     browserSystem.resolve = _resolve;
 
     browserSystem.instantiate = function (url, importerUrl) {
-      if (url === GLOBAL_SPECIFIER) {
-        return fromFunctionReturningNamespace(function () {
-          return window;
-        }, {
-          url: url,
-          importerUrl: importerUrl,
-          compileServerOrigin: compileServerOrigin,
-          outDirectoryRelativeUrl: outDirectoryRelativeUrl
-        });
-      }
-
       return fromUrl({
         url: url,
         importerUrl: importerUrl,
@@ -2513,7 +2277,7 @@
           return browserSystem.getRegister();
         },
         compileServerOrigin: compileServerOrigin,
-        outDirectoryRelativeUrl: outDirectoryRelativeUrl
+        compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
       });
     };
 
@@ -2701,7 +2465,7 @@
     };
   };
 
-  function _await$9(value, then, direct) {
+  function _await$a(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -2736,7 +2500,7 @@
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         icon = _ref.icon;
 
-    return _await$9(Notification.requestPermission(), function (permission) {
+    return _await$a(Notification.requestPermission(), function (permission) {
       if (permission === "granted") {
         var notification = new Notification("An error occured", {
           lang: "en",
@@ -2815,7 +2579,7 @@
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
-  function _await$8(value, then, direct) {
+  function _await$9(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -2937,7 +2701,7 @@
     }
 
     xhr.send(body);
-    return _await$8(headersPromise, function () {
+    return _await$9(headersPromise, function () {
       // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
       var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
       var responseStatus = xhr.status;
@@ -2945,7 +2709,7 @@
       var responseHeaders = getHeadersFromXHR(xhr);
 
       var readBody = function readBody() {
-        return _await$8(bodyPromise, function () {
+        return _await$9(bodyPromise, function () {
           var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
           if (status === 0) {
@@ -3248,7 +3012,7 @@
     return view.buffer;
   };
 
-  function _await$7(value, then, direct) {
+  function _await$8(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -3278,7 +3042,7 @@
     });
     var response;
     return _continue$2(_catch$3(function () {
-      return _await$7(window.fetch(url, _objectSpread({
+      return _await$8(window.fetch(url, _objectSpread({
         signal: abortController.signal,
         mode: mode
       }, options)), function (_window$fetch) {
@@ -3356,6 +3120,310 @@
   }
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
+
+  var pathnameToExtension$1 = function pathnameToExtension(pathname) {
+    var slashLastIndex = pathname.lastIndexOf("/");
+
+    if (slashLastIndex !== -1) {
+      pathname = pathname.slice(slashLastIndex + 1);
+    }
+
+    var dotLastIndex = pathname.lastIndexOf(".");
+    if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+    return pathname.slice(dotLastIndex);
+  };
+
+  var applyImportMap = function applyImportMap(_ref) {
+    var importMap = _ref.importMap,
+        specifier = _ref.specifier,
+        importer = _ref.importer,
+        _ref$createBareSpecif = _ref.createBareSpecifierError,
+        createBareSpecifierError = _ref$createBareSpecif === void 0 ? function (_ref2) {
+      var specifier = _ref2.specifier,
+          importer = _ref2.importer;
+      return new Error(createDetailedMessage("Unmapped bare specifier.", {
+        specifier: specifier,
+        importer: importer
+      }));
+    } : _ref$createBareSpecif,
+        _ref$onImportMapping = _ref.onImportMapping,
+        onImportMapping = _ref$onImportMapping === void 0 ? function () {} : _ref$onImportMapping;
+    assertImportMap(importMap);
+
+    if (typeof specifier !== "string") {
+      throw new TypeError(createDetailedMessage("specifier must be a string.", {
+        specifier: specifier,
+        importer: importer
+      }));
+    }
+
+    if (importer) {
+      if (typeof importer !== "string") {
+        throw new TypeError(createDetailedMessage("importer must be a string.", {
+          importer: importer,
+          specifier: specifier
+        }));
+      }
+
+      if (!hasScheme(importer)) {
+        throw new Error(createDetailedMessage("importer must be an absolute url.", {
+          importer: importer,
+          specifier: specifier
+        }));
+      }
+    }
+
+    var specifierUrl = resolveSpecifier(specifier, importer);
+    var specifierNormalized = specifierUrl || specifier;
+    var scopes = importMap.scopes;
+
+    if (scopes && importer) {
+      var scopeSpecifierMatching = Object.keys(scopes).find(function (scopeSpecifier) {
+        return scopeSpecifier === importer || specifierIsPrefixOf(scopeSpecifier, importer);
+      });
+
+      if (scopeSpecifierMatching) {
+        var scopeMappings = scopes[scopeSpecifierMatching];
+        var mappingFromScopes = applyMappings(scopeMappings, specifierNormalized, scopeSpecifierMatching, onImportMapping);
+
+        if (mappingFromScopes !== null) {
+          return mappingFromScopes;
+        }
+      }
+    }
+
+    var imports = importMap.imports;
+
+    if (imports) {
+      var mappingFromImports = applyMappings(imports, specifierNormalized, undefined, onImportMapping);
+
+      if (mappingFromImports !== null) {
+        return mappingFromImports;
+      }
+    }
+
+    if (specifierUrl) {
+      return specifierUrl;
+    }
+
+    throw createBareSpecifierError({
+      specifier: specifier,
+      importer: importer
+    });
+  };
+
+  var applyMappings = function applyMappings(mappings, specifierNormalized, scope, onImportMapping) {
+    var specifierCandidates = Object.keys(mappings);
+    var i = 0;
+
+    while (i < specifierCandidates.length) {
+      var specifierCandidate = specifierCandidates[i];
+      i++;
+
+      if (specifierCandidate === specifierNormalized) {
+        var address = mappings[specifierCandidate];
+        onImportMapping({
+          scope: scope,
+          from: specifierCandidate,
+          to: address,
+          before: specifierNormalized,
+          after: address
+        });
+        return address;
+      }
+
+      if (specifierIsPrefixOf(specifierCandidate, specifierNormalized)) {
+        var _address = mappings[specifierCandidate];
+        var afterSpecifier = specifierNormalized.slice(specifierCandidate.length);
+        var addressFinal = tryUrlResolution(afterSpecifier, _address);
+        onImportMapping({
+          scope: scope,
+          from: specifierCandidate,
+          to: _address,
+          before: specifierNormalized,
+          after: addressFinal
+        });
+        return addressFinal;
+      }
+    }
+
+    return null;
+  };
+
+  var specifierIsPrefixOf = function specifierIsPrefixOf(specifierHref, href) {
+    return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
+  };
+
+  var resolveImport = function resolveImport(_ref) {
+    var specifier = _ref.specifier,
+        importer = _ref.importer,
+        importMap = _ref.importMap,
+        _ref$defaultExtension = _ref.defaultExtension,
+        defaultExtension = _ref$defaultExtension === void 0 ? true : _ref$defaultExtension,
+        createBareSpecifierError = _ref.createBareSpecifierError,
+        _ref$onImportMapping = _ref.onImportMapping,
+        onImportMapping = _ref$onImportMapping === void 0 ? function () {} : _ref$onImportMapping;
+    return applyDefaultExtension$1({
+      url: importMap ? applyImportMap({
+        importMap: importMap,
+        specifier: specifier,
+        importer: importer,
+        createBareSpecifierError: createBareSpecifierError,
+        onImportMapping: onImportMapping
+      }) : resolveUrl(specifier, importer),
+      importer: importer,
+      defaultExtension: defaultExtension
+    });
+  };
+
+  var applyDefaultExtension$1 = function applyDefaultExtension(_ref2) {
+    var url = _ref2.url,
+        importer = _ref2.importer,
+        defaultExtension = _ref2.defaultExtension;
+
+    if (urlToPathname$1(url).endsWith("/")) {
+      return url;
+    }
+
+    if (typeof defaultExtension === "string") {
+      var extension = pathnameToExtension$1(url);
+
+      if (extension === "") {
+        return "".concat(url).concat(defaultExtension);
+      }
+
+      return url;
+    }
+
+    if (defaultExtension === true) {
+      var _extension = pathnameToExtension$1(url);
+
+      if (_extension === "" && importer) {
+        var importerPathname = urlToPathname$1(importer);
+        var importerExtension = pathnameToExtension$1(importerPathname);
+        return "".concat(url).concat(importerExtension);
+      }
+    }
+
+    return url;
+  };
+
+  var applyDefaultExtension = function applyDefaultExtension(specifier, importer) {
+    if (!importer) {
+      return specifier;
+    }
+
+    var importerExtension = urlToExtension(importer);
+    var fakeUrl = new URL(specifier, importer).href;
+    var specifierExtension = urlToExtension(fakeUrl);
+
+    if (specifierExtension !== "") {
+      return specifier;
+    } // I guess typescript still expect default extension to be .ts
+    // in a tsx file.
+
+
+    if (importerExtension === "tsx") {
+      return "".concat(specifier, ".ts");
+    } // extension magic
+
+
+    return "".concat(specifier).concat(importerExtension);
+  };
+
+  var urlToExtension = function urlToExtension(url) {
+    return pathnameToExtension(urlToPathname(url));
+  };
+
+  var urlToPathname = function urlToPathname(url) {
+    return new URL(url).pathname;
+  };
+
+  var pathnameToExtension = function pathnameToExtension(pathname) {
+    var slashLastIndex = pathname.lastIndexOf("/");
+
+    if (slashLastIndex !== -1) {
+      pathname = pathname.slice(slashLastIndex + 1);
+    }
+
+    var dotLastIndex = pathname.lastIndexOf(".");
+    if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+    var extension = pathname.slice(dotLastIndex);
+    return extension;
+  };
+
+  function _await$7(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  var createImportResolverForImportmap = function createImportResolverForImportmap(_ref) {
+    var compileServerOrigin = _ref.compileServerOrigin,
+        compileDirectoryRelativeUrl = _ref.compileDirectoryRelativeUrl,
+        importMap = _ref.importMap,
+        importMapUrl = _ref.importMapUrl,
+        importDefaultExtension = _ref.importDefaultExtension,
+        _ref$onBareSpecifierE = _ref.onBareSpecifierError,
+        onBareSpecifierError = _ref$onBareSpecifierE === void 0 ? function () {} : _ref$onBareSpecifierE;
+
+    var _resolveImport = function _resolveImport(specifier, importer) {
+      if (importDefaultExtension) {
+        specifier = applyDefaultExtension(specifier, importer);
+      }
+
+      return resolveImport({
+        specifier: specifier,
+        importer: importer,
+        importMap: importMap,
+        createBareSpecifierError: function createBareSpecifierError(_ref2) {
+          var specifier = _ref2.specifier,
+              importer = _ref2.importer;
+
+          var bareSpecifierError = _createBareSpecifierError({
+            specifier: specifier,
+            importer: tryToFindProjectRelativeUrl(importer, {
+              compileServerOrigin: compileServerOrigin,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+            }) || importer,
+            importMapUrl: tryToFindProjectRelativeUrl(importMapUrl, {
+              compileServerOrigin: compileServerOrigin,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+            }) || importMapUrl,
+            importMap: importMap
+          });
+
+          onBareSpecifierError(bareSpecifierError);
+          return bareSpecifierError;
+        }
+      });
+    };
+
+    return _await$7({
+      resolveImport: _resolveImport
+    });
+  };
+
+  var _createBareSpecifierError = function _createBareSpecifierError(_ref3) {
+    var specifier = _ref3.specifier,
+        importer = _ref3.importer,
+        importMapUrl = _ref3.importMapUrl;
+    var detailedMessage = createDetailedMessage("Unmapped bare specifier.", {
+      specifier: specifier,
+      importer: importer,
+      "how to fix": importMapUrl ? "Add a mapping for \"".concat(specifier, "\" into the importmap file at ").concat(importMapUrl) : "Add an importmap with a mapping for \"".concat(specifier, "\""),
+      "suggestion": "Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map"
+    });
+    return new Error(detailedMessage);
+  };
 
   function _await$6(value, then, direct) {
     if (direct) {
@@ -3438,7 +3506,7 @@
     var envUrl = String(new URL("env.json", outDirectoryUrl));
     return _await$6(fetchJson(envUrl), function (_ref2) {
       var importDefaultExtension = _ref2.importDefaultExtension;
-      var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/"); // if there is an importmap in the document we should use it instead of fetching like this.
+      var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/"); // if there is an importmap in the document we use it instead of fetching.
       // systemjs style with systemjs-importmap
 
       var importmapScript = document.querySelector("script[type=\"jsenv-importmap\"]");
@@ -3466,90 +3534,95 @@
           });
         }
       }, function () {
-        var importFile = _async$6(function (specifier) {
-          return _await$6(memoizedCreateBrowserSystem({
-            compileServerOrigin: compileServerOrigin,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-            importMapUrl: importMapUrl,
-            importMap: importMap,
-            importDefaultExtension: importDefaultExtension,
-            fetchSource: fetchSource
-          }), function (browserSystem) {
-            return browserSystem.import(specifier);
-          });
-        });
-
-        var executeFile = _async$6(function (specifier) {
-          var _ref3 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-              _ref3$transferableNam = _ref3.transferableNamespace,
-              transferableNamespace = _ref3$transferableNam === void 0 ? false : _ref3$transferableNam,
-              _ref3$errorExposureIn = _ref3.errorExposureInConsole,
-              errorExposureInConsole = _ref3$errorExposureIn === void 0 ? true : _ref3$errorExposureIn,
-              _ref3$errorExposureIn2 = _ref3.errorExposureInNotification,
-              errorExposureInNotification = _ref3$errorExposureIn2 === void 0 ? false : _ref3$errorExposureIn2,
-              _ref3$errorExposureIn3 = _ref3.errorExposureInDocument,
-              errorExposureInDocument = _ref3$errorExposureIn3 === void 0 ? true : _ref3$errorExposureIn3,
-              _ref3$executionExposu = _ref3.executionExposureOnWindow,
-              executionExposureOnWindow = _ref3$executionExposu === void 0 ? false : _ref3$executionExposu,
-              _ref3$errorTransform = _ref3.errorTransform,
-              errorTransform = _ref3$errorTransform === void 0 ? function (error) {
-            return error;
-          } : _ref3$errorTransform;
-
-          return _await$6(memoizedCreateBrowserSystem({
-            compileServerOrigin: compileServerOrigin,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-            importMapUrl: importMapUrl,
-            importMap: importMap,
-            importDefaultExtension: importDefaultExtension,
-            fetchSource: fetchSource
-          }), function (browserSystem) {
-            var executionResult;
-            return _continue$1(_catch$2(function () {
-              return _await$6(browserSystem.import(specifier), function (namespace) {
-                if (transferableNamespace) {
-                  namespace = makeNamespaceTransferable(namespace);
-                }
-
-                executionResult = {
-                  status: "completed",
-                  namespace: namespace,
-                  coverageMap: readCoverage()
-                };
-              });
-            }, function (error) {
-              var transformedError;
-              return _continue$1(_catch$2(function () {
-                return _await$6(errorTransform(error), function (_errorTransform) {
-                  transformedError = _errorTransform;
-                });
-              }, function () {
-                transformedError = error;
-              }), function () {
-                if (errorExposureInConsole) displayErrorInConsole(transformedError);
-                if (errorExposureInNotification) displayErrorNotification(transformedError);
-                if (errorExposureInDocument) displayErrorInDocument(transformedError);
-                executionResult = {
-                  status: "errored",
-                  exceptionSource: unevalException(transformedError),
-                  coverageMap: readCoverage()
-                };
-              });
-            }), function () {
-              if (executionExposureOnWindow) {
-                window.__executionResult__ = executionResult;
-              }
-
-              return executionResult;
+        return _await$6(createImportResolverForImportmap({
+          // projectDirectoryUrl,
+          compileServerOrigin: compileServerOrigin,
+          compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+          importMap: importMap,
+          importMapUrl: importMapUrl,
+          importDefaultExtension: importDefaultExtension
+        }), function (importResolver) {
+          var importFile = _async$6(function (specifier) {
+            return _await$6(memoizedCreateBrowserSystem({
+              compileServerOrigin: compileServerOrigin,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+              fetchSource: fetchSource,
+              importResolver: importResolver
+            }), function (browserSystem) {
+              return browserSystem.import(specifier);
             });
           });
-        });
 
-        return {
-          compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
-          importFile: importFile,
-          executeFile: executeFile
-        };
+          var executeFile = _async$6(function (specifier) {
+            var _ref3 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+                _ref3$transferableNam = _ref3.transferableNamespace,
+                transferableNamespace = _ref3$transferableNam === void 0 ? false : _ref3$transferableNam,
+                _ref3$errorExposureIn = _ref3.errorExposureInConsole,
+                errorExposureInConsole = _ref3$errorExposureIn === void 0 ? true : _ref3$errorExposureIn,
+                _ref3$errorExposureIn2 = _ref3.errorExposureInNotification,
+                errorExposureInNotification = _ref3$errorExposureIn2 === void 0 ? false : _ref3$errorExposureIn2,
+                _ref3$errorExposureIn3 = _ref3.errorExposureInDocument,
+                errorExposureInDocument = _ref3$errorExposureIn3 === void 0 ? true : _ref3$errorExposureIn3,
+                _ref3$executionExposu = _ref3.executionExposureOnWindow,
+                executionExposureOnWindow = _ref3$executionExposu === void 0 ? false : _ref3$executionExposu,
+                _ref3$errorTransform = _ref3.errorTransform,
+                errorTransform = _ref3$errorTransform === void 0 ? function (error) {
+              return error;
+            } : _ref3$errorTransform;
+
+            return _await$6(memoizedCreateBrowserSystem({
+              compileServerOrigin: compileServerOrigin,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+              fetchSource: fetchSource,
+              importResolver: importResolver
+            }), function (browserSystem) {
+              var executionResult;
+              return _continue$1(_catch$2(function () {
+                return _await$6(browserSystem.import(specifier), function (namespace) {
+                  if (transferableNamespace) {
+                    namespace = makeNamespaceTransferable(namespace);
+                  }
+
+                  executionResult = {
+                    status: "completed",
+                    namespace: namespace,
+                    coverageMap: readCoverage()
+                  };
+                });
+              }, function (error) {
+                var transformedError;
+                return _continue$1(_catch$2(function () {
+                  return _await$6(errorTransform(error), function (_errorTransform) {
+                    transformedError = _errorTransform;
+                  });
+                }, function () {
+                  transformedError = error;
+                }), function () {
+                  if (errorExposureInConsole) displayErrorInConsole(transformedError);
+                  if (errorExposureInNotification) displayErrorNotification(transformedError);
+                  if (errorExposureInDocument) displayErrorInDocument(transformedError);
+                  executionResult = {
+                    status: "errored",
+                    exceptionSource: unevalException(transformedError),
+                    coverageMap: readCoverage()
+                  };
+                });
+              }), function () {
+                if (executionExposureOnWindow) {
+                  window.__executionResult__ = executionResult;
+                }
+
+                return executionResult;
+              });
+            });
+          });
+
+          return {
+            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+            importFile: importFile,
+            executeFile: executeFile
+          };
+        });
       });
     });
   });
@@ -3656,6 +3729,7 @@
     return "".concat(name, ": ").concat(message).concat(stackString);
   };
 
+  /* eslint-env browser, node */
   var parseDataUrl = function parseDataUrl(dataUrl) {
     var afterDataProtocol = dataUrl.slice("data:".length);
     var commaIndex = afterDataProtocol.indexOf(",");
@@ -4168,7 +4242,7 @@
         onFailure = _ref.onFailure;
     var urlToSourcemapConsumer = memoizeByFirstArgStringValue(_async$4(function (stackTraceFileUrl) {
       var _exit = false;
-      return _catch$1(function () {
+      return stackTraceFileUrl.startsWith("node:") ? null : _catch$1(function () {
         var text;
         return _continue(_catch$1(function () {
           return _await$4(fetchFile(stackTraceFileUrl), function (fileResponse) {
@@ -4613,7 +4687,7 @@
         var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window.location.href;
         // browsers having Error.captureStrackTrace got window.URL
         // and this executes only when Error.captureStackTrace exists
-        return String(new window.URL(specifier, importer));
+        return String(new URL(specifier, importer));
       }
     }, options));
   };

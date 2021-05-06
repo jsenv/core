@@ -34,23 +34,27 @@ const testPlan = {
   },
 }
 
-const actual = await executeTestPlan({
+const { testPlanSummary, testPlanReport } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
   compileGroupCount: 1,
 })
+const actual = {
+  testPlanSummary,
+  testPlanReport,
+}
 const expected = {
-  summary: {
+  testPlanSummary: {
     executionCount: 4,
     disconnectedCount: 0,
     timedoutCount: 0,
     erroredCount: 0,
     completedCount: 4,
-    startMs: actual.summary.startMs,
-    endMs: actual.summary.endMs,
+    startMs: testPlanSummary.startMs,
+    endMs: testPlanSummary.endMs,
   },
-  report: {
+  testPlanReport: {
     [htmlFileRelativeUrl]: {
       chromium: {
         status: "completed",

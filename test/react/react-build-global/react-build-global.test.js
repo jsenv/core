@@ -13,26 +13,28 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
-const mainFilename = `${testDirectoryname}.js`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/global/`
+const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
+  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
 const convertMap = {
   "./node_modules/react/index.js": (options) =>
     convertCommonJsWithRollup({ ...options, processEnvNodeEnv: "dev" }),
 }
 
-await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
   convertMap,
 })
+const mainRelativeUrl = `./${buildMappings[`${testDirectoryRelativeUrl}${testDirectoryname}.js`]}`
 const { globalValue: actual } = await scriptLoadGlobalBuild({
   ...SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
+  mainRelativeUrl,
 })
 const expected = "object"
 assert({ actual, expected })

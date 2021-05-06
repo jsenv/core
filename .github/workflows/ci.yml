@@ -18,7 +18,7 @@ jobs:
         # maybe because of https://github.com/nodejs/node/issues/23169
         # or https://github.com/node-fetch/node-fetch/issues/309
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node: [14.5.0]
+        node: [14.9.0]
     runs-on: ${{ matrix.os }}
     name: test on ${{ matrix.os }} and node ${{ matrix.node }}
     env:
@@ -61,7 +61,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
         with:
-          node-version: "14.x"
+          node-version: "15.x"
       - name: npm install
         run: |
           npm config set //npm.pkg.github.com/:_authToken ${{ secrets.GITHUB_TOKEN }}

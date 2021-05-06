@@ -20,7 +20,6 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  importMapFileRelativeUrl: `${testDirectoryRelativeUrl}test.importmap`,
 })
 
 const actual = await launchAndExecute({
@@ -37,8 +36,8 @@ const actual = await launchAndExecute({
 const expected = {
   status: "completed",
   namespace: {
-    basic: `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}file.js`,
-    remapped: `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}bar.js`,
+    bare: `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}node_modules/foo/index.js`,
+    relative: `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}file.js`,
   },
 }
 assert({ actual, expected })

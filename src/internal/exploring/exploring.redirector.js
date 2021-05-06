@@ -1,4 +1,4 @@
-import { fetchUrl } from "../fetch-browser.js"
+import { fetchUrl } from "../browser-utils/fetch-browser.js"
 import { fetchExploringJson } from "./fetchExploringJson.js"
 import { computeCompileIdFromGroupId } from "../runtime/computeCompileIdFromGroupId.js"
 import { resolveBrowserGroup } from "../runtime/resolveBrowserGroup.js"
@@ -32,6 +32,8 @@ const decideExploringIndexUrl = async ({
 }
 
 const browserSupportsAllFeatures = async () => {
+  // we MUST also take into account the babelPluginMap
+
   // start testing importmap support first and not in paralell
   // so that there is not module script loaded beore importmap is injected
   // it would log an error in chrome console and return undefined

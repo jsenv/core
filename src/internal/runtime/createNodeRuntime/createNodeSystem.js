@@ -1,80 +1,44 @@
-/* eslint-disable import/max-dependencies */
+/**
+
+We could use https://nodejs.org/api/esm.html#esm_loaders once it gets stable
+
+*/
+
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
-import { resolveImport } from "@jsenv/import-map"
 import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
-import { createBareSpecifierError } from "@jsenv/core/src/internal/createBareSpecifierError.js"
+import { createImportResolverForNode } from "@jsenv/core/src/internal/import-resolution/import-resolver-node.js"
 import { require } from "../../require.js"
 import "../s.js"
-import {
-  fromFunctionReturningNamespace,
-  fromUrl,
-  tryToFindProjectRelativeUrl,
-} from "../module-registration.js"
+import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
 import { valueInstall } from "../valueInstall.js"
 import { evalSource } from "./evalSource.js"
 
-const GLOBAL_SPECIFIER = "global"
-
-export const createNodeSystem = ({
+export const createNodeSystem = async ({
   projectDirectoryUrl,
   compileServerOrigin,
-  outDirectoryRelativeUrl,
-  importMapUrl,
-  importMap,
-  importDefaultExtension,
+  compileDirectoryRelativeUrl,
   fetchSource,
+  importDefaultExtension,
 } = {}) => {
   if (typeof global.System === "undefined") {
     throw new Error(`global.System is undefined`)
   }
 
   const nodeSystem = new global.System.constructor()
+  const nodeImporterResolver = await createImportResolverForNode({
+    projectDirectoryUrl,
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
+    importDefaultExtension,
+  })
 
-  const resolve = (specifier, importer) => {
-    if (specifier === GLOBAL_SPECIFIER) {
-      return specifier
-    }
-
-    if (isSpecifierForNodeCoreModule(specifier)) {
-      return specifier
-    }
-
-    return resolveImport({
-      specifier,
-      importer,
-      importMap,
-      defaultExtension: importDefaultExtension,
-      createBareSpecifierError: ({ specifier, importer }) => {
-        return createBareSpecifierError({
-          specifier,
-          importer:
-            tryToFindProjectRelativeUrl(importer, {
-              compileServerOrigin,
-              outDirectoryRelativeUrl,
-            }) || importer,
-          importMapUrl:
-            tryToFindProjectRelativeUrl(importMapUrl, {
-              compileServerOrigin,
-              outDirectoryRelativeUrl,
-            }) || importMapUrl,
-          importMap,
-        })
-      },
-    })
+  const resolve = async (specifier, importer) => {
+    return nodeImporterResolver.resolveImport(specifier, importer)
   }
 
   nodeSystem.resolve = resolve
 
   nodeSystem.instantiate = async (url, importerUrl) => {
-    if (url === GLOBAL_SPECIFIER) {
-      return fromFunctionReturningNamespace(() => global, {
-        url,
-        importerUrl,
-        compileServerOrigin,
-        outDirectoryRelativeUrl,
-      })
-    }
-
     if (isSpecifierForNodeCoreModule(url)) {
       return fromFunctionReturningNamespace(
         () => {
@@ -86,7 +50,7 @@ export const createNodeSystem = ({
           url,
           importerUrl,
           compileServerOrigin,
-          outDirectoryRelativeUrl,
+          compileDirectoryRelativeUrl,
         },
       )
     }
@@ -111,26 +75,26 @@ export const createNodeSystem = ({
 
         return nodeSystem.getRegister()
       },
-      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
       compileServerOrigin,
     })
   }
 
   // https://github.com/systemjs/systemjs/blob/master/docs/hooks.md#createcontexturl---object
   nodeSystem.createContext = (url) => {
-    const originalUrl = urlToOriginalUrl(url, {
+    const fileUrl = nodeImporterResolver.fileUrlFromUrl(url, {
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
       compileServerOrigin,
     })
 
     return {
-      url: originalUrl,
-      resolve: (specifier) => {
-        const urlResolved = resolve(specifier, url)
-        return urlToOriginalUrl(urlResolved, {
+      url: fileUrl,
+      resolve: async (specifier) => {
+        const urlResolved = await resolve(specifier, url)
+        return nodeImporterResolver.fileUrlFromUrl(urlResolved, {
           projectDirectoryUrl,
-          outDirectoryRelativeUrl,
+          compileDirectoryRelativeUrl,
           compileServerOrigin,
         })
       },
@@ -153,33 +117,6 @@ const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirec
     return urlToFileSystemPath(fileUrl)
   }
   return responseUrl
-}
-
-const urlToOriginalUrl = (
-  url,
-  { projectDirectoryUrl, outDirectoryRelativeUrl, compileServerOrigin },
-) => {
-  if (!url.startsWith(`${compileServerOrigin}/`)) {
-    return url
-  }
-
-  if (url === compileServerOrigin) {
-    return url
-  }
-
-  const afterOrigin = url.slice(`${compileServerOrigin}/`.length)
-  if (!afterOrigin.startsWith(outDirectoryRelativeUrl)) {
-    return url
-  }
-
-  const afterCompileDirectory = afterOrigin.slice(outDirectoryRelativeUrl.length)
-  const nextSlashIndex = afterCompileDirectory.indexOf("/")
-  if (nextSlashIndex === -1) {
-    return url
-  }
-
-  const afterCompileId = afterCompileDirectory.slice(nextSlashIndex + 1)
-  return resolveUrl(afterCompileId, projectDirectoryUrl)
 }
 
 const moduleExportsToModuleNamespace = (moduleExports) => {

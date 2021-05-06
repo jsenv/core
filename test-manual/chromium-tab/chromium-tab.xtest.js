@@ -1,8 +1,9 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+
+import { executeTestPlan, launchChromiumTab, launchChromium, launchNode } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
-import { executeTestPlan, launchChromiumTab, launchChromium, launchNode } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -25,7 +26,7 @@ const testPlan = {
     },
   },
 }
-const actual = await executeTestPlan({
+const { testPlanSummary, testPlanReport } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
@@ -38,15 +39,19 @@ const actual = await executeTestPlan({
   // and one of them has two tabs
   // stopAfterExecute: false,
 })
+const actual = {
+  testPlanSummary,
+  testPlanReport,
+}
 const expected = {
-  summary: {
+  testPlanSummary: {
     executionCount: 4,
     disconnectedCount: 0,
     timedoutCount: 0,
     erroredCount: 0,
     completedCount: 4,
   },
-  report: {
+  testPlanReport: {
     [fileRelativeUrl]: {
       tab1: {
         status: "completed",
@@ -54,7 +59,7 @@ const expected = {
           default: 42,
         },
         runtimeName: "chromium",
-        runtimeVersion: actual.report[fileRelativeUrl].chromium.runtimeVersion,
+        runtimeVersion: testPlanReport[fileRelativeUrl].chromium.runtimeVersion,
       },
       chromium: {
         status: "completed",
@@ -62,7 +67,7 @@ const expected = {
           default: 42,
         },
         runtimeName: "chromium",
-        runtimeVersion: actual.report[fileRelativeUrl].chromium.runtimeVersion,
+        runtimeVersion: testPlanReport[fileRelativeUrl].chromium.runtimeVersion,
       },
       tab2: {
         status: "completed",
@@ -70,7 +75,7 @@ const expected = {
           default: 42,
         },
         runtimeName: "chromium",
-        runtimeVersion: actual.report[fileRelativeUrl].chromium.runtimeVersion,
+        runtimeVersion: testPlanReport[fileRelativeUrl].chromium.runtimeVersion,
       },
       node: {
         status: "completed",
@@ -78,7 +83,7 @@ const expected = {
           default: 42,
         },
         runtimeName: "node",
-        runtimeVersion: actual.report[fileRelativeUrl].node.runtimeVersion,
+        runtimeVersion: testPlanReport[fileRelativeUrl].node.runtimeVersion,
       },
     },
   },

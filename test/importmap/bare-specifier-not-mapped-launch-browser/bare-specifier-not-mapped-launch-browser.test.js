@@ -17,7 +17,6 @@ const importMapFileRelativeUrl = `${testDirectoryRelativeUrl}import-map.importma
 const executionResult = await execute({
   ...EXECUTE_TEST_PARAMS,
   ignoreError: true,
-  importMapFileRelativeUrl,
   jsenvDirectoryRelativeUrl,
   fileRelativeUrl,
   launch: launchChromium,

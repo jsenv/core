@@ -1,3 +1,3 @@
-export const basic = import.meta.resolve("./file.js")
+export const relative = import.meta.resolve("./file.js")
 
-export const remapped = import.meta.resolve("foo")
+export const bare = import.meta.resolve("foo")

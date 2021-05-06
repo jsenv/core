@@ -8,13 +8,6 @@ import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { buildUsingRollup } from "./internal/building/buildUsingRollup.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
-const FORMAT_ENTRY_POINTS = {
-  commonjs: { "./main.js": "./main.cjs" },
-  esmodule: { "./main.html": "./main.html" },
-  global: { "./main.js": "./main.js" },
-  systemjs: { "./main.html": "./main.html" },
-}
-
 export const buildProject = async ({
   cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
@@ -24,13 +17,26 @@ export const buildProject = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
+
+  format,
+
+  browser = format === "global" || format === "systemjs" || format === "esmodule",
+  node = format === "commonjs",
+  entryPointMap,
+  systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
+  globalName,
+  globals = {},
+
+  importResolutionMethod = format === "commonjs" ? "node" : "importmap",
   importMapFileRelativeUrl,
-  importMetaEnvFileRelativeUrlForBuild = "env.prod.js",
-  importMeta = {
-    dev: false,
-  },
   importDefaultExtension,
   externalImportSpecifiers = [],
+  externalImportUrlPatterns = format === "commonjs"
+    ? {
+        "node_modules/": true,
+      }
+    : {},
+
   env = {},
 
   compileServerProtocol,
@@ -40,18 +46,6 @@ export const buildProject = async ({
   compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
 
-  format = "esmodule",
-  externalImportUrlPatterns = format === "commonjs"
-    ? {
-        "node_modules/": true,
-      }
-    : {},
-  browser = format === "global" || format === "systemjs" || format === "esmodule",
-  node = format === "commonjs",
-  entryPointMap = FORMAT_ENTRY_POINTS[format],
-  systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
-  globalName,
-  globals = {},
   sourcemapExcludeSources = false,
 
   buildDirectoryRelativeUrl,
@@ -90,32 +84,9 @@ export const buildProject = async ({
 }) => {
   return executeJsenvAsyncFunction(async () => {
     logger = logger || createLogger({ logLevel })
-
-    if (format === "esmodule") {
-      if (buildDirectoryRelativeUrl === undefined) {
-        buildDirectoryRelativeUrl = "./dist/esmodule"
-      }
-    } else if (format === "systemjs") {
-      if (buildDirectoryRelativeUrl === undefined) {
-        buildDirectoryRelativeUrl = "./dist/systemjs"
-      }
-    } else if (format === "commonjs") {
-      if (buildDirectoryRelativeUrl === undefined) {
-        buildDirectoryRelativeUrl = "./dist/commonjs"
-      }
-      if (node === undefined) {
-        node = true
-      }
-    } else if (format === "global") {
-      if (buildDirectoryRelativeUrl === undefined) {
-        buildDirectoryRelativeUrl = "./dist/global"
-      }
-      if (browser === undefined) {
-        browser = true
-      }
-    } else {
+    if (!["esmodule", "systemjs", "commonjs", "global"].includes(format)) {
       throw new TypeError(
-        `unexpected format: ${format}. Must be esmodule, systemjs, commonjs or global.`,
+        `unexpected format: ${format}. Must be "esmodule", "systemjs", "commonjs" or "global".`,
       )
     }
 
@@ -153,10 +124,7 @@ export const buildProject = async ({
       // that is expecting esmodule format, not systemjs
       // + some more differences like import.meta.dev
       outDirectoryName: "out-build",
-      importMapFileRelativeUrl,
       importDefaultExtension,
-      importMetaEnvFileRelativeUrl: importMetaEnvFileRelativeUrlForBuild,
-      importMeta,
       moduleOutFormat: "esmodule", // rollup will transform into systemjs
       importMetaFormat: format, // but ensure import.meta are correctly transformed into the right format
 
@@ -184,12 +152,15 @@ export const buildProject = async ({
 
         entryPointMap,
         projectDirectoryUrl,
-        importMapFileRelativeUrl: compileServer.importMapFileRelativeUrl,
-        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         compileServerOrigin,
+        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
+
+        importResolutionMethod,
+        importMapFileRelativeUrl,
         importDefaultExtension,
         externalImportSpecifiers,
         externalImportUrlPatterns,
+
         babelPluginMap,
         node,
         browser,

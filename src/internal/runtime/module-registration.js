@@ -46,7 +46,7 @@ export const fromUrl = async ({
   fetchSource,
   instantiateJavaScript,
   compileServerOrigin,
-  outDirectoryRelativeUrl,
+  compileDirectoryRelativeUrl,
 }) => {
   let moduleResponse
   try {
@@ -62,7 +62,7 @@ export const fromUrl = async ({
             url,
             importerUrl,
             compileServerOrigin,
-            outDirectoryRelativeUrl,
+            compileDirectoryRelativeUrl,
             notFound: true,
           }),
         ),
@@ -81,7 +81,12 @@ export const fromUrl = async ({
       const error = new Error(
         createDetailedMessage(`Module file cannot be parsed.`, {
           ["parsing error message"]: bodyAsJson.message,
-          ...getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl }),
+          ...getModuleDetails({
+            url,
+            importerUrl,
+            compileServerOrigin,
+            compileDirectoryRelativeUrl,
+          }),
         }),
       )
       error.parsingError = bodyAsJson
@@ -95,7 +100,12 @@ export const fromUrl = async ({
         ["status"]: moduleResponse.status,
         ["allowed status"]: "200 to 299",
         ["statusText"]: moduleResponse.statusText,
-        ...getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl }),
+        ...getModuleDetails({
+          url,
+          importerUrl,
+          compileServerOrigin,
+          compileDirectoryRelativeUrl,
+        }),
       }),
     )
   }
@@ -110,7 +120,7 @@ export const fromUrl = async ({
         url: moduleResponse.url,
         importerUrl,
         compileServerOrigin,
-        outDirectoryRelativeUrl,
+        compileDirectoryRelativeUrl,
       },
     )
   }
@@ -127,7 +137,7 @@ export const fromUrl = async ({
         url: moduleResponse.url,
         importerUrl,
         compileServerOrigin,
-        outDirectoryRelativeUrl,
+        compileDirectoryRelativeUrl,
       },
     )
   }
@@ -143,7 +153,7 @@ export const fromUrl = async ({
         url: moduleResponse.url,
         importerUrl,
         compileServerOrigin,
-        outDirectoryRelativeUrl,
+        compileDirectoryRelativeUrl,
       },
     )
   }
@@ -163,7 +173,12 @@ export const fromUrl = async ({
   } else {
     console.warn(`Module content-type is missing.`, {
       ["allowed content-type"]: ["aplication/javascript", "application/json", "text/*"],
-      ...getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl }),
+      ...getModuleDetails({
+        url,
+        importerUrl,
+        compileServerOrigin,
+        compileDirectoryRelativeUrl,
+      }),
     })
   }
 
@@ -177,7 +192,7 @@ export const fromUrl = async ({
       url: moduleResponse.url,
       importerUrl,
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
     },
   )
 }
@@ -201,17 +216,17 @@ const getModuleDetails = ({
   url,
   importerUrl,
   compileServerOrigin,
-  outDirectoryRelativeUrl,
+  compileDirectoryRelativeUrl,
   notFound = false,
 }) => {
   const relativeUrl = tryToFindProjectRelativeUrl(url, {
     compileServerOrigin,
-    outDirectoryRelativeUrl,
+    compileDirectoryRelativeUrl,
   })
 
   const importerRelativeUrl = tryToFindProjectRelativeUrl(importerUrl, {
     compileServerOrigin,
-    outDirectoryRelativeUrl,
+    compileDirectoryRelativeUrl,
   })
 
   const details = notFound
@@ -231,7 +246,7 @@ const getModuleDetails = ({
 
 export const tryToFindProjectRelativeUrl = (
   url,
-  { compileServerOrigin, outDirectoryRelativeUrl },
+  { compileServerOrigin, compileDirectoryRelativeUrl },
 ) => {
   if (!url) {
     return null
@@ -246,16 +261,10 @@ export const tryToFindProjectRelativeUrl = (
   }
 
   const afterOrigin = url.slice(`${compileServerOrigin}/`.length)
-  if (!afterOrigin.startsWith(outDirectoryRelativeUrl)) {
+  if (!afterOrigin.startsWith(compileDirectoryRelativeUrl)) {
     return null
   }
 
-  const afterCompileDirectory = afterOrigin.slice(outDirectoryRelativeUrl.length)
-  const nextSlashIndex = afterCompileDirectory.indexOf("/")
-  if (nextSlashIndex === -1) {
-    return null
-  }
-
-  const afterCompileId = afterCompileDirectory.slice(nextSlashIndex + 1)
-  return afterCompileId
+  const afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length)
+  return afterCompileDirectory
 }

@@ -57,13 +57,3 @@ If you don't pass `debugModeInheritBreak`, its value will be:
 ```js
 true
 ```
-
-### traceWarnings
-
-> Pass `--trace-warnings` to child process or not.
-
-If you don't pass `traceWarnings`, its value will be:
-
-```js
-true
-```

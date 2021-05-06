@@ -44,8 +44,6 @@ For `launchWebkit` you would add `playwright-webkit`
 npm install --save-dev playwright-webkit
 ```
 
-If you want to manage the browser files yourself you don't have to add these dev dependencies but you must tell jsenv where to find these files. Check [chromiumExecutablePath](./shared-parameters.md#chromiumExecutablePath), [firefoxExecutablePath](./shared-parameters.md#firefoxExecutablePath) and [webkitExecutablePath](./shared-parameters.md#webkitExecutablePath) to do this.
-
 # Passing options to a launcher
 
 You can pass option to a runtime launcher but you have to be sure you forward the options it receives.<br />

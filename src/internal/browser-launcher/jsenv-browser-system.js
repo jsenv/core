@@ -1,7 +1,9 @@
+/* eslint-env browser */
+
 import { createBrowserRuntime } from "../runtime/createBrowserRuntime/createBrowserRuntime.js"
 import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
-import { fetchUrl } from "../fetch-browser.js"
-import { fetchAndEvalUsingFetch } from "../fetchAndEvalUsingFetch.js"
+import { fetchUrl } from "../browser-utils/fetch-browser.js"
+import { fetchAndEvalUsingFetch } from "../browser-utils/fetchAndEvalUsingFetch.js"
 import { memoize } from "../memoize.js"
 
 const getNavigationStartTime = () => {

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "17.10.0",
+  "version": "18.0.0",
   "description": "Tool to develop, test and build js projects.",
   "license": "MIT",
   "repository": {
@@ -8,7 +8,7 @@
     "url": "https://github.com/jsenv/jsenv-core"
   },
   "engines": {
-    "node": ">=13.0.0"
+    "node": ">=14.0.0"
   },
   "publishConfig": {
     "access": "public"
@@ -16,13 +16,11 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./main.js",
-      "require": "./dist/commonjs/main.cjs"
+      "import": "./main.js"
     },
     "./": "./"
   },
-  "module": "main.js",
-  "main": "dist/commonjs/main.cjs",
+  "main": "main.js",
   "files": [
     "/dist/",
     "/helpers/",
@@ -33,9 +31,8 @@
     "eslint-check": "node ./node_modules/eslint/bin/eslint.js .",
     "generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
     "generate-internal-builds": "node --experimental-top-level-await ./script/generate-internal-builds/generate-internal-builds.js",
-    "generate-commonjs-build": "node ./script/generate-commonjs-build/generate-commonjs-build.js",
-    "dist": "npm run generate-commonjs-build && npm run generate-internal-builds",
-    "test": "node ./script/test/test.js",
+    "dist": "npm run generate-internal-builds",
+    "test": "node --experimental-import-meta-resolve ./script/test/test.js",
     "start-exploring": "node ./script/start-exploring/start-exploring.js",
     "test-with-coverage": "npm run test -- --coverage",
     "test-js-transform": "node ./script/test/test-js-transform.js",
@@ -98,13 +95,14 @@
     "@babel/plugin-transform-template-literals": "7.13.0",
     "@babel/plugin-transform-typeof-symbol": "7.12.13",
     "@babel/plugin-transform-unicode-regex": "7.12.13",
+    "@c88/v8-coverage": "0.1.1",
     "@jsenv/cancellation": "2.0.3",
-    "@jsenv/import-map": "6.13.0",
+    "@jsenv/import-map": "6.13.2",
     "@jsenv/logger": "4.0.0",
     "@jsenv/node-signals": "2.0.1",
-    "@jsenv/server": "6.0.1",
+    "@jsenv/server": "6.0.2",
     "@jsenv/uneval": "1.5.1",
-    "@jsenv/util": "4.0.6",
+    "@jsenv/util": "4.1.0",
     "@rollup/plugin-commonjs": "18.0.0",
     "@rollup/plugin-json": "4.1.0",
     "@rollup/plugin-node-resolve": "11.2.1",
@@ -140,6 +138,7 @@
     "systemjs": "6.8.3",
     "terser": "5.6.1",
     "tree-kill": "1.2.2",
+    "v8-to-istanbul": "7.1.1",
     "wrap-ansi": "7.0.0"
   },
   "devDependencies": {
@@ -147,9 +146,9 @@
     "@babel/plugin-transform-typescript": "7.13.0",
     "@jsenv/assert": "2.2.5",
     "@jsenv/codecov-upload": "3.4.3",
-    "@jsenv/eslint-config": "12.9.1",
+    "@jsenv/eslint-config": "14.0.0",
     "@jsenv/github-release-package": "1.2.2",
-    "@jsenv/node-module-import-map": "13.1.0",
+    "@jsenv/node-module-import-map": "13.4.1",
     "@jsenv/package-publish": "1.5.2",
     "@jsenv/prettier-check-project": "5.6.1",
     "@jsenv/pwa": "3.0.6",

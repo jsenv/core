@@ -64,6 +64,8 @@ export const generateGroupMap = ({
     throw new TypeError(`groupCount must be above 1, got ${groupCount}`)
   }
 
+  babelPluginMap = withoutSyntaxPlugins(babelPluginMap)
+
   const groupWithoutFeature = {
     babelPluginRequiredNameArray: Object.keys(babelPluginMap),
     jsenvPluginRequiredNameArray: Object.keys(jsenvPluginMap),
@@ -133,6 +135,17 @@ export const generateGroupMap = ({
   }
 
   return groupMap
+}
+
+export const withoutSyntaxPlugins = (babelPluginMap) => {
+  const babelPluginMapWithoutSyntaxPlugins = {}
+  Object.keys(babelPluginMap).forEach((key) => {
+    if (key.startsWith("syntax-")) {
+      return
+    }
+    babelPluginMapWithoutSyntaxPlugins[key] = babelPluginMap[key]
+  })
+  return babelPluginMapWithoutSyntaxPlugins
 }
 
 const arrayWithoutValue = (array, value) =>

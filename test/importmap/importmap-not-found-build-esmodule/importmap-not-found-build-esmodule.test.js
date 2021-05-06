@@ -1,8 +1,8 @@
-import { basename } from "path"
-// import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { assert } from "@jsenv/assert"
+import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/util"
+
 import { buildProject } from "@jsenv/core"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // BROWSER_IMPORT_BUILD_TEST_PARAMS,
@@ -11,22 +11,32 @@ import {
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
 }
+const importMapFileRelativeUrl = "./not-found.importmap"
+const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, jsenvCoreDirectoryUrl)
 
-// if it does not throw, it means `@jsenv/core/helpers/babel/typeof/typeof.js` was
-// properly resolved.
-// It's possible because jsenv server returns a minimal importmap with @jsenv/core/* remapping
-// even if the project has no importmap file.
-await buildProject({
-  ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  importMapFileRelativeUrl: "./not-found.importmap",
-  jsenvDirectoryRelativeUrl,
-  buildDirectoryRelativeUrl,
-  entryPointMap,
-})
+try {
+  await buildProject({
+    ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+    importMapFileRelativeUrl,
+    jsenvDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
+    entryPointMap,
+  })
+} catch (e) {
+  const actual = e.message
+  const expected = `Unexpected response status for importmap.
+--- response status ---
+404
+--- response text ---
+
+--- importmap url ---
+${importMapFileUrl}`
+  assert({ actual, expected })
+}

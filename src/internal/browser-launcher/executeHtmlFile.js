@@ -1,8 +1,9 @@
 import { extname } from "path"
 import { resolveUrl, assertFilePresence } from "@jsenv/util"
+import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
+
 import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
-import { composeCoverageMap } from "../executing/coverage/composeCoverageMap.js"
 
 export const executeHtmlFile = async (
   fileRelativeUrl,
@@ -30,6 +31,7 @@ export const executeHtmlFile = async (
   await page.waitForFunction(
     /* istanbul ignore next */
     () => {
+      // eslint-disable-next-line no-undef
       return Boolean(window.__jsenv__)
     },
     [],
@@ -41,6 +43,7 @@ export const executeHtmlFile = async (
     executionResult = await page.evaluate(
       /* istanbul ignore next */
       () => {
+        // eslint-disable-next-line no-undef
         return window.__jsenv__.executionResultPromise
       },
     )
@@ -77,24 +80,27 @@ export const executeHtmlFile = async (
       status: "errored",
       error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
       namespace: fileExecutionResultMap,
-      ...(collectCoverage ? { coverageMap: generateCoverageForPage(fileExecutionResultMap) } : {}),
+      coverageMap: generateCoverageForPage(fileExecutionResultMap),
     }
   }
 
   return {
     status: "completed",
     namespace: fileExecutionResultMap,
-    ...(collectCoverage ? { coverageMap: generateCoverageForPage(fileExecutionResultMap) } : {}),
+    coverageMap: generateCoverageForPage(fileExecutionResultMap),
   }
 }
 
 const generateCoverageForPage = (fileExecutionResultMap) => {
-  const coverageMap = composeCoverageMap(
-    ...Object.keys(fileExecutionResultMap).map((fileRelativeUrl) => {
-      return fileExecutionResultMap[fileRelativeUrl].coverageMap || {}
-    }),
-  )
-  return coverageMap
+  const istanbulCoverages = []
+  Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
+    const istanbulCoverage = fileExecutionResultMap[fileRelativeUrl].coverageMap
+    if (istanbulCoverage) {
+      istanbulCoverages.push(istanbulCoverage)
+    }
+  })
+  const istanbulCoverage = composeIstanbulCoverages(istanbulCoverages)
+  return istanbulCoverage
 }
 
 const evalException = (exceptionSource, { projectDirectoryUrl, compileServerOrigin }) => {

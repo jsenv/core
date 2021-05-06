@@ -1,22 +1,28 @@
 import { collectFiles } from "@jsenv/util"
 import { relativeUrlToEmptyCoverage } from "./relativeUrlToEmptyCoverage.js"
-import { composeCoverageMap } from "./composeCoverageMap.js"
-import { ensureRelativePathsInCoverage } from "./ensureRelativePathsInCoverage.js"
+import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
+import { normalizeIstanbulCoverage } from "./normalizeIstanbulCoverage.js"
 
 export const reportToCoverageMap = async (
   report,
   {
+    logger,
     cancellationToken,
     projectDirectoryUrl,
     babelPluginMap,
     coverageConfig,
     coverageIncludeMissing,
+    coverageV8MergeConflictIsExpected,
   },
 ) => {
-  const coverageMapForReport = executionReportToCoverageMap(report)
+  const istanbulCoverageFromExecution = executionReportToCoverageMap(report, {
+    logger,
+    projectDirectoryUrl,
+    coverageV8MergeConflictIsExpected,
+  })
 
   if (!coverageIncludeMissing) {
-    return ensureRelativePathsInCoverage(coverageMapForReport)
+    return istanbulCoverageFromExecution
   }
 
   const relativeFileUrlToCoverArray = await listRelativeFileUrlToCover({
@@ -26,10 +32,13 @@ export const reportToCoverageMap = async (
   })
 
   const relativeFileUrlMissingCoverageArray = relativeFileUrlToCoverArray.filter(
-    (relativeFileUrlToCover) => relativeFileUrlToCover in coverageMapForReport === false,
+    (relativeFileUrlToCover) =>
+      Object.keys(istanbulCoverageFromExecution).every((key) => {
+        return key !== `./${relativeFileUrlToCover}`
+      }),
   )
 
-  const coverageMapForMissedFiles = {}
+  const istanbulCoverageFromMissedFiles = {}
   await Promise.all(
     relativeFileUrlMissingCoverageArray.map(async (relativeFileUrlMissingCoverage) => {
       const emptyCoverage = await relativeUrlToEmptyCoverage(relativeFileUrlMissingCoverage, {
@@ -37,15 +46,15 @@ export const reportToCoverageMap = async (
         projectDirectoryUrl,
         babelPluginMap,
       })
-      coverageMapForMissedFiles[relativeFileUrlMissingCoverage] = emptyCoverage
+      istanbulCoverageFromMissedFiles[relativeFileUrlMissingCoverage] = emptyCoverage
       return emptyCoverage
     }),
   )
 
-  return ensureRelativePathsInCoverage({
-    ...coverageMapForReport,
-    ...coverageMapForMissedFiles,
-  })
+  return {
+    ...istanbulCoverageFromExecution, // already normalized
+    ...normalizeIstanbulCoverage(istanbulCoverageFromMissedFiles, projectDirectoryUrl),
+  }
 }
 
 const listRelativeFileUrlToCover = async ({
@@ -67,15 +76,18 @@ const listRelativeFileUrlToCover = async ({
   return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl)
 }
 
-const executionReportToCoverageMap = (report) => {
-  const coverageMapArray = []
+const executionReportToCoverageMap = (
+  report,
+  { logger, projectDirectoryUrl, coverageV8MergeConflictIsExpected },
+) => {
+  const istanbulCoverages = []
 
   Object.keys(report).forEach((file) => {
     const executionResultForFile = report[file]
     Object.keys(executionResultForFile).forEach((executionName) => {
       const executionResultForFileOnRuntime = executionResultForFile[executionName]
 
-      const { coverageMap } = executionResultForFileOnRuntime
+      const { status, coverageMap } = executionResultForFileOnRuntime
       if (!coverageMap) {
         // several reasons not to have coverageMap here:
         // 1. the file we executed did not import an instrumented file.
@@ -94,14 +106,21 @@ const executionReportToCoverageMap = (report) => {
         // in any scenario we are fine because
         // coverDescription will generate empty coverage for files
         // that were suppose to be coverage but were not.
+
+        if (status === "completed") {
+          logger.warn(`No execution.coverageMap from execution named "${executionName}" of ${file}`)
+        }
         return
       }
 
-      coverageMapArray.push(coverageMap)
+      const istanbulCoverage = normalizeIstanbulCoverage(coverageMap, projectDirectoryUrl)
+      istanbulCoverages.push(istanbulCoverage)
     })
   })
 
-  const executionCoverageMap = composeCoverageMap(...coverageMapArray)
+  const istanbulCoverage = composeIstanbulCoverages(istanbulCoverages, {
+    coverageV8MergeConflictIsExpected,
+  })
 
-  return executionCoverageMap
+  return istanbulCoverage
 }

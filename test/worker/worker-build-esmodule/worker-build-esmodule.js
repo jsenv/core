@@ -1,3 +1,4 @@
+/* eslint-env browser */
 const workerUrl = String(new URL("./worker.js", import.meta.url))
 
 const worker = new Worker(workerUrl)

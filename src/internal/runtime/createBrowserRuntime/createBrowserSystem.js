@@ -1,22 +1,12 @@
-import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
-import { createBareSpecifierError } from "@jsenv/core/src/internal/createBareSpecifierError.js"
 import "../s.js"
 import { valueInstall } from "../valueInstall.js"
-import {
-  fromFunctionReturningNamespace,
-  fromUrl,
-  tryToFindProjectRelativeUrl,
-} from "../module-registration.js"
+import { fromUrl } from "../module-registration.js"
 import { evalSource } from "./evalSource.js"
-
-const GLOBAL_SPECIFIER = "global"
 
 export const createBrowserSystem = ({
   compileServerOrigin,
-  outDirectoryRelativeUrl,
-  importMapUrl,
-  importMap,
-  importDefaultExtension,
+  compileDirectoryRelativeUrl,
+  importResolver,
   fetchSource,
 }) => {
   if (typeof window.System === "undefined") {
@@ -26,46 +16,12 @@ export const createBrowserSystem = ({
   const browserSystem = new window.System.constructor()
 
   const resolve = (specifier, importer = document.location.href) => {
-    if (specifier === GLOBAL_SPECIFIER) {
-      return specifier
-    }
-
-    return resolveImport({
-      specifier,
-      importer,
-      importMap,
-      defaultExtension: importDefaultExtension,
-      createBareSpecifierError: ({ specifier, importer }) => {
-        return createBareSpecifierError({
-          specifier,
-          importer:
-            tryToFindProjectRelativeUrl(importer, {
-              compileServerOrigin,
-              outDirectoryRelativeUrl,
-            }) || importer,
-          importMapUrl:
-            tryToFindProjectRelativeUrl(importMapUrl, {
-              compileServerOrigin,
-              outDirectoryRelativeUrl,
-            }) || importMapUrl,
-          importMap,
-        })
-      },
-    })
+    return importResolver.resolveImport(specifier, importer)
   }
 
   browserSystem.resolve = resolve
 
   browserSystem.instantiate = (url, importerUrl) => {
-    if (url === GLOBAL_SPECIFIER) {
-      return fromFunctionReturningNamespace(() => window, {
-        url,
-        importerUrl,
-        compileServerOrigin,
-        outDirectoryRelativeUrl,
-      })
-    }
-
     return fromUrl({
       url,
       importerUrl,
@@ -81,7 +37,7 @@ export const createBrowserSystem = ({
         return browserSystem.getRegister()
       },
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      compileDirectoryRelativeUrl,
     })
   }
 

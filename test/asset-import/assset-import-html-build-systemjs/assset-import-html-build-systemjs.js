@@ -1,3 +1,5 @@
+/* eslint-env browser */
+
 import htmlText from "./whatever.html"
 
 const div = document.createElement("div")

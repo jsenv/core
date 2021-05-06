@@ -4,6 +4,7 @@
 /docs/**/.jsenv/
 /docs/**/node_modules/
 /helpers/chromium/
+/helpers/regenerator-runtime/
 /node_modules/
 **/s.js
 /src/**/system.js

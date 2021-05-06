@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { extname } from "path"
-import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
+import { normalizeImportMap } from "@jsenv/import-map"
 import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
 import { loggerToLogLevel, createDetailedMessage } from "@jsenv/logger"
 import {
@@ -18,7 +18,6 @@ import {
 } from "@jsenv/util"
 
 // import { jsenvImportMetaResolveGlobalUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { createBareSpecifierError } from "@jsenv/core/src/internal/createBareSpecifierError.js"
 import {
   urlToServerUrl,
   urlToProjectUrl,
@@ -46,6 +45,9 @@ import { computeBuildRelativeUrl } from "./url-versioning.js"
 import { transformImportMetaUrlReferences } from "./transformImportMetaUrlReferences.js"
 
 import { minifyJs } from "./js/minifyJs.js"
+import { createImportResolverForNode } from "../import-resolution/import-resolver-node.js"
+import { createImportResolverForImportmap } from "../import-resolution/import-resolver-importmap.js"
+import { getDefaultImportMap } from "../import-resolution/importmap-default.js"
 
 // use a fake and predictable compile server origin
 // because rollup will check the dependencies url
@@ -60,16 +62,17 @@ export const createJsenvRollupPlugin = async ({
 
   entryPointMap,
   projectDirectoryUrl,
-  importMapFileRelativeUrl,
-  importMetaEnvFileRelativeUrl,
-  compileDirectoryRelativeUrl,
   compileServerOrigin,
+  compileDirectoryRelativeUrl,
+
+  importResolutionMethod,
+  importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers,
   externalImportUrlPatterns,
+
   babelPluginMap,
   node,
-  browser,
 
   format,
   urlVersioning,
@@ -92,10 +95,8 @@ export const createJsenvRollupPlugin = async ({
   const jsModulesInHtml = {}
 
   let lastErrorMessage
-  const createJsenvPluginError = (message) => {
-    const error = new Error(message)
-    lastErrorMessage = message
-    return error
+  const storeLatestJsenvPluginError = (error) => {
+    lastErrorMessage = error.message
   }
 
   const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(
@@ -194,53 +195,10 @@ export const createJsenvRollupPlugin = async ({
     compileServerOrigin,
   )
 
-  const nativeModulePredicate = (specifier) => {
-    if (node && isSpecifierForNodeCoreModule(specifier)) return true
-    // for now browser have no native module
-    // and we don't know how we will handle that
-    if (browser) return false
-    return false
-  }
-
-  const fetchAndNormalizeImportmap = async (importmapUrl, { allow404 = false } = {}) => {
-    const importmapResponse = await fetchUrl(importmapUrl)
-    if (allow404 && importmapResponse.status === 404) {
-      return null
-    }
-    if (importmapResponse.status < 200 || importmapResponse.status > 299) {
-      throw createJsenvPluginError(
-        createDetailedMessage(`Unexpected response status for importmap.`, {
-          ["response status"]: importmapResponse.status,
-          ["response text"]: await importmapResponse.text(),
-          ["importmap url"]: importmapUrl,
-        }),
-      )
-    }
-    const importmap = await importmapResponse.json()
-    const importmapNormalized = normalizeImportMap(importmap, importmapUrl)
-    return importmapNormalized
-  }
-
-  const fetchImportmapFromParameter = async () => {
-    const importmapProjectUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-    importMapUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
-    const importMap = await fetchAndNormalizeImportmap(importMapUrl, { allow404: true })
-    if (importMap === null) {
-      logger.warn(
-        `WARNING: no importmap found following importMapRelativeUrl at ${importmapProjectUrl}`,
-      )
-      return {}
-    }
-    logger.debug(`use importmap found following importMapRelativeUrl at ${importmapProjectUrl}`)
-    return importMap
-  }
-
   let assetBuilder
   let rollupEmitFile = () => {}
   let rollupSetAssetSource = () => {}
-  let fetchImportmap = fetchImportmapFromParameter
-  let importMap
-  let importMapUrl
+  let importResolver
 
   const emitAsset = ({ fileName, source }) => {
     return rollupEmitFile({
@@ -276,6 +234,7 @@ export const createJsenvRollupPlugin = async ({
       // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
 
       const entryPointsPrepared = []
+      const importMapInfos = []
       await Promise.all(
         Object.keys(entryPointMap).map(async (key) => {
           const entryProjectUrl = resolveUrl(key, projectDirectoryUrl)
@@ -292,37 +251,26 @@ export const createJsenvRollupPlugin = async ({
 
           if (entryContentType === "text/html") {
             const htmlSource = await entryResponse.text()
-            const importmapHtmlNode = findFirstImportmapNode(htmlSource)
-            if (importmapHtmlNode) {
-              if (fetchImportmap === fetchImportmapFromParameter) {
-                const srcAttribute = getHtmlNodeAttributeByName(importmapHtmlNode, "src")
-                if (srcAttribute) {
-                  logger.debug(formatUseImportMap(importmapHtmlNode, entryProjectUrl, htmlSource))
-                  importMapUrl = resolveUrl(srcAttribute.value, entryCompiledUrl)
-                  if (!urlIsInsideOf(importMapUrl, compileDirectoryRemoteUrl)) {
-                    logger.warn(
-                      formatImportmapOutsideCompileDirectory(
-                        importmapHtmlNode,
-                        entryProjectUrl,
-                        htmlSource,
-                        compileDirectoryUrl,
-                      ),
-                    )
-                  }
-                  fetchImportmap = () => fetchAndNormalizeImportmap(importMapUrl)
-                } else {
-                  const textNode = getHtmlNodeTextNode(importmapHtmlNode)
-                  if (textNode) {
-                    logger.info(formatUseImportMap(importmapHtmlNode, entryProjectUrl, htmlSource))
-                    fetchImportmap = () => {
-                      const importmapRaw = JSON.parse(textNode.value)
-                      const importmap = normalizeImportMap(importmapRaw, entryCompiledUrl)
-                      return importmap
-                    }
-                  }
-                }
+            const importMapInfo = importMapInfoFromHtml({
+              htmlUrl: entryProjectUrl,
+              htmlSource,
+              htmlCompileUrl: entryCompiledUrl,
+              projectDirectoryUrl,
+              compileServerOrigin,
+              compileDirectoryRelativeUrl,
+            })
+
+            if (importMapInfo) {
+              // eslint-disable-next-line no-negated-condition
+              if (!urlIsInsideOf(importMapInfo.importMapUrl, compileDirectoryRemoteUrl)) {
+                logger.warn(
+                  formatImportmapOutsideCompileDirectory({
+                    importMapInfo,
+                    compileDirectoryUrl,
+                  }),
+                )
               } else {
-                logger.warn(formatIgnoreImportMap(importmapHtmlNode, entryProjectUrl, htmlSource))
+                importMapInfos.push(importMapInfo)
               }
             }
 
@@ -351,7 +299,81 @@ export const createJsenvRollupPlugin = async ({
           }
         }),
       )
-      importMap = await fetchImportmap()
+
+      if (importResolutionMethod === "node") {
+        importResolver = await createImportResolverForNode({
+          projectDirectoryUrl,
+          compileServerOrigin,
+          compileDirectoryRelativeUrl,
+          importDefaultExtension,
+        })
+      } else {
+        const importMapCount = importMapInfos.length
+        let importMap
+        let importMapUrl
+        let fetchImportMap
+        if (importMapCount === 0) {
+          if (importMapFileRelativeUrl) {
+            importMapUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
+            fetchImportMap = () =>
+              fetchImportMapFromUrl(
+                importMapUrl,
+                urlToOriginalProjectUrl(importMapUrl, {
+                  projectDirectoryUrl,
+                  compileServerOrigin,
+                  compileDirectoryRelativeUrl,
+                }),
+              )
+          } else {
+            // there is no importmap, its' fine it's not mandatory to use one
+            fetchImportMap = () => {
+              const entryProjectRelativeUrl = Object.keys(entryPointMap)[0]
+              const entryCompileUrl = resolveUrl(entryProjectRelativeUrl, compileDirectoryUrl)
+              const defaultImportMap = getDefaultImportMap({
+                importMapFileUrl: entryCompileUrl,
+                projectDirectoryUrl,
+                compileDirectoryRelativeUrl,
+              })
+              const entryCompileServerUrl = resolveUrl(
+                entryProjectRelativeUrl,
+                compileDirectoryRemoteUrl,
+              )
+              return normalizeImportMap(defaultImportMap, entryCompileServerUrl)
+            }
+          }
+        } else {
+          if (importMapCount > 1) {
+            logger.warn(formatMultipleImportMapWarning())
+          }
+
+          const lastImportMapInfo = importMapInfos[importMapCount - 1]
+          logger.info(
+            formatUseImportMap({
+              importMapInfo: lastImportMapInfo,
+            }),
+          )
+
+          importMapUrl = lastImportMapInfo.importMapUrl
+          fetchImportMap = lastImportMapInfo.fetchImportMap
+        }
+
+        try {
+          importMap = await fetchImportMap()
+        } catch (e) {
+          storeLatestJsenvPluginError(e)
+          throw e
+        }
+        importResolver = await createImportResolverForImportmap({
+          compileServerOrigin,
+          compileDirectoryRelativeUrl,
+          importMap,
+          importMapUrl,
+          importDefaultExtension,
+          onBareSpecifierError: (error) => {
+            storeLatestJsenvPluginError(error)
+          },
+        })
+      }
 
       // rollup will yell at us telling we did not provide an input option
       // if we provide only an html file without any script type module in it
@@ -486,7 +508,7 @@ export const createJsenvRollupPlugin = async ({
       }
     },
 
-    resolveId(specifier, importer) {
+    async resolveId(specifier, importer) {
       if (importer === undefined) {
         if (specifier.endsWith(".html")) {
           importer = compileServerOrigin
@@ -497,7 +519,7 @@ export const createJsenvRollupPlugin = async ({
         importer = rollupUrlToServerUrl(importer)
       }
 
-      if (nativeModulePredicate(specifier)) {
+      if (node && isSpecifierForNodeCoreModule(specifier)) {
         logger.debug(`${specifier} is native module -> marked as external`)
         return false
       }
@@ -514,27 +536,8 @@ export const createJsenvRollupPlugin = async ({
       if (isFileSystemPath(importer)) {
         importer = fileSystemPathToUrl(importer)
       }
-      const importUrl = resolveImport({
-        specifier,
-        importer,
-        importMap,
-        defaultExtension: importDefaultExtension,
-        createBareSpecifierError: ({ specifier, importer }) => {
-          const importerOriginalProjectUrl = rollupUrlToOriginalProjectUrl(importer)
-          const importMapOriginalProjectUrl = rollupUrlToOriginalProjectUrl(importMapUrl)
-          const message = createBareSpecifierError({
-            specifier,
-            importer: importerOriginalProjectUrl
-              ? urlToRelativeUrl(importerOriginalProjectUrl, projectDirectoryUrl)
-              : importer,
-            importMapUrl: importMapOriginalProjectUrl
-              ? urlToRelativeUrl(importMapOriginalProjectUrl, projectDirectoryUrl)
-              : importMapUrl,
-            importMap,
-          }).message
-          return createJsenvPluginError(message)
-        },
-      })
+
+      const importUrl = await importResolver.resolveImport(specifier, importer)
 
       if (importer !== projectDirectoryUrl) {
         urlImporterMap[importUrl] = importer
@@ -896,7 +899,6 @@ export const createJsenvRollupPlugin = async ({
 
       const { code, map } = await transformJs({
         projectDirectoryUrl,
-        importMetaEnvFileRelativeUrl,
         code: codeInput,
         url: rollupUrlToProjectUrl(moduleUrl), // transformJs expect a file:// url
         babelPluginMap,
@@ -992,7 +994,7 @@ export const createJsenvRollupPlugin = async ({
       rollupUrlToOriginalProjectUrl(importer) || rollupUrlToProjectUrl(importer) || importer
 
     if (response.status === 404) {
-      throw createJsenvPluginError(
+      const jsenvPluginError = new Error(
         formatFileNotFound(
           rollupUrlToOriginalProjectUrl(response.url) ||
             rollupUrlToProjectUrl(response.url) ||
@@ -1000,12 +1002,16 @@ export const createJsenvRollupPlugin = async ({
           importer,
         ),
       )
+      storeLatestJsenvPluginError(jsenvPluginError)
+      throw jsenvPluginError
     }
 
     const okValidation = await validateResponseStatusIsOk(response, importer)
 
     if (!okValidation.valid) {
-      throw createJsenvPluginError(okValidation.message)
+      const jsenvPluginError = new Error(okValidation.message)
+      storeLatestJsenvPluginError(jsenvPluginError)
+      throw jsenvPluginError
     }
 
     return response
@@ -1030,6 +1036,74 @@ export const createJsenvRollupPlugin = async ({
       }
     },
   }
+}
+
+const importMapInfoFromHtml = ({
+  htmlUrl,
+  htmlSource,
+  htmlCompileUrl,
+  projectDirectoryUrl,
+  compileServerOrigin,
+  compileDirectoryRelativeUrl,
+}) => {
+  const importMapHtmlNode = findFirstImportmapNode(htmlSource)
+  if (!importMapHtmlNode) {
+    return null
+  }
+
+  const srcAttribute = getHtmlNodeAttributeByName(importMapHtmlNode, "src")
+  if (srcAttribute) {
+    const importMapUrl = resolveUrl(srcAttribute.value, htmlCompileUrl)
+    return {
+      htmlUrl,
+      htmlSource,
+      importMapHtmlNode,
+      importMapUrl,
+      fetchImportMap: () =>
+        fetchImportMapFromUrl(
+          importMapUrl,
+          urlToOriginalProjectUrl(importMapUrl, {
+            projectDirectoryUrl,
+            compileServerOrigin,
+            compileDirectoryRelativeUrl,
+          }),
+        ),
+    }
+  }
+
+  const textNode = getHtmlNodeTextNode(importMapHtmlNode)
+  if (textNode) {
+    const importMapUrl = htmlCompileUrl
+    return {
+      htmlUrl,
+      htmlSource,
+      importMapHtmlNode,
+      importMapUrl,
+      fetchImportMap: () => {
+        const importMapRaw = JSON.parse(textNode.value)
+        const importMap = normalizeImportMap(importMapRaw, htmlCompileUrl)
+        return importMap
+      },
+    }
+  }
+
+  return null
+}
+
+const fetchImportMapFromUrl = async (importMapUrl, importMapProjectUrl) => {
+  const importMapResponse = await fetchUrl(importMapUrl)
+  if (importMapResponse.status < 200 || importMapResponse.status > 299) {
+    throw new Error(
+      createDetailedMessage(`Unexpected response status for importmap.`, {
+        ["response status"]: importMapResponse.status,
+        ["response text"]: await importMapResponse.text(),
+        ["importmap url"]: importMapProjectUrl || importMapUrl,
+      }),
+    )
+  }
+  const importMap = await importMapResponse.json()
+  const importMapNormalized = normalizeImportMap(importMap, importMapUrl)
+  return importMapNormalized
 }
 
 const fixRollupUrl = (rollupUrl) => {
@@ -1062,8 +1136,8 @@ const formatFileNotFound = (url, importer) => {
   })
 }
 
-const showImportmapSourceLocation = (importmapHtmlNode, htmlUrl, htmlSource) => {
-  const { line, column } = getHtmlNodeLocation(importmapHtmlNode)
+const showImportmapSourceLocation = ({ importMapHtmlNode, htmlUrl, htmlSource }) => {
+  const { line, column } = getHtmlNodeLocation(importMapHtmlNode)
 
   return `${htmlUrl}:${line}:${column}
 
@@ -1074,26 +1148,20 @@ ${showSourceLocation(htmlSource, {
 `
 }
 
-const formatIgnoreImportMap = (importmapHtmlNode, htmlUrl, htmlSource) => {
-  return `ignore importmap found in html file.
-${showImportmapSourceLocation(importmapHtmlNode, htmlUrl, htmlSource)}`
+const formatMultipleImportMapWarning = () => {
+  return `many importmap found in html files, only the latest will be used.`
 }
 
-const formatUseImportMap = (importmapHtmlNode, htmlUrl, htmlSource) => {
+const formatUseImportMap = ({ importMapInfo }) => {
   return `use importmap found in html file.
-${showImportmapSourceLocation(importmapHtmlNode, htmlUrl, htmlSource)}`
+${showImportmapSourceLocation(importMapInfo)}`
 }
 
-const formatImportmapOutsideCompileDirectory = (
-  importmapHtmlNode,
-  htmlUrl,
-  htmlSource,
-  compileDirectoryUrl,
-) => {
+const formatImportmapOutsideCompileDirectory = ({ importMapInfo, compileDirectoryUrl }) => {
   return `WARNING: found importmap outside compile directory.
 Remapped import will not be compiled.
 You should make importmap source relative.
-${showImportmapSourceLocation(importmapHtmlNode, htmlUrl, htmlSource)}
+${showImportmapSourceLocation(importMapInfo)}
 --- compile directory url ---
 ${compileDirectoryUrl}`
 }

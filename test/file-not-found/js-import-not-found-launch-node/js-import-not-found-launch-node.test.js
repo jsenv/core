@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
@@ -17,16 +17,12 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const compileId = "best"
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
-const importedFileRelativeUrl = `${testDirectoryRelativeUrl}foo.js`
-const importedFileUrl = resolveUrl(
-  `${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`,
-  jsenvCoreDirectoryUrl,
-)
+const importerFileUrl = resolveUrl(filename, testDirectoryUrl)
+const importedFileUrl = resolveUrl("foo.js", testDirectoryUrl)
 
 const actual = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
@@ -43,20 +39,14 @@ const actual = await launchAndExecute({
 const expected = {
   status: "errored",
   error: Object.assign(
-    new Error(`Module file cannot be found.
---- import declared in ---
-${fileRelativeUrl}
---- file ---
-${importedFileRelativeUrl}
---- file url ---
-${importedFileUrl}`),
+    new Error(
+      `Cannot find module '${urlToFileSystemPath(
+        importedFileUrl,
+      )}' imported from ${urlToFileSystemPath(importerFileUrl)}`,
+    ),
     {
-      code: "NETWORK_FAILURE",
-      filename: actual.error.filename,
-      lineno: actual.error.lineno,
-      columnno: actual.error.columnno,
+      code: "ERR_MODULE_NOT_FOUND",
     },
   ),
 }
-
 assert({ actual, expected })

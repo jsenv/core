@@ -29,7 +29,6 @@ import {
 } from "@jsenv/util"
 
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { assertImportMapFileRelativeUrl, assertImportMapFileInsideProject } from "../argUtils.js"
 import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
@@ -46,11 +45,9 @@ export const startCompileServer = async ({
   compileServerLogLevel,
 
   projectDirectoryUrl,
-  importMapFileRelativeUrl = "import-map.importmap",
+
   importDefaultExtension,
-  importMetaDev = false,
-  importMetaEnvFileRelativeUrl,
-  importMeta = {},
+
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
@@ -86,7 +83,7 @@ export const startCompileServer = async ({
   stopOnPackageVersionChange = false,
 
   // remaining options
-  compileGroupCount = 1,
+  compileGroupCount = 2,
   babelCompatMap = jsenvBabelPluginCompatMap,
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
@@ -105,20 +102,25 @@ export const startCompileServer = async ({
 }) => {
   assertArguments({
     projectDirectoryUrl,
-    importMapFileRelativeUrl,
     jsenvDirectoryRelativeUrl,
     outDirectoryName,
   })
 
-  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
   const outDirectoryUrl = resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl)
   const outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
   // normalization
-  importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
   jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl)
 
   const logger = createLogger({ logLevel: compileServerLogLevel })
+  const compileServerGroupMap = generateGroupMap({
+    babelPluginMap,
+    babelCompatMap,
+    runtimeScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
+    groupCount: compileGroupCount,
+    runtimeAlwaysInsideRuntimeScoreMap,
+  })
+
   babelPluginMap = {
     "transform-replace-expressions": [
       babelPluginReplaceExpressions,
@@ -137,18 +139,6 @@ export const startCompileServer = async ({
     ],
     ...babelPluginMap,
   }
-  const compileServerGroupMap = generateGroupMap({
-    babelPluginMap,
-    babelCompatMap,
-    runtimeScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
-    groupCount: compileGroupCount,
-    runtimeAlwaysInsideRuntimeScoreMap,
-  })
-
-  importMeta = {
-    dev: importMetaDev,
-    ...importMeta,
-  }
 
   await setupOutDirectory(outDirectoryUrl, {
     logger,
@@ -157,8 +147,6 @@ export const startCompileServer = async ({
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
-    importMeta,
-    importMetaEnvFileRelativeUrl,
     compileServerGroupMap,
   })
 
@@ -201,11 +189,8 @@ export const startCompileServer = async ({
 
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
-    jsenvDirectoryRelativeUrl,
-    importMapFileRelativeUrl,
+
     importDefaultExtension,
-    importMetaEnvFileRelativeUrl,
-    importMeta,
 
     transformTopLevelAwait,
     groupMap: compileServerGroupMap,
@@ -267,7 +252,6 @@ export const startCompileServer = async ({
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     importDefaultExtension,
-    importMapFileRelativeUrl,
     compileServerGroupMap,
     env,
     writeOnFilesystem,
@@ -300,7 +284,6 @@ export const startCompileServer = async ({
   return {
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
-    importMapFileRelativeUrl,
     ...compileServer,
     compileServerGroupMap,
   }
@@ -318,19 +301,10 @@ export const computeOutDirectoryRelativeUrl = ({
   return outDirectoryRelativeUrl
 }
 
-const assertArguments = ({
-  projectDirectoryUrl,
-  importMapFileRelativeUrl,
-  jsenvDirectoryRelativeUrl,
-  outDirectoryName,
-}) => {
+const assertArguments = ({ projectDirectoryUrl, jsenvDirectoryRelativeUrl, outDirectoryName }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
   }
-
-  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
-  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
   if (typeof jsenvDirectoryRelativeUrl !== "string") {
     throw new TypeError(
@@ -362,8 +336,6 @@ const setupOutDirectory = async (
     useFilesystemAsCache,
     babelPluginMap,
     convertMap,
-    importMeta,
-    importMetaEnvFileRelativeUrl,
     compileServerGroupMap,
     replaceProcessEnvNodeEnv,
     processEnvNodeEnv,
@@ -381,8 +353,6 @@ const setupOutDirectory = async (
       jsenvCorePackageVersion,
       babelPluginMap,
       convertMap,
-      importMeta,
-      importMetaEnvFileRelativeUrl,
       compileServerGroupMap,
       replaceProcessEnvNodeEnv,
       processEnvNodeEnv,
@@ -819,7 +789,6 @@ const installOutFiles = async ({
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   importDefaultExtension,
-  importMapFileRelativeUrl,
   compileServerGroupMap,
   env,
   onOutFileWritten = () => {},
@@ -831,7 +800,6 @@ const installOutFiles = async ({
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     importDefaultExtension,
-    importMapFileRelativeUrl,
   }
 
   const groupMapToString = () => JSON.stringify(compileServerGroupMap, null, "  ")

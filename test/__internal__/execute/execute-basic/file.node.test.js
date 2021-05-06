@@ -13,7 +13,7 @@ const actual = await execute({
   ...EXECUTE_TEST_PARAMS,
   launchLogLevel: "info",
   jsenvDirectoryRelativeUrl,
-  launch: (options) => launchNode({ ...options, debugPort: 40001 }),
+  launch: launchNode, // (options) => launchNode({ ...options, debugPort: 40001 }),
   fileRelativeUrl,
 })
 const expected = {

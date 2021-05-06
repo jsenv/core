@@ -2,7 +2,6 @@
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  jsenvNodeSystemRelativeUrl,
   jsenvBrowserSystemRelativeUrl,
   jsenvExploringRedirectorJsRelativeUrl,
   jsenvExploringIndexJsRelativeUrl,
@@ -10,50 +9,43 @@ import {
   jsenvToolbarJsRelativeUrl,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
+const commonParams = {
+  projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  importMapFileRelativeUrl: "./import-map.importmap",
+  buildDirectoryRelativeUrl: "dist",
+}
+
 const buildsToGenerate = [
   {
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    buildDirectoryRelativeUrl: "dist",
-    format: "commonjs",
-    entryPointMap: {
-      [jsenvNodeSystemRelativeUrl]: "./jsenv-node-system.cjs",
-    },
-  },
-  {
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    buildDirectoryRelativeUrl: "dist",
+    ...commonParams,
     format: "global",
     entryPointMap: {
       [jsenvBrowserSystemRelativeUrl]: "./jsenv-browser-system.js",
     },
   },
   {
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    buildDirectoryRelativeUrl: "dist",
+    ...commonParams,
     format: "global",
     entryPointMap: {
       [jsenvExploringRedirectorJsRelativeUrl]: "./jsenv-exploring-redirector.js",
     },
   },
   {
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    buildDirectoryRelativeUrl: "dist",
+    ...commonParams,
     format: "global",
     entryPointMap: {
       [jsenvExploringIndexJsRelativeUrl]: "./jsenv-exploring-index.js",
     },
   },
   {
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    buildDirectoryRelativeUrl: "dist",
+    ...commonParams,
     format: "global",
     entryPointMap: {
       [jsenvToolbarInjectorRelativeUrl]: "./jsenv-toolbar-injector.js",
     },
   },
   {
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    buildDirectoryRelativeUrl: "dist",
+    ...commonParams,
     format: "global",
     entryPointMap: {
       [jsenvToolbarJsRelativeUrl]: "./jsenv-toolbar.js",

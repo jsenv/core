@@ -14,11 +14,9 @@ export const executePlan = async (
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     jsenvDirectoryClean,
-    importMapFileRelativeUrl,
+
+    importResolutionMethod,
     importDefaultExtension,
-    importMetaDev,
-    importMetaEnvFileRelativeUrl,
-    importMeta,
 
     compileServerProtocol,
     compileServerPrivateKey,
@@ -37,10 +35,11 @@ export const executePlan = async (
     logSummary,
     measureGlobalDuration,
 
-    // coverage parameters
     coverage,
     coverageConfig,
     coverageIncludeMissing,
+    coverageForceIstanbul,
+    coverageV8MergeConflictIsExpected,
 
     ...rest
   } = {},
@@ -59,11 +58,9 @@ export const executePlan = async (
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     jsenvDirectoryClean,
-    importMapFileRelativeUrl,
+
+    importResolutionMethod,
     importDefaultExtension,
-    importMetaDev,
-    importMetaEnvFileRelativeUrl,
-    importMeta,
 
     compileServerProtocol,
     compileServerPrivateKey,
@@ -95,7 +92,9 @@ export const executePlan = async (
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
     compileServerOrigin,
-    importMapFileRelativeUrl,
+
+    // not sure we actually have to pass import params to executeConcurrently
+    importResolutionMethod,
     importDefaultExtension,
 
     babelPluginMap,
@@ -111,6 +110,8 @@ export const executePlan = async (
     coverage,
     coverageConfig,
     coverageIncludeMissing,
+    coverageForceIstanbul,
+    coverageV8MergeConflictIsExpected,
 
     ...rest,
   })

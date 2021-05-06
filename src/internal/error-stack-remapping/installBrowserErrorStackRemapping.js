@@ -1,3 +1,5 @@
+/* eslint-env browser */
+
 import { installErrorStackRemapping } from "./installErrorStackRemapping.js"
 
 export const installBrowserErrorStackRemapping = (options = {}) =>
@@ -25,7 +27,7 @@ export const installBrowserErrorStackRemapping = (options = {}) =>
     resolveFile: (specifier, importer = window.location.href) => {
       // browsers having Error.captureStrackTrace got window.URL
       // and this executes only when Error.captureStackTrace exists
-      return String(new window.URL(specifier, importer))
+      return String(new URL(specifier, importer))
     },
     ...options,
   })

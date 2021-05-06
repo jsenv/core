@@ -1,25 +1,14 @@
 import { urlToContentType } from "@jsenv/server"
-import { resolveUrl } from "@jsenv/util"
 import { transformImportmap } from "./transformImportmap.js"
 
-export const jsenvCompilerForImportmap = ({
-  projectDirectoryUrl,
-  importMapFileRelativeUrl,
-  originalFileUrl,
-}) => {
+export const jsenvCompilerForImportmap = ({ originalFileUrl }) => {
   const contentType = urlToContentType(originalFileUrl)
 
   if (contentType !== "application/importmap+json") {
     return null
   }
 
-  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-
   return {
-    // allow project to have no importmap
-    fileContentFallback: () => {
-      return originalFileUrl === importMapFileUrl ? "{}" : undefined
-    },
     compile: (importmapBeforeTransformation) => {
       return transformImportmap(importmapBeforeTransformation, {
         originalFileUrl,

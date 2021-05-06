@@ -1,0 +1,6 @@
+{
+  "name": "whatever",
+  "imports": {
+    "#env": "./env.cjs"
+  }
+}

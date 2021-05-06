@@ -25,6 +25,7 @@ await buildProject({
     ...GENERATE_COMMONJS_BUILD_TEST_PARAMS.babelPluginMap,
     "transform-typescript": [transformTypeScript],
   },
+  importDefaultExtension: true,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {

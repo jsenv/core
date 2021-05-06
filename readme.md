@@ -2,7 +2,6 @@
 
 Tool to develop, test and build js projects.
 
-[![github package](https://img.shields.io/github/package-json/v/jsenv/jsenv-core.svg?logo=github&label=package)](https://github.com/jsenv/jsenv-core/packages)
 [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 [![github ci](https://github.com/jsenv/jsenv-core/workflows/ci/badge.svg)](https://github.com/jsenv/jsenv-core/actions?workflow=ci)
 [![codecov coverage](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
@@ -243,6 +242,7 @@ await buildProject({
   enryPointMap: {
     "./index.html": "./main.html",
   },
+  format: "esmodule",
   minify: false,
 })
 ```
@@ -417,36 +417,7 @@ You can use both patterns to reference an asset but prefer the one relying on `i
 
 </details>
 
-<details>
-  <summary>import.meta.dev</summary>
-
-A common pattern to write code specific to dev environment consists into using `process.env.NODE_ENV` and rely on dead code elimination provided by tree shaking.
-
-```js
-if (process.env.NODE_ENV !== "production") {
-  console.log("log visible only in dev")
-}
-```
-
-Is transformed, when building for production, into a `false` constant and eliminated by tree shaking.
-
-```js
-if (false) {
-  console.log("log visible only in dev")
-}
-```
-
-But `process.env.NODE_ENV` is specific to Node.js. It would not work in a browser without transformation. Using `import.meta.dev` it's possible to write something browser can understand.
-
-```js
-if (import.meta.dev) {
-  console.log("log visible only in dev")
-}
-```
-
-</details>
-
-The list above is non exaustive, there is more like long term caching, livereload without configuration, service workers, ...
+The list above is non exaustive, there is more like tree shaking, long term caching, service workers, ...
 
 # Installation
 
@@ -532,11 +503,29 @@ export const convertMap = {
 }
 ```
 
+You must also add an importmap file in your html to remap react imports.
+
+```diff
++ <script type="importmap" src="./project.importmap"></script>
+```
+
+`project.importmap`
+
+```json
+{
+  "imports": {
+    "react": "./node_modules/react/index.js",
+    "react-dom": "./node_modules/react-dom/index.js"
+  }
+}
+```
+
 See also
 
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
 - [convertMap](./docs/shared-parameters.md#convertMap)
 - [transform-react-jsx on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-react-jsx.html)
+- [importMap spec](https://github.com/WICG/import-maps#import-maps)
 
 </details>
 
@@ -558,11 +547,14 @@ export const babelPluginMap = {
   ...jsenvBabelPluginMap,
   "transform-typescript": [transformTypeScript, { allowNamespaces: true }],
 }
+
+export const importDefaultExtension = true
 ```
 
 See also
 
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
+- [importDefaultExtension](./docs/shared-parameters.md#importDefaultExtension)
 - [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
 
 </details>

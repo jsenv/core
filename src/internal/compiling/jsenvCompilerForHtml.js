@@ -1,6 +1,7 @@
 import { urlToContentType } from "@jsenv/server"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 
+import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
 import { jsenvToolbarHtmlUrl } from "../jsenvInternalFiles.js"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
@@ -24,13 +25,10 @@ export const jsenvCompilerForHtml = ({
   // request,
 
   projectDirectoryUrl,
+  outDirectoryRelativeUrl,
   originalFileUrl,
   compiledFileUrl,
   compileId,
-  outDirectoryRelativeUrl,
-  importMapFileRelativeUrl,
-  importMetaEnvFileRelativeUrl,
-  importMeta,
   groupMap,
   babelPluginMap,
   convertMap,
@@ -104,14 +102,20 @@ export const jsenvCompilerForHtml = ({
           return
         }
       })
-      // ensure there is at least the importmap needed for jsenv
       if (hasImportmap === false) {
+        const defaultImportMap = getDefaultImportMap({
+          importMapFileUrl: compiledFileUrl,
+          projectDirectoryUrl,
+          compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
+        })
+
         manipulateHtmlAst(htmlAst, {
           scriptInjections: [
             {
               type: "jsenv-importmap",
-              // in case there is no importmap, use a top level one
-              src: `/${outDirectoryRelativeUrl}${compileId}/${importMapFileRelativeUrl}`,
+              // in case there is no importmap, force the presence
+              // so that '@jsenv/core/' are still remapped
+              text: JSON.stringify(defaultImportMap, null, "  "),
             },
           ],
         })
@@ -133,8 +137,6 @@ export const jsenvCompilerForHtml = ({
           try {
             scriptTransformResult = await transformJs({
               projectDirectoryUrl,
-              importMetaEnvFileRelativeUrl,
-              importMeta,
               code: scriptBeforeCompilation,
               url: scriptOriginalFileUrl,
               urlAfterTransform: scriptAfterTransformFileUrl,

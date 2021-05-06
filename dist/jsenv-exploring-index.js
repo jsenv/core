@@ -386,18 +386,28 @@
         groupMap = _ref.groupMap;
 
     if (typeof groupId === "undefined") {
-      if (COMPILE_ID_OTHERWISE in groupMap) return COMPILE_ID_OTHERWISE;
+      if (COMPILE_ID_OTHERWISE in groupMap) {
+        return COMPILE_ID_OTHERWISE;
+      }
+
       var keys = Object.keys(groupMap);
-      if (keys.length === 1) return keys[0];
+
+      if (keys.length === 1) {
+        return keys[0];
+      }
+
       throw new Error(createUnexpectedGroupIdMessage({
         groupMap: groupMap
       }));
     }
 
-    if (groupId in groupMap === false) throw new Error(createUnexpectedGroupIdMessage({
-      groupId: groupId,
-      groupMap: groupMap
-    }));
+    if (groupId in groupMap === false) {
+      throw new Error(createUnexpectedGroupIdMessage({
+        groupId: groupId,
+        groupMap: groupMap
+      }));
+    }
+
     return groupId;
   };
 

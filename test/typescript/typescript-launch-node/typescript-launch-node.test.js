@@ -26,11 +26,11 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
     ...START_COMPILE_SERVER_TEST_PARAMS.babelPluginMap,
     "transform-typescript": [transformTypeScript],
   },
-  compileGroupCount: 1,
+  importDefaultExtension: true,
   jsenvDirectoryRelativeUrl,
 })
 
-const actual = await launchAndExecute({
+const result = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
   fileRelativeUrl,
   launch: (options) =>
@@ -41,6 +41,10 @@ const actual = await launchAndExecute({
       compileServerOrigin,
     }),
 })
+const actual = {
+  status: result.status,
+  namespace: result.namespace,
+}
 const expected = {
   status: "completed",
   namespace: {

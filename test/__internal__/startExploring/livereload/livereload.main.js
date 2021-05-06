@@ -1,3 +1,5 @@
+/* eslint-env browser */
+
 import whatever from "./whatever.js"
 
 const startValue = parseInt(localStorage.getItem(whatever)) || 41

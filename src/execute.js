@@ -13,8 +13,9 @@ export const execute = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
-  importMapFileRelativeUrl,
+
   importDefaultExtension,
+
   fileRelativeUrl,
 
   compileServerProtocol,
@@ -25,9 +26,6 @@ export const execute = async ({
   babelPluginMap,
   convertMap,
   compileGroupCount = 2,
-  importMetaDev,
-  importMetaEnvFileRelativeUrl,
-  importMeta,
 
   launch,
   mirrorConsole = true,
@@ -56,11 +54,8 @@ export const execute = async ({
         projectDirectoryUrl,
         jsenvDirectoryRelativeUrl,
         jsenvDirectoryClean,
-        importMapFileRelativeUrl,
+
         importDefaultExtension,
-        importMetaDev,
-        importMetaEnvFileRelativeUrl,
-        importMeta,
 
         compileServerProtocol,
         compileServerPrivateKey,

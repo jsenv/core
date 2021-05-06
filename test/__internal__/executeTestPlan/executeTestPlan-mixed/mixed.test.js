@@ -1,7 +1,8 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+
 import { executeTestPlan, launchNode } from "@jsenv/core"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -17,7 +18,7 @@ const testPlan = {
   },
 }
 
-const actual = await executeTestPlan({
+const { testPlanSummary } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   // put logLevel: "info" to see usual logs about how execution goes
   // here I put "warn" to avoid seeing read things when tests executes
@@ -29,16 +30,18 @@ const actual = await executeTestPlan({
   completedExecutionLogAbbreviation: false,
   completedExecutionLogMerging: true,
 })
+const actual = {
+  testPlanSummary,
+}
 const expected = {
-  summary: {
+  testPlanSummary: {
     executionCount: 4,
     disconnectedCount: 0,
     timedoutCount: 0,
     erroredCount: 1,
     completedCount: 3,
-    startMs: actual.summary.startMs,
-    endMs: actual.summary.endMs,
+    startMs: testPlanSummary.startMs,
+    endMs: testPlanSummary.endMs,
   },
-  report: actual.report,
 }
 assert({ actual, expected })

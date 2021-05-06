@@ -4,6 +4,7 @@ export { convertCommonJsWithRollup } from "./src/convertCommonJsWithRollup.js"
 export { execute } from "./src/execute.js"
 export { executeTestPlan } from "./src/executeTestPlan.js"
 export { getBabelPluginMapForNode } from "./src/getBabelPluginMapForNode.js"
+export { importUsingChildProcess } from "./src/importUsingChildProcess.js"
 export { jsenvBabelPluginCompatMap } from "./src/jsenvBabelPluginCompatMap.js"
 export { jsenvBabelPluginMap } from "./src/jsenvBabelPluginMap.js"
 export { jsenvBrowserScoreMap } from "./src/jsenvBrowserScoreMap.js"
@@ -21,4 +22,5 @@ export {
   launchWebkitTab,
 } from "./src/launchBrowser.js"
 export { launchNode } from "./src/launchNode.js"
+export { requireUsingChildProcess } from "./src/requireUsingChildProcess.js"
 export { startExploring } from "./src/startExploring.js"

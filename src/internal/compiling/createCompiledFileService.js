@@ -26,12 +26,7 @@ export const createCompiledFileService = ({
   logger,
 
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
-  importMapFileRelativeUrl,
-  importMetaEnvFileRelativeUrl,
-  importMeta,
-  importDefaultExtension,
 
   transformTopLevelAwait,
   moduleOutFormat,
@@ -108,15 +103,6 @@ export const createCompiledFileService = ({
     )
     const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl)
 
-    importMeta = {
-      jsenv: {
-        importMapFileRelativeUrl,
-        jsenvDirectoryRelativeUrl,
-        outDirectoryRelativeUrl,
-      },
-      ...importMeta,
-    }
-
     let compilerOptions = null
     const compilerCandidateParams = {
       cancellationToken,
@@ -128,13 +114,9 @@ export const createCompiledFileService = ({
       compiledFileUrl,
       compileId,
       outDirectoryRelativeUrl,
-      importMapFileRelativeUrl,
-      importMetaEnvFileRelativeUrl,
-      importDefaultExtension,
 
       moduleOutFormat,
       importMetaFormat,
-      importMeta,
       groupMap,
       babelPluginMap,
       convertMap,

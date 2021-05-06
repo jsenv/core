@@ -1,8 +1,9 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+
+import { executeTestPlan, launchNode } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
-import { executeTestPlan, launchNode } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -15,29 +16,33 @@ const testPlan = {
     },
   },
 }
-const actual = await executeTestPlan({
+const { testPlanSummary, testPlanReport } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
   compileGroupCount: 1,
 })
+const actual = {
+  testPlanSummary,
+  testPlanReport,
+}
 const expected = {
-  summary: {
+  testPlanSummary: {
     executionCount: 1,
     disconnectedCount: 0,
     timedoutCount: 0,
     erroredCount: 0,
     completedCount: 1,
-    startMs: actual.summary.startMs,
-    endMs: actual.summary.endMs,
+    startMs: testPlanSummary.startMs,
+    endMs: testPlanSummary.endMs,
   },
-  report: {
+  testPlanReport: {
     [fileRelativeUrl]: {
       node: {
         status: "completed",
         namespace: {},
         runtimeName: "node",
-        runtimeVersion: actual.report[fileRelativeUrl].node.runtimeVersion,
+        runtimeVersion: testPlanReport[fileRelativeUrl].node.runtimeVersion,
       },
     },
   },

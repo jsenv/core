@@ -34,7 +34,6 @@ export const startContinuousTesting = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
-  importMapFileRelativeUrl,
   importDefaultExtension,
   testPlan = {},
   watchDescription = {
@@ -97,7 +96,6 @@ export const startContinuousTesting = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      importMapFileRelativeUrl,
       importDefaultExtension,
 
       compileGroupCount,

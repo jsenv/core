@@ -1,20 +1,16 @@
 # Table of contents
 
 - [projectDirectoryUrl](#projectDirectoryUrl)
-- [jsenvDirectoryRelativeUrl](#jsenvDirectoryRelativeUrl)
+- [importDefaultExtension](#importDefaultExtension)
 - [babelPluginMap](#babelPluginMap)
 - [convertMap](#convertMap)
-- [importMapFileRelativeUrl](#importMapFileRelativeUrl)
-- [importDefaultExtension](#importDefaultExtension)
 - [compileServerLogLevel](#compileServerLogLevel)
 - [compileServerProtocol](#compileServerProtocol)
 - [compileServerPrivateKey](#compileServerPrivateKey)
 - [compileServerCertificate](#compileServerCertificate)
 - [compileServerIp](#compileServerIp)
 - [compileServerPort](#compileServerPort)
-- [chromiumExecutablePath](#chromiumExecutablePath)
-- [firefoxExecutablePath](#firefoxExecutablePath)
-- [webkitExecutablePath](#webkitExecutablePath)
+- [jsenvDirectoryRelativeUrl](#jsenvDirectoryRelativeUrl)
 
 # projectDirectoryUrl
 
@@ -44,9 +40,15 @@ const projectDirectoryUrl = resolve("../", __dirname)
 
 Please note you can put a trailing slash in `projectDirectoryUrl` value if you want.
 
-# jsenvDirectoryRelativeUrl
+# importDefaultExtension
 
-`jsenvDirectoryRelativeUrl` parameter is a string leading to a directory used by jsenv to write compiled version of your files. This parameter is optional with a default value of `"./.jsenv/"`. Every time a file is compiled, the compiled version of the file is written into that directory. Alongside with the compiled file, some metadata on the source used to generate the compiled version is written. These metadata are used later to know if the compiled version is still valid. This directory should be added to your `.gitignore`.
+`importDefaultExtension` parameter is a boolean or a string controlling if an extension is added to import without any. This parameter is optional and enabled by default.
+
+When enabled extensionless import inherits file extension. When a string, extensionless import get suffixed by that string.
+
+As you are forced to rely on magic extension when one of your dependency contains one or more extensionless import, `importDefaultExtension` is `true` by default. But expecting a tool to guess extension introduces complexity and makes you dependent on magic extensions configuration and implementation.
+
+This parameter only adds an extension on extensionless import, it cannot try different extension and choose the right one.
 
 # babelPluginMap
 
@@ -78,28 +80,6 @@ const convertMap = {
 }
 ```
 
-# importMapFileRelativeUrl
-
-`importMapFileRelativeUrl` parameter is a string representing a relative url to a file containing import map. This parameter is optional with a default value of `"./import-map.importmap"`. This file becomes mandatory as soon as you use an import that is not explicitely targeting a file like:
-
-```js
-import whatever from "foo"
-```
-
-You can create the import map file manually and maintain it. If these remapping correspond to node modules you can use [jsenv-node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map) to generate the importmap file for you.
-
-See also [importmap specification](https://github.com/WICG/import-maps).
-
-# importDefaultExtension
-
-`importDefaultExtension` parameter is a boolean or a string controlling if an extension is added to import without any. This parameter is optional and enabled by default.
-
-When enabled extensionless import inherits file extension. When a string, extensionless import get suffixed by that string.
-
-As you are forced to rely on magic extension when one of your dependency contains one or more extensionless import, `importDefaultExtension` is `true` by default. But expecting a tool to guess extension introduces complexity and makes you dependent on magic extensions configuration and implementation.
-
-This parameter only adds an extension on extensionless import, it cannot try different extension and choose the right one.
-
 # compileServerLogLevel
 
 `compileServerLogLevel` parameter is a string controlling verbosity of the compile server. This parameter is optional with a default value of `"info"`. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel.
@@ -124,20 +104,6 @@ This parameter only adds an extension on extensionless import, it cannot try dif
 
 `compileServerPort` parameter is a number controlling the port jsenv compile server will listen to. This parameter is optional with a default value of `0` meaning a random available port will be used. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port.
 
-# chromiumExecutablePath
+# jsenvDirectoryRelativeUrl
 
-`chromiumExecutablePath` is a string leading to a chromium executable file. It is used internally by playwright to launch a chromium browser.
-
-It's easier to let `playwright-chromium` decide this value for you by adding it to your dependencies as documented in [Browser launchers](./launcher.md#Browser-launchers).
-
-# firefoxExecutablePath
-
-`firefoxExecutablePath` is a string leading to a firefox executable file. It is used internally by playwright to launch a firefox browser.
-
-It's easier to let `playwright-firefox` decide this value for you by adding it to your dependencies as documented in [Browser launchers](./launcher.md#Browser-launchers).
-
-# webkitExecutablePath
-
-`webkitExecutablePath` is a string leading to a webkit executable file. It is used internally by playwright to launch a webkit browser.
-
-It's easier to let `playwright-webkit` decide this value for you by adding it to your dependencies as documented in [Browser launchers](./launcher.md#Browser-launchers).
+`jsenvDirectoryRelativeUrl` parameter is a string leading to a directory used by jsenv to write compiled version of your files. This parameter is optional with a default value of `"./.jsenv/"`. Every time a file is compiled, the compiled version of the file is written into that directory. Alongside with the compiled file, some metadata on the source used to generate the compiled version is written. These metadata are used later to know if the compiled version is still valid. This directory should be added to your `.gitignore`.

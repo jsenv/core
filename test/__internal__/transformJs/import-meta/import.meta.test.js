@@ -20,7 +20,6 @@ const importMetaEnvFileRelativeUrl = `${testDirectoryRelativeUrl}env.js`
     ...TRANSFORM_JS_TEST_PARAMS,
     moduleOutFormat: "esmodule",
     importMetaEnvFileRelativeUrl,
-    importMeta: { dev: true },
     code: originalFileContent,
     url: originalFileUrl,
   })
@@ -39,19 +38,12 @@ const importMetaEnvFileRelativeUrl = `${testDirectoryRelativeUrl}env.js`
   })
   const actual = result.namespace
   const expected = {
-    dev: true,
-    env: {
-      whatever: 42,
-    },
-    // devDestructured is undefined, unfortunately it's not supported
     meta: {
       // meta contains only url (what is provided by the runtime)
-      // there is not dev, or env
-      // it means you cannot do this:
-      // const meta = import.meta; const dev = meta.dev;
       url: distFileUrl,
     },
     url: distFileUrl,
+    urlDestructured: distFileUrl,
   }
   assert({ actual, expected })
 }

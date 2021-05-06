@@ -1,5 +1,5 @@
 import { require } from "@jsenv/core/src/internal/require.js"
-import { composeCoverageMap } from "@jsenv/core/src/internal/executing/coverage/composeCoverageMap.js"
+import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
 import { evalSource } from "@jsenv/core/src/internal/runtime/createNodeRuntime/evalSource.js"
 import { coverageIsEnabled } from "./coverageIsEnabled.js"
 
@@ -54,7 +54,10 @@ export const openBrowserPage = async (
 
   if (inheritCoverage) {
     const { coverageMap } = executionResult
-    global.__coverage__ = composeCoverageMap(global.__coverage__ || {}, coverageMap || {})
+    global.__indirectCoverage__ = composeIstanbulCoverages([
+      global.__indirectCoverage__ || {},
+      coverageMap || {},
+    ])
   }
 
   delete executionResult.coverageMap
@@ -77,6 +80,7 @@ export const getHtmlExecutionResult = async (page) => {
   await page.waitForFunction(
     /* istanbul ignore next */
     () => {
+      // eslint-disable-next-line no-undef
       return Boolean(window.__jsenv__)
     },
   )
@@ -84,6 +88,7 @@ export const getHtmlExecutionResult = async (page) => {
   return page.evaluate(
     /* istanbul ignore next */
     () => {
+      // eslint-disable-next-line no-undef
       return window.__jsenv__.executionResultPromise
     },
   )

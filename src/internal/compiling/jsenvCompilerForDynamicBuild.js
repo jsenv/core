@@ -55,13 +55,11 @@ const handleDynamicBuild = ({
   logger,
 
   projectDirectoryUrl,
-  importMapFileRelativeUrl,
   compileId,
   originalFileUrl,
   compiledFileUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
-  importDefaultExtension,
 
   babelPluginMap,
 }) => {
@@ -99,10 +97,8 @@ const handleDynamicBuild = ({
 
         entryPointMap,
         projectDirectoryUrl,
-        importMapFileRelativeUrl,
         compileDirectoryRelativeUrl,
         compileServerOrigin,
-        importDefaultExtension,
         externalImportSpecifiers: [],
         babelPluginMap,
 
@@ -135,8 +131,6 @@ const handleDynamicBuildFile = ({
   originalFileUrl,
   compiledFileUrl,
   compileId,
-  importMetaEnvFileRelativeUrl,
-  importMeta,
   groupMap,
   babelPluginMap,
   convertMap,
@@ -148,8 +142,6 @@ const handleDynamicBuildFile = ({
     compile: async (originalFileContent) => {
       const transformResult = await transformJs({
         projectDirectoryUrl,
-        importMetaEnvFileRelativeUrl,
-        importMeta,
         code: originalFileContent,
         url: originalFileUrl,
         urlAfterTransform: compiledFileUrl,

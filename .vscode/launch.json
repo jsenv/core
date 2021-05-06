@@ -23,16 +23,18 @@
       ]
     },
     {
-      "name": "node14",
+      "name": "node",
       "type": "node",
       "request": "launch",
       "protocol": "inspector",
       "program": "${file}",
       // "runtimeVersion": "14.5.0",
       "runtimeArgs": [
+        "--inspect",
         "--unhandled-rejections=strict",
         "--experimental-json-modules",
-        "--experimental-top-level-await"
+        "--experimental-top-level-await",
+        "--experimental-import-meta-resolve"
       ],
       // "args": ["--coverage"],
       "autoAttachChildProcesses": true,
@@ -46,6 +48,8 @@
         "node_modules/@rollup/**",
         "node_modules/playwright/**",
         "node_modules/playwright-chromium/**",
+        "node_modules/playwright-webkit/**",
+        "node_modules/playwright-firefox/**",
         "node_modules/playwright-core/**",
         "<node_internals>/**"
       ]
@@ -79,8 +83,7 @@
         "node_modules/playwright/**",
         "node_modules/playwright-core/**",
         "node_modules/rollup/**",
-        "src/internal/supportsDynamicImport.js",
-        "src/internal/dynamicImportSource.js",
+        "**/node-feature-detect/**",
         "src/execute.js",
         "script/run-node/**"
       ]
