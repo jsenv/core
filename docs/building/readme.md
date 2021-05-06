@@ -4,15 +4,10 @@
 - [Minification](#Minification)
 - [Long term caching](#Long-term-caching)
 - [JavaScript modules](#JavaScript-modules)
-  - [SystemJS format](#SystemJS-format)
-    - [import maps](#import-maps)
-    - [top level await](#top-level-await)
 - [Concatenation](#Concatenation)
 - [Building a frontend](#Building-a-frontend)
-  - [Embed frontend](#Embed-frontend)
-  - [Progressive Web Application (PWA)](#Progressive-Web-Application-PWA)
 - [Building a Node.js package](#Building-a-nodejs-package)
-- [API](./build-api.md)
+- [buildProject api](#buildProject-api)
 
 # Presentation
 
@@ -34,6 +29,7 @@ import { buildProject } from "@jsenv/core"
 
 await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
+  format: "esmodule",
   minify: true,
 })
 ```
@@ -85,6 +81,7 @@ import { buildProject } from "@jsenv/core"
 
 await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
+  format: "esmodule",
   urlVersioning: false,
 })
 ```
@@ -113,11 +110,11 @@ import { buildProject } from "@jsenv/core"
 await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "dist",
+  format: "systemjs",
   enryPointMap: {
     "./index.html": "main.html",
   },
   minify: false,
-  format: "systemjs",
 })
 ```
 
@@ -276,6 +273,7 @@ import { buildProject } from "@jsenv/core"
 
 await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
+  format: "esmodule",
   jsConcatenation: false,
 })
 ```
@@ -371,8 +369,6 @@ await buildProject({
 })
 ```
 
-> To be explicit `entryPointMap` is shown in the code above, but you could omit it. This is the default value when format is `commonjs`
-
 </details>
 
 You can even generate a commonjs build to be compatible with a specific node version with the following script.
@@ -399,5 +395,177 @@ buildProject({
   babelPluginMap: babelPluginMapForNode8,
 })
 ```
+
+</details>
+
+# buildProject api
+
+`buildProject` is an async function reading project files, transforming them and writing the resulting files in a directory.
+
+<details>
+  <summary>buildProject code example</summary>
+
+```js
+import { buildProject } from "@jsenv/core"
+
+const { buildMappings, buildManifest } = await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  buildDirectoryRelativeUrl: "./dist/",
+  entryPointMap: {
+    "./main.html": "./main.min.html",
+  },
+  format: "esmodule",
+  minify: true,
+})
+```
+
+</details>
+
+<details>
+  <summary>buildDirectoryRelativeUrl parameter</summary>
+
+`buildDirectoryRelativeUrl` parameter is a string leading to a directory where files are written. This parameter is **required**.
+
+</details>
+
+<details>
+  <summary>entryPointMap parameter</summary>
+
+`entryPointMap` parameter is an object describing the project files you want to read and their destination in the build directory. This parameter is **required**.
+
+`entryPointMap` keys are relative to project directory and values are relative to build directory.
+
+</details>
+
+<details>
+  <summary>format parameter</summary>
+
+`format` parameter is a string indicating the module format of the files written in the build directory. This parameter is **required** and must be one of `"esmodule"`, `"systemjs"`, `"commonjs"`, `"global"`.
+
+</details>
+
+<details>
+  <summary>minify parameter</summary>
+
+`minify` parameter is a boolean controlling if build files will be minified to save bytes. This parameter is optional and enabled by default when `process.env.NODE_ENV` is `"production"`.
+
+</details>
+
+<details>
+  <summary>externalImportSpecifiers parameter</summary>
+
+`externalImportSpecifiers` parameter is an array of string repsenting imports that will be ignored whle generating the build files. This parameter is optional with a default value being an empty array. This parameter can be used to avoid building some dependencies.
+
+To better understand this let's assume your source files contains the following import.
+
+```js
+import { answer } from "foo"
+
+export const ask = () => answer
+```
+
+If `externalImportSpecifiers` contains `foo` the generated files will keep that import untouched and still try to load this file resulting in a file as below:
+
+- For build using `esmodule` format:
+
+  ```js
+  import { answer } from "foo"
+
+  export const ask = () => answer
+  ```
+
+- For build using `systemjs` format
+
+  ```js
+  System.register(["foo"], function (exports) {
+    var answer
+    return {
+      setters: [
+        function (module) {
+          answer = module.answer
+        },
+      ],
+      execute: function () {
+        exports("ask", function ask() {
+          return answer
+        })
+      },
+    }
+  })
+  ```
+
+- For build using `commonjs` format
+
+  ```js
+  const { answer } = require("foo")
+
+  module.exports.ask = () => answer
+  ```
+
+- For build using `global` format:
+
+  ```js
+  ;(function (exports, foo) {
+    var ask = function ask() {
+      return foo.answer
+    }
+
+    exports.ask = ask
+    return exports
+  })({}, foo)
+  ```
+
+  It means build using `global` format expect `window.foo` or `global.foo` to exists. You can control the expected global variable name using `globals`.
+
+  ```js
+  import { buildProject } from "@jsenv/core"
+
+  buildProject({
+    externalImportSpecifiers: ["foo"],
+    globals: {
+      foo: "bar",
+    },
+  })
+  ```
+
+</details>
+
+<details>
+  <summary>importResolutionMethod parameter</summary>
+
+todo
+
+</details>
+
+<details>
+  <summary>shared parameters</summary>
+
+To avoid duplication some parameter are linked to a generic documentation.
+
+- [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
+- [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
+- [babelPluginMap](../shared-parameters.md#babelPluginMap)
+- [convertMap](../shared-parameters.md#convertMap)
+- [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
+- [compileServerProtocol](../shared-parameters.md#compileServerProtocol)
+- [compileServerPrivateKey](../shared-parameters.md#compileServerPrivateKey)
+- [compileServerCertificate](../shared-parameters.md#compileServerCertificate)
+- [compileServerIp](../shared-parameters.md#compileServerIp)
+- [compileServerPort](../shared-parameters.md#compileServerPort)
+- [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
+
+</details>
+
+<details>
+  <summary>buildMappings return value</summary>
+
+TODO
+
+</details>
+
+<details>
+  <summary>buildManifest return value</summary>
+
+TODO
 
 </details>

@@ -2,34 +2,16 @@
 
 - [Execute presentation](#Execute-presentation)
 - [Execute concrete example](#Execute-concrete-example)
-  - [1 - Setup basic project](#1---Setup-basic-project)
-  - [2 - Executing file on chromium](#2---Executing-file-on-chromium)
-  - [3 - Executing file on Node.js](#3---Executing-file-on-Node.js)
-  - [4 - Debug file from vscode](#4---Debug-file-from-vscode)
-    - [Debug chrome execution](#Debug-chrome-execution)
-    - [Debug node execution](#Debug-node-execution)
-      - [Node debugger inconsistency](#Node-debugger-inconsistency)
 - [execute example](#execute-example)
 - [execute parameters](#execute-parameters)
-  - [launch](#launch)
-  - [fileRelativeUrl](#fileRelativeUrl)
-  - [mirrorConsole](#mirrorConsole)
-  - [stopAfterExecute](#stopAfterExecute)
-  - [shared parameters](#shared-parameters)
 - [execute return value](#execute-return-value)
-  - [status](#status)
-  - [error](#error)
-  - [namespace](#namespace)
-  - [consoleCalls](#consoleCalls)
-  - [startMs + endMs](#startMs-+-endMs)
-  - [runtimeName](#runtimeName)
-  - [runtimeVersion](#runtimeVersion)
 
 # Execute concrete example
 
 This part helps you to setup a project on your machine to create scripts capable to execute html files inside chromium and js files inside node.js. You can also reuse the project file structure to understand how to integrate jsenv to execute your files.
 
-## 1 - Setup basic project
+<details>
+  <summary>1 - Setup basic project</summary>
 
 ```console
 git clone https://github.com/jsenv/jsenv-core.git
@@ -43,7 +25,10 @@ cd ./jsenv-core/docs/executing/basic-project
 npm install
 ```
 
-## 2 - Executing file on chromium
+</details>
+
+<details>
+  <summary>2 - Executing file on chromium</summary>
 
 ```console
 node ./execute-chromium.js index.js
@@ -53,7 +38,10 @@ node ./execute-chromium.js index.js
 
 ![chromium execution terminal screenshot](./chromium-terminal-screenshot.png)
 
-## 3 - Executing file on Node.js
+</details>
+
+<details>
+  <summary>3 - Executing file on Node.js</summary>
 
 ```console
 node ./execute-node.js index.js
@@ -63,13 +51,12 @@ node ./execute-node.js index.js
 
 ![node execution terminal screenshot](./node-terminal-screenshot.png)
 
-## 4 - Debug file from vscode
+</details>
+
+<details>
+  <summary>4 - Debug chrome from vscode</summary>
 
 If you are using vscode you can also debug the file execution within your editor.
-
-### Debug chrome execution
-
-You can debug file being executed in chrome within vscode.
 
 ![vscode debug chrome gif](../example-asset/vscode-debug-chrome.gif)
 
@@ -110,7 +97,10 @@ Once server is started you can use the jsenv-chrome debug configuration to debug
 
 > There is an issue to improve chrome debugging at https://github.com/jsenv/jsenv-core/issues/54
 
-### Debug node execution
+</details>
+
+<details>
+  <summary>5 - Debug node from vscode</summary>
 
 You can debug file being executed in a node process withing vscode.
 
@@ -160,6 +150,8 @@ To do that you can add an other configuration in your `launch.json`.
   "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
 }
 ```
+
+</details>
 
 # execute example
 

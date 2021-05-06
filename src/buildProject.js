@@ -8,13 +8,6 @@ import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { buildUsingRollup } from "./internal/building/buildUsingRollup.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
-const FORMAT_ENTRY_POINTS = {
-  commonjs: { "./main.js": "./main.cjs" },
-  esmodule: { "./main.html": "./main.html" },
-  global: { "./main.js": "./main.js" },
-  systemjs: { "./main.html": "./main.html" },
-}
-
 export const buildProject = async ({
   cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
@@ -29,7 +22,7 @@ export const buildProject = async ({
 
   browser = format === "global" || format === "systemjs" || format === "esmodule",
   node = format === "commonjs",
-  entryPointMap = FORMAT_ENTRY_POINTS[format],
+  entryPointMap,
   systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
   globalName,
   globals = {},
@@ -91,30 +84,7 @@ export const buildProject = async ({
 }) => {
   return executeJsenvAsyncFunction(async () => {
     logger = logger || createLogger({ logLevel })
-
-    if (format === "esmodule") {
-      if (buildDirectoryRelativeUrl === undefined) {
-        buildDirectoryRelativeUrl = "./dist/esmodule"
-      }
-    } else if (format === "systemjs") {
-      if (buildDirectoryRelativeUrl === undefined) {
-        buildDirectoryRelativeUrl = "./dist/systemjs"
-      }
-    } else if (format === "commonjs") {
-      if (buildDirectoryRelativeUrl === undefined) {
-        buildDirectoryRelativeUrl = "./dist/commonjs"
-      }
-      if (node === undefined) {
-        node = true
-      }
-    } else if (format === "global") {
-      if (buildDirectoryRelativeUrl === undefined) {
-        buildDirectoryRelativeUrl = "./dist/global"
-      }
-      if (browser === undefined) {
-        browser = true
-      }
-    } else {
+    if (!["esmodule", "systemjs", "commonjs", "global"].includes(format)) {
       throw new TypeError(
         `unexpected format: ${format}. Must be "esmodule", "systemjs", "commonjs" or "global".`,
       )
