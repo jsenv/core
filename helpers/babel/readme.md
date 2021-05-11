@@ -9,3 +9,5 @@ They are inlined to properly appear in sourcemap.
 
 - To see if something changed since
   https://github.com/babel/babel/compare/1a05b81387eedbb2fb86a404e8df69dc96ac21e9...master
+
+- History of the file: https://github.com/babel/babel/commits/main/packages/babel-helpers/src/helpers.js

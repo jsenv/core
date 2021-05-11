@@ -1,4 +1,4 @@
-export default (arr, i) => {
+export default function _iterableToArrayLimit(arr, i) {
   // this is an expanded form of \`for...of\` that properly supports abrupt completions of
   // iterators etc. variable names have been minimised to reduce the size of this massive
   // helper. sometimes spec compliance is annoying :(
@@ -8,15 +8,14 @@ export default (arr, i) => {
   // _e = _iteratorError
   // _i = _iterator
   // _s = _step
-  if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return
+  var _i = arr && ((typeof Symbol !== "undefined" && arr[Symbol.iterator]) || arr["@@iterator"])
+  if (_i == null) return
   var _arr = []
   var _n = true
   var _d = false
-  var _e
-  var _i = arr[Symbol.iterator]()
-  var _s
+  var _s, _e
   try {
-    for (; !(_n = (_s = _i.next()).done); _n = true) {
+    for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) {
       _arr.push(_s.value)
       if (i && _arr.length === i) break
     }
@@ -25,11 +24,10 @@ export default (arr, i) => {
     _e = err
   } finally {
     try {
-      if (!_n && _i.return !== null) _i.return()
+      if (!_n && _i["return"] != null) _i["return"]()
     } finally {
       if (_d) throw _e
     }
   }
-  // eslint-disable-next-line consistent-return
   return _arr
 }
