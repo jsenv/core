@@ -4,14 +4,13 @@
 // see https://github.com/jsenv/jsenv-core/issues/59
 import readline from "readline"
 import tty from "tty"
-import { require } from "../require.js"
 
-const { supportsColor } = require("supports-color")
+import { createSupportsColor } from "supports-color"
 
 const CLEAR_WHOLE_LINE = 0
 
 export const clearLine = (stdout = process.stdout) => {
-  if (supportsColor(stdout)) {
+  if (createSupportsColor(stdout)) {
     readline.clearLine(stdout, CLEAR_WHOLE_LINE)
     readline.cursorTo(stdout, 0)
   } else if (stdout instanceof tty.WriteStream) {
@@ -23,7 +22,7 @@ export const clearLine = (stdout = process.stdout) => {
 }
 
 export const toStartOfLine = (stdout = process.stdout) => {
-  if (supportsColor(stdout)) {
+  if (createSupportsColor(stdout)) {
     readline.cursorTo(stdout, 0)
   } else {
     stdout.write("\r")
