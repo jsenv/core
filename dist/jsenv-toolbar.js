@@ -241,20 +241,35 @@
     if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
   }
 
-  function _objectSpread (target) {
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+
+      if (enumerableOnly) {
+        symbols = symbols.filter(function (sym) {
+          return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+        });
+      }
+
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
     for (var i = 1; i < arguments.length; i++) {
-      // eslint-disable-next-line prefer-rest-params
-      var source = arguments[i] === null ? {} : arguments[i];
+      var source = arguments[i] != null ? arguments[i] : {};
 
       if (i % 2) {
-        // eslint-disable-next-line no-loop-func
         ownKeys(Object(source), true).forEach(function (key) {
           _defineProperty(target, key, source[key]);
         });
       } else if (Object.getOwnPropertyDescriptors) {
         Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
       } else {
-        // eslint-disable-next-line no-loop-func
         ownKeys(Object(source)).forEach(function (key) {
           Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
         });
@@ -262,23 +277,6 @@
     }
 
     return target;
-  } // This function is different to "Reflect.ownKeys". The enumerableOnly
-  // filters on symbol properties only. Returned string properties are always
-  // enumerable. It is good to use in objectSpread.
-
-  function ownKeys(object, enumerableOnly) {
-    var keys = Object.keys(object);
-
-    if (Object.getOwnPropertySymbols) {
-      var symbols = Object.getOwnPropertySymbols(object);
-      if (enumerableOnly) symbols = symbols.filter(function (sym) {
-        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
-      }); // eslint-disable-next-line prefer-spread
-
-      keys.push.apply(keys, symbols);
-    }
-
-    return keys;
   }
 
   // fallback to this polyfill (or even use an existing polyfill would be better)
@@ -747,7 +745,7 @@
     });
     var response;
     return _continue(_catch$1(function () {
-      return _await$2(window.fetch(url, _objectSpread({
+      return _await$2(window.fetch(url, _objectSpread2({
         signal: abortController.signal,
         mode: mode
       }, options)), function (_window$fetch) {
@@ -1256,21 +1254,21 @@
     if (execution.status === "errored") {
       if (previousExecution) {
         if (previousExecution.status === "completed") {
-          notify("Broken", _objectSpread(_objectSpread({}, notificationOptions), {}, {
+          notify("Broken", _objectSpread2(_objectSpread2({}, notificationOptions), {}, {
             body: "".concat(executedFileRelativeUrl, " execution now failing.")
           }));
         } else {
-          notify("Still failing", _objectSpread(_objectSpread({}, notificationOptions), {}, {
+          notify("Still failing", _objectSpread2(_objectSpread2({}, notificationOptions), {}, {
             body: "".concat(executedFileRelativeUrl, " execution still failing.")
           }));
         }
       } else {
-        notify("Failing", _objectSpread(_objectSpread({}, notificationOptions), {}, {
+        notify("Failing", _objectSpread2(_objectSpread2({}, notificationOptions), {}, {
           body: "".concat(executedFileRelativeUrl, " execution failed.")
         }));
       }
     } else if (previousExecution && previousExecution.status === "errored") {
-      notify("Fixed", _objectSpread(_objectSpread({}, notificationOptions), {}, {
+      notify("Fixed", _objectSpread2(_objectSpread2({}, notificationOptions), {}, {
         body: "".concat(executedFileRelativeUrl, " execution fixed.")
       }));
     }
@@ -1424,7 +1422,7 @@
     if (Array.isArray(arr)) return arr;
   });
 
-  var iterableToArrayLimit = (function (arr, i) {
+  function _iterableToArrayLimit(arr, i) {
     // this is an expanded form of \`for...of\` that properly supports abrupt completions of
     // iterators etc. variable names have been minimised to reduce the size of this massive
     // helper. sometimes spec compliance is annoying :(
@@ -1434,19 +1432,17 @@
     // _e = _iteratorError
     // _i = _iterator
     // _s = _step
-    if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return;
+    var _i = arr && (typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"]);
+
+    if (_i == null) return;
     var _arr = [];
     var _n = true;
     var _d = false;
 
-    var _e;
-
-    var _i = arr[Symbol.iterator]();
-
-    var _s;
+    var _s, _e;
 
     try {
-      for (; !(_n = (_s = _i.next()).done); _n = true) {
+      for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) {
         _arr.push(_s.value);
 
         if (i && _arr.length === i) break;
@@ -1456,22 +1452,21 @@
       _e = err;
     } finally {
       try {
-        if (!_n && _i.return !== null) _i.return();
+        if (!_n && _i["return"] != null) _i["return"]();
       } finally {
         if (_d) throw _e;
       }
-    } // eslint-disable-next-line consistent-return
-
+    }
 
     return _arr;
-  });
+  }
 
   var nonIterableRest = (function () {
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   });
 
   var _slicedToArray = (function (arr, i) {
-    return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
+    return arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
   });
 
   var enableVariant = function enableVariant(rootNode, variables) {

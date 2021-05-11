@@ -21,20 +21,35 @@
     return obj;
   });
 
-  function _objectSpread (target) {
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+
+      if (enumerableOnly) {
+        symbols = symbols.filter(function (sym) {
+          return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+        });
+      }
+
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
     for (var i = 1; i < arguments.length; i++) {
-      // eslint-disable-next-line prefer-rest-params
-      var source = arguments[i] === null ? {} : arguments[i];
+      var source = arguments[i] != null ? arguments[i] : {};
 
       if (i % 2) {
-        // eslint-disable-next-line no-loop-func
         ownKeys(Object(source), true).forEach(function (key) {
           _defineProperty(target, key, source[key]);
         });
       } else if (Object.getOwnPropertyDescriptors) {
         Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
       } else {
-        // eslint-disable-next-line no-loop-func
         ownKeys(Object(source)).forEach(function (key) {
           Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
         });
@@ -42,23 +57,6 @@
     }
 
     return target;
-  } // This function is different to "Reflect.ownKeys". The enumerableOnly
-  // filters on symbol properties only. Returned string properties are always
-  // enumerable. It is good to use in objectSpread.
-
-  function ownKeys(object, enumerableOnly) {
-    var keys = Object.keys(object);
-
-    if (Object.getOwnPropertySymbols) {
-      var symbols = Object.getOwnPropertySymbols(object);
-      if (enumerableOnly) symbols = symbols.filter(function (sym) {
-        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
-      }); // eslint-disable-next-line prefer-spread
-
-      keys.push.apply(keys, symbols);
-    }
-
-    return keys;
   }
 
   /* eslint-disable no-eq-null, eqeqeq */
@@ -77,10 +75,9 @@
     if (Array.isArray(arr)) return arrayLikeToArray(arr);
   });
 
-  // eslint-disable-next-line consistent-return
-  var iterableToArray = (function (iter) {
-    if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter);
-  });
+  function _iterableToArray(iter) {
+    if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
+  }
 
   /* eslint-disable consistent-return */
   function unsupportedIterableToArray(o, minLen) {
@@ -97,7 +94,7 @@
   });
 
   var _toConsumableArray = (function (arr) {
-    return arrayWithoutHoles(arr) || iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
+    return arrayWithoutHoles(arr) || _iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
   });
 
   var nativeTypeOf = function nativeTypeOf(obj) {
@@ -2024,12 +2021,12 @@
       return fn();
     } catch (error) {
       if (error.name === "SyntaxError") {
-        throw new Error(createDetailedMessage("Syntax error in module.", _objectSpread({
+        throw new Error(createDetailedMessage("Syntax error in module.", _objectSpread2({
           "syntax error stack": error.stack
         }, getModuleDetails(data))));
       }
 
-      throw new Error(createDetailedMessage("Module instantiation error.", _objectSpread(_defineProperty({}, "instantiation error stack", error.stack), getModuleDetails(data))));
+      throw new Error(createDetailedMessage("Module instantiation error.", _objectSpread2(_defineProperty({}, "instantiation error stack", error.stack), getModuleDetails(data))));
     }
   };
 
@@ -2066,7 +2063,7 @@
         if (moduleResponse.status === 500 && contentType === "application/json") {
           return _await$b(moduleResponse.json(), function (bodyAsJson) {
             if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
-              var error = new Error(createDetailedMessage("Module file cannot be parsed.", _objectSpread(_defineProperty({}, "parsing error message", bodyAsJson.message), getModuleDetails({
+              var error = new Error(createDetailedMessage("Module file cannot be parsed.", _objectSpread2(_defineProperty({}, "parsing error message", bodyAsJson.message), getModuleDetails({
                 url: url,
                 importerUrl: importerUrl,
                 compileServerOrigin: compileServerOrigin,
@@ -2083,7 +2080,7 @@
         if (moduleResponse.status < 200 || moduleResponse.status >= 300) {
           var _objectSpread4;
 
-          throw new Error(createDetailedMessage("Module file response status is unexpected.", _objectSpread((_objectSpread4 = {}, _defineProperty(_objectSpread4, "status", moduleResponse.status), _defineProperty(_objectSpread4, "allowed status", "200 to 299"), _defineProperty(_objectSpread4, "statusText", moduleResponse.statusText), _objectSpread4), getModuleDetails({
+          throw new Error(createDetailedMessage("Module file response status is unexpected.", _objectSpread2((_objectSpread4 = {}, _defineProperty(_objectSpread4, "status", moduleResponse.status), _defineProperty(_objectSpread4, "allowed status", "200 to 299"), _defineProperty(_objectSpread4, "statusText", moduleResponse.statusText), _objectSpread4), getModuleDetails({
             url: url,
             importerUrl: importerUrl,
             compileServerOrigin: compileServerOrigin,
@@ -2143,7 +2140,7 @@
             }
 
             if (contentType) ; else {
-              console.warn("Module content-type is missing.", _objectSpread(_defineProperty({}, "allowed content-type", ["aplication/javascript", "application/json", "text/*"]), getModuleDetails({
+              console.warn("Module content-type is missing.", _objectSpread2(_defineProperty({}, "allowed content-type", ["aplication/javascript", "application/json", "text/*"]), getModuleDetails({
                 url: url,
                 importerUrl: importerUrl,
                 compileServerOrigin: compileServerOrigin,
@@ -2198,9 +2195,9 @@
       compileServerOrigin: compileServerOrigin,
       compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
     });
-    var details = notFound ? _objectSpread(_objectSpread(_objectSpread({}, importerUrl ? _defineProperty({}, "import declared in", importerRelativeUrl || importerUrl) : {}), relativeUrl ? {
+    var details = notFound ? _objectSpread2(_objectSpread2(_objectSpread2({}, importerUrl ? _defineProperty({}, "import declared in", importerRelativeUrl || importerUrl) : {}), relativeUrl ? {
       file: relativeUrl
-    } : {}), {}, _defineProperty({}, "file url", url)) : _objectSpread(_objectSpread({}, relativeUrl ? {
+    } : {}), {}, _defineProperty({}, "file url", url)) : _objectSpread2(_objectSpread2({}, relativeUrl ? {
       file: relativeUrl
     } : {}), {}, _defineProperty({}, "file url", url), importerUrl ? _defineProperty({}, "imported by", importerRelativeUrl || importerUrl) : {});
     return details;
@@ -3042,7 +3039,7 @@
     });
     var response;
     return _continue$2(_catch$3(function () {
-      return _await$8(window.fetch(url, _objectSpread({
+      return _await$8(window.fetch(url, _objectSpread2({
         signal: abortController.signal,
         mode: mode
       }, options)), function (_window$fetch) {
@@ -3490,7 +3487,7 @@
     var fetchSource = function fetchSource(url) {
       return fetchUrl(url, {
         credentials: "include",
-        headers: _objectSpread({}, htmlFileRelativeUrl ? {
+        headers: _objectSpread2({}, htmlFileRelativeUrl ? {
           "x-jsenv-execution-id": htmlFileRelativeUrl
         } : {})
       });
@@ -4658,7 +4655,7 @@
 
   var installBrowserErrorStackRemapping = function installBrowserErrorStackRemapping() {
     var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    return installErrorStackRemapping(_objectSpread({
+    return installErrorStackRemapping(_objectSpread2({
       fetchFile: _async$2(function (url) {
         // browser having Error.captureStackTrace got window.fetch
         // and this executes only when Error.captureStackTrace exists
@@ -4842,7 +4839,7 @@
       });
     });
     return _await(Promise.all(fileExecutionResultPromises), function () {
-      return _objectSpread(_objectSpread({
+      return _objectSpread2(_objectSpread2({
         status: status
       }, status === "errored" ? {
         exceptionSource: exceptionSource
@@ -4950,7 +4947,7 @@
 
                 browserRuntime.executeFile = function (file) {
                   var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-                  return executeFile(file, _objectSpread({
+                  return executeFile(file, _objectSpread2({
                     errorTransform: errorTransform
                   }, options));
                 };
