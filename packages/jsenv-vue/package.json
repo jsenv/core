@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/vue",
-  "version": "1.0.1-alpha",
+  "version": "1.0.2-alpha",
   "description": "Enable vue in jsenv.",
   "license": "MIT",
   "repository": {
@@ -30,13 +30,13 @@
     "/main.js"
   ],
   "dependencies": {
-    "@jsenv/server": "6.0.0",
-    "@jsenv/util": "4.0.4",
-    "@vue/component-compiler": "4.2.3",
+    "@jsenv/server": "6.0.2",
+    "@jsenv/util": "4.1.0",
+    "@vue/component-compiler": "4.2.4",
     "vue-template-compiler": "2.6.12"
   },
   "devDependencies": {
-    "@jsenv/node-module-import-map": "12.2.2"
+    "@jsenv/node-module-import-map": "13.4.1"
   },
   "peerDependencies": {
     "@jsenv/core": "*"
