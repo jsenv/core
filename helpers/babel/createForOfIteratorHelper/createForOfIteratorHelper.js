@@ -5,9 +5,9 @@ import unsupportedIterableToArray from "../unsupportedIterableToArray/unsupporte
 // n: next
 // e: error (called whenever something throws)
 // f: finish (always called at the end)
-export default function createForOfIteratorHelper(o, allowArrayLike) {
-  var it
-  if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) {
+export default function _createForOfIteratorHelper(o, allowArrayLike) {
+  var it = (typeof Symbol !== "undefined" && o[Symbol.iterator]) || o["@@iterator"]
+  if (!it) {
     // Fallback for engines without symbol support
     if (
       Array.isArray(o) ||
@@ -19,11 +19,11 @@ export default function createForOfIteratorHelper(o, allowArrayLike) {
       var F = function () {}
       return {
         s: F,
-        n() {
+        n: function () {
           if (i >= o.length) return { done: true }
           return { done: false, value: o[i++] }
         },
-        e(e) {
+        e: function (e) {
           throw e
         },
         f: F,
@@ -33,23 +33,23 @@ export default function createForOfIteratorHelper(o, allowArrayLike) {
       "Invalid attempt to iterate non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.",
     )
   }
-  var normalCompletion = true
-  var didErr = false
-  var err
+  var normalCompletion = true,
+    didErr = false,
+    err
   return {
-    s() {
-      it = o[Symbol.iterator]()
+    s: function () {
+      it = it.call(o)
     },
-    n() {
+    n: function () {
       var step = it.next()
       normalCompletion = step.done
       return step
     },
-    e(e) {
+    e: function (e) {
       didErr = true
       err = e
     },
-    f() {
+    f: function () {
       try {
         if (!normalCompletion && it.return != null) it.return()
       } finally {

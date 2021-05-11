@@ -1,6 +1,6 @@
-export default function (inner, awaitWrap) {
-  var iter = {}
-  var waiting = false
+export default function _asyncGeneratorDelegate(inner, awaitWrap) {
+  var iter = {},
+    waiting = false
   function pump(key, value) {
     waiting = true
     value = new Promise(function (resolve) {
@@ -8,10 +8,8 @@ export default function (inner, awaitWrap) {
     })
     return { done: false, value: awaitWrap(value) }
   }
-  if (typeof Symbol === "function" && Symbol.iterator) {
-    iter[Symbol.iterator] = function () {
-      return this
-    }
+  iter[(typeof Symbol !== "undefined" && Symbol.iterator) || "@@iterator"] = function () {
+    return this
   }
   iter.next = function (value) {
     if (waiting) {

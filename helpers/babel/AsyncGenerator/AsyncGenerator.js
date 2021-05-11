@@ -1,15 +1,14 @@
 import AwaitValue from "../AwaitValue/AwaitValue.js"
 
-function AsyncGenerator(gen) {
-  var front
-  var back
+export default function AsyncGenerator(gen) {
+  var front, back
   function send(key, arg) {
     return new Promise(function (resolve, reject) {
       var request = {
-        key,
-        arg,
-        resolve,
-        reject,
+        key: key,
+        arg: arg,
+        resolve: resolve,
+        reject: reject,
         next: null,
       }
       if (back) {
@@ -44,13 +43,13 @@ function AsyncGenerator(gen) {
   function settle(type, value) {
     switch (type) {
       case "return":
-        front.resolve({ value, done: true })
+        front.resolve({ value: value, done: true })
         break
       case "throw":
         front.reject(value)
         break
       default:
-        front.resolve({ value, done: false })
+        front.resolve({ value: value, done: false })
         break
     }
     front = front.next
@@ -66,10 +65,10 @@ function AsyncGenerator(gen) {
     this.return = undefined
   }
 }
-if (typeof Symbol === "function" && Symbol.asyncIterator) {
-  AsyncGenerator.prototype[Symbol.asyncIterator] = function () {
-    return this
-  }
+AsyncGenerator.prototype[
+  (typeof Symbol === "function" && Symbol.asyncIterator) || "@@asyncIterator"
+] = function () {
+  return this
 }
 AsyncGenerator.prototype.next = function (arg) {
   return this._invoke("next", arg)
@@ -80,5 +79,3 @@ AsyncGenerator.prototype.throw = function (arg) {
 AsyncGenerator.prototype.return = function (arg) {
   return this._invoke("return", arg)
 }
-
-export default AsyncGenerator

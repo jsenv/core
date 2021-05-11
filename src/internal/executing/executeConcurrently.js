@@ -1,6 +1,8 @@
 /* eslint-disable import/max-dependencies */
 import { cpus } from "os"
 import { stat } from "fs"
+
+import wrapAnsi from "wrap-ansi"
 import {
   createConcurrentOperations,
   createCancellationSource,
@@ -8,14 +10,13 @@ import {
 } from "@jsenv/cancellation"
 import { loggerToLevels, createDetailedMessage } from "@jsenv/logger"
 import { urlToFileSystemPath } from "@jsenv/util"
-import { require } from "../require.js"
+
 import { launchAndExecute } from "../executing/launchAndExecute.js"
+
 import { reportToCoverageMap } from "./coverage/reportToCoverageMap.js"
 import { writeLog } from "./writeLog.js"
 import { createExecutionResultLog } from "./executionLogs.js"
 import { createSummaryLog } from "./createSummaryLog.js"
-
-const wrapAnsi = require("wrap-ansi")
 
 export const executeConcurrently = async (
   executionSteps,
