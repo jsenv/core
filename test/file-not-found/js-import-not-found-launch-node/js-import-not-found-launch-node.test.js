@@ -1,6 +1,13 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
+import {
+  resolveUrl,
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  urlToFileSystemPath,
+  urlToBasename,
+} from "@jsenv/util"
+
+import { launchNode } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
@@ -9,11 +16,10 @@ import {
   LAUNCH_AND_EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
-import { launchNode } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
@@ -26,8 +32,7 @@ const importedFileUrl = resolveUrl("foo.js", testDirectoryUrl)
 
 const actual = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
-  executionLogLevel: "off",
-  fileRelativeUrl,
+  launchAndExecuteLogLevel: "off",
   launch: (options) =>
     launchNode({
       ...LAUNCH_TEST_PARAMS,
@@ -35,6 +40,9 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
+  executeParams: {
+    fileRelativeUrl,
+  },
 })
 const expected = {
   status: "errored",

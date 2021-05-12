@@ -24,9 +24,8 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 
 const result = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
-  // sets executionLogLevel to off to avoid seeing an expected error in logs
-  executionLogLevel: "off",
-  fileRelativeUrl,
+  // sets launchAndExecuteLogLevel to off to avoid seeing an expected error in logs
+  launchAndExecuteLogLevel: "off",
   launch: (options) =>
     launchNode({
       ...LAUNCH_TEST_PARAMS,
@@ -34,6 +33,9 @@ const result = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
+  executeParams: {
+    fileRelativeUrl,
+  },
   mirrorConsole: true,
 })
 const stack = result.error.stack

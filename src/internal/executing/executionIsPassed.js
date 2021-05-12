@@ -1,1 +1,2 @@
-export const executionIsPassed = ({ summary }) => summary.executionCount === summary.completedCount
+export const executionIsPassed = ({ planSummary }) =>
+  planSummary.executionCount === planSummary.completedCount

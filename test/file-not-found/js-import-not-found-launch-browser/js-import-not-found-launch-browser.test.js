@@ -1,6 +1,7 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/util"
+
+import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
@@ -10,11 +11,10 @@ import {
   EXECUTION_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
-import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const htmlFilename = `${testDirectoryname}.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
@@ -34,8 +34,7 @@ const importedFileUrl = resolveUrl(
 await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
   const result = await launchAndExecute({
     ...EXECUTION_TEST_PARAMS,
-    executionLogLevel: "off",
-    fileRelativeUrl: htmlFileRelativeUrl,
+    launchAndExecuteLogLevel: "off",
     launch: (options) =>
       launchBrowser({
         ...LAUNCH_TEST_PARAMS,
@@ -43,6 +42,9 @@ await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launc
         outDirectoryRelativeUrl,
         compileServerOrigin,
       }),
+    executeParams: {
+      fileRelativeUrl: htmlFileRelativeUrl,
+    },
   })
   const actual = {
     status: result.status,

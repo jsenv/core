@@ -29,8 +29,7 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${com
 const test = async ({ nodeRuntimeDecision } = {}) => {
   const result = await launchAndExecute({
     ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
-    executionLogLevel: "off",
-    fileRelativeUrl,
+    launchAndExecuteLogLevel: "off",
     launch: (options) =>
       launchNode({
         ...LAUNCH_TEST_PARAMS,
@@ -39,6 +38,9 @@ const test = async ({ nodeRuntimeDecision } = {}) => {
         compileServerOrigin,
         nodeRuntimeDecision,
       }),
+    executeParams: {
+      fileRelativeUrl,
+    },
   })
   return result
 }

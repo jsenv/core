@@ -153,19 +153,13 @@ export const launchNode = async ({
   }
 
   return {
-    runtimeName: "node",
-    runtimeVersion: process.version.slice(1),
+    ...controllableNodeProcess,
     options: {
       execArgv: controllableNodeProcess.execArgv,
       // for now do not pass env, it make debug logs to verbose
       // because process.env is very big
       // env,
     },
-    gracefulStop: controllableNodeProcess.gracefulStop,
-    stop: controllableNodeProcess.stop,
-    disconnected: controllableNodeProcess.disconnected,
-    registerErrorCallback: controllableNodeProcess.registerErrorCallback,
-    registerConsoleCallback: controllableNodeProcess.registerConsoleCallback,
     execute,
     finalizeExecutionResult,
   }

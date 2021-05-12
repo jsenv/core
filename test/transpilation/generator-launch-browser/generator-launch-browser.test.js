@@ -24,7 +24,6 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 
 const actual = await launchAndExecute({
   ...EXECUTION_TEST_PARAMS,
-  fileRelativeUrl,
   launch: (options) =>
     launchChromium({
       ...LAUNCH_TEST_PARAMS,
@@ -32,6 +31,9 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
+  executeParams: {
+    fileRelativeUrl,
+  },
   mirrorConsole: true,
 })
 const expected = {

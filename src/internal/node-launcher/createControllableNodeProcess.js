@@ -257,6 +257,8 @@ export const createControllableNodeProcess = async ({
   }
 
   return {
+    runtimeName: "node",
+    runtimeVersion: process.version.slice(1),
     execArgv,
     gracefulStop,
     stop,
