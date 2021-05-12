@@ -328,16 +328,18 @@ const computeExecutionResult = async ({
     },
   })
 
+  const launchReturnValue = await launchOperation
+  validateLaunchReturnValue(launchReturnValue)
   const {
     runtimeName,
     runtimeVersion,
     options,
     execute,
-    registerErrorCallback,
-    registerConsoleCallback,
     disconnected,
+    registerErrorCallback = () => {},
+    registerConsoleCallback = () => {},
     finalizeExecutionResult = (executionResult) => executionResult,
-  } = await launchOperation
+  } = launchReturnValue
 
   const runtime = `${runtimeName}/${runtimeVersion}`
 
@@ -470,4 +472,34 @@ const promiseTrackRace = (promiseArray) => {
       visit(i++)
     }
   })
+}
+
+const validateLaunchReturnValue = (launchReturnValue) => {
+  if (launchReturnValue === null) {
+    throw new Error(`launch must return an object, got null`)
+  }
+
+  if (typeof launchReturnValue !== "object") {
+    throw new Error(`launch must return an object, got ${launchReturnValue}`)
+  }
+
+  const { runtimeName } = launchReturnValue
+  if (typeof runtimeName !== "string") {
+    throw new Error(`launch must return a runtimeName string, got ${runtimeName}`)
+  }
+
+  const { runtimeVersion } = launchReturnValue
+  if (typeof runtimeVersion !== "string" && typeof runtimeVersion !== "number") {
+    throw new Error(`launch must return a runtimeVersion, got ${runtimeName}`)
+  }
+
+  const { execute } = launchReturnValue
+  if (typeof execute !== "function") {
+    throw new Error(`launch must return an execute function, got ${execute}`)
+  }
+
+  const { disconnected } = launchReturnValue
+  if (!disconnected || typeof disconnected.then !== "function") {
+    throw new Error(`launch must return a disconnected promise, got ${execute}`)
+  }
 }
