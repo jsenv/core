@@ -1,5 +1,8 @@
 import { resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+
 import { require } from "../../require.js"
+
+import { istanbulCoverageMapFromCoverage } from "./istanbulCoverageMapFromCoverage.js"
 
 const { readFileSync } = require("fs")
 
@@ -9,11 +12,10 @@ export const generateCoverageHtmlDirectory = async (
 ) => {
   const libReport = require("istanbul-lib-report")
   const reports = require("istanbul-reports")
-  const { createCoverageMap } = require("istanbul-lib-coverage")
 
   const context = libReport.createContext({
     dir: urlToFileSystemPath(projectDirectoryUrl),
-    coverageMap: createCoverageMap(coverage),
+    coverageMap: istanbulCoverageMapFromCoverage(coverage),
     sourceFinder: (path) => {
       return readFileSync(urlToFileSystemPath(resolveUrl(path, projectDirectoryUrl)), "utf8")
     },
