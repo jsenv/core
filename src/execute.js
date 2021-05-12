@@ -46,27 +46,29 @@ export const execute = async ({
       throw new TypeError(`launch must be a function, got ${launch}`)
     }
 
-    const { outDirectoryRelativeUrl, origin: compileServerOrigin, stop } = await startCompileServer(
-      {
-        cancellationToken,
-        compileServerLogLevel,
+    const {
+      outDirectoryRelativeUrl,
+      origin: compileServerOrigin,
+      stop,
+    } = await startCompileServer({
+      cancellationToken,
+      compileServerLogLevel,
 
-        projectDirectoryUrl,
-        jsenvDirectoryRelativeUrl,
-        jsenvDirectoryClean,
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryClean,
 
-        importDefaultExtension,
+      importDefaultExtension,
 
-        compileServerProtocol,
-        compileServerPrivateKey,
-        compileServerCertificate,
-        compileServerIp,
-        compileServerPort,
-        babelPluginMap,
-        convertMap,
-        compileGroupCount,
-      },
-    )
+      compileServerProtocol,
+      compileServerPrivateKey,
+      compileServerCertificate,
+      compileServerIp,
+      compileServerPort,
+      babelPluginMap,
+      convertMap,
+      compileGroupCount,
+    })
 
     const result = await launchAndExecute({
       cancellationToken,

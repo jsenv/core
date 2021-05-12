@@ -51,7 +51,11 @@ export const executePlan = async (
     }
   }
 
-  const { origin: compileServerOrigin, outDirectoryRelativeUrl, stop } = await startCompileServer({
+  const {
+    origin: compileServerOrigin,
+    outDirectoryRelativeUrl,
+    stop,
+  } = await startCompileServer({
     cancellationToken,
     compileServerLogLevel,
 

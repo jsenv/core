@@ -14,11 +14,8 @@ const fetchJSON = async (url, options) => {
 const groupPreference = createPreference("group")
 
 const run = async () => {
-  const {
-    projectDirectoryUrl,
-    explorableConfig,
-    outDirectoryRelativeUrl,
-  } = await fetchExploringJson()
+  const { projectDirectoryUrl, explorableConfig, outDirectoryRelativeUrl } =
+    await fetchExploringJson()
 
   const files = await fetchJSON(`/.jsenv/explorables.json`, {
     method: "GET",

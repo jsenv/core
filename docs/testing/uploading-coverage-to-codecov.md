@@ -86,5 +86,4 @@ If you don't pass this option, the default value will be:
 
 ```js
 "./coverage/coverage.json"
-
 ```
