@@ -18,6 +18,8 @@ const { testPlanReport } = await executeTestPlan({
     [fileRelativeUrl]: {
       node: {
         launch: launchNode,
+        measureDuration: false,
+        captureConsole: false,
       },
     },
   },
