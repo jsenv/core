@@ -13,7 +13,7 @@ import { urlToFileSystemPath } from "@jsenv/util"
 
 import { launchAndExecute } from "../executing/launchAndExecute.js"
 
-import { reportToCoverageMap } from "./coverage/reportToCoverageMap.js"
+import { reportToCoverage } from "./coverage/reportToCoverage.js"
 import { writeLog } from "./writeLog.js"
 import { createExecutionResultLog } from "./executionLogs.js"
 import { createSummaryLog } from "./createSummaryLog.js"
@@ -40,6 +40,7 @@ export const executeConcurrently = async (
     coverage,
     coverageConfig,
     coverageIncludeMissing,
+    coverageForceIstanbul,
     coverageV8MergeConflictIsExpected,
 
     mainFileNotFoundCallback = ({ fileRelativeUrl }) => {
@@ -121,11 +122,14 @@ export const executeConcurrently = async (
         cancellationToken: executionCancellationToken,
 
         ...executionParams,
+        collectCoverage: coverage,
         launchParams: {
           projectDirectoryUrl,
           compileServerOrigin,
           outDirectoryRelativeUrl,
           collectCoverage: coverage,
+          coverageConfig,
+          coverageForceIstanbul,
           ...executionParams.launchParams,
         },
         executeParams: {
@@ -210,7 +214,7 @@ export const executeConcurrently = async (
     report,
     ...(coverage
       ? {
-          coverageMap: await reportToCoverageMap(report, {
+          coverage: await reportToCoverage(report, {
             logger,
             cancellationToken,
             projectDirectoryUrl,

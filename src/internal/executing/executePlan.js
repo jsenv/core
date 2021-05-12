@@ -119,6 +119,6 @@ export const executePlan = async (
   return {
     planSummary: result.summary,
     planReport: result.report,
-    planCoverage: result.coverageMap,
+    planCoverage: result.coverage,
   }
 }

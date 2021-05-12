@@ -206,7 +206,7 @@ export const executeTestPlan = async ({
     return {
       testPlanSummary: result.planSummary,
       testPlanReport: result.planReport,
-      testPlanCoverage: result.planCoverageMap,
+      testPlanCoverage: result.planCoverage,
     }
   })
 }

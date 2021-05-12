@@ -3,7 +3,7 @@ import { relativeUrlToEmptyCoverage } from "./relativeUrlToEmptyCoverage.js"
 import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
 import { normalizeIstanbulCoverage } from "./normalizeIstanbulCoverage.js"
 
-export const reportToCoverageMap = async (
+export const reportToCoverage = async (
   report,
   {
     logger,

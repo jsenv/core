@@ -194,11 +194,14 @@ const getNodeV8CoverageDir = async ({ projectDirectoryUrl }) => {
   return urlToFileSystemPath(v8CoverageDirectory)
 }
 
-const transformExecutionResult = (evaluateResult, { compileServerOrigin, projectDirectoryUrl }) => {
-  const { status } = evaluateResult
+const transformExecutionResult = (
+  executionResult,
+  { compileServerOrigin, projectDirectoryUrl },
+) => {
+  const { status } = executionResult
 
   if (status === "errored") {
-    const { exceptionSource, coverageMap } = evaluateResult
+    const { exceptionSource, coverageMap } = executionResult
     const error = evalSource(exceptionSource)
     const errorTransformed = transformError(error, { compileServerOrigin, projectDirectoryUrl })
     return {
@@ -208,7 +211,7 @@ const transformExecutionResult = (evaluateResult, { compileServerOrigin, project
     }
   }
 
-  const { namespace, coverageMap } = evaluateResult
+  const { namespace, coverageMap } = executionResult
   return {
     status,
     namespace,
