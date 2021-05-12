@@ -13,7 +13,7 @@ import { urlToFileSystemPath } from "@jsenv/util"
 
 import { launchAndExecute } from "../executing/launchAndExecute.js"
 
-import { reportToCoverageMap } from "./coverage/reportToCoverageMap.js"
+import { reportToCoverage } from "./coverage/reportToCoverage.js"
 import { writeLog } from "./writeLog.js"
 import { createExecutionResultLog } from "./executionLogs.js"
 import { createSummaryLog } from "./createSummaryLog.js"
@@ -21,20 +21,18 @@ import { createSummaryLog } from "./createSummaryLog.js"
 export const executeConcurrently = async (
   executionSteps,
   {
-    cancellationToken,
     logger,
-    executionLogLevel,
+    launchAndExecuteLogLevel,
+    cancellationToken,
 
     projectDirectoryUrl,
-    outDirectoryRelativeUrl,
     compileServerOrigin,
+    outDirectoryRelativeUrl,
 
     babelPluginMap,
 
+    defaultMsAllocatedPerExecution = 30000,
     concurrencyLimit = Math.max(cpus.length - 1, 1),
-    executionDefaultOptions = {},
-    stopAfterExecute,
-    logSummary,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     measureGlobalDuration = true,
@@ -45,25 +43,7 @@ export const executeConcurrently = async (
     coverageForceIstanbul,
     coverageV8MergeConflictIsExpected,
 
-    ...rest
-  },
-) => {
-  if (typeof compileServerOrigin !== "string") {
-    throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
-  }
-
-  const executionOptionsFromDefault = {
-    allocatedMs: 30000,
-    measureDuration: true,
-    // mirrorConsole: false because file will be executed in parallel
-    // so log would be a mess to read
-    mirrorConsole: false,
-    captureConsole: true,
-    collectRuntimeName: true,
-    collectRuntimeVersion: true,
-    collectCoverage: coverage,
-
-    mainFileNotFoundCallback: ({ fileRelativeUrl }) => {
+    mainFileNotFoundCallback = ({ fileRelativeUrl }) => {
       logger.error(
         new Error(
           createDetailedMessage(`an execution main file does not exists.`, {
@@ -72,17 +52,18 @@ export const executeConcurrently = async (
         ),
       )
     },
-    beforeExecutionCallback: () => {},
-    afterExecutionCallback: () => {},
-    ...executionDefaultOptions,
-  }
+    beforeExecutionCallback = () => {},
+    afterExecutionCallback = () => {},
 
+    logSummary,
+  },
+) => {
   const startMs = Date.now()
 
-  const allExecutionDoneCancellationSource = createCancellationSource()
+  const allStepDoneCancellationSource = createCancellationSource()
   const executionCancellationToken = composeCancellationToken(
     cancellationToken,
-    allExecutionDoneCancellationSource.token,
+    allStepDoneCancellationSource.token,
   )
 
   const report = {}
@@ -98,39 +79,33 @@ export const executeConcurrently = async (
     cancellationToken,
     concurrencyLimit,
     array: executionSteps,
-    start: async (executionOptionsFromStep) => {
-      const executionIndex = executionSteps.indexOf(executionOptionsFromStep)
-      const executionOptions = {
-        ...executionOptionsFromDefault,
-        ...executionOptionsFromStep,
+    start: async (paramsFromStep) => {
+      const executionIndex = executionSteps.indexOf(paramsFromStep)
+      const { executionName, fileRelativeUrl } = paramsFromStep
+      const executionParams = {
+        // the params below can be overriden by executionDefaultParams
+        measureDuration: true,
+        captureConsole: true,
+        collectRuntimeName: true,
+        collectRuntimeVersion: true,
+        // stopAfterExecute: true to ensure runtime is stopped once executed
+        // because we have what we wants: execution is completed and
+        // we have associated coverage and capturedConsole
+        // passsing false means all node process and browsers launched stays opened
+        // (can eventually be used for debug)
+        stopAfterExecute: true,
+        stopAfterExecuteReason: "execution-done",
+        allocatedMs: defaultMsAllocatedPerExecution,
+        ...paramsFromStep,
+        // mirrorConsole: false because file will be executed in parallel
+        // so log would be a mess to read
+        mirrorConsole: false,
       }
 
-      const {
-        name,
-        executionId,
-        fileRelativeUrl,
-        launch,
-        allocatedMs,
-        measureDuration,
-        mirrorConsole,
-        captureConsole,
-        collectRuntimeName,
-        collectRuntimeVersion,
-        collectCoverage,
-
-        mainFileNotFoundCallback,
-        beforeExecutionCallback,
-        afterExecutionCallback,
-        gracefulStopAllocatedMs,
-        ...executionRemainingOptions
-      } = executionOptions
-
       const beforeExecutionInfo = {
-        allocatedMs,
-        name,
-        executionId,
         fileRelativeUrl,
         executionIndex,
+        executionParams,
       }
 
       const filePath = urlToFileSystemPath(`${projectDirectoryUrl}${fileRelativeUrl}`)
@@ -141,38 +116,32 @@ export const executeConcurrently = async (
       }
 
       beforeExecutionCallback(beforeExecutionInfo)
-      const executionResult = await launchAndExecute({
-        cancellationToken: executionCancellationToken,
-        executionLogLevel,
-        launch: (params) =>
-          launch({
-            projectDirectoryUrl,
-            outDirectoryRelativeUrl,
-            compileServerOrigin,
-            ...params,
-            ...executionRemainingOptions,
-          }),
-        allocatedMs,
-        measureDuration,
-        collectRuntimeName,
-        collectRuntimeVersion,
-        mirrorConsole,
-        captureConsole,
-        gracefulStopAllocatedMs,
-        stopAfterExecute,
-        stopAfterExecuteReason: "execution-done",
-        executionId,
-        fileRelativeUrl,
-        collectCoverage,
-        coverageConfig,
-        coverageForceIstanbul,
-        coverageV8MergeConflictIsExpected,
 
-        ...rest,
+      const executionResult = await launchAndExecute({
+        launchAndExecuteLogLevel,
+        cancellationToken: executionCancellationToken,
+
+        ...executionParams,
+        collectCoverage: coverage,
+        launchParams: {
+          projectDirectoryUrl,
+          compileServerOrigin,
+          outDirectoryRelativeUrl,
+          collectCoverage: coverage,
+          coverageConfig,
+          coverageForceIstanbul,
+          ...executionParams.launchParams,
+        },
+        executeParams: {
+          fileRelativeUrl,
+          ...executionParams.executeParams,
+        },
+
+        coverageV8MergeConflictIsExpected,
       })
       const afterExecutionInfo = {
         ...beforeExecutionInfo,
-        ...executionResult,
+        executionResult,
       }
       afterExecutionCallback(afterExecutionInfo)
 
@@ -221,14 +190,14 @@ export const executeConcurrently = async (
       if (fileRelativeUrl in report === false) {
         report[fileRelativeUrl] = {}
       }
-      report[fileRelativeUrl][name] = executionResult
+      report[fileRelativeUrl][executionName] = executionResult
       previousExecutionResult = executionResult
     },
   })
 
   // tell everyone we are done
   // (used to stop potential chrome browser still opened to be reused)
-  allExecutionDoneCancellationSource.cancel("all execution done")
+  allStepDoneCancellationSource.cancel("all execution done")
 
   const summary = reportToSummary(report)
   if (measureGlobalDuration) {
@@ -245,7 +214,7 @@ export const executeConcurrently = async (
     report,
     ...(coverage
       ? {
-          coverageMap: await reportToCoverageMap(report, {
+          coverage: await reportToCoverage(report, {
             logger,
             cancellationToken,
             projectDirectoryUrl,

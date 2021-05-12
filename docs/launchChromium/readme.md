@@ -1,4 +1,4 @@
-## `launchChromium` options
+## `launchChromium` params
 
 ### headless
 

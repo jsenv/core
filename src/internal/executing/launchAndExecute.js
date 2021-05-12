@@ -14,12 +14,21 @@ const TIMING_DURING_EXECUTION = "during-execution"
 const TIMING_AFTER_EXECUTION = "after-execution"
 
 export const launchAndExecute = async ({
+  launchAndExecuteLogLevel,
   cancellationToken = createCancellationToken(),
-  executionLogLevel,
 
-  fileRelativeUrl,
   launch,
+  launchParams,
+  executeParams,
 
+  allocatedMs,
+  measureDuration = false,
+  mirrorConsole = false,
+  captureConsole = false, // rename collectConsole ?
+  collectRuntimeName = false,
+  collectRuntimeVersion = false,
+  inheritCoverage = false,
+  collectCoverage = false,
   // stopAfterExecute false by default because you want to keep browser alive
   // or nodejs process
   // however unit test will pass true because they want to move on
@@ -29,29 +38,17 @@ export const launchAndExecute = async ({
   // the launched runtime have that amount of ms for disconnected to resolve
   // before we call stop
   gracefulStopAllocatedMs = 4000,
+
   runtimeConsoleCallback = () => {},
   runtimeStartedCallback = () => {},
   runtimeStoppedCallback = () => {},
   runtimeErrorCallback = () => {},
   runtimeDisconnectCallback = () => {},
 
-  measureDuration = false,
-  mirrorConsole = false,
-  captureConsole = false, // rename collectConsole ?
-  collectRuntimeName = false,
-  collectRuntimeVersion = false,
-  inheritCoverage = false,
-  collectCoverage = false,
-  coverageConfig,
-  coverageForceIstanbul,
   coverageV8MergeConflictIsExpected,
-  ...rest
 } = {}) => {
-  const logger = createLogger({ logLevel: executionLogLevel })
+  const logger = createLogger({ logLevel: launchAndExecuteLogLevel })
 
-  if (typeof fileRelativeUrl !== "string") {
-    throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`)
-  }
   if (typeof launch !== "function") {
     throw new TypeError(`launch launch must be a function, got ${launch}`)
   }
@@ -96,11 +93,11 @@ export const launchAndExecute = async ({
   }
 
   if (collectRuntimeName) {
-    runtimeStartedCallback = composeCallback(runtimeStartedCallback, ({ name }) => {
+    runtimeStartedCallback = composeCallback(runtimeStartedCallback, ({ runtimeName }) => {
       executionResultTransformer = composeTransformer(
         executionResultTransformer,
         (executionResult) => {
-          executionResult.runtimeName = name
+          executionResult.runtimeName = runtimeName
           return executionResult
         },
       )
@@ -108,11 +105,11 @@ export const launchAndExecute = async ({
   }
 
   if (collectRuntimeVersion) {
-    runtimeStartedCallback = composeCallback(runtimeStartedCallback, ({ version }) => {
+    runtimeStartedCallback = composeCallback(runtimeStartedCallback, ({ runtimeVersion }) => {
       executionResultTransformer = composeTransformer(
         executionResultTransformer,
         (executionResult) => {
-          executionResult.runtimeVersion = version
+          executionResult.runtimeVersion = runtimeVersion
           return executionResult
         },
       )
@@ -129,19 +126,11 @@ export const launchAndExecute = async ({
     executionResultTransformer = composeTransformer(
       executionResultTransformer,
       (executionResult) => {
-        const { coverageMap, ...rest } = executionResult
+        const { coverage, ...rest } = executionResult
         // ensure the coverage of the executed file is taken into account
-        global.__coverage__ = composeIstanbulCoverages([
-          global.__coverage__ || {},
-          coverageMap || {},
-        ])
+        global.__coverage__ = composeIstanbulCoverages([global.__coverage__ || {}, coverage || {}])
         if (collectCoverageSaved) {
           return executionResult
-        }
-        if (fileRelativeUrl.endsWith(".html") && rest.namespace) {
-          Object.keys(rest.namespace).forEach((file) => {
-            delete rest.namespace[file].coverageMap
-          })
         }
         return rest
       },
@@ -159,23 +148,36 @@ export const launchAndExecute = async ({
     executionResultTransformer = composeTransformer(
       executionResultTransformer,
       (executionResult) => {
-        const { coverageMap, indirectCoverage } = executionResult
+        const { coverage, indirectCoverage } = executionResult
         if (indirectCoverage) {
-          executionResult.coverageMap = composeIstanbulCoverages([coverageMap, indirectCoverage], {
+          executionResult.coverage = composeIstanbulCoverages([coverage, indirectCoverage], {
             coverageV8MergeConflictIsExpected,
           })
         }
         return executionResult
       },
     )
+  } else {
+    executionResultTransformer = composeTransformer(
+      executionResultTransformer,
+      (executionResult) => {
+        // as collectCoverage is disabled
+        // executionResult.coverage is undefined or {}
+        // we delete it just to have a cleaner object
+        delete executionResult.coverage
+        return executionResult
+      },
+    )
   }
 
-  const executionResult = await computeRawExecutionResult({
-    cancellationToken,
+  let executionResult
+  const executionParams = {
     logger,
+    cancellationToken,
 
-    fileRelativeUrl,
     launch,
+    launchParams,
+    executeParams,
 
     stopAfterExecute,
     stopAfterExecuteReason,
@@ -185,12 +187,44 @@ export const launchAndExecute = async ({
     runtimeDisconnectCallback,
     runtimeStartedCallback,
     runtimeStoppedCallback,
-    collectCoverage,
-    coverageConfig,
-    coverageForceIstanbul,
+  }
+  const hasAllocatedMs = typeof allocatedMs === "number" && allocatedMs !== Infinity
+  if (hasAllocatedMs) {
+    const TIMEOUT_CANCEL_REASON = "timeout"
 
-    ...rest,
-  })
+    const timeoutCancellationSource = createCancellationSource()
+
+    const id = setTimeout(() => {
+      // here if allocatedMs is very big
+      // setTimeout may be called immediatly
+      // in that case we should just throw that hte number is too big
+      timeoutCancellationSource.cancel(TIMEOUT_CANCEL_REASON)
+    }, allocatedMs)
+    const timeoutCancel = () => clearTimeout(id)
+
+    cancellationToken.register(timeoutCancel)
+
+    const externalOrTimeoutCancellationToken = composeCancellationToken(
+      cancellationToken,
+      timeoutCancellationSource.token,
+    )
+
+    try {
+      executionResult = await computeExecutionResult({
+        ...executionParams,
+        cancellationToken: externalOrTimeoutCancellationToken,
+      })
+      timeoutCancel()
+    } catch (e) {
+      if (errorToCancelReason(e) === TIMEOUT_CANCEL_REASON) {
+        executionResult = createTimedoutExecutionResult()
+      } else {
+        throw e
+      }
+    }
+  } else {
+    executionResult = await computeExecutionResult(executionParams)
+  }
 
   return executionResultTransformer(executionResult)
 }
@@ -209,54 +243,13 @@ const composeTransformer = (previousTransformer, transformer) => {
   }
 }
 
-const computeRawExecutionResult = async ({ cancellationToken, allocatedMs, ...rest }) => {
-  const hasAllocatedMs = typeof allocatedMs === "number" && allocatedMs !== Infinity
-
-  if (!hasAllocatedMs) {
-    return computeExecutionResult({
-      cancellationToken,
-      ...rest,
-    })
-  }
-
-  // here if allocatedMs is very big
-  // setTimeout may be called immediatly
-  // in that case we should just throw that hte number is too big
-
-  const TIMEOUT_CANCEL_REASON = "timeout"
-  const id = setTimeout(() => {
-    timeoutCancellationSource.cancel(TIMEOUT_CANCEL_REASON)
-  }, allocatedMs)
-  const timeoutCancel = () => clearTimeout(id)
-  cancellationToken.register(timeoutCancel)
-
-  const timeoutCancellationSource = createCancellationSource()
-  const externalOrTimeoutCancellationToken = composeCancellationToken(
-    cancellationToken,
-    timeoutCancellationSource.token,
-  )
-
-  try {
-    const executionResult = await computeExecutionResult({
-      cancellationToken: externalOrTimeoutCancellationToken,
-      ...rest,
-    })
-    timeoutCancel()
-    return executionResult
-  } catch (e) {
-    if (errorToCancelReason(e) === TIMEOUT_CANCEL_REASON) {
-      return createTimedoutExecutionResult()
-    }
-    throw e
-  }
-}
-
 const computeExecutionResult = async ({
-  cancellationToken,
   logger,
+  cancellationToken,
 
-  fileRelativeUrl,
   launch,
+  launchParams,
+  executeParams,
 
   stopAfterExecute,
   stopAfterExecuteReason,
@@ -266,28 +259,24 @@ const computeExecutionResult = async ({
   runtimeConsoleCallback,
   runtimeErrorCallback,
   runtimeDisconnectCallback,
-
-  collectCoverage,
-  coverageForceIstanbul,
-
-  ...rest
 }) => {
-  logger.debug(`launch runtime environment for ${fileRelativeUrl}`)
+  logger.debug(`launch a runtime to execute something in it`)
 
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
       const value = await launch({
-        cancellationToken,
         logger,
-        collectCoverage,
-        coverageForceIstanbul,
-        ...rest,
+        cancellationToken,
+        ...launchParams,
       })
-      runtimeStartedCallback({ name: value.name, version: value.version })
+      runtimeStartedCallback({
+        runtimeName: value.runtimeName,
+        runtimeVersion: value.runtimeVersion,
+      })
       return value
     },
-    stop: async ({ name: runtimeName, version: runtimeVersion, gracefulStop, stop }, reason) => {
+    stop: async ({ runtimeName, runtimeVersion, gracefulStop, stop }, reason) => {
       const runtime = `${runtimeName}/${runtimeVersion}`
 
       // external code can cancel using cancellationToken at any time.
@@ -298,7 +287,7 @@ const computeExecutionResult = async ({
       let stoppedGracefully
 
       if (gracefulStop && gracefulStopAllocatedMs) {
-        logger.debug(`${fileRelativeUrl} ${runtime}: runtime.gracefulStop() because ${reason}`)
+        logger.debug(`${runtime}: runtime.gracefulStop() because ${reason}`)
 
         const gracefulStopPromise = (async () => {
           await gracefulStop({ reason })
@@ -322,7 +311,7 @@ const computeExecutionResult = async ({
           }
 
           logger.debug(
-            `${fileRelativeUrl} ${runtime}: runtime.stop() because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
+            `${runtime}: runtime.stop() because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
           )
           await stop({ reason, gracefulFailed: true })
           return false
@@ -334,33 +323,33 @@ const computeExecutionResult = async ({
         stoppedGracefully = false
       }
 
-      logger.debug(
-        `${fileRelativeUrl} ${runtime}: runtime stopped${stoppedGracefully ? " gracefully" : ""}`,
-      )
+      logger.debug(`${runtime}: runtime stopped${stoppedGracefully ? " gracefully" : ""}`)
       runtimeStoppedCallback({ stoppedGracefully })
     },
   })
 
+  const launchReturnValue = await launchOperation
+  validateLaunchReturnValue(launchReturnValue)
   const {
-    name: runtimeName,
-    version: runtimeVersion,
+    runtimeName,
+    runtimeVersion,
     options,
-    executeFile,
-    registerErrorCallback,
-    registerConsoleCallback,
+    execute,
     disconnected,
+    registerErrorCallback = () => {},
+    registerConsoleCallback = () => {},
     finalizeExecutionResult = (executionResult) => executionResult,
-  } = await launchOperation
+  } = launchReturnValue
 
   const runtime = `${runtimeName}/${runtimeVersion}`
 
   logger.debug(
-    createDetailedMessage(`${fileRelativeUrl} ${runtime}: runtime launched.`, {
+    createDetailedMessage(`${runtime}: runtime launched.`, {
       options: JSON.stringify(options, null, "  "),
     }),
   )
 
-  logger.debug(`${fileRelativeUrl} ${runtime}: start file execution.`)
+  logger.debug(`${runtime}: start execution.`)
   registerConsoleCallback(runtimeConsoleCallback)
 
   const executeOperation = createOperation({
@@ -369,21 +358,19 @@ const computeExecutionResult = async ({
       let timing = TIMING_BEFORE_EXECUTION
 
       disconnected.then(() => {
-        logger.debug(`${fileRelativeUrl} ${runtime}: runtime disconnected ${timing}.`)
+        logger.debug(`${runtime}: runtime disconnected ${timing}.`)
         runtimeDisconnectCallback({ timing })
       })
 
-      const executed = executeFile(fileRelativeUrl, {
-        collectCoverage,
-        ...rest,
-      })
+      const executed = execute(executeParams)
+
       timing = TIMING_DURING_EXECUTION
 
       registerErrorCallback((error) => {
         logger.error(
           createDetailedMessage(`error ${timing}.`, {
             ["error stack"]: error.stack,
-            ["file executed"]: fileRelativeUrl,
+            ["execute params"]: JSON.stringify(executeParams, null, "  "),
             ["runtime"]: runtime,
           }),
         )
@@ -412,19 +399,15 @@ const computeExecutionResult = async ({
         logger.debug(
           createDetailedMessage(`error ${TIMING_DURING_EXECUTION}.`, {
             ["error stack"]: executionResult.error.stack,
-            ["file executed"]: fileRelativeUrl,
+            ["execute params"]: JSON.stringify(executeParams, null, "  "),
             ["runtime"]: runtime,
           }),
         )
-        return finalizeExecutionResult(
-          createErroredExecutionResult(executionResult, { collectCoverage }),
-        )
+        return finalizeExecutionResult(createErroredExecutionResult(executionResult))
       }
 
-      logger.debug(`${fileRelativeUrl} ${runtime}: execution completed.`)
-      return finalizeExecutionResult(
-        createCompletedExecutionResult(executionResult, { collectCoverage }),
-      )
+      logger.debug(`${runtime}: execution completed.`)
+      return finalizeExecutionResult(createCompletedExecutionResult(executionResult))
     },
   })
 
@@ -445,28 +428,14 @@ const createDisconnectedExecutionResult = () => {
   }
 }
 
-const createErroredExecutionResult = (executionResult, { collectCoverage }) => {
-  // as collectCoverage is disabled
-  // executionResult.coverageMap is undefined or {}
-  // we delete it just to have a cleaner object
-  if (!collectCoverage) {
-    delete executionResult.coverageMap
-  }
-
+const createErroredExecutionResult = (executionResult) => {
   return {
     ...executionResult,
     status: "errored",
   }
 }
 
-const createCompletedExecutionResult = (executionResult, { collectCoverage }) => {
-  // as collectCoverage is disabled
-  // executionResult.coverageMap is undefined or {}
-  // we delete it just to have a cleaner object
-  if (!collectCoverage) {
-    delete executionResult.coverageMap
-  }
-
+const createCompletedExecutionResult = (executionResult) => {
   return {
     ...executionResult,
     status: "completed",
@@ -503,4 +472,34 @@ const promiseTrackRace = (promiseArray) => {
       visit(i++)
     }
   })
+}
+
+const validateLaunchReturnValue = (launchReturnValue) => {
+  if (launchReturnValue === null) {
+    throw new Error(`launch must return an object, got null`)
+  }
+
+  if (typeof launchReturnValue !== "object") {
+    throw new Error(`launch must return an object, got ${launchReturnValue}`)
+  }
+
+  const { runtimeName } = launchReturnValue
+  if (typeof runtimeName !== "string") {
+    throw new Error(`launch must return a runtimeName string, got ${runtimeName}`)
+  }
+
+  const { runtimeVersion } = launchReturnValue
+  if (typeof runtimeVersion !== "string" && typeof runtimeVersion !== "number") {
+    throw new Error(`launch must return a runtimeVersion, got ${runtimeName}`)
+  }
+
+  const { execute } = launchReturnValue
+  if (typeof execute !== "function") {
+    throw new Error(`launch must return an execute function, got ${execute}`)
+  }
+
+  const { disconnected } = launchReturnValue
+  if (!disconnected || typeof disconnected.then !== "function") {
+    throw new Error(`launch must return a disconnected promise, got ${execute}`)
+  }
 }

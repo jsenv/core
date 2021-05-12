@@ -2,8 +2,8 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 export const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {
   const fileExecutionSteps = []
-  Object.keys(filePlan).forEach((name) => {
-    const stepConfig = filePlan[name]
+  Object.keys(filePlan).forEach((executionName) => {
+    const stepConfig = filePlan[executionName]
     if (stepConfig === null || stepConfig === undefined) {
       return
     }
@@ -12,14 +12,14 @@ export const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {
       throw new TypeError(
         createDetailedMessage(`found unexpected value in plan, they must be object.`, {
           ["file relative path"]: fileRelativeUrl,
-          ["name"]: name,
+          ["execution name"]: executionName,
           ["value"]: stepConfig,
         }),
       )
     }
 
     fileExecutionSteps.push({
-      name,
+      executionName,
       fileRelativeUrl,
       ...stepConfig,
     })

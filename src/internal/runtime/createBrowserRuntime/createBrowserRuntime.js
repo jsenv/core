@@ -101,7 +101,7 @@ export const createBrowserRuntime = async ({
       executionResult = {
         status: "completed",
         namespace,
-        coverageMap: readCoverage(),
+        coverage: readCoverage(),
       }
     } catch (error) {
       let transformedError
@@ -118,7 +118,7 @@ export const createBrowserRuntime = async ({
       executionResult = {
         status: "errored",
         exceptionSource: unevalException(transformedError),
-        coverageMap: readCoverage(),
+        coverage: readCoverage(),
       }
     }
 

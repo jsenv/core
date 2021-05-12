@@ -14,13 +14,13 @@ import { executeHtmlFile } from "./internal/browser-launcher/executeHtmlFile.js"
 const chromiumSharing = createSharing()
 
 export const launchChromium = async ({
+  browserServerLogLevel,
   cancellationToken = createCancellationToken(),
   chromiumExecutablePath,
-  browserServerLogLevel,
 
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
   compileServerOrigin,
+  outDirectoryRelativeUrl,
 
   headless = true,
   // about debug check https://github.com/microsoft/playwright/blob/master/docs/api.md#browsertypelaunchserveroptions
@@ -28,6 +28,7 @@ export const launchChromium = async ({
   debugPort = 0,
   stopOnExit = true,
   share = false,
+  collectCoverage,
 }) => {
   const ressourceTracker = trackRessources()
   const sharingToken = share
@@ -81,17 +82,19 @@ export const launchChromium = async ({
 
   return {
     browser,
-    name: "chromium",
-    version: "82.0.4057.0",
+    runtimeName: "chromium",
+    runtimeVersion: "82.0.4057.0",
     stop: ressourceTracker.cleanup,
     ...browserToRuntimeHooks(browser, {
+      browserServerLogLevel,
       cancellationToken,
       ressourceTracker,
-      browserServerLogLevel,
 
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
       compileServerOrigin,
+      outDirectoryRelativeUrl,
+
+      collectCoverage,
     }),
   }
 }
@@ -110,12 +113,13 @@ export const launchFirefox = async ({
   browserServerLogLevel,
 
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
   compileServerOrigin,
+  outDirectoryRelativeUrl,
 
   headless = true,
   stopOnExit = true,
   share = false,
+  collectCoverage,
 }) => {
   const ressourceTracker = trackRessources()
   const sharingToken = share
@@ -142,17 +146,19 @@ export const launchFirefox = async ({
 
   return {
     browser,
-    name: "firefox",
-    version: "73.0b13",
+    runtimeName: "firefox",
+    runtimeVersion: "73.0b13",
     stop: ressourceTracker.cleanup,
     ...browserToRuntimeHooks(browser, {
+      browserServerLogLevel,
       cancellationToken,
       ressourceTracker,
-      browserServerLogLevel,
 
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
       compileServerOrigin,
+      outDirectoryRelativeUrl,
+
+      collectCoverage,
     }),
   }
 }
@@ -166,17 +172,18 @@ export const launchFirefoxTab = (namedArgs) =>
 const webkitSharing = createSharing()
 
 export const launchWebkit = async ({
+  browserServerLogLevel,
   cancellationToken = createCancellationToken(),
   webkitExecutablePath,
-  browserServerLogLevel,
 
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
   compileServerOrigin,
+  outDirectoryRelativeUrl,
 
   headless = true,
   stopOnExit = true,
   share = false,
+  collectCoverage,
 }) => {
   const ressourceTracker = trackRessources()
   const sharingToken = share
@@ -203,17 +210,19 @@ export const launchWebkit = async ({
 
   return {
     browser,
-    name: "webkit",
-    version: "13.0.4",
+    runtimeName: "webkit",
+    runtimeVersion: "13.0.4",
     stop: ressourceTracker.cleanup,
     ...browserToRuntimeHooks(browser, {
+      browserServerLogLevel,
       cancellationToken,
       ressourceTracker,
-      browserServerLogLevel,
 
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
       compileServerOrigin,
+      outDirectoryRelativeUrl,
+
+      collectCoverage,
     }),
   }
 }
@@ -290,8 +299,10 @@ const browserToRuntimeHooks = (
     ressourceTracker,
 
     projectDirectoryUrl,
-    outDirectoryRelativeUrl,
     compileServerOrigin,
+    outDirectoryRelativeUrl,
+
+    collectCoverage,
   },
 ) => {
   const disconnected = new Promise((resolve) => {
@@ -309,14 +320,11 @@ const browserToRuntimeHooks = (
     consoleCallbackArray.push(callback)
   }
 
-  const executeFile = async (
+  const execute = async ({
     fileRelativeUrl,
-    {
-      // because we use a self signed certificate
-      collectCoverage,
-      ignoreHTTPSErrors = true,
-    },
-  ) => {
+    // because we use a self signed certificate
+    ignoreHTTPSErrors = true,
+  }) => {
     // open a tab to execute to the file
     const browserContext = await browser.newContext({ ignoreHTTPSErrors })
     const page = await browserContext.newPage()
@@ -348,8 +356,8 @@ const browserToRuntimeHooks = (
       cancellationToken,
 
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
       compileServerOrigin,
+      outDirectoryRelativeUrl,
 
       page,
       collectCoverage,
@@ -360,7 +368,7 @@ const browserToRuntimeHooks = (
     disconnected,
     registerErrorCallback,
     registerConsoleCallback,
-    executeFile,
+    execute,
   }
 }
 

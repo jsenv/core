@@ -25,7 +25,6 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 const test = async ({ jsonModulesFlag = false } = {}) => {
   const result = await launchAndExecute({
     ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
-    fileRelativeUrl,
     launch: (options) =>
       launchNode({
         ...LAUNCH_TEST_PARAMS,
@@ -36,6 +35,9 @@ const test = async ({ jsonModulesFlag = false } = {}) => {
         outDirectoryRelativeUrl,
         compileServerOrigin,
       }),
+    executeParams: {
+      fileRelativeUrl,
+    },
   })
   return result
 }

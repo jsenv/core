@@ -27,9 +27,8 @@ const { cancel, token: cancellationToken } = createCancellationSource()
 let errorCallbackArg
 const actual = await launchAndExecute({
   ...EXECUTION_TEST_PARAMS,
-  executionLogLevel: "off",
+  launchAndExecuteLogLevel: "off",
   cancellationToken,
-  fileRelativeUrl,
   launch: (options) =>
     launchChromium({
       ...LAUNCH_TEST_PARAMS,
@@ -37,6 +36,9 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
+  executeParams: {
+    fileRelativeUrl,
+  },
   stopAfterExecute: false,
   runtimeErrorCallback: (argValue) => {
     errorCallbackArg = argValue
@@ -56,9 +58,12 @@ const expected = {
 assert({ actual, expected })
 
 process.on("exit", () => {
-  const actual = errorCallbackArg
+  const actual = {
+    errorMessage: errorCallbackArg.error.message,
+    timing: errorCallbackArg.timing,
+  }
   const expected = {
-    error: new Error(errorCallbackArg.error.message),
+    errorMessage: actual.errorMessage,
     timing: "after-execution",
   }
   assert({ actual, expected })

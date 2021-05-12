@@ -1,7 +1,6 @@
 # Table of contents
 
 - [Exploring presentation](#Exploring-presentation)
-- [Exploring concrete example](#Exploring-concrete-example)
 - [Exploring integration](#Exploring-integration)
 - [startExploring](#startExploring)
 - [jsenv toolbar](#jsenv-toolbar)
@@ -15,59 +14,6 @@ These type of servers focuses on development. During development files change of
 You can use jsenv to start a server serving an html page containing a list of links to your project files. Each link goes to an url where your file will be executed. Thanks to this, any html file in your project can become an entry point. You can use it to debug a file in isolation, create a storybook and so on.
 
 Jsenv call this `exploring`.
-
-# Exploring concrete example
-
-This part helps you to setup a project on your machine to play with jsenv exploring.<br />
-You can also reuse the project file structure to understand how to integrate jsenv to explore your own project files.
-
-<details>
-  <summary>1 - Setup basic project</summary>
-
-```console
-git clone https://github.com/jsenv/jsenv-core.git
-```
-
-```console
-cd ./jsenv-core/docs/exploring/basic-project
-```
-
-```console
-npm install
-```
-
-</details>
-
-<details>
-  <summary>2 - Explore basic project</summary>
-
-If your node version is anterior to 13 please upgrade to node 13+ before going further. You can get this information by running the following command.
-
-```console
-node -v
-```
-
-Now you have node 13 or more you can execute the following command.
-
-```console
-node ./start-exploring.js
-```
-
-When exploring server starts `http://localhost:3456` is logged in your terminal.
-
-Once server is started you can navigate to `http://localhost:3456` and you will see an html page listing the files you can explore.
-
-![exploring index screenshot](./exploring-index.png)
-
-If you click `src/hello.html` page displays `Hello world`.
-
-![exploring hello html file screenshot](./exploring-hello.png)
-
-It shows that if your file execution renders something, you can see the effect in your browser.
-
-Now you have seen a basic example it's time to integrate it in your own project.
-
-</details>
 
 # Exploring integration
 

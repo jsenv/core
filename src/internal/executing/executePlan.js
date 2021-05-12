@@ -6,10 +6,10 @@ import { executeConcurrently } from "./executeConcurrently.js"
 export const executePlan = async (
   plan,
   {
-    cancellationToken,
-    compileServerLogLevel,
     logger,
-    executionLogLevel,
+    compileServerLogLevel,
+    launchAndExecuteLogLevel,
+    cancellationToken,
 
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
@@ -18,18 +18,8 @@ export const executePlan = async (
     importResolutionMethod,
     importDefaultExtension,
 
-    compileServerProtocol,
-    compileServerPrivateKey,
-    compileServerCertificate,
-    compileServerIp,
-    compileServerPort,
-    babelPluginMap,
-    convertMap,
-    compileGroupCount,
-
+    defaultMsAllocatedPerExecution,
     concurrencyLimit,
-    executionDefaultOptions,
-    stopAfterExecute,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     logSummary,
@@ -41,7 +31,14 @@ export const executePlan = async (
     coverageForceIstanbul,
     coverageV8MergeConflictIsExpected,
 
-    ...rest
+    compileServerProtocol,
+    compileServerPrivateKey,
+    compileServerCertificate,
+    compileServerIp,
+    compileServerPort,
+    babelPluginMap,
+    convertMap,
+    compileGroupCount,
   } = {},
 ) => {
   if (coverage) {
@@ -51,7 +48,11 @@ export const executePlan = async (
     }
   }
 
-  const { origin: compileServerOrigin, outDirectoryRelativeUrl, stop } = await startCompileServer({
+  const {
+    origin: compileServerOrigin,
+    outDirectoryRelativeUrl,
+    stop,
+  } = await startCompileServer({
     cancellationToken,
     compileServerLogLevel,
 
@@ -84,14 +85,14 @@ export const executePlan = async (
     },
   )
 
-  const executionResult = await executeConcurrently(executionSteps, {
-    cancellationToken,
+  const result = await executeConcurrently(executionSteps, {
     logger,
-    executionLogLevel,
+    launchAndExecuteLogLevel,
+    cancellationToken,
 
     projectDirectoryUrl,
-    outDirectoryRelativeUrl,
     compileServerOrigin,
+    outDirectoryRelativeUrl,
 
     // not sure we actually have to pass import params to executeConcurrently
     importResolutionMethod,
@@ -99,9 +100,8 @@ export const executePlan = async (
 
     babelPluginMap,
 
-    stopAfterExecute,
+    defaultMsAllocatedPerExecution,
     concurrencyLimit,
-    executionDefaultOptions,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     logSummary,
@@ -112,11 +112,13 @@ export const executePlan = async (
     coverageIncludeMissing,
     coverageForceIstanbul,
     coverageV8MergeConflictIsExpected,
-
-    ...rest,
   })
 
   stop("all execution done")
 
-  return executionResult
+  return {
+    planSummary: result.summary,
+    planReport: result.report,
+    planCoverage: result.coverage,
+  }
 }

@@ -1,4 +1,4 @@
-## `launchNode` options
+## `launchNode` params
 
 ### env
 
@@ -41,7 +41,6 @@ If you don't pass `debugMode` options, its value will be:
 
 ```js
 "inherit"
-
 ```
 
 ### debugModeInheritBreak

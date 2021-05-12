@@ -5,7 +5,6 @@
 - [How to test async code](#How-to-test-async-code)
 - [executeTestPlan](#executeTestPlan)
 - [All execution options](#All-execution-options)
-- [Test concrete example](#Test-concrete-example)
 
 # Test presentation
 
@@ -67,7 +66,7 @@ await new Promise(() => {})
 ```
 
 Note: By default an execution is given 30s before being considered as a timeout.
-Check [executionDefaultOptions](#executionDefaultOptions) to know how to configure this value.
+Check [defaultMsAllocatedPerExecution](#executeTestPlan-parameters) to know how to configure this value.
 
 </details>
 
@@ -145,7 +144,6 @@ If jsenv executed that code, runtime would be stopped after `execution end` logs
 # executeTestPlan
 
 `executeTestPlan` is an async function executing test files in one or several runtime environments logging progression and optionnaly generating associated coverage.
-To integrate it properly in your own project, take inspiration from the [basic project](./basic-project) files.
 
 ```js
 import { executeTestPlan, launchNode } from "@jsenv/core"
@@ -207,22 +205,15 @@ const testPlan = {
 }
 ```
 
-<details>
-  <summary>specifier</summary>
+**specifier**
 
 `specifier` is documented in [https://github.com/jsenv/jsenv-url-meta#specifier](https://github.com/jsenv/jsenv-url-meta#specifier).
 
-</details>
-
-<details>
-  <summary>executionName</summary>
+**executionName**
 
 `executionName` can be anything. up to you to name this execution.
 
-</details>
-
-<details>
-  <summary>executionOptions</summary>
+**executionOptions**
 
 `executionOptions` can be `null`, in that case the execution is ignored.
 It exists to prevent an execution planified by a previous specifier.
@@ -249,32 +240,10 @@ Otherwise `executionOptions` must be an object describing how to execute files. 
 
 </details>
 
-</details>
-
 <details>
-  <summary>executionDefaultOptions</summary>
+  <summary>defaultMsAllocatedPerExecution</summary>
 
-`executionDefaultOptions` parameter is an object that will be the default option used to execute file. This is an optional parameter with a default value of `{}`.
-
-`executionDefaultOptions` was designed to define options shared by file execution. These option can be overriden per file using `testPlan`.
-
-For example the following code allocates 5s per file by default and 10s for `foo.test.js`
-
-```js
-executeTestPlan({
-  executionDefaultOptions: {
-    allocatedMs: 5000,
-  },
-  testPlan: {
-    "./foo.test.js": {
-      node: {
-        launch: launchNode,
-        allocatedMs: 10000,
-      },
-    },
-  },
-})
-```
+`defaultMsAllocatedPerExecution` parameter is a number representing a number of ms allocated given for each file execution to complete. This parameter is optional with a default value corresponding to 30 seconds.
 
 </details>
 
@@ -353,7 +322,7 @@ To avoid duplication some parameter are linked to a generic documentation.
 <details>
   <summary>coverageIncludeMissing</summary>
 
-`coverageIncludeMissing` parameter is a boolean used to controls if testPlanCoverageMap will generate empty coverage for file never imported by test files. This parameter is optional and enabled by default.
+`coverageIncludeMissing` parameter is a boolean used to controls if testPlanCoverage will generate empty coverage for file never imported by test files. This parameter is optional and enabled by default.
 
 </details>
 
@@ -521,13 +490,13 @@ const { testPlanCoverage } = await executeTestPlan({
 
 # All execution options
 
-Execution options can appear either in `executionDefaultOptions` or `testPlan` (see [executeTestPlan parameters](#executeTestPlan-parameters)).
+Execution options can appear either in `testPlan` (see [executeTestPlan parameters](#executeTestPlan-parameters)).
 
 ```js
+import { executeTestPlan, launchNode } from "@jsenv/core"
+
 executeTestPlan({
-  executionDefaultOptions: {
-    allocatedMs: 5000,
-  },
+  defaultMsAllocatedPerExecution: 5000,
   testPlan: {
     "./foo.test.js": {
       node: {
@@ -547,16 +516,60 @@ A function capable to launch a runtime. This parameter is **required**, the avai
 </details>
 
 <details>
+  <summary>launchParams</summary>
+
+An object used to configure the launch function. This parameter is optional.
+
+`launchParams` works so that the two code below are equivalent:
+
+```js
+import { executeTestPlan, launchChromium } from "@jsenv/core"
+
+executeTestPlan({
+  testPlan: {
+    "./foo.test.html": {
+      chromium: {
+        launch: launchChromium,
+        launchParams: {
+          headless: false,
+        },
+      },
+    },
+  },
+})
+```
+
+```js
+import { executeTestPlan, launchChromium } from "@jsenv/core"
+
+executeTestPlan({
+  testPlan: {
+    "./foo.test.html": {
+      chromium: {
+        launch: (params) =>
+          launchChromium({
+            ...params,
+            headless: false,
+          }),
+      },
+    },
+  },
+})
+```
+
+</details>
+
+<details>
   <summary>allocatedMs</summary>
 
-A number representing the amount of milliseconds allocated for this file execution to complete. This option is optional with a default value of 30s.
+A number representing the amount of milliseconds allocated for this file execution to complete. This param is optional and fallback to [defaultMsAllocatedPerExecution](#executeTestPlan-parameters)
 
 </details>
 
 <details>
   <summary>measureDuration</summary>
 
-A boolean controlling if file execution duration is measured and reported back. This parameter is optional with a default value of true.
+A boolean controlling if file execution duration is measured and reported back. This param is optional and enabled by default.
 
 When true `startMs`, `endMs` properties are availabe on every execution result inside [testPlanReport](#executeTestPlan-return-value)
 
@@ -565,87 +578,17 @@ When true `startMs`, `endMs` properties are availabe on every execution result i
 <details>
   <summary>captureConsole</summary>
 
-A boolean controlling if console logs are captured during file execution and reported back. This parameter is optional with a default value of true.
+A boolean controlling if console logs are captured during file execution and reported back. This param is optional and enabled by default.
 
 When true `consoleCalls` property is availabe on every execution result inside [testPlanReport](#executeTestPlan-return-value).
 
 </details>
 
 <details>
-  <summary>collectCoverage</summary>
-
-A boolean controlling if coverage related to this execution is collected and reported back. This parameter is optional with a default value equal to [coverage parameter](#executeTestPlan-parameters)
-
-When true `coverageMap` property is availabe on every execution result inside [testPlanReport](#executeTestPlan-return-value).
-
-</details>
-
-<details>
   <summary>logSuccess</summary>
 
-A boolean controlling if execution success is logged in your terminal. This parameter is optional with a default value of true.
+A boolean controlling if execution success is logged in your terminal. This parameter is optional and enabled by default.
 
 When false and execution completes normally nothing is logged.
-
-</details>
-
-# Test concrete example
-
-This part helps you to setup a project on your machine to play with jsenv testing.<br />
-You can also reuse the project file structure to understand how to integrate jsenv to write and run your own project tests.
-
-<details>
-  <summary>1 - Setup basic project</summary>
-
-```console
-git clone https://github.com/jsenv/jsenv-core.git
-```
-
-```console
-cd ./jsenv-core/docs/testing/basic-project
-```
-
-```console
-npm install
-```
-
-</details>
-
-<details>
-  <summary>2 - Execute tests</summary>
-
-```console
-node ./execute-test-plan.js
-```
-
-> You need node 13+
-
-It will execute all your tests.
-
-![basic project test execution terminal screenshot](./basic-project-terminal-screenshot.png)
-
-</details>
-
-<details>
-  <summary>3 - Generate test coverage</summary>
-
-```console
-node ./execute-test-plan.js --cover
-```
-
-It will execute tests and generate `./coverage/` directory with files corresponding to your test coverage.
-
-### coverage/index.html
-
-You can explore your test coverage by opening `coverage/index.html` in your browser.
-
-![browsing coverage index](./coverage-index.png)
-![browsing coverage file](./coverage-file.png)
-
-### coverage/coverage.json
-
-It is your test plan coverage in JSON format. This format was created by [istanbul](https://github.com/gotwarlost/istanbul), a JS code coverage tool written in JS. This file exists to be provided to some code coverage tool.
-For instance you might want to send `coverage.json` to codecov.io inside continuous integration workflow.<br />
-— see [uploading coverage to codecov.io](./uploading-coverage-to-codecov.md)
 
 </details>

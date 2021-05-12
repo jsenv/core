@@ -437,11 +437,8 @@ export const createAssetBuilder = (
         const rollupChunkReadyPromise = new Promise((resolve) => {
           registerCallbackOnceRollupChunkIsReady(target.targetUrl, resolve)
         })
-        const {
-          targetBuildBuffer,
-          targetBuildRelativeUrl,
-          targetFileName,
-        } = await rollupChunkReadyPromise
+        const { targetBuildBuffer, targetBuildRelativeUrl, targetFileName } =
+          await rollupChunkReadyPromise
         target.targetFileName = targetFileName
         target.targetBuildEnd(targetBuildBuffer, targetBuildRelativeUrl)
         return

@@ -3,18 +3,7 @@ import { formatDuration } from "./formatDuration.js"
 import { createSummaryDetails } from "./createSummaryLog.js"
 
 export const createExecutionResultLog = (
-  {
-    status,
-    fileRelativeUrl,
-    allocatedMs,
-    runtimeName,
-    runtimeVersion,
-    consoleCalls,
-    startMs,
-    endMs,
-    error,
-    executionIndex,
-  },
+  { executionIndex, fileRelativeUrl, executionParams, executionResult },
   {
     completedExecutionLogAbbreviation,
     executionCount,
@@ -25,6 +14,9 @@ export const createExecutionResultLog = (
   },
 ) => {
   const executionNumber = executionIndex + 1
+  const { status } = executionResult
+  const { allocatedMs } = executionParams
+
   const description = descriptionFormatters[status]({
     executionNumber,
     executionCount,
@@ -42,6 +34,8 @@ export const createExecutionResultLog = (
     return `
 ${description} ${summary}.`
   }
+
+  const { runtimeName, runtimeVersion, consoleCalls, startMs, endMs, error } = executionResult
 
   const runtime = `${runtimeName}/${runtimeVersion}`
   return `

@@ -12,12 +12,12 @@ const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}file.spec.html`
 const testPlan = {
   [htmlFileRelativeUrl]: {
     chromium: {
-      launch: (params) =>
-        launchChromium({
-          ...params,
-          // headless: false
-        }),
+      launch: launchChromium,
+      launchParams: {
+        // headless: false
+      },
       captureConsole: true,
+      measureDuration: false,
     },
   },
 }
@@ -25,7 +25,7 @@ const { testPlanSummary, testPlanReport } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
-  executionLogLevel: "off",
+  launchAndExecuteLogLevel: "off",
   // stopAfterExecute: false,
 })
 const actual = {

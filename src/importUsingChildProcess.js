@@ -33,7 +33,7 @@ export const importUsingChildProcess = async (
 
       return {
         ...controllableNodeProcess,
-        executeFile: async () => {
+        execute: async () => {
           try {
             const namespace = await controllableNodeProcess.requestActionOnChildProcess({
               actionType: "execute-using-import",

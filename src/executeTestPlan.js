@@ -19,36 +19,21 @@ import { generateCoverageTextLog } from "./internal/executing/coverage/generateC
 import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 
 export const executeTestPlan = async ({
-  cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
-  executionLogLevel = "warn",
+  launchAndExecuteLogLevel = "warn",
+  cancellationToken = createCancellationTokenForProcess(),
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  jsenvDirectoryClean,
-
   importResolutionMethod,
   importDefaultExtension,
 
-  compileServerProtocol,
-  compileServerPrivateKey,
-  compileServerCertificate,
-  compileServerIp,
-  compileServerPort,
-  babelPluginMap,
-  convertMap,
-  compileGroupCount = 2,
-
   testPlan,
+  defaultMsAllocatedPerExecution,
+
   concurrencyLimit,
-  executionDefaultOptions = {},
-  // stopAfterExecute: true to ensure runtime is stopped once executed
-  // because we have what we wants: execution is completed and
-  // we have associated coverageMap and capturedConsole
-  // you can still pass false to debug what happens
-  // meaning all node process and browsers launched stays opened
-  stopAfterExecute = true,
+
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   logSummary = true,
@@ -74,9 +59,15 @@ export const executeTestPlan = async ({
   // skip full means file with 100% coverage won't appear in coverage reports (log and html)
   coverageSkipFull = false,
 
-  // for chromiumExecutablePath, firefoxExecutablePath and webkitExecutablePath
-  // but we need something angostic that just forward the params hence using ...rest
-  ...rest
+  compileServerProtocol,
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp,
+  compileServerPort,
+  babelPluginMap,
+  convertMap,
+  compileGroupCount = 2,
+  jsenvDirectoryClean,
 }) => {
   return executeJsenvAsyncFunction(async () => {
     const logger = createLogger({ logLevel })
@@ -138,30 +129,19 @@ export const executeTestPlan = async ({
     }
 
     const result = await executePlan(testPlan, {
-      cancellationToken,
-      compileServerLogLevel,
       logger,
-      executionLogLevel,
+      compileServerLogLevel,
+      launchAndExecuteLogLevel,
+      cancellationToken,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      jsenvDirectoryClean,
 
       importResolutionMethod,
       importDefaultExtension,
 
-      compileServerProtocol,
-      compileServerPrivateKey,
-      compileServerCertificate,
-      compileServerIp,
-      compileServerPort,
-      babelPluginMap,
-      convertMap,
-      compileGroupCount,
-
+      defaultMsAllocatedPerExecution,
       concurrencyLimit,
-      executionDefaultOptions,
-      stopAfterExecute,
       completedExecutionLogMerging,
       completedExecutionLogAbbreviation,
       logSummary,
@@ -173,7 +153,15 @@ export const executeTestPlan = async ({
       coverageForceIstanbul,
       coverageV8MergeConflictIsExpected,
 
-      ...rest,
+      jsenvDirectoryClean,
+      compileServerProtocol,
+      compileServerPrivateKey,
+      compileServerCertificate,
+      compileServerIp,
+      compileServerPort,
+      babelPluginMap,
+      convertMap,
+      compileGroupCount,
     })
 
     if (updateProcessExitCode && !executionIsPassed(result)) {
@@ -195,7 +183,7 @@ export const executeTestPlan = async ({
         logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`)
       }
       promises.push(
-        generateCoverageHtmlDirectory(result.coverageMap, {
+        generateCoverageHtmlDirectory(result.coverage, {
           projectDirectoryUrl,
           coverageHtmlDirectoryRelativeUrl,
         }),
@@ -206,19 +194,19 @@ export const executeTestPlan = async ({
       if (coverageJsonFileLog) {
         logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
       }
-      promises.push(generateCoverageJsonFile(result.coverageMap, coverageJsonFileUrl))
+      promises.push(generateCoverageJsonFile(result.coverage, coverageJsonFileUrl))
     }
     if (coverage && coverageTextLog) {
       promises.push(
-        generateCoverageTextLog(result.coverageMap, { coverageSkipEmpty, coverageSkipFull }),
+        generateCoverageTextLog(result.coverage, { coverageSkipEmpty, coverageSkipFull }),
       )
     }
     await Promise.all(promises)
 
     return {
-      testPlanSummary: result.summary,
-      testPlanReport: result.report,
-      testPlanCoverage: result.coverageMap,
+      testPlanSummary: result.planSummary,
+      testPlanReport: result.planReport,
+      testPlanCoverage: result.planCoverage,
     }
   })
 }

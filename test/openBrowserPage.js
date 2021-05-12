@@ -53,18 +53,18 @@ export const openBrowserPage = async (
   }
 
   if (inheritCoverage) {
-    const { coverageMap } = executionResult
+    const { coverage } = executionResult
     global.__indirectCoverage__ = composeIstanbulCoverages([
       global.__indirectCoverage__ || {},
-      coverageMap || {},
+      coverage || {},
     ])
   }
 
-  delete executionResult.coverageMap
+  delete executionResult.coverage
   const { fileExecutionResultMap } = executionResult
   Object.keys(fileExecutionResultMap).forEach((file) => {
     const fileExecutionResult = fileExecutionResultMap[file]
-    delete fileExecutionResult.coverageMap
+    delete fileExecutionResult.coverage
   })
 
   return {

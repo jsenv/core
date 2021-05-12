@@ -20,6 +20,8 @@ const testPlan = {
         }),
       allocatedMs: 8000,
       gracefulStopAllocatedMs: 5000,
+      measureDuration: false,
+      captureConsole: false,
     },
   },
 }

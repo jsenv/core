@@ -603,7 +603,12 @@ export const createJsenvRollupPlugin = async ({
       // }
 
       logger.debug(`loads ${url}`)
-      const { responseUrl, contentRaw, content = "", map } = await loadModule(url, {
+      const {
+        responseUrl,
+        contentRaw,
+        content = "",
+        map,
+      } = await loadModule(url, {
         moduleInfo,
       })
 

@@ -20,12 +20,12 @@ import { istanbulCoverageFromV8Coverage } from "./internal/executing/coverage/is
 const cuid = require("cuid")
 
 export const launchNode = async ({
-  cancellationToken = createCancellationToken(),
   logger,
+  cancellationToken = createCancellationToken(),
 
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
   compileServerOrigin,
+  outDirectoryRelativeUrl,
 
   debugPort,
   debugMode,
@@ -86,10 +86,10 @@ export const launchNode = async ({
 
       // the v8 coverage directory is available once the child process is disconnected
       finalizeExecutionResult = async (executionResult) => {
-        const coverageMap = await ensureV8CoverageDirClean(async () => {
+        const coverage = await ensureV8CoverageDirClean(async () => {
           // prefer istanbul if available
-          if (executionResult.coverageMap) {
-            return executionResult.coverageMap
+          if (executionResult.coverage) {
+            return executionResult.coverage
           }
 
           await controllableNodeProcess.disconnected
@@ -101,7 +101,7 @@ export const launchNode = async ({
           })
           return istanbulCoverage
         }, NODE_V8_COVERAGE)
-        executionResult.coverageMap = coverageMap
+        executionResult.coverage = coverage
         return executionResult
       }
     }
@@ -124,12 +124,12 @@ export const launchNode = async ({
     logProcessCommand,
   })
 
-  const executeFile = async (fileRelativeUrl, { collectCoverage, executionId }) => {
+  const execute = async ({ fileRelativeUrl, executionId }) => {
     const executeParams = {
-      jsenvCoreDirectoryUrl,
       projectDirectoryUrl,
       compileServerOrigin,
       outDirectoryRelativeUrl,
+      jsenvCoreDirectoryUrl,
 
       fileRelativeUrl,
       collectCoverage,
@@ -153,20 +153,14 @@ export const launchNode = async ({
   }
 
   return {
-    name: "node",
-    version: process.version.slice(1),
+    ...controllableNodeProcess,
     options: {
       execArgv: controllableNodeProcess.execArgv,
       // for now do not pass env, it make debug logs to verbose
       // because process.env is very big
       // env,
     },
-    gracefulStop: controllableNodeProcess.gracefulStop,
-    stop: controllableNodeProcess.stop,
-    disconnected: controllableNodeProcess.disconnected,
-    registerErrorCallback: controllableNodeProcess.registerErrorCallback,
-    registerConsoleCallback: controllableNodeProcess.registerConsoleCallback,
-    executeFile,
+    execute,
     finalizeExecutionResult,
   }
 }
@@ -194,25 +188,28 @@ const getNodeV8CoverageDir = async ({ projectDirectoryUrl }) => {
   return urlToFileSystemPath(v8CoverageDirectory)
 }
 
-const transformExecutionResult = (evaluateResult, { compileServerOrigin, projectDirectoryUrl }) => {
-  const { status } = evaluateResult
+const transformExecutionResult = (
+  executionResult,
+  { compileServerOrigin, projectDirectoryUrl },
+) => {
+  const { status } = executionResult
 
   if (status === "errored") {
-    const { exceptionSource, coverageMap } = evaluateResult
+    const { exceptionSource, coverage } = executionResult
     const error = evalSource(exceptionSource)
     const errorTransformed = transformError(error, { compileServerOrigin, projectDirectoryUrl })
     return {
       status,
       error: errorTransformed,
-      coverageMap,
+      coverage,
     }
   }
 
-  const { namespace, coverageMap } = evaluateResult
+  const { namespace, coverage } = executionResult
   return {
     status,
     namespace,
-    coverageMap,
+    coverage,
   }
 }
 

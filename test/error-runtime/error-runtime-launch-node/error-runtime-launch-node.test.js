@@ -24,7 +24,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 
 const result = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
-  executionLogLevel: "off",
+  launchAndExecuteLogLevel: "off",
   launch: (options) =>
     launchNode({
       ...LAUNCH_TEST_PARAMS,
@@ -32,7 +32,9 @@ const result = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
-  fileRelativeUrl,
+  executeParams: {
+    fileRelativeUrl,
+  },
   captureConsole: true,
 })
 

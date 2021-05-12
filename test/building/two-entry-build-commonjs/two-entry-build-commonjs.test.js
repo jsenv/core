@@ -32,9 +32,8 @@ const { buildManifest, buildMappings } = await buildProject({
   const expected = {
     [`${testDirectoryRelativeUrl}a.js`]: "a.cjs",
     [`${testDirectoryRelativeUrl}b.js`]: "b.cjs",
-    [`${testDirectoryRelativeUrl}used-by-both.js`]: actual[
-      `${testDirectoryRelativeUrl}used-by-both.js`
-    ],
+    [`${testDirectoryRelativeUrl}used-by-both.js`]:
+      actual[`${testDirectoryRelativeUrl}used-by-both.js`],
   }
   assert({ actual, expected })
 }
