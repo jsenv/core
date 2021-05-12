@@ -18,6 +18,7 @@ await Promise.all(
       launch: launchBrowser,
       fileRelativeUrl,
       stopAfterExecute: true,
+      mirrorConsole: false,
     })
     const expected = {
       status: "completed",

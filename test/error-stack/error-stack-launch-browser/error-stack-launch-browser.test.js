@@ -26,8 +26,8 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
   const result = await launchAndExecute({
     ...EXECUTION_TEST_PARAMS,
-    // sets executionLogLevel to off to avoid seeing an expected error in logs
-    executionLogLevel: "off",
+    // sets launchAndExecuteLogLevel to off to avoid seeing an expected error in logs
+    launchAndExecuteLogLevel: "off",
     // stopAfterExecute: false,
     launch: (options) =>
       launchBrowser({
