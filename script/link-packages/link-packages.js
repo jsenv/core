@@ -4,24 +4,36 @@ import { resolveUrl, readDirectory, urlToFileSystemPath } from "@jsenv/util"
 const jsenvDirectoryUrl = resolveUrl("../../", import.meta.url)
 const packagesDirectorUrl = resolveUrl("packages/", jsenvDirectoryUrl)
 
+const execCommand = (command, { cwd }) => {
+  console.log(`> cd ${cwd}
+> ${command}`)
+  return new Promise((resolve, reject) => {
+    exec(
+      command,
+      {
+        cwd,
+      },
+      (error) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve()
+        }
+      },
+    )
+  })
+}
+
 const packageNames = await readDirectory(packagesDirectorUrl)
-await Promise.all(
-  packageNames.map(async (packageName) => {
-    const packageDirectoryUrl = resolveUrl(packageName, packagesDirectorUrl)
-    await new Promise((resolve, reject) => {
-      exec(
-        "npm link @jsenv/core",
-        {
-          cwd: urlToFileSystemPath(packageDirectoryUrl),
-        },
-        (error) => {
-          if (error) {
-            reject(error)
-          } else {
-            resolve()
-          }
-        },
-      )
-    })
-  }),
-)
+if (packageNames.length) {
+  await execCommand("npm link", { cwd: urlToFileSystemPath(jsenvDirectoryUrl) })
+
+  await Promise.all(
+    packageNames.map(async (packageName) => {
+      const packageDirectoryUrl = resolveUrl(packageName, packagesDirectorUrl)
+      await execCommand("npm link @jsenv/core", {
+        cwd: urlToFileSystemPath(packageDirectoryUrl),
+      })
+    }),
+  )
+}
