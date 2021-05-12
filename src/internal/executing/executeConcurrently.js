@@ -102,6 +102,7 @@ export const executeConcurrently = async (
       }
 
       const beforeExecutionInfo = {
+        fileRelativeUrl,
         executionIndex,
         executionParams,
       }
