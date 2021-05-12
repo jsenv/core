@@ -91,8 +91,11 @@ const merge = (istanbulFileCoverageA, istanbulFileCoverageB) => {
 const formatMergeConflictBetweenV8AndIstanbulWarning = ({ fileRelativeUrl, coverageKept }) => {
   return `Cannot merge file coverage coming from v8 and istanbul.
 The one with most branch coverage will be kept and the other ignored.
+--- coverage kept ---
+${coverageKept.fromV8 ? "v8" : "istanbul"}
 --- file ---
 ${fileRelativeUrl}
---- coverage kept ---
-${coverageKept.fromV8 ? "v8" : "istanbul"}`
+--- suggestion ---
+If this is expected use coverageV8MergeConflictIsExpected to disable this warning
+`
 }
