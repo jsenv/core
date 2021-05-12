@@ -5,10 +5,10 @@ import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
 
 export const execute = async ({
-  cancellationToken = createCancellationTokenForProcess(),
   logLevel = "warn",
   compileServerLogLevel = logLevel,
-  executionLogLevel = logLevel,
+  launchAndExecuteLogLevel = logLevel,
+  cancellationToken = createCancellationTokenForProcess(),
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -17,6 +17,21 @@ export const execute = async ({
   importDefaultExtension,
 
   fileRelativeUrl,
+  launch,
+  launchParams,
+
+  allocatedMs,
+  measureDuration,
+  mirrorConsole = true,
+  captureConsole,
+  collectRuntimeName,
+  collectRuntimeVersion,
+  inheritCoverage,
+  collectCoverage,
+  stopAfterExecute = false,
+  stopAfterExecuteReason,
+  gracefulStopAllocatedMs,
+  ignoreError = false,
 
   compileServerProtocol,
   compileServerPrivateKey,
@@ -26,13 +41,6 @@ export const execute = async ({
   babelPluginMap,
   convertMap,
   compileGroupCount = 2,
-
-  launch,
-  mirrorConsole = true,
-  stopAfterExecute = false,
-  gracefulStopAllocatedMs,
-  ignoreError = false,
-  ...rest
 }) => {
   const executionPromise = executeJsenvAsyncFunction(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
@@ -71,21 +79,31 @@ export const execute = async ({
     })
 
     const result = await launchAndExecute({
+      launchAndExecuteLogLevel,
       cancellationToken,
-      executionLogLevel,
 
-      fileRelativeUrl,
-      launch: (params) =>
-        launch({
-          projectDirectoryUrl,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-          ...params,
-        }),
+      launch,
+      launchParams: {
+        projectDirectoryUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
+        ...launchParams,
+      },
+      executeParams: {
+        fileRelativeUrl,
+      },
+
+      allocatedMs,
+      measureDuration,
       mirrorConsole,
+      captureConsole,
+      collectRuntimeName,
+      collectRuntimeVersion,
+      inheritCoverage,
+      collectCoverage,
       stopAfterExecute,
+      stopAfterExecuteReason,
       gracefulStopAllocatedMs,
-      ...rest,
     })
 
     stop("single-execution-done")

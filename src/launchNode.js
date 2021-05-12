@@ -20,12 +20,12 @@ import { istanbulCoverageFromV8Coverage } from "./internal/executing/coverage/is
 const cuid = require("cuid")
 
 export const launchNode = async ({
-  cancellationToken = createCancellationToken(),
   logger,
+  cancellationToken = createCancellationToken(),
 
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
   compileServerOrigin,
+  outDirectoryRelativeUrl,
 
   debugPort,
   debugMode,
@@ -124,12 +124,12 @@ export const launchNode = async ({
     logProcessCommand,
   })
 
-  const executeFile = async (fileRelativeUrl, { collectCoverage, executionId }) => {
+  const execute = async ({ fileRelativeUrl, executionId }) => {
     const executeParams = {
-      jsenvCoreDirectoryUrl,
       projectDirectoryUrl,
       compileServerOrigin,
       outDirectoryRelativeUrl,
+      jsenvCoreDirectoryUrl,
 
       fileRelativeUrl,
       collectCoverage,
@@ -153,8 +153,8 @@ export const launchNode = async ({
   }
 
   return {
-    name: "node",
-    version: process.version.slice(1),
+    runtimeName: "node",
+    runtimeVersion: process.version.slice(1),
     options: {
       execArgv: controllableNodeProcess.execArgv,
       // for now do not pass env, it make debug logs to verbose
@@ -166,7 +166,7 @@ export const launchNode = async ({
     disconnected: controllableNodeProcess.disconnected,
     registerErrorCallback: controllableNodeProcess.registerErrorCallback,
     registerConsoleCallback: controllableNodeProcess.registerConsoleCallback,
-    executeFile,
+    execute,
     finalizeExecutionResult,
   }
 }

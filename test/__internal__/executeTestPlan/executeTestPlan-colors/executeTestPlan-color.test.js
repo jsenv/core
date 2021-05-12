@@ -30,14 +30,15 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 const getLogs = async () => {
   const result = await launchAndExecute({
     ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
-    fileRelativeUrl,
-    launch: (options) =>
-      launchNode({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-      }),
+    launch: launchNode,
+    launchParams: {
+      ...LAUNCH_TEST_PARAMS,
+      compileServerOrigin,
+      outDirectoryRelativeUrl,
+    },
+    executeParams: {
+      fileRelativeUrl,
+    },
     captureConsole: true,
     stopAfterExecute: true,
     // mirrorConsole: false

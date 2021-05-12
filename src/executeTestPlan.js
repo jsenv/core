@@ -19,36 +19,21 @@ import { generateCoverageTextLog } from "./internal/executing/coverage/generateC
 import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 
 export const executeTestPlan = async ({
-  cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
-  executionLogLevel = "warn",
+  launchAndExecuteLogLevel = "warn",
+  cancellationToken = createCancellationTokenForProcess(),
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  jsenvDirectoryClean,
-
   importResolutionMethod,
   importDefaultExtension,
 
-  compileServerProtocol,
-  compileServerPrivateKey,
-  compileServerCertificate,
-  compileServerIp,
-  compileServerPort,
-  babelPluginMap,
-  convertMap,
-  compileGroupCount = 2,
-
   testPlan,
+  defaultMsAllocatedPerExecution,
+
   concurrencyLimit,
-  executionDefaultOptions = {},
-  // stopAfterExecute: true to ensure runtime is stopped once executed
-  // because we have what we wants: execution is completed and
-  // we have associated coverageMap and capturedConsole
-  // passsing false means all node process and browsers launched stays opened
-  // (can eventually be used for debug)
-  stopAfterExecute = true,
+
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   logSummary = true,
@@ -73,6 +58,16 @@ export const executeTestPlan = async ({
   coverageSkipEmpty = false,
   // skip full means file with 100% coverage won't appear in coverage reports (log and html)
   coverageSkipFull = false,
+
+  compileServerProtocol,
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp,
+  compileServerPort,
+  babelPluginMap,
+  convertMap,
+  compileGroupCount = 2,
+  jsenvDirectoryClean,
 }) => {
   return executeJsenvAsyncFunction(async () => {
     const logger = createLogger({ logLevel })
@@ -134,30 +129,19 @@ export const executeTestPlan = async ({
     }
 
     const result = await executePlan(testPlan, {
-      cancellationToken,
-      compileServerLogLevel,
       logger,
-      executionLogLevel,
+      compileServerLogLevel,
+      launchAndExecuteLogLevel,
+      cancellationToken,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      jsenvDirectoryClean,
 
       importResolutionMethod,
       importDefaultExtension,
 
-      compileServerProtocol,
-      compileServerPrivateKey,
-      compileServerCertificate,
-      compileServerIp,
-      compileServerPort,
-      babelPluginMap,
-      convertMap,
-      compileGroupCount,
-
+      defaultMsAllocatedPerExecution,
       concurrencyLimit,
-      executionDefaultOptions,
-      stopAfterExecute,
       completedExecutionLogMerging,
       completedExecutionLogAbbreviation,
       logSummary,
@@ -168,6 +152,16 @@ export const executeTestPlan = async ({
       coverageIncludeMissing,
       coverageForceIstanbul,
       coverageV8MergeConflictIsExpected,
+
+      jsenvDirectoryClean,
+      compileServerProtocol,
+      compileServerPrivateKey,
+      compileServerCertificate,
+      compileServerIp,
+      compileServerPort,
+      babelPluginMap,
+      convertMap,
+      compileGroupCount,
     })
 
     if (updateProcessExitCode && !executionIsPassed(result)) {

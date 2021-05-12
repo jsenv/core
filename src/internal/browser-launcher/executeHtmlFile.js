@@ -10,8 +10,8 @@ export const executeHtmlFile = async (
   {
     cancellationToken,
     projectDirectoryUrl,
-    outDirectoryRelativeUrl,
     compileServerOrigin,
+    outDirectoryRelativeUrl,
     page,
     collectCoverage,
   },

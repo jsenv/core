@@ -7,10 +7,6 @@ export const EXECUTE_TEST_PLAN_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
-  executionDefaultOptions: {
-    measureDuration: false,
-    captureConsole: false,
-  },
   coverageTextLog: false,
   coverageJsonFile: false,
   coverageHtmlDirectory: false,
