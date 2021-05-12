@@ -3583,7 +3583,7 @@
                   executionResult = {
                     status: "completed",
                     namespace: namespace,
-                    coverageMap: readCoverage()
+                    coverage: readCoverage()
                   };
                 });
               }, function (error) {
@@ -3601,7 +3601,7 @@
                   executionResult = {
                     status: "errored",
                     exceptionSource: unevalException(transformedError),
-                    coverageMap: readCoverage()
+                    coverage: readCoverage()
                   };
                 });
               }), function () {
