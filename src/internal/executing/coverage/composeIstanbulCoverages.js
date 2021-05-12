@@ -78,7 +78,7 @@ export const composeIstanbulCoverages = (
 const branchHitCountFromFileCoverage = ({ b }) => {
   const branchHitCount = Object.keys(b).reduce((previous, key) => {
     return previous + b[key]
-  })
+  }, 0)
   return branchHitCount
 }
 

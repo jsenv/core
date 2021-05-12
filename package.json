@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "18.1.0",
+  "version": "18.1.1",
   "description": "Tool to develop, test and build js projects.",
   "license": "MIT",
   "repository": {
@@ -18,7 +18,7 @@
     ".": {
       "import": "./main.js"
     },
-    "./": "./"
+    "./*": "./*"
   },
   "main": "main.js",
   "files": [
@@ -95,13 +95,13 @@
     "@babel/plugin-transform-typeof-symbol": "7.12.13",
     "@babel/plugin-transform-unicode-regex": "7.12.13",
     "@c88/v8-coverage": "0.1.1",
-    "@jsenv/cancellation": "2.0.3",
-    "@jsenv/import-map": "6.13.2",
-    "@jsenv/logger": "4.0.0",
+    "@jsenv/cancellation": "2.0.4",
+    "@jsenv/import-map": "6.13.3",
+    "@jsenv/logger": "4.0.1",
     "@jsenv/node-signals": "2.0.1",
-    "@jsenv/server": "6.0.2",
+    "@jsenv/server": "6.0.3",
     "@jsenv/uneval": "1.5.1",
-    "@jsenv/util": "4.1.0",
+    "@jsenv/util": "4.1.1",
     "@rollup/plugin-commonjs": "19.0.0",
     "@rollup/plugin-json": "4.1.0",
     "@rollup/plugin-node-resolve": "13.0.0",
@@ -148,7 +148,7 @@
     "@jsenv/eslint-config": "15.0.1",
     "@jsenv/github-release-package": "1.2.2",
     "@jsenv/importmap-eslint-resolver": "5.0.0",
-    "@jsenv/node-module-import-map": "13.4.1",
+    "@jsenv/node-module-import-map": "13.4.2",
     "@jsenv/package-publish": "1.5.2",
     "@jsenv/prettier-check-project": "5.6.1",
     "@jsenv/pwa": "3.0.7",
