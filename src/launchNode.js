@@ -86,10 +86,10 @@ export const launchNode = async ({
 
       // the v8 coverage directory is available once the child process is disconnected
       finalizeExecutionResult = async (executionResult) => {
-        const coverageMap = await ensureV8CoverageDirClean(async () => {
+        const coverage = await ensureV8CoverageDirClean(async () => {
           // prefer istanbul if available
-          if (executionResult.coverageMap) {
-            return executionResult.coverageMap
+          if (executionResult.coverage) {
+            return executionResult.coverage
           }
 
           await controllableNodeProcess.disconnected
@@ -101,7 +101,7 @@ export const launchNode = async ({
           })
           return istanbulCoverage
         }, NODE_V8_COVERAGE)
-        executionResult.coverageMap = coverageMap
+        executionResult.coverage = coverage
         return executionResult
       }
     }
@@ -201,21 +201,21 @@ const transformExecutionResult = (
   const { status } = executionResult
 
   if (status === "errored") {
-    const { exceptionSource, coverageMap } = executionResult
+    const { exceptionSource, coverage } = executionResult
     const error = evalSource(exceptionSource)
     const errorTransformed = transformError(error, { compileServerOrigin, projectDirectoryUrl })
     return {
       status,
       error: errorTransformed,
-      coverageMap,
+      coverage,
     }
   }
 
-  const { namespace, coverageMap } = executionResult
+  const { namespace, coverage } = executionResult
   return {
     status,
     namespace,
-    coverageMap,
+    coverage,
   }
 }
 

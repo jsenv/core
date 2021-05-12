@@ -4,7 +4,7 @@ import { require } from "../../require.js"
 const { readFileSync } = require("fs")
 
 export const generateCoverageHtmlDirectory = async (
-  coverageMap,
+  coverage,
   { projectDirectoryUrl, coverageHtmlDirectoryRelativeUrl, coverageSkipEmpty, coverageSkipFull },
 ) => {
   const libReport = require("istanbul-lib-report")
@@ -13,7 +13,7 @@ export const generateCoverageHtmlDirectory = async (
 
   const context = libReport.createContext({
     dir: urlToFileSystemPath(projectDirectoryUrl),
-    coverageMap: createCoverageMap(coverageMap),
+    coverageMap: createCoverageMap(coverage),
     sourceFinder: (path) => {
       return readFileSync(urlToFileSystemPath(resolveUrl(path, projectDirectoryUrl)), "utf8")
     },

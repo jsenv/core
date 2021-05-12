@@ -30,7 +30,7 @@ const expected = {
     node: {
       status: "completed",
       namespace: { COVERAGE_ENABLED: "true" },
-      coverageMap: {},
+      coverage: {},
       runtimeName: "node",
       runtimeVersion: actual[fileRelativeUrl].node.runtimeVersion,
     },

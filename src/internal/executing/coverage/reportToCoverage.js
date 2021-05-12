@@ -15,7 +15,7 @@ export const reportToCoverage = async (
     coverageV8MergeConflictIsExpected,
   },
 ) => {
-  const istanbulCoverageFromExecution = executionReportToCoverageMap(report, {
+  const istanbulCoverageFromExecution = executionReportToCoverage(report, {
     logger,
     projectDirectoryUrl,
     coverageV8MergeConflictIsExpected,
@@ -76,7 +76,7 @@ const listRelativeFileUrlToCover = async ({
   return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl)
 }
 
-const executionReportToCoverageMap = (
+const executionReportToCoverage = (
   report,
   { logger, projectDirectoryUrl, coverageV8MergeConflictIsExpected },
 ) => {
@@ -87,9 +87,9 @@ const executionReportToCoverageMap = (
     Object.keys(executionResultForFile).forEach((executionName) => {
       const executionResultForFileOnRuntime = executionResultForFile[executionName]
 
-      const { status, coverageMap } = executionResultForFileOnRuntime
-      if (!coverageMap) {
-        // several reasons not to have coverageMap here:
+      const { status, coverage } = executionResultForFileOnRuntime
+      if (!coverage) {
+        // several reasons not to have coverage here:
         // 1. the file we executed did not import an instrumented file.
         // - a test file without import
         // - a test file importing only file excluded from coverage
@@ -108,12 +108,12 @@ const executionReportToCoverageMap = (
         // that were suppose to be coverage but were not.
 
         if (status === "completed") {
-          logger.warn(`No execution.coverageMap from execution named "${executionName}" of ${file}`)
+          logger.warn(`No execution.coverage from execution named "${executionName}" of ${file}`)
         }
         return
       }
 
-      const istanbulCoverage = normalizeIstanbulCoverage(coverageMap, projectDirectoryUrl)
+      const istanbulCoverage = normalizeIstanbulCoverage(coverage, projectDirectoryUrl)
       istanbulCoverages.push(istanbulCoverage)
     })
   })

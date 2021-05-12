@@ -183,7 +183,7 @@ export const executeTestPlan = async ({
         logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`)
       }
       promises.push(
-        generateCoverageHtmlDirectory(result.coverageMap, {
+        generateCoverageHtmlDirectory(result.coverage, {
           projectDirectoryUrl,
           coverageHtmlDirectoryRelativeUrl,
         }),
@@ -194,11 +194,11 @@ export const executeTestPlan = async ({
       if (coverageJsonFileLog) {
         logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
       }
-      promises.push(generateCoverageJsonFile(result.coverageMap, coverageJsonFileUrl))
+      promises.push(generateCoverageJsonFile(result.coverage, coverageJsonFileUrl))
     }
     if (coverage && coverageTextLog) {
       promises.push(
-        generateCoverageTextLog(result.coverageMap, { coverageSkipEmpty, coverageSkipFull }),
+        generateCoverageTextLog(result.coverage, { coverageSkipEmpty, coverageSkipFull }),
       )
     }
     await Promise.all(promises)

@@ -90,7 +90,7 @@ export const executeConcurrently = async (
         collectRuntimeVersion: true,
         // stopAfterExecute: true to ensure runtime is stopped once executed
         // because we have what we wants: execution is completed and
-        // we have associated coverageMap and capturedConsole
+        // we have associated coverage and capturedConsole
         // passsing false means all node process and browsers launched stays opened
         // (can eventually be used for debug)
         stopAfterExecute: true,

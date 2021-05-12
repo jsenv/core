@@ -322,7 +322,7 @@ To avoid duplication some parameter are linked to a generic documentation.
 <details>
   <summary>coverageIncludeMissing</summary>
 
-`coverageIncludeMissing` parameter is a boolean used to controls if testPlanCoverageMap will generate empty coverage for file never imported by test files. This parameter is optional and enabled by default.
+`coverageIncludeMissing` parameter is a boolean used to controls if testPlanCoverage will generate empty coverage for file never imported by test files. This parameter is optional and enabled by default.
 
 </details>
 

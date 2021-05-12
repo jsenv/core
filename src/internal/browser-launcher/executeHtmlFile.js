@@ -70,7 +70,7 @@ export const executeHtmlFile = async (
 
   if (!collectCoverage) {
     Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
-      delete fileExecutionResultMap[fileRelativeUrl].coverageMap
+      delete fileExecutionResultMap[fileRelativeUrl].coverage
     })
   }
 
@@ -80,21 +80,21 @@ export const executeHtmlFile = async (
       status: "errored",
       error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
       namespace: fileExecutionResultMap,
-      coverageMap: generateCoverageForPage(fileExecutionResultMap),
+      coverage: generateCoverageForPage(fileExecutionResultMap),
     }
   }
 
   return {
     status: "completed",
     namespace: fileExecutionResultMap,
-    coverageMap: generateCoverageForPage(fileExecutionResultMap),
+    coverage: generateCoverageForPage(fileExecutionResultMap),
   }
 }
 
 const generateCoverageForPage = (fileExecutionResultMap) => {
   const istanbulCoverages = []
   Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
-    const istanbulCoverage = fileExecutionResultMap[fileRelativeUrl].coverageMap
+    const istanbulCoverage = fileExecutionResultMap[fileRelativeUrl].coverage
     if (istanbulCoverage) {
       istanbulCoverages.push(istanbulCoverage)
     }

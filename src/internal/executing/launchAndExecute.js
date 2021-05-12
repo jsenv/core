@@ -126,12 +126,9 @@ export const launchAndExecute = async ({
     executionResultTransformer = composeTransformer(
       executionResultTransformer,
       (executionResult) => {
-        const { coverageMap, ...rest } = executionResult
+        const { coverage, ...rest } = executionResult
         // ensure the coverage of the executed file is taken into account
-        global.__coverage__ = composeIstanbulCoverages([
-          global.__coverage__ || {},
-          coverageMap || {},
-        ])
+        global.__coverage__ = composeIstanbulCoverages([global.__coverage__ || {}, coverage || {}])
         if (collectCoverageSaved) {
           return executionResult
         }
@@ -151,9 +148,9 @@ export const launchAndExecute = async ({
     executionResultTransformer = composeTransformer(
       executionResultTransformer,
       (executionResult) => {
-        const { coverageMap, indirectCoverage } = executionResult
+        const { coverage, indirectCoverage } = executionResult
         if (indirectCoverage) {
-          executionResult.coverageMap = composeIstanbulCoverages([coverageMap, indirectCoverage], {
+          executionResult.coverage = composeIstanbulCoverages([coverage, indirectCoverage], {
             coverageV8MergeConflictIsExpected,
           })
         }
@@ -165,9 +162,9 @@ export const launchAndExecute = async ({
       executionResultTransformer,
       (executionResult) => {
         // as collectCoverage is disabled
-        // executionResult.coverageMap is undefined or {}
+        // executionResult.coverage is undefined or {}
         // we delete it just to have a cleaner object
-        delete executionResult.coverageMap
+        delete executionResult.coverage
         return executionResult
       },
     )
