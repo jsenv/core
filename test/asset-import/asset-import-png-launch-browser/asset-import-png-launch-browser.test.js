@@ -1,6 +1,7 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, urlToBasename } from "@jsenv/util"
+
+import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
@@ -10,11 +11,10 @@ import {
   EXECUTION_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
-import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativeUrl)
+const testDirectoryBasename = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const filename = `${testDirectoryBasename}.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
@@ -28,7 +28,6 @@ const pngFileUrl = resolveUrl(`${testDirectoryRelativeUrl}jsenv.png`, compileSer
 await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
   const actual = await launchAndExecute({
     ...EXECUTION_TEST_PARAMS,
-    fileRelativeUrl,
     // stopAfterExecute: false,
     launch: (options) =>
       launchBrowser({
@@ -38,6 +37,9 @@ await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launc
         compileServerOrigin,
         // headless: false,
       }),
+    executeParams: {
+      fileRelativeUrl,
+    },
   })
   const expected = {
     status: "completed",
