@@ -42,7 +42,7 @@
     "@jsenv/core": "*"
   },
   "scripts": {
-    "generate-commonjs-build": "node ./script/generate-commonjs-build/generate-commonjs-build.js",
+    "generate-commonjs-build": "node --experimental-import-meta-resolve ./script/generate-commonjs-build/generate-commonjs-build.js",
     "generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
     "dist": "npm run generate-commonjs-build",
     "postinstall": "npm run generate-import-map",
