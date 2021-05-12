@@ -46,8 +46,8 @@ export const executeTestPlan = async ({
   // stopAfterExecute: true to ensure runtime is stopped once executed
   // because we have what we wants: execution is completed and
   // we have associated coverageMap and capturedConsole
-  // you can still pass false to debug what happens
-  // meaning all node process and browsers launched stays opened
+  // passsing false means all node process and browsers launched stays opened
+  // (can eventually be used for debug)
   stopAfterExecute = true,
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
@@ -73,10 +73,6 @@ export const executeTestPlan = async ({
   coverageSkipEmpty = false,
   // skip full means file with 100% coverage won't appear in coverage reports (log and html)
   coverageSkipFull = false,
-
-  // for chromiumExecutablePath, firefoxExecutablePath and webkitExecutablePath
-  // but we need something angostic that just forward the params hence using ...rest
-  ...rest
 }) => {
   return executeJsenvAsyncFunction(async () => {
     const logger = createLogger({ logLevel })
@@ -172,8 +168,6 @@ export const executeTestPlan = async ({
       coverageIncludeMissing,
       coverageForceIstanbul,
       coverageV8MergeConflictIsExpected,
-
-      ...rest,
     })
 
     if (updateProcessExitCode && !executionIsPassed(result)) {
@@ -216,9 +210,9 @@ export const executeTestPlan = async ({
     await Promise.all(promises)
 
     return {
-      testPlanSummary: result.summary,
-      testPlanReport: result.report,
-      testPlanCoverage: result.coverageMap,
+      testPlanSummary: result.planSummary,
+      testPlanReport: result.planReport,
+      testPlanCoverage: result.planCoverageMap,
     }
   })
 }
