@@ -55,7 +55,10 @@ import { execute, launchChromium } from "@jsenv/core"
 execute({
   projectDirectoryUrl: "/Users/you/directory",
   fileRelativeUrl: "./index.js",
-  launch: (options) => launchChromium({ ...options, headless: false }),
+  launch: launchChromium,
+  launchParams: {
+    headless: false,
+  },
 })
 ```
 

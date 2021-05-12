@@ -1,4 +1,4 @@
-## `launchNode` options
+## `launchNode` params
 
 ### env
 
