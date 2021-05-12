@@ -14,6 +14,7 @@ await publishPackage({
 
 await publishPackage({
   projectDirectoryUrl: new URL("../../packages/jsenv-sass", import.meta.url),
+  logLevel: "debug",
   registriesConfig: {
     "https://registry.npmjs.org": {
       token: process.env.NPM_TOKEN,
