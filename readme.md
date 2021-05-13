@@ -199,7 +199,7 @@ Building can be described as: generating files optimized for production thanks t
 
 Jsenv only needs to know your main html file and where to write the builded files. You can create a script and execute it with node.
 
-Following the simplified steps below turns `index.html` into a production optimized `dist/main.html`.
+Following the steps below turns `index.html` into a production optimized `dist/main.html`.
 
 <details>
   <summary>1. Create <code>index.html</code></summary>
