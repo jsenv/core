@@ -3,6 +3,7 @@ import * as jsenvConfig from "../../jsenv.config.js"
 
 executeTestPlan({
   ...jsenvConfig,
+  coverageForceIstanbul: false,
   testPlan: {
     "test/**/*.test.js": {
       node: {
