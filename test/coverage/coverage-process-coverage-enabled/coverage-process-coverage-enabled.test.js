@@ -25,6 +25,7 @@ const { testPlanReport } = await executeTestPlan({
   },
   coverage: true,
   coverageConfig: {},
+  coverageForceIstanbul: true,
 })
 const actual = testPlanReport
 const expected = {
