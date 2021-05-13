@@ -268,6 +268,7 @@ const computeExecutionResult = async ({
       const value = await launch({
         logger,
         cancellationToken,
+        stopAfterExecute,
         ...launchParams,
       })
       runtimeStartedCallback({

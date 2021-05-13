@@ -43,6 +43,7 @@ export const launchNode = async ({
   coverageForceIstanbul,
   logProcessCommand,
   nodeRuntimeDecision,
+  stopAfterExecute,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -141,6 +142,8 @@ export const launchNode = async ({
       executionId,
       remap,
       nodeRuntimeDecision,
+
+      exitAfterAction: stopAfterExecute,
     }
 
     let executionResult = await controllableNodeProcess.requestActionOnChildProcess({
