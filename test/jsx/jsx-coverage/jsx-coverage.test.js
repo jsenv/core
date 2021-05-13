@@ -45,7 +45,10 @@ const actual = testPlanCoverage
 const expected = {
   [`./${testDirectoryRelativeUrl}file.jsx`]: {
     ...actual[`./${testDirectoryRelativeUrl}file.jsx`],
-    s: { 0: 2, 1: 2 },
+    s: {
+      0: 2,
+      1: 2,
+    },
   },
 }
 assert({ actual, expected })

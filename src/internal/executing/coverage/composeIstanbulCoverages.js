@@ -42,21 +42,21 @@ export const composeIstanbulCoverages = (
     const fileCoverageFromV8 = coverageFromV8Conversion[key]
     const fileCoverageFromIstanbul = coverageFromIstanbul[key]
     if (fileCoverageFromIstanbul) {
-      const v8BranchCount = branchHitCountFromFileCoverage(fileCoverageFromV8)
-      const istanbulBranchCount = branchHitCountFromFileCoverage(fileCoverageFromIstanbul)
-      const coverageWithMostBranchCovered =
-        v8BranchCount >= istanbulBranchCount ? fileCoverageFromV8 : fileCoverageFromIstanbul
+      const v8HitCount = hitCountFromFileCoverage(fileCoverageFromV8)
+      const istanbulHitCount = hitCountFromFileCoverage(fileCoverageFromIstanbul)
+      const coverageWithMostHit =
+        v8HitCount >= istanbulHitCount ? fileCoverageFromV8 : fileCoverageFromIstanbul
 
       if (!coverageV8MergeConflictIsExpected) {
         // ideally when coverageV8MergeConflictIsExpected it would be a console.debug
         console.warn(
           formatMergeConflictBetweenV8AndIstanbulWarning({
             fileRelativeUrl: key,
-            coverageKept: coverageWithMostBranchCovered,
+            coverageKept: coverageWithMostHit,
           }),
         )
       }
-      coverageComposed[key] = coverageWithMostBranchCovered
+      coverageComposed[key] = coverageWithMostHit
     } else {
       coverageComposed[key] = fileCoverageFromV8
     }
@@ -75,11 +75,19 @@ export const composeIstanbulCoverages = (
   return coverageComposed
 }
 
-const branchHitCountFromFileCoverage = ({ b }) => {
-  const branchHitCount = Object.keys(b).reduce((previous, key) => {
-    return previous + b[key]
+const hitCountFromFileCoverage = ({ b, s }) => {
+  const statementHitCount = Object.keys(s).reduce((previous, key) => {
+    return previous + s[key]
   }, 0)
-  return branchHitCount
+
+  const branchHitCount = Object.keys(b).reduce((previous, key) => {
+    const branchCount = b[key].reduce((previous, count) => {
+      return previous + count
+    }, 0)
+    return previous + branchCount
+  }, 0)
+
+  return statementHitCount + branchHitCount
 }
 
 const merge = (istanbulFileCoverageA, istanbulFileCoverageB) => {
