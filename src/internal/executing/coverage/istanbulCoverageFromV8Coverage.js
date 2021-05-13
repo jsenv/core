@@ -8,6 +8,7 @@ import {
   urlToFileSystemPath,
 } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
+
 import { composeV8Coverages } from "./composeV8Coverages.js"
 import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
 
@@ -18,13 +19,13 @@ export const istanbulCoverageFromV8Coverage = async ({
   NODE_V8_COVERAGE,
   coverageConfig,
 }) => {
-  const coverageReports = await readV8CoverageReportsFromDirectory(NODE_V8_COVERAGE)
-  const coverageReportsFiltered = filterCoverageReports(coverageReports, {
+  const allV8Coverages = await readV8CoverageReportsFromDirectory(NODE_V8_COVERAGE)
+  const v8Coverages = filterCoverageReports(allV8Coverages, {
     projectDirectoryUrl,
     coverageConfig,
   })
 
-  const v8Coverage = composeV8Coverages(coverageReportsFiltered)
+  const v8Coverage = composeV8Coverages(v8Coverages)
   const istanbulCoverage = await convertV8CoverageToIstanbul(v8Coverage)
   return istanbulCoverage
 }
@@ -33,6 +34,10 @@ const readV8CoverageReportsFromDirectory = async (coverageDirectory) => {
   const coverageReports = []
 
   const dirContent = await readDirectory(coverageDirectory)
+  // here if dirContent is empty it's quite unexpected
+  // but sometime it happens.
+  // Maybe we could retry to read the dir content after waiting 500ms
+  // but I don't think that is why the dir is empty sometimes
   const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageDirectory)
   await Promise.all(
     dirContent.map(async (dirEntry) => {
@@ -85,6 +90,7 @@ const convertV8CoverageToIstanbul = async (v8Coverage) => {
     v8Coverage.result.map(async (fileV8Coverage) => {
       const sources = sourcesFromSourceMapCache(fileV8Coverage.url, v8Coverage["source-map-cache"])
       const path = urlToFileSystemPath(fileV8Coverage.url)
+
       const converter = v8ToIstanbul(
         path,
         // wrapperLength is undefined we don't need it

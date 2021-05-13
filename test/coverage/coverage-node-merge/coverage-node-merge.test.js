@@ -14,14 +14,15 @@ const testPlan = {
   [fileRelativeUrl]: {
     node: {
       launch: launchNode,
-    },
-    node2: {
-      launch: launchNode,
       launchParams: {
         env: {
           FOO: true,
         },
       },
+    },
+    node2: {
+      launch: launchNode,
+      launchParams: {},
     },
   },
 }
@@ -29,13 +30,17 @@ const testPlan = {
 const getCoverage = async (params) => {
   const result = await executeTestPlan({
     ...EXECUTE_TEST_PLAN_TEST_PARAMS,
+    defaultMsAllocatedPerExecution: Infinity,
+    logLevel: "info",
     jsenvDirectoryRelativeUrl,
     testPlan,
     coverage: true,
     coverageConfig: {
-      [`./${testDirectoryRelativeUrl}file.js`]: true,
+      [`./${testDirectoryRelativeUrl}message.js`]: true,
     },
+    coverageForceIstanbul: true,
     // coverageHtmlDirectory: true,
+    // concurrencyLimit: 1,
     ...params,
     // coverageTextLog: true,
     // coverageJsonFile: true,
@@ -46,9 +51,13 @@ const getCoverage = async (params) => {
 
 const actual = await getCoverage()
 const expected = {
-  [`./${testDirectoryRelativeUrl}file.js`]: {
-    ...actual[`./${testDirectoryRelativeUrl}file.js`],
-    path: `./${testDirectoryRelativeUrl}file.js`,
+  [`./${testDirectoryRelativeUrl}message.js`]: {
+    ...actual[`./${testDirectoryRelativeUrl}message.js`],
+    path: `./${testDirectoryRelativeUrl}message.js`,
+    b: {
+      0: [2], // c'est nimp
+      1: [0],
+    },
     s: {
       0: 2,
       1: 1,

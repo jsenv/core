@@ -1,1 +1,1 @@
-import "./file.js"
+import "./message.js"

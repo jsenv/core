@@ -18,7 +18,7 @@ const testPlan = {
   },
 }
 
-const getCoverage = async ({ coverageForceIstanbul = false } = {}) => {
+const getCoverage = async (params) => {
   const result = await executeTestPlan({
     ...EXECUTE_TEST_PLAN_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
@@ -27,7 +27,7 @@ const getCoverage = async ({ coverageForceIstanbul = false } = {}) => {
     coverageConfig: {
       [`./${testDirectoryRelativeUrl}file.js`]: true,
     },
-    coverageForceIstanbul,
+    ...params,
     // coverageTextLog: true,
     // coverageJsonFile: true,
     // coverageHtmlDirectory: true,
@@ -38,7 +38,9 @@ const getCoverage = async ({ coverageForceIstanbul = false } = {}) => {
 // v8
 // for some reason I can't explain, when this gets executed by CI it fails
 if (!process.env.CI) {
-  const actual = await getCoverage()
+  const actual = await getCoverage({
+    coverageForceIstanbul: false,
+  })
   const expected = {
     [`./${testDirectoryRelativeUrl}file.js`]: {
       ...actual[`./${testDirectoryRelativeUrl}file.js`],

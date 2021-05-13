@@ -266,6 +266,9 @@ export const createControllableNodeProcess = async ({
     registerErrorCallback,
     registerConsoleCallback,
     requestActionOnChildProcess,
+    onceChildProcessEvent: (event, callback) => {
+      onceProcessEvent(childProcess, event, callback)
+    },
   }
 }
 

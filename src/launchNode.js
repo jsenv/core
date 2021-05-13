@@ -39,7 +39,7 @@ export const launchNode = async ({
   remap = true,
   collectCoverage = false,
   coverageConfig,
-  coverageForceIstanbul = false,
+  coverageForceIstanbul,
   logProcessCommand,
   nodeRuntimeDecision,
 }) => {
@@ -92,8 +92,10 @@ export const launchNode = async ({
             return executionResult.coverage
           }
 
-          await controllableNodeProcess.disconnected
-          await new Promise((resolve) => setTimeout(resolve, 300))
+          await new Promise((resolve) => {
+            controllableNodeProcess.onceChildProcessEvent("close", resolve)
+            controllableNodeProcess.stop()
+          })
           const istanbulCoverage = await istanbulCoverageFromV8Coverage({
             projectDirectoryUrl,
             NODE_V8_COVERAGE,
@@ -173,9 +175,9 @@ const ensureV8CoverageDirClean = async (fn, NODE_V8_COVERAGE) => {
       // do not try to remove or copy coverage
     } else if (process.env.NODE_V8_COVERAGE) {
       await moveDirectoryContent(NODE_V8_COVERAGE, process.env.NODE_V8_COVERAGE)
-      removeFileSystemNode(NODE_V8_COVERAGE)
+      await removeFileSystemNode(NODE_V8_COVERAGE)
     } else {
-      removeFileSystemNode(NODE_V8_COVERAGE, {
+      await removeFileSystemNode(NODE_V8_COVERAGE, {
         recursive: true,
       })
     }
