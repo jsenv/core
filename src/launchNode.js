@@ -94,7 +94,7 @@ export const launchNode = async ({
           }
 
           await new Promise((resolve) => {
-            controllableNodeProcess.onceChildProcessEvent("close", resolve)
+            controllableNodeProcess.onceChildProcessEvent("exit", resolve)
             // controllableNodeProcess.gracefulStop()
           })
           const v8Coverage = await v8CoverageFromNodeV8Directory({

@@ -25,14 +25,22 @@ export const v8CoverageFromNodeV8Directory = async ({
 }
 
 const readV8CoverageReportsFromDirectory = async (coverageDirectory) => {
+  const tryReadDirectory = async (timeSpentTrying = 0) => {
+    const dirContent = await readDirectory(coverageDirectory)
+    if (dirContent.length > 0) {
+      return dirContent
+    }
+    if (timeSpentTrying > 1500) {
+      console.warn(`${coverageDirectory} is empty`)
+      return dirContent
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    return tryReadDirectory(timeSpentTrying + 100)
+  }
+  const dirContent = await tryReadDirectory()
+
   const coverageReports = []
 
-  const dirContent = await readDirectory(coverageDirectory)
-  if (dirContent.length === 0) {
-    debugger
-    // here if dirContent is empty it's quite unexpected
-    // but sometime it happens.
-  }
   const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageDirectory)
   await Promise.all(
     dirContent.map(async (dirEntry) => {
