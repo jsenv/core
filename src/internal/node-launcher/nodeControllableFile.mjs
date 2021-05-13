@@ -137,7 +137,7 @@ const removeActionRequestListener = onceProcessMessage(
       sendActionCompleted(value)
     }
 
-    removeActionRequestListener()
+    // removeActionRequestListener()
     // process.exit()
   },
 )

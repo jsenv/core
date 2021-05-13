@@ -41,6 +41,7 @@ export const createControllableNodeProcess = async ({
   debugModeInheritBreak,
   commandLineOptions = [],
   env,
+  inheritProcessEnv = true,
 
   stdin = "pipe",
   stdout = "pipe",
@@ -65,9 +66,7 @@ export const createControllableNodeProcess = async ({
   }
   const execArgv = execArgvFromProcessOptions(processOptions)
 
-  if (env === undefined) {
-    env = { ...process.env }
-  } else if (typeof env !== "object") {
+  if (env !== undefined && typeof env !== "object") {
     throw new TypeError(`env must be an object, got ${env}`)
   }
 
@@ -76,8 +75,18 @@ export const createControllableNodeProcess = async ({
     execArgv,
     // silent: true
     stdio: ["pipe", "pipe", "pipe", "ipc"],
-    env,
+    env: {
+      ...(inheritProcessEnv ? process.env : {}),
+      ...env,
+    },
   })
+
+  logger.debug(`fork child process pid ${childProcess.pid}
+--- execArgv ---
+${execArgv.join(`
+`)}
+--- custom env ---
+${JSON.stringify(env, null, "  ")}`)
 
   // if we passe stream, pipe them https://github.com/sindresorhus/execa/issues/81
   if (typeof stdin === "object") {

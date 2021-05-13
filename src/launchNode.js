@@ -31,6 +31,7 @@ export const launchNode = async ({
   debugMode,
   debugModeInheritBreak,
   env,
+  inheritProcessEnv,
   commandLineOptions = [],
   stdin,
   stdout,
@@ -54,7 +55,7 @@ export const launchNode = async ({
   }
 
   env = {
-    ...(env ? env : process.env),
+    ...env,
     COVERAGE_ENABLED: collectCoverage,
     JSENV: true,
   }
@@ -119,6 +120,7 @@ export const launchNode = async ({
     debugMode,
     debugModeInheritBreak,
     env,
+    inheritProcessEnv,
     commandLineOptions,
     stdin,
     stdout,
