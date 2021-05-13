@@ -8,9 +8,8 @@ import {
   urlToFileSystemPath,
 } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
+import { composeV8Coverages } from "./composeV8Coverages.js"
 import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
-
-const { mergeProcessCovs } = require("@c88/v8-coverage")
 
 const v8ToIstanbul = require("v8-to-istanbul")
 
@@ -24,21 +23,9 @@ export const istanbulCoverageFromV8Coverage = async ({
     projectDirectoryUrl,
     coverageConfig,
   })
-  // mergeCoverageReports do not preserves source-map-cache during the merge
-  // so we store sourcemap cache now
-  const sourceMapCache = {}
-  coverageReportsFiltered.forEach((coverageReport) => {
-    coverageReport.result.forEach((fileReport) => {
-      if (fileReport["source-map-cache"]) {
-        Object.assign(sourceMapCache, fileReport["source-map-cache"])
-      }
-    })
-  })
 
-  const coverageReport = mergeCoverageReports(coverageReportsFiltered)
-  const istanbulCoverage = await convertV8CoverageToIstanbul(coverageReport, {
-    sourceMapCache,
-  })
+  const v8Coverage = composeV8Coverages(coverageReportsFiltered)
+  const istanbulCoverage = await convertV8CoverageToIstanbul(v8Coverage)
   return istanbulCoverage
 }
 
@@ -93,15 +80,10 @@ const filterCoverageReports = (coverageReports, { projectDirectoryUrl, coverageC
   })
 }
 
-const mergeCoverageReports = (coverageReports) => {
-  const coverageReport = mergeProcessCovs(coverageReports)
-  return coverageReport
-}
-
-const convertV8CoverageToIstanbul = async (coverageReport, { sourceMapCache }) => {
+const convertV8CoverageToIstanbul = async (v8Coverage) => {
   const istanbulCoverages = await Promise.all(
-    coverageReport.result.map(async (fileV8Coverage) => {
-      const sources = sourcesFromSourceMapCache(fileV8Coverage.url, sourceMapCache)
+    v8Coverage.result.map(async (fileV8Coverage) => {
+      const sources = sourcesFromSourceMapCache(fileV8Coverage.url, v8Coverage["source-map-cache"])
       const path = urlToFileSystemPath(fileV8Coverage.url)
       const converter = v8ToIstanbul(
         path,
