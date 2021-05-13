@@ -31,15 +31,15 @@ const getCoverage = async (params) => {
   const result = await executeTestPlan({
     ...EXECUTE_TEST_PLAN_TEST_PARAMS,
     defaultMsAllocatedPerExecution: Infinity,
-    logLevel: "info",
+    // logLevel: "info",
+    launchAndExecuteLogLevel: "debug",
     jsenvDirectoryRelativeUrl,
     testPlan,
     coverage: true,
     coverageConfig: {
       [`./${testDirectoryRelativeUrl}message.js`]: true,
     },
-    coverageForceIstanbul: true,
-    // coverageHtmlDirectory: true,
+    coverageHtmlDirectory: true,
     // concurrencyLimit: 1,
     ...params,
     // coverageTextLog: true,
@@ -49,19 +49,21 @@ const getCoverage = async (params) => {
   return result.testPlanCoverage
 }
 
-const actual = await getCoverage()
+const actual = await getCoverage({
+  coverageForceIstanbul: false,
+})
 const expected = {
   [`./${testDirectoryRelativeUrl}message.js`]: {
     ...actual[`./${testDirectoryRelativeUrl}message.js`],
     path: `./${testDirectoryRelativeUrl}message.js`,
     b: {
-      0: [2], // c'est nimp
-      1: [0],
+      0: [2],
+      1: [1],
     },
     s: {
       0: 2,
       1: 1,
-      2: 2,
+      2: 1,
       3: 1,
       4: 1,
     },
