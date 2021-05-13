@@ -1,6 +1,6 @@
 import { collectFiles } from "@jsenv/util"
 import { relativeUrlToEmptyCoverage } from "./relativeUrlToEmptyCoverage.js"
-import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
+import { istanbulCoverageFromCoverages } from "./istanbulCoverageFromCoverages.js"
 import { normalizeIstanbulCoverage } from "./normalizeIstanbulCoverage.js"
 
 export const reportToCoverage = async (
@@ -15,7 +15,7 @@ export const reportToCoverage = async (
     coverageV8MergeConflictIsExpected,
   },
 ) => {
-  const istanbulCoverageFromExecution = executionReportToCoverage(report, {
+  const istanbulCoverageFromExecution = await executionReportToCoverage(report, {
     logger,
     projectDirectoryUrl,
     coverageV8MergeConflictIsExpected,
@@ -76,11 +76,11 @@ const listRelativeFileUrlToCover = async ({
   return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl)
 }
 
-const executionReportToCoverage = (
+const executionReportToCoverage = async (
   report,
   { logger, projectDirectoryUrl, coverageV8MergeConflictIsExpected },
 ) => {
-  const istanbulCoverages = []
+  const coverages = []
 
   Object.keys(report).forEach((file) => {
     const executionResultForFile = report[file]
@@ -113,12 +113,12 @@ const executionReportToCoverage = (
         return
       }
 
-      const istanbulCoverage = normalizeIstanbulCoverage(coverage, projectDirectoryUrl)
-      istanbulCoverages.push(istanbulCoverage)
+      coverages.push(coverage)
     })
   })
 
-  const istanbulCoverage = composeIstanbulCoverages(istanbulCoverages, {
+  const istanbulCoverage = await istanbulCoverageFromCoverages(coverages, {
+    projectDirectoryUrl,
     coverageV8MergeConflictIsExpected,
   })
 

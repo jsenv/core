@@ -57,8 +57,7 @@ const test = async (options = {}) => {
 }
 
 // without forcing istanbul
-// for some reason I can't explain, when this gets executed by CI it fails
-if (!process.env.CI) {
+{
   const actual = await test({
     coverageV8MergeConflictIsExpected: true,
   })

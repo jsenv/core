@@ -44,7 +44,7 @@ export const executeTestPlan = async ({
   coverageConfig = jsenvCoverageConfig,
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
-  coverageForceIstanbul = true,
+  coverageForceIstanbul = false,
   coverageV8MergeConflictIsExpected = false,
 
   coverageTextLog = true,

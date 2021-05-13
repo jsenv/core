@@ -268,6 +268,7 @@ const computeExecutionResult = async ({
       const value = await launch({
         logger,
         cancellationToken,
+        stopAfterExecute,
         ...launchParams,
       })
       runtimeStartedCallback({
@@ -333,7 +334,6 @@ const computeExecutionResult = async ({
   const {
     runtimeName,
     runtimeVersion,
-    options,
     execute,
     disconnected,
     registerErrorCallback = () => {},
@@ -344,9 +344,7 @@ const computeExecutionResult = async ({
   const runtime = `${runtimeName}/${runtimeVersion}`
 
   logger.debug(
-    createDetailedMessage(`${runtime}: runtime launched.`, {
-      options: JSON.stringify(options, null, "  "),
-    }),
+    createDetailedMessage(`${runtime}: runtime launched.`),
   )
 
   logger.debug(`${runtime}: start execution.`)

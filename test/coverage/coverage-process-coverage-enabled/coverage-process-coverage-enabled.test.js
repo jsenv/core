@@ -25,6 +25,7 @@ const { testPlanReport } = await executeTestPlan({
   },
   coverage: true,
   coverageConfig: {},
+  coverageForceIstanbul: true,
 })
 const actual = testPlanReport
 const expected = {
@@ -32,7 +33,7 @@ const expected = {
     node: {
       status: "completed",
       namespace: { COVERAGE_ENABLED: "true" },
-      coverage: {},
+      coverage: undefined,
       runtimeName: "node",
       runtimeVersion: actual[fileRelativeUrl].node.runtimeVersion,
     },

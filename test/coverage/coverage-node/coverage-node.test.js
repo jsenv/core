@@ -36,8 +36,7 @@ const getCoverage = async (params) => {
 }
 
 // v8
-// for some reason I can't explain, when this gets executed by CI it fails
-if (!process.env.CI) {
+{
   const actual = await getCoverage({
     coverageForceIstanbul: false,
   })

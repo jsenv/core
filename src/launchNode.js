@@ -15,7 +15,7 @@ import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
-import { istanbulCoverageFromV8Coverage } from "./internal/executing/coverage/istanbulCoverageFromV8Coverage.js"
+import { v8CoverageFromNodeV8Directory } from "./internal/executing/coverage/v8CoverageFromNodeV8Directory.js"
 
 const cuid = require("cuid")
 
@@ -31,6 +31,7 @@ export const launchNode = async ({
   debugMode,
   debugModeInheritBreak,
   env,
+  inheritProcessEnv,
   commandLineOptions = [],
   stdin,
   stdout,
@@ -42,6 +43,7 @@ export const launchNode = async ({
   coverageForceIstanbul,
   logProcessCommand,
   nodeRuntimeDecision,
+  stopAfterExecute,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -54,7 +56,7 @@ export const launchNode = async ({
   }
 
   env = {
-    ...(env ? env : process.env),
+    ...env,
     COVERAGE_ENABLED: collectCoverage,
     JSENV: true,
   }
@@ -66,9 +68,9 @@ export const launchNode = async ({
     // through process.env.NODE_V8_COVERAGE.
 
     if (coverageForceIstanbul) {
-      // if we want to force istanbul, we will set process.env.NODE_V8_COVERAGE = undefined
+      // if we want to force istanbul, we will set process.env.NODE_V8_COVERAGE = ''
       // into the child_process
-      env.NODE_V8_COVERAGE = undefined
+      env.NODE_V8_COVERAGE = ""
     }
     // } else if (process.env.NODE_V8_COVERAGE) {
     //   // The V8_COVERAGE was already set by a parent process or command line.
@@ -93,15 +95,15 @@ export const launchNode = async ({
           }
 
           await new Promise((resolve) => {
-            controllableNodeProcess.onceChildProcessEvent("close", resolve)
-            controllableNodeProcess.stop()
+            controllableNodeProcess.onceChildProcessEvent("exit", resolve)
+            // controllableNodeProcess.gracefulStop()
           })
-          const istanbulCoverage = await istanbulCoverageFromV8Coverage({
+          const v8Coverage = await v8CoverageFromNodeV8Directory({
             projectDirectoryUrl,
             NODE_V8_COVERAGE,
             coverageConfig,
           })
-          return istanbulCoverage
+          return v8Coverage
         }, NODE_V8_COVERAGE)
         executionResult.coverage = coverage
         return executionResult
@@ -119,6 +121,7 @@ export const launchNode = async ({
     debugMode,
     debugModeInheritBreak,
     env,
+    inheritProcessEnv,
     commandLineOptions,
     stdin,
     stdout,
@@ -139,6 +142,8 @@ export const launchNode = async ({
       executionId,
       remap,
       nodeRuntimeDecision,
+
+      exitAfterAction: stopAfterExecute,
     }
 
     let executionResult = await controllableNodeProcess.requestActionOnChildProcess({

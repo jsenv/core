@@ -136,6 +136,12 @@ const removeActionRequestListener = onceProcessMessage(
     } else {
       sendActionCompleted(value)
     }
+
+    // removeActionRequestListener()
+    if (actionParams.exitAfterAction) {
+      // for some reason this fixes v8 coverage directory somtimes empty
+      setTimeout(() => process.exit())
+    }
   },
 )
 

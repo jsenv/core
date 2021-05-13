@@ -41,6 +41,7 @@ export const createControllableNodeProcess = async ({
   debugModeInheritBreak,
   commandLineOptions = [],
   env,
+  inheritProcessEnv = true,
 
   stdin = "pipe",
   stdout = "pipe",
@@ -65,9 +66,7 @@ export const createControllableNodeProcess = async ({
   }
   const execArgv = execArgvFromProcessOptions(processOptions)
 
-  if (env === undefined) {
-    env = { ...process.env }
-  } else if (typeof env !== "object") {
+  if (env !== undefined && typeof env !== "object") {
     throw new TypeError(`env must be an object, got ${env}`)
   }
 
@@ -76,8 +75,18 @@ export const createControllableNodeProcess = async ({
     execArgv,
     // silent: true
     stdio: ["pipe", "pipe", "pipe", "ipc"],
-    env,
+    env: {
+      ...(inheritProcessEnv ? process.env : {}),
+      ...env,
+    },
   })
+
+  logger.debug(`fork child process pid ${childProcess.pid}
+--- execArgv ---
+${execArgv.join(`
+`)}
+--- custom env ---
+${JSON.stringify(env, null, "  ")}`)
 
   // if we passe stream, pipe them https://github.com/sindresorhus/execa/issues/81
   if (typeof stdin === "object") {
@@ -144,10 +153,9 @@ export const createControllableNodeProcess = async ({
     onceProcessMessage(childProcess, "disconnect", () => {
       resolve()
     })
-  })
-  // child might exit without disconnect apparently. We want to disconnect on exit
-  childProcess.once("exit", () => {
-    disconnectChildProcess()
+    onceProcessEvent(childProcess, "disconnect", () => {
+      resolve()
+    })
   })
 
   const disconnectChildProcess = () => {
@@ -225,7 +233,7 @@ export const createControllableNodeProcess = async ({
         logger.debug(
           createDetailedMessage(`child process sent an action result.`, {
             status,
-            value,
+            value: JSON.stringify(value, null, "  "),
           }),
         )
         if (status === "action-completed") {
@@ -238,7 +246,7 @@ export const createControllableNodeProcess = async ({
       logger.debug(
         createDetailedMessage(`ask child process to perform an action`, {
           actionType,
-          actionParams,
+          actionParams: JSON.stringify(actionParams, null, "  "),
         }),
       )
 
@@ -344,16 +352,21 @@ const createExitWithFailureCodeError = (code) => {
 }
 
 const onceProcessMessage = (childProcess, type, callback) => {
-  return onceProcessEvent(childProcess, "message", (message) => {
+  const onmessage = (message) => {
     if (message.type === type) {
+      childProcess.removeListener("message", onmessage)
       // eslint-disable-next-line no-eval
       callback(message.data ? eval(`(${message.data})`) : "")
     }
-  })
+  }
+  childProcess.on("message", onmessage)
+  return () => {
+    childProcess.removeListener("message", onmessage)
+  }
 }
 
 const onceProcessEvent = (childProcess, type, callback) => {
-  childProcess.on(type, callback)
+  childProcess.once(type, callback)
 
   return () => {
     childProcess.removeListener(type, callback)
