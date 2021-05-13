@@ -3,11 +3,10 @@ import { urlToFileSystemPath } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 
 import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
-import { normalizeIstanbulCoverage } from "./normalizeIstanbulCoverage.js"
 
 const v8ToIstanbul = require("v8-to-istanbul")
 
-export const istanbulCoverageFromV8Coverage = async (v8Coverage, { projectDirectoryUrl }) => {
+export const istanbulCoverageFromV8Coverage = async (v8Coverage) => {
   const istanbulCoverages = await Promise.all(
     v8Coverage.result.map(async (fileV8Coverage) => {
       const sources = sourcesFromSourceMapCache(fileV8Coverage.url, v8Coverage["source-map-cache"])
@@ -29,9 +28,7 @@ export const istanbulCoverageFromV8Coverage = async (v8Coverage, { projectDirect
   )
 
   const istanbulCoverageComposed = composeIstanbulCoverages(istanbulCoverages)
-  return markCoverageAsConverted(
-    normalizeIstanbulCoverage(istanbulCoverageComposed, projectDirectoryUrl),
-  )
+  return markCoverageAsConverted(istanbulCoverageComposed)
 }
 
 const markCoverageAsConverted = (istanbulCoverage) => {

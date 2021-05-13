@@ -8,6 +8,7 @@
 import { composeV8Coverages } from "./composeV8Coverages.js"
 import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
 import { istanbulCoverageFromV8Coverage } from "./istanbulCoverageFromV8Coverage.js"
+import { normalizeIstanbulCoverage } from "./normalizeIstanbulCoverage.js"
 
 export const istanbulCoverageFromCoverages = async (
   coverages,
@@ -20,7 +21,7 @@ export const istanbulCoverageFromCoverages = async (
     if (coverage.result) {
       v8Coverages.push(coverage)
     } else {
-      istanbulCoverages.push(coverage)
+      istanbulCoverages.push(normalizeIstanbulCoverage(coverage, projectDirectoryUrl))
     }
   })
 
@@ -28,12 +29,12 @@ export const istanbulCoverageFromCoverages = async (
   const istanbulCoverageComposed = composeIstanbulCoverages(istanbulCoverages)
   const istanbulCoverageFromV8CoverageComposed = await istanbulCoverageFromV8Coverage(
     v8CoverageComposed,
-    {
-      projectDirectoryUrl,
-    },
   )
   const istanbulCoverage = composeIstanbulCoverages(
-    [istanbulCoverageComposed, istanbulCoverageFromV8CoverageComposed],
+    [
+      istanbulCoverageComposed,
+      normalizeIstanbulCoverage(istanbulCoverageFromV8CoverageComposed, projectDirectoryUrl),
+    ],
     {
       coverageV8MergeConflictIsExpected,
     },
