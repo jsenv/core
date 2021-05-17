@@ -1,5 +1,7 @@
 import { uneval } from "@jsenv/uneval"
 import { resolveUrl } from "@jsenv/util"
+
+import { measureAsyncFnPerf } from "@jsenv/core/src/internal/perf_node.js"
 import { memoize } from "../../memoize.js"
 import { installNodeErrorStackRemapping } from "../../error-stack-remapping/installNodeErrorStackRemapping.js"
 import { fetchSource } from "./fetchSource.js"
@@ -41,7 +43,7 @@ export const createNodeExecutionWithSystemJs = ({
     return error
   }
 
-  const executeFile = async (specifier, { errorExposureInConsole = true } = {}) => {
+  const executeFile = async (specifier, { measurePerf, errorExposureInConsole = true } = {}) => {
     const compiledFileRemoteUrl = resolveUrl(
       specifier,
       `${compileServerOrigin}/${compileDirectoryRelativeUrl}`,
@@ -54,31 +56,40 @@ export const createNodeExecutionWithSystemJs = ({
       fetchSource,
       importDefaultExtension,
     })
-    try {
-      const namespace = await makePromiseKeepNodeProcessAlive(
-        nodeSystem.import(compiledFileRemoteUrl),
-      )
-      return {
-        status: "completed",
-        namespace,
-        coverage: global.__coverage__,
-      }
-    } catch (error) {
-      let transformedError
+
+    const importWithSystemJs = async () => {
       try {
-        transformedError = await errorTransformer(error)
-      } catch (e) {
-        transformedError = error
-      }
+        const importPromise = nodeSystem.import(compiledFileRemoteUrl)
+        const namespace = await makePromiseKeepNodeProcessAlive(importPromise)
+        return {
+          status: "completed",
+          namespace,
+          coverage: global.__coverage__,
+        }
+      } catch (error) {
+        let transformedError
+        try {
+          transformedError = await errorTransformer(error)
+        } catch (e) {
+          transformedError = error
+        }
 
-      if (errorExposureInConsole) console.error(transformedError)
+        if (errorExposureInConsole) {
+          console.error(transformedError)
+        }
 
-      return {
-        status: "errored",
-        exceptionSource: unevalException(transformedError),
-        coverage: global.__coverage__,
+        return {
+          status: "errored",
+          exceptionSource: unevalException(transformedError),
+          coverage: global.__coverage__,
+        }
       }
     }
+
+    if (measurePerf) {
+      return measureAsyncFnPerf(importWithSystemJs, "jsenv:file import")
+    }
+    return importWithSystemJs()
   }
 
   return {
