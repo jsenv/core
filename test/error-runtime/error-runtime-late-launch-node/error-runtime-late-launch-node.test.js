@@ -25,7 +25,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 let errorCallbackArgValue
 const actual = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
-  executionLogLevel: "off",
+  launchAndExecuteLogLevel: "off",
   launch: (options) =>
     launchNode({
       ...LAUNCH_TEST_PARAMS,
@@ -46,7 +46,7 @@ const expected = {
 }
 assert({ actual, expected })
 
-process.on("exit", () => {
+process.on("beforeExit", () => {
   const actual = errorCallbackArgValue
   const expected = {
     error: Object.assign(new Error("child exited with 1"), { exitCode: 1 }),

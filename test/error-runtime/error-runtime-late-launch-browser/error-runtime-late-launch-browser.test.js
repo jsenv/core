@@ -57,7 +57,7 @@ const expected = {
 }
 assert({ actual, expected })
 
-process.on("exit", () => {
+process.on("beforeExit", () => {
   const actual = {
     errorMessage: errorCallbackArg.error.message,
     timing: errorCallbackArg.timing,

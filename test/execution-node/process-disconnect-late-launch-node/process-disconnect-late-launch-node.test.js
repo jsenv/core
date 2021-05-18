@@ -47,7 +47,7 @@ const expected = {
 }
 assert({ actual, expected })
 
-process.on("exit", () => {
+process.on("beforeExit", () => {
   const actual = disconnectCallbackArg
   const expected = { timing: "after-execution" }
   assert({ actual, expected })
