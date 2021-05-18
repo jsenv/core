@@ -1,7 +1,7 @@
-import { uneval } from "@jsenv/uneval"
 import { resolveUrl } from "@jsenv/util"
 
 import { measureAsyncFnPerf } from "@jsenv/core/src/internal/perf_node.js"
+import { unevalException } from "@jsenv/core/src/internal/unevalException.js"
 import { memoize } from "../../memoize.js"
 import { installNodeErrorStackRemapping } from "../../error-stack-remapping/installNodeErrorStackRemapping.js"
 import { fetchSource } from "./fetchSource.js"
@@ -111,11 +111,4 @@ const makePromiseKeepNodeProcessAlive = async (promise) => {
   } finally {
     clearInterval(timerId)
   }
-}
-
-const unevalException = (value) => {
-  if (value.hasOwnProperty("toString")) {
-    delete value.toString
-  }
-  return uneval(value)
 }

@@ -40,6 +40,7 @@ export const execute = async ({
         )
       },
     )
+    // perfObserver.observe()
     perfObserver.observe({
       entryTypes: ["measure"],
     })
@@ -50,9 +51,7 @@ export const execute = async ({
       return {
         ...executionResult,
         performance: {
-          nodeTiming: performance.nodeTiming,
-          timeOrigin: performance.timeOrigin,
-          eventLoopUtilization: performance.eventLoopUtilization(),
+          ...readNodePerformance(),
           measures,
         },
       }
@@ -77,4 +76,22 @@ export const execute = async ({
     ...executionResult,
     indirectCoverage: global.__indirectCoverage__,
   })
+}
+
+const readNodePerformance = () => {
+  const nodePerformance = {
+    nodeTiming: asPlainObject(performance.nodeTiming),
+    timeOrigin: performance.timeOrigin,
+    eventLoopUtilization: asPlainObject(performance.eventLoopUtilization()),
+  }
+  return nodePerformance
+}
+
+// remove getters that cannot be stringified
+const asPlainObject = (objectWithGetters) => {
+  const objectWithoutGetters = {}
+  Object.keys(objectWithGetters).forEach((key) => {
+    objectWithoutGetters[key] = objectWithGetters[key]
+  })
+  return objectWithoutGetters
 }

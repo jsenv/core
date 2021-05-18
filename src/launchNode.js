@@ -28,8 +28,8 @@ export const launchNode = async ({
   compileServerOrigin,
   outDirectoryRelativeUrl,
 
-  collectPerformance,
   measurePerformance,
+  collectPerformance,
   collectCoverage = false,
   coverageConfig,
   coverageForceIstanbul,
@@ -144,10 +144,10 @@ export const launchNode = async ({
       nodeRuntimeDecision,
       exitAfterAction: stopAfterExecute,
 
+      measurePerformance,
+      collectPerformance,
       collectCoverage,
       coverageConfig,
-      collectPerformance,
-      measurePerformance,
 
       remap,
     }
@@ -208,22 +208,17 @@ const transformExecutionResult = (
   const { status } = executionResult
 
   if (status === "errored") {
-    const { exceptionSource, coverage } = executionResult
+    const { exceptionSource, ...rest } = executionResult
     const error = evalSource(exceptionSource)
     const errorTransformed = transformError(error, { compileServerOrigin, projectDirectoryUrl })
     return {
       status,
       error: errorTransformed,
-      coverage,
+      ...rest,
     }
   }
 
-  const { namespace, coverage } = executionResult
-  return {
-    status,
-    namespace,
-    coverage,
-  }
+  return executionResult
 }
 
 const transformError = (error, { compileServerOrigin, projectDirectoryUrl }) => {

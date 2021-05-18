@@ -1,6 +1,6 @@
-import { uneval } from "@jsenv/uneval"
 import { resolveUrl } from "@jsenv/util"
 
+import { unevalException } from "@jsenv/core/src/internal/unevalException.js"
 import { measureAsyncFnPerf } from "@jsenv/core/src/internal/perf_node.js"
 
 export const createNodeExecutionWithDynamicImport = ({ projectDirectoryUrl }) => {
@@ -53,11 +53,4 @@ const makePromiseKeepNodeProcessAlive = async (promise) => {
   } finally {
     clearInterval(timerId)
   }
-}
-
-const unevalException = (value) => {
-  if (value.hasOwnProperty("toString")) {
-    delete value.toString
-  }
-  return uneval(value)
 }
