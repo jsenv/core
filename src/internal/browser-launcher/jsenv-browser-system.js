@@ -55,6 +55,7 @@ const executionResultPromise = readyPromise.then(async () => {
     startTime: navigationStartTime,
     endTime: Date.now(),
     fileExecutionResultMap,
+    performance: readPerformance(),
   }
 })
 
@@ -68,37 +69,43 @@ const importFile = (specifier) => {
 
   const fileExecutionResultPromise = (async () => {
     const browserRuntime = await getBrowserRuntime()
-    const executionResult = await browserRuntime.executeFile(specifier, {})
+    const executionResult = await browserRuntime.executeFile(specifier, {
+      measurePerformance: true,
+      collectPerformance: true,
+    })
     if (executionResult.status === "errored") {
-      // eslint-disable-next-line no-eval
-      const originalError = window.eval(executionResult.exceptionSource)
-      if (originalError.code === "NETWORK_FAILURE") {
-        if (currentScript) {
-          const errorEvent = new Event("error")
-          currentScript.dispatchEvent(errorEvent)
-        }
-      } else {
-        const { parsingError } = originalError
-        const globalErrorEvent = new Event("error")
-        if (parsingError) {
-          globalErrorEvent.filename = parsingError.filename
-          globalErrorEvent.lineno = parsingError.lineNumber
-          globalErrorEvent.message = parsingError.message
-          globalErrorEvent.colno = parsingError.columnNumber
-        } else {
-          globalErrorEvent.filename = originalError.filename
-          globalErrorEvent.lineno = originalError.lineno
-          globalErrorEvent.message = originalError.message
-          globalErrorEvent.colno = originalError.columnno
-        }
-        window.dispatchEvent(globalErrorEvent)
-      }
+      onExecutionError(executionResult, { currentScript })
     }
     return executionResult
   })()
-
   fileExecutionMap[specifier] = fileExecutionResultPromise
   return fileExecutionResultPromise
+}
+
+const onExecutionError = (executionResult, { currentScript }) => {
+  // eslint-disable-next-line no-eval
+  const originalError = window.eval(executionResult.exceptionSource)
+  if (originalError.code === "NETWORK_FAILURE") {
+    if (currentScript) {
+      const errorEvent = new Event("error")
+      currentScript.dispatchEvent(errorEvent)
+    }
+  } else {
+    const { parsingError } = originalError
+    const globalErrorEvent = new Event("error")
+    if (parsingError) {
+      globalErrorEvent.filename = parsingError.filename
+      globalErrorEvent.lineno = parsingError.lineNumber
+      globalErrorEvent.message = parsingError.message
+      globalErrorEvent.colno = parsingError.columnNumber
+    } else {
+      globalErrorEvent.filename = originalError.filename
+      globalErrorEvent.lineno = originalError.lineno
+      globalErrorEvent.message = originalError.message
+      globalErrorEvent.colno = originalError.columnno
+    }
+    window.dispatchEvent(globalErrorEvent)
+  }
 }
 
 const getBrowserRuntime = memoize(async () => {
@@ -153,6 +160,28 @@ const getBrowserRuntime = memoize(async () => {
 
   return browserRuntime
 })
+
+const readPerformance = () => {
+  if (!window.performance) {
+    return null
+  }
+
+  return {
+    navigation: window.performance.navigation,
+    timeOrigin: window.performance.timeOrigin,
+    timing: window.performance.timing,
+    measures: readPerformanceMeasures(),
+  }
+}
+
+const readPerformanceMeasures = () => {
+  const measures = {}
+  const measurePerfEntries = window.performance.getEntriesByType("measure")
+  measurePerfEntries.forEach((measurePerfEntry) => {
+    measures[measurePerfEntry.name] = measurePerfEntry.duration
+  })
+  return measures
+}
 
 window.__jsenv__ = {
   executionResultPromise,

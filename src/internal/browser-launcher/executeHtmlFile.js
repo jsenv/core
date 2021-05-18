@@ -13,6 +13,8 @@ export const executeHtmlFile = async (
     compileServerOrigin,
     outDirectoryRelativeUrl,
     page,
+    // measurePerformance,
+    collectPerformance,
     collectCoverage,
   },
 ) => {
@@ -80,14 +82,16 @@ export const executeHtmlFile = async (
       status: "errored",
       error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
       namespace: fileExecutionResultMap,
-      coverage: generateCoverageForPage(fileExecutionResultMap),
+      ...(collectCoverage ? { coverage: generateCoverageForPage(fileExecutionResultMap) } : {}),
+      ...(collectPerformance ? { performance: executionResult.performance } : {}),
     }
   }
 
   return {
     status: "completed",
     namespace: fileExecutionResultMap,
-    coverage: generateCoverageForPage(fileExecutionResultMap),
+    ...(collectCoverage ? { coverage: generateCoverageForPage(fileExecutionResultMap) } : {}),
+    ...(collectPerformance ? { performance: executionResult.performance } : {}),
   }
 }
 
