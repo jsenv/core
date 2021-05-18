@@ -467,6 +467,6 @@
     }
   },
   "exclude": [
-    "node_modules/toto"
+    "node_modules/agent-base"
   ]
 }
