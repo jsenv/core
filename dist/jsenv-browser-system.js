@@ -59,44 +59,6 @@
     return target;
   }
 
-  /* eslint-disable no-eq-null, eqeqeq */
-  function arrayLikeToArray(arr, len) {
-    if (len == null || len > arr.length) len = arr.length;
-    var arr2 = new Array(len);
-
-    for (var i = 0; i < len; i++) {
-      arr2[i] = arr[i];
-    }
-
-    return arr2;
-  }
-
-  var arrayWithoutHoles = (function (arr) {
-    if (Array.isArray(arr)) return arrayLikeToArray(arr);
-  });
-
-  function _iterableToArray(iter) {
-    if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
-  }
-
-  /* eslint-disable consistent-return */
-  function unsupportedIterableToArray(o, minLen) {
-    if (!o) return;
-    if (typeof o === "string") return arrayLikeToArray(o, minLen);
-    var n = Object.prototype.toString.call(o).slice(8, -1);
-    if (n === "Object" && o.constructor) n = o.constructor.name;
-    if (n === "Map" || n === "Set") return Array.from(o);
-    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
-  }
-
-  var nonIterableSpread = (function () {
-    throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-  });
-
-  var _toConsumableArray = (function (arr) {
-    return arrayWithoutHoles(arr) || _iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
-  });
-
   var nativeTypeOf = function nativeTypeOf(obj) {
     return typeof obj;
   };
@@ -443,6 +405,44 @@
         baseUrl = _ref5.baseUrl;
     return "Scope url resolution failed.\n--- scope ---\n".concat(scope, "\n--- base url ---\n").concat(baseUrl);
   };
+
+  /* eslint-disable no-eq-null, eqeqeq */
+  function arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+    var arr2 = new Array(len);
+
+    for (var i = 0; i < len; i++) {
+      arr2[i] = arr[i];
+    }
+
+    return arr2;
+  }
+
+  var arrayWithoutHoles = (function (arr) {
+    if (Array.isArray(arr)) return arrayLikeToArray(arr);
+  });
+
+  function _iterableToArray(iter) {
+    if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
+  }
+
+  /* eslint-disable consistent-return */
+  function unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
+  }
+
+  var nonIterableSpread = (function () {
+    throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  });
+
+  var _toConsumableArray = (function (arr) {
+    return arrayWithoutHoles(arr) || _iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
+  });
 
   // https://developer.mozilla.org/en-US/docs/Glossary/Primitive
   var isComposite = function isComposite(value) {
@@ -1230,6 +1230,14 @@
     return source;
   };
 
+  var unevalException = function unevalException(value) {
+    if (value.hasOwnProperty("toString")) {
+      delete value.toString;
+    }
+
+    return uneval(value);
+  };
+
   var memoize = function memoize(compute) {
     var memoized = false;
     var memoizedValue;
@@ -1255,6 +1263,1256 @@
 
     return fnWithMemoization;
   };
+
+  var objectWithoutPropertiesLoose = (function (source, excluded) {
+    if (source === null) return {};
+    var target = {};
+    var sourceKeys = Object.keys(source);
+    var key;
+    var i;
+
+    for (i = 0; i < sourceKeys.length; i++) {
+      key = sourceKeys[i];
+      if (excluded.indexOf(key) >= 0) continue;
+      target[key] = source[key];
+    }
+
+    return target;
+  });
+
+  var _objectWithoutProperties = (function (source, excluded) {
+    if (source === null) return {};
+    var target = objectWithoutPropertiesLoose(source, excluded);
+    var key;
+    var i;
+
+    if (Object.getOwnPropertySymbols) {
+      var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
+
+      for (i = 0; i < sourceSymbolKeys.length; i++) {
+        key = sourceSymbolKeys[i];
+        if (excluded.indexOf(key) >= 0) continue;
+        if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
+        target[key] = source[key];
+      }
+    }
+
+    return target;
+  });
+
+  var createCancellationToken = function createCancellationToken() {
+    var register = function register(callback) {
+      if (typeof callback !== "function") {
+        throw new Error("callback must be a function, got ".concat(callback));
+      }
+
+      return {
+        callback: callback,
+        unregister: function unregister() {}
+      };
+    };
+
+    var throwIfRequested = function throwIfRequested() {
+      return undefined;
+    };
+
+    return {
+      register: register,
+      cancellationRequested: false,
+      throwIfRequested: throwIfRequested
+    };
+  };
+
+  var createDetailedMessage = function createDetailedMessage(message) {
+    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var string = "".concat(message);
+    Object.keys(details).forEach(function (key) {
+      var value = details[key];
+      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    });
+    return string;
+  };
+
+  // fallback to this polyfill (or even use an existing polyfill would be better)
+  // https://github.com/github/fetch/blob/master/fetch.js
+
+  function _await$b(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _async$b(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  function _call$1(body, then, direct) {
+    if (direct) {
+      return then ? then(body()) : body();
+    }
+
+    try {
+      var result = Promise.resolve(body());
+      return then ? result.then(then) : result;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  var fetchUsingXHR = _async$b(function (url) {
+    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        _ref$cancellationToke = _ref.cancellationToken,
+        cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
+        _ref$method = _ref.method,
+        method = _ref$method === void 0 ? "GET" : _ref$method,
+        _ref$credentials = _ref.credentials,
+        credentials = _ref$credentials === void 0 ? "same-origin" : _ref$credentials,
+        _ref$headers = _ref.headers,
+        headers = _ref$headers === void 0 ? {} : _ref$headers,
+        _ref$body = _ref.body,
+        body = _ref$body === void 0 ? null : _ref$body;
+
+    var headersPromise = createPromiseAndHooks();
+    var bodyPromise = createPromiseAndHooks();
+    var xhr = new XMLHttpRequest();
+
+    var failure = function failure(error) {
+      // if it was already resolved, we must reject the body promise
+      if (headersPromise.settled) {
+        bodyPromise.reject(error);
+      } else {
+        headersPromise.reject(error);
+      }
+    };
+
+    var cleanup = function cleanup() {
+      xhr.ontimeout = null;
+      xhr.onerror = null;
+      xhr.onload = null;
+      xhr.onreadystatechange = null;
+    };
+
+    xhr.ontimeout = function () {
+      cleanup();
+      failure(new Error("xhr request timeout on ".concat(url, ".")));
+    };
+
+    xhr.onerror = function (error) {
+      cleanup(); // unfortunately with have no clue why it fails
+      // might be cors for instance
+
+      failure(createRequestError(error, {
+        url: url
+      }));
+    };
+
+    xhr.onload = function () {
+      cleanup();
+      bodyPromise.resolve();
+    };
+
+    cancellationToken.register(function (cancelError) {
+      xhr.abort();
+      failure(cancelError);
+    });
+
+    xhr.onreadystatechange = function () {
+      // https://developer.mozilla.org/fr/docs/Web/API/XMLHttpRequest/readyState
+      var readyState = xhr.readyState;
+
+      if (readyState === 2) {
+        headersPromise.resolve();
+      } else if (readyState === 4) {
+        cleanup();
+        bodyPromise.resolve();
+      }
+    };
+
+    xhr.open(method, url, true);
+    Object.keys(headers).forEach(function (key) {
+      xhr.setRequestHeader(key, headers[key]);
+    });
+    xhr.withCredentials = computeWithCredentials({
+      credentials: credentials,
+      url: url
+    });
+
+    if ("responseType" in xhr && hasBlob) {
+      xhr.responseType = "blob";
+    }
+
+    xhr.send(body);
+    return _await$b(headersPromise, function () {
+      // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
+      var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
+      var responseStatus = xhr.status;
+      var responseStatusText = xhr.statusText;
+      var responseHeaders = getHeadersFromXHR(xhr);
+
+      var readBody = function readBody() {
+        return _await$b(bodyPromise, function () {
+          var status = xhr.status; // in Chrome on file:/// URLs, status is 0
+
+          if (status === 0) {
+            responseStatus = 200;
+          }
+
+          var body = "response" in xhr ? xhr.response : xhr.responseText;
+          return {
+            responseBody: body,
+            responseBodyType: detectBodyType(body)
+          };
+        });
+      };
+
+      var text = function text() {
+        return _call$1(readBody, function (_ref2) {
+          var responseBody = _ref2.responseBody,
+              responseBodyType = _ref2.responseBodyType;
+
+          if (responseBodyType === "blob") {
+            return blobToText(responseBody);
+          }
+
+          if (responseBodyType === "formData") {
+            throw new Error("could not read FormData body as text");
+          }
+
+          return responseBodyType === "dataView" ? arrayBufferToText(responseBody.buffer) : responseBodyType === "arrayBuffer" ? arrayBufferToText(responseBody) : String(responseBody);
+        });
+      };
+
+      var json = function json() {
+        return _call$1(text, JSON.parse);
+      };
+
+      var blob = _async$b(function () {
+        if (!hasBlob) {
+          throw new Error("blob not supported");
+        }
+
+        return _call$1(readBody, function (_ref3) {
+          var responseBody = _ref3.responseBody,
+              responseBodyType = _ref3.responseBodyType;
+
+          if (responseBodyType === "blob") {
+            return responseBody;
+          }
+
+          if (responseBodyType === "dataView") {
+            return new Blob([cloneBuffer(responseBody.buffer)]);
+          }
+
+          if (responseBodyType === "arrayBuffer") {
+            return new Blob([cloneBuffer(responseBody)]);
+          }
+
+          if (responseBodyType === "formData") {
+            throw new Error("could not read FormData body as blob");
+          }
+
+          return new Blob([String(responseBody)]);
+        });
+      });
+
+      var arrayBuffer = function arrayBuffer() {
+        return _call$1(readBody, function (_ref4) {
+          var responseBody = _ref4.responseBody,
+              responseBodyType = _ref4.responseBodyType;
+          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$1(blob, blobToArrayBuffer);
+        });
+      };
+
+      var formData = _async$b(function () {
+        if (!hasFormData) {
+          throw new Error("formData not supported");
+        }
+
+        return _call$1(text, textToFormData);
+      });
+
+      return {
+        url: responseUrl,
+        status: responseStatus,
+        statusText: responseStatusText,
+        headers: responseHeaders,
+        text: text,
+        json: json,
+        blob: blob,
+        arrayBuffer: arrayBuffer,
+        formData: formData
+      };
+    });
+  });
+
+  var canUseBlob = function canUseBlob() {
+    if (typeof window.FileReader !== "function") return false;
+    if (typeof window.Blob !== "function") return false;
+
+    try {
+      // eslint-disable-next-line no-new
+      new Blob();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  var hasBlob = canUseBlob();
+  var hasFormData = typeof window.FormData === "function";
+  var hasArrayBuffer = typeof window.ArrayBuffer === "function";
+  var hasSearchParams = typeof window.URLSearchParams === "function";
+
+  var createRequestError = function createRequestError(error, _ref5) {
+    var url = _ref5.url;
+    return new Error(createDetailedMessage("error during xhr request on ".concat(url, "."), _defineProperty({}, "error stack", error.stack)));
+  };
+
+  var createPromiseAndHooks = function createPromiseAndHooks() {
+    var resolve;
+    var reject;
+    var promise = new Promise(function (res, rej) {
+      resolve = function resolve(value) {
+        promise.settled = true;
+        res(value);
+      };
+
+      reject = function reject(value) {
+        promise.settled = true;
+        rej(value);
+      };
+    });
+    promise.resolve = resolve;
+    promise.reject = reject;
+    return promise;
+  }; // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+
+
+  var computeWithCredentials = function computeWithCredentials(_ref6) {
+    var credentials = _ref6.credentials,
+        url = _ref6.url;
+
+    if (credentials === "same-origin") {
+      return originSameAsGlobalOrigin(url);
+    }
+
+    return credentials === "include";
+  };
+
+  var originSameAsGlobalOrigin = function originSameAsGlobalOrigin(url) {
+    // if we cannot read globalOrigin from window.location.origin, let's consider it's ok
+    if ((typeof window === "undefined" ? "undefined" : _typeof(window)) !== "object") return true;
+    if (_typeof(window.location) !== "object") return true;
+    var globalOrigin = window.location.origin;
+    if (globalOrigin === "null") return true;
+    return hrefToOrigin(url) === globalOrigin;
+  };
+
+  var detectBodyType = function detectBodyType(body) {
+    if (!body) {
+      return "";
+    }
+
+    if (typeof body === "string") {
+      return "text";
+    }
+
+    if (hasBlob && Blob.prototype.isPrototypeOf(body)) {
+      return "blob";
+    }
+
+    if (hasFormData && FormData.prototype.isPrototypeOf(body)) {
+      return "formData";
+    }
+
+    if (hasArrayBuffer) {
+      if (hasBlob && isDataView(body)) {
+        return "dataView";
+      }
+
+      if (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body)) {
+        return "arrayBuffer";
+      }
+    }
+
+    if (hasSearchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+      return "searchParams";
+    }
+
+    return "";
+  }; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/getAllResponseHeaders#Example
+
+
+  var getHeadersFromXHR = function getHeadersFromXHR(xhr) {
+    var headerMap = {};
+    var headersString = xhr.getAllResponseHeaders();
+    if (headersString === "") return headerMap;
+    var lines = headersString.trim().split(/[\r\n]+/);
+    lines.forEach(function (line) {
+      var parts = line.split(": ");
+      var name = parts.shift();
+      var value = parts.join(": ");
+      headerMap[name.toLowerCase()] = value;
+    });
+    return headerMap;
+  };
+
+  var hrefToOrigin = function hrefToOrigin(href) {
+    var scheme = hrefToScheme(href);
+
+    if (scheme === "file") {
+      return "file://";
+    }
+
+    if (scheme === "http" || scheme === "https") {
+      var secondProtocolSlashIndex = scheme.length + "://".length;
+      var pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
+      if (pathnameSlashIndex === -1) return href;
+      return href.slice(0, pathnameSlashIndex);
+    }
+
+    return href.slice(0, scheme.length + 1);
+  };
+
+  var hrefToScheme = function hrefToScheme(href) {
+    var colonIndex = href.indexOf(":");
+    if (colonIndex === -1) return "";
+    return href.slice(0, colonIndex);
+  };
+
+  var isDataView = function isDataView(obj) {
+    return obj && DataView.prototype.isPrototypeOf(obj);
+  };
+
+  var isArrayBufferView = ArrayBuffer.isView || function () {
+    var viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
+    return function (value) {
+      return value && viewClasses.includes(Object.prototype.toString.call(value));
+    };
+  }();
+
+  var textToFormData = function textToFormData(text) {
+    var form = new FormData();
+    text.trim().split("&").forEach(function (bytes) {
+      if (bytes) {
+        var split = bytes.split("=");
+        var name = split.shift().replace(/\+/g, " ");
+        var value = split.join("=").replace(/\+/g, " ");
+        form.append(decodeURIComponent(name), decodeURIComponent(value));
+      }
+    });
+    return form;
+  };
+
+  var blobToArrayBuffer = _async$b(function (blob) {
+    var reader = new FileReader();
+    var promise = fileReaderReady(reader);
+    reader.readAsArrayBuffer(blob);
+    return promise;
+  });
+
+  var blobToText = function blobToText(blob) {
+    var reader = new FileReader();
+    var promise = fileReaderReady(reader);
+    reader.readAsText(blob);
+    return promise;
+  };
+
+  var arrayBufferToText = function arrayBufferToText(arrayBuffer) {
+    var view = new Uint8Array(arrayBuffer);
+    var chars = new Array(view.length);
+    var i = 0;
+
+    while (i < view.length) {
+      chars[i] = String.fromCharCode(view[i]);
+      i++;
+    }
+
+    return chars.join("");
+  };
+
+  var fileReaderReady = function fileReaderReady(reader) {
+    return new Promise(function (resolve, reject) {
+      reader.onload = function () {
+        resolve(reader.result);
+      };
+
+      reader.onerror = function () {
+        reject(reader.error);
+      };
+    });
+  };
+
+  var cloneBuffer = function cloneBuffer(buffer) {
+    if (buffer.slice) {
+      return buffer.slice(0);
+    }
+
+    var view = new Uint8Array(buffer.byteLength);
+    view.set(new Uint8Array(buffer));
+    return view.buffer;
+  };
+
+  function _await$a(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  var fetchNative = _async$a(function (url) {
+
+    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+    var _ref$cancellationToke = _ref.cancellationToken,
+        cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
+        _ref$mode = _ref.mode,
+        mode = _ref$mode === void 0 ? "cors" : _ref$mode,
+        options = _objectWithoutProperties(_ref, ["cancellationToken", "mode"]);
+
+    var abortController = new AbortController();
+    var cancelError;
+    cancellationToken.register(function (reason) {
+      cancelError = reason;
+      abortController.abort(reason);
+    });
+    var response;
+    return _continue$3(_catch$4(function () {
+      return _await$a(window.fetch(url, _objectSpread2({
+        signal: abortController.signal,
+        mode: mode
+      }, options)), function (_window$fetch) {
+        response = _window$fetch;
+      });
+    }, function (e) {
+      if (cancelError && e.name === "AbortError") {
+        throw cancelError;
+      }
+
+      throw e;
+    }), function (_result) {
+      return {
+        url: response.url,
+        status: response.status,
+        statusText: "",
+        headers: responseToHeaders$1(response),
+        text: function text() {
+          return response.text();
+        },
+        json: function json() {
+          return response.json();
+        },
+        blob: function blob() {
+          return response.blob();
+        },
+        arrayBuffer: function arrayBuffer() {
+          return response.arrayBuffer();
+        },
+        formData: function formData() {
+          return response.formData();
+        }
+      };
+    });
+  });
+
+  function _catch$4(body, recover) {
+    try {
+      var result = body();
+    } catch (e) {
+      return recover(e);
+    }
+
+    if (result && result.then) {
+      return result.then(void 0, recover);
+    }
+
+    return result;
+  }
+
+  var responseToHeaders$1 = function responseToHeaders(response) {
+    var headers = {};
+    response.headers.forEach(function (value, name) {
+      headers[name] = value;
+    });
+    return headers;
+  };
+
+  function _continue$3(value, then) {
+    return value && value.then ? value.then(then) : then(value);
+  }
+
+  function _async$a(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
+
+  var pathnameToExtension$1 = function pathnameToExtension(pathname) {
+    var slashLastIndex = pathname.lastIndexOf("/");
+
+    if (slashLastIndex !== -1) {
+      pathname = pathname.slice(slashLastIndex + 1);
+    }
+
+    var dotLastIndex = pathname.lastIndexOf(".");
+    if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+    return pathname.slice(dotLastIndex);
+  };
+
+  var applyImportMap = function applyImportMap(_ref) {
+    var importMap = _ref.importMap,
+        specifier = _ref.specifier,
+        importer = _ref.importer,
+        _ref$createBareSpecif = _ref.createBareSpecifierError,
+        createBareSpecifierError = _ref$createBareSpecif === void 0 ? function (_ref2) {
+      var specifier = _ref2.specifier,
+          importer = _ref2.importer;
+      return new Error(createDetailedMessage("Unmapped bare specifier.", {
+        specifier: specifier,
+        importer: importer
+      }));
+    } : _ref$createBareSpecif,
+        _ref$onImportMapping = _ref.onImportMapping,
+        onImportMapping = _ref$onImportMapping === void 0 ? function () {} : _ref$onImportMapping;
+    assertImportMap(importMap);
+
+    if (typeof specifier !== "string") {
+      throw new TypeError(createDetailedMessage("specifier must be a string.", {
+        specifier: specifier,
+        importer: importer
+      }));
+    }
+
+    if (importer) {
+      if (typeof importer !== "string") {
+        throw new TypeError(createDetailedMessage("importer must be a string.", {
+          importer: importer,
+          specifier: specifier
+        }));
+      }
+
+      if (!hasScheme(importer)) {
+        throw new Error(createDetailedMessage("importer must be an absolute url.", {
+          importer: importer,
+          specifier: specifier
+        }));
+      }
+    }
+
+    var specifierUrl = resolveSpecifier(specifier, importer);
+    var specifierNormalized = specifierUrl || specifier;
+    var scopes = importMap.scopes;
+
+    if (scopes && importer) {
+      var scopeSpecifierMatching = Object.keys(scopes).find(function (scopeSpecifier) {
+        return scopeSpecifier === importer || specifierIsPrefixOf(scopeSpecifier, importer);
+      });
+
+      if (scopeSpecifierMatching) {
+        var scopeMappings = scopes[scopeSpecifierMatching];
+        var mappingFromScopes = applyMappings(scopeMappings, specifierNormalized, scopeSpecifierMatching, onImportMapping);
+
+        if (mappingFromScopes !== null) {
+          return mappingFromScopes;
+        }
+      }
+    }
+
+    var imports = importMap.imports;
+
+    if (imports) {
+      var mappingFromImports = applyMappings(imports, specifierNormalized, undefined, onImportMapping);
+
+      if (mappingFromImports !== null) {
+        return mappingFromImports;
+      }
+    }
+
+    if (specifierUrl) {
+      return specifierUrl;
+    }
+
+    throw createBareSpecifierError({
+      specifier: specifier,
+      importer: importer
+    });
+  };
+
+  var applyMappings = function applyMappings(mappings, specifierNormalized, scope, onImportMapping) {
+    var specifierCandidates = Object.keys(mappings);
+    var i = 0;
+
+    while (i < specifierCandidates.length) {
+      var specifierCandidate = specifierCandidates[i];
+      i++;
+
+      if (specifierCandidate === specifierNormalized) {
+        var address = mappings[specifierCandidate];
+        onImportMapping({
+          scope: scope,
+          from: specifierCandidate,
+          to: address,
+          before: specifierNormalized,
+          after: address
+        });
+        return address;
+      }
+
+      if (specifierIsPrefixOf(specifierCandidate, specifierNormalized)) {
+        var _address = mappings[specifierCandidate];
+        var afterSpecifier = specifierNormalized.slice(specifierCandidate.length);
+        var addressFinal = tryUrlResolution(afterSpecifier, _address);
+        onImportMapping({
+          scope: scope,
+          from: specifierCandidate,
+          to: _address,
+          before: specifierNormalized,
+          after: addressFinal
+        });
+        return addressFinal;
+      }
+    }
+
+    return null;
+  };
+
+  var specifierIsPrefixOf = function specifierIsPrefixOf(specifierHref, href) {
+    return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
+  };
+
+  var resolveImport = function resolveImport(_ref) {
+    var specifier = _ref.specifier,
+        importer = _ref.importer,
+        importMap = _ref.importMap,
+        _ref$defaultExtension = _ref.defaultExtension,
+        defaultExtension = _ref$defaultExtension === void 0 ? true : _ref$defaultExtension,
+        createBareSpecifierError = _ref.createBareSpecifierError,
+        _ref$onImportMapping = _ref.onImportMapping,
+        onImportMapping = _ref$onImportMapping === void 0 ? function () {} : _ref$onImportMapping;
+    return applyDefaultExtension$1({
+      url: importMap ? applyImportMap({
+        importMap: importMap,
+        specifier: specifier,
+        importer: importer,
+        createBareSpecifierError: createBareSpecifierError,
+        onImportMapping: onImportMapping
+      }) : resolveUrl(specifier, importer),
+      importer: importer,
+      defaultExtension: defaultExtension
+    });
+  };
+
+  var applyDefaultExtension$1 = function applyDefaultExtension(_ref2) {
+    var url = _ref2.url,
+        importer = _ref2.importer,
+        defaultExtension = _ref2.defaultExtension;
+
+    if (urlToPathname$1(url).endsWith("/")) {
+      return url;
+    }
+
+    if (typeof defaultExtension === "string") {
+      var extension = pathnameToExtension$1(url);
+
+      if (extension === "") {
+        return "".concat(url).concat(defaultExtension);
+      }
+
+      return url;
+    }
+
+    if (defaultExtension === true) {
+      var _extension = pathnameToExtension$1(url);
+
+      if (_extension === "" && importer) {
+        var importerPathname = urlToPathname$1(importer);
+        var importerExtension = pathnameToExtension$1(importerPathname);
+        return "".concat(url).concat(importerExtension);
+      }
+    }
+
+    return url;
+  };
+
+  function _await$9(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _catch$3(body, recover) {
+    try {
+      var result = body();
+    } catch (e) {
+      return recover(e);
+    }
+
+    if (result && result.then) {
+      return result.then(void 0, recover);
+    }
+
+    return result;
+  }
+
+  function _invoke$5(body, then) {
+    var result = body();
+
+    if (result && result.then) {
+      return result.then(then);
+    }
+
+    return then(result);
+  }
+
+  function _continue$2(value, then) {
+    return value && value.then ? value.then(then) : then(value);
+  }
+
+  function _async$9(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  var fromFunctionReturningNamespace = function fromFunctionReturningNamespace(fn, data) {
+    return fromFunctionReturningRegisteredModule(function () {
+      // should we compute the namespace here
+      // or as it is done below, defer to execute ?
+      // I think defer to execute is better
+      return [[], function (_export) {
+        return {
+          execute: function execute() {
+            var namespace = fn();
+
+            _export(namespace);
+          }
+        };
+      }];
+    }, data);
+  };
+
+  var fromFunctionReturningRegisteredModule = function fromFunctionReturningRegisteredModule(fn, data) {
+    try {
+      return fn();
+    } catch (error) {
+      if (error.name === "SyntaxError") {
+        throw new Error(createDetailedMessage("Syntax error in module.", _objectSpread2({
+          "syntax error stack": error.stack
+        }, getModuleDetails(data))));
+      }
+
+      throw new Error(createDetailedMessage("Module instantiation error.", _objectSpread2(_defineProperty({}, "instantiation error stack", error.stack), getModuleDetails(data))));
+    }
+  };
+
+  var fromUrl = _async$9(function (_ref) {
+    var url = _ref.url,
+        importerUrl = _ref.importerUrl,
+        fetchSource = _ref.fetchSource,
+        instantiateJavaScript = _ref.instantiateJavaScript,
+        compileServerOrigin = _ref.compileServerOrigin,
+        compileDirectoryRelativeUrl = _ref.compileDirectoryRelativeUrl;
+    var moduleResponse;
+    return _continue$2(_catch$3(function () {
+      return _await$9(fetchSource(url, {
+        importerUrl: importerUrl
+      }), function (_fetchSource) {
+        moduleResponse = _fetchSource;
+
+        if (moduleResponse.status === 404) {
+          throw new Error(createDetailedMessage("Module file cannot be found.", getModuleDetails({
+            url: url,
+            importerUrl: importerUrl,
+            compileServerOrigin: compileServerOrigin,
+            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+            notFound: true
+          })));
+        }
+      });
+    }, function (e) {
+      e.code = "NETWORK_FAILURE";
+      throw e;
+    }), function (_result) {
+      var contentType = moduleResponse.headers["content-type"] || "";
+      return _invoke$5(function () {
+        if (moduleResponse.status === 500 && contentType === "application/json") {
+          return _await$9(moduleResponse.json(), function (bodyAsJson) {
+            if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
+              var error = new Error(createDetailedMessage("Module file cannot be parsed.", _objectSpread2(_defineProperty({}, "parsing error message", bodyAsJson.message), getModuleDetails({
+                url: url,
+                importerUrl: importerUrl,
+                compileServerOrigin: compileServerOrigin,
+                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+              }))));
+              error.parsingError = bodyAsJson;
+              throw error;
+            }
+          });
+        }
+      }, function (_result2) {
+        var _exit3 = false;
+
+        if (moduleResponse.status < 200 || moduleResponse.status >= 300) {
+          var _objectSpread4;
+
+          throw new Error(createDetailedMessage("Module file response status is unexpected.", _objectSpread2((_objectSpread4 = {}, _defineProperty(_objectSpread4, "status", moduleResponse.status), _defineProperty(_objectSpread4, "allowed status", "200 to 299"), _defineProperty(_objectSpread4, "statusText", moduleResponse.statusText), _objectSpread4), getModuleDetails({
+            url: url,
+            importerUrl: importerUrl,
+            compileServerOrigin: compileServerOrigin,
+            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+          }))));
+        } // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
+        // and in sync with loadModule in createJsenvRollupPlugin.js
+
+
+        return _invoke$5(function () {
+          if (contentType === "application/javascript" || contentType === "text/javascript") {
+            return _await$9(moduleResponse.text(), function (bodyAsText) {
+              _exit3 = true;
+              return fromFunctionReturningRegisteredModule(function () {
+                return instantiateJavaScript(bodyAsText, moduleResponse.url);
+              }, {
+                url: moduleResponse.url,
+                importerUrl: importerUrl,
+                compileServerOrigin: compileServerOrigin,
+                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+              });
+            });
+          }
+        }, function (_result3) {
+          var _exit4 = false;
+          if (_exit3) return _result3;
+          return _invoke$5(function () {
+            if (contentType === "application/json" || contentType === "application/importmap+json") {
+              return _await$9(moduleResponse.json(), function (bodyAsJson) {
+                _exit4 = true;
+                return fromFunctionReturningNamespace(function () {
+                  return {
+                    default: bodyAsJson
+                  };
+                }, {
+                  url: moduleResponse.url,
+                  importerUrl: importerUrl,
+                  compileServerOrigin: compileServerOrigin,
+                  compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+                });
+              });
+            }
+          }, function (_result4) {
+            if (_exit4) return _result4;
+
+            if (contentTypeShouldBeReadAsText(contentType)) {
+              return fromFunctionReturningNamespace(function () {
+                return {
+                  default: moduleResponse.url
+                };
+              }, {
+                url: moduleResponse.url,
+                importerUrl: importerUrl,
+                compileServerOrigin: compileServerOrigin,
+                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+              });
+            }
+
+            if (contentType) ; else {
+              console.warn("Module content-type is missing.", _objectSpread2(_defineProperty({}, "allowed content-type", ["aplication/javascript", "application/json", "text/*"]), getModuleDetails({
+                url: url,
+                importerUrl: importerUrl,
+                compileServerOrigin: compileServerOrigin,
+                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+              })));
+            }
+
+            return fromFunctionReturningNamespace(function () {
+              return {
+                default: moduleResponse.url
+              };
+            }, {
+              url: moduleResponse.url,
+              importerUrl: importerUrl,
+              compileServerOrigin: compileServerOrigin,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+            });
+          });
+        });
+      });
+    });
+  });
+
+  var contentTypeShouldBeReadAsText = function contentTypeShouldBeReadAsText(contentType) {
+    if (contentType.startsWith("text/")) {
+      return true;
+    }
+
+    if (contentType === "image/svg+xml") {
+      return true;
+    }
+
+    return false;
+  }; // const textToBase64 =
+  //   typeof window === "object"
+  //     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
+  //     : (text) => Buffer.from(text, "utf8").toString("base64")
+
+
+  var getModuleDetails = function getModuleDetails(_ref2) {
+    var url = _ref2.url,
+        importerUrl = _ref2.importerUrl,
+        compileServerOrigin = _ref2.compileServerOrigin,
+        compileDirectoryRelativeUrl = _ref2.compileDirectoryRelativeUrl,
+        _ref2$notFound = _ref2.notFound,
+        notFound = _ref2$notFound === void 0 ? false : _ref2$notFound;
+    var relativeUrl = tryToFindProjectRelativeUrl(url, {
+      compileServerOrigin: compileServerOrigin,
+      compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+    });
+    var importerRelativeUrl = tryToFindProjectRelativeUrl(importerUrl, {
+      compileServerOrigin: compileServerOrigin,
+      compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+    });
+    var details = notFound ? _objectSpread2(_objectSpread2(_objectSpread2({}, importerUrl ? _defineProperty({}, "import declared in", importerRelativeUrl || importerUrl) : {}), relativeUrl ? {
+      file: relativeUrl
+    } : {}), {}, _defineProperty({}, "file url", url)) : _objectSpread2(_objectSpread2({}, relativeUrl ? {
+      file: relativeUrl
+    } : {}), {}, _defineProperty({}, "file url", url), importerUrl ? _defineProperty({}, "imported by", importerRelativeUrl || importerUrl) : {});
+    return details;
+  };
+
+  var tryToFindProjectRelativeUrl = function tryToFindProjectRelativeUrl(url, _ref5) {
+    var compileServerOrigin = _ref5.compileServerOrigin,
+        compileDirectoryRelativeUrl = _ref5.compileDirectoryRelativeUrl;
+
+    if (!url) {
+      return null;
+    }
+
+    if (!url.startsWith("".concat(compileServerOrigin, "/"))) {
+      return null;
+    }
+
+    if (url === compileServerOrigin) {
+      return null;
+    }
+
+    var afterOrigin = url.slice("".concat(compileServerOrigin, "/").length);
+
+    if (!afterOrigin.startsWith(compileDirectoryRelativeUrl)) {
+      return null;
+    }
+
+    var afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length);
+    return afterCompileDirectory;
+  };
+
+  var applyDefaultExtension = function applyDefaultExtension(specifier, importer) {
+    if (!importer) {
+      return specifier;
+    }
+
+    var importerExtension = urlToExtension(importer);
+    var fakeUrl = new URL(specifier, importer).href;
+    var specifierExtension = urlToExtension(fakeUrl);
+
+    if (specifierExtension !== "") {
+      return specifier;
+    } // I guess typescript still expect default extension to be .ts
+    // in a tsx file.
+
+
+    if (importerExtension === "tsx") {
+      return "".concat(specifier, ".ts");
+    } // extension magic
+
+
+    return "".concat(specifier).concat(importerExtension);
+  };
+
+  var urlToExtension = function urlToExtension(url) {
+    return pathnameToExtension(urlToPathname(url));
+  };
+
+  var urlToPathname = function urlToPathname(url) {
+    return new URL(url).pathname;
+  };
+
+  var pathnameToExtension = function pathnameToExtension(pathname) {
+    var slashLastIndex = pathname.lastIndexOf("/");
+
+    if (slashLastIndex !== -1) {
+      pathname = pathname.slice(slashLastIndex + 1);
+    }
+
+    var dotLastIndex = pathname.lastIndexOf(".");
+    if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+    var extension = pathname.slice(dotLastIndex);
+    return extension;
+  };
+
+  function _await$8(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  var createImportResolverForImportmap = function createImportResolverForImportmap(_ref) {
+    var compileServerOrigin = _ref.compileServerOrigin,
+        compileDirectoryRelativeUrl = _ref.compileDirectoryRelativeUrl,
+        importMap = _ref.importMap,
+        importMapUrl = _ref.importMapUrl,
+        importDefaultExtension = _ref.importDefaultExtension,
+        _ref$onBareSpecifierE = _ref.onBareSpecifierError,
+        onBareSpecifierError = _ref$onBareSpecifierE === void 0 ? function () {} : _ref$onBareSpecifierE;
+
+    var _resolveImport = function _resolveImport(specifier, importer) {
+      if (importDefaultExtension) {
+        specifier = applyDefaultExtension(specifier, importer);
+      }
+
+      return resolveImport({
+        specifier: specifier,
+        importer: importer,
+        importMap: importMap,
+        createBareSpecifierError: function createBareSpecifierError(_ref2) {
+          var specifier = _ref2.specifier,
+              importer = _ref2.importer;
+
+          var bareSpecifierError = _createBareSpecifierError({
+            specifier: specifier,
+            importer: tryToFindProjectRelativeUrl(importer, {
+              compileServerOrigin: compileServerOrigin,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+            }) || importer,
+            importMapUrl: tryToFindProjectRelativeUrl(importMapUrl, {
+              compileServerOrigin: compileServerOrigin,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+            }) || importMapUrl,
+            importMap: importMap
+          });
+
+          onBareSpecifierError(bareSpecifierError);
+          return bareSpecifierError;
+        }
+      });
+    };
+
+    return _await$8({
+      resolveImport: _resolveImport
+    });
+  };
+
+  var _createBareSpecifierError = function _createBareSpecifierError(_ref3) {
+    var specifier = _ref3.specifier,
+        importer = _ref3.importer,
+        importMapUrl = _ref3.importMapUrl;
+    var detailedMessage = createDetailedMessage("Unmapped bare specifier.", {
+      specifier: specifier,
+      importer: importer,
+      "how to fix": importMapUrl ? "Add a mapping for \"".concat(specifier, "\" into the importmap file at ").concat(importMapUrl) : "Add an importmap with a mapping for \"".concat(specifier, "\""),
+      "suggestion": "Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map"
+    });
+    return new Error(detailedMessage);
+  };
+
+  /* eslint-env browser */
+  var _window$1 = window,
+      performance = _window$1.performance;
+
+  function _rethrow(thrown, value) {
+    if (thrown) throw value;
+    return value;
+  }
+
+  function _finallyRethrows(body, finalizer) {
+    try {
+      var result = body();
+    } catch (e) {
+      return finalizer(true, e);
+    }
+
+    if (result && result.then) {
+      return result.then(finalizer.bind(null, false), finalizer.bind(null, true));
+    }
+
+    return finalizer(false, result);
+  }
+
+  function _async$8(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  var measureAsyncFnPerf = performance ? _async$8(function (fn, name) {
+    var perfMarkStartName = "".concat(name, "_start");
+    performance.mark(perfMarkStartName);
+    return _finallyRethrows(fn, function (_wasThrown, _result) {
+      performance.measure(name, perfMarkStartName);
+      return _rethrow(_wasThrown, _result);
+    });
+  }) : _async$8(function (fn) {
+    return fn();
+  });
 
   /*
   * SJS 6.7.1
@@ -1935,300 +3193,6 @@
     };
   };
 
-  var createDetailedMessage = function createDetailedMessage(message) {
-    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var string = "".concat(message);
-    Object.keys(details).forEach(function (key) {
-      var value = details[key];
-      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-    });
-    return string;
-  };
-
-  function _await$b(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  function _catch$4(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  function _invoke$5(body, then) {
-    var result = body();
-
-    if (result && result.then) {
-      return result.then(then);
-    }
-
-    return then(result);
-  }
-
-  function _continue$3(value, then) {
-    return value && value.then ? value.then(then) : then(value);
-  }
-
-  function _async$a(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  var fromFunctionReturningNamespace = function fromFunctionReturningNamespace(fn, data) {
-    return fromFunctionReturningRegisteredModule(function () {
-      // should we compute the namespace here
-      // or as it is done below, defer to execute ?
-      // I think defer to execute is better
-      return [[], function (_export) {
-        return {
-          execute: function execute() {
-            var namespace = fn();
-
-            _export(namespace);
-          }
-        };
-      }];
-    }, data);
-  };
-
-  var fromFunctionReturningRegisteredModule = function fromFunctionReturningRegisteredModule(fn, data) {
-    try {
-      return fn();
-    } catch (error) {
-      if (error.name === "SyntaxError") {
-        throw new Error(createDetailedMessage("Syntax error in module.", _objectSpread2({
-          "syntax error stack": error.stack
-        }, getModuleDetails(data))));
-      }
-
-      throw new Error(createDetailedMessage("Module instantiation error.", _objectSpread2(_defineProperty({}, "instantiation error stack", error.stack), getModuleDetails(data))));
-    }
-  };
-
-  var fromUrl = _async$a(function (_ref) {
-    var url = _ref.url,
-        importerUrl = _ref.importerUrl,
-        fetchSource = _ref.fetchSource,
-        instantiateJavaScript = _ref.instantiateJavaScript,
-        compileServerOrigin = _ref.compileServerOrigin,
-        compileDirectoryRelativeUrl = _ref.compileDirectoryRelativeUrl;
-    var moduleResponse;
-    return _continue$3(_catch$4(function () {
-      return _await$b(fetchSource(url, {
-        importerUrl: importerUrl
-      }), function (_fetchSource) {
-        moduleResponse = _fetchSource;
-
-        if (moduleResponse.status === 404) {
-          throw new Error(createDetailedMessage("Module file cannot be found.", getModuleDetails({
-            url: url,
-            importerUrl: importerUrl,
-            compileServerOrigin: compileServerOrigin,
-            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
-            notFound: true
-          })));
-        }
-      });
-    }, function (e) {
-      e.code = "NETWORK_FAILURE";
-      throw e;
-    }), function (_result) {
-      var contentType = moduleResponse.headers["content-type"] || "";
-      return _invoke$5(function () {
-        if (moduleResponse.status === 500 && contentType === "application/json") {
-          return _await$b(moduleResponse.json(), function (bodyAsJson) {
-            if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
-              var error = new Error(createDetailedMessage("Module file cannot be parsed.", _objectSpread2(_defineProperty({}, "parsing error message", bodyAsJson.message), getModuleDetails({
-                url: url,
-                importerUrl: importerUrl,
-                compileServerOrigin: compileServerOrigin,
-                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-              }))));
-              error.parsingError = bodyAsJson;
-              throw error;
-            }
-          });
-        }
-      }, function (_result2) {
-        var _exit3 = false;
-
-        if (moduleResponse.status < 200 || moduleResponse.status >= 300) {
-          var _objectSpread4;
-
-          throw new Error(createDetailedMessage("Module file response status is unexpected.", _objectSpread2((_objectSpread4 = {}, _defineProperty(_objectSpread4, "status", moduleResponse.status), _defineProperty(_objectSpread4, "allowed status", "200 to 299"), _defineProperty(_objectSpread4, "statusText", moduleResponse.statusText), _objectSpread4), getModuleDetails({
-            url: url,
-            importerUrl: importerUrl,
-            compileServerOrigin: compileServerOrigin,
-            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-          }))));
-        } // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
-        // and in sync with loadModule in createJsenvRollupPlugin.js
-
-
-        return _invoke$5(function () {
-          if (contentType === "application/javascript" || contentType === "text/javascript") {
-            return _await$b(moduleResponse.text(), function (bodyAsText) {
-              _exit3 = true;
-              return fromFunctionReturningRegisteredModule(function () {
-                return instantiateJavaScript(bodyAsText, moduleResponse.url);
-              }, {
-                url: moduleResponse.url,
-                importerUrl: importerUrl,
-                compileServerOrigin: compileServerOrigin,
-                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-              });
-            });
-          }
-        }, function (_result3) {
-          var _exit4 = false;
-          if (_exit3) return _result3;
-          return _invoke$5(function () {
-            if (contentType === "application/json" || contentType === "application/importmap+json") {
-              return _await$b(moduleResponse.json(), function (bodyAsJson) {
-                _exit4 = true;
-                return fromFunctionReturningNamespace(function () {
-                  return {
-                    default: bodyAsJson
-                  };
-                }, {
-                  url: moduleResponse.url,
-                  importerUrl: importerUrl,
-                  compileServerOrigin: compileServerOrigin,
-                  compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-                });
-              });
-            }
-          }, function (_result4) {
-            if (_exit4) return _result4;
-
-            if (contentTypeShouldBeReadAsText(contentType)) {
-              return fromFunctionReturningNamespace(function () {
-                return {
-                  default: moduleResponse.url
-                };
-              }, {
-                url: moduleResponse.url,
-                importerUrl: importerUrl,
-                compileServerOrigin: compileServerOrigin,
-                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-              });
-            }
-
-            if (contentType) ; else {
-              console.warn("Module content-type is missing.", _objectSpread2(_defineProperty({}, "allowed content-type", ["aplication/javascript", "application/json", "text/*"]), getModuleDetails({
-                url: url,
-                importerUrl: importerUrl,
-                compileServerOrigin: compileServerOrigin,
-                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-              })));
-            }
-
-            return fromFunctionReturningNamespace(function () {
-              return {
-                default: moduleResponse.url
-              };
-            }, {
-              url: moduleResponse.url,
-              importerUrl: importerUrl,
-              compileServerOrigin: compileServerOrigin,
-              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-            });
-          });
-        });
-      });
-    });
-  });
-
-  var contentTypeShouldBeReadAsText = function contentTypeShouldBeReadAsText(contentType) {
-    if (contentType.startsWith("text/")) {
-      return true;
-    }
-
-    if (contentType === "image/svg+xml") {
-      return true;
-    }
-
-    return false;
-  }; // const textToBase64 =
-  //   typeof window === "object"
-  //     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
-  //     : (text) => Buffer.from(text, "utf8").toString("base64")
-
-
-  var getModuleDetails = function getModuleDetails(_ref2) {
-    var url = _ref2.url,
-        importerUrl = _ref2.importerUrl,
-        compileServerOrigin = _ref2.compileServerOrigin,
-        compileDirectoryRelativeUrl = _ref2.compileDirectoryRelativeUrl,
-        _ref2$notFound = _ref2.notFound,
-        notFound = _ref2$notFound === void 0 ? false : _ref2$notFound;
-    var relativeUrl = tryToFindProjectRelativeUrl(url, {
-      compileServerOrigin: compileServerOrigin,
-      compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-    });
-    var importerRelativeUrl = tryToFindProjectRelativeUrl(importerUrl, {
-      compileServerOrigin: compileServerOrigin,
-      compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-    });
-    var details = notFound ? _objectSpread2(_objectSpread2(_objectSpread2({}, importerUrl ? _defineProperty({}, "import declared in", importerRelativeUrl || importerUrl) : {}), relativeUrl ? {
-      file: relativeUrl
-    } : {}), {}, _defineProperty({}, "file url", url)) : _objectSpread2(_objectSpread2({}, relativeUrl ? {
-      file: relativeUrl
-    } : {}), {}, _defineProperty({}, "file url", url), importerUrl ? _defineProperty({}, "imported by", importerRelativeUrl || importerUrl) : {});
-    return details;
-  };
-
-  var tryToFindProjectRelativeUrl = function tryToFindProjectRelativeUrl(url, _ref5) {
-    var compileServerOrigin = _ref5.compileServerOrigin,
-        compileDirectoryRelativeUrl = _ref5.compileDirectoryRelativeUrl;
-
-    if (!url) {
-      return null;
-    }
-
-    if (!url.startsWith("".concat(compileServerOrigin, "/"))) {
-      return null;
-    }
-
-    if (url === compileServerOrigin) {
-      return null;
-    }
-
-    var afterOrigin = url.slice("".concat(compileServerOrigin, "/").length);
-
-    if (!afterOrigin.startsWith(compileDirectoryRelativeUrl)) {
-      return null;
-    }
-
-    var afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length);
-    return afterCompileDirectory;
-  };
-
   // eslint-disable-next-line no-eval
   var evalSource = function evalSource(code, href) {
     return window.eval(appendSourceURL$1(code, href));
@@ -2462,7 +3426,7 @@
     };
   };
 
-  function _await$a(value, then, direct) {
+  function _await$7(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -2477,7 +3441,7 @@
   var _window = window,
       Notification = _window.Notification;
 
-  function _async$9(f) {
+  function _async$7(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -2493,11 +3457,11 @@
 
   var displayErrorNotificationNotAvailable = function displayErrorNotificationNotAvailable() {};
 
-  var displayErrorNotificationImplementation = _async$9(function (error) {
+  var displayErrorNotificationImplementation = _async$7(function (error) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         icon = _ref.icon;
 
-    return _await$a(Notification.requestPermission(), function (permission) {
+    return _await$7(Notification.requestPermission(), function (permission) {
       if (permission === "granted") {
         var notification = new Notification("An error occured", {
           lang: "en",
@@ -2514,913 +3478,84 @@
 
   var displayErrorNotification = typeof Notification === "function" ? displayErrorNotificationImplementation : displayErrorNotificationNotAvailable;
 
-  var objectWithoutPropertiesLoose = (function (source, excluded) {
-    if (source === null) return {};
-    var target = {};
-    var sourceKeys = Object.keys(source);
-    var key;
-    var i;
-
-    for (i = 0; i < sourceKeys.length; i++) {
-      key = sourceKeys[i];
-      if (excluded.indexOf(key) >= 0) continue;
-      target[key] = source[key];
-    }
-
-    return target;
-  });
-
-  var _objectWithoutProperties = (function (source, excluded) {
-    if (source === null) return {};
-    var target = objectWithoutPropertiesLoose(source, excluded);
-    var key;
-    var i;
-
-    if (Object.getOwnPropertySymbols) {
-      var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
-
-      for (i = 0; i < sourceSymbolKeys.length; i++) {
-        key = sourceSymbolKeys[i];
-        if (excluded.indexOf(key) >= 0) continue;
-        if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
-        target[key] = source[key];
-      }
-    }
-
-    return target;
-  });
-
-  var createCancellationToken = function createCancellationToken() {
-    var register = function register(callback) {
-      if (typeof callback !== "function") {
-        throw new Error("callback must be a function, got ".concat(callback));
-      }
-
-      return {
-        callback: callback,
-        unregister: function unregister() {}
-      };
-    };
-
-    var throwIfRequested = function throwIfRequested() {
-      return undefined;
-    };
-
-    return {
-      register: register,
-      cancellationRequested: false,
-      throwIfRequested: throwIfRequested
-    };
+  var makeNamespaceTransferable = function makeNamespaceTransferable(namespace) {
+    var transferableNamespace = {};
+    Object.keys(namespace).forEach(function (key) {
+      var value = namespace[key];
+      transferableNamespace[key] = isTransferable(value) ? value : hideNonTransferableValue(value);
+    });
+    return transferableNamespace;
   };
 
-  // fallback to this polyfill (or even use an existing polyfill would be better)
-  // https://github.com/github/fetch/blob/master/fetch.js
-
-  function _await$9(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
+  var hideNonTransferableValue = function hideNonTransferableValue(value) {
+    if (typeof value === "function") {
+      return "[[HIDDEN: ".concat(value.name, " function cannot be transfered]]");
     }
 
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
+    if (_typeof(value) === "symbol") {
+      return "[[HIDDEN: symbol function cannot be transfered]]";
     }
 
-    return then ? value.then(then) : value;
-  }
+    return "[[HIDDEN: ".concat(value.constructor ? value.constructor.name : "object", " cannot be transfered]]");
+  }; // https://stackoverflow.com/a/32673910/2634179
 
-  function _async$8(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
 
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
+  var isTransferable = function isTransferable(value) {
+    var seenArray = [];
 
-  function _call$1(body, then, direct) {
-    if (direct) {
-      return then ? then(body()) : body();
-    }
+    var visit = function visit() {
+      if (typeof value === "function") return false;
+      if (_typeof(value) === "symbol") return false;
+      if (value === null) return false;
 
-    try {
-      var result = Promise.resolve(body());
-      return then ? result.then(then) : result;
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  }
+      if (_typeof(value) === "object") {
+        var constructorName = value.constructor.namespace;
 
-  var fetchUsingXHR = _async$8(function (url) {
-    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        _ref$cancellationToke = _ref.cancellationToken,
-        cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
-        _ref$method = _ref.method,
-        method = _ref$method === void 0 ? "GET" : _ref$method,
-        _ref$credentials = _ref.credentials,
-        credentials = _ref$credentials === void 0 ? "same-origin" : _ref$credentials,
-        _ref$headers = _ref.headers,
-        headers = _ref$headers === void 0 ? {} : _ref$headers,
-        _ref$body = _ref.body,
-        body = _ref$body === void 0 ? null : _ref$body;
-
-    var headersPromise = createPromiseAndHooks();
-    var bodyPromise = createPromiseAndHooks();
-    var xhr = new XMLHttpRequest();
-
-    var failure = function failure(error) {
-      // if it was already resolved, we must reject the body promise
-      if (headersPromise.settled) {
-        bodyPromise.reject(error);
-      } else {
-        headersPromise.reject(error);
-      }
-    };
-
-    var cleanup = function cleanup() {
-      xhr.ontimeout = null;
-      xhr.onerror = null;
-      xhr.onload = null;
-      xhr.onreadystatechange = null;
-    };
-
-    xhr.ontimeout = function () {
-      cleanup();
-      failure(new Error("xhr request timeout on ".concat(url, ".")));
-    };
-
-    xhr.onerror = function (error) {
-      cleanup(); // unfortunately with have no clue why it fails
-      // might be cors for instance
-
-      failure(createRequestError(error, {
-        url: url
-      }));
-    };
-
-    xhr.onload = function () {
-      cleanup();
-      bodyPromise.resolve();
-    };
-
-    cancellationToken.register(function (cancelError) {
-      xhr.abort();
-      failure(cancelError);
-    });
-
-    xhr.onreadystatechange = function () {
-      // https://developer.mozilla.org/fr/docs/Web/API/XMLHttpRequest/readyState
-      var readyState = xhr.readyState;
-
-      if (readyState === 2) {
-        headersPromise.resolve();
-      } else if (readyState === 4) {
-        cleanup();
-        bodyPromise.resolve();
-      }
-    };
-
-    xhr.open(method, url, true);
-    Object.keys(headers).forEach(function (key) {
-      xhr.setRequestHeader(key, headers[key]);
-    });
-    xhr.withCredentials = computeWithCredentials({
-      credentials: credentials,
-      url: url
-    });
-
-    if ("responseType" in xhr && hasBlob) {
-      xhr.responseType = "blob";
-    }
-
-    xhr.send(body);
-    return _await$9(headersPromise, function () {
-      // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
-      var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
-      var responseStatus = xhr.status;
-      var responseStatusText = xhr.statusText;
-      var responseHeaders = getHeadersFromXHR(xhr);
-
-      var readBody = function readBody() {
-        return _await$9(bodyPromise, function () {
-          var status = xhr.status; // in Chrome on file:/// URLs, status is 0
-
-          if (status === 0) {
-            responseStatus = 200;
-          }
-
-          var body = "response" in xhr ? xhr.response : xhr.responseText;
-          return {
-            responseBody: body,
-            responseBodyType: detectBodyType(body)
-          };
-        });
-      };
-
-      var text = function text() {
-        return _call$1(readBody, function (_ref2) {
-          var responseBody = _ref2.responseBody,
-              responseBodyType = _ref2.responseBodyType;
-
-          if (responseBodyType === "blob") {
-            return blobToText(responseBody);
-          }
-
-          if (responseBodyType === "formData") {
-            throw new Error("could not read FormData body as text");
-          }
-
-          return responseBodyType === "dataView" ? arrayBufferToText(responseBody.buffer) : responseBodyType === "arrayBuffer" ? arrayBufferToText(responseBody) : String(responseBody);
-        });
-      };
-
-      var json = function json() {
-        return _call$1(text, JSON.parse);
-      };
-
-      var blob = _async$8(function () {
-        if (!hasBlob) {
-          throw new Error("blob not supported");
+        if (supportedTypes.includes(constructorName)) {
+          return true;
         }
 
-        return _call$1(readBody, function (_ref3) {
-          var responseBody = _ref3.responseBody,
-              responseBodyType = _ref3.responseBodyType;
+        var maybe = maybeTypes.includes(constructorName);
 
-          if (responseBodyType === "blob") {
-            return responseBody;
+        if (maybe) {
+          var visited = seenArray.includes(value);
+
+          if (visited) {
+            // we don't really know until we are done visiting the object
+            // implementing it properly means waiting for the recursion to be done
+            // let's just
+            return true;
           }
 
-          if (responseBodyType === "dataView") {
-            return new Blob([cloneBuffer(responseBody.buffer)]);
+          seenArray.push(value);
+
+          if (constructorName === "Array" || constructorName === "Object") {
+            return Object.keys(value).every(function (key) {
+              return isTransferable(value[key]);
+            });
           }
 
-          if (responseBodyType === "arrayBuffer") {
-            return new Blob([cloneBuffer(responseBody)]);
+          if (constructorName === "Map") {
+            return _toConsumableArray(value.keys()).every(isTransferable) && _toConsumableArray(value.values()).every(isTransferable);
           }
 
-          if (responseBodyType === "formData") {
-            throw new Error("could not read FormData body as blob");
+          if (constructorName === "Set") {
+            return _toConsumableArray(value.keys()).every(isTransferable);
           }
+        } // Error, DOM Node and others
 
-          return new Blob([String(responseBody)]);
-        });
-      });
 
-      var arrayBuffer = function arrayBuffer() {
-        return _call$1(readBody, function (_ref4) {
-          var responseBody = _ref4.responseBody,
-              responseBodyType = _ref4.responseBodyType;
-          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$1(blob, blobToArrayBuffer);
-        });
-      };
+        return false;
+      }
 
-      var formData = _async$8(function () {
-        if (!hasFormData) {
-          throw new Error("formData not supported");
-        }
-
-        return _call$1(text, textToFormData);
-      });
-
-      return {
-        url: responseUrl,
-        status: responseStatus,
-        statusText: responseStatusText,
-        headers: responseHeaders,
-        text: text,
-        json: json,
-        blob: blob,
-        arrayBuffer: arrayBuffer,
-        formData: formData
-      };
-    });
-  });
-
-  var canUseBlob = function canUseBlob() {
-    if (typeof window.FileReader !== "function") return false;
-    if (typeof window.Blob !== "function") return false;
-
-    try {
-      // eslint-disable-next-line no-new
-      new Blob();
       return true;
-    } catch (e) {
-      return false;
-    }
-  };
-
-  var hasBlob = canUseBlob();
-  var hasFormData = typeof window.FormData === "function";
-  var hasArrayBuffer = typeof window.ArrayBuffer === "function";
-  var hasSearchParams = typeof window.URLSearchParams === "function";
-
-  var createRequestError = function createRequestError(error, _ref5) {
-    var url = _ref5.url;
-    return new Error(createDetailedMessage("error during xhr request on ".concat(url, "."), _defineProperty({}, "error stack", error.stack)));
-  };
-
-  var createPromiseAndHooks = function createPromiseAndHooks() {
-    var resolve;
-    var reject;
-    var promise = new Promise(function (res, rej) {
-      resolve = function resolve(value) {
-        promise.settled = true;
-        res(value);
-      };
-
-      reject = function reject(value) {
-        promise.settled = true;
-        rej(value);
-      };
-    });
-    promise.resolve = resolve;
-    promise.reject = reject;
-    return promise;
-  }; // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-
-
-  var computeWithCredentials = function computeWithCredentials(_ref6) {
-    var credentials = _ref6.credentials,
-        url = _ref6.url;
-
-    if (credentials === "same-origin") {
-      return originSameAsGlobalOrigin(url);
-    }
-
-    return credentials === "include";
-  };
-
-  var originSameAsGlobalOrigin = function originSameAsGlobalOrigin(url) {
-    // if we cannot read globalOrigin from window.location.origin, let's consider it's ok
-    if ((typeof window === "undefined" ? "undefined" : _typeof(window)) !== "object") return true;
-    if (_typeof(window.location) !== "object") return true;
-    var globalOrigin = window.location.origin;
-    if (globalOrigin === "null") return true;
-    return hrefToOrigin(url) === globalOrigin;
-  };
-
-  var detectBodyType = function detectBodyType(body) {
-    if (!body) {
-      return "";
-    }
-
-    if (typeof body === "string") {
-      return "text";
-    }
-
-    if (hasBlob && Blob.prototype.isPrototypeOf(body)) {
-      return "blob";
-    }
-
-    if (hasFormData && FormData.prototype.isPrototypeOf(body)) {
-      return "formData";
-    }
-
-    if (hasArrayBuffer) {
-      if (hasBlob && isDataView(body)) {
-        return "dataView";
-      }
-
-      if (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body)) {
-        return "arrayBuffer";
-      }
-    }
-
-    if (hasSearchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
-      return "searchParams";
-    }
-
-    return "";
-  }; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/getAllResponseHeaders#Example
-
-
-  var getHeadersFromXHR = function getHeadersFromXHR(xhr) {
-    var headerMap = {};
-    var headersString = xhr.getAllResponseHeaders();
-    if (headersString === "") return headerMap;
-    var lines = headersString.trim().split(/[\r\n]+/);
-    lines.forEach(function (line) {
-      var parts = line.split(": ");
-      var name = parts.shift();
-      var value = parts.join(": ");
-      headerMap[name.toLowerCase()] = value;
-    });
-    return headerMap;
-  };
-
-  var hrefToOrigin = function hrefToOrigin(href) {
-    var scheme = hrefToScheme(href);
-
-    if (scheme === "file") {
-      return "file://";
-    }
-
-    if (scheme === "http" || scheme === "https") {
-      var secondProtocolSlashIndex = scheme.length + "://".length;
-      var pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
-      if (pathnameSlashIndex === -1) return href;
-      return href.slice(0, pathnameSlashIndex);
-    }
-
-    return href.slice(0, scheme.length + 1);
-  };
-
-  var hrefToScheme = function hrefToScheme(href) {
-    var colonIndex = href.indexOf(":");
-    if (colonIndex === -1) return "";
-    return href.slice(0, colonIndex);
-  };
-
-  var isDataView = function isDataView(obj) {
-    return obj && DataView.prototype.isPrototypeOf(obj);
-  };
-
-  var isArrayBufferView = ArrayBuffer.isView || function () {
-    var viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
-    return function (value) {
-      return value && viewClasses.includes(Object.prototype.toString.call(value));
-    };
-  }();
-
-  var textToFormData = function textToFormData(text) {
-    var form = new FormData();
-    text.trim().split("&").forEach(function (bytes) {
-      if (bytes) {
-        var split = bytes.split("=");
-        var name = split.shift().replace(/\+/g, " ");
-        var value = split.join("=").replace(/\+/g, " ");
-        form.append(decodeURIComponent(name), decodeURIComponent(value));
-      }
-    });
-    return form;
-  };
-
-  var blobToArrayBuffer = _async$8(function (blob) {
-    var reader = new FileReader();
-    var promise = fileReaderReady(reader);
-    reader.readAsArrayBuffer(blob);
-    return promise;
-  });
-
-  var blobToText = function blobToText(blob) {
-    var reader = new FileReader();
-    var promise = fileReaderReady(reader);
-    reader.readAsText(blob);
-    return promise;
-  };
-
-  var arrayBufferToText = function arrayBufferToText(arrayBuffer) {
-    var view = new Uint8Array(arrayBuffer);
-    var chars = new Array(view.length);
-    var i = 0;
-
-    while (i < view.length) {
-      chars[i] = String.fromCharCode(view[i]);
-      i++;
-    }
-
-    return chars.join("");
-  };
-
-  var fileReaderReady = function fileReaderReady(reader) {
-    return new Promise(function (resolve, reject) {
-      reader.onload = function () {
-        resolve(reader.result);
-      };
-
-      reader.onerror = function () {
-        reject(reader.error);
-      };
-    });
-  };
-
-  var cloneBuffer = function cloneBuffer(buffer) {
-    if (buffer.slice) {
-      return buffer.slice(0);
-    }
-
-    var view = new Uint8Array(buffer.byteLength);
-    view.set(new Uint8Array(buffer));
-    return view.buffer;
-  };
-
-  function _await$8(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  var fetchNative = _async$7(function (url) {
-
-    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-    var _ref$cancellationToke = _ref.cancellationToken,
-        cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
-        _ref$mode = _ref.mode,
-        mode = _ref$mode === void 0 ? "cors" : _ref$mode,
-        options = _objectWithoutProperties(_ref, ["cancellationToken", "mode"]);
-
-    var abortController = new AbortController();
-    var cancelError;
-    cancellationToken.register(function (reason) {
-      cancelError = reason;
-      abortController.abort(reason);
-    });
-    var response;
-    return _continue$2(_catch$3(function () {
-      return _await$8(window.fetch(url, _objectSpread2({
-        signal: abortController.signal,
-        mode: mode
-      }, options)), function (_window$fetch) {
-        response = _window$fetch;
-      });
-    }, function (e) {
-      if (cancelError && e.name === "AbortError") {
-        throw cancelError;
-      }
-
-      throw e;
-    }), function (_result) {
-      return {
-        url: response.url,
-        status: response.status,
-        statusText: "",
-        headers: responseToHeaders$1(response),
-        text: function text() {
-          return response.text();
-        },
-        json: function json() {
-          return response.json();
-        },
-        blob: function blob() {
-          return response.blob();
-        },
-        arrayBuffer: function arrayBuffer() {
-          return response.arrayBuffer();
-        },
-        formData: function formData() {
-          return response.formData();
-        }
-      };
-    });
-  });
-
-  function _catch$3(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  var responseToHeaders$1 = function responseToHeaders(response) {
-    var headers = {};
-    response.headers.forEach(function (value, name) {
-      headers[name] = value;
-    });
-    return headers;
-  };
-
-  function _continue$2(value, then) {
-    return value && value.then ? value.then(then) : then(value);
-  }
-
-  function _async$7(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
-
-  var pathnameToExtension$1 = function pathnameToExtension(pathname) {
-    var slashLastIndex = pathname.lastIndexOf("/");
-
-    if (slashLastIndex !== -1) {
-      pathname = pathname.slice(slashLastIndex + 1);
-    }
-
-    var dotLastIndex = pathname.lastIndexOf(".");
-    if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
-
-    return pathname.slice(dotLastIndex);
-  };
-
-  var applyImportMap = function applyImportMap(_ref) {
-    var importMap = _ref.importMap,
-        specifier = _ref.specifier,
-        importer = _ref.importer,
-        _ref$createBareSpecif = _ref.createBareSpecifierError,
-        createBareSpecifierError = _ref$createBareSpecif === void 0 ? function (_ref2) {
-      var specifier = _ref2.specifier,
-          importer = _ref2.importer;
-      return new Error(createDetailedMessage("Unmapped bare specifier.", {
-        specifier: specifier,
-        importer: importer
-      }));
-    } : _ref$createBareSpecif,
-        _ref$onImportMapping = _ref.onImportMapping,
-        onImportMapping = _ref$onImportMapping === void 0 ? function () {} : _ref$onImportMapping;
-    assertImportMap(importMap);
-
-    if (typeof specifier !== "string") {
-      throw new TypeError(createDetailedMessage("specifier must be a string.", {
-        specifier: specifier,
-        importer: importer
-      }));
-    }
-
-    if (importer) {
-      if (typeof importer !== "string") {
-        throw new TypeError(createDetailedMessage("importer must be a string.", {
-          importer: importer,
-          specifier: specifier
-        }));
-      }
-
-      if (!hasScheme(importer)) {
-        throw new Error(createDetailedMessage("importer must be an absolute url.", {
-          importer: importer,
-          specifier: specifier
-        }));
-      }
-    }
-
-    var specifierUrl = resolveSpecifier(specifier, importer);
-    var specifierNormalized = specifierUrl || specifier;
-    var scopes = importMap.scopes;
-
-    if (scopes && importer) {
-      var scopeSpecifierMatching = Object.keys(scopes).find(function (scopeSpecifier) {
-        return scopeSpecifier === importer || specifierIsPrefixOf(scopeSpecifier, importer);
-      });
-
-      if (scopeSpecifierMatching) {
-        var scopeMappings = scopes[scopeSpecifierMatching];
-        var mappingFromScopes = applyMappings(scopeMappings, specifierNormalized, scopeSpecifierMatching, onImportMapping);
-
-        if (mappingFromScopes !== null) {
-          return mappingFromScopes;
-        }
-      }
-    }
-
-    var imports = importMap.imports;
-
-    if (imports) {
-      var mappingFromImports = applyMappings(imports, specifierNormalized, undefined, onImportMapping);
-
-      if (mappingFromImports !== null) {
-        return mappingFromImports;
-      }
-    }
-
-    if (specifierUrl) {
-      return specifierUrl;
-    }
-
-    throw createBareSpecifierError({
-      specifier: specifier,
-      importer: importer
-    });
-  };
-
-  var applyMappings = function applyMappings(mappings, specifierNormalized, scope, onImportMapping) {
-    var specifierCandidates = Object.keys(mappings);
-    var i = 0;
-
-    while (i < specifierCandidates.length) {
-      var specifierCandidate = specifierCandidates[i];
-      i++;
-
-      if (specifierCandidate === specifierNormalized) {
-        var address = mappings[specifierCandidate];
-        onImportMapping({
-          scope: scope,
-          from: specifierCandidate,
-          to: address,
-          before: specifierNormalized,
-          after: address
-        });
-        return address;
-      }
-
-      if (specifierIsPrefixOf(specifierCandidate, specifierNormalized)) {
-        var _address = mappings[specifierCandidate];
-        var afterSpecifier = specifierNormalized.slice(specifierCandidate.length);
-        var addressFinal = tryUrlResolution(afterSpecifier, _address);
-        onImportMapping({
-          scope: scope,
-          from: specifierCandidate,
-          to: _address,
-          before: specifierNormalized,
-          after: addressFinal
-        });
-        return addressFinal;
-      }
-    }
-
-    return null;
-  };
-
-  var specifierIsPrefixOf = function specifierIsPrefixOf(specifierHref, href) {
-    return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
-  };
-
-  var resolveImport = function resolveImport(_ref) {
-    var specifier = _ref.specifier,
-        importer = _ref.importer,
-        importMap = _ref.importMap,
-        _ref$defaultExtension = _ref.defaultExtension,
-        defaultExtension = _ref$defaultExtension === void 0 ? true : _ref$defaultExtension,
-        createBareSpecifierError = _ref.createBareSpecifierError,
-        _ref$onImportMapping = _ref.onImportMapping,
-        onImportMapping = _ref$onImportMapping === void 0 ? function () {} : _ref$onImportMapping;
-    return applyDefaultExtension$1({
-      url: importMap ? applyImportMap({
-        importMap: importMap,
-        specifier: specifier,
-        importer: importer,
-        createBareSpecifierError: createBareSpecifierError,
-        onImportMapping: onImportMapping
-      }) : resolveUrl(specifier, importer),
-      importer: importer,
-      defaultExtension: defaultExtension
-    });
-  };
-
-  var applyDefaultExtension$1 = function applyDefaultExtension(_ref2) {
-    var url = _ref2.url,
-        importer = _ref2.importer,
-        defaultExtension = _ref2.defaultExtension;
-
-    if (urlToPathname$1(url).endsWith("/")) {
-      return url;
-    }
-
-    if (typeof defaultExtension === "string") {
-      var extension = pathnameToExtension$1(url);
-
-      if (extension === "") {
-        return "".concat(url).concat(defaultExtension);
-      }
-
-      return url;
-    }
-
-    if (defaultExtension === true) {
-      var _extension = pathnameToExtension$1(url);
-
-      if (_extension === "" && importer) {
-        var importerPathname = urlToPathname$1(importer);
-        var importerExtension = pathnameToExtension$1(importerPathname);
-        return "".concat(url).concat(importerExtension);
-      }
-    }
-
-    return url;
-  };
-
-  var applyDefaultExtension = function applyDefaultExtension(specifier, importer) {
-    if (!importer) {
-      return specifier;
-    }
-
-    var importerExtension = urlToExtension(importer);
-    var fakeUrl = new URL(specifier, importer).href;
-    var specifierExtension = urlToExtension(fakeUrl);
-
-    if (specifierExtension !== "") {
-      return specifier;
-    } // I guess typescript still expect default extension to be .ts
-    // in a tsx file.
-
-
-    if (importerExtension === "tsx") {
-      return "".concat(specifier, ".ts");
-    } // extension magic
-
-
-    return "".concat(specifier).concat(importerExtension);
-  };
-
-  var urlToExtension = function urlToExtension(url) {
-    return pathnameToExtension(urlToPathname(url));
-  };
-
-  var urlToPathname = function urlToPathname(url) {
-    return new URL(url).pathname;
-  };
-
-  var pathnameToExtension = function pathnameToExtension(pathname) {
-    var slashLastIndex = pathname.lastIndexOf("/");
-
-    if (slashLastIndex !== -1) {
-      pathname = pathname.slice(slashLastIndex + 1);
-    }
-
-    var dotLastIndex = pathname.lastIndexOf(".");
-    if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
-
-    var extension = pathname.slice(dotLastIndex);
-    return extension;
-  };
-
-  function _await$7(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  var createImportResolverForImportmap = function createImportResolverForImportmap(_ref) {
-    var compileServerOrigin = _ref.compileServerOrigin,
-        compileDirectoryRelativeUrl = _ref.compileDirectoryRelativeUrl,
-        importMap = _ref.importMap,
-        importMapUrl = _ref.importMapUrl,
-        importDefaultExtension = _ref.importDefaultExtension,
-        _ref$onBareSpecifierE = _ref.onBareSpecifierError,
-        onBareSpecifierError = _ref$onBareSpecifierE === void 0 ? function () {} : _ref$onBareSpecifierE;
-
-    var _resolveImport = function _resolveImport(specifier, importer) {
-      if (importDefaultExtension) {
-        specifier = applyDefaultExtension(specifier, importer);
-      }
-
-      return resolveImport({
-        specifier: specifier,
-        importer: importer,
-        importMap: importMap,
-        createBareSpecifierError: function createBareSpecifierError(_ref2) {
-          var specifier = _ref2.specifier,
-              importer = _ref2.importer;
-
-          var bareSpecifierError = _createBareSpecifierError({
-            specifier: specifier,
-            importer: tryToFindProjectRelativeUrl(importer, {
-              compileServerOrigin: compileServerOrigin,
-              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-            }) || importer,
-            importMapUrl: tryToFindProjectRelativeUrl(importMapUrl, {
-              compileServerOrigin: compileServerOrigin,
-              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-            }) || importMapUrl,
-            importMap: importMap
-          });
-
-          onBareSpecifierError(bareSpecifierError);
-          return bareSpecifierError;
-        }
-      });
     };
 
-    return _await$7({
-      resolveImport: _resolveImport
-    });
+    return visit();
   };
 
-  var _createBareSpecifierError = function _createBareSpecifierError(_ref3) {
-    var specifier = _ref3.specifier,
-        importer = _ref3.importer,
-        importMapUrl = _ref3.importMapUrl;
-    var detailedMessage = createDetailedMessage("Unmapped bare specifier.", {
-      specifier: specifier,
-      importer: importer,
-      "how to fix": importMapUrl ? "Add a mapping for \"".concat(specifier, "\" into the importmap file at ").concat(importMapUrl) : "Add an importmap with a mapping for \"".concat(specifier, "\""),
-      "suggestion": "Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map"
-    });
-    return new Error(detailedMessage);
-  };
+  var supportedTypes = ["Boolean", "Number", "String", "Date", "RegExp", "Blob", "FileList", "ImageData", "ImageBitmap", "ArrayBuffer"];
+  var maybeTypes = ["Array", "Object", "Map", "Set"];
 
   function _await$6(value, then, direct) {
     if (direct) {
@@ -3565,7 +3700,8 @@
                 _ref3$errorTransform = _ref3.errorTransform,
                 errorTransform = _ref3$errorTransform === void 0 ? function (error) {
               return error;
-            } : _ref3$errorTransform;
+            } : _ref3$errorTransform,
+                measurePerformance = _ref3.measurePerformance;
 
             return _await$6(memoizedCreateBrowserSystem({
               compileServerOrigin: compileServerOrigin,
@@ -3573,38 +3709,50 @@
               fetchSource: fetchSource,
               importResolver: importResolver
             }), function (browserSystem) {
-              var executionResult;
-              return _continue$1(_catch$2(function () {
-                return _await$6(browserSystem.import(specifier), function (namespace) {
-                  if (transferableNamespace) {
-                    namespace = makeNamespaceTransferable(namespace);
-                  }
+              var importUsingSystemJs = _async$6(function () {
+                return _catch$2(function () {
+                  return _await$6(browserSystem.import(specifier), function (namespace) {
+                    if (transferableNamespace) {
+                      namespace = makeNamespaceTransferable(namespace);
+                    }
 
-                  executionResult = {
-                    status: "completed",
-                    namespace: namespace,
-                    coverage: readCoverage()
-                  };
-                });
-              }, function (error) {
-                var transformedError;
-                return _continue$1(_catch$2(function () {
-                  return _await$6(errorTransform(error), function (_errorTransform) {
-                    transformedError = _errorTransform;
+                    return {
+                      status: "completed",
+                      namespace: namespace,
+                      coverage: readCoverage()
+                    };
                   });
-                }, function () {
-                  transformedError = error;
-                }), function () {
-                  if (errorExposureInConsole) displayErrorInConsole(transformedError);
-                  if (errorExposureInNotification) displayErrorNotification(transformedError);
-                  if (errorExposureInDocument) displayErrorInDocument(transformedError);
-                  executionResult = {
-                    status: "errored",
-                    exceptionSource: unevalException(transformedError),
-                    coverage: readCoverage()
-                  };
+                }, function (error) {
+                  var transformedError;
+                  return _continue$1(_catch$2(function () {
+                    return _await$6(errorTransform(error), function (_errorTransform) {
+                      transformedError = _errorTransform;
+                    });
+                  }, function () {
+                    transformedError = error;
+                  }), function () {
+                    if (errorExposureInConsole) {
+                      displayErrorInConsole(transformedError);
+                    }
+
+                    if (errorExposureInNotification) {
+                      displayErrorNotification(transformedError);
+                    }
+
+                    if (errorExposureInDocument) {
+                      displayErrorInDocument(transformedError);
+                    }
+
+                    return {
+                      status: "errored",
+                      exceptionSource: unevalException(transformedError),
+                      coverage: readCoverage()
+                    };
+                  });
                 });
-              }), function () {
+              });
+
+              return _await$6(measurePerformance ? measureAsyncFnPerf(importUsingSystemJs, "jsenv_file_import") : importUsingSystemJs(), function (executionResult) {
                 if (executionExposureOnWindow) {
                   window.__executionResult__ = executionResult;
                 }
@@ -3623,89 +3771,6 @@
       });
     });
   });
-
-  var makeNamespaceTransferable = function makeNamespaceTransferable(namespace) {
-    var transferableNamespace = {};
-    Object.keys(namespace).forEach(function (key) {
-      var value = namespace[key];
-      transferableNamespace[key] = isTransferable(value) ? value : hideNonTransferableValue(value);
-    });
-    return transferableNamespace;
-  };
-
-  var hideNonTransferableValue = function hideNonTransferableValue(value) {
-    if (typeof value === "function") {
-      return "[[HIDDEN: ".concat(value.name, " function cannot be transfered]]");
-    }
-
-    if (_typeof(value) === "symbol") {
-      return "[[HIDDEN: symbol function cannot be transfered]]";
-    }
-
-    return "[[HIDDEN: ".concat(value.constructor ? value.constructor.name : "object", " cannot be transfered]]");
-  }; // https://stackoverflow.com/a/32673910/2634179
-
-
-  var isTransferable = function isTransferable(value) {
-    var seenArray = [];
-
-    var visit = function visit() {
-      if (typeof value === "function") return false;
-      if (_typeof(value) === "symbol") return false;
-      if (value === null) return false;
-
-      if (_typeof(value) === "object") {
-        var constructorName = value.constructor.namespace;
-
-        if (supportedTypes.includes(constructorName)) {
-          return true;
-        }
-
-        var maybe = maybeTypes.includes(constructorName);
-
-        if (maybe) {
-          var visited = seenArray.includes(value);
-
-          if (visited) {
-            // we don't really know until we are done visiting the object
-            // implementing it properly means waiting for the recursion to be done
-            // let's just
-            return true;
-          }
-
-          seenArray.push(value);
-
-          if (constructorName === "Array" || constructorName === "Object") {
-            return Object.keys(value).every(function (key) {
-              return isTransferable(value[key]);
-            });
-          }
-
-          if (constructorName === "Map") {
-            return _toConsumableArray(value.keys()).every(isTransferable) && _toConsumableArray(value.values()).every(isTransferable);
-          }
-
-          if (constructorName === "Set") {
-            return _toConsumableArray(value.keys()).every(isTransferable);
-          }
-        } // Error, DOM Node and others
-
-
-        return false;
-      }
-
-      return true;
-    };
-
-    return visit();
-  };
-
-  var supportedTypes = ["Boolean", "Number", "String", "Date", "RegExp", "Blob", "FileList", "ImageData", "ImageBitmap", "ArrayBuffer"];
-  var maybeTypes = ["Array", "Object", "Map", "Set"];
-
-  var unevalException = function unevalException(value) {
-    return uneval(value);
-  };
 
   var readCoverage = function readCoverage() {
     return window.__coverage__;
@@ -4846,7 +4911,8 @@
       } : {}), {}, {
         startTime: navigationStartTime,
         endTime: Date.now(),
-        fileExecutionResultMap: fileExecutionResultMap
+        fileExecutionResultMap: fileExecutionResultMap,
+        performance: readPerformance()
       });
     });
   }));
@@ -4860,34 +4926,14 @@
 
     var fileExecutionResultPromise = function () {
       return _call(getBrowserRuntime, function (browserRuntime) {
-        return _await(browserRuntime.executeFile(specifier, {}), function (executionResult) {
+        return _await(browserRuntime.executeFile(specifier, {
+          measurePerformance: true,
+          collectPerformance: true
+        }), function (executionResult) {
           if (executionResult.status === "errored") {
-            // eslint-disable-next-line no-eval
-            var originalError = window.eval(executionResult.exceptionSource);
-
-            if (originalError.code === "NETWORK_FAILURE") {
-              if (currentScript) {
-                var errorEvent = new Event("error");
-                currentScript.dispatchEvent(errorEvent);
-              }
-            } else {
-              var parsingError = originalError.parsingError;
-              var globalErrorEvent = new Event("error");
-
-              if (parsingError) {
-                globalErrorEvent.filename = parsingError.filename;
-                globalErrorEvent.lineno = parsingError.lineNumber;
-                globalErrorEvent.message = parsingError.message;
-                globalErrorEvent.colno = parsingError.columnNumber;
-              } else {
-                globalErrorEvent.filename = originalError.filename;
-                globalErrorEvent.lineno = originalError.lineno;
-                globalErrorEvent.message = originalError.message;
-                globalErrorEvent.colno = originalError.columnno;
-              }
-
-              window.dispatchEvent(globalErrorEvent);
-            }
+            onExecutionError(executionResult, {
+              currentScript: currentScript
+            });
           }
 
           return executionResult;
@@ -4897,6 +4943,36 @@
 
     fileExecutionMap[specifier] = fileExecutionResultPromise;
     return fileExecutionResultPromise;
+  };
+
+  var onExecutionError = function onExecutionError(executionResult, _ref) {
+    var currentScript = _ref.currentScript;
+    // eslint-disable-next-line no-eval
+    var originalError = window.eval(executionResult.exceptionSource);
+
+    if (originalError.code === "NETWORK_FAILURE") {
+      if (currentScript) {
+        var errorEvent = new Event("error");
+        currentScript.dispatchEvent(errorEvent);
+      }
+    } else {
+      var parsingError = originalError.parsingError;
+      var globalErrorEvent = new Event("error");
+
+      if (parsingError) {
+        globalErrorEvent.filename = parsingError.filename;
+        globalErrorEvent.lineno = parsingError.lineNumber;
+        globalErrorEvent.message = parsingError.message;
+        globalErrorEvent.colno = parsingError.columnNumber;
+      } else {
+        globalErrorEvent.filename = originalError.filename;
+        globalErrorEvent.lineno = originalError.lineno;
+        globalErrorEvent.message = originalError.message;
+        globalErrorEvent.colno = originalError.columnno;
+      }
+
+      window.dispatchEvent(globalErrorEvent);
+    }
   };
 
   var getBrowserRuntime = memoize(_async(function () {
@@ -4960,6 +5036,29 @@
       });
     });
   }));
+
+  var readPerformance = function readPerformance() {
+    if (!window.performance) {
+      return null;
+    }
+
+    return {
+      timeOrigin: window.performance.timeOrigin,
+      timing: window.performance.timing.toJSON(),
+      navigation: window.performance.navigation.toJSON(),
+      measures: readPerformanceMeasures()
+    };
+  };
+
+  var readPerformanceMeasures = function readPerformanceMeasures() {
+    var measures = {};
+    var measurePerfEntries = window.performance.getEntriesByType("measure");
+    measurePerfEntries.forEach(function (measurePerfEntry) {
+      measures[measurePerfEntry.name] = measurePerfEntry.duration;
+    });
+    return measures;
+  };
+
   window.__jsenv__ = {
     executionResultPromise: executionResultPromise,
     importFile: importFile

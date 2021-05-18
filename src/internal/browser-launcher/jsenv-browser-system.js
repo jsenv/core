@@ -167,9 +167,9 @@ const readPerformance = () => {
   }
 
   return {
-    navigation: window.performance.navigation,
     timeOrigin: window.performance.timeOrigin,
-    timing: window.performance.timing,
+    timing: window.performance.timing.toJSON(),
+    navigation: window.performance.navigation.toJSON(),
     measures: readPerformanceMeasures(),
   }
 }

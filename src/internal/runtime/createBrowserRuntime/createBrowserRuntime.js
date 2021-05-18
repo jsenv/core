@@ -135,7 +135,7 @@ export const createBrowserRuntime = async ({
     }
 
     const executionResult = await (measurePerformance
-      ? measureAsyncFnPerf(importUsingSystemJs, `jsenv:file import`)
+      ? measureAsyncFnPerf(importUsingSystemJs, `jsenv_file_import`)
       : importUsingSystemJs())
     if (executionExposureOnWindow) {
       window.__executionResult__ = executionResult
