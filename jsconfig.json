@@ -1,0 +1,472 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@babel/plugin-transform-exponentiation-operator": [
+        "./node_modules/@babel/plugin-transform-exponentiation-operator/lib/index.js"
+      ],
+      "@babel/plugin-transform-block-scoped-functions": [
+        "./node_modules/@babel/plugin-transform-block-scoped-functions/lib/index.js"
+      ],
+      "@babel/plugin-proposal-optional-catch-binding": [
+        "./node_modules/@babel/plugin-proposal-optional-catch-binding/lib/index.js"
+      ],
+      "@babel/plugin-proposal-unicode-property-regex": [
+        "./node_modules/@babel/plugin-proposal-unicode-property-regex/lib/index.js"
+      ],
+      "@babel/plugin-transform-shorthand-properties": [
+        "./node_modules/@babel/plugin-transform-shorthand-properties/lib/index.js"
+      ],
+      "@babel/plugin-syntax-optional-catch-binding": [
+        "./node_modules/@babel/plugin-syntax-optional-catch-binding/lib/index.js"
+      ],
+      "@babel/plugin-transform-computed-properties": [
+        "./node_modules/@babel/plugin-transform-computed-properties/lib/index.js"
+      ],
+      "@babel/plugin-proposal-object-rest-spread": [
+        "./node_modules/@babel/plugin-proposal-object-rest-spread/lib/index.js"
+      ],
+      "@babel/plugin-transform-template-literals": [
+        "./node_modules/@babel/plugin-transform-template-literals/lib/index.js"
+      ],
+      "@babel/plugin-proposal-numeric-separator": [
+        "./node_modules/@babel/plugin-proposal-numeric-separator/lib/index.js"
+      ],
+      "@babel/plugin-proposal-optional-chaining": [
+        "./node_modules/@babel/plugin-proposal-optional-chaining/lib/index.js"
+      ],
+      "@babel/plugin-transform-modules-systemjs": [
+        "./node_modules/@babel/plugin-transform-modules-systemjs/lib/index.js"
+      ],
+      "babel-plugin-transform-async-to-promises": [
+        "./node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js"
+      ],
+      "@babel/plugin-syntax-object-rest-spread": [
+        "./node_modules/@babel/plugin-syntax-object-rest-spread/lib/index.js"
+      ],
+      "@babel/plugin-transform-arrow-functions": [
+        "./node_modules/@babel/plugin-transform-arrow-functions/lib/index.js"
+      ],
+      "@babel/plugin-syntax-numeric-separator": [
+        "./node_modules/@babel/plugin-syntax-numeric-separator/lib/index.js"
+      ],
+      "@babel/plugin-transform-duplicate-keys": [
+        "./node_modules/@babel/plugin-transform-duplicate-keys/lib/index.js"
+      ],
+      "@babel/plugin-proposal-dynamic-import": [
+        "./node_modules/@babel/plugin-proposal-dynamic-import/lib/index.js"
+      ],
+      "@babel/plugin-transform-block-scoping": [
+        "./node_modules/@babel/plugin-transform-block-scoping/lib/index.js"
+      ],
+      "@babel/plugin-transform-destructuring": [
+        "./node_modules/@babel/plugin-transform-destructuring/lib/index.js"
+      ],
+      "@babel/plugin-transform-function-name": [
+        "./node_modules/@babel/plugin-transform-function-name/lib/index.js"
+      ],
+      "@babel/plugin-transform-typeof-symbol": [
+        "./node_modules/@babel/plugin-transform-typeof-symbol/lib/index.js"
+      ],
+      "@babel/plugin-transform-unicode-regex": [
+        "./node_modules/@babel/plugin-transform-unicode-regex/lib/index.js"
+      ],
+      "@babel/plugin-transform-dotall-regex": [
+        "./node_modules/@babel/plugin-transform-dotall-regex/lib/index.js"
+      ],
+      "@babel/plugin-transform-object-super": [
+        "./node_modules/@babel/plugin-transform-object-super/lib/index.js"
+      ],
+      "@babel/plugin-transform-sticky-regex": [
+        "./node_modules/@babel/plugin-transform-sticky-regex/lib/index.js"
+      ],
+      "@babel/plugin-proposal-json-strings": [
+        "./node_modules/@babel/plugin-proposal-json-strings/lib/index.js"
+      ],
+      "@babel/plugin-syntax-dynamic-import": [
+        "./node_modules/@babel/plugin-syntax-dynamic-import/lib/index.js"
+      ],
+      "@babel/plugin-transform-regenerator": [
+        "./node_modules/@babel/plugin-transform-regenerator/lib/index.js"
+      ],
+      "@babel/plugin-transform-new-target": [
+        "./node_modules/@babel/plugin-transform-new-target/lib/index.js"
+      ],
+      "@babel/plugin-transform-parameters": [
+        "./node_modules/@babel/plugin-transform-parameters/lib/index.js"
+      ],
+      "@babel/plugin-transform-typescript": [
+        "./node_modules/@babel/plugin-transform-typescript/lib/index.js"
+      ],
+      "@babel/plugin-transform-react-jsx": [
+        "./node_modules/@babel/plugin-transform-react-jsx/lib/index.js"
+      ],
+      "rollup-plugin-node-builtins-brofs": [
+        "./node_modules/rollup-plugin-node-builtins-brofs/dist/rollup-plugin-node-builtins.es6.js"
+      ],
+      "@babel/plugin-syntax-import-meta": [
+        "./node_modules/@babel/plugin-syntax-import-meta/lib/index.js"
+      ],
+      "@babel/plugin-transform-literals": [
+        "./node_modules/@babel/plugin-transform-literals/lib/index.js"
+      ],
+      "@jsenv/importmap-eslint-resolver": [
+        "./node_modules/@jsenv/importmap-eslint-resolver/main.js"
+      ],
+      "@babel/plugin-transform-classes": [
+        "./node_modules/@babel/plugin-transform-classes/lib/index.js"
+      ],
+      "babel-plugin-transform-commonjs": [
+        "./node_modules/babel-plugin-transform-commonjs/dist/index.js"
+      ],
+      "@babel/plugin-transform-for-of": [
+        "./node_modules/@babel/plugin-transform-for-of/lib/index.js"
+      ],
+      "@babel/plugin-transform-spread": [
+        "./node_modules/@babel/plugin-transform-spread/lib/index.js"
+      ],
+      "@jsenv/node-module-import-map/*": [
+        "./node_modules/@jsenv/node-module-import-map/*"
+      ],
+      "postcss/lib/terminal-highlight": [
+        "./node_modules/postcss/lib/terminal-highlight.js"
+      ],
+      "@jsenv/github-release-package": [
+        "./node_modules/@jsenv/github-release-package/index.js"
+      ],
+      "@jsenv/node-module-import-map": [
+        "./node_modules/@jsenv/node-module-import-map/index.js"
+      ],
+      "@jsenv/prettier-check-project": [
+        "./node_modules/@jsenv/prettier-check-project/index.js"
+      ],
+      "@babel/helper-module-imports": [
+        "./node_modules/@babel/helper-module-imports/lib/index.js"
+      ],
+      "postcss/lib/css-syntax-error": [
+        "./node_modules/postcss/lib/css-syntax-error.js"
+      ],
+      "@rollup/plugin-node-resolve": [
+        "./node_modules/@rollup/plugin-node-resolve/dist/es/index.js"
+      ],
+      "@babel/helper-plugin-utils": [
+        "./node_modules/@babel/helper-plugin-utils/lib/index.js"
+      ],
+      "rollup-plugin-node-globals": [
+        "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.es6.js"
+      ],
+      "postcss/lib/map-generator": [
+        "./node_modules/postcss/lib/map-generator.js"
+      ],
+      "postcss/lib/previous-map": [
+        "./node_modules/postcss/lib/previous-map.js"
+      ],
+      "@rollup/plugin-commonjs": [
+        "./node_modules/@rollup/plugin-commonjs/dist/index.es.js"
+      ],
+      "@vue/component-compiler": [
+        "./node_modules/@vue/component-compiler/dist/index.js"
+      ],
+      "istanbul-lib-instrument": [
+        "./node_modules/istanbul-lib-instrument/dist/index.js"
+      ],
+      "postcss/lib/declaration": [
+        "./node_modules/postcss/lib/declaration.js"
+      ],
+      "postcss/lib/lazy-result": [
+        "./node_modules/postcss/lib/lazy-result.js"
+      ],
+      "postcss/lib/stringifier": [
+        "./node_modules/postcss/lib/stringifier.js"
+      ],
+      "@jsenv/package-publish": [
+        "./node_modules/@jsenv/package-publish/index.js"
+      ],
+      "@rollup/plugin-replace": [
+        "./node_modules/@rollup/plugin-replace/dist/rollup-plugin-replace.es.js"
+      ],
+      "cssnano-preset-default": [
+        "./node_modules/cssnano-preset-default/dist/index.js"
+      ],
+      "@jsenv/codecov-upload": [
+        "./node_modules/@jsenv/codecov-upload/index.js"
+      ],
+      "istanbul-lib-coverage": [
+        "./node_modules/istanbul-lib-coverage/index.js"
+      ],
+      "postcss/lib/container": [
+        "./node_modules/postcss/lib/container.js"
+      ],
+      "postcss/lib/processor": [
+        "./node_modules/postcss/lib/processor.js"
+      ],
+      "postcss/lib/stringify": [
+        "./node_modules/postcss/lib/stringify.js"
+      ],
+      "postcss/lib/warn-once": [
+        "./node_modules/postcss/lib/warn-once.js"
+      ],
+      "vue-template-compiler": [
+        "./node_modules/vue-template-compiler/index.js"
+      ],
+      "@jsenv/cancellation/*": [
+        "./node_modules/@jsenv/cancellation/*"
+      ],
+      "@jsenv/eslint-config": [
+        "./node_modules/@jsenv/eslint-config/index.js"
+      ],
+      "eslint-plugin-import": [
+        "./node_modules/eslint-plugin-import/lib/index.js"
+      ],
+      "playwright-chromium/*": [
+        "./node_modules/playwright-chromium/*"
+      ],
+      "postcss-value-parser": [
+        "./node_modules/postcss-value-parser/lib/index.js"
+      ],
+      "postcss/lib/fromJSON": [
+        "./node_modules/postcss/lib/fromJSON.js"
+      ],
+      "postcss/lib/tokenize": [
+        "./node_modules/postcss/lib/tokenize.js"
+      ],
+      "postcss/package.json": [
+        "./node_modules/postcss/package.json"
+      ],
+      "@jsenv/cancellation": [
+        "./node_modules/@jsenv/cancellation/main.node.js"
+      ],
+      "@jsenv/node-signals": [
+        "./node_modules/@jsenv/node-signals/index.js"
+      ],
+      "@rollup/plugin-json": [
+        "./node_modules/@rollup/plugin-json/dist/index.es.js"
+      ],
+      "istanbul-lib-report": [
+        "./node_modules/istanbul-lib-report/index.js"
+      ],
+      "playwright-chromium": [
+        "./node_modules/playwright-chromium/index.mjs"
+      ],
+      "playwright-firefox/*": [
+        "./node_modules/playwright-firefox/*"
+      ],
+      "postcss/lib/at-rule": [
+        "./node_modules/postcss/lib/at-rule.js"
+      ],
+      "postcss/lib/comment": [
+        "./node_modules/postcss/lib/comment.js"
+      ],
+      "postcss/lib/postcss": [
+        "./node_modules/postcss/lib/postcss.js"
+      ],
+      "postcss/lib/symbols": [
+        "./node_modules/postcss/lib/symbols.js"
+      ],
+      "postcss/lib/warning": [
+        "./node_modules/postcss/lib/warning.js"
+      ],
+      "regenerator-runtime": [
+        "./node_modules/regenerator-runtime/runtime.js"
+      ],
+      "terser/package.json": [
+        "./node_modules/terser/package.json"
+      ],
+      "@jsenv/import-map/*": [
+        "./node_modules/@jsenv/import-map/*"
+      ],
+      "playwright-firefox": [
+        "./node_modules/playwright-firefox/index.mjs"
+      ],
+      "playwright-webkit/*": [
+        "./node_modules/playwright-webkit/*"
+      ],
+      "postcss/lib/parser": [
+        "./node_modules/postcss/lib/parser.js"
+      ],
+      "postcss/lib/result": [
+        "./node_modules/postcss/lib/result.js"
+      ],
+      "@jsenv/import-map": [
+        "./node_modules/@jsenv/import-map/index.js"
+      ],
+      "humanize-duration": [
+        "./node_modules/humanize-duration/humanize-duration.js"
+      ],
+      "playwright-webkit": [
+        "./node_modules/playwright-webkit/index.mjs"
+      ],
+      "postcss/lib/input": [
+        "./node_modules/postcss/lib/input.js"
+      ],
+      "postcss/lib/parse": [
+        "./node_modules/postcss/lib/parse.js"
+      ],
+      "terser/bin/terser": [
+        "./node_modules/terser/bin/terser"
+      ],
+      "@c88/v8-coverage": [
+        "./node_modules/@c88/v8-coverage/index.js"
+      ],
+      "istanbul-reports": [
+        "./node_modules/istanbul-reports/index.js"
+      ],
+      "playwright-core/*": [
+        "./node_modules/playwright-core/*"
+      ],
+      "postcss/lib/list": [
+        "./node_modules/postcss/lib/list.js"
+      ],
+      "postcss/lib/node": [
+        "./node_modules/postcss/lib/node.js"
+      ],
+      "postcss/lib/root": [
+        "./node_modules/postcss/lib/root.js"
+      ],
+      "postcss/lib/rule": [
+        "./node_modules/postcss/lib/rule.js"
+      ],
+      "playwright-core": [
+        "./node_modules/playwright-core/index.mjs"
+      ],
+      "proper-lockfile": [
+        "./node_modules/proper-lockfile/index.js"
+      ],
+      "@babel/helpers": [
+        "./node_modules/@babel/helpers/lib/index.js"
+      ],
+      "@jsenv/assert/*": [
+        "./node_modules/@jsenv/assert/*"
+      ],
+      "@jsenv/logger/*": [
+        "./node_modules/@jsenv/logger/*"
+      ],
+      "@jsenv/server/*": [
+        "./node_modules/@jsenv/server/*"
+      ],
+      "supports-color": [
+        "./node_modules/supports-color/index.js"
+      ],
+      "systemjs/dist/*": [
+        "./node_modules/systemjs/dist/*"
+      ],
+      "terser/package": [
+        "./node_modules/terser/package.json"
+      ],
+      "v8-to-istanbul": [
+        "./node_modules/v8-to-istanbul/index.js"
+      ],
+      "@babel/parser": [
+        "./node_modules/@babel/parser/lib/index.js"
+      ],
+      "@jsenv/assert": [
+        "./node_modules/@jsenv/assert/index.js"
+      ],
+      "@jsenv/logger": [
+        "./node_modules/@jsenv/logger/main.node.js"
+      ],
+      "@jsenv/server": [
+        "./node_modules/@jsenv/server/index.js"
+      ],
+      "@jsenv/uneval": [
+        "./node_modules/@jsenv/uneval/index.js"
+      ],
+      "estree-walker": [
+        "./node_modules/estree-walker/src/index.js"
+      ],
+      "html-minifier": [
+        "./node_modules/html-minifier/src/htmlminifier.js"
+      ],
+      "node-notifier": [
+        "./node_modules/node-notifier/index.js"
+      ],
+      "systemjs/s.js": [
+        "./node_modules/systemjs/dist/s.min.js"
+      ],
+      "@jsenv/core/*": [
+        "./*"
+      ],
+      "@jsenv/util/*": [
+        "./node_modules/@jsenv/util/*"
+      ],
+      "ansi-to-html": [
+        "./node_modules/ansi-to-html/lib/ansi_to_html.js"
+      ],
+      "magic-string": [
+        "./node_modules/magic-string/dist/magic-string.es.js"
+      ],
+      "rollup/dist/*": [
+        "./node_modules/rollup/dist/*"
+      ],
+      "string-width": [
+        "./node_modules/string-width/index.js"
+      ],
+      "@babel/core": [
+        "./node_modules/@babel/core/lib/index.js"
+      ],
+      "@jsenv/core": [
+        "./main.js"
+      ],
+      "@jsenv/pwa/*": [
+        "./node_modules/@jsenv/pwa/*"
+      ],
+      "@jsenv/util": [
+        "./node_modules/@jsenv/util/index.js"
+      ],
+      "eventsource": [
+        "./node_modules/eventsource/lib/eventsource.js"
+      ],
+      "@jsenv/pwa": [
+        "./node_modules/@jsenv/pwa/main.js"
+      ],
+      "source-map": [
+        "./node_modules/source-map/source-map.js"
+      ],
+      "tree-kill": [
+        "./node_modules/tree-kill/index.js"
+      ],
+      "wrap-ansi": [
+        "./node_modules/wrap-ansi/index.js"
+      ],
+      "prettier": [
+        "./node_modules/prettier/index.js"
+      ],
+      "systemjs": [
+        "./node_modules/systemjs/dist/system-node.cjs"
+      ],
+      "cssnano": [
+        "./node_modules/cssnano/dist/index.js"
+      ],
+      "postcss": [
+        "./node_modules/postcss/lib/postcss.mjs"
+      ],
+      "eslint": [
+        "./node_modules/eslint/lib/api.js"
+      ],
+      "parse5": [
+        "./node_modules/parse5/lib/index.js"
+      ],
+      "rollup": [
+        "./node_modules/rollup/dist/es/rollup.js"
+      ],
+      "terser": [
+        "./node_modules/terser/main.js"
+      ],
+      "react": [
+        "./node_modules/react/index.js"
+      ],
+      "redux": [
+        "./node_modules/redux/es/redux.js"
+      ],
+      "cuid": [
+        "./node_modules/cuid/index.js"
+      ],
+      "sass": [
+        "./node_modules/sass/sass.dart.js"
+      ]
+    }
+  },
+  "exclude": [
+    "node_modules/toto"
+  ]
+}
