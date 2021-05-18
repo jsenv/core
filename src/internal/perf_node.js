@@ -1,12 +1,13 @@
 import { performance } from "perf_hooks"
 
-export const measureAsyncFnPerf = async (fn, label) => {
-  performance.mark(`${label} start`)
+export const measureAsyncFnPerf = async (fn, name) => {
+  const perfMarkStartName = `${name}_start`
+
+  performance.mark(perfMarkStartName)
   try {
     const value = await fn()
     return value
   } finally {
-    performance.mark(`${label} end`)
-    performance.measure(label, `${label} start`, `${label} end`)
+    performance.measure(name, perfMarkStartName)
   }
 }

@@ -34,7 +34,7 @@ export const createNodeExecutionWithDynamicImport = ({ projectDirectoryUrl }) =>
     }
 
     if (measurePerformance) {
-      return measureAsyncFnPerf(importWithDynamicImport, "jsenv:file import")
+      return measureAsyncFnPerf(importWithDynamicImport, "jsenv_file_import")
     }
     return importWithDynamicImport()
   }

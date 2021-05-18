@@ -90,7 +90,7 @@ export const createNodeExecutionWithSystemJs = ({
     }
 
     if (measurePerformance) {
-      return measureAsyncFnPerf(importWithSystemJs, "jsenv:file import")
+      return measureAsyncFnPerf(importWithSystemJs, "jsenv_file_import")
     }
     return importWithSystemJs()
   }

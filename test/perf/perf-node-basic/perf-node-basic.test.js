@@ -29,10 +29,13 @@ const executeParams = {
     status: "completed",
     namespace: {},
     performance: {
-      nodeTiming: actual.nodeTiming,
-      timeOrigin: actual.timeOrigin,
-      eventLoopUtilization: actual.eventLoopUtilization,
-      measures: {}, // this should not be empty !!
+      nodeTiming: actual.performance.nodeTiming,
+      timeOrigin: actual.performance.timeOrigin,
+      eventLoopUtilization: actual.performance.eventLoopUtilization,
+      measures: {
+        "jsenv_file_import": assert.any(Number),
+        "a to b": assert.any(Number),
+      },
     },
   }
   assert({ actual, expected })

@@ -1,3 +1,17 @@
-import { performance } from "perf_hooks"
+import { PerformanceObserver } from "perf_hooks"
 
-console.log(performance.toJSON())
+const perfObserver = new PerformanceObserver(
+  (
+    // https://nodejs.org/dist/latest-v16.x/docs/api/perf_hooks.html#perf_hooks_class_performanceobserverentrylist
+    list,
+  ) => {
+    const perfEntries = list.getEntries()
+    console.log(perfEntries)
+  },
+)
+// perfObserver.observe()
+perfObserver.observe({
+  entryTypes: ["measure"],
+})
+
+import("./file.js")

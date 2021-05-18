@@ -45,7 +45,11 @@ export const execute = async ({
       entryTypes: ["measure"],
     })
 
-    finalizeExecutionResult = (executionResult) => {
+    finalizeExecutionResult = async (executionResult) => {
+      // wait for node to call the performance observer
+      await new Promise((resolve) => {
+        setTimeout(resolve)
+      })
       performance.clearMarks()
       perfObserver.disconnect()
       return {
@@ -68,8 +72,8 @@ export const execute = async ({
   const executionResult = await executeFile(fileRelativeUrl, {
     executionId,
     errorExposureInConsole,
-    collectCoverage,
     measurePerformance,
+    collectCoverage,
   })
 
   return finalizeExecutionResult({
@@ -82,7 +86,7 @@ const readNodePerformance = () => {
   const nodePerformance = {
     nodeTiming: asPlainObject(performance.nodeTiming),
     timeOrigin: performance.timeOrigin,
-    eventLoopUtilization: asPlainObject(performance.eventLoopUtilization()),
+    eventLoopUtilization: performance.eventLoopUtilization(),
   }
   return nodePerformance
 }
