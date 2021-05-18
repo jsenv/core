@@ -70,12 +70,3 @@ export const jsenvToolbarJsBuildUrl = resolveUrl(
   jsenvToolbarJsBuildRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-
-export const jsenvImportMetaResolveGlobalUrl = resolveUrl(
-  "helpers/import-meta-resolve/import-meta-resolve-global.js",
-  jsenvCoreDirectoryUrl,
-)
-export const jsenvImportMetaResolveCommonjsUrl = resolveUrl(
-  "helpers/import-meta-resolve/import-meta-resolve-commonjs.js",
-  jsenvCoreDirectoryUrl,
-)

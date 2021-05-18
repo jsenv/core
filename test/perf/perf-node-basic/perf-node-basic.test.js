@@ -7,35 +7,48 @@ import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXECUTE.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
+const executeParams = {
+  ...EXECUTE_TEST_PARAMS,
+  launchLogLevel: "info",
+  jsenvDirectoryRelativeUrl,
+  launch: launchNode,
+  fileRelativeUrl,
+}
 
-let nodeRuntimeHooks
+// measure and collect perf
 {
   const actual = await execute({
-    ...EXECUTE_TEST_PARAMS,
-    // executionLogLevel: "debug",
-    jsenvDirectoryRelativeUrl,
-    launch: async (options) => {
-      nodeRuntimeHooks = await launchNode({ ...options, debugPort: 40001 })
-      return nodeRuntimeHooks
+    ...executeParams,
+    measurePerformance: true,
+    collectPerformance: true,
+  })
+  const expected = {
+    status: "completed",
+    namespace: {},
+    performance: {
+      nodeTiming: actual.performance.nodeTiming,
+      timeOrigin: actual.performance.timeOrigin,
+      eventLoopUtilization: actual.performance.eventLoopUtilization,
+      measures: {
+        "jsenv_file_import": assert.any(Number),
+        "a to b": assert.any(Number),
+      },
     },
-    fileRelativeUrl,
+  }
+  assert({ actual, expected })
+}
+
+// default
+{
+  const actual = await execute({
+    ...executeParams,
   })
   const expected = {
     status: "completed",
     namespace: {},
   }
-  assert({ actual, expected })
-}
-{
-  const actual = await Promise.race([
-    nodeRuntimeHooks.disconnected.then(() => "disconnected"),
-    new Promise((resolve) => {
-      setTimeout(() => resolve("timeout"), 5000)
-    }),
-  ])
-  const expected = "disconnected"
   assert({ actual, expected })
 }

@@ -46,10 +46,14 @@ const ACTION_RESPONSE_STATUS_FAILED = "action-failed"
 const ACTION_RESPONSE_STATUS_COMPLETED = "action-completed"
 
 const sendActionFailed = (error) => {
+  if (error.hasOwnProperty("toString")) {
+    delete error.toString
+  }
   sendToParent(
     ACTION_RESPONSE_EVENT_NAME,
     // process.send algorithm does not send non enumerable values
     // because it works with JSON.stringify I guess so use uneval
+
     uneval({
       status: ACTION_RESPONSE_STATUS_FAILED,
       value: error,

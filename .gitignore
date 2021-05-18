@@ -10,7 +10,6 @@
 /node_modules/
 /test-manual/**/.jsenv/
 /import-map.importmap
-/jsconfig.json
 /package-lock.json
 /secrets.json
 /yarn.lock

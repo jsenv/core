@@ -84,6 +84,8 @@ export const executeConcurrently = async (
       const { executionName, fileRelativeUrl } = paramsFromStep
       const executionParams = {
         // the params below can be overriden by executionDefaultParams
+        measurePerformance: false,
+        collectPerformance: false,
         measureDuration: true,
         captureConsole: true,
         collectRuntimeName: true,

@@ -67,6 +67,8 @@ export const openBrowserPage = async (
     delete fileExecutionResult.coverage
   })
 
+  delete executionResult.performance
+
   return {
     browser,
     page,

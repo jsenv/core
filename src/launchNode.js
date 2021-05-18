@@ -21,11 +21,18 @@ const cuid = require("cuid")
 
 export const launchNode = async ({
   logger,
+  logProcessCommand,
   cancellationToken = createCancellationToken(),
 
   projectDirectoryUrl,
   compileServerOrigin,
   outDirectoryRelativeUrl,
+
+  measurePerformance,
+  collectPerformance,
+  collectCoverage = false,
+  coverageConfig,
+  coverageForceIstanbul,
 
   debugPort,
   debugMode,
@@ -36,14 +43,10 @@ export const launchNode = async ({
   stdin,
   stdout,
   stderr,
+  stopAfterExecute,
+  nodeRuntimeDecision,
 
   remap = true,
-  collectCoverage = false,
-  coverageConfig,
-  coverageForceIstanbul,
-  logProcessCommand,
-  nodeRuntimeDecision,
-  stopAfterExecute,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -98,6 +101,9 @@ export const launchNode = async ({
             controllableNodeProcess.onceChildProcessEvent("exit", resolve)
             // controllableNodeProcess.gracefulStop()
           })
+          await new Promise((resolve) => {
+            setTimeout(resolve)
+          })
           const v8Coverage = await v8CoverageFromNodeV8Directory({
             projectDirectoryUrl,
             NODE_V8_COVERAGE,
@@ -137,13 +143,16 @@ export const launchNode = async ({
       jsenvCoreDirectoryUrl,
 
       fileRelativeUrl,
+      executionId,
+      nodeRuntimeDecision,
+      exitAfterAction: stopAfterExecute,
+
+      measurePerformance,
+      collectPerformance,
       collectCoverage,
       coverageConfig,
-      executionId,
-      remap,
-      nodeRuntimeDecision,
 
-      exitAfterAction: stopAfterExecute,
+      remap,
     }
 
     let executionResult = await controllableNodeProcess.requestActionOnChildProcess({
@@ -202,22 +211,17 @@ const transformExecutionResult = (
   const { status } = executionResult
 
   if (status === "errored") {
-    const { exceptionSource, coverage } = executionResult
+    const { exceptionSource, ...rest } = executionResult
     const error = evalSource(exceptionSource)
     const errorTransformed = transformError(error, { compileServerOrigin, projectDirectoryUrl })
     return {
       status,
       error: errorTransformed,
-      coverage,
+      ...rest,
     }
   }
 
-  const { namespace, coverage } = executionResult
-  return {
-    status,
-    namespace,
-    coverage,
-  }
+  return executionResult
 }
 
 const transformError = (error, { compileServerOrigin, projectDirectoryUrl }) => {

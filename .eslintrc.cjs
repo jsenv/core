@@ -10,6 +10,25 @@ const {
 const eslintConfig = composeEslintConfig(
   eslintConfigBase,
   {
+    plugins: ["import"],
+    settings: {
+      "import/resolver": {
+        "@jsenv/importmap-eslint-resolver": {
+          projectDirectoryUrl: __dirname,
+          importMapFileRelativeUrl: "./import-map.importmap",
+          node: true,
+        },
+      },
+    },
+    rules: jsenvEslintRulesForImport,
+  },
+  {
+    plugins: ["html"],
+    settings: {
+      extensions: [".html"],
+    },
+  },
+  {
     rules: jsenvEslintRules,
   },
   {
@@ -61,19 +80,6 @@ const eslintConfig = composeEslintConfig(
         },
       },
     ],
-  },
-  {
-    plugins: ["import"],
-    settings: {
-      "import/resolver": {
-        "@jsenv/importmap-eslint-resolver": {
-          projectDirectoryUrl: __dirname,
-          importMapFileRelativeUrl: "./import-map.importmap",
-          node: true,
-        },
-      },
-    },
-    rules: jsenvEslintRulesForImport,
   },
   eslintConfigToPreferExplicitGlobals,
   eslintConfigForPrettier,

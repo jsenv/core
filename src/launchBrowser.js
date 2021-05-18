@@ -3,6 +3,7 @@
 
 import { createCancellationToken, createStoppableOperation } from "@jsenv/cancellation"
 import { teardownSignal } from "@jsenv/node-signals"
+
 import { trackRessources } from "./internal/trackRessources.js"
 import { require } from "./internal/require.js"
 import { fetchUrl } from "./internal/fetchUrl.js"
@@ -22,13 +23,16 @@ export const launchChromium = async ({
   compileServerOrigin,
   outDirectoryRelativeUrl,
 
+  collectPerformance,
+  measurePerformance,
+  collectCoverage,
+
   headless = true,
   // about debug check https://github.com/microsoft/playwright/blob/master/docs/api.md#browsertypelaunchserveroptions
   debug = false,
   debugPort = 0,
   stopOnExit = true,
   share = false,
-  collectCoverage,
 }) => {
   const ressourceTracker = trackRessources()
   const sharingToken = share
@@ -94,6 +98,8 @@ export const launchChromium = async ({
       compileServerOrigin,
       outDirectoryRelativeUrl,
 
+      collectPerformance,
+      measurePerformance,
       collectCoverage,
     }),
   }
@@ -116,10 +122,13 @@ export const launchFirefox = async ({
   compileServerOrigin,
   outDirectoryRelativeUrl,
 
+  collectPerformance,
+  measurePerformance,
+  collectCoverage,
+
   headless = true,
   stopOnExit = true,
   share = false,
-  collectCoverage,
 }) => {
   const ressourceTracker = trackRessources()
   const sharingToken = share
@@ -158,6 +167,8 @@ export const launchFirefox = async ({
       compileServerOrigin,
       outDirectoryRelativeUrl,
 
+      collectPerformance,
+      measurePerformance,
       collectCoverage,
     }),
   }
@@ -180,10 +191,13 @@ export const launchWebkit = async ({
   compileServerOrigin,
   outDirectoryRelativeUrl,
 
+  collectPerformance,
+  measurePerformance,
+  collectCoverage,
+
   headless = true,
   stopOnExit = true,
   share = false,
-  collectCoverage,
 }) => {
   const ressourceTracker = trackRessources()
   const sharingToken = share
@@ -222,6 +236,8 @@ export const launchWebkit = async ({
       compileServerOrigin,
       outDirectoryRelativeUrl,
 
+      collectPerformance,
+      measurePerformance,
       collectCoverage,
     }),
   }
@@ -302,6 +318,8 @@ const browserToRuntimeHooks = (
     compileServerOrigin,
     outDirectoryRelativeUrl,
 
+    collectPerformance,
+    measurePerformance,
     collectCoverage,
   },
 ) => {
@@ -360,6 +378,8 @@ const browserToRuntimeHooks = (
       outDirectoryRelativeUrl,
 
       page,
+      measurePerformance,
+      collectPerformance,
       collectCoverage,
     })
   }

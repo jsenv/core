@@ -28,6 +28,8 @@ export const execute = async ({
   collectRuntimeVersion,
   inheritCoverage,
   collectCoverage,
+  measurePerformance,
+  collectPerformance,
   stopAfterExecute = false,
   stopAfterExecuteReason,
   gracefulStopAllocatedMs,
@@ -101,6 +103,9 @@ export const execute = async ({
       collectRuntimeVersion,
       inheritCoverage,
       collectCoverage,
+      measurePerformance,
+      collectPerformance,
+
       stopAfterExecute,
       stopAfterExecuteReason,
       gracefulStopAllocatedMs,
