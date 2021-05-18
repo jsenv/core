@@ -4,7 +4,10 @@ import { resolveUrl } from "@jsenv/util"
 import { measureAsyncFnPerf } from "@jsenv/core/src/internal/perf_node.js"
 
 export const createNodeExecutionWithDynamicImport = ({ projectDirectoryUrl }) => {
-  const executeFile = async (specifier, { measurePerf, errorExposureInConsole = false } = {}) => {
+  const executeFile = async (
+    specifier,
+    { measurePerformance, errorExposureInConsole = false } = {},
+  ) => {
     // we can't dynamically import from compileServerOrigin I guess
     // we have to use the filesystem
     const fileUrl = resolveUrl(specifier, projectDirectoryUrl)
@@ -30,7 +33,7 @@ export const createNodeExecutionWithDynamicImport = ({ projectDirectoryUrl }) =>
       }
     }
 
-    if (measurePerf) {
+    if (measurePerformance) {
       return measureAsyncFnPerf(importWithDynamicImport, "jsenv:file import")
     }
     return importWithDynamicImport()

@@ -43,7 +43,10 @@ export const createNodeExecutionWithSystemJs = ({
     return error
   }
 
-  const executeFile = async (specifier, { measurePerf, errorExposureInConsole = true } = {}) => {
+  const executeFile = async (
+    specifier,
+    { measurePerformance, errorExposureInConsole = true } = {},
+  ) => {
     const compiledFileRemoteUrl = resolveUrl(
       specifier,
       `${compileServerOrigin}/${compileDirectoryRelativeUrl}`,
@@ -86,7 +89,7 @@ export const createNodeExecutionWithSystemJs = ({
       }
     }
 
-    if (measurePerf) {
+    if (measurePerformance) {
       return measureAsyncFnPerf(importWithSystemJs, "jsenv:file import")
     }
     return importWithSystemJs()

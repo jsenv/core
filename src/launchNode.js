@@ -21,11 +21,18 @@ const cuid = require("cuid")
 
 export const launchNode = async ({
   logger,
+  logProcessCommand,
   cancellationToken = createCancellationToken(),
 
   projectDirectoryUrl,
   compileServerOrigin,
   outDirectoryRelativeUrl,
+
+  collectPerformance,
+  measurePerformance,
+  collectCoverage = false,
+  coverageConfig,
+  coverageForceIstanbul,
 
   debugPort,
   debugMode,
@@ -36,14 +43,10 @@ export const launchNode = async ({
   stdin,
   stdout,
   stderr,
+  stopAfterExecute,
+  nodeRuntimeDecision,
 
   remap = true,
-  collectCoverage = false,
-  coverageConfig,
-  coverageForceIstanbul,
-  logProcessCommand,
-  nodeRuntimeDecision,
-  stopAfterExecute,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -137,13 +140,16 @@ export const launchNode = async ({
       jsenvCoreDirectoryUrl,
 
       fileRelativeUrl,
+      executionId,
+      nodeRuntimeDecision,
+      exitAfterAction: stopAfterExecute,
+
       collectCoverage,
       coverageConfig,
-      executionId,
-      remap,
-      nodeRuntimeDecision,
+      collectPerformance,
+      measurePerformance,
 
-      exitAfterAction: stopAfterExecute,
+      remap,
     }
 
     let executionResult = await controllableNodeProcess.requestActionOnChildProcess({

@@ -29,6 +29,9 @@ export const launchAndExecute = async ({
   collectRuntimeVersion = false,
   inheritCoverage = false,
   collectCoverage = false,
+  measurePerformance,
+  collectPerformance = false,
+
   // stopAfterExecute false by default because you want to keep browser alive
   // or nodejs process
   // however unit test will pass true because they want to move on
@@ -176,7 +179,11 @@ export const launchAndExecute = async ({
     cancellationToken,
 
     launch,
-    launchParams,
+    launchParams: {
+      measurePerformance,
+      collectPerformance,
+      ...launchParams,
+    },
     executeParams,
 
     stopAfterExecute,
@@ -343,9 +350,7 @@ const computeExecutionResult = async ({
 
   const runtime = `${runtimeName}/${runtimeVersion}`
 
-  logger.debug(
-    createDetailedMessage(`${runtime}: runtime launched.`),
-  )
+  logger.debug(createDetailedMessage(`${runtime}: runtime launched.`))
 
   logger.debug(`${runtime}: start execution.`)
   registerConsoleCallback(runtimeConsoleCallback)
