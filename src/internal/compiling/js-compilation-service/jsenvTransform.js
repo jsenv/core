@@ -121,19 +121,11 @@ export const jsenvTransform = async ({
               throw createParseError({
                 message: `import.meta.resolve() not supported with commonjs format`,
               })
-              // replaceWithImport({
-              //   from: `@jsenv/core/helpers/import-meta/import-meta-resolve-commonjs.js`,
-              // })
-              // return
             }
             if (importMetaFormat === "global") {
               throw createParseError({
                 message: `import.meta.resolve() not supported with global format`,
               })
-              // replaceWithImport({
-              //   from: `@jsenv/core/helpers/import-meta/import-meta-resolve-global.js`,
-              // })
-              // return
             }
             return
           }

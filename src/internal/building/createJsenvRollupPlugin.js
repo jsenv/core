@@ -17,7 +17,6 @@ import {
   urlToMeta,
 } from "@jsenv/util"
 
-// import { jsenvImportMetaResolveGlobalUrl } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import {
   urlToServerUrl,
   urlToProjectUrl,
@@ -590,17 +589,6 @@ export const createJsenvRollupPlugin = async ({
 
       const moduleInfo = this.getModuleInfo(id)
       const url = rollupUrlToServerUrl(id)
-
-      // const originalProjectUrl = urlToOriginalProjectUrl(url)
-      // if (originalProjectUrl === jsenvImportMetaResolveGlobalUrl) {
-      //   await assetBuilder.createReferenceForJs({
-      //     jsUrl: url,
-
-      //     targetSpecifier: importMapFileRelativeUrl,
-      //     targetContentType: "application/importmap+json",
-      //     // targetBuffer,
-      //   })
-      // }
 
       logger.debug(`loads ${url}`)
       const {
