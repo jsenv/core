@@ -330,6 +330,8 @@ await buildProject({
 })
 ```
 
+If you didn't change meaningful files, building your project outputs exactly the same service worker file. In that case your service worker is not updated -> users keep their current service worker. Otherwise, browser will see that something has changed and start the process to update the service worker.
+
 ### Jsenv service worker
 
 If you want, jsenv has its own service worker. Read more at https://github.com/jsenv/jsenv-pwa/blob/master/docs/jsenv-service-worker.md
