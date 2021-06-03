@@ -139,12 +139,12 @@ Exploring server parameters are configured to let you use exploring right away. 
 
 The following parameter controls the exploring server:
 
-- [compileServerProtocol](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#protocol)
-- [compileServerPrivateKey](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#privateKey)
-- [compileServerCertificate](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#certificate)
-- [compileServerIp](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#ip)
-- [compileServerPort](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port)
-- [compileServerLogLevel](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel)
+- [compileServerProtocol](../shared-parameters.md#compileServerProtocol)
+- [compileServerPrivateKey](../shared-parameters.md#compileServerPrivateKey)
+- [compileServerCertificate](../shared-parameters.md#compileServerCertificate)
+- [compileServerIp](../shared-parameters.md#compileServerIp)
+- [compileServerPort](../shared-parameters.md#compileServerPort)
+- [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
 
 </details>
 

@@ -82,27 +82,27 @@ const convertMap = {
 
 # compileServerLogLevel
 
-`compileServerLogLevel` parameter is a string controlling verbosity of the compile server. This parameter is optional with a default value of `"info"`. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel.
+`compileServerLogLevel` parameter is a string controlling verbosity of the compile server. This parameter is optional with a default value of `"info"`. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#loglevel.
 
 # compileServerProtocol
 
-`compileServerProtocol` parameter is a string controlling the protocol used by jsenv compile server. This parameters is optional with a default value of `"https"`. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port.
+`compileServerProtocol` parameter is a string controlling the protocol used by jsenv compile server. This parameters is optional with a default value of `"https"`. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#protocol.
 
 # compileServerPrivateKey
 
-`compileServerPrivateKey` parameter is a string containing a privateKey that will be used for https encryption. This parameter is optional. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#privateKey.
+`compileServerPrivateKey` parameter is a string containing a privateKey that will be used for https encryption. This parameter is optional. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#privatekey.
 
 # compileServerCertificate
 
-`compileServerCertificate` parameter is a string containing a certificate that will be used for https encryption. This parameter is optional. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#certificate.
+`compileServerCertificate` parameter is a string containing a certificate that will be used for https encryption. This parameter is optional. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#certificate.
 
 # compileServerIp
 
-`compileServerIp` parameter is a string controlling the ip jsenv compile server will listen to. This parameter is optional with a default value of `"0.0.0.0"`. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#ip.
+`compileServerIp` parameter is a string controlling the ip jsenv compile server will listen to. This parameter is optional with a default value of `"0.0.0.0"`. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#ip.
 
 # compileServerPort
 
-`compileServerPort` parameter is a number controlling the port jsenv compile server will listen to. This parameter is optional with a default value of `0` meaning a random available port will be used. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port.
+`compileServerPort` parameter is a number controlling the port jsenv compile server will listen to. This parameter is optional with a default value of `0` meaning a random available port will be used. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#port.
 
 # jsenvDirectoryRelativeUrl
 
