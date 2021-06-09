@@ -1,22 +1,10 @@
-# core
+# jsenv
 
 Tool to develop, test and build js projects.
 
 [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 [![github ci](https://github.com/jsenv/jsenv-core/workflows/ci/badge.svg)](https://github.com/jsenv/jsenv-core/actions?workflow=ci)
 [![codecov coverage](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
-
-# Table of contents
-
-- [Presentation](#Presentation)
-- [Testing](#Testing)
-- [Exploring](#Exploring)
-- [Building](#Building)
-- [Features](#Features)
-- [Installation](#Installation)
-- [Configuration](#Configuration)
-- [About](#About)
-- [See also](#See-also)
 
 # Presentation
 
