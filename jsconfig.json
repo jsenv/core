@@ -509,17 +509,11 @@
       "postcss/lib/rule": [
         "./node_modules/postcss/lib/rule.js"
       ],
-      "proper-lockfile/*": [
-        "./node_modules/proper-lockfile/*"
-      ],
       "@babel/helpers/*": [
         "./node_modules/@babel/helpers/*"
       ],
       "playwright-core": [
         "./node_modules/playwright-core/index.mjs"
-      ],
-      "proper-lockfile": [
-        "./node_modules/proper-lockfile/index.js"
       ],
       "v8-to-istanbul/*": [
         "./node_modules/v8-to-istanbul/*"

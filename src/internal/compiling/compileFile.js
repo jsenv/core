@@ -23,7 +23,6 @@ export const compileFile = async ({
   useFilesystemAsCache,
   compileCacheStrategy = "etag",
   serverCompileCacheHitTracking = false,
-  serverCompileCacheInterProcessLocking = false,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
 }) => {
@@ -66,7 +65,6 @@ export const compileFile = async ({
       writeOnFilesystem,
       useFilesystemAsCache,
       cacheHitTracking: serverCompileCacheHitTracking,
-      cacheInterProcessLocking: serverCompileCacheInterProcessLocking,
       compileCacheSourcesValidation,
       compileCacheAssetsValidation,
       compile,

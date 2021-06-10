@@ -1,8 +1,6 @@
-/* eslint-disable import/max-dependencies */
-import { urlToFileSystemPath, ensureParentDirectories } from "@jsenv/util"
+import { urlToFileSystemPath } from "@jsenv/util"
 import { createDetailedMessage } from "@jsenv/logger"
 import { timeStart, timeFunction } from "@jsenv/server"
-import { require } from "../../require.js"
 import { readFileContent } from "./fs-optimized-for-cache.js"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
@@ -21,7 +19,6 @@ export const getOrGenerateCompiledFile = async ({
   writeOnFilesystem,
   useFilesystemAsCache,
   cacheHitTracking = false,
-  cacheInterProcessLocking = false,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
   fileContentFallback,
@@ -103,7 +100,6 @@ export const getOrGenerateCompiledFile = async ({
     },
     {
       compiledFileUrl,
-      cacheInterProcessLocking,
       logger,
     },
   )
@@ -257,7 +253,7 @@ const getArgumentsForCompile = async ({ originalFileUrl, fileContentFallback }) 
   return [fileContent]
 }
 
-const startAsap = async (fn, { logger, compiledFileUrl, cacheInterProcessLocking }) => {
+const startAsap = async (fn, { logger, compiledFileUrl }) => {
   const metaJsonFileUrl = getMetaJsonFileUrl(compiledFileUrl)
   const metaJsonFilePath = urlToFileSystemPath(metaJsonFileUrl)
 
@@ -266,22 +262,6 @@ const startAsap = async (fn, { logger, compiledFileUrl, cacheInterProcessLocking
   const unlockLocal = await lockForRessource(metaJsonFilePath)
 
   let unlockInterProcessLock = () => {}
-  if (cacheInterProcessLocking) {
-    // after that we use a lock pathnameRelative to be sure we don't conflict with other process
-    // trying to do the same (mapy happen when spawining multiple server for instance)
-    // https://github.com/moxystudio/node-proper-lockfile/issues/69
-    await ensureParentDirectories(metaJsonFilePath)
-    // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
-    const lockfile = require("proper-lockfile")
-    unlockInterProcessLock = await lockfile.lock(metaJsonFilePath, {
-      realpath: false,
-      retries: {
-        retries: 20,
-        minTimeout: 20,
-        maxTimeout: 500,
-      },
-    })
-  }
 
   try {
     return await fn()
@@ -291,11 +271,4 @@ const startAsap = async (fn, { logger, compiledFileUrl, cacheInterProcessLocking
     unlockLocal()
     unlockInterProcessLock()
   }
-
-  // here in case of error.code === 'ELOCKED' thrown from here
-  // https://github.com/moxystudio/node-proper-lockfile/blob/1a478a43a077a7a7efc46ac79fd8f713a64fd499/lib/lockfile.js#L54
-  // we could give a better failure message when server tries to compile a file
-  // otherwise he'll get a 500 without much more info to debug
-
-  // we use two lock because the local lock is very fast, it's a sort of perf improvement
 }

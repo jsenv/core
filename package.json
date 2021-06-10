@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "18.1.7",
+  "version": "18.1.8",
   "description": "Tool to develop, test and build js projects.",
   "license": "MIT",
   "repository": {
@@ -126,7 +126,6 @@
     "playwright-core": "1.11.0",
     "postcss": "8.2.15",
     "postcss-value-parser": "4.1.0",
-    "proper-lockfile": "4.1.2",
     "regenerator-runtime": "0.13.7",
     "rollup": "2.47.0",
     "rollup-plugin-node-builtins-brofs": "2.1.3",
