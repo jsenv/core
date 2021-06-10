@@ -2,8 +2,20 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
+      "@babel/plugin-transform-exponentiation-operator/*": [
+        "./node_modules/@babel/plugin-transform-exponentiation-operator/*"
+      ],
+      "@babel/plugin-transform-block-scoped-functions/*": [
+        "./node_modules/@babel/plugin-transform-block-scoped-functions/*"
+      ],
       "@babel/plugin-transform-exponentiation-operator": [
         "./node_modules/@babel/plugin-transform-exponentiation-operator/lib/index.js"
+      ],
+      "@babel/plugin-proposal-optional-catch-binding/*": [
+        "./node_modules/@babel/plugin-proposal-optional-catch-binding/*"
+      ],
+      "@babel/plugin-proposal-unicode-property-regex/*": [
+        "./node_modules/@babel/plugin-proposal-unicode-property-regex/*"
       ],
       "@babel/plugin-transform-block-scoped-functions": [
         "./node_modules/@babel/plugin-transform-block-scoped-functions/lib/index.js"
@@ -14,6 +26,15 @@
       "@babel/plugin-proposal-unicode-property-regex": [
         "./node_modules/@babel/plugin-proposal-unicode-property-regex/lib/index.js"
       ],
+      "@babel/plugin-transform-shorthand-properties/*": [
+        "./node_modules/@babel/plugin-transform-shorthand-properties/*"
+      ],
+      "@babel/plugin-syntax-optional-catch-binding/*": [
+        "./node_modules/@babel/plugin-syntax-optional-catch-binding/*"
+      ],
+      "@babel/plugin-transform-computed-properties/*": [
+        "./node_modules/@babel/plugin-transform-computed-properties/*"
+      ],
       "@babel/plugin-transform-shorthand-properties": [
         "./node_modules/@babel/plugin-transform-shorthand-properties/lib/index.js"
       ],
@@ -23,11 +44,29 @@
       "@babel/plugin-transform-computed-properties": [
         "./node_modules/@babel/plugin-transform-computed-properties/lib/index.js"
       ],
+      "@babel/plugin-proposal-object-rest-spread/*": [
+        "./node_modules/@babel/plugin-proposal-object-rest-spread/*"
+      ],
+      "@babel/plugin-transform-template-literals/*": [
+        "./node_modules/@babel/plugin-transform-template-literals/*"
+      ],
+      "@babel/plugin-proposal-numeric-separator/*": [
+        "./node_modules/@babel/plugin-proposal-numeric-separator/*"
+      ],
       "@babel/plugin-proposal-object-rest-spread": [
         "./node_modules/@babel/plugin-proposal-object-rest-spread/lib/index.js"
       ],
+      "@babel/plugin-proposal-optional-chaining/*": [
+        "./node_modules/@babel/plugin-proposal-optional-chaining/*"
+      ],
+      "@babel/plugin-transform-modules-systemjs/*": [
+        "./node_modules/@babel/plugin-transform-modules-systemjs/*"
+      ],
       "@babel/plugin-transform-template-literals": [
         "./node_modules/@babel/plugin-transform-template-literals/lib/index.js"
+      ],
+      "babel-plugin-transform-async-to-promises/*": [
+        "./node_modules/babel-plugin-transform-async-to-promises/*"
       ],
       "@babel/plugin-proposal-numeric-separator": [
         "./node_modules/@babel/plugin-proposal-numeric-separator/lib/index.js"
@@ -35,11 +74,20 @@
       "@babel/plugin-proposal-optional-chaining": [
         "./node_modules/@babel/plugin-proposal-optional-chaining/lib/index.js"
       ],
+      "@babel/plugin-syntax-object-rest-spread/*": [
+        "./node_modules/@babel/plugin-syntax-object-rest-spread/*"
+      ],
+      "@babel/plugin-transform-arrow-functions/*": [
+        "./node_modules/@babel/plugin-transform-arrow-functions/*"
+      ],
       "@babel/plugin-transform-modules-systemjs": [
         "./node_modules/@babel/plugin-transform-modules-systemjs/lib/index.js"
       ],
       "babel-plugin-transform-async-to-promises": [
         "./node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js"
+      ],
+      "@babel/plugin-syntax-numeric-separator/*": [
+        "./node_modules/@babel/plugin-syntax-numeric-separator/*"
       ],
       "@babel/plugin-syntax-object-rest-spread": [
         "./node_modules/@babel/plugin-syntax-object-rest-spread/lib/index.js"
@@ -47,11 +95,32 @@
       "@babel/plugin-transform-arrow-functions": [
         "./node_modules/@babel/plugin-transform-arrow-functions/lib/index.js"
       ],
+      "@babel/plugin-transform-duplicate-keys/*": [
+        "./node_modules/@babel/plugin-transform-duplicate-keys/*"
+      ],
+      "@babel/plugin-proposal-dynamic-import/*": [
+        "./node_modules/@babel/plugin-proposal-dynamic-import/*"
+      ],
       "@babel/plugin-syntax-numeric-separator": [
         "./node_modules/@babel/plugin-syntax-numeric-separator/lib/index.js"
       ],
+      "@babel/plugin-transform-block-scoping/*": [
+        "./node_modules/@babel/plugin-transform-block-scoping/*"
+      ],
+      "@babel/plugin-transform-destructuring/*": [
+        "./node_modules/@babel/plugin-transform-destructuring/*"
+      ],
       "@babel/plugin-transform-duplicate-keys": [
         "./node_modules/@babel/plugin-transform-duplicate-keys/lib/index.js"
+      ],
+      "@babel/plugin-transform-function-name/*": [
+        "./node_modules/@babel/plugin-transform-function-name/*"
+      ],
+      "@babel/plugin-transform-typeof-symbol/*": [
+        "./node_modules/@babel/plugin-transform-typeof-symbol/*"
+      ],
+      "@babel/plugin-transform-unicode-regex/*": [
+        "./node_modules/@babel/plugin-transform-unicode-regex/*"
       ],
       "@babel/plugin-proposal-dynamic-import": [
         "./node_modules/@babel/plugin-proposal-dynamic-import/lib/index.js"
@@ -62,8 +131,17 @@
       "@babel/plugin-transform-destructuring": [
         "./node_modules/@babel/plugin-transform-destructuring/lib/index.js"
       ],
+      "@babel/plugin-transform-dotall-regex/*": [
+        "./node_modules/@babel/plugin-transform-dotall-regex/*"
+      ],
       "@babel/plugin-transform-function-name": [
         "./node_modules/@babel/plugin-transform-function-name/lib/index.js"
+      ],
+      "@babel/plugin-transform-object-super/*": [
+        "./node_modules/@babel/plugin-transform-object-super/*"
+      ],
+      "@babel/plugin-transform-sticky-regex/*": [
+        "./node_modules/@babel/plugin-transform-sticky-regex/*"
       ],
       "@babel/plugin-transform-typeof-symbol": [
         "./node_modules/@babel/plugin-transform-typeof-symbol/lib/index.js"
@@ -71,11 +149,20 @@
       "@babel/plugin-transform-unicode-regex": [
         "./node_modules/@babel/plugin-transform-unicode-regex/lib/index.js"
       ],
+      "@babel/plugin-proposal-json-strings/*": [
+        "./node_modules/@babel/plugin-proposal-json-strings/*"
+      ],
+      "@babel/plugin-syntax-dynamic-import/*": [
+        "./node_modules/@babel/plugin-syntax-dynamic-import/*"
+      ],
       "@babel/plugin-transform-dotall-regex": [
         "./node_modules/@babel/plugin-transform-dotall-regex/lib/index.js"
       ],
       "@babel/plugin-transform-object-super": [
         "./node_modules/@babel/plugin-transform-object-super/lib/index.js"
+      ],
+      "@babel/plugin-transform-regenerator/*": [
+        "./node_modules/@babel/plugin-transform-regenerator/*"
       ],
       "@babel/plugin-transform-sticky-regex": [
         "./node_modules/@babel/plugin-transform-sticky-regex/lib/index.js"
@@ -86,8 +173,17 @@
       "@babel/plugin-syntax-dynamic-import": [
         "./node_modules/@babel/plugin-syntax-dynamic-import/lib/index.js"
       ],
+      "@babel/plugin-transform-new-target/*": [
+        "./node_modules/@babel/plugin-transform-new-target/*"
+      ],
+      "@babel/plugin-transform-parameters/*": [
+        "./node_modules/@babel/plugin-transform-parameters/*"
+      ],
       "@babel/plugin-transform-regenerator": [
         "./node_modules/@babel/plugin-transform-regenerator/lib/index.js"
+      ],
+      "@babel/plugin-transform-typescript/*": [
+        "./node_modules/@babel/plugin-transform-typescript/*"
       ],
       "@babel/plugin-transform-new-target": [
         "./node_modules/@babel/plugin-transform-new-target/lib/index.js"
@@ -95,8 +191,20 @@
       "@babel/plugin-transform-parameters": [
         "./node_modules/@babel/plugin-transform-parameters/lib/index.js"
       ],
+      "@babel/plugin-transform-react-jsx/*": [
+        "./node_modules/@babel/plugin-transform-react-jsx/*"
+      ],
       "@babel/plugin-transform-typescript": [
         "./node_modules/@babel/plugin-transform-typescript/lib/index.js"
+      ],
+      "rollup-plugin-node-builtins-brofs/*": [
+        "./node_modules/rollup-plugin-node-builtins-brofs/*"
+      ],
+      "@babel/plugin-syntax-import-meta/*": [
+        "./node_modules/@babel/plugin-syntax-import-meta/*"
+      ],
+      "@babel/plugin-transform-literals/*": [
+        "./node_modules/@babel/plugin-transform-literals/*"
       ],
       "@babel/plugin-transform-react-jsx": [
         "./node_modules/@babel/plugin-transform-react-jsx/lib/index.js"
@@ -107,14 +215,26 @@
       "@babel/plugin-syntax-import-meta": [
         "./node_modules/@babel/plugin-syntax-import-meta/lib/index.js"
       ],
+      "@babel/plugin-transform-classes/*": [
+        "./node_modules/@babel/plugin-transform-classes/*"
+      ],
       "@babel/plugin-transform-literals": [
         "./node_modules/@babel/plugin-transform-literals/lib/index.js"
       ],
       "@jsenv/importmap-eslint-resolver": [
         "./node_modules/@jsenv/importmap-eslint-resolver/main.js"
       ],
+      "babel-plugin-transform-commonjs/*": [
+        "./node_modules/babel-plugin-transform-commonjs/*"
+      ],
       "@babel/plugin-transform-classes": [
         "./node_modules/@babel/plugin-transform-classes/lib/index.js"
+      ],
+      "@babel/plugin-transform-for-of/*": [
+        "./node_modules/@babel/plugin-transform-for-of/*"
+      ],
+      "@babel/plugin-transform-spread/*": [
+        "./node_modules/@babel/plugin-transform-spread/*"
       ],
       "babel-plugin-transform-commonjs": [
         "./node_modules/babel-plugin-transform-commonjs/dist/index.js"
@@ -131,6 +251,9 @@
       "postcss/lib/terminal-highlight": [
         "./node_modules/postcss/lib/terminal-highlight.js"
       ],
+      "@babel/helper-module-imports/*": [
+        "./node_modules/@babel/helper-module-imports/*"
+      ],
       "@jsenv/github-release-package": [
         "./node_modules/@jsenv/github-release-package/index.js"
       ],
@@ -146,8 +269,14 @@
       "postcss/lib/css-syntax-error": [
         "./node_modules/postcss/lib/css-syntax-error.js"
       ],
+      "@babel/helper-plugin-utils/*": [
+        "./node_modules/@babel/helper-plugin-utils/*"
+      ],
       "@rollup/plugin-node-resolve": [
         "./node_modules/@rollup/plugin-node-resolve/dist/es/index.js"
+      ],
+      "rollup-plugin-node-globals/*": [
+        "./node_modules/rollup-plugin-node-globals/*"
       ],
       "@babel/helper-plugin-utils": [
         "./node_modules/@babel/helper-plugin-utils/lib/index.js"
@@ -158,14 +287,32 @@
       "postcss/lib/map-generator": [
         "./node_modules/postcss/lib/map-generator.js"
       ],
+      "@rollup/plugin-commonjs/*": [
+        "./node_modules/@rollup/plugin-commonjs/*"
+      ],
+      "@vue/component-compiler/*": [
+        "./node_modules/@vue/component-compiler/*"
+      ],
+      "istanbul-lib-instrument/*": [
+        "./node_modules/istanbul-lib-instrument/*"
+      ],
       "postcss/lib/previous-map": [
         "./node_modules/postcss/lib/previous-map.js"
+      ],
+      "@jsenv/package-publish/*": [
+        "./node_modules/@jsenv/package-publish/*"
       ],
       "@rollup/plugin-commonjs": [
         "./node_modules/@rollup/plugin-commonjs/dist/index.es.js"
       ],
+      "@rollup/plugin-replace/*": [
+        "./node_modules/@rollup/plugin-replace/*"
+      ],
       "@vue/component-compiler": [
         "./node_modules/@vue/component-compiler/dist/index.js"
+      ],
+      "cssnano-preset-default/*": [
+        "./node_modules/cssnano-preset-default/*"
       ],
       "istanbul-lib-instrument": [
         "./node_modules/istanbul-lib-instrument/dist/index.js"
@@ -188,11 +335,23 @@
       "cssnano-preset-default": [
         "./node_modules/cssnano-preset-default/dist/index.js"
       ],
+      "istanbul-lib-coverage/*": [
+        "./node_modules/istanbul-lib-coverage/*"
+      ],
+      "vue-template-compiler/*": [
+        "./node_modules/vue-template-compiler/*"
+      ],
       "@jsenv/codecov-upload": [
         "./node_modules/@jsenv/codecov-upload/index.js"
       ],
+      "eslint-plugin-import/*": [
+        "./node_modules/eslint-plugin-import/*"
+      ],
       "istanbul-lib-coverage": [
         "./node_modules/istanbul-lib-coverage/index.js"
+      ],
+      "postcss-value-parser/*": [
+        "./node_modules/postcss-value-parser/*"
       ],
       "postcss/lib/container": [
         "./node_modules/postcss/lib/container.js"
@@ -215,8 +374,14 @@
       "@jsenv/eslint-config": [
         "./node_modules/@jsenv/eslint-config/index.js"
       ],
+      "@rollup/plugin-json/*": [
+        "./node_modules/@rollup/plugin-json/*"
+      ],
       "eslint-plugin-import": [
         "./node_modules/eslint-plugin-import/lib/index.js"
+      ],
+      "istanbul-lib-report/*": [
+        "./node_modules/istanbul-lib-report/*"
       ],
       "playwright-chromium/*": [
         "./node_modules/playwright-chromium/*"
@@ -233,6 +398,9 @@
       "postcss/package.json": [
         "./node_modules/postcss/package.json"
       ],
+      "regenerator-runtime/*": [
+        "./node_modules/regenerator-runtime/*"
+      ],
       "@jsenv/cancellation": [
         "./node_modules/@jsenv/cancellation/main.node.js"
       ],
@@ -241,6 +409,9 @@
       ],
       "@rollup/plugin-json": [
         "./node_modules/@rollup/plugin-json/dist/index.es.js"
+      ],
+      "eslint-plugin-html/*": [
+        "./node_modules/eslint-plugin-html/*"
       ],
       "istanbul-lib-report": [
         "./node_modules/istanbul-lib-report/index.js"
@@ -275,6 +446,12 @@
       "@jsenv/import-map/*": [
         "./node_modules/@jsenv/import-map/*"
       ],
+      "eslint-plugin-html": [
+        "./node_modules/eslint-plugin-html/src/index.js"
+      ],
+      "humanize-duration/*": [
+        "./node_modules/humanize-duration/*"
+      ],
       "playwright-firefox": [
         "./node_modules/playwright-firefox/index.mjs"
       ],
@@ -287,11 +464,17 @@
       "postcss/lib/result": [
         "./node_modules/postcss/lib/result.js"
       ],
+      "@c88/v8-coverage/*": [
+        "./node_modules/@c88/v8-coverage/*"
+      ],
       "@jsenv/import-map": [
         "./node_modules/@jsenv/import-map/index.js"
       ],
       "humanize-duration": [
         "./node_modules/humanize-duration/humanize-duration.js"
+      ],
+      "istanbul-reports/*": [
+        "./node_modules/istanbul-reports/*"
       ],
       "playwright-webkit": [
         "./node_modules/playwright-webkit/index.mjs"
@@ -326,14 +509,26 @@
       "postcss/lib/rule": [
         "./node_modules/postcss/lib/rule.js"
       ],
+      "proper-lockfile/*": [
+        "./node_modules/proper-lockfile/*"
+      ],
+      "@babel/helpers/*": [
+        "./node_modules/@babel/helpers/*"
+      ],
       "playwright-core": [
         "./node_modules/playwright-core/index.mjs"
       ],
       "proper-lockfile": [
         "./node_modules/proper-lockfile/index.js"
       ],
+      "v8-to-istanbul/*": [
+        "./node_modules/v8-to-istanbul/*"
+      ],
       "@babel/helpers": [
         "./node_modules/@babel/helpers/lib/index.js"
+      ],
+      "@babel/parser/*": [
+        "./node_modules/@babel/parser/*"
       ],
       "@jsenv/assert/*": [
         "./node_modules/@jsenv/assert/*"
@@ -343,6 +538,12 @@
       ],
       "@jsenv/server/*": [
         "./node_modules/@jsenv/server/*"
+      ],
+      "html-minifier/*": [
+        "./node_modules/html-minifier/*"
+      ],
+      "node-notifier/*": [
+        "./node_modules/node-notifier/*"
       ],
       "supports-color": [
         "./node_modules/supports-color/index.js"
@@ -371,17 +572,26 @@
       "@jsenv/uneval": [
         "./node_modules/@jsenv/uneval/index.js"
       ],
+      "ansi-to-html/*": [
+        "./node_modules/ansi-to-html/*"
+      ],
       "estree-walker": [
         "./node_modules/estree-walker/src/index.js"
       ],
       "html-minifier": [
         "./node_modules/html-minifier/src/htmlminifier.js"
       ],
+      "magic-string/*": [
+        "./node_modules/magic-string/*"
+      ],
       "node-notifier": [
         "./node_modules/node-notifier/index.js"
       ],
       "systemjs/s.js": [
         "./node_modules/systemjs/dist/s.min.js"
+      ],
+      "@babel/core/*": [
+        "./node_modules/@babel/core/*"
       ],
       "@jsenv/core/*": [
         "./*"
@@ -391,6 +601,9 @@
       ],
       "ansi-to-html": [
         "./node_modules/ansi-to-html/lib/ansi_to_html.js"
+      ],
+      "eventsource/*": [
+        "./node_modules/eventsource/*"
       ],
       "magic-string": [
         "./node_modules/magic-string/dist/magic-string.es.js"
@@ -416,17 +629,29 @@
       "eventsource": [
         "./node_modules/eventsource/lib/eventsource.js"
       ],
+      "source-map/*": [
+        "./node_modules/source-map/*"
+      ],
       "@jsenv/pwa": [
         "./node_modules/@jsenv/pwa/main.js"
       ],
       "source-map": [
         "./node_modules/source-map/source-map.js"
       ],
+      "tree-kill/*": [
+        "./node_modules/tree-kill/*"
+      ],
+      "prettier/*": [
+        "./node_modules/prettier/*"
+      ],
       "tree-kill": [
         "./node_modules/tree-kill/index.js"
       ],
       "wrap-ansi": [
         "./node_modules/wrap-ansi/index.js"
+      ],
+      "cssnano/*": [
+        "./node_modules/cssnano/*"
       ],
       "prettier": [
         "./node_modules/prettier/index.js"
@@ -437,6 +662,12 @@
       "cssnano": [
         "./node_modules/cssnano/dist/index.js"
       ],
+      "eslint/*": [
+        "./node_modules/eslint/*"
+      ],
+      "parse5/*": [
+        "./node_modules/parse5/*"
+      ],
       "postcss": [
         "./node_modules/postcss/lib/postcss.mjs"
       ],
@@ -446,17 +677,26 @@
       "parse5": [
         "./node_modules/parse5/lib/index.js"
       ],
+      "react/*": [
+        "./node_modules/react/*"
+      ],
+      "redux/*": [
+        "./node_modules/redux/*"
+      ],
       "rollup": [
         "./node_modules/rollup/dist/es/rollup.js"
       ],
-      "terser": [
-        "./node_modules/terser/main.js"
+      "cuid/*": [
+        "./node_modules/cuid/*"
       ],
       "react": [
         "./node_modules/react/index.js"
       ],
       "redux": [
         "./node_modules/redux/es/redux.js"
+      ],
+      "sass/*": [
+        "./node_modules/sass/*"
       ],
       "cuid": [
         "./node_modules/cuid/index.js"
