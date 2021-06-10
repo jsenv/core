@@ -1,3 +1,4 @@
+/* eslint-disable import/max-dependencies */
 export { buildProject } from "./src/buildProject.js"
 export { convertCommonJsWithBabel } from "./src/convertCommonJsWithBabel.js"
 export { convertCommonJsWithRollup } from "./src/convertCommonJsWithRollup.js"

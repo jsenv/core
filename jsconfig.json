@@ -680,6 +680,9 @@
       "rollup": [
         "./node_modules/rollup/dist/es/rollup.js"
       ],
+      "terser": [
+        "./node_modules/terser/main.js"
+      ],
       "cuid/*": [
         "./node_modules/cuid/*"
       ],
