@@ -1,10 +1,3 @@
-# Table of contents
-
-- [Exploring presentation](#Exploring-presentation)
-- [Exploring integration](#Exploring-integration)
-- [startExploring](#startExploring)
-- [jsenv toolbar](#jsenv-toolbar)
-
 # Exploring presentation
 
 Frontend projects often comes with a local server running on your machine.
@@ -38,11 +31,16 @@ npm install --save-dev @jsenv/core
 <details>
   <summary>3. Create a file to start the exploring server</summary>
 
-Copy [jsenv-core/docs/exploring/basic-project/start-exploring.js](./basic-project/start-exploring.js) into your project.
+```js
+import { startExploring } from "@jsenv/core"
 
-If your node version is above 13 and your `package.json` contains `"type": "module"` it's fine, go to step 4.
+startExploring({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  compileServerPort: 3472,
+})
+```
 
-Otherwise be sure to change `start-exploring.js` file extension from `.js` to `.mjs`.
+The code above is written in ESM. You may have to use `.mjs` extension to run it with Node.js as documented in [enabling ESM](https://nodejs.org/docs/latest-v16.x/api/esm.html#esm_enabling)
 
 </details>
 
