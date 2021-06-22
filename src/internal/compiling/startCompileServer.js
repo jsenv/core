@@ -21,7 +21,6 @@ import {
   resolveDirectoryUrl,
   readFile,
   writeFile,
-  removeFileSystemNode,
   ensureEmptyDirectory,
   registerFileLifecycle,
   registerDirectoryLifecycle,
@@ -141,17 +140,6 @@ export const startCompileServer = async ({
     ...babelPluginMap,
   }
 
-  if (compileServerCanWriteOnFilesystem) {
-    await setupOutDirectory(outDirectoryUrl, {
-      logger,
-      jsenvDirectoryUrl,
-      jsenvDirectoryClean,
-      babelPluginMap,
-      convertMap,
-      compileServerGroupMap,
-    })
-  }
-
   const serverStopCancellationSource = createCancellationSource()
 
   let projectFileRequestedCallback = () => {}
@@ -180,6 +168,24 @@ export const startCompileServer = async ({
     }
   }
 
+  const outJSONFiles = createOutJSONFiles({
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
+    importDefaultExtension,
+    compileServerGroupMap,
+    env,
+  })
+  if (compileServerCanWriteOnFilesystem) {
+    await setupOutDirectory({
+      logger,
+      outDirectoryMeta: outJSONFiles.meta.data,
+      outDirectoryUrl,
+      jsenvDirectoryUrl,
+      jsenvDirectoryClean,
+    })
+  }
+
   const jsenvServices = {
     "service:compilation asset": createCompilationAssetFileService({
       projectDirectoryUrl,
@@ -188,51 +194,13 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
     }),
-  }
-
-  const outFilesDescription = createOutFilesDescription({
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    importDefaultExtension,
-    compileServerGroupMap,
-    env,
-  })
-
-  if (compileServerCanWriteOnFilesystem) {
-    await installOutFiles(outFilesDescription, {
-      onOutFileWritten: (outFileUrl) => {
-        logger.debug(`-> ${outFileUrl}`)
-      },
-    })
-  } else {
-    const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
-    jsenvServices["service:out files"] = (request) => {
-      const requestUrl = resolveUrl(request.ressource.slice(1), projectDirectoryUrl)
-      if (!urlIsInsideOf(requestUrl, outDirectoryUrl)) {
-        return null
-      }
-
-      const fileContent = outFilesDescription[requestUrl]
-      if (typeof fileContent === "function") {
-        const body = fileContent()
-        return {
-          status: 200,
-          headers: {
-            "content-type": urlToContentType(requestUrl),
-            "content-length": Buffer.byteLength(body),
-          },
-          body,
-        }
-      }
-
-      return {
-        status: 404,
-      }
-    }
-  }
-
-  Object.assign(jsenvServices, {
+    "service:out files": await createOutFilesService({
+      logger,
+      projectDirectoryUrl,
+      compileServerCanWriteOnFilesystem,
+      outDirectoryUrl,
+      outJSONFiles,
+    }),
     "service:compiled file": createCompiledFileService({
       cancellationToken,
       logger,
@@ -262,7 +230,7 @@ export const startCompileServer = async ({
       projectFileRequestedCallback,
       projectFileEtagEnabled,
     }),
-  })
+  }
 
   const compileServer = await startServer({
     cancellationToken,
@@ -356,33 +324,16 @@ const assertArguments = ({ projectDirectoryUrl, jsenvDirectoryRelativeUrl, outDi
   }
 }
 
-const setupOutDirectory = async (
+const setupOutDirectory = async ({
+  logger,
+  outDirectoryMeta,
   outDirectoryUrl,
-  {
-    logger,
-    jsenvDirectoryClean,
-    jsenvDirectoryUrl,
-    babelPluginMap,
-    convertMap,
-    compileServerGroupMap,
-    replaceProcessEnvNodeEnv,
-    processEnvNodeEnv,
-  },
-) => {
+  jsenvDirectoryClean,
+  jsenvDirectoryUrl,
+}) => {
   if (jsenvDirectoryClean) {
     logger.info(`Cleaning jsenv directory because jsenvDirectoryClean parameter enabled`)
     await ensureEmptyDirectory(jsenvDirectoryUrl)
-  }
-  const jsenvCorePackageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
-  const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
-  const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
-  const outDirectoryMeta = {
-    jsenvCorePackageVersion,
-    babelPluginMap,
-    convertMap,
-    compileServerGroupMap,
-    replaceProcessEnvNodeEnv,
-    processEnvNodeEnv,
   }
   const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
 
@@ -420,8 +371,6 @@ const setupOutDirectory = async (
       await ensureEmptyDirectory(outDirectoryUrl)
     }
   }
-
-  await writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "))
 }
 
 const getOutDirectoryChanges = (previousOutDirectoryMeta, outDirectoryMeta) => {
@@ -810,50 +759,112 @@ const createProjectFileService = ({
   }
 }
 
-const createOutFilesDescription = ({
+const createOutJSONFiles = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   importDefaultExtension,
   compileServerGroupMap,
+  babelPluginMap,
+  convertMap,
+  replaceProcessEnvNodeEnv,
+  processEnvNodeEnv,
   env,
 }) => {
+  const outJSONFiles = {}
   const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
-  const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
-  const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
 
+  const metaOutFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
+  const jsenvCorePackageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
+  const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
+  const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
+  const outDirectoryMeta = {
+    jsenvCorePackageVersion,
+    babelPluginMap,
+    convertMap,
+    compileServerGroupMap,
+    replaceProcessEnvNodeEnv,
+    processEnvNodeEnv,
+  }
+  outJSONFiles.meta = {
+    url: metaOutFileUrl,
+    data: outDirectoryMeta,
+  }
+
+  const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
   env = {
     ...env,
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     importDefaultExtension,
   }
-
-  return {
-    [groupMapOutFileUrl]: () => {
-      return JSON.stringify(compileServerGroupMap, null, "  ")
-    },
-    [envOutFileUrl]: () => {
-      return JSON.stringify(env, null, "  ")
-    },
+  outJSONFiles.env = {
+    url: envOutFileUrl,
+    data: env,
   }
+
+  const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
+  outJSONFiles.groupMap = {
+    url: groupMapOutFileUrl,
+    data: compileServerGroupMap,
+  }
+
+  return outJSONFiles
 }
 
-const installOutFiles = async (outFilesDescription, { onOutFileWritten = () => {} } = {}) => {
-  await Promise.all(
-    Object.keys(outFilesDescription).map(async (outFileUrl) => {
-      const outFileContent = outFilesDescription[outFileUrl]()
-      await writeFile(outFileUrl, outFileContent)
-      onOutFileWritten(outFileUrl)
-    }),
-  )
-
-  return async () => {
+const createOutFilesService = async ({
+  logger,
+  projectDirectoryUrl,
+  compileServerCanWriteOnFilesystem,
+  outDirectoryUrl,
+  outJSONFiles,
+}) => {
+  if (compileServerCanWriteOnFilesystem) {
     await Promise.all(
-      Object.keys(outFilesDescription).map(async (outFileUrl) => {
-        removeFileSystemNode(outFileUrl, { allowUseless: true })
+      Object.keys(outJSONFiles).map(async (name) => {
+        const outJSONFile = outJSONFiles[name]
+        await writeFile(outJSONFile.url, JSON.stringify(outJSONFile.data, null, "  "))
+        logger.debug(`-> ${outJSONFile.url}`)
       }),
     )
+
+    return async (request) => {
+      const requestUrl = resolveUrl(request.ressource.slice(1), projectDirectoryUrl)
+      if (!urlIsInsideOf(requestUrl, outDirectoryUrl)) {
+        return null
+      }
+      return serveFile(request, {
+        rootDirectoryUrl: projectDirectoryUrl,
+        etagEnabled: true,
+      })
+    }
+  }
+  // serve from memory
+  return (request) => {
+    const requestUrl = resolveUrl(request.ressource.slice(1), projectDirectoryUrl)
+    if (!urlIsInsideOf(requestUrl, outDirectoryUrl)) {
+      return null
+    }
+
+    const outJSONFileKey = Object.keys(outJSONFiles).find((name) => {
+      return outJSONFiles[name].url === requestUrl
+    })
+    if (!outJSONFileKey) {
+      return {
+        status: 404,
+      }
+    }
+
+    const outJSONFile = outJSONFiles[outJSONFileKey]
+    const body = JSON.stringify(outJSONFile.data, null, "  ")
+    return {
+      status: 200,
+      headers: {
+        "content-type": urlToContentType(requestUrl),
+        "content-length": Buffer.byteLength(body),
+      },
+      body,
+    }
   }
 }
 
