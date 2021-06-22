@@ -20,27 +20,17 @@ export const execute = async ({
   let finalizeExecutionResult = (result) => result
 
   if (collectPerformance) {
-    const measures = {}
+    const measureEntries = []
     // https://nodejs.org/dist/latest-v16.x/docs/api/perf_hooks.html
     const perfObserver = new PerformanceObserver(
       (
         // https://nodejs.org/dist/latest-v16.x/docs/api/perf_hooks.html#perf_hooks_class_performanceobserverentrylist
         list,
       ) => {
-        const perfEntries = list.getEntries()
-        perfEntries.forEach(
-          (
-            // https://nodejs.org/dist/latest-v16.x/docs/api/perf_hooks.html#perf_hooks_class_performanceentry
-            perfEntry,
-          ) => {
-            if (perfEntry.entryType === "measure") {
-              measures[perfEntry.name] = perfEntry.duration
-            }
-          },
-        )
+        const perfMeasureEntries = list.getEntriesByType("measure")
+        measureEntries.push(...perfMeasureEntries)
       },
     )
-    // perfObserver.observe()
     perfObserver.observe({
       entryTypes: ["measure"],
     })
@@ -56,7 +46,7 @@ export const execute = async ({
         ...executionResult,
         performance: {
           ...readNodePerformance(),
-          measures,
+          measures: measuresFromMeasureEntries(measureEntries),
         },
       }
     }
@@ -98,4 +88,23 @@ const asPlainObject = (objectWithGetters) => {
     objectWithoutGetters[key] = objectWithGetters[key]
   })
   return objectWithoutGetters
+}
+
+const measuresFromMeasureEntries = (measureEntries) => {
+  const measures = {}
+  // Sort to ensure measures order is predictable
+  // It seems to be already predictable on Node 16+ but
+  // it's not the case on Node 14.
+  measureEntries.sort((a, b) => {
+    return a.startTime - b.startTime
+  })
+  measureEntries.forEach(
+    (
+      // https://nodejs.org/dist/latest-v16.x/docs/api/perf_hooks.html#perf_hooks_class_performanceentry
+      perfMeasureEntry,
+    ) => {
+      measures[perfMeasureEntry.name] = perfMeasureEntry.duration
+    },
+  )
+  return measures
 }

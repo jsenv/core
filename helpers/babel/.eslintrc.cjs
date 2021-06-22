@@ -18,6 +18,7 @@ Object.assign(eslintConfig.rules, {
   "no-loop-func": ["off"],
   "no-negated-condition": ["off"],
   "no-func-assign": ["off"],
+  "no-else-return": ["off"],
 })
 
 module.exports = eslintConfig

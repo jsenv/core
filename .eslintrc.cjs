@@ -68,6 +68,7 @@ const eslintConfig = composeEslintConfig(
     overrides: [
       {
         files: [
+          "**/**/*.html",
           "**/createBrowserRuntime/**/*.js",
           "**/exploring/**/*.js",
           "**/toolbar/**/*.js",
