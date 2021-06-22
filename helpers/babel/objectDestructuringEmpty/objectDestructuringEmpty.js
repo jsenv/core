@@ -1,3 +1,3 @@
-export default (obj) => {
-  if (obj === null) throw new TypeError("Cannot destructure undefined")
+export default function _objectDestructuringEmpty(obj) {
+  if (obj == null) throw new TypeError("Cannot destructure undefined")
 }

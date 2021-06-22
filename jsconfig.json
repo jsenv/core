@@ -365,6 +365,9 @@
       "postcss/lib/warn-once": [
         "./node_modules/postcss/lib/warn-once.js"
       ],
+      "systemjs/package.json": [
+        "./node_modules/systemjs/package.json"
+      ],
       "vue-template-compiler": [
         "./node_modules/vue-template-compiler/index.js"
       ],

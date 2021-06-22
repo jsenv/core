@@ -2,7 +2,6 @@ import setPrototypeOf from "../setPrototypeOf/setPrototypeOf.js"
 import inherits from "../inherits/inherits.js"
 
 export default function _wrapRegExp() {
-  // eslint-disable-next-line no-func-assign
   _wrapRegExp = function (re, groups) {
     return new BabelRegExp(re, undefined, groups)
   }
@@ -44,7 +43,6 @@ export default function _wrapRegExp() {
         }
         return substitution.apply(this, args)
       })
-      // eslint-disable-next-line no-else-return
     } else {
       return _super[Symbol.replace].call(this, str, substitution)
     }
