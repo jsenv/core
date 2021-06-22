@@ -1,6 +1,7 @@
 import { createCancellationToken } from "@jsenv/cancellation"
 import { findFreePort } from "@jsenv/server"
 import { createDetailedMessage } from "@jsenv/logger"
+
 import { processOptionsFromExecArgv } from "./processOptions.js"
 
 const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"]
@@ -77,7 +78,7 @@ const mutateDebuggingOptions = async (
   // this is required because vscode does not
   // support assigning a child spawned without a specific port
   const childDebugPortOptionValue =
-    debugPort === 0 ? await findFreePort(processDebugPort + 27, { cancellationToken }) : debugPort
+    debugPort === 0 ? await findFreePort(processDebugPort + 37, { cancellationToken }) : debugPort
   // replace child debug port
   if (parentDebugPortOptionName) {
     delete childProcessOptions[parentDebugPortOptionName]

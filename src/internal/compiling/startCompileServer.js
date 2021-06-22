@@ -11,6 +11,7 @@ import {
   serveFile,
   createSSERoom,
   composeServiceWithTiming,
+  urlToContentType,
 } from "@jsenv/server"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import {
@@ -52,9 +53,9 @@ export const startCompileServer = async ({
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
 
-  writeOnFilesystem = true,
   sourcemapExcludeSources = false, // this should increase perf (no need to download source for browser)
-  useFilesystemAsCache = true,
+  compileServerCanReadFromFilesystem = true,
+  compileServerCanWriteOnFilesystem = true,
   compileCacheStrategy = "etag",
   projectFileEtagEnabled = true,
 
@@ -140,15 +141,16 @@ export const startCompileServer = async ({
     ...babelPluginMap,
   }
 
-  await setupOutDirectory(outDirectoryUrl, {
-    logger,
-    jsenvDirectoryUrl,
-    jsenvDirectoryClean,
-    useFilesystemAsCache,
-    babelPluginMap,
-    convertMap,
-    compileServerGroupMap,
-  })
+  if (compileServerCanWriteOnFilesystem) {
+    await setupOutDirectory(outDirectoryUrl, {
+      logger,
+      jsenvDirectoryUrl,
+      jsenvDirectoryClean,
+      babelPluginMap,
+      convertMap,
+      compileServerGroupMap,
+    })
+  }
 
   const serverStopCancellationSource = createCancellationSource()
 
@@ -178,39 +180,88 @@ export const startCompileServer = async ({
     }
   }
 
-  const serveCompilationAssetFile = createCompilationAssetFileService({ projectDirectoryUrl })
-  const serveBrowserScript = createBrowserScriptService({
-    projectDirectoryUrl,
-    outDirectoryRelativeUrl,
-  })
-  const serveCompiledFile = createCompiledFileService({
-    cancellationToken,
-    logger,
+  const jsenvServices = {
+    "service:compilation asset": createCompilationAssetFileService({
+      projectDirectoryUrl,
+    }),
+    "service:browser script": createBrowserScriptService({
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+    }),
+  }
 
+  const outFilesDescription = createOutFilesDescription({
     projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
-
     importDefaultExtension,
-
-    transformTopLevelAwait,
-    groupMap: compileServerGroupMap,
-    babelPluginMap,
-    convertMap,
-    customCompilers,
-    moduleOutFormat,
-    importMetaFormat,
-    scriptInjections,
-
-    projectFileRequestedCallback,
-    useFilesystemAsCache,
-    writeOnFilesystem,
-    sourcemapExcludeSources,
-    compileCacheStrategy,
+    compileServerGroupMap,
+    env,
   })
-  const serveProjectFile = createProjectFileService({
-    projectDirectoryUrl,
-    projectFileRequestedCallback,
-    projectFileEtagEnabled,
+
+  if (compileServerCanWriteOnFilesystem) {
+    await installOutFiles(outFilesDescription, {
+      onOutFileWritten: (outFileUrl) => {
+        logger.debug(`-> ${outFileUrl}`)
+      },
+    })
+  } else {
+    const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
+    jsenvServices["service:out files"] = (request) => {
+      const requestUrl = resolveUrl(request.ressource.slice(1), projectDirectoryUrl)
+      if (!urlIsInsideOf(requestUrl, outDirectoryUrl)) {
+        return null
+      }
+
+      const fileContent = outFilesDescription[requestUrl]
+      if (typeof fileContent === "function") {
+        const body = fileContent()
+        return {
+          status: 200,
+          headers: {
+            "content-type": urlToContentType(requestUrl),
+            "content-length": Buffer.byteLength(body),
+          },
+          body,
+        }
+      }
+
+      return {
+        status: 404,
+      }
+    }
+  }
+
+  Object.assign(jsenvServices, {
+    "service:compiled file": createCompiledFileService({
+      cancellationToken,
+      logger,
+
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+
+      importDefaultExtension,
+
+      transformTopLevelAwait,
+      groupMap: compileServerGroupMap,
+      babelPluginMap,
+      convertMap,
+      customCompilers,
+      moduleOutFormat,
+      importMetaFormat,
+      scriptInjections,
+
+      projectFileRequestedCallback,
+      useFilesystemAsCache: compileServerCanReadFromFilesystem,
+      writeOnFilesystem: compileServerCanWriteOnFilesystem,
+      sourcemapExcludeSources,
+      compileCacheStrategy,
+    }),
+    "service:project file": createProjectFileService({
+      projectDirectoryUrl,
+      projectFileRequestedCallback,
+      projectFileEtagEnabled,
+    }),
   })
 
   const compileServer = await startServer({
@@ -228,10 +279,7 @@ export const startCompileServer = async ({
     sendServerInternalErrorDetails: true,
     requestToResponse: composeServiceWithTiming({
       ...customServices,
-      "service:compilation asset": serveCompilationAssetFile,
-      "service:browser script": serveBrowserScript,
-      "service:compiled file": serveCompiledFile,
-      "service:project file": serveProjectFile,
+      ...jsenvServices,
     }),
     accessControlAllowRequestOrigin: true,
     accessControlAllowRequestMethod: true,
@@ -245,25 +293,6 @@ export const startCompileServer = async ({
   })
 
   compileServer.stoppedPromise.then(serverStopCancellationSource.cancel)
-
-  const uninstallOutFiles = await installOutFiles({
-    logger,
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    importDefaultExtension,
-    compileServerGroupMap,
-    env,
-    writeOnFilesystem,
-    onOutFileWritten: (outFileUrl) => {
-      logger.debug(`-> ${outFileUrl}`)
-    },
-  })
-  if (!writeOnFilesystem) {
-    compileServer.stoppedPromise.then(() => {
-      uninstallOutFiles()
-    })
-  }
 
   if (stopOnPackageVersionChange) {
     const stopListeningJsenvPackageVersionChange = listenJsenvPackageVersionChange({
@@ -333,7 +362,6 @@ const setupOutDirectory = async (
     logger,
     jsenvDirectoryClean,
     jsenvDirectoryUrl,
-    useFilesystemAsCache,
     babelPluginMap,
     convertMap,
     compileServerGroupMap,
@@ -345,57 +373,55 @@ const setupOutDirectory = async (
     logger.info(`Cleaning jsenv directory because jsenvDirectoryClean parameter enabled`)
     await ensureEmptyDirectory(jsenvDirectoryUrl)
   }
-  if (useFilesystemAsCache) {
-    const jsenvCorePackageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
-    const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
-    const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
-    const outDirectoryMeta = {
-      jsenvCorePackageVersion,
-      babelPluginMap,
-      convertMap,
-      compileServerGroupMap,
-      replaceProcessEnvNodeEnv,
-      processEnvNodeEnv,
-    }
-    const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
-
-    let previousOutDirectoryMeta
-    try {
-      const source = await readFile(metaFileUrl)
-      previousOutDirectoryMeta = JSON.parse(source)
-    } catch (e) {
-      if (e && e.code === "ENOENT") {
-        previousOutDirectoryMeta = null
-      } else {
-        throw e
-      }
-    }
-
-    if (previousOutDirectoryMeta !== null) {
-      const outDirectoryChanges = getOutDirectoryChanges(previousOutDirectoryMeta, outDirectoryMeta)
-
-      if (outDirectoryChanges) {
-        if (!jsenvDirectoryClean) {
-          logger.warn(
-            createDetailedMessage(
-              `Cleaning jsenv ${urlToBasename(
-                outDirectoryUrl.slice(0, -1),
-              )} directory because configuration has changed.`,
-              {
-                "changes": outDirectoryChanges.namedChanges
-                  ? outDirectoryChanges.namedChanges
-                  : `something`,
-                "out directory": urlToFileSystemPath(outDirectoryUrl),
-              },
-            ),
-          )
-        }
-        await ensureEmptyDirectory(outDirectoryUrl)
-      }
-    }
-
-    await writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "))
+  const jsenvCorePackageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
+  const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
+  const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
+  const outDirectoryMeta = {
+    jsenvCorePackageVersion,
+    babelPluginMap,
+    convertMap,
+    compileServerGroupMap,
+    replaceProcessEnvNodeEnv,
+    processEnvNodeEnv,
   }
+  const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
+
+  let previousOutDirectoryMeta
+  try {
+    const source = await readFile(metaFileUrl)
+    previousOutDirectoryMeta = JSON.parse(source)
+  } catch (e) {
+    if (e && e.code === "ENOENT") {
+      previousOutDirectoryMeta = null
+    } else {
+      throw e
+    }
+  }
+
+  if (previousOutDirectoryMeta !== null) {
+    const outDirectoryChanges = getOutDirectoryChanges(previousOutDirectoryMeta, outDirectoryMeta)
+
+    if (outDirectoryChanges) {
+      if (!jsenvDirectoryClean) {
+        logger.warn(
+          createDetailedMessage(
+            `Cleaning jsenv ${urlToBasename(
+              outDirectoryUrl.slice(0, -1),
+            )} directory because configuration has changed.`,
+            {
+              "changes": outDirectoryChanges.namedChanges
+                ? outDirectoryChanges.namedChanges
+                : `something`,
+              "out directory": urlToFileSystemPath(outDirectoryUrl),
+            },
+          ),
+        )
+      }
+      await ensureEmptyDirectory(outDirectoryUrl)
+    }
+  }
+
+  await writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "))
 }
 
 const getOutDirectoryChanges = (previousOutDirectoryMeta, outDirectoryMeta) => {
@@ -784,16 +810,17 @@ const createProjectFileService = ({
   }
 }
 
-const installOutFiles = async ({
+const createOutFilesDescription = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   importDefaultExtension,
   compileServerGroupMap,
   env,
-  onOutFileWritten = () => {},
 }) => {
   const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
+  const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
+  const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
 
   env = {
     ...env,
@@ -802,22 +829,31 @@ const installOutFiles = async ({
     importDefaultExtension,
   }
 
-  const groupMapToString = () => JSON.stringify(compileServerGroupMap, null, "  ")
-  const envToString = () => JSON.stringify(env, null, "  ")
-  const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
-  const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
+  return {
+    [groupMapOutFileUrl]: () => {
+      return JSON.stringify(compileServerGroupMap, null, "  ")
+    },
+    [envOutFileUrl]: () => {
+      return JSON.stringify(env, null, "  ")
+    },
+  }
+}
 
-  await Promise.all([
-    writeFile(groupMapOutFileUrl, groupMapToString()),
-    writeFile(envOutFileUrl, envToString()),
-  ])
-
-  onOutFileWritten(groupMapOutFileUrl)
-  onOutFileWritten(envOutFileUrl)
+const installOutFiles = async (outFilesDescription, { onOutFileWritten = () => {} } = {}) => {
+  await Promise.all(
+    Object.keys(outFilesDescription).map(async (outFileUrl) => {
+      const outFileContent = outFilesDescription[outFileUrl]()
+      await writeFile(outFileUrl, outFileContent)
+      onOutFileWritten(outFileUrl)
+    }),
+  )
 
   return async () => {
-    removeFileSystemNode(groupMapOutFileUrl, { allowUseless: true })
-    removeFileSystemNode(envOutFileUrl)
+    await Promise.all(
+      Object.keys(outFilesDescription).map(async (outFileUrl) => {
+        removeFileSystemNode(outFileUrl, { allowUseless: true })
+      }),
+    )
   }
 }
 

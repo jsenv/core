@@ -24,6 +24,7 @@ const executeParams = {
     ...executeParams,
     measurePerformance: true,
     collectPerformance: true,
+    compileServerCanWriteOnFilesystem: false,
   })
   const expected = {
     status: "completed",
