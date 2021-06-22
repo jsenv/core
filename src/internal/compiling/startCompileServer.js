@@ -819,6 +819,17 @@ const createOutFilesService = async ({
   outDirectoryUrl,
   outJSONFiles,
 }) => {
+  const isOutRootFile = (url) => {
+    if (!urlIsInsideOf(url, outDirectoryUrl)) {
+      return false
+    }
+    const afterOutDirectory = url.slice(outDirectoryUrl.length)
+    if (afterOutDirectory.indexOf("/") > -1) {
+      return false
+    }
+    return true
+  }
+
   if (compileServerCanWriteOnFilesystem) {
     await Promise.all(
       Object.keys(outJSONFiles).map(async (name) => {
@@ -830,7 +841,7 @@ const createOutFilesService = async ({
 
     return async (request) => {
       const requestUrl = resolveUrl(request.ressource.slice(1), projectDirectoryUrl)
-      if (!urlIsInsideOf(requestUrl, outDirectoryUrl)) {
+      if (!isOutRootFile(requestUrl)) {
         return null
       }
       return serveFile(request, {
@@ -842,7 +853,7 @@ const createOutFilesService = async ({
   // serve from memory
   return (request) => {
     const requestUrl = resolveUrl(request.ressource.slice(1), projectDirectoryUrl)
-    if (!urlIsInsideOf(requestUrl, outDirectoryUrl)) {
+    if (!isOutRootFile(requestUrl)) {
       return null
     }
 
