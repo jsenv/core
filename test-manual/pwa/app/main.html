@@ -57,24 +57,23 @@
     </main>
     <script type="module">
       import {
-        listenAddToHomescreenAvailable,
-        promptAddToHomescreen,
+        addToHomescreen,
         displayModeStandalone,
       } from "../../../node_modules/@jsenv/pwa/main.js"
 
-      displayModeStandalone.listen(() => {
+      displayModeStandalone.listenAvailabilityChange(() => {
         document.querySelector("#display-mode").innerHTML = displayModeStandalone.get()
           ? "standalone"
           : "browser tab"
       })
 
-      listenAddToHomescreenAvailable((available) => {
+      addToHomescreen((available) => {
         // app was installed by user (maybe from browser toolbar, maybe from our button)
         document.querySelector("#install").disabled = !available
       })
 
       document.querySelector("#install").onclick = async () => {
-        const accepted = await promptAddToHomescreen()
+        const accepted = await addToHomescreen.prompt()
         if (accepted) {
           document.querySelector("#install").disabled = true
         }
