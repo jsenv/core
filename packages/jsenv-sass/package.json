@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/sass",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Enable sass in jsenv.",
   "license": "MIT",
   "repository": {
@@ -20,7 +20,7 @@
       "import": "./main.js",
       "require": "./dist/commonjs/main.cjs"
     },
-    "./": "./"
+    "./*": "./*"
   },
   "module": "main.js",
   "main": "dist/commonjs/main.cjs",
@@ -30,12 +30,12 @@
     "/main.js"
   ],
   "dependencies": {
-    "@jsenv/server": "6.0.2",
-    "@jsenv/util": "4.1.0",
-    "sass": "1.32.12"
+    "@jsenv/server": "6.1.0",
+    "@jsenv/util": "4.1.1",
+    "sass": "1.35.1"
   },
   "devDependencies": {
-    "@jsenv/node-module-import-map": "13.4.1"
+    "@jsenv/node-module-import-map": "13.6.0"
   },
   "peerDependencies": {
     "@jsenv/core": "*"
