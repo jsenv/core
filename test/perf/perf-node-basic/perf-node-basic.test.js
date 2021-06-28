@@ -1,5 +1,11 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/util"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  urlToBasename,
+  readFileSystemNodeStat,
+  removeFileSystemNode,
+} from "@jsenv/util"
 
 import { execute, launchNode } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -17,18 +23,30 @@ const executeParams = {
   launch: launchNode,
   fileRelativeUrl,
 }
+const jsenvDirectoryUrl = resolveUrl(".jsenv/", testDirectoryUrl)
+
+const testDirectoryPresence = async (source) => {
+  const stats = await readFileSystemNodeStat(source, { nullIfNotFound: true })
+  return Boolean(stats && stats.isDirectory())
+}
+await removeFileSystemNode(jsenvDirectoryUrl, {
+  recursive: true,
+  allowUseless: true,
+})
 
 // measure and collect perf
 {
-  const actual = await execute({
+  const executeResult = await execute({
     ...executeParams,
     measurePerformance: true,
     collectPerformance: true,
     compileServerCanWriteOnFilesystem: false,
   })
+  const actual = {
+    performance: executeResult.performance,
+    jsenvDirectoryPresence: await testDirectoryPresence(jsenvDirectoryUrl),
+  }
   const expected = {
-    status: "completed",
-    namespace: {},
     performance: {
       nodeTiming: actual.performance.nodeTiming,
       timeOrigin: actual.performance.timeOrigin,
@@ -38,18 +56,24 @@ const executeParams = {
         "a to b": assert.any(Number),
       },
     },
+    jsenvDirectoryPresence: false,
   }
   assert({ actual, expected })
 }
 
 // default
 {
-  const actual = await execute({
+  const executeResult = await execute({
     ...executeParams,
   })
+  const actual = {
+    performance: executeResult.performance,
+    jsenvDirectoryPresence: await testDirectoryPresence(jsenvDirectoryUrl),
+  }
   const expected = {
-    status: "completed",
-    namespace: {},
+    performance: undefined,
+    jsenvDirectoryPresence: true,
   }
   assert({ actual, expected })
+  await removeFileSystemNode(jsenvDirectoryUrl, { recursive: true })
 }
