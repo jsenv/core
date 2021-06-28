@@ -1,4 +1,5 @@
 import { createCancellationTokenForProcess } from "@jsenv/cancellation"
+
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
@@ -43,6 +44,8 @@ export const execute = async ({
   babelPluginMap,
   convertMap,
   compileGroupCount = 2,
+  compileServerCanReadFromFilesystem,
+  compileServerCanWriteOnFilesystem,
 }) => {
   const executionPromise = executeJsenvAsyncFunction(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
@@ -78,6 +81,8 @@ export const execute = async ({
       babelPluginMap,
       convertMap,
       compileGroupCount,
+      compileServerCanReadFromFilesystem,
+      compileServerCanWriteOnFilesystem,
     })
 
     const result = await launchAndExecute({

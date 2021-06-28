@@ -1,7 +1,9 @@
 import { basename } from "path"
+
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
+
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { convertCommonJsWithBabel } from "@jsenv/core"
@@ -17,6 +19,7 @@ const compileId = "best"
 
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
+  // compileServerLogLevel: "debug",
   jsenvDirectoryRelativeUrl,
   convertMap: {
     [fileRelativeUrl]: (options) =>

@@ -136,8 +136,8 @@ export const buildProject = async ({
       env,
       babelPluginMap,
 
-      writeOnFilesystem: filesystemCache,
-      useFilesystemAsCache: filesystemCache,
+      compileServerCanReadFromFileSystem: filesystemCache,
+      compileServerCanWriteOnFilesystem: filesystemCache,
 
       // override with potential custom options
       ...rest,

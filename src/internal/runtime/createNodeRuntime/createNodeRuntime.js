@@ -12,7 +12,7 @@ export const createNodeRuntime = async ({
   outDirectoryRelativeUrl,
   nodeRuntimeDecision = "auto",
 }) => {
-  const outDirectoryServerUrl = `${projectDirectoryUrl}${outDirectoryRelativeUrl}`
+  const outDirectoryServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
   const groupMapServerUrl = String(new URL("groupMap.json", outDirectoryServerUrl))
   const envFileServerUrl = String(new URL("env.json", outDirectoryServerUrl))
   const [groupMap, envJson] = await Promise.all([
