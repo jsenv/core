@@ -1,10 +1,11 @@
 import { createDetailedMessage } from "@jsenv/logger"
 import { isCancelError } from "@jsenv/cancellation/main.browser.js"
-import { importJson } from "./importJson.js"
+
+import { fetchJson } from "../browser-utils/fetchJson.js"
 
 export const fetchExploringJson = async ({ cancellationToken } = {}) => {
   try {
-    const exploringInfo = await importJson("/.jsenv/exploring.json", {
+    const exploringInfo = await fetchJson("/.jsenv/exploring.json", {
       headers: { "x-jsenv": "1" },
       cancellationToken,
     })
