@@ -7,6 +7,7 @@
 import { resolveUrl } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
 import { moveImportMap } from "@jsenv/import-map"
+import { createDetailedMessage } from "@jsenv/logger"
 
 import {
   parseHtmlString,
@@ -17,6 +18,7 @@ import {
 } from "./compileHtml.js"
 
 export const transformHTMLSourceFile = async ({
+  logger,
   projectDirectoryUrl,
   fileUrl,
   fileContent,
@@ -25,6 +27,7 @@ export const transformHTMLSourceFile = async ({
   const htmlAst = parseHtmlString(fileContent)
   if (inlineImportMapIntoHTML) {
     await inlineImportmapScripts({
+      logger,
       htmlAst,
       fileUrl,
       projectDirectoryUrl,
@@ -33,7 +36,7 @@ export const transformHTMLSourceFile = async ({
   return stringifyHtmlAst(htmlAst)
 }
 
-const inlineImportmapScripts = async ({ htmlAst, fileUrl }) => {
+const inlineImportmapScripts = async ({ logger, htmlAst, fileUrl }) => {
   const { scripts } = parseHtmlAstRessources(htmlAst)
   const remoteImportmapScripts = scripts.filter((script) => {
     const typeAttribute = getHtmlNodeAttributeByName(script, "type")
@@ -50,6 +53,19 @@ const inlineImportmapScripts = async ({ htmlAst, fileUrl }) => {
       const importMapUrl = resolveUrl(srcAttribute.value, fileUrl)
       const importMapResponse = await fetchUrl(importMapUrl)
       if (importMapResponse.status !== 200) {
+        logger.warn(
+          createDetailedMessage(
+            importMapResponse.status === 404
+              ? `Cannot inline importmap script because file cannot be found.`
+              : `Cannot inline importmap script due to unexpected response status (${importMapResponse.status}).`,
+            {
+              "importmap script src": srcAttribute.value,
+              "importmap url": importMapUrl,
+              "html url": fileUrl,
+            },
+          ),
+        )
+
         return
       }
 

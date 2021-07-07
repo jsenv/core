@@ -230,6 +230,7 @@ export const startCompileServer = async ({
       compileCacheStrategy,
     }),
     "service:project file": createProjectFileService({
+      logger,
       projectDirectoryUrl,
       projectFileRequestedCallback,
       projectFileEtagEnabled,
@@ -746,6 +747,7 @@ const createBrowserScriptService = ({ projectDirectoryUrl, outDirectoryRelativeU
 }
 
 const createProjectFileService = ({
+  logger,
   projectDirectoryUrl,
   projectFileRequestedCallback,
   projectFileEtagEnabled,
@@ -771,6 +773,7 @@ const createProjectFileService = ({
         throw e
       }
       const htmlTransformed = await transformHTMLSourceFile({
+        logger,
         projectDirectoryUrl,
         fileUrl,
         fileContent,
