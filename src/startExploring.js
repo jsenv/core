@@ -27,6 +27,7 @@ export const startExploring = async ({
   outDirectoryName,
   toolbar = true,
   livereloading = true,
+  inlineImportMapIntoHTML = true,
   ...rest
 }) => {
   return executeJsenvAsyncFunction(async () => {
@@ -51,6 +52,7 @@ export const startExploring = async ({
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
       explorableConfig,
+      inlineImportMapIntoHTML,
     })
     const serveExplorableListAsJson = createExplorableListAsJsonService({
       projectDirectoryUrl,
@@ -87,6 +89,7 @@ export const startExploring = async ({
       },
       jsenvDirectoryRelativeUrl,
       outDirectoryName,
+      inlineImportMapIntoHTML,
       ...rest,
     })
 
@@ -177,6 +180,7 @@ const createExploringDataService = ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   explorableConfig,
+  inlineImportMapIntoHTML,
 }) => {
   return (request) => {
     if (
@@ -198,6 +202,7 @@ const createExploringDataService = ({
           jsenvCoreDirectoryUrl,
         ),
         explorableConfig,
+        inlineImportMapIntoHTML,
       }
       const json = JSON.stringify(data)
       return {

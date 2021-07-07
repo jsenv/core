@@ -4,17 +4,20 @@ import { computeCompileIdFromGroupId } from "../runtime/computeCompileIdFromGrou
 import { resolveBrowserGroup } from "../runtime/resolveBrowserGroup.js"
 
 const redirect = async () => {
-  const { outDirectoryRelativeUrl, exploringHtmlFileRelativeUrl } = await fetchExploringJson()
+  const { outDirectoryRelativeUrl, exploringHtmlFileRelativeUrl, inlineImportMapIntoHTML } =
+    await fetchExploringJson()
 
   window.location.href = await decideExploringIndexUrl({
     outDirectoryRelativeUrl,
     exploringHtmlFileRelativeUrl,
+    inlineImportMapIntoHTML,
   })
 }
 
 const decideExploringIndexUrl = async ({
   outDirectoryRelativeUrl,
   exploringHtmlFileRelativeUrl,
+  inlineImportMapIntoHTML,
 }) => {
   // for now it's not possible to avoid compilation
   // I need to list what is needed to support that
@@ -24,26 +27,30 @@ const decideExploringIndexUrl = async ({
   // by the html page
   const canAvoidCompilation = false
 
-  if (canAvoidCompilation && (await browserSupportsAllFeatures())) {
+  if (canAvoidCompilation && (await browserSupportsAllFeatures({ inlineImportMapIntoHTML }))) {
     return `/${exploringHtmlFileRelativeUrl}`
   }
   const compileId = await decideCompileId({ outDirectoryRelativeUrl })
   return `/${outDirectoryRelativeUrl}${compileId}/${exploringHtmlFileRelativeUrl}`
 }
 
-const browserSupportsAllFeatures = async () => {
+const browserSupportsAllFeatures = async ({ inlineImportMapIntoHTML }) => {
   // we MUST also take into account the babelPluginMap
 
   // start testing importmap support first and not in paralell
   // so that there is not module script loaded beore importmap is injected
   // it would log an error in chrome console and return undefined
   const hasImportmap = await supportsImportmap({
+    //  chrome supports inline but not remote importmap
+    // https://github.com/WICG/import-maps/issues/235
+
     // at this stage we won't know if the html file will use
     // an importmap or not and if that importmap is inline or specified with an src
+    // so we should test if browser support local and remote importmap.
+    // But there exploring server can inline importmap by transforming html
+    // and in that case we can test only the local importmap support
     // so we test importmap support and the remote one
-    // because chrome supports inline but not remote
-    // https://github.com/WICG/import-maps/issues/235
-    remote: true,
+    remote: !inlineImportMapIntoHTML,
   })
   if (!hasImportmap) {
     return false

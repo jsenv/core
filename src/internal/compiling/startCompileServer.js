@@ -26,19 +26,21 @@ import {
   registerDirectoryLifecycle,
   urlIsInsideOf,
   urlToBasename,
+  urlToExtension,
 } from "@jsenv/util"
 
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
-import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
+import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { createCallbackList } from "../createCallbackList.js"
+import { sourcemapMainFileUrl, sourcemapMappingFileUrl } from "../jsenvInternalFiles.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
 import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
-import { sourcemapMainFileUrl, sourcemapMappingFileUrl } from "../jsenvInternalFiles.js"
+import { transformHTMLSourceFile } from "./transformHTMLSourceFile.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -99,6 +101,7 @@ export const startCompileServer = async ({
   customServices = {},
   livereloadSSE = false,
   scriptInjections = [],
+  inlineImportMapIntoHTML = true,
 }) => {
   assertArguments({
     projectDirectoryUrl,
@@ -229,6 +232,7 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
       projectFileRequestedCallback,
       projectFileEtagEnabled,
+      inlineImportMapIntoHTML,
     }),
   }
 
@@ -744,11 +748,43 @@ const createProjectFileService = ({
   projectDirectoryUrl,
   projectFileRequestedCallback,
   projectFileEtagEnabled,
+  inlineImportMapIntoHTML,
 }) => {
-  return (request) => {
+  return async (request) => {
     const { ressource } = request
     const relativeUrl = ressource.slice(1)
     projectFileRequestedCallback(relativeUrl, request)
+
+    const requestUrl = resolveUrl(ressource, request.origin)
+    if (urlToExtension(requestUrl) === ".html") {
+      const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
+      let fileContent
+      try {
+        fileContent = await readFile(fileUrl, { as: "string" })
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          return {
+            status: 404,
+          }
+        }
+        throw e
+      }
+      const htmlTransformed = await transformHTMLSourceFile({
+        projectDirectoryUrl,
+        fileUrl,
+        fileContent,
+        inlineImportMapIntoHTML,
+      })
+      return {
+        status: 200,
+        headers: {
+          "content-type": "text/html",
+          "content-length": Buffer.byteLength(htmlTransformed),
+          "cache-control": "no-cache",
+        },
+        body: htmlTransformed,
+      }
+    }
 
     const responsePromise = serveFile(request, {
       rootDirectoryUrl: projectDirectoryUrl,
