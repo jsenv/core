@@ -20,35 +20,39 @@ const buildsToGenerate = [
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvBrowserSystemFileInfo.jsenvRelativeUrl]: "./jsenv-browser-system.js",
+      [jsenvBrowserSystemFileInfo.jsenvRelativeUrl]:
+        jsenvBrowserSystemFileInfo.jsenvBuildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvExploringRedirectorJsFileInfo.jsenvRelativeUrl]: "./jsenv-exploring-redirector.js",
+      [jsenvExploringRedirectorJsFileInfo.jsenvRelativeUrl]:
+        jsenvExploringRedirectorJsFileInfo.jsenvBuildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvExploringIndexJsFileInfo.jsenvRelativeUrl]: "./jsenv-exploring-index.js",
+      [jsenvExploringIndexJsFileInfo.jsenvRelativeUrl]:
+        jsenvExploringIndexJsFileInfo.jsenvBuildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvToolbarInjectorFileInfo.jsenvRelativeUrl]: "./jsenv-toolbar-injector.js",
+      [jsenvToolbarInjectorFileInfo.jsenvRelativeUrl]:
+        jsenvToolbarInjectorFileInfo.jsenvBuildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvToolbarJsFileInfo.jsenvRelativeUrl]: "./jsenv-toolbar.js",
+      [jsenvToolbarJsFileInfo.jsenvRelativeUrl]: jsenvToolbarJsFileInfo.jsenvBuildRelativeUrl,
     },
   },
 ]

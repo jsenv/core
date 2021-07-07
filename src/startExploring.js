@@ -161,7 +161,7 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
     // "/.jsenv/jsenv-toolbar.js.map"
     // we could also inline sourcemap but it's not yet possible
     // inside buildProject
-    if (request.ressource === "/.jsenv/jsenv-toolbar.js.map") {
+    if (request.ressource === `/.jsenv/${jsenvToolbarJsFileInfo.sourcemapFilename}`) {
       const jsenvToolbarJsBuildSourcemapServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}.map`
       return {
         status: 307,
