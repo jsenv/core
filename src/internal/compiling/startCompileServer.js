@@ -178,6 +178,7 @@ export const startCompileServer = async ({
     importDefaultExtension,
     compileServerGroupMap,
     env,
+    inlineImportMapIntoHTML,
   })
   if (compileServerCanWriteOnFilesystem) {
     await setupOutDirectory({
@@ -806,6 +807,7 @@ const createOutJSONFiles = ({
   replaceProcessEnvNodeEnv,
   processEnvNodeEnv,
   env,
+  inlineImportMapIntoHTML,
 }) => {
   const outJSONFiles = {}
   const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
@@ -833,6 +835,7 @@ const createOutJSONFiles = ({
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     importDefaultExtension,
+    inlineImportMapIntoHTML,
   }
   outJSONFiles.env = {
     url: envOutFileUrl,

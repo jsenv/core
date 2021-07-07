@@ -1,24 +1,40 @@
-import { fetchUrl } from "../browser-utils/fetch-browser.js"
-import { fetchExploringJson } from "./fetchExploringJson.js"
 import { computeCompileIdFromGroupId } from "../runtime/computeCompileIdFromGroupId.js"
 import { resolveBrowserGroup } from "../runtime/resolveBrowserGroup.js"
+import { importJson } from "./importJson.js"
+import { fetchExploringJson } from "./fetchExploringJson.js"
 
 const redirect = async () => {
-  const { outDirectoryRelativeUrl, exploringHtmlFileRelativeUrl, inlineImportMapIntoHTML } =
-    await fetchExploringJson()
+  const groupMapUrl = `/${outDirectoryRelativeUrl}groupMap.json`
+  const envFileUrl = `/${outDirectoryRelativeUrl}env.json`
+  const [groupMap, envJson, { outDirectoryRelativeUrl, exploringHtmlFileRelativeUrl }] =
+    await Promise.all([importJson(groupMapUrl), importJson(envFileUrl), fetchExploringJson()])
 
-  window.location.href = await decideExploringIndexUrl({
-    outDirectoryRelativeUrl,
-    exploringHtmlFileRelativeUrl,
+  const compileId = await decideCompileId({ groupMap, outDirectoryRelativeUrl })
+  const groupInfo = groupMap[compileId]
+  const { inlineImportMapIntoHTML } = envJson
+
+  const canUseNativeModuleSystem = await browserSupportsAllFeatures({
+    groupInfo,
     inlineImportMapIntoHTML,
   })
+
+  if (canUseNativeModuleSystem) {
+    window.location.href = `/${exploringHtmlFileRelativeUrl}`
+    return
+  }
+
+  window.location.href = `/${outDirectoryRelativeUrl}${compileId}/${exploringHtmlFileRelativeUrl}`
 }
 
-const decideExploringIndexUrl = async ({
-  outDirectoryRelativeUrl,
-  exploringHtmlFileRelativeUrl,
-  inlineImportMapIntoHTML,
-}) => {
+const decideCompileId = async ({ groupMap }) => {
+  const compileId = computeCompileIdFromGroupId({
+    groupId: resolveBrowserGroup(groupMap),
+    groupMap,
+  })
+  return compileId
+}
+
+const browserSupportsAllFeatures = async ({ groupInfo, inlineImportMapIntoHTML }) => {
   // for now it's not possible to avoid compilation
   // I need to list what is needed to support that
   // for instance it means we should collect coverage from chrome devtools
@@ -26,16 +42,18 @@ const decideExploringIndexUrl = async ({
   // It also means we should be able somehow to collect namespace of module imported
   // by the html page
   const canAvoidCompilation = false
-
-  if (canAvoidCompilation && (await browserSupportsAllFeatures({ inlineImportMapIntoHTML }))) {
-    return `/${exploringHtmlFileRelativeUrl}`
+  if (!canAvoidCompilation) {
+    return false
   }
-  const compileId = await decideCompileId({ outDirectoryRelativeUrl })
-  return `/${outDirectoryRelativeUrl}${compileId}/${exploringHtmlFileRelativeUrl}`
-}
 
-const browserSupportsAllFeatures = async ({ inlineImportMapIntoHTML }) => {
-  // we MUST also take into account the babelPluginMap
+  const requiredBabelPluginCount = countRequiredBabelPlugins(groupInfo)
+  if (requiredBabelPluginCount > 0) {
+    return false
+  }
+
+  if (groupInfo.jsenvPluginRequiredNameArray.length > 0) {
+    return false
+  }
 
   // start testing importmap support first and not in paralell
   // so that there is not module script loaded beore importmap is injected
@@ -67,6 +85,21 @@ const browserSupportsAllFeatures = async ({ inlineImportMapIntoHTML }) => {
   }
 
   return true
+}
+
+const countRequiredBabelPlugins = (groupInfo) => {
+  const { babelPluginRequiredNameArray } = groupInfo
+  let count = babelPluginRequiredNameArray.length
+
+  // When instrumentation CAN be handed by playwright
+  // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
+  // "transform-instrument" becomes non mandatory
+  // TODO: set window.PLAYWRIGHT_COVERAGE to true in specific circustances
+  const transformInstrumentIndex = babelPluginRequiredNameArray.indexOf("transform-instrument")
+  if (transformInstrumentIndex > -1 && window.PLAYWRIGHT_COVERAGE) {
+    count--
+  }
+  return count
 }
 
 const supportsImportmap = async ({ remote = true } = {}) => {
@@ -134,18 +167,6 @@ const supportsTopLevelAwait = async () => {
   } catch (e) {
     return false
   }
-}
-
-const decideCompileId = async ({ outDirectoryRelativeUrl }) => {
-  const compileServerGroupMapUrl = `/${outDirectoryRelativeUrl}groupMap.json`
-  const compileServerGroupMapResponse = await fetchUrl(compileServerGroupMapUrl)
-  const compileServerGroupMap = await compileServerGroupMapResponse.json()
-
-  const compileId = computeCompileIdFromGroupId({
-    groupId: resolveBrowserGroup(compileServerGroupMap),
-    groupMap: compileServerGroupMap,
-  })
-  return compileId
 }
 
 redirect()
