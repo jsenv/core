@@ -2,7 +2,7 @@ import { urlToContentType } from "@jsenv/server"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 
 import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
-import { jsenvToolbarHtmlUrl } from "../jsenvInternalFiles.js"
+import { jsenvToolbarHtmlFileInfo } from "../jsenvInternalFiles.js"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { compileIdToBabelPluginMap } from "./jsenvCompilerForJavaScript.js"
@@ -60,7 +60,7 @@ export const jsenvCompilerForHtml = ({
           // todo: this is dirty because it means
           // compile server is aware of exploring and jsenv toolbar
           // instead this should be moved to startExploring
-          ...(originalFileUrl === jsenvToolbarHtmlUrl ? [] : scriptInjections),
+          ...(originalFileUrl === jsenvToolbarHtmlFileInfo.url ? [] : scriptInjections),
         ],
       })
       const { scripts } = parseHtmlAstRessources(htmlAst)

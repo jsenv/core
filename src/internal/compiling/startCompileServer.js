@@ -35,7 +35,7 @@ import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { createCallbackList } from "../createCallbackList.js"
-import { sourcemapMainFileUrl, sourcemapMappingFileUrl } from "../jsenvInternalFiles.js"
+import { sourcemapMainFileInfo, sourcemapMappingFileInfo } from "../jsenvInternalFiles.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
@@ -712,9 +712,12 @@ const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {
 }
 
 const createBrowserScriptService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) => {
-  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl)
+  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(
+    sourcemapMainFileInfo.url,
+    projectDirectoryUrl,
+  )
   const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
-    sourcemapMappingFileUrl,
+    sourcemapMappingFileInfo.url,
     projectDirectoryUrl,
   )
 

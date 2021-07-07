@@ -9,14 +9,14 @@ import {
 } from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 import {
-  sourcemapMainFileUrl,
-  sourcemapMappingFileUrl,
-  jsenvExploringRedirectorHtmlUrl,
-  jsenvExploringRedirectorJsBuildUrl,
-  jsenvExploringIndexHtmlUrl,
-  jsenvExploringIndexJsBuildUrl,
-  jsenvToolbarInjectorBuildUrl,
-  jsenvToolbarJsBuildUrl,
+  sourcemapMainFileInfo,
+  sourcemapMappingFileInfo,
+  jsenvExploringRedirectorHtmlFileInfo,
+  jsenvExploringRedirectorJsFileInfo,
+  jsenvExploringIndexHtmlFileInfo,
+  jsenvExploringIndexJsFileInfo,
+  jsenvToolbarInjectorFileInfo,
+  jsenvToolbarJsFileInfo,
 } from "./internal/jsenvInternalFiles.js"
 
 export const startExploring = async ({
@@ -40,7 +40,7 @@ export const startExploring = async ({
       outDirectoryName,
     })
     const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-      jsenvToolbarInjectorBuildUrl,
+      jsenvToolbarInjectorFileInfo.jsenvBuildUrl,
       projectDirectoryUrl,
     )
 
@@ -98,19 +98,19 @@ export const startExploring = async ({
 
 const createRedirectFilesService = ({ projectDirectoryUrl }) => {
   const jsenvExploringRedirectorHtmlRelativeUrlForProject = urlToRelativeUrl(
-    jsenvExploringRedirectorHtmlUrl,
+    jsenvExploringRedirectorHtmlFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
   )
   const jsenvExploringRedirectorJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    jsenvExploringRedirectorJsBuildUrl,
+    jsenvExploringRedirectorJsFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
   )
   const jsenvExploringJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    jsenvExploringIndexJsBuildUrl,
+    jsenvExploringIndexJsFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
   )
   const jsenvToolbarJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    jsenvToolbarJsBuildUrl,
+    jsenvToolbarJsFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
   )
 
@@ -191,12 +191,15 @@ const createExploringDataService = ({
         outDirectoryRelativeUrl,
         jsenvDirectoryRelativeUrl: urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl),
         exploringHtmlFileRelativeUrl: urlToRelativeUrl(
-          jsenvExploringIndexHtmlUrl,
+          jsenvExploringIndexHtmlFileInfo.url,
           projectDirectoryUrl,
         ),
-        sourcemapMainFileRelativeUrl: urlToRelativeUrl(sourcemapMainFileUrl, jsenvCoreDirectoryUrl),
+        sourcemapMainFileRelativeUrl: urlToRelativeUrl(
+          sourcemapMainFileInfo.url,
+          jsenvCoreDirectoryUrl,
+        ),
         sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
-          sourcemapMappingFileUrl,
+          sourcemapMappingFileInfo.url,
           jsenvCoreDirectoryUrl,
         ),
         explorableConfig,

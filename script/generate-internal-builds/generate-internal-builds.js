@@ -2,11 +2,11 @@
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  jsenvBrowserSystemRelativeUrl,
-  jsenvExploringRedirectorJsRelativeUrl,
-  jsenvExploringIndexJsRelativeUrl,
-  jsenvToolbarInjectorRelativeUrl,
-  jsenvToolbarJsRelativeUrl,
+  jsenvBrowserSystemFileInfo,
+  jsenvExploringRedirectorJsFileInfo,
+  jsenvExploringIndexJsFileInfo,
+  jsenvToolbarInjectorFileInfo,
+  jsenvToolbarJsFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
 const commonParams = {
@@ -20,35 +20,35 @@ const buildsToGenerate = [
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvBrowserSystemRelativeUrl]: "./jsenv-browser-system.js",
+      [jsenvBrowserSystemFileInfo.jsenvRelativeUrl]: "./jsenv-browser-system.js",
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvExploringRedirectorJsRelativeUrl]: "./jsenv-exploring-redirector.js",
+      [jsenvExploringRedirectorJsFileInfo.jsenvRelativeUrl]: "./jsenv-exploring-redirector.js",
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvExploringIndexJsRelativeUrl]: "./jsenv-exploring-index.js",
+      [jsenvExploringIndexJsFileInfo.jsenvRelativeUrl]: "./jsenv-exploring-index.js",
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvToolbarInjectorRelativeUrl]: "./jsenv-toolbar-injector.js",
+      [jsenvToolbarInjectorFileInfo.jsenvRelativeUrl]: "./jsenv-toolbar-injector.js",
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvToolbarJsRelativeUrl]: "./jsenv-toolbar.js",
+      [jsenvToolbarJsFileInfo.jsenvRelativeUrl]: "./jsenv-toolbar.js",
     },
   },
 ]

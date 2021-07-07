@@ -7,7 +7,7 @@ import {
   COMPILE_ID_BUILD_COMMONJS,
   COMPILE_ID_BUILD_COMMONJS_FILES,
 } from "../CONSTANTS.js"
-import { jsenvBrowserSystemBuildUrl } from "../jsenvInternalFiles.js"
+import { jsenvBrowserSystemFileInfo } from "../jsenvInternalFiles.js"
 import { compileFile } from "./compileFile.js"
 import { jsenvCompilerForDynamicBuild } from "./jsenvCompilerForDynamicBuild.js"
 import { jsenvCompilerForHtml } from "./jsenvCompilerForHtml.js"
@@ -44,7 +44,7 @@ export const createCompiledFileService = ({
   sourcemapExcludeSources,
 }) => {
   const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
-    jsenvBrowserSystemBuildUrl,
+    jsenvBrowserSystemFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
   )
 
