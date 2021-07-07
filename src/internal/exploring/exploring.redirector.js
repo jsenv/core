@@ -1,5 +1,5 @@
-import { fetchExploringJson } from "./fetchExploringJson.js"
 import { scanBrowserRuntimeFeatures } from "../runtime/createBrowserRuntime/scanBrowserRuntimeFeatures.js"
+import { fetchExploringJson } from "./fetchExploringJson.js"
 
 const redirect = async () => {
   const [browserRuntimeFeaturesReport, { exploringHtmlFileRelativeUrl }] = await Promise.all([

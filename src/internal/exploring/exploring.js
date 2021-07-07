@@ -19,9 +19,6 @@ const run = async () => {
 
   const files = await fetchJSON(`/.jsenv/explorables.json`, {
     method: "GET",
-    headers: {
-      "x-jsenv": "1",
-    },
   })
 
   const compileServerOrigin = document.location.origin

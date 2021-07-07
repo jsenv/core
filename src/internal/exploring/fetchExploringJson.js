@@ -6,7 +6,6 @@ import { fetchJson } from "../browser-utils/fetchJson.js"
 export const fetchExploringJson = async ({ cancellationToken } = {}) => {
   try {
     const exploringInfo = await fetchJson("/.jsenv/exploring.json", {
-      headers: { "x-jsenv": "1" },
       cancellationToken,
     })
     return exploringInfo

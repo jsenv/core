@@ -181,11 +181,7 @@ const createExploringDataService = ({
   explorableConfig,
 }) => {
   return (request) => {
-    if (
-      request.ressource === "/.jsenv/exploring.json" &&
-      request.method === "GET" &&
-      "x-jsenv" in request.headers
-    ) {
+    if (request.ressource === "/.jsenv/exploring.json" && request.method === "GET") {
       const data = {
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
@@ -225,11 +221,7 @@ const createExplorableListAsJsonService = ({
   explorableConfig,
 }) => {
   return async (request) => {
-    if (
-      request.ressource === "/.jsenv/explorables.json" &&
-      request.method === "GET" &&
-      "x-jsenv" in request.headers
-    ) {
+    if (request.ressource === "/.jsenv/explorables.json" && request.method === "GET") {
       const structuredMetaMapRelativeForExplorable = {}
       Object.keys(explorableConfig).forEach((explorableGroup) => {
         const explorableGroupConfig = explorableConfig[explorableGroup]

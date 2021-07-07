@@ -282,7 +282,7 @@
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
-  function _await$3(value, then, direct) {
+  function _await$4(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -294,7 +294,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$4(f) {
+  function _async$5(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -321,7 +321,7 @@
     }
   }
 
-  var fetchUsingXHR = _async$4(function (url) {
+  var fetchUsingXHR = _async$5(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         _ref$cancellationToke = _ref.cancellationToken,
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
@@ -404,7 +404,7 @@
     }
 
     xhr.send(body);
-    return _await$3(headersPromise, function () {
+    return _await$4(headersPromise, function () {
       // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
       var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
       var responseStatus = xhr.status;
@@ -412,7 +412,7 @@
       var responseHeaders = getHeadersFromXHR(xhr);
 
       var readBody = function readBody() {
-        return _await$3(bodyPromise, function () {
+        return _await$4(bodyPromise, function () {
           var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
           if (status === 0) {
@@ -448,7 +448,7 @@
         return _call$2(text, JSON.parse);
       };
 
-      var blob = _async$4(function () {
+      var blob = _async$5(function () {
         if (!hasBlob) {
           throw new Error("blob not supported");
         }
@@ -485,7 +485,7 @@
         });
       };
 
-      var formData = _async$4(function () {
+      var formData = _async$5(function () {
         if (!hasFormData) {
           throw new Error("formData not supported");
         }
@@ -666,7 +666,7 @@
     return form;
   };
 
-  var blobToArrayBuffer = _async$4(function (blob) {
+  var blobToArrayBuffer = _async$5(function (blob) {
     var reader = new FileReader();
     var promise = fileReaderReady(reader);
     reader.readAsArrayBuffer(blob);
@@ -715,7 +715,9 @@
     return view.buffer;
   };
 
-  function _await$2(value, then, direct) {
+  var _excluded$1 = ["cancellationToken", "mode"];
+
+  function _await$3(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -727,7 +729,7 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchNative = _async$3(function (url) {
+  var fetchNative = _async$4(function (url) {
 
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -735,7 +737,7 @@
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
         _ref$mode = _ref.mode,
         mode = _ref$mode === void 0 ? "cors" : _ref$mode,
-        options = _objectWithoutProperties(_ref, ["cancellationToken", "mode"]);
+        options = _objectWithoutProperties(_ref, _excluded$1);
 
     var abortController = new AbortController();
     var cancelError;
@@ -745,7 +747,7 @@
     });
     var response;
     return _continue(_catch$1(function () {
-      return _await$2(window.fetch(url, _objectSpread2({
+      return _await$3(window.fetch(url, _objectSpread2({
         signal: abortController.signal,
         mode: mode
       }, options)), function (_window$fetch) {
@@ -808,7 +810,7 @@
     return value && value.then ? value.then(then) : then(value);
   }
 
-  function _async$3(f) {
+  function _async$4(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -823,6 +825,39 @@
   }
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
+
+  function _await$2(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _async$3(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  var fetchJson = _async$3(function (url) {
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    return _await$2(fetchUrl(url, options), function (response) {
+      return _await$2(response.json());
+    });
+  });
 
   function _await$1(value, then, direct) {
     if (direct) {
@@ -869,14 +904,12 @@
         cancellationToken = _ref.cancellationToken;
 
     return _catch(function () {
-      return _await$1(fetchUrl("/.jsenv/exploring.json", {
+      return _await$1(fetchJson("/.jsenv/exploring.json", {
         headers: {
           "x-jsenv": "1"
         },
         cancellationToken: cancellationToken
-      }), function (exploringJsonResponse) {
-        return _await$1(exploringJsonResponse.json());
-      });
+      }));
     }, function (e) {
       if (isCancelError(e)) {
         throw e;
@@ -1178,6 +1211,20 @@
     updateIframeOverflowOnParentWindow();
   };
 
+  var _excluded = ["clickToFocus", "clickToClose"];
+
+  function _await(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
   function _call$1(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
@@ -1193,20 +1240,6 @@
 
   var notificationPreference = createPreference("notification");
 
-  function _await(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  var arrayOfOpenedNotifications = [];
-
   function _async$1(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
@@ -1221,6 +1254,7 @@
     };
   }
 
+  var arrayOfOpenedNotifications = [];
   var renderToolbarNotification = function renderToolbarNotification() {
     var notifCheckbox = document.querySelector("#toggle-notifs");
     notifCheckbox.checked = getNotificationPreference();
@@ -1295,7 +1329,7 @@
         clickToFocus = _ref$clickToFocus === void 0 ? false : _ref$clickToFocus,
         _ref$clickToClose = _ref.clickToClose,
         clickToClose = _ref$clickToClose === void 0 ? false : _ref$clickToClose,
-        options = _objectWithoutProperties(_ref, ["clickToFocus", "clickToClose"]);
+        options = _objectWithoutProperties(_ref, _excluded);
 
     return _call$1(requestPermission, function (permission) {
       if (permission === "granted") {
@@ -1432,7 +1466,7 @@
     // _e = _iteratorError
     // _i = _iterator
     // _s = _step
-    var _i = arr && (typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"]);
+    var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
 
     if (_i == null) return;
     var _arr = [];
@@ -2530,4 +2564,4 @@
 
 }());
 
-//# sourceMappingURL=jsenv-toolbar.js.map
+//# sourceMappingURL=jsenv_toolbar.js.map

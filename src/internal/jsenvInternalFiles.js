@@ -9,8 +9,22 @@ export const jsenvNodeSystemFileInfo = {
 
 export const jsenvBrowserSystemFileInfo = {
   jsenvRelativeUrl: "./src/internal/browser-launcher/jsenv-browser-system.js",
-  jsenvBuildRelativeUrl: "./dist/jsenv_browser_system.js",
+  jsenvBuildRelativeUrl: "./jsenv_browser_system.js",
   jsenvBuildUrl: resolveUrl("./dist/jsenv_browser_system.js", jsenvCoreDirectoryUrl),
+}
+
+export const jsenvCompileProxyHtmlFileInfo = {
+  jsenvRelativeUrl: "./src/internal/browser-launcher/jsenv_compile_proxy.html",
+  url: resolveUrl(
+    "./src/internal/browser-launcher/jsenv_compile_proxy.html",
+    jsenvCoreDirectoryUrl,
+  ),
+}
+
+export const jsenvCompileProxyFileInfo = {
+  jsenvRelativeUrl: "./src/internal/browser-launcher/jsenv_compile_proxy.js",
+  jsenvBuildRelativeUrl: "./jsenv_compile_proxy.js",
+  jsenvBuildUrl: resolveUrl("./dist/jsenv_compile_proxy.js", jsenvCoreDirectoryUrl),
 }
 
 export const sourcemapMainFileInfo = {
@@ -29,7 +43,7 @@ export const jsenvExploringRedirectorHtmlFileInfo = {
 
 export const jsenvExploringRedirectorJsFileInfo = {
   jsenvRelativeUrl: "./src/internal/exploring/exploring.redirector.js",
-  jsenvBuildRelativeUrl: "./dist/jsenv_exploring_redirector.js",
+  jsenvBuildRelativeUrl: "./jsenv_exploring_redirector.js",
   url: resolveUrl("./src/internal/exploring/exploring.redirector.js", jsenvCoreDirectoryUrl),
   jsenvBuildUrl: resolveUrl("./dist/jsenv_exploring_redirector.js", jsenvCoreDirectoryUrl),
 }
@@ -37,7 +51,7 @@ export const jsenvExploringRedirectorJsFileInfo = {
 // Exploring index and toolbar
 export const jsenvExploringIndexJsFileInfo = {
   jsenvRelativeUrl: "./src/internal/exploring/exploring.js",
-  jsenvBuildRelativeUrl: "./dist/jsenv_exploring_index.js",
+  jsenvBuildRelativeUrl: "./jsenv_exploring_index.js",
   jsenvBuildUrl: resolveUrl("./dist/jsenv_exploring_index.js", jsenvCoreDirectoryUrl),
 }
 export const jsenvExploringIndexHtmlFileInfo = {
@@ -48,12 +62,12 @@ export const jsenvToolbarHtmlFileInfo = {
 }
 export const jsenvToolbarInjectorFileInfo = {
   jsenvRelativeUrl: "./src/internal/toolbar/toolbar.injector.js",
-  jsenvBuildRelativeUrl: "./dist/jsenv_toolbar_injector.js",
+  jsenvBuildRelativeUrl: "./jsenv_toolbar_injector.js",
   jsenvBuildUrl: resolveUrl("./dist/jsenv_toolbar_injector.js", jsenvCoreDirectoryUrl),
 }
 export const jsenvToolbarJsFileInfo = {
   jsenvRelativeUrl: "./src/internal/toolbar/toolbar.main.js",
-  jsenvBuildRelativeUrl: "./dist/jsenv_toolbar.js",
+  jsenvBuildRelativeUrl: "./jsenv_toolbar.js",
   url: resolveUrl("./src/internal/toolbar/toolbar.main.js", jsenvCoreDirectoryUrl),
   jsenvBuildUrl: resolveUrl("./dist/jsenv_toolbar.js", jsenvCoreDirectoryUrl),
   sourcemapFilename: "jsenv_toolbar.js.map",

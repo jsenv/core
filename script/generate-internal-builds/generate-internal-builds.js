@@ -3,6 +3,7 @@ import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   jsenvBrowserSystemFileInfo,
+  jsenvCompileProxyFileInfo,
   jsenvExploringRedirectorJsFileInfo,
   jsenvExploringIndexJsFileInfo,
   jsenvToolbarInjectorFileInfo,
@@ -22,6 +23,13 @@ const buildsToGenerate = [
     entryPointMap: {
       [jsenvBrowserSystemFileInfo.jsenvRelativeUrl]:
         jsenvBrowserSystemFileInfo.jsenvBuildRelativeUrl,
+    },
+  },
+  {
+    ...commonParams,
+    format: "global",
+    entryPointMap: {
+      [jsenvCompileProxyFileInfo.jsenvRelativeUrl]: jsenvCompileProxyFileInfo.jsenvBuildRelativeUrl,
     },
   },
   {

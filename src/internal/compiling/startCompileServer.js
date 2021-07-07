@@ -35,7 +35,11 @@ import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { createCallbackList } from "../createCallbackList.js"
-import { sourcemapMainFileInfo, sourcemapMappingFileInfo } from "../jsenvInternalFiles.js"
+import {
+  jsenvCompileProxyFileInfo,
+  sourcemapMainFileInfo,
+  sourcemapMappingFileInfo,
+} from "../jsenvInternalFiles.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
@@ -204,6 +208,9 @@ export const startCompileServer = async ({
       compileServerCanWriteOnFilesystem,
       outDirectoryUrl,
       outJSONFiles,
+    }),
+    "service: compile proxy": createCompileProxyService({
+      projectDirectoryUrl,
     }),
     "service:compiled file": createCompiledFileService({
       cancellationToken,
@@ -722,11 +729,7 @@ const createBrowserScriptService = ({ projectDirectoryUrl, outDirectoryRelativeU
   )
 
   return (request) => {
-    if (
-      request.method === "GET" &&
-      request.ressource === "/.jsenv/compile-meta.json" &&
-      "x-jsenv" in request.headers
-    ) {
+    if (request.method === "GET" && request.ressource === "/.jsenv/compile-meta.json") {
       const body = JSON.stringify({
         outDirectoryRelativeUrl,
         errorStackRemapping: true,
@@ -921,6 +924,27 @@ const createOutFilesService = async ({
       },
       body,
     }
+  }
+}
+
+const createCompileProxyService = ({ projectDirectoryUrl }) => {
+  const jsenvCompileProxyRelativeUrlForProject = urlToRelativeUrl(
+    jsenvCompileProxyFileInfo.jsenvBuildUrl,
+    projectDirectoryUrl,
+  )
+
+  return (request) => {
+    if (request.ressource === "/.jsenv/jsenv_compile_proxy.js") {
+      const jsenvCompileProxyBuildServerUrl = `${request.origin}/${jsenvCompileProxyRelativeUrlForProject}`
+      return {
+        status: 307,
+        headers: {
+          location: jsenvCompileProxyBuildServerUrl,
+        },
+      }
+    }
+
+    return null
   }
 }
 

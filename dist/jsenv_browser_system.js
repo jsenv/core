@@ -1769,6 +1769,8 @@
     return view.buffer;
   };
 
+  var _excluded = ["cancellationToken", "mode"];
+
   function _await$a(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -1789,7 +1791,7 @@
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
         _ref$mode = _ref.mode,
         mode = _ref$mode === void 0 ? "cors" : _ref$mode,
-        options = _objectWithoutProperties(_ref, ["cancellationToken", "mode"]);
+        options = _objectWithoutProperties(_ref, _excluded);
 
     var abortController = new AbortController();
     var cancelError;
@@ -3065,7 +3067,6 @@
         var lastScript = scripts[scripts.length - 1];
 
         if (lastScript) {
-          lastScript.src;
           lastAutoImportDeps = deps; // if this is already a System load, then the instantiate has already begun
           // so this re-import has no consequence
 
@@ -5066,4 +5067,4 @@
 
 }());
 
-//# sourceMappingURL=jsenv-browser-system.js.map
+//# sourceMappingURL=jsenv_browser_system.js.map

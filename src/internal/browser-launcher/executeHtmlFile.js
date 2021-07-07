@@ -1,5 +1,7 @@
 import { extname } from "path"
-import { resolveUrl, assertFilePresence } from "@jsenv/util"
+import { resolveUrl, assertFilePresence, urlToRelativeUrl } from "@jsenv/util"
+
+import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
 
 import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
@@ -25,20 +27,26 @@ export const executeHtmlFile = async (
 
   await assertFilePresence(fileUrl)
 
-  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}otherwise/`
-  const compileDirectoryRemoteUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
-  const fileClientUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
-  await page.goto(fileClientUrl, { timeout: 0 })
+  const compileProxyProjectRelativeUrl = urlToRelativeUrl(
+    jsenvCompileProxyHtmlFileInfo.url,
+    projectDirectoryUrl,
+  )
+  const compileProxyClientUrl = resolveUrl(compileProxyProjectRelativeUrl, compileServerOrigin)
+  await page.goto(compileProxyClientUrl)
 
-  await page.waitForFunction(
+  const browserRuntimeFeaturesReport = await page.evaluate(
     /* istanbul ignore next */
     () => {
       // eslint-disable-next-line no-undef
-      return Boolean(window.__jsenv__)
+      return window.scanBrowserRuntimeFeatures()
     },
-    [],
-    { timeout: 0 },
   )
+  // ici si on peut avoid compilation alors on pourrait visiter la page de base
+  const { compileId } = browserRuntimeFeaturesReport
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
+  const compileDirectoryRemoteUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
+  const fileClientUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
+  await page.goto(fileClientUrl, { timeout: 0 })
 
   let executionResult
   try {
