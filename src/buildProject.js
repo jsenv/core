@@ -138,6 +138,7 @@ export const buildProject = async ({
 
       compileServerCanReadFromFileSystem: filesystemCache,
       compileServerCanWriteOnFilesystem: filesystemCache,
+      inlineImportMapIntoHTML: false,
 
       // override with potential custom options
       ...rest,
