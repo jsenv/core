@@ -98,7 +98,7 @@ export const startExploring = async ({
 
 const createRedirectFilesService = ({ projectDirectoryUrl }) => {
   const jsenvExploringRedirectorHtmlRelativeUrlForProject = urlToRelativeUrl(
-    jsenvExploringRedirectorHtmlFileInfo.jsenvBuildUrl,
+    jsenvExploringRedirectorHtmlFileInfo.url,
     projectDirectoryUrl,
   )
   const jsenvExploringRedirectorJsBuildRelativeUrlForProject = urlToRelativeUrl(
