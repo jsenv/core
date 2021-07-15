@@ -91,7 +91,8 @@ const alertCompilationRequiredReasons = (featuresReport) => {
 
   // eslint-disable-next-line no-alert
   window.alert(
-    `-${parts.join(`
+    `Compilation is required because:
+- ${parts.join(`
 -`)}`,
   )
 }

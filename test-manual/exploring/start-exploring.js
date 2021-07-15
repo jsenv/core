@@ -47,6 +47,6 @@ startExploring({
   stopOnPackageVersionChange: false,
   // useFilesystemAsCache: false,
   // writeOnFileSystem: false,
-  compileGroupCount: 1,
+  compileGroupCount: 2,
   // livereloading: false,
 })
