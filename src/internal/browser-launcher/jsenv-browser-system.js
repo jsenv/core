@@ -55,7 +55,6 @@ const executionResultPromise = readyPromise.then(async () => {
     startTime: navigationStartTime,
     endTime: Date.now(),
     fileExecutionResultMap,
-    performance: readPerformance(),
   }
 })
 
@@ -156,28 +155,6 @@ const getBrowserRuntime = memoize(async () => {
 
   return browserRuntime
 })
-
-const readPerformance = () => {
-  if (!window.performance) {
-    return null
-  }
-
-  return {
-    timeOrigin: window.performance.timeOrigin,
-    timing: window.performance.timing.toJSON(),
-    navigation: window.performance.navigation.toJSON(),
-    measures: readPerformanceMeasures(),
-  }
-}
-
-const readPerformanceMeasures = () => {
-  const measures = {}
-  const measurePerfEntries = window.performance.getEntriesByType("measure")
-  measurePerfEntries.forEach((measurePerfEntry) => {
-    measures[measurePerfEntry.name] = measurePerfEntry.duration
-  })
-  return measures
-}
 
 window.__jsenv__ = {
   executionResultPromise,
