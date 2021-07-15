@@ -1,34 +1,43 @@
 export const enableVariant = (rootNode, variables) => {
-  let nodesWithAttribute = Array.from(rootNode.querySelectorAll(`[${attributeName}]`))
-  let nodesWithActiveAttribute = Array.from(
-    rootNode.querySelectorAll(`[${attributeNameWhenActive}]`),
-  )
+  let nodesNotMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingACondition}]`))
+  let nodesMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingAMatch}]`))
+
+  const conditionIsMatching = (condition, key, value) => {
+    const [conditionKey, conditionValue] = condition.split(":")
+    if (conditionKey !== key) {
+      return false
+    }
+    if (conditionValue !== value) {
+      return false
+    }
+    return true
+  }
 
   Object.keys(variables).forEach((key) => {
     const variableValue = variables[key]
 
-    nodesWithAttribute = nodesWithAttribute.filter((node) => {
-      const [keyCandidate, value] = node.getAttribute(attributeName).split(":")
-      if (keyCandidate !== key) return true
-      if (value !== variableValue) return true
-
-      renameAttribute(node, attributeName, attributeNameWhenActive)
-      return false
+    nodesNotMatching = nodesNotMatching.filter((node) => {
+      const condition = node.getAttribute(attributeIndicatingACondition)
+      if (conditionIsMatching(condition, key, variableValue)) {
+        renameAttribute(node, attributeIndicatingACondition, attributeIndicatingAMatch)
+        return false
+      }
+      return true
     })
 
-    nodesWithActiveAttribute = nodesWithActiveAttribute.filter((node) => {
-      const [keyCandidate, value] = node.getAttribute(attributeNameWhenActive).split(":")
-      if (keyCandidate !== key) return true
-      if (value === variableValue) return true
-
-      renameAttribute(node, attributeNameWhenActive, attributeName)
+    nodesMatching = nodesMatching.filter((node) => {
+      const condition = node.getAttribute(attributeIndicatingAMatch)
+      if (conditionIsMatching(condition, key, variableValue)) {
+        return true
+      }
+      renameAttribute(node, attributeIndicatingAMatch, attributeIndicatingACondition)
       return false
     })
   })
 }
 
-const attributeNameWhenActive = `data-when-active`
-const attributeName = `data-when`
+const attributeIndicatingACondition = `data-when`
+const attributeIndicatingAMatch = `data-when-active`
 
 const renameAttribute = (node, name, newName) => {
   node.setAttribute(newName, node.getAttribute(name))
