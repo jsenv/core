@@ -1,5 +1,4 @@
-import { extname } from "path"
-import { resolveUrl, assertFilePresence, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, assertFilePresence, urlToRelativeUrl, urlToExtension } from "@jsenv/util"
 
 import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
@@ -21,7 +20,7 @@ export const executeHtmlFile = async (
   },
 ) => {
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
-  if (extname(fileUrl) !== ".html") {
+  if (urlToExtension(fileUrl) !== ".html") {
     throw new Error(`the file to execute must use .html extension, received ${fileRelativeUrl}.`)
   }
 
@@ -42,6 +41,8 @@ export const executeHtmlFile = async (
     },
   )
   // ici si on peut avoid compilation alors on pourrait visiter la page de base
+  // mais il faudrait alors un moyen d'obtenir:
+  // coverage et namespace des scripts qui s'éxécute
   const { compileId } = browserRuntimeFeaturesReport
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
   const compileDirectoryRemoteUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
