@@ -14,6 +14,7 @@ import { renderToolbarNotification } from "./notification/toolbar.notification.j
 import { renderToolbarTheme } from "./theme/toolbar.theme.js"
 import { renderToolbarAnimation } from "./animation/toolbar.animation.js"
 import { renderExecutionInToolbar } from "./execution/toolbar.execution.js"
+import { renderCompilationInToolbar } from "./compilation/toolbar.compilation.js"
 import { initToolbarEventSource } from "./eventsource/toolbar.eventsource.js"
 import { makeToolbarResponsive } from "./responsive/toolbar.responsive.js"
 
@@ -25,11 +26,12 @@ const renderToolbar = async () => {
   // this should not block the whole toolbar rendering + interactivity
   const exploringConfig = await fetchExploringJson()
   const { outDirectoryRelativeUrl, livereloading } = exploringConfig
-  const outDirectoryRemoteUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin))
-  const executedFileRelativeUrl = urlToOriginalRelativeUrl(
+  const compileInfo = getCompileInfo({
     executedFileCompiledUrl,
-    outDirectoryRemoteUrl,
-  )
+    outDirectoryRelativeUrl,
+    compileServerOrigin,
+  })
+  const executedFileRelativeUrl = compileInfo.fileRelativeUrl
 
   const toolbarOverlay = document.querySelector("#toolbar-overlay")
   toolbarOverlay.onclick = () => {
@@ -68,6 +70,7 @@ const renderToolbar = async () => {
   renderToolbarAnimation()
   renderToolbarTheme()
   renderExecutionInToolbar({ executedFileRelativeUrl })
+  renderCompilationInToolbar({ compileInfo })
   // this might become active but we need to detect this somehow
   deactivateToolbarSection(document.querySelector("#file-list-link"))
   initToolbarEventSource({ executedFileRelativeUrl, livereloading })
@@ -170,13 +173,27 @@ const showToolbar = ({ animate = true } = {}) => {
   }
 }
 
-const urlToOriginalRelativeUrl = (url, outDirectoryRemoteUrl) => {
-  if (urlIsInsideOf(url, outDirectoryRemoteUrl)) {
-    const afterCompileDirectory = urlToRelativeUrl(url, outDirectoryRemoteUrl)
-    const fileRelativeUrl = afterCompileDirectory.slice(afterCompileDirectory.indexOf("/") + 1)
-    return fileRelativeUrl
+const getCompileInfo = ({
+  executedFileCompiledUrl,
+  outDirectoryRelativeUrl,
+  compileServerOrigin,
+}) => {
+  const outDirectoryRemoteUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin))
+  if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryRemoteUrl)) {
+    const afterCompileDirectory = urlToRelativeUrl(executedFileCompiledUrl, outDirectoryRemoteUrl)
+    const slashIndex = afterCompileDirectory.indexOf("/")
+    const fileRelativeUrl = afterCompileDirectory.slice(slashIndex + 1)
+    return {
+      fileRelativeUrl,
+      outDirectoryRelativeUrl,
+      compileId: afterCompileDirectory.slice(0, slashIndex),
+    }
   }
-  return new URL(url).pathname.slice(1)
+  return {
+    fileRelativeUrl: new URL(executedFileCompiledUrl).pathname.slice(1),
+    outDirectoryRelativeUrl,
+    compileId: null,
+  }
 }
 
 const sendEventToParent = (type, value) => {

@@ -2,12 +2,30 @@ export const enableVariant = (rootNode, variables) => {
   let nodesNotMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingACondition}]`))
   let nodesMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingAMatch}]`))
 
-  const conditionIsMatching = (condition, key, value) => {
-    const [conditionKey, conditionValue] = condition.split(":")
-    if (conditionKey !== key) {
+  const parseCondition = (conditionAttributeValue) => {
+    const colonIndex = conditionAttributeValue.indexOf(":")
+    if (colonIndex === -1) {
+      return {
+        key: conditionAttributeValue,
+        value: undefined,
+      }
+    }
+    return {
+      key: conditionAttributeValue.slice(0, colonIndex),
+      value: conditionAttributeValue.slice(colonIndex + 1),
+    }
+  }
+
+  const conditionIsMatching = (conditionAttributeValue, key, value) => {
+    const condition = parseCondition(conditionAttributeValue)
+    if (condition.key !== key) {
       return false
     }
-    if (conditionValue !== value) {
+    // the condition do not specify a value, any value is ok
+    if (condition.value === undefined) {
+      return true
+    }
+    if (condition.value !== value) {
       return false
     }
     return true

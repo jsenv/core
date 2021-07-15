@@ -71,6 +71,21 @@
           </div>
         </section>
 
+        <section id="compile-indicator">
+          <div data-when="compilation">
+            <div class="tooltip">
+              Files are compiled because <span class="reason">Y</span>
+            </div>
+            <button>
+              <svg id="compilationSvg" class="tooltipIcon">
+                <use
+                  xlink:href="./compilation/toolbar_compilation.svg#toolbar_compilation_icon"
+                ></use>
+              </svg>
+            </button>
+          </div>
+        </section>
+
         <div style="width: 100%"></div>
 
         <section id="eventsource-indicator" data-responsive-toolbar-element>

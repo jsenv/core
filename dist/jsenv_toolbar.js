@@ -219,28 +219,6 @@
     return value && _typeof(value) === "object" && value.name === "CANCEL_ERROR";
   };
 
-  /* eslint-disable no-eq-null, eqeqeq */
-  function arrayLikeToArray(arr, len) {
-    if (len == null || len > arr.length) len = arr.length;
-    var arr2 = new Array(len);
-
-    for (var i = 0; i < len; i++) {
-      arr2[i] = arr[i];
-    }
-
-    return arr2;
-  }
-
-  /* eslint-disable consistent-return */
-  function unsupportedIterableToArray(o, minLen) {
-    if (!o) return;
-    if (typeof o === "string") return arrayLikeToArray(o, minLen);
-    var n = Object.prototype.toString.call(o).slice(8, -1);
-    if (n === "Object" && o.constructor) n = o.constructor.name;
-    if (n === "Map" || n === "Set") return Array.from(o);
-    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
-  }
-
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
 
@@ -1448,89 +1426,71 @@
     document.documentElement.setAttribute("data-animation-disabled", "");
   };
 
-  // eslint-disable-next-line consistent-return
-  var arrayWithHoles = (function (arr) {
-    if (Array.isArray(arr)) return arr;
-  });
-
-  function _iterableToArrayLimit(arr, i) {
-    // this is an expanded form of \`for...of\` that properly supports abrupt completions of
-    // iterators etc. variable names have been minimised to reduce the size of this massive
-    // helper. sometimes spec compliance is annoying :(
-    //
-    // _n = _iteratorNormalCompletion
-    // _d = _didIteratorError
-    // _e = _iteratorError
-    // _i = _iterator
-    // _s = _step
-    var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
-
-    if (_i == null) return;
-    var _arr = [];
-    var _n = true;
-    var _d = false;
-
-    var _s, _e;
-
-    try {
-      for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) {
-        _arr.push(_s.value);
-
-        if (i && _arr.length === i) break;
-      }
-    } catch (err) {
-      _d = true;
-      _e = err;
-    } finally {
-      try {
-        if (!_n && _i["return"] != null) _i["return"]();
-      } finally {
-        if (_d) throw _e;
-      }
-    }
-
-    return _arr;
-  }
-
-  var nonIterableRest = (function () {
-    throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-  });
-
-  var _slicedToArray = (function (arr, i) {
-    return arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
-  });
-
   var enableVariant = function enableVariant(rootNode, variables) {
-    var nodesWithAttribute = Array.from(rootNode.querySelectorAll("[".concat(attributeName, "]")));
-    var nodesWithActiveAttribute = Array.from(rootNode.querySelectorAll("[".concat(attributeNameWhenActive, "]")));
+    var nodesNotMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingACondition, "]")));
+    var nodesMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingAMatch, "]")));
+
+    var parseCondition = function parseCondition(conditionAttributeValue) {
+      var colonIndex = conditionAttributeValue.indexOf(":");
+
+      if (colonIndex === -1) {
+        return {
+          key: conditionAttributeValue,
+          value: undefined
+        };
+      }
+
+      return {
+        key: conditionAttributeValue.slice(0, colonIndex),
+        value: conditionAttributeValue.slice(colonIndex + 1)
+      };
+    };
+
+    var conditionIsMatching = function conditionIsMatching(conditionAttributeValue, key, value) {
+      var condition = parseCondition(conditionAttributeValue);
+
+      if (condition.key !== key) {
+        return false;
+      } // the condition do not specify a value, any value is ok
+
+
+      if (condition.value === undefined) {
+        return true;
+      }
+
+      if (condition.value !== value) {
+        return false;
+      }
+
+      return true;
+    };
+
     Object.keys(variables).forEach(function (key) {
       var variableValue = variables[key];
-      nodesWithAttribute = nodesWithAttribute.filter(function (node) {
-        var _node$getAttribute$sp = node.getAttribute(attributeName).split(":"),
-            _node$getAttribute$sp2 = _slicedToArray(_node$getAttribute$sp, 2),
-            keyCandidate = _node$getAttribute$sp2[0],
-            value = _node$getAttribute$sp2[1];
+      nodesNotMatching = nodesNotMatching.filter(function (node) {
+        var condition = node.getAttribute(attributeIndicatingACondition);
 
-        if (keyCandidate !== key) return true;
-        if (value !== variableValue) return true;
-        renameAttribute(node, attributeName, attributeNameWhenActive);
-        return false;
+        if (conditionIsMatching(condition, key, variableValue)) {
+          renameAttribute(node, attributeIndicatingACondition, attributeIndicatingAMatch);
+          return false;
+        }
+
+        return true;
       });
-      nodesWithActiveAttribute = nodesWithActiveAttribute.filter(function (node) {
-        var _node$getAttribute$sp3 = node.getAttribute(attributeNameWhenActive).split(":"),
-            _node$getAttribute$sp4 = _slicedToArray(_node$getAttribute$sp3, 2),
-            keyCandidate = _node$getAttribute$sp4[0],
-            value = _node$getAttribute$sp4[1];
+      nodesMatching = nodesMatching.filter(function (node) {
+        var condition = node.getAttribute(attributeIndicatingAMatch);
 
-        if (keyCandidate !== key) return true;
-        if (value === variableValue) return true;
-        renameAttribute(node, attributeNameWhenActive, attributeName);
+        if (conditionIsMatching(condition, key, variableValue)) {
+          return true;
+        }
+
+        renameAttribute(node, attributeIndicatingAMatch, attributeIndicatingACondition);
         return false;
       });
     });
   };
-  var attributeNameWhenActive = "data-when-active";
-  var attributeName = "data-when";
+  var attributeIndicatingACondition = "data-when";
+  var attributeIndicatingAMatch = "data-when-active";
 
   var renameAttribute = function renameAttribute(node, name, newName) {
     node.setAttribute(newName, node.getAttribute(name));
@@ -1754,6 +1714,41 @@
       input.style.width = "".concat(size, "ch");
     } else {
       input.style.width = "".concat(input.value.length, "ch");
+    }
+  };
+
+  var renderCompilationInToolbar = function renderCompilationInToolbar(_ref) {
+    var compileInfo = _ref.compileInfo;
+    // reset file execution indicator ui
+    updateCompilationIndicator({
+      compileInfo: compileInfo
+    });
+    removeForceHideElement(document.querySelector("#compile-indicator"));
+    activateToolbarSection(document.querySelector("#compile-indicator"));
+  };
+
+  var updateCompilationIndicator = function updateCompilationIndicator() {
+    var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        compileInfo = _ref2.compileInfo;
+
+    var compilationIndicator = document.querySelector("#compile-indicator");
+    enableVariant(compilationIndicator, {
+      compilation: compileInfo.compileId
+    });
+    var variantNode = compilationIndicator.querySelector("[data-when-active]");
+
+    if (variantNode) {
+      variantNode.querySelector("button").onclick = function () {
+        return toggleTooltip(compilationIndicator);
+      }; // const compileDirectoryText = variantNode.querySelector(".tooltip .compile-directory")
+      // compileDirectoryText.title = `${compileInfo.outDirectoryRelativeUrl}${compileInfo.compileId}`
+      // compileDirectoryText.textContent = compileInfo.compileId
+      // TODO: reason should be collected from the result
+      // of scanBrowserFeatures() and do its best to describe
+      // why the files needs to be compiled
+
+
+      variantNode.querySelector(".tooltip .reason").textContent = "Unknown reason";
     }
   };
 
@@ -2401,8 +2396,12 @@
     return _call(fetchExploringJson, function (exploringConfig) {
       var outDirectoryRelativeUrl = exploringConfig.outDirectoryRelativeUrl,
           livereloading = exploringConfig.livereloading;
-      var outDirectoryRemoteUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
-      var executedFileRelativeUrl = urlToOriginalRelativeUrl(executedFileCompiledUrl, outDirectoryRemoteUrl);
+      var compileInfo = getCompileInfo({
+        executedFileCompiledUrl: executedFileCompiledUrl,
+        outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+        compileServerOrigin: compileServerOrigin
+      });
+      var executedFileRelativeUrl = compileInfo.fileRelativeUrl;
       var toolbarOverlay = document.querySelector("#toolbar-overlay");
 
       toolbarOverlay.onclick = function () {
@@ -2444,6 +2443,9 @@
       renderToolbarTheme();
       renderExecutionInToolbar({
         executedFileRelativeUrl: executedFileRelativeUrl
+      });
+      renderCompilationInToolbar({
+        compileInfo: compileInfo
       }); // this might become active but we need to detect this somehow
 
       deactivateToolbarSection(document.querySelector("#file-list-link"));
@@ -2558,14 +2560,28 @@
     };
   };
 
-  var urlToOriginalRelativeUrl = function urlToOriginalRelativeUrl(url, outDirectoryRemoteUrl) {
-    if (urlIsInsideOf(url, outDirectoryRemoteUrl)) {
-      var afterCompileDirectory = urlToRelativeUrl(url, outDirectoryRemoteUrl);
-      var fileRelativeUrl = afterCompileDirectory.slice(afterCompileDirectory.indexOf("/") + 1);
-      return fileRelativeUrl;
+  var getCompileInfo = function getCompileInfo(_ref3) {
+    var executedFileCompiledUrl = _ref3.executedFileCompiledUrl,
+        outDirectoryRelativeUrl = _ref3.outDirectoryRelativeUrl,
+        compileServerOrigin = _ref3.compileServerOrigin;
+    var outDirectoryRemoteUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
+
+    if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryRemoteUrl)) {
+      var afterCompileDirectory = urlToRelativeUrl(executedFileCompiledUrl, outDirectoryRemoteUrl);
+      var slashIndex = afterCompileDirectory.indexOf("/");
+      var fileRelativeUrl = afterCompileDirectory.slice(slashIndex + 1);
+      return {
+        fileRelativeUrl: fileRelativeUrl,
+        outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+        compileId: afterCompileDirectory.slice(0, slashIndex)
+      };
     }
 
-    return new URL(url).pathname.slice(1);
+    return {
+      fileRelativeUrl: new URL(executedFileCompiledUrl).pathname.slice(1),
+      outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+      compileId: null
+    };
   };
 
   var sendEventToParent = function sendEventToParent(type, value) {
