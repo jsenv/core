@@ -9,7 +9,11 @@ import { fetchUrl } from "@jsenv/server"
 import { moveImportMap } from "@jsenv/import-map"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { jsenvToolbarInjectorFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
+import {
+  jsenvBrowserSystemFileInfo,
+  jsenvToolbarInjectorFileInfo,
+} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
@@ -17,6 +21,9 @@ import {
   replaceHtmlNode,
   stringifyHtmlAst,
   manipulateHtmlAst,
+  removeHtmlNodeAttribute,
+  getHtmlNodeTextNode,
+  setHtmlNodeText,
 } from "./compileHtml.js"
 
 export const transformHTMLSourceFile = async ({
@@ -37,12 +44,19 @@ export const transformHTMLSourceFile = async ({
     })
   }
 
+  const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
+    jsenvBrowserSystemFileInfo.jsenvBuildUrl,
+    projectDirectoryUrl,
+  )
   const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
     jsenvToolbarInjectorFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
   )
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
+      {
+        src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
+      },
       ...(jsenvToolbarInjection && fileUrl !== jsenvToolbarInjectorFileInfo.url
         ? [
             {
@@ -52,8 +66,37 @@ export const transformHTMLSourceFile = async ({
         : []),
     ],
   })
-  // il faudrait aussi transformer tous les script type module en script normaux utilisant un
-  // import dynamique et écrire ce résultat dans window.__jsenv__.executionResultPromise
+
+  const { scripts } = parseHtmlAstRessources(htmlAst)
+  scripts.forEach((script) => {
+    const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+    const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+
+    // remote
+    if (typeAttribute && typeAttribute.value === "module" && srcAttribute) {
+      removeHtmlNodeAttribute(script, typeAttribute)
+      setHtmlNodeText(
+        script,
+        `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(srcAttribute.value)})`,
+      )
+      return
+    }
+    // inline
+    const textNode = getHtmlNodeTextNode(script)
+    if (typeAttribute && typeAttribute.value === "module" && textNode) {
+      const specifierAsBase64 = stringifyDataUrl({
+        mediaType: "application/javascript",
+        data: textNode.value,
+      })
+      removeHtmlNodeAttribute(script, srcAttribute)
+      setHtmlNodeText(
+        script,
+        `window.__jsenv__.executeFileUsingDynamicImport(${specifierAsBase64})`,
+      )
+      return
+    }
+  })
+
   return stringifyHtmlAst(htmlAst)
 }
 

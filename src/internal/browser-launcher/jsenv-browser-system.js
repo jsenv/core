@@ -1,5 +1,6 @@
 /* eslint-env browser */
 
+import { unevalException } from "../unevalException.js"
 import { createBrowserRuntime } from "../runtime/createBrowserRuntime/createBrowserRuntime.js"
 import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
 import { fetchUrl } from "../browser-utils/fetch-browser.js"
@@ -58,7 +59,30 @@ const executionResultPromise = readyPromise.then(async () => {
   }
 })
 
-const importFile = (specifier) => {
+const executeFileUsingDynamicImport = async (specifier) => {
+  const { currentScript } = document
+  const fileExecutionResultPromise = (async () => {
+    try {
+      const namespace = await import(specifier)
+      const executionResult = {
+        status: "completed",
+        namespace,
+      }
+      return executionResult
+    } catch (e) {
+      const executionResult = {
+        status: "errored",
+        exceptionSource: unevalException(e),
+      }
+      onExecutionError(executionResult, { currentScript })
+      return executionResult
+    }
+  })()
+  fileExecutionMap[specifier] = fileExecutionResultPromise
+  return fileExecutionResultPromise
+}
+
+const executeFileUsingSystemJs = (specifier) => {
   // si on a déja importer ce fichier ??
   // if (specifier in fileExecutionMap) {
 
@@ -158,5 +182,6 @@ const getBrowserRuntime = memoize(async () => {
 
 window.__jsenv__ = {
   executionResultPromise,
-  importFile,
+  executeFileUsingDynamicImport,
+  executeFileUsingSystemJs,
 }

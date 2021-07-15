@@ -2,6 +2,7 @@ import { urlToContentType } from "@jsenv/server"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 
 import {
+  jsenvBrowserSystemFileInfo,
   jsenvToolbarHtmlFileInfo,
   jsenvToolbarInjectorFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
@@ -39,7 +40,6 @@ export const jsenvCompilerForHtml = ({
   moduleOutFormat,
   importMetaFormat,
 
-  jsenvBrowserBuildUrlRelativeToProject,
   jsenvToolbarInjection,
 }) => {
   const contentType = urlToContentType(originalFileUrl)
@@ -47,6 +47,10 @@ export const jsenvCompilerForHtml = ({
     return null
   }
 
+  const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
+    jsenvBrowserSystemFileInfo.jsenvBuildUrl,
+    projectDirectoryUrl,
+  )
   const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
     jsenvToolbarInjectorFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
@@ -93,7 +97,7 @@ export const jsenvCompilerForHtml = ({
           removeHtmlNodeAttribute(script, srcAttribute)
           setHtmlNodeText(
             script,
-            `window.__jsenv__.importFile(${JSON.stringify(srcAttribute.value)})`,
+            `window.__jsenv__.executeFileUsingSystemJs(${JSON.stringify(srcAttribute.value)})`,
           )
           return
         }
@@ -109,7 +113,10 @@ export const jsenvCompilerForHtml = ({
 
           removeHtmlNodeAttribute(script, typeAttribute)
           removeHtmlNodeAttribute(script, srcAttribute)
-          setHtmlNodeText(script, `window.__jsenv__.importFile(${JSON.stringify(specifier)})`)
+          setHtmlNodeText(
+            script,
+            `window.__jsenv__.executeFileUsingSystemJs(${JSON.stringify(specifier)})`,
+          )
           return
         }
       })

@@ -1,5 +1,6 @@
 import { serveFile } from "@jsenv/server"
-import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, resolveDirectoryUrl } from "@jsenv/util"
+
 import { urlToCompileInfo } from "@jsenv/core/src/internal/url-conversion.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
@@ -7,7 +8,6 @@ import {
   COMPILE_ID_BUILD_COMMONJS,
   COMPILE_ID_BUILD_COMMONJS_FILES,
 } from "../CONSTANTS.js"
-import { jsenvBrowserSystemFileInfo } from "../jsenvInternalFiles.js"
 import { compileFile } from "./compileFile.js"
 import { jsenvCompilerForDynamicBuild } from "./jsenvCompilerForDynamicBuild.js"
 import { jsenvCompilerForHtml } from "./jsenvCompilerForHtml.js"
@@ -43,11 +43,6 @@ export const createCompiledFileService = ({
   compileCacheStrategy,
   sourcemapExcludeSources,
 }) => {
-  const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
-    jsenvBrowserSystemFileInfo.jsenvBuildUrl,
-    projectDirectoryUrl,
-  )
-
   return (request) => {
     const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
@@ -124,7 +119,6 @@ export const createCompiledFileService = ({
       writeOnFilesystem,
       sourcemapExcludeSources,
 
-      jsenvBrowserBuildUrlRelativeToProject,
       jsenvToolbarInjection,
     }
     const compilerCandidates = [...jsenvCompilerCandidates, ...customCompilers]
