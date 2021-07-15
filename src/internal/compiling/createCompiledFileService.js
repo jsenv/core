@@ -35,7 +35,7 @@ export const createCompiledFileService = ({
   groupMap,
   convertMap,
   customCompilers,
-  scriptInjections,
+  jsenvToolbarInjection,
 
   projectFileRequestedCallback,
   useFilesystemAsCache,
@@ -125,7 +125,7 @@ export const createCompiledFileService = ({
       sourcemapExcludeSources,
 
       jsenvBrowserBuildUrlRelativeToProject,
-      scriptInjections,
+      jsenvToolbarInjection,
     }
     const compilerCandidates = [...jsenvCompilerCandidates, ...customCompilers]
     compilerCandidates.find((compilerCandidate) => {

@@ -4,17 +4,19 @@
  * This is to force inlining of importmap
  */
 
-import { resolveUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
 import { moveImportMap } from "@jsenv/import-map"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { jsenvToolbarInjectorFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
   getHtmlNodeAttributeByName,
   replaceHtmlNode,
   stringifyHtmlAst,
+  manipulateHtmlAst,
 } from "./compileHtml.js"
 
 export const transformHTMLSourceFile = async ({
@@ -23,6 +25,7 @@ export const transformHTMLSourceFile = async ({
   fileUrl,
   fileContent,
   inlineImportMapIntoHTML,
+  jsenvToolbarInjection, // for toolbar
 }) => {
   const htmlAst = parseHtmlString(fileContent)
   if (inlineImportMapIntoHTML) {
@@ -33,6 +36,24 @@ export const transformHTMLSourceFile = async ({
       projectDirectoryUrl,
     })
   }
+
+  const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
+    jsenvToolbarInjectorFileInfo.jsenvBuildUrl,
+    projectDirectoryUrl,
+  )
+  manipulateHtmlAst(htmlAst, {
+    scriptInjections: [
+      ...(jsenvToolbarInjection && fileUrl !== jsenvToolbarInjectorFileInfo.url
+        ? [
+            {
+              src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
+            },
+          ]
+        : []),
+    ],
+  })
+  // il faudrait aussi transformer tous les script type module en script normaux utilisant un
+  // import dynamique et écrire ce résultat dans window.__jsenv__.executionResultPromise
   return stringifyHtmlAst(htmlAst)
 }
 

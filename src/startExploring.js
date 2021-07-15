@@ -15,7 +15,6 @@ import {
   jsenvExploringRedirectorJsFileInfo,
   jsenvExploringIndexHtmlFileInfo,
   jsenvExploringIndexJsFileInfo,
-  jsenvToolbarInjectorFileInfo,
   jsenvToolbarJsFileInfo,
 } from "./internal/jsenvInternalFiles.js"
 
@@ -25,7 +24,7 @@ export const startExploring = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryName,
-  toolbar = true,
+  jsenvToolbar = true,
   livereloading = true,
   inlineImportMapIntoHTML = true,
   ...rest
@@ -39,10 +38,6 @@ export const startExploring = async ({
       jsenvDirectoryRelativeUrl,
       outDirectoryName,
     })
-    const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-      jsenvToolbarInjectorFileInfo.jsenvBuildUrl,
-      projectDirectoryUrl,
-    )
 
     const redirectFiles = createRedirectFilesService({
       projectDirectoryUrl,
@@ -73,15 +68,7 @@ export const startExploring = async ({
       stopOnPackageVersionChange: true,
       watchAndSyncImportMap: true,
       compileGroupCount: 2,
-      scriptInjections: [
-        ...(toolbar
-          ? [
-              {
-                src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
-              },
-            ]
-          : []),
-      ],
+      jsenvToolbarInjection: jsenvToolbar,
       customServices: {
         "service:exploring-redirect": (request) => redirectFiles(request),
         "service:exploring-data": (request) => serveExploringData(request),

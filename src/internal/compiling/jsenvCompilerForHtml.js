@@ -1,8 +1,11 @@
 import { urlToContentType } from "@jsenv/server"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 
+import {
+  jsenvToolbarHtmlFileInfo,
+  jsenvToolbarInjectorFileInfo,
+} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
-import { jsenvToolbarHtmlFileInfo } from "../jsenvInternalFiles.js"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { compileIdToBabelPluginMap } from "./jsenvCompilerForJavaScript.js"
@@ -37,12 +40,17 @@ export const jsenvCompilerForHtml = ({
   importMetaFormat,
 
   jsenvBrowserBuildUrlRelativeToProject,
-  scriptInjections,
+  jsenvToolbarInjection,
 }) => {
   const contentType = urlToContentType(originalFileUrl)
   if (contentType !== "text/html") {
     return null
   }
+
+  const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
+    jsenvToolbarInjectorFileInfo.jsenvBuildUrl,
+    projectDirectoryUrl,
+  )
 
   return {
     compile: async (htmlBeforeCompilation) => {
@@ -57,10 +65,13 @@ export const jsenvCompilerForHtml = ({
           {
             src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
           },
-          // todo: this is dirty because it means
-          // compile server is aware of exploring and jsenv toolbar
-          // instead this should be moved to startExploring
-          ...(originalFileUrl === jsenvToolbarHtmlFileInfo.url ? [] : scriptInjections),
+          ...(jsenvToolbarInjection && originalFileUrl !== jsenvToolbarHtmlFileInfo.url
+            ? [
+                {
+                  src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
+                },
+              ]
+            : []),
         ],
       })
       const { scripts } = parseHtmlAstRessources(htmlAst)

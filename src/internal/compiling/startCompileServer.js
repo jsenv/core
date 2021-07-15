@@ -104,7 +104,7 @@ export const startCompileServer = async ({
   livereloadLogLevel = "info",
   customServices = {},
   livereloadSSE = false,
-  scriptInjections = [],
+  jsenvToolbarInjection = false,
   inlineImportMapIntoHTML = true,
 }) => {
   assertArguments({
@@ -241,7 +241,7 @@ export const startCompileServer = async ({
       customCompilers,
       moduleOutFormat,
       importMetaFormat,
-      scriptInjections,
+      jsenvToolbarInjection,
 
       projectFileRequestedCallback,
       useFilesystemAsCache: compileServerCanReadFromFilesystem,
@@ -771,6 +771,7 @@ const createProjectFileService = ({
   projectFileRequestedCallback,
   projectFileEtagEnabled,
   inlineImportMapIntoHTML,
+  jsenvToolbarInjection
 }) => {
   return async (request) => {
     const { ressource } = request
@@ -797,6 +798,7 @@ const createProjectFileService = ({
         fileUrl,
         fileContent,
         inlineImportMapIntoHTML,
+        jsenvToolbarInjection,
       })
       return {
         status: 200,
