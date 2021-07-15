@@ -1,5 +1,5 @@
-.compilationSvg {
-  width: 25px;
-  height: 25px;
-  margin: 7px;
+#compilation_info ul {
+  margin: 0;
+  margin-bottom: 0.7em;
+  padding-left: 1em;
 }

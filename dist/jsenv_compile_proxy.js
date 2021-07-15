@@ -629,7 +629,7 @@
     };
   }
 
-  function _call(body, then, direct) {
+  function _call$1(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -749,7 +749,7 @@
       };
 
       var text = function text() {
-        return _call(readBody, function (_ref2) {
+        return _call$1(readBody, function (_ref2) {
           var responseBody = _ref2.responseBody,
               responseBodyType = _ref2.responseBodyType;
 
@@ -766,7 +766,7 @@
       };
 
       var json = function json() {
-        return _call(text, JSON.parse);
+        return _call$1(text, JSON.parse);
       };
 
       var blob = _async$3(function () {
@@ -774,7 +774,7 @@
           throw new Error("blob not supported");
         }
 
-        return _call(readBody, function (_ref3) {
+        return _call$1(readBody, function (_ref3) {
           var responseBody = _ref3.responseBody,
               responseBodyType = _ref3.responseBodyType;
 
@@ -799,10 +799,10 @@
       });
 
       var arrayBuffer = function arrayBuffer() {
-        return _call(readBody, function (_ref4) {
+        return _call$1(readBody, function (_ref4) {
           var responseBody = _ref4.responseBody,
               responseBodyType = _ref4.responseBodyType;
-          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call(blob, blobToArrayBuffer);
+          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$1(blob, blobToArrayBuffer);
         });
       };
 
@@ -811,7 +811,7 @@
           throw new Error("formData not supported");
         }
 
-        return _call(text, textToFormData);
+        return _call$1(text, textToFormData);
       });
 
       return {
@@ -1067,7 +1067,7 @@
       abortController.abort(reason);
     });
     var response;
-    return _continue(_catch(function () {
+    return _continue(_catch$1(function () {
       return _await$2(window.fetch(url, _objectSpread2({
         signal: abortController.signal,
         mode: mode
@@ -1105,7 +1105,7 @@
     });
   });
 
-  function _catch(body, recover) {
+  function _catch$1(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -1206,6 +1206,33 @@
     };
   }
 
+  function _call(body, then, direct) {
+    if (direct) {
+      return then ? then(body()) : body();
+    }
+
+    try {
+      var result = Promise.resolve(body());
+      return then ? result.then(then) : result;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  function _catch(body, recover) {
+    try {
+      var result = body();
+    } catch (e) {
+      return recover(e);
+    }
+
+    if (result && result.then) {
+      return result.then(void 0, recover);
+    }
+
+    return result;
+  }
+
   var scanBrowserRuntimeFeatures = _async(function () {
     return _await(fetchJson("/.jsenv/compile-meta.json"), function (_ref) {
       var outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
@@ -1222,12 +1249,14 @@
         });
         var groupInfo = groupMap[compileId];
         var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML;
-        return _await(browserSupportsAllFeatures({
+        return _await(getFeaturesReport({
           groupInfo: groupInfo,
           inlineImportMapIntoHTML: inlineImportMapIntoHTML
-        }), function (browserHasEverything) {
+        }), function (featuresReport) {
+          var canAvoidCompilation = featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
           return {
-            canAvoidCompilation: browserHasEverything,
+            featuresReport: featuresReport,
+            canAvoidCompilation: canAvoidCompilation,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
             compileId: compileId
           };
@@ -1236,13 +1265,121 @@
     });
   });
 
-  var browserSupportsAllFeatures = _async(function (_ref4) {
-    _ref4.groupInfo;
-        _ref4.inlineImportMapIntoHTML;
+  var getFeaturesReport = _async(function (_ref4) {
+    var groupInfo = _ref4.groupInfo,
+        inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML;
+    var babelPluginRequiredNames = babelPluginRequiredNamesFromGroupInfo(groupInfo);
+    var jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray; // start testing importmap support first and not in paralell
+    // so that there is not module script loaded beore importmap is injected
+    // it would log an error in chrome console and return undefined
 
-    {
-      return false;
+    return _await(supportsImportmap({
+      //  chrome supports inline but not remote importmap
+      // https://github.com/WICG/import-maps/issues/235
+      // at this stage we won't know if the html file will use
+      // an importmap or not and if that importmap is inline or specified with an src
+      // so we should test if browser support local and remote importmap.
+      // But there exploring server can inline importmap by transforming html
+      // and in that case we can test only the local importmap support
+      // so we test importmap support and the remote one
+      remote: !inlineImportMapIntoHTML
+    }), function (importmapSupported) {
+      return _call(supportsDynamicImport, function (dynamicImportSupported) {
+        return _call(supportsTopLevelAwait, function (topLevelAwaitSupported) {
+          return {
+            babelPluginRequiredNames: babelPluginRequiredNames,
+            jsenvPluginRequiredNames: jsenvPluginRequiredNames,
+            importmapSupported: importmapSupported,
+            dynamicImportSupported: dynamicImportSupported,
+            topLevelAwaitSupported: topLevelAwaitSupported
+          };
+        });
+      });
+    });
+  });
+
+  var babelPluginRequiredNamesFromGroupInfo = function babelPluginRequiredNamesFromGroupInfo(groupInfo) {
+    var babelPluginRequiredNameArray = groupInfo.babelPluginRequiredNameArray;
+    var babelPluginRequiredNames = babelPluginRequiredNameArray.slice(); // When instrumentation CAN be handed by playwright
+    // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
+    // "transform-instrument" becomes non mandatory
+    // TODO: set window.PLAYWRIGHT_COVERAGE to true in specific circustances
+
+    var transformInstrumentIndex = babelPluginRequiredNames.indexOf("transform-instrument");
+
+    if (transformInstrumentIndex > -1 && window.PLAYWRIGHT_COVERAGE) {
+      babelPluginRequiredNames.splice(transformInstrumentIndex, 1);
     }
+
+    return babelPluginRequiredNames;
+  };
+
+  var supportsImportmap = _async(function () {
+    var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref5$remote = _ref5.remote,
+        remote = _ref5$remote === void 0 ? true : _ref5$remote;
+
+    var specifier = jsToTextUrl("export default false");
+    var importMap = {
+      imports: _defineProperty({}, specifier, jsToTextUrl("export default true"))
+    };
+    var importmapScript = document.createElement("script");
+    var importmapString = JSON.stringify(importMap, null, "  ");
+    importmapScript.type = "importmap";
+
+    if (remote) {
+      importmapScript.src = "data:application/json;base64,".concat(window.btoa(importmapString));
+    } else {
+      importmapScript.textContent = importmapString;
+    }
+
+    document.body.appendChild(importmapScript);
+    var scriptModule = document.createElement("script");
+    scriptModule.type = "module";
+    scriptModule.src = jsToTextUrl("import supported from \"".concat(specifier, "\"; window.__importmap_supported = supported"));
+    return new Promise(function (resolve, reject) {
+      scriptModule.onload = function () {
+        var supported = window.__importmap_supported;
+        delete window.__importmap_supported;
+        document.body.removeChild(scriptModule);
+        document.body.removeChild(importmapScript);
+        resolve(supported);
+      };
+
+      scriptModule.onerror = function () {
+        document.body.removeChild(scriptModule);
+        document.body.removeChild(importmapScript);
+        reject();
+      };
+
+      document.body.appendChild(scriptModule);
+    });
+  });
+
+  var jsToTextUrl = function jsToTextUrl(js) {
+    return "data:text/javascript;base64,".concat(window.btoa(js));
+  };
+
+  var supportsDynamicImport = _async(function () {
+    var moduleSource = jsToTextUrl("export default 42");
+    return _catch(function () {
+      return _await(import(moduleSource), function (namespace) {
+        return namespace.default === 42;
+      });
+    }, function () {
+      return false;
+    });
+  });
+
+  var supportsTopLevelAwait = _async(function () {
+    var moduleSource = jsToTextUrl("export default await Promise.resolve(42)");
+    return _catch(function () {
+      return _await(import(moduleSource), function (namespace) {
+        return namespace.default === 42;
+      });
+    }, function () {
+      return false;
+    });
   });
 
   /* eslint-env browser */

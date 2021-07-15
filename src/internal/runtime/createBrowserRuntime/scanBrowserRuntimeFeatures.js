@@ -15,43 +15,33 @@ export const scanBrowserRuntimeFeatures = async () => {
   const groupInfo = groupMap[compileId]
   const { inlineImportMapIntoHTML } = envJson
 
-  const browserHasEverything = await browserSupportsAllFeatures({
+  const featuresReport = await getFeaturesReport({
     groupInfo,
     inlineImportMapIntoHTML,
   })
 
+  const canAvoidCompilation =
+    featuresReport.babelPluginRequiredNames.length === 0 &&
+    featuresReport.jsenvPluginRequiredNames.length === 0 &&
+    featuresReport.importmapSupported &&
+    featuresReport.dynamicImportSupported &&
+    featuresReport.topLevelAwaitSupported
+
   return {
-    canAvoidCompilation: browserHasEverything,
+    featuresReport,
+    canAvoidCompilation,
     outDirectoryRelativeUrl,
     compileId,
   }
 }
 
-const browserSupportsAllFeatures = async ({ groupInfo, inlineImportMapIntoHTML }) => {
-  // for now it's not possible to avoid compilation
-  // I need to list what is needed to support that
-  // for instance it means we should collect coverage from chrome devtools
-  // instead of instrumenting source code.
-  // It also means we should be able somehow to collect namespace of module imported
-  // by the html page
-  const canAvoidCompilation = false
-  if (!canAvoidCompilation) {
-    return false
-  }
-
-  const requiredBabelPluginCount = countRequiredBabelPlugins(groupInfo)
-  if (requiredBabelPluginCount > 0) {
-    return false
-  }
-
-  if (groupInfo.jsenvPluginRequiredNameArray.length > 0) {
-    return false
-  }
-
+const getFeaturesReport = async ({ groupInfo, inlineImportMapIntoHTML }) => {
+  const babelPluginRequiredNames = babelPluginRequiredNamesFromGroupInfo(groupInfo)
+  const jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray
   // start testing importmap support first and not in paralell
   // so that there is not module script loaded beore importmap is injected
   // it would log an error in chrome console and return undefined
-  const hasImportmap = await supportsImportmap({
+  const importmapSupported = await supportsImportmap({
     //  chrome supports inline but not remote importmap
     // https://github.com/WICG/import-maps/issues/235
 
@@ -63,36 +53,35 @@ const browserSupportsAllFeatures = async ({ groupInfo, inlineImportMapIntoHTML }
     // so we test importmap support and the remote one
     remote: !inlineImportMapIntoHTML,
   })
-  if (!hasImportmap) {
-    return false
-  }
 
-  const hasDynamicImport = await supportsDynamicImport()
-  if (!hasDynamicImport) {
-    return false
-  }
+  const dynamicImportSupported = await supportsDynamicImport()
 
-  const hasTopLevelAwait = await supportsTopLevelAwait()
-  if (!hasTopLevelAwait) {
-    return false
-  }
+  const topLevelAwaitSupported = await supportsTopLevelAwait()
 
-  return true
+  return {
+    babelPluginRequiredNames,
+    jsenvPluginRequiredNames,
+    importmapSupported,
+    dynamicImportSupported,
+    topLevelAwaitSupported,
+  }
 }
 
-const countRequiredBabelPlugins = (groupInfo) => {
+const babelPluginRequiredNamesFromGroupInfo = (groupInfo) => {
   const { babelPluginRequiredNameArray } = groupInfo
-  let count = babelPluginRequiredNameArray.length
+
+  const babelPluginRequiredNames = babelPluginRequiredNameArray.slice()
 
   // When instrumentation CAN be handed by playwright
   // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
   // "transform-instrument" becomes non mandatory
   // TODO: set window.PLAYWRIGHT_COVERAGE to true in specific circustances
-  const transformInstrumentIndex = babelPluginRequiredNameArray.indexOf("transform-instrument")
+  const transformInstrumentIndex = babelPluginRequiredNames.indexOf("transform-instrument")
   if (transformInstrumentIndex > -1 && window.PLAYWRIGHT_COVERAGE) {
-    count--
+    babelPluginRequiredNames.splice(transformInstrumentIndex, 1)
   }
-  return count
+
+  return babelPluginRequiredNames
 }
 
 const supportsImportmap = async ({ remote = true } = {}) => {

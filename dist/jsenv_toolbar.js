@@ -219,6 +219,28 @@
     return value && _typeof(value) === "object" && value.name === "CANCEL_ERROR";
   };
 
+  /* eslint-disable no-eq-null, eqeqeq */
+  function arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+    var arr2 = new Array(len);
+
+    for (var i = 0; i < len; i++) {
+      arr2[i] = arr[i];
+    }
+
+    return arr2;
+  }
+
+  /* eslint-disable consistent-return */
+  function unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
+  }
+
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
 
@@ -260,7 +282,7 @@
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
-  function _await$4(value, then, direct) {
+  function _await$5(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -272,7 +294,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$5(f) {
+  function _async$6(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -286,7 +308,7 @@
     };
   }
 
-  function _call$2(body, then, direct) {
+  function _call$3(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -299,7 +321,7 @@
     }
   }
 
-  var fetchUsingXHR = _async$5(function (url) {
+  var fetchUsingXHR = _async$6(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         _ref$cancellationToke = _ref.cancellationToken,
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
@@ -382,7 +404,7 @@
     }
 
     xhr.send(body);
-    return _await$4(headersPromise, function () {
+    return _await$5(headersPromise, function () {
       // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
       var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
       var responseStatus = xhr.status;
@@ -390,7 +412,7 @@
       var responseHeaders = getHeadersFromXHR(xhr);
 
       var readBody = function readBody() {
-        return _await$4(bodyPromise, function () {
+        return _await$5(bodyPromise, function () {
           var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
           if (status === 0) {
@@ -406,7 +428,7 @@
       };
 
       var text = function text() {
-        return _call$2(readBody, function (_ref2) {
+        return _call$3(readBody, function (_ref2) {
           var responseBody = _ref2.responseBody,
               responseBodyType = _ref2.responseBodyType;
 
@@ -423,15 +445,15 @@
       };
 
       var json = function json() {
-        return _call$2(text, JSON.parse);
+        return _call$3(text, JSON.parse);
       };
 
-      var blob = _async$5(function () {
+      var blob = _async$6(function () {
         if (!hasBlob) {
           throw new Error("blob not supported");
         }
 
-        return _call$2(readBody, function (_ref3) {
+        return _call$3(readBody, function (_ref3) {
           var responseBody = _ref3.responseBody,
               responseBodyType = _ref3.responseBodyType;
 
@@ -456,19 +478,19 @@
       });
 
       var arrayBuffer = function arrayBuffer() {
-        return _call$2(readBody, function (_ref4) {
+        return _call$3(readBody, function (_ref4) {
           var responseBody = _ref4.responseBody,
               responseBodyType = _ref4.responseBodyType;
-          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$2(blob, blobToArrayBuffer);
+          return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$3(blob, blobToArrayBuffer);
         });
       };
 
-      var formData = _async$5(function () {
+      var formData = _async$6(function () {
         if (!hasFormData) {
           throw new Error("formData not supported");
         }
 
-        return _call$2(text, textToFormData);
+        return _call$3(text, textToFormData);
       });
 
       return {
@@ -644,7 +666,7 @@
     return form;
   };
 
-  var blobToArrayBuffer = _async$5(function (blob) {
+  var blobToArrayBuffer = _async$6(function (blob) {
     var reader = new FileReader();
     var promise = fileReaderReady(reader);
     reader.readAsArrayBuffer(blob);
@@ -695,7 +717,7 @@
 
   var _excluded$1 = ["cancellationToken", "mode"];
 
-  function _await$3(value, then, direct) {
+  function _await$4(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -707,7 +729,7 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchNative = _async$4(function (url) {
+  var fetchNative = _async$5(function (url) {
 
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -724,8 +746,8 @@
       abortController.abort(reason);
     });
     var response;
-    return _continue(_catch$1(function () {
-      return _await$3(window.fetch(url, _objectSpread2({
+    return _continue(_catch$2(function () {
+      return _await$4(window.fetch(url, _objectSpread2({
         signal: abortController.signal,
         mode: mode
       }, options)), function (_window$fetch) {
@@ -762,7 +784,7 @@
     });
   });
 
-  function _catch$1(body, recover) {
+  function _catch$2(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -788,7 +810,7 @@
     return value && value.then ? value.then(then) : then(value);
   }
 
-  function _async$4(f) {
+  function _async$5(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -804,6 +826,39 @@
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
+  function _await$3(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _async$4(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  var fetchJson = _async$4(function (url) {
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    return _await$3(fetchUrl(url, options), function (response) {
+      return _await$3(response.json());
+    });
+  });
+
   function _await$2(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -814,6 +869,20 @@
     }
 
     return then ? value.then(then) : value;
+  }
+
+  function _catch$1(body, recover) {
+    try {
+      var result = body();
+    } catch (e) {
+      return recover(e);
+    }
+
+    if (result && result.then) {
+      return result.then(void 0, recover);
+    }
+
+    return result;
   }
 
   function _async$3(f) {
@@ -830,59 +899,12 @@
     };
   }
 
-  var fetchJson = _async$3(function (url) {
-    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    return _await$2(fetchUrl(url, options), function (response) {
-      return _await$2(response.json());
-    });
-  });
-
-  function _await$1(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  function _catch(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  function _async$2(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  var fetchExploringJson = _async$2(function () {
+  var fetchExploringJson = _async$3(function () {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         cancellationToken = _ref.cancellationToken;
 
-    return _catch(function () {
-      return _await$1(fetchJson("/.jsenv/exploring.json", {
+    return _catch$1(function () {
+      return _await$2(fetchJson("/.jsenv/exploring.json", {
         cancellationToken: cancellationToken
       }));
     }, function (e) {
@@ -1188,7 +1210,7 @@
 
   var _excluded = ["clickToFocus", "clickToClose"];
 
-  function _await(value, then, direct) {
+  function _await$1(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -1200,7 +1222,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _call$1(body, then, direct) {
+  function _call$2(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
     }
@@ -1215,7 +1237,7 @@
 
   var notificationPreference = createPreference("notification");
 
-  function _async$1(f) {
+  function _async$2(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -1306,7 +1328,7 @@
         clickToClose = _ref$clickToClose === void 0 ? false : _ref$clickToClose,
         options = _objectWithoutProperties(_ref, _excluded);
 
-    return _call$1(requestPermission, function (permission) {
+    return _call$2(requestPermission, function (permission) {
       if (permission === "granted") {
         var notification = new Notification(title, options);
         arrayOfOpenedNotifications.push(notification);
@@ -1339,10 +1361,10 @@
     });
   } : function () {};
   var permissionPromise;
-  var requestPermission = notificationAvailable ? _async$1(function () {
+  var requestPermission = notificationAvailable ? _async$2(function () {
     if (permissionPromise) return permissionPromise;
     permissionPromise = Notification.requestPermission();
-    return _await(permissionPromise, function (permission) {
+    return _await$1(permissionPromise, function (permission) {
       permissionPromise = undefined;
       return permission;
     });
@@ -1428,27 +1450,28 @@
 
   var enableVariant = function enableVariant(rootNode, variables) {
     var nodesNotMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingACondition, "]")));
-    var nodesMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingAMatch, "]")));
+    nodesNotMatching.forEach(function (nodeNotMatching) {
+      var conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition);
+      var matches = testCondition(conditionAttributeValue, variables);
 
-    var parseCondition = function parseCondition(conditionAttributeValue) {
-      var colonIndex = conditionAttributeValue.indexOf(":");
-
-      if (colonIndex === -1) {
-        return {
-          key: conditionAttributeValue,
-          value: undefined
-        };
+      if (matches) {
+        renameAttribute(nodeNotMatching, attributeIndicatingACondition, attributeIndicatingAMatch);
       }
+    });
+    var nodesMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingAMatch, "]")));
+    nodesMatching.forEach(function (nodeMatching) {
+      var conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch);
+      var matches = testCondition(conditionAttributeValue, variables);
 
-      return {
-        key: conditionAttributeValue.slice(0, colonIndex),
-        value: conditionAttributeValue.slice(colonIndex + 1)
-      };
-    };
+      if (!matches) {
+        renameAttribute(nodeMatching, attributeIndicatingAMatch, attributeIndicatingACondition);
+      }
+    });
+  };
 
-    var conditionIsMatching = function conditionIsMatching(conditionAttributeValue, key, value) {
-      var condition = parseCondition(conditionAttributeValue);
-
+  var testCondition = function testCondition(conditionAttributeValue, variables) {
+    var condition = parseCondition(conditionAttributeValue);
+    return Object.keys(variables).some(function (key) {
       if (condition.key !== key) {
         return false;
       } // the condition do not specify a value, any value is ok
@@ -1458,37 +1481,30 @@
         return true;
       }
 
-      if (condition.value !== value) {
-        return false;
+      if (condition.value === variables[key]) {
+        return true;
       }
 
-      return true;
-    };
-
-    Object.keys(variables).forEach(function (key) {
-      var variableValue = variables[key];
-      nodesNotMatching = nodesNotMatching.filter(function (node) {
-        var condition = node.getAttribute(attributeIndicatingACondition);
-
-        if (conditionIsMatching(condition, key, variableValue)) {
-          renameAttribute(node, attributeIndicatingACondition, attributeIndicatingAMatch);
-          return false;
-        }
-
-        return true;
-      });
-      nodesMatching = nodesMatching.filter(function (node) {
-        var condition = node.getAttribute(attributeIndicatingAMatch);
-
-        if (conditionIsMatching(condition, key, variableValue)) {
-          return true;
-        }
-
-        renameAttribute(node, attributeIndicatingAMatch, attributeIndicatingACondition);
-        return false;
-      });
+      return false;
     });
   };
+
+  var parseCondition = function parseCondition(conditionAttributeValue) {
+    var colonIndex = conditionAttributeValue.indexOf(":");
+
+    if (colonIndex === -1) {
+      return {
+        key: conditionAttributeValue,
+        value: undefined
+      };
+    }
+
+    return {
+      key: conditionAttributeValue.slice(0, colonIndex),
+      value: conditionAttributeValue.slice(colonIndex + 1)
+    };
+  };
+
   var attributeIndicatingACondition = "data-when";
   var attributeIndicatingAMatch = "data-when-active";
 
@@ -1717,39 +1733,762 @@
     }
   };
 
-  var renderCompilationInToolbar = function renderCompilationInToolbar(_ref) {
-    var compileInfo = _ref.compileInfo;
-    // reset file execution indicator ui
-    updateCompilationIndicator({
-      compileInfo: compileInfo
-    });
-    removeForceHideElement(document.querySelector("#compile-indicator"));
-    activateToolbarSection(document.querySelector("#compile-indicator"));
+  // eslint-disable-next-line consistent-return
+  var arrayWithHoles = (function (arr) {
+    if (Array.isArray(arr)) return arr;
+  });
+
+  function _iterableToArrayLimit(arr, i) {
+    // this is an expanded form of \`for...of\` that properly supports abrupt completions of
+    // iterators etc. variable names have been minimised to reduce the size of this massive
+    // helper. sometimes spec compliance is annoying :(
+    //
+    // _n = _iteratorNormalCompletion
+    // _d = _didIteratorError
+    // _e = _iteratorError
+    // _i = _iterator
+    // _s = _step
+    var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
+
+    if (_i == null) return;
+    var _arr = [];
+    var _n = true;
+    var _d = false;
+
+    var _s, _e;
+
+    try {
+      for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);
+
+        if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;
+      _e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"] != null) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }
+
+    return _arr;
+  }
+
+  var nonIterableRest = (function () {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  });
+
+  var _slicedToArray = (function (arr, i) {
+    return arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
+  });
+
+  var COMPILE_ID_OTHERWISE = "otherwise";
+
+  var computeCompileIdFromGroupId = function computeCompileIdFromGroupId(_ref) {
+    var groupId = _ref.groupId,
+        groupMap = _ref.groupMap;
+
+    if (typeof groupId === "undefined") {
+      if (COMPILE_ID_OTHERWISE in groupMap) {
+        return COMPILE_ID_OTHERWISE;
+      }
+
+      var keys = Object.keys(groupMap);
+
+      if (keys.length === 1) {
+        return keys[0];
+      }
+
+      throw new Error(createUnexpectedGroupIdMessage({
+        groupMap: groupMap
+      }));
+    }
+
+    if (groupId in groupMap === false) {
+      throw new Error(createUnexpectedGroupIdMessage({
+        groupId: groupId,
+        groupMap: groupMap
+      }));
+    }
+
+    return groupId;
   };
 
-  var updateCompilationIndicator = function updateCompilationIndicator() {
-    var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        compileInfo = _ref2.compileInfo;
+  var createUnexpectedGroupIdMessage = function createUnexpectedGroupIdMessage(_ref2) {
+    var _createDetailedMessag;
 
-    var compilationIndicator = document.querySelector("#compile-indicator");
-    enableVariant(compilationIndicator, {
-      compilation: compileInfo.compileId
-    });
-    var variantNode = compilationIndicator.querySelector("[data-when-active]");
+    var compileId = _ref2.compileId,
+        groupMap = _ref2.groupMap;
+    return createDetailedMessage("unexpected groupId.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "expected compiled id", Object.keys(groupMap)), _defineProperty(_createDetailedMessag, "received compile id", compileId), _createDetailedMessag));
+  };
 
-    if (variantNode) {
-      variantNode.querySelector("button").onclick = function () {
-        return toggleTooltip(compilationIndicator);
-      }; // const compileDirectoryText = variantNode.querySelector(".tooltip .compile-directory")
-      // compileDirectoryText.title = `${compileInfo.outDirectoryRelativeUrl}${compileInfo.compileId}`
-      // compileDirectoryText.textContent = compileInfo.compileId
-      // TODO: reason should be collected from the result
-      // of scanBrowserFeatures() and do its best to describe
-      // why the files needs to be compiled
+  var firstMatch = function firstMatch(regexp, string) {
+    var match = string.match(regexp);
+    return match && match.length > 0 ? match[1] || undefined : undefined;
+  };
+  var secondMatch = function secondMatch(regexp, string) {
+    var match = string.match(regexp);
+    return match && match.length > 1 ? match[2] || undefined : undefined;
+  };
+  var userAgentToVersion = function userAgentToVersion(userAgent) {
+    return firstMatch(/version\/(\d+(\.?_?\d+)+)/i, userAgent) || undefined;
+  };
 
+  var detectAndroid = function detectAndroid() {
+    return navigatorToBrowser$1(window.navigator);
+  };
 
-      variantNode.querySelector(".tooltip .reason").textContent = "Unknown reason";
+  var navigatorToBrowser$1 = function navigatorToBrowser(_ref) {
+    var userAgent = _ref.userAgent,
+        appVersion = _ref.appVersion;
+
+    if (/(android)/i.test(userAgent)) {
+      return {
+        name: "android",
+        version: firstMatch(/Android (\d+(\.?_?\d+)+)/i, appVersion)
+      };
     }
+
+    return null;
+  };
+
+  var detectInternetExplorer = function detectInternetExplorer() {
+    return userAgentToBrowser$5(window.navigator.userAgent);
+  };
+
+  var userAgentToBrowser$5 = function userAgentToBrowser(userAgent) {
+    if (/msie|trident/i.test(userAgent)) {
+      return {
+        name: "ie",
+        version: firstMatch(/(?:msie |rv:)(\d+(\.?_?\d+)+)/i, userAgent)
+      };
+    }
+
+    return null;
+  };
+
+  var detectOpera = function detectOpera() {
+    return userAgentToBrowser$4(window.navigator.userAgent);
+  };
+
+  var userAgentToBrowser$4 = function userAgentToBrowser(userAgent) {
+    // opera below 13
+    if (/opera/i.test(userAgent)) {
+      return {
+        name: "opera",
+        version: userAgentToVersion(userAgent) || firstMatch(/(?:opera)[\s/](\d+(\.?_?\d+)+)/i, userAgent)
+      };
+    } // opera above 13
+
+
+    if (/opr\/|opios/i.test(userAgent)) {
+      return {
+        name: "opera",
+        version: firstMatch(/(?:opr|opios)[\s/](\S+)/i, userAgent) || userAgentToVersion(userAgent)
+      };
+    }
+
+    return null;
+  };
+
+  var detectEdge = function detectEdge() {
+    return userAgentToBrowser$3(window.navigator.userAgent);
+  };
+
+  var userAgentToBrowser$3 = function userAgentToBrowser(userAgent) {
+    if (/edg([ea]|ios)/i.test(userAgent)) {
+      return {
+        name: "edge",
+        version: secondMatch(/edg([ea]|ios)\/(\d+(\.?_?\d+)+)/i, userAgent)
+      };
+    }
+
+    return null;
+  };
+
+  var detectFirefox = function detectFirefox() {
+    return userAgentToBrowser$2(window.navigator.userAgent);
+  };
+
+  var userAgentToBrowser$2 = function userAgentToBrowser(userAgent) {
+    if (/firefox|iceweasel|fxios/i.test(userAgent)) {
+      return {
+        name: "firefox",
+        version: firstMatch(/(?:firefox|iceweasel|fxios)[\s/](\d+(\.?_?\d+)+)/i, userAgent)
+      };
+    }
+
+    return null;
+  };
+
+  var detectChrome = function detectChrome() {
+    return userAgentToBrowser$1(window.navigator.userAgent);
+  };
+
+  var userAgentToBrowser$1 = function userAgentToBrowser(userAgent) {
+    if (/chromium/i.test(userAgent)) {
+      return {
+        name: "chrome",
+        version: firstMatch(/(?:chromium)[\s/](\d+(\.?_?\d+)+)/i, userAgent) || userAgentToVersion(userAgent)
+      };
+    }
+
+    if (/chrome|crios|crmo/i.test(userAgent)) {
+      return {
+        name: "chrome",
+        version: firstMatch(/(?:chrome|crios|crmo)\/(\d+(\.?_?\d+)+)/i, userAgent)
+      };
+    }
+
+    return null;
+  };
+
+  var detectSafari = function detectSafari() {
+    return userAgentToBrowser(window.navigator.userAgent);
+  };
+
+  var userAgentToBrowser = function userAgentToBrowser(userAgent) {
+    if (/safari|applewebkit/i.test(userAgent)) {
+      return {
+        name: "safari",
+        version: userAgentToVersion(userAgent)
+      };
+    }
+
+    return null;
+  };
+
+  var detectElectron = function detectElectron() {
+    return null;
+  }; // TODO
+
+  var detectIOS = function detectIOS() {
+    return navigatorToBrowser(window.navigator);
+  };
+
+  var navigatorToBrowser = function navigatorToBrowser(_ref) {
+    var userAgent = _ref.userAgent,
+        appVersion = _ref.appVersion;
+
+    if (/iPhone;/.test(userAgent)) {
+      return {
+        name: "ios",
+        version: firstMatch(/OS (\d+(\.?_?\d+)+)/i, appVersion)
+      };
+    }
+
+    if (/iPad;/.test(userAgent)) {
+      return {
+        name: "ios",
+        version: firstMatch(/OS (\d+(\.?_?\d+)+)/i, appVersion)
+      };
+    }
+
+    return null;
+  };
+
+  // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
+
+  var detectorCompose = function detectorCompose(detectors) {
+    return function () {
+      var i = 0;
+
+      while (i < detectors.length) {
+        var _detector = detectors[i];
+        i++;
+
+        var result = _detector();
+
+        if (result) {
+          return result;
+        }
+      }
+
+      return null;
+    };
+  };
+
+  var detector = detectorCompose([detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
+  var detectBrowser = function detectBrowser() {
+    var _ref = detector() || {},
+        _ref$name = _ref.name,
+        name = _ref$name === void 0 ? "other" : _ref$name,
+        _ref$version = _ref.version,
+        version = _ref$version === void 0 ? "unknown" : _ref$version;
+
+    return {
+      name: normalizeName(name),
+      version: normalizeVersion(version)
+    };
+  };
+
+  var normalizeName = function normalizeName(name) {
+    return name.toLowerCase();
+  };
+
+  var normalizeVersion = function normalizeVersion(version) {
+    if (version.indexOf(".") > -1) {
+      var parts = version.split("."); // remove extraneous .
+
+      return parts.slice(0, 3).join(".");
+    }
+
+    if (version.indexOf("_") > -1) {
+      var _parts = version.split("_"); // remove extraneous _
+
+
+      return _parts.slice(0, 3).join("_");
+    }
+
+    return version;
+  };
+
+  var valueToVersion = function valueToVersion(value) {
+    if (typeof value === "number") {
+      return numberToVersion(value);
+    }
+
+    if (typeof value === "string") {
+      return stringToVersion(value);
+    }
+
+    throw new TypeError(createValueErrorMessage({
+      version: value
+    }));
+  };
+
+  var numberToVersion = function numberToVersion(number) {
+    return {
+      major: number,
+      minor: 0,
+      patch: 0
+    };
+  };
+
+  var stringToVersion = function stringToVersion(string) {
+    if (string.indexOf(".") > -1) {
+      var parts = string.split(".");
+      return {
+        major: Number(parts[0]),
+        minor: parts[1] ? Number(parts[1]) : 0,
+        patch: parts[2] ? Number(parts[2]) : 0
+      };
+    }
+
+    if (isNaN(string)) {
+      return {
+        major: 0,
+        minor: 0,
+        patch: 0
+      };
+    }
+
+    return {
+      major: Number(string),
+      minor: 0,
+      patch: 0
+    };
+  };
+
+  var createValueErrorMessage = function createValueErrorMessage(_ref) {
+    var value = _ref.value;
+    return "value must be a number or a string.\nvalue: ".concat(value);
+  };
+
+  var versionCompare = function versionCompare(versionA, versionB) {
+    var semanticVersionA = valueToVersion(versionA);
+    var semanticVersionB = valueToVersion(versionB);
+    var majorDiff = semanticVersionA.major - semanticVersionB.major;
+
+    if (majorDiff > 0) {
+      return majorDiff;
+    }
+
+    if (majorDiff < 0) {
+      return majorDiff;
+    }
+
+    var minorDiff = semanticVersionA.minor - semanticVersionB.minor;
+
+    if (minorDiff > 0) {
+      return minorDiff;
+    }
+
+    if (minorDiff < 0) {
+      return minorDiff;
+    }
+
+    var patchDiff = semanticVersionA.patch - semanticVersionB.patch;
+
+    if (patchDiff > 0) {
+      return patchDiff;
+    }
+
+    if (patchDiff < 0) {
+      return patchDiff;
+    }
+
+    return 0;
+  };
+
+  var versionIsBelow = function versionIsBelow(versionSupposedBelow, versionSupposedAbove) {
+    return versionCompare(versionSupposedBelow, versionSupposedAbove) < 0;
+  };
+
+  var findHighestVersion = function findHighestVersion() {
+    for (var _len = arguments.length, values = new Array(_len), _key = 0; _key < _len; _key++) {
+      values[_key] = arguments[_key];
+    }
+
+    if (values.length === 0) throw new Error("missing argument");
+    return values.reduce(function (highestVersion, value) {
+      if (versionIsBelow(highestVersion, value)) {
+        return value;
+      }
+
+      return highestVersion;
+    });
+  };
+
+  var resolveGroup = function resolveGroup(_ref, groupMap) {
+    var name = _ref.name,
+        version = _ref.version;
+    return Object.keys(groupMap).find(function (compileIdCandidate) {
+      var runtimeCompatMap = groupMap[compileIdCandidate].runtimeCompatMap;
+
+      if (name in runtimeCompatMap === false) {
+        return false;
+      }
+
+      var versionForGroup = runtimeCompatMap[name];
+      var highestVersion = findHighestVersion(version, versionForGroup);
+      return highestVersion === version;
+    });
+  };
+
+  var resolveBrowserGroup = function resolveBrowserGroup(groupMap) {
+    return resolveGroup(detectBrowser(), groupMap);
+  };
+
+  function _await(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _async$1(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  function _call$1(body, then, direct) {
+    if (direct) {
+      return then ? then(body()) : body();
+    }
+
+    try {
+      var result = Promise.resolve(body());
+      return then ? result.then(then) : result;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  function _catch(body, recover) {
+    try {
+      var result = body();
+    } catch (e) {
+      return recover(e);
+    }
+
+    if (result && result.then) {
+      return result.then(void 0, recover);
+    }
+
+    return result;
+  }
+
+  var scanBrowserRuntimeFeatures = _async$1(function () {
+    return _await(fetchJson("/.jsenv/compile-meta.json"), function (_ref) {
+      var outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
+      var groupMapUrl = "/".concat(outDirectoryRelativeUrl, "groupMap.json");
+      var envFileUrl = "/".concat(outDirectoryRelativeUrl, "env.json");
+      return _await(Promise.all([fetchJson(groupMapUrl), fetchJson(envFileUrl)]), function (_ref2) {
+        var _ref3 = _slicedToArray(_ref2, 2),
+            groupMap = _ref3[0],
+            envJson = _ref3[1];
+
+        var compileId = computeCompileIdFromGroupId({
+          groupId: resolveBrowserGroup(groupMap),
+          groupMap: groupMap
+        });
+        var groupInfo = groupMap[compileId];
+        var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML;
+        return _await(getFeaturesReport({
+          groupInfo: groupInfo,
+          inlineImportMapIntoHTML: inlineImportMapIntoHTML
+        }), function (featuresReport) {
+          var canAvoidCompilation = featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
+          return {
+            featuresReport: featuresReport,
+            canAvoidCompilation: canAvoidCompilation,
+            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            compileId: compileId
+          };
+        });
+      });
+    });
+  });
+
+  var getFeaturesReport = _async$1(function (_ref4) {
+    var groupInfo = _ref4.groupInfo,
+        inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML;
+    var babelPluginRequiredNames = babelPluginRequiredNamesFromGroupInfo(groupInfo);
+    var jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray; // start testing importmap support first and not in paralell
+    // so that there is not module script loaded beore importmap is injected
+    // it would log an error in chrome console and return undefined
+
+    return _await(supportsImportmap({
+      //  chrome supports inline but not remote importmap
+      // https://github.com/WICG/import-maps/issues/235
+      // at this stage we won't know if the html file will use
+      // an importmap or not and if that importmap is inline or specified with an src
+      // so we should test if browser support local and remote importmap.
+      // But there exploring server can inline importmap by transforming html
+      // and in that case we can test only the local importmap support
+      // so we test importmap support and the remote one
+      remote: !inlineImportMapIntoHTML
+    }), function (importmapSupported) {
+      return _call$1(supportsDynamicImport, function (dynamicImportSupported) {
+        return _call$1(supportsTopLevelAwait, function (topLevelAwaitSupported) {
+          return {
+            babelPluginRequiredNames: babelPluginRequiredNames,
+            jsenvPluginRequiredNames: jsenvPluginRequiredNames,
+            importmapSupported: importmapSupported,
+            dynamicImportSupported: dynamicImportSupported,
+            topLevelAwaitSupported: topLevelAwaitSupported
+          };
+        });
+      });
+    });
+  });
+
+  var babelPluginRequiredNamesFromGroupInfo = function babelPluginRequiredNamesFromGroupInfo(groupInfo) {
+    var babelPluginRequiredNameArray = groupInfo.babelPluginRequiredNameArray;
+    var babelPluginRequiredNames = babelPluginRequiredNameArray.slice(); // When instrumentation CAN be handed by playwright
+    // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
+    // "transform-instrument" becomes non mandatory
+    // TODO: set window.PLAYWRIGHT_COVERAGE to true in specific circustances
+
+    var transformInstrumentIndex = babelPluginRequiredNames.indexOf("transform-instrument");
+
+    if (transformInstrumentIndex > -1 && window.PLAYWRIGHT_COVERAGE) {
+      babelPluginRequiredNames.splice(transformInstrumentIndex, 1);
+    }
+
+    return babelPluginRequiredNames;
+  };
+
+  var supportsImportmap = _async$1(function () {
+    var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref5$remote = _ref5.remote,
+        remote = _ref5$remote === void 0 ? true : _ref5$remote;
+
+    var specifier = jsToTextUrl("export default false");
+    var importMap = {
+      imports: _defineProperty({}, specifier, jsToTextUrl("export default true"))
+    };
+    var importmapScript = document.createElement("script");
+    var importmapString = JSON.stringify(importMap, null, "  ");
+    importmapScript.type = "importmap";
+
+    if (remote) {
+      importmapScript.src = "data:application/json;base64,".concat(window.btoa(importmapString));
+    } else {
+      importmapScript.textContent = importmapString;
+    }
+
+    document.body.appendChild(importmapScript);
+    var scriptModule = document.createElement("script");
+    scriptModule.type = "module";
+    scriptModule.src = jsToTextUrl("import supported from \"".concat(specifier, "\"; window.__importmap_supported = supported"));
+    return new Promise(function (resolve, reject) {
+      scriptModule.onload = function () {
+        var supported = window.__importmap_supported;
+        delete window.__importmap_supported;
+        document.body.removeChild(scriptModule);
+        document.body.removeChild(importmapScript);
+        resolve(supported);
+      };
+
+      scriptModule.onerror = function () {
+        document.body.removeChild(scriptModule);
+        document.body.removeChild(importmapScript);
+        reject();
+      };
+
+      document.body.appendChild(scriptModule);
+    });
+  });
+
+  var jsToTextUrl = function jsToTextUrl(js) {
+    return "data:text/javascript;base64,".concat(window.btoa(js));
+  };
+
+  var supportsDynamicImport = _async$1(function () {
+    var moduleSource = jsToTextUrl("export default 42");
+    return _catch(function () {
+      return _await(import(moduleSource), function (namespace) {
+        return namespace.default === 42;
+      });
+    }, function () {
+      return false;
+    });
+  });
+
+  var supportsTopLevelAwait = _async$1(function () {
+    var moduleSource = jsToTextUrl("export default await Promise.resolve(42)");
+    return _catch(function () {
+      return _await(import(moduleSource), function (namespace) {
+        return namespace.default === 42;
+      });
+    }, function () {
+      return false;
+    });
+  });
+
+  var renderCompilationInToolbar = function renderCompilationInToolbar(_ref) {
+    var compileGroup = _ref.compileGroup;
+    var compilationRootNode = document.querySelector("#compilation_info"); // reset file execution indicator ui
+
+    enableVariant(compilationRootNode, {
+      compileInfo: "pending"
+    });
+    removeForceHideElement(compilationRootNode);
+    activateToolbarSection(compilationRootNode);
+    scanBrowserRuntimeFeatures().then(function (_ref2) {
+      var featuresReport = _ref2.featuresReport,
+          canAvoidCompilation = _ref2.canAvoidCompilation,
+          outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
+          compileId = _ref2.compileId;
+
+      if (compileGroup.compileId && canAvoidCompilation) {
+        enableVariant(compilationRootNode, {
+          compileInfo: "compiled_and_compilation_is_optional"
+        });
+
+        var _variantNode = compilationRootNode.querySelector("[data-when-active]");
+
+        _variantNode.querySelector("a.go_to_source_link").onclick = function () {
+          window.parent.location = "/".concat(compileGroup.fileRelativeUrl);
+        };
+
+        return;
+      }
+
+      if (compileGroup.compileId) {
+        enableVariant(compilationRootNode, {
+          compileInfo: "compiled_and_compilation_is_required"
+        });
+
+        var _variantNode2 = compilationRootNode.querySelector("[data-when-active]");
+
+        _variantNode2.querySelector("a.go_to_source_link").onclick = function () {
+          window.parent.location = "/".concat(compileGroup.fileRelativeUrl);
+        };
+
+        _variantNode2.querySelector("a.required_reasons_link").onclick = function () {
+          alertCompilationRequiredReasons(featuresReport);
+        };
+
+        return;
+      }
+
+      if (canAvoidCompilation) {
+        enableVariant(compilationRootNode, {
+          compileInfo: "source_and_compilation_is_optional"
+        });
+
+        var _variantNode3 = compilationRootNode.querySelector("[data-when-active]");
+
+        _variantNode3.querySelector("a.go_to_compiled_link").onclick = function () {
+          window.parent.location = "/".concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(compileGroup.fileRelativeUrl);
+        };
+
+        return;
+      }
+
+      enableVariant(compilationRootNode, {
+        compileInfo: "source_and_compilation_is_required"
+      });
+      var variantNode = compilationRootNode.querySelector("[data-when-active]");
+
+      variantNode.querySelector("a.go_to_compiled_link").onclick = function () {
+        window.parent.location = "/".concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(compileGroup.fileRelativeUrl);
+      };
+
+      variantNode.querySelector("a.required_reasons_link").onclick = function () {
+        alertCompilationRequiredReasons(featuresReport);
+      };
+
+      return;
+    });
+  };
+
+  var alertCompilationRequiredReasons = function alertCompilationRequiredReasons(featuresReport) {
+    var parts = [];
+    var babelPluginRequiredNames = featuresReport.babelPluginRequiredNames;
+    var babelPluginRequiredCount = babelPluginRequiredNames.length;
+
+    if (babelPluginRequiredCount > 0) {
+      parts.push("".concat(babelPluginRequiredCount, " babel plugins are mandatory: ").concat(babelPluginRequiredNames));
+    }
+
+    var jsenvPluginRequiredNames = featuresReport.jsenvPluginRequiredNames;
+    var jsenvPluginRequiredCount = jsenvPluginRequiredNames.length;
+
+    if (jsenvPluginRequiredCount > 0) {
+      parts.push("".concat(jsenvPluginRequiredCount, " jsenv plugins are mandatory: ").concat(jsenvPluginRequiredNames));
+    }
+
+    var importmapSupported = featuresReport.importmapSupported;
+
+    if (!importmapSupported) {
+      parts.push("importmap are not supported");
+    }
+
+    var dynamicImportSupported = featuresReport.dynamicImportSupported;
+
+    if (!dynamicImportSupported) {
+      parts.push("dynamic import are not supported");
+    }
+
+    var topLevelAwaitSupported = featuresReport.topLevelAwaitSupported;
+
+    if (!topLevelAwaitSupported) {
+      parts.push("top level await is not supported");
+    } // eslint-disable-next-line no-alert
+
+
+    window.alert("-".concat(parts.join("\n-")));
   };
 
   var createPromiseAndHooks = function createPromiseAndHooks() {
@@ -2396,12 +3135,12 @@
     return _call(fetchExploringJson, function (exploringConfig) {
       var outDirectoryRelativeUrl = exploringConfig.outDirectoryRelativeUrl,
           livereloading = exploringConfig.livereloading;
-      var compileInfo = getCompileInfo({
+      var compileGroup = getCompileGroup({
         executedFileCompiledUrl: executedFileCompiledUrl,
         outDirectoryRelativeUrl: outDirectoryRelativeUrl,
         compileServerOrigin: compileServerOrigin
       });
-      var executedFileRelativeUrl = compileInfo.fileRelativeUrl;
+      var executedFileRelativeUrl = compileGroup.fileRelativeUrl;
       var toolbarOverlay = document.querySelector("#toolbar-overlay");
 
       toolbarOverlay.onclick = function () {
@@ -2445,7 +3184,7 @@
         executedFileRelativeUrl: executedFileRelativeUrl
       });
       renderCompilationInToolbar({
-        compileInfo: compileInfo
+        compileGroup: compileGroup
       }); // this might become active but we need to detect this somehow
 
       deactivateToolbarSection(document.querySelector("#file-list-link"));
@@ -2560,7 +3299,7 @@
     };
   };
 
-  var getCompileInfo = function getCompileInfo(_ref3) {
+  var getCompileGroup = function getCompileGroup(_ref3) {
     var executedFileCompiledUrl = _ref3.executedFileCompiledUrl,
         outDirectoryRelativeUrl = _ref3.outDirectoryRelativeUrl,
         compileServerOrigin = _ref3.compileServerOrigin;

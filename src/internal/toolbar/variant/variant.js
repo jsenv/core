@@ -1,23 +1,28 @@
 export const enableVariant = (rootNode, variables) => {
-  let nodesNotMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingACondition}]`))
-  let nodesMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingAMatch}]`))
-
-  const parseCondition = (conditionAttributeValue) => {
-    const colonIndex = conditionAttributeValue.indexOf(":")
-    if (colonIndex === -1) {
-      return {
-        key: conditionAttributeValue,
-        value: undefined,
-      }
+  const nodesNotMatching = Array.from(
+    rootNode.querySelectorAll(`[${attributeIndicatingACondition}]`),
+  )
+  nodesNotMatching.forEach((nodeNotMatching) => {
+    const conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition)
+    const matches = testCondition(conditionAttributeValue, variables)
+    if (matches) {
+      renameAttribute(nodeNotMatching, attributeIndicatingACondition, attributeIndicatingAMatch)
     }
-    return {
-      key: conditionAttributeValue.slice(0, colonIndex),
-      value: conditionAttributeValue.slice(colonIndex + 1),
-    }
-  }
+  })
 
-  const conditionIsMatching = (conditionAttributeValue, key, value) => {
-    const condition = parseCondition(conditionAttributeValue)
+  const nodesMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingAMatch}]`))
+  nodesMatching.forEach((nodeMatching) => {
+    const conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch)
+    const matches = testCondition(conditionAttributeValue, variables)
+    if (!matches) {
+      renameAttribute(nodeMatching, attributeIndicatingAMatch, attributeIndicatingACondition)
+    }
+  })
+}
+
+const testCondition = (conditionAttributeValue, variables) => {
+  const condition = parseCondition(conditionAttributeValue)
+  return Object.keys(variables).some((key) => {
     if (condition.key !== key) {
       return false
     }
@@ -25,33 +30,25 @@ export const enableVariant = (rootNode, variables) => {
     if (condition.value === undefined) {
       return true
     }
-    if (condition.value !== value) {
-      return false
-    }
-    return true
-  }
-
-  Object.keys(variables).forEach((key) => {
-    const variableValue = variables[key]
-
-    nodesNotMatching = nodesNotMatching.filter((node) => {
-      const condition = node.getAttribute(attributeIndicatingACondition)
-      if (conditionIsMatching(condition, key, variableValue)) {
-        renameAttribute(node, attributeIndicatingACondition, attributeIndicatingAMatch)
-        return false
-      }
+    if (condition.value === variables[key]) {
       return true
-    })
-
-    nodesMatching = nodesMatching.filter((node) => {
-      const condition = node.getAttribute(attributeIndicatingAMatch)
-      if (conditionIsMatching(condition, key, variableValue)) {
-        return true
-      }
-      renameAttribute(node, attributeIndicatingAMatch, attributeIndicatingACondition)
-      return false
-    })
+    }
+    return false
   })
+}
+
+const parseCondition = (conditionAttributeValue) => {
+  const colonIndex = conditionAttributeValue.indexOf(":")
+  if (colonIndex === -1) {
+    return {
+      key: conditionAttributeValue,
+      value: undefined,
+    }
+  }
+  return {
+    key: conditionAttributeValue.slice(0, colonIndex),
+    value: conditionAttributeValue.slice(colonIndex + 1),
+  }
 }
 
 const attributeIndicatingACondition = `data-when`

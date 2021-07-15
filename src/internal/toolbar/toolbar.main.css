@@ -182,3 +182,7 @@ html[data-toolbar-visible] #toolbar-trigger {
 /* #jsenvLogo {
   transition: 600ms;
 } */
+
+#toolbar a {
+  color: inherit;
+}

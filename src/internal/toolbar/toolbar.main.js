@@ -26,12 +26,12 @@ const renderToolbar = async () => {
   // this should not block the whole toolbar rendering + interactivity
   const exploringConfig = await fetchExploringJson()
   const { outDirectoryRelativeUrl, livereloading } = exploringConfig
-  const compileInfo = getCompileInfo({
+  const compileGroup = getCompileGroup({
     executedFileCompiledUrl,
     outDirectoryRelativeUrl,
     compileServerOrigin,
   })
-  const executedFileRelativeUrl = compileInfo.fileRelativeUrl
+  const executedFileRelativeUrl = compileGroup.fileRelativeUrl
 
   const toolbarOverlay = document.querySelector("#toolbar-overlay")
   toolbarOverlay.onclick = () => {
@@ -70,7 +70,7 @@ const renderToolbar = async () => {
   renderToolbarAnimation()
   renderToolbarTheme()
   renderExecutionInToolbar({ executedFileRelativeUrl })
-  renderCompilationInToolbar({ compileInfo })
+  renderCompilationInToolbar({ compileGroup })
   // this might become active but we need to detect this somehow
   deactivateToolbarSection(document.querySelector("#file-list-link"))
   initToolbarEventSource({ executedFileRelativeUrl, livereloading })
@@ -173,7 +173,7 @@ const showToolbar = ({ animate = true } = {}) => {
   }
 }
 
-const getCompileInfo = ({
+const getCompileGroup = ({
   executedFileCompiledUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,

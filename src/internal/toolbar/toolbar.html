@@ -71,21 +71,6 @@
           </div>
         </section>
 
-        <section id="compile-indicator">
-          <div data-when="compilation">
-            <div class="tooltip">
-              Files are compiled because <span class="reason">Y</span>
-            </div>
-            <button>
-              <svg id="compilationSvg" class="tooltipIcon">
-                <use
-                  xlink:href="./compilation/toolbar_compilation.svg#toolbar_compilation_icon"
-                ></use>
-              </svg>
-            </button>
-          </div>
-        </section>
-
         <div style="width: 100%"></div>
 
         <section id="eventsource-indicator" data-responsive-toolbar-element>
@@ -284,6 +269,59 @@
                     <div class="square"></div>
                   </div>
                 </label>
+              </div>
+              <div id="compilation_info" class="settings-box-item">
+                <div class="category-title">
+                  <svg id="compilationSvg" width="20px" height="20px">
+                    <use xlink:href="./compilation/info.svg#icon"></use>
+                  </svg>
+                  Compiled or not?
+                </div>
+                <div class="category-subtitle">
+                  <div data-when="compileInfo:pending">...</div>
+                  <div data-when="compileInfo:source_and_compilation_is_optional">
+                    <ul>
+                      <li>Source files are used</li>
+                      <li>Compilation is optional <span class="emoji">❤️</span></li>
+                    </ul>
+                    <a class="go_to_compiled_link" href="javascript:void(0);"
+                      >Go to compiled files</a
+                    >
+                  </div>
+                  <div data-when="compileInfo:compiled_and_compilation_is_optional">
+                    <ul>
+                      <li>The files shown are compiled</li>
+                      <li>Compilation is optional <span class="emoji">❤️</span></li>
+                    </ul>
+                    <a class="go_to_source_link" href="javascript:void(0);"
+                      >Go to source files (not compiled)</a
+                    >
+                  </div>
+                  <div data-when="compileInfo:source_and_compilation_is_required">
+                    <ul>
+                      <li>Source files are used</li>
+                      <li>
+                        Compilation is
+                        <a class="required_reasons_link" href="javascript:void(0);">required</a>
+                      </li>
+                    </ul>
+                    <a class="go_to_compiled_link" href="javascript:void(0);"
+                      >Go to compiled file</a
+                    >
+                  </div>
+                  <div data-when="compileInfo:compiled_and_compilation_is_required">
+                    <ul>
+                      <li>The files shown are compiled</li>
+                      <li>
+                        Compilation is
+                        <a class="required_reasons_link" href="javascript:void(0);">required</a>
+                      </li>
+                    </ul>
+                    <a class="go_to_source_link" href="javascript:void(0);"
+                      >Go to source files (not compiled)</a
+                    >
+                  </div>
+                </div>
               </div>
             </div>
           </div>
