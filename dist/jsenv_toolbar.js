@@ -905,9 +905,6 @@
 
     return _catch(function () {
       return _await$1(fetchJson("/.jsenv/exploring.json", {
-        headers: {
-          "x-jsenv": "1"
-        },
         cancellationToken: cancellationToken
       }));
     }, function (e) {
@@ -918,65 +915,6 @@
       throw new Error(createDetailedMessage("Cannot communicate with exploring server due to a network error", _defineProperty({}, "error stack", e.stack)));
     });
   });
-
-  // handle data-last-interaction attr on html (focusring)
-  window.addEventListener("mousedown", function (mousedownEvent) {
-    if (mousedownEvent.defaultPrevented) {
-      return;
-    }
-
-    document.documentElement.setAttribute("data-last-interaction", "mouse");
-  });
-  window.addEventListener("touchstart", function (touchstartEvent) {
-    if (touchstartEvent.defaultPrevented) {
-      return;
-    }
-
-    document.documentElement.setAttribute("data-last-interaction", "mouse");
-  });
-  window.addEventListener("keydown", function (keydownEvent) {
-    if (keydownEvent.defaultPrevented) {
-      return;
-    }
-
-    document.documentElement.setAttribute("data-last-interaction", "keyboard");
-  });
-
-  var renderBackToListInToolbar = function renderBackToListInToolbar(_ref) {
-    var outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
-        exploringHtmlFileRelativeUrl = _ref.exploringHtmlFileRelativeUrl;
-    var exploringHtmlFileUrl = "/".concat(outDirectoryRelativeUrl, "otherwise/").concat(exploringHtmlFileRelativeUrl);
-    document.querySelector("#file-list-link a").href = exploringHtmlFileUrl;
-
-    document.querySelector("#file-list-link a").onclick = function (clickEvent) {
-      if (clickEvent.defaultPrevented) {
-        return;
-      }
-
-      if (isClickToOpenTab(clickEvent)) {
-        return;
-      }
-
-      window.parent.location.href = exploringHtmlFileUrl;
-    };
-  };
-
-  var isClickToOpenTab = function isClickToOpenTab(clickEvent) {
-    if (clickEvent.button !== 0) {
-      // Chrome < 55 fires a click event when the middle mouse button is pressed
-      return true;
-    }
-
-    if (clickEvent.metaKey) {
-      return true;
-    }
-
-    if (clickEvent.ctrlKey) {
-      return true;
-    }
-
-    return false;
-  };
 
   var updateIframeOverflowOnParentWindow = function updateIframeOverflowOnParentWindow() {
     var aTooltipIsOpened = document.querySelector("[data-tooltip-visible]") || document.querySelector("[data-tooltip-auto-visible]");
@@ -1139,6 +1077,65 @@
     };
 
     return stop;
+  };
+
+  // handle data-last-interaction attr on html (focusring)
+  window.addEventListener("mousedown", function (mousedownEvent) {
+    if (mousedownEvent.defaultPrevented) {
+      return;
+    }
+
+    document.documentElement.setAttribute("data-last-interaction", "mouse");
+  });
+  window.addEventListener("touchstart", function (touchstartEvent) {
+    if (touchstartEvent.defaultPrevented) {
+      return;
+    }
+
+    document.documentElement.setAttribute("data-last-interaction", "mouse");
+  });
+  window.addEventListener("keydown", function (keydownEvent) {
+    if (keydownEvent.defaultPrevented) {
+      return;
+    }
+
+    document.documentElement.setAttribute("data-last-interaction", "keyboard");
+  });
+
+  var renderBackToListInToolbar = function renderBackToListInToolbar(_ref) {
+    var outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
+        exploringHtmlFileRelativeUrl = _ref.exploringHtmlFileRelativeUrl;
+    var exploringHtmlFileUrl = "/".concat(outDirectoryRelativeUrl, "otherwise/").concat(exploringHtmlFileRelativeUrl);
+    document.querySelector("#file-list-link a").href = exploringHtmlFileUrl;
+
+    document.querySelector("#file-list-link a").onclick = function (clickEvent) {
+      if (clickEvent.defaultPrevented) {
+        return;
+      }
+
+      if (isClickToOpenTab(clickEvent)) {
+        return;
+      }
+
+      window.parent.location.href = exploringHtmlFileUrl;
+    };
+  };
+
+  var isClickToOpenTab = function isClickToOpenTab(clickEvent) {
+    if (clickEvent.button !== 0) {
+      // Chrome < 55 fires a click event when the middle mouse button is pressed
+      return true;
+    }
+
+    if (clickEvent.metaKey) {
+      return true;
+    }
+
+    if (clickEvent.ctrlKey) {
+      return true;
+    }
+
+    return false;
   };
 
   var createPreference = function createPreference(name) {
@@ -2077,12 +2074,21 @@
   };
 
   var livereloadingPreference = createPreference("livereloading");
+  var eventSourceState = "default";
+  var livereloadingAvailableOnServer = false;
   var initToolbarEventSource = function initToolbarEventSource(_ref) {
-    var executedFileRelativeUrl = _ref.executedFileRelativeUrl;
+    var executedFileRelativeUrl = _ref.executedFileRelativeUrl,
+        livereloading = _ref.livereloading;
     removeForceHideElement(document.querySelector("#eventsource-indicator"));
     connectEventSource(executedFileRelativeUrl);
+    livereloadingAvailableOnServer = livereloading;
+
+    if (!livereloadingAvailableOnServer) {
+      disableLivereloadSetting();
+    }
+
     var livereloadCheckbox = document.querySelector("#toggle-livereload");
-    livereloadCheckbox.checked = getLivereloadingPreference();
+    livereloadCheckbox.checked = shouldLivereload();
 
     livereloadCheckbox.onchange = function () {
       livereloadingPreference.set(livereloadCheckbox.checked);
@@ -2092,10 +2098,19 @@
     updateEventSourceIndicator();
   };
 
+  var shouldLivereload = function shouldLivereload() {
+    return livereloadingAvailableOnServer && getLivereloadingPreference();
+  };
+
+  var disableLivereloadSetting = function disableLivereloadSetting() {
+    document.querySelector(".settings-livereload").setAttribute("data-disabled", "true");
+    document.querySelector(".settings-livereload").setAttribute("title", "Livereload not available: disabled by server");
+    document.querySelector("#toggle-livereload").disabled = true;
+  };
+
   var parentEventSource = window.parent.__jsenv_eventsource__();
 
   var latestChangeMap = parentEventSource.latestChangeMap;
-  var eventSourceState = "default";
   var eventSourceHooks = {};
   var eventSourceConnection;
   var connectionReadyPromise;
@@ -2103,9 +2118,8 @@
   var handleFileChange = function handleFileChange(file, type) {
     latestChangeMap[file] = type;
     updateEventSourceIndicator();
-    var livereloadingEnabled = getLivereloadingPreference();
 
-    if (livereloadingEnabled) {
+    if (shouldLivereload()) {
       if (file.endsWith(".css") || file.endsWith(".scss") || file.endsWith(".sass")) {
         reloadAllCss();
         delete latestChangeMap[file];
@@ -2222,7 +2236,7 @@
     var changeCount = Object.keys(latestChangeMap).length;
     enableVariant(eventSourceIndicator, {
       eventsource: eventSourceState,
-      livereload: getLivereloadingPreference() ? "on" : "off",
+      livereload: shouldLivereload() ? "on" : "off",
       changes: changeCount > 0 ? "yes" : "no"
     });
     var variantNode = document.querySelector("#eventsource-indicator > [data-when-active]");
@@ -2385,7 +2399,8 @@
     var compileServerOrigin = window.parent.location.origin; // this should not block the whole toolbar rendering + interactivity
 
     return _call(fetchExploringJson, function (exploringConfig) {
-      var outDirectoryRelativeUrl = exploringConfig.outDirectoryRelativeUrl;
+      var outDirectoryRelativeUrl = exploringConfig.outDirectoryRelativeUrl,
+          livereloading = exploringConfig.livereloading;
       var outDirectoryRemoteUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
       var executedFileRelativeUrl = urlToOriginalRelativeUrl(executedFileCompiledUrl, outDirectoryRemoteUrl);
       var toolbarOverlay = document.querySelector("#toolbar-overlay");
@@ -2433,7 +2448,8 @@
 
       deactivateToolbarSection(document.querySelector("#file-list-link"));
       initToolbarEventSource({
-        executedFileRelativeUrl: executedFileRelativeUrl
+        executedFileRelativeUrl: executedFileRelativeUrl,
+        livereloading: livereloading
       }); // if user click enter or space quickly while closing toolbar
       // it will cancel the closing
       // that's why I used toggleToolbar and not hideToolbar

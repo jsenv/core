@@ -1295,9 +1295,6 @@
 
     return _catch(function () {
       return _await$1(fetchJson("/.jsenv/exploring.json", {
-        headers: {
-          "x-jsenv": "1"
-        },
         cancellationToken: cancellationToken
       }));
     }, function (e) {

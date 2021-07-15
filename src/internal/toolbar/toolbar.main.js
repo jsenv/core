@@ -1,11 +1,12 @@
 /* eslint-disable import/max-dependencies */
 import { urlIsInsideOf } from "@jsenv/util/src/urlIsInsideOf.js"
 import { urlToRelativeUrl } from "@jsenv/util/src/urlToRelativeUrl.js"
+
 import { fetchExploringJson } from "../exploring/fetchExploringJson.js"
+import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
 import "./focus/toolbar.focus.js"
 import { renderBackToListInToolbar } from "./backtolist/toolbar.backtolist.js"
 import { getToolbarIframe, deactivateToolbarSection, setStyles } from "./util/dom.js"
-import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
 import { createPreference } from "./util/preferences.js"
 import { hideTooltip, hideAllTooltip } from "./tooltip/tooltip.js"
 import { renderToolbarSettings, hideSettings } from "./settings/toolbar.settings.js"
@@ -23,7 +24,7 @@ const renderToolbar = async () => {
   const compileServerOrigin = window.parent.location.origin
   // this should not block the whole toolbar rendering + interactivity
   const exploringConfig = await fetchExploringJson()
-  const { outDirectoryRelativeUrl } = exploringConfig
+  const { outDirectoryRelativeUrl, livereloading } = exploringConfig
   const outDirectoryRemoteUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin))
   const executedFileRelativeUrl = urlToOriginalRelativeUrl(
     executedFileCompiledUrl,
@@ -69,7 +70,7 @@ const renderToolbar = async () => {
   renderExecutionInToolbar({ executedFileRelativeUrl })
   // this might become active but we need to detect this somehow
   deactivateToolbarSection(document.querySelector("#file-list-link"))
-  initToolbarEventSource({ executedFileRelativeUrl })
+  initToolbarEventSource({ executedFileRelativeUrl, livereloading })
 
   // if user click enter or space quickly while closing toolbar
   // it will cancel the closing

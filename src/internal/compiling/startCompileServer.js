@@ -173,6 +173,19 @@ export const startCompileServer = async ({
       "service:livereload sse": serveSSEForLivereload,
       ...customServices,
     }
+  } else {
+    const roomWhenLivereloadIsDisabled = createSSERoom()
+    roomWhenLivereloadIsDisabled.open()
+    customServices = {
+      "service:livereload sse": (request) => {
+        const { accept } = request.headers
+        if (!accept || !accept.includes("text/event-stream")) {
+          return null
+        }
+        return roomWhenLivereloadIsDisabled.join(request)
+      },
+      ...customServices,
+    }
   }
 
   const outJSONFiles = createOutJSONFiles({

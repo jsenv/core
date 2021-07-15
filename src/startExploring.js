@@ -52,6 +52,7 @@ export const startExploring = async ({
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
       explorableConfig,
+      livereloading,
     })
     const serveExplorableListAsJson = createExplorableListAsJsonService({
       projectDirectoryUrl,
@@ -179,6 +180,7 @@ const createExploringDataService = ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   explorableConfig,
+  livereloading,
 }) => {
   return (request) => {
     if (request.ressource === "/.jsenv/exploring.json" && request.method === "GET") {
@@ -199,6 +201,7 @@ const createExploringDataService = ({
           jsenvCoreDirectoryUrl,
         ),
         explorableConfig,
+        livereloading,
       }
       const json = JSON.stringify(data)
       return {

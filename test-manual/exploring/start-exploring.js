@@ -48,4 +48,5 @@ startExploring({
   // useFilesystemAsCache: false,
   // writeOnFileSystem: false,
   compileGroupCount: 1,
+  // livereloading: false,
 })

@@ -664,6 +664,85 @@
 
   var fetchUrl$1 = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative$1 : fetchPolyfill;
 
+  var createPreference = function createPreference(name) {
+    return {
+      has: function has() {
+        return localStorage.hasOwnProperty(name);
+      },
+      get: function get() {
+        return localStorage.hasOwnProperty(name) ? JSON.parse(localStorage.getItem(name)) : undefined;
+      },
+      set: function set(value) {
+        return localStorage.setItem(name, JSON.stringify(value));
+      }
+    };
+  };
+
+  var startJavaScriptAnimation = function startJavaScriptAnimation(_ref6) {
+    var _ref6$duration = _ref6.duration,
+        duration = _ref6$duration === void 0 ? 300 : _ref6$duration,
+        _ref6$timingFunction = _ref6.timingFunction,
+        timingFunction = _ref6$timingFunction === void 0 ? function (t) {
+      return t;
+    } : _ref6$timingFunction,
+        _ref6$onProgress = _ref6.onProgress,
+        onProgress = _ref6$onProgress === void 0 ? function () {} : _ref6$onProgress,
+        _ref6$onCancel = _ref6.onCancel,
+        onCancel = _ref6$onCancel === void 0 ? function () {} : _ref6$onCancel,
+        _ref6$onComplete = _ref6.onComplete,
+        onComplete = _ref6$onComplete === void 0 ? function () {} : _ref6$onComplete;
+
+    if (isNaN(duration)) {
+      // console.warn(`duration must be a number, received ${duration}`)
+      return function () {};
+    }
+
+    duration = parseInt(duration, 10);
+    var startMs = performance.now();
+    var currentRequestAnimationFrameId;
+    var done = false;
+    var rawProgress = 0;
+    var progress = 0;
+
+    var handler = function handler() {
+      currentRequestAnimationFrameId = null;
+      var nowMs = performance.now();
+      rawProgress = Math.min((nowMs - startMs) / duration, 1);
+      progress = timingFunction(rawProgress);
+      done = rawProgress === 1;
+      onProgress({
+        done: done,
+        rawProgress: rawProgress,
+        progress: progress
+      });
+
+      if (done) {
+        onComplete();
+      } else {
+        currentRequestAnimationFrameId = window.requestAnimationFrame(handler);
+      }
+    };
+
+    handler();
+
+    var stop = function stop() {
+      if (currentRequestAnimationFrameId) {
+        window.cancelAnimationFrame(currentRequestAnimationFrameId);
+        currentRequestAnimationFrameId = null;
+      }
+
+      if (!done) {
+        done = true;
+        onCancel({
+          rawProgress: rawProgress,
+          progress: progress
+        });
+      }
+    };
+
+    return stop;
+  };
+
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
@@ -1295,9 +1374,6 @@
 
     return _catch(function () {
       return _await$1(fetchJson("/.jsenv/exploring.json", {
-        headers: {
-          "x-jsenv": "1"
-        },
         cancellationToken: cancellationToken
       }));
     }, function (e) {
@@ -1308,85 +1384,6 @@
       throw new Error(createDetailedMessage("Cannot communicate with exploring server due to a network error", _defineProperty({}, "error stack", e.stack)));
     });
   });
-
-  var createPreference = function createPreference(name) {
-    return {
-      has: function has() {
-        return localStorage.hasOwnProperty(name);
-      },
-      get: function get() {
-        return localStorage.hasOwnProperty(name) ? JSON.parse(localStorage.getItem(name)) : undefined;
-      },
-      set: function set(value) {
-        return localStorage.setItem(name, JSON.stringify(value));
-      }
-    };
-  };
-
-  var startJavaScriptAnimation = function startJavaScriptAnimation(_ref6) {
-    var _ref6$duration = _ref6.duration,
-        duration = _ref6$duration === void 0 ? 300 : _ref6$duration,
-        _ref6$timingFunction = _ref6.timingFunction,
-        timingFunction = _ref6$timingFunction === void 0 ? function (t) {
-      return t;
-    } : _ref6$timingFunction,
-        _ref6$onProgress = _ref6.onProgress,
-        onProgress = _ref6$onProgress === void 0 ? function () {} : _ref6$onProgress,
-        _ref6$onCancel = _ref6.onCancel,
-        onCancel = _ref6$onCancel === void 0 ? function () {} : _ref6$onCancel,
-        _ref6$onComplete = _ref6.onComplete,
-        onComplete = _ref6$onComplete === void 0 ? function () {} : _ref6$onComplete;
-
-    if (isNaN(duration)) {
-      // console.warn(`duration must be a number, received ${duration}`)
-      return function () {};
-    }
-
-    duration = parseInt(duration, 10);
-    var startMs = performance.now();
-    var currentRequestAnimationFrameId;
-    var done = false;
-    var rawProgress = 0;
-    var progress = 0;
-
-    var handler = function handler() {
-      currentRequestAnimationFrameId = null;
-      var nowMs = performance.now();
-      rawProgress = Math.min((nowMs - startMs) / duration, 1);
-      progress = timingFunction(rawProgress);
-      done = rawProgress === 1;
-      onProgress({
-        done: done,
-        rawProgress: rawProgress,
-        progress: progress
-      });
-
-      if (done) {
-        onComplete();
-      } else {
-        currentRequestAnimationFrameId = window.requestAnimationFrame(handler);
-      }
-    };
-
-    handler();
-
-    var stop = function stop() {
-      if (currentRequestAnimationFrameId) {
-        window.cancelAnimationFrame(currentRequestAnimationFrameId);
-        currentRequestAnimationFrameId = null;
-      }
-
-      if (!done) {
-        done = true;
-        onCancel({
-          rawProgress: rawProgress,
-          progress: progress
-        });
-      }
-    };
-
-    return stop;
-  };
 
   function _await(value, then, direct) {
     if (direct) {
@@ -1441,10 +1438,7 @@
           explorableConfig = _ref.explorableConfig,
           outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
       return _await(fetchJSON("/.jsenv/explorables.json", {
-        method: "GET",
-        headers: {
-          "x-jsenv": "1"
-        }
+        method: "GET"
       }), function (files) {
         var compileServerOrigin = document.location.origin;
         var outDirectoryUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
