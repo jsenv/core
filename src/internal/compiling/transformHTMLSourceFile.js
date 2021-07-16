@@ -39,7 +39,8 @@ export const transformHTMLSourceFile = async ({
   fileUrl,
   fileContent,
   inlineImportMapIntoHTML,
-  jsenvToolbarInjection, // for toolbar
+  jsenvScriptInjection,
+  jsenvToolbarInjection,
 }) => {
   const htmlAst = parseHtmlString(fileContent)
   if (inlineImportMapIntoHTML) {
@@ -61,9 +62,13 @@ export const transformHTMLSourceFile = async ({
   )
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      {
-        src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
-      },
+      ...(jsenvScriptInjection
+        ? [
+            {
+              src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
+            },
+          ]
+        : []),
       ...(jsenvToolbarInjection && fileUrl !== jsenvToolbarHtmlFileInfo.url
         ? [
             {
@@ -74,34 +79,36 @@ export const transformHTMLSourceFile = async ({
     ],
   })
 
-  const { scripts } = parseHtmlAstRessources(htmlAst)
-  scripts.forEach((script) => {
-    const typeAttribute = getHtmlNodeAttributeByName(script, "type")
-    const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  if (jsenvScriptInjection) {
+    const { scripts } = parseHtmlAstRessources(htmlAst)
+    scripts.forEach((script) => {
+      const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+      const srcAttribute = getHtmlNodeAttributeByName(script, "src")
 
-    // remote
-    if (typeAttribute && typeAttribute.value === "module" && srcAttribute) {
-      removeHtmlNodeAttribute(script, srcAttribute)
-      setHtmlNodeText(
-        script,
-        `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(srcAttribute.value)})`,
-      )
-      return
-    }
-    // inline
-    const textNode = getHtmlNodeTextNode(script)
-    if (typeAttribute && typeAttribute.value === "module" && textNode) {
-      const specifierAsBase64 = stringifyDataUrl({
-        mediaType: "application/javascript",
-        data: textNode.value,
-      })
-      setHtmlNodeText(
-        script,
-        `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(specifierAsBase64)})`,
-      )
-      return
-    }
-  })
+      // remote
+      if (typeAttribute && typeAttribute.value === "module" && srcAttribute) {
+        removeHtmlNodeAttribute(script, srcAttribute)
+        setHtmlNodeText(
+          script,
+          `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(srcAttribute.value)})`,
+        )
+        return
+      }
+      // inline
+      const textNode = getHtmlNodeTextNode(script)
+      if (typeAttribute && typeAttribute.value === "module" && textNode) {
+        const specifierAsBase64 = stringifyDataUrl({
+          mediaType: "application/javascript",
+          data: textNode.value,
+        })
+        setHtmlNodeText(
+          script,
+          `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(specifierAsBase64)})`,
+        )
+        return
+      }
+    })
+  }
 
   return stringifyHtmlAst(htmlAst)
 }

@@ -104,7 +104,9 @@ export const startCompileServer = async ({
   livereloadLogLevel = "info",
   customServices = {},
   livereloadSSE = false,
+  transformHtmlSourceFiles = true,
   jsenvToolbarInjection = false,
+  jsenvScriptInjection = true,
   inlineImportMapIntoHTML = true,
 }) => {
   assertArguments({
@@ -195,6 +197,7 @@ export const startCompileServer = async ({
     importDefaultExtension,
     compileServerGroupMap,
     env,
+    convertMap,
     inlineImportMapIntoHTML,
     customCompilers,
   })
@@ -255,7 +258,9 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
       projectFileRequestedCallback,
       projectFileEtagEnabled,
+      transformHtmlSourceFiles,
       inlineImportMapIntoHTML,
+      jsenvScriptInjection,
       jsenvToolbarInjection,
     }),
   }
@@ -772,7 +777,9 @@ const createProjectFileService = ({
   projectDirectoryUrl,
   projectFileRequestedCallback,
   projectFileEtagEnabled,
+  transformHtmlSourceFiles,
   inlineImportMapIntoHTML,
+  jsenvScriptInjection,
   jsenvToolbarInjection,
 }) => {
   return async (request) => {
@@ -781,7 +788,7 @@ const createProjectFileService = ({
     projectFileRequestedCallback(relativeUrl, request)
 
     const requestUrl = resolveUrl(ressource, request.origin)
-    if (urlToExtension(requestUrl) === ".html") {
+    if (transformHtmlSourceFiles && urlToExtension(requestUrl) === ".html") {
       const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
       let fileContent
       try {
@@ -800,6 +807,7 @@ const createProjectFileService = ({
         fileUrl,
         fileContent,
         inlineImportMapIntoHTML,
+        jsenvScriptInjection,
         jsenvToolbarInjection,
       })
       return {
