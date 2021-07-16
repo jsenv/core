@@ -22,10 +22,6 @@ import { transformResultToCompilationResult } from "./transformResultToCompilati
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { compileIdToBabelPluginMap } from "./jsenvCompilerForJavaScript.js"
 
-export const jsenvCompilerForDynamicBuild = {
-  "jsenv-compiler-dynamic-build": compileDynamicBuildFile,
-}
-
 const compileDynamicBuildFile = ({ compileId, originalFileUrl, ...rest }) => {
   const contentType = urlToContentType(originalFileUrl)
 
@@ -53,6 +49,10 @@ const compileDynamicBuildFile = ({ compileId, originalFileUrl, ...rest }) => {
   }
 
   return null
+}
+
+export const jsenvCompilerForDynamicBuild = {
+  "jsenv-compiler-dynamic-build": compileDynamicBuildFile,
 }
 
 const handleDynamicBuild = ({

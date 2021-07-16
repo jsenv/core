@@ -9,10 +9,6 @@ const require = createRequire(import.meta.url)
 
 const sass = require("sass")
 
-export const jsenvCompilerForSass = {
-  "jsenv-compiler-sass": compileSassFile,
-}
-
 const compileSassFile = ({
   projectDirectoryUrl,
   originalFileUrl,
@@ -57,4 +53,8 @@ const compileSassFile = ({
       )
     },
   }
+}
+
+export const jsenvCompilerForSass = {
+  "jsenv-compiler-sass": compileSassFile,
 }

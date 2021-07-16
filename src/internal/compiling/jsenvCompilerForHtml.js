@@ -23,10 +23,6 @@ import {
 } from "./compileHtml.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
-export const jsenvCompilerForHtml = {
-  "jsenv-compiler-html": compileHtmlFile,
-}
-
 const compileHtmlFile = ({
   // cancellationToken,
   // logger,
@@ -210,4 +206,8 @@ const compileHtmlFile = ({
       }
     },
   }
+}
+
+export const jsenvCompilerForHtml = {
+  "jsenv-compiler-html": compileHtmlFile,
 }

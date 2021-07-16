@@ -12,10 +12,6 @@ const VueComponentCompiler = require("@vue/component-compiler")
 
 const VueCompiler = VueComponentCompiler.createDefaultCompiler()
 
-export const jsenvCompilerForVue = {
-  "jsenv-compiler-vue": compileVueFile,
-}
-
 const compileVueFile = ({
   projectDirectoryUrl,
   originalFileUrl,
@@ -79,4 +75,8 @@ const compileVueFile = ({
       })
     },
   }
+}
+
+export const jsenvCompilerForVue = {
+  "jsenv-compiler-vue": compileVueFile,
 }

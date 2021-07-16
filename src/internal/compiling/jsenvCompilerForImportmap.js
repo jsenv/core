@@ -1,10 +1,6 @@
 import { urlToContentType } from "@jsenv/server"
 import { transformImportmap } from "./transformImportmap.js"
 
-export const jsenvCompilerForImportmap = {
-  "jsenv-compiler-importmap": compileImportmapFile,
-}
-
 const compileImportmapFile = ({ originalFileUrl }) => {
   const contentType = urlToContentType(originalFileUrl)
 
@@ -19,4 +15,8 @@ const compileImportmapFile = ({ originalFileUrl }) => {
       })
     },
   }
+}
+
+export const jsenvCompilerForImportmap = {
+  "jsenv-compiler-importmap": compileImportmapFile,
 }
