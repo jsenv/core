@@ -2488,7 +2488,7 @@
     } // eslint-disable-next-line no-alert
 
 
-    window.alert("-".concat(parts.join("\n-")));
+    window.alert("Compilation is required because:\n- ".concat(parts.join("\n-")));
   };
 
   var createPromiseAndHooks = function createPromiseAndHooks() {

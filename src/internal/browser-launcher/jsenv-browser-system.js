@@ -63,7 +63,8 @@ const executeFileUsingDynamicImport = async (specifier) => {
   const { currentScript } = document
   const fileExecutionResultPromise = (async () => {
     try {
-      const namespace = await import(specifier)
+      const url = new URL(specifier, document.location.href).href
+      const namespace = await import(url)
       const executionResult = {
         status: "completed",
         namespace,

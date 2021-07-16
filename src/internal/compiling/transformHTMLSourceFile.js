@@ -1,7 +1,13 @@
 /**
  * Send a modified version of the html files instead of serving
  * the source html files
- * This is to force inlining of importmap
+ * - force inlining of importmap
+ * - inject a script into html head to have window.__jsenv__
+ * - <script type="module" src="file.js">
+ *   into
+ *   <script type="module">
+ *      window.__jsenv__.executeFileUsingDynamicImport('file.js')
+ *   </script>
  */
 
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
@@ -11,6 +17,7 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import {
+  jsenvToolbarHtmlFileInfo,
   jsenvBrowserSystemFileInfo,
   jsenvToolbarInjectorFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
@@ -57,7 +64,7 @@ export const transformHTMLSourceFile = async ({
       {
         src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
       },
-      ...(jsenvToolbarInjection && fileUrl !== jsenvToolbarInjectorFileInfo.url
+      ...(jsenvToolbarInjection && fileUrl !== jsenvToolbarHtmlFileInfo.url
         ? [
             {
               src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
@@ -74,7 +81,7 @@ export const transformHTMLSourceFile = async ({
 
     // remote
     if (typeAttribute && typeAttribute.value === "module" && srcAttribute) {
-      removeHtmlNodeAttribute(script, typeAttribute)
+      removeHtmlNodeAttribute(script, srcAttribute)
       setHtmlNodeText(
         script,
         `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(srcAttribute.value)})`,
@@ -88,10 +95,9 @@ export const transformHTMLSourceFile = async ({
         mediaType: "application/javascript",
         data: textNode.value,
       })
-      removeHtmlNodeAttribute(script, srcAttribute)
       setHtmlNodeText(
         script,
-        `window.__jsenv__.executeFileUsingDynamicImport(${specifierAsBase64})`,
+        `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(specifierAsBase64)})`,
       )
       return
     }

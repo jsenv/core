@@ -255,6 +255,7 @@ export const startCompileServer = async ({
       projectFileRequestedCallback,
       projectFileEtagEnabled,
       inlineImportMapIntoHTML,
+      jsenvToolbarInjection
     }),
   }
 
