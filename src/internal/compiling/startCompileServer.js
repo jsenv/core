@@ -864,6 +864,7 @@ const createOutJSONFiles = ({
     importDefaultExtension,
     inlineImportMapIntoHTML,
     customCompilerNames: Object.keys(customCompilers),
+    convertPatterns: Object.keys(convertMap),
   }
   outJSONFiles.env = {
     url: envOutFileUrl,

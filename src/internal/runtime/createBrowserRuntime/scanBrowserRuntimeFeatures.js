@@ -13,7 +13,7 @@ export const scanBrowserRuntimeFeatures = async () => {
     groupMap,
   })
   const groupInfo = groupMap[compileId]
-  const { inlineImportMapIntoHTML, customCompilerNames } = envJson
+  const { inlineImportMapIntoHTML, customCompilerNames, convertPatterns } = envJson
 
   const featuresReport = {
     ...(await getFeaturesReport({
@@ -22,9 +22,11 @@ export const scanBrowserRuntimeFeatures = async () => {
       customCompilerNames,
     })),
     customCompilerNames,
+    convertPatterns,
   }
 
   const canAvoidCompilation =
+    featuresReport.convertPatterns.legnth === 0 &&
     featuresReport.customCompilerNames.length === 0 &&
     featuresReport.jsenvPluginRequiredNames.length === 0 &&
     featuresReport.babelPluginRequiredNames.length === 0 &&

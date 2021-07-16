@@ -58,6 +58,12 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
 const alertCompilationRequiredReasons = (featuresReport) => {
   const parts = []
 
+  const { convertPatterns } = featuresReport
+  const convertPatternCount = convertPatterns.length
+  if (convertPatternCount > 0) {
+    parts.push(`convertMap is used with the following keys: ${convertPatterns}`)
+  }
+
   const { jsenvPluginRequiredNames } = featuresReport
   const jsenvPluginRequiredCount = jsenvPluginRequiredNames.length
   if (jsenvPluginRequiredCount > 0) {
