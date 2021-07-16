@@ -2,7 +2,11 @@ import { urlToContentType } from "@jsenv/server"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./transformResultToCompilationResult.js"
 
-export const jsenvCompilerForJavaScript = ({
+export const jsenvCompilerForJavaScript = {
+  "jsenv-compiler-js": compileJsFile,
+}
+
+const compileJsFile = ({
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,

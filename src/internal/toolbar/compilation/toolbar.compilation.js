@@ -58,19 +58,25 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
 const alertCompilationRequiredReasons = (featuresReport) => {
   const parts = []
 
-  const { babelPluginRequiredNames } = featuresReport
-  const babelPluginRequiredCount = babelPluginRequiredNames.length
-  if (babelPluginRequiredCount > 0) {
-    parts.push(
-      `${babelPluginRequiredCount} babel plugins are mandatory: ${babelPluginRequiredNames}`,
-    )
-  }
-
   const { jsenvPluginRequiredNames } = featuresReport
   const jsenvPluginRequiredCount = jsenvPluginRequiredNames.length
   if (jsenvPluginRequiredCount > 0) {
     parts.push(
       `${jsenvPluginRequiredCount} jsenv plugins are mandatory: ${jsenvPluginRequiredNames}`,
+    )
+  }
+
+  const { customCompilerNames } = featuresReport
+  const customCompilerCount = customCompilerNames.length
+  if (customCompilerCount > 0) {
+    parts.push(`${customCompilerCount} custom compilers enabled: ${customCompilerNames}`)
+  }
+
+  const { babelPluginRequiredNames } = featuresReport
+  const babelPluginRequiredCount = babelPluginRequiredNames.length
+  if (babelPluginRequiredCount > 0) {
+    parts.push(
+      `${babelPluginRequiredCount} babel plugins are mandatory: ${babelPluginRequiredNames}`,
     )
   }
 

@@ -14,12 +14,12 @@ import { jsenvCompilerForHtml } from "./jsenvCompilerForHtml.js"
 import { jsenvCompilerForImportmap } from "./jsenvCompilerForImportmap.js"
 import { jsenvCompilerForJavaScript } from "./jsenvCompilerForJavaScript.js"
 
-const jsenvCompilerCandidates = [
-  jsenvCompilerForDynamicBuild,
-  jsenvCompilerForJavaScript,
-  jsenvCompilerForHtml,
-  jsenvCompilerForImportmap,
-]
+const jsenvCompilers = {
+  ...jsenvCompilerForDynamicBuild,
+  ...jsenvCompilerForJavaScript,
+  ...jsenvCompilerForHtml,
+  ...jsenvCompilerForImportmap,
+}
 
 export const createCompiledFileService = ({
   cancellationToken,
@@ -121,9 +121,9 @@ export const createCompiledFileService = ({
 
       jsenvToolbarInjection,
     }
-    const compilerCandidates = [...jsenvCompilerCandidates, ...customCompilers]
-    compilerCandidates.find((compilerCandidate) => {
-      const returnValue = compilerCandidate(compilerCandidateParams)
+    const compilerCandidates = { ...jsenvCompilers, ...customCompilers }
+    Object.keys(compilerCandidates).find((compilerCandidateName) => {
+      const returnValue = compilerCandidates[compilerCandidateName](compilerCandidateParams)
       if (returnValue && typeof returnValue === "object") {
         compilerOptions = returnValue
         return true

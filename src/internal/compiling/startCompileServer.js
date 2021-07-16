@@ -77,7 +77,7 @@ export const startCompileServer = async ({
   replaceMap = {},
   babelPluginMap = jsenvBabelPluginMap,
   convertMap = {},
-  customCompilers = [],
+  customCompilers = {},
 
   // options related to the server itself
   compileServerProtocol = "https",
@@ -196,6 +196,7 @@ export const startCompileServer = async ({
     compileServerGroupMap,
     env,
     inlineImportMapIntoHTML,
+    customCompilers,
   })
   if (compileServerCanWriteOnFilesystem) {
     await setupOutDirectory({
@@ -255,7 +256,7 @@ export const startCompileServer = async ({
       projectFileRequestedCallback,
       projectFileEtagEnabled,
       inlineImportMapIntoHTML,
-      jsenvToolbarInjection
+      jsenvToolbarInjection,
     }),
   }
 
@@ -772,7 +773,7 @@ const createProjectFileService = ({
   projectFileRequestedCallback,
   projectFileEtagEnabled,
   inlineImportMapIntoHTML,
-  jsenvToolbarInjection
+  jsenvToolbarInjection,
 }) => {
   return async (request) => {
     const { ressource } = request
@@ -833,6 +834,7 @@ const createOutJSONFiles = ({
   processEnvNodeEnv,
   env,
   inlineImportMapIntoHTML,
+  customCompilers,
 }) => {
   const outJSONFiles = {}
   const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
@@ -861,6 +863,7 @@ const createOutJSONFiles = ({
     outDirectoryRelativeUrl,
     importDefaultExtension,
     inlineImportMapIntoHTML,
+    customCompilerNames: Object.keys(customCompilers),
   }
   outJSONFiles.env = {
     url: envOutFileUrl,

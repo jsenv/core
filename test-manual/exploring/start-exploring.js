@@ -38,7 +38,10 @@ startExploring({
       [`./${testDirectoryRelativeUrl}**/*.html`]: true,
     },
   },
-  customCompilers: [jsenvCompilerForSass, jsenvCompilerForVue],
+  customCompilers: {
+    ...jsenvCompilerForSass,
+    ...jsenvCompilerForVue,
+  },
   jsenvDirectoryRelativeUrl,
   compileServerProtocol: "https",
   compileServerPort: 3456,

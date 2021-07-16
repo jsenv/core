@@ -1,6 +1,6 @@
+import { fetchJson } from "../../browser-utils/fetchJson.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
-import { fetchJson } from "../../browser-utils/fetchJson.js"
 
 export const scanBrowserRuntimeFeatures = async () => {
   const { outDirectoryRelativeUrl } = await fetchJson("/.jsenv/compile-meta.json")
@@ -13,16 +13,21 @@ export const scanBrowserRuntimeFeatures = async () => {
     groupMap,
   })
   const groupInfo = groupMap[compileId]
-  const { inlineImportMapIntoHTML } = envJson
+  const { inlineImportMapIntoHTML, customCompilerNames } = envJson
 
-  const featuresReport = await getFeaturesReport({
-    groupInfo,
-    inlineImportMapIntoHTML,
-  })
+  const featuresReport = {
+    ...(await getFeaturesReport({
+      groupInfo,
+      inlineImportMapIntoHTML,
+      customCompilerNames,
+    })),
+    customCompilerNames,
+  }
 
   const canAvoidCompilation =
-    featuresReport.babelPluginRequiredNames.length === 0 &&
+    featuresReport.customCompilerNames.length === 0 &&
     featuresReport.jsenvPluginRequiredNames.length === 0 &&
+    featuresReport.babelPluginRequiredNames.length === 0 &&
     featuresReport.importmapSupported &&
     featuresReport.dynamicImportSupported &&
     featuresReport.topLevelAwaitSupported
