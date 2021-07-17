@@ -44,7 +44,7 @@ export const executeHtmlFile = async (
       // eslint-disable-next-line no-undef
       return window.scanBrowserRuntimeFeatures({ coverageInstrumentationRequired })
     },
-    [{ coverageInstrumentationRequired }],
+    { coverageInstrumentationRequired },
   )
   // ici si on peut avoid compilation alors on pourrait visiter la page de base
   // mais il faudrait alors un moyen d'obtenir:
