@@ -26,6 +26,7 @@ export const launchChromium = async ({
   collectPerformance,
   measurePerformance,
   collectCoverage,
+  coverageConfig,
   coverageForceIstanbul,
 
   headless = true,
@@ -102,6 +103,7 @@ export const launchChromium = async ({
       measurePerformance,
       collectPerformance,
       collectCoverage,
+      coverageConfig,
       coverageForceIstanbul,
       coveragePlaywrightAPIAvailable: true,
     }),
@@ -128,6 +130,7 @@ export const launchFirefox = async ({
   collectPerformance,
   measurePerformance,
   collectCoverage,
+  coverageConfig,
   coverageForceIstanbul,
 
   headless = true,
@@ -174,6 +177,7 @@ export const launchFirefox = async ({
       collectPerformance,
       measurePerformance,
       collectCoverage,
+      coverageConfig,
       coverageForceIstanbul,
     }),
   }
@@ -199,6 +203,7 @@ export const launchWebkit = async ({
   collectPerformance,
   measurePerformance,
   collectCoverage,
+  coverageConfig,
   coverageForceIstanbul,
 
   headless = true,
@@ -245,6 +250,7 @@ export const launchWebkit = async ({
       collectPerformance,
       measurePerformance,
       collectCoverage,
+      coverageConfig,
       coverageForceIstanbul,
     }),
   }
@@ -328,6 +334,7 @@ const browserToRuntimeHooks = (
     collectPerformance,
     measurePerformance,
     collectCoverage,
+    coverageConfig,
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable = false,
   },
@@ -390,6 +397,7 @@ const browserToRuntimeHooks = (
       measurePerformance,
       collectPerformance,
       collectCoverage,
+      coverageConfig,
       coverageForceIstanbul,
       coveragePlaywrightAPIAvailable,
     })

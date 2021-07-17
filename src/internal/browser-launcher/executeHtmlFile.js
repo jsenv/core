@@ -1,8 +1,8 @@
 import { resolveUrl, assertFilePresence, urlToRelativeUrl, urlToExtension } from "@jsenv/util"
 
 import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { v8CoverageFromAllV8Coverages } from "@jsenv/core/src/internal/executing/coverage/v8CoverageFromAllV8Coverages.js"
 import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
-
 import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
 
@@ -18,6 +18,7 @@ export const executeHtmlFile = async (
     // measurePerformance,
     collectPerformance,
     collectCoverage,
+    coverageConfig,
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable,
   },
@@ -60,6 +61,7 @@ export const executeHtmlFile = async (
         fileRelativeUrl,
         page,
         collectCoverage,
+        coverageConfig,
       })
     } else {
       executionResult = await executeCompiledVersion({
@@ -122,13 +124,25 @@ const executeSource = async ({
   fileRelativeUrl,
   page,
   collectCoverage,
+  coverageConfig,
 }) => {
   let transformResult = (result) => result
 
   if (collectCoverage) {
     await page.coverage.startJSCoverage()
     transformResult = composeTransformer(transformResult, async (result) => {
-      const coverage = await page.coverage.stopJSCoverage()
+      const allV8Coverages = await page.coverage.stopJSCoverage()
+      // TODO:
+      // sauf que ici deux choses: le format de l'objet est un peu différent de celui retourné par nodejs
+      // il n'y a pas de propriété "result"
+      // de plus les urls pointents vers compileServerOrigin
+      // il faut donc se servir de cela pour filtrer les coverages
+      // et enfin comme on a transformé les script type module
+      // en script inline, il faut chercher a nouveau la vraie url du script de type module
+      const coverage = v8CoverageFromAllV8Coverages(allV8Coverages, {
+        projectDirectoryUrl,
+        coverageConfig,
+      })
       return {
         ...result,
         coverage,
