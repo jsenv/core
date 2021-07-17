@@ -10,7 +10,7 @@ export const v8CoverageFromNodeV8Directory = async ({
   const allV8Coverages = await readV8CoverageReportsFromDirectory(NODE_V8_COVERAGE)
 
   const v8Coverage = v8CoverageFromAllV8Coverages(allV8Coverages, {
-    projectDirectoryUrl,
+    coverageRootUrl: projectDirectoryUrl,
     coverageConfig,
   })
 

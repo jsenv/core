@@ -129,18 +129,24 @@ const executeSource = async ({
   let transformResult = (result) => result
 
   if (collectCoverage) {
-    await page.coverage.startJSCoverage()
+    await page.coverage.startJSCoverage({
+      // reportAnonymousScripts: true,
+    })
     transformResult = composeTransformer(transformResult, async (result) => {
-      const allV8Coverages = await page.coverage.stopJSCoverage()
-      // TODO:
-      // sauf que ici deux choses: le format de l'objet est un peu différent de celui retourné par nodejs
-      // il n'y a pas de propriété "result"
-      // de plus les urls pointents vers compileServerOrigin
-      // il faut donc se servir de cela pour filtrer les coverages
-      // et enfin comme on a transformé les script type module
-      // en script inline, il faut chercher a nouveau la vraie url du script de type module
+      const v8CoveragesWithWebUrls = await page.coverage.stopJSCoverage()
+      // we convert urls starting with http:// to file:// because we later
+      // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
+      const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map((v8CoveragesWithWebUrl) => {
+        const relativeUrl = urlToRelativeUrl(v8CoveragesWithWebUrl.url, compileServerOrigin)
+        const fsUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
+        return {
+          ...v8CoveragesWithWebUrl,
+          url: fsUrl,
+        }
+      })
+      const allV8Coverages = [{ result: v8CoveragesWithFsUrls }]
       const coverage = v8CoverageFromAllV8Coverages(allV8Coverages, {
-        projectDirectoryUrl,
+        coverageRootUrl: projectDirectoryUrl,
         coverageConfig,
       })
       return {

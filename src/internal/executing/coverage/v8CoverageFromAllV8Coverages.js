@@ -4,10 +4,10 @@ import { composeV8Coverages } from "./composeV8Coverages.js"
 
 export const v8CoverageFromAllV8Coverages = (
   allV8Coverages,
-  { projectDirectoryUrl, coverageConfig },
+  { coverageRootUrl, coverageConfig },
 ) => {
   const v8Coverages = filterCoverageReports(allV8Coverages, {
-    projectDirectoryUrl,
+    coverageRootUrl,
     coverageConfig,
   })
 
@@ -15,16 +15,16 @@ export const v8CoverageFromAllV8Coverages = (
   return v8Coverage
 }
 
-const filterCoverageReports = (coverageReports, { projectDirectoryUrl, coverageConfig }) => {
+const filterCoverageReports = (coverageReports, { coverageRootUrl, coverageConfig }) => {
   const structuredMetaMapForCover = normalizeStructuredMetaMap(
     {
       cover: coverageConfig,
     },
-    projectDirectoryUrl,
+    coverageRootUrl,
   )
   const shouldIgnoreCoverage = (url) => {
     return !urlToMeta({
-      url: resolveUrl(url, projectDirectoryUrl),
+      url: resolveUrl(url, coverageRootUrl),
       structuredMetaMap: structuredMetaMapForCover,
     }).cover
   }
