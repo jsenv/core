@@ -46,8 +46,16 @@ export const executeHtmlFile = async (
 
   try {
     let executionResult
-    const { compileId } = browserRuntimeFeaturesReport
-    if (compileId) {
+    const { canAvoidCompilation, compileId } = browserRuntimeFeaturesReport
+    if (canAvoidCompilation) {
+      executionResult = await executeSource({
+        projectDirectoryUrl,
+        compileServerOrigin,
+        fileRelativeUrl,
+        page,
+        collectCoverage,
+      })
+    } else {
       executionResult = await executeCompiledVersion({
         projectDirectoryUrl,
         compileServerOrigin,
@@ -55,14 +63,6 @@ export const executeHtmlFile = async (
         page,
         outDirectoryRelativeUrl,
         compileId,
-        collectCoverage,
-      })
-    } else {
-      executionResult = await executeSource({
-        projectDirectoryUrl,
-        compileServerOrigin,
-        fileRelativeUrl,
-        page,
         collectCoverage,
       })
     }
@@ -93,6 +93,8 @@ export const executeHtmlFile = async (
       )
       executionResult.performance = performance
     }
+
+    return executionResult
   } catch (e) {
     // if browser is closed due to cancellation
     // before it is able to finish evaluate we can safely ignore
@@ -154,7 +156,10 @@ const executeSource = async ({
     })
   }
 
-  return transformResult(executionResult)
+  return transformResult({
+    status: "completed",
+    namespace: fileExecutionResultMap,
+  })
 }
 
 const executeCompiledVersion = async ({
@@ -166,6 +171,22 @@ const executeCompiledVersion = async ({
   compileId,
   collectCoverage,
 }) => {
+  let transformResult = (result) => result
+  if (collectCoverage) {
+    transformResult = composeTransformer(transformResult, async (result) => {
+      result.coverage = generateCoverageForPage(fileExecutionResultMap)
+      return result
+    })
+  } else {
+    transformResult = composeTransformer(transformResult, (result) => {
+      const { namespace: fileExecutionResultMap } = result
+      Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
+        delete fileExecutionResultMap[fileRelativeUrl].coverage
+      })
+      return result
+    })
+  }
+
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
   const compileDirectoryRemoteUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
   const fileClientUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
@@ -180,33 +201,24 @@ const executeCompiledVersion = async ({
   )
 
   const { fileExecutionResultMap } = executionResult
-
   const fileErrored = Object.keys(fileExecutionResultMap).find((fileRelativeUrl) => {
     const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
     return fileExecutionResult.status === "errored"
   })
 
-  if (!collectCoverage) {
-    Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
-      delete fileExecutionResultMap[fileRelativeUrl].coverage
-    })
-  }
-
   if (fileErrored) {
     const { exceptionSource } = fileExecutionResultMap[fileErrored]
-    return {
+    return transformResult({
       status: "errored",
       error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
       namespace: fileExecutionResultMap,
-      ...(collectCoverage ? { coverage: generateCoverageForPage(fileExecutionResultMap) } : {}),
-    }
+    })
   }
 
-  return {
+  return transformResult({
     status: "completed",
     namespace: fileExecutionResultMap,
-    ...(collectCoverage ? { coverage: generateCoverageForPage(fileExecutionResultMap) } : {}),
-  }
+  })
 }
 
 const generateCoverageForPage = (fileExecutionResultMap) => {
