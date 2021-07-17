@@ -2470,7 +2470,7 @@
 
   /* eslint-env browser */
   var _window$1 = window,
-      performance = _window$1.performance;
+      performance$1 = _window$1.performance;
 
   function _rethrow(thrown, value) {
     if (thrown) throw value;
@@ -2505,11 +2505,11 @@
     };
   }
 
-  var measureAsyncFnPerf = performance ? _async$8(function (fn, name) {
+  var measureAsyncFnPerf = performance$1 ? _async$8(function (fn, name) {
     var perfMarkStartName = "".concat(name, "_start");
-    performance.mark(perfMarkStartName);
+    performance$1.mark(perfMarkStartName);
     return _finallyRethrows(fn, function (_wasThrown, _result) {
-      performance.measure(name, perfMarkStartName);
+      performance$1.measure(name, perfMarkStartName);
       return _rethrow(_wasThrown, _result);
     });
   }) : _async$8(function (fn) {
@@ -4933,13 +4933,16 @@
   }));
 
   var executeFileUsingDynamicImport = _async(function (specifier) {
+    var identifier = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : specifier;
     var _document = document,
         currentScript = _document.currentScript;
 
     var fileExecutionResultPromise = _async(function () {
       return _catch(function () {
         var url = new URL(specifier, document.location.href).href;
+        performance.mark("jsenv_file_import_start");
         return _await(import(url), function (namespace) {
+          performance.measure("jsenv_file_import", "jsenv_file_import_start");
           var executionResult = {
             status: "completed",
             namespace: namespace
@@ -4947,6 +4950,7 @@
           return executionResult;
         });
       }, function (e) {
+        performance.measure("jsenv_file_import", "jsenv_file_import_start");
         var executionResult = {
           status: "errored",
           exceptionSource: unevalException(e)
@@ -4958,7 +4962,7 @@
       });
     })();
 
-    fileExecutionMap[specifier] = fileExecutionResultPromise;
+    fileExecutionMap[identifier] = fileExecutionResultPromise;
     return fileExecutionResultPromise;
   });
 

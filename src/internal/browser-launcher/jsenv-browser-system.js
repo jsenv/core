@@ -59,18 +59,21 @@ const executionResultPromise = readyPromise.then(async () => {
   }
 })
 
-const executeFileUsingDynamicImport = async (specifier) => {
+const executeFileUsingDynamicImport = async (specifier, identifier = specifier) => {
   const { currentScript } = document
   const fileExecutionResultPromise = (async () => {
     try {
       const url = new URL(specifier, document.location.href).href
+      performance.mark(`jsenv_file_import_start`)
       const namespace = await import(url)
+      performance.measure(`jsenv_file_import`, `jsenv_file_import_start`)
       const executionResult = {
         status: "completed",
         namespace,
       }
       return executionResult
     } catch (e) {
+      performance.measure(`jsenv_file_import`, `jsenv_file_import_start`)
       const executionResult = {
         status: "errored",
         exceptionSource: unevalException(e),
@@ -79,7 +82,7 @@ const executeFileUsingDynamicImport = async (specifier) => {
       return executionResult
     }
   })()
-  fileExecutionMap[specifier] = fileExecutionResultPromise
+  fileExecutionMap[identifier] = fileExecutionResultPromise
   return fileExecutionResultPromise
 }
 
