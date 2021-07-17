@@ -2,7 +2,9 @@ import { fetchJson } from "../../browser-utils/fetchJson.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 
-export const scanBrowserRuntimeFeatures = async () => {
+export const scanBrowserRuntimeFeatures = async ({
+  coverageInstrumentationRequired = true,
+} = {}) => {
   const { outDirectoryRelativeUrl } = await fetchJson("/.jsenv/compile-meta.json")
   const groupMapUrl = `/${outDirectoryRelativeUrl}groupMap.json`
   const envFileUrl = `/${outDirectoryRelativeUrl}env.json`
@@ -16,10 +18,14 @@ export const scanBrowserRuntimeFeatures = async () => {
   const { inlineImportMapIntoHTML, customCompilerNames, convertPatterns } = envJson
 
   const featuresReport = {
+    babelPluginRequiredNames: babelPluginRequiredNamesFromGroupInfo(groupInfo, {
+      coverageInstrumentationRequired,
+    }),
     ...(await getFeaturesReport({
       groupInfo,
       inlineImportMapIntoHTML,
       customCompilerNames,
+      coverageInstrumentationRequired,
     })),
     customCompilerNames,
     convertPatterns,
@@ -43,7 +49,6 @@ export const scanBrowserRuntimeFeatures = async () => {
 }
 
 const getFeaturesReport = async ({ groupInfo, inlineImportMapIntoHTML }) => {
-  const babelPluginRequiredNames = babelPluginRequiredNamesFromGroupInfo(groupInfo)
   const jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray
   // start testing importmap support first and not in paralell
   // so that there is not module script loaded beore importmap is injected
@@ -66,7 +71,6 @@ const getFeaturesReport = async ({ groupInfo, inlineImportMapIntoHTML }) => {
   const topLevelAwaitSupported = await supportsTopLevelAwait()
 
   return {
-    babelPluginRequiredNames,
     jsenvPluginRequiredNames,
     importmapSupported,
     dynamicImportSupported,
@@ -74,17 +78,16 @@ const getFeaturesReport = async ({ groupInfo, inlineImportMapIntoHTML }) => {
   }
 }
 
-const babelPluginRequiredNamesFromGroupInfo = (groupInfo) => {
+const babelPluginRequiredNamesFromGroupInfo = (groupInfo, { coverageInstrumentationRequired }) => {
   const { babelPluginRequiredNameArray } = groupInfo
 
   const babelPluginRequiredNames = babelPluginRequiredNameArray.slice()
 
   // When instrumentation CAN be handed by playwright
   // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-  // "transform-instrument" becomes non mandatory
-  // TODO: set window.PLAYWRIGHT_COVERAGE to true in specific circustances
+  // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
   const transformInstrumentIndex = babelPluginRequiredNames.indexOf("transform-instrument")
-  if (transformInstrumentIndex > -1 && window.PLAYWRIGHT_COVERAGE) {
+  if (transformInstrumentIndex > -1 && !coverageInstrumentationRequired) {
     babelPluginRequiredNames.splice(transformInstrumentIndex, 1)
   }
 

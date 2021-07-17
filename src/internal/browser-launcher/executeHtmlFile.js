@@ -14,9 +14,12 @@ export const executeHtmlFile = async (
     compileServerOrigin,
     outDirectoryRelativeUrl,
     page,
+
     // measurePerformance,
-    collectCoverage,
     collectPerformance,
+    collectCoverage,
+    coverageForceIstanbul,
+    coveragePlaywrightAPIAvailable,
   },
 ) => {
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
@@ -33,12 +36,15 @@ export const executeHtmlFile = async (
   const compileProxyClientUrl = resolveUrl(compileProxyProjectRelativeUrl, compileServerOrigin)
   await page.goto(compileProxyClientUrl)
 
+  const coverageInstrumentationRequired = coverageForceIstanbul || !coveragePlaywrightAPIAvailable
+
   const browserRuntimeFeaturesReport = await page.evaluate(
     /* istanbul ignore next */
-    () => {
+    ({ coverageInstrumentationRequired }) => {
       // eslint-disable-next-line no-undef
-      return window.scanBrowserRuntimeFeatures()
+      return window.scanBrowserRuntimeFeatures({ coverageInstrumentationRequired })
     },
+    [{ coverageInstrumentationRequired }],
   )
   // ici si on peut avoid compilation alors on pourrait visiter la page de base
   // mais il faudrait alors un moyen d'obtenir:

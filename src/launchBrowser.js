@@ -26,6 +26,7 @@ export const launchChromium = async ({
   collectPerformance,
   measurePerformance,
   collectCoverage,
+  coverageForceIstanbul,
 
   headless = true,
   // about debug check https://github.com/microsoft/playwright/blob/master/docs/api.md#browsertypelaunchserveroptions
@@ -98,9 +99,11 @@ export const launchChromium = async ({
       compileServerOrigin,
       outDirectoryRelativeUrl,
 
-      collectPerformance,
       measurePerformance,
+      collectPerformance,
       collectCoverage,
+      coverageForceIstanbul,
+      coveragePlaywrightAPIAvailable: true,
     }),
   }
 }
@@ -125,6 +128,7 @@ export const launchFirefox = async ({
   collectPerformance,
   measurePerformance,
   collectCoverage,
+  coverageForceIstanbul,
 
   headless = true,
   stopOnExit = true,
@@ -170,6 +174,7 @@ export const launchFirefox = async ({
       collectPerformance,
       measurePerformance,
       collectCoverage,
+      coverageForceIstanbul,
     }),
   }
 }
@@ -194,6 +199,7 @@ export const launchWebkit = async ({
   collectPerformance,
   measurePerformance,
   collectCoverage,
+  coverageForceIstanbul,
 
   headless = true,
   stopOnExit = true,
@@ -239,6 +245,7 @@ export const launchWebkit = async ({
       collectPerformance,
       measurePerformance,
       collectCoverage,
+      coverageForceIstanbul,
     }),
   }
 }
@@ -321,6 +328,8 @@ const browserToRuntimeHooks = (
     collectPerformance,
     measurePerformance,
     collectCoverage,
+    coverageForceIstanbul,
+    coveragePlaywrightAPIAvailable = false,
   },
 ) => {
   const disconnected = new Promise((resolve) => {
@@ -381,6 +390,8 @@ const browserToRuntimeHooks = (
       measurePerformance,
       collectPerformance,
       collectCoverage,
+      coverageForceIstanbul,
+      coveragePlaywrightAPIAvailable,
     })
   }
 
