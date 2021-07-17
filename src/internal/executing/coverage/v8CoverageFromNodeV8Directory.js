@@ -31,7 +31,7 @@ const readV8CoverageReportsFromDirectory = async (coverageDirectory) => {
       return dirContent
     }
     if (timeSpentTrying > 1500) {
-      console.warn(`${coverageDirectory} is empty`)
+      console.warn(`v8 coverage directory is empty at ${coverageDirectory}`)
       return dirContent
     }
     await new Promise((resolve) => setTimeout(resolve, 100))

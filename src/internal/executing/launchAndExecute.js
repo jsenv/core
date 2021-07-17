@@ -7,6 +7,7 @@ import {
   errorToCancelReason,
 } from "@jsenv/cancellation"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
+
 import { composeIstanbulCoverages } from "./coverage/composeIstanbulCoverages.js"
 
 const TIMING_BEFORE_EXECUTION = "before-execution"
