@@ -21,6 +21,44 @@
     return obj;
   });
 
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+
+      if (enumerableOnly) {
+        symbols = symbols.filter(function (sym) {
+          return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+        });
+      }
+
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i] != null ? arguments[i] : {};
+
+      if (i % 2) {
+        ownKeys(Object(source), true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(Object(source)).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
+      }
+    }
+
+    return target;
+  }
+
   // eslint-disable-next-line consistent-return
   var arrayWithHoles = (function (arr) {
     if (Array.isArray(arr)) return arr;
@@ -95,442 +133,6 @@
     return arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
   });
 
-  var createDetailedMessage = function createDetailedMessage(message) {
-    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var string = "".concat(message);
-    Object.keys(details).forEach(function (key) {
-      var value = details[key];
-      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-    });
-    return string;
-  };
-
-  var COMPILE_ID_OTHERWISE = "otherwise";
-
-  var computeCompileIdFromGroupId = function computeCompileIdFromGroupId(_ref) {
-    var groupId = _ref.groupId,
-        groupMap = _ref.groupMap;
-
-    if (typeof groupId === "undefined") {
-      if (COMPILE_ID_OTHERWISE in groupMap) {
-        return COMPILE_ID_OTHERWISE;
-      }
-
-      var keys = Object.keys(groupMap);
-
-      if (keys.length === 1) {
-        return keys[0];
-      }
-
-      throw new Error(createUnexpectedGroupIdMessage({
-        groupMap: groupMap
-      }));
-    }
-
-    if (groupId in groupMap === false) {
-      throw new Error(createUnexpectedGroupIdMessage({
-        groupId: groupId,
-        groupMap: groupMap
-      }));
-    }
-
-    return groupId;
-  };
-
-  var createUnexpectedGroupIdMessage = function createUnexpectedGroupIdMessage(_ref2) {
-    var _createDetailedMessag;
-
-    var compileId = _ref2.compileId,
-        groupMap = _ref2.groupMap;
-    return createDetailedMessage("unexpected groupId.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "expected compiled id", Object.keys(groupMap)), _defineProperty(_createDetailedMessag, "received compile id", compileId), _createDetailedMessag));
-  };
-
-  var firstMatch = function firstMatch(regexp, string) {
-    var match = string.match(regexp);
-    return match && match.length > 0 ? match[1] || undefined : undefined;
-  };
-  var secondMatch = function secondMatch(regexp, string) {
-    var match = string.match(regexp);
-    return match && match.length > 1 ? match[2] || undefined : undefined;
-  };
-  var userAgentToVersion = function userAgentToVersion(userAgent) {
-    return firstMatch(/version\/(\d+(\.?_?\d+)+)/i, userAgent) || undefined;
-  };
-
-  var detectAndroid = function detectAndroid() {
-    return navigatorToBrowser$1(window.navigator);
-  };
-
-  var navigatorToBrowser$1 = function navigatorToBrowser(_ref) {
-    var userAgent = _ref.userAgent,
-        appVersion = _ref.appVersion;
-
-    if (/(android)/i.test(userAgent)) {
-      return {
-        name: "android",
-        version: firstMatch(/Android (\d+(\.?_?\d+)+)/i, appVersion)
-      };
-    }
-
-    return null;
-  };
-
-  var detectInternetExplorer = function detectInternetExplorer() {
-    return userAgentToBrowser$5(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$5 = function userAgentToBrowser(userAgent) {
-    if (/msie|trident/i.test(userAgent)) {
-      return {
-        name: "ie",
-        version: firstMatch(/(?:msie |rv:)(\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectOpera = function detectOpera() {
-    return userAgentToBrowser$4(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$4 = function userAgentToBrowser(userAgent) {
-    // opera below 13
-    if (/opera/i.test(userAgent)) {
-      return {
-        name: "opera",
-        version: userAgentToVersion(userAgent) || firstMatch(/(?:opera)[\s/](\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    } // opera above 13
-
-
-    if (/opr\/|opios/i.test(userAgent)) {
-      return {
-        name: "opera",
-        version: firstMatch(/(?:opr|opios)[\s/](\S+)/i, userAgent) || userAgentToVersion(userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectEdge = function detectEdge() {
-    return userAgentToBrowser$3(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$3 = function userAgentToBrowser(userAgent) {
-    if (/edg([ea]|ios)/i.test(userAgent)) {
-      return {
-        name: "edge",
-        version: secondMatch(/edg([ea]|ios)\/(\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectFirefox = function detectFirefox() {
-    return userAgentToBrowser$2(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$2 = function userAgentToBrowser(userAgent) {
-    if (/firefox|iceweasel|fxios/i.test(userAgent)) {
-      return {
-        name: "firefox",
-        version: firstMatch(/(?:firefox|iceweasel|fxios)[\s/](\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectChrome = function detectChrome() {
-    return userAgentToBrowser$1(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$1 = function userAgentToBrowser(userAgent) {
-    if (/chromium/i.test(userAgent)) {
-      return {
-        name: "chrome",
-        version: firstMatch(/(?:chromium)[\s/](\d+(\.?_?\d+)+)/i, userAgent) || userAgentToVersion(userAgent)
-      };
-    }
-
-    if (/chrome|crios|crmo/i.test(userAgent)) {
-      return {
-        name: "chrome",
-        version: firstMatch(/(?:chrome|crios|crmo)\/(\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectSafari = function detectSafari() {
-    return userAgentToBrowser(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser = function userAgentToBrowser(userAgent) {
-    if (/safari|applewebkit/i.test(userAgent)) {
-      return {
-        name: "safari",
-        version: userAgentToVersion(userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectElectron = function detectElectron() {
-    return null;
-  }; // TODO
-
-  var detectIOS = function detectIOS() {
-    return navigatorToBrowser(window.navigator);
-  };
-
-  var navigatorToBrowser = function navigatorToBrowser(_ref) {
-    var userAgent = _ref.userAgent,
-        appVersion = _ref.appVersion;
-
-    if (/iPhone;/.test(userAgent)) {
-      return {
-        name: "ios",
-        version: firstMatch(/OS (\d+(\.?_?\d+)+)/i, appVersion)
-      };
-    }
-
-    if (/iPad;/.test(userAgent)) {
-      return {
-        name: "ios",
-        version: firstMatch(/OS (\d+(\.?_?\d+)+)/i, appVersion)
-      };
-    }
-
-    return null;
-  };
-
-  // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
-
-  var detectorCompose = function detectorCompose(detectors) {
-    return function () {
-      var i = 0;
-
-      while (i < detectors.length) {
-        var _detector = detectors[i];
-        i++;
-
-        var result = _detector();
-
-        if (result) {
-          return result;
-        }
-      }
-
-      return null;
-    };
-  };
-
-  var detector = detectorCompose([detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
-  var detectBrowser = function detectBrowser() {
-    var _ref = detector() || {},
-        _ref$name = _ref.name,
-        name = _ref$name === void 0 ? "other" : _ref$name,
-        _ref$version = _ref.version,
-        version = _ref$version === void 0 ? "unknown" : _ref$version;
-
-    return {
-      name: normalizeName(name),
-      version: normalizeVersion(version)
-    };
-  };
-
-  var normalizeName = function normalizeName(name) {
-    return name.toLowerCase();
-  };
-
-  var normalizeVersion = function normalizeVersion(version) {
-    if (version.indexOf(".") > -1) {
-      var parts = version.split("."); // remove extraneous .
-
-      return parts.slice(0, 3).join(".");
-    }
-
-    if (version.indexOf("_") > -1) {
-      var _parts = version.split("_"); // remove extraneous _
-
-
-      return _parts.slice(0, 3).join("_");
-    }
-
-    return version;
-  };
-
-  var valueToVersion = function valueToVersion(value) {
-    if (typeof value === "number") {
-      return numberToVersion(value);
-    }
-
-    if (typeof value === "string") {
-      return stringToVersion(value);
-    }
-
-    throw new TypeError(createValueErrorMessage({
-      version: value
-    }));
-  };
-
-  var numberToVersion = function numberToVersion(number) {
-    return {
-      major: number,
-      minor: 0,
-      patch: 0
-    };
-  };
-
-  var stringToVersion = function stringToVersion(string) {
-    if (string.indexOf(".") > -1) {
-      var parts = string.split(".");
-      return {
-        major: Number(parts[0]),
-        minor: parts[1] ? Number(parts[1]) : 0,
-        patch: parts[2] ? Number(parts[2]) : 0
-      };
-    }
-
-    if (isNaN(string)) {
-      return {
-        major: 0,
-        minor: 0,
-        patch: 0
-      };
-    }
-
-    return {
-      major: Number(string),
-      minor: 0,
-      patch: 0
-    };
-  };
-
-  var createValueErrorMessage = function createValueErrorMessage(_ref) {
-    var value = _ref.value;
-    return "value must be a number or a string.\nvalue: ".concat(value);
-  };
-
-  var versionCompare = function versionCompare(versionA, versionB) {
-    var semanticVersionA = valueToVersion(versionA);
-    var semanticVersionB = valueToVersion(versionB);
-    var majorDiff = semanticVersionA.major - semanticVersionB.major;
-
-    if (majorDiff > 0) {
-      return majorDiff;
-    }
-
-    if (majorDiff < 0) {
-      return majorDiff;
-    }
-
-    var minorDiff = semanticVersionA.minor - semanticVersionB.minor;
-
-    if (minorDiff > 0) {
-      return minorDiff;
-    }
-
-    if (minorDiff < 0) {
-      return minorDiff;
-    }
-
-    var patchDiff = semanticVersionA.patch - semanticVersionB.patch;
-
-    if (patchDiff > 0) {
-      return patchDiff;
-    }
-
-    if (patchDiff < 0) {
-      return patchDiff;
-    }
-
-    return 0;
-  };
-
-  var versionIsBelow = function versionIsBelow(versionSupposedBelow, versionSupposedAbove) {
-    return versionCompare(versionSupposedBelow, versionSupposedAbove) < 0;
-  };
-
-  var findHighestVersion = function findHighestVersion() {
-    for (var _len = arguments.length, values = new Array(_len), _key = 0; _key < _len; _key++) {
-      values[_key] = arguments[_key];
-    }
-
-    if (values.length === 0) throw new Error("missing argument");
-    return values.reduce(function (highestVersion, value) {
-      if (versionIsBelow(highestVersion, value)) {
-        return value;
-      }
-
-      return highestVersion;
-    });
-  };
-
-  var resolveGroup = function resolveGroup(_ref, groupMap) {
-    var name = _ref.name,
-        version = _ref.version;
-    return Object.keys(groupMap).find(function (compileIdCandidate) {
-      var runtimeCompatMap = groupMap[compileIdCandidate].runtimeCompatMap;
-
-      if (name in runtimeCompatMap === false) {
-        return false;
-      }
-
-      var versionForGroup = runtimeCompatMap[name];
-      var highestVersion = findHighestVersion(version, versionForGroup);
-      return highestVersion === version;
-    });
-  };
-
-  var resolveBrowserGroup = function resolveBrowserGroup(groupMap) {
-    return resolveGroup(detectBrowser(), groupMap);
-  };
-
-  function ownKeys(object, enumerableOnly) {
-    var keys = Object.keys(object);
-
-    if (Object.getOwnPropertySymbols) {
-      var symbols = Object.getOwnPropertySymbols(object);
-
-      if (enumerableOnly) {
-        symbols = symbols.filter(function (sym) {
-          return Object.getOwnPropertyDescriptor(object, sym).enumerable;
-        });
-      }
-
-      keys.push.apply(keys, symbols);
-    }
-
-    return keys;
-  }
-
-  function _objectSpread2(target) {
-    for (var i = 1; i < arguments.length; i++) {
-      var source = arguments[i] != null ? arguments[i] : {};
-
-      if (i % 2) {
-        ownKeys(Object(source), true).forEach(function (key) {
-          _defineProperty(target, key, source[key]);
-        });
-      } else if (Object.getOwnPropertyDescriptors) {
-        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
-      } else {
-        ownKeys(Object(source)).forEach(function (key) {
-          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
-        });
-      }
-    }
-
-    return target;
-  }
-
   var objectWithoutPropertiesLoose = (function (source, excluded) {
     if (source === null) return {};
     var target = {};
@@ -599,6 +201,16 @@
   };
 
   var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+
+  var createDetailedMessage = function createDetailedMessage(message) {
+    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var string = "".concat(message);
+    Object.keys(details).forEach(function (key) {
+      var value = details[key];
+      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    });
+    return string;
+  };
 
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
@@ -1180,6 +792,394 @@
     });
   });
 
+  var COMPILE_ID_OTHERWISE = "otherwise";
+
+  var computeCompileIdFromGroupId = function computeCompileIdFromGroupId(_ref) {
+    var groupId = _ref.groupId,
+        groupMap = _ref.groupMap;
+
+    if (typeof groupId === "undefined") {
+      if (COMPILE_ID_OTHERWISE in groupMap) {
+        return COMPILE_ID_OTHERWISE;
+      }
+
+      var keys = Object.keys(groupMap);
+
+      if (keys.length === 1) {
+        return keys[0];
+      }
+
+      throw new Error(createUnexpectedGroupIdMessage({
+        groupMap: groupMap
+      }));
+    }
+
+    if (groupId in groupMap === false) {
+      throw new Error(createUnexpectedGroupIdMessage({
+        groupId: groupId,
+        groupMap: groupMap
+      }));
+    }
+
+    return groupId;
+  };
+
+  var createUnexpectedGroupIdMessage = function createUnexpectedGroupIdMessage(_ref2) {
+    var _createDetailedMessag;
+
+    var compileId = _ref2.compileId,
+        groupMap = _ref2.groupMap;
+    return createDetailedMessage("unexpected groupId.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "expected compiled id", Object.keys(groupMap)), _defineProperty(_createDetailedMessag, "received compile id", compileId), _createDetailedMessag));
+  };
+
+  var firstMatch = function firstMatch(regexp, string) {
+    var match = string.match(regexp);
+    return match && match.length > 0 ? match[1] || undefined : undefined;
+  };
+  var secondMatch = function secondMatch(regexp, string) {
+    var match = string.match(regexp);
+    return match && match.length > 1 ? match[2] || undefined : undefined;
+  };
+  var userAgentToVersion = function userAgentToVersion(userAgent) {
+    return firstMatch(/version\/(\d+(\.?_?\d+)+)/i, userAgent) || undefined;
+  };
+
+  var detectAndroid = function detectAndroid() {
+    return navigatorToBrowser$1(window.navigator);
+  };
+
+  var navigatorToBrowser$1 = function navigatorToBrowser(_ref) {
+    var userAgent = _ref.userAgent,
+        appVersion = _ref.appVersion;
+
+    if (/(android)/i.test(userAgent)) {
+      return {
+        name: "android",
+        version: firstMatch(/Android (\d+(\.?_?\d+)+)/i, appVersion)
+      };
+    }
+
+    return null;
+  };
+
+  var detectInternetExplorer = function detectInternetExplorer() {
+    return userAgentToBrowser$5(window.navigator.userAgent);
+  };
+
+  var userAgentToBrowser$5 = function userAgentToBrowser(userAgent) {
+    if (/msie|trident/i.test(userAgent)) {
+      return {
+        name: "ie",
+        version: firstMatch(/(?:msie |rv:)(\d+(\.?_?\d+)+)/i, userAgent)
+      };
+    }
+
+    return null;
+  };
+
+  var detectOpera = function detectOpera() {
+    return userAgentToBrowser$4(window.navigator.userAgent);
+  };
+
+  var userAgentToBrowser$4 = function userAgentToBrowser(userAgent) {
+    // opera below 13
+    if (/opera/i.test(userAgent)) {
+      return {
+        name: "opera",
+        version: userAgentToVersion(userAgent) || firstMatch(/(?:opera)[\s/](\d+(\.?_?\d+)+)/i, userAgent)
+      };
+    } // opera above 13
+
+
+    if (/opr\/|opios/i.test(userAgent)) {
+      return {
+        name: "opera",
+        version: firstMatch(/(?:opr|opios)[\s/](\S+)/i, userAgent) || userAgentToVersion(userAgent)
+      };
+    }
+
+    return null;
+  };
+
+  var detectEdge = function detectEdge() {
+    return userAgentToBrowser$3(window.navigator.userAgent);
+  };
+
+  var userAgentToBrowser$3 = function userAgentToBrowser(userAgent) {
+    if (/edg([ea]|ios)/i.test(userAgent)) {
+      return {
+        name: "edge",
+        version: secondMatch(/edg([ea]|ios)\/(\d+(\.?_?\d+)+)/i, userAgent)
+      };
+    }
+
+    return null;
+  };
+
+  var detectFirefox = function detectFirefox() {
+    return userAgentToBrowser$2(window.navigator.userAgent);
+  };
+
+  var userAgentToBrowser$2 = function userAgentToBrowser(userAgent) {
+    if (/firefox|iceweasel|fxios/i.test(userAgent)) {
+      return {
+        name: "firefox",
+        version: firstMatch(/(?:firefox|iceweasel|fxios)[\s/](\d+(\.?_?\d+)+)/i, userAgent)
+      };
+    }
+
+    return null;
+  };
+
+  var detectChrome = function detectChrome() {
+    return userAgentToBrowser$1(window.navigator.userAgent);
+  };
+
+  var userAgentToBrowser$1 = function userAgentToBrowser(userAgent) {
+    if (/chromium/i.test(userAgent)) {
+      return {
+        name: "chrome",
+        version: firstMatch(/(?:chromium)[\s/](\d+(\.?_?\d+)+)/i, userAgent) || userAgentToVersion(userAgent)
+      };
+    }
+
+    if (/chrome|crios|crmo/i.test(userAgent)) {
+      return {
+        name: "chrome",
+        version: firstMatch(/(?:chrome|crios|crmo)\/(\d+(\.?_?\d+)+)/i, userAgent)
+      };
+    }
+
+    return null;
+  };
+
+  var detectSafari = function detectSafari() {
+    return userAgentToBrowser(window.navigator.userAgent);
+  };
+
+  var userAgentToBrowser = function userAgentToBrowser(userAgent) {
+    if (/safari|applewebkit/i.test(userAgent)) {
+      return {
+        name: "safari",
+        version: userAgentToVersion(userAgent)
+      };
+    }
+
+    return null;
+  };
+
+  var detectElectron = function detectElectron() {
+    return null;
+  }; // TODO
+
+  var detectIOS = function detectIOS() {
+    return navigatorToBrowser(window.navigator);
+  };
+
+  var navigatorToBrowser = function navigatorToBrowser(_ref) {
+    var userAgent = _ref.userAgent,
+        appVersion = _ref.appVersion;
+
+    if (/iPhone;/.test(userAgent)) {
+      return {
+        name: "ios",
+        version: firstMatch(/OS (\d+(\.?_?\d+)+)/i, appVersion)
+      };
+    }
+
+    if (/iPad;/.test(userAgent)) {
+      return {
+        name: "ios",
+        version: firstMatch(/OS (\d+(\.?_?\d+)+)/i, appVersion)
+      };
+    }
+
+    return null;
+  };
+
+  // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
+
+  var detectorCompose = function detectorCompose(detectors) {
+    return function () {
+      var i = 0;
+
+      while (i < detectors.length) {
+        var _detector = detectors[i];
+        i++;
+
+        var result = _detector();
+
+        if (result) {
+          return result;
+        }
+      }
+
+      return null;
+    };
+  };
+
+  var detector = detectorCompose([detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
+  var detectBrowser = function detectBrowser() {
+    var _ref = detector() || {},
+        _ref$name = _ref.name,
+        name = _ref$name === void 0 ? "other" : _ref$name,
+        _ref$version = _ref.version,
+        version = _ref$version === void 0 ? "unknown" : _ref$version;
+
+    return {
+      name: normalizeName(name),
+      version: normalizeVersion(version)
+    };
+  };
+
+  var normalizeName = function normalizeName(name) {
+    return name.toLowerCase();
+  };
+
+  var normalizeVersion = function normalizeVersion(version) {
+    if (version.indexOf(".") > -1) {
+      var parts = version.split("."); // remove extraneous .
+
+      return parts.slice(0, 3).join(".");
+    }
+
+    if (version.indexOf("_") > -1) {
+      var _parts = version.split("_"); // remove extraneous _
+
+
+      return _parts.slice(0, 3).join("_");
+    }
+
+    return version;
+  };
+
+  var valueToVersion = function valueToVersion(value) {
+    if (typeof value === "number") {
+      return numberToVersion(value);
+    }
+
+    if (typeof value === "string") {
+      return stringToVersion(value);
+    }
+
+    throw new TypeError(createValueErrorMessage({
+      version: value
+    }));
+  };
+
+  var numberToVersion = function numberToVersion(number) {
+    return {
+      major: number,
+      minor: 0,
+      patch: 0
+    };
+  };
+
+  var stringToVersion = function stringToVersion(string) {
+    if (string.indexOf(".") > -1) {
+      var parts = string.split(".");
+      return {
+        major: Number(parts[0]),
+        minor: parts[1] ? Number(parts[1]) : 0,
+        patch: parts[2] ? Number(parts[2]) : 0
+      };
+    }
+
+    if (isNaN(string)) {
+      return {
+        major: 0,
+        minor: 0,
+        patch: 0
+      };
+    }
+
+    return {
+      major: Number(string),
+      minor: 0,
+      patch: 0
+    };
+  };
+
+  var createValueErrorMessage = function createValueErrorMessage(_ref) {
+    var value = _ref.value;
+    return "value must be a number or a string.\nvalue: ".concat(value);
+  };
+
+  var versionCompare = function versionCompare(versionA, versionB) {
+    var semanticVersionA = valueToVersion(versionA);
+    var semanticVersionB = valueToVersion(versionB);
+    var majorDiff = semanticVersionA.major - semanticVersionB.major;
+
+    if (majorDiff > 0) {
+      return majorDiff;
+    }
+
+    if (majorDiff < 0) {
+      return majorDiff;
+    }
+
+    var minorDiff = semanticVersionA.minor - semanticVersionB.minor;
+
+    if (minorDiff > 0) {
+      return minorDiff;
+    }
+
+    if (minorDiff < 0) {
+      return minorDiff;
+    }
+
+    var patchDiff = semanticVersionA.patch - semanticVersionB.patch;
+
+    if (patchDiff > 0) {
+      return patchDiff;
+    }
+
+    if (patchDiff < 0) {
+      return patchDiff;
+    }
+
+    return 0;
+  };
+
+  var versionIsBelow = function versionIsBelow(versionSupposedBelow, versionSupposedAbove) {
+    return versionCompare(versionSupposedBelow, versionSupposedAbove) < 0;
+  };
+
+  var findHighestVersion = function findHighestVersion() {
+    for (var _len = arguments.length, values = new Array(_len), _key = 0; _key < _len; _key++) {
+      values[_key] = arguments[_key];
+    }
+
+    if (values.length === 0) throw new Error("missing argument");
+    return values.reduce(function (highestVersion, value) {
+      if (versionIsBelow(highestVersion, value)) {
+        return value;
+      }
+
+      return highestVersion;
+    });
+  };
+
+  var resolveGroup = function resolveGroup(_ref, groupMap) {
+    var name = _ref.name,
+        version = _ref.version;
+    return Object.keys(groupMap).find(function (compileIdCandidate) {
+      var runtimeCompatMap = groupMap[compileIdCandidate].runtimeCompatMap;
+
+      if (name in runtimeCompatMap === false) {
+        return false;
+      }
+
+      var versionForGroup = runtimeCompatMap[name];
+      var highestVersion = findHighestVersion(version, versionForGroup);
+      return highestVersion === version;
+    });
+  };
+
+  var resolveBrowserGroup = function resolveBrowserGroup(groupMap) {
+    return resolveGroup(detectBrowser(), groupMap);
+  };
+
   function _await(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -1234,26 +1234,46 @@
   }
 
   var scanBrowserRuntimeFeatures = _async(function () {
-    return _await(fetchJson("/.jsenv/compile-meta.json"), function (_ref) {
-      var outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
+    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref$coverageInstrume = _ref.coverageInstrumentationRequired,
+        coverageInstrumentationRequired = _ref$coverageInstrume === void 0 ? true : _ref$coverageInstrume;
+
+    return _await(fetchJson("/.jsenv/compile-meta.json"), function (_ref2) {
+      var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl;
       var groupMapUrl = "/".concat(outDirectoryRelativeUrl, "groupMap.json");
       var envFileUrl = "/".concat(outDirectoryRelativeUrl, "env.json");
-      return _await(Promise.all([fetchJson(groupMapUrl), fetchJson(envFileUrl)]), function (_ref2) {
-        var _ref3 = _slicedToArray(_ref2, 2),
-            groupMap = _ref3[0],
-            envJson = _ref3[1];
+      return _await(Promise.all([fetchJson(groupMapUrl), fetchJson(envFileUrl)]), function (_ref3) {
+        var _ref4 = _slicedToArray(_ref3, 2),
+            groupMap = _ref4[0],
+            envJson = _ref4[1];
 
         var compileId = computeCompileIdFromGroupId({
           groupId: resolveBrowserGroup(groupMap),
           groupMap: groupMap
         });
         var groupInfo = groupMap[compileId];
-        var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML;
+        var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML,
+            customCompilerNames = envJson.customCompilerNames,
+            convertPatterns = envJson.convertPatterns;
+
+        var _babelPluginRequiredN = babelPluginRequiredNamesFromGroupInfo(groupInfo, {
+          coverageInstrumentationRequired: coverageInstrumentationRequired
+        });
+
         return _await(getFeaturesReport({
           groupInfo: groupInfo,
-          inlineImportMapIntoHTML: inlineImportMapIntoHTML
-        }), function (featuresReport) {
-          var canAvoidCompilation = featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
+          inlineImportMapIntoHTML: inlineImportMapIntoHTML,
+          customCompilerNames: customCompilerNames,
+          coverageInstrumentationRequired: coverageInstrumentationRequired
+        }), function (_getFeaturesReport) {
+          var featuresReport = _objectSpread2(_objectSpread2({
+            babelPluginRequiredNames: _babelPluginRequiredN
+          }, _getFeaturesReport), {}, {
+            customCompilerNames: customCompilerNames,
+            convertPatterns: convertPatterns
+          });
+
+          var canAvoidCompilation = featuresReport.convertPatterns.legnth === 0 && featuresReport.customCompilerNames.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
           return {
             featuresReport: featuresReport,
             canAvoidCompilation: canAvoidCompilation,
@@ -1265,10 +1285,9 @@
     });
   });
 
-  var getFeaturesReport = _async(function (_ref4) {
-    var groupInfo = _ref4.groupInfo,
-        inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML;
-    var babelPluginRequiredNames = babelPluginRequiredNamesFromGroupInfo(groupInfo);
+  var getFeaturesReport = _async(function (_ref5) {
+    var groupInfo = _ref5.groupInfo,
+        inlineImportMapIntoHTML = _ref5.inlineImportMapIntoHTML;
     var jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray; // start testing importmap support first and not in paralell
     // so that there is not module script loaded beore importmap is injected
     // it would log an error in chrome console and return undefined
@@ -1287,7 +1306,6 @@
       return _call(supportsDynamicImport, function (dynamicImportSupported) {
         return _call(supportsTopLevelAwait, function (topLevelAwaitSupported) {
           return {
-            babelPluginRequiredNames: babelPluginRequiredNames,
             jsenvPluginRequiredNames: jsenvPluginRequiredNames,
             importmapSupported: importmapSupported,
             dynamicImportSupported: dynamicImportSupported,
@@ -1298,16 +1316,16 @@
     });
   });
 
-  var babelPluginRequiredNamesFromGroupInfo = function babelPluginRequiredNamesFromGroupInfo(groupInfo) {
+  var babelPluginRequiredNamesFromGroupInfo = function babelPluginRequiredNamesFromGroupInfo(groupInfo, _ref6) {
+    var coverageInstrumentationRequired = _ref6.coverageInstrumentationRequired;
     var babelPluginRequiredNameArray = groupInfo.babelPluginRequiredNameArray;
     var babelPluginRequiredNames = babelPluginRequiredNameArray.slice(); // When instrumentation CAN be handed by playwright
     // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-    // "transform-instrument" becomes non mandatory
-    // TODO: set window.PLAYWRIGHT_COVERAGE to true in specific circustances
+    // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
 
     var transformInstrumentIndex = babelPluginRequiredNames.indexOf("transform-instrument");
 
-    if (transformInstrumentIndex > -1 && window.PLAYWRIGHT_COVERAGE) {
+    if (transformInstrumentIndex > -1 && !coverageInstrumentationRequired) {
       babelPluginRequiredNames.splice(transformInstrumentIndex, 1);
     }
 
@@ -1315,9 +1333,9 @@
   };
 
   var supportsImportmap = _async(function () {
-    var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        _ref5$remote = _ref5.remote,
-        remote = _ref5$remote === void 0 ? true : _ref5$remote;
+    var _ref7 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref7$remote = _ref7.remote,
+        remote = _ref7$remote === void 0 ? true : _ref7$remote;
 
     var specifier = jsToTextUrl("export default false");
     var importMap = {

@@ -2227,26 +2227,46 @@
   }
 
   var scanBrowserRuntimeFeatures = _async$1(function () {
-    return _await(fetchJson("/.jsenv/compile-meta.json"), function (_ref) {
-      var outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
+    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref$coverageInstrume = _ref.coverageInstrumentationRequired,
+        coverageInstrumentationRequired = _ref$coverageInstrume === void 0 ? true : _ref$coverageInstrume;
+
+    return _await(fetchJson("/.jsenv/compile-meta.json"), function (_ref2) {
+      var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl;
       var groupMapUrl = "/".concat(outDirectoryRelativeUrl, "groupMap.json");
       var envFileUrl = "/".concat(outDirectoryRelativeUrl, "env.json");
-      return _await(Promise.all([fetchJson(groupMapUrl), fetchJson(envFileUrl)]), function (_ref2) {
-        var _ref3 = _slicedToArray(_ref2, 2),
-            groupMap = _ref3[0],
-            envJson = _ref3[1];
+      return _await(Promise.all([fetchJson(groupMapUrl), fetchJson(envFileUrl)]), function (_ref3) {
+        var _ref4 = _slicedToArray(_ref3, 2),
+            groupMap = _ref4[0],
+            envJson = _ref4[1];
 
         var compileId = computeCompileIdFromGroupId({
           groupId: resolveBrowserGroup(groupMap),
           groupMap: groupMap
         });
         var groupInfo = groupMap[compileId];
-        var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML;
+        var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML,
+            customCompilerNames = envJson.customCompilerNames,
+            convertPatterns = envJson.convertPatterns;
+
+        var _babelPluginRequiredN = babelPluginRequiredNamesFromGroupInfo(groupInfo, {
+          coverageInstrumentationRequired: coverageInstrumentationRequired
+        });
+
         return _await(getFeaturesReport({
           groupInfo: groupInfo,
-          inlineImportMapIntoHTML: inlineImportMapIntoHTML
-        }), function (featuresReport) {
-          var canAvoidCompilation = featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
+          inlineImportMapIntoHTML: inlineImportMapIntoHTML,
+          customCompilerNames: customCompilerNames,
+          coverageInstrumentationRequired: coverageInstrumentationRequired
+        }), function (_getFeaturesReport) {
+          var featuresReport = _objectSpread2(_objectSpread2({
+            babelPluginRequiredNames: _babelPluginRequiredN
+          }, _getFeaturesReport), {}, {
+            customCompilerNames: customCompilerNames,
+            convertPatterns: convertPatterns
+          });
+
+          var canAvoidCompilation = featuresReport.convertPatterns.legnth === 0 && featuresReport.customCompilerNames.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
           return {
             featuresReport: featuresReport,
             canAvoidCompilation: canAvoidCompilation,
@@ -2258,10 +2278,9 @@
     });
   });
 
-  var getFeaturesReport = _async$1(function (_ref4) {
-    var groupInfo = _ref4.groupInfo,
-        inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML;
-    var babelPluginRequiredNames = babelPluginRequiredNamesFromGroupInfo(groupInfo);
+  var getFeaturesReport = _async$1(function (_ref5) {
+    var groupInfo = _ref5.groupInfo,
+        inlineImportMapIntoHTML = _ref5.inlineImportMapIntoHTML;
     var jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray; // start testing importmap support first and not in paralell
     // so that there is not module script loaded beore importmap is injected
     // it would log an error in chrome console and return undefined
@@ -2280,7 +2299,6 @@
       return _call$1(supportsDynamicImport, function (dynamicImportSupported) {
         return _call$1(supportsTopLevelAwait, function (topLevelAwaitSupported) {
           return {
-            babelPluginRequiredNames: babelPluginRequiredNames,
             jsenvPluginRequiredNames: jsenvPluginRequiredNames,
             importmapSupported: importmapSupported,
             dynamicImportSupported: dynamicImportSupported,
@@ -2291,16 +2309,16 @@
     });
   });
 
-  var babelPluginRequiredNamesFromGroupInfo = function babelPluginRequiredNamesFromGroupInfo(groupInfo) {
+  var babelPluginRequiredNamesFromGroupInfo = function babelPluginRequiredNamesFromGroupInfo(groupInfo, _ref6) {
+    var coverageInstrumentationRequired = _ref6.coverageInstrumentationRequired;
     var babelPluginRequiredNameArray = groupInfo.babelPluginRequiredNameArray;
     var babelPluginRequiredNames = babelPluginRequiredNameArray.slice(); // When instrumentation CAN be handed by playwright
     // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-    // "transform-instrument" becomes non mandatory
-    // TODO: set window.PLAYWRIGHT_COVERAGE to true in specific circustances
+    // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
 
     var transformInstrumentIndex = babelPluginRequiredNames.indexOf("transform-instrument");
 
-    if (transformInstrumentIndex > -1 && window.PLAYWRIGHT_COVERAGE) {
+    if (transformInstrumentIndex > -1 && !coverageInstrumentationRequired) {
       babelPluginRequiredNames.splice(transformInstrumentIndex, 1);
     }
 
@@ -2308,9 +2326,9 @@
   };
 
   var supportsImportmap = _async$1(function () {
-    var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        _ref5$remote = _ref5.remote,
-        remote = _ref5$remote === void 0 ? true : _ref5$remote;
+    var _ref7 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref7$remote = _ref7.remote,
+        remote = _ref7$remote === void 0 ? true : _ref7$remote;
 
     var specifier = jsToTextUrl("export default false");
     var importMap = {
@@ -2455,11 +2473,11 @@
 
   var alertCompilationRequiredReasons = function alertCompilationRequiredReasons(featuresReport) {
     var parts = [];
-    var babelPluginRequiredNames = featuresReport.babelPluginRequiredNames;
-    var babelPluginRequiredCount = babelPluginRequiredNames.length;
+    var convertPatterns = featuresReport.convertPatterns;
+    var convertPatternCount = convertPatterns.length;
 
-    if (babelPluginRequiredCount > 0) {
-      parts.push("".concat(babelPluginRequiredCount, " babel plugins are mandatory: ").concat(babelPluginRequiredNames));
+    if (convertPatternCount > 0) {
+      parts.push("convertMap is used with the following keys: ".concat(convertPatterns));
     }
 
     var jsenvPluginRequiredNames = featuresReport.jsenvPluginRequiredNames;
@@ -2467,6 +2485,20 @@
 
     if (jsenvPluginRequiredCount > 0) {
       parts.push("".concat(jsenvPluginRequiredCount, " jsenv plugins are mandatory: ").concat(jsenvPluginRequiredNames));
+    }
+
+    var customCompilerNames = featuresReport.customCompilerNames;
+    var customCompilerCount = customCompilerNames.length;
+
+    if (customCompilerCount > 0) {
+      parts.push("".concat(customCompilerCount, " custom compilers enabled: ").concat(customCompilerNames));
+    }
+
+    var babelPluginRequiredNames = featuresReport.babelPluginRequiredNames;
+    var babelPluginRequiredCount = babelPluginRequiredNames.length;
+
+    if (babelPluginRequiredCount > 0) {
+      parts.push("".concat(babelPluginRequiredCount, " babel plugins are mandatory: ").concat(babelPluginRequiredNames));
     }
 
     var importmapSupported = featuresReport.importmapSupported;
