@@ -2266,7 +2266,7 @@
             convertPatterns: convertPatterns
           });
 
-          var canAvoidCompilation = featuresReport.convertPatterns.legnth === 0 && featuresReport.customCompilerNames.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
+          var canAvoidCompilation = featuresReport.convertPatterns.length === 0 && featuresReport.customCompilerNames.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
           return {
             featuresReport: featuresReport,
             canAvoidCompilation: canAvoidCompilation,

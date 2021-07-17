@@ -32,7 +32,7 @@ export const scanBrowserRuntimeFeatures = async ({
   }
 
   const canAvoidCompilation =
-    featuresReport.convertPatterns.legnth === 0 &&
+    featuresReport.convertPatterns.length === 0 &&
     featuresReport.customCompilerNames.length === 0 &&
     featuresReport.jsenvPluginRequiredNames.length === 0 &&
     featuresReport.babelPluginRequiredNames.length === 0 &&
