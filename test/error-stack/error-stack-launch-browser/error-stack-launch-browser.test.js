@@ -23,42 +23,50 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 
-await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
-  const result = await launchAndExecute({
-    ...EXECUTION_TEST_PARAMS,
-    // sets launchAndExecuteLogLevel to off to avoid seeing an expected error in logs
-    launchAndExecuteLogLevel: "off",
-    // stopAfterExecute: false,
-    launch: (options) =>
-      launchBrowser({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        // headless: false,
-      }),
-    executeParams: {
-      fileRelativeUrl,
-    },
-    captureConsole: true,
-    mirrorConsole: true,
-  })
+await launchBrowsers(
+  [
+    // ensure multiline
+    launchChromium,
+    launchFirefox,
+    launchWebkit,
+  ],
+  async (launchBrowser) => {
+    const result = await launchAndExecute({
+      ...EXECUTION_TEST_PARAMS,
+      // sets launchAndExecuteLogLevel to off to avoid seeing an expected error in logs
+      launchAndExecuteLogLevel: "off",
+      // stopAfterExecute: false,
+      launch: (options) =>
+        launchBrowser({
+          ...LAUNCH_TEST_PARAMS,
+          ...options,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+          // headless: false,
+        }),
+      executeParams: {
+        fileRelativeUrl,
+      },
+      captureConsole: true,
+      mirrorConsole: true,
+    })
 
-  const stack = result.error.stack
+    const stack = result.error.stack
 
-  if (launchBrowser === launchChromium) {
-    const expected = `Error: error
-  at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
-  at Object.triggerError (${testDirectoryUrl}${testDirectoryBasename}.js:3:1)`
-    const actual = stack.slice(0, expected.length)
-    assert({ actual, expected })
-  } else if (launchBrowser === launchFirefox) {
-    const expected = `Error: error`
-    const actual = stack.slice(0, expected.length)
-    assert({ actual, expected })
-  } else {
-    const actual = typeof stack
-    const expected = `string`
-    assert({ actual, expected })
-  }
-})
+    if (launchBrowser === launchChromium) {
+      const expected = `Error: error
+    at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
+    at ${testDirectoryUrl}${testDirectoryBasename}.js:3:1`
+      const actual = stack.slice(0, expected.length)
+      assert({ actual, expected })
+    } else if (launchBrowser === launchFirefox) {
+      const expected = `Error: error`
+      const actual = stack.slice(0, expected.length)
+      assert({ actual, expected })
+    } else {
+      const actual = typeof stack
+      const expected = `string`
+      assert({ actual, expected })
+    }
+  },
+)

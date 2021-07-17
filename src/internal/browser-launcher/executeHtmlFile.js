@@ -175,9 +175,10 @@ const executeSource = async ({
 
   if (fileErrored) {
     const { exceptionSource } = fileExecutionResultMap[fileErrored]
+    const error = evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin })
     return transformResult({
       status: "errored",
-      error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
+      error,
       namespace: fileExecutionResultMap,
     })
   }
@@ -234,9 +235,10 @@ const executeCompiledVersion = async ({
 
   if (fileErrored) {
     const { exceptionSource } = fileExecutionResultMap[fileErrored]
+    const error = evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin })
     return transformResult({
       status: "errored",
-      error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
+      error,
       namespace: fileExecutionResultMap,
     })
   }
