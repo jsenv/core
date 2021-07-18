@@ -26,7 +26,6 @@ import {
   registerDirectoryLifecycle,
   urlIsInsideOf,
   urlToBasename,
-  urlToExtension,
 } from "@jsenv/util"
 
 import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
@@ -44,7 +43,7 @@ import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
 import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
-import { transformHTMLSourceFile } from "./transformHTMLSourceFile.js"
+import { createTransformHtmlSourceFileService } from "./html_source_file_service.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -172,14 +171,14 @@ export const startCompileServer = async ({
       trackMainAndDependencies: sseSetup.trackMainAndDependencies,
     })
     customServices = {
-      "service:livereload sse": serveSSEForLivereload,
+      "service:sse": serveSSEForLivereload,
       ...customServices,
     }
   } else {
     const roomWhenLivereloadIsDisabled = createSSERoom()
     roomWhenLivereloadIsDisabled.open()
     customServices = {
-      "service:livereload sse": (request) => {
+      "service:sse": (request) => {
         const { accept } = request.headers
         if (!accept || !accept.includes("text/event-stream")) {
           return null
@@ -253,7 +252,18 @@ export const startCompileServer = async ({
       sourcemapExcludeSources,
       compileCacheStrategy,
     }),
-    "service:project file": createProjectFileService({
+    ...(transformHtmlSourceFiles
+      ? {
+          "service:transform html source file": createTransformHtmlSourceFileService({
+            logger,
+            projectDirectoryUrl,
+            inlineImportMapIntoHTML,
+            jsenvScriptInjection,
+            jsenvToolbarInjection,
+          }),
+        }
+      : {}),
+    "service:source file": createSourceFileService({
       logger,
       projectDirectoryUrl,
       projectFileRequestedCallback,
@@ -772,54 +782,15 @@ const createBrowserScriptService = ({ projectDirectoryUrl, outDirectoryRelativeU
   }
 }
 
-const createProjectFileService = ({
-  logger,
+const createSourceFileService = ({
   projectDirectoryUrl,
   projectFileRequestedCallback,
   projectFileEtagEnabled,
-  transformHtmlSourceFiles,
-  inlineImportMapIntoHTML,
-  jsenvScriptInjection,
-  jsenvToolbarInjection,
 }) => {
   return async (request) => {
     const { ressource } = request
     const relativeUrl = ressource.slice(1)
     projectFileRequestedCallback(relativeUrl, request)
-
-    const requestUrl = resolveUrl(ressource, request.origin)
-    if (transformHtmlSourceFiles && urlToExtension(requestUrl) === ".html") {
-      const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
-      let fileContent
-      try {
-        fileContent = await readFile(fileUrl, { as: "string" })
-      } catch (e) {
-        if (e.code === "ENOENT") {
-          return {
-            status: 404,
-          }
-        }
-        throw e
-      }
-      const htmlTransformed = await transformHTMLSourceFile({
-        logger,
-        projectDirectoryUrl,
-        fileUrl,
-        fileContent,
-        inlineImportMapIntoHTML,
-        jsenvScriptInjection,
-        jsenvToolbarInjection,
-      })
-      return {
-        status: 200,
-        headers: {
-          "content-type": "text/html",
-          "content-length": Buffer.byteLength(htmlTransformed),
-          "cache-control": "no-cache",
-        },
-        body: htmlTransformed,
-      }
-    }
 
     const responsePromise = serveFile(request, {
       rootDirectoryUrl: projectDirectoryUrl,

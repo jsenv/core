@@ -10,12 +10,11 @@
  *   </script>
  */
 
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlToExtension, readFile, urlToBasename } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
 import { moveImportMap } from "@jsenv/import-map"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import {
   jsenvToolbarHtmlFileInfo,
   jsenvBrowserSystemFileInfo,
@@ -31,9 +30,94 @@ import {
   removeHtmlNodeAttribute,
   getHtmlNodeTextNode,
   setHtmlNodeText,
+  getUniqueNameForInlineHtmlNode,
 } from "./compileHtml.js"
 
-export const transformHTMLSourceFile = async ({
+export const createTransformHtmlSourceFileService = ({
+  logger,
+  projectDirectoryUrl,
+  inlineImportMapIntoHTML,
+  jsenvScriptInjection,
+  jsenvToolbarInjection,
+}) => {
+  /**
+   * htmlInlineScriptMap is composed as below
+   * "file:///project_directory/index.html.10.js": {
+   *   "htmlFileUrl": "file:///project_directory/index.html",
+   *   "scriptContent": "console.log(`Hello world`)"
+   * }
+   * It is used to serve the inline script as if they where inside a file
+   * Every time the html file is retransformed, the list of inline script inside it
+   * are deleted so that when html file and page is reloaded, the inline script are updated
+   */
+  const htmlInlineScriptMap = new Map()
+
+  return async (request) => {
+    const { ressource } = request
+    const relativeUrl = ressource.slice(1)
+    const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
+
+    const inlineScript = htmlInlineScriptMap.get(fileUrl)
+    if (inlineScript) {
+      return {
+        status: 200,
+        headers: {
+          "content-type": "application/javascript",
+          "content-length": Buffer.byteLength(inlineScript.scriptContent),
+        },
+        body: inlineScript.scriptContent,
+      }
+    }
+
+    if (urlToExtension(fileUrl) !== ".html") {
+      return null
+    }
+
+    let fileContent
+    try {
+      fileContent = await readFile(fileUrl, { as: "string" })
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        return {
+          status: 404,
+        }
+      }
+      throw e
+    }
+    htmlInlineScriptMap.forEach((inlineScript, inlineScriptUrl) => {
+      if (inlineScript.htmlFileUrl === fileUrl) {
+        htmlInlineScriptMap.delete(inlineScriptUrl)
+      }
+    })
+    const htmlTransformed = await transformHTMLSourceFile({
+      logger,
+      projectDirectoryUrl,
+      fileUrl,
+      fileContent,
+      inlineImportMapIntoHTML,
+      jsenvScriptInjection,
+      jsenvToolbarInjection,
+      onInlineModuleScript: ({ scriptContent, scriptIdentifier }) => {
+        const inlineScriptUrl = resolveUrl(scriptIdentifier, fileUrl)
+        htmlInlineScriptMap.set(inlineScriptUrl, {
+          htmlFileUrl: fileUrl,
+          scriptContent,
+        })
+      },
+    })
+    return {
+      status: 200,
+      headers: {
+        "content-type": "text/html",
+        "content-length": Buffer.byteLength(htmlTransformed),
+        "cache-control": "no-cache",
+      },
+      body: htmlTransformed,
+    }
+  }
+}
+
+const transformHTMLSourceFile = async ({
   logger,
   projectDirectoryUrl,
   fileUrl,
@@ -41,6 +125,7 @@ export const transformHTMLSourceFile = async ({
   inlineImportMapIntoHTML,
   jsenvScriptInjection,
   jsenvToolbarInjection,
+  onInlineModuleScript = () => {},
 }) => {
   const htmlAst = parseHtmlString(fileContent)
   if (inlineImportMapIntoHTML) {
@@ -97,13 +182,18 @@ export const transformHTMLSourceFile = async ({
       // inline
       const textNode = getHtmlNodeTextNode(script)
       if (typeAttribute && typeAttribute.value === "module" && textNode) {
-        const specifierAsBase64 = stringifyDataUrl({
-          mediaType: "application/javascript",
-          data: textNode.value,
+        const scriptIdentifier = getUniqueNameForInlineHtmlNode(
+          script,
+          scripts,
+          `${urlToBasename(fileUrl.targetUrl)}.[id].js`,
+        )
+        onInlineModuleScript({
+          scriptContent: textNode.value,
+          scriptIdentifier,
         })
         setHtmlNodeText(
           script,
-          `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(specifierAsBase64)})`,
+          `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(scriptIdentifier)})`,
         )
         return
       }
