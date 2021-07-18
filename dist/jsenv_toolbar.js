@@ -2270,6 +2270,7 @@
           return {
             featuresReport: featuresReport,
             canAvoidCompilation: canAvoidCompilation,
+            inlineImportMapIntoHTML: inlineImportMapIntoHTML,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
             compileId: compileId
           };
@@ -2286,7 +2287,7 @@
     // it would log an error in chrome console and return undefined
 
     return _await(supportsImportmap({
-      //  chrome supports inline but not remote importmap
+      // chrome supports inline but not remote importmap
       // https://github.com/WICG/import-maps/issues/235
       // at this stage we won't know if the html file will use
       // an importmap or not and if that importmap is inline or specified with an src
@@ -2395,132 +2396,136 @@
 
   var renderCompilationInToolbar = function renderCompilationInToolbar(_ref) {
     var compileGroup = _ref.compileGroup;
-    var compilationRootNode = document.querySelector("#compilation_info"); // reset file execution indicator ui
-
-    enableVariant(compilationRootNode, {
-      compileInfo: "pending"
-    });
-    removeForceHideElement(compilationRootNode);
-    activateToolbarSection(compilationRootNode);
+    var browserSupportRootNode = document.querySelector("#browser_support");
+    var filesCompilationRootNode = document.querySelector("#files_compilation");
+    removeForceHideElement(browserSupportRootNode);
+    removeForceHideElement(filesCompilationRootNode);
     scanBrowserRuntimeFeatures().then(function (_ref2) {
       var featuresReport = _ref2.featuresReport,
           canAvoidCompilation = _ref2.canAvoidCompilation,
+          inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
           outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
           compileId = _ref2.compileId;
-
-      if (compileGroup.compileId && canAvoidCompilation) {
-        enableVariant(compilationRootNode, {
-          compileInfo: "compiled_and_compilation_is_optional"
-        });
-
-        var _variantNode = compilationRootNode.querySelector("[data-when-active]");
-
-        _variantNode.querySelector("a.go_to_source_link").onclick = function () {
-          window.parent.location = "/".concat(compileGroup.fileRelativeUrl);
-        };
-
-        return;
-      }
-
-      if (compileGroup.compileId) {
-        enableVariant(compilationRootNode, {
-          compileInfo: "compiled_and_compilation_is_required"
-        });
-
-        var _variantNode2 = compilationRootNode.querySelector("[data-when-active]");
-
-        _variantNode2.querySelector("a.go_to_source_link").onclick = function () {
-          window.parent.location = "/".concat(compileGroup.fileRelativeUrl);
-        };
-
-        _variantNode2.querySelector("a.required_reasons_link").onclick = function () {
-          alertCompilationRequiredReasons(featuresReport);
-        };
-
-        return;
-      }
-
-      if (canAvoidCompilation) {
-        enableVariant(compilationRootNode, {
-          compileInfo: "source_and_compilation_is_optional"
-        });
-
-        var _variantNode3 = compilationRootNode.querySelector("[data-when-active]");
-
-        _variantNode3.querySelector("a.go_to_compiled_link").onclick = function () {
-          window.parent.location = "/".concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(compileGroup.fileRelativeUrl);
-        };
-
-        return;
-      }
-
-      enableVariant(compilationRootNode, {
-        compileInfo: "source_and_compilation_is_required"
+      var browserSupport = canAvoidCompilation ? inlineImportMapIntoHTML ? "partial" : "full" : "no";
+      enableVariant(browserSupportRootNode, {
+        browserSupport: browserSupport
       });
-      var variantNode = compilationRootNode.querySelector("[data-when-active]");
 
-      variantNode.querySelector("a.go_to_compiled_link").onclick = function () {
+      if (browserSupport === "no") {
+        browserSupportRootNode.querySelector("a.no_support_read_more_link").onclick = function () {
+          // eslint-disable-next-line no-alert
+          window.alert("Source files needs to be compiled to be executable in this browser because: ".concat(getBrowserSupportMessage({
+            missingOnly: true,
+            featuresReport: featuresReport,
+            inlineImportMapIntoHTML: inlineImportMapIntoHTML
+          })));
+        };
+      } else if (browserSupport === "partial") {
+        browserSupportRootNode.querySelector("a.partial_support_read_more_link").onclick = function () {
+          // eslint-disable-next-line no-alert
+          window.alert("Source files (except html) can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
+            featuresReport: featuresReport,
+            inlineImportMapIntoHTML: inlineImportMapIntoHTML
+          })));
+        };
+      } else if (browserSupport === "full") {
+        browserSupportRootNode.querySelector("a.full_support_read_more_link").onclick = function () {
+          // eslint-disable-next-line no-alert
+          window.alert("Source files can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
+            featuresReport: featuresReport,
+            inlineImportMapIntoHTML: inlineImportMapIntoHTML
+          })));
+        };
+      }
+
+      var filesCompilation = compileGroup.compileId ? "yes" : inlineImportMapIntoHTML ? "html_only" : "no";
+      enableVariant(filesCompilationRootNode, {
+        filesCompilation: filesCompilation,
+        compiled: compileGroup.compileId ? "yes" : "no"
+      });
+
+      filesCompilationRootNode.querySelector("a.go_to_source_link").onclick = function () {
+        window.parent.location = "/".concat(compileGroup.fileRelativeUrl);
+      };
+
+      filesCompilationRootNode.querySelector("a.go_to_compiled_link").onclick = function () {
         window.parent.location = "/".concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(compileGroup.fileRelativeUrl);
       };
-
-      variantNode.querySelector("a.required_reasons_link").onclick = function () {
-        alertCompilationRequiredReasons(featuresReport);
-      };
-
-      return;
     });
   };
 
-  var alertCompilationRequiredReasons = function alertCompilationRequiredReasons(featuresReport) {
+  var getBrowserSupportMessage = function getBrowserSupportMessage(_ref3) {
+    var missingOnly = _ref3.missingOnly,
+        featuresReport = _ref3.featuresReport,
+        inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
     var parts = [];
-    var convertPatterns = featuresReport.convertPatterns;
-    var convertPatternCount = convertPatterns.length;
+    var importmapSupported = featuresReport.importmapSupported;
 
-    if (convertPatternCount > 0) {
-      parts.push("convertMap is used with the following keys: ".concat(convertPatterns));
+    if (importmapSupported) {
+      if (!missingOnly) {
+        if (inlineImportMapIntoHTML) {
+          parts.push("importmaps are supported (only when inlined in html files)");
+        } else {
+          parts.push("importmaps are supported");
+        }
+      }
+    } else {
+      parts.push("importmaps are not supported");
     }
 
-    var jsenvPluginRequiredNames = featuresReport.jsenvPluginRequiredNames;
-    var jsenvPluginRequiredCount = jsenvPluginRequiredNames.length;
+    var dynamicImportSupported = featuresReport.dynamicImportSupported;
 
-    if (jsenvPluginRequiredCount > 0) {
-      parts.push("".concat(jsenvPluginRequiredCount, " jsenv plugins are mandatory: ").concat(jsenvPluginRequiredNames));
+    if (dynamicImportSupported) {
+      if (!missingOnly) {
+        parts.push("dynamic imports are supported");
+      }
+    } else {
+      parts.push("dynamic imports are not supported");
     }
 
-    var customCompilerNames = featuresReport.customCompilerNames;
-    var customCompilerCount = customCompilerNames.length;
+    var topLevelAwaitSupported = featuresReport.topLevelAwaitSupported;
 
-    if (customCompilerCount > 0) {
-      parts.push("".concat(customCompilerCount, " custom compilers enabled: ").concat(customCompilerNames));
+    if (topLevelAwaitSupported) {
+      if (!missingOnly) {
+        parts.push("top level await is supported");
+      }
+    } else {
+      parts.push("top level await is not supported");
     }
 
     var babelPluginRequiredNames = featuresReport.babelPluginRequiredNames;
     var babelPluginRequiredCount = babelPluginRequiredNames.length;
 
-    if (babelPluginRequiredCount > 0) {
+    if (babelPluginRequiredCount === 0) {
+      if (!missingOnly) {
+        parts.push("all babel plugins are natively supported");
+      }
+    } else {
       parts.push("".concat(babelPluginRequiredCount, " babel plugins are mandatory: ").concat(babelPluginRequiredNames));
     }
 
-    var importmapSupported = featuresReport.importmapSupported;
+    var convertPatterns = featuresReport.convertPatterns;
+    var convertPatternCount = convertPatterns.length;
 
-    if (!importmapSupported) {
-      parts.push("importmap are not supported");
+    if (convertPatternCount === 0) ; else {
+      parts.push("convertMap is used with the following keys: ".concat(convertPatterns));
     }
 
-    var dynamicImportSupported = featuresReport.dynamicImportSupported;
+    var customCompilerNames = featuresReport.customCompilerNames;
+    var customCompilerCount = customCompilerNames.length;
 
-    if (!dynamicImportSupported) {
-      parts.push("dynamic import are not supported");
+    if (customCompilerCount === 0) ; else {
+      parts.push("".concat(customCompilerCount, " custom compilers enabled: ").concat(customCompilerNames));
     }
 
-    var topLevelAwaitSupported = featuresReport.topLevelAwaitSupported;
+    var jsenvPluginRequiredNames = featuresReport.jsenvPluginRequiredNames;
+    var jsenvPluginRequiredCount = jsenvPluginRequiredNames.length;
 
-    if (!topLevelAwaitSupported) {
-      parts.push("top level await is not supported");
-    } // eslint-disable-next-line no-alert
+    if (jsenvPluginRequiredCount === 0) ; else {
+      parts.push("".concat(jsenvPluginRequiredCount, " jsenv plugins are mandatory: ").concat(jsenvPluginRequiredNames));
+    }
 
-
-    window.alert("Compilation is required because:\n- ".concat(parts.join("\n-")));
+    return "\n- ".concat(parts.join("\n- "));
   };
 
   var createPromiseAndHooks = function createPromiseAndHooks() {

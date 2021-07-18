@@ -203,122 +203,124 @@
               <h3>Settings</h3>
             </div>
             <div id="settings-box-body">
-              <div class="settings-box-item">
-                <div class="category-title">
-                  <svg width="20px" height="20px">
-                    <use xlink:href="./toolbar-notif-icon.svg#toolbar-notif-icon"></use>
-                  </svg>
-                  Notifications
-                </div>
-                <label class="switch" data-contains-hidden-input>
-                  <input id="toggle-notifs" type="checkbox" />
-                  <div>
-                    <div class="slider"></div>
-                    <div class="square"></div>
+              <div class="settings-box-items-wrapper">
+                <div class="settings-box-item">
+                  <div class="category-title">
+                    <svg width="20px" height="20px">
+                      <use xlink:href="./toolbar-notif-icon.svg#toolbar-notif-icon"></use>
+                    </svg>
+                    Notifications
                   </div>
-                </label>
-                <div class="category-subtitle">
-                  Send system notification when execution fails or is fixed.
-                </div>
-              </div>
-              <div class="settings-box-item settings-livereload">
-                <div class="category-title">
-                  <svg width="20px" height="20px">
-                    <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
-                  </svg>
-                  <span>Livereload</span>
-                </div>
-                <label class="switch" data-contains-hidden-input>
-                  <input id="toggle-livereload" type="checkbox" />
-                  <div>
-                    <div class="slider"></div>
-                    <div class="square"></div>
+                  <label class="switch" data-contains-hidden-input>
+                    <input id="toggle-notifs" type="checkbox" />
+                    <div>
+                      <div class="slider"></div>
+                      <div class="square"></div>
+                    </div>
+                  </label>
+                  <div class="category-subtitle">
+                    Send system notification when execution fails or is fixed.
                   </div>
-                </label>
-                <div class="category-subtitle">
-                  Reload page when a file is modified, deleted or created.
                 </div>
-              </div>
-              <div class="settings-box-item">
-                <div class="category-title">
-                  <svg width="20px" height="20px">
-                    <use xlink:href="./animation/toolbar-movie-icon.svg#toolbar-movie-icon"></use>
-                  </svg>
-                  Animations
-                </div>
-                <label class="switch" data-contains-hidden-input>
-                  <input id="toggle-anims" type="checkbox" />
-                  <div>
-                    <div class="slider"></div>
-                    <div class="square"></div>
+                <div class="settings-box-item settings-livereload">
+                  <div class="category-title">
+                    <svg width="20px" height="20px">
+                      <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
+                    </svg>
+                    <span>Livereload</span>
                   </div>
-                </label>
-                <div class="category-subtitle">Play toolbar animations and transitions.</div>
-              </div>
-              <div class="settings-box-item">
-                <div class="category-title">
-                  <svg width="20px" height="20px" id="paletteIconSvg">
-                    <use xlink:href="./theme/toolbar-palette-icon.svg#toolbar-palette-icon"></use>
-                  </svg>
-                  Dark mode
-                </div>
-                <label class="switch" data-contains-hidden-input>
-                  <input id="checkbox-dark-theme" type="checkbox" />
-                  <div>
-                    <div class="slider"></div>
-                    <div class="square"></div>
+                  <label class="switch" data-contains-hidden-input>
+                    <input id="toggle-livereload" type="checkbox" />
+                    <div>
+                      <div class="slider"></div>
+                      <div class="square"></div>
+                    </div>
+                  </label>
+                  <div class="category-subtitle">
+                    Reload page when a file is modified, deleted or created.
                   </div>
-                </label>
-              </div>
-              <div id="compilation_info" class="settings-box-item">
-                <div class="category-title">
-                  <svg id="compilationSvg" width="20px" height="20px">
-                    <use xlink:href="./compilation/info.svg#icon"></use>
-                  </svg>
-                  Compiled or not?
                 </div>
-                <div class="category-subtitle">
-                  <div data-when="compileInfo:pending">...</div>
-                  <div data-when="compileInfo:source_and_compilation_is_optional">
-                    <ul>
-                      <li>Source files are used</li>
-                      <li>Compilation is optional <span class="emoji">❤️</span></li>
-                    </ul>
-                    <a class="go_to_compiled_link" href="javascript:void(0);"
-                      >Go to compiled files</a
+                <div class="settings-box-item">
+                  <div class="category-title">
+                    <svg width="20px" height="20px">
+                      <use xlink:href="./animation/toolbar-movie-icon.svg#toolbar-movie-icon"></use>
+                    </svg>
+                    Animations
+                  </div>
+                  <label class="switch" data-contains-hidden-input>
+                    <input id="toggle-anims" type="checkbox" />
+                    <div>
+                      <div class="slider"></div>
+                      <div class="square"></div>
+                    </div>
+                  </label>
+                  <div class="category-subtitle">Play toolbar animations and transitions.</div>
+                </div>
+                <div class="settings-box-item">
+                  <div class="category-title">
+                    <svg width="20px" height="20px" id="paletteIconSvg">
+                      <use xlink:href="./theme/toolbar-palette-icon.svg#toolbar-palette-icon"></use>
+                    </svg>
+                    Dark mode
+                  </div>
+                  <label class="switch" data-contains-hidden-input>
+                    <input id="checkbox-dark-theme" type="checkbox" />
+                    <div>
+                      <div class="slider"></div>
+                      <div class="square"></div>
+                    </div>
+                  </label>
+                  <div class="category-subtitle">
+                    Choose between light and dark theme for jsenv toolbar.
+                  </div>
+                </div>
+                <div class="settings-box-item" id="browser_support">
+                  <div class="category-title">
+                    <svg id="browser_support_svg" width="20px" height="20px">
+                      <use xlink:href="./compilation/loupe.svg#icon"></use>
+                    </svg>
+                    Browser support
+                  </div>
+                  <div class="category-subtitle">
+                    <div data-when="browserSupport:no">
+                      No browser support.
+                      <a class="no_support_read_more_link" href="javascript:void(0);">Read more</a>
+                    </div>
+                    <div data-when="browserSupport:partial">
+                      Excellent browser support <span class="emoji">❤️</span>.
+                      <a class="partial_support_read_more_link" href="javascript:void(0);"
+                        >Read more</a
+                      >
+                    </div>
+                    <div data-when="browserSupport:full">
+                      Perfect browser support <span class="emoji">❤️</span>.
+                      <a class="full_support_read_more_link" href="javascript:void(0);"
+                        >Read more</a
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-box-item" id="files_compilation">
+                  <div class="category-title">
+                    <svg id="browser_support_svg" width="20px" height="20px">
+                      <use xlink:href="./compilation/flask.svg#icon"></use>
+                    </svg>
+                    Files compilation
+                  </div>
+                  <div class="category-subtitle">
+                    <div data-when="filesCompilation:no">Files shown are source files.</div>
+                    <div data-when="filesCompilation:html_only">
+                      Files shown are source files, except html.
+                    </div>
+                    <div data-when="filesCompilation:yes">Files shown are compiled.</div>
+                    <a data-when="compiled:yes" class="go_to_source_link" href="javascript:void(0);"
+                      >Switch to source files</a
                     >
-                  </div>
-                  <div data-when="compileInfo:compiled_and_compilation_is_optional">
-                    <ul>
-                      <li>The files shown are compiled</li>
-                      <li>Compilation is optional <span class="emoji">❤️</span></li>
-                    </ul>
-                    <a class="go_to_source_link" href="javascript:void(0);"
-                      >Go to source files (not compiled)</a
-                    >
-                  </div>
-                  <div data-when="compileInfo:source_and_compilation_is_required">
-                    <ul>
-                      <li>Source files are used</li>
-                      <li>
-                        Compilation is
-                        <a class="required_reasons_link" href="javascript:void(0);">required</a>
-                      </li>
-                    </ul>
-                    <a class="go_to_compiled_link" href="javascript:void(0);"
-                      >Go to compiled file</a
-                    >
-                  </div>
-                  <div data-when="compileInfo:compiled_and_compilation_is_required">
-                    <ul>
-                      <li>The files shown are compiled</li>
-                      <li>
-                        Compilation is
-                        <a class="required_reasons_link" href="javascript:void(0);">required</a>
-                      </li>
-                    </ul>
-                    <a class="go_to_source_link" href="javascript:void(0);"
-                      >Go to source files (not compiled)</a
+                    <a
+                      data-when="compiled:no"
+                      class="go_to_compiled_link"
+                      href="javascript:void(0);"
+                      >Switch to compiled files</a
                     >
                   </div>
                 </div>

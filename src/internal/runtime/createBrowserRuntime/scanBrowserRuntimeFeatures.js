@@ -43,6 +43,7 @@ export const scanBrowserRuntimeFeatures = async ({
   return {
     featuresReport,
     canAvoidCompilation,
+    inlineImportMapIntoHTML,
     outDirectoryRelativeUrl,
     compileId,
   }
@@ -54,7 +55,7 @@ const getFeaturesReport = async ({ groupInfo, inlineImportMapIntoHTML }) => {
   // so that there is not module script loaded beore importmap is injected
   // it would log an error in chrome console and return undefined
   const importmapSupported = await supportsImportmap({
-    //  chrome supports inline but not remote importmap
+    // chrome supports inline but not remote importmap
     // https://github.com/WICG/import-maps/issues/235
 
     // at this stage we won't know if the html file will use

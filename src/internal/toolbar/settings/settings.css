@@ -32,12 +32,26 @@
 
 #settings-box-body {
   text-align: left;
+  padding: 18px 0;
+  max-height: 80vh;
+  overflow: auto;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+}
+
+.settings-box-items-wrapper {
+  max-width: 700px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .settings-box-item {
-  margin-top: 13px;
   padding: 15px;
   background: #0c111b;
+  width: 250px;
+  margin: 9px 18px;
 }
 
 #settings-box-header .settings-icon {

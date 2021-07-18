@@ -1281,6 +1281,7 @@
           return {
             featuresReport: featuresReport,
             canAvoidCompilation: canAvoidCompilation,
+            inlineImportMapIntoHTML: inlineImportMapIntoHTML,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
             compileId: compileId
           };
@@ -1297,7 +1298,7 @@
     // it would log an error in chrome console and return undefined
 
     return _await$2(supportsImportmap({
-      //  chrome supports inline but not remote importmap
+      // chrome supports inline but not remote importmap
       // https://github.com/WICG/import-maps/issues/235
       // at this stage we won't know if the html file will use
       // an importmap or not and if that importmap is inline or specified with an src
