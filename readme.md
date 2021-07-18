@@ -11,85 +11,26 @@ Tool to develop, test and build js projects.
 `@jsenv/core` was first created to write tests that could be executed in different browsers AND Node.js. In the end it became a tool covering the core needs of a JavaScript project:
 
 - A development server
-- A test runner to execute test files.
+- A test runner to execute test files
 - A builder/bundler to optimize files for production
 
 Jsenv integrates naturally with standard html, css and js. It can be configured to work with TypeScript and React.
 
 # Testing
 
-`@jsenv/core` provides a test runner: A function executing test files to know if some are failing. This function is called `executeTestPlan`. Check steps below to get an idea of its usage.
+`"@jsenv/core"` provides a test runner with the following features:
 
-<details>
-  <summary>1. Create a file to execute your test</summary>
+- Tests can be executed on Chrome, Firefox, Safari and Node.js
+- Tests are executed in isolated runtimes
+- Tests can use top level await to test async stuff
+- Tests can use importmap to remap imports
+- Tests have a configurable amount of ms to end; This is also configurable per test
+- Test runner can report coverage in terminal, JSON file, and HTML files
+- Test runner is not a magic command line; It is just a function in a js file that you can simply execute with the _node_ command.
 
-> The code in file below translates into the following sentence: "Execute all files in my project that ends with `test.html` on Chrome and Firefox AND execute all files that ends with `test.js` on Node.js"
-
-`execute-test-plan.js`
-
-```js
-import { executeTestPlan, launchChromiumTab, launchFirefoxTab, launchNode } from "@jsenv/core"
-
-executeTestPlan({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  testPlan: {
-    "**/*.test.html": {
-      chromium: {
-        launch: launchChromiumTab,
-      },
-      firefox: {
-        launch: launchFirefoxTab,
-      },
-    },
-    "**/*.test.js": {
-      node: {
-        launchNode,
-      },
-    },
-  },
-})
-```
-
-</details>
-
-<details>
-  <summary>2. Create a test file</summary>
-
-> In order to show code unrelated to a specific codebase the example below is testing `Math.max`. In reality you wouldn't test `Math.max`.
-
-`Math.max.test.js`
-
-```js
-const actual = Math.max(2, 4)
-const expected = 4
-if (actual !== expected) {
-  throw new Error(`Math.max(2, 4) should return ${expected}, got ${actual}`)
-}
-```
-
-`Math.max.test.html`
-
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf8" />
-    <link rel="icon" href="data:," />
-  </head>
-  <body>
-    <script type="module" src="./Math.max.test.js"></script>
-  </body>
-</html>
-```
-
-</details>
-
-<details>
-  <summary>3. Execute your tests</summary>
+_screenshot of test plan execution in a terminal:_
 
 ![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
-
-</details>
 
 Read more on [testing documentation](./docs/testing/readme.md)
 
@@ -277,30 +218,23 @@ node ./build-project.js
 
 Read more [building documentation](./docs/building/readme.md)
 
-# Features
+# Jsenv philosophy
 
-Jsenv focuses on one thing: developer experience. Everything was carefully crafted to get explicit and coherent apis. This section list most important features provided by jsenv. Click them to get more details.
+Jsenv focuses on one thing: developer experience. Everything was carefully crafted to get explicit and coherent apis.
 
-<details>
-  <summary>Dispensable by default</summary>
+## Dispensable by default
 
 Jsenv is **dispensable** by default. As long as your code is using only standards, you could remove jsenv from your project and still be able to run your code. You can double click your html file to open it inside your browser -> it works. Or if this is a Node.js file execute it directly using the `node` command.
 
 Being dispensable by default highlights jsenv philosophy: no new concept to learn. It also means you can switch to an other tool easily as no part of your code is specific to jsenv.
 
-</details>
-
-<details>
-  <summary>Explicitness over magic</summary>
+## Explicitness over magic
 
 Jsenv also don't like blackboxes. `@jsenv/core` functions always choose expliciteness over magic. It makes things much simpler to understand and follow both for jsenv and for you.
 
 > One example of expliciteness over magic: You control and tell jsenv where is your project directory. Jsenv don't try to guess or assume where it is.
 
-</details>
-
-<details>
-  <summary>Less context switching</summary>
+## Less context switching
 
 Context switching happens when you are in context A and switch to context B. The more context A differ from context B, the harder it is to switch.
 
@@ -316,8 +250,15 @@ With jsenv context switching almost vanishes because:
 
 Less context switching saves lot of energy making a project codebase faster to write and easier to maintain.
 
-</details>
+<!--
+features below belong to some parts
+importmap are mostly useful for tests and import aliases
+dynamic import for build and production
+top level await is already mentioned
 
+we could have an other section exlaining that jsenv supports all this
+
+-->
 <details>
   <summary>Import maps</summary>
 
