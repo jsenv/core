@@ -20,36 +20,16 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
 
 `"@jsenv/core"` provides a test runner with the following features:
 
+- Test files are "normal" js files:
+  - Test can be written and debugged like a regular file
+  - Test can be executed independently
 - Tests can be executed on Chrome, Firefox, Safari and Node.js
-- Tests are executed in isolated runtimes
+- Tests executed in total isolation: a dedicated browser or node process per test
 - Tests can use top level await to test async stuff
 - Tests can use importmap to remap imports
 - Tests have a configurable amount of ms to end; This is also configurable per test
 - Test runner can report coverage in terminal, JSON file, and HTML files
 - Test runner is not a magic command line; It is just a function in a js file that you can simply execute with the _node_ command.
-
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf8" />
-    <link rel="icon" href="data:," />
-  </head>
-  <body>
-    <script type="module">
-      const actual = Math.max(1, 2)
-      const expected = 2
-      if (actual !== expected) {
-        throw new Error(`given 1 and 2, Math.max should return ${expected}, got ${actual}`)
-      }
-    </script>
-  </body>
-</html>
-```
-
-_screenshot of test plan execution in a terminal:_
-
-![test execution terminal screenshot](./docs/main/math_max_chrome_and_firefox.png)
 
 Read more on [testing documentation](./docs/testing/readme.md)
 
