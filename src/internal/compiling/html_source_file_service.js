@@ -185,7 +185,7 @@ const transformHTMLSourceFile = async ({
         const scriptIdentifier = getUniqueNameForInlineHtmlNode(
           script,
           scripts,
-          `${urlToBasename(fileUrl.targetUrl)}.[id].js`,
+          `${urlToBasename(fileUrl)}_script_inline_[id].js`,
         )
         onInlineModuleScript({
           scriptContent: textNode.value,
@@ -193,7 +193,9 @@ const transformHTMLSourceFile = async ({
         })
         setHtmlNodeText(
           script,
-          `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(scriptIdentifier)})`,
+          `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(
+            `./${scriptIdentifier}`,
+          )})`,
         )
         return
       }
