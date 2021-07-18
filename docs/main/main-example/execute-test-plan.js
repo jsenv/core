@@ -1,4 +1,4 @@
-import { executeTestPlan, launchChromiumTab, launchFirefoxTab, launchNode } from "@jsenv/core"
+import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
 
 executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),
@@ -11,11 +11,11 @@ executeTestPlan({
         launch: launchFirefoxTab,
       },
     },
-    "**/*.test.js": {
-      node: {
-        launch: launchNode,
-      },
-    },
+    // "**/*.test.js": {
+    //   node: {
+    //     launch: launchNode,
+    //   },
+    // },
     "**/.jsenv/": null,
     "**/node_modules/": null,
   },

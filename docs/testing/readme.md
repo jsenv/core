@@ -1,33 +1,4 @@
-# executeTestPlan
-
-`executeTestPlan` is an async function executing test files in one or several runtime environments logging progression and optionnaly generating associated coverage.
-
-```js
-import { executeTestPlan, launchNode } from "@jsenv/core"
-
-executeTestPlan({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  testPlan: {
-    "./test/**/*.test.js": {
-      node: {
-        launch: launchNode,
-        allocatedMs: 5000,
-      },
-    },
-  },
-  logLevel: "info",
-  coverage: true,
-  coverageConfig: {
-    "./index.js": true,
-    "./src/**/*.js": true,
-    "./**/*.test.*": false,
-  },
-})
-```
-
-— source code at [src/executeTestPlan.js](../../src/executeTestPlan.js).
-
-## executeTestPlan example
+# executeTestPlan example
 
 In order to show code unrelated to a specific codebase, let's say we want to test a native js function: `"Math.max"`. To do this, let's create two files:
 
@@ -114,6 +85,35 @@ _execute_test_plan.js_ runs 1 test 3 times. You can run _n_ test using wildcards
 ```
 
 This is documented in [testPlan](#testPlan).
+
+# executeTestPlan
+
+`executeTestPlan` is an async function executing test files in one or several runtime environments logging progression and optionnaly generating associated coverage.
+
+```js
+import { executeTestPlan, launchNode } from "@jsenv/core"
+
+executeTestPlan({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  testPlan: {
+    "./test/**/*.test.js": {
+      node: {
+        launch: launchNode,
+        allocatedMs: 5000,
+      },
+    },
+  },
+  logLevel: "info",
+  coverage: true,
+  coverageConfig: {
+    "./index.js": true,
+    "./src/**/*.js": true,
+    "./**/*.test.*": false,
+  },
+})
+```
+
+— source code at [src/executeTestPlan.js](../../src/executeTestPlan.js).
 
 ## testPlan
 

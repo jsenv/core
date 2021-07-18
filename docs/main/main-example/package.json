@@ -11,8 +11,8 @@
     "test": "node ./execute-test-plan.js"
   },
   "devDependencies": {
-    "@jsenv/core": "17.7.0",
-    "playwright-chromium": "1.7.1",
-    "playwright-firefox": "1.7.1"
+    "@jsenv/core": "18.2.0",
+    "playwright-chromium": "1.12.3",
+    "playwright-firefox": "1.12.3"
   }
 }

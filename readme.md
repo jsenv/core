@@ -28,9 +28,28 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
 - Test runner can report coverage in terminal, JSON file, and HTML files
 - Test runner is not a magic command line; It is just a function in a js file that you can simply execute with the _node_ command.
 
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <script type="module">
+      const actual = Math.max(1, 2)
+      const expected = 2
+      if (actual !== expected) {
+        throw new Error(`given 1 and 2, Math.max should return ${expected}, got ${actual}`)
+      }
+    </script>
+  </body>
+</html>
+```
+
 _screenshot of test plan execution in a terminal:_
 
-![test execution terminal screenshot](./docs/main/main-example-testing-terminal.png)
+![test execution terminal screenshot](./docs/main/math_max_chrome_and_firefox.png)
 
 Read more on [testing documentation](./docs/testing/readme.md)
 
