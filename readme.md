@@ -16,7 +16,7 @@ Tool to develop, test and build js projects.
 
 Jsenv integrates naturally with standard html, css and js. It can be configured to work with TypeScript and React.
 
-# Testing overview
+# Test runner overview
 
 Let's assume you want to test `countDogs` exported by `animals.js` file.
 
@@ -82,108 +82,73 @@ export const countDogs = (animals) => {
    > node ./execute_test_plan.mjs
    ```
 
-   ![test execution terminal screenshot](./docs/main/animals_chrome_and_firefox.png)
+   ![test execution terminal screenshot](./docs/demo_animals_chrome_and_firefox.png)
 
 To read more about testing in jsenv, check [Testing with jsenv](./docs/testing/readme.md#Testing-with-jsenv).
 
-# Exploring
+# Dev server overview
 
-`@jsenv/core` provides a server capable to turn any html file into an entry point. This power can be used to create a storybook, debug a file in isolation and more. It is called `exploring server`. This server is designed for development: it provides livereloading out of the box and does not bundle files.
+You have an html file that you want to open in a browser on your machine.
 
-The following example uses exploring server only to execute a single html file designed for testing. As mentionned earlier, it can execute any html file.
-
-<details>
-  <summary>1. Create a file to start exploring server</summary>
-
-```js
-import { startExploring } from "@jsenv/core"
-
-startExploring({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  explorableConfig: {
-    source: {
-      "**/*.html": true,
-    },
-  },
-  compileServerPort: 3456,
-})
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <h1>Hello world!</h1>
+  </body>
+</html>
 ```
 
-</details>
+1. Add `"@jsenv/core"` to your _devDependencies_
 
-<details>
-  <summary>2. Start exploring server</summary>
+   ```console
+   npm install --save-dev @jsenv/core
+   ```
 
-![exploring command terminal screenshot](./docs/main/main-example-exploring-terminal.png)
+2. Create `start_dev_server.mjs`
 
-</details>
+   ```js
+   import { startExploring } from "@jsenv/core"
 
-<details>
-    <summary>3. Open exploring server in a browser</summary>
+   startExploring({
+     projectDirectoryUrl: new URL("./", import.meta.url),
+     explorableConfig: {
+       source: {
+         "**/*.html": true,
+       },
+     },
+     compileServerPort: 3456,
+   })
+   ```
 
-When you open `https://localhost:3456` in a browser, a page called jsenv exploring index is shown. It displays a list of all your html files. You can click a file to execute it inside the browser. In our previous example we created `Math.max.test.html` so it is displayed in that list.
+3. Run `start_dev_server.mjs` with Node.js
 
-![jsenv exploring index page screenshot](./docs/main/main-example-exploring-index.png)
+   ```console
+   > node ./start_dev_server.mjs
+   server started at https://localhost:3456
+   ```
 
-> Maybe you noticed the black toolbar at the bottom of the page? We'll see that further in the documentation.
+4. Open a browser and naviguate to `https://localhost:3456`
 
-</details>
+   When you open `https://localhost:3456` in a browser, a page called jsenv exploring index is shown. It displays a list of links to your html files.
 
-<details>
-  <summary>4. Open <code>Math.max.test.html</code></summary>
+   ![dev server index screenshot](./docs/demo_exploring_index.png)
 
-Clicking `Math.max.test.html` load an empty blank page because code inside this html file display nothing and does not throw.
+5. Click `main.html`
 
-![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
+   Browser naviguates to `main.html` and execute the file. Hello world is displayed in the browser.
 
-</details>
+   ![dev server hello world screenshot](./docs/demo_exploring_hello_world.png)
 
-To get a better idea of how this would integrate in everyday workflow, let's go a bit further and see what happens if we make test file throw. After that we'll revert the changes.
+To read more about jsenv dev server, also called exploring server, check [Exploring server](./docs/exploring/readme.md#Exploring-presentation).
 
-<details>
-  <summary>5. Make <code>Math.max.test.html</code> fail</summary>
+# Builder overview
 
-```diff
-- const expected = 4
-+ const expected = 3
-```
-
-The browser page is reloaded and page displays the failure. Jsenv also uses [Notification API](https://developer.mozilla.org/en-US/docs/Web/API/Notification) to display a system notification.
-
-![test file failing page screenshot](./docs/main/main-example-exploring-failing.png)
-
-![test file failing notification screenshot](./docs/main/main-example-failing-notif.png)
-
-</details>
-
-<details>
-  <summary>6. Fix <code>Math.max.test.html</code></summary>
-
-```diff
-- const expected = 3
-+ const expected = 4
-```
-
-Browser livereloads again and error is gone together with a system notification.
-
-![test file page screenshot](./docs/main/main-example-exploring-file-a.png)
-
-![test file fixed notification screenshot](./docs/main/main-example-fixed-notif.png)
-
-</details>
-
-Read more [exploring documentation](./docs/exploring/readme.md)
-
-# Building
-
-Building can be described as: generating files optimized for production thanks to minification, concatenation and long term caching.
-
-Jsenv only needs to know your main html file and where to write the builded files. You can create a script and execute it with node.
-
-Following the steps below turns `index.html` into a production optimized `dist/main.html`.
-
-<details>
-  <summary>1. Create <code>index.html</code></summary>
+Following the steps below turns an `index.html` into an optimized `dist/main.html`. Only the content of the html files will be shown. The content of other files such as `favicon.ico` is trivial.
 
 ```html
 <!DOCTYPE html>
@@ -192,7 +157,7 @@ Following the steps below turns `index.html` into a production optimized `dist/m
     <title>Title</title>
     <meta charset="utf-8" />
     <link rel="icon" href="./favicon.ico" />
-    <script type="importmap" src="./import-map.importmap"></script>
+    <script type="importmap" src="./import_map.importmap"></script>
     <link rel="stylesheet" type="text/css" href="./main.css" />
   </head>
 
@@ -202,71 +167,52 @@ Following the steps below turns `index.html` into a production optimized `dist/m
 </html>
 ```
 
-> To keep example concise, the content of the following files is not shown:
->
-> - `favicon.ico`
-> - `import-map.importmap`
-> - `main.css`
-> - `main.js`
+1. Add `"@jsenv/core"` to your _devDependencies_
 
-</details>
+   ```console
+   npm install --save-dev @jsenv/core
+   ```
 
-<details>
-  <summary>2. Create <code>build-project.js</code></summary>
+2. Create `build.mjs`
 
-```js
-import { buildProject } from "@jsenv/core"
+   ```js
+   import { buildProject } from "@jsenv/core"
 
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  buildDirectoryRelativeUrl: "dist",
-  enryPointMap: {
-    "./index.html": "./main.html",
-  },
-  format: "esmodule",
-  minify: false,
-})
-```
+   await buildProject({
+     projectDirectoryUrl: new URL("./", import.meta.url),
+     buildDirectoryRelativeUrl: "dist",
+     enryPointMap: {
+       "./index.html": "./main.html",
+     },
+     format: "esmodule",
+     minify: false,
+   })
+   ```
 
-</details>
+3. Run `build.mjs` with Node.js
 
-<details>
-  <summary>3. Execute <code>build-project.js</code></summary>
+   ```console
+   > node ./build.mjs
+   ```
 
-```console
-node ./build-project.js
-```
+4. Open `dist/index.html`
 
-</details>
+   ```html
+   <!DOCTYPE html>
+   <html>
+     <head>
+       <title>Title</title>
+       <meta charset="utf-8" />
+       <link rel="icon" href="assets/favicon-5340s4789a.ico" />
+       <script type="importmap" src="import-map-b237a334.importmap"></script>
+       <link rel="stylesheet" type="text/css" href="assets/main-3b329ff0.css" />
+     </head>
 
-<details>
-  <summary>4. Open <code>dist/index.html</code></summary>
-
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="assets/favicon-5340s4789a.ico" />
-    <script type="importmap" src="import-map-b237a334.importmap"></script>
-    <link rel="stylesheet" type="text/css" href="assets/main-3b329ff0.css" />
-  </head>
-
-  <body>
-    <script type="module" src="./main-f7379e10.js"></script>
-  </body>
-</html>
-```
-
-> To keep example concise, the content of the following files is not shown:
->
-> - `dist/assets/favicon-5340s4789a.ico`
-> - `dist/import-map-b237a334.importmap`
-> - `dist/assets/main-3b329ff0.css`
-> - `dist/main-f7379e10.js`
-
-</details>
+     <body>
+       <script type="module" src="./main-f7379e10.js"></script>
+     </body>
+   </html>
+   ```
 
 Read more [building documentation](./docs/building/readme.md)
 

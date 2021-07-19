@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "19.0.0",
+  "version": "19.0.0-alpha.0",
   "description": "Tool to develop, test and build js projects.",
   "license": "MIT",
   "repository": {
