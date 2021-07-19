@@ -12,27 +12,58 @@
     <main></main>
     <div style="display: none">
       <article data-page="file-list">
-        <section id="explorables">
-          <div id="explorables-header">
-            <svg id="fileIconSvgConfig" viewBox="0 0 24 24" width="35px" height="35px">
-              <path d="M0 0h24v24H0V0z" fill="none" />
+        <!--
+        <section id="main_html_file">
+          <h2>
+            <svg id="main_file_icon" viewBox="0 0 16 16" width="25px" height="25px">
               <path
-                d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"
+                d="M15.45,7L14,5.551V2c0-0.55-0.45-1-1-1h-1c-0.55,0-1,0.45-1,1v0.553L9,0.555C8.727,0.297,8.477,0,8,0S7.273,0.297,7,0.555  L0.55,7C0.238,7.325,0,7.562,0,8c0,0.563,0.432,1,1,1h1v6c0,0.55,0.45,1,1,1h3v-5c0-0.55,0.45-1,1-1h2c0.55,0,1,0.45,1,1v5h3  c0.55,0,1-0.45,1-1V9h1c0.568,0,1-0.437,1-1C16,7.562,15.762,7.325,15.45,7z"
               />
             </svg>
-            <h2>Explorable files in <span title="${directoryUrl}">${directoryName}</span></h2>
-            <div class="menu-wrapper">
-              <fieldset id="filter-group-set" class="menu"></fieldset>
-            </div>
-            <div class="paddles">
-              <button class="left-paddle paddle hidden">&#60;</button>
-              <button class="right-paddle paddle">&#62;</button>
-            </div>
+            <span
+              >Main html file:
+              <a id="main_file_link" href="javascript:void(0)">${mainFileRelativeUrl}</a></span
+            >
+          </h2>
+          <div>
+            <iframe id="main_file_iframe" src="about:blank"></iframe>
           </div>
-          <h4>${message}</h4>
-          <nav>
-            <ul></ul>
-          </nav>
+        </section>
+        <hr />
+        !-->
+        <section id="explorables">
+          <div id="explorables-header">
+            <div id="explorables_header_and_menu">
+              <h2 style="white-space: nowrap">
+                <svg id="fileIconSvgConfig" viewBox="0 0 24 24">
+                  <path d="M0 0h24v24H0V0z" fill="none" />
+                  <path
+                    d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"
+                  />
+                </svg>
+                <span
+                  >File(s) to explore in
+                  <span id="directory_relative_url" title="${directoryUrl}"
+                    >${directoryName}</span
+                  ></span
+                >
+              </h2>
+              <div class="menu-wrapper">
+                <fieldset id="filter-group-set" class="menu"></fieldset>
+              </div>
+              <div class="paddles">
+                <button class="left-paddle paddle hidden">&#60;</button>
+                <button class="right-paddle paddle">&#62;</button>
+              </div>
+            </div>
+            <div id="explorables_header_bottom_spacing"></div>
+          </div>
+          <div>
+            <div id="explorables-message"><h4 style="margin-top: 0">${message}</h4></div>
+            <nav>
+              <ul></ul>
+            </nav>
+          </div>
         </section>
       </article>
     </div>

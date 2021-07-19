@@ -34,10 +34,50 @@ main > * {
   flex: 1;
 }
 
+hr {
+  color: black;
+  background-color: black;
+  border-color: black;
+  margin: 15px 0;
+}
+
 article[data-page="file-list"] {
-  background: #1f262c;
+  background-color: #204143;
   color: #97a0a0;
 }
+
+nav,
+#explorables-message {
+  background: #1f262c;
+}
+
+#explorables-message {
+  overflow: auto; /* propagate background to margins cause by h4 inside */
+}
+
+article h2 {
+  margin: 0;
+  display: flex;
+}
+
+article h2 svg {
+  margin-right: 15px;
+}
+
+#main_html_file {
+  padding: 25px;
+  padding-bottom: 0;
+}
+
+#main_file_link {
+  /* background-color: #204143;
+  padding: 0.5em 0.7em;
+  border-radius: 0.1em; */
+  color: #e7f2f3;
+}
+
+/* article > section {
+} */
 
 h2 {
   margin: 20px 0;
@@ -56,16 +96,26 @@ h4 {
   word-break: break-word;
 }
 
-#explorables #explorables-header {
-  padding: 25px;
-  padding-bottom: 0;
+#explorables-header {
+  /* padding-bottom: 10px; */
   width: 100%;
-  background-color: #204143;
   position: sticky;
   top: 0;
 }
 
-#explorables h2 span {
+#explorables_header_and_menu {
+  padding-left: 25px;
+  padding-right: 25px;
+  padding-top: 25px;
+  background-color: #204143;
+}
+
+#explorables_header_bottom_spacing {
+  height: 20px;
+  background: #1f262c;
+}
+
+#directory_relative_url {
   color: orange;
 }
 
@@ -98,15 +148,13 @@ h4 {
 }
 
 /* icons */
-#fileIconSvgConfig {
-  margin-right: 20px;
-  width: 25px;
-  height: 25px;
-  position: relative;
-  top: 5px;
+#main_file_icon {
+  fill: #24b1b0;
 }
 
 #fileIconSvgConfig {
+  width: 25px;
+  height: 25px;
   stroke: none;
   fill: #24b1b0;
 }
@@ -145,10 +193,10 @@ h4 {
 .menu-wrapper {
   position: relative;
   max-width: 100%;
-  margin-top: 25px;
   overflow-x: hidden;
   overflow-y: hidden;
   transition: 300ms;
+  margin-top: 25px;
 }
 .menu {
   box-sizing: border-box;

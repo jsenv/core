@@ -1,354 +1,6 @@
 (function () {
   'use strict';
 
-  var firstMatch = function firstMatch(regexp, string) {
-    var match = string.match(regexp);
-    return match && match.length > 0 ? match[1] || undefined : undefined;
-  };
-  var secondMatch = function secondMatch(regexp, string) {
-    var match = string.match(regexp);
-    return match && match.length > 1 ? match[2] || undefined : undefined;
-  };
-  var userAgentToVersion = function userAgentToVersion(userAgent) {
-    return firstMatch(/version\/(\d+(\.?_?\d+)+)/i, userAgent) || undefined;
-  };
-
-  var detectAndroid = function detectAndroid() {
-    return navigatorToBrowser$1(window.navigator);
-  };
-
-  var navigatorToBrowser$1 = function navigatorToBrowser(_ref) {
-    var userAgent = _ref.userAgent,
-        appVersion = _ref.appVersion;
-
-    if (/(android)/i.test(userAgent)) {
-      return {
-        name: "android",
-        version: firstMatch(/Android (\d+(\.?_?\d+)+)/i, appVersion)
-      };
-    }
-
-    return null;
-  };
-
-  var detectInternetExplorer = function detectInternetExplorer() {
-    return userAgentToBrowser$5(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$5 = function userAgentToBrowser(userAgent) {
-    if (/msie|trident/i.test(userAgent)) {
-      return {
-        name: "ie",
-        version: firstMatch(/(?:msie |rv:)(\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectOpera = function detectOpera() {
-    return userAgentToBrowser$4(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$4 = function userAgentToBrowser(userAgent) {
-    // opera below 13
-    if (/opera/i.test(userAgent)) {
-      return {
-        name: "opera",
-        version: userAgentToVersion(userAgent) || firstMatch(/(?:opera)[\s/](\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    } // opera above 13
-
-
-    if (/opr\/|opios/i.test(userAgent)) {
-      return {
-        name: "opera",
-        version: firstMatch(/(?:opr|opios)[\s/](\S+)/i, userAgent) || userAgentToVersion(userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectEdge = function detectEdge() {
-    return userAgentToBrowser$3(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$3 = function userAgentToBrowser(userAgent) {
-    if (/edg([ea]|ios)/i.test(userAgent)) {
-      return {
-        name: "edge",
-        version: secondMatch(/edg([ea]|ios)\/(\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectFirefox = function detectFirefox() {
-    return userAgentToBrowser$2(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$2 = function userAgentToBrowser(userAgent) {
-    if (/firefox|iceweasel|fxios/i.test(userAgent)) {
-      return {
-        name: "firefox",
-        version: firstMatch(/(?:firefox|iceweasel|fxios)[\s/](\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectChrome = function detectChrome() {
-    return userAgentToBrowser$1(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser$1 = function userAgentToBrowser(userAgent) {
-    if (/chromium/i.test(userAgent)) {
-      return {
-        name: "chrome",
-        version: firstMatch(/(?:chromium)[\s/](\d+(\.?_?\d+)+)/i, userAgent) || userAgentToVersion(userAgent)
-      };
-    }
-
-    if (/chrome|crios|crmo/i.test(userAgent)) {
-      return {
-        name: "chrome",
-        version: firstMatch(/(?:chrome|crios|crmo)\/(\d+(\.?_?\d+)+)/i, userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectSafari = function detectSafari() {
-    return userAgentToBrowser(window.navigator.userAgent);
-  };
-
-  var userAgentToBrowser = function userAgentToBrowser(userAgent) {
-    if (/safari|applewebkit/i.test(userAgent)) {
-      return {
-        name: "safari",
-        version: userAgentToVersion(userAgent)
-      };
-    }
-
-    return null;
-  };
-
-  var detectElectron = function detectElectron() {
-    return null;
-  }; // TODO
-
-  var detectIOS = function detectIOS() {
-    return navigatorToBrowser(window.navigator);
-  };
-
-  var navigatorToBrowser = function navigatorToBrowser(_ref) {
-    var userAgent = _ref.userAgent,
-        appVersion = _ref.appVersion;
-
-    if (/iPhone;/.test(userAgent)) {
-      return {
-        name: "ios",
-        version: firstMatch(/OS (\d+(\.?_?\d+)+)/i, appVersion)
-      };
-    }
-
-    if (/iPad;/.test(userAgent)) {
-      return {
-        name: "ios",
-        version: firstMatch(/OS (\d+(\.?_?\d+)+)/i, appVersion)
-      };
-    }
-
-    return null;
-  };
-
-  // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
-
-  var detectorCompose = function detectorCompose(detectors) {
-    return function () {
-      var i = 0;
-
-      while (i < detectors.length) {
-        var _detector = detectors[i];
-        i++;
-
-        var result = _detector();
-
-        if (result) {
-          return result;
-        }
-      }
-
-      return null;
-    };
-  };
-
-  var detector = detectorCompose([detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
-  var detectBrowser = function detectBrowser() {
-    var _ref = detector() || {},
-        _ref$name = _ref.name,
-        name = _ref$name === void 0 ? "other" : _ref$name,
-        _ref$version = _ref.version,
-        version = _ref$version === void 0 ? "unknown" : _ref$version;
-
-    return {
-      name: normalizeName(name),
-      version: normalizeVersion(version)
-    };
-  };
-
-  var normalizeName = function normalizeName(name) {
-    return name.toLowerCase();
-  };
-
-  var normalizeVersion = function normalizeVersion(version) {
-    if (version.indexOf(".") > -1) {
-      var parts = version.split("."); // remove extraneous .
-
-      return parts.slice(0, 3).join(".");
-    }
-
-    if (version.indexOf("_") > -1) {
-      var _parts = version.split("_"); // remove extraneous _
-
-
-      return _parts.slice(0, 3).join("_");
-    }
-
-    return version;
-  };
-
-  var valueToVersion = function valueToVersion(value) {
-    if (typeof value === "number") {
-      return numberToVersion(value);
-    }
-
-    if (typeof value === "string") {
-      return stringToVersion(value);
-    }
-
-    throw new TypeError(createValueErrorMessage({
-      version: value
-    }));
-  };
-
-  var numberToVersion = function numberToVersion(number) {
-    return {
-      major: number,
-      minor: 0,
-      patch: 0
-    };
-  };
-
-  var stringToVersion = function stringToVersion(string) {
-    if (string.indexOf(".") > -1) {
-      var parts = string.split(".");
-      return {
-        major: Number(parts[0]),
-        minor: parts[1] ? Number(parts[1]) : 0,
-        patch: parts[2] ? Number(parts[2]) : 0
-      };
-    }
-
-    if (isNaN(string)) {
-      return {
-        major: 0,
-        minor: 0,
-        patch: 0
-      };
-    }
-
-    return {
-      major: Number(string),
-      minor: 0,
-      patch: 0
-    };
-  };
-
-  var createValueErrorMessage = function createValueErrorMessage(_ref) {
-    var value = _ref.value;
-    return "value must be a number or a string.\nvalue: ".concat(value);
-  };
-
-  var versionCompare = function versionCompare(versionA, versionB) {
-    var semanticVersionA = valueToVersion(versionA);
-    var semanticVersionB = valueToVersion(versionB);
-    var majorDiff = semanticVersionA.major - semanticVersionB.major;
-
-    if (majorDiff > 0) {
-      return majorDiff;
-    }
-
-    if (majorDiff < 0) {
-      return majorDiff;
-    }
-
-    var minorDiff = semanticVersionA.minor - semanticVersionB.minor;
-
-    if (minorDiff > 0) {
-      return minorDiff;
-    }
-
-    if (minorDiff < 0) {
-      return minorDiff;
-    }
-
-    var patchDiff = semanticVersionA.patch - semanticVersionB.patch;
-
-    if (patchDiff > 0) {
-      return patchDiff;
-    }
-
-    if (patchDiff < 0) {
-      return patchDiff;
-    }
-
-    return 0;
-  };
-
-  var versionIsBelow = function versionIsBelow(versionSupposedBelow, versionSupposedAbove) {
-    return versionCompare(versionSupposedBelow, versionSupposedAbove) < 0;
-  };
-
-  var findHighestVersion = function findHighestVersion() {
-    for (var _len = arguments.length, values = new Array(_len), _key = 0; _key < _len; _key++) {
-      values[_key] = arguments[_key];
-    }
-
-    if (values.length === 0) throw new Error("missing argument");
-    return values.reduce(function (highestVersion, value) {
-      if (versionIsBelow(highestVersion, value)) {
-        return value;
-      }
-
-      return highestVersion;
-    });
-  };
-
-  var resolveGroup = function resolveGroup(_ref, groupMap) {
-    var name = _ref.name,
-        version = _ref.version;
-    return Object.keys(groupMap).find(function (compileIdCandidate) {
-      var runtimeCompatMap = groupMap[compileIdCandidate].runtimeCompatMap;
-
-      if (name in runtimeCompatMap === false) {
-        return false;
-      }
-
-      var versionForGroup = runtimeCompatMap[name];
-      var highestVersion = findHighestVersion(version, versionForGroup);
-      return highestVersion === version;
-    });
-  };
-
-  var resolveBrowserGroup = function resolveBrowserGroup(groupMap) {
-    return resolveGroup(detectBrowser(), groupMap);
-  };
-
   var _defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
@@ -368,56 +20,6 @@
 
     return obj;
   });
-
-  var createDetailedMessage = function createDetailedMessage(message) {
-    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var string = "".concat(message);
-    Object.keys(details).forEach(function (key) {
-      var value = details[key];
-      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-    });
-    return string;
-  };
-
-  var COMPILE_ID_OTHERWISE = "otherwise";
-
-  var computeCompileIdFromGroupId = function computeCompileIdFromGroupId(_ref) {
-    var groupId = _ref.groupId,
-        groupMap = _ref.groupMap;
-
-    if (typeof groupId === "undefined") {
-      if (COMPILE_ID_OTHERWISE in groupMap) {
-        return COMPILE_ID_OTHERWISE;
-      }
-
-      var keys = Object.keys(groupMap);
-
-      if (keys.length === 1) {
-        return keys[0];
-      }
-
-      throw new Error(createUnexpectedGroupIdMessage({
-        groupMap: groupMap
-      }));
-    }
-
-    if (groupId in groupMap === false) {
-      throw new Error(createUnexpectedGroupIdMessage({
-        groupId: groupId,
-        groupMap: groupMap
-      }));
-    }
-
-    return groupId;
-  };
-
-  var createUnexpectedGroupIdMessage = function createUnexpectedGroupIdMessage(_ref2) {
-    var _createDetailedMessag;
-
-    var compileId = _ref2.compileId,
-        groupMap = _ref2.groupMap;
-    return createDetailedMessage("unexpected groupId.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "expected compiled id", Object.keys(groupMap)), _defineProperty(_createDetailedMessag, "received compile id", compileId), _createDetailedMessag));
-  };
 
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
@@ -741,6 +343,16 @@
     };
 
     return stop;
+  };
+
+  var createDetailedMessage = function createDetailedMessage(message) {
+    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var string = "".concat(message);
+    Object.keys(details).forEach(function (key) {
+      var value = details[key];
+      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    });
+    return string;
   };
 
   // fallback to this polyfill (or even use an existing polyfill would be better)
@@ -1442,166 +1054,180 @@
       }), function (files) {
         var compileServerOrigin = document.location.origin;
         var outDirectoryUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
-        var groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl));
-        return _await(fetchJSON(groupMapUrl), function (groupMap) {
-          var compileId = computeCompileIdFromGroupId({
-            groupId: resolveBrowserGroup(groupMap),
-            groupMap: groupMap
-          });
+        var documentUrl = document.location.href;
+        var compileId;
+        var outDirectoryIndex = documentUrl.indexOf(outDirectoryUrl);
 
-          var renderHtml = function renderHtml() {
-            var fileListElement = document.querySelector("[data-page=\"file-list\"]").cloneNode(true);
-            var directoryName = directoryUrlToDirectoryName(projectDirectoryUrl);
-            var span = fileListElement.querySelector("h2 span");
-            span.title = projectDirectoryUrl;
-            span.textContent = directoryName;
-            var h4 = fileListElement.querySelector("h4");
-            var ul = fileListElement.querySelector("ul");
-            ul.innerHTML = files.map(function (file) {
-              return "<li>\n          <a\n            class=\"execution-link\"\n            data-relative-url=".concat(file.relativeUrl, "\n            href=").concat(relativeUrlToCompiledUrl(file.relativeUrl), "\n          >\n            ").concat(file.relativeUrl, "\n          </a>\n        </li>");
-            }).join("");
-            var groupFieldset = fileListElement.querySelector("#filter-group-set");
-            var groupNames = Object.keys(explorableConfig);
-            groupFieldset.innerHTML = groupNames.map(function (key) {
-              return "<label data-contains-hidden-input class=\"item\">\n  <input type=\"radio\" name=\"filter-group\" value=\"".concat(key, "\"/>\n  <span>").concat(key, "</span>\n</label>");
-            }).join("");
-            var currentGroup = groupPreference.has() ? groupPreference.get() : groupNames[0];
-            Array.from(groupFieldset.querySelectorAll("input")).forEach(function (inputRadio) {
-              inputRadio.checked = inputRadio.value === currentGroup;
+        if (outDirectoryIndex === 0) {
+          var afterOutDirectory = documentUrl.slice(outDirectoryUrl.length);
+          compileId = afterOutDirectory.split("/")[0];
+        } else {
+          compileId = null;
+        }
 
-              inputRadio.onchange = function () {
-                if (inputRadio.checked) {
-                  groupPreference.set(inputRadio.value);
-                  enableGroup(inputRadio.value);
-                }
-              };
-            });
+        var renderHtml = function renderHtml() {
+          // const mainHtmlFileRelativeUrl = "index.html"
+          // const mainFileLink = document.querySelector("#main_file_link")
+          // const mainFileUrl = urlToVisitFromRelativeUrl(mainHtmlFileRelativeUrl)
+          // mainFileLink.href = mainFileUrl
+          // mainFileLink.textContent = `${mainHtmlFileRelativeUrl}`
+          // const mainFileIframe = document.querySelector(`#main_file_iframe`)
+          // mainFileIframe.src = mainFileUrl
+          var fileListElement = document.querySelector("[data-page=\"file-list\"]").cloneNode(true);
+          var directoryName = directoryUrlToDirectoryName(projectDirectoryUrl);
+          var span = fileListElement.querySelector("#directory_relative_url");
+          span.title = projectDirectoryUrl;
+          span.textContent = directoryName;
+          var h4 = fileListElement.querySelector("h4");
+          var ul = fileListElement.querySelector("ul");
+          ul.innerHTML = files.map(function (file) {
+            return "<li>\n          <a\n            class=\"execution-link\"\n            data-relative-url=".concat(file.relativeUrl, "\n            href=").concat(urlToVisitFromRelativeUrl(file.relativeUrl), "\n          >\n            ").concat(file.relativeUrl, "\n          </a>\n        </li>");
+          }).join("");
+          var groupFieldset = fileListElement.querySelector("#filter-group-set");
+          var groupNames = Object.keys(explorableConfig);
+          groupFieldset.innerHTML = groupNames.map(function (key) {
+            return "<label data-contains-hidden-input class=\"item\">\n  <input type=\"radio\" name=\"filter-group\" value=\"".concat(key, "\"/>\n  <span>").concat(key, "</span>\n</label>");
+          }).join("");
+          var currentGroup = groupPreference.has() ? groupPreference.get() : groupNames[0];
+          Array.from(groupFieldset.querySelectorAll("input")).forEach(function (inputRadio) {
+            inputRadio.checked = inputRadio.value === currentGroup;
 
-            var enableGroup = function enableGroup(groupName) {
-              var arrayOfElementToShow = [];
-              var arrayOfElementToHide = [];
-              files.forEach(function (file) {
-                var fileLink = fileListElement.querySelector("a[data-relative-url=\"".concat(file.relativeUrl, "\"]"));
-                var fileLi = fileLink.parentNode;
-
-                if (file.meta[groupName]) {
-                  arrayOfElementToShow.push(fileLi);
-                } else {
-                  arrayOfElementToHide.push(fileLi);
-                }
-              });
-              arrayOfElementToShow.forEach(function (element) {
-                element.removeAttribute("data-force-hide");
-              });
-              arrayOfElementToHide.forEach(function (element) {
-                element.setAttribute("data-force-hide", "");
-              });
-              h4.innerHTML = arrayOfElementToShow.length === 0 ? "No file found.\n              Config for this section: <pre>".concat(JSON.stringify(explorableConfig[groupName], null, "  "), "</pre>") : "".concat(arrayOfElementToShow.length, " files found. Click on the one you want to execute");
-            };
-
-            enableGroup(currentGroup);
-            document.querySelector("main").appendChild(fileListElement);
-            makeMenuScrollable();
-          };
-
-          var relativeUrlToCompiledUrl = function relativeUrlToCompiledUrl(relativeUrl) {
-            return "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(relativeUrl);
-          };
-
-          var makeMenuScrollable = function makeMenuScrollable() {
-            var getMenuWrapperSize = function getMenuWrapperSize() {
-              return document.querySelector(".menu-wrapper").getBoundingClientRect().width;
-            };
-
-            var menuWrapperSize = getMenuWrapperSize();
-
-            var getMenuSize = function getMenuSize() {
-              return document.querySelector(".menu").getBoundingClientRect().width;
-            };
-
-            var menuSize = getMenuSize();
-            var menuVisibleSize = menuWrapperSize;
-            var menuInvisibleSize = menuSize - menuVisibleSize;
-
-            var getMenuPosition = function getMenuPosition() {
-              return document.querySelector(".menu-wrapper").scrollLeft;
-            };
-
-            var scrollDuration = 300;
-            var leftPaddle = document.querySelector(".left-paddle");
-            var rightPaddle = document.querySelector(".right-paddle");
-
-            var handleMenuScroll = function handleMenuScroll() {
-              menuInvisibleSize = menuSize - menuWrapperSize;
-              var menuPosition = getMenuPosition();
-              var menuEndOffset = menuInvisibleSize; // show & hide the paddles, depending on scroll position
-
-              if (menuPosition <= 0 && menuEndOffset <= 0) {
-                // hide both paddles if the window is large enough to display all tabs
-                leftPaddle.classList.add("hidden");
-                rightPaddle.classList.add("hidden");
-              } else if (menuPosition <= 0) {
-                leftPaddle.classList.add("hidden");
-                rightPaddle.classList.remove("hidden");
-              } else if (menuPosition < Math.floor(menuEndOffset)) {
-                // show both paddles in the middle
-                leftPaddle.classList.remove("hidden");
-                rightPaddle.classList.remove("hidden");
-              } else if (menuPosition >= Math.floor(menuEndOffset)) {
-                leftPaddle.classList.remove("hidden");
-                rightPaddle.classList.add("hidden");
+            inputRadio.onchange = function () {
+              if (inputRadio.checked) {
+                groupPreference.set(inputRadio.value);
+                enableGroup(inputRadio.value);
               }
             };
+          });
 
+          var enableGroup = function enableGroup(groupName) {
+            var arrayOfElementToShow = [];
+            var arrayOfElementToHide = [];
+            files.forEach(function (file) {
+              var fileLink = fileListElement.querySelector("a[data-relative-url=\"".concat(file.relativeUrl, "\"]"));
+              var fileLi = fileLink.parentNode;
+
+              if (file.meta[groupName]) {
+                arrayOfElementToShow.push(fileLi);
+              } else {
+                arrayOfElementToHide.push(fileLi);
+              }
+            });
+            arrayOfElementToShow.forEach(function (element) {
+              element.removeAttribute("data-force-hide");
+            });
+            arrayOfElementToHide.forEach(function (element) {
+              element.setAttribute("data-force-hide", "");
+            });
+            h4.innerHTML = arrayOfElementToShow.length === 0 ? "No file found.\n              Config for this section: <pre>".concat(JSON.stringify(explorableConfig[groupName], null, "  "), "</pre>") : "".concat(arrayOfElementToShow.length, " files found. Click on the one you want to execute");
+          };
+
+          enableGroup(currentGroup);
+          document.querySelector("main").appendChild(fileListElement);
+          makeMenuScrollable();
+        };
+
+        var urlToVisitFromRelativeUrl = function urlToVisitFromRelativeUrl(relativeUrl) {
+          if (compileId) {
+            return "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(relativeUrl);
+          }
+
+          return "".concat(compileServerOrigin, "/").concat(relativeUrl);
+        };
+
+        var makeMenuScrollable = function makeMenuScrollable() {
+          var getMenuWrapperSize = function getMenuWrapperSize() {
+            return document.querySelector(".menu-wrapper").getBoundingClientRect().width;
+          };
+
+          var menuWrapperSize = getMenuWrapperSize();
+
+          var getMenuSize = function getMenuSize() {
+            return document.querySelector(".menu").getBoundingClientRect().width;
+          };
+
+          var menuSize = getMenuSize();
+          var menuVisibleSize = menuWrapperSize;
+          var menuInvisibleSize = menuSize - menuVisibleSize;
+
+          var getMenuPosition = function getMenuPosition() {
+            return document.querySelector(".menu-wrapper").scrollLeft;
+          };
+
+          var scrollDuration = 300;
+          var leftPaddle = document.querySelector(".left-paddle");
+          var rightPaddle = document.querySelector(".right-paddle");
+
+          var handleMenuScroll = function handleMenuScroll() {
+            menuInvisibleSize = menuSize - menuWrapperSize;
+            var menuPosition = getMenuPosition();
+            var menuEndOffset = menuInvisibleSize; // show & hide the paddles, depending on scroll position
+
+            if (menuPosition <= 0 && menuEndOffset <= 0) {
+              // hide both paddles if the window is large enough to display all tabs
+              leftPaddle.classList.add("hidden");
+              rightPaddle.classList.add("hidden");
+            } else if (menuPosition <= 0) {
+              leftPaddle.classList.add("hidden");
+              rightPaddle.classList.remove("hidden");
+            } else if (menuPosition < Math.floor(menuEndOffset)) {
+              // show both paddles in the middle
+              leftPaddle.classList.remove("hidden");
+              rightPaddle.classList.remove("hidden");
+            } else if (menuPosition >= Math.floor(menuEndOffset)) {
+              leftPaddle.classList.remove("hidden");
+              rightPaddle.classList.add("hidden");
+            }
+          };
+
+          handleMenuScroll();
+
+          window.onresize = function () {
+            menuWrapperSize = getMenuWrapperSize();
+            menuSize = getMenuSize();
             handleMenuScroll();
-
-            window.onresize = function () {
-              menuWrapperSize = getMenuWrapperSize();
-              menuSize = getMenuSize();
-              handleMenuScroll();
-            }; // finally, what happens when we are actually scrolling the menu
+          }; // finally, what happens when we are actually scrolling the menu
 
 
-            document.querySelector(".menu-wrapper").onscroll = function () {
-              handleMenuScroll();
-            }; // scroll to left
+          document.querySelector(".menu-wrapper").onscroll = function () {
+            handleMenuScroll();
+          }; // scroll to left
 
 
-            rightPaddle.onclick = function () {
-              var scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
-              var scrollEnd = scrollStart + menuWrapperSize;
-              startJavaScriptAnimation({
-                duration: scrollDuration,
-                onProgress: function onProgress(_ref2) {
-                  var progress = _ref2.progress;
-                  document.querySelector(".menu-wrapper").scrollLeft = scrollStart + (scrollEnd - scrollStart) * progress;
-                }
-              });
-            }; // scroll to right
+          rightPaddle.onclick = function () {
+            var scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
+            var scrollEnd = scrollStart + menuWrapperSize;
+            startJavaScriptAnimation({
+              duration: scrollDuration,
+              onProgress: function onProgress(_ref2) {
+                var progress = _ref2.progress;
+                document.querySelector(".menu-wrapper").scrollLeft = scrollStart + (scrollEnd - scrollStart) * progress;
+              }
+            });
+          }; // scroll to right
 
 
-            leftPaddle.onclick = function () {
-              var scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
-              var scrollEnd = scrollStart - menuWrapperSize;
-              startJavaScriptAnimation({
-                duration: scrollDuration,
-                onProgress: function onProgress(_ref3) {
-                  var progress = _ref3.progress;
-                  document.querySelector(".menu-wrapper").scrollLeft = scrollStart + (scrollEnd - scrollStart) * progress;
-                }
-              });
-            };
+          leftPaddle.onclick = function () {
+            var scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
+            var scrollEnd = scrollStart - menuWrapperSize;
+            startJavaScriptAnimation({
+              duration: scrollDuration,
+              onProgress: function onProgress(_ref3) {
+                var progress = _ref3.progress;
+                document.querySelector(".menu-wrapper").scrollLeft = scrollStart + (scrollEnd - scrollStart) * progress;
+              }
+            });
           };
+        };
 
-          var directoryUrlToDirectoryName = function directoryUrlToDirectoryName(directoryUrl) {
-            var slashLastIndex = directoryUrl.lastIndexOf("/", // ignore last slash
-            directoryUrl.length - 2);
-            if (slashLastIndex === -1) return "";
-            return directoryUrl.slice(slashLastIndex + 1);
-          };
+        var directoryUrlToDirectoryName = function directoryUrlToDirectoryName(directoryUrl) {
+          var slashLastIndex = directoryUrl.lastIndexOf("/", // ignore last slash
+          directoryUrl.length - 2);
+          if (slashLastIndex === -1) return "";
+          return directoryUrl.slice(slashLastIndex + 1);
+        };
 
-          renderHtml();
-        });
+        renderHtml();
       });
     });
   };
