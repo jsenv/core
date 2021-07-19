@@ -16,22 +16,75 @@ Tool to develop, test and build js projects.
 
 Jsenv integrates naturally with standard html, css and js. It can be configured to work with TypeScript and React.
 
-# Testing
+# Testing overview
 
-`"@jsenv/core"` provides a test runner with the following features:
+Let's assume you want to test `countDogs` exported by `animals.js` file.
 
-- Test files are "normal" js files:
-  - Test can be written and debugged like a regular file
-  - Test can be executed independently
-- Tests can be executed on Chrome, Firefox, Safari and Node.js
-- Tests executed in total isolation: a dedicated browser or node process per test
-- Tests can use top level await to test async stuff
-- Tests can use importmap to remap imports
-- Tests have a configurable amount of ms to end; This is also configurable per test
-- Test runner can report coverage in terminal, JSON file, and HTML files
-- Test runner is not a magic command line; It is just a function in a js file that you can simply execute with the _node_ command.
+```js
+export const countDogs = (animals) => {
+  return animals.filter((animal) => animal === "dog").length
+}
+```
 
-Read more on [testing documentation](./docs/testing/readme.md)
+1. Create `animals.test.html`
+
+   ```html
+   <!DOCTYPE html>
+   <html>
+     <head>
+       <meta charset="utf8" />
+       <link rel="icon" href="data:," />
+     </head>
+     <body>
+       <script type="module">
+         import { countDogs } from "./animals.js"
+
+         const animals = ["dog", "dog", "cat", "cat", "cat"]
+         const actual = countDogs(animals)
+         const expected = 2
+         if (actual !== expected) {
+           throw new Error(`countDogs should return ${expected}, got ${actual}`)
+         }
+       </script>
+     </body>
+   </html>
+   ```
+
+2. Add `"@jsenv/core"` to your _devDependencies_
+
+   ```console
+   npm install --save-dev @jsenv/core
+   ```
+
+3. Create `execute_test_plan.mjs`
+
+   ```js
+   import { executeTestPlan, launchChromiumTab, launchFirefoxTab, launchNode } from "@jsenv/core"
+
+   executeTestPlan({
+     projectDirectoryUrl: new URL("./", import.meta.url),
+     testPlan: {
+       "./animals.test.html": {
+         chromium: {
+           launch: launchChromiumTab,
+         },
+         firefox: {
+           launch: launchFirefoxTab,
+         },
+       },
+     },
+   })
+   ```
+
+4. Run `execute_test_plan.mjs` with Node.js
+
+   ```console
+   > node ./execute_test_plan.mjs
+   ```
+
+   ![test execution terminal screenshot](./docs/main/animals_chrome_and_firefox.png)
+
+To read more about testing in jsenv, check [Testing with jsenv](./docs/testing/readme.md#Testing-with-jsenv).
 
 # Exploring
 

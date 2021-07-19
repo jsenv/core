@@ -3,7 +3,7 @@ import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/cor
 executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "**/*.test.html": {
+    "./animals.test.html": {
       chromium: {
         launch: launchChromiumTab,
       },
@@ -11,12 +11,5 @@ executeTestPlan({
         launch: launchFirefoxTab,
       },
     },
-    // "**/*.test.js": {
-    //   node: {
-    //     launch: launchNode,
-    //   },
-    // },
-    "**/.jsenv/": null,
-    "**/node_modules/": null,
   },
 })

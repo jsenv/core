@@ -1,90 +1,30 @@
-# executeTestPlan example
+# Testing with jsenv
 
-In order to show code unrelated to a specific codebase, let's say we want to test a native js function: `"Math.max"`. To do this, let's create two files:
+This is an in-depth documentation about jsenv test runner. For a quick overview go to [Testing overview](../../readme.md#Testing-overview).
 
-1. An html file to be able to run test inside a browser
+This documentation list [key features](#key-features) and gives the [definition of a test for jsenv](#Definition-of-a-test-for-jsenv) to get an idea of how things where designed. Then it documents [executeTestPlan](#executeTestPlan) function, its parameters and return value. Finally you can find:
 
-   ```html
-   <!DOCTYPE html>
-   <html>
-     <head>
-       <meta charset="utf8" />
-       <link rel="icon" href="data:," />
-     </head>
-     <body>
-       <script type="module" src="./math_max.test.js"></script>
-     </body>
-   </html>
-   ```
+- [How tests are executed?](#How-tests-are-executed)
+- [How to test async code?](#How-to-test-async-code)
 
-2. A js file testing `"Math.max"`
+# Key features
 
-   ```js
-   const actual = Math.max(2, 4)
-   const expected = 4
-   if (actual !== expected) {
-     throw new Error(`Math.max(2, 4) should return ${expected}, got ${actual}`)
-   }
-   ```
+- Test files are "normal" js files:
+  - Test can be written and debugged like a regular file
+  - Test can be executed independently
+- Tests can be executed on Chrome, Firefox, Safari and Node.js
+- Tests are executed in total isolation: a dedicated browser or node process per test
+- Tests have a configurable amount of ms to end; This is also configurable per test
+- Test runner is not a magic command line; It is just a function in a js file that you can simply execute with the _node_ command.
 
-At this stage you can manually open the html file in a browser to ensure there is no error during the test execution. This is what [executeTestPlan](#executeTestPlan) will do but in a programmatic way.
+# Definition of a test for jsenv
 
-If we want to execute `"Math.max"` test in Firefox, Chrome and even Node.js we can write the following js file:
+A test runs your code to ensure it works as expected.
 
-```js
-import { executeTestPlan, launchChromiumTab, launchFirefoxTab, launchNode } from "@jsenv/core"
+Test are putting you in the shoes of someone using your code. In that perspective they document how to use your code and the variety of scenarios your code supports.<br />
+Finally testing mitigates the risk of breaking in the future what is working today.
 
-executeTestPlan({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  testPlan: {
-    "math_max.test.html": {
-      chromium: {
-        launch: launchChromiumTab,
-      },
-      firefox: {
-        launch: launchFirefoxTab,
-      },
-    },
-    "math_max.test.js": {
-      node: {
-        launchNode,
-      },
-    },
-  },
-})
-```
-
-The file above can be executed directly with `"node"`.
-
-```console
-> node execute_test_plan.js
-```
-
-_screenshot of terminal after execute_test_plan.js execution:_
-
-![test execution terminal screenshot](./math_max_terminal.png)
-
-_execute_test_plan.js_ runs 1 test 3 times. You can run _n_ test using wildcards.
-
-```diff
--    "math_max.test.html": {
-+    "**/*.test.html": {
-      chromium: {
-        launch: launchChromiumTab,
-      },
-      firefox: {
-        launch: launchFirefoxTab,
-      },
-    },
--   "math_max.test.js": {
-+   "**/*.test.js": {
-      node: {
-        launchNode,
-      },
-    }
-```
-
-This is documented in [testPlan](#testPlan).
+Jsenv provides an api to execute your test files inside one or many environments. It means you can execute a given test file inside chromium and Node.js as long as code inside test file can executes in both.
 
 # executeTestPlan
 
@@ -131,10 +71,10 @@ executeTestPlan({
 
 This default value translates into the following sentence: "Execute all files in my project that ends with `test.js` on Node.js".
 
-`testPlan` parts are named `specifier`, `filePlan`, `executionName` and `executionOptions`. To better see what is named how, let's name every value from `testPlan` above.
+`testPlan` parts are named `pattern`, `filePlan`, `executionName` and `executionOptions`. To better see what is named how, let's name every value from `testPlan` above.
 
 ```js
-const specifier = "./test/**/*.test.js"
+const pattern = "./test/**/*.test.js"
 const executionName = "node"
 const executionOptions = {
   launch: launchNode,
@@ -143,22 +83,22 @@ const filePlan = {
   [executionName]: executionOptions,
 }
 const testPlan = {
-  [specifier]: filePlan,
+  [pattern]: filePlan,
 }
 ```
 
-### specifier
+### pattern
 
-`specifier` is documented in [https://github.com/jsenv/jsenv-url-meta#specifier](https://github.com/jsenv/jsenv-url-meta#specifier).
+`pattern` is documented in [https://github.com/jsenv/jsenv-url-meta#pattern](https://github.com/jsenv/jsenv-url-meta#pattern).
 
 ### executionName
 
-`executionName` can be anything. up to you to name this execution.
+`executionName` can be anything. Up to you to name this execution.
 
 ### executionOptions
 
 `executionOptions` can be `null`, in that case the execution is ignored.
-It exists to prevent an execution planified by a previous specifier.
+It exists to prevent an execution planified by a previous pattern.
 
 ```js
 {
@@ -220,7 +160,7 @@ Becomes
 
 ### coverageConfig
 
-`coverageConfig` parameter is an object used to configure which files must be covered. This parameter is optional with a default value exported by [src/jsenvCoverageConfig.js](../../src/jsenvCoverageConfig.js). Keys are specifiers as documented in [https://github.com/jsenv/jsenv-url-meta#specifier](https://github.com/jsenv/jsenv-url-meta#specifier).
+`coverageConfig` parameter is an object used to configure which files must be covered. This parameter is optional with a default value exported by [src/jsenvCoverageConfig.js](../../src/jsenvCoverageConfig.js). Keys are patterns as documented in [https://github.com/jsenv/jsenv-url-meta#pattern](https://github.com/jsenv/jsenv-url-meta#pattern).
 
 ### coverageIncludeMissing
 
@@ -456,16 +396,7 @@ A boolean controlling if execution success is logged in your terminal. This para
 
 When false and execution completes normally nothing is logged.
 
-# Test presentation
-
-A test runs your code to ensure it works as expected.
-
-Test are putting you in the shoes of someone using your code. In that perspective they document how to use your code and the variety of scenarios your code supports.<br />
-Finally testing mitigates the risk of breaking in the future what is working today.
-
-Jsenv provides an api to execute your test files inside one or many environments. It means you can execute a given test file inside chromium and Node.js as long as code inside test file can executes in both.
-
-# Test execution
+# How tests are executed?
 
 Each test file will be executed in his own browser or node.js process. It reduces chances that a file execution have a side effect on an other file execution. For example if a test file creates an infinite loop, only this test file will be considered failing and other test can keep going.
 
@@ -478,8 +409,6 @@ jsenv provides several test execution environments, called `runtime`.
 - A webkit browser per test
 - A webkit tab per test
 - A node process per test
-
-## How test is executed
 
 Test is executed by something equivalent to a dynamic import.
 
@@ -495,7 +424,7 @@ Once the execution becomes either successfull, errored or timedout jsenv stops t
 
 ![test execution all status terminal screenshot](./all-status-terminal-screenshot.png)
 
-### Execution error example
+## Execution error example
 
 Any value thrown during file execution sets execution status to errored and test is considered as failed.
 
@@ -503,7 +432,7 @@ Any value thrown during file execution sets execution status to errored and test
 throw new Error("here")
 ```
 
-### Execution timeout example
+## Execution timeout example
 
 Execution taking longer than an allocated amout of milliseconds sets execution status to timedout and test is considered as failed.
 
@@ -514,7 +443,7 @@ await new Promise(() => {})
 Note: By default an execution is given 30s before being considered as a timeout.
 Check [defaultMsAllocatedPerExecution](#defaultMsAllocatedPerExecution) to know how to configure this value.
 
-### Execution disconnected example
+## Execution disconnected example
 
 Runtime disconnected during file execution sets execution status to disconnected and test is considered as failed.
 
@@ -528,7 +457,7 @@ Note: There is, fortunately, no way to crash a browser during execution so this 
 process.exit()
 ```
 
-### Execution completed example
+## Execution completed example
 
 When none of the aboves scenario occurs, execution status is success and test is considered as completed.
 
@@ -542,7 +471,7 @@ if (actual !== expected) {
 
 Note: An empty file is a completed test.
 
-## How to test async code
+# How to test async code?
 
 Top level await is a standard (and damn cool) way to make your top level code execution asynchronous. Use it to test async code.
 
