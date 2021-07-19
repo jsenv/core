@@ -6,8 +6,12 @@ This documentation list [key features](#key-features) and gives the [definition 
 
 # Key features
 
-- Livereloading: Page auto reload when you save a file
 - Any html file can become an entry point
+- Files are compiled only if browser needs it
+- Server uses filesystem as cache for compiled files
+  - You can see compiled files with your own eyes
+  - Files are recompiled only if they changed, otherwise cache is used
+- Livereloading: Page auto reload when you save a file
 
 # Definition of a dev server for jsenv
 
