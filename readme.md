@@ -84,7 +84,7 @@ export const countDogs = (animals) => {
 
    ![test execution terminal screenshot](./docs/demo_animals_chrome_and_firefox.png)
 
-To read more about testing in jsenv, check [Testing with jsenv](./docs/testing/readme.md#Testing-with-jsenv).
+To read more about testing in jsenv, check [jsenv test runner documentation](./docs/testing/readme.md#Testing-with-jsenv).
 
 # Dev server overview
 

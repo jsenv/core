@@ -1,6 +1,6 @@
-# Testing with jsenv
+# Jsenv test runner
 
-This is an in-depth documentation about jsenv test runner. For a quick overview go to [Testing overview](../../readme.md#Testing-overview).
+This is an in-depth documentation about jsenv test runner. For a quick overview go to [test runner overview](../../readme.md#Test-runner-overview).
 
 This documentation list [key features](#key-features) and gives the [definition of a test for jsenv](#Definition-of-a-test-for-jsenv) to get an idea of how things where designed. Then it documents [executeTestPlan](#executeTestPlan) function, its parameters and return value. Finally you can find:
 
