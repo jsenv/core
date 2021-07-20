@@ -43,7 +43,7 @@ startExploring({
 
 `explorableConfig` parameter is an object used to configure what files are explorable in your project. This is an optional parameter with a default value configured to match list a subset of html files. The exact value can be found in [src/jsenvExplorableConfig.js](../../src/jsenvExplorableConfig.js).
 
-This parameter must be an object composed of other object where keys are relative or absolute urls. These urls are allowed to contain `*` and `**` that will be used for pattern matching as documented in https://github.com/jsenv/jsenv-url-meta#pattern.
+This parameter must be an object composed of other objects where keys are relative or absolute urls. These urls are allowed to contain `*` and `**` that will be used for pattern matching as documented in https://github.com/jsenv/jsenv-url-meta#pattern.
 
 Each group declared in `explorableConfig` are turned into tabs in jsenv exploring index page. These tabs are here to regroup files that goes together.
 For instance you might want to have a tab for source files and one for test files.
@@ -60,12 +60,11 @@ Any request to a file inside your project is also considered as a dependency tha
 
 `watchConfig` parameter is an object configuring which files are watched to trigger livereloading. This is an optional parameter with a default value configured to watch everything except git and node_modules directories. `watchConfig` reuse [explorableConfig](#explorableConfig) shape meaning keys are urls with pattern matching.
 
-Example of a custom `watchConfig`:
+_A custom `watchConfig` to watch only index.html and files inside src directory_
 
 ```js
 {
-  "./*/**": false,
-  "./*": true,
+  "./index.html": true,
   "./src/**/*": true,
 }
 ```
@@ -95,7 +94,7 @@ The following parameter controls the exploring server:
 
 ## Shared parameters
 
-To avoid duplication some parameter are linked to a generic documentation.
+There is more parameters listed here. Their documentation is regrouped in an other section.
 
 - [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
@@ -133,7 +132,7 @@ This button is convenient to go back to exploring index.
 
 ## File indicator
 
-This component display the file being executed. Useful to have it visible to remember what we are talking about.
+This component displays the file being executed as an url relative to your project directory.
 
 ## Execution indicator
 
@@ -151,7 +150,7 @@ This component is an icon representing the exploring server connection state. Th
 
 | State                             | Screenshot                                                                                  | Description                                                                                                                  |
 | --------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| connecting                        | ![connecting screenshot](./server-connecting.png)                                           | Jsenv is connecting to the exploring server                                                                                  |
+| connecting                        | ![connecting screenshot](./server-connecting.png)                                           | Jsenv toolbar is connecting to the exploring server                                                                          |
 | disconnected                      | ![disconnected indicator screenshot](./server-disconnected.png)                             | Happens after you click cancel button in previous state                                                                      |
 | failed                            | ![connection failed indicator screenshot](./server-failed.png)                              | Jsenv toolbar cannot connect to exploring server. You should check the terminal where exploring server was started           |
 | connected with livereloading      | ![connected with livereloading screenshot](./server-connected-and-livereloading.png)        | Jsenv toolbar is connected to exploring server and will autoreload on save                                                   |
@@ -172,9 +171,13 @@ Control if a notification is shown when file execution fails, is still failing o
 
 Useful to disable temporarily livereload for any legit reason you may have.
 
+If livereload is fully disabled using [livereloading](#livereloading) parameter, this switch cannot be used and looks as below:
+
+![settings livereload disabled](./settings_livereload_disabled.png)
+
 ## Animations switch
 
-Useful in case the toolbar animation are annoying to you. There is very few of them like when it's opened or closed. It exists mostly because there was more animation in the past.
+Toolbar has a few animations, mostly when it's opened or closed. If animations bothers you they can be disabled with this switch.
 
 ## Dark mode switch
 
