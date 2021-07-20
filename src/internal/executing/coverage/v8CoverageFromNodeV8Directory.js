@@ -1,13 +1,6 @@
-import {
-  assertAndNormalizeDirectoryUrl,
-  readDirectory,
-  readFile,
-  resolveUrl,
-  normalizeStructuredMetaMap,
-  urlToMeta,
-} from "@jsenv/util"
+import { assertAndNormalizeDirectoryUrl, readDirectory, readFile, resolveUrl } from "@jsenv/util"
 
-import { composeV8Coverages } from "./composeV8Coverages.js"
+import { v8CoverageFromAllV8Coverages } from "./v8CoverageFromAllV8Coverages.js"
 
 export const v8CoverageFromNodeV8Directory = async ({
   projectDirectoryUrl,
@@ -15,12 +8,12 @@ export const v8CoverageFromNodeV8Directory = async ({
   coverageConfig,
 }) => {
   const allV8Coverages = await readV8CoverageReportsFromDirectory(NODE_V8_COVERAGE)
-  const v8Coverages = filterCoverageReports(allV8Coverages, {
-    projectDirectoryUrl,
+
+  const v8Coverage = v8CoverageFromAllV8Coverages(allV8Coverages, {
+    coverageRootUrl: projectDirectoryUrl,
     coverageConfig,
   })
 
-  const v8Coverage = composeV8Coverages(v8Coverages)
   return v8Coverage
 }
 
@@ -31,7 +24,7 @@ const readV8CoverageReportsFromDirectory = async (coverageDirectory) => {
       return dirContent
     }
     if (timeSpentTrying > 1500) {
-      console.warn(`${coverageDirectory} is empty`)
+      console.warn(`v8 coverage directory is empty at ${coverageDirectory}`)
       return dirContent
     }
     await new Promise((resolve) => setTimeout(resolve, 100))
@@ -62,28 +55,4 @@ ${dirEntryUrl}`)
   )
 
   return coverageReports
-}
-
-const filterCoverageReports = (coverageReports, { projectDirectoryUrl, coverageConfig }) => {
-  const structuredMetaMapForCover = normalizeStructuredMetaMap(
-    {
-      cover: coverageConfig,
-    },
-    projectDirectoryUrl,
-  )
-  const shouldIgnoreCoverage = (url) => {
-    return !urlToMeta({
-      url: resolveUrl(url, projectDirectoryUrl),
-      structuredMetaMap: structuredMetaMapForCover,
-    }).cover
-  }
-
-  return coverageReports.map((coverageReport) => {
-    return {
-      ...coverageReport,
-      result: coverageReport.result.filter((fileReport) => {
-        return !shouldIgnoreCoverage(fileReport.url)
-      }),
-    }
-  })
 }

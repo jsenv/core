@@ -1,59 +1,27 @@
-# Exploring presentation
+# Jsenv dev server
+
+This is an in-depth documentation about jsenv dev server. For a quick overview go to [dev server overview](../../readme.md#Dev-server-overview).
+
+This documentation list [key features](#key-features) and gives the [definition of a dev server for jsenv](#Definition-of-a-dev-server-for-jsenv) to get an idea of how things where designed. Then it documents [startExploring](#startExploring) function, its parameters and return value. Finally you can find:
+
+# Key features
+
+- Any html file can become an entry point
+- Files are compiled only if browser needs it
+- Server uses filesystem as cache for compiled files
+  - You can see compiled files with your own eyes
+  - Files are recompiled only if they changed, otherwise cache is used
+- Livereloading: Page auto reload when you save a file
+
+# Definition of a dev server for jsenv
 
 Frontend projects often comes with a local server running on your machine.
 
 These type of servers focuses on development. During development files change often and developper want a fast feedback to see effects of thoose changes.
 
-You can use jsenv to start a server serving an html page containing a list of links to your project files. Each link goes to an url where your file will be executed. Thanks to this, any html file in your project can become an entry point. You can use it to debug a file in isolation, create a storybook and so on.
-
-Jsenv call this `exploring`.
-
-# Exploring integration
-
-<details>
-  <summary>1. Go to your project root directory</summary>
-
-```console
-cd /your-project
-```
-
-</details>
-
-<details>
-  <summary>2. Install <code>@jsenv/core</code> to your dependencies.</summary>
-
-```console
-npm install --save-dev @jsenv/core
-```
-
-</details>
-
-<details>
-  <summary>3. Create a file to start the exploring server</summary>
-
-```js
-import { startExploring } from "@jsenv/core"
-
-startExploring({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  compileServerPort: 3472,
-})
-```
-
-The code above is written in ESM. You may have to use `.mjs` extension to run it with Node.js as documented in [enabling ESM](https://nodejs.org/docs/latest-v16.x/api/esm.html#esm_enabling)
-
-</details>
-
-<details>
-  <summary>4. Execute start exploring file </summary>
-
-At this point exploring server will start in your project. Check `startExploring` documentation below.
-
-</details>
-
 # startExploring
 
-`startExploring` is an async function starting a development server that transforms project files configured as explorable into an executable html page.
+`startExploring` is an async function starting a development server. This development server consider that more than one html file in your project can be an entry point. You can use it to debug a file in isolation, create a storybook and so on.
 
 ```js
 import { startExploring } from "@jsenv/core"
@@ -71,37 +39,24 @@ startExploring({
 
 — source code at [src/startExploring.js](../../src/startExploring.js).
 
-# startExploring parameters
+## explorableConfig
 
-`startExploring` uses named parameters documented below.
+`explorableConfig` parameter is an object used to configure what files are explorable in your project. This is an optional parameter with a default value configured to match list a subset of html files. The exact value can be found in [src/jsenvExplorableConfig.js](../../src/jsenvExplorableConfig.js).
 
-To keep in mind: when you change a parameter don't forget to restart the server.
-
-<details>
-  <summary>explorableConfig</summary>
-
-`explorableConfig` parameter is an object used to configure what files are explorable in your project. This is an optional parameter with a default value configured to match jsenv file structure. The exact value can be found in [src/jsenvExplorableConfig.js](../../src/jsenvExplorableConfig.js).
-
-This parameter must be an object composed of other object where keys are relative or absolute urls. These urls are allowed to contain `*` and `**` that will be used for pattern matching as documented in https://github.com/jsenv/jsenv-url-meta#pattern-matching-behaviour.
+This parameter must be an object composed of other object where keys are relative or absolute urls. These urls are allowed to contain `*` and `**` that will be used for pattern matching as documented in https://github.com/jsenv/jsenv-url-meta#pattern.
 
 Each group declared in `explorableConfig` are turned into tabs in jsenv exploring index page. These tabs are here to regroup files that goes together.
 For instance you might want to have a tab for source files and one for test files.
 
 ![explorableConfig and tabs screenshot](./exploring-tabs.png)
 
-</details>
-
-<details>
-  <summary>livereloading</summary>
+## livereloading
 
 `livereloading` parameter is a boolean controlling if the browser will auto reload when a file is saved. This is an optional parameter enabled by default.
 
 Any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file load assets such as image or css these asset files will also trigger livereloading when saved.
 
-</details>
-
-<details>
-  <summary>watchConfig</summary>
+## watchConfig
 
 `watchConfig` parameter is an object configuring which files are watched to trigger livereloading. This is an optional parameter with a default value configured to watch everything except git and node_modules directories. `watchConfig` reuse [explorableConfig](#explorableConfig) shape meaning keys are urls with pattern matching.
 
@@ -115,12 +70,9 @@ Example of a custom `watchConfig`:
 }
 ```
 
-</details>
+## jsenvToolbar
 
-<details>
-  <summary>toolbar</summary>
-
-`toolbar` parameter is a boolean controlling if a script loading jsenv toolbar will be injected into html files. This parameter is optional and enabled by default.
+`jsenvToolbar` parameter is a boolean controlling if a script loading jsenv toolbar will be injected into html files. This parameter is optional and enabled by default.
 
 The image below is a screenshot of this toolbar.
 
@@ -128,10 +80,7 @@ The image below is a screenshot of this toolbar.
 
 For more details check [jsenv toolbar](#jsenv-toolbar) section.
 
-</details>
-
-<details>
-  <summary>Server parameters</summary>
+## Server parameters
 
 Exploring server parameters are configured to let you use exploring right away. You might want to configure some of them to use a specific port or your own https certificate.
 
@@ -144,10 +93,7 @@ The following parameter controls the exploring server:
 - [compileServerPort](../shared-parameters.md#compileServerPort)
 - [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
 
-</details>
-
-<details>
-  <summary>Shared parameters</summary>
+## Shared parameters
 
 To avoid duplication some parameter are linked to a generic documentation.
 
@@ -157,157 +103,112 @@ To avoid duplication some parameter are linked to a generic documentation.
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
 - [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
 
-</details>
-
 # startExploring return value
 
-Using the return value is an advanced use case, in theory you should not need this.
-
-`startExploring` returns the `compileServer`.
-
-`compileServer` is created by `@jsenv/server`. You can read the `@jsenv/server` documentation on the return value to see the shape of these objects.
-https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#startServer-return-value.
+Using the return value is an advanced use case, in theory you should not need this. `startExploring` returns a _server object_ created by `@jsenv/server`. You can read [@jsenv/server documentation](https://github.com/jsenv/jsenv-server#startserver-return-value) to know more about the _server object_ composition.
 
 Code below shows how you might use return value.
 
 ```js
 import { startExploring } from "@jsenv/core"
 
-const compileServer = await startExploring({
+const exploringServer = await startExploring({
   projectDirectoryUrl: new URL("./", import.meta.url),
 })
 
-compileServer.stop()
+exploringServer.stop()
 ```
 
 # jsenv toolbar
 
-The jsenv toolbar is injected at the bottom of the page by the exploring server. It is inside an iframe so that it cannot conflict with your css or js.
+The jsenv toolbar is injected at the bottom of the page by the exploring server. It is inside an iframe so it cannot conflict with your css or js.
 
-The toolbar is composed as shown in the following image:
+The toolbar is composed as shown:
 
-![jsenv toolbar legend](./toolbar-legend.png)
+![jsenv toolbar legend](./jsenv_toolbar_legend.png)
 
-<details>
-  <summary>back button</summary>
+## Exploring index button
 
 This button is convenient to go back to exploring index.
 
-</details>
-
-<details>
-  <summary>file input</summary>
+## File indicator
 
 This component display the file being executed. Useful to have it visible to remember what we are talking about.
 
-</details>
+## Execution indicator
 
-<details>
-  <summary>execution indicator</summary>
+This component is an icon representing the html file execution state. The icon can be clicked to get more information and can be in the following states:
 
-This component is an icon representing the html file execution state. The icon can be clicked to get more information as shown in the images below.
+| State     | Screenshot                                                           | Description                                                        |
+| --------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| executing | ![executing indicator screenshot](./execution-variant-running.png)   | html file assets and imports are being loaded, parsed and executed |
+| failed    | ![failed indicator screenshot](./execution-variant-failed.png)       | a script with type module in the html file has thrown an error     |
+| completed | ![completed indicator screenshot](./execution-variant-completed.png) | html file execution is done without error                          |
 
-**executing**
+## Server connection indicator
 
-html file assets and imports are being loaded, parsed and executed.
+This component is an icon representing the exploring server connection state. The icon can be clicked to get more information and can be in the following states.
 
-![execution indicator running state screenshot](./execution-variant-running.png)
+| State                             | Screenshot                                                                                  | Description                                                                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| connecting                        | ![connecting screenshot](./server-connecting.png)                                           | Jsenv is connecting to the exploring server                                                                                  |
+| disconnected                      | ![disconnected indicator screenshot](./server-disconnected.png)                             | Happens after you click cancel button in previous state                                                                      |
+| failed                            | ![connection failed indicator screenshot](./server-failed.png)                              | Jsenv toolbar cannot connect to exploring server. You should check the terminal where exploring server was started           |
+| connected with livereloading      | ![connected with livereloading screenshot](./server-connected-and-livereloading.png)        | Jsenv toolbar is connected to exploring server and will autoreload on save                                                   |
+| connected without livereloading   | ![connected without livereloading screenshot](./server-connected-without-livereloading.png) | Jsenv toolbar is connected to exploring server but won't autoreload on save. Happens if your disable livereload in settings. |
+| connected without livereloading 2 | ![connected without livereloading second screenshot](./server-connected-and-changes.png)    | As previous state + you saved one file while livereload is disabled.                                                         |
 
-**failed**
-
-a script with type module in the html file has thrown an error.
-
-![execution indicator failed state screenshot](./execution-variant-failed.png)
-
-**completed**
-
-html file execution is done without error.
-
-![execution indicator completed state screenshot](./execution-variant-completed.png)
-
-</details>
-
-<details>
-  <summary>livereload indicator</summary>
-
-This component is an icon representing the server connection state. The icon can be clicked to get more information.
-
-**connecting**
-
-![server indicator connecting screenshot](./server-connecting.png)
-
-> You should rarely see this in practice because connection is almost instant.
-
-**connected with livereloading**
-
-Exploring server works correctly and livereload is fully functionnal.
-
-![server indicator connected screenshot](./server-connected-and-livereloading.png)
-
-You can disable livereloading using `settings button`
-
-**connected without livereloading**
-
-Exploring server works correctly and livereload is disabled.
-
-![server indicator connected without livereloading screenshot](./server-connected-without-livereloading.png)
-
-If files are modified while livereload is disabled the component is updated to give the information:
-
-- This icon is different
-- Number of changes is displayed and can be clicked to see what has changed since page was loaded.
-- There is a reload link to encourage reloading the page
-
-![server indicator connected without livereloading screenshot](./server-connected-and-changes.png)
-
-You can enable livereloading using `settings button`
-
-**disconnected**
-
-Happens after you click disconnect button
-
-![server indicator disconnected screenshot](./server-disconnected.png)
-
-**failed**
-
-Exploring server is down. Livereload will not work. You should check the terminal where exploring server was started.
-
-![server indicator failed screenshot](./server-failed.png)
-
-</details>
-
-<details>
-  <summary>settings button</summary>
+## Settings button
 
 This component is a button opening a setting panel when clicked. Each setting is saved in the browser localStorage.
 
-![settings panel screenshot](./settings.png)
+![settings panel screenshot](./jsenv_toolbar_settings.png)
 
-**Notification setting**
+## Notification switch
 
-Show a notification when file execution fails, is still failing or is fixed.
+Control if a notification is shown when file execution fails, is still failing or is fixed.
 
-**Livereload setting**
+## Livereload switch
 
 Useful to disable temporarily livereload for any legit reason you may have.
 
-**Animation setting**
+## Animations switch
 
-Useful in case the toolbar animation are annoying to you. There is very few of them like when it's opened or closed. It exists mostly because they more animation than that in the past.
+Useful in case the toolbar animation are annoying to you. There is very few of them like when it's opened or closed. It exists mostly because there was more animation in the past.
 
-**Dark mode setting**
+## Dark mode switch
 
 Toogle between dark theme and light theme. Use this to keep a good contrast between the toolbar and the website behind it.
 
-</details>
+## Browser support
 
-<details>
- <summary>close button</summary>
+When browser support is good enough and if he code you write is standard js, html and css, jsenv exploring server will serve the source files **without compilation step**. The browser support section informs you if that is possible or not. You can click "Read more" to get more information in an alert dialog.
+
+| State     | Screenshot                                                               | Description                                                                | Alert screenshot                                                                        |
+| --------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Excellent | ![Excellent browser support screenshot](./browser_support_excellent.png) | The browser support all features except remote importmap files             | ![No browser support excellent alert screenshot](./browser_support_excellent_alert.png) |
+| No        | ![No browser support screenshot](./browser_support_no.png)               | The browser is missing some/all important features such as top level await | ![No browser support alert screenshot](./browser_support_no_alert.png)                  |
+
+## Files compilation
+
+As explained in [Browser support](#Browser-support) jsenv exploring server might use source files directly. The files compilation section informs you if files are compiled and allows you to switch between source files and compiled files.
+
+| Compiled? | Screenshot                                                         |
+| --------- | ------------------------------------------------------------------ |
+| No        | ![Files not compiled screenshot](./settings_files_compiled_no.png) |
+| Yes       | ![Files compiled screenshot](./settings_files_compiled_yes.png)    |
+
+An other way to see if files are compiled or not is to check the browser url.
+
+| Compiled? | Browser url                                                           |
+| --------- | --------------------------------------------------------------------- |
+| No        | ![Not compiled browser url screenshot](./browser_url_compiled_no.png) |
+| Yes       | ![Compiled browser url screenshot](./browser_url_compiled_yes.png)    |
+
+## Close button
 
 This button closes the toolbar to keep only the website. The toolbar can be shown back using a discrete box at the bottom right.
 
 ![toolbar discrete box screenshot](./toolbar-trigger.png)
 
-When you close toolbar this information is kept in browser localStorage to keep it hidden.
-
-</details>
+When you close toolbar this information is kept in browser localStorage to keep it hidden after reloading.

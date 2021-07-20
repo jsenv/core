@@ -12,7 +12,6 @@ import { loggerToLevels, createDetailedMessage } from "@jsenv/logger"
 import { urlToFileSystemPath } from "@jsenv/util"
 
 import { launchAndExecute } from "../executing/launchAndExecute.js"
-
 import { reportToCoverage } from "./coverage/reportToCoverage.js"
 import { writeLog } from "./writeLog.js"
 import { createExecutionResultLog } from "./executionLogs.js"

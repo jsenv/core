@@ -11,7 +11,12 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}file.html`
 
 await Promise.all(
-  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
+  [
+    // ensure multiline
+    launchChromium,
+    launchFirefox,
+    launchWebkit,
+  ].map(async (launchBrowser) => {
     const actual = await execute({
       ...EXECUTE_TEST_PARAMS,
       jsenvDirectoryRelativeUrl,

@@ -1,16 +1,33 @@
-# Table of contents
+# Jsenv build
 
-- [Presentation](#Presentation)
-- [buildProject](#buildProject)
-- [Building a frontend](#Building-a-frontend)
-- [Building a Node.js package](#Building-a-nodejs-package)
+This is an in-depth documentation about jsenv build. For a quick overview go to [build overview](../../readme.md#build-overview).
+
+This documentation list [key features](#key-features) and gives the [definition of a build for jsenv](#Definition-of-a-build-for-jsenv) to get an idea of how things where designed. Then it documents [buildProject](#buildProject) function, its parameters and return value. Finally you can find:
+
+- [How to reference js assets?](#How-to-reference-js-assets)
 - [Long term caching](#Long-term-caching)
-- [SystemJS format](#Systemjs-format)
+- [SystemJS format](#SystemJS-format)
+- [Frontend build](#Frontend-build)
+- [Node package build](#Node-package-build)
 - [Disable concatenation](#Disable-concatenation)
 
-# Presentation
+# Key features
 
-Building consists into taking one or many input files to generate one or many output files. It creates a step between dev and production where you can perform specific optimizations:
+- Url versioning to enable long term caching
+- Favor cache reuse thanks to importmap
+- Can build code that works on browsers without native support:
+  - importmap
+  - top level await
+  - script type module
+  - anything babel can transform
+- Can minify html, css, js, json, svg.
+- Generate sourcemap files for js and css
+- Can build service worker files
+- Regroup js files into chunks (concatenation)
+
+# Definition of a build for jsenv
+
+A build consists into taking one or many input files to generate one or many output files. It creates a step between dev and production where you can perform specific optimizations:
 
 - File concatenation to save http request
 - Minify file content to reduce file size
@@ -35,35 +52,23 @@ const { buildMappings, buildManifest } = await buildProject({
 })
 ```
 
-## buildProject parameters
-
-`buildProject` uses named parameters documented below.
-
-<details>
-  <summary>buildDirectoryRelativeUrl</summary>
+## buildDirectoryRelativeUrl
 
 `buildDirectoryRelativeUrl` parameter is a string leading to a directory where files are written. This parameter is **required**.
 
-</details>
-
-<details>
-  <summary>entryPointMap</summary>
+## entryPointMap
 
 `entryPointMap` parameter is an object describing the project files you want to read and their destination in the build directory. This parameter is **required**.
 
 `entryPointMap` keys are relative to project directory and values are relative to build directory.
 
-</details>
-
-<details>
-  <summary>format</summary>
+## format
 
 `format` parameter is a string indicating the module format of the files written in the build directory. This parameter is **required** and must be one of `"esmodule"`, `"systemjs"`, `"commonjs"`, `"global"`.
 
-</details>
+— see [SystemJS format](#SystemJS-format)
 
-<details>
-  <summary>minify</summary>
+## minify
 
 `minify` parameter is a boolean controlling if build files will be minified to save bytes. This parameter is optional and enabled by default when `process.env.NODE_ENV` is `"production"`.
 
@@ -79,10 +84,7 @@ await buildProject({
 })
 ```
 
-</details>
-
-<details>
-  <summary>externalImportSpecifiers</summary>
+## externalImportSpecifiers
 
 `externalImportSpecifiers` parameter is an array of string repsenting imports that will be ignored whle generating the build files. This parameter is optional with a default value being an empty array. This parameter can be used to avoid building some dependencies.
 
@@ -158,19 +160,13 @@ If `externalImportSpecifiers` contains `foo` the generated files will keep that 
   })
   ```
 
-</details>
-
-<details>
-  <summary>urlVersioning</summary>
+## urlVersioning
 
 `urlVersioning` parameter is a boolean controlling the file written in the build directory will be versioned. This parameter is optional and enabled by default.
 
 When enabled, the files written in the build directory have dynamic names computed from the source file content. This allows to enable [long term caching](#long-term-caching) of your files.
 
-</details>
-
-<details>
-  <summary>assetManifestFile</summary>
+## assetManifestFile
 
 `urlVersioning` parameter is a boolean controlling if an `asset-manifest.json` file will be written in the build directory. This parameter is optional and disabled by default.
 
@@ -188,10 +184,7 @@ Example of an `asset-manifest.json` file content:
 }
 ```
 
-</details>
-
-<details>
-  <summary>importResolutionMethod</summary>
+## importResolutionMethod
 
 `importResolutionMethod` parameter is a string controlling how import will be resolved. This parameter is optional, the default value is infered from `format` parameter. When `format` is `"commonjs"` default resolution method is `"node"`, otherwise it is `"importmap'`.
 
@@ -201,10 +194,7 @@ Example of an `asset-manifest.json` file content:
 
 If you need, you can force node module resolution by passing `importResolutionMethod: "node"`.
 
-</details>
-
-<details>
-  <summary>Shared parameters</summary>
+## Shared parameters
 
 To avoid duplication some parameter are linked to a generic documentation.
 
@@ -220,8 +210,6 @@ To avoid duplication some parameter are linked to a generic documentation.
 - [compileServerPort](../shared-parameters.md#compileServerPort)
 - [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
 
-</details>
-
 ## buildProject return value
 
 `buildProject` return a value with the following shape
@@ -233,8 +221,7 @@ To avoid duplication some parameter are linked to a generic documentation.
 }
 ```
 
-<details>
-  <summary>buildManifest</summary>
+### buildManifest
 
 `buildManifest` is part of buildProject return value. This object will contain a key/value pair for each file written in the build directory.
 
@@ -254,10 +241,7 @@ The value above can be translated into the following sentence where build direct
 
 > "Three files where written in `dist/`: `main.html`, `assets/main.css` and `main.js`. <br /> `main.html` was not versioned but `assets/main.css` and `main.js` are versioned."
 
-</details>
-
-<details>
-  <summary>buildMappings</summary>
+### buildMappings
 
 `buildMappings` is part of buildProject return value. This object will contain a key/value pair for each file written in the build directory.
 
@@ -273,141 +257,26 @@ Example of a `buildMappings` value.
 }
 ```
 
-The value above can be translated into the following sentence where build directory is assumed to be `dist`.
+The value above can be translated into the following sentence where build directory is assumed to be _dist_:
 
-> "Three files where written in `dist/` from project directory: `main.html`, `src/main.css` and `src/main.js`. <br /> `main.html` can be found at `dist/main.html`, `src/main.css` at `dist/assets/main-2e7e167b.css` and `src/main.js` at `dist/main-a340d0ae.js`
+"Three files where written in _dist/_ from project directory:
+_main.html_ can be found at _dist/main.html_, _src/main.css_ at _dist/assets/main-2e7e167b.css_ and _src/main.js_ at _dist/main-a340d0ae.js_"
 
-</details>
+## How to reference js assets?
 
-# Building a frontend
-
-A frontend is composed of files that will be executed by a browser (Chrome, Firefox, ...). In other words you need to generate an html file and the files needed by this html file.
-
-To do that provide your main html to jsenv. It will collect all the files used directly or indirectly by the html file. Once all the files are known they are eventually minified, concatenated and file urls are replaced with a unique url identifier to enable long term caching.
+The following pattern should be used to o reference an asset from a js file:
 
 ```js
-import { buildProject } from "@jsenv/core"
-
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  buildDirectoryRelativeUrl: "./dist/",
-  entryPointMap: {
-    "./main.html": "./main.html",
-  },
-  format: "systemjs",
-})
+const imageUrl = new URL("./img.png", import.meta.url)
 ```
 
-## Embed frontend
+This pattern is recognized by jsenv build which detects the dependency to `"./img.png"`.
 
-Embed refers to a product that is meant to be injected into website you don't own, like a video embed for instance. In that case, developper using your product can inject it in their web page using an iframe.
-
-```html
-<iframe src="./dist/main.html"></iframe>
-```
-
-## Progressive Web Application (PWA)
-
-There is a pre configured GitHub repository for this use case: [jsenv-template-pwa](https://github.com/jsenv/jsenv-template-pwa#jsenv-template-for-pwa-progressive-web-application).
-
-If you want to build a PWA, you certainly got a service worker file. In that case use `serviceWorkers` parameter. Otherwise, your service worker file is ignored and does not appear in the build directory. For each service worker file specified in `serviceWorkers` a corresponding file will be written to the build directory. Building a service worker is almost equivalent to copying files from project directory to build directory. Two optimizations are still peformed:
-
-- `self.importScripts` are inlined
-- The final service worker file is minified
-
-Your service worker file must be written in a way browser can understand. Service worker are totally different from js executing in a browser tab. They don't have `import` or `export` keywords for instance and jsenv won't transform them for you.
-
-> Service workers and regular js are very different. Trying to blur these differences would be hard to do AND complex AND confusing.
+The following pattern is also supported but should be avoided as it's not standard.
 
 ```js
-import { buildProject } from "@jsenv/core"
-
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  serviceWorkers: {
-    "./sw.js": "./sw.js",
-  },
-})
+import imageUrl from "./img.png"
 ```
-
-If you didn't change meaningful files, building your project outputs exactly the same service worker file. In that case your service worker is not updated -> users keep their current service worker. Otherwise, browser will see that something has changed and start the process to update the service worker.
-
-### Jsenv service worker
-
-If you want, jsenv has its own service worker. Read more at https://github.com/jsenv/jsenv-pwa/blob/master/docs/jsenv-service-worker.md
-
-If you use it be sure to add `serviceWorkerFinalizer` parameter to buildProject:
-
-```diff
-- import { buildProject } from "@jsenv/core"
-+ import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
-
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  serviceWorkers: {
-    "./sw.js": "./sw.js",
-  },
-+ serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
-})
-```
-
-[jsenvServiceWorkerFinalizer](../../src/jsenvServiceWorkerFinalizer.js) configure service worker with the list of urls to cache and if they are versioned or not.
-
-# Building a Node.js package
-
-There is a pre configured GitHub repository for this use case: [jsenv-template-node-package](https://github.com/jsenv/jsenv-template-node-package).
-
-A Node.js package does not have the same constraints than the web. If you are targeting recent Node.js versions you can even skip the build step completely and serve your files untouched.
-
-## Building a commonjs package
-
-If you want to publish a version of your files compatible with commonjs you can use the following script.
-
-> If any of your js file uses on top level await, jsenv will throw an error because it's not supported.
-
-<details>
-  <summary>generate-commonjs-build.js</summary>
-
-```js
-import { buildProject } from "@jsenv/core"
-
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  entryPointMap: {
-    "./main.js": "./main.cjs",
-  },
-  format: "commonjs",
-})
-```
-
-</details>
-
-You can even generate a commonjs build to be compatible with a specific node version with the following script.
-
-<details>
-  <summary>generate-commonjs-build-advanced.js</summary>
-
-```js
-import { buildProject, getBabelPluginMapForNode } from "@jsenv/core"
-
-// you can enable a subset of babel plugins transformations
-// to get only thoose required to work with node 8
-const babelPluginMapForNode8 = getBabelPluginMapForNode({
-  nodeMinimumVersion: "8.0.0",
-})
-
-// calling getBabelPluginMapForNode() without specifying nodeMinimumVersion
-// returns a babel plugin map computed from process.version
-const babelPluginMapForCurrentNodeVersion = getBabelPluginMapForNode()
-
-buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  format: "commonjs",
-  babelPluginMap: babelPluginMapForNode8,
-})
-```
-
-</details>
 
 # Long term caching
 
@@ -449,7 +318,7 @@ body {
 }
 ```
 
-You can disable url versioning if you don't want it using `urlVersioning` parameter as shown below:
+You can disable url versioning if you don't want it using [urlVersioning](#urlVersioning) parameter as shown below:
 
 ```js
 import { buildProject } from "@jsenv/core"
@@ -461,21 +330,26 @@ await buildProject({
 })
 ```
 
-— link to Babel on GitHub: https://github.com/babel/babel<br />
-— link to PostCSS on GitHub: https://github.com/postcss/postcss<br />
-— link to parse5 on GitHub: https://github.com/inikulin/parse5
+## How importmap improves cache reuse
+
+Import maps is a standard that is starting to be supported by Web browsers. It is the future proof way of controlling how js imports are resolved.
+
+Thanks to importmap it's possible to reuse files from cache and only remap their references to the file that was updated. It drastically improve cache reuse of files generated with [urlVersioning](#urlVersioning) enabled.
+
+| Action        | Context           | Cache impact               |
+| ------------- | ----------------- | -------------------------- |
+| Update 1 file | without importmap | **n urls**\* to redownload |
+| Update 1 file | with importmap    | **1 url** to redownload    |
+
+\*n is the number of other files referencing the updated file directly or indirectly
+
+— Link to import maps specifications on GitHub: https://github.com/WICG/import-maps
 
 ## SystemJS format
 
-JavaScript modules, also called ES modules, refers to the browser support for the `import` and `export` keywords.
+Amongst other things, jsenv uses top level await and import maps. But for now the native browser support of these features is too small. For this reason you likely want to build your files into the _systemjs_ format.
 
-> For a more detailed explanation about JavaScript modules, see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules
-
-By default jsenv generates files assuming the browser will support JavaScript modules. But for reasons detailed below you might want to output files using the `"systemjs"` format.
-
-If you want any of the benefits of [import maps](#import-maps) and/or [top level await](#top-level-await), you must use SystemJS format until browser supports them natively.
-
-To use SystemJS format, use `format` parameter
+To use SystemJS format, use [format](#format) parameter
 
 ```js
 import { buildProject } from "@jsenv/core"
@@ -491,137 +365,135 @@ await buildProject({
 })
 ```
 
-<details>
-  <summary>dist/main.html</summary>
+When using the _systemjs_ format the generated html is a bit different:
 
-```html
+```diff
 <!DOCTYPE html>
 <html>
   <head>
     <title>Title</title>
     <meta charset="utf-8" />
     <link rel="icon" href="assets/favicon-5340s4789a.ico" />
-    <script src="assets/s.min-550cb99a.js"></script>
-    <script type="systemjs-importmap" src="import-map-b237a334.importmap"></script>
++   <script src="assets/s.min-550cb99a.js"></script>
+-   <script type="importmap" src="import-map-b237a334.importmap"></script>
++   <script type="systemjs-importmap" src="import-map-b237a334.importmap"></script>
     <link rel="stylesheet" type="text/css" href="assets/main-3b329ff0.css" />
   </head>
 
   <body>
-    <script type="systemjs-module" src="./main-f7379e10.js"></script>
+-   <script type="module" src="./main-f7379e10.js"></script>
++   <script type="systemjs-module" src="./main-f7379e10.js"></script>
   </body>
 </html>
 ```
 
-</details>
+`<script src="assets/s.min-550cb99a.js"></script>` was injected into `<head>`: this is SystemJS script. SystemJS is injected only if the html source file contains a `<script type="module"></script>`, otherwise systemjs is not needed so it's not injected.
 
-When using this format the html generated is a bit different:
+`<script type="module">` are transformed into `<script type="systemjs-module">`. This is because systemjs will now load and execute these scripts. Amongst other things, it makes browser capable to execute code which had top level await or relies on importmap.
 
-- `<script type="module">` are transformed into `<script type="systemjs-module">`
-  > This also means html becomes compatible with browser that does not support `<script type="module"></script>`.
-- `<script type="importmap">` are transformed into `<script type="systemjs-importmap">`
-
-- `<script src="assets/s.min-550cb99a.js"></script>` was injected into `<head>`
-
-  > This is to provide `window.System` needed by SystemJS.
-
-  > If you have no `<script type="module"></script>` in the html file, this script is not needed so it's no injected in `<head>`
+`<script type="importmap">` are transformed into `<script type="systemjs-importmap">`. Again this is because SystemJS is now handling the importmap.
 
 — Link to SystemJS on GitHub: https://github.com/systemjs
 
-#### import maps
+# Frontend build
 
-Import maps is a standard that is starting to be supported by runtimes such as Node.js, deno, and Web browsers. It is the future proof way of controlling how js imports are resolved.
+A frontend is composed of files that will be executed by a browser (Chrome, Firefox, ...). In other words you need to generate an html file and the files needed by this html file.
 
-Import maps drastically improve reuse of files configured with [Long term caching](#Long-term-caching). Without import maps `1` modification invalidates `n` files in cache. With import maps `1` modification invalidates `1` file in cache. They also enable a standard way to remap imports that improves developper experience.
-
-<details>
-  <summary>See details on how import maps improves cache reuse</summary>
-
-Without import maps, changing a file content updates its unique url with hash and all files referencing that url (directly or indirectly) must be updated. To illustrate, let's say you have three js files:
-`main.js` importing `dependency.js` which is importing `foo.js`. You have a dependency tree between files that looks like this:
-
-```console
-main.js
-  └── dependency.js
-          └────── foo.js
-```
-
-You can generate build files a first time, dependency tree becomes:
-
-```console
-main-x3rdf.js
-  └── dependency-vjdt3.js
-          └────── foo-rtiu76.js
-```
-
-At this point browser puts the 3 urls in cache.
-
-Later, you update `foo.js`:
-
-1. jsenv computes `foo.js` url -> `foo-newhash.js`.
-2. jsenv updates `dependency.js` so that `import "./foo.js"` becomes `import "./foo-newhash.js"`
-3. jsenv also needs to update `main.js` because `dependency.js` have changed.
-
-In the end 1 file is modified but 3 urls needs to be updated.
-
-Import maps allows to tell browser exactly which files have changed and reuse the ones that are not modified.
-
-</details>
-
-<details>
-  <summary>See details on how import maps improves developer experience</summary>
-  The ability to remap imports is important to simplify the developper experience when reading and writing imports.
+To do that provide your main html to jsenv. It will collect all the files used directly or indirectly by the html file. Once all the files are known they are eventually minified, concatenated and file urls are replaced with a unique url identifier to enable long term caching.
 
 ```js
-import "../../file.js"
-// vs
-import "src/feature/file.js"
+import { buildProject } from "@jsenv/core"
+
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  buildDirectoryRelativeUrl: "./dist/",
+  entryPointMap: {
+    "./main.html": "./main.html",
+  },
+  format: "systemjs",
+})
 ```
 
-This unlock consistent import paths accross the codebase which helps a lot to know where we are. As import maps is a standard, tools (VSCode, ESLint, Webpack, ...) will soon use them too.
+## Embed frontend
 
-The following html will be supported natively by browsers:
+Embed refers to a product that is meant to be injected into website you don't own, like a video embed for instance. In that case, developper using your product can inject it in their web page using an iframe.
+
+```html
+<iframe src="./dist/main.html"></iframe>
+```
+
+## Progressive Web Application (PWA)
+
+There is a pre configured GitHub repository template for this use case: [jsenv-template-pwa](https://github.com/jsenv/jsenv-template-pwa#progressive-web-application-template).
+
+If you want to build a PWA, you have a service worker file referenced somewhere by _navigator.serviceWorker.register_.
 
 ```html
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-    <script type="importmap">
-      {
-        "imports": {
-          "src/": "./src/"
-        }
-      }
-    </script>
+    <meta charset="utf8" />
+    <link rel="icon" href="data:," />
   </head>
-
   <body>
     <script type="module">
-      import "src/feature/file.js"
+      navigator.serviceWorker.register("/sw.js")
     </script>
   </body>
 </html>
 ```
 
-</details>
-
-— Link to import maps specifications on GitHub: https://github.com/WICG/import-maps
-
-#### top level await
-
-Top level await is the ability to write `await` at the top level of your program.
+For this scenario, you must manually specify the usage of `"/sw.js"` to jsenv using _serviceWorkers_ parameter.
 
 ```js
-const a = await Promise.resolve(42)
+import { buildProject } from "@jsenv/core"
 
-export default a
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  serviceWorkers: {
+    "./sw.js": "./sw.js",
+  },
+})
 ```
 
-Top level await, depites being useful, is not yet supported by browsers as reported in chrome platform status: https://www.chromestatus.com/feature/5767881411264512. By using SystemJS format it becomes possible to use it right now.
+For each service worker file specified in _serviceWorkers_ a corresponding file will be written to the build directory. So if you forget to pass `"sw.js"` using _serviceWorkers_ parameter, `"sw.js"` won't be in the build directory.
 
-## Disable concatenation
+A service worker file is special:
+
+- you can use _self.importScripts_
+- you cannot use _import_ keyword
+- ...many more differences...
+
+Jsenv won't try to change this. So you must write the service worker file in a way that browser can understand. This is what jsenv does for every service worker file specified in _serviceWorkers_ parameter:
+
+1. Inline every _self.importScripts_
+2. Minify the resulting service worker file
+3. Write the final service worker file into the build directory
+
+### Jsenv service worker
+
+When generating the build jsenv knows every file used by your frontend files. This information can be injected into a service worker to preload or put into cache all these urls. This can be done with _serviceWorkerFinalizer_ as shown in the code below:
+
+```diff
+- import { buildProject } from "@jsenv/core"
++ import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
+
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  serviceWorkers: {
+    "./sw.js": "./sw.js",
+  },
++ serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
+})
+```
+
+_serviceWorkerFinalizer_ injects a variable into the service worker file called `self.generatedUrlsConfig`. At this stage you can write your own service worker to do something with this variable. You can also use a service worker already written to handle this: https://github.com/jsenv/jsenv-pwa/blob/master/docs/jsenv-service-worker.md.
+
+# Node package build
+
+A node package does not have the same constraints than the web. If you are targeting recent Node.js versions you can skip the build step completely and serve your files untouched. See the jsenv GitHub repository template to start a node package from sratch: [jsenv-template-node-package](https://github.com/jsenv/jsenv-template-node-package).
+
+# Disable concatenation
 
 By default js files are concatenated as much as possible. There is legitimates reasons to disable this behaviour. Merging `n` files into chunks poses two issues:
 
@@ -635,9 +507,9 @@ Disabling concatenation will fixe these two issues, but also means browser will 
 
 I would consider the following before disabling concatenation:
 
-- Is production server compatible with http2 ?
-- Is there a friendly loading experience on the website ? (A loading screen + a progress bar for instance) ?
-- What type of user experience I want to favor: new users or returning users ?
+- Is production server compatible with http2?
+- Is there a friendly loading experience on the website? (A loading screen + a progress bar for instance)
+- What type of user experience I want to favor: new users or returning users?
 
 Concatenation cannot be disabled because rollup cannot do that. It should be possible with rollup 3.0 as stated in https://github.com/rollup/rollup/issues/3882. Whenever rollup makes it possible it will become possible to use `jsConcatenation` parameter to disable concatenation.
 

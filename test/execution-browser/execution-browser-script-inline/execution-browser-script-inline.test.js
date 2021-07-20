@@ -23,34 +23,44 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 
-await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
-  const actual = await launchAndExecute({
-    ...EXECUTION_TEST_PARAMS,
-    launch: (options) =>
-      launchBrowser({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        // headless: false,
-      }),
-    executeParams: {
-      fileRelativeUrl,
-    },
-    captureConsole: true,
-    // stopAfterExecute: false,
-  })
-  const expected = {
-    status: "completed",
-    namespace: {
-      [`./${testDirectoryname}.html__asset__foo.js`]: {
-        status: "completed",
-        namespace: {
-          default: 42,
+await launchBrowsers(
+  [
+    // comment to ensure multiline
+    launchChromium,
+    launchFirefox,
+    launchWebkit,
+  ],
+  async (launchBrowser) => {
+    const actual = await launchAndExecute({
+      ...EXECUTION_TEST_PARAMS,
+      launch: (options) =>
+        launchBrowser({
+          ...LAUNCH_TEST_PARAMS,
+          ...options,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+          // headless: false,
+        }),
+      executeParams: {
+        fileRelativeUrl,
+      },
+      captureConsole: true,
+      // stopAfterExecute: false,
+    })
+    const expected = {
+      status: "completed",
+      namespace: {
+        [launchBrowser === launchChromium
+          ? `./${testDirectoryname}_script_inline_foo.js`
+          : `./${testDirectoryname}.html__asset__foo.js`]: {
+          status: "completed",
+          namespace: {
+            default: 42,
+          },
         },
       },
-    },
-    consoleCalls: [],
-  }
-  assert({ actual, expected })
-})
+      consoleCalls: [],
+    }
+    assert({ actual, expected })
+  },
+)

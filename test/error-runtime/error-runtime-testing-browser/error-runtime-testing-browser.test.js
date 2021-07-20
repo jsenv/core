@@ -46,11 +46,7 @@ const expected = {
     [htmlFileRelativeUrl]: {
       chromium: {
         status: "errored",
-        error: Object.assign(new Error(`ask() should return 42, got 40`), {
-          filename: testPlanReport[htmlFileRelativeUrl].chromium.error.filename,
-          lineno: testPlanReport[htmlFileRelativeUrl].chromium.error.lineno,
-          columnno: testPlanReport[htmlFileRelativeUrl].chromium.error.columnno,
-        }),
+        error: new Error(`ask() should return 42, got 40`),
         namespace: testPlanReport[htmlFileRelativeUrl].chromium.namespace,
         consoleCalls: testPlanReport[htmlFileRelativeUrl].chromium.consoleCalls,
         runtimeName: "chromium",

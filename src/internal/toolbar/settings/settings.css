@@ -32,12 +32,26 @@
 
 #settings-box-body {
   text-align: left;
+  padding: 18px 0;
+  max-height: 80vh;
+  overflow: auto;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+}
+
+.settings-box-items-wrapper {
+  max-width: 700px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .settings-box-item {
-  margin-top: 13px;
   padding: 15px;
   background: #0c111b;
+  width: 250px;
+  margin: 9px 18px;
 }
 
 #settings-box-header .settings-icon {
@@ -153,4 +167,23 @@ To be able to apply an outline to this element later*/
 .switch input:checked + * .square {
   transform: translateX(1.6em);
   background-color: #24b1b0;
+}
+
+.settings-box-item[data-disabled] {
+  background-color: rgba(12, 17, 27, 0.4);
+  cursor: default;
+}
+.settings-box-item[data-disabled] .category-title,
+.settings-box-item[data-disabled] .switch,
+.settings-box-item[data-disabled] .category-subtitle {
+  opacity: 0.4;
+}
+.settings-box-item[data-disabled] .category-title span {
+  text-decoration: line-through;
+}
+.settings-box-item[data-disabled] .category-subtitle {
+  text-decoration: line-through;
+}
+.settings-box-item[data-disabled] .switch {
+  cursor: default;
 }

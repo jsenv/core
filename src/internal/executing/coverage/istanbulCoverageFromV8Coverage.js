@@ -7,9 +7,19 @@ import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
 const v8ToIstanbul = require("v8-to-istanbul")
 
 export const istanbulCoverageFromV8Coverage = async (v8Coverage) => {
+  const sourcemapCache = v8Coverage["source-map-cache"]
   const istanbulCoverages = await Promise.all(
     v8Coverage.result.map(async (fileV8Coverage) => {
-      const sources = sourcesFromSourceMapCache(fileV8Coverage.url, v8Coverage["source-map-cache"])
+      const { source } = fileV8Coverage
+      let sources
+      // when v8 coverage comes from playwright (chromium) v8Coverage.source is set
+      if (typeof source === "string") {
+        sources = { source }
+      }
+      // when v8 coverage comes from Node.js, the source can be read from sourcemapCache
+      else if (sourcemapCache) {
+        sources = sourcesFromSourceMapCache(fileV8Coverage.url, sourcemapCache)
+      }
       const path = urlToFileSystemPath(fileV8Coverage.url)
 
       const converter = v8ToIstanbul(

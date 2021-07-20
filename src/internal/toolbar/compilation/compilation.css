@@ -1,0 +1,16 @@
+#file_info_svg {
+  width: 20px;
+  height: 20px;
+  margin: 10px;
+  color: #cecece;
+}
+
+#file_info ul {
+  margin: 0;
+  margin-bottom: 0.7em;
+  padding-left: 1em;
+}
+
+#file_info ul li {
+  text-align: left;
+}

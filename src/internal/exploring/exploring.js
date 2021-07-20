@@ -1,9 +1,7 @@
-import { resolveBrowserGroup } from "../runtime/resolveBrowserGroup.js"
-import { computeCompileIdFromGroupId } from "../runtime/computeCompileIdFromGroupId.js"
 import { fetchUrl } from "../toolbar/util/fetching.js"
-import { fetchExploringJson } from "./fetchExploringJson.js"
 import { createPreference } from "../toolbar/util/preferences.js"
 import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
+import { fetchExploringJson } from "./fetchExploringJson.js"
 
 const fetchJSON = async (url, options) => {
   const response = await fetchUrl(url, options)
@@ -19,24 +17,33 @@ const run = async () => {
 
   const files = await fetchJSON(`/.jsenv/explorables.json`, {
     method: "GET",
-    headers: {
-      "x-jsenv": "1",
-    },
   })
 
   const compileServerOrigin = document.location.origin
   const outDirectoryUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin))
-  const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
-  const groupMap = await fetchJSON(groupMapUrl)
-  const compileId = computeCompileIdFromGroupId({
-    groupId: resolveBrowserGroup(groupMap),
-    groupMap,
-  })
+  const documentUrl = document.location.href
+  let compileId
+
+  const outDirectoryIndex = documentUrl.indexOf(outDirectoryUrl)
+  if (outDirectoryIndex === 0) {
+    const afterOutDirectory = documentUrl.slice(outDirectoryUrl.length)
+    compileId = afterOutDirectory.split("/")[0]
+  } else {
+    compileId = null
+  }
 
   const renderHtml = () => {
+    // const mainHtmlFileRelativeUrl = "index.html"
+    // const mainFileLink = document.querySelector("#main_file_link")
+    // const mainFileUrl = urlToVisitFromRelativeUrl(mainHtmlFileRelativeUrl)
+    // mainFileLink.href = mainFileUrl
+    // mainFileLink.textContent = `${mainHtmlFileRelativeUrl}`
+    // const mainFileIframe = document.querySelector(`#main_file_iframe`)
+    // mainFileIframe.src = mainFileUrl
+
     const fileListElement = document.querySelector(`[data-page="file-list"]`).cloneNode(true)
     const directoryName = directoryUrlToDirectoryName(projectDirectoryUrl)
-    const span = fileListElement.querySelector("h2 span")
+    const span = fileListElement.querySelector("#directory_relative_url")
     span.title = projectDirectoryUrl
     span.textContent = directoryName
 
@@ -50,7 +57,7 @@ const run = async () => {
           <a
             class="execution-link"
             data-relative-url=${file.relativeUrl}
-            href=${relativeUrlToCompiledUrl(file.relativeUrl)}
+            href=${urlToVisitFromRelativeUrl(file.relativeUrl)}
           >
             ${file.relativeUrl}
           </a>
@@ -115,8 +122,11 @@ const run = async () => {
     makeMenuScrollable()
   }
 
-  const relativeUrlToCompiledUrl = (relativeUrl) => {
-    return `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${relativeUrl}`
+  const urlToVisitFromRelativeUrl = (relativeUrl) => {
+    if (compileId) {
+      return `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${relativeUrl}`
+    }
+    return `${compileServerOrigin}/${relativeUrl}`
   }
 
   const makeMenuScrollable = () => {
