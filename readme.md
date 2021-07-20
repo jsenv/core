@@ -26,13 +26,13 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
 
 ## Native features used by jsenv
 
-Each feature presented in this section is eventually supported natively by the browser. When browser support all features, jsenv will use source files without modification. Otherwise the files are compiled to be executable in the browser.
+Each feature presented in this section is potentially supported natively by the browser. When browser supports all features, jsenv will use source files without modification. Otherwise the files are compiled to be executable in the browser.
 
 ### Import maps
 
 > This proposal allows control over what URLs get fetched by JavaScript import statements and import() expressions. This allows "bare import specifiers", such as import moment from "moment", to work.
 >
-> — Domenic Denicola in [WICG/import-maps](https://github.com/WICG/import-maps)
+> — Domenic Denicola in [WICG/import-maps](https://github.com/WICG/import-maps#the-basic-idea)
 
 The following html can be used with jsenv:
 
@@ -60,7 +60,7 @@ The following html can be used with jsenv:
 </html>
 ```
 
-By the way, if your code use node module resolution, [@jsenv/node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map#node-module-import-map) can generate importmap for you.
+By the way, if your code uses node module resolution, [@jsenv/node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map#node-module-import-map) can generate importmap for you.
 
 ### Top level await
 
@@ -68,7 +68,7 @@ By the way, if your code use node module resolution, [@jsenv/node-module-import-
 >
 > — Taro in [How can I use async/await at the top level?](https://stackoverflow.com/a/56590390/2634179)
 
-Top level await allow jsenv to know when a file code is done executing. This is used to kill a file that is too long to execute and know when to collect code coverage.
+Top level await allows jsenv to know when a file code is done executing. This is used to kill a file that is too long to execute and know when to collect code coverage.
 
 ### Dynamic import
 
