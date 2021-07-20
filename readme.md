@@ -12,7 +12,7 @@ Tool to develop, test and build js projects.
 
 - A test runner to execute test files
 - A development server
-- A builder/bundler to optimize files for production
+- A build tool to optimize files for production
 
 Jsenv integrates naturally with standard html, css and js. It can be configured to work with TypeScript and React.
 
@@ -146,7 +146,7 @@ You have an html file that you want to open in a browser on your machine.
 
 To read more about jsenv dev server, also called exploring server, check [Exploring server](./docs/exploring/readme.md#Exploring-presentation).
 
-# Builder overview
+# Build overview
 
 Following the steps below turns an `index.html` into an optimized `dist/main.html`. Only the content of the html files will be shown. The content of other files such as `favicon.ico` is trivial.
 
@@ -368,31 +368,11 @@ To get a better idea see [jsenv.config.js](./jsenv.config.js). The file can be i
 
 That being said it's only a recommendation. There is nothing enforcing or checking the presence of _jsenv.config.js_.
 
-## CommonJS
-
-CommonJS module format rely on `module.exports` and `require`. It was invented by Node.js and is not standard JavaScript. If your code or one of your dependency uses it, it requires some configuration.
-
-<details>
-  <summary><i>jsenv.config.js</i> to use code written in CommonJS</summary>
-
-```js
-import { jsenvBabelPluginMap, convertCommonJsWithRollup } from "@jsenv/core"
-
-export const convertMap = {
-  "./node_modules/whatever/index.js": convertCommonJsWithRollup,
-}
-```
-
-_jsenv.config.js_ above makes jsenv compatible with a package named `whatever` that would be written in CommonJS.
-
-</details>
-
 ## React
 
-React is written in CommonJS and comes with JSX. If you use them it requires some configuration.
+React is written in CommonJS and comes with jsx. If you use react and or jsx it requires some configuration.
 
-<details>
-  <summary><i>jsenv.config.js</i> for react and jsx</summary>
+_jsenv.config.js for react and jsx:_
 
 ```js
 import { createRequire } from "module"
@@ -419,36 +399,30 @@ export const convertMap = {
 
 You must also add an importmap file in your html to remap react imports.
 
-```diff
-+ <script type="importmap" src="./project.importmap"></script>
-```
-
-`project.importmap`
-
-```json
-{
-  "imports": {
-    "react": "./node_modules/react/index.js",
-    "react-dom": "./node_modules/react-dom/index.js"
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "react": "./node_modules/react/index.js",
+      "react-dom": "./node_modules/react-dom/index.js"
+    }
   }
-}
+</script>
 ```
 
 See also
 
+- [@jsenv/node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map#node-module-import-map)
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
 - [convertMap](./docs/shared-parameters.md#convertMap)
 - [transform-react-jsx on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-react-jsx.html)
-- [importMap spec](https://github.com/WICG/import-maps#import-maps)
+- [importmap spec](https://github.com/WICG/import-maps#import-maps)
 
 </details>
 
 ## TypeScript
 
-TypeScript needs some configuration if you use it.
-
-<details>
-  <summary><i>jsenv.config.js</i> for TypeScript</summary>
+_jsenv.config.js for TypeScript_:
 
 ```js
 import { createRequire } from "module"
@@ -471,7 +445,19 @@ See also
 - [importDefaultExtension](./docs/shared-parameters.md#importDefaultExtension)
 - [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
 
-</details>
+## CommonJS
+
+CommonJS module format rely on `module.exports` and `require`. It was invented by Node.js and is not standard JavaScript. If your code or one of your dependency uses it, it requires some configuration. The jsenv config below makes jsenv compatible with a package named `whatever` that would be written in CommonJS.
+
+_jsenv.config.js to use code written in CommonJS_:
+
+```js
+import { jsenvBabelPluginMap, convertCommonJsWithRollup } from "@jsenv/core"
+
+export const convertMap = {
+  "./node_modules/whatever/index.js": convertCommonJsWithRollup,
+}
+```
 
 # See also
 
