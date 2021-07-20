@@ -19,8 +19,8 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
 # Jsenv iconic features
 
 - Relies on standard, see [Native features used by jsenv](#Native-features-used-by-jsenv).
-  - Dispensable by default: As long as your code use only standards, jsenv can be removed and code still runs.
-  - Compile when mandatory: If code can be executed without compilation, source files are used.
+  - Dispensable by default: as long as your code use only standards, jsenv can be removed and code still runs.
+  - Compiles when mandatory: if code can be executed without compilation, source files are used.
 - Test files and regular files have more in common. They are easier to understand and debug.
 - Developer experience: things where carefully crafted to get explicit and coherent apis.
 
@@ -75,8 +75,6 @@ Top level await allow jsenv to know when a file code is done executing. This is 
 > The lazy-loading capabilities enabled by dynamic import() can be quite powerful when applied correctly. For demonstration purposes, Addy modified an example Hacker News PWA that statically imported all its dependencies, including comments, on first load. The updated version uses dynamic import() to lazily load the comments, avoiding the load, parse, and compile cost until the user really needs them.
 >
 > — Mathias Bynens on [Dynamic import()](https://v8.dev/features/dynamic-import#dynamic)
-
-When building project, dynamic import are turned into separate chunks.
 
 ### import.meta.url
 
@@ -263,7 +261,7 @@ Following the steps below turns an `index.html` into an optimized `dist/main.htm
    > node ./build.mjs
    ```
 
-4. Open `dist/index.html`
+4. Open `dist/main.html`
 
    ```html
    <!DOCTYPE html>
