@@ -8,6 +8,32 @@
 - [SystemJS format](#Systemjs-format)
 - [Disable concatenation](#Disable-concatenation)
 
+## Asset reference by url
+
+Jsenv reuses [import.meta.url](#importmetaurl)
+
+To reference an asset from js, you can use the following pattern.
+
+```js
+const imageUrl = new URL("./img.png", import.meta.url)
+```
+
+This pattern is recognized by jsenv which detects the dependency to `"./img.png"`.
+
+You can also use a non standard
+
+A common pattern to reference an asset is to use an import statement. This import would actually return an url to the asset.
+
+```js
+import imageUrl from "./img.png"
+```
+
+As it's not standard, it doesn't work in the browser without transformation. However, does work in the browser.
+
+You can use both patterns to reference an asset but prefer the one relying on `import.meta.url`.
+
+<!-- The list above is non exaustive, there is more like tree shaking, long term caching, service workers, ... -->
+
 # Presentation
 
 Building consists into taking one or many input files to generate one or many output files. It creates a step between dev and production where you can perform specific optimizations:

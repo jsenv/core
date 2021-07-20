@@ -10,8 +10,8 @@ Tool to develop, test and build js projects.
 
 `@jsenv/core` was first created to write tests that could be executed in different browsers AND Node.js. In the end it became a tool covering the core needs of a JavaScript project:
 
-- A development server
 - A test runner to execute test files
+- A development server
 - A builder/bundler to optimize files for production
 
 Jsenv integrates naturally with standard html, css and js. It can be configured to work with TypeScript and React.
@@ -216,55 +216,25 @@ Following the steps below turns an `index.html` into an optimized `dist/main.htm
 
 Read more [building documentation](./docs/building/readme.md)
 
-# Jsenv philosophy
+# Jsenv iconic features
 
-Jsenv focuses on one thing: developer experience. Everything was carefully crafted to get explicit and coherent apis.
+- Relies on standard, see [Native features used by jsenv](#Native-features-used-by-jsenv).
+  - Dispensable by default: As long as your code use only standards, jsenv can be removed and code still runs.
+  - Compile when mandatory: If code can be executed without compilation, source files are used.
+- Test files and regular files have more in common. They are easier to understand and debug.
+- Developer experience: things where carefully crafted to get explicit and coherent apis.
 
-## Dispensable by default
+## Native features used by jsenv
 
-Jsenv is **dispensable** by default. As long as your code is using only standards, you could remove jsenv from your project and still be able to run your code. You can double click your html file to open it inside your browser -> it works. Or if this is a Node.js file execute it directly using the `node` command.
+Each feature presented in this section is eventually supported natively by the browser. When browser support all features, jsenv will use source files without modification. Otherwise the files are compiled to be executable in the browser.
 
-Being dispensable by default highlights jsenv philosophy: no new concept to learn. It also means you can switch to an other tool easily as no part of your code is specific to jsenv.
-
-## Explicitness over magic
-
-Jsenv also don't like blackboxes. `@jsenv/core` functions always choose expliciteness over magic. It makes things much simpler to understand and follow both for jsenv and for you.
-
-> One example of expliciteness over magic: You control and tell jsenv where is your project directory. Jsenv don't try to guess or assume where it is.
-
-## Less context switching
-
-Context switching happens when you are in context A and switch to context B. The more context A differ from context B, the harder it is to switch.
-
-Some example where context switching occurs:
-
-- switching from a regular file to a unit test file
-- switching from a file written for web browsers to file written for Node.js
-
-With jsenv context switching almost vanishes because:
-
-- [exploring](#exploring) provides a unified experience regardless of the file being executed (unit test, web page, reduced test case, experimentation, ...)
-- [testing](#testing) and [building](building) are both capable to handle files written for browsers and/or Node.js
-
-Less context switching saves lot of energy making a project codebase faster to write and easier to maintain.
-
-<!--
-features below belong to some parts
-importmap are mostly useful for tests and import aliases
-dynamic import for build and production
-top level await is already mentioned
-
-we could have an other section exlaining that jsenv supports all this
-
--->
-<details>
-  <summary>Import maps</summary>
+### Import maps
 
 > This proposal allows control over what URLs get fetched by JavaScript import statements and import() expressions. This allows "bare import specifiers", such as import moment from "moment", to work.
 >
 > — Domenic Denicola in [WICG/import-maps](https://github.com/WICG/import-maps)
 
-Jsenv supports import maps out of the box. The following html can be used with jsenv:
+The following html can be used with jsenv:
 
 ```html
 <!DOCTYPE html>
@@ -290,61 +260,83 @@ Jsenv supports import maps out of the box. The following html can be used with j
 </html>
 ```
 
-</details>
+By the way, if your code use node module resolution, [@jsenv/node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map#node-module-import-map) can generate importmap for you.
 
-<details>
-  <summary>Top level await</summary>
+### Top level await
 
 > Top-Level await has moved to stage 3, so the answer to your question How can I use async/await at the top level? is to just add await the call to main()
 >
 > — Taro in [How can I use async/await at the top level?](https://stackoverflow.com/a/56590390/2634179)
 
-Jsenv supports top level await out of the box. Top level await allow jsenv to know when a file code is done executing. This is used to kill a file that is too long to execute and know when to collect code coverage.
+Top level await allow jsenv to know when a file code is done executing. This is used to kill a file that is too long to execute and know when to collect code coverage.
 
-</details>
-
-<details>
-  <summary>Dynamic import</summary>
+### Dynamic import
 
 > The lazy-loading capabilities enabled by dynamic import() can be quite powerful when applied correctly. For demonstration purposes, Addy modified an example Hacker News PWA that statically imported all its dependencies, including comments, on first load. The updated version uses dynamic import() to lazily load the comments, avoiding the load, parse, and compile cost until the user really needs them.
 >
 > — Mathias Bynens on [Dynamic import()](https://v8.dev/features/dynamic-import#dynamic)
 
-Dynamic import are supported by jsenv. When building project using `buildProject`, dynamic import are turned into separate chunks.
+When building project, dynamic import are turned into separate chunks.
 
-</details>
-
-<details>
-  <summary>import.meta.url</summary>
+### import.meta.url
 
 > It's a proposal to add the ability for ES modules to figure out what their file name or full path is. This behaves similarly to \_\_dirname in Node which prints out the file path to the current module. According to caniuse, most browsers already support it (including the latest Chromium Edge)
 >
 > — Jake Deichert on [A Super Hacky Alternative to import.meta.url](https://jakedeichert.com/blog/2020/02/a-super-hacky-alternative-to-import-meta-url/)
 
-Jsenv supports `import.meta.url`.
+# About
 
-</details>
+## When to use it
+
+Amongst other use cases, the ease of use and flexibility of jsenv makes it a great tool to start and learn web development.
+
+Firstly because jsenv is a tool that was built to run raw js, html and css. It starts from the **simplest form of coding**. If a browser can run your code, so can jsenv without configuration or things to learn. There is no magic that will bite you right away or later. Jsenv can be configured to add react, typescript, whatever you need, later, on demand.
+
+Secondly because jsenv is compatible with the latest standards. Even some that are not yet mature in the js ecosystem, such as import maps. This will makes you at ease with technologies that will be part of the ecosystem once you are confortable with coding.
+
+To sum up, jsenv focuses on simplicity and flexibility making it a perfect candidate to learn the ecosystem gradually. In the end, you might even consider sticking to vanilla js if that makes sense for you and your project.
+
+## Main dependencies
+
+An overview of the main dependencies used by `@jsenv/core`.
+
+| Dependency                                            | How it is used by jsenv                     |
+| ----------------------------------------------------- | ------------------------------------------- |
+| [systemjs](https://github.com/systemjs/systemjs)      | "Polyfill" js modules, import maps and more |
+| [playwright](https://github.com/microsoft/playwright) | Launch Chromium, Firefox and WebKit         |
+| [istanbul](https://github.com/gotwarlost/istanbul)    | Collect and generate code coverage          |
+| [rollup](https://github.com/rollup/rollup)            | Tree shaking when building                  |
+| [babel](https://github.com/babel/babel)               | Parse and transform js                      |
+| [parse5](https://github.com/inikulin/parse5)          | Parse and transform html                    |
+| [postCSS](https://github.com/postcss/postcss)         | Parse and transform css                     |
+
+## Name
+
+The name `jsenv` stands for JavaScript environments. This is because the original purpose of `jsenv` was to bring closer two JavaScript runtimes: web browsers and Node.js. This aspect of `jsenv` is not highlighted in the documentation but it exists.
+
+Maybe `jsenv` should be written `JSEnv`? That makes typing the name too complex:
+
+1. Hold `shift` on keyboard
+2. While holding `shift`, type `JSE`
+3. Release `shift`
+4. Finally, type `nv`.
+
+No one should have to do that, the prefered syntax is `jsenv`.
+
+## Logo
+
+The logo is composed by the name at the center and two circles orbiting around it. One of the circle is web browsers, the other is Node.js. It represents the two JavaScript environments supported by jsenv.
+
+![jsenv logo with legend](./docs/jsenv-logo-legend.png)
 
 <details>
-  <summary>Asset reference by url</summary>
+  <summary>Jsenv logo origin explained</summary>
 
-A common pattern to reference an asset is to use an import statement. This import would actually return an url to the asset.
+![jsenv logo origin explained](./docs/jsenv-logo-origin-explained.jpg)
 
-```js
-import imageUrl from "./img.png"
-```
-
-As it's not standard, it doesn't work in the browser without transformation. However, `import.meta.url` does work in the browser.
-
-```js
-const imageUrl = new URL("./img.png", import.meta.url)
-```
-
-You can use both patterns to reference an asset but prefer the one relying on `import.meta.url`.
+> This is a joke
 
 </details>
-
-The list above is non exaustive, there is more like tree shaking, long term caching, service workers, ...
 
 # Installation
 
@@ -352,7 +344,7 @@ The list above is non exaustive, there is more like tree shaking, long term cach
 npm install --save-dev @jsenv/core
 ```
 
-`@jsenv/core` is tested on Mac, Windows, Linux on Node.js 14.5.0. Other operating systems and Node.js versions are not tested.
+`@jsenv/core` is tested on Mac, Windows, Linux on Node.js 14.17.0. Other operating systems and Node.js versions are not tested.
 
 # Configuration
 
@@ -366,27 +358,22 @@ Non-standard corresponds to [CommonJS modules](https://code-trotter.com/web/unde
 
 ## jsenv.config.js
 
-We recommend to regroup configuration in a `jsenv.config.js` file at the root of your working directory.
+We recommend to regroup configuration in a _jsenv.config.js_ file at the root of your working directory.
 
 To get a better idea see [jsenv.config.js](./jsenv.config.js). The file can be imported and passed using the spread operator. This technic helps to see jsenv custom configuration quickly and share it between files.
-
-<details>
-  <summary>Example of jsenv config passed using spread operator</summary>
 
 ![screenshot about jsenv config import and spread operator](./docs/jsenv-config-spread.png)
 
 — See [script/test/test.js](https://github.com/jsenv/jsenv-core/blob/e44e362241e8e2142010322cb4552983b3bc9744/script/test/test.js#L2)
 
-</details>
-
-That being said it's only a recommendation. There is nothing enforcing or checking the presence of `jsenv.config.js`.
+That being said it's only a recommendation. There is nothing enforcing or checking the presence of _jsenv.config.js_.
 
 ## CommonJS
 
 CommonJS module format rely on `module.exports` and `require`. It was invented by Node.js and is not standard JavaScript. If your code or one of your dependency uses it, it requires some configuration.
 
 <details>
-  <summary><code>jsenv.config.js</code> to use code written in CommonJS</summary>
+  <summary><i>jsenv.config.js</i> to use code written in CommonJS</summary>
 
 ```js
 import { jsenvBabelPluginMap, convertCommonJsWithRollup } from "@jsenv/core"
@@ -396,7 +383,7 @@ export const convertMap = {
 }
 ```
 
-`jsenv.config.js` above makes jsenv compatible with a package named `whatever` that would be written in CommonJS.
+_jsenv.config.js_ above makes jsenv compatible with a package named `whatever` that would be written in CommonJS.
 
 </details>
 
@@ -405,7 +392,7 @@ export const convertMap = {
 React is written in CommonJS and comes with JSX. If you use them it requires some configuration.
 
 <details>
-  <summary><code>jsenv.config.js</code> for react and jsx</summary>
+  <summary><i>jsenv.config.js</i> for react and jsx</summary>
 
 ```js
 import { createRequire } from "module"
@@ -461,7 +448,7 @@ See also
 TypeScript needs some configuration if you use it.
 
 <details>
-  <summary><code>jsenv.config.js</code> for TypeScript</summary>
+  <summary><i>jsenv.config.js</i> for TypeScript</summary>
 
 ```js
 import { createRequire } from "module"
@@ -483,60 +470,6 @@ See also
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
 - [importDefaultExtension](./docs/shared-parameters.md#importDefaultExtension)
 - [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
-
-</details>
-
-# About
-
-## When to use it
-
-Amongst other use cases, the ease of use and flexibility of jsenv makes it a great tool to start and learn web development.
-
-Firstly because jsenv is a tool that was built to run raw js, html and css. It starts from the **simplest form of coding**. If a browser can run your code, so can jsenv without configuration or things to learn. There is no magic that will bite you right away or later. Jsenv can be configured to add react, typescript, whatever you need, later, on demand.
-
-Secondly because jsenv is compatible with the latest standards. Even some that are not yet mature in the js ecosystem, such as import maps. This will makes you at ease with technologies that will be part of the ecosystem once you are confortable with coding.
-
-To sum up, jsenv focuses on simplicity and flexibility making it a perfect candidate to learn the ecosystem gradually. In the end, you might even consider sticking to vanilla js if that makes sense for you and your project.
-
-## Main dependencies
-
-An overview of the main dependencies used by `@jsenv/core`.
-
-| Dependency                                            | How it is used by jsenv                     |
-| ----------------------------------------------------- | ------------------------------------------- |
-| [systemjs](https://github.com/systemjs/systemjs)      | "Polyfill" js modules, import maps and more |
-| [playwright](https://github.com/microsoft/playwright) | Launch Chromium, Firefox and WebKit         |
-| [istanbul](https://github.com/gotwarlost/istanbul)    | Collect and generate code coverage          |
-| [rollup](https://github.com/rollup/rollup)            | Tree shaking when building                  |
-| [babel](https://github.com/babel/babel)               | Parse and transform js                      |
-| [parse5](https://github.com/inikulin/parse5)          | Parse and transform html                    |
-| [postCSS](https://github.com/postcss/postcss)         | Parse and transform css                     |
-
-## Name
-
-The name `jsenv` stands for JavaScript environments. This is because the original purpose of `jsenv` was to bring closer two JavaScript runtimes: web browsers and Node.js. This aspect of `jsenv` is not highlighted in the documentation but it exists.
-
-Maybe `jsenv` should be written `JSEnv`? That makes typing the name too complex:
-
-1. Hold `shift` on keyboard
-2. While holding `shift`, type `JSE`
-3. Release `shift`
-4. Finally, type `nv`.
-
-No one should have to do that, the prefered syntax is `jsenv`.
-
-## Logo
-
-The logo is composed by the name at the center and two circles orbiting around it. One of the circle is web browsers, the other is Node.js. It represents the two JavaScript environments supported by jsenv.
-
-![jsenv logo with legend](./docs/jsenv-logo-legend.png)
-
-<details>
-  <summary>Jsenv logo origin explained</summary>
-
-![jsenv logo origin explained](./docs/jsenv-logo-origin-explained.jpg)
-
-> **Warning**: This is a joke
 
 </details>
 
