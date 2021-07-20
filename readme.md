@@ -127,7 +127,7 @@ export const countDogs = (animals) => {
 3. Create `execute_test_plan.mjs`
 
    ```js
-   import { executeTestPlan, launchChromiumTab, launchFirefoxTab, launchNode } from "@jsenv/core"
+   import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
 
    executeTestPlan({
      projectDirectoryUrl: new URL("./", import.meta.url),
@@ -152,7 +152,7 @@ export const countDogs = (animals) => {
 
    ![test execution terminal screenshot](./docs/demo_animals_chrome_and_firefox.png)
 
-To read more about testing in jsenv, check [jsenv test runner documentation](./docs/testing/readme.md#Testing-with-jsenv).
+To read more about testing in jsenv, check [jsenv test runner documentation](./docs/testing/readme.md#jsenv-test-runner).
 
 # Dev server overview
 
@@ -212,7 +212,7 @@ You have an html file that you want to open in a browser on your machine.
 
    ![dev server hello world screenshot](./docs/demo_exploring_hello_world.png)
 
-To read more about jsenv dev server, also called exploring server, check [Exploring server](./docs/exploring/readme.md#Exploring-presentation).
+To read more about jsenv dev server, also called exploring server, check [jsenv dev server documentation](./docs/exploring/readme.md#jsenv-dev-server).
 
 # Build overview
 
@@ -282,7 +282,7 @@ Following the steps below turns an `index.html` into an optimized `dist/main.htm
    </html>
    ```
 
-Read more [building documentation](./docs/building/readme.md)
+To read more about jsenv build tool, check [jsenv build documentation](./docs/building/readme.md#jsenv-build).
 
 # About
 
