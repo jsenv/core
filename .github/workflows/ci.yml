@@ -1,4 +1,19 @@
-name: ci
+# This file configure a GitHub workflow responsible to perform
+# various checks related to the codebase.
+#
+# For that reason it's runned on every pull request and push to main.
+#
+# It does the following:
+#  - Check linting passes (no eslint error on files)
+#  - Run tests and ensure none is failing
+#  - Update tests code coverage
+#
+# If all these steps are passing the workflow ends up
+# publishing package on npm if needed. It will publish the npm package
+# using the token found in secrets.NPM_TOKEN. Be sure to create this
+# token in the GitHub repository.
+
+name: main
 
 on:
   push:
@@ -33,18 +48,11 @@ jobs:
           ulimit -n
         # sudo ulimit should prevent npm link failure
       - name: npm install
-        run: |
-          npm config set //npm.pkg.github.com/:_authToken ${{ secrets.GITHUB_TOKEN }}
-          npm install
-      - name: code quality
+        run: npm install
+      - name: check lint
         run: npm run eslint-check
-      - name: code format
-        run: npm run prettier-check
-      - name: testing
+      - name: check tests
         run: npm run test-with-coverage
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: upload coverage
         run: npm run upload-coverage
         env:
@@ -66,15 +74,12 @@ jobs:
           ulimit -n
         # sudo ulimit should prevent npm link failure
       - name: npm install
-        run: |
-          npm config set //npm.pkg.github.com/:_authToken ${{ secrets.GITHUB_TOKEN }}
-          npm install
+        run: npm install
       - name: publish package
-        run: node --experimental-top-level-await ./.github/release/publish-package.js
+        run: node --experimental-top-level-await ./.github/workflows/main/publish-package.js
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: ensure github release
-        run: node ./.github/release/ensure-github-release-for-package.js
+        run: node --experimental-top-level-await ./.github/workflows/main/ensure-github-release-for-package.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
