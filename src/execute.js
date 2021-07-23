@@ -47,6 +47,15 @@ export const execute = async ({
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
 }) => {
+  // Node.js emits a warning when too many things are listening to SIGTERM
+  // SIGTERM is listened for every call to
+  // createCancellationTokenForProcess()
+  // Increasing the max listeners is a dirty fix, the proper fix would be
+  // to remove the SIGTERM listener installed by the cancellation token
+  // once the cancellable function is done or when cancellation occurs
+  const processMaxListeners = process.getMaxListeners()
+  process.setMaxListeners(100)
+
   const executionPromise = executeJsenvAsyncFunction(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
@@ -117,6 +126,8 @@ export const execute = async ({
     })
 
     stop("single-execution-done")
+
+    process.setMaxListeners(processMaxListeners)
 
     return result
   })

@@ -1,0 +1,25 @@
+name: perf_impact
+
+on: pull_request_target
+
+jobs:
+  perf_impact:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node: [16.3.0]
+    runs-on: ${{ matrix.os }}
+    name: perf impact
+    steps:
+      - name: Setup git
+        uses: actions/checkout@v2
+      - name: Setup node ${{ matrix.node }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Setup npm
+        run: npm install
+      - name: Report perf impact
+        run: node ./.github/workflows/perf_impact/report_perf_impact.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
