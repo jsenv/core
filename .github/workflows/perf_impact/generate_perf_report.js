@@ -1,5 +1,9 @@
-import { execute, launchNode } from "@jsenv/core"
 import { measurePerformanceMultipleTimes, computeMetricsMedian } from "@jsenv/perf-impact"
+
+import { performanceFromFile } from "./performance_file.js"
+// import { collectWorkerMessages } from "./worker_messages.js"
+
+const executeAndLog = process.argv.includes("--log")
 
 export const generatePerformanceReport = async () => {
   const importingPackageMetrics = await measureImportingJsenvCorePackage()
@@ -12,23 +16,29 @@ export const generatePerformanceReport = async () => {
 }
 
 const measureImportingJsenvCorePackage = async () => {
-  const metrics = await measurePerformanceMultipleTimes(() => {
-    return collectPerformanceMeasuresFromFileExecution("measure_importing_jsenv_core_package")
-  })
+  const fileUrl = new URL("./measure_importing_jsenv_core_package.js", import.meta.url)
+  // const fileUrl = new URL("./job_measure_importing_jsenv_core_package.js", import.meta.url)
+  const metrics = await measurePerformanceMultipleTimes(
+    async () => {
+      const { measures } = await performanceFromFile(fileUrl)
+      return measures
+      // const messages = await collectWorkerMessages(fileUrl)
+      // return {
+      //   "import @jsenv/core": messages[0],
+      // }
+    },
+    10,
+    {
+      msToWaitBetweenEachMeasure: 200,
+    },
+  )
+  if (executeAndLog) {
+    console.log(metrics)
+  }
   return computeMetricsMedian(metrics)
 }
 
-const collectPerformanceMeasuresFromFileExecution = async (fileRelativeUrl) => {
-  const executionResult = await execute({
-    projectDirectoryUrl: new URL("./", import.meta.url),
-    fileRelativeUrl,
-    launch: launchNode,
-    // measurePerformance: true,
-    compileServerCanWriteOnFilesystem: false,
-    collectPerformance: true,
-  })
-  return executionResult.performance.measures
+if (executeAndLog) {
+  const performanceReport = await generatePerformanceReport()
+  console.log(performanceReport)
 }
-
-const performanceReport = await generatePerformanceReport()
-console.log(performanceReport)
