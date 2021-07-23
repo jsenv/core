@@ -3,8 +3,6 @@ import { resolveUrl, urlToFileSystemPath, fileSystemPathToUrl } from "@jsenv/uti
 import { createDetailedMessage } from "@jsenv/logger"
 import { require } from "@jsenv/core/src/internal/require.js"
 
-const { transformSync } = require("@babel/core")
-
 export const bundleWorker = ({ workerScriptUrl, workerScriptSourceMap }) => {
   const { code, map } = transformWorkerScript(workerScriptUrl, { workerScriptSourceMap })
   return { code, map }
@@ -29,6 +27,8 @@ const transformWorkerScript = (scriptUrl, { workerScriptSourceMap, importerUrl }
     }
     throw e
   }
+
+  const { transformSync } = require("@babel/core")
   const { code, map } = transformSync(scriptContent, {
     filename: scriptPath,
     configFile: false,

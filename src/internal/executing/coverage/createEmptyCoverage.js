@@ -1,5 +1,6 @@
 import { require } from "../../require.js"
 
-const { createFileCoverage } = require("istanbul-lib-coverage")
-
-export const createEmptyCoverage = (relativeUrl) => createFileCoverage(relativeUrl).toJSON()
+export const createEmptyCoverage = (relativeUrl) => {
+  const { createFileCoverage } = require("istanbul-lib-coverage")
+  return createFileCoverage(relativeUrl).toJSON()
+}

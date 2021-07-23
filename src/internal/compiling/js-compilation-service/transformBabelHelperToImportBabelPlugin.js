@@ -1,9 +1,6 @@
 import { require } from "../../require.js"
 import { filePathToBabelHelperName, babelHelperNameToImportSpecifier } from "./babelHelper.js"
 
-// https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
-const { addDefault } = require("@babel/helper-module-imports")
-
 // named import approach found here:
 // https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
 
@@ -13,6 +10,9 @@ const { addDefault } = require("@babel/helper-module-imports")
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-plugin-external-helpers/src/index.js
 
 export const transformBabelHelperToImportBabelPlugin = (api) => {
+  // https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
+  const { addDefault } = require("@babel/helper-module-imports")
+
   api.assertVersion(7)
 
   return {

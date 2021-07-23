@@ -11,8 +11,6 @@ import { require } from "../require.js"
 import { createChildProcessOptions } from "./createChildProcessOptions.js"
 import { processOptionsFromExecArgv, execArgvFromProcessOptions } from "./processOptions.js"
 
-const killProcessTree = require("tree-kill")
-
 const nodeControllableFileUrl = resolveUrl(
   "./src/internal/node-launcher/nodeControllableFile.mjs",
   jsenvCoreDirectoryUrl,
@@ -176,6 +174,7 @@ ${JSON.stringify(env, null, "  ")}`)
     logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`)
 
     await new Promise((resolve) => {
+      const killProcessTree = require("tree-kill")
       killProcessTree(childProcess.pid, signal, (error) => {
         if (error) {
           // on windows: process with pid cannot be found

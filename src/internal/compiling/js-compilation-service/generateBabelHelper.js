@@ -1,9 +1,9 @@
 import { require } from "../../require.js"
 
-const { buildExternalHelpers } = require("@babel/core")
-const { getDependencies } = require("@babel/helpers")
-
 export const generateBabelHelper = (name) => {
+  const { buildExternalHelpers } = require("@babel/core")
+  const { getDependencies } = require("@babel/helpers")
+
   const helpersToBuild = [name]
 
   /**

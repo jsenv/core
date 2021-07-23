@@ -14,9 +14,8 @@ hence sourcemap cannot point the original source location
 import { fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 
-const valueParser = require("postcss-value-parser")
-
 export const postCssUrlHashPlugin = () => {
+  const valueParser = require("postcss-value-parser")
   return {
     postcssPlugin: "urlhash",
     prepare: (result) => {
@@ -154,6 +153,7 @@ const declarationNodeContainsUrl = (declarationNode) => {
 }
 
 const walkUrls = (declarationNode, callback) => {
+  const valueParser = require("postcss-value-parser")
   const parsed = valueParser(declarationNode.value)
   parsed.walk((node) => {
     // https://github.com/andyjansson/postcss-functions

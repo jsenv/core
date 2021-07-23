@@ -1,7 +1,5 @@
 import { require } from "../../require.js"
 
-const { createFileCoverage } = require("istanbul-lib-coverage")
-
 // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43
 export const composeIstanbulCoverages = (
   istanbulCoverages,
@@ -91,6 +89,7 @@ const hitCountFromFileCoverage = ({ b, s }) => {
 }
 
 const merge = (istanbulFileCoverageA, istanbulFileCoverageB) => {
+  const { createFileCoverage } = require("istanbul-lib-coverage")
   const istanbulFileCoverageObject = createFileCoverage(istanbulFileCoverageA)
   istanbulFileCoverageObject.merge(istanbulFileCoverageB)
   return istanbulFileCoverageObject.toJSON()
