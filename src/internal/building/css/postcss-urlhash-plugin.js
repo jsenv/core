@@ -15,7 +15,9 @@ import { fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 
 export const postCssUrlHashPlugin = () => {
-  const valueParser = require("postcss-value-parser")
+  const parseCssValue = require("postcss-value-parser")
+  const stringifyCssNodes = parseCssValue.stringify
+
   return {
     postcssPlugin: "urlhash",
     prepare: (result) => {
@@ -34,7 +36,7 @@ export const postCssUrlHashPlugin = () => {
               return
             }
 
-            const parsed = valueParser(atImportNode.params)
+            const parsed = parseCssValue(atImportNode.params)
             let [urlNode] = parsed.nodes
 
             if (!urlNode || (urlNode.type !== "string" && urlNode.type !== "function")) {
@@ -61,7 +63,7 @@ export const postCssUrlHashPlugin = () => {
                 url = urlNode.value
               } else {
                 urlNode = urlNode.nodes
-                url = valueParser.stringify(urlNode.nodes)
+                url = stringifyCssNodes(urlNode.nodes)
               }
             }
 
@@ -109,37 +111,41 @@ export const postCssUrlHashPlugin = () => {
             return
           }
 
-          walkUrls(declarationNode, (url, urlNode) => {
-            // Empty URL
-            if (!urlNode || url.length === 0) {
-              declarationNode.warn(result, `Empty URL in \`${declarationNode.toString()}\``)
-              return
-            }
+          walkUrls(declarationNode, {
+            parseCssValue,
+            stringifyCssNodes,
+            visitor: (url, urlNode) => {
+              // Empty URL
+              if (!urlNode || url.length === 0) {
+                declarationNode.warn(result, `Empty URL in \`${declarationNode.toString()}\``)
+                return
+              }
 
-            // Skip Data URI
-            if (isDataUrl(url)) {
-              return
-            }
+              // Skip Data URI
+              if (isDataUrl(url)) {
+                return
+              }
 
-            const specifier = url
-            url = resolveUrl(specifier, fileSystemPathToUrl(from))
+              const specifier = url
+              url = resolveUrl(specifier, fileSystemPathToUrl(from))
 
-            const urlReference = {
-              type: "asset",
-              specifier,
-              url,
-              declarationNode,
-              urlNode,
-            }
+              const urlReference = {
+                type: "asset",
+                specifier,
+                url,
+                declarationNode,
+                urlNode,
+              }
 
-            const urlNewValue = getUrlReplacementValue(urlReference)
-            if (urlNewValue) {
-              urlNode.value = urlNewValue
-            }
+              const urlNewValue = getUrlReplacementValue(urlReference)
+              if (urlNewValue) {
+                urlNode.value = urlNewValue
+              }
 
-            if (collectUrls) {
-              result.messages.push(urlReference)
-            }
+              if (collectUrls) {
+                result.messages.push(urlReference)
+              }
+            },
           })
         },
       }
@@ -152,24 +158,22 @@ const declarationNodeContainsUrl = (declarationNode) => {
   return /^(?:url|(?:-webkit-)?image-set)\(/i.test(declarationNode.value)
 }
 
-const walkUrls = (declarationNode, callback) => {
-  const valueParser = require("postcss-value-parser")
-  const parsed = valueParser(declarationNode.value)
+const walkUrls = (declarationNode, { parseCssValue, stringifyCssNodes, visitor }) => {
+  const parsed = parseCssValue(declarationNode)
   parsed.walk((node) => {
     // https://github.com/andyjansson/postcss-functions
     if (isUrlFunctionNode(node)) {
       const { nodes } = node
       const [urlNode] = nodes
-      const url =
-        urlNode && urlNode.type === "string" ? urlNode.value : valueParser.stringify(nodes)
-      callback(url.trim(), urlNode)
+      const url = urlNode && urlNode.type === "string" ? urlNode.value : stringifyCssNodes(nodes)
+      visitor(url.trim(), urlNode)
       return
     }
 
     if (isImageSetFunctionNode(node)) {
       Array.from(node.nodes).forEach((childNode) => {
         if (childNode.type === "string") {
-          callback(childNode.value.trim(), childNode)
+          visitor(childNode.value.trim(), childNode)
           return
         }
 
@@ -177,8 +181,8 @@ const walkUrls = (declarationNode, callback) => {
           const { nodes } = childNode
           const [urlNode] = nodes
           const url =
-            urlNode && urlNode.type === "string" ? urlNode.value : valueParser.stringify(nodes)
-          callback(url.trim(), urlNode)
+            urlNode && urlNode.type === "string" ? urlNode.value : stringifyCssNodes(nodes)
+          visitor(url.trim(), urlNode)
           return
         }
       })
