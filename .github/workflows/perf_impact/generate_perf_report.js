@@ -21,11 +21,16 @@ const measureImportingJsenvCorePackage = async () => {
 
   const metrics = await measurePerformanceMultipleTimes(
     async () => {
-      const { namespace } = await executeFile(fileUrl)
+      const messages = await executeFile(fileUrl)
+      const { namespace } = messages[0]
       const {
         userCPUTime,
         systemCPUTime,
-        memorySpace,
+        // "When using Worker threads, rss will be a value that is valid for the entire process, while the other fields will only refer to the current thread."
+        // see https://nodejs.org/docs/latest-v16.x/api/process.html#process_process_memoryusage
+        // for this reason we use worker to ensure heapUsed is measured
+        // only for the worker.
+        heapUsed,
         fileSystemReadOperationCount,
         fileSystemWriteOperationCount,
       } = namespace
@@ -39,9 +44,9 @@ const measureImportingJsenvCorePackage = async () => {
           type: "duration",
           value: systemCPUTime / 1000, // convert to ms
         },
-        "memory space": {
+        "memory heap used": {
           type: "memory",
-          value: memorySpace * 1000, // convert to bytes
+          value: heapUsed,
         },
         "number of filesystem read": {
           type: "count",

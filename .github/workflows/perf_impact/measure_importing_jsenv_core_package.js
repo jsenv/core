@@ -1,10 +1,12 @@
-import { resourceUsage } from "process"
+import { resourceUsage, memoryUsage } from "process"
 
 const beforeImportRessourceUsage = resourceUsage()
+const beforeImportMemoryUsage = memoryUsage()
 
 await import(`@jsenv/core`)
 
 const afterImportRessourceUsage = resourceUsage()
+const afterImportMemoryUsage = memoryUsage()
 
 export const userCPUTime =
   afterImportRessourceUsage.userCPUTime - beforeImportRessourceUsage.userCPUTime
@@ -12,7 +14,7 @@ export const userCPUTime =
 export const systemCPUTime =
   afterImportRessourceUsage.systemCPUTime - beforeImportRessourceUsage.systemCPUTime
 
-export const memorySpace = afterImportRessourceUsage.maxRSS - beforeImportRessourceUsage.maxRSS
+export const heapUsed = afterImportMemoryUsage.heapUsed - beforeImportMemoryUsage.heapUsed
 
 export const fileSystemReadOperationCount =
   afterImportRessourceUsage.fsRead - beforeImportRessourceUsage.fsRead

@@ -1,15 +1,28 @@
-import { urlToRelativeUrl } from "@jsenv/util"
-import { execute, launchNode } from "@jsenv/core"
+import { Worker } from "worker_threads"
+
+import { urlToFileSystemPath } from "@jsenv/util"
+
+const workerFileExecution = urlToFileSystemPath(
+  new URL("./file_execution_worker.js", import.meta.url),
+)
 
 export const executeFile = async (fileUrl) => {
-  const projectDirectoryUrl = new URL("./", fileUrl)
-  const executionResult = await execute({
-    projectDirectoryUrl,
-    fileRelativeUrl: urlToRelativeUrl(fileUrl, projectDirectoryUrl),
-    launch: launchNode,
-    // measurePerformance: true,
-    compileServerCanWriteOnFilesystem: false,
-    collectPerformance: true,
+  const worker = new Worker(workerFileExecution, {
+    workerData: {
+      fileUrl: String(fileUrl),
+    },
   })
-  return executionResult
+  return new Promise((resolve, reject) => {
+    const messages = []
+    worker.on("error", (error) => {
+      worker.terminate()
+      reject(error)
+    })
+    worker.on("message", (message) => {
+      messages.push(message)
+    })
+    worker.on("exit", () => {
+      resolve(messages)
+    })
+  })
 }
