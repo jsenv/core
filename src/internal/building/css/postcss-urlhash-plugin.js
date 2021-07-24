@@ -159,7 +159,7 @@ const declarationNodeContainsUrl = (declarationNode) => {
 }
 
 const walkUrls = (declarationNode, { parseCssValue, stringifyCssNodes, visitor }) => {
-  const parsed = parseCssValue(declarationNode)
+  const parsed = parseCssValue(declarationNode.value)
   parsed.walk((node) => {
     // https://github.com/andyjansson/postcss-functions
     if (isUrlFunctionNode(node)) {

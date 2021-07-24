@@ -4,5 +4,5 @@ export const unevalException = (value) => {
   if (value.hasOwnProperty("toString")) {
     delete value.toString
   }
-  return uneval(value)
+  return uneval(value, { ignoreSymbols: true })
 }

@@ -100,7 +100,7 @@
     "@jsenv/logger": "4.0.1",
     "@jsenv/node-signals": "2.0.1",
     "@jsenv/server": "6.1.0",
-    "@jsenv/uneval": "1.5.1",
+    "@jsenv/uneval": "1.6.0",
     "@jsenv/util": "4.1.1",
     "@rollup/plugin-commonjs": "19.0.1",
     "@rollup/plugin-json": "4.1.0",
