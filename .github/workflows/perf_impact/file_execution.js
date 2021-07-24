@@ -1,7 +1,7 @@
-import { execute, launchNode } from "@jsenv/core"
 import { urlToRelativeUrl } from "@jsenv/util"
+import { execute, launchNode } from "@jsenv/core"
 
-export const performanceFromFile = async (fileUrl) => {
+export const executeFile = async (fileUrl) => {
   const projectDirectoryUrl = new URL("./", fileUrl)
   const executionResult = await execute({
     projectDirectoryUrl,
@@ -11,5 +11,5 @@ export const performanceFromFile = async (fileUrl) => {
     compileServerCanWriteOnFilesystem: false,
     collectPerformance: true,
   })
-  return executionResult.performance
+  return executionResult
 }
