@@ -41,7 +41,7 @@ const measureImportingJsenvCorePackage = async () => {
         },
         "memory space": {
           type: "memory",
-          value: memorySpace,
+          value: memorySpace * 1000, // convert to bytes
         },
         "number of filesystem read": {
           type: "count",
