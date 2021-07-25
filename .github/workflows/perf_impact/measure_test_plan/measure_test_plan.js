@@ -6,8 +6,11 @@ import {
   launchWebkit,
   launchNode,
 } from "@jsenv/core"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 
-const projectDirectoryUrl = new URL("./", import.meta.url)
+const projectDirectoryUrl = jsenvCoreDirectoryUrl
+const currentDirectoryUrl = new URL("./", import.meta.url)
+const currentDirectoryRelativeUrl = new URL(currentDirectoryUrl, jsenvCoreDirectoryUrl)
 
 // wait a bit to let Node.js cleanup things, otherwise heapUsed can be negative o_O
 await new Promise((resolve) => {
@@ -19,7 +22,7 @@ const beforeMemoryUsage = memoryUsage()
 const beforeTime = Date.now()
 
 const testPlan = {
-  "./animals.test.html": {
+  [`${currentDirectoryRelativeUrl}animals.test.html`]: {
     chromium: {
       launch: launchChromium,
       measureDuration: false,
@@ -36,7 +39,7 @@ const testPlan = {
       captureConsole: false,
     },
   },
-  "./animals.test.js": {
+  [`${currentDirectoryRelativeUrl}animals.test.js`]: {
     node: {
       launch: launchNode,
       measureDuration: false,
@@ -52,6 +55,7 @@ await executeTestPlan({
   compileServerProtocol: "https",
   coverage: true,
   coverageHtmlDirectory: false,
+  coverageTextLog: false,
 })
 
 const afterRessourceUsage = resourceUsage()
