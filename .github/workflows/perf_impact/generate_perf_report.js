@@ -6,25 +6,68 @@ const executeAndLog = process.argv.includes("--log")
 
 export const generatePerformanceReport = async () => {
   const importingPackageMetrics = await measureImportingJsenvCorePackage()
+  const startExploringMetrics = await measureStartExploringMetrics()
+  const buildProjectMetrics = await measureBuildProjectMetrics()
+  const testPlanMetrics = await measureTestPlanMetrics()
 
   return {
     groups: {
       "importing @jsenv/core": {
         ...importingPackageMetrics,
       },
+      "starting exploring server": {
+        ...startExploringMetrics,
+      },
+      "building a simple project": {
+        ...buildProjectMetrics,
+      },
+      "execute test plan": {
+        ...testPlanMetrics,
+      },
     },
   }
 }
 
 const measureImportingJsenvCorePackage = async () => {
-  const fileUrl = new URL("./measure_importing_jsenv_core_package.js", import.meta.url)
+  return getMetricsFromFile(
+    new URL("./measure_importing_package/measure_importing_jsenv_core_package.js", import.meta.url),
+    {
+      iterationCount: 10,
+    },
+  )
+}
 
+const measureStartExploringMetrics = async () => {
+  return getMetricsFromFile(
+    new URL("./measure_exploring/measure_start_exploring.js", import.meta.url),
+    {
+      iterationCount: 5,
+    },
+  )
+}
+
+const measureBuildProjectMetrics = async () => {
+  return getMetricsFromFile(new URL("./measure_build/measure_build.js", import.meta.url), {
+    iterationCount: 5,
+  })
+}
+
+const measureTestPlanMetrics = async () => {
+  return getMetricsFromFile(new URL("./measure_test_plan/measure_test_plan.js", import.meta.url), {
+    iterationCount: 5,
+  })
+}
+
+const getMetricsFromFile = async (
+  fileUrl,
+  { iterationCount = 5, msToWaitBetweenEachMeasure = 100 } = {},
+) => {
   const metrics = await measurePerformanceMultipleTimes(
     async () => {
       const messages = await executeFile(fileUrl)
       const { namespace } = messages[0]
       const {
-        userCPUTime,
+        msEllapsed,
         // "When using Worker threads, rss will be a value that is valid for the entire process, while the other fields will only refer to the current thread."
         // see https://nodejs.org/docs/latest-v16.x/api/process.html#process_process_memoryusage
         // for this reason we use worker to ensure heapUsed is measured
@@ -35,9 +78,9 @@ const measureImportingJsenvCorePackage = async () => {
       } = namespace
 
       return {
-        "user CPU time": {
+        "time": {
           type: "duration",
-          value: userCPUTime / 1000, // convert to ms
+          value: msEllapsed,
         },
         "memory heap used": {
           type: "memory",
@@ -53,18 +96,15 @@ const measureImportingJsenvCorePackage = async () => {
         },
       }
     },
-    10,
+    iterationCount,
     {
-      msToWaitBetweenEachMeasure: 200,
+      msToWaitBetweenEachMeasure,
     },
   )
-  if (executeAndLog) {
-    console.log(metrics)
-  }
   return computeMetricsMedian(metrics)
 }
 
 if (executeAndLog) {
   const performanceReport = await generatePerformanceReport()
-  console.log(performanceReport)
+  console.log(JSON.stringify(performanceReport, null, "  "))
 }

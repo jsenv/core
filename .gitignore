@@ -1,3 +1,5 @@
+.github/workflows/**/.jsenv/
+.github/workflows/**/dist/
 /.jsenv/
 /coverage/
 /docs/**/.jsenv/

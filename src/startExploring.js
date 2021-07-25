@@ -30,6 +30,14 @@ export const startExploring = async ({
   jsenvToolbar = true,
   livereloading = true,
   inlineImportMapIntoHTML = true,
+  keepProcessAlive = true,
+
+  compileServerCanReadFromFilesystem,
+  compileServerCanWriteOnFilesystem,
+  // ideally instead of rest, we should enumerate all
+  // params to help vscode autocompletion.
+  // it also helps to see what is available wihout having to open
+  // startCompileServer
   ...rest
 }) => {
   const jsenvStartExploringFunction = async ({ jsenvCancellationToken }) => {
@@ -63,7 +71,7 @@ export const startExploring = async ({
     const compileServer = await startCompileServer({
       cancellationToken,
       projectDirectoryUrl,
-      keepProcessAlive: true,
+      keepProcessAlive,
       cors: true,
       livereloadSSE: livereloading,
       accessControlAllowRequestOrigin: true,
@@ -82,6 +90,9 @@ export const startExploring = async ({
       jsenvDirectoryRelativeUrl,
       outDirectoryName,
       inlineImportMapIntoHTML,
+
+      compileServerCanReadFromFilesystem,
+      compileServerCanWriteOnFilesystem,
       ...rest,
     })
 

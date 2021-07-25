@@ -19,6 +19,8 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Setup npm
         run: npm install
+      - name: Setup playwright
+        run: npx playwright install-deps
       - name: Report perf impact
         run: node ./.github/workflows/perf_impact/report_perf_impact.js
         env:
