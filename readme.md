@@ -1,6 +1,6 @@
 # jsenv
 
-Tool to develop, test and build js projects. boo
+Tool to develop, test and build js projects.
 
 [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 [![github main worflow](https://github.com/jsenv/jsenv-core/workflows/main/badge.svg)](https://github.com/jsenv/jsenv-core/actions?workflow=main)

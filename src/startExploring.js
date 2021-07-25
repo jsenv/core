@@ -32,6 +32,7 @@ export const startExploring = async ({
   inlineImportMapIntoHTML = true,
   keepProcessAlive = true,
 
+  compileServerLogLevel,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
   // ideally instead of rest, we should enumerate all
@@ -91,6 +92,7 @@ export const startExploring = async ({
       outDirectoryName,
       inlineImportMapIntoHTML,
 
+      compileServerLogLevel,
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
       ...rest,
