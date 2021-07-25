@@ -6,18 +6,25 @@ const executeAndLog = process.argv.includes("--log")
 
 export const generatePerformanceReport = async () => {
   const importingPackageMetrics = await measureImportingJsenvCorePackage()
+  const startExploringMetrics = await measureStartExploringMetrics()
 
   return {
     groups: {
       "importing @jsenv/core": {
         ...importingPackageMetrics,
       },
+      "startExploring": {
+        ...startExploringMetrics,
+      },
     },
   }
 }
 
 const measureImportingJsenvCorePackage = async () => {
-  const fileUrl = new URL("./measure_importing_jsenv_core_package.js", import.meta.url)
+  const fileUrl = new URL(
+    "./measure_importing_package/measure_importing_jsenv_core_package.js",
+    import.meta.url,
+  )
 
   const metrics = await measurePerformanceMultipleTimes(
     async () => {
@@ -63,6 +70,8 @@ const measureImportingJsenvCorePackage = async () => {
   }
   return computeMetricsMedian(metrics)
 }
+
+const measureStartExploringMetrics = () => {}
 
 if (executeAndLog) {
   const performanceReport = await generatePerformanceReport()
