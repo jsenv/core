@@ -17,10 +17,10 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node }}
-      - name: install playwright deps
-        run: npx playwright install-deps
       - name: Setup npm
         run: npm install
+      - name: Setup playwright
+        run: npx playwright install-deps
       - name: Report perf impact
         run: node ./.github/workflows/perf_impact/report_perf_impact.js
         env:
