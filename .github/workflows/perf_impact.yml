@@ -17,7 +17,8 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node }}
-      - uses: microsoft/playwright-github-action@v1
+      - name: install playwright deps
+        run: npx playwright install-deps
       - name: Setup npm
         run: npm install
       - name: Report perf impact

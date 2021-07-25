@@ -14,7 +14,7 @@ const beforeTime = Date.now()
 
 await startExploring({
   projectDirectoryUrl,
-  logLevel: "warn",
+  logLevel: "error",
   compileServerProtocol: "https",
   keepProcessAlive: false,
 })
