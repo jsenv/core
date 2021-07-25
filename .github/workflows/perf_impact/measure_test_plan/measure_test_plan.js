@@ -19,7 +19,7 @@ const currentDirectoryRelativeUrl = new URL(currentDirectoryUrl, jsenvCoreDirect
 
 // wait a bit to let Node.js cleanup things, otherwise heapUsed can be negative o_O
 await new Promise((resolve) => {
-  setTimeout(resolve, 500)
+  setTimeout(resolve, 1000)
 })
 
 const beforeRessourceUsage = resourceUsage()

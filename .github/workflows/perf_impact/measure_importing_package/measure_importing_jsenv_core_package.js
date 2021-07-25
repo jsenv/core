@@ -1,5 +1,10 @@
 import { resourceUsage, memoryUsage } from "process"
 
+// wait a bit to let Node.js cleanup things, otherwise heapUsed can be negative o_O
+await new Promise((resolve) => {
+  setTimeout(resolve, 1000)
+})
+
 const beforeImportRessourceUsage = resourceUsage()
 const beforeImportMemoryUsage = memoryUsage()
 const beforeImportTime = Date.now()
