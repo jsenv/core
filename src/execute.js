@@ -1,4 +1,4 @@
-import { createCancellationTokenForProcess } from "@jsenv/cancellation"
+import { createCancellationToken, composeCancellationToken } from "@jsenv/cancellation"
 
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
@@ -9,7 +9,8 @@ export const execute = async ({
   logLevel = "warn",
   compileServerLogLevel = logLevel,
   launchAndExecuteLogLevel = logLevel,
-  cancellationToken = createCancellationTokenForProcess(),
+  cancellationToken = createCancellationToken(),
+  cancelOnSIGINT = true,
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -47,16 +48,9 @@ export const execute = async ({
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
 }) => {
-  // Node.js emits a warning when too many things are listening to SIGTERM
-  // SIGTERM is listened for every call to
-  // createCancellationTokenForProcess()
-  // Increasing the max listeners is a dirty fix, the proper fix would be
-  // to remove the SIGTERM listener installed by the cancellation token
-  // once the cancellable function is done or when cancellation occurs
-  const processMaxListeners = process.getMaxListeners()
-  process.setMaxListeners(100)
+  const jsenvExecutionFunction = async ({ jsenvCancellationToken }) => {
+    cancellationToken = composeCancellationToken(cancellationToken, jsenvCancellationToken)
 
-  const executionPromise = executeJsenvAsyncFunction(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
@@ -127,9 +121,11 @@ export const execute = async ({
 
     stop("single-execution-done")
 
-    process.setMaxListeners(processMaxListeners)
-
     return result
+  }
+
+  const executionPromise = executeJsenvAsyncFunction(jsenvExecutionFunction, {
+    cancelOnSIGINT,
   })
 
   if (ignoreError) {

@@ -1,5 +1,5 @@
 /* eslint-disable import/max-dependencies */
-import { createCancellationTokenForProcess } from "@jsenv/cancellation"
+import { createCancellationToken, composeCancellationToken } from "@jsenv/cancellation"
 import {
   normalizeStructuredMetaMap,
   urlToFileSystemPath,
@@ -23,7 +23,8 @@ export const executeTestPlan = async ({
   logLevel = "info",
   compileServerLogLevel = "warn",
   launchAndExecuteLogLevel = "warn",
-  cancellationToken = createCancellationTokenForProcess(),
+  cancellationToken = createCancellationToken(),
+  cancelOnSIGINT = false,
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -70,7 +71,9 @@ export const executeTestPlan = async ({
   compileGroupCount = 2,
   jsenvDirectoryClean,
 }) => {
-  return executeJsenvAsyncFunction(async () => {
+  const jsenvExecuteTestPlanFunction = async ({ jsenvCancellationToken }) => {
+    cancellationToken = composeCancellationToken(cancellationToken, jsenvCancellationToken)
+
     const logger = createLogger({ logLevel })
 
     cancellationToken.register((cancelError) => {
@@ -209,5 +212,7 @@ export const executeTestPlan = async ({
       testPlanReport: result.planReport,
       testPlanCoverage: result.planCoverage,
     }
-  })
+  }
+
+  return executeJsenvAsyncFunction(jsenvExecuteTestPlanFunction, { cancelOnSIGINT })
 }

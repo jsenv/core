@@ -1,5 +1,6 @@
-import { createCancellationTokenForProcess } from "@jsenv/cancellation"
+import { createCancellationToken, composeCancellationToken } from "@jsenv/cancellation"
 import { normalizeStructuredMetaMap, collectFiles, urlToRelativeUrl } from "@jsenv/util"
+
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
@@ -19,7 +20,9 @@ import {
 } from "./internal/jsenvInternalFiles.js"
 
 export const startExploring = async ({
-  cancellationToken = createCancellationTokenForProcess(),
+  cancellationToken = createCancellationToken(),
+  cancelOnSIGINT = false,
+
   explorableConfig = jsenvExplorableConfig,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -29,7 +32,9 @@ export const startExploring = async ({
   inlineImportMapIntoHTML = true,
   ...rest
 }) => {
-  return executeJsenvAsyncFunction(async () => {
+  const jsenvStartExploringFunction = async ({ jsenvCancellationToken }) => {
+    cancellationToken = composeCancellationToken(cancellationToken, jsenvCancellationToken)
+
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
@@ -81,7 +86,9 @@ export const startExploring = async ({
     })
 
     return compileServer
-  })
+  }
+
+  return executeJsenvAsyncFunction(jsenvStartExploringFunction, { cancelOnSIGINT })
 }
 
 const createRedirectFilesService = ({ projectDirectoryUrl }) => {

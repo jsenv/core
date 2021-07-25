@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import {
-  createCancellationTokenForProcess,
+  createCancellationToken,
   composeCancellationToken,
   createCancellationSource,
   errorToCancelReason,
@@ -30,7 +30,7 @@ export const TESTING_WATCH_EXCLUDE_DESCRIPTION = {
 }
 
 export const startContinuousTesting = async ({
-  cancellationToken = createCancellationTokenForProcess(),
+  cancellationToken = createCancellationToken(),
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
