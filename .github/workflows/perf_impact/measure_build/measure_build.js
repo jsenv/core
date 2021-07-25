@@ -1,5 +1,5 @@
 import { resourceUsage, memoryUsage } from "process"
-import { startExploring } from "@jsenv/core"
+import { buildProject } from "@jsenv/core"
 
 const projectDirectoryUrl = new URL("./", import.meta.url)
 
@@ -12,11 +12,17 @@ const beforeRessourceUsage = resourceUsage()
 const beforeMemoryUsage = memoryUsage()
 const beforeTime = Date.now()
 
-await startExploring({
+await buildProject({
+  format: "esmodule",
   projectDirectoryUrl,
+  buildDirectoryRelativeUrl: "./dist/",
+  entryPointMap: {
+    "./main.html": "./main.min.html",
+  },
+  jsenvDirectoryClean: true,
+  buildDirectoryClean: true,
   logLevel: "warn",
-  compileServerProtocol: "https",
-  keepProcessAlive: false,
+  minify: true,
 })
 
 const afterRessourceUsage = resourceUsage()

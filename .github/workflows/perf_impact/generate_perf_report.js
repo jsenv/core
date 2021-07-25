@@ -7,14 +7,18 @@ const executeAndLog = process.argv.includes("--log")
 export const generatePerformanceReport = async () => {
   const importingPackageMetrics = await measureImportingJsenvCorePackage()
   const startExploringMetrics = await measureStartExploringMetrics()
+  const buildProjectMetrics = await measureBuildProjectMetrics()
 
   return {
     groups: {
       "importing @jsenv/core": {
         ...importingPackageMetrics,
       },
-      "startExploring": {
+      "starting exploring server": {
         ...startExploringMetrics,
+      },
+      "building a simple project": {
+        ...buildProjectMetrics,
       },
     },
   }
@@ -36,6 +40,12 @@ const measureStartExploringMetrics = async () => {
       iterationCount: 5,
     },
   )
+}
+
+const measureBuildProjectMetrics = async () => {
+  return getMetricsFromFile(new URL("./measure_build/measure_build.js", import.meta.url), {
+    iterationCount: 5,
+  })
 }
 
 const getMetricsFromFile = async (
