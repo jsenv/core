@@ -1,5 +1,5 @@
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
-import { createCancellationTokenForProcess } from "@jsenv/cancellation"
+import { createCancellationToken, composeCancellationToken } from "@jsenv/cancellation"
 import { resolveDirectoryUrl } from "@jsenv/util"
 
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
@@ -10,7 +10,8 @@ import { buildUsingRollup } from "./internal/building/buildUsingRollup.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 export const buildProject = async ({
-  cancellationToken = createCancellationTokenForProcess(),
+  cancellationToken = createCancellationToken(),
+  cancelOnSIGINT = false,
   logLevel = "info",
   compileServerLogLevel = "warn",
   logger,
@@ -83,7 +84,9 @@ export const buildProject = async ({
 
   ...rest
 }) => {
-  return executeJsenvAsyncFunction(async () => {
+  const jsenvBuildFunction = async ({ jsenvCancellationToken }) => {
+    cancellationToken = composeCancellationToken(cancellationToken, jsenvCancellationToken)
+
     logger = logger || createLogger({ logLevel })
     if (!["esmodule", "systemjs", "commonjs", "global"].includes(format)) {
       throw new TypeError(
@@ -199,6 +202,10 @@ export const buildProject = async ({
     } finally {
       compileServer.stop("build generated")
     }
+  }
+
+  return executeJsenvAsyncFunction(jsenvBuildFunction, {
+    cancelOnSIGINT,
   })
 }
 

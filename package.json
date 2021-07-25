@@ -95,7 +95,7 @@
     "@babel/plugin-transform-typeof-symbol": "7.14.5",
     "@babel/plugin-transform-unicode-regex": "7.14.5",
     "@c88/v8-coverage": "0.1.1",
-    "@jsenv/cancellation": "2.0.4",
+    "@jsenv/cancellation": "3.0.0",
     "@jsenv/import-map": "6.13.3",
     "@jsenv/logger": "4.0.1",
     "@jsenv/node-signals": "2.0.1",
