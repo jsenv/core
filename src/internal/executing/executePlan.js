@@ -36,6 +36,8 @@ export const executePlan = async (
     compileServerCertificate,
     compileServerIp,
     compileServerPort,
+    compileServerCanReadFromFilesystem,
+    compileServerCanWriteOnFilesystem,
     babelPluginMap,
     convertMap,
     compileGroupCount,
@@ -68,6 +70,8 @@ export const executePlan = async (
     compileServerCertificate,
     compileServerIp,
     compileServerPort,
+    compileServerCanReadFromFilesystem,
+    compileServerCanWriteOnFilesystem,
     keepProcessAlive: true, // to be sure it stays alive
     babelPluginMap,
     convertMap,
