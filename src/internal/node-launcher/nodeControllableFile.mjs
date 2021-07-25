@@ -55,10 +55,13 @@ const sendActionFailed = (error) => {
     // process.send algorithm does not send non enumerable values
     // because it works with JSON.stringify I guess so use uneval
 
-    uneval({
-      status: ACTION_RESPONSE_STATUS_FAILED,
-      value: error,
-    }),
+    uneval(
+      {
+        status: ACTION_RESPONSE_STATUS_FAILED,
+        value: error,
+      },
+      { ignoreSymbols: true },
+    ),
   )
 }
 

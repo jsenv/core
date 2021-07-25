@@ -12,22 +12,24 @@ import { createHash } from "crypto"
 import { require } from "../require.js"
 import { renderNamePattern } from "../renderNamePattern.js"
 
-const parse5 = require("parse5")
 // https://github.com/inikulin/parse5/blob/master/packages/parse5/lib/tree-adapters/default.js
 // eslint-disable-next-line import/no-unresolved
 // const treeAdapter = require("parse5/lib/tree-adapters/default.js")
 
 export const parseHtmlString = (htmlString) => {
+  const parse5 = require("parse5")
   const htmlAst = parse5.parse(htmlString, { sourceCodeLocationInfo: true })
   return htmlAst
 }
 
 export const parseSvgString = (svgString) => {
+  const parse5 = require("parse5")
   const svgAst = parse5.parseFragment(svgString, { sourceCodeLocationInfo: true })
   return svgAst
 }
 
 export const stringifyHtmlAst = (htmlAst) => {
+  const parse5 = require("parse5")
   const htmlString = parse5.serialize(htmlAst)
   return htmlString
 }
@@ -338,6 +340,7 @@ const scriptsToFragment = (scripts) => {
     return `${previous}<script ${scriptAttributes}>${text}</script>
       `
   }, "")
+  const parse5 = require("parse5")
   const fragment = parse5.parseFragment(html)
   return fragment
 }
@@ -411,6 +414,7 @@ export const getUniqueNameForInlineHtmlNode = (node, nodes, pattern) => {
 }
 
 const parseHtmlAsSingleElement = (html) => {
+  const parse5 = require("parse5")
   const fragment = parse5.parseFragment(html)
   return fragment.childNodes[0]
 }

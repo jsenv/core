@@ -4,8 +4,6 @@
 import { fileSystemPathToUrl } from "@jsenv/util"
 import { require } from "../../require.js"
 
-const { list } = require("@babel/helpers")
-
 const babelHelperNameInsideJsenvCoreArray = [
   "applyDecoratedDescriptor",
   "arrayLikeToArray",
@@ -102,6 +100,7 @@ const babelHelperScope = "@jsenv/core/helpers/babel/"
 const babelHelperAbstractScope = `.jsenv/helpers/babel/`
 
 export const listAbstractBabelHelpers = () => {
+  const { list } = require("@babel/helpers")
   return list.filter((babelHelperName) => !babelHelperIsInsideJsenvCore(babelHelperName))
 }
 

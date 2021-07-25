@@ -269,17 +269,11 @@
       "postcss/lib/css-syntax-error": [
         "./node_modules/postcss/lib/css-syntax-error.js"
       ],
-      "@babel/helper-plugin-utils/*": [
-        "./node_modules/@babel/helper-plugin-utils/*"
-      ],
       "@rollup/plugin-node-resolve": [
         "./node_modules/@rollup/plugin-node-resolve/dist/es/index.js"
       ],
       "rollup-plugin-node-globals/*": [
         "./node_modules/rollup-plugin-node-globals/*"
-      ],
-      "@babel/helper-plugin-utils": [
-        "./node_modules/@babel/helper-plugin-utils/lib/index.js"
       ],
       "rollup-plugin-node-globals": [
         "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.es6.js"
@@ -605,9 +599,6 @@
       "ansi-to-html": [
         "./node_modules/ansi-to-html/lib/ansi_to_html.js"
       ],
-      "eventsource/*": [
-        "./node_modules/eventsource/*"
-      ],
       "magic-string": [
         "./node_modules/magic-string/dist/magic-string.es.js"
       ],
@@ -628,9 +619,6 @@
       ],
       "@jsenv/util": [
         "./node_modules/@jsenv/util/index.js"
-      ],
-      "eventsource": [
-        "./node_modules/eventsource/lib/eventsource.js"
       ],
       "source-map/*": [
         "./node_modules/source-map/*"

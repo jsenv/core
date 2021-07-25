@@ -1,8 +1,8 @@
 import { require } from "@jsenv/core/src/internal/require.js"
 
-const { mergeProcessCovs } = require("@c88/v8-coverage")
-
 export const composeV8Coverages = (v8Coverages) => {
+  const { mergeProcessCovs } = require("@c88/v8-coverage")
+
   // mergeCoverageReports do not preserves source-map-cache during the merge
   // so we store sourcemap cache now
   const sourceMapCache = {}

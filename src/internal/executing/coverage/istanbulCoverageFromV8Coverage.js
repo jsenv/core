@@ -4,9 +4,8 @@ import { require } from "@jsenv/core/src/internal/require.js"
 
 import { composeIstanbulCoverages } from "./composeIstanbulCoverages.js"
 
-const v8ToIstanbul = require("v8-to-istanbul")
-
 export const istanbulCoverageFromV8Coverage = async (v8Coverage) => {
+  const v8ToIstanbul = require("v8-to-istanbul")
   const sourcemapCache = v8Coverage["source-map-cache"]
   const istanbulCoverages = await Promise.all(
     v8Coverage.result.map(async (fileV8Coverage) => {

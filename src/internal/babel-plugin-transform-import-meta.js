@@ -4,10 +4,10 @@
 
 import { require } from "@jsenv/core/src/internal/require.js"
 
-const { addNamespace, addDefault, addNamed } = require("@babel/helper-module-imports")
-const { parseExpression } = require("@babel/parser")
-
 export const babelPluginTransformImportMeta = (api, pluginOptions) => {
+  const { addNamespace, addDefault, addNamed } = require("@babel/helper-module-imports")
+  const { parseExpression } = require("@babel/parser")
+
   const { replaceImportMeta } = pluginOptions
 
   let babelState
