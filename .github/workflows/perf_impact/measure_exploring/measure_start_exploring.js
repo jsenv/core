@@ -3,25 +3,26 @@ import { startExploring } from "@jsenv/core"
 
 const projectDirectoryUrl = new URL("./", import.meta.url)
 
-const beforeImportRessourceUsage = resourceUsage()
-const beforeImportMemoryUsage = memoryUsage()
-const beforeImportTime = Date.now()
+const beforeRessourceUsage = resourceUsage()
+const beforeMemoryUsage = memoryUsage()
+const beforeTime = Date.now()
 
 await startExploring({
   projectDirectoryUrl,
+  logLevel: "warn",
   compileServerProtocol: "https",
+  keepProcessAlive: false,
 })
 
-const afterImportRessourceUsage = resourceUsage()
-const afterImportMemoryUsage = memoryUsage()
-const afterImportTime = Date.now()
+const afterRessourceUsage = resourceUsage()
+const aftertMemoryUsage = memoryUsage()
+const afterTime = Date.now()
 
-export const msEllapsed = afterImportTime - beforeImportTime
+export const msEllapsed = afterTime - beforeTime
 
-export const heapUsed = afterImportMemoryUsage.heapUsed - beforeImportMemoryUsage.heapUsed
+export const heapUsed = aftertMemoryUsage.heapUsed - beforeMemoryUsage.heapUsed
 
-export const fileSystemReadOperationCount =
-  afterImportRessourceUsage.fsRead - beforeImportRessourceUsage.fsRead
+export const fileSystemReadOperationCount = afterRessourceUsage.fsRead - beforeRessourceUsage.fsRead
 
 export const fileSystemWriteOperationCount =
-  afterImportRessourceUsage.fsWrite - beforeImportRessourceUsage.fsWrite
+  afterRessourceUsage.fsWrite - beforeRessourceUsage.fsWrite
