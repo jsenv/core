@@ -24,7 +24,7 @@ const measureImportingJsenvCorePackage = async () => {
       const messages = await executeFile(fileUrl)
       const { namespace } = messages[0]
       const {
-        userCPUTime,
+        msEllapsed,
         // "When using Worker threads, rss will be a value that is valid for the entire process, while the other fields will only refer to the current thread."
         // see https://nodejs.org/docs/latest-v16.x/api/process.html#process_process_memoryusage
         // for this reason we use worker to ensure heapUsed is measured
@@ -35,9 +35,9 @@ const measureImportingJsenvCorePackage = async () => {
       } = namespace
 
       return {
-        "user CPU time": {
+        "time": {
           type: "duration",
-          value: userCPUTime / 1000, // convert to ms
+          value: msEllapsed,
         },
         "memory heap used": {
           type: "memory",
