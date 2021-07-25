@@ -8,6 +8,7 @@ export const generatePerformanceReport = async () => {
   const importingPackageMetrics = await measureImportingJsenvCorePackage()
   const startExploringMetrics = await measureStartExploringMetrics()
   const buildProjectMetrics = await measureBuildProjectMetrics()
+  const testPlanMetrics = await measureTestPlanMetrics()
 
   return {
     groups: {
@@ -19,6 +20,9 @@ export const generatePerformanceReport = async () => {
       },
       "building a simple project": {
         ...buildProjectMetrics,
+      },
+      "execute test plan": {
+        ...testPlanMetrics,
       },
     },
   }
@@ -44,6 +48,12 @@ const measureStartExploringMetrics = async () => {
 
 const measureBuildProjectMetrics = async () => {
   return getMetricsFromFile(new URL("./measure_build/measure_build.js", import.meta.url), {
+    iterationCount: 5,
+  })
+}
+
+const measureTestPlanMetrics = async () => {
+  return getMetricsFromFile(new URL("./measure_test_plan/measure_test_plan.js", import.meta.url), {
     iterationCount: 5,
   })
 }
