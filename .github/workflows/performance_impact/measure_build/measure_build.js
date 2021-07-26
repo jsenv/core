@@ -5,6 +5,7 @@ import { measurePerformanceMultipleTimes, computeMetricsMedian } from "@jsenv/pe
 export const measureBuild = async () => {
   const childProcessFileUrl = new URL("./child_process_measuring_build.js", import.meta.url)
   const childProcessFilePath = fileURLToPath(childProcessFileUrl)
+
   const metrics = await measurePerformanceMultipleTimes(
     async () => {
       const childProcess = fork(childProcessFilePath, {

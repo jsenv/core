@@ -10,7 +10,7 @@ const afterHeapUsed = memoryUsage().heapUsed
 
 const heapUsed = afterHeapUsed - beforeHeapUsed
 
-process.send(heapUsed)
+process.send({ heapUsed })
 
 namespace = null
 global.gc()

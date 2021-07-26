@@ -5,12 +5,13 @@ import { measurePerformanceMultipleTimes, computeMetricsMedian } from "@jsenv/pe
 export const measureImportMemoryUsage = async () => {
   const childProcessFileUrl = new URL("./child_process_measuring_memory.js", import.meta.url)
   const childProcessFilePath = fileURLToPath(childProcessFileUrl)
+
   const metrics = await measurePerformanceMultipleTimes(
     async () => {
       const childProcess = fork(childProcessFilePath, {
         execArgv: ["--expose-gc"],
       })
-      const heapUsed = await new Promise((resolve) => {
+      const { heapUsed } = await new Promise((resolve) => {
         childProcess.on("message", (message) => {
           resolve(message)
         })
