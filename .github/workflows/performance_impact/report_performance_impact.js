@@ -1,4 +1,4 @@
-import { reportPerformanceImpact, readGitHubWorkflowEnv } from "@jsenv/perf-impact"
+import { reportPerformanceImpact, readGitHubWorkflowEnv } from "@jsenv/performance-impact"
 
 reportPerformanceImpact({
   ...readGitHubWorkflowEnv(),

@@ -8,7 +8,9 @@ export const measureImport = async () => {
 
   const metrics = await measurePerformanceMultipleTimes(
     async () => {
-      const childProcess = fork(childProcessFilePath)
+      const childProcess = fork(childProcessFilePath, {
+        execArgv: ["--expose-gc"],
+      })
       const { msEllapsed, heapUsed } = await new Promise((resolve) => {
         childProcess.on("message", (message) => {
           resolve(message)
