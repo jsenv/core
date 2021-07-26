@@ -275,8 +275,14 @@
       "rollup-plugin-node-globals/*": [
         "./node_modules/rollup-plugin-node-globals/*"
       ],
+      "@jsenv/performance-impact/*": [
+        "./node_modules/@jsenv/performance-impact/*"
+      ],
       "rollup-plugin-node-globals": [
         "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.es6.js"
+      ],
+      "@jsenv/performance-impact": [
+        "./node_modules/@jsenv/performance-impact/main.js"
       ],
       "postcss/lib/map-generator": [
         "./node_modules/postcss/lib/map-generator.js"
@@ -404,9 +410,6 @@
       "@jsenv/node-signals": [
         "./node_modules/@jsenv/node-signals/index.js"
       ],
-      "@jsenv/perf-impact/*": [
-        "./node_modules/@jsenv/perf-impact/*"
-      ],
       "@rollup/plugin-json": [
         "./node_modules/@rollup/plugin-json/dist/index.es.js"
       ],
@@ -445,9 +448,6 @@
       ],
       "@jsenv/import-map/*": [
         "./node_modules/@jsenv/import-map/*"
-      ],
-      "@jsenv/perf-impact": [
-        "./node_modules/@jsenv/perf-impact/main.js"
       ],
       "eslint-plugin-html": [
         "./node_modules/eslint-plugin-html/src/index.js"

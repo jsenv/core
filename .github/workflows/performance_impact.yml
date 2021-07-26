@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        node: [16.3.0]
+        node: [16.5.0]
     runs-on: ${{ matrix.os }}
     name: perf impact
     steps:
@@ -21,7 +21,7 @@ jobs:
         run: npm install
       - name: Setup playwright
         run: npx playwright install-deps
-      - name: Report perf impact
-        run: node ./.github/workflows/perf_impact/report_perf_impact.js
+      - name: Report performance impact
+        run: node ./.github/workflows/performance_impact/report_performance_impact.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,10 @@
+export const measureNpmTarball = async () => {
+  const fileUrl = new URL("./module_measuring_npm_tarball.js", import.meta.url)
+  const { npmTarballInfo } = await import(`${fileUrl}?t=${Date.now()}`)
+
+  return {
+    "npm tarball size": { value: npmTarballInfo.size, unit: "byte" },
+    "npm tarball unpacked size": { value: npmTarballInfo.unpackedSize, unit: "byte" },
+    "npm tarball file count": { value: npmTarballInfo.entryCount },
+  }
+}
