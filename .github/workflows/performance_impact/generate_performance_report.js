@@ -1,13 +1,11 @@
-import { measureImportDuration } from "./measure_import_duration/measure_import_duration.js"
-import { measureImportMemoryUsage } from "./measure_import_memory_usage/measure_import_memory_usage.js"
+import { measureImport } from "./measure_import/measure_import.js"
 import { measureNpmTarball } from "./measure_npm_tarball/measure_npm_tarball.js"
 import { measureExploring } from "./measure_exploring/measure_exploring.js"
 import { measureBuild } from "./measure_build/measure_build.js"
 import { measureTestPlan } from "./measure_test_plan/measure_test_plan.js"
 
 export const generatePerformanceReport = async () => {
-  const importDurationMetric = await measureImportDuration()
-  const importMemoryHeapUsed = await measureImportMemoryUsage()
+  const importMetrics = await measureImport()
   const npmTarballMetrics = await measureNpmTarball()
 
   const exploringMetrics = await measureExploring()
@@ -17,8 +15,7 @@ export const generatePerformanceReport = async () => {
   return {
     groups: {
       "@jsenv/performance-impact package": {
-        ...importDurationMetric,
-        ...importMemoryHeapUsed,
+        ...importMetrics,
         ...npmTarballMetrics,
       },
       "starting exploring server": {
