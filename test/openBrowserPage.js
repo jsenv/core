@@ -3,7 +3,7 @@ import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/cov
 import { evalSource } from "@jsenv/core/src/internal/runtime/createNodeRuntime/evalSource.js"
 import { coverageIsEnabled } from "./coverageIsEnabled.js"
 
-const { chromium } = require("playwright-chromium")
+const { chromium } = require("playwright")
 
 export const openBrowserPage = async (
   url,

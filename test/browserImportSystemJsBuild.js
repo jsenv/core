@@ -2,7 +2,7 @@ import { startServer, composeService, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl, readFile } from "@jsenv/util"
 import { require } from "@jsenv/core/src/internal/require.js"
 
-const { chromium } = require("playwright-chromium")
+const { chromium } = require("playwright")
 
 const SYSTEM_PATH = require.resolve("systemjs/dist/system.js")
 
