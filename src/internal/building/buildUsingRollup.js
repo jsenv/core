@@ -18,6 +18,7 @@ export const buildUsingRollup = async ({
   importDefaultExtension,
   externalImportSpecifiers,
   externalImportUrlPatterns,
+  importPaths,
 
   babelPluginMap,
   node,
@@ -62,6 +63,7 @@ export const buildUsingRollup = async ({
     importDefaultExtension,
     externalImportSpecifiers,
     externalImportUrlPatterns,
+    importPaths,
 
     babelPluginMap,
     node,

@@ -38,6 +38,7 @@ export const buildProject = async ({
         "node_modules/": true,
       }
     : {},
+  importPaths = {},
 
   env = {},
 
@@ -168,6 +169,7 @@ export const buildProject = async ({
         importDefaultExtension,
         externalImportSpecifiers,
         externalImportUrlPatterns,
+        importPaths,
 
         babelPluginMap,
         node,

@@ -69,6 +69,7 @@ export const createJsenvRollupPlugin = async ({
   importDefaultExtension,
   externalImportSpecifiers,
   externalImportUrlPatterns,
+  importPaths,
 
   babelPluginMap,
   node,
@@ -639,6 +640,18 @@ export const createJsenvRollupPlugin = async ({
       const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
       const outputExtension = extension === ".html" ? ".js" : extension
 
+      outputOptions.paths = (id) => {
+        const mapping = importPaths[id]
+        if (mapping) {
+          return mapping
+        }
+        if (format === "commonjs") {
+          if (id.startsWith("node:")) {
+            return id.slice("node:".length)
+          }
+        }
+        return id
+      }
       outputOptions.entryFileNames = `[name]${outputExtension}`
       outputOptions.chunkFileNames =
         useImportMapToImproveLongTermCaching || !urlVersioning
