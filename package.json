@@ -49,8 +49,9 @@
     "prettier-format-stage": "npm run prettier-format -- --staged",
     "prettier-check": "npm run prettier-format -- --dry-run",
     "upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
+    "install-playwright": "npx playwright install-deps && npx playwright install",
     "link-packages": "node --experimental-top-level-await ./script/link-packages/link-packages.js",
-    "postinstall": "npm run generate-import-map && npm run link-packages",
+    "postinstall": "npm run generate-import-map && npm run install-playwright && npm run link-packages",
     "prepublishOnly": "node ./script/transform-package/remove-postinstall.js && npm run dist",
     "postpublish": "node ./script/transform-package/restore-postinstall.js"
   },
