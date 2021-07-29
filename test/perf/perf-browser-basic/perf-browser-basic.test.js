@@ -44,9 +44,7 @@ await Promise.all(
         },
       },
       performance: {
-        timeOrigin:
-          // window.performance.timeOrigin is undefined on webkit
-          launchBrowser === launchWebkit ? undefined : assert.any(Number),
+        timeOrigin: assert.any(Number),
         timing: actual.performance.timing,
         navigation: {
           type: 0,
