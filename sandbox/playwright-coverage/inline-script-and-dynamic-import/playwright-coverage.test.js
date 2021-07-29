@@ -4,7 +4,7 @@ import { resolveUrl } from "@jsenv/util"
 import { startServer, serveFile } from "@jsenv/server"
 
 const require = createRequire(import.meta.url)
-const { chromium } = require("playwright-core")
+const { chromium } = require("playwright")
 
 const directoryUrl = resolveUrl("./", import.meta.url)
 

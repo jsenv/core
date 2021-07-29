@@ -24,25 +24,21 @@ execute({
 
 # Browser launchers
 
-jsenv uses [playwright](https://github.com/microsoft/playwright) to launch browser runtime environments. If you want to use a browser launcher (launchChromium, launchFirefox or launchWebkit) you need to have the browser executable file somewhere in your project.
+Jsenv uses [playwright](https://github.com/microsoft/playwright) to launch browser runtime environments. If you want to use one of the browser launcher (_launchChromium_, _launchFirefox_ or _launchWebkit_) you need to:
 
-For instance if you plan to use `launchChromium`, add `playwright-chromium` to your devDependencies.
-
-```console
-npm install --save-dev playwright-chromium
-```
-
-For `launchFirefox` you would add `playwright-firefox`
+1. Install browser executable dependencies
 
 ```console
-npm install --save-dev playwright-firefox
+npx playwright install-deps
 ```
 
-For `launchWebkit` you would add `playwright-webkit`
+2. Install browser executable
 
 ```console
-npm install --save-dev playwright-webkit
+npx playwright install
 ```
+
+See also how to install a single browser at https://playwright.dev/docs/test-install/#installing-a-single-browser-binary
 
 # Passing options to a launcher
 

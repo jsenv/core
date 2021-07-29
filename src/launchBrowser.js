@@ -43,6 +43,7 @@ export const launchChromium = async ({
 
   if (!sharingToken.isUsed()) {
     const launchOperation = launchBrowser("chromium", {
+      browserClass: require(`playwright`).chromium,
       cancellationToken,
       ressourceTracker,
       options: {
@@ -144,6 +145,7 @@ export const launchFirefox = async ({
 
   if (!sharingToken.isUsed()) {
     const launchOperation = launchBrowser("firefox", {
+      browserClass: require(`playwright`).firefox,
       cancellationToken,
       ressourceTracker,
       options: {
@@ -217,6 +219,7 @@ export const launchWebkit = async ({
 
   if (!sharingToken.isUsed()) {
     const launchOperation = launchBrowser("webkit", {
+      browserClass: require(`playwright`).webkit,
       cancellationToken,
       ressourceTracker,
       options: {
@@ -264,10 +267,8 @@ export const launchWebkitTab = (namedArgs) =>
 
 const launchBrowser = async (
   browserName,
-  { cancellationToken, ressourceTracker, options, stopOnExit },
+  { cancellationToken, browserClass, ressourceTracker, options, stopOnExit },
 ) => {
-  // eslint-disable-next-line import/no-dynamic-require
-  const browserClass = require(`playwright-${browserName}`)[browserName]
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {

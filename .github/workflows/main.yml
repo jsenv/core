@@ -49,7 +49,9 @@ jobs:
       - name: npm install
         run: npm install
       - name: install playwright deps
-        run: npx playwright install-deps
+        run: |
+          npx playwright install-deps
+          npx playwright install
       - name: check lint
         run: npm run eslint-check
       - name: check tests

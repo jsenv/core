@@ -386,9 +386,6 @@
       "istanbul-lib-report/*": [
         "./node_modules/istanbul-lib-report/*"
       ],
-      "playwright-chromium/*": [
-        "./node_modules/playwright-chromium/*"
-      ],
       "postcss-value-parser": [
         "./node_modules/postcss-value-parser/lib/index.js"
       ],
@@ -418,12 +415,6 @@
       ],
       "istanbul-lib-report": [
         "./node_modules/istanbul-lib-report/index.js"
-      ],
-      "playwright-chromium": [
-        "./node_modules/playwright-chromium/index.mjs"
-      ],
-      "playwright-firefox/*": [
-        "./node_modules/playwright-firefox/*"
       ],
       "postcss/lib/at-rule": [
         "./node_modules/postcss/lib/at-rule.js"
@@ -455,12 +446,6 @@
       "humanize-duration/*": [
         "./node_modules/humanize-duration/*"
       ],
-      "playwright-firefox": [
-        "./node_modules/playwright-firefox/index.mjs"
-      ],
-      "playwright-webkit/*": [
-        "./node_modules/playwright-webkit/*"
-      ],
       "postcss/lib/parser": [
         "./node_modules/postcss/lib/parser.js"
       ],
@@ -479,9 +464,6 @@
       "istanbul-reports/*": [
         "./node_modules/istanbul-reports/*"
       ],
-      "playwright-webkit": [
-        "./node_modules/playwright-webkit/index.mjs"
-      ],
       "postcss/lib/input": [
         "./node_modules/postcss/lib/input.js"
       ],
@@ -497,9 +479,6 @@
       "istanbul-reports": [
         "./node_modules/istanbul-reports/index.js"
       ],
-      "playwright-core/*": [
-        "./node_modules/playwright-core/*"
-      ],
       "postcss/lib/list": [
         "./node_modules/postcss/lib/list.js"
       ],
@@ -514,9 +493,6 @@
       ],
       "@babel/helpers/*": [
         "./node_modules/@babel/helpers/*"
-      ],
-      "playwright-core": [
-        "./node_modules/playwright-core/index.mjs"
       ],
       "v8-to-istanbul/*": [
         "./node_modules/v8-to-istanbul/*"
@@ -620,11 +596,17 @@
       "@jsenv/util": [
         "./node_modules/@jsenv/util/index.js"
       ],
+      "playwright/*": [
+        "./node_modules/playwright/*"
+      ],
       "source-map/*": [
         "./node_modules/source-map/*"
       ],
       "@jsenv/pwa": [
         "./node_modules/@jsenv/pwa/main.js"
+      ],
+      "playwright": [
+        "./node_modules/playwright/index.mjs"
       ],
       "source-map": [
         "./node_modules/source-map/source-map.js"
