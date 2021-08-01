@@ -51,6 +51,12 @@ nav,
   background: #1f262c;
 }
 
+#explorables nav {
+  /* overflow hidden to ensure it wraps li which have margins
+  otherwise the background color is not the one from <nav> */
+  overflow: hidden;
+}
+
 #explorables-message {
   overflow: auto; /* propagate background to margins cause by h4 inside */
 }
