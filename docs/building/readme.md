@@ -218,7 +218,7 @@ Example of an _asset-manifest.json_ file content:
 
 _importResolutionMethod_ is a string controlling how import will be resolved. This parameter is optional, the default value is infered from [format](#format). When _format_ is `"commonjs"` default is `"node"`, otherwise it is `"importmap'`.
 
-| importResolutionMethod | Description                                                                     |
+| Value | Description                                                                     |
 | ---------------------- | ------------------------------------------------------------------------------- |
 | `"importmap"`          | import are resolved by standard import resolution, the one used by web browsers |
 | `"node"`               | imports are resolved by Node.js module resolution                               |
@@ -493,7 +493,9 @@ A service worker file is special:
 - you cannot use _import_ keyword
 - ...many more differences...
 
-Jsenv won't try to change this. So you must write the service worker file in a way that browser can understand. This is what jsenv does for every service worker file specified in _serviceWorkers_ parameter:
+Jsenv won't try to change this.
+So you must write the service worker file in a way that browser can understand.
+During build, the following steps are taken for every service worker file specified in _serviceWorkers_:
 
 1. Inline every _self.importScripts_
 2. Minify the resulting service worker file
