@@ -14,8 +14,8 @@ This documentation list [key features](#key-features) and gives the [definition 
 # Key features
 
 - Url versioning to enable long term caching
-- Favor cache reuse thanks to importmap
-- Can build code that works on browsers without native support:
+- Accurate cache invalidation: changing one file invalidates one file in browser cache
+- Can build code that works on browsers without native support for:
   - importmap
   - top level await
   - script type module
@@ -31,12 +31,12 @@ A build consists into taking one or many input files to generate one or many out
 
 - File concatenation to save http request
 - Minify file content to reduce file size
-- Hash url to enable long term caching
+- Inject hash based on file content into urls to enable long term caching
 - Transform file content to support more execution environments (old browsers for instance)
 
 # buildProject
 
-`buildProject` is an async function reading project files, transforming them and writing the resulting files in a directory.
+_buildProject_ is an async function reading project files, transforming them and writing the resulting files in a directory.
 
 ```js
 import { buildProject } from "@jsenv/core"
@@ -54,23 +54,23 @@ const { buildMappings, buildManifest } = await buildProject({
 
 ## buildDirectoryRelativeUrl
 
-`buildDirectoryRelativeUrl` parameter is a string leading to a directory where files are written. This parameter is **required**.
+_buildDirectoryRelativeUrl_ is a string leading to a directory where files are written. This parameter is **required**.
 
 ## entryPointMap
 
-`entryPointMap` parameter is an object describing the project files you want to read and their destination in the build directory. This parameter is **required**.
+_entryPointMap_ is an object describing the project files you want to read and their destination in the build directory. This parameter is **required**.
 
-`entryPointMap` keys are relative to project directory and values are relative to build directory.
+_entryPointMap_ keys are relative to project directory and values are relative to build directory.
 
 ## format
 
-`format` parameter is a string indicating the module format of the files written in the build directory. This parameter is **required** and must be one of `"esmodule"`, `"systemjs"`, `"commonjs"`, `"global"`.
+_format_ is a string indicating the module format of the files written in the build directory. This parameter is **required** and must be one of `"esmodule"`, `"systemjs"`, `"commonjs"`, `"global"`.
 
 — see [SystemJS format](#SystemJS-format)
 
 ## minify
 
-`minify` parameter is a boolean controlling if build files will be minified to save bytes. This parameter is optional and enabled by default when `process.env.NODE_ENV` is `"production"`.
+_minify_ is a boolean controlling if build files will be minified to save bytes. This parameter is optional and enabled by default when `process.env.NODE_ENV` is `"production"`.
 
 When enabled: js, css, html, importmap, json, svg are minified.
 
@@ -86,7 +86,7 @@ await buildProject({
 
 ## externalImportSpecifiers
 
-`externalImportSpecifiers` parameter is an array of string repsenting imports that will be ignored whle generating the build files. This parameter is optional with a default value being an empty array. This parameter can be used to avoid building some dependencies.
+_externalImportSpecifiers_ is an array of string representing imports that will be ignored whle generating the build files. This parameter is optional with a default value being an empty array. This parameter can be used to avoid building some dependencies.
 
 To better understand this let's assume your source files contains the following import.
 
@@ -96,83 +96,113 @@ import { answer } from "foo"
 export const ask = () => answer
 ```
 
-If `externalImportSpecifiers` contains `foo` the generated files will keep that import untouched and still try to load this file resulting in a file as below:
+If _externalImportSpecifiers_ contains `"foo"` the generated files will keep that import untouched. Depending on _format_ the generated code differs as shown below:
 
-- For build using `esmodule` format:
+<table>
+  <thead>
+    <tr>
+      <th>Format
+      </th>
+      <th>Code generated
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>esmodule</td>
+      <td>
 
-  ```js
-  import { answer } from "foo"
+```js
+import { answer } from "foo"
 
-  export const ask = () => answer
-  ```
+export const ask = () => answer
+```
 
-- For build using `systemjs` format
+</td>
+    </tr>
+    <tr>
+      <td>systemjs</td>
+      <td>
 
-  ```js
-  System.register(["foo"], function (exports) {
-    var answer
-    return {
-      setters: [
-        function (module) {
-          answer = module.answer
-        },
-      ],
-      execute: function () {
-        exports("ask", function ask() {
-          return answer
-        })
+```js
+System.register(["foo"], function (exports) {
+  var answer
+  return {
+    setters: [
+      function (module) {
+        answer = module.answer
       },
-    }
-  })
-  ```
-
-- For build using `commonjs` format
-
-  ```js
-  const { answer } = require("foo")
-
-  module.exports.ask = () => answer
-  ```
-
-- For build using `global` format:
-
-  ```js
-  ;(function (exports, foo) {
-    var ask = function ask() {
-      return foo.answer
-    }
-
-    exports.ask = ask
-    return exports
-  })({}, foo)
-  ```
-
-  It means build using `global` format expect `window.foo` or `global.foo` to exists. You can control the expected global variable name using `globals`.
-
-  ```js
-  import { buildProject } from "@jsenv/core"
-
-  buildProject({
-    externalImportSpecifiers: ["foo"],
-    globals: {
-      foo: "bar",
+    ],
+    execute: function () {
+      exports("ask", function ask() {
+        return answer
+      })
     },
-  })
-  ```
+  }
+})
+```
+
+</td>
+    </tr>
+    <tr>
+      <td>commonjs</td>
+      <td>
+
+```js
+const { answer } = require("foo")
+
+module.exports.ask = () => answer
+```
+
+</td>
+    </tr>
+    <tr>
+      <td>global</td>
+      <td>
+
+```js
+;(function (exports, foo) {
+  var ask = function ask() {
+    return foo.answer
+  }
+
+  exports.ask = ask
+  return exports
+})({}, foo)
+```
+
+</td>
+    </tr>
+  </tbody>
+</table>
+
+Code generated for `"global"` format expect `window.foo` or `global.foo` to exists. You can control the expected global variable name using _globals_.
+
+```js
+import { buildProject } from "@jsenv/core"
+
+buildProject({
+  format: "global",
+  externalImportSpecifiers: ["foo"],
+  globals: {
+    foo: "bar",
+  },
+})
+```
 
 ## urlVersioning
 
-`urlVersioning` parameter is a boolean controlling the file written in the build directory will be versioned. This parameter is optional and enabled by default.
+_urlVersioning_ is a boolean controlling the file written in the build directory will be versioned. This parameter is optional and enabled by default.
 
 When enabled, the files written in the build directory have dynamic names computed from the source file content. This allows to enable [long term caching](#long-term-caching) of your files.
 
 ## assetManifestFile
 
-`urlVersioning` parameter is a boolean controlling if an `asset-manifest.json` file will be written in the build directory. This parameter is optional and disabled by default.
+_assetManifestFile_ is a boolean controlling if an _asset-manifest.json_ file will be written in the build directory. This parameter is optional and disabled by default.
 
-When `urlVersioning` is enabled, the files have dynamic names. Generating a manifest file can be important to be able to find the generated files.
+When _urlVersioning_ is enabled, the files have dynamic names. Generating a manifest file can be important to be able to find the generated files.
 
-Example of an `asset-manifest.json` file content:
+Example of an _asset-manifest.json_ file content:
 
 ```json
 {
@@ -186,13 +216,12 @@ Example of an `asset-manifest.json` file content:
 
 ## importResolutionMethod
 
-`importResolutionMethod` parameter is a string controlling how import will be resolved. This parameter is optional, the default value is infered from `format` parameter. When `format` is `"commonjs"` default resolution method is `"node"`, otherwise it is `"importmap'`.
+_importResolutionMethod_ is a string controlling how import will be resolved. This parameter is optional, the default value is infered from [format](#format). When _format_ is `"commonjs"` default is `"node"`, otherwise it is `"importmap'`.
 
-`"importmap"` means import are resolved by standard import resolution, the one used by web browsers.
-
-`"node"` means imports are resolved by Node.js module resolution.
-
-If you need, you can force node module resolution by passing `importResolutionMethod: "node"`.
+| importResolutionMethod | Description                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| `"importmap"`          | import are resolved by standard import resolution, the one used by web browsers |
+| `"node"`               | imports are resolved by Node.js module resolution                               |
 
 ## Shared parameters
 
@@ -212,7 +241,7 @@ To avoid duplication some parameter are linked to a generic documentation.
 
 ## buildProject return value
 
-`buildProject` return a value with the following shape
+_buildProject_ return a value with the following shape
 
 ```js
 {
@@ -223,11 +252,11 @@ To avoid duplication some parameter are linked to a generic documentation.
 
 ### buildManifest
 
-`buildManifest` is part of buildProject return value. This object will contain a key/value pair for each file written in the build directory.
+_buildManifest_ is part of _buildProject_ return value. This object will contain a key/value pair for each file written in the build directory.
 
 Keys and values are strings, both represent are file path relative to the build directory. But keys are paths without url versioning while values are paths with url versionning.
 
-Example of a `buildManifest` value.
+_Example of a buildManifest value:_
 
 ```js
 {
@@ -243,11 +272,11 @@ The value above can be translated into the following sentence where build direct
 
 ### buildMappings
 
-`buildMappings` is part of buildProject return value. This object will contain a key/value pair for each file written in the build directory.
+_buildMappings_ is part of _buildProject_ return value. This object will contain a key/value pair for each file written in the build directory.
 
 Keys and values are strings, both are file path, keys are relative to project directory while values are relative to the build directory.
 
-Example of a `buildMappings` value.
+_Example of a buildMappings value:_
 
 ```js
 {
@@ -521,4 +550,8 @@ await buildProject({
   format: "esmodule",
   jsConcatenation: false,
 })
+```
+
+```
+
 ```
