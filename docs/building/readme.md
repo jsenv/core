@@ -518,7 +518,7 @@ await buildProject({
 })
 ```
 
-_serviceWorkerFinalizer_ injects a variable into the service worker file called `self.generatedUrlsConfig`. At this stage you can write your own service worker to do something with this variable. You can also use a service worker already written to handle this: https://github.com/jsenv/jsenv-pwa/blob/master/docs/jsenv-service-worker.md.
+_serviceWorkerFinalizer_ injects a variable into the service worker file called `self.generatedUrlsConfig`. At this stage you can write your own service worker to do something with it. You can also use a service worker already written to handle this: https://github.com/jsenv/jsenv-pwa/blob/master/docs/jsenv-service-worker.md.
 
 # Node package build
 
