@@ -64,9 +64,16 @@ export const parseCssAsset = async (
 
         // url node nous dit quel réfrence y correspond
         const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
-        const { targetIsInline } = urlNodeReference.target
+        const { target } = urlNodeReference
+
+        const { targetIsExternal } = target
+        if (targetIsExternal) {
+          return urlNode.value
+        }
+
+        const { targetIsInline } = target
         if (targetIsInline) {
-          return getTargetAsBase64Url(urlNodeReference.target)
+          return getTargetAsBase64Url(target)
         }
         return getReferenceUrlRelativeToImporter(urlNodeReference)
       },
