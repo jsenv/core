@@ -327,6 +327,7 @@ export const createAssetBuilder = (
       targetIsEntry,
       targetIsJsModule,
       targetIsInline,
+      targetIsExternal,
 
       targetUrlVersioningDisabled,
       targetFileNamePattern,
@@ -564,6 +565,8 @@ export const createAssetBuilder = (
       })
       target.rollupReferenceId = rollupReferenceId
     } else if (targetIsInline) {
+      // nothing to do
+    } else if (targetIsExternal) {
       // nothing to do
     } else {
       logger.debug(`emit asset for ${shortenUrl(targetUrl)}`)

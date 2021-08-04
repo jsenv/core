@@ -40,9 +40,7 @@ foo
 --- importer ---
 ${importerRelativeUrl}
 --- how to fix ---
-Add a mapping for "foo" into the importmap file at ${importMapFileRelativeUrl}
---- suggestion ---
-Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map`,
+Add a mapping for "foo" into the importmap file at ${importMapFileRelativeUrl}`,
   }
   assert({ actual, expected })
 }

@@ -192,7 +192,8 @@
 
   var decompose = function decompose(mainValue, _ref) {
     var functionAllowed = _ref.functionAllowed,
-        prototypeStrict = _ref.prototypeStrict;
+        prototypeStrict = _ref.prototypeStrict,
+        ignoreSymbols = _ref.ignoreSymbols;
     var valueMap = {};
     var recipeArray = [];
 
@@ -261,15 +262,19 @@
         });
       });
       var symbolDescriptionArray = [];
-      Object.getOwnPropertySymbols(value).forEach(function (symbol) {
-        var propertyDescriptor = Object.getOwnPropertyDescriptor(value, symbol);
-        var symbolIdentifier = valueToIdentifier(symbol, [].concat(_toConsumableArray(path), ["[".concat(symbol.toString(), "]")]));
-        var propertyDescription = computePropertyDescription(propertyDescriptor, symbol, path);
-        symbolDescriptionArray.push({
-          symbolIdentifier: symbolIdentifier,
-          propertyDescription: propertyDescription
+
+      if (!ignoreSymbols) {
+        Object.getOwnPropertySymbols(value).forEach(function (symbol) {
+          var propertyDescriptor = Object.getOwnPropertyDescriptor(value, symbol);
+          var symbolIdentifier = valueToIdentifier(symbol, [].concat(_toConsumableArray(path), ["[".concat(symbol.toString(), "]")]));
+          var propertyDescription = computePropertyDescription(propertyDescriptor, symbol, path);
+          symbolDescriptionArray.push({
+            symbolIdentifier: symbolIdentifier,
+            propertyDescription: propertyDescription
+          });
         });
-      });
+      }
+
       var methodDescriptionArray = computeMethodDescriptionArray(value, path);
       var extensible = Object.isExtensible(value);
       recipeArray[identifier] = createCompositeRecipe({
@@ -715,11 +720,14 @@
         _ref$functionAllowed = _ref.functionAllowed,
         functionAllowed = _ref$functionAllowed === void 0 ? false : _ref$functionAllowed,
         _ref$prototypeStrict = _ref.prototypeStrict,
-        prototypeStrict = _ref$prototypeStrict === void 0 ? false : _ref$prototypeStrict;
+        prototypeStrict = _ref$prototypeStrict === void 0 ? false : _ref$prototypeStrict,
+        _ref$ignoreSymbols = _ref.ignoreSymbols,
+        ignoreSymbols = _ref$ignoreSymbols === void 0 ? false : _ref$ignoreSymbols;
 
     var _decompose = decompose(value, {
       functionAllowed: functionAllowed,
-      prototypeStrict: prototypeStrict
+      prototypeStrict: prototypeStrict,
+      ignoreSymbols: ignoreSymbols
     }),
         recipeArray = _decompose.recipeArray,
         mainIdentifier = _decompose.mainIdentifier,
@@ -898,7 +906,9 @@
       delete value.toString;
     }
 
-    return uneval(value);
+    return uneval(value, {
+      ignoreSymbols: true
+    });
   };
 
   var assertImportMap = function assertImportMap(value) {
@@ -2459,12 +2469,15 @@
     var specifier = _ref3.specifier,
         importer = _ref3.importer,
         importMapUrl = _ref3.importMapUrl;
-    var detailedMessage = createDetailedMessage("Unmapped bare specifier.", {
+    var detailedMessage = createDetailedMessage("Unmapped bare specifier.", _objectSpread2({
       specifier: specifier,
-      importer: importer,
-      "how to fix": importMapUrl ? "Add a mapping for \"".concat(specifier, "\" into the importmap file at ").concat(importMapUrl) : "Add an importmap with a mapping for \"".concat(specifier, "\""),
-      "suggestion": "Generate importmap using https://github.com/jsenv/jsenv-node-module-import-map"
-    });
+      importer: importer
+    }, importMapUrl ? {
+      "how to fix": "Add a mapping for \"".concat(specifier, "\" into the importmap file at ").concat(importMapUrl)
+    } : {
+      "how to fix": "Add an importmap with a mapping for \"".concat(specifier, "\""),
+      "suggestion": "Generate importmap using https://github.com/jsenv/importmap-node-module"
+    }));
     return new Error(detailedMessage);
   };
 
@@ -2517,7 +2530,7 @@
   });
 
   /*
-  * SJS 6.7.1
+  * SJS 6.10.2
   * Minimal SystemJS Build
   */
   (function () {
@@ -2743,15 +2756,6 @@
       };
     };
 
-    function loadToId(load) {
-      return load.id;
-    }
-
-    function triggerOnload(loader, load, err, isErrSource) {
-      loader.onload(err, load.id, load.d && load.d.map(loadToId), !!isErrSource);
-      if (err) throw err;
-    }
-
     var lastRegister;
 
     systemJSPrototype.register = function (deps, declare) {
@@ -2801,7 +2805,7 @@
               }
             }
 
-            if (name.__esModule) {
+            if (name && name.__esModule) {
               ns.__esModule = name.__esModule;
             }
           }
@@ -2823,6 +2827,10 @@
         load.e = declared.execute || function () {};
 
         return [registration[0], declared.setters || []];
+      }, function (err) {
+        load.e = null;
+        load.er = err;
+        throw err;
       });
       var linkPromise = instantiatePromise.then(function (instantiation) {
         return Promise.all(instantiation[0].map(function (dep, i) {
@@ -2843,11 +2851,7 @@
           });
         })).then(function (depLoads) {
           load.d = depLoads;
-        }, !true);
-      });
-      linkPromise.catch(function (err) {
-        load.e = null;
-        load.er = err;
+        });
       }); // Capital letter = a promise function
 
       return load = loader[REGISTRY][id] = {
@@ -2867,8 +2871,6 @@
         // dependency load records
         d: undefined,
         // execution function
-        // set to NULL immediately after execution (or on any failure) to indicate execution has happened
-        // in such a case, C should be used, and E, I, L will be emptied
         e: undefined,
         // On execution we have populated:
         // the execution error if any
@@ -2877,24 +2879,31 @@
         E: undefined,
         // On execution, L, I, E cleared
         // Promise for top-level completion
-        C: undefined
+        C: undefined,
+        // parent instantiator / executor
+        p: undefined
       };
     }
 
-    function instantiateAll(loader, load, loaded) {
+    function instantiateAll(loader, load, parent, loaded) {
       if (!loaded[load.id]) {
         loaded[load.id] = true; // load.L may be undefined for already-instantiated
 
         return Promise.resolve(load.L).then(function () {
+          if (!load.p || load.p.e === null) load.p = parent;
           return Promise.all(load.d.map(function (dep) {
-            return instantiateAll(loader, dep, loaded);
+            return instantiateAll(loader, dep, parent, loaded);
           }));
+        }).catch(function (err) {
+          if (load.er) throw err;
+          load.e = null;
+          throw err;
         });
       }
     }
 
     function topLevelLoad(loader, load) {
-      return load.C = instantiateAll(loader, load, {}).then(function () {
+      return load.C = instantiateAll(loader, load, load, {}).then(function () {
         return postOrderExec(loader, load, {});
       }).then(function () {
         return load.n;
@@ -2927,11 +2936,7 @@
           throw err;
         }
       });
-      if (depLoadPromises) return Promise.all(depLoadPromises).then(doExec, function (err) {
-        load.e = null;
-        load.er = err;
-        throw err;
-      });
+      if (depLoadPromises) return Promise.all(depLoadPromises).then(doExec);
       return doExec();
 
       function doExec() {
@@ -2947,19 +2952,19 @@
             }, function (err) {
               load.er = err;
               load.E = null;
-              if (!true) ;else throw err;
+              if (!true) ;
+              throw err;
             });
-            return load.E = load.E || execPromise;
+            return load.E = execPromise;
           } // (should be a promise, but a minify optimization to leave out Promise.resolve)
 
 
           load.C = load.n;
-          if (!true) ;
+          load.L = load.I = undefined;
         } catch (err) {
           load.er = err;
           throw err;
         } finally {
-          load.L = load.I = undefined;
           load.e = null;
         }
       }
@@ -3004,13 +3009,33 @@
         if (script.type === 'systemjs-module') {
           script.sp = true;
           if (!script.src) return;
-          System.import(script.src.slice(0, 7) === 'import:' ? script.src.slice(7) : resolveUrl(script.src, baseUrl));
+          System.import(script.src.slice(0, 7) === 'import:' ? script.src.slice(7) : resolveUrl(script.src, baseUrl)).catch(function (e) {
+            // if there is a script load error, dispatch an "error" event
+            // on the script tag.
+            if (e.message.indexOf('https://git.io/JvFET#3') > -1) {
+              var event = document.createEvent('Event');
+              event.initEvent('error', false, false);
+              script.dispatchEvent(event);
+            }
+
+            return Promise.reject(e);
+          });
         } else if (script.type === 'systemjs-importmap') {
           script.sp = true;
           var fetchPromise = script.src ? fetch(script.src, {
             integrity: script.integrity
           }).then(function (res) {
+            if (!res.ok) throw Error(res.status);
             return res.text();
+          }).catch(function (err) {
+            err.message = errMsg('W4', script.src) + '\n' + err.message;
+            console.warn(err);
+
+            if (typeof script.onerror === 'function') {
+              script.onerror();
+            }
+
+            return '{}';
           }) : script.innerHTML;
           importMapPromise = importMapPromise.then(function () {
             return fetchPromise;
@@ -3022,10 +3047,12 @@
     }
 
     function extendImportMap(importMap, newMapText, newMapUrl) {
+      var newMap = {};
+
       try {
-        var newMap = JSON.parse(newMapText);
+        newMap = JSON.parse(newMapText);
       } catch (err) {
-        throw Error(errMsg(1));
+        console.warn(Error(errMsg('W5')));
       }
 
       resolveAndComposeImportMap(newMap, newMapUrl, importMap);
@@ -3139,6 +3166,7 @@
         var contentType = res.headers.get('content-type');
         if (!contentType || !jsContentTypeRegEx.test(contentType)) throw Error(errMsg(4, contentType));
         return res.text().then(function (source) {
+          if (source.indexOf('//# sourceURL=') < 0) source += '\n//# sourceURL=' + url;
           (0, eval)(source);
           return loader.getRegister();
         });
@@ -3552,7 +3580,7 @@
       return true;
     };
 
-    return visit();
+    return visit(value);
   };
 
   var supportedTypes = ["Boolean", "Number", "String", "Date", "RegExp", "Blob", "FileList", "ImageData", "ImageBitmap", "ArrayBuffer"];
