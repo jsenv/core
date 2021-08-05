@@ -170,8 +170,9 @@ export const createAssetBuilder = (
   const targetMap = {}
   const targetRedirectionMap = {}
   const createReference = ({
-    referenceTargetSpecifier,
+    referenceIsPreloadOrPrefetch,
     referenceExpectedContentType,
+    referenceTargetSpecifier,
     referenceUrl,
     referenceColumn,
     referenceLine,
@@ -248,6 +249,7 @@ export const createAssetBuilder = (
     }
 
     const reference = {
+      referenceIsPreloadOrPrefetch,
       referenceExpectedContentType,
       referenceUrl,
       referenceColumn,
@@ -359,8 +361,9 @@ export const createAssetBuilder = (
 
       let parsingDone = false
       const notifyReferenceFound = ({
-        referenceTargetSpecifier,
+        referenceIsPreloadOrPrefetch,
         referenceExpectedContentType,
+        referenceTargetSpecifier,
         referenceLine,
         referenceColumn,
 
@@ -382,6 +385,7 @@ export const createAssetBuilder = (
           referenceUrl: targetUrl,
           referenceLine,
           referenceColumn,
+          referenceIsPreloadOrPrefetch,
           referenceExpectedContentType,
 
           targetContentType,
@@ -543,7 +547,11 @@ export const createAssetBuilder = (
       }
     }
 
-    if (targetIsJsModule) {
+    if (importerReference.referenceIsPreloadOrPrefetch) {
+      // do not try to load or fetch this file
+      // we'll wait for something to reference it
+      // if nothing references it a warning is logged
+    } else if (targetIsJsModule) {
       const jsModuleUrl = targetUrl
 
       onJsModuleReferencedInHtml({

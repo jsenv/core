@@ -46,6 +46,7 @@ export const parseHtmlAsset = async (
     minifyHtmlOptions,
     htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString),
     htmlAstToHtmlString = (htmlAst) => stringifyHtmlAst(htmlAst),
+    preloadOrPrefetchLinkNeverUsedCallback = () => {},
   } = {},
 ) => {
   const htmlString = String(htmlTarget.targetBuffer)
@@ -66,7 +67,11 @@ export const parseHtmlAsset = async (
   ])
   const linksMutations = collectNodesMutations(links, notifiers, htmlTarget, [
     linkStylesheetHrefVisitor,
-    linkHrefVisitor,
+    (link, { notifyReferenceFound }) =>
+      linkHrefVisitor(link, {
+        notifyReferenceFound,
+        preloadOrPrefetchLinkNeverUsedCallback,
+      }),
   ])
   const stylesMutations = collectNodesMutations(styles, notifiers, htmlTarget, [
     styleTextNodeVisitor,
@@ -379,24 +384,60 @@ const linkStylesheetHrefVisitor = (link, { notifyReferenceFound }) => {
   }
 }
 
-const linkHrefVisitor = (link, { notifyReferenceFound }) => {
+const linkHrefVisitor = (
+  link,
+  { notifyReferenceFound, preloadOrPrefetchLinkNeverUsedCallback },
+) => {
   const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
   if (!hrefAttribute) {
     return null
   }
 
-  const contentType = linkToContentType(link)
+  const relAttribute = getHtmlNodeAttributeByName(link, "rel")
+  const rel = relAttribute ? relAttribute.value : undefined
+  const isPreloadLink = rel === "preload" || rel === "modulepreload"
+  const isPrefetchLink = rel === "prefetch"
+  const referenceIsPreloadOrPrefetch = isPreloadLink || isPrefetchLink
+
+  let referenceExpectedContentType
+  const typeAttribute = getHtmlNodeAttributeByName(link, "type")
+  const type = typeAttribute ? typeAttribute.value : ""
+  let targetIsJsModule = false
+  if (type) {
+    referenceExpectedContentType = type
+  } else if (rel === "manifest") {
+    referenceExpectedContentType = "application/manifest+json"
+  } else if (rel === "modulepreload") {
+    referenceExpectedContentType = "application/javascript"
+    targetIsJsModule = true
+  }
 
   const reference = notifyReferenceFound({
-    referenceExpectedContentType: contentType,
+    referenceIsPreloadOrPrefetch,
+    referenceExpectedContentType,
     referenceTargetSpecifier: hrefAttribute.value,
     ...htmlNodeToReferenceLocation(link),
-
-    targetUrlVersioningDisabled: contentType === "application/manifest+json",
+    targetUrlVersioningDisabled: referenceExpectedContentType === "application/manifest+json",
+    targetIsJsModule,
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
-    const { targetIsInline } = reference.target
+    const target = reference.target
+    if (referenceIsPreloadOrPrefetch) {
+      const otherReferences = target.targetReferences.filter((targetReference) => {
+        return !targetReference.referenceIsPreloadOrPrefetch
+      })
+      if (otherReferences.length === 0) {
+        preloadOrPrefetchLinkNeverUsedCallback({
+          htmlNode: link,
+          type: rel,
+          href: hrefAttribute.value,
+        })
+      }
+      // we could remove the HTML node but better keep it untouched and let user decide what to do
+      return
+    }
 
+    const { targetIsInline } = target
     if (targetIsInline) {
       replaceHtmlNode(link, `<link href="${getTargetAsBase64Url(reference.target)}" />`)
     } else {
@@ -404,26 +445,6 @@ const linkHrefVisitor = (link, { notifyReferenceFound }) => {
       hrefAttribute.value = urlRelativeToImporter
     }
   }
-}
-
-// pour le preload faut créer un type différent
-// on "doit" pas parser le js je dirait
-// on va plutot juste attendre
-const linkToContentType = (link) => {
-  const typeAttribute = getHtmlNodeAttributeByName(link, "type")
-  if (typeAttribute) {
-    return typeAttribute.value
-  }
-  const relAttribute = getHtmlNodeAttributeByName(link, "rel")
-  if (relAttribute) {
-    if (relAttribute.value === "manifest") {
-      return "application/manifest+json"
-    }
-    if (relAttribute.value === "modulepreload") {
-      return "application/javascript"
-    }
-  }
-  return undefined
 }
 
 const styleTextNodeVisitor = (style, { notifyReferenceFound }, htmlTarget, styles) => {

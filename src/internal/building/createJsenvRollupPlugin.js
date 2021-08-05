@@ -259,11 +259,13 @@ export const createJsenvRollupPlugin = async ({
           throw error
         }
 
-        const htmlUrl = resolveUrl(htmlEntryPoint.entryProjectRelativeUrl, projectDirectoryUrl)
-        importMapInfoFromHtml = {
-          ...importMaps[0],
-          htmlUrl,
-          htmlSource,
+        if (importMapCount === 1) {
+          const htmlUrl = resolveUrl(htmlEntryPoint.entryProjectRelativeUrl, projectDirectoryUrl)
+          importMapInfoFromHtml = {
+            ...importMaps[0],
+            htmlUrl,
+            htmlSource,
+          }
         }
       }
 
@@ -377,6 +379,9 @@ export const createJsenvRollupPlugin = async ({
               urlToOriginalServerUrl: rollupUrlToOriginalServerUrl,
               format,
               systemJsUrl,
+              preloadOrPrefetchLinkNeverUsedCallback: (linkInfo) => {
+                logger.warn(formatLinkNeverUsedWarning(linkInfo))
+              },
               useImportMapToImproveLongTermCaching,
               createImportMapForFilesUsedInJs,
               minify,
@@ -1109,7 +1114,7 @@ const formatFileNotFound = (url, importer) => {
   })
 }
 
-const showImportMapSourceLocation = ({ htmlNode, htmlUrl, htmlSource }) => {
+const showHtmlSourceLocation = ({ htmlNode, htmlUrl, htmlSource }) => {
   const { line, column } = getHtmlNodeLocation(htmlNode)
 
   return `${htmlUrl}:${line}:${column}
@@ -1137,15 +1142,20 @@ ${entryProjectRelativeUrls.map((entryProjectRelativeUrl) => {
 
 const formatUseImportMapFromHtml = (importMapInfoFromHtml) => {
   return `use importmap found in html file.
-${showImportMapSourceLocation(importMapInfoFromHtml)}`
+${showHtmlSourceLocation(importMapInfoFromHtml)}`
 }
 
 const formatImportmapOutsideCompileDirectory = ({ importMapInfo, compileDirectoryUrl }) => {
   return `WARNING: importmap file is outside compile directory.
 That's unusual you should certainly make importmap file relative.
-${showImportMapSourceLocation(importMapInfo)}
+${showHtmlSourceLocation(importMapInfo)}
 --- compile directory url ---
 ${compileDirectoryUrl}`
+}
+
+const formatLinkNeverUsedWarning = (linkInfo) => {
+  return `A ${linkInfo.type} link references a ressource never used elsewhere.
+${showHtmlSourceLocation(linkInfo)}`
 }
 
 const formatBuildDoneDetails = (build) => {

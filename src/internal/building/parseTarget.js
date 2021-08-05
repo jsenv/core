@@ -22,6 +22,7 @@ export const parseTarget = (
     urlToOriginalServerUrl,
     format,
     systemJsUrl,
+    preloadOrPrefetchLinkNeverUsedCallback,
     useImportMapToImproveLongTermCaching,
     createImportMapForFilesUsedInJs,
     minify,
@@ -89,6 +90,13 @@ export const parseTarget = (
         injectImportMapScriptIfNeeded(htmlAst)
 
         return htmlAst
+      },
+      preloadOrPrefetchLinkNeverUsedCallback: (info) => {
+        preloadOrPrefetchLinkNeverUsedCallback({
+          ...info,
+          htmlSource: String(target.targetBuffer),
+          htmlUrl: urlToOriginalProjectUrl(target.targetUrl),
+        })
       },
     })
   }

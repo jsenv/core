@@ -121,6 +121,11 @@ export const removeHtmlNodeText = (htmlNode) => {
   }
 }
 
+export const removeHtmlNode = (htmlNode) => {
+  const { childNodes } = htmlNode.parentNode
+  childNodes.splice(childNodes.indexOf(htmlNode), 1)
+}
+
 export const getHtmlNodeLocation = (htmlNode) => {
   const { sourceCodeLocation } = htmlNode
   if (!sourceCodeLocation) {
