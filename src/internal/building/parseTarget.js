@@ -3,7 +3,7 @@ import {
   htmlAstContains,
   htmlNodeIsScriptModule,
   manipulateHtmlAst,
-  findFirstImportmapNode,
+  findFirstImportMapNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 
 import { parseHtmlAsset } from "./html/parseHtmlAsset.js"
@@ -70,7 +70,7 @@ export const parseTarget = (
           if (!useImportMapToImproveLongTermCaching) {
             return
           }
-          if (findFirstImportmapNode(htmlAst)) {
+          if (findFirstImportMapNode(htmlAst)) {
             return
           }
 

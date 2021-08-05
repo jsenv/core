@@ -406,6 +406,9 @@ const linkHrefVisitor = (link, { notifyReferenceFound }) => {
   }
 }
 
+// pour le preload faut créer un type différent
+// on "doit" pas parser le js je dirait
+// on va plutot juste attendre
 const linkToContentType = (link) => {
   const typeAttribute = getHtmlNodeAttributeByName(link, "type")
   if (typeAttribute) {
@@ -415,6 +418,9 @@ const linkToContentType = (link) => {
   if (relAttribute) {
     if (relAttribute.value === "manifest") {
       return "application/manifest+json"
+    }
+    if (relAttribute.value === "modulepreload") {
+      return "application/javascript"
     }
   }
   return undefined
