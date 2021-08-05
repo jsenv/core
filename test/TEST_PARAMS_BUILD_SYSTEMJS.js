@@ -13,5 +13,6 @@ export const GENERATE_SYSTEMJS_BUILD_TEST_PARAMS = {
 
 export const IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  htmlFileRelativeUrl: "./dist/systemjs/main.html",
   mainRelativeUrl: "./dist/systemjs/main.js",
 }
