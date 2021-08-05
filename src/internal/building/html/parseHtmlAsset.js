@@ -432,9 +432,9 @@ const linkHrefVisitor = (
           type: rel,
           href: hrefAttribute.value,
         })
+        // we could remove the HTML node but better keep it untouched and let user decide what to do
+        return
       }
-      // we could remove the HTML node but better keep it untouched and let user decide what to do
-      return
     }
 
     const { targetIsInline } = target

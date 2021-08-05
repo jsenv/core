@@ -447,6 +447,10 @@ export const createJsenvRollupPlugin = async ({
             atleastOneChunkEmitted = true
             if (jsModuleIsInline) {
               virtualModules[jsModuleUrl] = jsModuleSource
+              urlImporterMap[jsModuleUrl] = resolveUrl(
+                entryPointsPrepared[0].entryProjectRelativeUrl,
+                compileDirectoryRemoteUrl,
+              )
             }
             jsModulesInHtml[urlToUrlForRollup(jsModuleUrl)] = true
           },
@@ -586,12 +590,31 @@ export const createJsenvRollupPlugin = async ({
       logger.debug(`loads ${url}`)
       const {
         responseUrl,
+        responseContentType,
         contentRaw,
         content = "",
         map,
       } = await loadModule(url, {
         moduleInfo,
       })
+
+      const importerUrl = urlImporterMap[url]
+      const isInlineJsModule = urlToUrlForRollup(url) in jsModulesInHtml
+      if (!isInlineJsModule) {
+        // Store the fact that this js file is referenced
+        assetBuilder.createReference({
+          referenceExpectedContentType: responseContentType,
+          referenceUrl: importerUrl,
+          referenceTargetSpecifier: responseUrl,
+          // rollup do not provide a way to know line and column for the static or dynamic import
+          // referencing that file
+          referenceColumn: undefined,
+          referenceLine: undefined,
+
+          targetContentType: responseContentType,
+          targetBuffer: Buffer.from(content),
+        })
+      }
 
       saveUrlResponseBody(responseUrl, contentRaw)
       // handle redirection
@@ -915,13 +938,17 @@ export const createJsenvRollupPlugin = async ({
       moduleUrl,
       rollupUrlToProjectUrl(importerUrl) || importerUrl,
     )
-    const contentType = moduleResponse.headers["content-type"] || ""
+    const responseContentType = moduleResponse.headers["content-type"] || ""
     const commonData = {
+      responseContentType,
       responseUrl: moduleResponse.url,
     }
 
     // keep this in sync with module-registration.js
-    if (contentType === "application/javascript" || contentType === "text/javascript") {
+    if (
+      responseContentType === "application/javascript" ||
+      responseContentType === "text/javascript"
+    ) {
       const jsModuleString = await moduleResponse.text()
       const map = await fetchSourcemap(moduleUrl, jsModuleString, {
         cancellationToken,
@@ -936,7 +963,7 @@ export const createJsenvRollupPlugin = async ({
       }
     }
 
-    if (contentType === "application/json" || contentType.endsWith("+json")) {
+    if (responseContentType === "application/json" || responseContentType.endsWith("+json")) {
       const responseBodyAsString = await moduleResponse.text()
       // there is no need to minify the json string
       // because it becomes valid javascript
@@ -951,7 +978,7 @@ export const createJsenvRollupPlugin = async ({
 
     const moduleResponseBodyAsBuffer = Buffer.from(await moduleResponse.arrayBuffer())
     const targetContentType = moduleResponse.headers["content-type"]
-    const assetReferenceForImport = await assetBuilder.createReferenceForJs({
+    const assetReferenceForImport = await assetBuilder.createReferenceForJsImport({
       // Reference to this target is corresponds to a static or dynamic import.
       // found in a given file (importerUrl).
       // But we don't know the line and colum because rollup
