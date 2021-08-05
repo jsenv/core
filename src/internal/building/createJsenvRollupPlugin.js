@@ -227,7 +227,7 @@ export const createJsenvRollupPlugin = async ({
         projectDirectoryUrl,
         buildDirectoryUrl,
         compileServerOrigin,
-        fetchFile: fetchModule,
+        fetchFile: jsenvFetchUrl,
       })
       const htmlEntryPoints = entryPointsPrepared.filter((entryPointPrepared) => {
         return entryPointPrepared.entryContentType === "text/html"
@@ -386,7 +386,7 @@ export const createJsenvRollupPlugin = async ({
             })
           },
           fetch: async (url, importer) => {
-            const moduleResponse = await fetchModule(url, importer)
+            const moduleResponse = await jsenvFetchUrl(url, importer)
             return moduleResponse
           },
         },
@@ -612,7 +612,7 @@ export const createJsenvRollupPlugin = async ({
         code,
         ast,
         assetBuilder,
-        fetch: fetchModule,
+        fetch: jsenvFetchUrl,
         markBuildRelativeUrlAsUsedByJs,
       })
     },
@@ -906,7 +906,7 @@ export const createJsenvRollupPlugin = async ({
     }
 
     const importerUrl = urlImporterMap[moduleUrl]
-    const moduleResponse = await fetchModule(
+    const moduleResponse = await jsenvFetchUrl(
       moduleUrl,
       rollupUrlToProjectUrl(importerUrl) || importerUrl,
     )
@@ -977,8 +977,8 @@ export const createJsenvRollupPlugin = async ({
     }
   }
 
-  const fetchModule = async (moduleUrl, importer) => {
-    const response = await fetchUrl(moduleUrl, {
+  const jsenvFetchUrl = async (url, importer) => {
+    const response = await fetchUrl(url, {
       cancellationToken,
       ignoreHttpsError: true,
     })
