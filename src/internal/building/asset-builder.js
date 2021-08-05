@@ -119,21 +119,23 @@ export const createAssetBuilder = (
           // (but that means updating html hash and importmap hash)
           return
         }
-        if (dependency.target.targetIsJsModule) {
+
+        const { target } = dependency
+        if (target.targetIsJsModule) {
           // await internally for rollup to be done with these js files
           // but don't await explicitely or rollup build cannot end
           // because rollup would wait for this promise in "buildStart" hook
           // and never go to the "generateBundle' hook where
           // a js module ready promise gets resolved
-          dependency.target.getReadyPromise()
+          target.getReadyPromise()
           return
         }
-        await dependency.target.getReadyPromise()
+        await target.getReadyPromise()
       }),
     )
   }
 
-  const createReferenceForJs = async ({
+  const createReferenceForJsImport = async ({
     jsUrl,
     jsLine,
     jsColumn,
@@ -453,7 +455,9 @@ export const createAssetBuilder = (
       await getDependenciesAvailablePromise()
       const dependencies = target.dependencies
       await Promise.all(
-        dependencies.map((dependencyReference) => dependencyReference.target.getReadyPromise()),
+        dependencies.map(async (dependencyReference) => {
+          await dependencyReference.target.getReadyPromise()
+        }),
       )
 
       const transform = assetTransformMap[targetUrl]
@@ -485,9 +489,8 @@ export const createAssetBuilder = (
           const referenceTarget = reference.target
 
           let referenceTargetBuildRelativeUrl
-          // only js can reference an other file by url without versionning
-          // and be able to actually fetch an other url with versioning using importmap
-          // html needs the exact filename
+          // html needs the exact url but js can reference an url without versionning
+          // and actually fetch the versioned url thanks to importmap
           if (importerTarget.targetIsJsModule) {
             referenceTargetBuildRelativeUrl =
               referenceTarget.targetFileName || referenceTarget.targetBuildRelativeUrl
@@ -599,7 +602,27 @@ export const createAssetBuilder = (
   const registerCallbackOnceRollupChunkIsReady = (url, callback) => {
     rollupChunkReadyCallbackMap[url] = callback
   }
-  const getRollupChunkReadyCallbackMap = () => rollupChunkReadyCallbackMap
+  const resolvePendingRollupChunks = (resolver) => {
+    Object.keys(rollupChunkReadyCallbackMap).forEach((url) => {
+      const target = getTargetFromUrl(url)
+      if (targetIsReferencedOnlyByPreloadOrPrefetch(target)) {
+        rollupChunkReadyCallbackMap[url]({
+          targetBuildBuffer: "", // we don't know the file was never used
+          targetBuildRelativeUrl: "", // we don't really know it would depend from the file content
+          targetFileName: "", // it would be the name given to that file for rollup
+        })
+        return
+      }
+
+      resolver(url, ({ targetBuildBuffer, targetBuildRelativeUrl, targetFileName }) => {
+        rollupChunkReadyCallbackMap[url]({
+          targetBuildBuffer,
+          targetBuildRelativeUrl,
+          targetFileName,
+        })
+      })
+    })
+  }
 
   const getTargetFromUrl = (url) => {
     if (url in targetMap) {
@@ -658,10 +681,11 @@ ${showSourceLocation(referenceSourceAsString, {
   }
 
   return {
+    createReference,
     createReferenceForHTMLEntry,
-    createReferenceForJs,
+    createReferenceForJsImport,
 
-    getRollupChunkReadyCallbackMap,
+    resolvePendingRollupChunks,
     getAllAssetEntryEmittedPromise,
     findAsset,
 
@@ -681,6 +705,12 @@ export const referenceToCodeForRollup = (reference) => {
   }
 
   return `import.meta.ROLLUP_FILE_URL_${target.rollupReferenceId}`
+}
+
+const targetIsReferencedOnlyByPreloadOrPrefetch = (target) => {
+  return target.targetReferences.every(
+    (targetReference) => targetReference.referenceIsPreloadOrPrefetch,
+  )
 }
 
 const removePotentialUrlHash = (url) => {

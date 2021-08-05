@@ -783,12 +783,11 @@ export const createJsenvRollupPlugin = async ({
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
-      const rollupChunkReadyCallbackMap = assetBuilder.getRollupChunkReadyCallbackMap()
-      Object.keys(rollupChunkReadyCallbackMap).forEach((key) => {
+      assetBuilder.resolvePendingRollupChunks((url, provideRollupChunkInfo) => {
         const targetBuildRelativeUrl = Object.keys(jsBuild).find((buildRelativeUrlCandidate) => {
           const file = jsBuild[buildRelativeUrlCandidate]
           const { facadeModuleId } = file
-          return facadeModuleId && rollupUrlToServerUrl(facadeModuleId) === key
+          return facadeModuleId && rollupUrlToServerUrl(facadeModuleId) === url
         })
         const file = jsBuild[targetBuildRelativeUrl]
         const targetBuildBuffer = file.code
@@ -797,8 +796,8 @@ export const createJsenvRollupPlugin = async ({
             ? buildRelativeUrlToFileName(targetBuildRelativeUrl)
             : targetBuildRelativeUrl
 
-        logger.debug(`resolve rollup chunk ${shortenUrl(key)}`)
-        rollupChunkReadyCallbackMap[key]({
+        logger.debug(`resolve rollup chunk ${shortenUrl(url)}`)
+        provideRollupChunkInfo({
           targetBuildBuffer,
           targetBuildRelativeUrl,
           targetFileName,
