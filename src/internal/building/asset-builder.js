@@ -171,6 +171,12 @@ export const createAssetBuilder = (
 
   const targetMap = {}
   const targetRedirectionMap = {}
+  // ok il faudrait faire un truc dans ce genre:
+  // lorsqu'on a un preload, on fait une promesse
+  // pour le moment ou la target est référencé par un autre truc
+  // ensuite dans le callback lorsque le build rollup est fini
+  // la on considere que ça n'a jamais été référencé, on resoud la promesse
+  // malgré tout
   const createReference = ({
     referenceIsPreloadOrPrefetch,
     referenceExpectedContentType,
@@ -444,10 +450,16 @@ export const createAssetBuilder = (
         const rollupChunkReadyPromise = new Promise((resolve) => {
           registerCallbackOnceRollupChunkIsReady(target.targetUrl, resolve)
         })
-        const { targetBuildBuffer, targetBuildRelativeUrl, targetFileName } =
-          await rollupChunkReadyPromise
-        target.targetFileName = targetFileName
-        target.targetBuildEnd(targetBuildBuffer, targetBuildRelativeUrl)
+        const {
+          onlyPreloadedOrPrefetched,
+          targetBuildBuffer,
+          targetBuildRelativeUrl,
+          targetFileName,
+        } = await rollupChunkReadyPromise
+        if (!onlyPreloadedOrPrefetched) {
+          target.targetFileName = targetFileName
+          target.targetBuildEnd(targetBuildBuffer, targetBuildRelativeUrl)
+        }
         return
       }
 
@@ -607,9 +619,10 @@ export const createAssetBuilder = (
       const target = getTargetFromUrl(url)
       if (targetIsReferencedOnlyByPreloadOrPrefetch(target)) {
         rollupChunkReadyCallbackMap[url]({
-          targetBuildBuffer: "", // we don't know the file was never used
-          targetBuildRelativeUrl: "", // we don't really know it would depend from the file content
-          targetFileName: "", // it would be the name given to that file for rollup
+          onlyPreloadedOrPrefetched: true,
+          // targetBuildBuffer: "", // we don't know the file was never used
+          // targetBuildRelativeUrl: "", // would depend from the file content
+          // targetFileName: "", // would be the name given to that file for rollup
         })
         return
       }
