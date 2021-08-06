@@ -472,15 +472,7 @@ export const createJsenvRollupPlugin = async ({
             entryBuildRelativeUrl,
             entryBuffer,
           }) => {
-            if (entryContentType === "text/html") {
-              const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
-              await assetBuilder.createReferenceForHTMLEntry({
-                entryContentType,
-                entryUrl,
-                entryBuffer,
-                entryBuildRelativeUrl,
-              })
-            } else if (entryContentType === "application/javascript") {
+            if (entryContentType === "application/javascript") {
               atleastOneChunkEmitted = true
               emitChunk({
                 id: ensureRelativeUrlNotation(entryProjectRelativeUrl),
@@ -488,18 +480,21 @@ export const createJsenvRollupPlugin = async ({
                 // don't hash js entry points
                 fileName: entryBuildRelativeUrl,
               })
-            } else {
-              console.warn(
-                `entry content type ${entryProjectRelativeUrl} is unusual, got ${entryContentType}`,
-              )
-              const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
-              await assetBuilder.createReferenceForHTMLEntry({
-                entryContentType,
-                entryUrl,
-                entryBuffer,
-                entryBuildRelativeUrl,
-              })
+              return
             }
+
+            if (entryContentType !== "text/html") {
+              logger.warn(
+                `Unusual content type for ${entryProjectRelativeUrl} ${entryContentType} will be handled as text/html`,
+              )
+            }
+            const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
+            await assetBuilder.createReferenceForHTMLEntry({
+              entryContentType,
+              entryUrl,
+              entryBuffer,
+              entryBuildRelativeUrl,
+            })
           },
         ),
       )
@@ -557,7 +552,7 @@ export const createJsenvRollupPlugin = async ({
       }
 
       // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
-      logger.debug(`${specifier} imported by ${importer} resolved to ${importUrl}`)
+      // logger.debug(`${specifier} imported by ${importer} resolved to ${importUrl}`)
       return urlToUrlForRollup(importUrl)
     },
 
@@ -855,7 +850,7 @@ export const createJsenvRollupPlugin = async ({
         await writeFile(assetManifestFileUrl, JSON.stringify(buildManifest, null, "  "))
       }
 
-      logger.info(createDetailedMessage(`build done`, formatBuildDoneDetails(rollupBuild)))
+      logger.info(formatBuildDoneInfo(rollupBuild))
 
       if (writeOnFileSystem) {
         await Promise.all(
@@ -1166,8 +1161,16 @@ ${compileDirectoryUrl}`
 }
 
 const formatLinkNeverUsedWarning = (linkInfo) => {
-  return `A ${linkInfo.type} link references a ressource never used elsewhere.
-${showHtmlSourceLocation(linkInfo)}`
+  return `
+A ${linkInfo.type} link references a ressource never used elsewhere.
+${showHtmlSourceLocation(linkInfo)}
+`
+}
+
+const formatBuildDoneInfo = (rollupBuild) => {
+  return `
+${createDetailedMessage(`build done`, formatBuildDoneDetails(rollupBuild))}
+`
 }
 
 const formatBuildDoneDetails = (build) => {

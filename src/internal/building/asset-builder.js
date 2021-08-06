@@ -120,16 +120,20 @@ export const createAssetBuilder = (
         }
 
         const { target } = dependency
+        const readyPromise = target.getReadyPromise()
         if (target.targetIsJsModule) {
-          // await internally for rollup to be done with these js files
-          // but don't await explicitely or rollup build cannot end
-          // because rollup would wait for this promise in "buildStart" hook
-          // and never go to the "generateBundle' hook where
-          // a js module ready promise gets resolved
-          target.getReadyPromise()
+          // await internally for rollup to be done with this target js module
+          // but don't await explicitely or rollup wait for asset builder
+          // which is waiting for rollup
           return
         }
-        await target.getReadyPromise()
+        if (!target.firstStrongReference) {
+          // await internally for rollup to be done to see if this target gets referenced
+          // but don't await explicitly or rollup would wait
+          // for asset builder which is waiting for rollup
+          return
+        }
+        await readyPromise
       }),
     )
   }
@@ -336,13 +340,13 @@ export const createAssetBuilder = (
         // If the module is not in the rollup build, that's an error
         // except if it was only preloaded/prefetched
         if (!buildFileInfo) {
-          if (targetIsReferencedOnlyByPreloadOrPrefetch(target)) {
+          if (target.firstStrongReference) {
+            reject(new Error(`${shortenUrl(targetUrl)} cannot be found in the build info`))
+          } else {
             // target.targetBuildBuffer = "" // we don't know the file was never used
             // target.targetBuildRelativeUrl = "" // would depend from the file content
             // target.targetFileName = "" // would be the name given to that file for rollup
             resolve()
-          } else {
-            reject(new Error(`${shortenUrl(targetUrl)} cannot be found in the build info`))
           }
           return
         }
@@ -364,7 +368,7 @@ export const createAssetBuilder = (
     })
 
     const getBufferAvailablePromise = memoize(async () => {
-      if (targetIsReferencedOnlyByPreloadOrPrefetch(target)) {
+      if (!target.firstStrongReference) {
         // for preload/prefetch links, we don't want to start the prefetching right away.
         // Instead we wait for something else to reference the same target
         // This is by choice so that:
@@ -795,12 +799,6 @@ const targetFileNameFromBuildManifest = (buildManifest, targetBuildRelativeUrl) 
     return buildManifest[keyCandidate] === targetBuildRelativeUrl
   })
   return buildManifest[key]
-}
-
-const targetIsReferencedOnlyByPreloadOrPrefetch = (target) => {
-  return target.targetReferences.every(
-    (targetReference) => targetReference.referenceIsPreloadOrPrefetch,
-  )
 }
 
 const removePotentialUrlHash = (url) => {

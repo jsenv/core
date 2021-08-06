@@ -27,7 +27,7 @@ const entryPointMap = {
 
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  logLevel: "debug",
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
