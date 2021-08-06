@@ -54,7 +54,7 @@ if (process.platform !== "win32") {
         // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
         // to include a hash for the html file.
         // -> when html file changes -> hash changes -> worker updates
-        version: "3581938f",
+        version: "2c6357a3",
       },
     },
   }
