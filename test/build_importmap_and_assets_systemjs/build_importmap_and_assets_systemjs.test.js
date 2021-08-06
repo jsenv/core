@@ -41,7 +41,7 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const jsBuildRelativeUrl = getBuildRelativeUrl("file.js")
+const jsBuildRelativeUrl = getBuildRelativeUrl("main.js")
 const imgRemapBuildRelativeUrl = getBuildRelativeUrl("img-remap.png")
 const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
 
@@ -60,7 +60,7 @@ const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
       "./assets/img.png": `./${imgBuildRelativeUrl}`,
       // the importmap for img-remap is available
       "./assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
-      "./file.js": `./${jsBuildRelativeUrl}`,
+      "./main.js": `./${jsBuildRelativeUrl}`,
       // and nothing more because js is referencing only img-remap
     },
   }
@@ -81,7 +81,7 @@ const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
 
 // assert asset url is correct for javascript (remapped + hashed)
 {
-  const mainRelativeUrl = getBuildRelativeUrl("file.js")
+  const mainRelativeUrl = getBuildRelativeUrl("main.js")
   const { namespace, serverOrigin } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
@@ -104,7 +104,6 @@ const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
     // importmap does not apply. Dev does not change that, and files after build neither.
     // That being said. when output format is systemjs we still use importmap to avoid
     // having to invalidate the js because an asset changes.
-    // TODO: retest this whole stuff with an output format of esmodule
     urlFromImportMetaNotation: resolveUrl(`dist/systemjs/${imgBuildRelativeUrl}`, serverOrigin),
   }
   assert({ actual, expected })

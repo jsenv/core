@@ -41,7 +41,7 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
 }
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const jsBuildRelativeUrl = getBuildRelativeUrl(`${testDirectoryname}.js`)
+const jsBuildRelativeUrl = getBuildRelativeUrl(`main.js`)
 const imgRemapBuildRelativeUrl = getBuildRelativeUrl("img-remap.png")
 const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
 
