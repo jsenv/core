@@ -34,12 +34,12 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   return buildRelativeUrl
 }
 
-const indexRelativeUrl = getBuildRelativeUrl("index.js")
+const mainJsRelativeUrl = getBuildRelativeUrl("main.js")
 
 const { namespace: actual } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
-  mainRelativeUrl: `./${indexRelativeUrl}`,
+  mainRelativeUrl: `./${mainJsRelativeUrl}`,
   // debug: true,
 })
 const expected = {
