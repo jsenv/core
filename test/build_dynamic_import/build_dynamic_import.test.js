@@ -1,9 +1,7 @@
-import { SourceMap } from "module"
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/util"
+
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { buildProject } from "@jsenv/core"
 import {
   GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
@@ -11,10 +9,11 @@ import {
 } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
 import { nodeImportEsModuleBuild } from "@jsenv/core/test/nodeImportEsModuleBuild.js"
+import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
@@ -31,14 +30,16 @@ await buildProject({
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
+    htmlFileRelativeUrl: "./main.html",
+    jsFileRelativeUrl: "./dist/esmodule/main.js",
     // debug: true,
   })
   const actual = namespace
   const expected = { value: 42 }
   assert({ actual, expected })
 }
-// SourceMap added in 13.7, used to test only if we got dynamic import
-if (SourceMap) {
+
+{
   const { namespace } = await nodeImportEsModuleBuild({
     ...NODE_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

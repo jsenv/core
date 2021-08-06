@@ -536,8 +536,8 @@ export const createJsenvRollupPlugin = async ({
       }
 
       const importUrl = await importResolver.resolveImport(specifier, importer)
-
-      if (importer !== projectDirectoryUrl && importer !== compileDirectoryRemoteUrl) {
+      const existingImporter = urlImporterMap[importUrl]
+      if (!existingImporter) {
         urlImporterMap[importUrl] = importer
       }
 

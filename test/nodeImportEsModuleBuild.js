@@ -8,12 +8,12 @@ const CONTROLLABLE_FILE_URL = resolveUrl("./controllable-file.js", import.meta.u
 export const nodeImportEsModuleBuild = async ({
   projectDirectoryUrl,
   testDirectoryRelativeUrl,
-  mainRelativeUrl,
+  jsFileRelativeUrl,
   awaitNamespace = true,
   topLevelAwait,
 }) => {
   const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
-  const mainFileUrl = resolveUrl(mainRelativeUrl, testDirectoryUrl)
+  const jsFileUrl = resolveUrl(jsFileRelativeUrl, testDirectoryUrl)
   const childProcessOptions = await createChildProcessOptions({
     topLevelAwait,
   })
@@ -32,7 +32,7 @@ export const nodeImportEsModuleBuild = async ({
         }
       })
       child.send({
-        url: mainFileUrl,
+        url: jsFileUrl,
         awaitNamespace,
       })
     })

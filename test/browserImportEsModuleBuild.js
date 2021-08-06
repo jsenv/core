@@ -8,7 +8,7 @@ export const browserImportEsModuleBuild = async ({
   projectDirectoryUrl,
   testDirectoryRelativeUrl,
   htmlFileRelativeUrl = "./dist/esmodule/main.html",
-  mainRelativeUrl,
+  jsFileRelativeUrl,
   awaitNamespace = true,
   debug = false,
 }) => {
@@ -29,10 +29,10 @@ export const browserImportEsModuleBuild = async ({
   try {
     const namespace = await page.evaluate(
       /* istanbul ignore next */
-      ({ debug, mainRelativeUrl, awaitNamespace }) => {
+      ({ debug, jsFileRelativeUrl, awaitNamespace }) => {
         /* globals window */
         const run = async () => {
-          const namespace = await import(mainRelativeUrl)
+          const namespace = await import(jsFileRelativeUrl)
           if (debug) {
             // eslint-disable-next-line no-debugger
             debugger
@@ -51,14 +51,14 @@ export const browserImportEsModuleBuild = async ({
 
         if (debug) {
           window.run = run
-          return null
+          return "no available cause debug: true"
         }
 
         return run()
       },
       {
         debug,
-        mainRelativeUrl,
+        jsFileRelativeUrl,
         awaitNamespace,
       },
     )
