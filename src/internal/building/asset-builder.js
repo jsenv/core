@@ -287,7 +287,7 @@ export const createAssetBuilder = (
       targetMap[targetUrl] = target
     }
     reference.target = target
-    target.addReference(reference)
+    target.addReference(reference, { targetIsJsModule })
 
     return reference
   }
@@ -331,7 +331,7 @@ export const createAssetBuilder = (
     })
     target.buildDonePromise = new Promise((resolve, reject) => {
       target.buildDoneCallback = ({ buildFileInfo, buildManifest }) => {
-        if (!targetIsJsModule) {
+        if (!target.targetIsJsModule) {
           // nothing special to do for asset targets
           resolve()
           return
@@ -352,10 +352,9 @@ export const createAssetBuilder = (
         }
 
         const targetBuildBuffer = buildFileInfo.code
-        const targetBuildRelativeUrl = buildFileInfo.fileName
-        const targetFileName =
-          targetFileNameFromBuildManifest(buildManifest, targetBuildRelativeUrl) ||
-          targetBuildRelativeUrl
+        const targetFileName = buildFileInfo.fileName
+        const targetBuildRelativeUrl = buildManifest[targetFileName] || targetFileName
+        // const targetFileName = targetFileNameFromBuildManifest(buildManifest, targetBuildRelativeUrl) || targetBuildRelativeUrl
         target.targetBuildBuffer = targetBuildBuffer
         target.targetBuildRelativeUrl = targetBuildRelativeUrl
         target.targetFileName = targetFileName
@@ -368,7 +367,7 @@ export const createAssetBuilder = (
     })
 
     const getBufferAvailablePromise = memoize(async () => {
-      if (targetIsJsModule) {
+      if (target.targetIsJsModule) {
         await target.buildDonePromise
         return
       }
@@ -409,7 +408,7 @@ export const createAssetBuilder = (
     }
 
     const getDependenciesAvailablePromise = memoize(async () => {
-      if (targetIsJsModule) {
+      if (target.targetIsJsModule) {
         // handled by rollup
         logger.debug(`waiting for rollup build to resolve ${shortenUrl(targetUrl)}`)
         await target.buildDonePromise
@@ -508,7 +507,7 @@ export const createAssetBuilder = (
 
       const transform = assetTransformMap[targetUrl]
       if (typeof transform !== "function") {
-        target.targetBuildEnd(target.targetBuffer)
+        target.targetBuildEnd(target.targetBuffer, target.targetBuildRelativeUrl)
         return
       }
 
@@ -535,12 +534,14 @@ export const createAssetBuilder = (
           const referenceTarget = reference.target
 
           let referenceTargetBuildRelativeUrl
-          // html needs the exact url but js can reference an url without versionning
-          // and actually fetch the versioned url thanks to importmap
+
           if (importerTarget.targetIsJsModule) {
+            // js can reference an url without versionning
+            // and actually fetch the versioned url thanks to importmap
             referenceTargetBuildRelativeUrl =
               referenceTarget.targetFileName || referenceTarget.targetBuildRelativeUrl
           } else {
+            // other ressource must use the exact url
             referenceTargetBuildRelativeUrl = referenceTarget.targetBuildRelativeUrl
           }
 
@@ -602,7 +603,9 @@ export const createAssetBuilder = (
       }
     }
 
-    const onReference = (reference) => {
+    const onReference = (reference, infoFromReference) => {
+      const effects = []
+
       target.getBufferAvailablePromise().then(
         () => {
           if (target.firstStrongReference) {
@@ -616,24 +619,34 @@ export const createAssetBuilder = (
         // do not try to load or fetch this file
         // we'll wait for something to reference it
         // if nothing references it a warning will be logged
-        return null
+        return effects
       }
 
       if (target.firstStrongReference) {
         // this target was already strongly referenced by something
         // don't try to load it twice
-        return null
+        return effects
       }
 
       target.firstStrongReference = reference
+      // the first strong reference is allowed to transform a reference where we did not know if it was
+      // a js module to a js module
+      // This happen for preload link following by a script type module
+      // <link rel="preload" href="file.js" />
+      // <script type="module" src="file.js"></script>
+      if (!target.targetIsJsModule && infoFromReference.targetIsJsModule) {
+        effects.push(`Mark referenced url as js module`)
+        target.targetIsJsModule = infoFromReference.targetIsJsModule
+      }
+
       target.usedCallback()
 
       if (targetIsExternal) {
         // nothing to do
-        return null
+        return effects
       }
 
-      if (targetIsJsModule) {
+      if (target.targetIsJsModule) {
         const jsModuleUrl = targetUrl
 
         onJsModuleReferencedInHtml({
@@ -653,36 +666,33 @@ export const createAssetBuilder = (
           name,
         })
         target.rollupReferenceId = rollupReferenceId
-        return {
-          action: "emit_rollup_chunk",
-          payload: `"${name}" (${rollupReferenceId})`,
-        }
+        effects.push(`emit rollup chunk "${name}" (${rollupReferenceId})`)
+        return effects
       }
 
       if (targetIsInline) {
         // nothing to do
-        return null
+        return effects
       }
 
       const rollupReferenceId = emitAsset({
         fileName: target.targetRelativeUrl,
       })
       target.rollupReferenceId = rollupReferenceId
-      return {
-        action: "emit_rollup_asset",
-        payload: `"${target.targetRelativeUrl}" (${rollupReferenceId})`,
-      }
+      effects.push(`emit rollup asset "${target.targetRelativeUrl}" (${rollupReferenceId})`)
+
+      return effects
     }
 
-    const addReference = (reference) => {
+    const addReference = (reference, infoFromReference) => {
       target.targetReferences.push(reference)
 
-      const referenceEffect = onReference(reference)
+      const referenceEffects = onReference(reference, infoFromReference)
 
       logger.debug(
         formatFoundReference({
           reference,
-          referenceEffect,
+          referenceEffects,
           showReferenceSourceLocation,
         }),
       )
@@ -801,12 +811,12 @@ export const referenceToCodeForRollup = (reference) => {
   return `import.meta.ROLLUP_FILE_URL_${target.rollupReferenceId}`
 }
 
-const targetFileNameFromBuildManifest = (buildManifest, targetBuildRelativeUrl) => {
-  const key = Object.keys(buildManifest).find((keyCandidate) => {
-    return buildManifest[keyCandidate] === targetBuildRelativeUrl
-  })
-  return buildManifest[key]
-}
+// const targetFileNameFromBuildManifest = (buildManifest, targetBuildRelativeUrl) => {
+//   const key = Object.keys(buildManifest).find((keyCandidate) => {
+//     return buildManifest[keyCandidate] === targetBuildRelativeUrl
+//   })
+//   return buildManifest[key]
+// }
 
 const removePotentialUrlHash = (url) => {
   const urlObject = new URL(url)

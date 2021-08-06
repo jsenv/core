@@ -23,7 +23,7 @@ const targetToFileNamePattern = (target) => {
     return assetFileNamePatternWithoutHash
   }
 
-  if (target.targetIsEntry || target.isTargetIsJsModule) {
+  if (target.targetIsEntry || target.targetIsJsModule) {
     return `[name]-[hash][extname]`
   }
   return assetFileNamePattern

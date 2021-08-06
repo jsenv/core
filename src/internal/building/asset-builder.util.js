@@ -101,8 +101,17 @@ const formatContentTypeMismatchLog = (reference, { showReferenceSourceLocation }
 export const formatFoundReference = ({
   reference,
   showReferenceSourceLocation,
-  referenceEffect,
+  referenceEffects,
 }) => {
+  const { referenceIsPreloadOrPrefetch } = reference
+
+  if (referenceIsPreloadOrPrefetch) {
+    return formatFoundPreloadToPrefetch({
+      reference,
+      showReferenceSourceLocation,
+    })
+  }
+
   const { target } = reference
   const { targetIsExternal } = target
 
@@ -132,15 +141,21 @@ export const formatFoundReference = ({
     return formatFoundReferenceToAsset({
       reference,
       showReferenceSourceLocation,
-      referenceEffect,
+      referenceEffects,
     })
   }
 
   return formatFoundReferenceToModule({
     reference,
     showReferenceSourceLocation,
-    referenceEffect,
+    referenceEffects,
   })
+}
+
+const formatFoundPreloadToPrefetch = ({ reference, showReferenceSourceLocation }) => {
+  return `
+${createDetailedMessage(`Found preload/prefetch link
+${showReferenceSourceLocation(reference)}`)}`
 }
 
 const formatFoundReferenceToExternalRessource = ({ reference, showReferenceSourceLocation }) => {
@@ -164,41 +179,39 @@ ${showReferenceSourceLocation(reference)}`)}`
 const formatFoundReferenceToAsset = ({
   reference,
   showReferenceSourceLocation,
-  referenceEffect,
+  referenceEffects,
 }) => {
   return `
 ${createDetailedMessage(
   `Found reference to an asset
 ${showReferenceSourceLocation(reference)}`,
   {
-    ...(referenceEffect
+    ...(referenceEffects
       ? {
-          effect: `emit rollup asset ${referenceEffect.payload}`,
+          effects: referenceEffects,
         }
       : {}),
   },
-)}
-`
+)}`
 }
 
 const formatFoundReferenceToModule = ({
   reference,
   showReferenceSourceLocation,
-  referenceEffect,
+  referenceEffects,
 }) => {
   return `
 ${createDetailedMessage(
   `Found reference to a module
 ${showReferenceSourceLocation(reference)}`,
   {
-    ...(referenceEffect
+    ...(referenceEffects
       ? {
-          effect: `emit rollup chunk ${referenceEffect.payload}`,
+          effects: referenceEffects,
         }
       : {}),
   },
-)}
-`
+)}`
 }
 
 // const textualContentTypes = ["text/html", "text/css", "image/svg+xml"]
