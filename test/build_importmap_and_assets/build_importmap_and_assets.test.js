@@ -78,7 +78,7 @@ const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
   const { namespace, serverOrigin } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    mainRelativeUrl: `./dist/esmodule/${jsBuildRelativeUrl}`,
+    jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
     // debug: true,
   })
   const actual = {

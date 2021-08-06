@@ -31,6 +31,7 @@ await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
+  logLevel: "error", // ideally we should catch the exact warning and assert it is correct
 })
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)

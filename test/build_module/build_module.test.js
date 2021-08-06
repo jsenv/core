@@ -28,22 +28,23 @@ const { buildMappings } = await buildProject({
   // minify: true,
 })
 
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
+{
+  const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
+    const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
+    const buildRelativeUrl = buildMappings[relativeUrl]
+    return buildRelativeUrl
+  }
+  const mainJsRelativeUrl = getBuildRelativeUrl("main.js")
+  const result = await browserImportEsModuleBuild({
+    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
+    testDirectoryRelativeUrl,
+    jsFileRelativeUrl: `./${mainJsRelativeUrl}`,
+    // debug: true,
+  })
 
-const mainJsRelativeUrl = getBuildRelativeUrl("main.js")
-
-const result = await browserImportEsModuleBuild({
-  ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  mainRelativeUrl: `./${mainJsRelativeUrl}`,
-  // debug: true,
-})
-const actual = result.namespace
-const expected = {
-  value: 42,
+  const actual = result.namespace
+  const expected = {
+    value: 42,
+  }
+  assert({ actual, expected })
 }
-assert({ actual, expected })

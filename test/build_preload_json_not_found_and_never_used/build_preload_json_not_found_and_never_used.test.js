@@ -23,6 +23,7 @@ await buildProject({
   entryPointMap: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
   },
+  logLevel: "error", // ideally we should catch the exact warning and assert it is correct
 })
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)

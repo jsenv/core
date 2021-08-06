@@ -1,14 +1,20 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import {
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  resolveUrl,
+  urlToFileSystemPath,
+  urlToBasename,
+} from "@jsenv/util"
+
+import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
-import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.html`
@@ -40,6 +46,7 @@ if (process.platform !== "win32") {
   const expected = {
     generatedUrlsConfig: {
       "assets/style-b126d686.css": { versioned: true },
+      [`${testDirectoryname}.11-1503a69c.js`]: { versioned: true },
       "main.html": {
         versioned: false,
         // because when html file is modified, it's url is not
@@ -47,9 +54,8 @@ if (process.platform !== "win32") {
         // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
         // to include a hash for the html file.
         // -> when html file changes -> hash changes -> worker updates
-        version: "e68eb8e4",
+        version: "3581938f",
       },
-      [`${testDirectoryname}.11-0c09c6a6.js`]: { versioned: true },
     },
   }
   assert({ actual, expected })
