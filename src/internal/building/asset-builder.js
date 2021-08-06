@@ -368,6 +368,11 @@ export const createAssetBuilder = (
     })
 
     const getBufferAvailablePromise = memoize(async () => {
+      if (targetIsJsModule) {
+        await target.buildDonePromise
+        return
+      }
+
       if (!target.firstStrongReference) {
         // for preload/prefetch links, we don't want to start the prefetching right away.
         // Instead we wait for something else to reference the same target
@@ -382,11 +387,6 @@ export const createAssetBuilder = (
         if (winner === buildDonePromise) {
           return
         }
-      }
-
-      if (targetIsJsModule) {
-        await target.buildDonePromise
-        return
       }
 
       const response = await fetch(
@@ -605,7 +605,9 @@ export const createAssetBuilder = (
     const onReference = (reference) => {
       target.getBufferAvailablePromise().then(
         () => {
-          checkContentType(reference, { logger, showReferenceSourceLocation })
+          if (target.firstStrongReference) {
+            checkContentType(reference, { logger, showReferenceSourceLocation })
+          }
         },
         () => {},
       )
@@ -619,11 +621,6 @@ export const createAssetBuilder = (
 
       target.firstStrongReference = reference
       target.usedCallback()
-
-      if (targetIsInline) {
-        // nothing to do
-        return null
-      }
 
       if (targetIsExternal) {
         // nothing to do
@@ -654,6 +651,11 @@ export const createAssetBuilder = (
           action: "emit_rollup_chunk",
           payload: rollupReferenceId,
         }
+      }
+
+      if (targetIsInline) {
+        // nothing to do
+        return null
       }
 
       const rollupReferenceId = emitAsset({
