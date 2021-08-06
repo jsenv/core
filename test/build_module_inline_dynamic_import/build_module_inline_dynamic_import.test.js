@@ -34,14 +34,15 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   return buildRelativeUrl
 }
 
-const inlinescriptBuildRelativeUrl = getBuildRelativeUrl(`${testDirectoryname}.10.js`)
-
-const result = await browserImportSystemJsBuild({
-  ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  mainRelativeUrl: `./${inlinescriptBuildRelativeUrl}`,
-  // debug: true,
-})
-const actual = result.namespace
-const expected = { value: 42 }
-assert({ actual, expected })
+{
+  const inlinescriptBuildRelativeUrl = getBuildRelativeUrl(`${testDirectoryname}.10.js`)
+  const result = await browserImportSystemJsBuild({
+    ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
+    testDirectoryRelativeUrl,
+    mainRelativeUrl: `./${inlinescriptBuildRelativeUrl}`,
+    // debug: true,
+  })
+  const actual = result.namespace
+  const expected = { value: 42 }
+  assert({ actual, expected })
+}
