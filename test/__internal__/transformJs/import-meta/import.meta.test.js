@@ -1,6 +1,13 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, readFile, writeFile, urlToRelativeUrl, copyFileSystemNode } from "@jsenv/util"
+import {
+  resolveUrl,
+  readFile,
+  writeFile,
+  urlToRelativeUrl,
+  copyFileSystemNode,
+  urlToBasename,
+} from "@jsenv/util"
+
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS_TRANSFORM_JS.js"
@@ -8,7 +15,7 @@ import { nodeImportEsModuleBuild } from "@jsenv/core/test/nodeImportEsModuleBuil
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryUrl)
+const testDirectoryname = urlToBasename(testDirectoryUrl)
 const filename = `${testDirectoryname}.js`
 const originalFileUrl = resolveUrl(`./${filename}`, testDirectoryUrl)
 const originalFileContent = await readFile(originalFileUrl)
@@ -34,7 +41,7 @@ const importMetaEnvFileRelativeUrl = `${testDirectoryRelativeUrl}env.js`
   const result = await nodeImportEsModuleBuild({
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
     testDirectoryRelativeUrl,
-    mainRelativeUrl: "dist/file.js",
+    jsFileRelativeUrl: "dist/file.js",
   })
   const actual = result.namespace
   const expected = {
