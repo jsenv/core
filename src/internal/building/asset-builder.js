@@ -411,7 +411,7 @@ export const createAssetBuilder = (
     const getDependenciesAvailablePromise = memoize(async () => {
       if (targetIsJsModule) {
         // handled by rollup
-        logger.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(targetUrl)}`)
+        logger.debug(`waiting for rollup build to resolve ${shortenUrl(targetUrl)}`)
         await target.buildDonePromise
         target.dependencies = []
         return
@@ -649,7 +649,7 @@ export const createAssetBuilder = (
         target.rollupReferenceId = rollupReferenceId
         return {
           action: "emit_rollup_chunk",
-          payload: rollupReferenceId,
+          payload: `"${name}" (${rollupReferenceId})`,
         }
       }
 
@@ -664,7 +664,7 @@ export const createAssetBuilder = (
       target.rollupReferenceId = rollupReferenceId
       return {
         action: "emit_rollup_asset",
-        payload: rollupReferenceId,
+        payload: `"${target.targetRelativeUrl}" (${rollupReferenceId})`,
       }
     }
 
@@ -762,8 +762,7 @@ export const createAssetBuilder = (
 ${showSourceLocation(referenceSourceAsString, {
   line: reference.referenceLine,
   column: reference.referenceColumn,
-})}
-`
+})}`
     }
 
     return `${message}`

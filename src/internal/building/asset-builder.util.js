@@ -146,22 +146,19 @@ export const formatFoundReference = ({
 const formatFoundReferenceToExternalRessource = ({ reference, showReferenceSourceLocation }) => {
   return `
 ${createDetailedMessage(`Found reference to an external url
-${showReferenceSourceLocation(reference)}`)}
-`
+${showReferenceSourceLocation(reference)}`)}`
 }
 
 const formatFoundReferenceToInlineAsset = ({ reference, showReferenceSourceLocation }) => {
   return `
 ${createDetailedMessage(`Found reference to an inline ressource
-${showReferenceSourceLocation(reference)}`)}
-`
+${showReferenceSourceLocation(reference)}`)}`
 }
 
 const formatFoundReferenceToInlineModule = ({ reference, showReferenceSourceLocation }) => {
   return `
 ${createDetailedMessage(`Found reference to an inline module
-${showReferenceSourceLocation(reference)}`)}
-`
+${showReferenceSourceLocation(reference)}`)}`
 }
 
 const formatFoundReferenceToAsset = ({

@@ -53,6 +53,14 @@ export const parseHtmlAsset = async (
   const htmlAst = await htmlStringToHtmlAst(htmlString)
   const { links, styles, scripts, imgs, images, uses, sources } = parseHtmlAstRessources(htmlAst)
 
+  const linksMutations = collectNodesMutations(links, notifiers, htmlTarget, [
+    linkStylesheetHrefVisitor,
+    (link, { notifyReferenceFound }) =>
+      linkHrefVisitor(link, {
+        notifyReferenceFound,
+        preloadOrPrefetchLinkNeverUsedCallback,
+      }),
+  ])
   const scriptsMutations = collectNodesMutations(scripts, notifiers, htmlTarget, [
     // regular javascript are not parseable by rollup
     // and we don't really care about there content
@@ -64,14 +72,6 @@ export const parseHtmlAsset = async (
     moduleScriptTextNodeVisitor,
     importmapScriptSrcVisitor,
     importmapScriptTextNodeVisitor,
-  ])
-  const linksMutations = collectNodesMutations(links, notifiers, htmlTarget, [
-    linkStylesheetHrefVisitor,
-    (link, { notifyReferenceFound }) =>
-      linkHrefVisitor(link, {
-        notifyReferenceFound,
-        preloadOrPrefetchLinkNeverUsedCallback,
-      }),
   ])
   const stylesMutations = collectNodesMutations(styles, notifiers, htmlTarget, [
     styleTextNodeVisitor,
@@ -87,8 +87,8 @@ export const parseHtmlAsset = async (
   const svgMutations = collectSvgMutations({ images, uses }, notifiers, htmlTarget)
 
   const htmlMutations = [
-    ...scriptsMutations,
     ...linksMutations,
+    ...scriptsMutations,
     ...stylesMutations,
     ...imgsSrcMutations,
     ...imgsSrcsetMutations,

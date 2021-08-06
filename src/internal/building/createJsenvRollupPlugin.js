@@ -589,7 +589,7 @@ export const createJsenvRollupPlugin = async ({
       const moduleInfo = this.getModuleInfo(id)
       const url = rollupUrlToServerUrl(id)
 
-      logger.debug(`loads ${url}`)
+      // logger.debug(`loads ${url}`)
       const {
         responseUrl,
         responseContentType,
