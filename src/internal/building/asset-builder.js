@@ -619,6 +619,12 @@ export const createAssetBuilder = (
         return null
       }
 
+      if (target.firstStrongReference) {
+        // this target was already strongly referenced by something
+        // don't try to load it twice
+        return null
+      }
+
       target.firstStrongReference = reference
       target.usedCallback()
 
