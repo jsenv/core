@@ -135,7 +135,7 @@ export const createAssetBuilder = (
     )
   }
 
-  const createReferenceForJsImport = async ({
+  const createReferenceFoundInJs = async ({
     jsUrl,
     jsLine,
     jsColumn,
@@ -614,11 +614,14 @@ export const createAssetBuilder = (
   const registerCallbackOnceRollupChunkIsReady = (url, callback) => {
     rollupChunkReadyCallbackMap[url] = callback
   }
-  const resolvePendingRollupChunks = (resolver) => {
+  const buildEnd = ({ jsBuild, buildManifest }) => {
     Object.keys(rollupChunkReadyCallbackMap).forEach((url) => {
+      const resolveRollupChunk = rollupChunkReadyCallbackMap[url]
+
       const target = getTargetFromUrl(url)
       if (targetIsReferencedOnlyByPreloadOrPrefetch(target)) {
-        rollupChunkReadyCallbackMap[url]({
+        logger.debug(`resolve rollup chunk ${shortenUrl(url)}`)
+        resolveRollupChunk({
           onlyPreloadedOrPrefetched: true,
           // targetBuildBuffer: "", // we don't know the file was never used
           // targetBuildRelativeUrl: "", // would depend from the file content
@@ -627,12 +630,22 @@ export const createAssetBuilder = (
         return
       }
 
-      resolver(url, ({ targetBuildBuffer, targetBuildRelativeUrl, targetFileName }) => {
-        rollupChunkReadyCallbackMap[url]({
-          targetBuildBuffer,
-          targetBuildRelativeUrl,
-          targetFileName,
-        })
+      const targetBuildRelativeUrl = Object.keys(jsBuild).find((buildRelativeUrlCandidate) => {
+        const file = jsBuild[buildRelativeUrlCandidate]
+        const { facadeModuleId } = file
+        return facadeModuleId && facadeModuleId === url
+      })
+      const file = jsBuild[targetBuildRelativeUrl]
+      const targetBuildBuffer = file.code
+      const targetFileName =
+        targetFileNameFromBuildManifest(buildManifest, targetBuildRelativeUrl) ||
+        targetBuildRelativeUrl
+
+      logger.debug(`resolve rollup chunk ${shortenUrl(url)}`)
+      resolveRollupChunk({
+        targetBuildBuffer,
+        targetBuildRelativeUrl,
+        targetFileName,
       })
     })
   }
@@ -696,9 +709,9 @@ ${showSourceLocation(referenceSourceAsString, {
   return {
     createReference,
     createReferenceForHTMLEntry,
-    createReferenceForJsImport,
+    createReferenceFoundInJs,
 
-    resolvePendingRollupChunks,
+    buildEnd,
     getAllAssetEntryEmittedPromise,
     findAsset,
 
@@ -718,6 +731,13 @@ export const referenceToCodeForRollup = (reference) => {
   }
 
   return `import.meta.ROLLUP_FILE_URL_${target.rollupReferenceId}`
+}
+
+const targetFileNameFromBuildManifest = (buildManifest, targetBuildRelativeUrl) => {
+  const key = Object.keys(buildManifest).find((keyCandidate) => {
+    return buildManifest[keyCandidate] === targetBuildRelativeUrl
+  })
+  return buildManifest[key]
 }
 
 const targetIsReferencedOnlyByPreloadOrPrefetch = (target) => {

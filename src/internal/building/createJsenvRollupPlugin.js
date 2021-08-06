@@ -284,7 +284,14 @@ export const createJsenvRollupPlugin = async ({
           logger.debug(formatUseImportMapFromHtml(importMapInfoFromHtml))
 
           if (importMapInfoFromHtml.type === "remote") {
-            importMapUrl = resolveUrl(importMapInfoFromHtml.src)
+            importMapUrl = resolveUrl(
+              importMapInfoFromHtml.src,
+              urlToCompiledServerUrl(importMapInfoFromHtml.htmlUrl, {
+                projectDirectoryUrl,
+                compileServerOrigin,
+                compileDirectoryRelativeUrl,
+              }),
+            )
 
             if (!urlIsInsideOf(importMapUrl, compileDirectoryRemoteUrl)) {
               logger.warn(
@@ -755,20 +762,28 @@ export const createJsenvRollupPlugin = async ({
         }
 
         let originalProjectUrl
+        const fileCopy = { ...file }
         const id = file.facadeModuleId
         if (id) {
           originalProjectUrl = rollupUrlToOriginalProjectUrl(id)
+          fileCopy.facadeModuleId = rollupUrlToServerUrl(id)
         } else {
           const sourcePath = file.map.sources[file.map.sources.length - 1]
           const fileBuildUrl = resolveUrl(file.fileName, buildDirectoryUrl)
           originalProjectUrl = resolveUrl(sourcePath, fileBuildUrl)
+          fileCopy.facadeModuleId = urlToCompiledServerUrl(originalProjectUrl, {
+            projectDirectoryUrl,
+            compileServerOrigin,
+            compileDirectoryRelativeUrl,
+          })
         }
         const originalProjectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
 
         if (canBeVersioned) {
           markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
         }
-        jsBuild[buildRelativeUrl] = file
+
+        jsBuild[buildRelativeUrl] = fileCopy
         buildManifest[fileName] = buildRelativeUrl
         buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
       })
@@ -783,26 +798,7 @@ export const createJsenvRollupPlugin = async ({
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
-      assetBuilder.resolvePendingRollupChunks((url, provideRollupChunkInfo) => {
-        const targetBuildRelativeUrl = Object.keys(jsBuild).find((buildRelativeUrlCandidate) => {
-          const file = jsBuild[buildRelativeUrlCandidate]
-          const { facadeModuleId } = file
-          return facadeModuleId && rollupUrlToServerUrl(facadeModuleId) === url
-        })
-        const file = jsBuild[targetBuildRelativeUrl]
-        const targetBuildBuffer = file.code
-        const targetFileName =
-          useImportMapToImproveLongTermCaching || !urlVersioning
-            ? buildRelativeUrlToFileName(targetBuildRelativeUrl)
-            : targetBuildRelativeUrl
-
-        logger.debug(`resolve rollup chunk ${shortenUrl(url)}`)
-        provideRollupChunkInfo({
-          targetBuildBuffer,
-          targetBuildRelativeUrl,
-          targetFileName,
-        })
-      })
+      assetBuilder.buildEnd({ jsBuild, buildManifest })
       // wait html files to be emitted
       await assetBuilder.getAllAssetEntryEmittedPromise()
 
@@ -977,7 +973,7 @@ export const createJsenvRollupPlugin = async ({
 
     const moduleResponseBodyAsBuffer = Buffer.from(await moduleResponse.arrayBuffer())
     const targetContentType = moduleResponse.headers["content-type"]
-    const assetReferenceForImport = await assetBuilder.createReferenceForJsImport({
+    const assetReferenceForImport = await assetBuilder.createReferenceFoundInJs({
       // Reference to this target is corresponds to a static or dynamic import.
       // found in a given file (importerUrl).
       // But we don't know the line and colum because rollup
@@ -1039,12 +1035,6 @@ export const createJsenvRollupPlugin = async ({
     }
 
     return response
-  }
-
-  const shortenUrl = (url) => {
-    return urlIsInsideOf(url, projectDirectoryUrl)
-      ? urlToRelativeUrl(url, projectDirectoryUrl)
-      : url
   }
 
   return {
