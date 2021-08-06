@@ -454,11 +454,11 @@ export const createJsenvRollupPlugin = async ({
             atleastOneChunkEmitted = true
             if (jsModuleIsInline) {
               virtualModules[jsModuleUrl] = jsModuleSource
-              urlImporterMap[jsModuleUrl] = resolveUrl(
-                entryPointsPrepared[0].entryProjectRelativeUrl,
-                compileDirectoryRemoteUrl,
-              )
             }
+            urlImporterMap[jsModuleUrl] = resolveUrl(
+              entryPointsPrepared[0].entryProjectRelativeUrl,
+              compileDirectoryRemoteUrl,
+            )
             jsModulesInHtml[urlToUrlForRollup(jsModuleUrl)] = true
           },
         },
@@ -542,7 +542,7 @@ export const createJsenvRollupPlugin = async ({
 
       const importUrl = await importResolver.resolveImport(specifier, importer)
 
-      if (importer !== projectDirectoryUrl) {
+      if (importer !== projectDirectoryUrl && importer !== compileDirectoryRemoteUrl) {
         urlImporterMap[importUrl] = importer
       }
 

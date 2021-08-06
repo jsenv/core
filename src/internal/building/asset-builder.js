@@ -347,6 +347,11 @@ export const createAssetBuilder = (
     }
 
     const getBufferAvailablePromise = memoize(async () => {
+      if (targetIsJsModule) {
+        await target.rollupPromise
+        return
+      }
+
       const response = await fetch(targetUrl, showReferenceSourceLocation(importerReference))
       if (response.url !== targetUrl) {
         targetRedirectionMap[targetUrl] = response.url
@@ -364,6 +369,14 @@ export const createAssetBuilder = (
     }
 
     const getDependenciesAvailablePromise = memoize(async () => {
+      if (targetIsJsModule) {
+        // handled by rollup
+        logger.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(targetUrl)}`)
+        await target.rollupPromise
+        target.dependencies = []
+        return
+      }
+
       await getBufferAvailablePromise()
       const dependencies = []
 
@@ -441,25 +454,6 @@ export const createAssetBuilder = (
     const getReadyPromise = memoize(async () => {
       if (targetIsExternal) {
         // external urls are immediatly available and not modified
-        return
-      }
-
-      // once rollup is done with that module we know it's final url
-      if (targetIsJsModule) {
-        logger.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(targetUrl)}`)
-        const rollupChunkReadyPromise = new Promise((resolve) => {
-          registerCallbackOnceRollupChunkIsReady(target.targetUrl, resolve)
-        })
-        const {
-          onlyPreloadedOrPrefetched,
-          targetBuildBuffer,
-          targetBuildRelativeUrl,
-          targetFileName,
-        } = await rollupChunkReadyPromise
-        if (!onlyPreloadedOrPrefetched) {
-          target.targetFileName = targetFileName
-          target.targetBuildEnd(targetBuildBuffer, targetBuildRelativeUrl)
-        }
         return
       }
 
@@ -587,6 +581,25 @@ export const createAssetBuilder = (
         name,
       })
       target.rollupReferenceId = rollupReferenceId
+
+      target.rollupPromise = new Promise((resolve) => {
+        registerCallbackOnceRollupChunkIsReady(
+          target.targetUrl,
+          ({
+            onlyPreloadedOrPrefetched,
+            targetBuildBuffer,
+            targetBuildRelativeUrl,
+            targetFileName,
+          }) => {
+            if (!onlyPreloadedOrPrefetched) {
+              target.targetBuildBuffer = targetBuildBuffer
+              target.targetBuildRelativeUrl = targetBuildRelativeUrl
+              target.targetFileName = targetFileName
+            }
+            resolve()
+          },
+        )
+      })
     } else if (targetIsInline) {
       // nothing to do
     } else if (targetIsExternal) {
