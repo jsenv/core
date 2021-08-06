@@ -98,43 +98,110 @@ const formatContentTypeMismatchLog = (reference, { showReferenceSourceLocation }
   )
 }
 
-export const formatExternalReferenceLog = (
+export const formatFoundReference = ({
   reference,
-  { showReferenceSourceLocation, projectDirectoryUrl },
-) => {
+  showReferenceSourceLocation,
+  referenceEffect,
+}) => {
   const { target } = reference
-  const { targetUrl } = target
-  return createDetailedMessage(
-    `Found reference to an url outside project directory.
-${showReferenceSourceLocation(reference)}`,
-    {
-      ["target url"]: targetUrl,
-      ["project directory url"]: projectDirectoryUrl,
-    },
-  )
-}
+  const { targetIsExternal } = target
 
-export const formatReferenceFound = (reference, referenceSourceLocation) => {
-  const { target } = reference
-  const { targetIsInline, targetIsJsModule, targetRelativeUrl } = target
-
-  let message
-
-  if (targetIsInline && targetIsJsModule) {
-    message = `found inline js module.`
-  } else if (targetIsInline) {
-    message = `found inline asset.`
-  } else if (targetIsJsModule) {
-    message = `found js module reference to ${targetRelativeUrl}.`
-  } else {
-    message = `found asset reference to ${targetRelativeUrl}.`
+  if (targetIsExternal) {
+    return formatFoundReferenceToExternalRessource({
+      reference,
+      showReferenceSourceLocation,
+    })
   }
 
-  message += `
---- reference source ---
-${referenceSourceLocation}`
+  const { targetIsInline, targetIsJsModule } = target
+  if (targetIsInline && !targetIsJsModule) {
+    return formatFoundReferenceToInlineAsset({
+      reference,
+      showReferenceSourceLocation,
+    })
+  }
 
-  return message
+  if (targetIsInline && targetIsJsModule) {
+    return formatFoundReferenceToInlineModule({
+      reference,
+      showReferenceSourceLocation,
+    })
+  }
+
+  if (!targetIsJsModule) {
+    return formatFoundReferenceToAsset({
+      reference,
+      showReferenceSourceLocation,
+      referenceEffect,
+    })
+  }
+
+  return formatFoundReferenceToModule({
+    reference,
+    showReferenceSourceLocation,
+    referenceEffect,
+  })
+}
+
+const formatFoundReferenceToExternalRessource = ({ reference, showReferenceSourceLocation }) => {
+  return `
+${createDetailedMessage(`Found reference to an external url
+${showReferenceSourceLocation(reference)}`)}
+`
+}
+
+const formatFoundReferenceToInlineAsset = ({ reference, showReferenceSourceLocation }) => {
+  return `
+${createDetailedMessage(`Found reference to an inline ressource
+${showReferenceSourceLocation(reference)}`)}
+`
+}
+
+const formatFoundReferenceToInlineModule = ({ reference, showReferenceSourceLocation }) => {
+  return `
+${createDetailedMessage(`Found reference to an inline module
+${showReferenceSourceLocation(reference)}`)}
+`
+}
+
+const formatFoundReferenceToAsset = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffect,
+}) => {
+  return `
+${createDetailedMessage(
+  `Found reference to an asset
+${showReferenceSourceLocation(reference)}`,
+  {
+    ...(referenceEffect
+      ? {
+          effect: `emit rollup asset ${referenceEffect.payload}`,
+        }
+      : {}),
+  },
+)}
+`
+}
+
+const formatFoundReferenceToModule = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffect,
+}) => {
+  return `
+${createDetailedMessage(
+  `Found reference to a module
+${showReferenceSourceLocation(reference)}`,
+  {
+    ...(referenceEffect
+      ? {
+          effect: `emit rollup chunk ${referenceEffect.payload}`,
+        }
+      : {}),
+  },
+)}
+`
 }
 
 // const textualContentTypes = ["text/html", "text/css", "image/svg+xml"]

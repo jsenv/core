@@ -38,15 +38,16 @@ import {
   urlToBasename,
 } from "@jsenv/util"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
-import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
+
+import { promiseTrackRace } from "../promise_track_race.js"
+import { parseDataUrl } from "../dataUrl.utils.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 
 import {
   getTargetAsBase64Url,
   memoize,
   getCallerLocation,
-  formatReferenceFound,
-  formatExternalReferenceLog,
+  formatFoundReference,
   checkContentType,
 } from "./asset-builder.util.js"
 import {
@@ -72,9 +73,7 @@ export const createAssetBuilder = (
       resolveUrl(targetSpecifier, importerUrl),
   },
 ) => {
-  const logger = createLogger({
-    logLevel,
-  })
+  const logger = createLogger({ logLevel })
 
   const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
 
@@ -265,13 +264,11 @@ export const createAssetBuilder = (
     }
 
     const existingTarget = getTargetFromUrl(targetUrl)
-
+    let target
     if (existingTarget) {
-      connectReferenceAndTarget(reference, existingTarget)
+      target = existingTarget
     } else {
-      const target = createTarget({
-        importerReference: reference,
-
+      target = createTarget({
         targetContentType,
         targetUrl,
         targetBuffer,
@@ -284,38 +281,16 @@ export const createAssetBuilder = (
         targetUrlVersioningDisabled,
       })
       targetMap[targetUrl] = target
-      connectReferenceAndTarget(reference, target)
     }
-
-    if (targetIsExternal) {
-      logger.debug(
-        formatExternalReferenceLog(reference, {
-          showReferenceSourceLocation,
-          projectDirectoryUrl: urlToFileUrl(projectDirectoryUrl),
-        }),
-      )
-    } else {
-      logger.debug(formatReferenceFound(reference, showReferenceSourceLocation(reference)))
-    }
+    reference.target = target
+    target.addReference(reference)
 
     return reference
-  }
-
-  const connectReferenceAndTarget = (reference, target) => {
-    reference.target = target
-    target.targetReferences.push(reference)
-    target.getBufferAvailablePromise().then(
-      () => {
-        checkContentType(reference, { logger, showReferenceSourceLocation })
-      },
-      () => {},
-    )
   }
 
   const assetTransformMap = {}
 
   const createTarget = ({
-    importerReference,
     targetContentType,
     targetUrl,
     targetBuffer,
@@ -332,6 +307,7 @@ export const createAssetBuilder = (
       targetContentType,
       targetUrl,
       targetBuffer,
+      firstStrongReference: null,
       targetReferences: [],
 
       targetIsEntry,
@@ -346,13 +322,73 @@ export const createAssetBuilder = (
       targetBuildBuffer: undefined,
     }
 
+    target.usedPromise = new Promise((resolve) => {
+      target.usedCallback = resolve
+    })
+    target.buildDonePromise = new Promise((resolve, reject) => {
+      target.buildDoneCallback = ({ buildFileInfo, buildManifest }) => {
+        if (!targetIsJsModule) {
+          // nothing special to do for asset targets
+          resolve()
+          return
+        }
+
+        // If the module is not in the rollup build, that's an error
+        // except if it was only preloaded/prefetched
+        if (!buildFileInfo) {
+          if (targetIsReferencedOnlyByPreloadOrPrefetch(target)) {
+            // target.targetBuildBuffer = "" // we don't know the file was never used
+            // target.targetBuildRelativeUrl = "" // would depend from the file content
+            // target.targetFileName = "" // would be the name given to that file for rollup
+            resolve()
+          } else {
+            reject(new Error(`${shortenUrl(targetUrl)} cannot be found in the build info`))
+          }
+          return
+        }
+
+        const targetBuildBuffer = buildFileInfo.code
+        const targetBuildRelativeUrl = buildFileInfo.fileName
+        const targetFileName =
+          targetFileNameFromBuildManifest(buildManifest, targetBuildRelativeUrl) ||
+          targetBuildRelativeUrl
+        target.targetBuildBuffer = targetBuildBuffer
+        target.targetBuildRelativeUrl = targetBuildRelativeUrl
+        target.targetFileName = targetFileName
+        if (buildFileInfo.type === "chunk") {
+          target.targetContentType = "application/javascript"
+        }
+        logger.debug(`resolve rollup chunk ${shortenUrl(targetUrl)}`)
+        resolve()
+      }
+    })
+
     const getBufferAvailablePromise = memoize(async () => {
+      if (targetIsReferencedOnlyByPreloadOrPrefetch(target)) {
+        // for preload/prefetch links, we don't want to start the prefetching right away.
+        // Instead we wait for something else to reference the same target
+        // This is by choice so that:
+        // 1. The warning about "preload but never used" is prio fetch errors like "preload not found"
+        // 2. We don't start fetching a ressource froun in HTML while rollup
+        //    could do the same later. It means we should synchronize rollup
+        //    and this asset builder fetching to avoid fetching twice.
+        //    This scenario would be reproduced for every js module preloaded
+        const { usedPromise, buildDonePromise } = target
+        const { winner } = await promiseTrackRace([usedPromise, buildDonePromise])
+        if (winner === buildDonePromise) {
+          return
+        }
+      }
+
       if (targetIsJsModule) {
-        await target.rollupPromise
+        await target.buildDonePromise
         return
       }
 
-      const response = await fetch(targetUrl, showReferenceSourceLocation(importerReference))
+      const response = await fetch(
+        targetUrl,
+        showReferenceSourceLocation(target.firstStrongReference),
+      )
       if (response.url !== targetUrl) {
         targetRedirectionMap[targetUrl] = response.url
         target.targetUrl = response.url
@@ -372,7 +408,7 @@ export const createAssetBuilder = (
       if (targetIsJsModule) {
         // handled by rollup
         logger.debug(`waiting for rollup chunk to be ready to resolve ${shortenUrl(targetUrl)}`)
-        await target.rollupPromise
+        await target.buildDonePromise
         target.dependencies = []
         return
       }
@@ -440,7 +476,7 @@ export const createAssetBuilder = (
       }
       if (dependencies.length > 0) {
         logger.debug(
-          createDetailedMessage(`${shortenUrl(targetUrl)} dependencies collected`, {
+          createDetailedMessage(`Dependencies collected for ${shortenUrl(targetUrl)}`, {
             dependencies: dependencies.map((dependencyReference) =>
               shortenUrl(dependencyReference.target.targetUrl),
             ),
@@ -551,68 +587,97 @@ export const createAssetBuilder = (
         target.targetBuildRelativeUrl = targetBuildRelativeUrl
       }
 
-      if (!target.targetIsInline && !target.targetIsJsModule) {
+      if (
+        // target.targetBuildBuffer can be undefined when target is only preloaded
+        // and never used
+        target.targetBuildBuffer &&
+        !target.targetIsInline &&
+        !target.targetIsJsModule
+      ) {
         setAssetSource(target.rollupReferenceId, target.targetBuildBuffer)
       }
     }
 
-    if (importerReference.referenceIsPreloadOrPrefetch) {
-      // do not try to load or fetch this file
-      // we'll wait for something to reference it
-      // if nothing references it a warning is logged
-    } else if (targetIsJsModule) {
-      const jsModuleUrl = targetUrl
-
-      onJsModuleReferencedInHtml({
-        jsModuleUrl,
-        jsModuleIsInline: targetIsInline,
-        jsModuleSource: String(targetBuffer),
-      })
-
-      const name = urlToRelativeUrl(
-        // get basename url
-        resolveUrl(urlToBasename(jsModuleUrl), jsModuleUrl),
-        // get importer url
-        urlToCompiledServerUrl(importerReference.referenceUrl),
+    const onReference = (reference) => {
+      target.getBufferAvailablePromise().then(
+        () => {
+          checkContentType(reference, { logger, showReferenceSourceLocation })
+        },
+        () => {},
       )
-      logger.debug(`emit chunk for ${shortenUrl(jsModuleUrl)}`)
-      const rollupReferenceId = emitChunk({
-        id: jsModuleUrl,
-        name,
-      })
-      target.rollupReferenceId = rollupReferenceId
 
-      target.rollupPromise = new Promise((resolve) => {
-        registerCallbackOnceRollupChunkIsReady(
-          target.targetUrl,
-          ({
-            onlyPreloadedOrPrefetched,
-            targetBuildBuffer,
-            targetBuildRelativeUrl,
-            targetFileName,
-          }) => {
-            if (!onlyPreloadedOrPrefetched) {
-              target.targetBuildBuffer = targetBuildBuffer
-              target.targetBuildRelativeUrl = targetBuildRelativeUrl
-              target.targetFileName = targetFileName
-            }
-            resolve()
-          },
+      if (reference.referenceIsPreloadOrPrefetch) {
+        // do not try to load or fetch this file
+        // we'll wait for something to reference it
+        // if nothing references it a warning will be logged
+        return null
+      }
+
+      target.firstStrongReference = reference
+      target.usedCallback()
+
+      if (targetIsInline) {
+        // nothing to do
+        return null
+      }
+
+      if (targetIsExternal) {
+        // nothing to do
+        return null
+      }
+
+      if (targetIsJsModule) {
+        const jsModuleUrl = targetUrl
+
+        onJsModuleReferencedInHtml({
+          jsModuleUrl,
+          jsModuleIsInline: targetIsInline,
+          jsModuleSource: String(targetBuffer),
+        })
+
+        const name = urlToRelativeUrl(
+          // get basename url
+          resolveUrl(urlToBasename(jsModuleUrl), jsModuleUrl),
+          // get importer url
+          urlToCompiledServerUrl(reference.referenceUrl),
         )
-      })
-    } else if (targetIsInline) {
-      // nothing to do
-    } else if (targetIsExternal) {
-      // nothing to do
-    } else {
-      logger.debug(`emit asset for ${shortenUrl(targetUrl)}`)
+        const rollupReferenceId = emitChunk({
+          id: jsModuleUrl,
+          name,
+        })
+        target.rollupReferenceId = rollupReferenceId
+        return {
+          action: "emit_rollup_chunk",
+          payload: rollupReferenceId,
+        }
+      }
+
       const rollupReferenceId = emitAsset({
         fileName: target.targetRelativeUrl,
       })
       target.rollupReferenceId = rollupReferenceId
+      return {
+        action: "emit_rollup_asset",
+        payload: rollupReferenceId,
+      }
+    }
+
+    const addReference = (reference) => {
+      target.targetReferences.push(reference)
+
+      const referenceEffect = onReference(reference)
+
+      logger.debug(
+        formatFoundReference({
+          reference,
+          referenceEffect,
+          showReferenceSourceLocation,
+        }),
+      )
     }
 
     Object.assign(target, {
+      addReference,
       getBufferAvailablePromise,
       getDependenciesAvailablePromise,
       getReadyPromise,
@@ -623,42 +688,21 @@ export const createAssetBuilder = (
     return target
   }
 
-  const rollupChunkReadyCallbackMap = {}
-  const registerCallbackOnceRollupChunkIsReady = (url, callback) => {
-    rollupChunkReadyCallbackMap[url] = callback
-  }
   const buildEnd = ({ jsBuild, buildManifest }) => {
-    Object.keys(rollupChunkReadyCallbackMap).forEach((url) => {
-      const resolveRollupChunk = rollupChunkReadyCallbackMap[url]
-
-      const target = getTargetFromUrl(url)
-      if (targetIsReferencedOnlyByPreloadOrPrefetch(target)) {
-        logger.debug(`resolve rollup chunk ${shortenUrl(url)}`)
-        resolveRollupChunk({
-          onlyPreloadedOrPrefetched: true,
-          // targetBuildBuffer: "", // we don't know the file was never used
-          // targetBuildRelativeUrl: "", // would depend from the file content
-          // targetFileName: "", // would be the name given to that file for rollup
-        })
-        return
-      }
+    Object.keys(targetMap).forEach((targetUrl) => {
+      const target = targetMap[targetUrl]
+      const { buildDoneCallback } = target
 
       const targetBuildRelativeUrl = Object.keys(jsBuild).find((buildRelativeUrlCandidate) => {
         const file = jsBuild[buildRelativeUrlCandidate]
         const { facadeModuleId } = file
-        return facadeModuleId && facadeModuleId === url
+        return facadeModuleId && facadeModuleId === targetUrl
       })
-      const file = jsBuild[targetBuildRelativeUrl]
-      const targetBuildBuffer = file.code
-      const targetFileName =
-        targetFileNameFromBuildManifest(buildManifest, targetBuildRelativeUrl) ||
-        targetBuildRelativeUrl
+      const buildFileInfo = jsBuild[targetBuildRelativeUrl]
 
-      logger.debug(`resolve rollup chunk ${shortenUrl(url)}`)
-      resolveRollupChunk({
-        targetBuildBuffer,
-        targetBuildRelativeUrl,
-        targetFileName,
+      buildDoneCallback({
+        buildFileInfo,
+        buildManifest,
       })
     })
   }

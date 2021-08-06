@@ -654,10 +654,6 @@ export const createJsenvRollupPlugin = async ({
 
     // resolveImportMeta: () => {}
 
-    // transform should not be required anymore as
-    // we will receive
-    // transform: async (moduleContent, rollupId) => {}
-
     outputOptions: (outputOptions) => {
       const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
       const outputExtension = extension === ".html" ? ".js" : extension
