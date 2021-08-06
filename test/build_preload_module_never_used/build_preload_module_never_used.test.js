@@ -3,7 +3,7 @@ import { resolveUrl, urlToRelativeUrl, urlToBasename, readFile } from "@jsenv/ut
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 import {
   findNodeByTagName,
   getHtmlNodeAttributeByName,
@@ -13,11 +13,11 @@ const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.html`
 
 await buildProject({
-  ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
+  ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
@@ -26,14 +26,15 @@ await buildProject({
 })
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBuildUrl, { as: "string" })
 
+// ensure link is kept untouched
 {
+  const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+  const htmlString = await readFile(htmlBuildUrl, { as: "string" })
   const preloadLinkNode = findNodeByTagName(htmlString, "link")
   const hrefAttribute = getHtmlNodeAttributeByName(preloadLinkNode, "href")
 
   const actual = hrefAttribute.value
-  const expected = "./app.js"
+  const expected = "./main.js"
   assert({ actual, expected })
 }
