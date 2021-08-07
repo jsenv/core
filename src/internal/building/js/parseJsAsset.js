@@ -10,7 +10,7 @@ import { minifyJs } from "./minifyJs.js"
 export const parseJsAsset = async (
   jsTarget,
   { notifyReferenceFound },
-  { urlToOriginalProjectUrl, urlToOriginalServerUrl, minify, minifyJsOptions },
+  { urlToOriginalFileUrl, urlToOriginalServerUrl, minify, minifyJsOptions },
 ) => {
   const jsUrl = jsTarget.targetUrl
   const jsString = String(jsTarget.targetBuffer)
@@ -43,7 +43,7 @@ export const parseJsAsset = async (
 
     let jsSourceAfterTransformation
     if (mightBeAWorkerScript) {
-      const workerScriptUrl = urlToOriginalProjectUrl(jsUrl)
+      const workerScriptUrl = urlToOriginalFileUrl(jsUrl)
       const workerBundle = await bundleWorker({ workerScriptUrl, workerScriptSourceMap: map })
       jsSourceAfterTransformation = workerBundle.code
       map = workerBundle.map

@@ -18,10 +18,10 @@ export const parseTarget = (
   target,
   notifiers,
   {
-    urlToOriginalProjectUrl,
-    urlToOriginalServerUrl,
     format,
     systemJsUrl,
+    urlToOriginalFileUrl,
+    urlToOriginalServerUrl,
     preloadOrPrefetchLinkNeverUsedCallback,
     useImportMapToImproveLongTermCaching,
     createImportMapForFilesUsedInJs,
@@ -95,7 +95,7 @@ export const parseTarget = (
         preloadOrPrefetchLinkNeverUsedCallback({
           ...info,
           htmlSource: String(target.targetBuffer),
-          htmlUrl: urlToOriginalProjectUrl(target.targetUrl),
+          htmlUrl: urlToOriginalFileUrl(target.targetUrl),
         })
       },
     })
@@ -127,7 +127,7 @@ export const parseTarget = (
 
   if (targetContentType === "application/javascript" || targetContentType === "text/javascript") {
     return parseJsAsset(target, notifiers, {
-      urlToOriginalProjectUrl,
+      urlToOriginalFileUrl,
       urlToOriginalServerUrl,
       minify,
       minifyJsOptions,
