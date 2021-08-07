@@ -30,7 +30,6 @@ const { buildMappings } = await buildProject({
   const expected = {
     [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
     [`${testDirectoryRelativeUrl}main.css`]: "assets/main-a3f2aec7.css",
-    [`${testDirectoryRelativeUrl}main.js`]: "main-c1ce5a96.js",
   }
   assert({ actual, expected })
 }
@@ -42,8 +41,7 @@ const { buildMappings } = await buildProject({
   const htmlString = await readFile(htmlBuildUrl)
   const linkPreload = findNode(
     htmlString,
-    (node) =>
-      node.nodeName === "link" && getHtmlNodeAttributeByName(node, "rel").value === "preload",
+    (node) => node.nodeName === "link" && Boolean(getHtmlNodeAttributeByName(node, "crossorigin")),
   )
   const href = getHtmlNodeAttributeByName(linkPreload, "href").value
 
