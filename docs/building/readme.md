@@ -218,10 +218,10 @@ Example of an _asset-manifest.json_ file content:
 
 _importResolutionMethod_ is a string controlling how import will be resolved. This parameter is optional, the default value is infered from [format](#format). When _format_ is `"commonjs"` default is `"node"`, otherwise it is `"importmap'`.
 
-| Value | Description                                                                     |
-| ---------------------- | ------------------------------------------------------------------------------- |
-| `"importmap"`          | import are resolved by standard import resolution, the one used by web browsers |
-| `"node"`               | imports are resolved by Node.js module resolution                               |
+| Value         | Description                                                                     |
+| ------------- | ------------------------------------------------------------------------------- |
+| `"importmap"` | import are resolved by standard import resolution, the one used by web browsers |
+| `"node"`      | imports are resolved by Node.js module resolution                               |
 
 ## Shared parameters
 
@@ -542,7 +542,7 @@ I would consider the following before disabling concatenation:
 - Is there a friendly loading experience on the website? (A loading screen + a progress bar for instance)
 - What type of user experience I want to favor: new users or returning users?
 
-Concatenation cannot be disabled because rollup cannot do that. It should be possible with rollup 3.0 as stated in https://github.com/rollup/rollup/issues/3882. Whenever rollup makes it possible it will become possible to use `jsConcatenation` parameter to disable concatenation.
+Use _jsConcatenation_ parameter to disable concatenation.
 
 ```js
 import { buildProject } from "@jsenv/core"
@@ -552,8 +552,4 @@ await buildProject({
   format: "esmodule",
   jsConcatenation: false,
 })
-```
-
-```
-
 ```
