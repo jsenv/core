@@ -1129,6 +1129,7 @@ const ensureTopLevelAwaitTranspilationIfNeeded = async ({
         // the top level await transformation should not need any new babel helper
         // if so let them be inlined
         babelHelpersInjectionAsImport: false,
+        transformGenerator: false, // assume it was done 
         // moduleOutFormat: format, // we are compiling for rollup output must be "esmodule"
       })
 
