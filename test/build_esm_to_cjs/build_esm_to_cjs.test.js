@@ -23,7 +23,7 @@ const { buildMappings } = await buildProject({
   },
   assetManifestFile: true,
   assetManifestFileRelativeUrl: "manifest.json",
-  logLevel: "debug",
+  // logLevel: "debug",
 })
 
 {
