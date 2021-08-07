@@ -1227,10 +1227,10 @@ const formatBuildStartLog = ({ entryPointMap }) => {
   const entryCount = entryProjectRelativeUrls.length
 
   if (entryCount === 1) {
-    return `build ${entryProjectRelativeUrls[0]}`
+    return `build start for ${entryProjectRelativeUrls[0]}`
   }
 
-  return `build ${entryCount} files:
+  return `build start for ${entryCount} files:
 - ${entryProjectRelativeUrls.join(`
 - `)}`
 }
@@ -1259,7 +1259,7 @@ WARNING: Ressource never used for ${linkInfo.type} link in ${showHtmlSourceLocat
 const formatBuildDoneInfo = ({ rollupBuild, buildDirectoryRelativeUrl }) => {
   return `
 ${createDetailedMessage(
-  `build done`,
+  `build end`,
   formatBuildDoneDetails({ rollupBuild, buildDirectoryRelativeUrl }),
 )}
 `
