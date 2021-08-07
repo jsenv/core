@@ -203,13 +203,15 @@ export const createJsenvRollupPlugin = async ({
       fileName,
     })
   }
-  const emitChunk = (chunk) =>
-    rollupEmitFile({
+  const emitChunk = (chunk) => {
+    return rollupEmitFile({
       type: "chunk",
       ...chunk,
     })
-  const setAssetSource = (rollupReferenceId, assetSource) =>
-    rollupSetAssetSource(rollupReferenceId, assetSource)
+  }
+  const setAssetSource = (rollupReferenceId, assetSource) => {
+    return rollupSetAssetSource(rollupReferenceId, assetSource)
+  }
 
   const jsenvRollupPlugin = {
     name: "jsenv",
@@ -409,6 +411,13 @@ export const createJsenvRollupPlugin = async ({
           buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
           urlToFileUrl: rollupUrlToProjectUrl,
           urlToCompiledServerUrl: rollupUrlToCompiledServerUrl,
+          urlToHumanUrl: (url) => {
+            if (!url.startsWith("http:") && !url.startsWith("https:") && !url.startsWith("file:")) {
+              return url
+            }
+            const originalProjectUrl = rollupUrlToOriginalProjectUrl(url)
+            return urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
+          },
           loadUrl: (url) => urlResponseBodyMap[url],
           resolveTargetUrl: ({
             targetSpecifier,
@@ -603,7 +612,7 @@ export const createJsenvRollupPlugin = async ({
       const importerUrl = urlImporterMap[url]
       const isInlineJsModule = urlToUrlForRollup(url) in jsModulesInHtml
       if (!isInlineJsModule) {
-        // Store the fact that this js file is referenced
+        // Store the fact that this file is referenced by js (static or dynamic import)
         assetBuilder.createReference({
           referenceExpectedContentType: responseContentType,
           referenceUrl: importerUrl,
@@ -615,6 +624,7 @@ export const createJsenvRollupPlugin = async ({
 
           targetContentType: responseContentType,
           targetBuffer: Buffer.from(content),
+          targetIsJsModule: responseContentType === "application/javascript",
         })
       }
 
@@ -943,6 +953,7 @@ export const createJsenvRollupPlugin = async ({
 
       return {
         ...commonData,
+        responseContentType: "application/javascript", // normalize
         contentRaw: jsModuleString,
         content: jsModuleString,
         map,

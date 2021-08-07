@@ -65,6 +65,7 @@ export const createAssetBuilder = (
     buildDirectoryRelativeUrl,
     urlToFileUrl, // get a file url from an eventual http url
     urlToCompiledServerUrl,
+    urlToHumanUrl,
     loadUrl = () => null,
     emitChunk,
     emitAsset,
@@ -208,6 +209,9 @@ export const createAssetBuilder = (
     const shouldBeIgnoredWarning = referenceShouldBeIgnoredWarning({
       targetIsJsModule,
       importerTarget,
+      referenceTargetSpecifier,
+      referenceUrl,
+      urlToHumanUrl,
     })
     if (shouldBeIgnoredWarning) {
       logger.warn(shouldBeIgnoredWarning)
@@ -595,6 +599,13 @@ export const createAssetBuilder = (
 
     const onReference = (reference, infoFromReference) => {
       const effects = []
+      if (!target.targetIsEntry) {
+        effects.push(
+          `mark ${urlToHumanUrl(targetUrl)} as referenced by ${urlToHumanUrl(
+            reference.referenceUrl,
+          )}`,
+        )
+      }
 
       target.getBufferAvailablePromise().then(
         () => {
@@ -625,7 +636,7 @@ export const createAssetBuilder = (
       // <link rel="preload" href="file.js" />
       // <script type="module" src="file.js"></script>
       if (!target.targetIsJsModule && infoFromReference.targetIsJsModule) {
-        effects.push(`Mark referenced url as js module`)
+        effects.push(`mark ${urlToHumanUrl(targetUrl)} as js module`)
         target.targetIsJsModule = infoFromReference.targetIsJsModule
       }
 
@@ -801,6 +812,19 @@ export const referenceToCodeForRollup = (reference) => {
   return `import.meta.ROLLUP_FILE_URL_${target.rollupReferenceId}`
 }
 
+// const targetFileNameFromBuildManifest = (buildManifest, targetBuildRelativeUrl) => {
+//   const key = Object.keys(buildManifest).find((keyCandidate) => {
+//     return buildManifest[keyCandidate] === targetBuildRelativeUrl
+//   })
+//   return buildManifest[key]
+// }
+
+const removePotentialUrlHash = (url) => {
+  const urlObject = new URL(url)
+  urlObject.hash = ""
+  return String(urlObject)
+}
+
 /*
  * We cannot reference js from asset (svg for example)
  * that is because rollup awaits for html to be ready which waits
@@ -813,7 +837,13 @@ export const referenceToCodeForRollup = (reference) => {
  * - https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
  * -https://github.com/rollup/rollup/issues/2872
  */
-const referenceShouldBeIgnoredWarning = ({ targetIsJsModule, importerTarget }) => {
+const referenceShouldBeIgnoredWarning = ({
+  targetIsJsModule,
+  importerTarget,
+  referenceTargetSpecifier,
+  referenceUrl,
+  urlToHumanUrl,
+}) => {
   if (!targetIsJsModule) {
     return false
   }
@@ -828,18 +858,9 @@ const referenceShouldBeIgnoredWarning = ({ targetIsJsModule, importerTarget }) =
     return false
   }
 
-  return `WARNING: ignoring js module found in an asset: js module can be referenced only from html or an other js module`
-}
-
-// const targetFileNameFromBuildManifest = (buildManifest, targetBuildRelativeUrl) => {
-//   const key = Object.keys(buildManifest).find((keyCandidate) => {
-//     return buildManifest[keyCandidate] === targetBuildRelativeUrl
-//   })
-//   return buildManifest[key]
-// }
-
-const removePotentialUrlHash = (url) => {
-  const urlObject = new URL(url)
-  urlObject.hash = ""
-  return String(urlObject)
+  return `
+WARNING: Ignoring reference to ${urlToHumanUrl(
+    referenceTargetSpecifier,
+  )} found inside ${urlToHumanUrl(referenceUrl)}.
+`
 }
