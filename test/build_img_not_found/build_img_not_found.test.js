@@ -10,12 +10,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
 const entryPointMap = {
-  [`./${fileRelativeUrl}`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
 }
-const fileUrl = resolveUrl(mainFilename, import.meta.url)
 const imgUrl = resolveUrl("img.png", import.meta.url)
 
 try {
@@ -32,7 +29,7 @@ try {
 --- file ---
 ${urlToFileSystemPath(imgUrl)}
 --- imported by ---
-${fileUrl}:9:5
+${testDirectoryRelativeUrl}${testDirectoryname}.html:9:5
 
   8  |   <body>
 > 9  |     <img src="./img.png" />
