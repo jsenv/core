@@ -14,15 +14,15 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.html`
+const entryPointMap = {
+  [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
+}
 
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
-  },
+  entryPointMap,
   logLevel: "error", // ideally we should catch the exact warning and assert it is correct
 })
 
