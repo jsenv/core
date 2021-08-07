@@ -417,10 +417,9 @@ const linkHrefVisitor = (link, { notifyReferenceFound, ressourceHintNeverUsedCal
 
   const relAttribute = getHtmlNodeAttributeByName(link, "rel")
   const rel = relAttribute ? relAttribute.value : undefined
-  const isPreconnectLink = rel === "preconnect"
-  const isPrefetchLink = rel === "prefetch"
-  const isPreloadLink = rel === "preload" || rel === "modulepreload"
-  const referenceIsRessourceHint = isPreconnectLink || isPrefetchLink || isPreloadLink
+  const referenceIsRessourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload"].includes(
+    rel,
+  )
 
   let referenceExpectedContentType
   const typeAttribute = getHtmlNodeAttributeByName(link, "type")
