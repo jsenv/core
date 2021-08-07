@@ -1,5 +1,6 @@
 import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/util"
 import { createDetailedMessage } from "@jsenv/logger"
+
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
 export const getTargetAsBase64Url = ({ targetBuildBuffer, targetContentType }) => {
@@ -113,6 +114,16 @@ export const formatFoundReference = ({
   }
 
   const { target } = reference
+  const { targetIsEntry } = target
+
+  if (targetIsEntry) {
+    return formatCreateReferenceForEntry({
+      reference,
+      showReferenceSourceLocation,
+      referenceEffects,
+    })
+  }
+
   const { targetIsExternal } = target
 
   if (targetIsExternal) {
@@ -152,27 +163,38 @@ export const formatFoundReference = ({
   })
 }
 
+const formatCreateReferenceForEntry = ({ reference, referenceEffects }) => {
+  return `
+${createDetailedMessage(`Start from entry file at ${reference.target.targetRelativeUrl}`, {
+  ...(referenceEffects
+    ? {
+        effects: referenceEffects,
+      }
+    : {}),
+})}`
+}
+
 const formatFoundPreloadToPrefetch = ({ reference, showReferenceSourceLocation }) => {
   return `
-${createDetailedMessage(`Found preload/prefetch link
+${createDetailedMessage(`Found preload/prefetch link in
 ${showReferenceSourceLocation(reference)}`)}`
 }
 
 const formatFoundReferenceToExternalRessource = ({ reference, showReferenceSourceLocation }) => {
   return `
-${createDetailedMessage(`Found reference to an external url
+${createDetailedMessage(`Found reference to an external url in
 ${showReferenceSourceLocation(reference)}`)}`
 }
 
 const formatFoundReferenceToInlineAsset = ({ reference, showReferenceSourceLocation }) => {
   return `
-${createDetailedMessage(`Found reference to an inline ressource
+${createDetailedMessage(`Found reference to an inline asset in
 ${showReferenceSourceLocation(reference)}`)}`
 }
 
 const formatFoundReferenceToInlineModule = ({ reference, showReferenceSourceLocation }) => {
   return `
-${createDetailedMessage(`Found reference to an inline module
+${createDetailedMessage(`Found reference to an inline module in
 ${showReferenceSourceLocation(reference)}`)}`
 }
 
@@ -183,7 +205,7 @@ const formatFoundReferenceToAsset = ({
 }) => {
   return `
 ${createDetailedMessage(
-  `Found reference to an asset
+  `Found reference to an asset in
 ${showReferenceSourceLocation(reference)}`,
   {
     ...(referenceEffects
@@ -202,7 +224,7 @@ const formatFoundReferenceToModule = ({
 }) => {
   return `
 ${createDetailedMessage(
-  `Found reference to a module
+  `Found reference to a module in
 ${showReferenceSourceLocation(reference)}`,
   {
     ...(referenceEffects
