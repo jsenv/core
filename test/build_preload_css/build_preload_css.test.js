@@ -22,31 +22,18 @@ const { buildMappings } = await buildProject({
   entryPointMap: {
     [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
   },
-  logLevel: "debug",
+  // logLevel: "debug",
 })
-
-{
-  const actual = buildMappings
-  const expected = {
-    [`${testDirectoryRelativeUrl}src/main.css`]: "assets/main-a3f2aec7.css",
-    [`${testDirectoryRelativeUrl}src/main.js`]: "smain-d56393bd.js",
-    [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
-  }
-  assert({ actual, expected })
-}
 
 // ensure link.href is correct
 {
   const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
   const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
   const htmlString = await readFile(htmlBuildUrl)
-  const linkPreload = findNode(
-    htmlString,
-    (node) => node.nodeName === "link" && Boolean(getHtmlNodeAttributeByName(node, "crossorigin")),
-  )
+  const linkPreload = findNode(htmlString, (node) => node.nodeName === "link")
   const href = getHtmlNodeAttributeByName(linkPreload, "href").value
 
   const actual = href
-  const expected = "https://fonts.googleapis.com/css2?family=Roboto"
+  const expected = buildMappings[`${testDirectoryRelativeUrl}src/main.css`]
   assert({ actual, expected })
 }
