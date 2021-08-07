@@ -14,24 +14,23 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.html`
+const entryPointMap = {
+  [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
+}
 
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
-  },
+  entryPointMap,
   // logLevel: "debug",
 })
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBuildUrl, { as: "string" })
-
 // ensure link.href is updated
 {
+  const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+  const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+  const htmlString = await readFile(htmlBuildUrl, { as: "string" })
   const preloadLinkNode = findNodeByTagName(htmlString, "link")
   const hrefAttribute = getHtmlNodeAttributeByName(preloadLinkNode, "href")
 
