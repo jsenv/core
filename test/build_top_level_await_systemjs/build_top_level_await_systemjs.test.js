@@ -22,7 +22,7 @@ await buildProject({
   entryPointMap: {
     [`./${testDirectoryRelativeUrl}${testDirectoryname}.js`]: "./main.js",
   },
-  logLevel: "debug",
+  // logLevel: "debug",
 })
 
 {

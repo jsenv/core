@@ -30,7 +30,7 @@ const { buildMappings } = await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
-  logLevel: "debug",
+  // logLevel: "debug",
 })
 
 // ensure href is properly updated
