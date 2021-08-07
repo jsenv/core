@@ -1180,15 +1180,18 @@ const formatBuildStartLog = ({ entryPointMap }) => {
 }
 
 const formatUseImportMapFromHtml = (importMapInfoFromHtml) => {
-  return `use importmap found in ${showHtmlSourceLocation(importMapInfoFromHtml)}`
+  return `
+use importmap found in ${showHtmlSourceLocation(importMapInfoFromHtml)}`
 }
 
 const formatImportmapOutsideCompileDirectory = ({ importMapInfo, compileDirectoryUrl }) => {
-  return `WARNING: importmap file is outside compile directory.
+  return `
+WARNING: importmap file is outside compile directory.
 That's unusual you should certainly make importmap file relative.
 ${showHtmlSourceLocation(importMapInfo)}
 --- compile directory url ---
-${compileDirectoryUrl}`
+${compileDirectoryUrl}
+`
 }
 
 const formatLinkNeverUsedWarning = (linkInfo) => {
@@ -1202,8 +1205,7 @@ const formatBuildDoneInfo = ({ rollupBuild, buildDirectoryRelativeUrl }) => {
 ${createDetailedMessage(
   `build done`,
   formatBuildDoneDetails({ rollupBuild, buildDirectoryRelativeUrl }),
-)}
-`
+)}`
 }
 
 const formatBuildDoneDetails = ({ rollupBuild, buildDirectoryRelativeUrl }) => {
