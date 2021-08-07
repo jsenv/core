@@ -159,14 +159,6 @@ export const createJsenvRollupPlugin = async ({
     })
   }
 
-  const rollupUrlToOriginalServerUrl = (url) => {
-    return urlToOriginalServerUrl(rollupUrlToServerUrl(url) || url, {
-      projectDirectoryUrl,
-      compileServerOrigin,
-      compileDirectoryRelativeUrl,
-    })
-  }
-
   const rollupUrlToOriginalProjectUrl = (url) => {
     return urlToOriginalProjectUrl(rollupUrlToServerUrl(url) || url, {
       projectDirectoryUrl,
@@ -384,10 +376,22 @@ export const createJsenvRollupPlugin = async ({
         {
           parse: async (target, notifiers) => {
             return parseTarget(target, notifiers, {
-              urlToOriginalProjectUrl: rollupUrlToOriginalProjectUrl,
-              urlToOriginalServerUrl: rollupUrlToOriginalServerUrl,
               format,
               systemJsUrl,
+              urlToOriginalFileUrl: (url) => {
+                return urlToOriginalProjectUrl(url, {
+                  projectDirectoryUrl,
+                  compileServerOrigin,
+                  compileDirectoryRelativeUrl,
+                })
+              },
+              urlToOriginalServerUrl: (url) => {
+                return urlToOriginalServerUrl(url, {
+                  projectDirectoryUrl,
+                  compileServerOrigin,
+                  compileDirectoryRelativeUrl,
+                })
+              },
               preloadOrPrefetchLinkNeverUsedCallback: (linkInfo) => {
                 logger.warn(formatLinkNeverUsedWarning(linkInfo))
               },
@@ -407,15 +411,31 @@ export const createJsenvRollupPlugin = async ({
         {
           logLevel: loggerToLogLevel(logger),
           format,
-          projectDirectoryUrl: `${compileServerOrigin}`,
+          baseUrl: compileServerOrigin,
           buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
-          urlToFileUrl: rollupUrlToProjectUrl,
-          urlToCompiledServerUrl: rollupUrlToCompiledServerUrl,
+
+          urlToFileUrl: (url) => {
+            return urlToProjectUrl(url, {
+              projectDirectoryUrl,
+              compileServerOrigin,
+            })
+          },
+          urlToCompiledServerUrl: (url) => {
+            return urlToCompiledServerUrl(url, {
+              projectDirectoryUrl,
+              compileServerOrigin,
+              compileDirectoryRelativeUrl,
+            })
+          },
           urlToHumanUrl: (url) => {
             if (!url.startsWith("http:") && !url.startsWith("https:") && !url.startsWith("file:")) {
               return url
             }
-            const originalProjectUrl = rollupUrlToOriginalProjectUrl(url)
+            const originalProjectUrl = urlToOriginalProjectUrl(url, {
+              projectDirectoryUrl,
+              compileServerOrigin,
+              compileDirectoryRelativeUrl,
+            })
             return urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
           },
           loadUrl: (url) => urlResponseBodyMap[url],
@@ -610,23 +630,21 @@ export const createJsenvRollupPlugin = async ({
       })
 
       const importerUrl = urlImporterMap[url]
-      const isInlineJsModule = urlToUrlForRollup(url) in jsModulesInHtml
-      if (!isInlineJsModule) {
-        // Store the fact that this file is referenced by js (static or dynamic import)
-        assetBuilder.createReference({
-          referenceExpectedContentType: responseContentType,
-          referenceUrl: importerUrl,
-          referenceTargetSpecifier: responseUrl,
-          // rollup do not provide a way to know line and column for the static or dynamic import
-          // referencing that file
-          referenceColumn: undefined,
-          referenceLine: undefined,
+      // const isInlineJsModule = urlToUrlForRollup(url) in jsModulesInHtml
+      // Store the fact that this file is referenced by js (static or dynamic import)
+      assetBuilder.createReference({
+        referenceExpectedContentType: responseContentType,
+        referenceUrl: importerUrl,
+        referenceTargetSpecifier: responseUrl,
+        // rollup do not provide a way to know line and column for the static or dynamic import
+        // referencing that file
+        referenceColumn: undefined,
+        referenceLine: undefined,
 
-          targetContentType: responseContentType,
-          targetBuffer: Buffer.from(content),
-          targetIsJsModule: responseContentType === "application/javascript",
-        })
-      }
+        targetContentType: responseContentType,
+        targetBuffer: Buffer.from(content),
+        targetIsJsModule: responseContentType === "application/javascript",
+      })
 
       saveUrlResponseBody(responseUrl, contentRaw)
       // handle redirection
