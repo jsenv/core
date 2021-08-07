@@ -25,6 +25,7 @@ export const jsenvTransform = async ({
   moduleOutFormat,
   importMetaFormat,
 
+  babelHelpersInjectionAsImport,
   allowTopLevelAwait,
   transformTopLevelAwait,
   transformGenerator,
@@ -135,7 +136,9 @@ export const jsenvTransform = async ({
       },
     ],
     ...babelPluginMap,
-    "transform-babel-helpers-to-import": [transformBabelHelperToImportBabelPlugin],
+    ...(babelHelpersInjectionAsImport
+      ? { "transform-babel-helpers-to-import": [transformBabelHelperToImportBabelPlugin] }
+      : {}),
   }
 
   const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap)

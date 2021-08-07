@@ -771,6 +771,7 @@ export const createJsenvRollupPlugin = async ({
       })
       await ensureTopLevelAwaitTranspilationIfNeeded({
         jsChunks,
+        format,
         babelPluginMap,
         transformTopLevelAwait,
         projectDirectoryUrl,
@@ -1096,6 +1097,7 @@ export const createJsenvRollupPlugin = async ({
 
 const ensureTopLevelAwaitTranspilationIfNeeded = async ({
   jsChunks,
+  format,
   transformTopLevelAwait,
   babelPluginMap,
   projectDirectoryUrl,
@@ -1105,6 +1107,8 @@ const ensureTopLevelAwaitTranspilationIfNeeded = async ({
     return
   }
 
+  // ideally we would do that only if top level await was used
+  // this is not something we know at this stage
   await Promise.all(
     Object.keys(jsChunks).map(async (fileName) => {
       const file = jsChunks[fileName]
@@ -1115,7 +1119,10 @@ const ensureTopLevelAwaitTranspilationIfNeeded = async ({
         map: file.map,
         url: rollupUrlToProjectUrl(file.facadeModuleId), // transformJs expect a file:// url
         babelPluginMap,
-        // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
+        // the top level await transformation should not need any new babel helper
+        // if so let them be inlined
+        babelHelpersInjectionAsImport: false,
+        moduleOutFormat: format, // we are compiling for rollup output must be "esmodule"
       })
 
       file.code = code

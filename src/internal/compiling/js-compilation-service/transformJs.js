@@ -18,6 +18,7 @@ export const transformJs = async ({
   moduleOutFormat = "esmodule",
   importMetaFormat = moduleOutFormat,
 
+  babelHelpersInjectionAsImport = true,
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
   transformGenerator = true,
@@ -61,6 +62,7 @@ export const transformJs = async ({
     moduleOutFormat,
     importMetaFormat,
 
+    babelHelpersInjectionAsImport,
     allowTopLevelAwait,
     transformTopLevelAwait,
     transformGenerator,
