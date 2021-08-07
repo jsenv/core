@@ -1,9 +1,7 @@
-function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof2 = function _typeof2(obj) { return typeof obj; }; } else { _typeof2 = function _typeof2(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof2(obj); }
-
 (function () {
   'use strict';
 
-  var _defineProperty = function _defineProperty(obj, key, value) {
+  var _defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
     // prototype cause side effects under the fast path of simple
@@ -21,7 +19,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return obj;
-  };
+  });
 
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
@@ -59,12 +57,12 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return target;
-  } // eslint-disable-next-line consistent-return
+  }
 
-
-  var arrayWithHoles = function arrayWithHoles(arr) {
+  // eslint-disable-next-line consistent-return
+  var arrayWithHoles = (function (arr) {
     if (Array.isArray(arr)) return arr;
-  };
+  });
 
   function _iterableToArrayLimit(arr, i) {
     // this is an expanded form of \`for...of\` that properly supports abrupt completions of
@@ -104,9 +102,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
 
     return _arr;
   }
+
   /* eslint-disable no-eq-null, eqeqeq */
-
-
   function arrayLikeToArray(arr, len) {
     if (len == null || len > arr.length) len = arr.length;
     var arr2 = new Array(len);
@@ -117,9 +114,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
 
     return arr2;
   }
+
   /* eslint-disable consistent-return */
-
-
   function unsupportedIterableToArray(o, minLen) {
     if (!o) return;
     if (typeof o === "string") return arrayLikeToArray(o, minLen);
@@ -129,15 +125,15 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
   }
 
-  var nonIterableRest = function nonIterableRest() {
+  var nonIterableRest = (function () {
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-  };
+  });
 
-  var _slicedToArray = function _slicedToArray(arr, i) {
+  var _slicedToArray = (function (arr, i) {
     return arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
-  };
+  });
 
-  var objectWithoutPropertiesLoose = function objectWithoutPropertiesLoose(source, excluded) {
+  var objectWithoutPropertiesLoose = (function (source, excluded) {
     if (source === null) return {};
     var target = {};
     var sourceKeys = Object.keys(source);
@@ -151,9 +147,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return target;
-  };
+  });
 
-  var _objectWithoutProperties = function _objectWithoutProperties(source, excluded) {
+  var _objectWithoutProperties = (function (source, excluded) {
     if (source === null) return {};
     var target = objectWithoutPropertiesLoose(source, excluded);
     var key;
@@ -171,7 +167,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return target;
-  };
+  });
 
   var createCancellationToken = function createCancellationToken() {
     var register = function register(callback) {
@@ -197,14 +193,14 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   };
 
   var nativeTypeOf = function nativeTypeOf(obj) {
-    return _typeof2(obj);
+    return typeof obj;
   };
 
   var customTypeOf = function customTypeOf(obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : _typeof2(obj);
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
   };
 
-  var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? nativeTypeOf : customTypeOf;
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
   var createDetailedMessage = function createDetailedMessage(message) {
     var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -214,9 +210,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
     });
     return string;
-  }; // fallback to this polyfill (or even use an existing polyfill would be better)
-  // https://github.com/github/fetch/blob/master/fetch.js
+  };
 
+  // fallback to this polyfill (or even use an existing polyfill would be better)
+  // https://github.com/github/fetch/blob/master/fetch.js
 
   function _await$3(value, then, direct) {
     if (direct) {
@@ -666,6 +663,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   }
 
   var fetchNative = _async$2(function (url) {
+
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
     var _ref$cancellationToke = _ref.cancellationToken,
@@ -838,12 +836,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     var match = string.match(regexp);
     return match && match.length > 0 ? match[1] || undefined : undefined;
   };
-
   var secondMatch = function secondMatch(regexp, string) {
     var match = string.match(regexp);
     return match && match.length > 1 ? match[2] || undefined : undefined;
   };
-
   var userAgentToVersion = function userAgentToVersion(userAgent) {
     return firstMatch(/version\/(\d+(\.?_?\d+)+)/i, userAgent) || undefined;
   };
@@ -976,7 +972,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     return null;
   }; // TODO
 
-
   var detectIOS = function detectIOS() {
     return navigatorToBrowser(window.navigator);
   };
@@ -1000,8 +995,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return null;
-  }; // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
+  };
 
+  // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
 
   var detectorCompose = function detectorCompose(detectors) {
     return function () {
@@ -1023,7 +1019,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   };
 
   var detector = detectorCompose([detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
-
   var detectBrowser = function detectBrowser() {
     var _ref = detector() || {},
         _ref$name = _ref.name,
@@ -1405,9 +1400,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       return false;
     });
   });
+
   /* eslint-env browser */
-
-
   window.scanBrowserRuntimeFeatures = scanBrowserRuntimeFeatures;
-})();
+
+}());
+
 //# sourceMappingURL=jsenv_compile_proxy.js.map

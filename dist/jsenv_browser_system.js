@@ -1,9 +1,7 @@
-function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof2 = function _typeof2(obj) { return typeof obj; }; } else { _typeof2 = function _typeof2(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof2(obj); }
-
 (function () {
   'use strict';
 
-  var _defineProperty = function _defineProperty(obj, key, value) {
+  var _defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
     // prototype cause side effects under the fast path of simple
@@ -21,7 +19,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return obj;
-  };
+  });
 
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
@@ -62,17 +60,16 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   }
 
   var nativeTypeOf = function nativeTypeOf(obj) {
-    return _typeof2(obj);
+    return typeof obj;
   };
 
   var customTypeOf = function customTypeOf(obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : _typeof2(obj);
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
   };
 
-  var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? nativeTypeOf : customTypeOf;
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+
   /* eslint-disable no-eq-null, eqeqeq */
-
-
   function arrayLikeToArray(arr, len) {
     if (len == null || len > arr.length) len = arr.length;
     var arr2 = new Array(len);
@@ -84,16 +81,15 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     return arr2;
   }
 
-  var arrayWithoutHoles = function arrayWithoutHoles(arr) {
+  var arrayWithoutHoles = (function (arr) {
     if (Array.isArray(arr)) return arrayLikeToArray(arr);
-  };
+  });
 
   function _iterableToArray(iter) {
     if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
   }
+
   /* eslint-disable consistent-return */
-
-
   function unsupportedIterableToArray(o, minLen) {
     if (!o) return;
     if (typeof o === "string") return arrayLikeToArray(o, minLen);
@@ -103,15 +99,15 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
   }
 
-  var nonIterableSpread = function nonIterableSpread() {
+  var nonIterableSpread = (function () {
     throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-  };
+  });
 
-  var _toConsumableArray = function _toConsumableArray(arr) {
+  var _toConsumableArray = (function (arr) {
     return arrayWithoutHoles(arr) || _iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
-  }; // https://developer.mozilla.org/en-US/docs/Glossary/Primitive
+  });
 
-
+  // https://developer.mozilla.org/en-US/docs/Glossary/Primitive
   var isComposite = function isComposite(value) {
     if (value === null) {
       return false;
@@ -132,11 +128,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
 
   var compositeWellKnownMap = new WeakMap();
   var primitiveWellKnownMap = new Map();
-
   var getCompositeGlobalPath = function getCompositeGlobalPath(value) {
     return compositeWellKnownMap.get(value);
   };
-
   var getPrimitiveGlobalPath = function getPrimitiveGlobalPath(value) {
     return primitiveWellKnownMap.get(value);
   };
@@ -610,11 +604,11 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   var createUnknownPrototypeMessage = function createUnknownPrototypeMessage(_ref10) {
     var prototypeValue = _ref10.prototypeValue;
     return "prototype must be global, like Object.prototype, or somewhere in the value.\nprototype constructor name: ".concat(prototypeValue.constructor.name);
-  }; // be carefull because this function is mutating recipe objects inside the recipeArray.
+  };
+
+  // be carefull because this function is mutating recipe objects inside the recipeArray.
   // this is not an issue because each recipe object is not accessible from the outside
   // when used internally by uneval
-
-
   var sortRecipe = function sortRecipe(recipeArray) {
     var findInRecipePrototypeChain = function findInRecipePrototypeChain(recipe, callback) {
       var currentRecipe = recipe; // eslint-disable-next-line no-constant-condition
@@ -686,10 +680,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       return 1;
     });
     return recipeArrayOrdered;
-  }; // https://github.com/joliss/js-string-escape/blob/master/index.js
+  };
+
+  // https://github.com/joliss/js-string-escape/blob/master/index.js
   // http://javascript.crockford.com/remedial.html
-
-
   var escapeString = function escapeString(value) {
     var string = String(value);
     var i = 0;
@@ -994,9 +988,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return pathname.slice(0, slashLastIndex + 1);
-  }; // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+  };
 
-
+  // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
   var resolveUrl = function resolveUrl(specifier, baseUrl) {
     if (baseUrl) {
       if (typeof baseUrl !== "string") {
@@ -1123,7 +1117,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     });
     return mappingsSorted;
   };
-
   var sortScopes = function sortScopes(scopes) {
     var scopesSorted = {};
     Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(function (scopeSpecifier) {
@@ -1281,7 +1274,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     return fnWithMemoization;
   };
 
-  var objectWithoutPropertiesLoose = function objectWithoutPropertiesLoose(source, excluded) {
+  var objectWithoutPropertiesLoose = (function (source, excluded) {
     if (source === null) return {};
     var target = {};
     var sourceKeys = Object.keys(source);
@@ -1295,9 +1288,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return target;
-  };
+  });
 
-  var _objectWithoutProperties = function _objectWithoutProperties(source, excluded) {
+  var _objectWithoutProperties = (function (source, excluded) {
     if (source === null) return {};
     var target = objectWithoutPropertiesLoose(source, excluded);
     var key;
@@ -1315,7 +1308,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return target;
-  };
+  });
 
   var createCancellationToken = function createCancellationToken() {
     var register = function register(callback) {
@@ -1348,9 +1341,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
     });
     return string;
-  }; // fallback to this polyfill (or even use an existing polyfill would be better)
-  // https://github.com/github/fetch/blob/master/fetch.js
+  };
 
+  // fallback to this polyfill (or even use an existing polyfill would be better)
+  // https://github.com/github/fetch/blob/master/fetch.js
 
   function _await$b(value, then, direct) {
     if (direct) {
@@ -1800,6 +1794,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   }
 
   var fetchNative = _async$a(function (url) {
+
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
     var _ref$cancellationToke = _ref.cancellationToken,
@@ -2277,7 +2272,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
               });
             }
 
-            if (contentType) ;else {
+            if (contentType) ; else {
               console.warn("Module content-type is missing.", _objectSpread2(_defineProperty({}, "allowed content-type", ["aplication/javascript", "application/json", "text/*"]), getModuleDetails({
                 url: url,
                 importerUrl: importerUrl,
@@ -2285,6 +2280,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
                 compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
               })));
             }
+
             return fromFunctionReturningNamespace(function () {
               return {
                 default: moduleResponse.url
@@ -2484,9 +2480,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }));
     return new Error(detailedMessage);
   };
+
   /* eslint-env browser */
-
-
   var _window$1 = window,
       performance$1 = _window$1.performance;
 
@@ -2533,11 +2528,11 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   }) : _async$8(function (fn) {
     return fn();
   });
+
   /*
   * SJS 6.10.2
   * Minimal SystemJS Build
   */
-
   (function () {
     function errMsg(errCode, msg) {
       return (msg || "") + " (SystemJS https://git.io/JvFET#" + errCode + ")";
@@ -3225,9 +3220,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
         delete object[name];
       }
     };
-  }; // eslint-disable-next-line no-eval
+  };
 
-
+  // eslint-disable-next-line no-eval
   var evalSource = function evalSource(code, href) {
     return window.eval(appendSourceURL$1(code, href));
   };
@@ -3824,9 +3819,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }).join("");
     return "".concat(name, ": ").concat(message).concat(stackString);
   };
+
   /* eslint-env browser, node */
-
-
   var parseDataUrl = function parseDataUrl(dataUrl) {
     var afterDataProtocol = dataUrl.slice("data:".length);
     var commaIndex = afterDataProtocol.indexOf(",");
@@ -3849,13 +3843,11 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       data: afterComma
     };
   };
-
   var dataUrlToRawData = function dataUrlToRawData(_ref2) {
     var base64Flag = _ref2.base64Flag,
         data = _ref2.data;
     return base64Flag ? base64ToString(data) : data;
   };
-
   (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.atob : function (data) {
     return Buffer.from(data).toString("base64");
   };
@@ -3870,7 +3862,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     });
     return sourceMappingUrl;
   };
-
   var javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g;
 
   var replaceSourceMappingUrl = function replaceSourceMappingUrl(source, regexp, callback) {
@@ -3901,11 +3892,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     if (secondChar !== ":") return false;
     return true;
   };
-
   var windowsFilePathToUrl = function windowsFilePathToUrl(windowsFilePath) {
     return "file:///".concat(replaceBackSlashesWithSlashes(windowsFilePath));
   };
-
   var replaceBackSlashesWithSlashes = function replaceBackSlashesWithSlashes(string) {
     return string.replace(/\\/g, "/");
   };
@@ -4002,8 +3991,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       }
     }, function (_result) {
       var _exit2 = false;
-      if (_exit) return _result; // Code called using eval() needs special handling
-
+      if (_exit) return _result;
+      // Code called using eval() needs special handling
       return _invoke$3(function () {
         if (callSite.isEval()) {
           var origin = callSite.getEvalOrigin();
@@ -4155,8 +4144,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     var _exit3 = false;
     var resolveFile = _ref3.resolveFile,
         urlToSourcemapConsumer = _ref3.urlToSourcemapConsumer,
-        onFailure = _ref3.onFailure; // Most eval() calls are in this format
-
+        onFailure = _ref3.onFailure;
+    // Most eval() calls are in this format
     var topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(origin);
     return _invoke$3(function () {
       if (topLevelEvalMatch) {
@@ -4177,8 +4166,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       }
     }, function (_result4) {
       var _exit4 = false;
-      if (_exit3) return _result4; // Parse nested eval() calls using recursion
-
+      if (_exit3) return _result4;
+      // Parse nested eval() calls using recursion
       var nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
       return _invoke$3(function () {
         if (nestedEvalMatch) {
@@ -4786,9 +4775,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
         });
       }),
       resolveFile: function resolveFile(specifier) {
-        var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window.location.href; // browsers having Error.captureStrackTrace got window.URL
+        var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window.location.href;
+        // browsers having Error.captureStrackTrace got window.URL
         // and this executes only when Error.captureStackTrace exists
-
         return String(new URL(specifier, importer));
       }
     }, options));
@@ -5034,8 +5023,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   };
 
   var onExecutionError = function onExecutionError(executionResult, _ref) {
-    var currentScript = _ref.currentScript; // eslint-disable-next-line no-eval
-
+    var currentScript = _ref.currentScript;
+    // eslint-disable-next-line no-eval
     var originalError = window.eval(executionResult.exceptionSource);
 
     if (originalError.code === "NETWORK_FAILURE") {
@@ -5125,5 +5114,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     executeFileUsingDynamicImport: executeFileUsingDynamicImport,
     executeFileUsingSystemJs: executeFileUsingSystemJs
   };
-})();
+
+}());
+
 //# sourceMappingURL=jsenv_browser_system.js.map

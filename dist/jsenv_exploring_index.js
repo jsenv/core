@@ -1,9 +1,7 @@
-function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof2 = function _typeof2(obj) { return typeof obj; }; } else { _typeof2 = function _typeof2(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof2(obj); }
-
 (function () {
   'use strict';
 
-  var _defineProperty = function _defineProperty(obj, key, value) {
+  var _defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
     // prototype cause side effects under the fast path of simple
@@ -21,7 +19,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return obj;
-  };
+  });
 
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
@@ -61,7 +59,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     return target;
   }
 
-  var objectWithoutPropertiesLoose = function objectWithoutPropertiesLoose(source, excluded) {
+  var objectWithoutPropertiesLoose = (function (source, excluded) {
     if (source === null) return {};
     var target = {};
     var sourceKeys = Object.keys(source);
@@ -75,9 +73,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return target;
-  };
+  });
 
-  var _objectWithoutProperties = function _objectWithoutProperties(source, excluded) {
+  var _objectWithoutProperties = (function (source, excluded) {
     if (source === null) return {};
     var target = objectWithoutPropertiesLoose(source, excluded);
     var key;
@@ -95,7 +93,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return target;
-  };
+  });
 
   var createCancellationToken = function createCancellationToken() {
     var register = function register(callback) {
@@ -121,14 +119,14 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   };
 
   var nativeTypeOf = function nativeTypeOf(obj) {
-    return _typeof2(obj);
+    return typeof obj;
   };
 
   var customTypeOf = function customTypeOf(obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : _typeof2(obj);
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
   };
 
-  var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? nativeTypeOf : customTypeOf;
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
   var isCancelError = function isCancelError(value) {
     return value && _typeof(value) === "object" && value.name === "CANCEL_ERROR";
@@ -188,6 +186,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   }
 
   var fetchNative$1 = _async$5(function (url) {
+
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
     var _ref$cancellationToke = _ref.cancellationToken,
@@ -248,9 +247,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   }
 
   var loadPolyfill = memoize(function () {
-    return Promise.resolve().then(function () {
-      return fetchUsingXHR$1;
-    });
+    return Promise.resolve().then(function () { return fetchUsingXHR$1; });
   });
 
   function _async$5(f) {
@@ -356,9 +353,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
     });
     return string;
-  }; // fallback to this polyfill (or even use an existing polyfill would be better)
-  // https://github.com/github/fetch/blob/master/fetch.js
+  };
 
+  // fallback to this polyfill (or even use an existing polyfill would be better)
+  // https://github.com/github/fetch/blob/master/fetch.js
 
   function _await$4(value, then, direct) {
     if (direct) {
@@ -797,6 +795,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     __proto__: null,
     fetchUsingXHR: fetchUsingXHR
   });
+
   var _excluded = ["cancellationToken", "mode"];
 
   function _await$3(value, then, direct) {
@@ -812,6 +811,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   }
 
   var fetchNative = _async$3(function (url) {
+
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
     var _ref$cancellationToke = _ref.cancellationToken,
@@ -1233,5 +1233,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   };
 
   run();
-})();
+
+}());
+
 //# sourceMappingURL=jsenv_exploring_index.js.map

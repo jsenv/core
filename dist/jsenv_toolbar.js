@@ -1,5 +1,3 @@
-function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof2 = function _typeof2(obj) { return typeof obj; }; } else { _typeof2 = function _typeof2(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof2(obj); }
-
 (function () {
   'use strict';
 
@@ -118,7 +116,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     return "".concat(specificPathname).concat(search).concat(hash);
   };
 
-  var _defineProperty = function _defineProperty(obj, key, value) {
+  var _defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
     // prototype cause side effects under the fast path of simple
@@ -136,7 +134,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return obj;
-  };
+  });
 
   var createDetailedMessage = function createDetailedMessage(message) {
     var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -148,7 +146,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     return string;
   };
 
-  var objectWithoutPropertiesLoose = function objectWithoutPropertiesLoose(source, excluded) {
+  var objectWithoutPropertiesLoose = (function (source, excluded) {
     if (source === null) return {};
     var target = {};
     var sourceKeys = Object.keys(source);
@@ -162,9 +160,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return target;
-  };
+  });
 
-  var _objectWithoutProperties = function _objectWithoutProperties(source, excluded) {
+  var _objectWithoutProperties = (function (source, excluded) {
     if (source === null) return {};
     var target = objectWithoutPropertiesLoose(source, excluded);
     var key;
@@ -182,7 +180,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return target;
-  };
+  });
 
   var createCancellationToken = function createCancellationToken() {
     var register = function register(callback) {
@@ -208,21 +206,20 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   };
 
   var nativeTypeOf = function nativeTypeOf(obj) {
-    return _typeof2(obj);
+    return typeof obj;
   };
 
   var customTypeOf = function customTypeOf(obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : _typeof2(obj);
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
   };
 
-  var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? nativeTypeOf : customTypeOf;
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
   var isCancelError = function isCancelError(value) {
     return value && _typeof(value) === "object" && value.name === "CANCEL_ERROR";
   };
+
   /* eslint-disable no-eq-null, eqeqeq */
-
-
   function arrayLikeToArray(arr, len) {
     if (len == null || len > arr.length) len = arr.length;
     var arr2 = new Array(len);
@@ -233,9 +230,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
 
     return arr2;
   }
+
   /* eslint-disable consistent-return */
-
-
   function unsupportedIterableToArray(o, minLen) {
     if (!o) return;
     if (typeof o === "string") return arrayLikeToArray(o, minLen);
@@ -281,9 +277,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return target;
-  } // fallback to this polyfill (or even use an existing polyfill would be better)
-  // https://github.com/github/fetch/blob/master/fetch.js
+  }
 
+  // fallback to this polyfill (or even use an existing polyfill would be better)
+  // https://github.com/github/fetch/blob/master/fetch.js
 
   function _await$5(value, then, direct) {
     if (direct) {
@@ -733,6 +730,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   }
 
   var fetchNative = _async$5(function (url) {
+
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
     var _ref$cancellationToke = _ref.cancellationToken,
@@ -928,7 +926,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       disableIframeOverflowOnParentWindow();
     }
   };
-
   var iframeOverflowEnabled = false;
 
   var enableIframeOverflowOnParentWindow = function enableIframeOverflowOnParentWindow() {
@@ -975,15 +972,12 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       return iframe.contentWindow === window;
     });
   };
-
   var forceHideElement = function forceHideElement(element) {
     element.setAttribute("data-force-hide", "");
   };
-
   var removeForceHideElement = function removeForceHideElement(element) {
     element.removeAttribute("data-force-hide");
   };
-
   var setStyles = function setStyles(element, styles) {
     var elementStyle = element.style;
     var restoreStyles = Object.keys(styles).map(function (styleName) {
@@ -1010,15 +1004,12 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       });
     };
   };
-
   var toolbarSectionIsActive = function toolbarSectionIsActive(element) {
     return element.hasAttribute("data-active");
   };
-
   var activateToolbarSection = function activateToolbarSection(element) {
     element.setAttribute("data-active", "");
   };
-
   var deactivateToolbarSection = function deactivateToolbarSection(element) {
     element.removeAttribute("data-active");
   };
@@ -1086,9 +1077,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     };
 
     return stop;
-  }; // handle data-last-interaction attr on html (focusring)
+  };
 
-
+  // handle data-last-interaction attr on html (focusring)
   window.addEventListener("mousedown", function (mousedownEvent) {
     if (mousedownEvent.defaultPrevented) {
       return;
@@ -1168,28 +1159,23 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       showTooltip(element);
     }
   };
-
   var hideTooltip = function hideTooltip(element) {
     element.removeAttribute("data-tooltip-visible");
     element.removeAttribute("data-tooltip-auto-visible");
     updateIframeOverflowOnParentWindow();
   };
-
   var showTooltip = function showTooltip(element) {
     element.setAttribute("data-tooltip-visible", "");
     updateIframeOverflowOnParentWindow();
   };
-
   var autoShowTooltip = function autoShowTooltip(element) {
     element.setAttribute("data-tooltip-auto-visible", "");
     updateIframeOverflowOnParentWindow();
   };
-
   var removeAutoShowTooltip = function removeAutoShowTooltip(element) {
     element.removeAttribute("data-tooltip-auto-visible");
     updateIframeOverflowOnParentWindow();
   };
-
   var hideAllTooltip = function hideAllTooltip() {
     var elementsWithTooltip = Array.from(document.querySelectorAll("[data-tooltip-visible]"));
     elementsWithTooltip.forEach(function (elementWithTooltip) {
@@ -1213,12 +1199,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   var settingsAreVisible = function settingsAreVisible() {
     return toolbarSectionIsActive(document.querySelector("#settings"));
   };
-
   var hideSettings = function hideSettings() {
     deactivateToolbarSection(document.querySelector("#settings"));
     updateIframeOverflowOnParentWindow();
   };
-
   var showSettings = function showSettings() {
     activateToolbarSection(document.querySelector("#settings"));
     updateIframeOverflowOnParentWindow();
@@ -1268,7 +1252,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   }
 
   var arrayOfOpenedNotifications = [];
-
   var renderToolbarNotification = function renderToolbarNotification() {
     var notifCheckbox = document.querySelector("#toggle-notifs");
     notifCheckbox.checked = getNotificationPreference();
@@ -1289,7 +1272,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       }
     };
   };
-
   var notifyExecutionResult = function notifyExecutionResult(executedFileRelativeUrl, execution, previousExecution) {
     var notificationEnabled = getNotificationPreference();
     if (!notificationEnabled) return;
@@ -1322,7 +1304,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
       }));
     }
   };
-
   var notificationAvailable = typeof window.Notification === "function";
 
   var getNotificationPreference = function getNotificationPreference() {
@@ -1390,10 +1371,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   }) : function () {
     return Promise.resolve("denied");
   };
+
   var DARK_THEME = "dark";
   var LIGHT_THEME = "light";
   var themePreference = createPreference("theme");
-
   var renderToolbarTheme = function renderToolbarTheme() {
     var theme = getThemePreference();
     var checkbox = document.querySelector("#checkbox-dark-theme");
@@ -1425,7 +1406,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   };
 
   var animationPreference = createPreference("animation");
-
   var renderToolbarAnimation = function renderToolbarAnimation() {
     var animCheckbox = document.querySelector("#toggle-anims");
     animCheckbox.checked = getAnimationPreference();
@@ -1665,12 +1645,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   //   },
   // })
 
-
   var WINDOW_MEDIUM_WIDTH = 570;
-
   var renderExecutionInToolbar = function renderExecutionInToolbar(_ref) {
-    var executedFileRelativeUrl = _ref.executedFileRelativeUrl; // reset file execution indicator ui
-
+    var executedFileRelativeUrl = _ref.executedFileRelativeUrl;
+    // reset file execution indicator ui
     applyExecutionIndicator();
     removeForceHideElement(document.querySelector("#execution-indicator")); // apply responsive design on fileInput if needed + add listener on resize screen
 
@@ -1753,12 +1731,12 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     } else {
       input.style.width = "".concat(input.value.length, "ch");
     }
-  }; // eslint-disable-next-line consistent-return
-
-
-  var arrayWithHoles = function arrayWithHoles(arr) {
-    if (Array.isArray(arr)) return arr;
   };
+
+  // eslint-disable-next-line consistent-return
+  var arrayWithHoles = (function (arr) {
+    if (Array.isArray(arr)) return arr;
+  });
 
   function _iterableToArrayLimit(arr, i) {
     // this is an expanded form of \`for...of\` that properly supports abrupt completions of
@@ -1799,13 +1777,13 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     return _arr;
   }
 
-  var nonIterableRest = function nonIterableRest() {
+  var nonIterableRest = (function () {
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-  };
+  });
 
-  var _slicedToArray = function _slicedToArray(arr, i) {
+  var _slicedToArray = (function (arr, i) {
     return arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
-  };
+  });
 
   var COMPILE_ID_OTHERWISE = "otherwise";
 
@@ -1851,12 +1829,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     var match = string.match(regexp);
     return match && match.length > 0 ? match[1] || undefined : undefined;
   };
-
   var secondMatch = function secondMatch(regexp, string) {
     var match = string.match(regexp);
     return match && match.length > 1 ? match[2] || undefined : undefined;
   };
-
   var userAgentToVersion = function userAgentToVersion(userAgent) {
     return firstMatch(/version\/(\d+(\.?_?\d+)+)/i, userAgent) || undefined;
   };
@@ -1989,7 +1965,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     return null;
   }; // TODO
 
-
   var detectIOS = function detectIOS() {
     return navigatorToBrowser(window.navigator);
   };
@@ -2013,8 +1988,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     }
 
     return null;
-  }; // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
+  };
 
+  // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
 
   var detectorCompose = function detectorCompose(detectors) {
     return function () {
@@ -2036,7 +2012,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   };
 
   var detector = detectorCompose([detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
-
   var detectBrowser = function detectBrowser() {
     var _ref = detector() || {},
         _ref$name = _ref.name,
@@ -2531,19 +2506,25 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
 
     var convertPatterns = featuresReport.convertPatterns;
     var convertPatternCount = convertPatterns.length;
-    if (convertPatternCount === 0) ;else {
+
+    if (convertPatternCount === 0) ; else {
       parts.push("convertMap is used with the following keys: ".concat(convertPatterns));
     }
+
     var customCompilerNames = featuresReport.customCompilerNames;
     var customCompilerCount = customCompilerNames.length;
-    if (customCompilerCount === 0) ;else {
+
+    if (customCompilerCount === 0) ; else {
       parts.push("".concat(customCompilerCount, " custom compilers enabled: ").concat(customCompilerNames));
     }
+
     var jsenvPluginRequiredNames = featuresReport.jsenvPluginRequiredNames;
     var jsenvPluginRequiredCount = jsenvPluginRequiredNames.length;
-    if (jsenvPluginRequiredCount === 0) ;else {
+
+    if (jsenvPluginRequiredCount === 0) ; else {
       parts.push("".concat(jsenvPluginRequiredCount, " jsenv plugins are mandatory: ").concat(jsenvPluginRequiredNames));
     }
+
     return "\n- ".concat(parts.join("\n- "));
   };
 
@@ -2866,7 +2847,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   var livereloadingPreference = createPreference("livereloading");
   var eventSourceState = "default";
   var livereloadingAvailableOnServer = false;
-
   var initToolbarEventSource = function initToolbarEventSource(_ref) {
     var executedFileRelativeUrl = _ref.executedFileRelativeUrl,
         livereloading = _ref.livereloading;
@@ -3062,7 +3042,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   };
 
   var WINDOW_SMALL_WIDTH = 420;
-
   var makeToolbarResponsive = function makeToolbarResponsive() {
     // apply responsive design on toolbar icons if needed + add listener on resize screen
     // ideally we should listen breakpoint once, for now restore toolbar
@@ -3154,8 +3133,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
     toolbar.removeAttribute("data-overflow-menu-visible");
     document.querySelector("#overflow-menu").removeAttribute("data-animate");
   };
-  /* eslint-disable import/max-dependencies */
 
+  /* eslint-disable import/max-dependencies */
 
   function _call(body, then, direct) {
     if (direct) {
@@ -3390,5 +3369,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "funct
   };
 
   window.renderToolbar = renderToolbar;
-})();
+
+}());
+
 //# sourceMappingURL=jsenv_toolbar.js.map
