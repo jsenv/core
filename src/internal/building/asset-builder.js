@@ -72,7 +72,7 @@ export const createAssetBuilder = (
     emitChunk,
     emitAsset,
     setAssetSource,
-    onJsModuleReferencedInHtml = () => {},
+    onJsModuleReference = () => {},
     resolveTargetUrl = ({ targetSpecifier, importerUrl }) =>
       resolveUrl(targetSpecifier, importerUrl),
   },
@@ -185,6 +185,7 @@ export const createAssetBuilder = (
   // la on considere que ça n'a jamais été référencé, on resoud la promesse
   // malgré tout
   const createReference = ({
+    referenceShouldNotEmitChunk,
     referenceIsPreloadOrPrefetch,
     referenceExpectedContentType,
     referenceTargetSpecifier,
@@ -265,6 +266,7 @@ export const createAssetBuilder = (
     }
 
     const reference = {
+      referenceShouldNotEmitChunk,
       referenceIsPreloadOrPrefetch,
       referenceExpectedContentType,
       referenceUrl,
@@ -342,17 +344,26 @@ export const createAssetBuilder = (
           return
         }
 
-        // If the module is not in the rollup build, that's an error
-        // except if it was only preloaded/prefetched
+        // If the module is not in the rollup build, that's an error except when
+        // rollup chunk was not emitted, which happens when:
+        // - js was only preloaded/prefetched and never referenced afterwards
+        // - js was only referenced by other js
         if (!buildFileInfo) {
-          if (target.firstStrongReference) {
-            reject(new Error(`${shortenUrl(targetUrl)} cannot be found in the build info`))
-          } else {
-            // target.targetBuildBuffer = "" // we don't know the file was never used
-            // target.targetBuildRelativeUrl = "" // would depend from the file content
-            // target.targetFileName = "" // would be the name given to that file for rollup
+          const targetWasOnlyPreloadedOrPrefecthed = !target.firstStrongReference
+          if (targetWasOnlyPreloadedOrPrefecthed) {
             resolve()
+            return
           }
+
+          const targetWasOnlyReferencedByOtherJs = target.targetReferences.every(
+            (ref) => ref.referenceShouldNotEmitChunk,
+          )
+          if (targetWasOnlyReferencedByOtherJs) {
+            resolve()
+            return
+          }
+
+          reject(new Error(`${shortenUrl(targetUrl)} cannot be found in the build info`))
           return
         }
 
@@ -658,9 +669,13 @@ export const createAssetBuilder = (
       }
 
       if (target.targetIsJsModule) {
+        if (!isEmitChunkNeeded({ target, reference })) {
+          return effects
+        }
+
         const jsModuleUrl = targetUrl
 
-        onJsModuleReferencedInHtml({
+        onJsModuleReference({
           jsModuleUrl,
           jsModuleIsInline: targetIsInline,
           jsModuleSource: String(targetBuffer),
@@ -671,7 +686,7 @@ export const createAssetBuilder = (
         const name = urlToRelativeUrl(basenameUrl, importerUrl)
         const rollupReferenceId = emitChunk({
           id: jsModuleUrl,
-          name,
+          name: name.replace(new RegExp("../", "g"), ""),
         })
         target.rollupReferenceId = rollupReferenceId
         effects.push(`emit rollup chunk "${name}" (${rollupReferenceId})`)
@@ -828,6 +843,20 @@ const removePotentialUrlHash = (url) => {
   const urlObject = new URL(url)
   urlObject.hash = ""
   return String(urlObject)
+}
+
+const isEmitChunkNeeded = ({ target, reference }) => {
+  if (reference.referenceShouldNotEmitChunk) {
+    // si la target est preload ou prefetch
+    const targetIsPreloadedOrPrefetched = target.targetReferences.some(
+      (ref) => ref.referenceIsPreloadOrPrefetch,
+    )
+    if (targetIsPreloadedOrPrefetched) {
+      return true
+    }
+    return false
+  }
+  return true
 }
 
 /*

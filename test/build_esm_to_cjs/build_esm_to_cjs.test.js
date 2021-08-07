@@ -1,13 +1,13 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_BUILD_COMMONJS.js"
 import { requireCommonJsBuild } from "@jsenv/core/test/requireCommonJsBuild.js"
-import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -23,6 +23,7 @@ const { buildMappings } = await buildProject({
   },
   assetManifestFile: true,
   assetManifestFileRelativeUrl: "manifest.json",
+  logLevel: "debug",
 })
 
 {

@@ -88,7 +88,7 @@ export const createJsenvRollupPlugin = async ({
   const urlResponseBodyMap = {}
   const virtualModules = {}
   const urlRedirectionMap = {}
-  const jsModulesInHtml = {}
+  const jsModulesFromEntry = {}
 
   let lastErrorMessage
   const storeLatestJsenvPluginError = (error) => {
@@ -479,7 +479,7 @@ export const createJsenvRollupPlugin = async ({
           emitChunk,
           emitAsset,
           setAssetSource,
-          onJsModuleReferencedInHtml: ({ jsModuleUrl, jsModuleIsInline, jsModuleSource }) => {
+          onJsModuleReference: ({ jsModuleUrl, jsModuleIsInline, jsModuleSource }) => {
             atleastOneChunkEmitted = true
             if (jsModuleIsInline) {
               virtualModules[jsModuleUrl] = jsModuleSource
@@ -488,7 +488,7 @@ export const createJsenvRollupPlugin = async ({
               entryPointsPrepared[0].entryProjectRelativeUrl,
               compileDirectoryRemoteUrl,
             )
-            jsModulesInHtml[urlToUrlForRollup(jsModuleUrl)] = true
+            jsModulesFromEntry[urlToUrlForRollup(jsModuleUrl)] = true
           },
         },
       )
@@ -630,9 +630,13 @@ export const createJsenvRollupPlugin = async ({
       })
 
       const importerUrl = urlImporterMap[url]
-      // const isInlineJsModule = urlToUrlForRollup(url) in jsModulesInHtml
       // Store the fact that this file is referenced by js (static or dynamic import)
       assetBuilder.createReference({
+        // we don't want to emit a js chunk for every js file found
+        // (However we want if the file is preload/prefetch by something else)
+        // so we tell asset builder not to emit a chunk for this js reference
+        // otherwise rollup would never concat module together
+        referenceShouldNotEmitChunk: true,
         referenceExpectedContentType: responseContentType,
         referenceUrl: importerUrl,
         referenceTargetSpecifier: responseUrl,
@@ -764,7 +768,7 @@ export const createJsenvRollupPlugin = async ({
         }
 
         let buildRelativeUrl
-        const canBeVersioned = file.facadeModuleId in jsModulesInHtml || !file.isEntry
+        const canBeVersioned = file.facadeModuleId in jsModulesFromEntry || !file.isEntry
         if (urlVersioning && useImportMapToImproveLongTermCaching) {
           if (canBeVersioned) {
             buildRelativeUrl = computeBuildRelativeUrl(
