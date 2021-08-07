@@ -110,6 +110,7 @@ export const formatFoundReference = ({
     return formatFoundPreloadToPrefetch({
       reference,
       showReferenceSourceLocation,
+      referenceEffects,
     })
   }
 
@@ -130,6 +131,7 @@ export const formatFoundReference = ({
     return formatFoundReferenceToExternalRessource({
       reference,
       showReferenceSourceLocation,
+      referenceEffects,
     })
   }
 
@@ -138,6 +140,7 @@ export const formatFoundReference = ({
     return formatFoundReferenceToInlineAsset({
       reference,
       showReferenceSourceLocation,
+      referenceEffects,
     })
   }
 
@@ -145,6 +148,7 @@ export const formatFoundReference = ({
     return formatFoundReferenceToInlineModule({
       reference,
       showReferenceSourceLocation,
+      referenceEffects,
     })
   }
 
@@ -165,37 +169,47 @@ export const formatFoundReference = ({
 
 const formatCreateReferenceForEntry = ({ reference, referenceEffects }) => {
   return `
-${createDetailedMessage(`Start from entry file at ${reference.target.targetRelativeUrl}`, {
-  ...(referenceEffects
-    ? {
-        effects: referenceEffects,
-      }
-    : {}),
-})}`
+Start from entry file ${reference.target.targetRelativeUrl}${appendEffects(referenceEffects)}`
 }
 
-const formatFoundPreloadToPrefetch = ({ reference, showReferenceSourceLocation }) => {
+const formatFoundPreloadToPrefetch = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
   return `
-${createDetailedMessage(`Found preload/prefetch link in
-${showReferenceSourceLocation(reference)}`)}`
+Found preload/prefetch link in
+${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
 }
 
-const formatFoundReferenceToExternalRessource = ({ reference, showReferenceSourceLocation }) => {
+const formatFoundReferenceToExternalRessource = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
   return `
-${createDetailedMessage(`Found reference to an external url in
-${showReferenceSourceLocation(reference)}`)}`
+Found reference to an external url in
+${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
 }
 
-const formatFoundReferenceToInlineAsset = ({ reference, showReferenceSourceLocation }) => {
+const formatFoundReferenceToInlineAsset = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
   return `
-${createDetailedMessage(`Found reference to an inline asset in
-${showReferenceSourceLocation(reference)}`)}`
+Found reference to an inline asset in
+${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
 }
 
-const formatFoundReferenceToInlineModule = ({ reference, showReferenceSourceLocation }) => {
+const formatFoundReferenceToInlineModule = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
   return `
-${createDetailedMessage(`Found reference to an inline module in
-${showReferenceSourceLocation(reference)}`)}`
+Found reference to an inline module in
+${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
 }
 
 const formatFoundReferenceToAsset = ({
@@ -204,17 +218,8 @@ const formatFoundReferenceToAsset = ({
   referenceEffects,
 }) => {
   return `
-${createDetailedMessage(
-  `Found reference to an asset in
-${showReferenceSourceLocation(reference)}`,
-  {
-    ...(referenceEffects
-      ? {
-          effects: referenceEffects,
-        }
-      : {}),
-  },
-)}`
+Found reference to an asset in
+${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
 }
 
 const formatFoundReferenceToModule = ({
@@ -223,17 +228,28 @@ const formatFoundReferenceToModule = ({
   referenceEffects,
 }) => {
   return `
-${createDetailedMessage(
-  `Found reference to a module in
-${showReferenceSourceLocation(reference)}`,
-  {
-    ...(referenceEffects
-      ? {
-          effects: referenceEffects,
-        }
-      : {}),
-  },
-)}`
+Found reference to a module in
+${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
+}
+
+const appendEffects = (effects) => {
+  return effects.length === 0
+    ? ``
+    : `
+-> ${effects.join(`
+-> `)}`
+}
+
+export const formatDependenciesCollectedMessage = ({ target, shortenUrl }) => {
+  return createDetailedMessage(
+    `
+Dependencies collected for ${shortenUrl(target.targetUrl)}`,
+    {
+      dependencies: target.dependencies.map((dependencyReference) =>
+        shortenUrl(dependencyReference.target.targetUrl),
+      ),
+    },
+  )
 }
 
 // const textualContentTypes = ["text/html", "text/css", "image/svg+xml"]

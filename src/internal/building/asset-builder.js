@@ -37,7 +37,7 @@ import {
   urlToParentUrl,
   urlToBasename,
 } from "@jsenv/util"
-import { createLogger, createDetailedMessage } from "@jsenv/logger"
+import { createLogger } from "@jsenv/logger"
 
 import { promiseTrackRace } from "../promise_track_race.js"
 import { parseDataUrl } from "../dataUrl.utils.js"
@@ -48,6 +48,7 @@ import {
   memoize,
   getCallerLocation,
   formatFoundReference,
+  // formatDependenciesCollectedMessage,
   checkContentType,
 } from "./asset-builder.util.js"
 import {
@@ -204,14 +205,12 @@ export const createAssetBuilder = (
       targetBuildBuffer: "",
     }
 
-    // for now we can only emit a chunk from an entry file as visible in
-    // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
-    // https://github.com/rollup/rollup/issues/2872
-    if (targetIsJsModule && !importerTarget.targetIsEntry) {
-      // it's not really possible
-      logger.warn(
-        `ignoring js reference found in an asset (js can be referenced only from an html entry point)`,
-      )
+    const shouldBeIgnoredWarning = referenceShouldBeIgnoredWarning({
+      targetIsJsModule,
+      importerTarget,
+    })
+    if (shouldBeIgnoredWarning) {
+      logger.warn(shouldBeIgnoredWarning)
       return null
     }
 
@@ -361,7 +360,7 @@ export const createAssetBuilder = (
         if (buildFileInfo.type === "chunk") {
           target.targetContentType = "application/javascript"
         }
-        logger.debug(`resolve rollup chunk ${shortenUrl(targetUrl)}`)
+        // logger.debug(`resolve rollup chunk ${shortenUrl(targetUrl)}`)
         resolve()
       }
     })
@@ -409,8 +408,6 @@ export const createAssetBuilder = (
 
     const getDependenciesAvailablePromise = memoize(async () => {
       if (target.targetIsJsModule) {
-        // handled by rollup
-        logger.debug(`waiting for rollup build to resolve ${shortenUrl(targetUrl)}`)
         await target.buildDonePromise
         target.dependencies = []
         return
@@ -477,17 +474,10 @@ export const createAssetBuilder = (
       if (typeof parseReturnValue === "function") {
         assetTransformMap[targetUrl] = parseReturnValue
       }
-      if (dependencies.length > 0) {
-        logger.debug(
-          createDetailedMessage(`Dependencies collected for ${shortenUrl(targetUrl)}`, {
-            dependencies: dependencies.map((dependencyReference) =>
-              shortenUrl(dependencyReference.target.targetUrl),
-            ),
-          }),
-        )
-      }
-
       target.dependencies = dependencies
+      // if (dependencies.length > 0) {
+      //   logger.debug(formatDependenciesCollectedMessage({ target, shortenUrl }))
+      // }
     })
 
     const getReadyPromise = memoize(async () => {
@@ -809,6 +799,36 @@ export const referenceToCodeForRollup = (reference) => {
   }
 
   return `import.meta.ROLLUP_FILE_URL_${target.rollupReferenceId}`
+}
+
+/*
+ * We cannot reference js from asset (svg for example)
+ * that is because rollup awaits for html to be ready which waits
+ * fetch and parse its dependencies (let's say an svg)
+ * which waits for js to be fetched and parsed
+ * but the fetching + parsing of js happens in rollup
+ * so rollup would end up waiting forever
+ *
+ * see also:
+ * - https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
+ * -https://github.com/rollup/rollup/issues/2872
+ */
+const referenceShouldBeIgnoredWarning = ({ targetIsJsModule, importerTarget }) => {
+  if (!targetIsJsModule) {
+    return false
+  }
+
+  // js can reference js
+  if (importerTarget.targetIsJsModule) {
+    return false
+  }
+
+  // html can reference js
+  if (importerTarget.targetIsEntry) {
+    return false
+  }
+
+  return `WARNING: ignoring js module found in an asset: js module can be referenced only from html or an other js module`
 }
 
 // const targetFileNameFromBuildManifest = (buildManifest, targetBuildRelativeUrl) => {
