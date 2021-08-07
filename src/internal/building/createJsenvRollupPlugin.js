@@ -392,8 +392,8 @@ export const createJsenvRollupPlugin = async ({
                   compileDirectoryRelativeUrl,
                 })
               },
-              preloadOrPrefetchLinkNeverUsedCallback: (linkInfo) => {
-                logger.warn(formatLinkNeverUsedWarning(linkInfo))
+              ressourceHintNeverUsedCallback: (linkInfo) => {
+                logger.warn(formatRessourceHintNeverUsedWarning(linkInfo))
               },
               useImportMapToImproveLongTermCaching,
               createImportMapForFilesUsedInJs,
@@ -1256,9 +1256,9 @@ ${compileDirectoryUrl}
 `
 }
 
-const formatLinkNeverUsedWarning = (linkInfo) => {
+const formatRessourceHintNeverUsedWarning = (linkInfo) => {
   return `
-WARNING: Ressource never used for ${linkInfo.type} link in ${showHtmlSourceLocation(linkInfo)}
+WARNING: Ressource never used for ${linkInfo.rel} link in ${showHtmlSourceLocation(linkInfo)}
 `
 }
 

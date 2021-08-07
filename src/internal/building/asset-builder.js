@@ -185,7 +185,7 @@ export const createAssetBuilder = (
   // malgré tout
   const createReference = ({
     referenceShouldNotEmitChunk,
-    referenceIsPreloadOrPrefetch,
+    referenceIsRessourceHint,
     referenceExpectedContentType,
     referenceTargetSpecifier,
     referenceUrl,
@@ -266,7 +266,7 @@ export const createAssetBuilder = (
 
     const reference = {
       referenceShouldNotEmitChunk,
-      referenceIsPreloadOrPrefetch,
+      referenceIsRessourceHint,
       referenceExpectedContentType,
       referenceUrl,
       referenceColumn,
@@ -434,7 +434,7 @@ export const createAssetBuilder = (
 
       let parsingDone = false
       const notifyReferenceFound = ({
-        referenceIsPreloadOrPrefetch,
+        referenceIsRessourceHint,
         referenceExpectedContentType,
         referenceTargetSpecifier,
         referenceLine,
@@ -458,7 +458,7 @@ export const createAssetBuilder = (
           referenceUrl: targetUrl,
           referenceLine,
           referenceColumn,
-          referenceIsPreloadOrPrefetch,
+          referenceIsRessourceHint,
           referenceExpectedContentType,
 
           targetContentType,
@@ -627,7 +627,7 @@ export const createAssetBuilder = (
         )
       }
 
-      if (reference.referenceIsPreloadOrPrefetch) {
+      if (reference.referenceIsRessourceHint) {
         // do not try to load or fetch this file
         // we'll wait for something to reference it
         // if nothing references it a warning will be logged
@@ -848,10 +848,10 @@ const removePotentialUrlHash = (url) => {
 const isEmitChunkNeeded = ({ target, reference }) => {
   if (reference.referenceShouldNotEmitChunk) {
     // si la target est preload ou prefetch
-    const targetIsPreloadedOrPrefetched = target.targetReferences.some(
-      (ref) => ref.referenceIsPreloadOrPrefetch,
+    const targetIsReferencedByRessourceHint = target.targetReferences.some(
+      (ref) => ref.referenceIsRessourceHint,
     )
-    if (targetIsPreloadedOrPrefetched) {
+    if (targetIsReferencedByRessourceHint) {
       return true
     }
     return false

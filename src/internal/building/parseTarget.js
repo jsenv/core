@@ -22,7 +22,7 @@ export const parseTarget = (
     systemJsUrl,
     urlToOriginalFileUrl,
     urlToOriginalServerUrl,
-    preloadOrPrefetchLinkNeverUsedCallback,
+    ressourceHintNeverUsedCallback,
     useImportMapToImproveLongTermCaching,
     createImportMapForFilesUsedInJs,
     minify,
@@ -91,8 +91,8 @@ export const parseTarget = (
 
         return htmlAst
       },
-      preloadOrPrefetchLinkNeverUsedCallback: (info) => {
-        preloadOrPrefetchLinkNeverUsedCallback({
+      ressourceHintNeverUsedCallback: (info) => {
+        ressourceHintNeverUsedCallback({
           ...info,
           htmlSource: String(target.targetBuffer),
           htmlUrl: urlToOriginalFileUrl(target.targetUrl),

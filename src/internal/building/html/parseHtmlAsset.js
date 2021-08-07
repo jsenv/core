@@ -46,7 +46,7 @@ export const parseHtmlAsset = async (
     minifyHtmlOptions,
     htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString),
     htmlAstToHtmlString = (htmlAst) => stringifyHtmlAst(htmlAst),
-    preloadOrPrefetchLinkNeverUsedCallback = () => {},
+    ressourceHintNeverUsedCallback = () => {},
   } = {},
 ) => {
   const htmlString = String(htmlTarget.targetBuffer)
@@ -58,7 +58,7 @@ export const parseHtmlAsset = async (
     (link, { notifyReferenceFound }) =>
       linkHrefVisitor(link, {
         notifyReferenceFound,
-        preloadOrPrefetchLinkNeverUsedCallback,
+        ressourceHintNeverUsedCallback,
       }),
   ])
   const scriptsMutations = collectNodesMutations(scripts, notifiers, htmlTarget, [
@@ -409,10 +409,7 @@ const linkStylesheetHrefVisitor = (link, { notifyReferenceFound }) => {
   }
 }
 
-const linkHrefVisitor = (
-  link,
-  { notifyReferenceFound, preloadOrPrefetchLinkNeverUsedCallback },
-) => {
+const linkHrefVisitor = (link, { notifyReferenceFound, ressourceHintNeverUsedCallback }) => {
   const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
   if (!hrefAttribute) {
     return null
@@ -420,9 +417,10 @@ const linkHrefVisitor = (
 
   const relAttribute = getHtmlNodeAttributeByName(link, "rel")
   const rel = relAttribute ? relAttribute.value : undefined
-  const isPreloadLink = rel === "preload" || rel === "modulepreload"
+  const isPreconnectLink = rel === "preconnect"
   const isPrefetchLink = rel === "prefetch"
-  const referenceIsPreloadOrPrefetch = isPreloadLink || isPrefetchLink
+  const isPreloadLink = rel === "preload" || rel === "modulepreload"
+  const referenceIsRessourceHint = isPreconnectLink || isPrefetchLink || isPreloadLink
 
   let referenceExpectedContentType
   const typeAttribute = getHtmlNodeAttributeByName(link, "type")
@@ -438,7 +436,7 @@ const linkHrefVisitor = (
   }
 
   const linkReference = notifyReferenceFound({
-    referenceIsPreloadOrPrefetch,
+    referenceIsRessourceHint,
     referenceExpectedContentType,
     referenceTargetSpecifier: hrefAttribute.value,
     ...htmlNodeToReferenceLocation(link),
@@ -447,14 +445,14 @@ const linkHrefVisitor = (
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     const target = linkReference.target
-    if (referenceIsPreloadOrPrefetch) {
+    if (referenceIsRessourceHint) {
       const otherReferences = target.targetReferences.filter((targetReference) => {
-        return !targetReference.referenceIsPreloadOrPrefetch
+        return !targetReference.referenceIsRessourceHint
       })
       if (otherReferences.length === 0) {
-        preloadOrPrefetchLinkNeverUsedCallback({
+        ressourceHintNeverUsedCallback({
           htmlNode: link,
-          type: rel,
+          rel,
           href: hrefAttribute.value,
         })
         // we could remove the HTML node but better keep it untouched and let user decide what to do

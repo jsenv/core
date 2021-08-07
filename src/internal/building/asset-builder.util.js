@@ -104,10 +104,10 @@ export const formatFoundReference = ({
   showReferenceSourceLocation,
   referenceEffects,
 }) => {
-  const { referenceIsPreloadOrPrefetch } = reference
+  const { referenceIsRessourceHint } = reference
 
-  if (referenceIsPreloadOrPrefetch) {
-    return formatFoundPreloadToPrefetch({
+  if (referenceIsRessourceHint) {
+    return formatFoundRessourceHint({
       reference,
       showReferenceSourceLocation,
       referenceEffects,
@@ -172,15 +172,9 @@ const formatCreateReferenceForEntry = ({ reference, referenceEffects }) => {
 Start from entry file ${reference.target.targetRelativeUrl}${appendEffects(referenceEffects)}`
 }
 
-const formatFoundPreloadToPrefetch = ({
-  reference,
-  showReferenceSourceLocation,
-  referenceEffects,
-}) => {
+const formatFoundRessourceHint = ({ reference, showReferenceSourceLocation, referenceEffects }) => {
   return `
-Found preload/prefetch link in ${showReferenceSourceLocation(reference)}${appendEffects(
-    referenceEffects,
-  )}`
+Found ressource hint in ${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
 }
 
 const formatFoundReferenceToExternalRessource = ({
