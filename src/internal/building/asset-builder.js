@@ -411,13 +411,13 @@ export const createAssetBuilder = (
     }
 
     const getDependenciesAvailablePromise = memoize(async () => {
+      await getBufferAvailablePromise()
+
       if (target.targetIsJsModule) {
-        await target.buildDonePromise
         target.dependencies = []
         return
       }
 
-      await getBufferAvailablePromise()
       const dependencies = []
 
       let parsingDone = false
@@ -462,6 +462,10 @@ export const createAssetBuilder = (
           dependencies.push(dependencyReference)
         }
         return dependencyReference
+      }
+
+      if (!target.targetIsEntry) {
+        logger.debug(`parse ${urlToHumanUrl(target.targetUrl)}`)
       }
 
       const parseReturnValue = await parse(target, {
@@ -599,12 +603,23 @@ export const createAssetBuilder = (
 
     const onReference = (reference, infoFromReference) => {
       const effects = []
-      if (!target.targetIsEntry) {
+      if (target.targetIsEntry) {
+        if (target.targetContentType === "text/html") {
+          effects.push(`parse html to find references`)
+        }
+      } else {
         effects.push(
           `mark ${urlToHumanUrl(targetUrl)} as referenced by ${urlToHumanUrl(
             reference.referenceUrl,
           )}`,
         )
+      }
+
+      if (reference.referenceIsPreloadOrPrefetch) {
+        // do not try to load or fetch this file
+        // we'll wait for something to reference it
+        // if nothing references it a warning will be logged
+        return effects
       }
 
       target.getBufferAvailablePromise().then(
@@ -615,13 +630,6 @@ export const createAssetBuilder = (
         },
         () => {},
       )
-
-      if (reference.referenceIsPreloadOrPrefetch) {
-        // do not try to load or fetch this file
-        // we'll wait for something to reference it
-        // if nothing references it a warning will be logged
-        return effects
-      }
 
       if (target.firstStrongReference) {
         // this target was already strongly referenced by something
