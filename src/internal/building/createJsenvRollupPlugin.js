@@ -942,6 +942,7 @@ export const createJsenvRollupPlugin = async ({
         code: codeInput,
         url: rollupUrlToProjectUrl(moduleUrl), // transformJs expect a file:// url
         babelPluginMap,
+        // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
       })
 
       return {
@@ -1096,13 +1097,14 @@ const prepareEntryPoints = async (
 
     const entryResponse = await fetchFile(entryServerUrl, `entryPointMap`)
     const entryContentType = entryResponse.headers["content-type"]
+    const isHtml = entryContentType === "text/html"
 
     entryPointsPrepared.push({
       entryContentType:
         entryContentType === "text/javascript" ? "application/javascript" : entryContentType,
       entryProjectRelativeUrl,
       entryBuildRelativeUrl,
-      entryBuffer: Buffer.from(await entryResponse.arrayBuffer()),
+      ...(isHtml ? { entryBuffer: Buffer.from(await entryResponse.arrayBuffer()) } : {}),
     })
   }, Promise.resolve())
 
