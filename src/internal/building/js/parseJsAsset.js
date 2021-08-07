@@ -23,8 +23,8 @@ export const parseJsAsset = async (
       referenceTargetSpecifier: jsSourcemapUrl,
       // we don't really know the line or column
       // but let's asusme it the last line and first column
-      referenceLine: jsString.split(/\r?\n/).length - 1,
-      referenceColumn: 0,
+      referenceLine: jsString.split(/\r?\n/).length,
+      referenceColumn: `//# sourceMappingURL=`.length + 1,
     })
   }
 
