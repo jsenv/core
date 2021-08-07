@@ -886,7 +886,7 @@ export const createJsenvRollupPlugin = async ({
         await writeFile(assetManifestFileUrl, JSON.stringify(buildManifest, null, "  "))
       }
 
-      logger.info(formatBuildDoneInfo(rollupBuild))
+      logger.info(formatBuildDoneInfo({ rollupBuild }))
 
       if (writeOnFileSystem) {
         await Promise.all(
@@ -1162,7 +1162,6 @@ const showHtmlSourceLocation = ({ htmlNode, htmlUrl, htmlSource }) => {
   const { line, column } = getHtmlNodeLocation(htmlNode)
 
   return `${htmlUrl}:${line}:${column}
-
 ${showSourceLocation(htmlSource, {
   line,
   column,
@@ -1185,7 +1184,7 @@ ${entryProjectRelativeUrls.map((entryProjectRelativeUrl) => {
 }
 
 const formatUseImportMapFromHtml = (importMapInfoFromHtml) => {
-  return `use importmap found in html file.
+  return `use importmap found in html file
 ${showHtmlSourceLocation(importMapInfoFromHtml)}`
 }
 
@@ -1199,26 +1198,26 @@ ${compileDirectoryUrl}`
 
 const formatLinkNeverUsedWarning = (linkInfo) => {
   return `
-A ${linkInfo.type} link references a ressource never used elsewhere.
+A ${linkInfo.type} link references a ressource never used elsewhere
 ${showHtmlSourceLocation(linkInfo)}
 `
 }
 
-const formatBuildDoneInfo = (rollupBuild) => {
+const formatBuildDoneInfo = ({ rollupBuild }) => {
   return `
-${createDetailedMessage(`build done`, formatBuildDoneDetails(rollupBuild))}
+${createDetailedMessage(`build done`, formatBuildDoneDetails({ rollupBuild }))}
 `
 }
 
-const formatBuildDoneDetails = (build) => {
-  const assetFilenames = Object.keys(build)
-    .filter((key) => build[key].type === "asset")
-    .map((key) => build[key].fileName)
+const formatBuildDoneDetails = ({ rollupBuild }) => {
+  const assetFilenames = Object.keys(rollupBuild)
+    .filter((key) => rollupBuild[key].type === "asset")
+    .map((key) => key)
   const assetCount = assetFilenames.length
 
-  const chunkFilenames = Object.keys(build)
-    .filter((key) => build[key].type === "chunk")
-    .map((key) => build[key].fileName)
+  const chunkFilenames = Object.keys(rollupBuild)
+    .filter((key) => rollupBuild[key].type === "chunk")
+    .map((key) => key)
   const chunkCount = chunkFilenames.length
 
   const assetDescription =
