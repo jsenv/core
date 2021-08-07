@@ -14,9 +14,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.js`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
+  [`./${testDirectoryRelativeUrl}${testDirectoryname}.js`]: "./main.js",
 }
 
 const { buildMappings } = await buildProject({
@@ -29,23 +28,18 @@ const { buildMappings } = await buildProject({
   // minify: true,
 })
 
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-const cssBuildRelativeUrl = getBuildRelativeUrl("style.css")
+{
+  const cssBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}style.css`]
+  const { namespace, serverOrigin } = await browserImportSystemJsBuild({
+    ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
+    testDirectoryRelativeUrl,
+    htmlFileRelativeUrl: "./index.html",
+    // debug: true,
+  })
 
-const { namespace, serverOrigin } = await browserImportSystemJsBuild({
-  ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  htmlFileRelativeUrl: "./index.html",
-  // debug: true,
-  // headless: false,
-  // autoStop: false,
-})
-const actual = namespace
-const expected = {
-  cssUrl: resolveUrl(`/dist/systemjs/${cssBuildRelativeUrl}`, serverOrigin),
+  const actual = namespace
+  const expected = {
+    cssUrl: resolveUrl(`/dist/systemjs/${cssBuildRelativeUrl}`, serverOrigin),
+  }
+  assert({ actual, expected })
 }
-assert({ actual, expected })
