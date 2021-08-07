@@ -212,8 +212,6 @@ export const createJsenvRollupPlugin = async ({
     async buildStart() {
       logger.info(
         formatBuildStartLog({
-          projectDirectoryUrl,
-          buildDirectoryUrl,
           entryPointMap,
         }),
       )
@@ -880,7 +878,12 @@ export const createJsenvRollupPlugin = async ({
         await writeFile(assetManifestFileUrl, JSON.stringify(buildManifest, null, "  "))
       }
 
-      logger.info(formatBuildDoneInfo({ rollupBuild }))
+      logger.info(
+        formatBuildDoneInfo({
+          rollupBuild,
+          buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
+        }),
+      )
 
       if (writeOnFileSystem) {
         await Promise.all(
@@ -1163,23 +1166,21 @@ ${showSourceLocation(htmlSource, {
 `
 }
 
-const formatBuildStartLog = ({ entryPointMap, projectDirectoryUrl, buildDirectoryUrl }) => {
+const formatBuildStartLog = ({ entryPointMap }) => {
   const entryProjectRelativeUrls = Object.keys(entryPointMap)
   const entryCount = entryProjectRelativeUrls.length
 
-  return `build ${entryCount} project file(s):
-${entryProjectRelativeUrls.map((entryProjectRelativeUrl) => {
-  const entryBuildUrl = resolveUrl(entryPointMap[entryProjectRelativeUrl], buildDirectoryUrl)
-  const entryBuildRelativeUrl = urlToRelativeUrl(entryBuildUrl, projectDirectoryUrl)
-  return `${entryProjectRelativeUrl} -> ${entryBuildRelativeUrl}`
-}).join(`
-`)}
-`
+  if (entryCount === 1) {
+    return `build ${entryProjectRelativeUrls[0]}`
+  }
+
+  return `build ${entryCount} files:
+- ${entryProjectRelativeUrls.join(`
+- `)}`
 }
 
 const formatUseImportMapFromHtml = (importMapInfoFromHtml) => {
-  return `use importmap found in html file
-${showHtmlSourceLocation(importMapInfoFromHtml)}`
+  return `use importmap found in ${showHtmlSourceLocation(importMapInfoFromHtml)}`
 }
 
 const formatImportmapOutsideCompileDirectory = ({ importMapInfo, compileDirectoryUrl }) => {
@@ -1192,26 +1193,28 @@ ${compileDirectoryUrl}`
 
 const formatLinkNeverUsedWarning = (linkInfo) => {
   return `
-A ${linkInfo.type} link references a ressource never used elsewhere
-${showHtmlSourceLocation(linkInfo)}
+WARNING: Ressource never used for ${linkInfo.type} link in ${showHtmlSourceLocation(linkInfo)}
 `
 }
 
-const formatBuildDoneInfo = ({ rollupBuild }) => {
+const formatBuildDoneInfo = ({ rollupBuild, buildDirectoryRelativeUrl }) => {
   return `
-${createDetailedMessage(`build done`, formatBuildDoneDetails({ rollupBuild }))}
+${createDetailedMessage(
+  `build done`,
+  formatBuildDoneDetails({ rollupBuild, buildDirectoryRelativeUrl }),
+)}
 `
 }
 
-const formatBuildDoneDetails = ({ rollupBuild }) => {
+const formatBuildDoneDetails = ({ rollupBuild, buildDirectoryRelativeUrl }) => {
   const assetFilenames = Object.keys(rollupBuild)
     .filter((key) => rollupBuild[key].type === "asset")
-    .map((key) => key)
+    .map((key) => `${buildDirectoryRelativeUrl}${key}`)
   const assetCount = assetFilenames.length
 
   const chunkFilenames = Object.keys(rollupBuild)
     .filter((key) => rollupBuild[key].type === "chunk")
-    .map((key) => key)
+    .map((key) => `${buildDirectoryRelativeUrl}${key}`)
   const chunkCount = chunkFilenames.length
 
   const assetDescription =

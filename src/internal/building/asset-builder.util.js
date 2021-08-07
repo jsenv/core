@@ -178,8 +178,9 @@ const formatFoundPreloadToPrefetch = ({
   referenceEffects,
 }) => {
   return `
-Found preload/prefetch link in
-${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
+Found preload/prefetch link in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
 }
 
 const formatFoundReferenceToExternalRessource = ({
@@ -188,8 +189,9 @@ const formatFoundReferenceToExternalRessource = ({
   referenceEffects,
 }) => {
   return `
-Found reference to an external url in
-${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
+Found reference to an external url in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
 }
 
 const formatFoundReferenceToInlineAsset = ({
@@ -198,8 +200,9 @@ const formatFoundReferenceToInlineAsset = ({
   referenceEffects,
 }) => {
   return `
-Found reference to an inline asset in
-${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
+Found reference to an inline asset in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
 }
 
 const formatFoundReferenceToInlineModule = ({
@@ -208,8 +211,9 @@ const formatFoundReferenceToInlineModule = ({
   referenceEffects,
 }) => {
   return `
-Found reference to an inline module in
-${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
+Found reference to an inline module in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
 }
 
 const formatFoundReferenceToAsset = ({
@@ -218,8 +222,9 @@ const formatFoundReferenceToAsset = ({
   referenceEffects,
 }) => {
   return `
-Found reference to an asset in
-${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
+Found reference to an asset in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
 }
 
 const formatFoundReferenceToModule = ({
@@ -228,8 +233,9 @@ const formatFoundReferenceToModule = ({
   referenceEffects,
 }) => {
   return `
-Found reference to a module in
-${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
+Found reference to a module in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
 }
 
 const appendEffects = (effects) => {
