@@ -732,17 +732,19 @@ export const createAssetBuilder = (
     return target
   }
 
-  const buildEnd = ({ jsBuild, buildManifest }) => {
+  const buildEnd = ({ jsModuleBuild, buildManifest }) => {
     Object.keys(targetMap).forEach((targetUrl) => {
       const target = targetMap[targetUrl]
       const { buildDoneCallback } = target
 
-      const targetBuildRelativeUrl = Object.keys(jsBuild).find((buildRelativeUrlCandidate) => {
-        const file = jsBuild[buildRelativeUrlCandidate]
-        const { facadeModuleId } = file
-        return facadeModuleId && facadeModuleId === targetUrl
-      })
-      const buildFileInfo = jsBuild[targetBuildRelativeUrl]
+      const targetBuildRelativeUrl = Object.keys(jsModuleBuild).find(
+        (buildRelativeUrlCandidate) => {
+          const file = jsModuleBuild[buildRelativeUrlCandidate]
+          const { facadeModuleId } = file
+          return facadeModuleId && facadeModuleId === targetUrl
+        },
+      )
+      const buildFileInfo = jsModuleBuild[targetBuildRelativeUrl]
 
       buildDoneCallback({
         buildFileInfo,

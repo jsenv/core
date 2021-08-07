@@ -369,8 +369,8 @@ export const createJsenvRollupPlugin = async ({
       // if we provide only an html file without any script type module in it
       // but this can be desired to produce a build with only assets (html, css, images)
       // without any js
-      // we emit an empty chunk, discards rollup warning about it and we manually remove
-      // this chunk in buildProject hook
+      // we emit an empty chunk, discards rollup warning about it. This chunk is
+      // later ignored by in generateBundle hooks
       let atleastOneChunkEmitted = false
       assetBuilder = createAssetBuilder(
         {
@@ -753,17 +753,10 @@ export const createJsenvRollupPlugin = async ({
     },
 
     async generateBundle(outputOptions, rollupResult) {
-      const jsBuild = {}
-
-      rollupResult = await ensureTopLevelAwaitTranspilationIfNeeded({
-        rollupResult,
-        babelPluginMap,
-        transformTopLevelAwait,
-        EMPTY_CHUNK_URL,
-        projectDirectoryUrl,
-        rollupUrlToProjectUrl,
-      })
-
+      const jsChunks = {}
+      // rollupResult can be mutated by late asset emission
+      // howeverl late chunk (js module) emission is not possible
+      // as rollup rightfully prevent late js emission
       Object.keys(rollupResult).forEach((fileName) => {
         const file = rollupResult[fileName]
         if (file.type !== "chunk") {
@@ -774,6 +767,19 @@ export const createJsenvRollupPlugin = async ({
           return
         }
 
+        jsChunks[fileName] = { ...file }
+      })
+      await ensureTopLevelAwaitTranspilationIfNeeded({
+        jsChunks,
+        babelPluginMap,
+        transformTopLevelAwait,
+        projectDirectoryUrl,
+        rollupUrlToProjectUrl,
+      })
+
+      const jsModuleBuild = {}
+      Object.keys(jsChunks).forEach((fileName) => {
+        const file = jsChunks[fileName]
         let buildRelativeUrl
         const canBeVersioned = file.facadeModuleId in jsModulesFromEntry || !file.isEntry
         if (urlVersioning && useImportMapToImproveLongTermCaching) {
@@ -792,16 +798,15 @@ export const createJsenvRollupPlugin = async ({
         }
 
         let originalProjectUrl
-        const fileCopy = { ...file }
         const id = file.facadeModuleId
         if (id) {
           originalProjectUrl = rollupUrlToOriginalProjectUrl(id)
-          fileCopy.facadeModuleId = rollupUrlToServerUrl(id)
+          file.facadeModuleId = rollupUrlToServerUrl(id)
         } else {
           const sourcePath = file.map.sources[file.map.sources.length - 1]
           const fileBuildUrl = resolveUrl(file.fileName, buildDirectoryUrl)
           originalProjectUrl = resolveUrl(sourcePath, fileBuildUrl)
-          fileCopy.facadeModuleId = urlToCompiledServerUrl(originalProjectUrl, {
+          file.facadeModuleId = urlToCompiledServerUrl(originalProjectUrl, {
             projectDirectoryUrl,
             compileServerOrigin,
             compileDirectoryRelativeUrl,
@@ -813,7 +818,7 @@ export const createJsenvRollupPlugin = async ({
           markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
         }
 
-        jsBuild[buildRelativeUrl] = fileCopy
+        jsModuleBuild[buildRelativeUrl] = file
         buildManifest[fileName] = buildRelativeUrl
         buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
       })
@@ -828,7 +833,7 @@ export const createJsenvRollupPlugin = async ({
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
-      assetBuilder.buildEnd({ jsBuild, buildManifest })
+      assetBuilder.buildEnd({ jsModuleBuild, buildManifest })
       // wait html files to be emitted
       await assetBuilder.getAllAssetEntryEmittedPromise()
 
@@ -876,7 +881,7 @@ export const createJsenvRollupPlugin = async ({
       })
 
       rollupBuild = {
-        ...jsBuild,
+        ...jsModuleBuild,
         ...assetBuild,
       }
 
@@ -1090,30 +1095,19 @@ export const createJsenvRollupPlugin = async ({
 }
 
 const ensureTopLevelAwaitTranspilationIfNeeded = async ({
-  rollupResult,
+  jsChunks,
   transformTopLevelAwait,
-  EMPTY_CHUNK_URL,
   babelPluginMap,
   projectDirectoryUrl,
   rollupUrlToProjectUrl,
 }) => {
   if (!transformTopLevelAwait) {
-    return rollupResult
+    return
   }
 
-  const rollupResultModified = {}
   await Promise.all(
-    Object.keys(rollupResult).map(async (fileName) => {
-      const file = rollupResult[fileName]
-      if (file.type !== "chunk") {
-        rollupResultModified[fileName] = file
-        return
-      }
-
-      if (file.facadeModuleId === EMPTY_CHUNK_URL) {
-        rollupResultModified[fileName] = file
-        return
-      }
+    Object.keys(jsChunks).map(async (fileName) => {
+      const file = jsChunks[fileName]
 
       const { code, map } = await transformJs({
         projectDirectoryUrl,
@@ -1124,15 +1118,10 @@ const ensureTopLevelAwaitTranspilationIfNeeded = async ({
         // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
       })
 
-      const fileCopy = {
-        ...file,
-      }
-      fileCopy.code = code
-      fileCopy.map = map
-      rollupResultModified[fileName] = fileCopy
+      file.code = code
+      file.map = map
     }),
   )
-  return rollupResultModified
 }
 
 const prepareEntryPoints = async (
