@@ -71,6 +71,7 @@ export const createJsenvRollupPlugin = async ({
   node,
 
   format,
+  jsConcatenation,
   urlVersioning,
   useImportMapToImproveLongTermCaching,
   systemJsUrl,
@@ -636,7 +637,7 @@ export const createJsenvRollupPlugin = async ({
         // (However we want if the file is preload/prefetch by something else)
         // so we tell asset builder not to emit a chunk for this js reference
         // otherwise rollup would never concat module together
-        referenceShouldNotEmitChunk: true,
+        referenceShouldNotEmitChunk: jsConcatenation,
         referenceExpectedContentType: responseContentType,
         referenceUrl: importerUrl,
         referenceTargetSpecifier: responseUrl,

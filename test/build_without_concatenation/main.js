@@ -1,4 +1,4 @@
-import { value } from "./dir/dep.js"
+import { value } from "./file.js"
 
 console.log(value)
 

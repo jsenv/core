@@ -95,12 +95,6 @@ export const buildProject = async ({
       )
     }
 
-    if (!jsConcatenation) {
-      throw new Error(
-        `jsConcatenation cannot be disabled for now. See https://github.com/rollup/rollup/issues/3882`,
-      )
-    }
-
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
