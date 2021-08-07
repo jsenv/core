@@ -61,11 +61,13 @@ export const createAssetBuilder = (
   {
     logLevel,
     format,
-    projectDirectoryUrl, // project url but it can be an http url
+    baseUrl,
     buildDirectoryRelativeUrl,
-    urlToFileUrl, // get a file url from an eventual http url
+
+    urlToFileUrl,
     urlToCompiledServerUrl,
     urlToHumanUrl,
+
     loadUrl = () => null,
     emitChunk,
     emitAsset,
@@ -77,7 +79,7 @@ export const createAssetBuilder = (
 ) => {
   const logger = createLogger({ logLevel })
 
-  const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
+  const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, baseUrl)
 
   const createReferenceForHTMLEntry = async ({
     entryContentType,
@@ -325,7 +327,7 @@ export const createAssetBuilder = (
       targetUrlVersioningDisabled,
       targetFileNamePattern,
 
-      targetRelativeUrl: urlToRelativeUrl(targetUrl, projectDirectoryUrl),
+      targetRelativeUrl: urlToRelativeUrl(targetUrl, baseUrl),
       targetBuildBuffer: undefined,
     }
 
@@ -664,12 +666,9 @@ export const createAssetBuilder = (
           jsModuleSource: String(targetBuffer),
         })
 
-        const name = urlToRelativeUrl(
-          // get basename url
-          resolveUrl(urlToBasename(jsModuleUrl), jsModuleUrl),
-          // get importer url
-          urlToCompiledServerUrl(reference.referenceUrl),
-        )
+        const basenameUrl = resolveUrl(urlToBasename(jsModuleUrl), jsModuleUrl)
+        const importerUrl = urlToCompiledServerUrl(reference.referenceUrl)
+        const name = urlToRelativeUrl(basenameUrl, importerUrl)
         const rollupReferenceId = emitChunk({
           id: jsModuleUrl,
           name,
@@ -762,9 +761,7 @@ export const createAssetBuilder = (
   }
 
   const shortenUrl = (url) => {
-    return urlIsInsideOf(url, projectDirectoryUrl)
-      ? urlToRelativeUrl(url, projectDirectoryUrl)
-      : url
+    return urlIsInsideOf(url, baseUrl) ? urlToRelativeUrl(url, baseUrl) : url
   }
 
   const showReferenceSourceLocation = (reference) => {
