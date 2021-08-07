@@ -791,6 +791,8 @@ export const createJsenvRollupPlugin = async ({
         transformTopLevelAwait,
         projectDirectoryUrl,
         rollupUrlToProjectUrl,
+        minify,
+        minifyJsOptions,
       })
 
       const jsModuleBuild = {}
@@ -1103,6 +1105,8 @@ const ensureTopLevelAwaitTranspilationIfNeeded = async ({
   babelPluginMap,
   projectDirectoryUrl,
   rollupUrlToProjectUrl,
+  minify,
+  minifyJsOptions,
 }) => {
   if (!transformTopLevelAwait) {
     return
@@ -1120,7 +1124,7 @@ const ensureTopLevelAwaitTranspilationIfNeeded = async ({
     Object.keys(jsChunks).map(async (fileName) => {
       const file = jsChunks[fileName]
 
-      const { code, map } = await transformJs({
+      let { code, map } = await transformJs({
         projectDirectoryUrl,
         code: file.code,
         map: file.map,
@@ -1129,9 +1133,22 @@ const ensureTopLevelAwaitTranspilationIfNeeded = async ({
         // the top level await transformation should not need any new babel helper
         // if so let them be inlined
         babelHelpersInjectionAsImport: false,
-        transformGenerator: false, // assume it was done 
+        transformGenerator: false, // assume it was done
         // moduleOutFormat: format, // we are compiling for rollup output must be "esmodule"
       })
+
+      if (minify) {
+        const result = await minifyJs(code, file.fileName, {
+          sourceMap: {
+            ...(map ? { content: JSON.stringify(map) } : {}),
+            asObject: true,
+          },
+          ...(format === "global" ? { toplevel: false } : { toplevel: true }),
+          ...minifyJsOptions,
+        })
+        code = result.code
+        map = result.map
+      }
 
       file.code = code
       file.map = map
