@@ -128,14 +128,19 @@ const regularScriptSrcVisitor = (script, { notifyReferenceFound }) => {
     ...htmlNodeToReferenceLocation(script),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
+    if (remoteScriptReference.target.targetIsExternal) {
+      return
+    }
+
     if (shouldInline({ reference: remoteScriptReference, htmlNode: script })) {
       removeHtmlNodeAttribute(script, srcAttribute)
       const { targetBuildBuffer } = remoteScriptReference.target
       setHtmlNodeText(script, targetBuildBuffer)
-    } else {
-      const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
-      srcAttribute.value = urlRelativeToImporter
+      return
     }
+
+    const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
+    srcAttribute.value = urlRelativeToImporter
   }
 }
 
@@ -200,17 +205,22 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       typeAttribute.value = "systemjs-module"
     }
 
+    if (remoteScriptReference.target.targetIsExternal) {
+      return
+    }
+
     if (shouldInline({ reference: remoteScriptReference, htmlNode: script })) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
       const { targetBuildBuffer } = script.target
       setHtmlNodeText(script, targetBuildBuffer)
-    } else {
-      const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
-      const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter)
-      srcAttribute.value = relativeUrlNotation
+      return
     }
+
+    const urlRelativeToImporter = getReferenceUrlRelativeToImporter(remoteScriptReference)
+    const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter)
+    srcAttribute.value = relativeUrlNotation
   }
 }
 
@@ -302,16 +312,21 @@ const importmapScriptSrcVisitor = (script, { format, notifyReferenceFound }) => 
       typeAttribute.value = "systemjs-importmap"
     }
 
+    if (importmapReference.target.targetIsExternal) {
+      return
+    }
+
     if (shouldInline({ reference: importmapReference, htmlNode: script })) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
       const { targetBuildBuffer } = importmapReference.target
       setHtmlNodeText(script, targetBuildBuffer)
-    } else {
-      const urlRelativeToImporter = getReferenceUrlRelativeToImporter(importmapReference)
-      srcAttribute.value = urlRelativeToImporter
+      return
     }
+
+    const urlRelativeToImporter = getReferenceUrlRelativeToImporter(importmapReference)
+    srcAttribute.value = urlRelativeToImporter
   }
 }
 
@@ -379,13 +394,18 @@ const linkStylesheetHrefVisitor = (link, { notifyReferenceFound }) => {
     ...htmlNodeToReferenceLocation(link),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
+    if (cssReference.target.targetIsExternal) {
+      return
+    }
+
     if (shouldInline({ reference: cssReference, htmlNode: link })) {
       const { targetBuildBuffer } = cssReference.target
       replaceHtmlNode(link, `<style>${targetBuildBuffer}</style>`)
-    } else {
-      const urlRelativeToImporter = getReferenceUrlRelativeToImporter(cssReference)
-      hrefAttribute.value = urlRelativeToImporter
+      return
     }
+
+    const urlRelativeToImporter = getReferenceUrlRelativeToImporter(cssReference)
+    hrefAttribute.value = urlRelativeToImporter
   }
 }
 
@@ -417,7 +437,7 @@ const linkHrefVisitor = (
     targetIsJsModule = true
   }
 
-  const reference = notifyReferenceFound({
+  const linkReference = notifyReferenceFound({
     referenceIsPreloadOrPrefetch,
     referenceExpectedContentType,
     referenceTargetSpecifier: hrefAttribute.value,
@@ -426,7 +446,7 @@ const linkHrefVisitor = (
     targetIsJsModule,
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
-    const target = reference.target
+    const target = linkReference.target
     if (referenceIsPreloadOrPrefetch) {
       const otherReferences = target.targetReferences.filter((targetReference) => {
         return !targetReference.referenceIsPreloadOrPrefetch
@@ -442,12 +462,17 @@ const linkHrefVisitor = (
       }
     }
 
-    if (shouldInline({ reference, htmlNode: link })) {
-      replaceHtmlNode(link, `<link href="${getTargetAsBase64Url(reference.target)}" />`)
-    } else {
-      const urlRelativeToImporter = getReferenceUrlRelativeToImporter(reference)
-      hrefAttribute.value = urlRelativeToImporter
+    if (linkReference.target.targetIsExternal) {
+      return
     }
+
+    if (shouldInline({ reference: linkReference, htmlNode: link })) {
+      replaceHtmlNode(link, `<link href="${getTargetAsBase64Url(linkReference.target)}" />`)
+      return
+    }
+
+    const urlRelativeToImporter = getReferenceUrlRelativeToImporter(linkReference)
+    hrefAttribute.value = urlRelativeToImporter
   }
 }
 
@@ -551,6 +576,9 @@ const sourceSrcVisitor = (source, { notifyReferenceFound }) => {
 }
 
 const referenceToUrl = ({ reference, htmlNode, getReferenceUrlRelativeToImporter }) => {
+  if (reference.target.targetIsExternal) {
+    return reference.target.targetUrl
+  }
   if (shouldInline({ reference, htmlNode })) {
     return getTargetAsBase64Url(reference.target)
   }
