@@ -1,17 +1,19 @@
+function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof2 = function _typeof2(obj) { return typeof obj; }; } else { _typeof2 = function _typeof2(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof2(obj); }
+
 (function () {
   'use strict';
 
   var nativeTypeOf = function nativeTypeOf(obj) {
-    return typeof obj;
+    return _typeof2(obj);
   };
 
   var customTypeOf = function customTypeOf(obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : _typeof2(obj);
   };
 
-  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+  var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? nativeTypeOf : customTypeOf;
 
-  var _defineProperty = (function (obj, key, value) {
+  var _defineProperty = function _defineProperty(obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
     // prototype cause side effects under the fast path of simple
@@ -29,7 +31,7 @@
     }
 
     return obj;
-  });
+  };
 
   var createDetailedMessage = function createDetailedMessage(message) {
     var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -41,7 +43,7 @@
     return string;
   };
 
-  var objectWithoutPropertiesLoose = (function (source, excluded) {
+  var objectWithoutPropertiesLoose = function objectWithoutPropertiesLoose(source, excluded) {
     if (source === null) return {};
     var target = {};
     var sourceKeys = Object.keys(source);
@@ -55,9 +57,9 @@
     }
 
     return target;
-  });
+  };
 
-  var _objectWithoutProperties = (function (source, excluded) {
+  var _objectWithoutProperties = function _objectWithoutProperties(source, excluded) {
     if (source === null) return {};
     var target = objectWithoutPropertiesLoose(source, excluded);
     var key;
@@ -75,7 +77,7 @@
     }
 
     return target;
-  });
+  };
 
   var createCancellationToken = function createCancellationToken() {
     var register = function register(callback) {
@@ -140,10 +142,9 @@
     }
 
     return target;
-  }
-
-  // fallback to this polyfill (or even use an existing polyfill would be better)
+  } // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
+
 
   function _await$4(value, then, direct) {
     if (direct) {
@@ -593,7 +594,6 @@
   }
 
   var fetchNative = _async$2(function (url) {
-
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
     var _ref$cancellationToke = _ref.cancellationToken,
@@ -805,21 +805,20 @@
       });
     };
   };
+
   var setAttributes = function setAttributes(element, attributes) {
     Object.keys(attributes).forEach(function (name) {
       element.setAttribute(name, attributes[name]);
     });
   };
-
   /*
   We must connect to livereload server asap so that if a file is modified
   while page is loading we are notified of it.
-
-  Otherwise it's possible that a file is loaded and used by browser then its modified before
+   Otherwise it's possible that a file is loaded and used by browser then its modified before
   livereload connection is established.
-
-  When toolbar is loaded it will open an other connection to server sent events and close this one.
+   When toolbar is loaded it will open an other connection to server sent events and close this one.
   */
+
 
   function _await(value, then, direct) {
     if (direct) {
@@ -1086,7 +1085,5 @@
   } else {
     window.addEventListener("load", injectToolbar);
   }
-
-}());
-
+})();
 //# sourceMappingURL=jsenv_toolbar_injector.js.map

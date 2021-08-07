@@ -1260,7 +1260,8 @@ const formatBuildDoneInfo = ({ rollupBuild, buildDirectoryRelativeUrl }) => {
 ${createDetailedMessage(
   `build done`,
   formatBuildDoneDetails({ rollupBuild, buildDirectoryRelativeUrl }),
-)}`
+)}
+`
 }
 
 const formatBuildDoneDetails = ({ rollupBuild, buildDirectoryRelativeUrl }) => {

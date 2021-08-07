@@ -1,10 +1,11 @@
-(function () {
-  'use strict';
+function _typeof2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof2 = function _typeof2(obj) { return typeof obj; }; } else { _typeof2 = function _typeof2(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof2(obj); }
 
-  // eslint-disable-next-line consistent-return
-  var arrayWithHoles = (function (arr) {
+(function () {
+  'use strict'; // eslint-disable-next-line consistent-return
+
+  var arrayWithHoles = function arrayWithHoles(arr) {
     if (Array.isArray(arr)) return arr;
-  });
+  };
 
   function _iterableToArrayLimit(arr, i) {
     // this is an expanded form of \`for...of\` that properly supports abrupt completions of
@@ -44,8 +45,9 @@
 
     return _arr;
   }
-
   /* eslint-disable no-eq-null, eqeqeq */
+
+
   function arrayLikeToArray(arr, len) {
     if (len == null || len > arr.length) len = arr.length;
     var arr2 = new Array(len);
@@ -56,8 +58,9 @@
 
     return arr2;
   }
-
   /* eslint-disable consistent-return */
+
+
   function unsupportedIterableToArray(o, minLen) {
     if (!o) return;
     if (typeof o === "string") return arrayLikeToArray(o, minLen);
@@ -67,15 +70,15 @@
     if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
   }
 
-  var nonIterableRest = (function () {
+  var nonIterableRest = function nonIterableRest() {
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-  });
+  };
 
-  var _slicedToArray = (function (arr, i) {
+  var _slicedToArray = function _slicedToArray(arr, i) {
     return arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
-  });
+  };
 
-  var _defineProperty = (function (obj, key, value) {
+  var _defineProperty = function _defineProperty(obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
     // prototype cause side effects under the fast path of simple
@@ -93,7 +96,7 @@
     }
 
     return obj;
-  });
+  };
 
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
@@ -133,7 +136,7 @@
     return target;
   }
 
-  var objectWithoutPropertiesLoose = (function (source, excluded) {
+  var objectWithoutPropertiesLoose = function objectWithoutPropertiesLoose(source, excluded) {
     if (source === null) return {};
     var target = {};
     var sourceKeys = Object.keys(source);
@@ -147,9 +150,9 @@
     }
 
     return target;
-  });
+  };
 
-  var _objectWithoutProperties = (function (source, excluded) {
+  var _objectWithoutProperties = function _objectWithoutProperties(source, excluded) {
     if (source === null) return {};
     var target = objectWithoutPropertiesLoose(source, excluded);
     var key;
@@ -167,7 +170,7 @@
     }
 
     return target;
-  });
+  };
 
   var createCancellationToken = function createCancellationToken() {
     var register = function register(callback) {
@@ -193,14 +196,14 @@
   };
 
   var nativeTypeOf = function nativeTypeOf(obj) {
-    return typeof obj;
+    return _typeof2(obj);
   };
 
   var customTypeOf = function customTypeOf(obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : _typeof2(obj);
   };
 
-  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+  var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? nativeTypeOf : customTypeOf;
 
   var isCancelError = function isCancelError(value) {
     return value && _typeof(value) === "object" && value.name === "CANCEL_ERROR";
@@ -214,10 +217,9 @@
       string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
     });
     return string;
-  };
-
-  // fallback to this polyfill (or even use an existing polyfill would be better)
+  }; // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
+
 
   function _await$5(value, then, direct) {
     if (direct) {
@@ -667,7 +669,6 @@
   }
 
   var fetchNative = _async$4(function (url) {
-
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
     var _ref$cancellationToke = _ref.cancellationToken,
@@ -840,10 +841,12 @@
     var match = string.match(regexp);
     return match && match.length > 0 ? match[1] || undefined : undefined;
   };
+
   var secondMatch = function secondMatch(regexp, string) {
     var match = string.match(regexp);
     return match && match.length > 1 ? match[2] || undefined : undefined;
   };
+
   var userAgentToVersion = function userAgentToVersion(userAgent) {
     return firstMatch(/version\/(\d+(\.?_?\d+)+)/i, userAgent) || undefined;
   };
@@ -976,6 +979,7 @@
     return null;
   }; // TODO
 
+
   var detectIOS = function detectIOS() {
     return navigatorToBrowser(window.navigator);
   };
@@ -999,9 +1003,8 @@
     }
 
     return null;
-  };
+  }; // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
 
-  // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
 
   var detectorCompose = function detectorCompose(detectors) {
     return function () {
@@ -1023,6 +1026,7 @@
   };
 
   var detector = detectorCompose([detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
+
   var detectBrowser = function detectBrowser() {
     var _ref = detector() || {},
         _ref$name = _ref.name,
@@ -1506,7 +1510,5 @@
   }
 
   redirect();
-
-}());
-
+})();
 //# sourceMappingURL=jsenv_exploring_redirector.js.map
