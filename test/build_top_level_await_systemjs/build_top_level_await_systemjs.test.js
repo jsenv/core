@@ -32,6 +32,6 @@ await buildProject({
     htmlFileRelativeUrl: "./index.html",
   })
   const actual = namespace
-  const expected = { default: 42 }
+  const expected = { value: 42 }
   assert({ actual, expected })
 }

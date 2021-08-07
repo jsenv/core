@@ -48,6 +48,7 @@ export const buildProject = async ({
   compileServerIp,
   compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
+  transformTopLevelAwait = true,
 
   sourcemapExcludeSources = false,
 
@@ -134,6 +135,7 @@ export const buildProject = async ({
       compileServerPort,
       env,
       babelPluginMap,
+      transformTopLevelAwait,
 
       compileServerCanReadFromFileSystem: filesystemCache,
       compileServerCanWriteOnFilesystem: filesystemCache,
@@ -166,6 +168,7 @@ export const buildProject = async ({
         importPaths,
 
         babelPluginMap,
+        transformTopLevelAwait,
         node,
         browser,
         writeOnFileSystem,

@@ -1,3 +1,1 @@
-const value = await Promise.resolve(42)
-
-export default value
+export const value = await Promise.resolve(42)

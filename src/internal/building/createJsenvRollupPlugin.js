@@ -68,6 +68,7 @@ export const createJsenvRollupPlugin = async ({
   importPaths,
 
   babelPluginMap,
+  transformTopLevelAwait,
   node,
 
   format,
@@ -753,6 +754,16 @@ export const createJsenvRollupPlugin = async ({
 
     async generateBundle(outputOptions, rollupResult) {
       const jsBuild = {}
+
+      rollupResult = await ensureTopLevelAwaitTranspilationIfNeeded({
+        rollupResult,
+        babelPluginMap,
+        transformTopLevelAwait,
+        EMPTY_CHUNK_URL,
+        projectDirectoryUrl,
+        rollupUrlToProjectUrl,
+      })
+
       Object.keys(rollupResult).forEach((fileName) => {
         const file = rollupResult[fileName]
         if (file.type !== "chunk") {
@@ -1076,6 +1087,52 @@ export const createJsenvRollupPlugin = async ({
       }
     },
   }
+}
+
+const ensureTopLevelAwaitTranspilationIfNeeded = async ({
+  rollupResult,
+  transformTopLevelAwait,
+  EMPTY_CHUNK_URL,
+  babelPluginMap,
+  projectDirectoryUrl,
+  rollupUrlToProjectUrl,
+}) => {
+  if (!transformTopLevelAwait) {
+    return rollupResult
+  }
+
+  const rollupResultModified = {}
+  await Promise.all(
+    Object.keys(rollupResult).map(async (fileName) => {
+      const file = rollupResult[fileName]
+      if (file.type !== "chunk") {
+        rollupResultModified[fileName] = file
+        return
+      }
+
+      if (file.facadeModuleId === EMPTY_CHUNK_URL) {
+        rollupResultModified[fileName] = file
+        return
+      }
+
+      const { code, map } = await transformJs({
+        projectDirectoryUrl,
+        code: file.code,
+        map: file.map,
+        url: rollupUrlToProjectUrl(file.facadeModuleId), // transformJs expect a file:// url
+        babelPluginMap,
+        // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
+      })
+
+      const fileCopy = {
+        ...file,
+      }
+      fileCopy.code = code
+      fileCopy.map = map
+      rollupResultModified[fileName] = fileCopy
+    }),
+  )
+  return rollupResultModified
 }
 
 const prepareEntryPoints = async (

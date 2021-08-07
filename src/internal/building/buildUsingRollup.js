@@ -21,6 +21,7 @@ export const buildUsingRollup = async ({
   importPaths,
 
   babelPluginMap,
+  transformTopLevelAwait,
   node,
   browser,
 
@@ -66,6 +67,7 @@ export const buildUsingRollup = async ({
     importPaths,
 
     babelPluginMap,
+    transformTopLevelAwait,
     node,
     browser,
 
