@@ -540,7 +540,7 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
       const reference = srcsetPartsReferences[index]
       srcsetPart.specifier = referenceToUrl({
         reference,
-        htmlNode: srcsetPart,
+        htmlNode,
         getReferenceUrlRelativeToImporter,
       })
     })

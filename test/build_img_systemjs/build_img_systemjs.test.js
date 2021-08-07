@@ -1,4 +1,3 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
@@ -6,7 +5,10 @@ import {
   readFile,
   resolveUrl,
   assertFilePresence,
+  urlToBasename,
 } from "@jsenv/util"
+
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   findNodeByTagName,
@@ -14,11 +16,10 @@ import {
   parseSrcset,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
-import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.html`
@@ -34,12 +35,6 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
@@ -48,10 +43,12 @@ const img = findNodeByTagName(htmlString, "img")
 // ensure src is properly updated
 {
   const srcAttribute = getHtmlNodeAttributeByName(img, "src")
-  const imgABuildRelativeUrl = getBuildRelativeUrl("img-a.png")
+  const imgABuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img-a.png`]
+
   const actual = srcAttribute.value
   const expected = imgABuildRelativeUrl
   assert({ actual, expected })
+
   // ensure corresponding file exists
   const imgABuildUrl = resolveUrl(imgABuildRelativeUrl, buildDirectoryUrl)
   await assertFilePresence(imgABuildUrl)
@@ -60,8 +57,9 @@ const img = findNodeByTagName(htmlString, "img")
 // ensure srcset is properly updated
 {
   const srcsetAttribute = getHtmlNodeAttributeByName(img, "srcset")
-  const imgBBuildRelativeUrl = getBuildRelativeUrl("img-b.png")
-  const imgCBuildRelativeUrl = getBuildRelativeUrl("img-c.png")
+  const imgBBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img-b.png`]
+  const imgCBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img-c.png`]
+
   const actual = parseSrcset(srcsetAttribute.value)
   const expected = [
     {
@@ -75,6 +73,7 @@ const img = findNodeByTagName(htmlString, "img")
   ]
   // and corresponding file exists
   assert({ actual, expected })
+
   const imgBBuildUrl = resolveUrl(imgBBuildRelativeUrl, buildDirectoryUrl)
   await assertFilePresence(imgBBuildUrl)
   const imgCBuildUrl = resolveUrl(imgCBuildRelativeUrl, buildDirectoryUrl)
