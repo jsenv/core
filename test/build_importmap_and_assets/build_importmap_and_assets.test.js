@@ -21,9 +21,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
 }
 
 const { buildMappings } = await buildProject({
@@ -51,6 +50,7 @@ const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
   const importmapBuildUrl = resolveUrl(importmapBuildRelativeUrl, buildDirectoryUrl)
   const importmapString = await readFile(importmapBuildUrl)
   const importmap = JSON.parse(importmapString)
+
   const actual = importmap
   // importmap is the same because non js files are remapped
   const expected = {
@@ -68,6 +68,7 @@ const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
   const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
   const cssString = await readFile(cssBuildUrl)
   const cssUrls = await parseCssUrls(cssString, cssBuildUrl)
+
   const actual = cssUrls.urlDeclarations[0].specifier
   const expected = urlToRelativeUrl(imgBuildUrl, cssBuildUrl)
   assert({ actual, expected })
@@ -81,6 +82,7 @@ const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
     jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
     // debug: true,
   })
+
   const actual = {
     urlFromStaticImport: namespace.urlFromStaticImport,
     urlFromDynamicImport: namespace.urlFromDynamicImport,
