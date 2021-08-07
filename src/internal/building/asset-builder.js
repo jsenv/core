@@ -64,7 +64,6 @@ export const createAssetBuilder = (
     baseUrl,
     buildDirectoryRelativeUrl,
 
-    urlToFileUrl,
     urlToCompiledServerUrl,
     urlToHumanUrl,
 
@@ -785,7 +784,7 @@ export const createAssetBuilder = (
     const referenceSource = referenceTarget ? referenceTarget.targetBuffer : loadUrl(referenceUrl)
     const referenceSourceAsString = referenceSource ? String(referenceSource) : ""
 
-    let message = `${urlToFileUrl(referenceUrl)}`
+    let message = `${urlToHumanUrl(referenceUrl)}`
     if (typeof reference.referenceLine === "number") {
       message += `:${reference.referenceLine}`
       if (typeof reference.referenceColumn === "number") {
