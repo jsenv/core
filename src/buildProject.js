@@ -61,6 +61,9 @@ export const buildProject = async ({
   urlVersioning = true,
   useImportMapToImproveLongTermCaching = format === "systemjs",
   preserveEntrySignatures,
+  // when jsConcatenation is disabled rollup becomes almost useless
+  // except it can still do tree shaking but in practice tree shaking
+  // fails to catch many things so...
   jsConcatenation = true,
   minify = process.env.NODE_ENV === "production",
   // https://github.com/kangax/html-minifier#options-quick-reference

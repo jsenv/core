@@ -1098,13 +1098,19 @@ export const createJsenvRollupPlugin = async ({
 
 const ensureTopLevelAwaitTranspilationIfNeeded = async ({
   jsChunks,
-  // format,
+  format,
   transformTopLevelAwait,
   babelPluginMap,
   projectDirectoryUrl,
   rollupUrlToProjectUrl,
 }) => {
   if (!transformTopLevelAwait) {
+    return
+  }
+
+  if (format !== "systemjs") {
+    // transform-async-to-promises won't be able to transform top level await
+    // for "esmodule", so it would be useless
     return
   }
 
