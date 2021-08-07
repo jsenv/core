@@ -763,11 +763,26 @@ export const createJsenvRollupPlugin = async ({
           return
         }
 
-        if (file.facadeModuleId === EMPTY_CHUNK_URL) {
+        const { facadeModuleId } = file
+        if (facadeModuleId === EMPTY_CHUNK_URL) {
           return
         }
 
-        jsChunks[fileName] = { ...file }
+        const fileCopy = { ...file }
+        if (facadeModuleId) {
+          fileCopy.url = rollupUrlToServerUrl(facadeModuleId)
+        } else {
+          const sourcePath = file.map.sources[file.map.sources.length - 1]
+          const fileBuildUrl = resolveUrl(file.fileName, buildDirectoryUrl)
+          const originalProjectUrl = resolveUrl(sourcePath, fileBuildUrl)
+          fileCopy.url = urlToCompiledServerUrl(originalProjectUrl, {
+            projectDirectoryUrl,
+            compileServerOrigin,
+            compileDirectoryRelativeUrl,
+          })
+        }
+
+        jsChunks[fileName] = fileCopy
       })
       await ensureTopLevelAwaitTranspilationIfNeeded({
         jsChunks,
@@ -782,7 +797,7 @@ export const createJsenvRollupPlugin = async ({
       Object.keys(jsChunks).forEach((fileName) => {
         const file = jsChunks[fileName]
         let buildRelativeUrl
-        const canBeVersioned = file.facadeModuleId in jsModulesFromEntry || !file.isEntry
+        const canBeVersioned = urlToUrlForRollup(file.url) in jsModulesFromEntry || !file.isEntry
         if (urlVersioning && useImportMapToImproveLongTermCaching) {
           if (canBeVersioned) {
             buildRelativeUrl = computeBuildRelativeUrl(
@@ -798,21 +813,7 @@ export const createJsenvRollupPlugin = async ({
           fileName = rollupFileNameWithoutHash(fileName)
         }
 
-        let originalProjectUrl
-        const id = file.facadeModuleId
-        if (id) {
-          originalProjectUrl = rollupUrlToOriginalProjectUrl(id)
-          file.facadeModuleId = rollupUrlToServerUrl(id)
-        } else {
-          const sourcePath = file.map.sources[file.map.sources.length - 1]
-          const fileBuildUrl = resolveUrl(file.fileName, buildDirectoryUrl)
-          originalProjectUrl = resolveUrl(sourcePath, fileBuildUrl)
-          file.facadeModuleId = urlToCompiledServerUrl(originalProjectUrl, {
-            projectDirectoryUrl,
-            compileServerOrigin,
-            compileDirectoryRelativeUrl,
-          })
-        }
+        const originalProjectUrl = rollupUrlToOriginalProjectUrl(file.url)
         const originalProjectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
 
         if (canBeVersioned) {
@@ -1097,7 +1098,7 @@ export const createJsenvRollupPlugin = async ({
 
 const ensureTopLevelAwaitTranspilationIfNeeded = async ({
   jsChunks,
-  format,
+  // format,
   transformTopLevelAwait,
   babelPluginMap,
   projectDirectoryUrl,
@@ -1117,12 +1118,12 @@ const ensureTopLevelAwaitTranspilationIfNeeded = async ({
         projectDirectoryUrl,
         code: file.code,
         map: file.map,
-        url: rollupUrlToProjectUrl(file.facadeModuleId), // transformJs expect a file:// url
+        url: rollupUrlToProjectUrl(file.url), // transformJs expect a file:// url
         babelPluginMap,
         // the top level await transformation should not need any new babel helper
         // if so let them be inlined
         babelHelpersInjectionAsImport: false,
-        moduleOutFormat: format, // we are compiling for rollup output must be "esmodule"
+        // moduleOutFormat: format, // we are compiling for rollup output must be "esmodule"
       })
 
       file.code = code

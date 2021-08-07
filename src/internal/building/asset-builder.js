@@ -682,10 +682,10 @@ export const createAssetBuilder = (
 
         const basenameUrl = resolveUrl(urlToBasename(jsModuleUrl), jsModuleUrl)
         const importerUrl = urlToCompiledServerUrl(reference.referenceUrl)
-        const name = urlToRelativeUrl(basenameUrl, importerUrl)
+        const name = urlToRelativeUrl(basenameUrl, importerUrl).replace(new RegExp("../", "g"), "")
         const rollupReferenceId = emitChunk({
           id: jsModuleUrl,
-          name: name.replace(new RegExp("../", "g"), ""),
+          name,
         })
         target.rollupReferenceId = rollupReferenceId
         effects.push(`emit rollup chunk "${name}" (${rollupReferenceId})`)
@@ -740,8 +740,7 @@ export const createAssetBuilder = (
       const targetBuildRelativeUrl = Object.keys(jsModuleBuild).find(
         (buildRelativeUrlCandidate) => {
           const file = jsModuleBuild[buildRelativeUrlCandidate]
-          const { facadeModuleId } = file
-          return facadeModuleId && facadeModuleId === targetUrl
+          return file.url === targetUrl
         },
       )
       const buildFileInfo = jsModuleBuild[targetBuildRelativeUrl]
