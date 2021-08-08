@@ -1,8 +1,13 @@
 import { fork } from "child_process"
 import { fileURLToPath } from "url"
-import { measurePerformanceMultipleTimes, computeMetricsMedian } from "@jsenv/performance-impact"
 
-export const measureBuild = async () => {
+import {
+  measurePerformanceMultipleTimes,
+  computeMetricsMedian,
+  logPerformanceMetrics,
+} from "@jsenv/performance-impact"
+
+export const measureBuild = async ({ iterations = 10 } = {}) => {
   const childProcessFileUrl = new URL("./child_process_measuring_build.js", import.meta.url)
   const childProcessFilePath = fileURLToPath(childProcessFileUrl)
 
@@ -25,8 +30,14 @@ export const measureBuild = async () => {
         "number of fs write operation": { value: fileSystemWriteOperationCount },
       }
     },
-    10,
+    iterations,
     { msToWaitBetweenEachMeasure: 50 },
   )
   return computeMetricsMedian(metrics)
+}
+
+const executeAndLog = process.argv.includes("--log")
+if (executeAndLog) {
+  const performanceMetrics = await measureBuild({ iterations: 1 })
+  logPerformanceMetrics(performanceMetrics)
 }

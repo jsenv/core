@@ -1,8 +1,13 @@
 import { fork } from "child_process"
 import { fileURLToPath } from "url"
-import { measurePerformanceMultipleTimes, computeMetricsMedian } from "@jsenv/performance-impact"
 
-export const measureImport = async () => {
+import {
+  measurePerformanceMultipleTimes,
+  computeMetricsMedian,
+  logPerformanceMetrics,
+} from "@jsenv/performance-impact"
+
+export const measureImport = async ({ iterations = 10 } = {}) => {
   const childProcessFileUrl = new URL("./child_process_measuring_import.js", import.meta.url)
   const childProcessFilePath = fileURLToPath(childProcessFileUrl)
 
@@ -22,8 +27,14 @@ export const measureImport = async () => {
         "import memory heap used": { value: heapUsed, unit: "byte" },
       }
     },
-    10,
+    iterations,
     { msToWaitBetweenEachMeasure: 50 },
   )
   return computeMetricsMedian(metrics)
+}
+
+const executeAndLog = process.argv.includes("--log")
+if (executeAndLog) {
+  const performanceMetrics = await measureImport({ iterations: 1 })
+  logPerformanceMetrics(performanceMetrics)
 }

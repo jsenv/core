@@ -30,9 +30,3 @@ export const generatePerformanceReport = async () => {
     },
   }
 }
-
-const executeAndLog = process.argv.includes("--log")
-if (executeAndLog) {
-  const performanceReport = await generatePerformanceReport()
-  console.log(JSON.stringify(performanceReport, null, "  "))
-}

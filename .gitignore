@@ -1,5 +1,3 @@
-.github/workflows/**/.jsenv/
-.github/workflows/**/dist/
 /.jsenv/
 /coverage/
 /docs/**/.jsenv/
@@ -10,6 +8,8 @@
 /docs/**/yarn.lock
 /coverage-v8/
 /node_modules/
+/script/**/.jsenv/
+/script/**/dist/
 /test-manual/**/.jsenv/
 /import-map.importmap
 /package-lock.json
