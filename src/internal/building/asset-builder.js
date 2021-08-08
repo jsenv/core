@@ -71,7 +71,7 @@ export const createAssetBuilder = (
     onJsModuleReference = () => {},
     resolveTargetUrl = ({ targetSpecifier, importerUrl }) =>
       resolveUrl(targetSpecifier, importerUrl),
-    lineBreakNormalization
+    lineBreakNormalization,
   },
 ) => {
   const logger = createLogger({ logLevel })
@@ -599,7 +599,9 @@ export const createAssetBuilder = (
       if (targetBuildBuffer !== undefined) {
         target.targetBuildBuffer = targetBuildBuffer
         if (targetBuildRelativeUrl === undefined) {
-          target.targetBuildRelativeUrl = computeBuildRelativeUrlForTarget(target)
+          target.targetBuildRelativeUrl = computeBuildRelativeUrlForTarget(target, {
+            lineBreakNormalization,
+          })
         }
       }
 

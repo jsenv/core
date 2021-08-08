@@ -10,20 +10,19 @@ import {
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls.js"
-import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.html`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
 }
 
 const { buildMappings } = await buildProject({
-  ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
+  ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -31,15 +30,9 @@ const { buildMappings } = await buildProject({
   minify: true,
 })
 
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const styleBuildRelativeUrl = getBuildRelativeUrl("style.css")
-const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
+const styleBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}style.css`]
+const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 const styleBuildUrl = resolveUrl(styleBuildRelativeUrl, buildDirectoryUrl)
 const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
 
@@ -47,6 +40,7 @@ const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
 {
   const styleCssString = await readFile(styleBuildUrl)
   const styleUrls = await parseCssUrls(styleCssString, styleBuildUrl)
+
   const actual = styleUrls.urlDeclarations[0].specifier
   const expected = urlToRelativeUrl(imgBuildUrl, styleBuildUrl)
   assert({ actual, expected })
