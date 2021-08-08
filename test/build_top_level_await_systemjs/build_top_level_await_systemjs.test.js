@@ -14,14 +14,15 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
+const entryPointMap = {
+  [`./${testDirectoryRelativeUrl}${testDirectoryname}.js`]: "./main.js",
+}
 
 await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${testDirectoryname}.js`]: "./main.js",
-  },
+  entryPointMap,
   // logLevel: "debug",
 })
 

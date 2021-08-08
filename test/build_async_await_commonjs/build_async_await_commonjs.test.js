@@ -30,6 +30,7 @@ await buildProject({
     ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
   })
+
   const actual = await namespace.ask()
   const expected = 42
   assert({ actual, expected })

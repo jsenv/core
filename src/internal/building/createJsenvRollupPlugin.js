@@ -30,6 +30,7 @@ import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-s
 import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
+import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
 import { importMapsFromHtml } from "./html/htmlScan.js"
 import { parseTarget } from "./parseTarget.js"
@@ -627,6 +628,13 @@ export const createJsenvRollupPlugin = async ({
       })
 
       const importerUrl = urlImporterMap[url]
+
+      // Jsenv helpers are injected as import statements to provide code like babel helpers
+      // For now we just compute the information that the target file is a jsenv helper
+      // without doing anything special with "targetIsJsenvHelperFile" information
+      const originalUrl = rollupUrlToOriginalProjectUrl(url)
+      const targetIsJsenvHelperFile = urlIsInsideOf(originalUrl, jsenvHelpersDirectoryInfo.url)
+
       // Store the fact that this file is referenced by js (static or dynamic import)
       assetBuilder.createReference({
         // we don't want to emit a js chunk for every js file found
@@ -642,6 +650,7 @@ export const createJsenvRollupPlugin = async ({
         referenceColumn: undefined,
         referenceLine: undefined,
 
+        targetIsJsenvHelperFile,
         targetContentType: responseContentType,
         targetBuffer: Buffer.from(content),
         targetIsJsModule: responseContentType === "application/javascript",
