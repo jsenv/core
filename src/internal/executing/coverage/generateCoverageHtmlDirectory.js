@@ -1,10 +1,9 @@
+import { readFileSync } from "fs"
 import { resolveUrl, urlToFileSystemPath } from "@jsenv/util"
 
 import { require } from "../../require.js"
 
 import { istanbulCoverageMapFromCoverage } from "./istanbulCoverageMapFromCoverage.js"
-
-const { readFileSync } = require("fs")
 
 export const generateCoverageHtmlDirectory = async (
   coverage,

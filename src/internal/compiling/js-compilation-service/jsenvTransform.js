@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { require } from "@jsenv/core/src/internal/require.js"
-import { minimalBabelPluginArray } from "@jsenv/core/src/internal/minimalBabelPluginArray.js"
+import { getMinimalBabelPluginArray } from "@jsenv/core/src/internal/minimalBabelPluginArray.js"
 import { babelPluginTransformImportMeta } from "@jsenv/core/src/internal/babel-plugin-transform-import-meta.js"
 
 import { findAsyncPluginNameInBabelPluginMap } from "./findAsyncPluginNameInBabelPluginMap.js"
@@ -157,7 +157,7 @@ export const jsenvTransform = async ({
       options: {
         ...options,
         plugins: [
-          ...minimalBabelPluginArray,
+          ...getMinimalBabelPluginArray(),
           ...babelPluginArrayWithoutAsync,
           [proposalDynamicImport],
           [transformModulesSystemJs],
@@ -179,7 +179,7 @@ export const jsenvTransform = async ({
         // https://github.com/babel/babel/blob/eac4c5bc17133c2857f2c94c1a6a8643e3b547a7/packages/babel-core/src/transformation/file/generate.js#L57
         // https://github.com/babel/babel/blob/090c364a90fe73d36a30707fc612ce037bdbbb24/packages/babel-core/src/transformation/file/merge-map.js#L6s
         inputSourceMap: result.map,
-        plugins: [...minimalBabelPluginArray, babelPluginMap[asyncPluginName]],
+        plugins: [...getMinimalBabelPluginArray(), babelPluginMap[asyncPluginName]],
       },
     })
 
@@ -191,7 +191,7 @@ export const jsenvTransform = async ({
   }
 
   const babelPluginArray = [
-    ...minimalBabelPluginArray,
+    ...getMinimalBabelPluginArray(),
     ...Object.keys(babelPluginMap).map((babelPluginName) => babelPluginMap[babelPluginName]),
     ...(moduleOutFormat === "systemjs"
       ? [[proposalDynamicImport], [transformModulesSystemJs]]

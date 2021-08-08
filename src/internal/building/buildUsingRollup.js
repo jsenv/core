@@ -1,7 +1,7 @@
 import { createOperation } from "@jsenv/cancellation"
 import { urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/util"
+
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
-import { require } from "../require.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
 export const buildUsingRollup = async ({
@@ -150,7 +150,7 @@ const useRollup = async ({
   buildDirectoryUrl,
   buildDirectoryClean,
 }) => {
-  const { rollup } = require("rollup")
+  const { rollup } = await import("rollup")
 
   const rollupInputOptions = {
     // about cache here, we should/could reuse previous rollup call

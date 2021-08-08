@@ -1,6 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { Script } from "vm"
 
+import cuid from "cuid"
 import { loggerToLogLevel } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
 import {
@@ -11,13 +12,10 @@ import {
   moveDirectoryContent,
 } from "@jsenv/util"
 
-import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
 import { v8CoverageFromNodeV8Directory } from "./internal/executing/coverage/v8CoverageFromNodeV8Directory.js"
-
-const cuid = require("cuid")
 
 export const launchNode = async ({
   logger,

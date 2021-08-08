@@ -5,7 +5,6 @@ import { createCancellationToken, createStoppableOperation } from "@jsenv/cancel
 import { teardownSignal } from "@jsenv/node-signals"
 
 import { trackRessources } from "./internal/trackRessources.js"
-import { require } from "./internal/require.js"
 import { fetchUrl } from "./internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "./internal/validateResponseStatusIsOk.js"
 import { trackPageToNotify } from "./internal/browser-launcher/trackPageToNotify.js"
@@ -42,8 +41,10 @@ export const launchChromium = async ({
     : chromiumSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
+    const { chromium } = await import("playwright")
+
     const launchOperation = launchBrowser("chromium", {
-      browserClass: require(`playwright`).chromium,
+      browserClass: chromium,
       cancellationToken,
       ressourceTracker,
       options: {
@@ -144,8 +145,9 @@ export const launchFirefox = async ({
     : firefoxSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
+    const { firefox } = await import("playwright")
     const launchOperation = launchBrowser("firefox", {
-      browserClass: require(`playwright`).firefox,
+      browserClass: firefox,
       cancellationToken,
       ressourceTracker,
       options: {
@@ -218,8 +220,9 @@ export const launchWebkit = async ({
     : webkitSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
+    const { webkit } = await import("playwright")
     const launchOperation = launchBrowser("webkit", {
-      browserClass: require(`playwright`).webkit,
+      browserClass: webkit,
       cancellationToken,
       ressourceTracker,
       options: {
