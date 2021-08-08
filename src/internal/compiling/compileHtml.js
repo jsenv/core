@@ -359,18 +359,16 @@ const findChild = ({ childNodes = [] }, predicate) => childNodes.find(predicate)
 
 const sameScript = (node, { type = "text/javascript", src }) => {
   const typeAttribute = getHtmlNodeAttributeByName(node, "type")
-  if (!typeAttribute) {
-    return type === undefined || type === "text/javascript"
-  }
-  if (typeAttribute !== type) {
+  const leftScriptType = typeAttribute ? typeAttribute.value : "text/javascript"
+  if (leftScriptType !== type) {
     return false
   }
 
   const srcAttribute = getHtmlNodeAttributeByName(node, "src")
-  if (!srcAttribute) {
-    return src === undefined
+  if (!srcAttribute && src) {
+    return false
   }
-  if (srcAttribute.value !== src) {
+  if (srcAttribute && srcAttribute.value !== src) {
     return false
   }
 

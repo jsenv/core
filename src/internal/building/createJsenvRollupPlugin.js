@@ -819,6 +819,7 @@ export const createJsenvRollupPlugin = async ({
               {
                 pattern: `[name]-[hash][extname]`,
                 lineBreakNormalization,
+                contentType: "application/javascript",
               },
             )
           } else {

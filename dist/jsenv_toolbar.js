@@ -2229,7 +2229,9 @@
   var scanBrowserRuntimeFeatures = _async$1(function () {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         _ref$coverageInstrume = _ref.coverageInstrumentationRequired,
-        coverageInstrumentationRequired = _ref$coverageInstrume === void 0 ? true : _ref$coverageInstrume;
+        coverageInstrumentationRequired = _ref$coverageInstrume === void 0 ? true : _ref$coverageInstrume,
+        _ref$failFastOnFeatur = _ref.failFastOnFeatureDetection,
+        failFastOnFeatureDetection = _ref$failFastOnFeatur === void 0 ? false : _ref$failFastOnFeatur;
 
     return _await(fetchJson("/.jsenv/compile-meta.json"), function (_ref2) {
       var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl;
@@ -2254,6 +2256,7 @@
         });
 
         return _await(getFeaturesReport({
+          failFastOnFeatureDetection: failFastOnFeatureDetection,
           groupInfo: groupInfo,
           inlineImportMapIntoHTML: inlineImportMapIntoHTML,
           customCompilerNames: customCompilerNames,
@@ -2280,13 +2283,18 @@
   });
 
   var getFeaturesReport = _async$1(function (_ref5) {
-    var groupInfo = _ref5.groupInfo,
+    var failFastOnFeatureDetection = _ref5.failFastOnFeatureDetection,
+        groupInfo = _ref5.groupInfo,
         inlineImportMapIntoHTML = _ref5.inlineImportMapIntoHTML;
-    var jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray; // start testing importmap support first and not in paralell
-    // so that there is not module script loaded beore importmap is injected
-    // it would log an error in chrome console and return undefined
-
-    return _await(supportsImportmap({
+    var featuresReport = {
+      jsenvPluginRequiredNames: [],
+      importmapSupported: undefined,
+      dynamicImportSupported: undefined,
+      topLevelAwaitSupported: undefined
+    };
+    var jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray;
+    featuresReport.jsenvPluginRequiredNames = jsenvPluginRequiredNames;
+    return jsenvPluginRequiredNames.length > 0 && failFastOnFeatureDetection ? featuresReport : _await(supportsImportmap({
       // chrome supports inline but not remote importmap
       // https://github.com/WICG/import-maps/issues/235
       // at this stage we won't know if the html file will use
@@ -2297,14 +2305,12 @@
       // so we test importmap support and the remote one
       remote: !inlineImportMapIntoHTML
     }), function (importmapSupported) {
-      return _call$1(supportsDynamicImport, function (dynamicImportSupported) {
-        return _call$1(supportsTopLevelAwait, function (topLevelAwaitSupported) {
-          return {
-            jsenvPluginRequiredNames: jsenvPluginRequiredNames,
-            importmapSupported: importmapSupported,
-            dynamicImportSupported: dynamicImportSupported,
-            topLevelAwaitSupported: topLevelAwaitSupported
-          };
+      featuresReport.importmapSupported = importmapSupported;
+      return !importmapSupported && failFastOnFeatureDetection ? featuresReport : _call$1(supportsDynamicImport, function (dynamicImportSupported) {
+        featuresReport.dynamicImportSupported = dynamicImportSupported;
+        return !dynamicImportSupported && failFastOnFeatureDetection ? featuresReport : _call$1(supportsTopLevelAwait, function (topLevelAwaitSupported) {
+          featuresReport.topLevelAwaitSupported = topLevelAwaitSupported;
+          return featuresReport;
         });
       });
     });

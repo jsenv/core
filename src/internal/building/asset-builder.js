@@ -841,6 +841,7 @@ const precomputeBuildRelativeUrlForTarget = (
   target.targetBuildBuffer = targetBuildBuffer
   const precomputedBuildRelativeUrl = computeBuildRelativeUrlForTarget(target, {
     lineBreakNormalization,
+    contentType: target.targetContentType,
   })
   target.targetBuildBuffer = undefined
   return precomputedBuildRelativeUrl

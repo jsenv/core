@@ -42,12 +42,15 @@ Please note you can put a trailing slash in `projectDirectoryUrl` value if you w
 
 # importDefaultExtension
 
-`importDefaultExtension` parameter is a boolean or a string controlling if an extension is added to import without any. This parameter is optional and enabled by default.
+_importDefaultExtension_ is a boolean or string parameter controlling if an extension is added to import without any. This parameter is optional and disabled by default.
 
-When enabled extensionless import inherits file extension. When a string, extensionless import get suffixed by that string.
+| Value           | Effect                                                    |
+| --------------- | --------------------------------------------------------- |
+| false (default) | Import without extension behaves normally                 |
+| true            | Import without extension inherits extension from the file |
+| a string        | The string is appended to import without extension        |
 
-As you are forced to rely on magic extension when one of your dependency contains one or more extensionless import, `importDefaultExtension` is `true` by default. But expecting a tool to guess extension introduces complexity and makes you dependent on magic extensions configuration and implementation.
-
+Expecting a tool to add an extension introduces complexity and makes your code dependent on magic extensions configuration.
 This parameter only adds an extension on extensionless import, it cannot try different extension and choose the right one.
 
 # babelPluginMap

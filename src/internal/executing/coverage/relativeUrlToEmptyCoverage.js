@@ -1,7 +1,7 @@
 import { createOperation } from "@jsenv/cancellation"
 import { resolveUrl, urlToFileSystemPath, readFile } from "@jsenv/util"
-import { require } from "../../require.js"
-import { minimalBabelPluginArray } from "../../minimalBabelPluginArray.js"
+
+import { getMinimalBabelPluginArray } from "../../minimalBabelPluginArray.js"
 import { babelPluginInstrument } from "./babel-plugin-instrument.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
@@ -9,7 +9,7 @@ export const relativeUrlToEmptyCoverage = async (
   relativeUrl,
   { cancellationToken, projectDirectoryUrl, babelPluginMap },
 ) => {
-  const { transformAsync } = require("@babel/core")
+  const { transformAsync } = await import("@babel/core")
 
   const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
   const source = await createOperation({
@@ -17,7 +17,7 @@ export const relativeUrlToEmptyCoverage = async (
     start: () => readFile(fileUrl),
   })
 
-  const plugins = [...minimalBabelPluginArray]
+  const plugins = [...getMinimalBabelPluginArray()]
   Object.keys(babelPluginMap).forEach((babelPluginName) => {
     if (babelPluginName !== "transform-instrument") {
       plugins.push(babelPluginMap[babelPluginName])

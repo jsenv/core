@@ -21,13 +21,14 @@ export const convertCommonJsWithRollup = async ({
     throw new Error(`compatible only with file:// protocol, got ${url}`)
   }
 
-  const { rollup } = require("rollup")
-  const commonjs = require("@rollup/plugin-commonjs")
-  const { nodeResolve } = require("@rollup/plugin-node-resolve")
-  const createJSONRollupPlugin = require("@rollup/plugin-json")
-  const createReplaceRollupPlugin = require("@rollup/plugin-replace")
+  const { rollup } = await import("rollup")
+  const { default: commonjs } = await import("@rollup/plugin-commonjs")
+  const { nodeResolve } = await import("@rollup/plugin-node-resolve")
+  const { default: createJSONRollupPlugin } = await import("@rollup/plugin-json")
+  const { default: createReplaceRollupPlugin } = await import("@rollup/plugin-replace")
+  const { default: createNodeGlobalRollupPlugin } = await import("rollup-plugin-node-globals")
+
   const builtins = require("rollup-plugin-node-builtins-brofs")
-  const createNodeGlobalRollupPlugin = require("rollup-plugin-node-globals")
 
   const filePath = urlToFileSystemPath(url)
 

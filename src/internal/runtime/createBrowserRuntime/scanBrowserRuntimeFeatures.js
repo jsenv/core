@@ -4,6 +4,7 @@ import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 
 export const scanBrowserRuntimeFeatures = async ({
   coverageInstrumentationRequired = true,
+  failFastOnFeatureDetection = false,
 } = {}) => {
   const { outDirectoryRelativeUrl } = await fetchJson("/.jsenv/compile-meta.json")
   const groupMapUrl = `/${outDirectoryRelativeUrl}groupMap.json`
@@ -22,6 +23,7 @@ export const scanBrowserRuntimeFeatures = async ({
       coverageInstrumentationRequired,
     }),
     ...(await getFeaturesReport({
+      failFastOnFeatureDetection,
       groupInfo,
       inlineImportMapIntoHTML,
       customCompilerNames,
@@ -49,8 +51,24 @@ export const scanBrowserRuntimeFeatures = async ({
   }
 }
 
-const getFeaturesReport = async ({ groupInfo, inlineImportMapIntoHTML }) => {
+const getFeaturesReport = async ({
+  failFastOnFeatureDetection,
+  groupInfo,
+  inlineImportMapIntoHTML,
+}) => {
+  const featuresReport = {
+    jsenvPluginRequiredNames: [],
+    importmapSupported: undefined,
+    dynamicImportSupported: undefined,
+    topLevelAwaitSupported: undefined,
+  }
+
   const jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray
+  featuresReport.jsenvPluginRequiredNames = jsenvPluginRequiredNames
+  if (jsenvPluginRequiredNames.length > 0 && failFastOnFeatureDetection) {
+    return featuresReport
+  }
+
   // start testing importmap support first and not in paralell
   // so that there is not module script loaded beore importmap is injected
   // it would log an error in chrome console and return undefined
@@ -66,17 +84,20 @@ const getFeaturesReport = async ({ groupInfo, inlineImportMapIntoHTML }) => {
     // so we test importmap support and the remote one
     remote: !inlineImportMapIntoHTML,
   })
+  featuresReport.importmapSupported = importmapSupported
+  if (!importmapSupported && failFastOnFeatureDetection) {
+    return featuresReport
+  }
 
   const dynamicImportSupported = await supportsDynamicImport()
+  featuresReport.dynamicImportSupported = dynamicImportSupported
+  if (!dynamicImportSupported && failFastOnFeatureDetection) {
+    return featuresReport
+  }
 
   const topLevelAwaitSupported = await supportsTopLevelAwait()
-
-  return {
-    jsenvPluginRequiredNames,
-    importmapSupported,
-    dynamicImportSupported,
-    topLevelAwaitSupported,
-  }
+  featuresReport.topLevelAwaitSupported = topLevelAwaitSupported
+  return featuresReport
 }
 
 const babelPluginRequiredNamesFromGroupInfo = (groupInfo, { coverageInstrumentationRequired }) => {

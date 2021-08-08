@@ -1,4 +1,5 @@
 /* eslint-disable import/max-dependencies */
+import cuid from "cuid"
 import {
   createCancellationToken,
   composeCancellationToken,
@@ -12,17 +13,19 @@ import {
   urlToFileSystemPath,
   registerDirectoryLifecycle,
 } from "@jsenv/util"
+
 import { executeJsenvAsyncFunction } from "@jsenv/core/src/internal/executeJsenvAsyncFunction.js"
-import { require } from "@jsenv/core/src/internal/require.js"
-import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "../../argUtils.js"
-import { generateExecutionSteps } from "../../executing/generateExecutionSteps.js"
-import { executeConcurrently } from "../../executing/executeConcurrently.js"
-import { startCompileServer } from "../../compiling/startCompileServer.js"
+import {
+  assertProjectDirectoryUrl,
+  assertProjectDirectoryExists,
+} from "@jsenv/core/src/internal/argUtils.js"
+import { generateExecutionSteps } from "@jsenv/core/src/internal/executing/generateExecutionSteps.js"
+import { executeConcurrently } from "@jsenv/core/src/internal/executing/executeConcurrently.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
+
 import { relativeUrlToExecutionSteps } from "./relativeUrlToExecutionSteps.js"
 import { showContinuousTestingNotification } from "./showContinuousTestingNotification.js"
 import { createRemoveLog, createRunLog } from "./continous-testing-logs.js"
-
-const cuid = require("cuid")
 
 export const TESTING_WATCH_EXCLUDE_DESCRIPTION = {
   "./.git/": false,

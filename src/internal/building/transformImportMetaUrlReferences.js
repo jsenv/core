@@ -1,6 +1,5 @@
 import { resolveUrl } from "@jsenv/util"
 
-import { require } from "@jsenv/core/src/internal/require.js"
 import { referenceToCodeForRollup } from "./asset-builder.js"
 
 export const transformImportMetaUrlReferences = async ({
@@ -12,7 +11,7 @@ export const transformImportMetaUrlReferences = async ({
   fetch,
   markBuildRelativeUrlAsUsedByJs,
 }) => {
-  const MagicString = require("magic-string")
+  const { default: MagicString } = await import("magic-string")
   const magicString = new MagicString(code)
 
   const { asyncWalk } = await import("estree-walker")
