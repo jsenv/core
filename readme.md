@@ -246,7 +246,7 @@ Firstly because jsenv is a tool that was built to run raw js, html and css. It s
 
 Secondly because jsenv is compatible with the latest standards. Even some that are not yet mature in the js ecosystem, such as import maps. This will makes you at ease with technologies that will be part of the ecosystem once you are confortable with coding.
 
-To sum up, jsenv focuses on simplicity and flexibility making it a perfect candidate to learn the ecosystem gradually. In the end, you might even consider sticking to vanilla js if that makes sense for you and your project.
+To sum up, jsenv focuses on simplicity and flexibility making it a perfect candidate to learn the ecosystem gradually.
 
 ## Main dependencies
 
