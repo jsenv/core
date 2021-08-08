@@ -372,7 +372,7 @@ See also
 
 </details>
 
-## TypeScript
+## TypeScript (experimental)
 
 _jsenv.config.js for TypeScript_:
 
@@ -399,7 +399,7 @@ See also
 
 ## CommonJS
 
-CommonJS module format rely on `module.exports` and `require`. It was invented by Node.js and is not standard JavaScript. If your code or one of your dependency uses it, it requires some configuration. The jsenv config below makes jsenv compatible with a package named `whatever` that would be written in CommonJS.
+CommonJS module format rely on `module.exports` and `require`. It was invented by Node.js and is not standard JavaScript. If your code or one of your dependency uses it, it requires some configuration. The jsenv config below makes jsenv compatible with a package named _"whatever"_ that would be written in CommonJS.
 
 _jsenv.config.js to use code written in CommonJS_:
 
