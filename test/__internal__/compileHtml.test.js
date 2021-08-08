@@ -1,5 +1,10 @@
 import { assert } from "@jsenv/assert"
-import { parseHtmlString, manipulateHtmlAst, stringifyHtmlAst } from "./compileHtml.js"
+
+import {
+  parseHtmlString,
+  manipulateHtmlAst,
+  stringifyHtmlAst,
+} from "@jsenv/core/src/internal/compiling/compileHtml.js"
 
 const compileHtml = (
   htmlBeforeCompilation,

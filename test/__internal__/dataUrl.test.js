@@ -1,5 +1,6 @@
 import { assert } from "@jsenv/assert"
-import { parseDataUrl } from "./dataUrl.utils.js"
+
+import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
 {
   const actual = parseDataUrl("data:,")
