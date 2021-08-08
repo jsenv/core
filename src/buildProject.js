@@ -58,9 +58,6 @@ export const buildProject = async ({
   assetManifestFile = false,
   assetManifestFileRelativeUrl = "asset-manifest.json",
 
-  urlVersioning = true,
-  lineBreakNormalization = process.platform === "win32" && !minify,
-  useImportMapToImproveLongTermCaching = format === "systemjs",
   preserveEntrySignatures,
   // when jsConcatenation is disabled rollup becomes almost useless
   // except it can still do tree shaking but in practice tree shaking
@@ -73,6 +70,10 @@ export const buildProject = async ({
   minifyJsOptions,
   // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default
   minifyCssOptions,
+
+  urlVersioning = true,
+  lineBreakNormalization = process.platform === "win32" && !minify,
+  useImportMapToImproveLongTermCaching = format === "systemjs",
 
   // when true .jsenv/out-build directory is generated
   // with all intermediated files used to produce the final build files.
