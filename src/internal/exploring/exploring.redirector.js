@@ -3,7 +3,10 @@ import { fetchExploringJson } from "./fetchExploringJson.js"
 
 const redirect = async () => {
   const [browserRuntimeFeaturesReport, { exploringHtmlFileRelativeUrl }] = await Promise.all([
-    scanBrowserRuntimeFeatures(),
+    scanBrowserRuntimeFeatures({
+      coverageInstrumentationRequired: false,
+      failFastOnFeatureDetection: true,
+    }),
     fetchExploringJson(),
   ])
 
