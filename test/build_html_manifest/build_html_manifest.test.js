@@ -27,10 +27,6 @@ const entryPointMap = {
 
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  // if we put log level warn we'll see the warning saying
-  // manifest.json extension is incorrect, let's avoid it with
-  // "error" log level
-  // logLevel: "error",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
@@ -38,23 +34,25 @@ await buildProject({
 })
 
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const manifestBuildRelativeUrl = "assets/manifest.json"
-const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBuildUrl)
-const link = findNodeByTagName(htmlString, "link")
+const manifestFileBuildRelativeUrl = "assets/manifest.webmanifest"
 
 // ensure link.href is correct
 {
-  const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
-  const actual = hrefAttribute.value
-  const expected = manifestBuildRelativeUrl
+  const htmlFileBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+  const htmlString = await readFile(htmlFileBuildUrl)
+  const link = findNodeByTagName(htmlString, "link")
+  const href = getHtmlNodeAttributeByName(link, "href").value
+
+  const actual = href
+  const expected = manifestFileBuildRelativeUrl
   assert({ actual, expected })
 }
 
 // ensure manifest build file is as expected
 {
-  const manifestBuildUrl = resolveUrl(manifestBuildRelativeUrl, buildDirectoryUrl)
-  const manifestAfterBuild = await readFile(manifestBuildUrl, { as: "json" })
+  const manifestFileBuildUrl = resolveUrl(manifestFileBuildRelativeUrl, buildDirectoryUrl)
+  const manifestAfterBuild = await readFile(manifestFileBuildUrl, { as: "json" })
+
   const actual = manifestAfterBuild.icons
   const expected = [
     {
@@ -66,6 +64,6 @@ const link = findNodeByTagName(htmlString, "link")
   assert({ actual, expected })
 
   // ensure manifest can find this file
-  const iconUrlForManifestBuild = resolveUrl("pwa.icon-574c1c76.png", manifestBuildUrl)
+  const iconUrlForManifestBuild = resolveUrl("pwa.icon-574c1c76.png", manifestFileBuildUrl)
   await assertFilePresence(iconUrlForManifestBuild)
 }
