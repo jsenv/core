@@ -1,8 +1,7 @@
+import { transformAsync } from "@babel/core"
 import { assert } from "@jsenv/assert"
-import { require } from "@jsenv/core/src/internal/require.js"
-import { babelPluginTransformImportSpecifier } from "./babel-plugin-transform-import-specifier.js"
 
-const { transformAsync } = require("@babel/core")
+import { babelPluginTransformImportSpecifier } from "./babel-plugin-transform-import-specifier.js"
 
 // dynamic import
 {
