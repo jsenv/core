@@ -1,5 +1,6 @@
-import { dirname } from "path"
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs"
+import { dirname } from "node:path"
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
+
 import { urlToFileSystemPath } from "@jsenv/util"
 
 // readFileSync seems faster than readFile
