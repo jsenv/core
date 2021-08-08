@@ -2219,8 +2219,7 @@
             compileServerOrigin: compileServerOrigin,
             compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
           }))));
-        } // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
-        // and in sync with loadModule in createJsenvRollupPlugin.js
+        } // don't forget to keep in sync with loadModule in createJsenvRollupPlugin.js
 
 
         return _invoke$5(function () {
@@ -2241,7 +2240,7 @@
           var _exit4 = false;
           if (_exit3) return _result3;
           return _invoke$5(function () {
-            if (contentType === "application/json" || contentType === "application/importmap+json") {
+            if (contentType === "application/json" || contentType.endsWith("+json")) {
               return _await$9(moduleResponse.json(), function (bodyAsJson) {
                 _exit4 = true;
                 return fromFunctionReturningNamespace(function () {
@@ -2259,21 +2258,22 @@
           }, function (_result4) {
             if (_exit4) return _result4;
 
-            if (contentTypeShouldBeReadAsText(contentType)) {
-              return fromFunctionReturningNamespace(function () {
-                return {
-                  default: moduleResponse.url
-                };
-              }, {
-                url: moduleResponse.url,
+            if (contentType) {
+              console.warn(createDetailedMessage("Ressource content-type is unusual", _objectSpread2(_objectSpread2({
+                "content-type": contentType,
+                "allowed content-type": ["application/javascript", "application/json"]
+              }, getModuleDetails({
+                url: url,
                 importerUrl: importerUrl,
                 compileServerOrigin: compileServerOrigin,
                 compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-              });
-            }
-
-            if (contentType) ; else {
-              console.warn("Module content-type is missing.", _objectSpread2(_defineProperty({}, "allowed content-type", ["aplication/javascript", "application/json", "text/*"]), getModuleDetails({
+              })), {}, {
+                "suggestion": "Prefer import.meta.url as documented in https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md#How-to-reference-js-assets"
+              })));
+            } else {
+              console.warn("Ressource content-type is missing", _objectSpread2({
+                "allowed content-type": ["application/javascript", "application/json"]
+              }, getModuleDetails({
                 url: url,
                 importerUrl: importerUrl,
                 compileServerOrigin: compileServerOrigin,
@@ -2295,23 +2295,10 @@
         });
       });
     });
-  });
-
-  var contentTypeShouldBeReadAsText = function contentTypeShouldBeReadAsText(contentType) {
-    if (contentType.startsWith("text/")) {
-      return true;
-    }
-
-    if (contentType === "image/svg+xml") {
-      return true;
-    }
-
-    return false;
-  }; // const textToBase64 =
+  }); // const textToBase64 =
   //   typeof window === "object"
   //     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
   //     : (text) => Buffer.from(text, "utf8").toString("base64")
-
 
   var getModuleDetails = function getModuleDetails(_ref2) {
     var url = _ref2.url,
