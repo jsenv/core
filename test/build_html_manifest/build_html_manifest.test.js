@@ -1,4 +1,3 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
@@ -6,23 +5,24 @@ import {
   resolveUrl,
   readFile,
   assertFilePresence,
+  urlToBasename,
 } from "@jsenv/util"
+
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   findNodeByTagName,
   getHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
-import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
 }
 
 await buildProject({
@@ -30,7 +30,7 @@ await buildProject({
   // if we put log level warn we'll see the warning saying
   // manifest.json extension is incorrect, let's avoid it with
   // "error" log level
-  logLevel: "error",
+  // logLevel: "error",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
