@@ -30,3 +30,9 @@ export const measureTestPlan = async () => {
   )
   return computeMetricsMedian(metrics)
 }
+
+const executeAndLog = process.argv.includes("--log")
+if (executeAndLog) {
+  const performanceMetrics = await measureTestPlan()
+  console.log(JSON.stringify(performanceMetrics, null, "  "))
+}
