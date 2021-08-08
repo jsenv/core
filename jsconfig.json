@@ -344,6 +344,9 @@
       "@jsenv/codecov-upload": [
         "./node_modules/@jsenv/codecov-upload/index.js"
       ],
+      "@jsenv/eslint-config/*": [
+        "./node_modules/@jsenv/eslint-config/*"
+      ],
       "eslint-plugin-import/*": [
         "./node_modules/eslint-plugin-import/*"
       ],
@@ -375,7 +378,7 @@
         "./node_modules/@jsenv/cancellation/*"
       ],
       "@jsenv/eslint-config": [
-        "./node_modules/@jsenv/eslint-config/index.js"
+        "./node_modules/@jsenv/eslint-config/main.js"
       ],
       "@rollup/plugin-json/*": [
         "./node_modules/@rollup/plugin-json/*"
