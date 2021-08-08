@@ -10,10 +10,6 @@ import { ensureGlobalThisImportBabelPlugin } from "./ensureGlobalThisImportBabel
 import { transformBabelHelperToImportBabelPlugin } from "./transformBabelHelperToImportBabelPlugin.js"
 import { filePathToBabelHelperName } from "./babelHelper.js"
 
-const { transformAsync, transformFromAstAsync } = require("@babel/core")
-const transformModulesSystemJs = require("@babel/plugin-transform-modules-systemjs")
-const proposalDynamicImport = require("@babel/plugin-proposal-dynamic-import")
-
 export const jsenvTransform = async ({
   inputCode,
   inputPath,
@@ -33,6 +29,9 @@ export const jsenvTransform = async ({
   regeneratorRuntimeImportPath,
   sourcemapEnabled,
 }) => {
+  const transformModulesSystemJs = require("@babel/plugin-transform-modules-systemjs")
+  const proposalDynamicImport = require("@babel/plugin-proposal-dynamic-import")
+
   // https://babeljs.io/docs/en/options
   const options = {
     filename: inputPath,
@@ -210,6 +209,8 @@ export const jsenvTransform = async ({
 }
 
 const babelTransform = async ({ ast, code, options }) => {
+  const { transformAsync, transformFromAstAsync } = require("@babel/core")
+
   try {
     if (ast) {
       const result = await transformFromAstAsync(ast, code, options)
