@@ -75,6 +75,7 @@ export const createJsenvRollupPlugin = async ({
   format,
   jsConcatenation,
   urlVersioning,
+  lineBreakNormalization,
   useImportMapToImproveLongTermCaching,
   systemJsUrl,
   minify,
@@ -814,7 +815,10 @@ export const createJsenvRollupPlugin = async ({
             buildRelativeUrl = computeBuildRelativeUrl(
               resolveUrl(fileName, buildDirectoryUrl),
               file.code,
-              `[name]-[hash][extname]`,
+              {
+                pattern: `[name]-[hash][extname]`,
+                lineBreakNormalization,
+              },
             )
           } else {
             buildRelativeUrl = fileName

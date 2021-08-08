@@ -51,10 +51,7 @@ import {
   // formatDependenciesCollectedMessage,
   checkContentType,
 } from "./asset-builder.util.js"
-import {
-  computeBuildRelativeUrlForTarget,
-  precomputeBuildRelativeUrlForTarget,
-} from "./asset-url-versioning.js"
+import { computeBuildRelativeUrlForTarget } from "./asset-url-versioning.js"
 
 export const createAssetBuilder = (
   { fetch, parse },
@@ -74,6 +71,7 @@ export const createAssetBuilder = (
     onJsModuleReference = () => {},
     resolveTargetUrl = ({ targetSpecifier, importerUrl }) =>
       resolveUrl(targetSpecifier, importerUrl),
+    lineBreakNormalization
   },
 ) => {
   const logger = createLogger({ logLevel })
@@ -255,7 +253,9 @@ export const createAssetBuilder = (
     if (targetIsInline && targetFileNamePattern === undefined) {
       // inherit parent directory location because it's an inline file
       targetFileNamePattern = () => {
-        const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(importerTarget)
+        const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(importerTarget, {
+          lineBreakNormalization,
+        })
         const importerParentRelativeUrl = urlToRelativeUrl(
           urlToParentUrl(resolveUrl(importerBuildRelativeUrl, "file://")),
           "file://",
@@ -531,11 +531,16 @@ export const createAssetBuilder = (
       // we don't yet know the exact importerBuildRelativeUrl but we can generate a fake one
       // to ensure we resolve dependency against where the importer file will be
 
-      const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(target)
+      const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(target, {
+        lineBreakNormalization,
+      })
       const assetEmitters = []
       const transformReturnValue = await transform({
         precomputeBuildRelativeUrl: (targetBuildBuffer) =>
-          precomputeBuildRelativeUrlForTarget(target, targetBuildBuffer),
+          precomputeBuildRelativeUrlForTarget(target, {
+            targetBuildBuffer,
+            lineBreakNormalization,
+          }),
         registerAssetEmitter: (callback) => {
           assetEmitters.push(callback)
         },
@@ -821,6 +826,22 @@ ${showSourceLocation(referenceSourceAsString, {
       }
     },
   }
+}
+
+const precomputeBuildRelativeUrlForTarget = (
+  target,
+  { targetBuildBuffer = "", lineBreakNormalization } = {},
+) => {
+  if (target.targetBuildRelativeUrl) {
+    return target.targetBuildRelativeUrl
+  }
+
+  target.targetBuildBuffer = targetBuildBuffer
+  const precomputedBuildRelativeUrl = computeBuildRelativeUrlForTarget(target, {
+    lineBreakNormalization,
+  })
+  target.targetBuildBuffer = undefined
+  return precomputedBuildRelativeUrl
 }
 
 export const referenceToCodeForRollup = (reference) => {

@@ -59,6 +59,7 @@ export const buildProject = async ({
   assetManifestFileRelativeUrl = "asset-manifest.json",
 
   urlVersioning = true,
+  lineBreakNormalization = process.platform === "win32" && !minify,
   useImportMapToImproveLongTermCaching = format === "systemjs",
   preserveEntrySignatures,
   // when jsConcatenation is disabled rollup becomes almost useless
@@ -188,6 +189,7 @@ export const buildProject = async ({
         assetManifestFileRelativeUrl,
 
         urlVersioning,
+        lineBreakNormalization,
         useImportMapToImproveLongTermCaching,
         preserveEntrySignatures,
         jsConcatenation,
