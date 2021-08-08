@@ -30,7 +30,7 @@ export const transformImportMetaUrlReferences = async ({
       const response = await fetch(targetUrl, url)
       const targetBuffer = Buffer.from(await response.arrayBuffer())
 
-      const reference = await assetBuilder.createReferenceForJs({
+      const reference = await assetBuilder.createReferenceFoundInJs({
         jsUrl: url,
         ...(node.loc
           ? {
@@ -39,7 +39,7 @@ export const transformImportMetaUrlReferences = async ({
             }
           : {}),
 
-        targetSpecifier: response.url,
+        targetSpecifier: targetUrl,
         targetContentType: response.headers["content-type"],
         targetBuffer,
       })

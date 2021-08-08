@@ -1,5 +1,6 @@
 import { startServer, composeService, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl, readFile } from "@jsenv/util"
+
 import { require } from "@jsenv/core/src/internal/require.js"
 
 const { chromium } = require("playwright")
@@ -44,7 +45,7 @@ export const browserImportSystemJsBuild = async ({
 
         if (debug) {
           window.run = () => window.System.import(specifier)
-          return specifier
+          return `not avaible because debug: true`
         }
         return window.System.import(specifier)
       },

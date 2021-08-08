@@ -21,6 +21,7 @@ export const buildUsingRollup = async ({
   importPaths,
 
   babelPluginMap,
+  transformTopLevelAwait,
   node,
   browser,
 
@@ -47,6 +48,7 @@ export const buildUsingRollup = async ({
   serviceWorkers,
   serviceWorkerFinalizer,
 
+  lineBreakNormalization,
   writeOnFileSystem,
 }) => {
   const { jsenvRollupPlugin, getLastErrorMessage, getResult } = await createJsenvRollupPlugin({
@@ -66,6 +68,7 @@ export const buildUsingRollup = async ({
     importPaths,
 
     babelPluginMap,
+    transformTopLevelAwait,
     node,
     browser,
 
@@ -73,7 +76,9 @@ export const buildUsingRollup = async ({
     systemJsUrl,
     buildDirectoryUrl,
 
+    jsConcatenation,
     urlVersioning,
+    lineBreakNormalization,
     useImportMapToImproveLongTermCaching,
     minify,
     minifyJsOptions,
@@ -95,7 +100,7 @@ export const buildUsingRollup = async ({
       globalName,
       sourcemapExcludeSources,
       preserveEntrySignatures,
-      jsConcatenation,
+      // jsConcatenation,
       buildDirectoryUrl,
       buildDirectoryClean,
     })
@@ -121,7 +126,8 @@ export const buildUsingRollup = async ({
           buildDirectoryUrl,
           serviceWorkerProjectRelativeUrl,
           serviceWorkerBuildRelativeUrl,
-          serviceWorkerTransformer: (code) => serviceWorkerFinalizer(code, jsenvBuild),
+          serviceWorkerTransformer: (code) =>
+            serviceWorkerFinalizer(code, jsenvBuild, { lineBreakNormalization }),
 
           minify,
         })

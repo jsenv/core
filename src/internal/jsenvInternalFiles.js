@@ -2,6 +2,10 @@ import { resolveUrl, fileSystemPathToUrl } from "@jsenv/util"
 import { require } from "./require.js"
 import { jsenvCoreDirectoryUrl } from "./jsenvCoreDirectoryUrl.js"
 
+export const jsenvHelpersDirectoryInfo = {
+  url: resolveUrl("./helpers/", jsenvCoreDirectoryUrl),
+}
+
 export const jsenvNodeSystemFileInfo = {
   jsenvRelativeUrl: "./src/internal/node-launcher/node-js-file.js",
   url: resolveUrl("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl),

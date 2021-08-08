@@ -66,7 +66,7 @@ export const findNodeByTagName = (htmlString, tagName) =>
 export const findAllNodeByTagName = (htmlString, tagName) =>
   findNodes(htmlString, (node) => node.nodeName === tagName)
 
-export const findFirstImportmapNode = (htmlStringOrAst) =>
+export const findFirstImportMapNode = (htmlStringOrAst) =>
   findNode(htmlStringOrAst, htmlNodeIsScriptImportmap)
 
 export const getHtmlNodeAttributeByName = (htmlNode, attributeName) =>
@@ -119,6 +119,11 @@ export const removeHtmlNodeText = (htmlNode) => {
   if (textNode) {
     htmlNode.childNodes = []
   }
+}
+
+export const removeHtmlNode = (htmlNode) => {
+  const { childNodes } = htmlNode.parentNode
+  childNodes.splice(childNodes.indexOf(htmlNode), 1)
 }
 
 export const getHtmlNodeLocation = (htmlNode) => {
@@ -426,7 +431,7 @@ const replaceNode = (node, newNode) => {
   parentNodeChildNodes[nodeIndex] = newNode
 }
 
-const visitHtmlAst = (htmlAst, callback) => {
+export const visitHtmlAst = (htmlAst, callback) => {
   const visitNode = (node) => {
     const callbackReturnValue = callback(node)
     if (callbackReturnValue === "stop") {

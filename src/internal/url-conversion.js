@@ -142,7 +142,10 @@ export const urlToCompiledServerUrl = (
   }
 
   const compileDirectoryServerUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
-  if (urlIsInsideOf(serverUrl, compileDirectoryServerUrl)) {
+  if (
+    serverUrl === compileDirectoryServerUrl ||
+    urlIsInsideOf(serverUrl, compileDirectoryServerUrl)
+  ) {
     return serverUrl
   }
 

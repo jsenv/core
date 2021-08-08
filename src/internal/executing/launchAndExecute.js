@@ -8,6 +8,7 @@ import {
 } from "@jsenv/cancellation"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 
+import { promiseTrackRace } from "../promise_track_race.js"
 import { composeIstanbulCoverages } from "./coverage/composeIstanbulCoverages.js"
 
 const TIMING_BEFORE_EXECUTION = "before-execution"
@@ -456,26 +457,6 @@ const normalizeNamespace = (namespace) => {
     normalized[key] = namespace[key]
   })
   return normalized
-}
-
-const promiseTrackRace = (promiseArray) => {
-  return new Promise((resolve, reject) => {
-    let resolved = false
-
-    const visit = (index) => {
-      const promise = promiseArray[index]
-      promise.then((value) => {
-        if (resolved) return
-        resolved = true
-        resolve({ winner: promise, value, index })
-      }, reject)
-    }
-
-    let i = 0
-    while (i < promiseArray.length) {
-      visit(i++)
-    }
-  })
 }
 
 const validateLaunchReturnValue = (launchReturnValue) => {

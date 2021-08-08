@@ -48,6 +48,7 @@ export const buildProject = async ({
   compileServerIp,
   compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
+  transformTopLevelAwait = true,
 
   sourcemapExcludeSources = false,
 
@@ -57,9 +58,10 @@ export const buildProject = async ({
   assetManifestFile = false,
   assetManifestFileRelativeUrl = "asset-manifest.json",
 
-  urlVersioning = true,
-  useImportMapToImproveLongTermCaching = format === "systemjs",
   preserveEntrySignatures,
+  // when jsConcatenation is disabled rollup becomes almost useless
+  // except it can still do tree shaking but in practice tree shaking
+  // fails to catch many things so...
   jsConcatenation = true,
   minify = process.env.NODE_ENV === "production",
   // https://github.com/kangax/html-minifier#options-quick-reference
@@ -68,6 +70,10 @@ export const buildProject = async ({
   minifyJsOptions,
   // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default
   minifyCssOptions,
+
+  urlVersioning = true,
+  lineBreakNormalization = process.platform === "win32" && !minify,
+  useImportMapToImproveLongTermCaching = format === "systemjs",
 
   // when true .jsenv/out-build directory is generated
   // with all intermediated files used to produce the final build files.
@@ -92,12 +98,6 @@ export const buildProject = async ({
     if (!["esmodule", "systemjs", "commonjs", "global"].includes(format)) {
       throw new TypeError(
         `unexpected format: ${format}. Must be "esmodule", "systemjs", "commonjs" or "global".`,
-      )
-    }
-
-    if (!jsConcatenation) {
-      throw new Error(
-        `jsConcatenation cannot be disabled for now. See https://github.com/rollup/rollup/issues/3882`,
       )
     }
 
@@ -140,6 +140,7 @@ export const buildProject = async ({
       compileServerPort,
       env,
       babelPluginMap,
+      transformTopLevelAwait,
 
       compileServerCanReadFromFileSystem: filesystemCache,
       compileServerCanWriteOnFilesystem: filesystemCache,
@@ -172,6 +173,7 @@ export const buildProject = async ({
         importPaths,
 
         babelPluginMap,
+        transformTopLevelAwait,
         node,
         browser,
         writeOnFileSystem,
@@ -188,6 +190,7 @@ export const buildProject = async ({
         assetManifestFileRelativeUrl,
 
         urlVersioning,
+        lineBreakNormalization,
         useImportMapToImproveLongTermCaching,
         preserveEntrySignatures,
         jsConcatenation,

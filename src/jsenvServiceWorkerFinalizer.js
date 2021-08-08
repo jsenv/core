@@ -1,6 +1,10 @@
 import { generateContentHash } from "./internal/building/url-versioning.js"
 
-export const jsenvServiceWorkerFinalizer = (code, { buildManifest, rollupBuild }) => {
+export const jsenvServiceWorkerFinalizer = (
+  code,
+  { buildManifest, rollupBuild },
+  { lineBreakNormalization },
+) => {
   const generatedUrlsConfig = {}
   Object.keys(buildManifest).forEach((projectRelativeUrl) => {
     if (projectRelativeUrl.endsWith(".map")) {
@@ -20,6 +24,7 @@ export const jsenvServiceWorkerFinalizer = (code, { buildManifest, rollupBuild }
             // detect there is a change
             version: generateContentHash(
               rollupFile.type === "chunk" ? rollupFile.code : rollupFile.source,
+              { lineBreakNormalization },
             ),
           }),
     }

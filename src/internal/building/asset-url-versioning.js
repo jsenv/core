@@ -1,11 +1,10 @@
 import { computeBuildRelativeUrl } from "./url-versioning.js"
 
-export const computeBuildRelativeUrlForTarget = (target) => {
-  return computeBuildRelativeUrl(
-    target.targetUrl,
-    target.targetBuildBuffer,
-    targetToFileNamePattern(target),
-  )
+export const computeBuildRelativeUrlForTarget = (target, { lineBreakNormalization }) => {
+  return computeBuildRelativeUrl(target.targetUrl, target.targetBuildBuffer, {
+    pattern: targetToFileNamePattern(target),
+    lineBreakNormalization,
+  })
 }
 
 const assetFileNamePattern = "assets/[name]-[hash][extname]"
@@ -23,19 +22,8 @@ const targetToFileNamePattern = (target) => {
     return assetFileNamePatternWithoutHash
   }
 
-  if (target.targetIsEntry || target.isTargetIsJsModule) {
+  if (target.targetIsEntry || target.targetIsJsModule) {
     return `[name]-[hash][extname]`
   }
   return assetFileNamePattern
-}
-
-export const precomputeBuildRelativeUrlForTarget = (target, targetBuildBuffer = "") => {
-  if (target.targetBuildRelativeUrl) {
-    return target.targetBuildRelativeUrl
-  }
-
-  target.targetBuildBuffer = targetBuildBuffer
-  const precomputedBuildRelativeUrl = computeBuildRelativeUrlForTarget(target)
-  target.targetBuildBuffer = undefined
-  return precomputedBuildRelativeUrl
 }

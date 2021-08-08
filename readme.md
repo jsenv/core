@@ -174,6 +174,7 @@ Following the steps below turns an `index.html` into an optimized `dist/main.htm
   <head>
     <title>Title</title>
     <meta charset="utf-8" />
+    <link rel="modulepreload" href="./main.js" />
     <link rel="icon" href="./favicon.ico" />
     <script type="importmap" src="./import_map.importmap"></script>
     <link rel="stylesheet" type="text/css" href="./main.css" />
@@ -221,6 +222,7 @@ Following the steps below turns an `index.html` into an optimized `dist/main.htm
      <head>
        <title>Title</title>
        <meta charset="utf-8" />
+       <link rel="modulepreload" href="main-f7379e10.js" />
        <link rel="icon" href="assets/favicon-5340s4789a.ico" />
        <script type="importmap" src="import-map-b237a334.importmap"></script>
        <link rel="stylesheet" type="text/css" href="assets/main-3b329ff0.css" />

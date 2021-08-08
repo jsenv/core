@@ -1,5 +1,6 @@
 import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/util"
 import { createDetailedMessage } from "@jsenv/logger"
+
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
 export const getTargetAsBase64Url = ({ targetBuildBuffer, targetContentType }) => {
@@ -98,43 +99,157 @@ const formatContentTypeMismatchLog = (reference, { showReferenceSourceLocation }
   )
 }
 
-export const formatExternalReferenceLog = (
+export const formatFoundReference = ({
   reference,
-  { showReferenceSourceLocation, projectDirectoryUrl },
-) => {
-  const { target } = reference
-  const { targetUrl } = target
-  return createDetailedMessage(
-    `Found reference to an url outside project directory.
-${showReferenceSourceLocation(reference)}`,
-    {
-      ["target url"]: targetUrl,
-      ["project directory url"]: projectDirectoryUrl,
-    },
-  )
-}
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
+  const { referenceIsRessourceHint } = reference
 
-export const formatReferenceFound = (reference, referenceSourceLocation) => {
-  const { target } = reference
-  const { targetIsInline, targetIsJsModule, targetRelativeUrl } = target
-
-  let message
-
-  if (targetIsInline && targetIsJsModule) {
-    message = `found inline js module.`
-  } else if (targetIsInline) {
-    message = `found inline asset.`
-  } else if (targetIsJsModule) {
-    message = `found js module reference to ${targetRelativeUrl}.`
-  } else {
-    message = `found asset reference to ${targetRelativeUrl}.`
+  if (referenceIsRessourceHint) {
+    return formatFoundRessourceHint({
+      reference,
+      showReferenceSourceLocation,
+      referenceEffects,
+    })
   }
 
-  message += `
---- reference source ---
-${referenceSourceLocation}`
+  const { target } = reference
+  const { targetIsEntry } = target
 
-  return message
+  if (targetIsEntry) {
+    return formatCreateReferenceForEntry({
+      reference,
+      showReferenceSourceLocation,
+      referenceEffects,
+    })
+  }
+
+  const { targetIsExternal } = target
+
+  if (targetIsExternal) {
+    return formatFoundReferenceToExternalRessource({
+      reference,
+      showReferenceSourceLocation,
+      referenceEffects,
+    })
+  }
+
+  const { targetIsInline, targetIsJsModule } = target
+  if (targetIsInline && !targetIsJsModule) {
+    return formatFoundReferenceToInlineAsset({
+      reference,
+      showReferenceSourceLocation,
+      referenceEffects,
+    })
+  }
+
+  if (targetIsInline && targetIsJsModule) {
+    return formatFoundReferenceToInlineModule({
+      reference,
+      showReferenceSourceLocation,
+      referenceEffects,
+    })
+  }
+
+  if (!targetIsJsModule) {
+    return formatFoundReferenceToAsset({
+      reference,
+      showReferenceSourceLocation,
+      referenceEffects,
+    })
+  }
+
+  return formatFoundReferenceToModule({
+    reference,
+    showReferenceSourceLocation,
+    referenceEffects,
+  })
+}
+
+const formatCreateReferenceForEntry = ({ reference, referenceEffects }) => {
+  return `
+Start from entry file ${reference.target.targetRelativeUrl}${appendEffects(referenceEffects)}`
+}
+
+const formatFoundRessourceHint = ({ reference, showReferenceSourceLocation, referenceEffects }) => {
+  return `
+Found ressource hint in ${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
+}
+
+const formatFoundReferenceToExternalRessource = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
+  return `
+Found reference to an external url in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
+}
+
+const formatFoundReferenceToInlineAsset = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
+  return `
+Found reference to an inline asset in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
+}
+
+const formatFoundReferenceToInlineModule = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
+  return `
+Found reference to an inline module in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
+}
+
+const formatFoundReferenceToAsset = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
+  return `
+Found reference to an asset in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
+}
+
+const formatFoundReferenceToModule = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
+  return `
+Found reference to a module in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
+}
+
+const appendEffects = (effects) => {
+  return effects.length === 0
+    ? ``
+    : `
+-> ${effects.join(`
+-> `)}`
+}
+
+export const formatDependenciesCollectedMessage = ({ target, shortenUrl }) => {
+  return createDetailedMessage(
+    `
+Dependencies collected for ${shortenUrl(target.targetUrl)}`,
+    {
+      dependencies: target.dependencies.map((dependencyReference) =>
+        shortenUrl(dependencyReference.target.targetUrl),
+      ),
+    },
+  )
 }
 
 // const textualContentTypes = ["text/html", "text/css", "image/svg+xml"]

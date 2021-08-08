@@ -10,7 +10,7 @@ import { minifyJs } from "./minifyJs.js"
 export const parseJsAsset = async (
   jsTarget,
   { notifyReferenceFound },
-  { urlToOriginalProjectUrl, urlToOriginalServerUrl, minify, minifyJsOptions },
+  { urlToOriginalFileUrl, urlToOriginalServerUrl, minify, minifyJsOptions },
 ) => {
   const jsUrl = jsTarget.targetUrl
   const jsString = String(jsTarget.targetBuffer)
@@ -23,8 +23,8 @@ export const parseJsAsset = async (
       referenceTargetSpecifier: jsSourcemapUrl,
       // we don't really know the line or column
       // but let's asusme it the last line and first column
-      referenceLine: jsString.split(/\r?\n/).length - 1,
-      referenceColumn: 0,
+      referenceLine: jsString.split(/\r?\n/).length,
+      referenceColumn: `//# sourceMappingURL=`.length + 1,
     })
   }
 
@@ -43,7 +43,7 @@ export const parseJsAsset = async (
 
     let jsSourceAfterTransformation
     if (mightBeAWorkerScript) {
-      const workerScriptUrl = urlToOriginalProjectUrl(jsUrl)
+      const workerScriptUrl = urlToOriginalFileUrl(jsUrl)
       const workerBundle = await bundleWorker({ workerScriptUrl, workerScriptSourceMap: map })
       jsSourceAfterTransformation = workerBundle.code
       map = workerBundle.map

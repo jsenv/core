@@ -3,7 +3,7 @@ import {
   htmlAstContains,
   htmlNodeIsScriptModule,
   manipulateHtmlAst,
-  findFirstImportmapNode,
+  findFirstImportMapNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 
 import { parseHtmlAsset } from "./html/parseHtmlAsset.js"
@@ -18,10 +18,11 @@ export const parseTarget = (
   target,
   notifiers,
   {
-    urlToOriginalProjectUrl,
-    urlToOriginalServerUrl,
     format,
     systemJsUrl,
+    urlToOriginalFileUrl,
+    urlToOriginalServerUrl,
+    ressourceHintNeverUsedCallback,
     useImportMapToImproveLongTermCaching,
     createImportMapForFilesUsedInJs,
     minify,
@@ -70,7 +71,7 @@ export const parseTarget = (
           if (!useImportMapToImproveLongTermCaching) {
             return
           }
-          if (findFirstImportmapNode(htmlAst)) {
+          if (findFirstImportMapNode(htmlAst)) {
             return
           }
 
@@ -89,6 +90,13 @@ export const parseTarget = (
         injectImportMapScriptIfNeeded(htmlAst)
 
         return htmlAst
+      },
+      ressourceHintNeverUsedCallback: (info) => {
+        ressourceHintNeverUsedCallback({
+          ...info,
+          htmlSource: String(target.targetBuffer),
+          htmlUrl: urlToOriginalFileUrl(target.targetUrl),
+        })
       },
     })
   }
@@ -119,7 +127,7 @@ export const parseTarget = (
 
   if (targetContentType === "application/javascript" || targetContentType === "text/javascript") {
     return parseJsAsset(target, notifiers, {
-      urlToOriginalProjectUrl,
+      urlToOriginalFileUrl,
       urlToOriginalServerUrl,
       minify,
       minifyJsOptions,
