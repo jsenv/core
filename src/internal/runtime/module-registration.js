@@ -110,8 +110,7 @@ export const fromUrl = async ({
     )
   }
 
-  // don't forget to keep it close to https://github.com/systemjs/systemjs/blob/9a15cfd3b7a9fab261e1848b1b2fa343d73afedb/src/extras/module-types.js#L21
-  // and in sync with loadModule in createJsenvRollupPlugin.js
+  // don't forget to keep in sync with loadModule in createJsenvRollupPlugin.js
   if (contentType === "application/javascript" || contentType === "text/javascript") {
     const bodyAsText = await moduleResponse.text()
     return fromFunctionReturningRegisteredModule(
@@ -125,7 +124,7 @@ export const fromUrl = async ({
     )
   }
 
-  if (contentType === "application/json" || contentType === "application/importmap+json") {
+  if (contentType === "application/json" || contentType.endsWith("+json")) {
     const bodyAsJson = await moduleResponse.json()
     return fromFunctionReturningNamespace(
       () => {
@@ -142,37 +141,23 @@ export const fromUrl = async ({
     )
   }
 
-  if (contentTypeShouldBeReadAsText(contentType)) {
-    return fromFunctionReturningNamespace(
-      () => {
-        return {
-          default: moduleResponse.url,
-        }
-      },
-      {
-        url: moduleResponse.url,
-        importerUrl,
-        compileServerOrigin,
-        compileDirectoryRelativeUrl,
-      },
-    )
-  }
-
   if (contentType) {
-    // for now content type different of javascript are not unusual anymore
-    // ideally we would not use static import to tell rollup we have a dependency to an url
-    // insetad we would write something that would be compatible with web strandard such as
-    // new URL('./whatever', import.meta.url)
-    // or import.meta.resolve('./whatever')
-    //     console.warn(`Module content-type is unusual.
-    // ['content-type']:   // ${contentType}
-    // ['allowed content-type']:   // application/javascript
-    // application/json
-    // text/*
-    // ${getModuleDetails({ url, importerUrl, compileServerOrigin, outDirectoryRelativeUrl })}`)
+    console.warn(
+      createDetailedMessage(`Ressource content-type is unusual`, {
+        "content-type": contentType,
+        "allowed content-type": ["application/javascript", "application/json"],
+        ...getModuleDetails({
+          url,
+          importerUrl,
+          compileServerOrigin,
+          compileDirectoryRelativeUrl,
+        }),
+        "suggestion": `Prefer import.meta.url as documented in https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md#How-to-reference-js-assets`,
+      }),
+    )
   } else {
-    console.warn(`Module content-type is missing.`, {
-      ["allowed content-type"]: ["aplication/javascript", "application/json", "text/*"],
+    console.warn(`Ressource content-type is missing`, {
+      "allowed content-type": ["application/javascript", "application/json"],
       ...getModuleDetails({
         url,
         importerUrl,
@@ -196,17 +181,6 @@ export const fromUrl = async ({
     },
   )
 }
-
-const contentTypeShouldBeReadAsText = (contentType) => {
-  if (contentType.startsWith("text/")) {
-    return true
-  }
-  if (contentType === "image/svg+xml") {
-    return true
-  }
-  return false
-}
-
 // const textToBase64 =
 //   typeof window === "object"
 //     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
