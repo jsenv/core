@@ -489,6 +489,7 @@ export const createJsenvRollupPlugin = async ({
             )
             jsModulesFromEntry[urlToUrlForRollup(jsModuleUrl)] = true
           },
+          lineBreakNormalization,
         },
       )
 

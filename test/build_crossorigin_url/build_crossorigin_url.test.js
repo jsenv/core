@@ -22,6 +22,7 @@ const { buildMappings } = await buildProject({
   entryPointMap: {
     [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
   },
+  lineBreakNormalization: true,
   // logLevel: "debug",
 })
 
