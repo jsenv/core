@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "eslint-check": "node ./node_modules/eslint/bin/eslint.js .",
-    "generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
+    "generate-importmap": "node ./script/importmap/generate_importmap.js",
     "generate-internal-builds": "node --experimental-top-level-await ./script/generate-internal-builds/generate-internal-builds.js",
     "dist": "npm run generate-internal-builds",
     "test": "node --experimental-import-meta-resolve ./script/test/test.js",
@@ -145,6 +145,7 @@
     "@jsenv/eslint-config": "15.0.2",
     "@jsenv/github-release-package": "1.2.3",
     "@jsenv/importmap-eslint-resolver": "5.1.0",
+    "@jsenv/importmap-node-module": "1.0.1",
     "@jsenv/node-module-import-map": "13.6.1",
     "@jsenv/package-publish": "1.6.2",
     "@jsenv/performance-impact": "1.6.1",

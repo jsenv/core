@@ -257,6 +257,9 @@
       "@jsenv/github-release-package": [
         "./node_modules/@jsenv/github-release-package/index.js"
       ],
+      "@jsenv/importmap-node-module/*": [
+        "./node_modules/@jsenv/importmap-node-module/*"
+      ],
       "@jsenv/node-module-import-map": [
         "./node_modules/@jsenv/node-module-import-map/index.js"
       ],
@@ -265,6 +268,9 @@
       ],
       "@babel/helper-module-imports": [
         "./node_modules/@babel/helper-module-imports/lib/index.js"
+      ],
+      "@jsenv/importmap-node-module": [
+        "./node_modules/@jsenv/importmap-node-module/index.js"
       ],
       "postcss/lib/css-syntax-error": [
         "./node_modules/postcss/lib/css-syntax-error.js"
