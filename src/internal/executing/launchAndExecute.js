@@ -55,7 +55,7 @@ export const launchAndExecute = async ({
   const logger = createLogger({ logLevel: launchAndExecuteLogLevel })
 
   if (typeof launch !== "function") {
-    throw new TypeError(`launch launch must be a function, got ${launch}`)
+    throw new TypeError(`launch must be a function, got ${launch}`)
   }
 
   let executionResultTransformer = (executionResult) => executionResult
