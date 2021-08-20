@@ -15,7 +15,7 @@ const createSummaryMessage = ({
   completedCount,
 }) => {
   if (executionCount === 0) {
-    return `0 execution.`
+    return `0 execution`
   }
 
   return `${executionCount} execution: ${createSummaryDetails({
@@ -24,7 +24,7 @@ const createSummaryMessage = ({
     timedoutCount,
     erroredCount,
     completedCount,
-  })}.`
+  })}`
 }
 
 export const createSummaryDetails = ({

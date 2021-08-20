@@ -32,7 +32,7 @@ export const createExecutionResultLog = (
 
   if (completedExecutionLogAbbreviation && status === "completed") {
     return `
-${description} ${summary}.`
+${description} ${summary}`
   }
 
   const { runtimeName, runtimeVersion, consoleCalls, startMs, endMs, error } = executionResult
