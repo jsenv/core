@@ -7,10 +7,11 @@ It is documented in https://nodejs.org/api/tty.html#tty_writestream_getcolordept
 
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+
+import { launchNode } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
-import { launchNode } from "@jsenv/core"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   LAUNCH_AND_EXECUTE_TEST_PARAMS,
@@ -58,12 +59,12 @@ if (process.platform !== "win32") {
   process.env.FORCE_COLOR = 0
   const actual = await getLogs()
   const expected = `
-✔ execution 1 of 1 completed (all completed).
+✔ execution 1 of 1 completed (all completed)
 file: ${testDirectoryRelativePath}file.js
 runtime: node/${process.version.slice(1)}
 
 -------------- summary -----------------
-1 execution: all completed.
+1 execution: all completed
 ----------------------------------------
 
 `
@@ -75,12 +76,12 @@ if (process.platform !== "win32") {
   process.env.FORCE_COLOR = 1
   const actual = await getLogs()
   const expected = `
-[32m✔ execution 1 of 1 completed[0m (all [32mcompleted[0m).
+[32m✔ execution 1 of 1 completed[0m (all [32mcompleted[0m)
 file: ${testDirectoryRelativePath}file.js
 runtime: node/${process.version.slice(1)}
 
 -------------- summary -----------------
-1 execution: all [32mcompleted[0m.
+1 execution: all [32mcompleted[0m
 ----------------------------------------
 
 `
