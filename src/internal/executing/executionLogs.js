@@ -39,7 +39,7 @@ ${description} ${summary}`
 
   const runtime = `${runtimeName}/${runtimeVersion}`
   return `
-${description} ${summary}.
+${description} ${summary}
 file: ${fileRelativeUrl}
 runtime: ${runtime}${appendDuration({
     startMs,
