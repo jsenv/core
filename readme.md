@@ -242,9 +242,9 @@ To read more about jsenv build tool, check [jsenv build documentation](./docs/bu
 
 Amongst other use cases, the ease of use and flexibility of jsenv makes it a great tool to start and learn web development.
 
-Firstly because jsenv is a tool that was built to run raw js, html and css. It starts from the **simplest form of coding**. If a browser can run your code, so can jsenv without configuration or things to learn. There is no magic that will bite you right away or later. Jsenv can be configured to add react, typescript, whatever you need, later, on demand.
+First because jsenv is a tool that was built to run raw js, html and css. It starts from the **simplest form of coding**. If a browser can run your code, so can jsenv without configuration or things to learn. There is no magic that will bite you right away or later. Jsenv can be configured to add more stuff later, on demand.
 
-Secondly because jsenv is compatible with the latest standards. Even some that are not yet mature in the js ecosystem, such as import maps. This will makes you at ease with technologies that will be part of the ecosystem once you are confortable with coding.
+Second because jsenv is compatible with the latest standards. Even some that are not yet mature in the js ecosystem, such as import maps. This will makes you at ease with technologies that will be part of the ecosystem once you are confortable with coding.
 
 To sum up, jsenv focuses on simplicity and flexibility making it a perfect candidate to learn the ecosystem gradually.
 
@@ -308,9 +308,9 @@ Non-standard corresponds to [CommonJS modules](https://code-trotter.com/web/unde
 
 > Keep in mind one of your dependency may use non-standard JavaScript. For instance react uses CommonJS modules.
 
-## jsenv.config.js
+## jsenv.config.mjs
 
-We recommend to regroup configuration in a _jsenv.config.js_ file at the root of your working directory.
+We recommend to regroup configuration in a _jsenv.config.mjs_ file at the root of your working directory.
 
 To get a better idea see [jsenv.config.js](./jsenv.config.js). The file can be imported and passed using the spread operator. This technic helps to see jsenv custom configuration quickly and share it between files.
 
@@ -318,13 +318,13 @@ To get a better idea see [jsenv.config.js](./jsenv.config.js). The file can be i
 
 — See [script/test/test.js](https://github.com/jsenv/jsenv-core/blob/e44e362241e8e2142010322cb4552983b3bc9744/script/test/test.js#L2)
 
-That being said it's only a recommendation. There is nothing enforcing or checking the presence of _jsenv.config.js_.
+That being said it's only a recommendation. There is nothing enforcing or checking the presence of _jsenv.config.mjs_.
 
 ## React
 
 React is written in CommonJS and comes with jsx. If you use react and or jsx it requires some configuration.
 
-_jsenv.config.js for react and jsx:_
+_jsenv.config.mjs for react and jsx:_
 
 ```js
 import { createRequire } from "module"
@@ -374,7 +374,7 @@ See also
 
 ## TypeScript (experimental)
 
-_jsenv.config.js for TypeScript_:
+_jsenv.config.mjs for TypeScript_:
 
 ```js
 import { createRequire } from "module"
@@ -401,7 +401,7 @@ See also
 
 CommonJS module format rely on `module.exports` and `require`. It was invented by Node.js and is not standard JavaScript. If your code or one of your dependency uses it, it requires some configuration. The jsenv config below makes jsenv compatible with a package named _"whatever"_ that would be written in CommonJS.
 
-_jsenv.config.js to use code written in CommonJS_:
+_jsenv.config.mjs to use code written in CommonJS_:
 
 ```js
 import { jsenvBabelPluginMap, convertCommonJsWithRollup } from "@jsenv/core"
