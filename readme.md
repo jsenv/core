@@ -166,7 +166,7 @@ To read more about jsenv dev server, also called exploring server, check [jsenv 
 
 # Build overview
 
-Following the steps below turns an `index.html` into an optimized `dist/main.html`. Only the content of the html files will be shown. The content of other files such as `favicon.ico` is trivial.
+Following the steps below turns an `index.html` into an optimized `dist/main.html`. As the content of non-html files is trivial, only the content of html files will be shown below.
 
 ```html
 <!DOCTYPE html>
