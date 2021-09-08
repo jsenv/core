@@ -1,7 +1,7 @@
 // https://mathiasbynens.be/notes/globalthis
 
-/* global globalThis */
 /* eslint-disable no-redeclare */
+/* global globalThis */
 let globalObject
 if (typeof globalThis === "object") {
   globalObject = globalThis
