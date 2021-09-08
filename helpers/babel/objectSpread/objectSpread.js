@@ -6,7 +6,8 @@ export default function (target) {
     var source = arguments[i] != null ? Object(arguments[i]) : {}
     var ownKeys = Object.keys(source)
     if (typeof Object.getOwnPropertySymbols === "function") {
-      ownKeys = ownKeys.concat(
+      ownKeys.push.apply(
+        ownKeys,
         // eslint-disable-next-line no-loop-func
         Object.getOwnPropertySymbols(source).filter(function (sym) {
           return Object.getOwnPropertyDescriptor(source, sym).enumerable
