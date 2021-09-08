@@ -1,5 +1,5 @@
 /* eslint-disable import/max-dependencies */
-import { extname } from "path"
+import { extname } from "node:path"
 import { normalizeImportMap } from "@jsenv/import-map"
 import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
 import { loggerToLogLevel, createDetailedMessage } from "@jsenv/logger"
