@@ -186,7 +186,10 @@ const ensureV8CoverageDirClean = async (fn, NODE_V8_COVERAGE) => {
     if (process.env.NODE_V8_COVERAGE === NODE_V8_COVERAGE) {
       // do not try to remove or copy coverage
     } else if (process.env.NODE_V8_COVERAGE) {
-      await moveDirectoryContent(NODE_V8_COVERAGE, process.env.NODE_V8_COVERAGE)
+      await moveDirectoryContent({
+        from: NODE_V8_COVERAGE,
+        to: process.env.NODE_V8_COVERAGE,
+      })
       await removeFileSystemNode(NODE_V8_COVERAGE)
     } else {
       await removeFileSystemNode(NODE_V8_COVERAGE, {
