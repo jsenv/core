@@ -30,6 +30,7 @@ const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage
     // headless: false,
   },
 )
+browser.close()
 
 const actual = { pageLogs, pageErrors, executionResult }
 const expectedParsingErrorMessage = `${importedFilePath}: Unexpected token (1:17)
@@ -64,7 +65,10 @@ const expected = {
       type: "error",
       text: "Failed to load resource: the server responded with a status of 500 (parse error)",
     },
-    { type: "error", text: "JSHandle@error" },
+    {
+      type: "error",
+      text: assert.any(String),
+    },
   ],
   pageErrors: [],
   executionResult: {
@@ -81,4 +85,10 @@ const expected = {
   },
 }
 assert({ actual, expected })
-browser.close()
+
+{
+  const stack = pageLogs[1].text
+  const expected = `Error: ${expectedError.message}`
+  const actual = stack.slice(0, expected.length)
+  assert({ actual, expected })
+}
