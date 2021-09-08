@@ -1,14 +1,14 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
+import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl, urlToBasename } from "@jsenv/filesystem"
+
+import { startExploring } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLORING.js"
 import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
-import { startExploring } from "@jsenv/core"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFilename = `${testDirectoryname}.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
@@ -62,7 +62,7 @@ const expected = {
   pageLogs: [
     {
       type: "error",
-      text: "Failed to load resource: the server responded with a status of 500 ()",
+      text: "Failed to load resource: the server responded with a status of 500 (parse error)",
     },
     { type: "error", text: "JSHandle@error" },
   ],

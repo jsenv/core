@@ -23,37 +23,38 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 
-await launchBrowsers([launchChromium, launchFirefox, launchWebkit], async (launchBrowser) => {
-  const result = await launchAndExecute({
-    ...EXECUTION_TEST_PARAMS,
-    launchAndExecuteLogLevel: "off",
-    launch: (options) =>
-      launchBrowser({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        // headless: false,
-      }),
-    executeParams: {
-      fileRelativeUrl,
-    },
-    captureConsole: true,
-  })
-  const actual = {
-    status: result.status,
-    errorMessage: result.error.message,
-  }
-  const expected = {
-    status: "errored",
-    errorMessage: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
-  }
-  assert({ actual, expected })
-  {
-    const actual = result.consoleCalls.some(({ text }) =>
-      text.includes("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
-    )
-    const expected = false
+await launchBrowsers(
+  [
+    // comment to ensure multiline
+    launchChromium,
+    launchFirefox,
+    launchWebkit,
+  ],
+  async (launchBrowser) => {
+    const result = await launchAndExecute({
+      ...EXECUTION_TEST_PARAMS,
+      launchAndExecuteLogLevel: "off",
+      launch: (options) =>
+        launchBrowser({
+          ...LAUNCH_TEST_PARAMS,
+          ...options,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+          // headless: false,
+        }),
+      executeParams: {
+        fileRelativeUrl,
+      },
+      captureConsole: true,
+    })
+    const actual = {
+      status: result.status,
+      errorMessage: result.error.message,
+    }
+    const expected = {
+      status: "errored",
+      errorMessage: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
+    }
     assert({ actual, expected })
-  }
-})
+  },
+)
