@@ -3,7 +3,7 @@ import { testBabelPluginMap } from "./testBabelPluginMap.js"
 
 export const START_EXPLORING_TEST_PARAMS = {
   logLevel: "warn",
-  protocol: "https",
+  protocol: "http",
   compileServerLogLevel: "warn",
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,

@@ -5,7 +5,7 @@ import {
   urlToBasename,
   resolveUrl,
   urlToFileSystemPath,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"

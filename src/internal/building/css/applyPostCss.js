@@ -1,4 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/util"
+import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 export const applyPostCss = async (
   cssString,

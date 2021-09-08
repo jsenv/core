@@ -1,7 +1,7 @@
 import readline from "readline"
 
 import stringWidth from "string-width"
-import { memoize } from "@jsenv/util"
+import { memoize } from "@jsenv/filesystem"
 
 export const writeLog = (string, { stream = process.stdout } = {}) => {
   string = `${string}

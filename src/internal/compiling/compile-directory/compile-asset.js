@@ -1,4 +1,4 @@
-import { urlToFilename } from "@jsenv/util"
+import { urlToFilename } from "@jsenv/filesystem"
 
 export const urlIsCompilationAsset = (url) => {
   const filename = urlToFilename(url)

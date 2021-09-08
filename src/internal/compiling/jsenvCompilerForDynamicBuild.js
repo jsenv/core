@@ -5,7 +5,7 @@ import {
   urlToRelativeUrl,
   urlToBasename,
   urlToFilename,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 import { urlToContentType } from "@jsenv/server"
 
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"

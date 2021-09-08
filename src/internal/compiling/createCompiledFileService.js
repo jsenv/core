@@ -1,5 +1,5 @@
 import { serveFile } from "@jsenv/server"
-import { resolveUrl, resolveDirectoryUrl } from "@jsenv/util"
+import { resolveUrl, resolveDirectoryUrl } from "@jsenv/filesystem"
 
 import { urlToCompileInfo } from "@jsenv/core/src/internal/url-conversion.js"
 import {

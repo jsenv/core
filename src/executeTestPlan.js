@@ -7,7 +7,7 @@ import {
   resolveDirectoryUrl,
   urlToMeta,
   resolveUrl,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"

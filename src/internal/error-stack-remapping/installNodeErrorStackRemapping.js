@@ -1,4 +1,4 @@
-import { ensureWindowsDriveLetter, resolveUrl } from "@jsenv/util"
+import { ensureWindowsDriveLetter, resolveUrl } from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { fetchUrl } from "../fetchUrl.js"
 import { installErrorStackRemapping } from "./installErrorStackRemapping.js"

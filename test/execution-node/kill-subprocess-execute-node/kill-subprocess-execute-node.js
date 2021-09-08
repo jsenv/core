@@ -1,5 +1,5 @@
 import { fork } from "child_process"
-import { resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/filesystem"
 
 const childFilePath = urlToFileSystemPath(resolveUrl("./child.cjs", import.meta.url))
 const child = fork(childFilePath, { execArgv: [] })

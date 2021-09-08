@@ -1,6 +1,6 @@
 import { createRequire } from "module"
 
-import { resolveUrl } from "@jsenv/util"
+import { resolveUrl } from "@jsenv/filesystem"
 import { startServer, serveFile } from "@jsenv/server"
 
 const require = createRequire(import.meta.url)

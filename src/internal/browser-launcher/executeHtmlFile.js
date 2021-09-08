@@ -1,4 +1,4 @@
-import { resolveUrl, assertFilePresence, urlToRelativeUrl, urlToExtension } from "@jsenv/util"
+import { resolveUrl, assertFilePresence, urlToRelativeUrl, urlToExtension } from "@jsenv/filesystem"
 
 import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { v8CoverageFromAllV8Coverages } from "@jsenv/core/src/internal/executing/coverage/v8CoverageFromAllV8Coverages.js"

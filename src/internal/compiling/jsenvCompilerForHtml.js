@@ -1,5 +1,5 @@
 import { urlToContentType } from "@jsenv/server"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   jsenvBrowserSystemFileInfo,

@@ -1,4 +1,9 @@
-import { assertAndNormalizeDirectoryUrl, readDirectory, readFile, resolveUrl } from "@jsenv/util"
+import {
+  assertAndNormalizeDirectoryUrl,
+  readDirectory,
+  readFile,
+  resolveUrl,
+} from "@jsenv/filesystem"
 
 import { v8CoverageFromAllV8Coverages } from "./v8CoverageFromAllV8Coverages.js"
 

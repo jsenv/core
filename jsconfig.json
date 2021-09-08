@@ -68,6 +68,9 @@
       "babel-plugin-transform-async-to-promises/*": [
         "./node_modules/babel-plugin-transform-async-to-promises/*"
       ],
+      "@babel/eslint-parser/experimental-worker": [
+        "./node_modules/@babel/eslint-parser/lib/experimental-worker.cjs"
+      ],
       "@babel/plugin-proposal-numeric-separator": [
         "./node_modules/@babel/plugin-proposal-numeric-separator/lib/index.js"
       ],
@@ -200,6 +203,9 @@
       "rollup-plugin-node-builtins-brofs/*": [
         "./node_modules/rollup-plugin-node-builtins-brofs/*"
       ],
+      "@babel/eslint-parser/package.json": [
+        "./node_modules/@babel/eslint-parser/package.json"
+      ],
       "@babel/plugin-syntax-import-meta/*": [
         "./node_modules/@babel/plugin-syntax-import-meta/*"
       ],
@@ -210,7 +216,7 @@
         "./node_modules/@babel/plugin-transform-react-jsx/lib/index.js"
       ],
       "rollup-plugin-node-builtins-brofs": [
-        "./node_modules/rollup-plugin-node-builtins-brofs/dist/rollup-plugin-node-builtins.es6.js"
+        "./node_modules/rollup-plugin-node-builtins-brofs/dist/rollup-plugin-node-builtins.cjs.js"
       ],
       "@babel/plugin-syntax-import-meta": [
         "./node_modules/@babel/plugin-syntax-import-meta/lib/index.js"
@@ -285,7 +291,7 @@
         "./node_modules/@jsenv/performance-impact/*"
       ],
       "rollup-plugin-node-globals": [
-        "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.es6.js"
+        "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.cjs.js"
       ],
       "@jsenv/performance-impact": [
         "./node_modules/@jsenv/performance-impact/main.js"
@@ -309,7 +315,7 @@
         "./node_modules/@jsenv/package-publish/*"
       ],
       "@rollup/plugin-commonjs": [
-        "./node_modules/@rollup/plugin-commonjs/dist/index.es.js"
+        "./node_modules/@rollup/plugin-commonjs/dist/index.js"
       ],
       "@rollup/plugin-replace/*": [
         "./node_modules/@rollup/plugin-replace/*"
@@ -336,7 +342,7 @@
         "./node_modules/@jsenv/package-publish/index.js"
       ],
       "@rollup/plugin-replace": [
-        "./node_modules/@rollup/plugin-replace/dist/rollup-plugin-replace.es.js"
+        "./node_modules/@rollup/plugin-replace/dist/rollup-plugin-replace.cjs.js"
       ],
       "cssnano-preset-default": [
         "./node_modules/cssnano-preset-default/dist/index.js"
@@ -380,6 +386,9 @@
       "vue-template-compiler": [
         "./node_modules/vue-template-compiler/index.js"
       ],
+      "@babel/eslint-parser": [
+        "./node_modules/@babel/eslint-parser/lib/index.cjs"
+      ],
       "@jsenv/cancellation/*": [
         "./node_modules/@jsenv/cancellation/*"
       ],
@@ -417,7 +426,7 @@
         "./node_modules/@jsenv/node-signals/index.js"
       ],
       "@rollup/plugin-json": [
-        "./node_modules/@rollup/plugin-json/dist/index.es.js"
+        "./node_modules/@rollup/plugin-json/dist/index.js"
       ],
       "eslint-plugin-html/*": [
         "./node_modules/eslint-plugin-html/*"
@@ -446,6 +455,9 @@
       "terser/package.json": [
         "./node_modules/terser/package.json"
       ],
+      "@jsenv/filesystem/*": [
+        "./node_modules/@jsenv/filesystem/*"
+      ],
       "@jsenv/import-map/*": [
         "./node_modules/@jsenv/import-map/*"
       ],
@@ -463,6 +475,9 @@
       ],
       "@c88/v8-coverage/*": [
         "./node_modules/@c88/v8-coverage/*"
+      ],
+      "@jsenv/filesystem": [
+        "./node_modules/@jsenv/filesystem/main.js"
       ],
       "@jsenv/import-map": [
         "./node_modules/@jsenv/import-map/index.js"
@@ -543,13 +558,13 @@
         "./node_modules/@babel/parser/lib/index.js"
       ],
       "@jsenv/assert": [
-        "./node_modules/@jsenv/assert/index.js"
+        "./node_modules/@jsenv/assert/main.js"
       ],
       "@jsenv/logger": [
         "./node_modules/@jsenv/logger/main.node.js"
       ],
       "@jsenv/server": [
-        "./node_modules/@jsenv/server/index.js"
+        "./node_modules/@jsenv/server/main.js"
       ],
       "@jsenv/uneval": [
         "./node_modules/@jsenv/uneval/index.js"
@@ -578,14 +593,11 @@
       "@jsenv/core/*": [
         "./*"
       ],
-      "@jsenv/util/*": [
-        "./node_modules/@jsenv/util/*"
-      ],
       "ansi-to-html": [
         "./node_modules/ansi-to-html/lib/ansi_to_html.js"
       ],
       "magic-string": [
-        "./node_modules/magic-string/dist/magic-string.es.js"
+        "./node_modules/magic-string/dist/magic-string.cjs.js"
       ],
       "rollup/dist/*": [
         "./node_modules/rollup/dist/*"
@@ -601,9 +613,6 @@
       ],
       "@jsenv/pwa/*": [
         "./node_modules/@jsenv/pwa/*"
-      ],
-      "@jsenv/util": [
-        "./node_modules/@jsenv/util/index.js"
       ],
       "playwright/*": [
         "./node_modules/playwright/*"
@@ -678,7 +687,7 @@
         "./node_modules/react/index.js"
       ],
       "redux": [
-        "./node_modules/redux/es/redux.js"
+        "./node_modules/redux/lib/redux.js"
       ],
       "sass/*": [
         "./node_modules/sass/*"

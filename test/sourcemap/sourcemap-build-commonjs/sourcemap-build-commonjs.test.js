@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { buildToCompilationResult } from "@jsenv/core/src/internal/building/buildToCompilationResult.js"

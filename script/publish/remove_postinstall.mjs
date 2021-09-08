@@ -1,4 +1,10 @@
-import { readFileSync, writeFileSync } from "fs"
+/*
+ * This file is executed by "prepublishOnly" script in package.json
+ * It will delete the "postinstall" script from package.json to ensure
+ * it is not published on NPM
+ */
+
+import { readFileSync, writeFileSync } from "node:fs"
 
 const PACKAGE_URL = new URL("../../package.json", import.meta.url)
 const PACKAGE_CACHED_URL = new URL("../../package-cached.json", import.meta.url)

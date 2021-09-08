@@ -1,4 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/util"
+import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
 

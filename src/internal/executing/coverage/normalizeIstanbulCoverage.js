@@ -1,4 +1,9 @@
-import { urlToRelativeUrl, fileSystemPathToUrl, isFileSystemPath, resolveUrl } from "@jsenv/util"
+import {
+  urlToRelativeUrl,
+  fileSystemPathToUrl,
+  isFileSystemPath,
+  resolveUrl,
+} from "@jsenv/filesystem"
 
 export const normalizeIstanbulCoverage = (istanbulCoverage, projectDirectoryUrl) => {
   const istanbulCoverageNormalized = {}

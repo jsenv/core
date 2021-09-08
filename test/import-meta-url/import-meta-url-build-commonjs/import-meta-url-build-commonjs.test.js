@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   GENERATE_COMMONJS_BUILD_TEST_PARAMS,

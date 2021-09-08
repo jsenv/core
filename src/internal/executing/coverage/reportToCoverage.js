@@ -1,4 +1,4 @@
-import { collectFiles } from "@jsenv/util"
+import { collectFiles } from "@jsenv/filesystem"
 import { relativeUrlToEmptyCoverage } from "./relativeUrlToEmptyCoverage.js"
 import { istanbulCoverageFromCoverages } from "./istanbulCoverageFromCoverages.js"
 import { normalizeIstanbulCoverage } from "./normalizeIstanbulCoverage.js"

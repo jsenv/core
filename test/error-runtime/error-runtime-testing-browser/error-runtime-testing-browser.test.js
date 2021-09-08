@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { executeTestPlan, launchChromium } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"

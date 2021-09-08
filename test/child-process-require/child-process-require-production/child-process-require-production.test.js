@@ -1,6 +1,6 @@
 import { requireUsingChildProcess } from "@jsenv/core"
 import { assert } from "@jsenv/assert"
-import { resolveUrl } from "@jsenv/util"
+import { resolveUrl } from "@jsenv/filesystem"
 
 const fileUrl = resolveUrl("./root/main.cjs", import.meta.url)
 

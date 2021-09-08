@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { urlToFilename, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { urlToFilename, resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import {
   getJavaScriptSourceMappingUrl,
   setJavaScriptSourceMappingUrl,

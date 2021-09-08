@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, urlToBasename } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, urlToBasename } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"

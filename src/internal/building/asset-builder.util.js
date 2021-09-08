@@ -1,4 +1,4 @@
-import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/util"
+import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"

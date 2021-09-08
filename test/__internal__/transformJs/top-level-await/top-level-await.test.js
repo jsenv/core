@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, readFile } from "@jsenv/util"
+import { resolveUrl, readFile } from "@jsenv/filesystem"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS_TRANSFORM_JS.js"
 

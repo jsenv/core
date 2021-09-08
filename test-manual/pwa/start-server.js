@@ -1,12 +1,12 @@
-import { resolveUrl, readFile, writeFile } from "@jsenv/util"
-import { startServer, serveFile, composeService, readRequestBody } from "@jsenv/server"
+import { resolveUrl, readFile, writeFile } from "@jsenv/filesystem"
+import { startServer, serveFile, composeServices, readRequestBody } from "@jsenv/server"
 
 const directoryUrl = resolveUrl("./app/dist/", import.meta.url)
 
 startServer({
-  protocol: "https",
+  protocol: "http",
   port: 3689,
-  requestToResponse: composeService(
+  requestToResponse: composeServices(
     async (request) => {
       if (request.ressource !== "/actions/update-manifest") return null
 

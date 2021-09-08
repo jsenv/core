@@ -1,5 +1,5 @@
 import { exec } from "child_process"
-import { resolveUrl, readDirectory, urlToFileSystemPath } from "@jsenv/util"
+import { resolveUrl, readDirectory, urlToFileSystemPath } from "@jsenv/filesystem"
 
 const jsenvDirectoryUrl = resolveUrl("../../", import.meta.url)
 const packagesDirectorUrl = resolveUrl("packages/", jsenvDirectoryUrl)

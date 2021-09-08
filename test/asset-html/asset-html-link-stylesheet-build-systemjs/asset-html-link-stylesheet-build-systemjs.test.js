@@ -6,7 +6,7 @@ import {
   resolveUrl,
   readFile,
   assertFilePresence,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   findNodeByTagName,

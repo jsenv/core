@@ -1,4 +1,4 @@
-import { resolveUrl, fileSystemPathToUrl, urlIsInsideOf } from "@jsenv/util"
+import { resolveUrl, fileSystemPathToUrl, urlIsInsideOf } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"

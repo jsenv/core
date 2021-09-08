@@ -1,4 +1,4 @@
-import { memoize } from "@jsenv/util"
+import { memoize } from "@jsenv/filesystem"
 
 export const trackRessources = () => {
   const callbackArray = []

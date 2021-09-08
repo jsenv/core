@@ -1,14 +1,16 @@
-import { basename } from "path"
+// disabled until npm link works again in github workflow
+
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, readFile, urlToBasename } from "@jsenv/filesystem"
+
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { jsenvCompilerForSass } from "@jsenv/core/packages/jsenv-sass/main.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
-import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.html`

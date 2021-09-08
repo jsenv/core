@@ -1,4 +1,4 @@
-import { resolveUrl, urlToFilename, writeFile, urlToParentUrl } from "@jsenv/util"
+import { resolveUrl, urlToFilename, writeFile, urlToParentUrl } from "@jsenv/filesystem"
 
 import { minifyJs } from "@jsenv/core/src/internal/building/js/minifyJs.js"
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"

@@ -5,7 +5,7 @@ import {
   readFile,
   resolveUrl,
   assertFilePresence,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls.js"

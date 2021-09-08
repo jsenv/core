@@ -5,7 +5,7 @@ import {
   resolveUrl,
   writeFileSystemNodeModificationTime,
   urlToBasename,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 
 import { startExploring } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"

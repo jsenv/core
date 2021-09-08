@@ -21,7 +21,7 @@ node --inspect test-manual/exploring/start-exploring.js
 
 */
 
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { startExploring } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { jsenvCompilerForSass } from "@jsenv/core/packages/jsenv-sass/main.js"
@@ -43,7 +43,7 @@ startExploring({
     ...jsenvCompilerForVue,
   },
   jsenvDirectoryRelativeUrl,
-  compileServerProtocol: "https",
+  compileServerProtocol: "http",
   compileServerPort: 3456,
   keepProcessAlive: true,
   jsenvDirectoryClean: true,

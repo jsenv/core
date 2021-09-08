@@ -1,7 +1,7 @@
 // see also https://github.com/rollup/rollup/issues/3882
 
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -32,8 +32,8 @@ const { buildMappings } = await buildProject({
   const actual = buildMappings
   const expected = {
     [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
-    [`${testDirectoryRelativeUrl}file.js`]: "file-88d972e7.js",
-    [`${testDirectoryRelativeUrl}main.js`]: "main-cabd4efd.js",
+    [`${testDirectoryRelativeUrl}file.js`]: "file-0ff3f8fb.js",
+    [`${testDirectoryRelativeUrl}main.js`]: "main-b972c195.js",
   }
   assert({ actual, expected })
 }

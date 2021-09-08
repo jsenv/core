@@ -1,4 +1,5 @@
 import { startExploring } from "@jsenv/core"
+
 import * as jsenvConfig from "../../jsenv.config.js"
 
 startExploring({

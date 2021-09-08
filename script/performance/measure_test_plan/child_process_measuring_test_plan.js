@@ -1,4 +1,4 @@
-import { resourceUsage, memoryUsage } from "process"
+import { resourceUsage, memoryUsage } from "node:process"
 
 import {
   executeTestPlan,
@@ -41,7 +41,7 @@ const executeTestPlanParameters = {
     },
   },
   logLevel: "warn",
-  compileServerProtocol: "https",
+  compileServerProtocol: "http",
   coverage: true,
   coverageHtmlDirectory: false,
   coverageTextLog: false,

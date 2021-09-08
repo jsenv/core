@@ -2,27 +2,6 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "node 12",
-      "type": "node",
-      "request": "launch",
-      "protocol": "inspector",
-      "program": "${file}",
-      "runtimeVersion": "12.8.0",
-      "runtimeArgs": ["--unhandled-rejections=strict"],
-      "autoAttachChildProcesses": true,
-      // "sourceMaps": false,
-      "smartStep": true,
-      "skipFiles": [
-        // force-array-multiline
-        // "node_modules/**",
-        "node_modules/@babel/template/**",
-        "node_modules/@dmail/cancellation/**",
-        "node_modules/playwright/**",
-        "node_modules/playwright-chromium/**",
-        "<node_internals>/**"
-      ]
-    },
-    {
       "name": "node",
       "type": "node",
       "request": "launch",
@@ -33,7 +12,6 @@
         "--inspect",
         "--unhandled-rejections=strict",
         "--experimental-json-modules",
-        "--experimental-top-level-await",
         "--experimental-import-meta-resolve"
       ],
       // "args": ["--coverage"],

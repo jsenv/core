@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
+import { urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/filesystem"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { babelPluginInstrument } from "@jsenv/core/src/internal/executing/coverage/babel-plugin-instrument.js"
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"

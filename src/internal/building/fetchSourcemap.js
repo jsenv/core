@@ -1,5 +1,5 @@
 import { createCancellationToken } from "@jsenv/cancellation"
-import { resolveUrl } from "@jsenv/util"
+import { resolveUrl } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { dataUrlToRawData, parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"

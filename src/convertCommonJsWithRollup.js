@@ -1,4 +1,4 @@
-import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
+import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
 import { require } from "./internal/require.js"
 
 export const convertCommonJsWithRollup = async ({

@@ -6,7 +6,7 @@
  *
  */
 
-import { urlToRelativeUrl, urlIsInsideOf } from "@jsenv/util"
+import { urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
 import { composeTwoImportMaps } from "@jsenv/import-map"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 

@@ -1,4 +1,4 @@
-import { collectFiles } from "@jsenv/util"
+import { collectFiles } from "@jsenv/filesystem"
 import { generateFileExecutionSteps } from "./generateFileExecutionSteps.js"
 
 export const generateExecutionSteps = async (plan, { cancellationToken, projectDirectoryUrl }) => {

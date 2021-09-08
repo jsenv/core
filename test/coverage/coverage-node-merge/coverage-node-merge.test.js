@@ -4,7 +4,7 @@ https://github.com/SimenB/jest/blob/917efc3398577c205f33c1c2f9a1aeabfaad6f7d/pac
 */
 
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
 
 import { executeTestPlan, launchNode } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"

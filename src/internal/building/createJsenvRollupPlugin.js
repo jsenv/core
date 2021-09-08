@@ -15,7 +15,7 @@ import {
   urlToFileSystemPath,
   normalizeStructuredMetaMap,
   urlToMeta,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 
 import {
   urlToServerUrl,

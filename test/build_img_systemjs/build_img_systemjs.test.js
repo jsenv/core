@@ -6,7 +6,7 @@ import {
   resolveUrl,
   assertFilePresence,
   urlToBasename,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"

@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/filesystem"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { buildProject } from "@jsenv/core"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"

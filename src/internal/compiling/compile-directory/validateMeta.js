@@ -3,7 +3,7 @@ import {
   urlToFileSystemPath,
   readFileSystemNodeModificationTime,
   bufferToEtag,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 import { timeFunction } from "@jsenv/server"
 
 import { readFileContent } from "./fs-optimized-for-cache.js"

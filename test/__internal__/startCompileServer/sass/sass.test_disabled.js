@@ -1,6 +1,9 @@
+// disabled until npm link works again in github workflow
+
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
 import { fetchUrl } from "@jsenv/server"
+
 import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"

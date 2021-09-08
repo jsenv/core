@@ -6,7 +6,7 @@ coverage is collected and is accurate.
 */
 
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { executeTestPlan } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"

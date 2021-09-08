@@ -1,6 +1,6 @@
 /* global __filename */
 
-import { fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
+import { fileSystemPathToUrl, resolveUrl } from "@jsenv/filesystem"
 
 let jsenvCoreDirectoryUrl
 if (typeof __filename === "string") {

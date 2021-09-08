@@ -36,7 +36,7 @@ import {
   urlIsInsideOf,
   urlToParentUrl,
   urlToBasename,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
 import { promiseTrackRace } from "../promise_track_race.js"

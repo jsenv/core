@@ -12,7 +12,7 @@ import {
   urlToRelativeUrl,
   urlToFileSystemPath,
   registerDirectoryLifecycle,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 
 import { executeJsenvAsyncFunction } from "@jsenv/core/src/internal/executeJsenvAsyncFunction.js"
 import {

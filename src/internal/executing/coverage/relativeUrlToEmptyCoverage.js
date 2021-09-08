@@ -1,5 +1,5 @@
 import { createOperation } from "@jsenv/cancellation"
-import { resolveUrl, urlToFileSystemPath, readFile } from "@jsenv/util"
+import { resolveUrl, urlToFileSystemPath, readFile } from "@jsenv/filesystem"
 
 import { getMinimalBabelPluginArray } from "../../minimalBabelPluginArray.js"
 import { babelPluginInstrument } from "./babel-plugin-instrument.js"

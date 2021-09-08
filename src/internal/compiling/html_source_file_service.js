@@ -10,7 +10,13 @@
  *   </script>
  */
 
-import { resolveUrl, urlToRelativeUrl, urlToExtension, readFile, urlToBasename } from "@jsenv/util"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  urlToExtension,
+  readFile,
+  urlToBasename,
+} from "@jsenv/filesystem"
 import { fetchUrl } from "@jsenv/server"
 import { moveImportMap } from "@jsenv/import-map"
 import { createDetailedMessage } from "@jsenv/logger"
