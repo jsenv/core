@@ -142,7 +142,7 @@ startExploring({
 server started at https://localhost:3456
 ```
 
-4 - Open a browser and naviguate to `https://localhost:3456`
+4 - Open a browser and navigate to `https://localhost:3456`
 
 When you open `https://localhost:3456` in a browser, a page called jsenv exploring index is shown. It displays a list of links to your html files.
 
@@ -150,7 +150,7 @@ When you open `https://localhost:3456` in a browser, a page called jsenv explori
 
 5 - Click `main.html`
 
-Browser naviguates to `main.html` and execute the file. Hello world is displayed in the browser.
+Browser navigates to `main.html` and execute the file. Hello world is displayed in the browser.
 
 ![dev server hello world screenshot](./docs/demo_exploring_hello_world.png)
 
