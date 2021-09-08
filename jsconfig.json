@@ -68,6 +68,9 @@
       "babel-plugin-transform-async-to-promises/*": [
         "./node_modules/babel-plugin-transform-async-to-promises/*"
       ],
+      "@babel/eslint-parser/experimental-worker": [
+        "./node_modules/@babel/eslint-parser/lib/experimental-worker.cjs"
+      ],
       "@babel/plugin-proposal-numeric-separator": [
         "./node_modules/@babel/plugin-proposal-numeric-separator/lib/index.js"
       ],
@@ -199,6 +202,9 @@
       ],
       "rollup-plugin-node-builtins-brofs/*": [
         "./node_modules/rollup-plugin-node-builtins-brofs/*"
+      ],
+      "@babel/eslint-parser/package.json": [
+        "./node_modules/@babel/eslint-parser/package.json"
       ],
       "@babel/plugin-syntax-import-meta/*": [
         "./node_modules/@babel/plugin-syntax-import-meta/*"
@@ -379,6 +385,9 @@
       ],
       "vue-template-compiler": [
         "./node_modules/vue-template-compiler/index.js"
+      ],
+      "@babel/eslint-parser": [
+        "./node_modules/@babel/eslint-parser/lib/index.cjs"
       ],
       "@jsenv/cancellation/*": [
         "./node_modules/@jsenv/cancellation/*"
