@@ -1,6 +1,6 @@
 import { createRequire } from "module"
 
-import { urlToRelativeUrl, resolveUrl } from "@jsenv/util"
+import { urlToRelativeUrl, resolveUrl } from "@jsenv/filesystem"
 
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"

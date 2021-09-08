@@ -4,7 +4,7 @@ We could use https://nodejs.org/api/esm.html#esm_loaders once it gets stable
 
 */
 
-import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
+import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
 import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
 import { createImportResolverForNode } from "@jsenv/core/src/internal/import-resolution/import-resolver-node.js"
 import { require } from "../../require.js"

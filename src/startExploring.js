@@ -1,5 +1,5 @@
 import { createCancellationToken, composeCancellationToken } from "@jsenv/cancellation"
-import { normalizeStructuredMetaMap, collectFiles, urlToRelativeUrl } from "@jsenv/util"
+import { normalizeStructuredMetaMap, collectFiles, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"

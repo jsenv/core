@@ -1,6 +1,6 @@
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { createCancellationToken, composeCancellationToken } from "@jsenv/cancellation"
-import { resolveDirectoryUrl } from "@jsenv/util"
+import { resolveDirectoryUrl } from "@jsenv/filesystem"
 
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"

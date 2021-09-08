@@ -26,7 +26,7 @@ import {
   registerDirectoryLifecycle,
   urlIsInsideOf,
   urlToBasename,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 
 import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"

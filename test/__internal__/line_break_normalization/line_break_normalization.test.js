@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { readFile, resolveUrl } from "@jsenv/util"
+import { readFile, resolveUrl } from "@jsenv/filesystem"
 
 import { generateContentHash } from "@jsenv/core/src/internal/building/url-versioning.js"
 

@@ -1,5 +1,5 @@
 import { buildProject } from "@jsenv/core"
-// import { resolveUrl } from "@jsenv/util"
+// import { resolveUrl } from "@jsenv/filesystem"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 
 const projectDirectoryUrl = jsenvCoreDirectoryUrl

@@ -1,5 +1,5 @@
 import { createHash } from "crypto"
-import { urlToParentUrl, urlToBasename, urlToExtension } from "@jsenv/util"
+import { urlToParentUrl, urlToBasename, urlToExtension } from "@jsenv/filesystem"
 import { renderNamePattern } from "../renderNamePattern.js"
 
 export const computeBuildRelativeUrl = (

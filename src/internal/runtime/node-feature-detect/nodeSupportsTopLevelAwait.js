@@ -1,4 +1,4 @@
-import { memoize, resolveUrl } from "@jsenv/util"
+import { memoize, resolveUrl } from "@jsenv/filesystem"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 

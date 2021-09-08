@@ -1,4 +1,4 @@
-import { resolveUrl } from "@jsenv/util"
+import { resolveUrl } from "@jsenv/filesystem"
 
 import { referenceToCodeForRollup } from "./asset-builder.js"
 

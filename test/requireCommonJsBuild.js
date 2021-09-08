@@ -1,4 +1,4 @@
-import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 
 export const requireCommonJsBuild = async ({

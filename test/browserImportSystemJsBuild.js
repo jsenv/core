@@ -1,5 +1,5 @@
 import { startServer, composeService, serveFile } from "@jsenv/server"
-import { resolveDirectoryUrl, resolveUrl, readFile } from "@jsenv/util"
+import { resolveDirectoryUrl, resolveUrl, readFile } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
 

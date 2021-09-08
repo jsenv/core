@@ -1,4 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/util"
+import { urlToFileSystemPath } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { getMetaJsonFileUrl } from "./compile-asset.js"

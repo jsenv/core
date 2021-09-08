@@ -10,7 +10,7 @@ import {
   urlToFileSystemPath,
   removeFileSystemNode,
   moveDirectoryContent,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"

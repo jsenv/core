@@ -1,5 +1,5 @@
 import { readFileSync } from "fs"
-import { resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { require } from "../../require.js"
 

@@ -9,7 +9,7 @@ import {
   composeCancellationToken,
 } from "@jsenv/cancellation"
 import { loggerToLevels, createDetailedMessage } from "@jsenv/logger"
-import { urlToFileSystemPath } from "@jsenv/util"
+import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { launchAndExecute } from "../executing/launchAndExecute.js"
 import { reportToCoverage } from "./coverage/reportToCoverage.js"

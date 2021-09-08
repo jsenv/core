@@ -1,4 +1,4 @@
-import { assertAndNormalizeDirectoryUrl, assertDirectoryPresence } from "@jsenv/util"
+import { assertAndNormalizeDirectoryUrl, assertDirectoryPresence } from "@jsenv/filesystem"
 
 export const assertProjectDirectoryUrl = ({ projectDirectoryUrl }) => {
   return assertAndNormalizeDirectoryUrl(projectDirectoryUrl)

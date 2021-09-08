@@ -1,5 +1,5 @@
 import { startServer, composeService, serveFile } from "@jsenv/server"
-import { resolveDirectoryUrl, resolveUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, resolveUrl } from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 
 const { chromium } = require("playwright")

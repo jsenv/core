@@ -1,4 +1,4 @@
-import { resolveDirectoryUrl, urlToRelativeUrl, urlIsInsideOf, resolveUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, urlIsInsideOf, resolveUrl } from "@jsenv/filesystem"
 
 export const urlToCompileInfo = (url, { compileServerOrigin, outDirectoryRelativeUrl }) => {
   const outDirectoryServerUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, compileServerOrigin)

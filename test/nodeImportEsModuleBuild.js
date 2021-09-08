@@ -1,5 +1,5 @@
 import { fork } from "child_process"
-import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/filesystem"
 import { createChildProcessOptions } from "@jsenv/core/src/internal/node-launcher/createChildProcessOptions.js"
 import { execArgvFromProcessOptions } from "@jsenv/core/src/internal/node-launcher/processOptions.js"
 
@@ -44,7 +44,7 @@ The code below is unused, and is a basic reimplementation of import function.
 It will certainly never be useful but it might be interesting so keeping it here for now.
 
 import { SourceTextModule } from "vm"
-import { resolveUrl, readFile } from "@jsenv/util"
+import { resolveUrl, readFile } from "@jsenv/filesystem"
 
 // we could also spawn a child process too
 export const importFake = async (url) => {

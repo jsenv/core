@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
-import { urlIsInsideOf } from "@jsenv/util/src/urlIsInsideOf.js"
-import { urlToRelativeUrl } from "@jsenv/util/src/urlToRelativeUrl.js"
+import { urlIsInsideOf } from "@jsenv/filesystem/src/urlIsInsideOf.js"
+import { urlToRelativeUrl } from "@jsenv/filesystem/src/urlToRelativeUrl.js"
 
 import { fetchExploringJson } from "../exploring/fetchExploringJson.js"
 import { startJavaScriptAnimation } from "../toolbar/util/animation.js"

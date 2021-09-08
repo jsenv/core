@@ -1,5 +1,5 @@
 import { createOperation } from "@jsenv/cancellation"
-import { urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/util"
+import { urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/filesystem"
 
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"

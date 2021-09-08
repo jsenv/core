@@ -1,4 +1,4 @@
-import { urlToRelativeUrl, urlToFileSystemPath, bufferToEtag } from "@jsenv/util"
+import { urlToRelativeUrl, urlToFileSystemPath, bufferToEtag } from "@jsenv/filesystem"
 
 import { writeFileContent, testFilePresence } from "./fs-optimized-for-cache.js"
 import { getMetaJsonFileUrl } from "./compile-asset.js"

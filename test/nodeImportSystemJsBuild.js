@@ -1,4 +1,4 @@
-import { resolveDirectoryUrl, resolveUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, resolveUrl } from "@jsenv/filesystem"
 import { createNodeSystem } from "@jsenv/core/src/internal/runtime/createNodeRuntime/createNodeSystem.js"
 import { fetchSource } from "@jsenv/core/src/internal/runtime/createNodeRuntime/fetchSource.js"
 

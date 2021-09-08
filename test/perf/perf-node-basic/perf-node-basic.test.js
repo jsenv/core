@@ -5,7 +5,7 @@ import {
   urlToBasename,
   readFileSystemNodeStat,
   removeFileSystemNode,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 
 import { execute, launchNode } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"

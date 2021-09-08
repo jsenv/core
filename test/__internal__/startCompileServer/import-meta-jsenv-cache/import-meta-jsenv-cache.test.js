@@ -8,7 +8,7 @@ import {
   readFile,
   bufferToEtag,
   readFileSystemNodeModificationTime,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_BUILD_COMMONJS } from "@jsenv/core/src/internal/CONSTANTS.js"

@@ -1,4 +1,4 @@
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { launchNode, launchChromium } from "@jsenv/core"
 import { startContinuousTesting } from "@jsenv/core/experimental/continuous-testing/startContinuousTesting.js"

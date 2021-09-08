@@ -1,7 +1,7 @@
 import { createRequire } from "module"
 
 import { urlToContentType } from "@jsenv/server"
-import { urlToFileSystemPath } from "@jsenv/util"
+import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
 

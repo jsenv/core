@@ -1,4 +1,4 @@
-import { resolveUrl, readFile, writeFile } from "@jsenv/util"
+import { resolveUrl, readFile, writeFile } from "@jsenv/filesystem"
 import { startServer, serveFile, composeService, readRequestBody } from "@jsenv/server"
 
 const directoryUrl = resolveUrl("./app/dist/", import.meta.url)

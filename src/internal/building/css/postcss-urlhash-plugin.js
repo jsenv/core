@@ -11,7 +11,7 @@ hence sourcemap cannot point the original source location
 
 */
 
-import { fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
+import { fileSystemPathToUrl, resolveUrl } from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 
 export const postCssUrlHashPlugin = () => {

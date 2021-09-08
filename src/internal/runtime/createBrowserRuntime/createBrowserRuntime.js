@@ -1,7 +1,7 @@
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 
 import { unevalException } from "../../unevalException.js"
-// do not use memoize from @jsenv/util to avoid pulling @jsenv/util code into the browser build
+// do not use memoize from @jsenv/filesystem to avoid pulling @jsenv/filesystem code into the browser build
 import { memoize } from "../../memoize.js"
 import { fetchUrl } from "../../browser-utils/fetch-browser.js"
 import { createImportResolverForImportmap } from "../../import-resolution/import-resolver-importmap.js"

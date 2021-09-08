@@ -5,7 +5,7 @@ import {
   resolveUrl,
   bufferToEtag,
   readFileSystemNodeModificationTime,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
 
 export const compileFile = async ({

@@ -31,7 +31,7 @@
   ],
   "dependencies": {
     "@jsenv/server": "7.1.0",
-    "@jsenv/util": "4.1.1",
+    "@jsenv/filesystem": "4.1.1",
     "sass": "1.35.1"
   },
   "devDependencies": {

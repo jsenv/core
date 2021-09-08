@@ -1,4 +1,4 @@
-import { resolveUrl, normalizeStructuredMetaMap, urlToMeta } from "@jsenv/util"
+import { resolveUrl, normalizeStructuredMetaMap, urlToMeta } from "@jsenv/filesystem"
 
 import { composeV8Coverages } from "./composeV8Coverages.js"
 

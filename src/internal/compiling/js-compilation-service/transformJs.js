@@ -3,7 +3,7 @@ import {
   urlToRelativeUrl,
   normalizeStructuredMetaMap,
   urlToMeta,
-} from "@jsenv/util"
+} from "@jsenv/filesystem"
 import { jsenvTransform } from "./jsenvTransform.js"
 
 export const transformJs = async ({

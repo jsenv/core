@@ -1,4 +1,4 @@
-import { comparePathnames } from "@jsenv/util"
+import { comparePathnames } from "@jsenv/filesystem"
 
 export const sortObjectByPathnames = (object) => {
   const objectSorted = {}

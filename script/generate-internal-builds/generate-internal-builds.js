@@ -1,4 +1,4 @@
-// import { resolveUrl } from "@jsenv/util"
+// import { resolveUrl } from "@jsenv/filesystem"
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {

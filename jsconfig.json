@@ -455,6 +455,9 @@
       "terser/package.json": [
         "./node_modules/terser/package.json"
       ],
+      "@jsenv/filesystem/*": [
+        "./node_modules/@jsenv/filesystem/*"
+      ],
       "@jsenv/import-map/*": [
         "./node_modules/@jsenv/import-map/*"
       ],
@@ -472,6 +475,9 @@
       ],
       "@c88/v8-coverage/*": [
         "./node_modules/@c88/v8-coverage/*"
+      ],
+      "@jsenv/filesystem": [
+        "./node_modules/@jsenv/filesystem/main.js"
       ],
       "@jsenv/import-map": [
         "./node_modules/@jsenv/import-map/index.js"
@@ -587,9 +593,6 @@
       "@jsenv/core/*": [
         "./*"
       ],
-      "@jsenv/util/*": [
-        "./node_modules/@jsenv/util/*"
-      ],
       "ansi-to-html": [
         "./node_modules/ansi-to-html/lib/ansi_to_html.js"
       ],
@@ -610,9 +613,6 @@
       ],
       "@jsenv/pwa/*": [
         "./node_modules/@jsenv/pwa/*"
-      ],
-      "@jsenv/util": [
-        "./node_modules/@jsenv/util/index.js"
       ],
       "playwright/*": [
         "./node_modules/playwright/*"

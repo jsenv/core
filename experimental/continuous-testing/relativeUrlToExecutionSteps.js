@@ -1,4 +1,4 @@
-import { resolveUrl, normalizeStructuredMetaMap, urlToMeta } from "@jsenv/util"
+import { resolveUrl, normalizeStructuredMetaMap, urlToMeta } from "@jsenv/filesystem"
 
 import { generateFileExecutionSteps } from "@jsenv/core/src/internal/executing/generateFileExecutionSteps.js"
 
