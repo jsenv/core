@@ -36,63 +36,63 @@ export const countDogs = (animals) => {
 }
 ```
 
-1. Create `animals.test.html`
+1 - Create `animals.test.html`
 
-   ```html
-   <!DOCTYPE html>
-   <html>
-     <head>
-       <meta charset="utf8" />
-       <link rel="icon" href="data:," />
-     </head>
-     <body>
-       <script type="module">
-         import { countDogs } from "./animals.js"
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <script type="module">
+      import { countDogs } from "./animals.js"
 
-         const animals = ["dog", "dog", "cat", "cat", "cat"]
-         const actual = countDogs(animals)
-         const expected = 2
-         if (actual !== expected) {
-           throw new Error(`countDogs should return ${expected}, got ${actual}`)
-         }
-       </script>
-     </body>
-   </html>
-   ```
+      const animals = ["dog", "dog", "cat", "cat", "cat"]
+      const actual = countDogs(animals)
+      const expected = 2
+      if (actual !== expected) {
+        throw new Error(`countDogs should return ${expected}, got ${actual}`)
+      }
+    </script>
+  </body>
+</html>
+```
 
-2. Add `"@jsenv/core"` to your _devDependencies_
+2 - Add `"@jsenv/core"` to your _devDependencies_
 
-   ```console
-   npm install --save-dev @jsenv/core
-   ```
+```console
+npm install --save-dev @jsenv/core
+```
 
-3. Create `execute_test_plan.mjs`
+3 - Create `execute_test_plan.mjs`
 
-   ```js
-   import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
+```js
+import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
 
-   executeTestPlan({
-     projectDirectoryUrl: new URL("./", import.meta.url),
-     testPlan: {
-       "./animals.test.html": {
-         chromium: {
-           launch: launchChromiumTab,
-         },
-         firefox: {
-           launch: launchFirefoxTab,
-         },
-       },
-     },
-   })
-   ```
+executeTestPlan({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  testPlan: {
+    "./animals.test.html": {
+      chromium: {
+        launch: launchChromiumTab,
+      },
+      firefox: {
+        launch: launchFirefoxTab,
+      },
+    },
+  },
+})
+```
 
-4. Run `execute_test_plan.mjs` with Node.js
+4 - Run `execute_test_plan.mjs` with Node.js
 
-   ```console
-   > node ./execute_test_plan.mjs
-   ```
+```console
+> node ./execute_test_plan.mjs
+```
 
-   ![test execution terminal screenshot](./docs/demo_animals_chrome_and_firefox.png)
+![test execution terminal screenshot](./docs/demo_animals_chrome_and_firefox.png)
 
 To read more about testing in jsenv, check [jsenv test runner documentation](./docs/testing/readme.md#jsenv-test-runner).
 
@@ -113,46 +113,46 @@ You have an html file that you want to open in a browser on your machine.
 </html>
 ```
 
-1. Add `"@jsenv/core"` to your _devDependencies_
+1 - Add `"@jsenv/core"` to your _devDependencies_
 
-   ```console
-   npm install --save-dev @jsenv/core
-   ```
+```console
+npm install --save-dev @jsenv/core
+```
 
-2. Create `start_dev_server.mjs`
+2 - Create `start_dev_server.mjs`
 
-   ```js
-   import { startExploring } from "@jsenv/core"
+```js
+import { startExploring } from "@jsenv/core"
 
-   startExploring({
-     projectDirectoryUrl: new URL("./", import.meta.url),
-     explorableConfig: {
-       source: {
-         "**/*.html": true,
-       },
-     },
-     compileServerPort: 3456,
-   })
-   ```
+startExploring({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  explorableConfig: {
+    source: {
+      "**/*.html": true,
+    },
+  },
+  compileServerPort: 3456,
+})
+```
 
-3. Run `start_dev_server.mjs` with Node.js
+3 - Run `start_dev_server.mjs` with Node.js
 
-   ```console
-   > node ./start_dev_server.mjs
-   server started at https://localhost:3456
-   ```
+```console
+> node ./start_dev_server.mjs
+server started at https://localhost:3456
+```
 
-4. Open a browser and naviguate to `https://localhost:3456`
+4 - Open a browser and naviguate to `https://localhost:3456`
 
-   When you open `https://localhost:3456` in a browser, a page called jsenv exploring index is shown. It displays a list of links to your html files.
+When you open `https://localhost:3456` in a browser, a page called jsenv exploring index is shown. It displays a list of links to your html files.
 
-   ![dev server index screenshot](./docs/demo_exploring_index.png)
+![dev server index screenshot](./docs/demo_exploring_index.png)
 
-5. Click `main.html`
+5 - Click `main.html`
 
-   Browser naviguates to `main.html` and execute the file. Hello world is displayed in the browser.
+Browser naviguates to `main.html` and execute the file. Hello world is displayed in the browser.
 
-   ![dev server hello world screenshot](./docs/demo_exploring_hello_world.png)
+![dev server hello world screenshot](./docs/demo_exploring_hello_world.png)
 
 To read more about jsenv dev server, also called exploring server, check [jsenv dev server documentation](./docs/exploring/readme.md#jsenv-dev-server).
 
@@ -178,53 +178,53 @@ Following the steps below turns an `index.html` into an optimized `dist/main.htm
 </html>
 ```
 
-1. Add `"@jsenv/core"` to your _devDependencies_
+1 - Add `"@jsenv/core"` to your _devDependencies_
 
-   ```console
-   npm install --save-dev @jsenv/core
-   ```
+```console
+npm install --save-dev @jsenv/core
+```
 
-2. Create `build.mjs`
+2 - Create `build.mjs`
 
-   ```js
-   import { buildProject } from "@jsenv/core"
+```js
+import { buildProject } from "@jsenv/core"
 
-   await buildProject({
-     projectDirectoryUrl: new URL("./", import.meta.url),
-     buildDirectoryRelativeUrl: "dist",
-     enryPointMap: {
-       "./index.html": "./main.html",
-     },
-     format: "esmodule",
-     minify: false,
-   })
-   ```
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  buildDirectoryRelativeUrl: "dist",
+  enryPointMap: {
+    "./index.html": "./main.html",
+  },
+  format: "esmodule",
+  minify: false,
+})
+```
 
-3. Run `build.mjs` with Node.js
+3 - Run `build.mjs` with Node.js
 
-   ```console
-   > node ./build.mjs
-   ```
+```console
+> node ./build.mjs
+```
 
-4. Open `dist/main.html`
+4 - Open `dist/main.html`
 
-   ```html
-   <!DOCTYPE html>
-   <html>
-     <head>
-       <title>Title</title>
-       <meta charset="utf-8" />
-       <link rel="modulepreload" href="main-f7379e10.js" />
-       <link rel="icon" href="assets/favicon-5340s4789a.ico" />
-       <script type="importmap" src="import-map-b237a334.importmap"></script>
-       <link rel="stylesheet" type="text/css" href="assets/main-3b329ff0.css" />
-     </head>
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="modulepreload" href="main-f7379e10.js" />
+    <link rel="icon" href="assets/favicon-5340s4789a.ico" />
+    <script type="importmap" src="import-map-b237a334.importmap"></script>
+    <link rel="stylesheet" type="text/css" href="assets/main-3b329ff0.css" />
+  </head>
 
-     <body>
-       <script type="module" src="./main-f7379e10.js"></script>
-     </body>
-   </html>
-   ```
+  <body>
+    <script type="module" src="./main-f7379e10.js"></script>
+  </body>
+</html>
+```
 
 To read more about jsenv build tool, check [jsenv build documentation](./docs/building/readme.md#jsenv-build).
 
@@ -405,12 +405,10 @@ export const convertMap = {
 
 # See also
 
-| Link                                                                                                                     | Description                                                                              |
-| ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa)                                                       | GitHub repository template for a progressive web application                             |
-| [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-node-package)                                     | GitHub repository template for a node package                                            |
-| [@jsenv/assert](https://github.com/jsenv/assert)                                                                         | Test anything using one assertion                                                        |
-| [@jsenv/sass](./packages/jsenv-sass)                                                                                     | Enables .scss and .sass in jsenv                                                         |
-| [@jsenv/vue](./packages/jsenv-vue)                                                                                       | Experimental, enables .vue in jsenv                                                      |
-| [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05) | Article presenting a straightforward testing experience and proposing jsenv to obtain it |
-| [Jsenv compile server](./docs/jsenv-compile-server.md)                                                                   | Documentation about progressive compilation with a filesystem cache                      |
+| Link                                                                                                                     | Description                                                         |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa)                                                       | GitHub repository template for a progressive web application        |
+| [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-node-package)                                     | GitHub repository template for a node package                       |
+| [@jsenv/assert](https://github.com/jsenv/assert)                                                                         | Test anything using one assertion                                   |
+| [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05) | Article presenting a straightforward testing experience             |
+| [Jsenv compile server](./docs/jsenv-compile-server.md)                                                                   | Documentation about progressive compilation with a filesystem cache |
