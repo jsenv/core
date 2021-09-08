@@ -44,15 +44,14 @@
     "measure-performances": "node ./script/performance/measure_all.js --log",
     "measure-test-plan-performances": "node ./script/performance/measure_test_plan/measure_test_plan.js --log",
     "measure-import-performances": "node ./script/performance/measure_import/measure_import.js --log",
-    "prettier-format": "node ./script/prettier-format/prettier-format.js",
+    "prettier-format": "node ./script/prettier/prettier_format.mjs",
     "prettier-format-stage": "npm run prettier-format -- --staged",
     "prettier-check": "npm run prettier-format -- --dry-run",
-    "upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
     "install-playwright": "npx playwright install-deps && npx playwright install",
     "link-packages": "node ./script/link-packages/link-packages.js",
     "postinstall": "npm run generate-importmap && npm run install-playwright",
-    "prepublishOnly": "node ./script/transform-package/remove-postinstall.js && npm run dist",
-    "postpublish": "node ./script/transform-package/restore-postinstall.js"
+    "prepublishOnly": "node ./script/publish/remove_postinstall.mjs && npm run dist",
+    "postpublish": "node ./script/publish/restore_postinstall.mjs"
   },
   "dependencies": {
     "@babel/core": "7.15.5",

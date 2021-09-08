@@ -10,8 +10,8 @@ import {
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS_TRANSFORM_JS.js"
 import { nodeImportEsModuleBuild } from "@jsenv/core/test/nodeImportEsModuleBuild.js"
+import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS_TRANSFORM_JS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -33,11 +33,11 @@ const importMetaEnvFileRelativeUrl = `${testDirectoryRelativeUrl}env.js`
   const distFileUrl = resolveUrl("dist/file.js", testDirectoryUrl)
   const envDistFileUrl = resolveUrl("dist/env.js", testDirectoryUrl)
   await writeFile(distFileUrl, transformResult.code)
-  await copyFileSystemNode(
-    resolveUrl(importMetaEnvFileRelativeUrl, jsenvCoreDirectoryUrl),
-    envDistFileUrl,
-    { overwrite: true },
-  )
+  await copyFileSystemNode({
+    from: resolveUrl(importMetaEnvFileRelativeUrl, jsenvCoreDirectoryUrl),
+    to: envDistFileUrl,
+    overwrite: true,
+  })
   const result = await nodeImportEsModuleBuild({
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
     testDirectoryRelativeUrl,
