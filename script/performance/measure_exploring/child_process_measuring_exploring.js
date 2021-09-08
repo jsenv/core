@@ -1,11 +1,11 @@
 /* eslint-disable no-unused-vars */
-import { resourceUsage, memoryUsage } from "process"
+import { resourceUsage, memoryUsage } from "node:process"
 import { startExploring } from "@jsenv/core"
 
 const startExploringParams = {
   projectDirectoryUrl: new URL("./", import.meta.url),
   compileServerLogLevel: "warn",
-  compileServerProtocol: "https",
+  compileServerProtocol: "http",
   keepProcessAlive: false,
 }
 

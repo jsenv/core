@@ -1,4 +1,4 @@
-import { startServer, composeService, serveFile } from "@jsenv/server"
+import { startServer, composeServices, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl, readFile } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
@@ -70,8 +70,8 @@ export const browserImportSystemJsBuild = async ({
 const startTestServer = ({ testDirectoryUrl }) => {
   return startServer({
     logLevel: "error",
-    protocol: "https",
-    requestToResponse: composeService(
+    protocol: "http",
+    requestToResponse: composeServices(
       (request) => serveSystemJS({ request }),
       (request) => serveTestDirectory({ testDirectoryUrl, request }),
     ),

@@ -79,7 +79,8 @@ export const startCompileServer = async ({
   customCompilers = {},
 
   // options related to the server itself
-  compileServerProtocol = "https",
+  compileServerProtocol = "http",
+  compileServerHttp2 = compileServerProtocol === "https",
   compileServerPrivateKey,
   compileServerCertificate,
   compileServerIp = "0.0.0.0",
@@ -280,9 +281,9 @@ export const startCompileServer = async ({
     logLevel: compileServerLogLevel,
 
     protocol: compileServerProtocol,
-    http2: compileServerProtocol === "https",
-    privateKey: compileServerPrivateKey,
-    certificate: compileServerCertificate,
+    http2: compileServerHttp2,
+    serverCertificate: compileServerCertificate,
+    serverCertificatePrivateKey: compileServerPrivateKey,
     ip: compileServerIp,
     port: compileServerPort,
     sendServerTiming: true,

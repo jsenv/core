@@ -43,7 +43,7 @@ startExploring({
     ...jsenvCompilerForVue,
   },
   jsenvDirectoryRelativeUrl,
-  compileServerProtocol: "https",
+  compileServerProtocol: "http",
   compileServerPort: 3456,
   keepProcessAlive: true,
   jsenvDirectoryClean: true,

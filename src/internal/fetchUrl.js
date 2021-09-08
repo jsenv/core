@@ -1,4 +1,4 @@
-import { globalAgent } from "https"
+import { globalAgent } from "node:https"
 import { fetchUrl as serverFetchUrl, headersToObject } from "@jsenv/server"
 
 // ideally we should only pass this to the fetch below

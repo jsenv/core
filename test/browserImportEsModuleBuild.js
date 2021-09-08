@@ -1,5 +1,6 @@
-import { startServer, composeService, serveFile } from "@jsenv/server"
+import { startServer, composeServices, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl } from "@jsenv/filesystem"
+
 import { require } from "@jsenv/core/src/internal/require.js"
 
 const { chromium } = require("playwright")
@@ -78,8 +79,8 @@ export const browserImportEsModuleBuild = async ({
 const startTestServer = ({ testDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
-    protocol: "https",
-    requestToResponse: composeService((request) =>
+    protocol: "http",
+    requestToResponse: composeServices((request) =>
       serveFile(request, {
         rootDirectoryUrl: testDirectoryUrl,
       }),
