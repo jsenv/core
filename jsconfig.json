@@ -552,7 +552,7 @@
         "./node_modules/@babel/parser/lib/index.js"
       ],
       "@jsenv/assert": [
-        "./node_modules/@jsenv/assert/index.js"
+        "./node_modules/@jsenv/assert/main.js"
       ],
       "@jsenv/logger": [
         "./node_modules/@jsenv/logger/main.node.js"
