@@ -4,6 +4,7 @@
 /* eslint-disable consistent-return */
 /* eslint-disable prefer-spread */
 /* eslint-disable no-void */
+/* eslint-disable no-sequences */
 import toArray from "../toArray/toArray.js"
 import toPropertyKey from "../toPropertyKey/toPropertyKey.js"
 

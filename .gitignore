@@ -11,7 +11,7 @@
 /script/**/.jsenv/
 /script/**/dist/
 /test-manual/**/.jsenv/
-/import-map.importmap
+/node_resolution.importmap
 /package-lock.json
 /secrets.json
 /yarn.lock

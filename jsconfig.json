@@ -216,7 +216,7 @@
         "./node_modules/@babel/plugin-transform-react-jsx/lib/index.js"
       ],
       "rollup-plugin-node-builtins-brofs": [
-        "./node_modules/rollup-plugin-node-builtins-brofs/dist/rollup-plugin-node-builtins.es6.js"
+        "./node_modules/rollup-plugin-node-builtins-brofs/dist/rollup-plugin-node-builtins.cjs.js"
       ],
       "@babel/plugin-syntax-import-meta": [
         "./node_modules/@babel/plugin-syntax-import-meta/lib/index.js"
@@ -291,7 +291,7 @@
         "./node_modules/@jsenv/performance-impact/*"
       ],
       "rollup-plugin-node-globals": [
-        "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.es6.js"
+        "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.cjs.js"
       ],
       "@jsenv/performance-impact": [
         "./node_modules/@jsenv/performance-impact/main.js"
@@ -315,7 +315,7 @@
         "./node_modules/@jsenv/package-publish/*"
       ],
       "@rollup/plugin-commonjs": [
-        "./node_modules/@rollup/plugin-commonjs/dist/index.es.js"
+        "./node_modules/@rollup/plugin-commonjs/dist/index.js"
       ],
       "@rollup/plugin-replace/*": [
         "./node_modules/@rollup/plugin-replace/*"
@@ -342,7 +342,7 @@
         "./node_modules/@jsenv/package-publish/index.js"
       ],
       "@rollup/plugin-replace": [
-        "./node_modules/@rollup/plugin-replace/dist/rollup-plugin-replace.es.js"
+        "./node_modules/@rollup/plugin-replace/dist/rollup-plugin-replace.cjs.js"
       ],
       "cssnano-preset-default": [
         "./node_modules/cssnano-preset-default/dist/index.js"
@@ -426,7 +426,7 @@
         "./node_modules/@jsenv/node-signals/index.js"
       ],
       "@rollup/plugin-json": [
-        "./node_modules/@rollup/plugin-json/dist/index.es.js"
+        "./node_modules/@rollup/plugin-json/dist/index.js"
       ],
       "eslint-plugin-html/*": [
         "./node_modules/eslint-plugin-html/*"
@@ -594,7 +594,7 @@
         "./node_modules/ansi-to-html/lib/ansi_to_html.js"
       ],
       "magic-string": [
-        "./node_modules/magic-string/dist/magic-string.es.js"
+        "./node_modules/magic-string/dist/magic-string.cjs.js"
       ],
       "rollup/dist/*": [
         "./node_modules/rollup/dist/*"
@@ -687,7 +687,7 @@
         "./node_modules/react/index.js"
       ],
       "redux": [
-        "./node_modules/redux/es/redux.js"
+        "./node_modules/redux/lib/redux.js"
       ],
       "sass/*": [
         "./node_modules/sass/*"

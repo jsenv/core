@@ -1,17 +1,22 @@
-import { getImportMapFromProjectFiles, writeImportMapFile } from "@jsenv/importmap-node-module"
+/*
+ * When this file is executed it does 2 things:
+ *
+ * - write "./node_resolution.importmap" file that is used by ESLint to resolve imports
+ * - update "paths" in "./jsconfig.json" file that is used by VSCode to resolve imports
+ */
+
+import { writeImportMapFiles } from "@jsenv/importmap-node-module"
 
 import { projectDirectoryUrl } from "../../jsenv.config.js"
 
-await writeImportMapFile(
-  [
-    getImportMapFromProjectFiles({
-      projectDirectoryUrl,
+await writeImportMapFiles({
+  projectDirectoryUrl,
+  importMapFiles: {
+    "./node_resolution.importmap": {
+      mappingsForNodeResolution: true,
+      mappingsForDevDependencies: true,
       runtime: "node",
-      dev: true,
-    }),
-  ],
-  {
-    projectDirectoryUrl,
-    jsConfigFile: true,
+      useForJsConfigJSON: true,
+    },
   },
-)
+})
