@@ -121,7 +121,7 @@
     "istanbul-reports": "3.0.2",
     "magic-string": "0.25.7",
     "parse5": "6.0.1",
-    "playwright": "1.13.1",
+    "playwright": "1.14.1",
     "postcss": "8.3.6",
     "postcss-value-parser": "4.1.0",
     "regenerator-runtime": "0.13.9",
@@ -132,7 +132,7 @@
     "string-width": "5.0.0",
     "supports-color": "9.0.2",
     "systemjs": "6.10.3",
-    "terser": "5.7.1",
+    "terser": "5.7.2",
     "tree-kill": "1.2.2",
     "v8-to-istanbul": "8.0.0",
     "wrap-ansi": "8.0.0"
