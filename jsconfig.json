@@ -558,7 +558,7 @@
         "./node_modules/@jsenv/logger/main.node.js"
       ],
       "@jsenv/server": [
-        "./node_modules/@jsenv/server/index.js"
+        "./node_modules/@jsenv/server/main.js"
       ],
       "@jsenv/uneval": [
         "./node_modules/@jsenv/uneval/index.js"

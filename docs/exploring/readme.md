@@ -104,7 +104,7 @@ There is more parameters listed here. Their documentation is regrouped in an oth
 
 # startExploring return value
 
-Using the return value is an advanced use case, in theory you should not need this. `startExploring` returns a _server object_ created by `@jsenv/server`. You can read [@jsenv/server documentation](https://github.com/jsenv/server#startserver-return-value) to know more about the _server object_ composition.
+Using the return value is an advanced use case, in theory you should not need this. `startExploring` returns a _server object_ created by `@jsenv/server`. You can read [@jsenv/server documentation](https://github.com/jsenv/server/blob/main/docs/all_the_rest.md#startserver-return-value) to know more about the _server object_ composition.
 
 Code below shows how you might use return value.
 

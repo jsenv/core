@@ -10,7 +10,7 @@ import {
   startServer,
   serveFile,
   createSSERoom,
-  composeServiceWithTiming,
+  composeServicesWithTiming,
   urlToContentType,
 } from "@jsenv/server"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
@@ -288,7 +288,7 @@ export const startCompileServer = async ({
     sendServerTiming: true,
     nagle: false,
     sendServerInternalErrorDetails: true,
-    requestToResponse: composeServiceWithTiming({
+    requestToResponse: composeServicesWithTiming({
       ...customServices,
       ...jsenvServices,
     }),
