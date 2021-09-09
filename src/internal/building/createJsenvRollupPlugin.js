@@ -12,7 +12,6 @@ import {
   writeFile,
   comparePathnames,
   urlIsInsideOf,
-  urlToFileSystemPath,
   normalizeStructuredMetaMap,
   urlToMeta,
 } from "@jsenv/filesystem"
@@ -27,14 +26,20 @@ import {
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
+import {
+  formatBuildStartLog,
+  formatUseImportMapFromHtml,
+  formatImportmapOutsideCompileDirectory,
+  formatFileNotFound,
+  formatRessourceHintNeverUsedWarning,
+  formatBuildDoneInfo,
+} from "./build_logs.js"
 import { importMapsFromHtml } from "./html/htmlScan.js"
 import { parseTarget } from "./parseTarget.js"
-import { showSourceLocation } from "./showSourceLocation.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { createAssetBuilder, referenceToCodeForRollup } from "./asset-builder.js"
 import { computeBuildRelativeUrl } from "./url-versioning.js"
@@ -61,6 +66,7 @@ export const createJsenvRollupPlugin = async ({
   compileServerOrigin,
   compileDirectoryRelativeUrl,
 
+  urlOverrides,
   importResolutionMethod,
   importMapFileRelativeUrl,
   importDefaultExtension,
@@ -662,7 +668,6 @@ export const createJsenvRollupPlugin = async ({
       // handle redirection
       if (responseUrl !== url) {
         saveUrlResponseBody(url, contentRaw)
-        urlRedirectionMap[url] = responseUrl
       }
 
       return { code: content, map }
@@ -1088,11 +1093,15 @@ export const createJsenvRollupPlugin = async ({
     }
 
     const okValidation = await validateResponseStatusIsOk(response, importer)
-
     if (!okValidation.valid) {
       const jsenvPluginError = new Error(okValidation.message)
       storeLatestJsenvPluginError(jsenvPluginError)
       throw jsenvPluginError
+    }
+
+    const responseUrl = response.url
+    if (url !== responseUrl) {
+      urlRedirectionMap[url] = responseUrl
     }
 
     return response
@@ -1239,94 +1248,6 @@ const fixRollupUrl = (rollupUrl) => {
   }
 
   return rollupUrl
-}
-
-const formatFileNotFound = (url, importer) => {
-  return createDetailedMessage(`A file cannot be found.`, {
-    file: urlToFileSystemPath(url),
-    ["imported by"]:
-      importer.startsWith("file://") && !importer.includes("\n")
-        ? urlToFileSystemPath(importer)
-        : importer,
-  })
-}
-
-const showHtmlSourceLocation = ({ htmlNode, htmlUrl, htmlSource }) => {
-  const { line, column } = getHtmlNodeLocation(htmlNode)
-
-  return `${htmlUrl}:${line}:${column}
-${showSourceLocation(htmlSource, {
-  line,
-  column,
-})}
-`
-}
-
-const formatBuildStartLog = ({ entryPointMap }) => {
-  const entryProjectRelativeUrls = Object.keys(entryPointMap)
-  const entryCount = entryProjectRelativeUrls.length
-
-  if (entryCount === 1) {
-    return `build start for ${entryProjectRelativeUrls[0]}`
-  }
-
-  return `build start for ${entryCount} files:
-- ${entryProjectRelativeUrls.join(`
-- `)}`
-}
-
-const formatUseImportMapFromHtml = (importMapInfoFromHtml) => {
-  return `
-use importmap found in ${showHtmlSourceLocation(importMapInfoFromHtml)}`
-}
-
-const formatImportmapOutsideCompileDirectory = ({ importMapInfo, compileDirectoryUrl }) => {
-  return `
-WARNING: importmap file is outside compile directory.
-That's unusual you should certainly make importmap file relative.
-${showHtmlSourceLocation(importMapInfo)}
---- compile directory url ---
-${compileDirectoryUrl}
-`
-}
-
-const formatRessourceHintNeverUsedWarning = (linkInfo) => {
-  return `
-WARNING: Ressource never used for ${linkInfo.rel} link in ${showHtmlSourceLocation(linkInfo)}
-`
-}
-
-const formatBuildDoneInfo = ({ rollupBuild, buildDirectoryRelativeUrl }) => {
-  return `
-${createDetailedMessage(
-  `build end`,
-  formatBuildDoneDetails({ rollupBuild, buildDirectoryRelativeUrl }),
-)}
-`
-}
-
-const formatBuildDoneDetails = ({ rollupBuild, buildDirectoryRelativeUrl }) => {
-  const assetFilenames = Object.keys(rollupBuild)
-    .filter((key) => rollupBuild[key].type === "asset")
-    .map((key) => `${buildDirectoryRelativeUrl}${key}`)
-  const assetCount = assetFilenames.length
-
-  const chunkFilenames = Object.keys(rollupBuild)
-    .filter((key) => rollupBuild[key].type === "chunk")
-    .map((key) => `${buildDirectoryRelativeUrl}${key}`)
-  const chunkCount = chunkFilenames.length
-
-  const assetDescription =
-    // eslint-disable-next-line no-nested-ternary
-    assetCount === 0 ? "" : assetCount === 1 ? "1 asset" : `${assetCount} assets`
-  const chunkDescription =
-    // eslint-disable-next-line no-nested-ternary
-    chunkCount === 0 ? "" : chunkCount === 1 ? "1 chunk" : `${chunkCount} chunks`
-
-  return {
-    ...(assetDescription ? { [assetDescription]: assetFilenames } : {}),
-    ...(chunkDescription ? { [chunkDescription]: chunkFilenames } : {}),
-  }
 }
 
 const rollupFileNameWithoutHash = (fileName) => {
