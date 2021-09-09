@@ -2,7 +2,7 @@
 import { extname } from "node:path"
 import { normalizeImportMap } from "@jsenv/import-map"
 import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
-import { loggerToLogLevel, createDetailedMessage } from "@jsenv/logger"
+import { loggerToLogLevel } from "@jsenv/logger"
 import {
   isFileSystemPath,
   fileSystemPathToUrl,
@@ -312,6 +312,7 @@ export const createJsenvRollupPlugin = async ({
                   compileServerOrigin,
                   compileDirectoryRelativeUrl,
                 }),
+                importMapInfoFromHtml.htmlUrl,
               )
             }
           } else {
@@ -327,15 +328,17 @@ export const createJsenvRollupPlugin = async ({
           }
         } else if (importMapFileRelativeUrl) {
           importMapUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
-          fetchImportMap = () =>
-            fetchImportMapFromUrl(
+          fetchImportMap = () => {
+            return fetchImportMapFromUrl(
               importMapUrl,
               urlToOriginalProjectUrl(importMapUrl, {
                 projectDirectoryUrl,
                 compileServerOrigin,
                 compileDirectoryRelativeUrl,
               }),
+              "importMapFileRelativeUrl parameter",
             )
+          }
         } else {
           // there is no importmap, its' fine it's not mandatory to use one
           fetchImportMap = () => {
@@ -1092,7 +1095,7 @@ export const createJsenvRollupPlugin = async ({
       throw jsenvPluginError
     }
 
-    const okValidation = await validateResponseStatusIsOk(response, importer)
+    const okValidation = await validateResponseStatusIsOk(response, { importer })
     if (!okValidation.valid) {
       const jsenvPluginError = new Error(okValidation.message)
       storeLatestJsenvPluginError(jsenvPluginError)
@@ -1214,16 +1217,14 @@ const prepareEntryPoints = async (
   return entryPointsPrepared
 }
 
-const fetchImportMapFromUrl = async (importMapUrl, importMapProjectUrl) => {
+const fetchImportMapFromUrl = async (importMapUrl, importMapProjectUrl, importer) => {
   const importMapResponse = await fetchUrl(importMapUrl)
-  if (importMapResponse.status < 200 || importMapResponse.status > 299) {
-    throw new Error(
-      createDetailedMessage(`Unexpected response status for importmap.`, {
-        ["response status"]: importMapResponse.status,
-        ["response text"]: await importMapResponse.text(),
-        ["importmap url"]: importMapProjectUrl || importMapUrl,
-      }),
-    )
+  const okValidation = await validateResponseStatusIsOk(importMapResponse, {
+    importer,
+    originalUrl: importMapProjectUrl,
+  })
+  if (!okValidation.valid) {
+    throw new Error(okValidation.message)
   }
   const importMap = await importMapResponse.json()
   const importMapNormalized = normalizeImportMap(importMap, importMapUrl)

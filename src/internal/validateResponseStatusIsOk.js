@@ -1,14 +1,17 @@
 import { createDetailedMessage } from "@jsenv/logger"
+import { urlToExtension } from "@jsenv/filesystem"
 
-export const validateResponseStatusIsOk = async (response, importer) => {
-  const { status, url } = response
+export const validateResponseStatusIsOk = async (response, { originalUrl, importer } = {}) => {
+  const { status } = response
+  const url = originalUrl || response.url
+  const { ressourceName, urlName } = urlToNames(url)
 
   if (status === 404) {
     return {
       valid: false,
-      message: createDetailedMessage(`Error: got 404 on url.`, {
-        url,
-        ["imported by"]: importer,
+      message: createDetailedMessage(`got 404 on ${ressourceName}`, {
+        [urlName]: url,
+        "imported by": importer,
       }),
     }
   }
@@ -17,8 +20,8 @@ export const validateResponseStatusIsOk = async (response, importer) => {
     if (response.headers["content-type"] === "application/json") {
       return {
         valid: false,
-        message: createDetailedMessage(`Error: error on url.`, {
-          url,
+        message: createDetailedMessage(`error on ${ressourceName}`, {
+          [urlName]: url,
           "imported by": importer,
           "parse error": JSON.stringify(await response.json(), null, "  "),
         }),
@@ -32,13 +35,29 @@ export const validateResponseStatusIsOk = async (response, importer) => {
 
   return {
     valid: false,
-    message: createDetailedMessage(`unexpected response status.`, {
-      ["response status"]: status,
-      ["expected status"]: "200 to 299",
-      url,
-      ["imported by"]: importer,
+    message: createDetailedMessage(`unexpected response status for ${ressourceName}`, {
+      "response status": status,
+      "response text": await response.text(),
+      [urlName]: url,
+      "imported by": importer,
     }),
   }
 }
 
-const responseStatusIsOk = (responseStatus) => responseStatus >= 200 && responseStatus < 300
+const responseStatusIsOk = (responseStatus) => {
+  return responseStatus >= 200 && responseStatus < 300
+}
+
+const urlToNames = (url) => {
+  if (urlToExtension(url) === ".importmap") {
+    return {
+      ressourceName: "importmap",
+      urlName: "importmap url",
+    }
+  }
+
+  return {
+    ressourceName: "url",
+    urlName: "url",
+  }
+}
