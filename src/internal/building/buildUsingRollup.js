@@ -13,7 +13,7 @@ export const buildUsingRollup = async ({
   compileServerOrigin,
   compileDirectoryRelativeUrl,
 
-  urlOverrides,
+  urlMappings,
   importResolutionMethod,
   importMapFileRelativeUrl,
   importDefaultExtension,
@@ -61,7 +61,7 @@ export const buildUsingRollup = async ({
     compileServerOrigin,
     compileDirectoryRelativeUrl,
 
-    urlOverrides,
+    urlMappings,
     importResolutionMethod,
     importMapFileRelativeUrl,
     importDefaultExtension,

@@ -29,7 +29,7 @@ export const buildProject = async ({
   globalName,
   globals = {},
 
-  urlOverrides = {},
+  urlMappings = {},
   importResolutionMethod = format === "commonjs" ? "node" : "importmap",
   importMapFileRelativeUrl,
   importDefaultExtension,
@@ -166,7 +166,7 @@ export const buildProject = async ({
         compileServerOrigin,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
 
-        urlOverrides,
+        urlMappings,
         importResolutionMethod,
         importMapFileRelativeUrl,
         importDefaultExtension,

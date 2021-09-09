@@ -1,5 +1,4 @@
 import { createDetailedMessage } from "@jsenv/logger"
-import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { showSourceLocation } from "./showSourceLocation.js"
@@ -30,16 +29,6 @@ ${showHtmlSourceLocation(importMapInfo)}
 --- compile directory url ---
 ${compileDirectoryUrl}
 `
-}
-
-export const formatFileNotFound = (url, importer) => {
-  return createDetailedMessage(`A file cannot be found.`, {
-    file: urlToFileSystemPath(url),
-    ["imported by"]:
-      importer.startsWith("file://") && !importer.includes("\n")
-        ? urlToFileSystemPath(importer)
-        : importer,
-  })
 }
 
 export const formatRessourceHintNeverUsedWarning = (linkInfo) => {
