@@ -1,8 +1,9 @@
 import { reportPerformanceImpact, readGitHubWorkflowEnv } from "@jsenv/performance-impact"
 
-reportPerformanceImpact({
+await reportPerformanceImpact({
   ...readGitHubWorkflowEnv(),
   logLevel: "debug",
   installCommand: "npm install",
-  generatePerformanceReportFileRelativeUrl: "./script/performance/generate_performance_report.js",
+  moduleGeneratingPerformanceReportRelativeUrl:
+    "./script/performance/generate_performance_report.js",
 })
