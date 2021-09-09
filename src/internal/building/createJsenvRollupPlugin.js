@@ -16,7 +16,7 @@ import {
   urlToMeta,
 } from "@jsenv/filesystem"
 
-import { createUrlConverter } from "@jsenv/core/src/internal/url-conversion.js"
+import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
