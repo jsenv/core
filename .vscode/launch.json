@@ -14,6 +14,7 @@
         "--experimental-json-modules",
         "--experimental-import-meta-resolve"
       ],
+      "console": "integratedTerminal",
       // "args": ["--coverage"],
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
