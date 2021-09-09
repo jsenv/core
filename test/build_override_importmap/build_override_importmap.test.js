@@ -1,15 +1,13 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-  resolveUrl,
-  readFile,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import {
+  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+  BROWSER_IMPORT_BUILD_TEST_PARAMS,
+} from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -32,32 +30,26 @@ const { buildMappings } = await buildProject({
   // logLevel: "debug",
 })
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-// const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
-
 {
   const actual = buildMappings
   const expected = {
     [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
-    [`${testDirectoryRelativeUrl}dev.importmap`]: "prod-bf578434.importmap",
-    [`${testDirectoryRelativeUrl}main.js`]: "main-557ceccc.js",
+    [`${testDirectoryRelativeUrl}dev.importmap`]: "prod-4caf283d.importmap",
+    [`${testDirectoryRelativeUrl}main.js`]: "main-4f5e8e92.js",
   }
   assert({ actual, expected })
 }
 
-// check importmap content
 {
-  const importmapBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}dev.importmap`]
-  const importmapBuildUrl = resolveUrl(importmapBuildRelativeUrl, buildDirectoryUrl)
-  const importmapString = await readFile(importmapBuildUrl)
-  const importmap = JSON.parse(importmapString)
-
-  const actual = importmap
-  // importmap is the same because non js files are remapped
+  const { namespace } = await browserImportEsModuleBuild({
+    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
+    testDirectoryRelativeUrl,
+    jsFileRelativeUrl: `./${buildMappings[`${testDirectoryRelativeUrl}main.js`]}`,
+    // debug: true,
+  })
+  const actual = namespace
   const expected = {
-    imports: {
-      "./img.png": "./img-remap.png",
-    },
+    env: "prod",
   }
   assert({ actual, expected })
 }

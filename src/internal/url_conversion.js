@@ -11,10 +11,13 @@ export const createUrlConverter = ({
   projectDirectoryUrl,
   compileServerOrigin,
   compileDirectoryRelativeUrl,
+  urlMappings,
 }) => {
   const compileServerOriginForRollup = String(
     new URL(STATIC_COMPILE_SERVER_AUTHORITY, compileServerOrigin),
   ).slice(0, -1)
+  urlMappings = normalizeUrlMappings(urlMappings, projectDirectoryUrl)
+  const mappingsRevertMap = {}
 
   const asRollupUrl = (url) => {
     if (url.startsWith(`${compileServerOrigin}/`)) {
@@ -57,12 +60,47 @@ export const createUrlConverter = ({
       compileServerOrigin,
       compileDirectoryRelativeUrl,
     })
-    return projectOriginalUrl
+    const withoutMapping = mappingsRevertMap[projectOriginalUrl]
+    return withoutMapping || projectOriginalUrl
   }
 
   const asOriginalServerUrl = (url) => {
-    const projectOriginalUrl = asCompiledUrl(url)
+    const projectOriginalUrl = asOriginalUrl(url)
     return asServerUrl(projectOriginalUrl)
+  }
+
+  // Url can
+  // - come from rollup "load" hook and be compiled
+  // - come from rollup "load" hook and be the original url
+  // - come from asset builder and be compiled
+  // - come from asset builder and be the original url
+  // We first want to ensure we are talking about the same url
+  // so we get the originalProjectUrl
+  // then we should return a mapped url, keeping in mind that
+  // if the url was compiled it should remain compiled
+  const applyUrlMappings = (url) => {
+    const originalProjectUrl = asOriginalUrl(url)
+    const urlMapping = urlMappings[originalProjectUrl]
+    if (!urlMapping) {
+      return url
+    }
+
+    mappingsRevertMap[urlMapping] = originalProjectUrl
+    const isInsideProject = url === projectDirectoryUrl || urlIsInsideOf(url, projectDirectoryUrl)
+    const projectUrl = isInsideProject ? url : asProjectUrl(url)
+    const compileDirectoryUrl = resolveUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
+    const isCompiled =
+      projectUrl === compileDirectoryUrl || urlIsInsideOf(projectUrl, compileDirectoryUrl)
+    if (isCompiled && isInsideProject) {
+      return asCompiledUrl(urlMapping)
+    }
+    if (isCompiled) {
+      return asCompiledServerUrl(urlMapping)
+    }
+    if (isInsideProject) {
+      return asProjectUrl(urlMapping)
+    }
+    return asServerUrl(urlMapping)
   }
 
   return {
@@ -74,10 +112,22 @@ export const createUrlConverter = ({
     asCompiledServerUrl,
     asOriginalUrl,
     asOriginalServerUrl,
+    applyUrlMappings,
   }
 }
 
-export const urlToCompileInfo = (url, { compileServerOrigin, outDirectoryRelativeUrl }) => {
+const normalizeUrlMappings = (urlMappings, baseUrl) => {
+  const urlMappingsNormalized = {}
+  Object.keys(urlMappings).forEach((key) => {
+    const value = urlMappings[key]
+    const keyNormalized = resolveUrl(key, baseUrl)
+    const valueNormalized = resolveUrl(value, baseUrl)
+    urlMappingsNormalized[keyNormalized] = valueNormalized
+  })
+  return urlMappingsNormalized
+}
+
+export const serverUrlToCompileInfo = (url, { compileServerOrigin, outDirectoryRelativeUrl }) => {
   const outDirectoryServerUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, compileServerOrigin)
   // not inside compile directory -> nothing to compile
   if (!url.startsWith(outDirectoryServerUrl)) {
@@ -173,10 +223,12 @@ const originalProjectUrlFromUrl = (
   }
 
   if (!compileDirectoryRelativeUrl) {
-    compileDirectoryRelativeUrl = compileDirectoryRelativeUrlFromServerUrl(
-      serverUrlFromUrl(projectUrl, { projectDirectoryUrl, compileServerOrigin }),
-      { compileServerOrigin, outDirectoryRelativeUrl },
-    )
+    const serverUrl = serverUrlFromUrl(projectUrl, { projectDirectoryUrl, compileServerOrigin })
+    compileDirectoryRelativeUrl = extractCompileDirectoryRelativeUrl({
+      serverUrl,
+      compileServerOrigin,
+      outDirectoryRelativeUrl,
+    })
     if (!compileDirectoryRelativeUrl) {
       return projectUrl
     }
@@ -191,11 +243,15 @@ const originalProjectUrlFromUrl = (
   return resolveUrl(relativeUrl, projectDirectoryUrl)
 }
 
-const compileDirectoryRelativeUrlFromServerUrl = (
+const extractCompileDirectoryRelativeUrl = ({
   serverUrl,
-  { compileServerOrigin, outDirectoryRelativeUrl },
-) => {
-  const compileInfo = urlToCompileInfo(serverUrl, { compileServerOrigin, outDirectoryRelativeUrl })
+  compileServerOrigin,
+  outDirectoryRelativeUrl,
+}) => {
+  const compileInfo = serverUrlToCompileInfo(serverUrl, {
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+  })
   if (compileInfo.compiledId) {
     return `${outDirectoryRelativeUrl}${compileInfo.compileId}/`
   }

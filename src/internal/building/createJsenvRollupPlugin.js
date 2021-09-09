@@ -85,7 +85,6 @@ export const createJsenvRollupPlugin = async ({
   const virtualModules = {}
   const urlRedirectionMap = {}
   const jsModulesFromEntry = {}
-  urlMappings = normalizeUrlMappings(urlMappings, projectDirectoryUrl)
 
   const {
     asRollupUrl,
@@ -94,10 +93,12 @@ export const createJsenvRollupPlugin = async ({
     asCompiledServerUrl,
     asOriginalUrl,
     asOriginalServerUrl,
+    applyUrlMappings,
   } = createUrlConverter({
     projectDirectoryUrl,
     compileServerOrigin,
     compileDirectoryRelativeUrl,
+    urlMappings,
   })
 
   let lastErrorMessage
@@ -990,7 +991,7 @@ export const createJsenvRollupPlugin = async ({
   }
 
   const jsenvFetchUrl = async (url, importer) => {
-    const urlToFetch = mapUrl(url)
+    const urlToFetch = applyUrlMappings(url)
 
     const response = await fetchUrl(urlToFetch, {
       cancellationToken,
@@ -1029,27 +1030,6 @@ export const createJsenvRollupPlugin = async ({
     const importMap = await importMapResponse.json()
     const importMapNormalized = normalizeImportMap(importMap, importMapResponse.url)
     return importMapNormalized
-  }
-
-  const mapUrl = (url) => {
-    // Url can
-    // - come from rollup "load" hook and be compiled
-    // - come from rollup "load" hook and be the original url
-    // - come from asset builder and be compiled
-    // - come from asset builder and be the original url
-    // We first want to ensure we are talking about the same url
-    // so we get the originalProjectUrl
-    // then we should return a mapped url, keeping in mind that
-    // if the url was compiled it should remain compiled
-
-    const originalProjectUrl = asOriginalUrl(url)
-
-    if (originalProjectUrl in urlMappings) {
-      const urlMapped = urlMappings[url]
-      return urlMapped
-    }
-
-    return url
   }
 
   return {
@@ -1213,15 +1193,4 @@ const externalImportUrlPatternsToExternalUrlPredicate = (
     })
     return Boolean(meta.external)
   }
-}
-
-const normalizeUrlMappings = (urlMappings, baseUrl) => {
-  const urlMappingsNormalized = {}
-  Object.keys(urlMappings).forEach((key) => {
-    const value = urlMappings[key]
-    const keyNormalized = resolveUrl(key, baseUrl)
-    const valueNormalized = resolveUrl(value, baseUrl)
-    urlMappingsNormalized[keyNormalized] = valueNormalized
-  })
-  return urlMappingsNormalized
 }

@@ -1,7 +1,7 @@
 import { serveFile } from "@jsenv/server"
 import { resolveUrl, resolveDirectoryUrl } from "@jsenv/filesystem"
 
-import { urlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
+import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
   COMPILE_ID_BUILD_GLOBAL_FILES,
@@ -47,7 +47,7 @@ export const createCompiledFileService = ({
     const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
 
-    const requestCompileInfo = urlToCompileInfo(requestUrl, {
+    const requestCompileInfo = serverUrlToCompileInfo(requestUrl, {
       outDirectoryRelativeUrl,
       compileServerOrigin: origin,
     })
