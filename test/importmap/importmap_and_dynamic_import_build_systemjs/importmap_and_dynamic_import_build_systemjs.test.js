@@ -52,8 +52,6 @@ const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirecto
   const actual = importmap
   const expected = {
     imports: {
-      // the original importmap remapping are still there (but an updated version)
-      "foo": `./${fooBuildRelativeUrl}`,
       // the importmap for foo is available
       "./file.js": `./${fileBuildRelativeUrl}`,
       "./foo.js": `./${fooBuildRelativeUrl}`,

@@ -49,9 +49,6 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
   const actual = importmap
   const expected = {
     imports: {
-      // the original importmap remapping are still there
-      // ideally it should target `./${imgRemapBuildRelativeUrl}` but for now it's not supported
-      "./img.png": "./img-remap.png",
       "./assets/img.png": `./${imgBuildRelativeUrl}`,
       // the importmap for img-remap is available
       "./assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
