@@ -25,8 +25,8 @@ const { buildMappings } = await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
-  urlOverrides: {
-    "./dev.importmap": "./prod.importmap",
+  urlMappings: {
+    [`./${testDirectoryRelativeUrl}dev.importmap`]: `./${testDirectoryRelativeUrl}prod.importmap`,
   },
   // minify: true,
   // logLevel: "debug",
@@ -37,7 +37,11 @@ const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirecto
 
 {
   const actual = buildMappings
-  const expected = {}
+  const expected = {
+    [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
+    [`${testDirectoryRelativeUrl}dev.importmap`]: "prod-bf578434.importmap",
+    [`${testDirectoryRelativeUrl}main.js`]: "main-557ceccc.js",
+  }
   assert({ actual, expected })
 }
 

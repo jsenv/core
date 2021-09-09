@@ -1,5 +1,82 @@
 import { resolveDirectoryUrl, urlToRelativeUrl, urlIsInsideOf, resolveUrl } from "@jsenv/filesystem"
 
+// use a fake and predictable compile server origin
+// because rollup will check the dependencies url
+// when computing the file hash
+// https://github.com/rollup/rollup/blob/d6131378f9481a442aeaa6d4e608faf3303366dc/src/Chunk.ts#L483
+// this way file hash remains the same when file content does not change
+const STATIC_COMPILE_SERVER_AUTHORITY = "//jsenv.com"
+
+export const createUrlConverter = ({
+  projectDirectoryUrl,
+  compileServerOrigin,
+  compileDirectoryRelativeUrl,
+}) => {
+  const compileServerOriginForRollup = String(
+    new URL(STATIC_COMPILE_SERVER_AUTHORITY, compileServerOrigin),
+  ).slice(0, -1)
+
+  const asRollupUrl = (url) => {
+    if (url.startsWith(`${compileServerOrigin}/`)) {
+      return `${compileServerOriginForRollup}/${url.slice(`${compileServerOrigin}/`.length)}`
+    }
+    return url
+  }
+
+  const asProjectUrl = (url) => {
+    return projectUrlFromUrl(asServerUrl(url) || url, {
+      projectDirectoryUrl,
+      compileServerOrigin,
+    })
+  }
+
+  const asServerUrl = (url) => {
+    if (url.startsWith(`${compileServerOriginForRollup}/`)) {
+      return `${compileServerOrigin}/${url.slice(`${compileServerOriginForRollup}/`.length)}`
+    }
+    return serverUrlFromUrl(url, { projectDirectoryUrl, compileServerOrigin })
+  }
+
+  const asCompiledUrl = (url) => {
+    const projectCompiledUrl = compiledProjectUrlFromUrl(asProjectUrl(url) || url, {
+      projectDirectoryUrl,
+      compileServerOrigin,
+      compileDirectoryRelativeUrl,
+    })
+    return projectCompiledUrl
+  }
+
+  const asCompiledServerUrl = (url) => {
+    const projectCompiledUrl = asCompiledUrl(url)
+    return asServerUrl(projectCompiledUrl)
+  }
+
+  const asOriginalUrl = (url) => {
+    const projectOriginalUrl = originalProjectUrlFromUrl(asProjectUrl(url) || url, {
+      projectDirectoryUrl,
+      compileServerOrigin,
+      compileDirectoryRelativeUrl,
+    })
+    return projectOriginalUrl
+  }
+
+  const asOriginalServerUrl = (url) => {
+    const projectOriginalUrl = asCompiledUrl(url)
+    return asServerUrl(projectOriginalUrl)
+  }
+
+  return {
+    asRollupUrl,
+    asProjectUrl,
+    asServerUrl,
+
+    asCompiledUrl,
+    asCompiledServerUrl,
+    asOriginalUrl,
+    asOriginalServerUrl,
+  }
+}
+
 export const urlToCompileInfo = (url, { compileServerOrigin, outDirectoryRelativeUrl }) => {
   const outDirectoryServerUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, compileServerOrigin)
   // not inside compile directory -> nothing to compile
@@ -28,13 +105,13 @@ export const urlToCompileInfo = (url, { compileServerOrigin, outDirectoryRelativ
   return { insideCompileDirectory: true, compileId, afterCompileId }
 }
 
-// take any url string and try to return a file url (an url inside projectDirectoryUrl)
-export const urlToProjectUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
+// tries to convert an url into an url that is inside projectDirectoryUrl
+const projectUrlFromUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
   if (url.startsWith(projectDirectoryUrl)) {
     return url
   }
 
-  const serverUrl = urlToServerUrl(url, { projectDirectoryUrl, compileServerOrigin })
+  const serverUrl = serverUrlFromUrl(url, { projectDirectoryUrl, compileServerOrigin })
   if (serverUrl) {
     return `${projectDirectoryUrl}${serverUrl.slice(`${compileServerOrigin}/`.length)}`
   }
@@ -42,17 +119,8 @@ export const urlToProjectUrl = (url, { projectDirectoryUrl, compileServerOrigin 
   return null
 }
 
-export const urlToProjectRelativeUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
-  const projectUrl = urlToProjectUrl(url, { projectDirectoryUrl, compileServerOrigin })
-  if (!projectUrl) {
-    return null
-  }
-
-  return urlToRelativeUrl(projectUrl, projectDirectoryUrl)
-}
-
-// take any url string and try to return the corresponding remote url (an url inside compileServerOrigin)
-export const urlToServerUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
+// tries to convert an url into an url that is inside compileServerOrigin
+const serverUrlFromUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
   if (url.startsWith(`${compileServerOrigin}/`)) {
     return url
   }
@@ -64,31 +132,33 @@ export const urlToServerUrl = (url, { projectDirectoryUrl, compileServerOrigin }
   return null
 }
 
-export const urlToOriginalServerUrl = (
+// tries to convert an url into an url inside compileServerOrigin
+// AND return the compiled url is the url is the original version
+const compiledProjectUrlFromUrl = (
   url,
-  {
-    projectDirectoryUrl,
-    compileServerOrigin,
-    outDirectoryRelativeUrl,
-    compileDirectoryRelativeUrl,
-  },
+  { projectDirectoryUrl, compileServerOrigin, compileDirectoryRelativeUrl },
 ) => {
-  const originalProjectUrl = urlToOriginalProjectUrl(url, {
-    projectDirectoryUrl,
-    compileServerOrigin,
-    outDirectoryRelativeUrl,
-    compileDirectoryRelativeUrl,
-  })
-  if (!originalProjectUrl) {
+  const projectUrl = projectUrlFromUrl(url, { projectDirectoryUrl, compileServerOrigin })
+  if (!projectUrl) {
     return null
   }
 
-  return urlToServerUrl(originalProjectUrl, { projectDirectoryUrl, compileServerOrigin })
+  const compileDirectoryUrl = resolveUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
+  if (projectUrl === compileDirectoryUrl || urlIsInsideOf(projectUrl, compileDirectoryUrl)) {
+    return projectUrl
+  }
+
+  const projectRelativeUrl = urlToRelativeUrl(projectUrl, projectDirectoryUrl)
+  if (projectRelativeUrl) {
+    return resolveUrl(projectRelativeUrl, compileDirectoryUrl)
+  }
+
+  return null
 }
 
-// take any url string and try to return a file url inside project directory url
-// prefer the source url if the url is inside compile directory
-export const urlToOriginalProjectUrl = (
+// tries to convert an url into an url that is inside projectDirectoryUrl
+// AND return the original url if the url is the compiled version
+const originalProjectUrlFromUrl = (
   url,
   {
     projectDirectoryUrl,
@@ -97,14 +167,14 @@ export const urlToOriginalProjectUrl = (
     compileDirectoryRelativeUrl,
   },
 ) => {
-  const projectUrl = urlToProjectUrl(url, { projectDirectoryUrl, compileServerOrigin })
+  const projectUrl = projectUrlFromUrl(url, { projectDirectoryUrl, compileServerOrigin })
   if (!projectUrl) {
     return null
   }
 
   if (!compileDirectoryRelativeUrl) {
-    compileDirectoryRelativeUrl = serverUrlToCompileDirectoryRelativeUrl(
-      urlToServerUrl(projectUrl, { projectDirectoryUrl, compileServerOrigin }),
+    compileDirectoryRelativeUrl = compileDirectoryRelativeUrlFromServerUrl(
+      serverUrlFromUrl(projectUrl, { projectDirectoryUrl, compileServerOrigin }),
       { compileServerOrigin, outDirectoryRelativeUrl },
     )
     if (!compileDirectoryRelativeUrl) {
@@ -121,7 +191,7 @@ export const urlToOriginalProjectUrl = (
   return resolveUrl(relativeUrl, projectDirectoryUrl)
 }
 
-const serverUrlToCompileDirectoryRelativeUrl = (
+const compileDirectoryRelativeUrlFromServerUrl = (
   serverUrl,
   { compileServerOrigin, outDirectoryRelativeUrl },
 ) => {
@@ -129,33 +199,5 @@ const serverUrlToCompileDirectoryRelativeUrl = (
   if (compileInfo.compiledId) {
     return `${outDirectoryRelativeUrl}${compileInfo.compileId}/`
   }
-  return null
-}
-
-export const urlToCompiledServerUrl = (
-  url,
-  { projectDirectoryUrl, compileServerOrigin, compileDirectoryRelativeUrl },
-) => {
-  const serverUrl = urlToServerUrl(url, { projectDirectoryUrl, compileServerOrigin })
-  if (!serverUrl) {
-    return null
-  }
-
-  const compileDirectoryServerUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
-  if (
-    serverUrl === compileDirectoryServerUrl ||
-    urlIsInsideOf(serverUrl, compileDirectoryServerUrl)
-  ) {
-    return serverUrl
-  }
-
-  const projectRelativeUrl = urlToProjectRelativeUrl(serverUrl, {
-    projectDirectoryUrl,
-    compileServerOrigin,
-  })
-  if (projectRelativeUrl) {
-    return resolveUrl(projectRelativeUrl, compileDirectoryServerUrl)
-  }
-
   return null
 }
