@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -25,9 +25,9 @@ try {
   throw new Error("should throw")
 } catch (e) {
   const actual = e.message
-  const expected = `A file cannot be found.
---- file ---
-${urlToFileSystemPath(imgUrl)}
+  const expected = `404 on url
+--- url ---
+${imgUrl}
 --- imported by ---
 ${testDirectoryRelativeUrl}${testDirectoryname}.html:9:5
 

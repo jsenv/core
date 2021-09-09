@@ -34,9 +34,9 @@ try {
   throw new Error("should throw")
 } catch (e) {
   const actual = e.message
-  const expected = `A file cannot be found.
---- file ---
-${urlToFileSystemPath(jsFileUrl)}
+  const expected = `404 on js url
+--- js url ---
+${jsFileUrl}
 --- imported by ---
 ${urlToFileSystemPath(htmlFileUrl)}`
   assert({ actual, expected })

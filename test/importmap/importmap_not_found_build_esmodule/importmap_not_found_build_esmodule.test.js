@@ -31,12 +31,10 @@ try {
   })
 } catch (e) {
   const actual = e.message
-  const expected = `Unexpected response status for importmap.
---- response status ---
-404
---- response text ---
-
+  const expected = `404 on importmap url
 --- importmap url ---
-${importMapFileUrl}`
+${importMapFileUrl}
+--- imported by ---
+importMapFileRelativeUrl parameter`
   assert({ actual, expected })
 }

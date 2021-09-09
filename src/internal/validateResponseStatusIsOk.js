@@ -10,7 +10,7 @@ export const validateResponseStatusIsOk = async (response, { originalUrl, import
   if (status === 404) {
     return {
       valid: false,
-      message: createDetailedMessage(`got 404 on ${urlName}`, {
+      message: createDetailedMessage(`404 on ${urlName}`, {
         [urlName]: url,
         "imported by": importerToLog(importer),
       }),
