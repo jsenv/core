@@ -1,5 +1,3 @@
-// TODO: move this inside ./logs/
-
 import isUnicodeSupported from "is-unicode-supported"
 import { createSupportsColor } from "supports-color"
 

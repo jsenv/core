@@ -1,5 +1,5 @@
 import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { setANSIColor, ANSI_GREY, okSign } from "../logs.js"
+import { setANSIColor, ANSI_GREY, okSign } from "../logs/log_style.js"
 import { byteAsFileSize } from "../logs/byteAsFileSize.js"
 import { msAsDuration } from "../logs/msAsDuration.js"
 import { showSourceLocation } from "./showSourceLocation.js"

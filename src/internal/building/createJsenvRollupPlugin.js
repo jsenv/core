@@ -22,7 +22,7 @@ import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateRes
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { infoSign } from "@jsenv/core/src/internal/logs.js"
+import { infoSign } from "@jsenv/core/src/internal/logs/log_style.js"
 
 import {
   formatUseImportMapFromHtml,

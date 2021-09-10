@@ -1,4 +1,4 @@
-import { setANSIColor, ANSI_MAGENTA, ANSI_YELLOW, ANSI_RED, ANSI_GREEN } from "../logs.js"
+import { setANSIColor, ANSI_MAGENTA, ANSI_YELLOW, ANSI_RED, ANSI_GREEN } from "../logs/log_style.js"
 import { msAsDuration } from "../logs/msAsDuration.js"
 
 export const createSummaryLog = (summary) => `

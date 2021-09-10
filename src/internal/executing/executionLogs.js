@@ -7,7 +7,7 @@ import {
   ANSI_RED,
   ANSI_GREY,
   ANSI_GREEN,
-} from "../logs.js"
+} from "../logs/log_style.js"
 import { msAsDuration } from "../logs/msAsDuration.js"
 import { createSummaryDetails } from "./createSummaryLog.js"
 
