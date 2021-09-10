@@ -4,8 +4,6 @@ import { createSupportsColor } from "supports-color"
 const canUseUnicode = isUnicodeSupported()
 const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic
 
-console.log(processSupportsBasicColor)
-
 export const ANSI_RED = "\x1b[31m"
 export const ANSI_GREEN = "\x1b[32m"
 export const ANSI_YELLOW = "\x1b[33m"

@@ -23,14 +23,8 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-
 const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const cssBuildRelativeUrl = getBuildRelativeUrl("style.css")
+const cssBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}style.css`]
 const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
 const cssString = await readFile(cssBuildUrl)
 
