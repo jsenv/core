@@ -1,4 +1,13 @@
-import { magenta, cross, yellow, green, checkmark, grey, red, setANSIColor } from "./ansi.js"
+import {
+  failureSign,
+  okSign,
+  setANSIColor,
+  ANSI_MAGENTA,
+  ANSI_YELLOW,
+  ANSI_RED,
+  ANSI_GREY,
+  ANSI_GREEN,
+} from "../logs.js"
 import { formatDuration } from "./formatDuration.js"
 import { createSummaryDetails } from "./createSummaryLog.js"
 
@@ -50,23 +59,26 @@ runtime: ${runtime}${appendDuration({
 const descriptionFormatters = {
   disconnected: ({ executionNumber, executionCount }) => {
     return setANSIColor(
-      `${cross} execution ${executionNumber} of ${executionCount} disconnected`,
-      magenta,
+      `${failureSign} execution ${executionNumber} of ${executionCount} disconnected`,
+      ANSI_MAGENTA,
     )
   },
   timedout: ({ executionNumber, allocatedMs, executionCount }) => {
     return setANSIColor(
-      `${cross} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms`,
-      yellow,
+      `${failureSign} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms`,
+      ANSI_YELLOW,
     )
   },
   errored: ({ executionNumber, executionCount }) => {
-    return setANSIColor(`${cross} execution ${executionNumber} of ${executionCount} error`, red)
+    return setANSIColor(
+      `${failureSign} execution ${executionNumber} of ${executionCount} error`,
+      ANSI_RED,
+    )
   },
   completed: ({ executionNumber, executionCount }) => {
     return setANSIColor(
-      `${checkmark} execution ${executionNumber} of ${executionCount} completed`,
-      green,
+      `${okSign} execution ${executionNumber} of ${executionCount} completed`,
+      ANSI_GREEN,
     )
   },
 }
@@ -89,9 +101,9 @@ const appendConsole = (consoleCalls) => {
   if (consoleOutputTrimmed === "") return ""
 
   return `
-${setANSIColor(`-------- console --------`, grey)}
+${setANSIColor(`-------- console --------`, ANSI_GREY)}
 ${consoleOutputTrimmed}
-${setANSIColor(`-------------------------`, grey)}`
+${setANSIColor(`-------------------------`, ANSI_GREY)}`
 }
 
 const appendError = (error) => {

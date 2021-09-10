@@ -401,6 +401,9 @@
       "eslint-plugin-import": [
         "./node_modules/eslint-plugin-import/lib/index.js"
       ],
+      "is-unicode-supported": [
+        "./node_modules/is-unicode-supported/index.js"
+      ],
       "istanbul-lib-report/*": [
         "./node_modules/istanbul-lib-report/*"
       ],

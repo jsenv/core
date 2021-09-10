@@ -3,7 +3,7 @@
 // https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/terminal-highlight.js#L50
 // https://github.com/babel/babel/blob/eea156b2cb8deecfcf82d52aa1b71ba4995c7d68/packages/babel-code-frame/src/index.js#L1
 
-import { grey, red, setANSIColor } from "../executing/ansi.js"
+import { setANSIColor, ANSI_GREY, ANSI_RED } from "../logs.js"
 
 export const showSourceLocation = (
   source,
@@ -12,8 +12,8 @@ export const showSourceLocation = (
   let mark = (string) => string
   let aside = (string) => string
   if (color) {
-    mark = (string) => setANSIColor(string, red)
-    aside = (string) => setANSIColor(string, grey)
+    mark = (string) => setANSIColor(string, ANSI_RED)
+    aside = (string) => setANSIColor(string, ANSI_GREY)
   }
 
   const lines = source.split(/\r?\n/)
