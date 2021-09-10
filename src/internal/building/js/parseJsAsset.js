@@ -31,7 +31,9 @@ export const parseJsAsset = async (
   return async ({ precomputeBuildRelativeUrl, registerAssetEmitter }) => {
     let map
     if (sourcemapReference) {
-      const sourcemapString = String(sourcemapReference.target.targetBuildBuffer)
+      const sourcemapString = String(
+        sourcemapReference.target.targetBuildBuffer,
+      )
       map = JSON.parse(sourcemapString)
     }
 
@@ -44,7 +46,10 @@ export const parseJsAsset = async (
     let jsSourceAfterTransformation
     if (mightBeAWorkerScript) {
       const workerScriptUrl = urlToOriginalFileUrl(jsUrl)
-      const workerBundle = await bundleWorker({ workerScriptUrl, workerScriptSourceMap: map })
+      const workerBundle = await bundleWorker({
+        workerScriptUrl,
+        workerScriptSourceMap: map,
+      })
       jsSourceAfterTransformation = workerBundle.code
       map = workerBundle.map
     } else {
@@ -53,7 +58,10 @@ export const parseJsAsset = async (
 
     if (minify) {
       const jsUrlRelativeToImporter = jsTarget.targetIsInline
-        ? urlToRelativeUrl(jsTarget.targetUrl, jsTarget.targetReferences[0].referenceUrl)
+        ? urlToRelativeUrl(
+            jsTarget.targetUrl,
+            jsTarget.targetReferences[0].referenceUrl,
+          )
         : jsTarget.targetRelativeUrl
       const result = await minifyJs(jsString, jsUrlRelativeToImporter, {
         sourceMap: {
@@ -79,7 +87,10 @@ export const parseJsAsset = async (
       )
 
       registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
-        const jsBuildUrl = resolveUrl(jsTarget.targetBuildRelativeUrl, buildDirectoryUrl)
+        const jsBuildUrl = resolveUrl(
+          jsTarget.targetBuildRelativeUrl,
+          buildDirectoryUrl,
+        )
         const mapBuildUrl = resolveUrl(jsSourcemapFilename, jsBuildUrl)
         map.file = urlToFilename(jsBuildUrl)
         if (map.sources) {
@@ -98,7 +109,10 @@ export const parseJsAsset = async (
         }
 
         const mapSource = JSON.stringify(map, null, "  ")
-        const buildRelativeUrl = urlToRelativeUrl(mapBuildUrl, buildDirectoryUrl)
+        const buildRelativeUrl = urlToRelativeUrl(
+          mapBuildUrl,
+          buildDirectoryUrl,
+        )
 
         if (sourcemapReference) {
           sourcemapReference.target.targetBuildRelativeUrl = buildRelativeUrl

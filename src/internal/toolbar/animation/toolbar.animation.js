@@ -25,7 +25,8 @@ const onPreferenceChange = (value = getAnimationPreference()) => {
   }
 }
 
-const getAnimationPreference = () => (animationPreference.has() ? animationPreference.get() : true)
+const getAnimationPreference = () =>
+  animationPreference.has() ? animationPreference.get() : true
 
 const setAnimationPreference = (value) => animationPreference.set(value)
 

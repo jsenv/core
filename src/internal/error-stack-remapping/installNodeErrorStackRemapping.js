@@ -3,7 +3,10 @@ import { require } from "@jsenv/core/src/internal/require.js"
 import { fetchUrl } from "../fetchUrl.js"
 import { installErrorStackRemapping } from "./installErrorStackRemapping.js"
 
-export const installNodeErrorStackRemapping = ({ projectDirectoryUrl, ...options }) => {
+export const installNodeErrorStackRemapping = ({
+  projectDirectoryUrl,
+  ...options
+}) => {
   const { SourceMapConsumer } = require("source-map")
 
   return installErrorStackRemapping({

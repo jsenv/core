@@ -85,7 +85,9 @@ html[data-theme="light"] .tooltip::after {
 html[data-theme="light"] #overflow-menu-button {
   background: #e8eff3;
 }
-html[data-theme="light"] #toolbar[data-overflow-menu-visible] #overflow-menu-button {
+html[data-theme="light"]
+  #toolbar[data-overflow-menu-visible]
+  #overflow-menu-button {
   background: #a5a9ad;
 }
 html[data-theme="light"] #overflow-menu {

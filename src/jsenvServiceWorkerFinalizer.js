@@ -36,4 +36,5 @@ ${code}
 `
 }
 
-const fileNameContainsHash = (fileName) => /-[a-z0-9]{8,}(\..*?)?$/.test(fileName)
+const fileNameContainsHash = (fileName) =>
+  /-[a-z0-9]{8,}(\..*?)?$/.test(fileName)

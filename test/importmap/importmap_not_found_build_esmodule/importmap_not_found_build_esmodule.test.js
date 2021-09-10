@@ -10,7 +10,10 @@ import {
 // import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
@@ -19,7 +22,10 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
 }
 const importMapFileRelativeUrl = "./not-found.importmap"
-const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, jsenvCoreDirectoryUrl)
+const importMapFileUrl = resolveUrl(
+  importMapFileRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 
 try {
   await buildProject({

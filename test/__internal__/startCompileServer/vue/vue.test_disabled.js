@@ -11,7 +11,10 @@ import { jsenvCompilerForVue } from "@jsenv/core/packages/jsenv-vue/main.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const filename = `main.vue`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`

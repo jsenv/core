@@ -44,7 +44,8 @@ export const createExecutionResultLog = (
 ${description} ${summary}`
   }
 
-  const { runtimeName, runtimeVersion, consoleCalls, startMs, endMs, error } = executionResult
+  const { runtimeName, runtimeVersion, consoleCalls, startMs, endMs, error } =
+    executionResult
 
   const runtime = `${runtimeName}/${runtimeVersion}`
   return `

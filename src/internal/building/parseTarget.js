@@ -49,7 +49,10 @@ export const parseTarget = (
             return
           }
 
-          const htmlContainsModuleScript = htmlAstContains(htmlAst, htmlNodeIsScriptModule)
+          const htmlContainsModuleScript = htmlAstContains(
+            htmlAst,
+            htmlNodeIsScriptModule,
+          )
           if (!htmlContainsModuleScript) {
             return
           }
@@ -120,12 +123,16 @@ export const parseTarget = (
 
   if (
     targetContentType === "application/manifest+json" ||
-    target.targetReferences[0].referenceExpectedContentType === "application/manifest+json"
+    target.targetReferences[0].referenceExpectedContentType ===
+      "application/manifest+json"
   ) {
     return parseWebmanifest(target, notifiers, { minify })
   }
 
-  if (targetContentType === "application/javascript" || targetContentType === "text/javascript") {
+  if (
+    targetContentType === "application/javascript" ||
+    targetContentType === "text/javascript"
+  ) {
     return parseJsAsset(target, notifiers, {
       urlToOriginalFileUrl,
       urlToOriginalServerUrl,
@@ -138,7 +145,10 @@ export const parseTarget = (
     return parseSvgAsset(target, notifiers, { minify, minifyHtmlOptions })
   }
 
-  if (targetContentType === "application/json" || targetContentType.endsWith("+json")) {
+  if (
+    targetContentType === "application/json" ||
+    targetContentType.endsWith("+json")
+  ) {
     return parseJsonAsset(target, notifiers, { minify })
   }
 

@@ -1,6 +1,10 @@
 import { createCancellationSource } from "@jsenv/cancellation"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import {
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  urlToBasename,
+} from "@jsenv/filesystem"
 
 import { launchChromium } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -13,15 +17,19 @@ import {
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativePath = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryBasename = urlToBasename(testDirectoryRelativePath)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
 const filename = `${testDirectoryBasename}.html`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-  ...START_COMPILE_SERVER_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-})
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
+  await startCompileServer({
+    ...START_COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+  })
 const { cancel, token: cancellationToken } = createCancellationSource()
 
 let errorCallbackArg

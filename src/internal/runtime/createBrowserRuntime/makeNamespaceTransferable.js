@@ -2,7 +2,9 @@ export const makeNamespaceTransferable = (namespace) => {
   const transferableNamespace = {}
   Object.keys(namespace).forEach((key) => {
     const value = namespace[key]
-    transferableNamespace[key] = isTransferable(value) ? value : hideNonTransferableValue(value)
+    transferableNamespace[key] = isTransferable(value)
+      ? value
+      : hideNonTransferableValue(value)
   })
   return transferableNamespace
 }
@@ -16,7 +18,9 @@ const hideNonTransferableValue = (value) => {
     return `[[HIDDEN: symbol function cannot be transfered]]`
   }
 
-  return `[[HIDDEN: ${value.constructor ? value.constructor.name : "object"} cannot be transfered]]`
+  return `[[HIDDEN: ${
+    value.constructor ? value.constructor.name : "object"
+  } cannot be transfered]]`
 }
 
 // https://stackoverflow.com/a/32673910/2634179
@@ -52,7 +56,8 @@ const isTransferable = (value) => {
         }
         if (constructorName === "Map") {
           return (
-            [...value.keys()].every(isTransferable) && [...value.values()].every(isTransferable)
+            [...value.keys()].every(isTransferable) &&
+            [...value.values()].every(isTransferable)
           )
         }
         if (constructorName === "Set") {

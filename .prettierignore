@@ -3,7 +3,7 @@
 /dist/
 /docs/**/.jsenv/
 /docs/**/node_modules/
-/helpers/chromium/
+/helpers/babel/
 /helpers/regenerator-runtime/
 /node_modules/
 **/s.js

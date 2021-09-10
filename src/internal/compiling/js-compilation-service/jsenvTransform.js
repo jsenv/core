@@ -83,7 +83,10 @@ export const jsenvTransform = async ({
     "transform-import-meta": [
       babelPluginTransformImportMeta,
       {
-        replaceImportMeta: (metaPropertyName, { replaceWithImport, replaceWithValue }) => {
+        replaceImportMeta: (
+          metaPropertyName,
+          { replaceWithImport, replaceWithValue },
+        ) => {
           if (metaPropertyName === "url") {
             if (importMetaFormat === "esmodule") {
               // keep native version
@@ -136,13 +139,21 @@ export const jsenvTransform = async ({
     ],
     ...babelPluginMap,
     ...(babelHelpersInjectionAsImport
-      ? { "transform-babel-helpers-to-import": [transformBabelHelperToImportBabelPlugin] }
+      ? {
+          "transform-babel-helpers-to-import": [
+            transformBabelHelperToImportBabelPlugin,
+          ],
+        }
       : {}),
   }
 
   const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap)
 
-  if (moduleOutFormat === "systemjs" && transformTopLevelAwait && asyncPluginName) {
+  if (
+    moduleOutFormat === "systemjs" &&
+    transformTopLevelAwait &&
+    asyncPluginName
+  ) {
     const babelPluginArrayWithoutAsync = []
     Object.keys(babelPluginMap).forEach((name) => {
       if (name !== asyncPluginName) {
@@ -179,7 +190,10 @@ export const jsenvTransform = async ({
         // https://github.com/babel/babel/blob/eac4c5bc17133c2857f2c94c1a6a8643e3b547a7/packages/babel-core/src/transformation/file/generate.js#L57
         // https://github.com/babel/babel/blob/090c364a90fe73d36a30707fc612ce037bdbbb24/packages/babel-core/src/transformation/file/merge-map.js#L6s
         inputSourceMap: result.map,
-        plugins: [...getMinimalBabelPluginArray(), babelPluginMap[asyncPluginName]],
+        plugins: [
+          ...getMinimalBabelPluginArray(),
+          babelPluginMap[asyncPluginName],
+        ],
       },
     })
 
@@ -192,7 +206,9 @@ export const jsenvTransform = async ({
 
   const babelPluginArray = [
     ...getMinimalBabelPluginArray(),
-    ...Object.keys(babelPluginMap).map((babelPluginName) => babelPluginMap[babelPluginName]),
+    ...Object.keys(babelPluginMap).map(
+      (babelPluginName) => babelPluginMap[babelPluginName],
+    ),
     ...(moduleOutFormat === "systemjs"
       ? [[proposalDynamicImport], [transformModulesSystemJs]]
       : []),

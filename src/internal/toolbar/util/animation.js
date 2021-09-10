@@ -4,7 +4,11 @@ const animateFallback = () => {
   return Promise.resolve()
 }
 
-const animateNative = (node, keyframes, { cancellationToken, ...options } = {}) => {
+const animateNative = (
+  node,
+  keyframes,
+  { cancellationToken, ...options } = {},
+) => {
   const animation = node.animate(keyframes, options)
   if (cancellationToken) {
     cancellationToken.register(() => {
@@ -16,9 +20,12 @@ const animateNative = (node, keyframes, { cancellationToken, ...options } = {}) 
   })
 }
 
-export const canUseAnimation = () => typeof HTMLElement.prototype.animate === "function"
+export const canUseAnimation = () =>
+  typeof HTMLElement.prototype.animate === "function"
 
-export const animateElement = canUseAnimation() ? animateNative : animateFallback
+export const animateElement = canUseAnimation()
+  ? animateNative
+  : animateFallback
 
 export const fadeIn = (node, options) =>
   animateElement(
@@ -81,8 +88,14 @@ export const move = (fromNode, toNode, options) => {
   div.appendChild(copy)
   document.body.appendChild(div)
 
-  const left = toPosition.left - fromPosition.left - (parseInt(fromComputedStyle.paddingLeft) || 0)
-  const top = toPosition.top - fromPosition.top - (parseInt(fromComputedStyle.paddingTop) || 0)
+  const left =
+    toPosition.left -
+    fromPosition.left -
+    (parseInt(fromComputedStyle.paddingLeft) || 0)
+  const top =
+    toPosition.top -
+    fromPosition.top -
+    (parseInt(fromComputedStyle.paddingTop) || 0)
   // define final position of new element and the duration
   const translate = `translate(${left}px, ${top}px)`
 
@@ -135,7 +148,9 @@ export const createToolbarAnimation = () => {
     "footer": { height: "40px" },
     "#toolbar": { visibility: "visible" },
   }
-  const expandTransition = transit(collapsedState, expandedState, { duration: 300 })
+  const expandTransition = transit(collapsedState, expandedState, {
+    duration: 300,
+  })
 
   const expand = () => {
     expandTransition.play()

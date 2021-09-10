@@ -115,11 +115,23 @@ export const startCompileServer = async ({
     outDirectoryName,
   })
 
-  const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
-  const outDirectoryUrl = resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl)
-  const outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
+  const jsenvDirectoryUrl = resolveDirectoryUrl(
+    jsenvDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
+  const outDirectoryUrl = resolveDirectoryUrl(
+    outDirectoryName,
+    jsenvDirectoryUrl,
+  )
+  const outDirectoryRelativeUrl = urlToRelativeUrl(
+    outDirectoryUrl,
+    projectDirectoryUrl,
+  )
   // normalization
-  jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl)
+  jsenvDirectoryRelativeUrl = urlToRelativeUrl(
+    jsenvDirectoryUrl,
+    projectDirectoryUrl,
+  )
 
   const logger = createLogger({ logLevel: compileServerLogLevel })
   const compileServerGroupMap = generateGroupMap({
@@ -139,7 +151,9 @@ export const startCompileServer = async ({
             ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` }
             : {}),
           ...(replaceGlobalObject ? { global: "globalThis" } : {}),
-          ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
+          ...(replaceGlobalFilename
+            ? { __filename: __filenameReplacement }
+            : {}),
           ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
           ...replaceMap,
         },
@@ -255,13 +269,14 @@ export const startCompileServer = async ({
     }),
     ...(transformHtmlSourceFiles
       ? {
-          "service:transform html source file": createTransformHtmlSourceFileService({
-            logger,
-            projectDirectoryUrl,
-            inlineImportMapIntoHTML,
-            jsenvScriptInjection,
-            jsenvToolbarInjection,
-          }),
+          "service:transform html source file":
+            createTransformHtmlSourceFileService({
+              logger,
+              projectDirectoryUrl,
+              inlineImportMapIntoHTML,
+              jsenvScriptInjection,
+              jsenvToolbarInjection,
+            }),
         }
       : {}),
     "service:source file": createSourceFileService({
@@ -307,13 +322,14 @@ export const startCompileServer = async ({
   compileServer.stoppedPromise.then(serverStopCancellationSource.cancel)
 
   if (stopOnPackageVersionChange) {
-    const stopListeningJsenvPackageVersionChange = listenJsenvPackageVersionChange({
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-      onJsenvPackageVersionChange: () => {
-        compileServer.stop(STOP_REASON_PACKAGE_VERSION_CHANGED)
-      },
-    })
+    const stopListeningJsenvPackageVersionChange =
+      listenJsenvPackageVersionChange({
+        projectDirectoryUrl,
+        jsenvDirectoryRelativeUrl,
+        onJsenvPackageVersionChange: () => {
+          compileServer.stop(STOP_REASON_PACKAGE_VERSION_CHANGED)
+        },
+      })
     compileServer.stoppedPromise.then(
       () => {
         stopListeningJsenvPackageVersionChange()
@@ -335,16 +351,31 @@ export const computeOutDirectoryRelativeUrl = ({
   jsenvDirectoryRelativeUrl = ".jsenv",
   outDirectoryName = "out",
 }) => {
-  const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
-  const outDirectoryUrl = resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl)
-  const outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
+  const jsenvDirectoryUrl = resolveDirectoryUrl(
+    jsenvDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
+  const outDirectoryUrl = resolveDirectoryUrl(
+    outDirectoryName,
+    jsenvDirectoryUrl,
+  )
+  const outDirectoryRelativeUrl = urlToRelativeUrl(
+    outDirectoryUrl,
+    projectDirectoryUrl,
+  )
 
   return outDirectoryRelativeUrl
 }
 
-const assertArguments = ({ projectDirectoryUrl, jsenvDirectoryRelativeUrl, outDirectoryName }) => {
+const assertArguments = ({
+  projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
+  outDirectoryName,
+}) => {
   if (typeof projectDirectoryUrl !== "string") {
-    throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
+    throw new TypeError(
+      `projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`,
+    )
   }
 
   if (typeof jsenvDirectoryRelativeUrl !== "string") {
@@ -352,19 +383,27 @@ const assertArguments = ({ projectDirectoryUrl, jsenvDirectoryRelativeUrl, outDi
       `jsenvDirectoryRelativeUrl must be a string. got ${jsenvDirectoryRelativeUrl}`,
     )
   }
-  const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
+  const jsenvDirectoryUrl = resolveDirectoryUrl(
+    jsenvDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
 
   if (!jsenvDirectoryUrl.startsWith(projectDirectoryUrl)) {
     throw new TypeError(
-      createDetailedMessage(`jsenv directory must be inside project directory`, {
-        ["jsenv directory url"]: jsenvDirectoryUrl,
-        ["project directory url"]: projectDirectoryUrl,
-      }),
+      createDetailedMessage(
+        `jsenv directory must be inside project directory`,
+        {
+          ["jsenv directory url"]: jsenvDirectoryUrl,
+          ["project directory url"]: projectDirectoryUrl,
+        },
+      ),
     )
   }
 
   if (typeof outDirectoryName !== "string") {
-    throw new TypeError(`outDirectoryName must be a string. got ${outDirectoryName}`)
+    throw new TypeError(
+      `outDirectoryName must be a string. got ${outDirectoryName}`,
+    )
   }
 }
 
@@ -376,7 +415,9 @@ const setupOutDirectory = async ({
   jsenvDirectoryUrl,
 }) => {
   if (jsenvDirectoryClean) {
-    logger.debug(`Cleaning jsenv directory because jsenvDirectoryClean parameter enabled`)
+    logger.debug(
+      `Cleaning jsenv directory because jsenvDirectoryClean parameter enabled`,
+    )
     await ensureEmptyDirectory(jsenvDirectoryUrl)
   }
   const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
@@ -394,7 +435,10 @@ const setupOutDirectory = async ({
   }
 
   if (previousOutDirectoryMeta !== null) {
-    const outDirectoryChanges = getOutDirectoryChanges(previousOutDirectoryMeta, outDirectoryMeta)
+    const outDirectoryChanges = getOutDirectoryChanges(
+      previousOutDirectoryMeta,
+      outDirectoryMeta,
+    )
 
     if (outDirectoryChanges) {
       if (!jsenvDirectoryClean) {
@@ -495,20 +539,23 @@ const setupServerSentEventsForLivereload = ({
     ...livereloadWatchConfig,
     [jsenvDirectoryRelativeUrl]: false,
   }
-  const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryUrl, {
-    watchDescription,
-    updated: ({ relativeUrl }) => {
-      projectFileModified.notify(relativeUrl)
+  const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
+    projectDirectoryUrl,
+    {
+      watchDescription,
+      updated: ({ relativeUrl }) => {
+        projectFileModified.notify(relativeUrl)
+      },
+      removed: ({ relativeUrl }) => {
+        projectFileRemoved.notify(relativeUrl)
+      },
+      added: ({ relativeUrl }) => {
+        projectFileAdded.notify(relativeUrl)
+      },
+      keepProcessAlive: false,
+      recursive: true,
     },
-    removed: ({ relativeUrl }) => {
-      projectFileRemoved.notify(relativeUrl)
-    },
-    added: ({ relativeUrl }) => {
-      projectFileAdded.notify(relativeUrl)
-    },
-    keepProcessAlive: false,
-    recursive: true,
-  })
+  )
   cancellationToken.register(unregisterDirectoryLifecyle)
 
   const getDependencySet = (mainRelativeUrl) => {
@@ -536,24 +583,30 @@ const setupServerSentEventsForLivereload = ({
     dependencySet.add(mainRelativeUrl)
     trackerMap.set(mainRelativeUrl, dependencySet)
 
-    const unregisterDependencyRequested = projectFileRequested.register((relativeUrl, request) => {
-      if (dependencySet.has(relativeUrl)) {
-        return
-      }
+    const unregisterDependencyRequested = projectFileRequested.register(
+      (relativeUrl, request) => {
+        if (dependencySet.has(relativeUrl)) {
+          return
+        }
 
-      const dependencyReport = reportDependency(relativeUrl, mainRelativeUrl, request)
-      if (dependencyReport.dependency === false) {
-        livereloadLogger.debug(
-          `${relativeUrl} not a dependency of ${mainRelativeUrl} because ${dependencyReport.reason}`,
+        const dependencyReport = reportDependency(
+          relativeUrl,
+          mainRelativeUrl,
+          request,
         )
-        return
-      }
+        if (dependencyReport.dependency === false) {
+          livereloadLogger.debug(
+            `${relativeUrl} not a dependency of ${mainRelativeUrl} because ${dependencyReport.reason}`,
+          )
+          return
+        }
 
-      livereloadLogger.debug(
-        `${relativeUrl} is a dependency of ${mainRelativeUrl} because ${dependencyReport.reason}`,
-      )
-      dependencySet.add(relativeUrl)
-    })
+        livereloadLogger.debug(
+          `${relativeUrl} is a dependency of ${mainRelativeUrl} because ${dependencyReport.reason}`,
+        )
+        dependencySet.add(relativeUrl)
+      },
+    )
     const unregisterMainRemoved = projectFileRemoved.register((relativeUrl) => {
       if (relativeUrl === mainRelativeUrl) {
         unregisterDependencyRequested()
@@ -563,7 +616,10 @@ const setupServerSentEventsForLivereload = ({
     })
   })
 
-  const trackMainAndDependencies = (mainRelativeUrl, { modified, removed, added }) => {
+  const trackMainAndDependencies = (
+    mainRelativeUrl,
+    { modified, removed, added },
+  ) => {
     livereloadLogger.debug(`track ${mainRelativeUrl} and its dependencies`)
 
     const unregisterModified = projectFileModified.register((relativeUrl) => {
@@ -586,7 +642,9 @@ const setupServerSentEventsForLivereload = ({
     })
 
     return () => {
-      livereloadLogger.debug(`stop tracking ${mainRelativeUrl} and its dependencies.`)
+      livereloadLogger.debug(
+        `stop tracking ${mainRelativeUrl} and its dependencies.`,
+      )
       unregisterModified()
       unregisterRemoved()
       unregisterAdded()
@@ -635,7 +693,10 @@ const setupServerSentEventsForLivereload = ({
         // in that case because the importer is a dependency the importee is also a dependency
         // eslint-disable-next-line no-unused-vars
         for (const tracker of trackerMap) {
-          if (tracker[0] === mainRelativeUrl && tracker[1].has(refererRelativeUrl)) {
+          if (
+            tracker[0] === mainRelativeUrl &&
+            tracker[1].has(refererRelativeUrl)
+          ) {
             return {
               dependency: true,
               reason: "referer is a dependency",
@@ -663,7 +724,8 @@ const createSSEForLivereloadService = ({
   const sseRoomLimit = 100
   const getOrCreateSSERoom = (mainFileRelativeUrl) => {
     const cacheEntry = cache.find(
-      (cacheEntryCandidate) => cacheEntryCandidate.mainFileRelativeUrl === mainFileRelativeUrl,
+      (cacheEntryCandidate) =>
+        cacheEntryCandidate.mainFileRelativeUrl === mainFileRelativeUrl,
     )
     if (cacheEntry) {
       return cacheEntry.sseRoom
@@ -729,7 +791,9 @@ const createSSEForLivereloadService = ({
 const urlToOriginalRelativeUrl = (url, outDirectoryRemoteUrl) => {
   if (urlIsInsideOf(url, outDirectoryRemoteUrl)) {
     const afterCompileDirectory = urlToRelativeUrl(url, outDirectoryRemoteUrl)
-    const fileRelativeUrl = afterCompileDirectory.slice(afterCompileDirectory.indexOf("/") + 1)
+    const fileRelativeUrl = afterCompileDirectory.slice(
+      afterCompileDirectory.indexOf("/") + 1,
+    )
     return fileRelativeUrl
   }
   return new URL(url).pathname.slice(1)
@@ -749,7 +813,10 @@ const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {
   }
 }
 
-const createBrowserScriptService = ({ projectDirectoryUrl, outDirectoryRelativeUrl }) => {
+const createBrowserScriptService = ({
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+}) => {
   const sourcemapMainFileRelativeUrl = urlToRelativeUrl(
     sourcemapMainFileInfo.url,
     projectDirectoryUrl,
@@ -760,7 +827,10 @@ const createBrowserScriptService = ({ projectDirectoryUrl, outDirectoryRelativeU
   )
 
   return (request) => {
-    if (request.method === "GET" && request.ressource === "/.jsenv/compile-meta.json") {
+    if (
+      request.method === "GET" &&
+      request.ressource === "/.jsenv/compile-meta.json"
+    ) {
       const body = JSON.stringify({
         outDirectoryRelativeUrl,
         errorStackRemapping: true,
@@ -817,10 +887,16 @@ const createOutJSONFiles = ({
   customCompilers,
 }) => {
   const outJSONFiles = {}
-  const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
+  const outDirectoryUrl = resolveUrl(
+    outDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
 
   const metaOutFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
-  const jsenvCorePackageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
+  const jsenvCorePackageFileUrl = resolveUrl(
+    "./package.json",
+    jsenvCoreDirectoryUrl,
+  )
   const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
   const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
   const outDirectoryMeta = {
@@ -882,13 +958,19 @@ const createOutFilesService = async ({
     await Promise.all(
       Object.keys(outJSONFiles).map(async (name) => {
         const outJSONFile = outJSONFiles[name]
-        await writeFile(outJSONFile.url, JSON.stringify(outJSONFile.data, null, "  "))
+        await writeFile(
+          outJSONFile.url,
+          JSON.stringify(outJSONFile.data, null, "  "),
+        )
         logger.debug(`-> ${outJSONFile.url}`)
       }),
     )
 
     return async (request) => {
-      const requestUrl = resolveUrl(request.ressource.slice(1), projectDirectoryUrl)
+      const requestUrl = resolveUrl(
+        request.ressource.slice(1),
+        projectDirectoryUrl,
+      )
       if (!isOutRootFile(requestUrl)) {
         return null
       }
@@ -900,7 +982,10 @@ const createOutFilesService = async ({
   }
   // serve from memory
   return (request) => {
-    const requestUrl = resolveUrl(request.ressource.slice(1), projectDirectoryUrl)
+    const requestUrl = resolveUrl(
+      request.ressource.slice(1),
+      projectDirectoryUrl,
+    )
     if (!isOutRootFile(requestUrl)) {
       return null
     }
@@ -953,7 +1038,10 @@ const listenJsenvPackageVersionChange = ({
   jsenvDirectoryRelativeUrl,
   onJsenvPackageVersionChange = () => {},
 }) => {
-  const jsenvCoreDirectoryUrl = resolveUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
+  const jsenvCoreDirectoryUrl = resolveUrl(
+    jsenvDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
   const packageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
   const packageFilePath = urlToFileSystemPath(packageFileUrl)
   let packageVersion

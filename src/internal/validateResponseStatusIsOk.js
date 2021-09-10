@@ -2,7 +2,10 @@ import { createDetailedMessage } from "@jsenv/logger"
 import { urlToFileSystemPath } from "@jsenv/filesystem"
 import { urlToContentType } from "@jsenv/server"
 
-export const validateResponseStatusIsOk = async (response, { originalUrl, importer } = {}) => {
+export const validateResponseStatusIsOk = async (
+  response,
+  { originalUrl, importer } = {},
+) => {
   const { status } = response
   const url = originalUrl || response.url
   const urlName = urlNameFromResponse(response)
@@ -36,12 +39,15 @@ export const validateResponseStatusIsOk = async (response, { originalUrl, import
 
   return {
     valid: false,
-    message: createDetailedMessage(`unexpected response status for ${urlName}`, {
-      [urlName]: url,
-      "imported by": importerToLog(importer),
-      "response status": status,
-      "response text": await response.text(),
-    }),
+    message: createDetailedMessage(
+      `unexpected response status for ${urlName}`,
+      {
+        [urlName]: url,
+        "imported by": importerToLog(importer),
+        "response status": status,
+        "response text": await response.text(),
+      },
+    ),
   }
 }
 
@@ -63,7 +69,8 @@ const importerToLog = (importer) => {
 }
 
 const urlNameFromResponse = (response) => {
-  const contentType = response.headers["content-type"] || urlToContentType(response.url)
+  const contentType =
+    response.headers["content-type"] || urlToContentType(response.url)
 
   if (contentType === "application/importmap+json") {
     return "importmap url"

@@ -46,7 +46,10 @@ export const executePlan = async (
   if (coverage) {
     babelPluginMap = {
       ...babelPluginMap,
-      "transform-instrument": [babelPluginInstrument, { projectDirectoryUrl, coverageConfig }],
+      "transform-instrument": [
+        babelPluginInstrument,
+        { projectDirectoryUrl, coverageConfig },
+      ],
     }
   }
 

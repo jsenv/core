@@ -4,7 +4,14 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { processOptionsFromExecArgv } from "./processOptions.js"
 
-const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"]
+const AVAILABLE_DEBUG_MODE = [
+  "none",
+  "inherit",
+  "inspect",
+  "inspect-brk",
+  "debug",
+  "debug-brk",
+]
 
 export const createChildProcessOptions = async ({
   cancellationToken = createCancellationToken(),
@@ -16,7 +23,10 @@ export const createChildProcessOptions = async ({
   debugMode = "inherit",
   debugModeInheritBreak = true,
 } = {}) => {
-  if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
+  if (
+    typeof debugMode === "string" &&
+    AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1
+  ) {
     throw new TypeError(
       createDetailedMessage(`unexpected debug mode.`, {
         ["debug mode"]: debugMode,
@@ -70,7 +80,10 @@ const mutateDebuggingOptions = async (
   }
 
   // replace child debug mode
-  if (parentDebugModeOptionName && parentDebugModeOptionName !== childDebugModeOptionName) {
+  if (
+    parentDebugModeOptionName &&
+    parentDebugModeOptionName !== childDebugModeOptionName
+  ) {
     delete childProcessOptions[parentDebugModeOptionName]
   }
   childProcessOptions[childDebugModeOptionName] = ""
@@ -78,12 +91,16 @@ const mutateDebuggingOptions = async (
   // this is required because vscode does not
   // support assigning a child spawned without a specific port
   const childDebugPortOptionValue =
-    debugPort === 0 ? await findFreePort(processDebugPort + 37, { cancellationToken }) : debugPort
+    debugPort === 0
+      ? await findFreePort(processDebugPort + 37, { cancellationToken })
+      : debugPort
   // replace child debug port
   if (parentDebugPortOptionName) {
     delete childProcessOptions[parentDebugPortOptionName]
   }
-  childProcessOptions[childDebugModeOptionName] = portToArgValue(childDebugPortOptionValue)
+  childProcessOptions[childDebugModeOptionName] = portToArgValue(
+    childDebugPortOptionValue,
+  )
 }
 
 const getChildDebugModeOptionName = ({

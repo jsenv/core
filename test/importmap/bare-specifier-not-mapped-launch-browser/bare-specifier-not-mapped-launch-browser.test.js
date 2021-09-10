@@ -1,12 +1,19 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import {
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  urlToBasename,
+} from "@jsenv/filesystem"
 
 import { launchChromium, launchFirefox, execute } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFilename = `${testDirectoryname}.html`

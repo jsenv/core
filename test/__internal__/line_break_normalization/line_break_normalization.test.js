@@ -6,22 +6,34 @@ import { generateContentHash } from "@jsenv/core/src/internal/building/url-versi
 const stringWithUnixLineBreak = `console.log(42);\n`
 const stringWithWindowsLineBreak = `console.log(42);\r\n`
 {
-  const hashForUnixStringWithoutNormalization = generateContentHash(stringWithUnixLineBreak, {
-    lineBreakNormalization: false,
-    contentType: "application/javascript",
-  })
-  const hashForWindowsStringWithoutNormalization = generateContentHash(stringWithWindowsLineBreak, {
-    lineBreakNormalization: false,
-    contentType: "application/javascript",
-  })
-  const hashForUnixStringWithNormalization = generateContentHash(stringWithUnixLineBreak, {
-    lineBreakNormalization: true,
-    contentType: "application/javascript",
-  })
-  const hashForWindowsStringWithNormalization = generateContentHash(stringWithWindowsLineBreak, {
-    lineBreakNormalization: true,
-    contentType: "application/javascript",
-  })
+  const hashForUnixStringWithoutNormalization = generateContentHash(
+    stringWithUnixLineBreak,
+    {
+      lineBreakNormalization: false,
+      contentType: "application/javascript",
+    },
+  )
+  const hashForWindowsStringWithoutNormalization = generateContentHash(
+    stringWithWindowsLineBreak,
+    {
+      lineBreakNormalization: false,
+      contentType: "application/javascript",
+    },
+  )
+  const hashForUnixStringWithNormalization = generateContentHash(
+    stringWithUnixLineBreak,
+    {
+      lineBreakNormalization: true,
+      contentType: "application/javascript",
+    },
+  )
+  const hashForWindowsStringWithNormalization = generateContentHash(
+    stringWithWindowsLineBreak,
+    {
+      lineBreakNormalization: true,
+      contentType: "application/javascript",
+    },
+  )
 
   const actual = {
     hashForUnixStringWithoutNormalization,
@@ -41,22 +53,34 @@ const stringWithWindowsLineBreak = `console.log(42);\r\n`
 const bufferWithUnixLineBreak = Buffer.from(stringWithUnixLineBreak)
 const bufferWithWindowsLineBreak = Buffer.from(stringWithWindowsLineBreak)
 {
-  const hashForUnixBufferWithoutNormalization = generateContentHash(bufferWithUnixLineBreak, {
-    lineBreakNormalization: false,
-    contentType: "application/javascript",
-  })
-  const hashForWindowsBufferWithoutNormalization = generateContentHash(bufferWithWindowsLineBreak, {
-    lineBreakNormalization: false,
-    contentType: "application/javascript",
-  })
-  const hashForUnixBufferWithNormalization = generateContentHash(bufferWithUnixLineBreak, {
-    lineBreakNormalization: true,
-    contentType: "application/javascript",
-  })
-  const hashForWindowsBufferWithNormalization = generateContentHash(bufferWithWindowsLineBreak, {
-    lineBreakNormalization: true,
-    contentType: "application/javascript",
-  })
+  const hashForUnixBufferWithoutNormalization = generateContentHash(
+    bufferWithUnixLineBreak,
+    {
+      lineBreakNormalization: false,
+      contentType: "application/javascript",
+    },
+  )
+  const hashForWindowsBufferWithoutNormalization = generateContentHash(
+    bufferWithWindowsLineBreak,
+    {
+      lineBreakNormalization: false,
+      contentType: "application/javascript",
+    },
+  )
+  const hashForUnixBufferWithNormalization = generateContentHash(
+    bufferWithUnixLineBreak,
+    {
+      lineBreakNormalization: true,
+      contentType: "application/javascript",
+    },
+  )
+  const hashForWindowsBufferWithNormalization = generateContentHash(
+    bufferWithWindowsLineBreak,
+    {
+      lineBreakNormalization: true,
+      contentType: "application/javascript",
+    },
+  )
 
   const actual = {
     hashForUnixBufferWithoutNormalization,
@@ -76,7 +100,10 @@ const bufferWithWindowsLineBreak = Buffer.from(stringWithWindowsLineBreak)
 // lineBreakNormalization disabled when content type is not textual
 // (for instance an image)
 {
-  const imageBuffer = await readFile(resolveUrl("./image.png", import.meta.url), { as: "buffer" })
+  const imageBuffer = await readFile(
+    resolveUrl("./image.png", import.meta.url),
+    { as: "buffer" },
+  )
   const hashForImageBufferRecognizedAsImage = generateContentHash(imageBuffer, {
     lineBreakNormalization: true,
     contentType: "image/png",

@@ -6,7 +6,9 @@ const getCurrentScriptSrc = () => {
 
   // https://github.com/amiller-gh/currentScript-polyfill
 
-  const scripts = Array.prototype.slice.call(document.getElementsByTagName("script"))
+  const scripts = Array.prototype.slice.call(
+    document.getElementsByTagName("script"),
+  )
 
   const readyScript = scripts.find((script) => {
     return script.readyState === "interactive"
@@ -21,12 +23,17 @@ const getCurrentScriptSrc = () => {
     const stackDetails = /.*at [^(]*\((.*):(.+):(.+)\)$/gi.exec(err.stack)
     const scriptLocation = (stackDetails || [false])[1]
     const line = (stackDetails || [false])[2]
-    const currentLocation = document.location.href.replace(document.location.hash, "")
+    const currentLocation = document.location.href.replace(
+      document.location.hash,
+      "",
+    )
 
     if (scriptLocation === currentLocation) {
       const source = document.documentElement.outerHTML
       const codeRegExp = new RegExp(
-        `(?:[^\\n]+?\\n){0,${line - 2}}[^<]*<script>([\\d\\D]*?)<\\/script>[\\d\\D]*`,
+        `(?:[^\\n]+?\\n){0,${
+          line - 2
+        }}[^<]*<script>([\\d\\D]*?)<\\/script>[\\d\\D]*`,
         "i",
       )
       const code = source.replace(codeRegExp, "$1").trim()

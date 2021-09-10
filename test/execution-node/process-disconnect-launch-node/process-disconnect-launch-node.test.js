@@ -13,15 +13,19 @@ import {
 import { removeAnnoyingLogs } from "@jsenv/core/test/removeAnnoyingLogs.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-  ...START_COMPILE_SERVER_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-})
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
+  await startCompileServer({
+    ...START_COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+  })
 
 const actual = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,

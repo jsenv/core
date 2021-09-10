@@ -1,4 +1,8 @@
-export const parseImportmapAsset = (importmapTarget, notifiers, { minify, importMapToInject }) => {
+export const parseImportmapAsset = (
+  importmapTarget,
+  notifiers,
+  { minify, importMapToInject },
+) => {
   const importmapString = String(importmapTarget.targetBuffer)
 
   return () => {
@@ -8,7 +12,9 @@ export const parseImportmapAsset = (importmapTarget, notifiers, { minify, import
         : valueToReadableJsonString(importMapToInject)
     }
 
-    return minify ? valueToCompactJsonString(JSON.parse(importmapString)) : importmapString
+    return minify
+      ? valueToCompactJsonString(JSON.parse(importmapString))
+      : importmapString
   }
 }
 

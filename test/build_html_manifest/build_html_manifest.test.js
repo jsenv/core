@@ -17,7 +17,10 @@ import {
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
@@ -33,7 +36,10 @@ await buildProject({
   // minify: true,
 })
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 const manifestFileBuildRelativeUrl = "assets/manifest.webmanifest"
 
 // ensure link.href is correct
@@ -50,8 +56,13 @@ const manifestFileBuildRelativeUrl = "assets/manifest.webmanifest"
 
 // ensure manifest build file is as expected
 {
-  const manifestFileBuildUrl = resolveUrl(manifestFileBuildRelativeUrl, buildDirectoryUrl)
-  const manifestAfterBuild = await readFile(manifestFileBuildUrl, { as: "json" })
+  const manifestFileBuildUrl = resolveUrl(
+    manifestFileBuildRelativeUrl,
+    buildDirectoryUrl,
+  )
+  const manifestAfterBuild = await readFile(manifestFileBuildUrl, {
+    as: "json",
+  })
 
   const actual = manifestAfterBuild.icons
   const expected = [
@@ -64,6 +75,9 @@ const manifestFileBuildRelativeUrl = "assets/manifest.webmanifest"
   assert({ actual, expected })
 
   // ensure manifest can find this file
-  const iconUrlForManifestBuild = resolveUrl("pwa.icon-574c1c76.png", manifestFileBuildUrl)
+  const iconUrlForManifestBuild = resolveUrl(
+    "pwa.icon-574c1c76.png",
+    manifestFileBuildUrl,
+  )
   await assertFilePresence(iconUrlForManifestBuild)
 }

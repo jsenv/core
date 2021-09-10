@@ -25,11 +25,17 @@ import { compileIdToBabelPluginMap } from "./jsenvCompilerForJavaScript.js"
 const compileDynamicBuildFile = ({ compileId, originalFileUrl, ...rest }) => {
   const contentType = urlToContentType(originalFileUrl)
 
-  if (contentType !== "application/javascript" && contentType !== "text/javascript") {
+  if (
+    contentType !== "application/javascript" &&
+    contentType !== "text/javascript"
+  ) {
     return null
   }
 
-  if (compileId === COMPILE_ID_BUILD_GLOBAL || compileId === COMPILE_ID_BUILD_COMMONJS) {
+  if (
+    compileId === COMPILE_ID_BUILD_GLOBAL ||
+    compileId === COMPILE_ID_BUILD_COMMONJS
+  ) {
     return handleDynamicBuild({
       compileId,
       originalFileUrl,
@@ -73,7 +79,11 @@ const handleDynamicBuild = ({
   // might want to put this to false while working on jsenv
   // to that cache gets verified
   const isJenvInternalFile =
-    false && urlIsInsideOf(originalFileUrl, resolveUrl("./src/internal/", jsenvCoreDirectoryUrl))
+    false &&
+    urlIsInsideOf(
+      originalFileUrl,
+      resolveUrl("./src/internal/", jsenvCoreDirectoryUrl),
+    )
 
   return {
     writeOnFilesystem: true,
@@ -82,9 +92,14 @@ const handleDynamicBuild = ({
     compileCacheAssetsValidation: !isJenvInternalFile,
     compile: async () => {
       const compileIdForFiles =
-        format === "global" ? COMPILE_ID_BUILD_GLOBAL_FILES : COMPILE_ID_BUILD_COMMONJS_FILES
+        format === "global"
+          ? COMPILE_ID_BUILD_GLOBAL_FILES
+          : COMPILE_ID_BUILD_COMMONJS_FILES
 
-      const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
+      const originalFileRelativeUrl = urlToRelativeUrl(
+        originalFileUrl,
+        projectDirectoryUrl,
+      )
       const buildRelativeUrl =
         format === "commonjs"
           ? `${urlToBasename(originalFileUrl)}.cjs`

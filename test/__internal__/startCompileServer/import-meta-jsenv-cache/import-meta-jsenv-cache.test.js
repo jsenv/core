@@ -16,7 +16,10 @@ import { startCompileServer } from "@jsenv/core/src/internal/compiling/startComp
 
 const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}file.cjs`
 const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
@@ -70,7 +73,9 @@ const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
     }
     const expected = {
       status: 200,
-      lastModified: new Date(await readFileSystemNodeModificationTime(fileBuildUrl)).toUTCString(),
+      lastModified: new Date(
+        await readFileSystemNodeModificationTime(fileBuildUrl),
+      ).toUTCString(),
     }
     assert({ actual, expected })
 
@@ -109,7 +114,9 @@ const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
       sources: ["../../../../../../../file.cjs"],
       sourcesEtag: [bufferToEtag(readFileSync(urlToFileSystemPath(fileUrl)))],
       assets: ["file.cjs.map"],
-      assetsEtag: [bufferToEtag(readFileSync(urlToFileSystemPath(sourcemapFileUrl)))],
+      assetsEtag: [
+        bufferToEtag(readFileSync(urlToFileSystemPath(sourcemapFileUrl))),
+      ],
       createdMs: actual.createdMs,
       lastModifiedMs: actual.lastModifiedMs,
     }

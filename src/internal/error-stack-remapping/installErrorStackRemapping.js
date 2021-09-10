@@ -12,7 +12,9 @@ export const installErrorStackRemapping = ({
     throw new TypeError(`fetchFile must be a function, got ${fetchFile}`)
   }
   if (typeof SourceMapConsumer !== "function") {
-    throw new TypeError(`sourceMapConsumer must be a function, got ${SourceMapConsumer}`)
+    throw new TypeError(
+      `sourceMapConsumer must be a function, got ${SourceMapConsumer}`,
+    )
   }
   if (typeof indent !== "string") {
     throw new TypeError(`indent must be a string, got ${indent}`)
@@ -80,7 +82,10 @@ export const installErrorStackRemapping = ({
     if (onFailure) {
       const remapFailureCallbackArray = errorRemapFailureCallbackMap.get(error)
       if (remapFailureCallbackArray) {
-        errorRemapFailureCallbackMap.set(error, [...remapFailureCallbackArray, onFailure])
+        errorRemapFailureCallbackMap.set(error, [
+          ...remapFailureCallbackArray,
+          onFailure,
+        ])
       } else {
         errorRemapFailureCallbackMap.set(error, [onFailure])
       }

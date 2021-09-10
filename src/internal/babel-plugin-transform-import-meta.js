@@ -5,7 +5,11 @@
 import { require } from "@jsenv/core/src/internal/require.js"
 
 export const babelPluginTransformImportMeta = (api, pluginOptions) => {
-  const { addNamespace, addDefault, addNamed } = require("@babel/helper-module-imports")
+  const {
+    addNamespace,
+    addDefault,
+    addNamed,
+  } = require("@babel/helper-module-imports")
   const { parseExpression } = require("@babel/parser")
 
   const { replaceImportMeta } = pluginOptions
@@ -95,7 +99,11 @@ export const babelPluginTransformImportMeta = (api, pluginOptions) => {
             replaceWithValue: (value) => {
               const valueAst = jsValueToAst(
                 // eslint-disable-next-line no-nested-ternary
-                value === undefined ? "undefined" : value === null ? "null" : JSON.stringify(value),
+                value === undefined
+                  ? "undefined"
+                  : value === null
+                  ? "null"
+                  : JSON.stringify(value),
               )
               metaPropertyPathMap[importMetaPropertyName].forEach((path) => {
                 path.replaceWith(valueAst)

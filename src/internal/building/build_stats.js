@@ -2,11 +2,16 @@ import { resolveUrl, urlToExtension } from "@jsenv/filesystem"
 
 import { targetIsReferencedOnlyByRessourceHint } from "./asset-builder.util.js"
 
-export const createBuildStats = ({ buildFileContents, assetBuilder, buildDuration }) => {
+export const createBuildStats = ({
+  buildFileContents,
+  assetBuilder,
+  buildDuration,
+}) => {
   const projectFileContents = getProjectFileContents(assetBuilder)
   const projectFileSizeInfo = sizeInfoFromFileContents(projectFileContents)
 
-  const { sourceFileContents, sourcemapFileContents } = extractSourcemapFiles(buildFileContents)
+  const { sourceFileContents, sourcemapFileContents } =
+    extractSourcemapFiles(buildFileContents)
   const buildFileSizeInfo = sizeInfoFromFileContents(sourceFileContents)
   const sourcemapFileSizeInfo = sizeInfoFromFileContents(sourcemapFileContents)
 

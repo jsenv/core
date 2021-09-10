@@ -1,14 +1,23 @@
 import { readFileSync } from "fs"
-import { resolveUrl, urlToFileSystemPath, fileSystemPathToUrl } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  urlToFileSystemPath,
+  fileSystemPathToUrl,
+} from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 import { require } from "@jsenv/core/src/internal/require.js"
 
 export const bundleWorker = ({ workerScriptUrl, workerScriptSourceMap }) => {
-  const { code, map } = transformWorkerScript(workerScriptUrl, { workerScriptSourceMap })
+  const { code, map } = transformWorkerScript(workerScriptUrl, {
+    workerScriptSourceMap,
+  })
   return { code, map }
 }
 
-const transformWorkerScript = (scriptUrl, { workerScriptSourceMap, importerUrl }) => {
+const transformWorkerScript = (
+  scriptUrl,
+  { workerScriptSourceMap, importerUrl },
+) => {
   const scriptPath = urlToFileSystemPath(scriptUrl)
   let scriptContent
   try {
@@ -109,7 +118,9 @@ const babelPluginInlineImportScripts = (api) => {
           const isSelf = types.isIdentifier(calleeObject.node, { name: "self" })
           if (isSelf) {
             const propertyPath = calleePath.get("property")
-            if (types.isIdentifier(propertyPath.node, { name: "importScripts" })) {
+            if (
+              types.isIdentifier(propertyPath.node, { name: "importScripts" })
+            ) {
               replaceImportScriptsWithFileContents()
               return
             }

@@ -12,7 +12,10 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}file.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}file.js`

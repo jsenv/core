@@ -6,7 +6,10 @@ export const measureNpmTarball = async () => {
 
   return {
     "npm tarball size": { value: npmTarballInfo.size, unit: "byte" },
-    "npm tarball unpacked size": { value: npmTarballInfo.unpackedSize, unit: "byte" },
+    "npm tarball unpacked size": {
+      value: npmTarballInfo.unpackedSize,
+      unit: "byte",
+    },
     "npm tarball file count": { value: npmTarballInfo.entryCount },
   }
 }

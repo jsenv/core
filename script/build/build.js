@@ -29,7 +29,8 @@ const buildsToGenerate = [
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvCompileProxyFileInfo.jsenvRelativeUrl]: jsenvCompileProxyFileInfo.jsenvBuildRelativeUrl,
+      [jsenvCompileProxyFileInfo.jsenvRelativeUrl]:
+        jsenvCompileProxyFileInfo.jsenvBuildRelativeUrl,
     },
   },
   {
@@ -60,7 +61,8 @@ const buildsToGenerate = [
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvToolbarJsFileInfo.jsenvRelativeUrl]: jsenvToolbarJsFileInfo.jsenvBuildRelativeUrl,
+      [jsenvToolbarJsFileInfo.jsenvRelativeUrl]:
+        jsenvToolbarJsFileInfo.jsenvBuildRelativeUrl,
     },
   },
 ]

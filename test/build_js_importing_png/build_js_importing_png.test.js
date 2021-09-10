@@ -1,5 +1,10 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename, readFile } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  urlToBasename,
+  readFile,
+} from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -12,7 +17,10 @@ import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModu
 import { nodeImportEsModuleBuild } from "@jsenv/core/test/nodeImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
@@ -31,7 +39,10 @@ await buildProject({
 
 {
   const imageUrl = resolveUrl("./jsenv.png", import.meta.url)
-  const imageBuildUrl = resolveUrl("./dist/esmodule/assets/jsenv-25e95a00.png", import.meta.url)
+  const imageBuildUrl = resolveUrl(
+    "./dist/esmodule/assets/jsenv-25e95a00.png",
+    import.meta.url,
+  )
   const actual = await readFile(imageUrl, { as: "buffer" })
   const expected = await readFile(imageBuildUrl, { as: "buffer" })
   assert({ actual, expected })
@@ -44,7 +55,9 @@ await buildProject({
   })
   const actual = namespace
   const expected = {
-    default: String(new URL("./dist/esmodule/assets/jsenv-25e95a00.png", serverOrigin)),
+    default: String(
+      new URL("./dist/esmodule/assets/jsenv-25e95a00.png", serverOrigin),
+    ),
   }
   assert({ actual, expected })
 }
@@ -56,7 +69,9 @@ await buildProject({
   })
   const actual = namespace
   const expected = {
-    default: String(new URL("./dist/esmodule/assets/jsenv-25e95a00.png", import.meta.url)),
+    default: String(
+      new URL("./dist/esmodule/assets/jsenv-25e95a00.png", import.meta.url),
+    ),
   }
   assert({ actual, expected })
 }

@@ -69,7 +69,11 @@ npm install --save-dev @jsenv/core
 3 - Create `execute_test_plan.mjs`
 
 ```js
-import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
+import {
+  executeTestPlan,
+  launchChromiumTab,
+  launchFirefoxTab,
+} from "@jsenv/core"
 
 executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),

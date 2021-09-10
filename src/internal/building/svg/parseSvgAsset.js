@@ -4,11 +4,18 @@ import {
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { collectNodesMutations, htmlNodeToReferenceLocation } from "../parsing.utils.js"
+import {
+  collectNodesMutations,
+  htmlNodeToReferenceLocation,
+} from "../parsing.utils.js"
 import { getTargetAsBase64Url } from "../asset-builder.util.js"
 import { minifyHtml } from "../html/minifyHtml.js"
 
-export const parseSvgAsset = async (svgTarget, notifiers, { minify, minifyHtmlOptions }) => {
+export const parseSvgAsset = async (
+  svgTarget,
+  notifiers,
+  { minify, minifyHtmlOptions },
+) => {
   const svgString = String(svgTarget.targetBuffer)
   const svgAst = await parseSvgString(svgString)
   const htmlRessources = parseHtmlAstRessources(svgAst)
@@ -20,13 +27,19 @@ export const parseSvgAsset = async (svgTarget, notifiers, { minify, minifyHtmlOp
     })
     const svgAfterTransformation = stringifyHtmlAst(svgAst)
     // could also benefit of minification https://github.com/svg/svgo
-    return minify ? minifyHtml(svgAfterTransformation, minifyHtmlOptions) : svgAfterTransformation
+    return minify
+      ? minifyHtml(svgAfterTransformation, minifyHtmlOptions)
+      : svgAfterTransformation
   }
 }
 
 export const collectSvgMutations = ({ images, uses }, notifiers, svgTarget) => {
-  const imagesMutations = collectNodesMutations(images, notifiers, svgTarget, [imageHrefVisitor])
-  const usesMutations = collectNodesMutations(uses, notifiers, svgTarget, [useHrefVisitor])
+  const imagesMutations = collectNodesMutations(images, notifiers, svgTarget, [
+    imageHrefVisitor,
+  ])
+  const usesMutations = collectNodesMutations(uses, notifiers, svgTarget, [
+    useHrefVisitor,
+  ])
   const svgMutations = [...imagesMutations, ...usesMutations]
   return svgMutations
 }
@@ -42,7 +55,10 @@ const imageHrefVisitor = (image, { notifyReferenceFound }) => {
     ...htmlNodeToReferenceLocation(image),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
-    const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter)
+    const hrefNewValue = referenceToUrl(
+      hrefReference,
+      getReferenceUrlRelativeToImporter,
+    )
     hrefAttribute.value = hrefNewValue
   }
 }
@@ -63,7 +79,10 @@ const useHrefVisitor = (use, { notifyReferenceFound }) => {
     ...htmlNodeToReferenceLocation(use),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
-    const hrefNewValue = referenceToUrl(hrefReference, getReferenceUrlRelativeToImporter)
+    const hrefNewValue = referenceToUrl(
+      hrefReference,
+      getReferenceUrlRelativeToImporter,
+    )
     hrefAttribute.value = `${hrefNewValue}${hash}`
   }
 }

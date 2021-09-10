@@ -23,7 +23,8 @@ export const ANSI_GREY = ansiStyles.grey
 export const ANSI_RESET = "\x1b[0m"
 
 export const setANSIColor = processSupportsBasicColor
-  ? (text, ansiColor) => `\x1b[${ansiColor.open}m${text}\x1b[${ansiColor.close}m`
+  ? (text, ansiColor) =>
+      `\x1b[${ansiColor.open}m${text}\x1b[${ansiColor.close}m`
   : (text) => text
 
 export const commandSignDefault = canUseUnicode ? `❯` : `>`

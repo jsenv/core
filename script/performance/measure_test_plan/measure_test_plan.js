@@ -7,7 +7,10 @@ import {
 } from "@jsenv/performance-impact"
 
 export const measureTestPlan = async ({ iterations = 5 } = {}) => {
-  const childProcessFileUrl = new URL("./child_process_measuring_test_plan.js", import.meta.url)
+  const childProcessFileUrl = new URL(
+    "./child_process_measuring_test_plan.js",
+    import.meta.url,
+  )
   const childProcessFilePath = fileURLToPath(childProcessFileUrl)
 
   const metrics = await measurePerformanceMultipleTimes(
@@ -15,18 +18,24 @@ export const measureTestPlan = async ({ iterations = 5 } = {}) => {
       const childProcess = fork(childProcessFilePath, {
         execArgv: ["--expose-gc"],
       })
-      const { heapUsed, msEllapsed, fileSystemReadOperationCount, fileSystemWriteOperationCount } =
-        await new Promise((resolve) => {
-          childProcess.on("message", (message) => {
-            resolve(message)
-          })
+      const {
+        heapUsed,
+        msEllapsed,
+        fileSystemReadOperationCount,
+        fileSystemWriteOperationCount,
+      } = await new Promise((resolve) => {
+        childProcess.on("message", (message) => {
+          resolve(message)
         })
+      })
 
       return {
         "test plan duration": { value: msEllapsed, unit: "ms" },
         "test plan memory heap used": { value: heapUsed, unit: "byte" },
         "number of fs read operation": { value: fileSystemReadOperationCount },
-        "number of fs write operation": { value: fileSystemWriteOperationCount },
+        "number of fs write operation": {
+          value: fileSystemWriteOperationCount,
+        },
       }
     },
     iterations,

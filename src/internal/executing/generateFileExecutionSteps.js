@@ -10,11 +10,14 @@ export const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {
 
     if (typeof stepConfig !== "object") {
       throw new TypeError(
-        createDetailedMessage(`found unexpected value in plan, they must be object.`, {
-          ["file relative path"]: fileRelativeUrl,
-          ["execution name"]: executionName,
-          ["value"]: stepConfig,
-        }),
+        createDetailedMessage(
+          `found unexpected value in plan, they must be object.`,
+          {
+            ["file relative path"]: fileRelativeUrl,
+            ["execution name"]: executionName,
+            ["value"]: stepConfig,
+          },
+        ),
       )
     }
 

@@ -12,7 +12,10 @@ import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `style.css`
@@ -34,7 +37,10 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   return buildRelativeUrl
 }
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 const cssBuildRelativeUrl = getBuildRelativeUrl("style.css")
 const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
 const cssString = await readFile(cssBuildUrl)

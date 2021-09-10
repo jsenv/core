@@ -1,5 +1,10 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename, readFile } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  urlToBasename,
+  readFile,
+} from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -11,7 +16,10 @@ import {
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
@@ -32,7 +40,10 @@ await buildProject({
 
 // ensure src is properly inlined
 {
-  const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+  const buildDirectoryUrl = resolveUrl(
+    buildDirectoryRelativeUrl,
+    jsenvCoreDirectoryUrl,
+  )
   const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
   const htmlString = await readFile(htmlBuildUrl)
   const imgBuffer = await readFile(imgFileUrl, { as: "buffer" })

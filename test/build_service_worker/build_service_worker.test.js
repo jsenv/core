@@ -13,7 +13,10 @@ import { require } from "@jsenv/core/src/internal/require.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
@@ -37,7 +40,10 @@ await buildProject({
 
 if (process.platform !== "win32") {
   // hash differ because of line endings
-  const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+  const buildDirectoryUrl = resolveUrl(
+    buildDirectoryRelativeUrl,
+    jsenvCoreDirectoryUrl,
+  )
   const serviceWorkerBuildUrl = resolveUrl("sw.cjs", buildDirectoryUrl)
   global.self = {}
   // eslint-disable-next-line import/no-dynamic-require

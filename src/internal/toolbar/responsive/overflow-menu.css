@@ -43,7 +43,8 @@
   background: #030713;
 }
 
-#toolbar[data-overflow-menu-enabled][data-overflow-menu-visible] #toolbar-wrapper {
+#toolbar[data-overflow-menu-enabled][data-overflow-menu-visible]
+  #toolbar-wrapper {
   visibility: hidden; /* disable keyboard navigation */
 }
 

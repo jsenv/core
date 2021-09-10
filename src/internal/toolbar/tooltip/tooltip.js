@@ -30,7 +30,9 @@ export const removeAutoShowTooltip = (element) => {
 }
 
 export const hideAllTooltip = () => {
-  const elementsWithTooltip = Array.from(document.querySelectorAll("[data-tooltip-visible]"))
+  const elementsWithTooltip = Array.from(
+    document.querySelectorAll("[data-tooltip-visible]"),
+  )
   elementsWithTooltip.forEach((elementWithTooltip) => {
     hideTooltip(elementWithTooltip)
   })

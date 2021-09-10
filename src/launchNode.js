@@ -47,13 +47,19 @@ export const launchNode = async ({
   remap = true,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
-    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
+    throw new TypeError(
+      `projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`,
+    )
   }
   if (typeof compileServerOrigin !== "string") {
-    throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
+    throw new TypeError(
+      `compileServerOrigin must be a string, got ${compileServerOrigin}`,
+    )
   }
   if (typeof outDirectoryRelativeUrl !== "string") {
-    throw new TypeError(`outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`)
+    throw new TypeError(
+      `outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`,
+    )
   }
 
   env = {
@@ -84,7 +90,9 @@ export const launchNode = async ({
     // which are testing that coverage can be collected for tests
     // this is possible because we overriding the child process NODE_V8_COVERAGE
     else {
-      const NODE_V8_COVERAGE = await getNodeV8CoverageDir({ projectDirectoryUrl })
+      const NODE_V8_COVERAGE = await getNodeV8CoverageDir({
+        projectDirectoryUrl,
+      })
       env.NODE_V8_COVERAGE = NODE_V8_COVERAGE
 
       // the v8 coverage directory is available once the child process is disconnected
@@ -115,7 +123,10 @@ export const launchNode = async ({
     }
   }
 
-  commandLineOptions = ["--experimental-import-meta-resolve", ...commandLineOptions]
+  commandLineOptions = [
+    "--experimental-import-meta-resolve",
+    ...commandLineOptions,
+  ]
 
   const logLevel = loggerToLogLevel(logger)
   const controllableNodeProcess = await createControllableNodeProcess({
@@ -153,10 +164,11 @@ export const launchNode = async ({
       remap,
     }
 
-    let executionResult = await controllableNodeProcess.requestActionOnChildProcess({
-      actionType: "execute-using-dynamic-import-fallback-on-systemjs",
-      actionParams: executeParams,
-    })
+    let executionResult =
+      await controllableNodeProcess.requestActionOnChildProcess({
+        actionType: "execute-using-dynamic-import-fallback-on-systemjs",
+        actionParams: executeParams,
+      })
 
     executionResult = transformExecutionResult(executionResult, {
       compileServerOrigin,
@@ -200,7 +212,10 @@ const ensureV8CoverageDirClean = async (fn, NODE_V8_COVERAGE) => {
 }
 
 const getNodeV8CoverageDir = async ({ projectDirectoryUrl }) => {
-  const v8CoverageDirectory = resolveUrl(`./coverage-v8/${cuid()}`, projectDirectoryUrl)
+  const v8CoverageDirectory = resolveUrl(
+    `./coverage-v8/${cuid()}`,
+    projectDirectoryUrl,
+  )
   await writeDirectory(v8CoverageDirectory, { allowUseless: true })
   return urlToFileSystemPath(v8CoverageDirectory)
 }
@@ -214,7 +229,10 @@ const transformExecutionResult = (
   if (status === "errored") {
     const { exceptionSource, ...rest } = executionResult
     const error = evalSource(exceptionSource)
-    const errorTransformed = transformError(error, { compileServerOrigin, projectDirectoryUrl })
+    const errorTransformed = transformError(error, {
+      compileServerOrigin,
+      projectDirectoryUrl,
+    })
     return {
       status,
       error: errorTransformed,
@@ -225,7 +243,10 @@ const transformExecutionResult = (
   return executionResult
 }
 
-const transformError = (error, { compileServerOrigin, projectDirectoryUrl }) => {
+const transformError = (
+  error,
+  { compileServerOrigin, projectDirectoryUrl },
+) => {
   if (!error) {
     return error
   }
@@ -242,8 +263,14 @@ const transformError = (error, { compileServerOrigin, projectDirectoryUrl }) => 
   //   `(${escapeRegexpSpecialCharacters(`${compileServerOrigin}/`)}[^\\s]+)`,
   //   "g",
   // )
-  error.message = error.message.replace(compileServerOriginRegexp, projectDirectoryUrl)
-  error.stack = error.stack.replace(compileServerOriginRegexp, projectDirectoryUrl)
+  error.message = error.message.replace(
+    compileServerOriginRegexp,
+    projectDirectoryUrl,
+  )
+  error.stack = error.stack.replace(
+    compileServerOriginRegexp,
+    projectDirectoryUrl,
+  )
   // const projectDirectoryPath = urlToFileSystemPath(projectDirectoryUrl)
   // const projectDirectoryPathRegexp = new RegExp(
   //   `(?<!file:\/\/)${escapeRegexpSpecialCharacters(projectDirectoryPath)}`,

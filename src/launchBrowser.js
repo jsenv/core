@@ -1,7 +1,10 @@
 /* eslint-disable import/max-dependencies */
 // https://github.com/microsoft/playwright/blob/master/docs/api.md
 
-import { createCancellationToken, createStoppableOperation } from "@jsenv/cancellation"
+import {
+  createCancellationToken,
+  createStoppableOperation,
+} from "@jsenv/cancellation"
 import { teardownSignal } from "@jsenv/node-signals"
 
 import { trackRessources } from "./internal/trackRessources.js"
@@ -37,7 +40,12 @@ export const launchChromium = async ({
 }) => {
   const ressourceTracker = trackRessources()
   const sharingToken = share
-    ? chromiumSharing.getSharingToken({ chromiumExecutablePath, headless, debug, debugPort })
+    ? chromiumSharing.getSharingToken({
+        chromiumExecutablePath,
+        headless,
+        debug,
+        debugPort,
+      })
     : chromiumSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
@@ -276,10 +284,12 @@ const launchBrowser = async (
     cancellationToken,
     start: async () => {
       if (stopOnExit) {
-        const unregisterProcessTeardown = teardownSignal.addCallback((reason) => {
-          unregisterProcessTeardown()
-          launchOperation.stop(`process ${reason}`)
-        })
+        const unregisterProcessTeardown = teardownSignal.addCallback(
+          (reason) => {
+            unregisterProcessTeardown()
+            launchOperation.stop(`process ${reason}`)
+          },
+        )
         ressourceTracker.registerCleanupCallback(unregisterProcessTeardown)
         cancellationToken.register(unregisterProcessTeardown)
       }

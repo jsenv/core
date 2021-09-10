@@ -13,7 +13,13 @@
       <div id="toolbar-wrapper">
         <section id="file-list-link" data-responsive-toolbar-element>
           <a class="toolbar-icon-wrapper" href="">
-            <svg id="fileIconSvg" class="iconToolbar" viewBox="0 0 24 24" width="35" height="35">
+            <svg
+              id="fileIconSvg"
+              class="iconToolbar"
+              viewBox="0 0 24 24"
+              width="35"
+              height="35"
+            >
               <path d="M0 0h24v24H0V0z" fill="none" />
               <path
                 d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"
@@ -23,7 +29,14 @@
         </section>
 
         <section id="file">
-          <input type="text" id="file-input" value="" dir="rtl" tabindex="-1" readonly />
+          <input
+            type="text"
+            id="file-input"
+            value=""
+            dir="rtl"
+            tabindex="-1"
+            readonly
+          />
         </section>
 
         <section id="execution-indicator">
@@ -34,7 +47,9 @@
             <div class="tooltip">Executing...</div>
             <button>
               <svg id="loader-icon" data-animate>
-                <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
+                <use
+                  xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"
+                ></use>
               </svg>
             </button>
           </div>
@@ -117,7 +132,9 @@
               <div class="tooltipAction">
                 <a href="javascript:void(0);">
                   <svg id="powerIconSvg" class="tooltipIcon">
-                    <use xlink:href="./eventsource/toolbar-power-icon.svg#toolbar-power-icon"></use>
+                    <use
+                      xlink:href="./eventsource/toolbar-power-icon.svg#toolbar-power-icon"
+                    ></use>
                   </svg>
                   retry
                 </a>
@@ -125,7 +142,13 @@
             </div>
             <button>
               <svg>
-                <circle class="eventsource-circle" data-variant="failed" cx="20" cy="20" r="5" />
+                <circle
+                  class="eventsource-circle"
+                  data-variant="failed"
+                  cx="20"
+                  cy="20"
+                  r="5"
+                />
               </svg>
             </button>
           </div>
@@ -133,7 +156,8 @@
             <div class="tooltip">
               Connected to server
               <br />
-              Livereload: <span data-when="livereload:on" style="color: green">ON</span
+              Livereload:
+              <span data-when="livereload:on" style="color: green">ON</span
               ><span data-when="livereload:off" style="color: grey">OFF</span>
               <br />
               Changes:
@@ -147,24 +171,43 @@
               ><span data-when="changes:no">none</span>
               <div data-when="changes:yes">
                 <br />
-                <a class="eventsource-reload-link" style="color: inherit" href="javascript:void(0);"
+                <a
+                  class="eventsource-reload-link"
+                  style="color: inherit"
+                  href="javascript:void(0);"
                   >reload</a
                 >
               </div>
             </div>
             <button>
               <div data-when="livereload:on">
-                <svg class="event-source-livereload iconToolbar" data-variant="enabled">
-                  <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
+                <svg
+                  class="event-source-livereload iconToolbar"
+                  data-variant="enabled"
+                >
+                  <use
+                    xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"
+                  ></use>
                 </svg>
               </div>
               <div data-when="changes:yes">
-                <svg class="event-source-livereload iconToolbar" data-variant="disabled">
-                  <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
+                <svg
+                  class="event-source-livereload iconToolbar"
+                  data-variant="disabled"
+                >
+                  <use
+                    xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"
+                  ></use>
                 </svg>
               </div>
               <svg class="event-source-icon">
-                <circle class="eventsource-circle" data-variant="connected" cx="20" cy="20" r="5" />
+                <circle
+                  class="eventsource-circle"
+                  data-variant="connected"
+                  cx="20"
+                  cy="20"
+                  r="5"
+                />
               </svg>
             </button>
           </div>
@@ -175,7 +218,9 @@
               <div class="tooltipAction">
                 <a href="javascript:void(0);">
                   <svg id="powerIconSvg" class="tooltipIcon">
-                    <use xlink:href="./eventsource/toolbar-power-icon.svg#toolbar-power-icon"></use>
+                    <use
+                      xlink:href="./eventsource/toolbar-power-icon.svg#toolbar-power-icon"
+                    ></use>
                   </svg>
                   connect
                 </a>
@@ -183,7 +228,13 @@
             </div>
             <button>
               <svg>
-                <circle class="eventsource-circle" data-variant="off" cx="20" cy="20" r="5" />
+                <circle
+                  class="eventsource-circle"
+                  data-variant="off"
+                  cx="20"
+                  cy="20"
+                  r="5"
+                />
               </svg>
             </button>
           </div>
@@ -194,11 +245,15 @@
             <div id="settings-box-header">
               <button id="button-close-settings">
                 <svg id="crossIconSvg" class="" width="18px" height="18px">
-                  <use xlink:href="./toolbar-cross-icon.svg#toolbar-cross-icon"></use>
+                  <use
+                    xlink:href="./toolbar-cross-icon.svg#toolbar-cross-icon"
+                  ></use>
                 </svg>
               </button>
               <svg class="settings-icon" width="35px" height="35px">
-                <use xlink:href="./settings/toolbar-settings-icon.svg#toolbar-settings-icon"></use>
+                <use
+                  xlink:href="./settings/toolbar-settings-icon.svg#toolbar-settings-icon"
+                ></use>
               </svg>
               <h3>Settings</h3>
             </div>
@@ -207,7 +262,9 @@
                 <div class="settings-box-item">
                   <div class="category-title">
                     <svg width="20px" height="20px">
-                      <use xlink:href="./toolbar-notif-icon.svg#toolbar-notif-icon"></use>
+                      <use
+                        xlink:href="./toolbar-notif-icon.svg#toolbar-notif-icon"
+                      ></use>
                     </svg>
                     Notifications
                   </div>
@@ -225,7 +282,9 @@
                 <div class="settings-box-item settings-livereload">
                   <div class="category-title">
                     <svg width="20px" height="20px">
-                      <use xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"></use>
+                      <use
+                        xlink:href="./toolbar-loading-icon.svg#toolbar-loading-icon"
+                      ></use>
                     </svg>
                     <span>Livereload</span>
                   </div>
@@ -243,7 +302,9 @@
                 <div class="settings-box-item">
                   <div class="category-title">
                     <svg width="20px" height="20px">
-                      <use xlink:href="./animation/toolbar-movie-icon.svg#toolbar-movie-icon"></use>
+                      <use
+                        xlink:href="./animation/toolbar-movie-icon.svg#toolbar-movie-icon"
+                      ></use>
                     </svg>
                     Animations
                   </div>
@@ -254,12 +315,16 @@
                       <div class="square"></div>
                     </div>
                   </label>
-                  <div class="category-subtitle">Play toolbar animations and transitions.</div>
+                  <div class="category-subtitle">
+                    Play toolbar animations and transitions.
+                  </div>
                 </div>
                 <div class="settings-box-item">
                   <div class="category-title">
                     <svg width="20px" height="20px" id="paletteIconSvg">
-                      <use xlink:href="./theme/toolbar-palette-icon.svg#toolbar-palette-icon"></use>
+                      <use
+                        xlink:href="./theme/toolbar-palette-icon.svg#toolbar-palette-icon"
+                      ></use>
                     </svg>
                     Dark mode
                   </div>
@@ -284,17 +349,25 @@
                   <div class="category-subtitle">
                     <div data-when="browserSupport:no">
                       No browser support.
-                      <a class="no_support_read_more_link" href="javascript:void(0);">Read more</a>
+                      <a
+                        class="no_support_read_more_link"
+                        href="javascript:void(0);"
+                        >Read more</a
+                      >
                     </div>
                     <div data-when="browserSupport:partial">
                       Excellent browser support <span class="emoji">❤️</span>.
-                      <a class="partial_support_read_more_link" href="javascript:void(0);"
+                      <a
+                        class="partial_support_read_more_link"
+                        href="javascript:void(0);"
                         >Read more</a
                       >
                     </div>
                     <div data-when="browserSupport:full">
                       Perfect browser support <span class="emoji">❤️</span>.
-                      <a class="full_support_read_more_link" href="javascript:void(0);"
+                      <a
+                        class="full_support_read_more_link"
+                        href="javascript:void(0);"
                         >Read more</a
                       >
                     </div>
@@ -308,12 +381,19 @@
                     Files compilation
                   </div>
                   <div class="category-subtitle">
-                    <div data-when="filesCompilation:no">Files shown are source files.</div>
+                    <div data-when="filesCompilation:no">
+                      Files shown are source files.
+                    </div>
                     <div data-when="filesCompilation:html_only">
                       Files shown are source files, except html.
                     </div>
-                    <div data-when="filesCompilation:yes">Files shown are compiled.</div>
-                    <a data-when="compiled:yes" class="go_to_source_link" href="javascript:void(0);"
+                    <div data-when="filesCompilation:yes">
+                      Files shown are compiled.
+                    </div>
+                    <a
+                      data-when="compiled:yes"
+                      class="go_to_source_link"
+                      href="javascript:void(0);"
                       >Switch to source files</a
                     >
                     <a
@@ -328,8 +408,15 @@
             </div>
           </div>
           <button id="settings-button" class="toolbar-icon-wrapper">
-            <svg class="settings-icon iconToolbar" class="iconToolbar" width="35px" height="35px">
-              <use xlink:href="./settings/toolbar-settings-icon.svg#toolbar-settings-icon"></use>
+            <svg
+              class="settings-icon iconToolbar"
+              class="iconToolbar"
+              width="35px"
+              height="35px"
+            >
+              <use
+                xlink:href="./settings/toolbar-settings-icon.svg#toolbar-settings-icon"
+              ></use>
             </svg>
           </button>
         </section>
@@ -337,8 +424,15 @@
         <section id="close" data-responsive-toolbar-element>
           <button id="button-close-toolbar">
             <div class="toolbar-icon-wrapper">
-              <svg id="crossIconSvg" class="iconToolbar" width="35px" height="35px">
-                <use xlink:href="./toolbar-cross-icon.svg#toolbar-cross-icon"></use>
+              <svg
+                id="crossIconSvg"
+                class="iconToolbar"
+                width="35px"
+                height="35px"
+              >
+                <use
+                  xlink:href="./toolbar-cross-icon.svg#toolbar-cross-icon"
+                ></use>
               </svg>
             </div>
           </button>
@@ -352,7 +446,9 @@
       <div id="overflow-menu-button">
         <button class="toolbar-icon-wrapper">
           <svg id="dotsIconSvg" class="iconToolbar" width="35px" height="35px">
-            <use xlink:href="./responsive/toolbar-dots-icon.svg#toolbar-dots-icon"></use>
+            <use
+              xlink:href="./responsive/toolbar-dots-icon.svg#toolbar-dots-icon"
+            ></use>
           </svg>
         </button>
       </div>

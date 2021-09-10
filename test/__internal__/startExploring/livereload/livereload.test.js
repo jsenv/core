@@ -9,28 +9,37 @@ import {
 
 import { startExploring } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { openBrowserPage, getHtmlExecutionResult } from "@jsenv/core/test/openBrowserPage.js"
+import {
+  openBrowserPage,
+  getHtmlExecutionResult,
+} from "@jsenv/core/test/openBrowserPage.js"
 import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLORING.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.main.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const filePath = urlToFileSystemPath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
+const filePath = urlToFileSystemPath(
+  resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl),
+)
 
 const exploringServer = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   livereloading: true,
 })
-const { browser, page, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
-  {
-    // headless: false,
-  },
-)
+const { browser, page, pageLogs, pageErrors, executionResult } =
+  await openBrowserPage(
+    `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
+    {
+      // headless: false,
+    },
+  )
 {
   const actual = { pageLogs, pageErrors, executionResult }
   const expected = {
@@ -57,7 +66,9 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
   writeFileSystemNodeModificationTime(filePath, Date.now())
   await navigationPromise
   const afterReloadExecutionResult = await getHtmlExecutionResult(page)
-  const actual = afterReloadExecutionResult.fileExecutionResultMap["./livereload.main.js"].namespace
+  const actual =
+    afterReloadExecutionResult.fileExecutionResultMap["./livereload.main.js"]
+      .namespace
   const expected = {
     default: 43,
   }
@@ -71,7 +82,9 @@ const { browser, page, pageLogs, pageErrors, executionResult } = await openBrows
   writeFileSystemNodeModificationTime(filePath, Date.now())
   await navigationPromise
   const afterReloadExecutionResult = await getHtmlExecutionResult(page)
-  const actual = afterReloadExecutionResult.fileExecutionResultMap["./livereload.main.js"].namespace
+  const actual =
+    afterReloadExecutionResult.fileExecutionResultMap["./livereload.main.js"]
+      .namespace
   const expected = {
     default: 44,
   }

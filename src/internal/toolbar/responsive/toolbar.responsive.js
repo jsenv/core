@@ -1,4 +1,8 @@
-import { forceHideElement, removeForceHideElement, deactivateToolbarSection } from "../util/dom.js"
+import {
+  forceHideElement,
+  removeForceHideElement,
+  deactivateToolbarSection,
+} from "../util/dom.js"
 import { createHorizontalBreakpoint } from "../util/responsive.js"
 import { hideTooltip } from "../tooltip/tooltip.js"
 
@@ -15,7 +19,8 @@ export const makeToolbarResponsive = () => {
   overflowMenuBreakpoint.changed.listen(handleOverflowMenuBreakpoint)
 
   // overflow menu
-  document.querySelector("#overflow-menu-button").onclick = () => toggleOverflowMenu()
+  document.querySelector("#overflow-menu-button").onclick = () =>
+    toggleOverflowMenu()
 }
 
 const responsiveToolbar = (overflowMenuBreakpoint) => {
@@ -36,7 +41,9 @@ let moves = []
 
 const enableOverflow = () => {
   // move elements from toolbar to overflow menu
-  const responsiveToolbarElements = document.querySelectorAll("[data-responsive-toolbar-element]")
+  const responsiveToolbarElements = document.querySelectorAll(
+    "[data-responsive-toolbar-element]",
+  )
   const overflowMenu = document.querySelector("#overflow-menu")
 
   // keep a placeholder element to know where to move them back
@@ -49,7 +56,9 @@ const enableOverflow = () => {
     return { element, placeholder }
   })
 
-  document.querySelector("#toolbar").setAttribute("data-overflow-menu-enabled", "")
+  document
+    .querySelector("#toolbar")
+    .setAttribute("data-overflow-menu-enabled", "")
   removeForceHideElement(document.querySelector("#overflow-menu-button"))
 }
 
@@ -62,7 +71,9 @@ const disableOverflow = () => {
   })
   moves = []
 
-  document.querySelector("#toolbar").removeAttribute("data-overflow-menu-enabled")
+  document
+    .querySelector("#toolbar")
+    .removeAttribute("data-overflow-menu-enabled")
   forceHideElement(document.querySelector("#overflow-menu-button"))
 }
 

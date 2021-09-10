@@ -3,7 +3,9 @@ import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compiling/compileH
 export const collectNodesMutations = (nodes, notifiers, target, candidates) => {
   const mutations = []
   nodes.forEach((node) => {
-    mutations.push(...collectNodeMutations(node, notifiers, target, nodes, candidates))
+    mutations.push(
+      ...collectNodeMutations(node, notifiers, target, nodes, candidates),
+    )
   })
   return mutations
 }

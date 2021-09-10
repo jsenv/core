@@ -28,7 +28,10 @@ export const createBuildFileContents = ({ rollupBuild, buildDirectoryUrl }) => {
       return
     }
 
-    const sourcemapBuildUrl = resolveUrl(sourcemapBuildRelativeUrl, buildDirectoryUrl)
+    const sourcemapBuildUrl = resolveUrl(
+      sourcemapBuildRelativeUrl,
+      buildDirectoryUrl,
+    )
     const fileSourcemapString = JSON.stringify(map, null, "  ")
     buildFileContents[sourcemapBuildRelativeUrl] = fileSourcemapString
 

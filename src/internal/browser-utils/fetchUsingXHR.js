@@ -82,7 +82,8 @@ export const fetchUsingXHR = async (
   await headersPromise
 
   // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
-  const responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"]
+  const responseUrl =
+    "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"]
   let responseStatus = xhr.status
   const responseStatusText = xhr.statusText
   const responseHeaders = getHeadersFromXHR(xhr)
@@ -337,7 +338,9 @@ const isArrayBufferView =
     ]
 
     return (value) => {
-      return value && viewClasses.includes(Object.prototype.toString.call(value))
+      return (
+        value && viewClasses.includes(Object.prototype.toString.call(value))
+      )
     }
   })()
 

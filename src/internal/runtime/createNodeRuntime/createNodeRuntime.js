@@ -13,7 +13,9 @@ export const createNodeRuntime = async ({
   canUseNativeModuleSystem,
 }) => {
   const outDirectoryServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
-  const groupMapServerUrl = String(new URL("groupMap.json", outDirectoryServerUrl))
+  const groupMapServerUrl = String(
+    new URL("groupMap.json", outDirectoryServerUrl),
+  )
   const envFileServerUrl = String(new URL("env.json", outDirectoryServerUrl))
   const [groupMap, envJson] = await Promise.all([
     importJson(groupMapServerUrl),
@@ -56,7 +58,10 @@ const importJson = async (url) => {
   return object
 }
 
-const nodeRuntimeSupportsAllFeatures = async ({ groupInfo, importDefaultExtension }) => {
+const nodeRuntimeSupportsAllFeatures = async ({
+  groupInfo,
+  importDefaultExtension,
+}) => {
   // node native resolution will not auto add extension
   if (importDefaultExtension) {
     return false
@@ -91,7 +96,9 @@ const countRequiredBabelPlugins = (groupInfo) => {
   // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
   // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
   // "transform-instrument" becomes non mandatory
-  const transformInstrumentIndex = babelPluginRequiredNameArray.indexOf("transform-instrument")
+  const transformInstrumentIndex = babelPluginRequiredNameArray.indexOf(
+    "transform-instrument",
+  )
   if (transformInstrumentIndex > -1 && process.env.NODE_V8_COVERAGE) {
     count--
   }

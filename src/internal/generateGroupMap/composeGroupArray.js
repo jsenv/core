@@ -13,8 +13,9 @@ const groupArrayReducer = (previousGroupArray, groupArray) => {
   })
 
   groupArray.forEach((group) => {
-    const groupWithSameRequirements = reducedGroupArray.find((existingGroupCandidate) =>
-      groupHaveSameRequirements(group, existingGroupCandidate),
+    const groupWithSameRequirements = reducedGroupArray.find(
+      (existingGroupCandidate) =>
+        groupHaveSameRequirements(group, existingGroupCandidate),
     )
     if (groupWithSameRequirements) {
       groupWithSameRequirements.runtimeCompatMap = composeRuntimeCompatMap(

@@ -1,4 +1,7 @@
-import { reportPerformanceImpact, readGitHubWorkflowEnv } from "@jsenv/performance-impact"
+import {
+  reportPerformanceImpact,
+  readGitHubWorkflowEnv,
+} from "@jsenv/performance-impact"
 
 await reportPerformanceImpact({
   ...readGitHubWorkflowEnv(),

@@ -1,4 +1,10 @@
-import { setANSIColor, ANSI_MAGENTA, ANSI_YELLOW, ANSI_RED, ANSI_GREEN } from "../logs/log_style.js"
+import {
+  setANSIColor,
+  ANSI_MAGENTA,
+  ANSI_YELLOW,
+  ANSI_RED,
+  ANSI_GREEN,
+} from "../logs/log_style.js"
 import { msAsDuration } from "../logs/msAsDuration.js"
 
 export const createSummaryLog = (summary) => `
@@ -56,19 +62,29 @@ export const createSummaryDetails = ({
   })
 }
 
-const createAllDisconnectedDetails = () => `all ${setANSIColor(`disconnected`, ANSI_MAGENTA)}`
+const createAllDisconnectedDetails = () =>
+  `all ${setANSIColor(`disconnected`, ANSI_MAGENTA)}`
 
-const createAllTimedoutDetails = () => `all ${setANSIColor(`timed out`, ANSI_YELLOW)}`
+const createAllTimedoutDetails = () =>
+  `all ${setANSIColor(`timed out`, ANSI_YELLOW)}`
 
 const createAllErroredDetails = () => `all ${setANSIColor(`errored`, ANSI_RED)}`
 
-const createAllCompletedDetails = () => `all ${setANSIColor(`completed`, ANSI_GREEN)}`
+const createAllCompletedDetails = () =>
+  `all ${setANSIColor(`completed`, ANSI_GREEN)}`
 
-const createMixedDetails = ({ disconnectedCount, timedoutCount, erroredCount, completedCount }) => {
+const createMixedDetails = ({
+  disconnectedCount,
+  timedoutCount,
+  erroredCount,
+  completedCount,
+}) => {
   const parts = []
 
   if (disconnectedCount) {
-    parts.push(`${disconnectedCount} ${setANSIColor(`disconnected`, ANSI_MAGENTA)}`)
+    parts.push(
+      `${disconnectedCount} ${setANSIColor(`disconnected`, ANSI_MAGENTA)}`,
+    )
   }
 
   if (timedoutCount) {

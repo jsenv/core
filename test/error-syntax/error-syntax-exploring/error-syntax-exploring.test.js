@@ -1,5 +1,10 @@
 import { assert } from "@jsenv/assert"
-import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl, urlToBasename } from "@jsenv/filesystem"
+import {
+  urlToRelativeUrl,
+  urlToFileSystemPath,
+  resolveUrl,
+  urlToBasename,
+} from "@jsenv/filesystem"
 
 import { startExploring } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -7,13 +12,19 @@ import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLOR
 import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFilename = `${testDirectoryname}.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
 const importedFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
-const importedFileUrl = resolveUrl(importedFileRelativeUrl, jsenvCoreDirectoryUrl)
+const importedFileUrl = resolveUrl(
+  importedFileRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 const importedFilePath = urlToFileSystemPath(importedFileUrl)
 const compileId = `best`
 
@@ -24,12 +35,10 @@ const exploringServer = await startExploring({
 const compiledHtmlFileUrl = `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}${compileId}/${htmlFileRelativeUrl}`
 const compiledImportedFileUrl = `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
 
-const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  compiledHtmlFileUrl,
-  {
+const { browser, pageLogs, pageErrors, executionResult } =
+  await openBrowserPage(compiledHtmlFileUrl, {
     // headless: false,
-  },
-)
+  })
 browser.close()
 
 const actual = { pageLogs, pageErrors, executionResult }

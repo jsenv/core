@@ -96,7 +96,10 @@ export const createCompiledFileService = ({
       compileDirectoryRelativeUrl,
       projectDirectoryUrl,
     )
-    const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl)
+    const compiledFileUrl = resolveUrl(
+      originalFileRelativeUrl,
+      compileDirectoryUrl,
+    )
 
     let compilerOptions = null
     const compilerCandidateParams = {
@@ -123,7 +126,9 @@ export const createCompiledFileService = ({
     }
     const compilerCandidates = { ...jsenvCompilers, ...customCompilers }
     Object.keys(compilerCandidates).find((compilerCandidateName) => {
-      const returnValue = compilerCandidates[compilerCandidateName](compilerCandidateParams)
+      const returnValue = compilerCandidates[compilerCandidateName](
+        compilerCandidateParams,
+      )
       if (returnValue && typeof returnValue === "object") {
         compilerOptions = returnValue
         return true

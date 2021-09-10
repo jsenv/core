@@ -1,4 +1,9 @@
-import { resolveUrl, urlToRelativeUrl, readFile, ensureWindowsDriveLetter } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  readFile,
+  ensureWindowsDriveLetter,
+} from "@jsenv/filesystem"
 import {
   replaceBackSlashesWithSlashes,
   startsWithWindowsDriveLetter,
@@ -32,19 +37,29 @@ export const transformResultToCompilationResult = async (
   },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
-    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
+    throw new TypeError(
+      `projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`,
+    )
   }
   if (typeof originalFileContent !== "string") {
-    throw new TypeError(`originalFileContent must be a string, got ${originalFileContent}`)
+    throw new TypeError(
+      `originalFileContent must be a string, got ${originalFileContent}`,
+    )
   }
   if (typeof originalFileUrl !== "string") {
-    throw new TypeError(`originalFileUrl must be a string, got ${originalFileUrl}`)
+    throw new TypeError(
+      `originalFileUrl must be a string, got ${originalFileUrl}`,
+    )
   }
   if (typeof compiledFileUrl !== "string") {
-    throw new TypeError(`compiledFileUrl must be a string, got ${compiledFileUrl}`)
+    throw new TypeError(
+      `compiledFileUrl must be a string, got ${compiledFileUrl}`,
+    )
   }
   if (typeof sourcemapFileUrl !== "string") {
-    throw new TypeError(`sourcemapFileUrl must be a string, got ${sourcemapFileUrl}`)
+    throw new TypeError(
+      `sourcemapFileUrl must be a string, got ${sourcemapFileUrl}`,
+    )
   }
 
   const sources = []
@@ -112,7 +127,10 @@ export const transformResultToCompilationResult = async (
     if (sourcemapMethod === "inline") {
       output = setSourceMappingUrl(output, sourcemapToBase64Url(map))
     } else if (sourcemapMethod === "comment") {
-      const sourcemapFileRelativePathForModule = urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl)
+      const sourcemapFileRelativePathForModule = urlToRelativeUrl(
+        sourcemapFileUrl,
+        compiledFileUrl,
+      )
       output = setSourceMappingUrl(output, sourcemapFileRelativePathForModule)
       assets.push(sourcemapFileUrl)
       assetsContent.push(stringifyMap(map))
@@ -124,7 +142,10 @@ export const transformResultToCompilationResult = async (
 
   const { coverage } = metadata
   if (coverage) {
-    const coverageAssetFileUrl = generateCompiledFileAssetUrl(compiledFileUrl, "coverage.json")
+    const coverageAssetFileUrl = generateCompiledFileAssetUrl(
+      compiledFileUrl,
+      "coverage.json",
+    )
     assets.push(coverageAssetFileUrl)
     assetsContent.push(stringifyCoverage(coverage))
   }

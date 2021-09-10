@@ -1,5 +1,10 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename, readFile } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  urlToBasename,
+  readFile,
+} from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -14,7 +19,10 @@ import {
 import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
@@ -30,7 +38,10 @@ const { buildMappings } = await buildProject({
   // logLevel: "debug",
 })
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
   const buildRelativeUrl = buildMappings[relativeUrl]
@@ -45,7 +56,10 @@ const fileJsBuildRelativeUrl = getBuildRelativeUrl("file.js")
   const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
   const htmlString = await readFile(htmlBuildUrl, { as: "string" })
   const preloadLinkNode = findNodeByTagName(htmlString, "link")
-  const preloadLinkHref = getHtmlNodeAttributeByName(preloadLinkNode, "href").value
+  const preloadLinkHref = getHtmlNodeAttributeByName(
+    preloadLinkNode,
+    "href",
+  ).value
 
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,

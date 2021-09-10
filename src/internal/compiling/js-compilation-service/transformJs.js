@@ -26,10 +26,14 @@ export const transformJs = async ({
   sourcemapEnabled = true,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
-    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
+    throw new TypeError(
+      `projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`,
+    )
   }
   if (typeof babelPluginMap !== "object") {
-    throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`)
+    throw new TypeError(
+      `babelPluginMap must be an object, got ${babelPluginMap}`,
+    )
   }
   if (typeof code === "undefined") {
     throw new TypeError(`code missing, received ${code}`)
@@ -106,11 +110,15 @@ const computeInputCodeAndInputMap = async ({
     allowTopLevelAwait,
   })
   if (typeof conversionResult !== "object") {
-    throw new TypeError(`convert must return an object, got ${conversionResult}`)
+    throw new TypeError(
+      `convert must return an object, got ${conversionResult}`,
+    )
   }
   const inputCode = conversionResult.code
   if (typeof inputCode !== "string") {
-    throw new TypeError(`convert must return { code } string, got { code: ${inputCode} } `)
+    throw new TypeError(
+      `convert must return { code } string, got { code: ${inputCode} } `,
+    )
   }
   const inputMap = conversionResult.map
   return { inputCode, inputMap }

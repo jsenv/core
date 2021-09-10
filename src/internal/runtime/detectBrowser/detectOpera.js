@@ -8,7 +8,8 @@ const userAgentToBrowser = (userAgent) => {
     return {
       name: "opera",
       version:
-        userAgentToVersion(userAgent) || firstMatch(/(?:opera)[\s/](\d+(\.?_?\d+)+)/i, userAgent),
+        userAgentToVersion(userAgent) ||
+        firstMatch(/(?:opera)[\s/](\d+(\.?_?\d+)+)/i, userAgent),
     }
   }
 
@@ -16,7 +17,9 @@ const userAgentToBrowser = (userAgent) => {
   if (/opr\/|opios/i.test(userAgent)) {
     return {
       name: "opera",
-      version: firstMatch(/(?:opr|opios)[\s/](\S+)/i, userAgent) || userAgentToVersion(userAgent),
+      version:
+        firstMatch(/(?:opr|opios)[\s/](\S+)/i, userAgent) ||
+        userAgentToVersion(userAgent),
     }
   }
 

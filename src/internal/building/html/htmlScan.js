@@ -54,7 +54,10 @@ export const preloadLinksFromHtml = (htmlSource) => {
       return
     }
     const relAttributeValue = relAttribute.value
-    if (relAttributeValue !== "preload" && relAttributeValue !== "modulepreload") {
+    if (
+      relAttributeValue !== "preload" &&
+      relAttributeValue !== "modulepreload"
+    ) {
       return
     }
 

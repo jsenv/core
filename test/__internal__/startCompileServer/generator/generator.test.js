@@ -8,18 +8,24 @@ import { startCompileServer } from "@jsenv/core/src/internal/compiling/startComp
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-  ...COMPILE_SERVER_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-})
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
+  await startCompileServer({
+    ...COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+  })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-const { status, statusText, headers } = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
+const { status, statusText, headers } = await fetchUrl(fileServerUrl, {
+  ignoreHttpsError: true,
+})
 const actual = {
   status,
   statusText,

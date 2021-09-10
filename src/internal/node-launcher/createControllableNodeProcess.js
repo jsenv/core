@@ -4,12 +4,19 @@ import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
-import { urlToFileSystemPath, resolveUrl, assertFilePresence } from "@jsenv/filesystem"
+import {
+  urlToFileSystemPath,
+  resolveUrl,
+  assertFilePresence,
+} from "@jsenv/filesystem"
 import { nodeSupportsDynamicImport } from "../runtime/node-feature-detect/nodeSupportsDynamicImport.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { require } from "../require.js"
 import { createChildProcessOptions } from "./createChildProcessOptions.js"
-import { processOptionsFromExecArgv, execArgvFromProcessOptions } from "./processOptions.js"
+import {
+  processOptionsFromExecArgv,
+  execArgvFromProcessOptions,
+} from "./processOptions.js"
 
 const nodeControllableFileUrl = resolveUrl(
   "./src/internal/node-launcher/nodeControllableFile.mjs",
@@ -69,15 +76,18 @@ export const createControllableNodeProcess = async ({
   }
 
   await assertFilePresence(nodeControllableFileUrl)
-  const childProcess = forkChildProcess(urlToFileSystemPath(nodeControllableFileUrl), {
-    execArgv,
-    // silent: true
-    stdio: ["pipe", "pipe", "pipe", "ipc"],
-    env: {
-      ...(inheritProcessEnv ? process.env : {}),
-      ...env,
+  const childProcess = forkChildProcess(
+    urlToFileSystemPath(nodeControllableFileUrl),
+    {
+      execArgv,
+      // silent: true
+      stdio: ["pipe", "pipe", "pipe", "ipc"],
+      env: {
+        ...(inheritProcessEnv ? process.env : {}),
+        ...env,
+      },
     },
-  })
+  )
 
   logger.debug(`fork child process pid ${childProcess.pid}
 --- execArgv ---
@@ -98,7 +108,9 @@ ${JSON.stringify(env, null, "  ")}`)
   }
   if (logProcessCommand) {
     console.log(
-      `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(nodeControllableFileUrl)}`,
+      `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(
+        nodeControllableFileUrl,
+      )}`,
     )
   }
 
@@ -178,26 +190,37 @@ ${JSON.stringify(env, null, "  ")}`)
       killProcessTree(childProcess.pid, signal, (error) => {
         if (error) {
           // on windows: process with pid cannot be found
-          if (error.stack.includes(`The process "${childProcess.pid}" not found`)) {
+          if (
+            error.stack.includes(`The process "${childProcess.pid}" not found`)
+          ) {
             resolve()
             return
           }
           // on windows: child process with a pid cannot be found
-          if (error.stack.includes("Reason: There is no running instance of the task")) {
+          if (
+            error.stack.includes(
+              "Reason: There is no running instance of the task",
+            )
+          ) {
             resolve()
             return
           }
           // windows too
-          if (error.stack.includes("The operation attempted is not supported")) {
+          if (
+            error.stack.includes("The operation attempted is not supported")
+          ) {
             resolve()
             return
           }
 
           logger.error(
-            createDetailedMessage(`error while killing process tree with ${signal}`, {
-              ["error stack"]: error.stack,
-              ["process.pid"]: childProcess.pid,
-            }),
+            createDetailedMessage(
+              `error while killing process tree with ${signal}`,
+              {
+                ["error stack"]: error.stack,
+                ["process.pid"]: childProcess.pid,
+              },
+            ),
           )
 
           // even if we could not kill the child
@@ -251,7 +274,10 @@ ${JSON.stringify(env, null, "  ")}`)
 
       await childProcessReadyPromise
       try {
-        await sendToProcess(childProcess, "action", { actionType, actionParams })
+        await sendToProcess(childProcess, "action", {
+          actionType,
+          actionParams,
+        })
       } catch (e) {
         logger.error(
           createDetailedMessage(`error while sending message to child`, {
@@ -318,7 +344,11 @@ const installProcessErrorListener = (childProcess, callback) => {
     callback(error)
     onceProcessMessage(childProcess, "error", errorListener)
   }
-  const removeErrorListener = onceProcessMessage(childProcess, "error", errorListener)
+  const removeErrorListener = onceProcessMessage(
+    childProcess,
+    "error",
+    errorListener,
+  )
   // process.exit(1) in child process or process.exitCode = 1 + process.exit()
   // means there was an error even if we don't know exactly what.
   const removeExitListener = onceProcessEvent(childProcess, "exit", (code) => {

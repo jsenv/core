@@ -101,7 +101,9 @@ const babelHelperAbstractScope = `.jsenv/helpers/babel/`
 
 export const listAbstractBabelHelpers = () => {
   const { list } = require("@babel/helpers")
-  return list.filter((babelHelperName) => !babelHelperIsInsideJsenvCore(babelHelperName))
+  return list.filter(
+    (babelHelperName) => !babelHelperIsInsideJsenvCore(babelHelperName),
+  )
 }
 
 export const babelHelperNameToImportSpecifier = (babelHelperName) => {
@@ -124,7 +126,8 @@ export const filePathToBabelHelperName = (filePath) => {
 
   if (fileUrl.includes(babelHelperAbstractScope)) {
     const afterBabelHelper = fileUrl.slice(
-      fileUrl.indexOf(babelHelperAbstractScope) + babelHelperAbstractScope.length,
+      fileUrl.indexOf(babelHelperAbstractScope) +
+        babelHelperAbstractScope.length,
     )
     return afterBabelHelper.slice(0, afterBabelHelper.indexOf("/"))
   }

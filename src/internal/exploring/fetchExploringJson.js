@@ -14,9 +14,12 @@ export const fetchExploringJson = async ({ cancellationToken } = {}) => {
       throw e
     }
     throw new Error(
-      createDetailedMessage(`Cannot communicate with exploring server due to a network error`, {
-        ["error stack"]: e.stack,
-      }),
+      createDetailedMessage(
+        `Cannot communicate with exploring server due to a network error`,
+        {
+          ["error stack"]: e.stack,
+        },
+      ),
     )
   }
 }

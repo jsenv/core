@@ -17,7 +17,10 @@ import {
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
@@ -35,12 +38,16 @@ const { buildMappings } = await buildProject({
 
 // ensure link.href is properly updated
 {
-  const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+  const buildDirectoryUrl = resolveUrl(
+    buildDirectoryRelativeUrl,
+    jsenvCoreDirectoryUrl,
+  )
   const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
   const htmlString = await readFile(htmlBuildUrl)
   const link = findNodeByTagName(htmlString, "link")
   const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
-  const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
+  const imgBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
   const actual = hrefAttribute.value
   const expected = imgBuildRelativeUrl

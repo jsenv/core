@@ -92,7 +92,10 @@ window.__jsenv_eventsource__ = connectLivereload()
 
 const injectToolbar = async () => {
   const { jsenvDirectoryRelativeUrl } = await fetchExploringJson()
-  const jsenvDirectoryServerUrl = resolveUrl(jsenvDirectoryRelativeUrl, document.location.origin)
+  const jsenvDirectoryServerUrl = resolveUrl(
+    jsenvDirectoryRelativeUrl,
+    document.location.origin,
+  )
 
   const placeholder = getToolbarPlaceholder()
 
@@ -153,7 +156,10 @@ const injectToolbar = async () => {
   })
 
   const div = document.createElement("div")
-  const jsenvLogoUrl = resolveUrl("./src/internal/toolbar/jsenv-logo.svg", jsenvDirectoryServerUrl)
+  const jsenvLogoUrl = resolveUrl(
+    "./src/internal/toolbar/jsenv-logo.svg",
+    jsenvDirectoryServerUrl,
+  )
   const jsenvLogoSvgSrc = jsenvLogoUrl
   div.innerHTML = `
 <div id="jsenv-toolbar-trigger">
@@ -254,13 +260,16 @@ const getToolbarPlaceholder = () => {
       return placeholder
     }
     // otherwise iframe would not be visible because in <head>
-    console.warn("element with [data-jsenv-toolbar-placeholder] must be inside document.body")
+    console.warn(
+      "element with [data-jsenv-toolbar-placeholder] must be inside document.body",
+    )
     return createTooolbarPlaceholder()
   }
   return createTooolbarPlaceholder()
 }
 
-const queryPlaceholder = () => document.querySelector("[data-jsenv-toolbar-placeholder]")
+const queryPlaceholder = () =>
+  document.querySelector("[data-jsenv-toolbar-placeholder]")
 
 const createTooolbarPlaceholder = () => {
   const placeholder = document.createElement("span")

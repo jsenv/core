@@ -1,4 +1,8 @@
-export const parseWebmanifest = (webmanifestTarget, { notifyReferenceFound }, { minify }) => {
+export const parseWebmanifest = (
+  webmanifestTarget,
+  { notifyReferenceFound },
+  { minify },
+) => {
   // const manifestUrl = manifestTarget.url
   const manifestString = String(webmanifestTarget.targetBuffer)
 
@@ -23,7 +27,9 @@ export const parseWebmanifest = (webmanifestTarget, { notifyReferenceFound }, { 
 
     const iconsAfterBuild = icons.map((icon, index) => {
       const iconAfterBuild = { ...icon }
-      iconAfterBuild.src = getReferenceUrlRelativeToImporter(iconReferences[index])
+      iconAfterBuild.src = getReferenceUrlRelativeToImporter(
+        iconReferences[index],
+      )
       return iconAfterBuild
     })
     const manifestAfterBuild = { ...manifest }

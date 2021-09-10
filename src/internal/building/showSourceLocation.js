@@ -7,7 +7,13 @@ import { setANSIColor, ANSI_GREY, ANSI_RED } from "../logs/log_style.js"
 
 export const showSourceLocation = (
   source,
-  { line, column, numberOfSurroundingLinesToShow = 1, lineMaxLength = 120, color = false },
+  {
+    line,
+    column,
+    numberOfSurroundingLinesToShow = 1,
+    lineMaxLength = 120,
+    color = false,
+  },
 ) => {
   let mark = (string) => string
   let aside = (string) => string
@@ -46,7 +52,9 @@ export const showSourceLocation = (
     const lineSourceTruncated = applyColumnRange(columnRange, lineSource)
     const lineNumberWidth = String(lineNumber).length
     // ensure if line moves from 7,8,9 to 10 the display is still great
-    const lineNumberRightSpacing = " ".repeat(lineNumberMaxWidth - lineNumberWidth)
+    const lineNumberRightSpacing = " ".repeat(
+      lineNumberMaxWidth - lineNumberWidth,
+    )
     const asideSource = `${lineNumber}${lineNumberRightSpacing} |`
     const lineFormatted = `${aside(asideSource)} ${lineSourceTruncated}`
     if (isMainLine) {
@@ -54,7 +62,10 @@ export const showSourceLocation = (
         return `${mark(">")} ${lineFormatted}`
       }
       const spacing = stringToSpaces(
-        `${asideSource} ${lineSourceTruncated.slice(0, column - columnRange.start - 1)}`,
+        `${asideSource} ${lineSourceTruncated.slice(
+          0,
+          column - columnRange.start - 1,
+        )}`,
       )
       return `${mark(">")} ${lineFormatted}
   ${spacing}${mark("^")}`
@@ -72,7 +83,9 @@ const applyColumnRange = ({ start, end }, line) => {
     throw new TypeError(`end must be a number, received ${end}`)
   }
   if (end < start) {
-    throw new Error(`end must be greater than start, but ${end} is smaller than ${start}`)
+    throw new Error(
+      `end must be greater than start, but ${end} is smaller than ${start}`,
+    )
   }
 
   const prefix = "…"

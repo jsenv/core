@@ -19,14 +19,18 @@ import {
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativePath = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
 const filename = `execute-test-plan.js`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-  ...START_COMPILE_SERVER_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-})
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
+  await startCompileServer({
+    ...START_COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+  })
 
 const getLogs = async () => {
   const result = await launchAndExecute({

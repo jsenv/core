@@ -27,7 +27,11 @@ export const createBrowserSystem = ({
       importerUrl,
       fetchSource,
       instantiateJavaScript: (source, responseUrl) => {
-        const uninstallSystemGlobal = valueInstall(window, "System", browserSystem)
+        const uninstallSystemGlobal = valueInstall(
+          window,
+          "System",
+          browserSystem,
+        )
         try {
           evalSource(source, responseUrl)
         } finally {

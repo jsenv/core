@@ -74,20 +74,26 @@ export const launchAndExecute = async ({
   }
 
   if (mirrorConsole) {
-    runtimeConsoleCallback = composeCallback(runtimeConsoleCallback, ({ type, text }) => {
-      if (type === "error") {
-        process.stderr.write(text)
-      } else {
-        process.stdout.write(text)
-      }
-    })
+    runtimeConsoleCallback = composeCallback(
+      runtimeConsoleCallback,
+      ({ type, text }) => {
+        if (type === "error") {
+          process.stderr.write(text)
+        } else {
+          process.stdout.write(text)
+        }
+      },
+    )
   }
 
   if (captureConsole) {
     const consoleCalls = []
-    runtimeConsoleCallback = composeCallback(runtimeConsoleCallback, ({ type, text }) => {
-      consoleCalls.push({ type, text })
-    })
+    runtimeConsoleCallback = composeCallback(
+      runtimeConsoleCallback,
+      ({ type, text }) => {
+        consoleCalls.push({ type, text })
+      },
+    )
     executionResultTransformer = composeTransformer(
       executionResultTransformer,
       (executionResult) => {
@@ -98,27 +104,33 @@ export const launchAndExecute = async ({
   }
 
   if (collectRuntimeName) {
-    runtimeStartedCallback = composeCallback(runtimeStartedCallback, ({ runtimeName }) => {
-      executionResultTransformer = composeTransformer(
-        executionResultTransformer,
-        (executionResult) => {
-          executionResult.runtimeName = runtimeName
-          return executionResult
-        },
-      )
-    })
+    runtimeStartedCallback = composeCallback(
+      runtimeStartedCallback,
+      ({ runtimeName }) => {
+        executionResultTransformer = composeTransformer(
+          executionResultTransformer,
+          (executionResult) => {
+            executionResult.runtimeName = runtimeName
+            return executionResult
+          },
+        )
+      },
+    )
   }
 
   if (collectRuntimeVersion) {
-    runtimeStartedCallback = composeCallback(runtimeStartedCallback, ({ runtimeVersion }) => {
-      executionResultTransformer = composeTransformer(
-        executionResultTransformer,
-        (executionResult) => {
-          executionResult.runtimeVersion = runtimeVersion
-          return executionResult
-        },
-      )
-    })
+    runtimeStartedCallback = composeCallback(
+      runtimeStartedCallback,
+      ({ runtimeVersion }) => {
+        executionResultTransformer = composeTransformer(
+          executionResultTransformer,
+          (executionResult) => {
+            executionResult.runtimeVersion = runtimeVersion
+            return executionResult
+          },
+        )
+      },
+    )
   }
 
   if (
@@ -133,7 +145,10 @@ export const launchAndExecute = async ({
       (executionResult) => {
         const { coverage, ...rest } = executionResult
         // ensure the coverage of the executed file is taken into account
-        global.__coverage__ = composeIstanbulCoverages([global.__coverage__ || {}, coverage || {}])
+        global.__coverage__ = composeIstanbulCoverages([
+          global.__coverage__ || {},
+          coverage || {},
+        ])
         if (collectCoverageSaved) {
           return executionResult
         }
@@ -155,9 +170,12 @@ export const launchAndExecute = async ({
       (executionResult) => {
         const { coverage, indirectCoverage } = executionResult
         if (indirectCoverage) {
-          executionResult.coverage = composeIstanbulCoverages([coverage, indirectCoverage], {
-            coverageV8MergeConflictIsExpected,
-          })
+          executionResult.coverage = composeIstanbulCoverages(
+            [coverage, indirectCoverage],
+            {
+              coverageV8MergeConflictIsExpected,
+            },
+          )
         }
         return executionResult
       },
@@ -197,7 +215,8 @@ export const launchAndExecute = async ({
     runtimeStartedCallback,
     runtimeStoppedCallback,
   }
-  const hasAllocatedMs = typeof allocatedMs === "number" && allocatedMs !== Infinity
+  const hasAllocatedMs =
+    typeof allocatedMs === "number" && allocatedMs !== Infinity
   if (hasAllocatedMs) {
     const TIMEOUT_CANCEL_REASON = "timeout"
 
@@ -286,7 +305,10 @@ const computeExecutionResult = async ({
       })
       return value
     },
-    stop: async ({ runtimeName, runtimeVersion, gracefulStop, stop }, reason) => {
+    stop: async (
+      { runtimeName, runtimeVersion, gracefulStop, stop },
+      reason,
+    ) => {
       const runtime = `${runtimeName}/${runtimeVersion}`
 
       // external code can cancel using cancellationToken at any time.
@@ -327,13 +349,18 @@ const computeExecutionResult = async ({
           return false
         })()
 
-        stoppedGracefully = await Promise.race([gracefulStopPromise, stopPromise])
+        stoppedGracefully = await Promise.race([
+          gracefulStopPromise,
+          stopPromise,
+        ])
       } else {
         await stop({ reason, gracefulFailed: false })
         stoppedGracefully = false
       }
 
-      logger.debug(`${runtime}: runtime stopped${stoppedGracefully ? " gracefully" : ""}`)
+      logger.debug(
+        `${runtime}: runtime stopped${stoppedGracefully ? " gracefully" : ""}`,
+      )
       runtimeStoppedCallback({ stoppedGracefully })
     },
   })
@@ -408,11 +435,15 @@ const computeExecutionResult = async ({
             ["runtime"]: runtime,
           }),
         )
-        return finalizeExecutionResult(createErroredExecutionResult(executionResult))
+        return finalizeExecutionResult(
+          createErroredExecutionResult(executionResult),
+        )
       }
 
       logger.debug(`${runtime}: execution completed.`)
-      return finalizeExecutionResult(createCompletedExecutionResult(executionResult))
+      return finalizeExecutionResult(
+        createCompletedExecutionResult(executionResult),
+      )
     },
   })
 
@@ -470,11 +501,16 @@ const validateLaunchReturnValue = (launchReturnValue) => {
 
   const { runtimeName } = launchReturnValue
   if (typeof runtimeName !== "string") {
-    throw new Error(`launch must return a runtimeName string, got ${runtimeName}`)
+    throw new Error(
+      `launch must return a runtimeName string, got ${runtimeName}`,
+    )
   }
 
   const { runtimeVersion } = launchReturnValue
-  if (typeof runtimeVersion !== "string" && typeof runtimeVersion !== "number") {
+  if (
+    typeof runtimeVersion !== "string" &&
+    typeof runtimeVersion !== "number"
+  ) {
     throw new Error(`launch must return a runtimeVersion, got ${runtimeName}`)
   }
 

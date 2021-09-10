@@ -21,7 +21,11 @@ export const postCssUrlHashPlugin = () => {
   return {
     postcssPlugin: "urlhash",
     prepare: (result) => {
-      const { from, collectUrls = false, getUrlReplacementValue = () => undefined } = result.opts
+      const {
+        from,
+        collectUrls = false,
+        getUrlReplacementValue = () => undefined,
+      } = result.opts
       const fromUrl = fileSystemPathToUrl(from)
       return {
         AtRule: {
@@ -32,15 +36,24 @@ export const postCssUrlHashPlugin = () => {
             }
 
             if (atImportNode.nodes) {
-              atImportNode.warn(result, "`@import` was not terminated correctly")
+              atImportNode.warn(
+                result,
+                "`@import` was not terminated correctly",
+              )
               return
             }
 
             const parsed = parseCssValue(atImportNode.params)
             let [urlNode] = parsed.nodes
 
-            if (!urlNode || (urlNode.type !== "string" && urlNode.type !== "function")) {
-              atImportNode.warn(result, `No URL in \`${atImportNode.toString()}\``)
+            if (
+              !urlNode ||
+              (urlNode.type !== "string" && urlNode.type !== "function")
+            ) {
+              atImportNode.warn(
+                result,
+                `No URL in \`${atImportNode.toString()}\``,
+              )
               return
             }
 
@@ -70,7 +83,10 @@ export const postCssUrlHashPlugin = () => {
             url = url.trim()
 
             if (url.length === 0) {
-              atImportNode.warn(result, `Empty URL in \`${atImportNode.toString()}\``)
+              atImportNode.warn(
+                result,
+                `Empty URL in \`${atImportNode.toString()}\``,
+              )
               return
             }
 
@@ -78,7 +94,10 @@ export const postCssUrlHashPlugin = () => {
             url = resolveUrl(specifier, fromUrl)
 
             if (url === fromUrl) {
-              atImportNode.warn(result, `\`@import\` loop in \`${atImportNode.toString()}\``)
+              atImportNode.warn(
+                result,
+                `\`@import\` loop in \`${atImportNode.toString()}\``,
+              )
               return
             }
 
@@ -117,7 +136,10 @@ export const postCssUrlHashPlugin = () => {
             visitor: (url, urlNode) => {
               // Empty URL
               if (!urlNode || url.length === 0) {
-                declarationNode.warn(result, `Empty URL in \`${declarationNode.toString()}\``)
+                declarationNode.warn(
+                  result,
+                  `Empty URL in \`${declarationNode.toString()}\``,
+                )
                 return
               }
 
@@ -158,14 +180,20 @@ const declarationNodeContainsUrl = (declarationNode) => {
   return /^(?:url|(?:-webkit-)?image-set)\(/i.test(declarationNode.value)
 }
 
-const walkUrls = (declarationNode, { parseCssValue, stringifyCssNodes, visitor }) => {
+const walkUrls = (
+  declarationNode,
+  { parseCssValue, stringifyCssNodes, visitor },
+) => {
   const parsed = parseCssValue(declarationNode.value)
   parsed.walk((node) => {
     // https://github.com/andyjansson/postcss-functions
     if (isUrlFunctionNode(node)) {
       const { nodes } = node
       const [urlNode] = nodes
-      const url = urlNode && urlNode.type === "string" ? urlNode.value : stringifyCssNodes(nodes)
+      const url =
+        urlNode && urlNode.type === "string"
+          ? urlNode.value
+          : stringifyCssNodes(nodes)
       visitor(url.trim(), urlNode)
       return
     }
@@ -181,7 +209,9 @@ const walkUrls = (declarationNode, { parseCssValue, stringifyCssNodes, visitor }
           const { nodes } = childNode
           const [urlNode] = nodes
           const url =
-            urlNode && urlNode.type === "string" ? urlNode.value : stringifyCssNodes(nodes)
+            urlNode && urlNode.type === "string"
+              ? urlNode.value
+              : stringifyCssNodes(nodes)
           visitor(url.trim(), urlNode)
           return
         }
@@ -197,9 +227,13 @@ const isUrlFunctionNode = (node) => {
 }
 
 const isImageSetFunctionNode = (node) => {
-  return node.type === "function" && /^(?:-webkit-)?image-set$/i.test(node.value)
+  return (
+    node.type === "function" && /^(?:-webkit-)?image-set$/i.test(node.value)
+  )
 }
 
 const isDataUrl = (url) => {
-  return /data:[^\n\r;]+?(?:;charset=[^\n\r;]+?)?;base64,([\d+/A-Za-z]+={0,2})/.test(url)
+  return /data:[^\n\r;]+?(?:;charset=[^\n\r;]+?)?;base64,([\d+/A-Za-z]+={0,2})/.test(
+    url,
+  )
 }

@@ -9,7 +9,10 @@ export const formatUseImportMapFromHtml = (importMapInfoFromHtml) => {
 use importmap found in ${showHtmlSourceLocation(importMapInfoFromHtml)}`
 }
 
-export const formatImportmapOutsideCompileDirectory = ({ importMapInfo, compileDirectoryUrl }) => {
+export const formatImportmapOutsideCompileDirectory = ({
+  importMapInfo,
+  compileDirectoryUrl,
+}) => {
   return `
 WARNING: importmap file is outside compile directory.
 That's unusual you should certainly make importmap file relative.
@@ -21,11 +24,16 @@ ${compileDirectoryUrl}
 
 export const formatRessourceHintNeverUsedWarning = (linkInfo) => {
   return `
-WARNING: Ressource never used for ${linkInfo.rel} link in ${showHtmlSourceLocation(linkInfo)}
+WARNING: Ressource never used for ${
+    linkInfo.rel
+  } link in ${showHtmlSourceLocation(linkInfo)}
 `
 }
 
-export const formatBuildDoneInfo = ({ buildStats, buildDirectoryRelativeUrl }) => {
+export const formatBuildDoneInfo = ({
+  buildStats,
+  buildDirectoryRelativeUrl,
+}) => {
   return `
 ${formatBuildDoneDetails({ buildStats, buildDirectoryRelativeUrl })}
 ${formatBuildSummary({ buildStats })}
@@ -37,14 +45,18 @@ const formatBuildDoneDetails = ({ buildStats, buildDirectoryRelativeUrl }) => {
   const { buildFileSizes } = buildStats
   const buildFiles = Object.keys(buildFileSizes).map((key) => {
     const buildFileSize = buildFileSizes[key]
-    return `${buildDirectoryRelativeUrl}${key} (${byteAsFileSize(buildFileSize)})`
+    return `${buildDirectoryRelativeUrl}${key} (${byteAsFileSize(
+      buildFileSize,
+    )})`
   })
   const buildFileCount = buildFiles.length
 
   const { buildSourcemapFileSizes } = buildStats
   const sourcemapFiles = Object.keys(buildSourcemapFileSizes).map((key) => {
     const buildSourcemapFileSize = buildSourcemapFileSizes[key]
-    return `${buildDirectoryRelativeUrl}${key} (${byteAsFileSize(buildSourcemapFileSize)})`
+    return `${buildDirectoryRelativeUrl}${key} (${byteAsFileSize(
+      buildSourcemapFileSize,
+    )})`
   })
   const sourcemapFileCount = sourcemapFiles.length
 
@@ -83,10 +95,13 @@ const formatBuildSummary = ({ buildStats }) => {
   const buildFileCount = Object.keys(buildFileSizes).length
 
   return `------- build summary -------
-${setANSIColor(`project files:`, ANSI_GREY)} ${projectFileCount} (${byteAsFileSize(
-    projectTotalFileSize,
+${setANSIColor(
+  `project files:`,
+  ANSI_GREY,
+)} ${projectFileCount} (${byteAsFileSize(projectTotalFileSize)})
+${setANSIColor(`build files:`, ANSI_GREY)} ${buildFileCount} (${byteAsFileSize(
+    buildTotalFileSize,
   )})
-${setANSIColor(`build files:`, ANSI_GREY)} ${buildFileCount} (${byteAsFileSize(buildTotalFileSize)})
 ${setANSIColor(`build duration:`, ANSI_GREY)} ${msAsDuration(buildDuration)}
 ------------------------------`
 }

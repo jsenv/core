@@ -12,15 +12,19 @@ import {
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativePath = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = basename(testDirectoryRelativePath)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-  ...START_COMPILE_SERVER_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-})
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
+  await startCompileServer({
+    ...START_COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+  })
 
 const actual = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,

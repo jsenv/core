@@ -20,7 +20,9 @@ const run = async () => {
   })
 
   const compileServerOrigin = document.location.origin
-  const outDirectoryUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin))
+  const outDirectoryUrl = String(
+    new URL(outDirectoryRelativeUrl, compileServerOrigin),
+  )
   const documentUrl = document.location.href
   let compileId
 
@@ -41,7 +43,9 @@ const run = async () => {
     // const mainFileIframe = document.querySelector(`#main_file_iframe`)
     // mainFileIframe.src = mainFileUrl
 
-    const fileListElement = document.querySelector(`[data-page="file-list"]`).cloneNode(true)
+    const fileListElement = document
+      .querySelector(`[data-page="file-list"]`)
+      .cloneNode(true)
     const directoryName = directoryUrlToDirectoryName(projectDirectoryUrl)
     const span = fileListElement.querySelector("#directory_relative_url")
     span.title = projectDirectoryUrl
@@ -76,22 +80,28 @@ const run = async () => {
       )
       .join("")
 
-    const currentGroup = groupPreference.has() ? groupPreference.get() : groupNames[0]
-    Array.from(groupFieldset.querySelectorAll("input")).forEach((inputRadio) => {
-      inputRadio.checked = inputRadio.value === currentGroup
-      inputRadio.onchange = () => {
-        if (inputRadio.checked) {
-          groupPreference.set(inputRadio.value)
-          enableGroup(inputRadio.value)
+    const currentGroup = groupPreference.has()
+      ? groupPreference.get()
+      : groupNames[0]
+    Array.from(groupFieldset.querySelectorAll("input")).forEach(
+      (inputRadio) => {
+        inputRadio.checked = inputRadio.value === currentGroup
+        inputRadio.onchange = () => {
+          if (inputRadio.checked) {
+            groupPreference.set(inputRadio.value)
+            enableGroup(inputRadio.value)
+          }
         }
-      }
-    })
+      },
+    )
 
     const enableGroup = (groupName) => {
       const arrayOfElementToShow = []
       const arrayOfElementToHide = []
       files.forEach((file) => {
-        const fileLink = fileListElement.querySelector(`a[data-relative-url="${file.relativeUrl}"]`)
+        const fileLink = fileListElement.querySelector(
+          `a[data-relative-url="${file.relativeUrl}"]`,
+        )
         const fileLi = fileLink.parentNode
         if (file.meta[groupName]) {
           arrayOfElementToShow.push(fileLi)
@@ -131,7 +141,8 @@ const run = async () => {
 
   const makeMenuScrollable = () => {
     const getMenuWrapperSize = () => {
-      return document.querySelector(".menu-wrapper").getBoundingClientRect().width
+      return document.querySelector(".menu-wrapper").getBoundingClientRect()
+        .width
     }
     let menuWrapperSize = getMenuWrapperSize()
 

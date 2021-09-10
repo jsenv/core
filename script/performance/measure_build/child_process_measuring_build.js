@@ -27,8 +27,10 @@ const afterRessourceUsage = resourceUsage()
 
 const msEllapsed = afterMs - beforeMs
 const heapUsed = afterHeapUsed - beforeHeapUsed
-const fileSystemReadOperationCount = afterRessourceUsage.fsRead - beforeRessourceUsage.fsRead
-const fileSystemWriteOperationCount = afterRessourceUsage.fsWrite - beforeRessourceUsage.fsWrite
+const fileSystemReadOperationCount =
+  afterRessourceUsage.fsRead - beforeRessourceUsage.fsRead
+const fileSystemWriteOperationCount =
+  afterRessourceUsage.fsWrite - beforeRessourceUsage.fsWrite
 process.send({
   heapUsed,
   msEllapsed,

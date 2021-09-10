@@ -10,7 +10,10 @@ import {
 } from "../TEST_PARAMS_TRANSFORM_JS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = basename(testDirectoryUrl)
 const filename = `${testDirectoryname}.js`
 const originalFileUrl = resolveUrl(`./${filename}`, testDirectoryUrl)

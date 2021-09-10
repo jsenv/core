@@ -33,7 +33,10 @@ import {
 import { importMapsFromHtml } from "./html/htmlScan.js"
 import { parseTarget } from "./parseTarget.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
-import { createAssetBuilder, referenceToCodeForRollup } from "./asset-builder.js"
+import {
+  createAssetBuilder,
+  referenceToCodeForRollup,
+} from "./asset-builder.js"
 import { computeBuildRelativeUrl } from "./url-versioning.js"
 import { transformImportMetaUrlReferences } from "./transformImportMetaUrlReferences.js"
 
@@ -126,16 +129,19 @@ export const createJsenvRollupPlugin = async ({
   const buildRelativeUrlsUsedInJs = []
   const markBuildRelativeUrlAsUsedByJs = (buildRelativeUrl) => {
     buildRelativeUrlsUsedInJs.push(buildRelativeUrl)
-    buildManifest[rollupFileNameWithoutHash(buildRelativeUrl)] = buildRelativeUrl
+    buildManifest[rollupFileNameWithoutHash(buildRelativeUrl)] =
+      buildRelativeUrl
   }
   const createImportMapForFilesUsedInJs = () => {
     const topLevelMappings = {}
-    buildRelativeUrlsUsedInJs.sort(comparePathnames).forEach((buildRelativeUrl) => {
-      const fileName = buildRelativeUrlToFileName(buildRelativeUrl)
-      if (fileName !== buildRelativeUrl) {
-        topLevelMappings[`./${fileName}`] = `./${buildRelativeUrl}`
-      }
-    })
+    buildRelativeUrlsUsedInJs
+      .sort(comparePathnames)
+      .forEach((buildRelativeUrl) => {
+        const fileName = buildRelativeUrlToFileName(buildRelativeUrl)
+        if (fileName !== buildRelativeUrl) {
+          topLevelMappings[`./${fileName}`] = `./${buildRelativeUrl}`
+        }
+      })
     return {
       imports: topLevelMappings,
     }
@@ -151,7 +157,10 @@ export const createJsenvRollupPlugin = async ({
 
   const EMPTY_CHUNK_URL = resolveUrl("__empty__", projectDirectoryUrl)
 
-  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
+  const compileDirectoryUrl = resolveDirectoryUrl(
+    compileDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
   const compileDirectoryRemoteUrl = resolveDirectoryUrl(
     compileDirectoryRelativeUrl,
     compileServerOrigin,
@@ -192,9 +201,11 @@ export const createJsenvRollupPlugin = async ({
         compileServerOrigin,
         fetchFile: jsenvFetchUrl,
       })
-      const htmlEntryPoints = entryPointsPrepared.filter((entryPointPrepared) => {
-        return entryPointPrepared.entryContentType === "text/html"
-      })
+      const htmlEntryPoints = entryPointsPrepared.filter(
+        (entryPointPrepared) => {
+          return entryPointPrepared.entryContentType === "text/html"
+        },
+      )
       const htmlEntryPointCount = htmlEntryPoints.length
       if (htmlEntryPointCount > 1) {
         const error = new Error(
@@ -223,7 +234,10 @@ export const createJsenvRollupPlugin = async ({
         }
 
         if (importMapCount === 1) {
-          const htmlUrl = resolveUrl(htmlEntryPoint.entryProjectRelativeUrl, projectDirectoryUrl)
+          const htmlUrl = resolveUrl(
+            htmlEntryPoint.entryProjectRelativeUrl,
+            projectDirectoryUrl,
+          )
           importMapInfoFromHtml = {
             ...importMaps[0],
             htmlUrl,
@@ -262,12 +276,19 @@ export const createJsenvRollupPlugin = async ({
             }
 
             fetchImportMap = () => {
-              return fetchImportMapFromUrl(importMapUrl, importMapInfoFromHtml.htmlUrl)
+              return fetchImportMapFromUrl(
+                importMapUrl,
+                importMapInfoFromHtml.htmlUrl,
+              )
             }
           } else {
             const firstHtmlEntryPoint = htmlEntryPoints[0]
-            const htmlProjectRelativeUrl = firstHtmlEntryPoint.entryProjectRelativeUrl
-            const htmlCompiledUrl = resolveUrl(htmlProjectRelativeUrl, compileDirectoryRemoteUrl)
+            const htmlProjectRelativeUrl =
+              firstHtmlEntryPoint.entryProjectRelativeUrl
+            const htmlCompiledUrl = resolveUrl(
+              htmlProjectRelativeUrl,
+              compileDirectoryRemoteUrl,
+            )
             importMapUrl = htmlCompiledUrl
             fetchImportMap = () => {
               const importMapRaw = JSON.parse(importMapInfoFromHtml.text)
@@ -276,16 +297,25 @@ export const createJsenvRollupPlugin = async ({
             }
           }
         } else if (importMapFileRelativeUrl) {
-          importMapUrl = resolveUrl(importMapFileRelativeUrl, compileDirectoryRemoteUrl)
+          importMapUrl = resolveUrl(
+            importMapFileRelativeUrl,
+            compileDirectoryRemoteUrl,
+          )
           fetchImportMap = () => {
-            return fetchImportMapFromUrl(importMapUrl, "importMapFileRelativeUrl parameter")
+            return fetchImportMapFromUrl(
+              importMapUrl,
+              "importMapFileRelativeUrl parameter",
+            )
           }
         } else {
           // there is no importmap, its' fine it's not mandatory to use one
           fetchImportMap = () => {
             const firstEntryPoint = htmlEntryPoints[0] || entryPointsPrepared[0]
             const { entryProjectRelativeUrl } = firstEntryPoint
-            const entryCompileUrl = resolveUrl(entryProjectRelativeUrl, compileDirectoryUrl)
+            const entryCompileUrl = resolveUrl(
+              entryProjectRelativeUrl,
+              compileDirectoryUrl,
+            )
             const defaultImportMap = getDefaultImportMap({
               importMapFileUrl: entryCompileUrl,
               projectDirectoryUrl,
@@ -356,13 +386,20 @@ export const createJsenvRollupPlugin = async ({
           logLevel: loggerToLogLevel(logger),
           format,
           baseUrl: compileServerOrigin,
-          buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
+          buildDirectoryRelativeUrl: urlToRelativeUrl(
+            buildDirectoryUrl,
+            projectDirectoryUrl,
+          ),
 
           urlToCompiledServerUrl: (url) => {
             return asCompiledServerUrl(url)
           },
           urlToHumanUrl: (url) => {
-            if (!url.startsWith("http:") && !url.startsWith("https:") && !url.startsWith("file:")) {
+            if (
+              !url.startsWith("http:") &&
+              !url.startsWith("https:") &&
+              !url.startsWith("file:")
+            ) {
               return url
             }
             const originalProjectUrl = asOriginalUrl(url)
@@ -380,7 +417,8 @@ export const createJsenvRollupPlugin = async ({
             importerIsJsModule,
           }) => {
             const isHtmlEntryPoint = importerIsEntry && !importerIsJsModule
-            const isHtmlEntryPointReferencingAJsModule = isHtmlEntryPoint && targetIsJsModule
+            const isHtmlEntryPointReferencingAJsModule =
+              isHtmlEntryPoint && targetIsJsModule
 
             // when html references a js we must wait for the compiled version of js
             if (isHtmlEntryPointReferencingAJsModule) {
@@ -412,7 +450,11 @@ export const createJsenvRollupPlugin = async ({
           emitChunk,
           emitAsset,
           setAssetSource,
-          onJsModuleReference: ({ jsModuleUrl, jsModuleIsInline, jsModuleSource }) => {
+          onJsModuleReference: ({
+            jsModuleUrl,
+            jsModuleIsInline,
+            jsModuleSource,
+          }) => {
             atleastOneChunkEmitted = true
             if (jsModuleIsInline) {
               virtualModules[jsModuleUrl] = jsModuleSource
@@ -451,7 +493,10 @@ export const createJsenvRollupPlugin = async ({
                 `Unusual content type for ${entryProjectRelativeUrl} ${entryContentType} will be handled as text/html`,
               )
             }
-            const entryUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
+            const entryUrl = resolveUrl(
+              entryProjectRelativeUrl,
+              compileServerOrigin,
+            )
             await assetBuilder.createReferenceForHTMLEntry({
               entryContentType,
               entryUrl,
@@ -486,7 +531,9 @@ export const createJsenvRollupPlugin = async ({
       }
 
       if (externalImportSpecifiers.includes(specifier)) {
-        logger.debug(`${specifier} verifies externalImportSpecifiers -> marked as external`)
+        logger.debug(
+          `${specifier} verifies externalImportSpecifiers -> marked as external`,
+        )
         return { id: specifier, external: true }
       }
 
@@ -523,7 +570,9 @@ export const createJsenvRollupPlugin = async ({
       const assetTarget = assetBuilder.findAsset((asset) => {
         return asset.rollupReferenceId === referenceId
       })
-      const buildRelativeUrl = assetTarget ? assetTarget.targetBuildRelativeUrl : fileName
+      const buildRelativeUrl = assetTarget
+        ? assetTarget.targetBuildRelativeUrl
+        : fileName
       if (format === "esmodule") {
         return `new URL("${buildRelativeUrl}", import.meta.url).href`
       }
@@ -569,7 +618,10 @@ export const createJsenvRollupPlugin = async ({
       // For now we just compute the information that the target file is a jsenv helper
       // without doing anything special with "targetIsJsenvHelperFile" information
       const originalUrl = asOriginalUrl(url)
-      const targetIsJsenvHelperFile = urlIsInsideOf(originalUrl, jsenvHelpersDirectoryInfo.url)
+      const targetIsJsenvHelperFile = urlIsInsideOf(
+        originalUrl,
+        jsenvHelpersDirectoryInfo.url,
+      )
 
       // Store the fact that this file is referenced by js (static or dynamic import)
       assetBuilder.createReference({
@@ -649,7 +701,10 @@ export const createJsenvRollupPlugin = async ({
         const sourcemapUrl = fileSystemPathToUrl(sourcemapPath)
         const url = relativePathToUrl(relativePath, sourcemapUrl)
         const serverUrl = asServerUrl(url)
-        const finalUrl = serverUrl in urlRedirectionMap ? urlRedirectionMap[serverUrl] : serverUrl
+        const finalUrl =
+          serverUrl in urlRedirectionMap
+            ? urlRedirectionMap[serverUrl]
+            : serverUrl
         const projectUrl = asProjectUrl(finalUrl)
 
         if (projectUrl) {
@@ -743,7 +798,8 @@ export const createJsenvRollupPlugin = async ({
       Object.keys(jsChunks).forEach((fileName) => {
         const file = jsChunks[fileName]
         let buildRelativeUrl
-        const canBeVersioned = asRollupUrl(file.url) in jsModulesFromEntry || !file.isEntry
+        const canBeVersioned =
+          asRollupUrl(file.url) in jsModulesFromEntry || !file.isEntry
         if (urlVersioning && useImportMapToImproveLongTermCaching) {
           if (canBeVersioned) {
             buildRelativeUrl = computeBuildRelativeUrl(
@@ -764,7 +820,10 @@ export const createJsenvRollupPlugin = async ({
         }
 
         const originalProjectUrl = asOriginalUrl(file.url)
-        const originalProjectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
+        const originalProjectRelativeUrl = urlToRelativeUrl(
+          originalProjectUrl,
+          projectDirectoryUrl,
+        )
 
         if (canBeVersioned) {
           markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
@@ -819,7 +878,10 @@ export const createJsenvRollupPlugin = async ({
         const buildRelativeUrl = assetTarget.targetBuildRelativeUrl
         const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
         const originalProjectUrl = asOriginalUrl(assetTarget.targetUrl)
-        const originalProjectRelativeUrl = urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
+        const originalProjectRelativeUrl = urlToRelativeUrl(
+          originalProjectUrl,
+          projectDirectoryUrl,
+        )
         // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
         file.source = assetTarget.targetBuildBuffer
 
@@ -835,13 +897,26 @@ export const createJsenvRollupPlugin = async ({
       rollupBuild = sortObjectByPathnames(rollupBuild)
       buildManifest = sortObjectByPathnames(buildManifest)
       buildMappings = sortObjectByPathnames(buildMappings)
-      buildFileContents = createBuildFileContents({ rollupBuild, buildDirectoryUrl })
+      buildFileContents = createBuildFileContents({
+        rollupBuild,
+        buildDirectoryUrl,
+      })
       const buildDuration = Date.now() - buildStartMs
-      buildStats = createBuildStats({ buildFileContents, assetBuilder, buildDuration })
+      buildStats = createBuildStats({
+        buildFileContents,
+        assetBuilder,
+        buildDuration,
+      })
 
       if (assetManifestFile) {
-        const assetManifestFileUrl = resolveUrl(assetManifestFileRelativeUrl, buildDirectoryUrl)
-        await writeFile(assetManifestFileUrl, JSON.stringify(buildManifest, null, "  "))
+        const assetManifestFileUrl = resolveUrl(
+          assetManifestFileRelativeUrl,
+          buildDirectoryUrl,
+        )
+        await writeFile(
+          assetManifestFileUrl,
+          JSON.stringify(buildManifest, null, "  "),
+        )
       }
 
       if (writeOnFileSystem) {
@@ -857,7 +932,10 @@ export const createJsenvRollupPlugin = async ({
       logger.info(
         formatBuildDoneInfo({
           buildStats,
-          buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
+          buildDirectoryRelativeUrl: urlToRelativeUrl(
+            buildDirectoryUrl,
+            projectDirectoryUrl,
+          ),
         }),
       )
     },
@@ -897,7 +975,10 @@ export const createJsenvRollupPlugin = async ({
     }
 
     const importerUrl = urlImporterMap[moduleUrl]
-    const moduleResponse = await jsenvFetchUrl(moduleUrl, asProjectUrl(importerUrl) || importerUrl)
+    const moduleResponse = await jsenvFetchUrl(
+      moduleUrl,
+      asProjectUrl(importerUrl) || importerUrl,
+    )
     const responseContentType = moduleResponse.headers["content-type"] || ""
     const commonData = {
       responseContentType,
@@ -924,7 +1005,10 @@ export const createJsenvRollupPlugin = async ({
       }
     }
 
-    if (responseContentType === "application/json" || responseContentType.endsWith("+json")) {
+    if (
+      responseContentType === "application/json" ||
+      responseContentType.endsWith("+json")
+    ) {
       const responseBodyAsString = await moduleResponse.text()
       // there is no need to minify the json string
       // because it becomes valid javascript
@@ -937,24 +1021,32 @@ export const createJsenvRollupPlugin = async ({
       }
     }
 
-    const moduleResponseBodyAsBuffer = Buffer.from(await moduleResponse.arrayBuffer())
+    const moduleResponseBodyAsBuffer = Buffer.from(
+      await moduleResponse.arrayBuffer(),
+    )
     const targetContentType = moduleResponse.headers["content-type"]
-    const assetReferenceForImport = await assetBuilder.createReferenceFoundInJs({
-      // Reference to this target is corresponds to a static or dynamic import.
-      // found in a given file (importerUrl).
-      // But we don't know the line and colum because rollup
-      // does not tell us that information
-      jsUrl: importerUrl,
-      jsLine: undefined,
-      jsColumn: undefined,
+    const assetReferenceForImport = await assetBuilder.createReferenceFoundInJs(
+      {
+        // Reference to this target is corresponds to a static or dynamic import.
+        // found in a given file (importerUrl).
+        // But we don't know the line and colum because rollup
+        // does not tell us that information
+        jsUrl: importerUrl,
+        jsLine: undefined,
+        jsColumn: undefined,
 
-      targetSpecifier: moduleResponse.url,
-      targetContentType,
-      targetBuffer: moduleResponseBodyAsBuffer,
-    })
+        targetSpecifier: moduleResponse.url,
+        targetContentType,
+        targetBuffer: moduleResponseBodyAsBuffer,
+      },
+    )
     if (assetReferenceForImport) {
-      markBuildRelativeUrlAsUsedByJs(assetReferenceForImport.target.targetBuildRelativeUrl)
-      const content = `export default ${referenceToCodeForRollup(assetReferenceForImport)}`
+      markBuildRelativeUrlAsUsedByJs(
+        assetReferenceForImport.target.targetBuildRelativeUrl,
+      )
+      const content = `export default ${referenceToCodeForRollup(
+        assetReferenceForImport,
+      )}`
 
       return {
         ...commonData,
@@ -982,7 +1074,8 @@ export const createJsenvRollupPlugin = async ({
     importer = asOriginalUrl(importer) || asProjectUrl(importer) || importer
 
     const okValidation = await validateResponseStatusIsOk(response, {
-      originalUrl: asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl,
+      originalUrl:
+        asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl,
       importer,
     })
     if (!okValidation.valid) {
@@ -1008,7 +1101,10 @@ export const createJsenvRollupPlugin = async ({
       throw new Error(okValidation.message)
     }
     const importMap = await importMapResponse.json()
-    const importMapNormalized = normalizeImportMap(importMap, importMapResponse.url)
+    const importMapNormalized = normalizeImportMap(
+      importMap,
+      importMapResponse.url,
+    )
     return importMapNormalized
   }
 
@@ -1090,22 +1186,43 @@ const ensureTopLevelAwaitTranspilationIfNeeded = async ({
 
 const prepareEntryPoints = async (
   entryPointMap,
-  { logger, projectDirectoryUrl, buildDirectoryUrl, compileServerOrigin, fetchFile },
+  {
+    logger,
+    projectDirectoryUrl,
+    buildDirectoryUrl,
+    compileServerOrigin,
+    fetchFile,
+  },
 ) => {
   const entryFileRelativeUrls = Object.keys(entryPointMap)
   const entryPointsPrepared = []
   await entryFileRelativeUrls.reduce(async (previous, entryFileRelativeUrl) => {
     await previous
 
-    const entryProjectUrl = resolveUrl(entryFileRelativeUrl, projectDirectoryUrl)
-    const entryBuildUrl = resolveUrl(entryPointMap[entryFileRelativeUrl], buildDirectoryUrl)
+    const entryProjectUrl = resolveUrl(
+      entryFileRelativeUrl,
+      projectDirectoryUrl,
+    )
+    const entryBuildUrl = resolveUrl(
+      entryPointMap[entryFileRelativeUrl],
+      buildDirectoryUrl,
+    )
 
-    const entryProjectRelativeUrl = urlToRelativeUrl(entryProjectUrl, projectDirectoryUrl)
-    const entryBuildRelativeUrl = urlToRelativeUrl(entryBuildUrl, buildDirectoryUrl)
+    const entryProjectRelativeUrl = urlToRelativeUrl(
+      entryProjectUrl,
+      projectDirectoryUrl,
+    )
+    const entryBuildRelativeUrl = urlToRelativeUrl(
+      entryBuildUrl,
+      buildDirectoryUrl,
+    )
 
     logger.info(`${infoSign} load entry point ${entryProjectRelativeUrl}`)
 
-    const entryServerUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
+    const entryServerUrl = resolveUrl(
+      entryProjectRelativeUrl,
+      compileServerOrigin,
+    )
 
     const entryResponse = await fetchFile(entryServerUrl, `entryPointMap`)
     const entryContentType = entryResponse.headers["content-type"]
@@ -1113,10 +1230,14 @@ const prepareEntryPoints = async (
 
     entryPointsPrepared.push({
       entryContentType:
-        entryContentType === "text/javascript" ? "application/javascript" : entryContentType,
+        entryContentType === "text/javascript"
+          ? "application/javascript"
+          : entryContentType,
       entryProjectRelativeUrl,
       entryBuildRelativeUrl,
-      ...(isHtml ? { entryBuffer: Buffer.from(await entryResponse.arrayBuffer()) } : {}),
+      ...(isHtml
+        ? { entryBuffer: Buffer.from(await entryResponse.arrayBuffer()) }
+        : {}),
     })
   }, Promise.resolve())
 

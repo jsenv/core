@@ -30,8 +30,12 @@ export const convertCommonJsWithBabel = async ({
               ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` }
               : {}),
             ...(replaceGlobalObject ? { global: "globalThis" } : {}),
-            ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
-            ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
+            ...(replaceGlobalFilename
+              ? { __filename: __filenameReplacement }
+              : {}),
+            ...(replaceGlobalDirname
+              ? { __dirname: __dirnameReplacement }
+              : {}),
             ...replaceMap,
           },
         },

@@ -14,7 +14,8 @@ export const babelPluginReplaceExpressions = (api, options) => {
     pre: (state) => {
       // https://github.com/babel/babel/blob/d50e78d45b608f6e0f6cc33aeb22f5db5027b153/packages/babel-traverse/src/path/replacement.js#L93
       const parseExpression = (value) => {
-        const expressionNode = parse(value, state.opts).program.body[0].expression
+        const expressionNode = parse(value, state.opts).program.body[0]
+          .expression
         traverse.removeProperties(expressionNode)
         return expressionNode
       }
@@ -25,16 +26,28 @@ export const babelPluginReplaceExpressions = (api, options) => {
         const value = replaceMap[key]
         const valueExpressionNode = parseExpression(value)
 
-        const equivalentKeyExpressionIndex = candidateArray.findIndex((candidate) =>
-          types.isNodesEquivalent(candidate.keyExpressionNode, keyExpressionNode),
+        const equivalentKeyExpressionIndex = candidateArray.findIndex(
+          (candidate) =>
+            types.isNodesEquivalent(
+              candidate.keyExpressionNode,
+              keyExpressionNode,
+            ),
         )
-        if (!allowConflictingReplacements && equivalentKeyExpressionIndex > -1) {
+        if (
+          !allowConflictingReplacements &&
+          equivalentKeyExpressionIndex > -1
+        ) {
           throw new Error(
             `Expressions ${candidateArray[equivalentKeyExpressionIndex].key} and ${key} conflict`,
           )
         }
 
-        const newCandidate = { key, value, keyExpressionNode, valueExpressionNode }
+        const newCandidate = {
+          key,
+          value,
+          keyExpressionNode,
+          valueExpressionNode,
+        }
         if (equivalentKeyExpressionIndex > -1) {
           candidateArray[equivalentKeyExpressionIndex] = newCandidate
         } else {
@@ -66,7 +79,11 @@ export const babelPluginReplaceExpressions = (api, options) => {
         })
         if (candidateFound) {
           try {
-            types.validate(path.parent, path.key, candidateFound.valueExpressionNode)
+            types.validate(
+              path.parent,
+              path.key,
+              candidateFound.valueExpressionNode,
+            )
           } catch (err) {
             if (!(err instanceof TypeError)) {
               throw err

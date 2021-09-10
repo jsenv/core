@@ -8,7 +8,11 @@ json file etag is used to invalidate the cache
 */
 
 import { readFileSync } from "fs"
-import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
+import {
+  urlToRelativeUrl,
+  urlToFileSystemPath,
+  resolveUrl,
+} from "@jsenv/filesystem"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 
 export const buildToCompilationResult = (
@@ -16,20 +20,28 @@ export const buildToCompilationResult = (
   { mainFileName, projectDirectoryUrl, compiledFileUrl, sourcemapFileUrl },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
-    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
+    throw new TypeError(
+      `projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`,
+    )
   }
   if (typeof compiledFileUrl !== "string") {
-    throw new TypeError(`compiledFileUrl must be a string, got ${compiledFileUrl}`)
+    throw new TypeError(
+      `compiledFileUrl must be a string, got ${compiledFileUrl}`,
+    )
   }
   if (typeof sourcemapFileUrl !== "string") {
-    throw new TypeError(`sourcemapFileUrl must be a string, got ${sourcemapFileUrl}`)
+    throw new TypeError(
+      `sourcemapFileUrl must be a string, got ${sourcemapFileUrl}`,
+    )
   }
 
   const sources = []
   const sourcesContent = []
 
   if (mainFileName === undefined) {
-    mainFileName = Object.keys(rollupBuild).find((key) => rollupBuild[key].isEntry)
+    mainFileName = Object.keys(rollupBuild).find(
+      (key) => rollupBuild[key].isEntry,
+    )
   }
 
   const trackDependencies = (dependencyMap) => {
@@ -53,7 +65,10 @@ export const buildToCompilationResult = (
   const mainFile = parseRollupFile(mainRollupFile, {
     urlResponseBodyMap,
     sourcemapFileUrl,
-    sourcemapFileRelativeUrlForModule: urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl),
+    sourcemapFileRelativeUrlForModule: urlToRelativeUrl(
+      sourcemapFileUrl,
+      compiledFileUrl,
+    ),
   })
   // mainFile.sourcemap.file = fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl)
   trackDependencies(mainFile.dependencyMap)
@@ -109,7 +124,10 @@ const parseRollupFile = (
 
   const sourcemap = rollupFile.map
 
-  const content = setJavaScriptSourceMappingUrl(rollupFile.code, sourcemapFileRelativeUrlForModule)
+  const content = setJavaScriptSourceMappingUrl(
+    rollupFile.code,
+    sourcemapFileRelativeUrlForModule,
+  )
 
   return {
     dependencyMap,
@@ -118,7 +136,12 @@ const parseRollupFile = (
   }
 }
 
-const getModuleContent = ({ urlResponseBodyMap, mainModuleSourcemap, moduleUrl, moduleIndex }) => {
+const getModuleContent = ({
+  urlResponseBodyMap,
+  mainModuleSourcemap,
+  moduleUrl,
+  moduleIndex,
+}) => {
   if (moduleUrl in urlResponseBodyMap) {
     return urlResponseBodyMap[moduleUrl]
   }
@@ -127,7 +150,10 @@ const getModuleContent = ({ urlResponseBodyMap, mainModuleSourcemap, moduleUrl, 
   const sourcesContent = mainModuleSourcemap.sourcesContent || []
   if (moduleIndex in sourcesContent) {
     const contentFromRollupSourcemap = sourcesContent[moduleIndex]
-    if (contentFromRollupSourcemap !== null && contentFromRollupSourcemap !== undefined) {
+    if (
+      contentFromRollupSourcemap !== null &&
+      contentFromRollupSourcemap !== undefined
+    ) {
       return contentFromRollupSourcemap
     }
   }

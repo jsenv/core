@@ -43,5 +43,7 @@ const stringToVersion = (string) => {
   }
 }
 
-const createValueErrorMessage = ({ value }) => `value must be a number or a string.
+const createValueErrorMessage = ({
+  value,
+}) => `value must be a number or a string.
 value: ${value}`

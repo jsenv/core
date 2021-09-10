@@ -3,7 +3,10 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
-export const getTargetAsBase64Url = ({ targetBuildBuffer, targetContentType }) => {
+export const getTargetAsBase64Url = ({
+  targetBuildBuffer,
+  targetContentType,
+}) => {
   return stringifyDataUrl({
     data: targetBuildBuffer,
     base64Flag: true,
@@ -44,7 +47,10 @@ export const getCallerLocation = () => {
   const callerCallsite = stack[2]
   const fileName = callerCallsite.getFileName()
   return {
-    url: fileName && isFileSystemPath(fileName) ? fileSystemPathToUrl(fileName) : fileName,
+    url:
+      fileName && isFileSystemPath(fileName)
+        ? fileSystemPathToUrl(fileName)
+        : fileName,
     line: callerCallsite.getLineNumber(),
     column: callerCallsite.getColumnNumber(),
   }
@@ -54,16 +60,25 @@ export const compareContentType = (leftContentType, rightContentType) => {
   if (leftContentType === rightContentType) {
     return true
   }
-  if (leftContentType === "text/javascript" && rightContentType === "application/javascript") {
+  if (
+    leftContentType === "text/javascript" &&
+    rightContentType === "application/javascript"
+  ) {
     return true
   }
-  if (leftContentType === "application/javascript" && rightContentType === "text/javascript") {
+  if (
+    leftContentType === "application/javascript" &&
+    rightContentType === "text/javascript"
+  ) {
     return true
   }
   return false
 }
 
-export const checkContentType = (reference, { logger, showReferenceSourceLocation }) => {
+export const checkContentType = (
+  reference,
+  { logger, showReferenceSourceLocation },
+) => {
   const { referenceExpectedContentType } = reference
   const { targetContentType } = reference.target
 
@@ -92,7 +107,10 @@ export const checkContentType = (reference, { logger, showReferenceSourceLocatio
   )
 }
 
-const formatContentTypeMismatchLog = (reference, { showReferenceSourceLocation }) => {
+const formatContentTypeMismatchLog = (
+  reference,
+  { showReferenceSourceLocation },
+) => {
   const { referenceExpectedContentType, target } = reference
   const { targetContentType, targetUrl } = target
 
@@ -175,12 +193,20 @@ export const formatFoundReference = ({
 
 const formatCreateReferenceForEntry = ({ reference, referenceEffects }) => {
   return `
-Start from entry file ${reference.target.targetRelativeUrl}${appendEffects(referenceEffects)}`
+Start from entry file ${reference.target.targetRelativeUrl}${appendEffects(
+    referenceEffects,
+  )}`
 }
 
-const formatFoundRessourceHint = ({ reference, showReferenceSourceLocation, referenceEffects }) => {
+const formatFoundRessourceHint = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
   return `
-Found ressource hint in ${showReferenceSourceLocation(reference)}${appendEffects(referenceEffects)}`
+Found ressource hint in ${showReferenceSourceLocation(
+    reference,
+  )}${appendEffects(referenceEffects)}`
 }
 
 const formatFoundReferenceToExternalRessource = ({
@@ -189,9 +215,9 @@ const formatFoundReferenceToExternalRessource = ({
   referenceEffects,
 }) => {
   return `
-Found reference to an external url in ${showReferenceSourceLocation(reference)}${appendEffects(
-    referenceEffects,
-  )}`
+Found reference to an external url in ${showReferenceSourceLocation(
+    reference,
+  )}${appendEffects(referenceEffects)}`
 }
 
 const formatFoundReferenceToInlineAsset = ({
@@ -200,9 +226,9 @@ const formatFoundReferenceToInlineAsset = ({
   referenceEffects,
 }) => {
   return `
-Found reference to an inline asset in ${showReferenceSourceLocation(reference)}${appendEffects(
-    referenceEffects,
-  )}`
+Found reference to an inline asset in ${showReferenceSourceLocation(
+    reference,
+  )}${appendEffects(referenceEffects)}`
 }
 
 const formatFoundReferenceToInlineModule = ({
@@ -211,9 +237,9 @@ const formatFoundReferenceToInlineModule = ({
   referenceEffects,
 }) => {
   return `
-Found reference to an inline module in ${showReferenceSourceLocation(reference)}${appendEffects(
-    referenceEffects,
-  )}`
+Found reference to an inline module in ${showReferenceSourceLocation(
+    reference,
+  )}${appendEffects(referenceEffects)}`
 }
 
 const formatFoundReferenceToAsset = ({
@@ -222,9 +248,9 @@ const formatFoundReferenceToAsset = ({
   referenceEffects,
 }) => {
   return `
-Found reference to an asset in ${showReferenceSourceLocation(reference)}${appendEffects(
-    referenceEffects,
-  )}`
+Found reference to an asset in ${showReferenceSourceLocation(
+    reference,
+  )}${appendEffects(referenceEffects)}`
 }
 
 const formatFoundReferenceToModule = ({
@@ -233,9 +259,9 @@ const formatFoundReferenceToModule = ({
   referenceEffects,
 }) => {
   return `
-Found reference to a module in ${showReferenceSourceLocation(reference)}${appendEffects(
-    referenceEffects,
-  )}`
+Found reference to a module in ${showReferenceSourceLocation(
+    reference,
+  )}${appendEffects(referenceEffects)}`
 }
 
 const appendEffects = (effects) => {

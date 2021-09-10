@@ -111,7 +111,10 @@ export const createAssetBuilder = (
     // on await que les assets, pour le js rollup s'en occupe
     await Promise.all(
       entryReference.target.dependencies.map(async (dependency) => {
-        if (dependency.referenceExpectedContentType === "application/importmap+json") {
+        if (
+          dependency.referenceExpectedContentType ===
+          "application/importmap+json"
+        ) {
           // don't await for importmap right away, it must be handled as the very last asset
           // to be aware of build mappings.
           // getReadyPromise() for that importmap will be called during getAllAssetEntryEmittedPromise
@@ -163,7 +166,9 @@ export const createAssetBuilder = (
   }
 
   const getAllAssetEntryEmittedPromise = async () => {
-    const urlToWait = Object.keys(targetMap).filter((url) => targetMap[url].targetIsEntry)
+    const urlToWait = Object.keys(targetMap).filter(
+      (url) => targetMap[url].targetIsEntry,
+    )
     return Promise.all(
       urlToWait.map(async (url) => {
         const target = targetMap[url]
@@ -253,9 +258,12 @@ export const createAssetBuilder = (
     if (targetIsInline && targetFileNamePattern === undefined) {
       // inherit parent directory location because it's an inline file
       targetFileNamePattern = () => {
-        const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(importerTarget, {
-          lineBreakNormalization,
-        })
+        const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(
+          importerTarget,
+          {
+            lineBreakNormalization,
+          },
+        )
         const importerParentRelativeUrl = urlToRelativeUrl(
           urlToParentUrl(resolveUrl(importerBuildRelativeUrl, "file://")),
           "file://",
@@ -355,27 +363,34 @@ export const createAssetBuilder = (
         // - js was only preloaded/prefetched and never referenced afterwards
         // - js was only referenced by other js
         if (!buildFileInfo) {
-          const targetWasOnlyPreloadedOrPrefecthed = !target.firstStrongReference
+          const targetWasOnlyPreloadedOrPrefecthed =
+            !target.firstStrongReference
           if (targetWasOnlyPreloadedOrPrefecthed) {
             resolve()
             return
           }
 
-          const targetWasOnlyReferencedByOtherJs = target.targetReferences.every(
-            (ref) => ref.referenceShouldNotEmitChunk,
-          )
+          const targetWasOnlyReferencedByOtherJs =
+            target.targetReferences.every(
+              (ref) => ref.referenceShouldNotEmitChunk,
+            )
           if (targetWasOnlyReferencedByOtherJs) {
             resolve()
             return
           }
 
-          reject(new Error(`${shortenUrl(targetUrl)} cannot be found in the build info`))
+          reject(
+            new Error(
+              `${shortenUrl(targetUrl)} cannot be found in the build info`,
+            ),
+          )
           return
         }
 
         const targetBuildBuffer = buildFileInfo.code
         const targetFileName = buildFileInfo.fileName
-        const targetBuildRelativeUrl = buildManifest[targetFileName] || targetFileName
+        const targetBuildRelativeUrl =
+          buildManifest[targetFileName] || targetFileName
         // const targetFileName = targetFileNameFromBuildManifest(buildManifest, targetBuildRelativeUrl) || targetBuildRelativeUrl
         target.targetBuildBuffer = targetBuildBuffer
         target.targetBuildRelativeUrl = targetBuildRelativeUrl
@@ -404,7 +419,10 @@ export const createAssetBuilder = (
         //    and this asset builder fetching to avoid fetching twice.
         //    This scenario would be reproduced for every js module preloaded
         const { usedPromise, buildDonePromise } = target
-        const { winner } = await promiseTrackRace([usedPromise, buildDonePromise])
+        const { winner } = await promiseTrackRace([
+          usedPromise,
+          buildDonePromise,
+        ])
         if (winner === buildDonePromise) {
           return
         }
@@ -524,7 +542,10 @@ export const createAssetBuilder = (
 
       const transform = assetTransformMap[targetUrl]
       if (typeof transform !== "function") {
-        target.targetBuildEnd(target.targetBuffer, target.targetBuildRelativeUrl)
+        target.targetBuildEnd(
+          target.targetBuffer,
+          target.targetBuildRelativeUrl,
+        )
         return
       }
 
@@ -538,9 +559,12 @@ export const createAssetBuilder = (
       // we don't yet know the exact importerBuildRelativeUrl but we can generate a fake one
       // to ensure we resolve dependency against where the importer file will be
 
-      const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(target, {
-        lineBreakNormalization,
-      })
+      const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(
+        target,
+        {
+          lineBreakNormalization,
+        },
+      )
       const assetEmitters = []
       const transformReturnValue = await transform({
         precomputeBuildRelativeUrl: (targetBuildBuffer) =>
@@ -561,14 +585,22 @@ export const createAssetBuilder = (
             // js can reference an url without versionning
             // and actually fetch the versioned url thanks to importmap
             referenceTargetBuildRelativeUrl =
-              referenceTarget.targetFileName || referenceTarget.targetBuildRelativeUrl
+              referenceTarget.targetFileName ||
+              referenceTarget.targetBuildRelativeUrl
           } else {
             // other ressource must use the exact url
-            referenceTargetBuildRelativeUrl = referenceTarget.targetBuildRelativeUrl
+            referenceTargetBuildRelativeUrl =
+              referenceTarget.targetBuildRelativeUrl
           }
 
-          const referenceTargetBuildUrl = resolveUrl(referenceTargetBuildRelativeUrl, "file:///")
-          const importerBuildUrl = resolveUrl(importerBuildRelativeUrl, "file:///")
+          const referenceTargetBuildUrl = resolveUrl(
+            referenceTargetBuildRelativeUrl,
+            "file:///",
+          )
+          const importerBuildUrl = resolveUrl(
+            importerBuildRelativeUrl,
+            "file:///",
+          )
           return urlToRelativeUrl(referenceTargetBuildUrl, importerBuildUrl)
         },
       })
@@ -606,9 +638,12 @@ export const createAssetBuilder = (
       if (targetBuildBuffer !== undefined) {
         target.targetBuildBuffer = targetBuildBuffer
         if (targetBuildRelativeUrl === undefined) {
-          target.targetBuildRelativeUrl = computeBuildRelativeUrlForTarget(target, {
-            lineBreakNormalization,
-          })
+          target.targetBuildRelativeUrl = computeBuildRelativeUrlForTarget(
+            target,
+            {
+              lineBreakNormalization,
+            },
+          )
         }
       }
 
@@ -696,7 +731,10 @@ export const createAssetBuilder = (
 
         const basenameUrl = resolveUrl(urlToBasename(jsModuleUrl), jsModuleUrl)
         const importerUrl = urlToCompiledServerUrl(reference.referenceUrl)
-        const name = urlToRelativeUrl(basenameUrl, importerUrl).replace(new RegExp("../", "g"), "")
+        const name = urlToRelativeUrl(basenameUrl, importerUrl).replace(
+          new RegExp("../", "g"),
+          "",
+        )
         const rollupReferenceId = emitChunk({
           id: jsModuleUrl,
           name,
@@ -715,7 +753,9 @@ export const createAssetBuilder = (
         fileName: target.targetRelativeUrl,
       })
       target.rollupReferenceId = rollupReferenceId
-      effects.push(`emit rollup asset "${target.targetRelativeUrl}" (${rollupReferenceId})`)
+      effects.push(
+        `emit rollup asset "${target.targetRelativeUrl}" (${rollupReferenceId})`,
+      )
 
       return effects
     }
@@ -796,8 +836,12 @@ export const createAssetBuilder = (
   const showReferenceSourceLocation = (reference) => {
     const referenceUrl = reference.referenceUrl
     const referenceTarget = getTargetFromUrl(referenceUrl)
-    const referenceSource = referenceTarget ? referenceTarget.targetBuffer : loadUrl(referenceUrl)
-    const referenceSourceAsString = referenceSource ? String(referenceSource) : ""
+    const referenceSource = referenceTarget
+      ? referenceTarget.targetBuffer
+      : loadUrl(referenceUrl)
+    const referenceSourceAsString = referenceSource
+      ? String(referenceSource)
+      : ""
 
     let message = `${urlToHumanUrl(referenceUrl)}`
     if (typeof reference.referenceLine === "number") {
@@ -807,7 +851,10 @@ export const createAssetBuilder = (
       }
     }
 
-    if (referenceSourceAsString && typeof reference.referenceLine === "number") {
+    if (
+      referenceSourceAsString &&
+      typeof reference.referenceLine === "number"
+    ) {
       return `${message}
 
 ${showSourceLocation(referenceSourceAsString, {

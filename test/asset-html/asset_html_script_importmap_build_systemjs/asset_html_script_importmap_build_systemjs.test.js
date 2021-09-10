@@ -16,7 +16,10 @@ import {
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
@@ -39,12 +42,18 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   return buildRelativeUrl
 }
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const importmapScriptNode = findNodeByTagName(htmlString, "script")
 const importmapBuildRelativeUrl = getBuildRelativeUrl("import-map.importmap")
-const importmapBuildUrl = resolveUrl(importmapBuildRelativeUrl, buildDirectoryUrl)
+const importmapBuildUrl = resolveUrl(
+  importmapBuildRelativeUrl,
+  buildDirectoryUrl,
+)
 
 // ensure src is properly updated
 {

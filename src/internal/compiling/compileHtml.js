@@ -24,7 +24,9 @@ export const parseHtmlString = (htmlString) => {
 
 export const parseSvgString = (svgString) => {
   const parse5 = require("parse5")
-  const svgAst = parse5.parseFragment(svgString, { sourceCodeLocationInfo: true })
+  const svgAst = parse5.parseFragment(svgString, {
+    sourceCodeLocationInfo: true,
+  })
   return svgAst
 }
 
@@ -36,7 +38,9 @@ export const stringifyHtmlAst = (htmlAst) => {
 
 export const findNode = (htmlStringOrAst, predicate) => {
   const htmlAst =
-    typeof htmlStringOrAst === "string" ? parseHtmlString(htmlStringOrAst) : htmlStringOrAst
+    typeof htmlStringOrAst === "string"
+      ? parseHtmlString(htmlStringOrAst)
+      : htmlStringOrAst
   let nodeMatching = null
   visitHtmlAst(htmlAst, (node) => {
     if (predicate(node)) {
@@ -86,7 +90,9 @@ export const removeHtmlNodeAttribute = (htmlNode, attributeToRemove) => {
 
 export const addHtmlNodeAttribute = (htmlNode, attributeToSet) => {
   if (typeof attributeToSet !== "object") {
-    throw new TypeError(`addHtmlNodeAttribute attribute must be an object {name, value}`)
+    throw new TypeError(
+      `addHtmlNodeAttribute attribute must be an object {name, value}`,
+    )
   }
 
   const existingAttributeIndex = htmlNode.attrs.findIndex(
@@ -109,7 +115,11 @@ export const setHtmlNodeText = (htmlNode, textContent) => {
   if (textNode) {
     textNode.value = textContent
   } else {
-    const newTextNode = { nodeName: "#text", value: textContent, parentNode: htmlNode }
+    const newTextNode = {
+      nodeName: "#text",
+      value: textContent,
+      parentNode: htmlNode,
+    }
     htmlNode.childNodes.splice(0, 0, newTextNode)
   }
 }
@@ -262,7 +272,11 @@ export const parseHtmlAstRessources = (htmlAst) => {
   }
 }
 
-export const replaceHtmlNode = (node, replacement, { inheritAttributes = true } = {}) => {
+export const replaceHtmlNode = (
+  node,
+  replacement,
+  { inheritAttributes = true } = {},
+) => {
   let newNode
   if (typeof replacement === "string") {
     newNode = parseHtmlAsSingleElement(replacement)
@@ -273,7 +287,9 @@ export const replaceHtmlNode = (node, replacement, { inheritAttributes = true } 
   if (inheritAttributes) {
     newNode.attrs = [
       // inherit script attributes except src, type, href
-      ...node.attrs.filter(({ name }) => name !== "type" && name !== "src" && name !== "href"),
+      ...node.attrs.filter(
+        ({ name }) => name !== "type" && name !== "src" && name !== "href",
+      ),
       ...newNode.attrs,
     ]
   }
@@ -405,7 +421,8 @@ export const getUniqueNameForInlineHtmlNode = (node, nodes, pattern) => {
       const { line, column } = getHtmlNodeLocation(node)
       const lineTaken = nodes.some(
         (nodeCandidate) =>
-          nodeCandidate !== node && getHtmlNodeLocation(nodeCandidate).line === line,
+          nodeCandidate !== node &&
+          getHtmlNodeLocation(nodeCandidate).line === line,
       )
       if (lineTaken) {
         return `${line}.${column}`

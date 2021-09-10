@@ -1,7 +1,13 @@
-import { createCancellationToken, composeCancellationToken } from "@jsenv/cancellation"
+import {
+  createCancellationToken,
+  composeCancellationToken,
+} from "@jsenv/cancellation"
 
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
-import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
+import {
+  assertProjectDirectoryUrl,
+  assertProjectDirectoryExists,
+} from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
 
@@ -49,13 +55,18 @@ export const execute = async ({
   compileServerCanWriteOnFilesystem,
 }) => {
   const jsenvExecutionFunction = async ({ jsenvCancellationToken }) => {
-    cancellationToken = composeCancellationToken(cancellationToken, jsenvCancellationToken)
+    cancellationToken = composeCancellationToken(
+      cancellationToken,
+      jsenvCancellationToken,
+    )
 
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
     if (typeof fileRelativeUrl !== "string") {
-      throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`)
+      throw new TypeError(
+        `fileRelativeUrl must be a string, got ${fileRelativeUrl}`,
+      )
     }
     fileRelativeUrl = fileRelativeUrl.replace(/\\/g, "/")
     if (typeof launch !== "function") {

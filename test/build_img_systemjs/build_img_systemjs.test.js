@@ -18,7 +18,10 @@ import {
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
@@ -35,7 +38,10 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const img = findNodeByTagName(htmlString, "img")
@@ -43,7 +49,8 @@ const img = findNodeByTagName(htmlString, "img")
 // ensure src is properly updated
 {
   const srcAttribute = getHtmlNodeAttributeByName(img, "src")
-  const imgABuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img-a.png`]
+  const imgABuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}img-a.png`]
 
   const actual = srcAttribute.value
   const expected = imgABuildRelativeUrl
@@ -57,8 +64,10 @@ const img = findNodeByTagName(htmlString, "img")
 // ensure srcset is properly updated
 {
   const srcsetAttribute = getHtmlNodeAttributeByName(img, "srcset")
-  const imgBBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img-b.png`]
-  const imgCBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img-c.png`]
+  const imgBBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}img-b.png`]
+  const imgCBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}img-c.png`]
 
   const actual = parseSrcset(srcsetAttribute.value)
   const expected = [

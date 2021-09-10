@@ -13,7 +13,11 @@ export const readFileContent = async (url) => {
   return String(buffer)
 }
 
-export const writeFileContent = async (url, content, { fileLikelyNotFound = false } = {}) => {
+export const writeFileContent = async (
+  url,
+  content,
+  { fileLikelyNotFound = false } = {},
+) => {
   const filePath = urlToFileSystemPath(url)
   const directoryPath = dirname(filePath)
 

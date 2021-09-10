@@ -10,7 +10,10 @@ import { requireGlobalBuild } from "@jsenv/core/test/requireGlobalBuild.js"
 import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryBasename = basename(testDirectoryRelativeUrl)
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/global/`
 const mainFilename = `${testDirectoryBasename}.js`

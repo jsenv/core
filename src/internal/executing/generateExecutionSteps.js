@@ -1,7 +1,10 @@
 import { collectFiles } from "@jsenv/filesystem"
 import { generateFileExecutionSteps } from "./generateFileExecutionSteps.js"
 
-export const generateExecutionSteps = async (plan, { cancellationToken, projectDirectoryUrl }) => {
+export const generateExecutionSteps = async (
+  plan,
+  { cancellationToken, projectDirectoryUrl },
+) => {
   const structuredMetaMap = {
     filePlan: plan,
   }

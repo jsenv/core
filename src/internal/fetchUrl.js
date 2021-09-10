@@ -4,7 +4,10 @@ import { fetchUrl as serverFetchUrl, headersToObject } from "@jsenv/server"
 // ideally we should only pass this to the fetch below
 globalAgent.options.rejectUnauthorized = false
 
-export const fetchUrl = async (url, { ignoreHttpsError = true, ...rest } = {}) => {
+export const fetchUrl = async (
+  url,
+  { ignoreHttpsError = true, ...rest } = {},
+) => {
   const response = await serverFetchUrl(url, { ignoreHttpsError, ...rest })
 
   return {

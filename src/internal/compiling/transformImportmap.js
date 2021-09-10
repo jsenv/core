@@ -10,16 +10,25 @@ import { urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
 import { composeTwoImportMaps } from "@jsenv/import-map"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
-export const transformImportmap = async (importmapBeforeTransformation, { originalFileUrl }) => {
+export const transformImportmap = async (
+  importmapBeforeTransformation,
+  { originalFileUrl },
+) => {
   const importMapForProject = JSON.parse(importmapBeforeTransformation)
 
   const topLevelRemappingForJsenvCore = {
-    "@jsenv/core/": urlToRelativeUrlRemapping(jsenvCoreDirectoryUrl, originalFileUrl),
+    "@jsenv/core/": urlToRelativeUrlRemapping(
+      jsenvCoreDirectoryUrl,
+      originalFileUrl,
+    ),
   }
 
   const importmapForSelfImport = {
     imports: topLevelRemappingForJsenvCore,
-    scopes: generateJsenvCoreScopes({ importMapForProject, topLevelRemappingForJsenvCore }),
+    scopes: generateJsenvCoreScopes({
+      importMapForProject,
+      topLevelRemappingForJsenvCore,
+    }),
   }
 
   const importMap = [importmapForSelfImport, importMapForProject].reduce(
@@ -62,7 +71,10 @@ const urlToRelativeUrlRemapping = (url, baseUrl) => {
   return relativeUrl
 }
 
-const generateJsenvCoreScopes = ({ importMapForProject, topLevelRemappingForJsenvCore }) => {
+const generateJsenvCoreScopes = ({
+  importMapForProject,
+  topLevelRemappingForJsenvCore,
+}) => {
   const { scopes } = importMapForProject
 
   if (!scopes) {

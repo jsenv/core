@@ -3,14 +3,21 @@ import { createPromiseAndHooks } from "../util/util.js"
 import { createPreference } from "../util/preferences.js"
 import { enableVariant } from "../variant/variant.js"
 
-import { toggleTooltip, removeAutoShowTooltip, autoShowTooltip } from "../tooltip/tooltip.js"
+import {
+  toggleTooltip,
+  removeAutoShowTooltip,
+  autoShowTooltip,
+} from "../tooltip/tooltip.js"
 import { connectCompileServerEventSource } from "./connectCompileServerEventSource.js"
 
 const livereloadingPreference = createPreference("livereloading")
 let eventSourceState = "default"
 let livereloadingAvailableOnServer = false
 
-export const initToolbarEventSource = ({ executedFileRelativeUrl, livereloading }) => {
+export const initToolbarEventSource = ({
+  executedFileRelativeUrl,
+  livereloading,
+}) => {
   removeForceHideElement(document.querySelector("#eventsource-indicator"))
   connectEventSource(executedFileRelativeUrl)
   livereloadingAvailableOnServer = livereloading
@@ -32,7 +39,9 @@ const shouldLivereload = () => {
 }
 
 const disableLivereloadSetting = () => {
-  document.querySelector(".settings-livereload").setAttribute("data-disabled", "true")
+  document
+    .querySelector(".settings-livereload")
+    .setAttribute("data-disabled", "true")
   document
     .querySelector(".settings-livereload")
     .setAttribute("title", `Livereload not available: disabled by server`)
@@ -49,7 +58,11 @@ const handleFileChange = (file, type) => {
   latestChangeMap[file] = type
   updateEventSourceIndicator()
   if (shouldLivereload()) {
-    if (file.endsWith(".css") || file.endsWith(".scss") || file.endsWith(".sass")) {
+    if (
+      file.endsWith(".css") ||
+      file.endsWith(".scss") ||
+      file.endsWith(".sass")
+    ) {
       reloadAllCss()
       delete latestChangeMap[file]
       updateEventSourceIndicator()
@@ -75,12 +88,16 @@ const reloadPage = () => {
 }
 
 const reloadChanges = () => {
-  const fullReloadRequired = Object.keys(latestChangeMap).some((key) => !key.endsWith(".css"))
+  const fullReloadRequired = Object.keys(latestChangeMap).some(
+    (key) => !key.endsWith(".css"),
+  )
   if (fullReloadRequired) {
     reloadPage()
     return
   }
-  const cssReloadRequired = Object.keys(latestChangeMap).some((key) => key.endsWith(".css"))
+  const cssReloadRequired = Object.keys(latestChangeMap).some((key) =>
+    key.endsWith(".css"),
+  )
   if (cssReloadRequired) {
     reloadAllCss()
     Object.keys(latestChangeMap).forEach((key) => {
@@ -96,40 +113,43 @@ const connectEventSource = (executedFileRelativeUrl) => {
   updateEventSourceIndicator()
   connectionReadyPromise = createPromiseAndHooks()
 
-  eventSourceConnection = connectCompileServerEventSource(executedFileRelativeUrl, {
-    onFileModified: (file) => {
-      handleFileChange(file, "modified")
+  eventSourceConnection = connectCompileServerEventSource(
+    executedFileRelativeUrl,
+    {
+      onFileModified: (file) => {
+        handleFileChange(file, "modified")
+      },
+      onFileRemoved: (file) => {
+        handleFileChange(file, "removed")
+      },
+      onFileAdded: (file) => {
+        handleFileChange(file, "added")
+      },
+      onConnecting: ({ cancel }) => {
+        eventSourceState = "connecting"
+        eventSourceHooks = { abort: cancel }
+        updateEventSourceIndicator()
+      },
+      onConnectionCancelled: ({ connect }) => {
+        eventSourceState = "disabled"
+        eventSourceHooks = { connect }
+        updateEventSourceIndicator()
+      },
+      onConnectionFailed: ({ connect }) => {
+        eventSourceState = "failed"
+        eventSourceHooks = { reconnect: connect }
+        updateEventSourceIndicator()
+      },
+      onConnected: ({ cancel }) => {
+        eventSourceState = "connected"
+        eventSourceHooks = { disconnect: cancel }
+        updateEventSourceIndicator()
+        connectionReadyPromise.resolve()
+        parentEventSource.disconnect()
+      },
+      lastEventId: parentEventSource.lastEventId,
     },
-    onFileRemoved: (file) => {
-      handleFileChange(file, "removed")
-    },
-    onFileAdded: (file) => {
-      handleFileChange(file, "added")
-    },
-    onConnecting: ({ cancel }) => {
-      eventSourceState = "connecting"
-      eventSourceHooks = { abort: cancel }
-      updateEventSourceIndicator()
-    },
-    onConnectionCancelled: ({ connect }) => {
-      eventSourceState = "disabled"
-      eventSourceHooks = { connect }
-      updateEventSourceIndicator()
-    },
-    onConnectionFailed: ({ connect }) => {
-      eventSourceState = "failed"
-      eventSourceHooks = { reconnect: connect }
-      updateEventSourceIndicator()
-    },
-    onConnected: ({ cancel }) => {
-      eventSourceState = "connected"
-      eventSourceHooks = { disconnect: cancel }
-      updateEventSourceIndicator()
-      connectionReadyPromise.resolve()
-      parentEventSource.disconnect()
-    },
-    lastEventId: parentEventSource.lastEventId,
-  })
+  )
 
   eventSourceConnection.connect()
 }
@@ -158,7 +178,9 @@ const updateEventSourceIndicator = () => {
     changes: changeCount > 0 ? "yes" : "no",
   })
 
-  const variantNode = document.querySelector("#eventsource-indicator > [data-when-active]")
+  const variantNode = document.querySelector(
+    "#eventsource-indicator > [data-when-active]",
+  )
   variantNode.querySelector("button").onclick = () => {
     toggleTooltip(eventSourceIndicator)
   }
@@ -173,11 +195,15 @@ const updateEventSourceIndicator = () => {
       const changeLink = variantNode.querySelector(".eventsource-changes-link")
       changeLink.innerHTML = changeCount
       changeLink.onclick = () => {
-        console.log(JSON.stringify(latestChangeMap, null, "  "), latestChangeMap)
+        console.log(
+          JSON.stringify(latestChangeMap, null, "  "),
+          latestChangeMap,
+        )
         // eslint-disable-next-line no-alert
         window.parent.alert(JSON.stringify(latestChangeMap, null, "  "))
       }
-      variantNode.querySelector(".eventsource-reload-link").onclick = reloadChanges
+      variantNode.querySelector(".eventsource-reload-link").onclick =
+        reloadChanges
     }
   } else if (eventSourceState === "failed") {
     autoShowTooltip(eventSourceIndicator)

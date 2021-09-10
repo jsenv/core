@@ -24,7 +24,9 @@ export const connectEventSource = (
 
   const reconnect = () => {
     attemptConnection(
-      lastEventId ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId) : eventSourceUrl,
+      lastEventId
+        ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId)
+        : eventSourceUrl,
     )
   }
 
@@ -51,7 +53,9 @@ export const connectEventSource = (
       connectionStatus = "connected"
       const disconnect = () => {
         if (connectionStatus !== "connected") {
-          console.warn(`disconnect ignored because connection is ${connectionStatus}`)
+          console.warn(
+            `disconnect ignored because connection is ${connectionStatus}`,
+          )
           return
         }
         connectionStatus = "disconnected"
@@ -72,7 +76,9 @@ export const connectEventSource = (
         failed({
           cancel: () => {
             if (connectionStatus !== "failed") {
-              console.warn(`disable ignored because connection is ${connectionStatus}`)
+              console.warn(
+                `disable ignored because connection is ${connectionStatus}`,
+              )
               return
             }
             connectionStatus = "disabled"
@@ -96,7 +102,9 @@ export const connectEventSource = (
         } else {
           const allRetryDuration = Date.now() - firstRetryMs
           if (retryAllocatedMs && allRetryDuration > retryAllocatedMs) {
-            console.info(`could not connect in less than ${retryAllocatedMs} ms`)
+            console.info(
+              `could not connect in less than ${retryAllocatedMs} ms`,
+            )
             eventSource.onerror = undefined
             eventSource.close()
             considerFailed()
@@ -193,11 +201,15 @@ const addLastEventIdIntoUrlSearchParams = (url, lastEventId) => {
 // }
 
 const listenPageUnload = (callback) => {
-  const removePageHideListener = listenEvent(window, "pagehide", (pageHideEvent) => {
-    if (pageHideEvent.persisted !== true) {
-      callback(pageHideEvent)
-    }
-  })
+  const removePageHideListener = listenEvent(
+    window,
+    "pagehide",
+    (pageHideEvent) => {
+      if (pageHideEvent.persisted !== true) {
+        callback(pageHideEvent)
+      }
+    },
+  )
   return removePageHideListener
 }
 

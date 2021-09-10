@@ -17,7 +17,10 @@ import {
 import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
@@ -34,15 +37,24 @@ const { buildMappings } = await buildProject({
   // minify: true,
 })
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const mainJsFileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
-const imgRemapBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
+const mainJsFileBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}main.js`]
+const imgRemapBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
 const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
 // check importmap content
 {
-  const importmapBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}import-map.importmap`]
-  const importmapBuildUrl = resolveUrl(importmapBuildRelativeUrl, buildDirectoryUrl)
+  const importmapBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}import-map.importmap`]
+  const importmapBuildUrl = resolveUrl(
+    importmapBuildRelativeUrl,
+    buildDirectoryUrl,
+  )
   const importmapString = await readFile(importmapBuildUrl)
   const importmap = JSON.parse(importmapString)
 
@@ -61,7 +73,8 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
 // assert asset url is correct for css (hashed)
 {
-  const cssBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}style.css`]
+  const cssBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}style.css`]
   const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
   const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
   const cssString = await readFile(cssBuildUrl)
@@ -87,9 +100,15 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
     urlFromImportMetaNotation: namespace.urlFromImportMetaNotation,
   }
   const expected = {
-    urlFromStaticImport: resolveUrl(`dist/systemjs/${imgRemapBuildRelativeUrl}`, serverOrigin),
+    urlFromStaticImport: resolveUrl(
+      `dist/systemjs/${imgRemapBuildRelativeUrl}`,
+      serverOrigin,
+    ),
     urlFromDynamicImport: {
-      default: resolveUrl(`dist/systemjs/${imgRemapBuildRelativeUrl}`, serverOrigin),
+      default: resolveUrl(
+        `dist/systemjs/${imgRemapBuildRelativeUrl}`,
+        serverOrigin,
+      ),
     },
     // We MUST NOT introduce a build only importmap awareness
     // otherwise it would introduce a difference between dev/after build.
@@ -97,7 +116,10 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
     // importmap does not apply. Dev does not change that, and files after build neither.
     // That being said. when output format is systemjs we still use importmap to avoid
     // having to invalidate the js because an asset changes.
-    urlFromImportMetaNotation: resolveUrl(`dist/systemjs/${imgBuildRelativeUrl}`, serverOrigin),
+    urlFromImportMetaNotation: resolveUrl(
+      `dist/systemjs/${imgBuildRelativeUrl}`,
+      serverOrigin,
+    ),
   }
   assert({ actual, expected })
 }
