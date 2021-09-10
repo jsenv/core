@@ -6,7 +6,12 @@ here I want to test that cache is invalidated when a source file is modified.
 
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl, writeFile } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  writeFile,
+} from "@jsenv/filesystem"
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
@@ -16,7 +21,10 @@ import {
 import { requireCommonJsBuild } from "@jsenv/core/test/requireCommonJsBuild.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryBasename = basename(testDirectoryRelativeUrl)
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`

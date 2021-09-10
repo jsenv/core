@@ -13,7 +13,10 @@ import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
@@ -30,8 +33,12 @@ const { buildMappings } = await buildProject({
   minify: true,
 })
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
-const styleBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}style.css`]
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
+const styleBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}style.css`]
 const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 const styleBuildUrl = resolveUrl(styleBuildRelativeUrl, buildDirectoryUrl)
 const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)

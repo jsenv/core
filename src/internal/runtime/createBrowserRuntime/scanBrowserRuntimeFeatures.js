@@ -6,17 +6,23 @@ export const scanBrowserRuntimeFeatures = async ({
   coverageInstrumentationRequired = true,
   failFastOnFeatureDetection = false,
 } = {}) => {
-  const { outDirectoryRelativeUrl } = await fetchJson("/.jsenv/compile-meta.json")
+  const { outDirectoryRelativeUrl } = await fetchJson(
+    "/.jsenv/compile-meta.json",
+  )
   const groupMapUrl = `/${outDirectoryRelativeUrl}groupMap.json`
   const envFileUrl = `/${outDirectoryRelativeUrl}env.json`
-  const [groupMap, envJson] = await Promise.all([fetchJson(groupMapUrl), fetchJson(envFileUrl)])
+  const [groupMap, envJson] = await Promise.all([
+    fetchJson(groupMapUrl),
+    fetchJson(envFileUrl),
+  ])
 
   const compileId = computeCompileIdFromGroupId({
     groupId: resolveBrowserGroup(groupMap),
     groupMap,
   })
   const groupInfo = groupMap[compileId]
-  const { inlineImportMapIntoHTML, customCompilerNames, convertPatterns } = envJson
+  const { inlineImportMapIntoHTML, customCompilerNames, convertPatterns } =
+    envJson
 
   const featuresReport = {
     babelPluginRequiredNames: babelPluginRequiredNamesFromGroupInfo(groupInfo, {
@@ -100,7 +106,10 @@ const getFeaturesReport = async ({
   return featuresReport
 }
 
-const babelPluginRequiredNamesFromGroupInfo = (groupInfo, { coverageInstrumentationRequired }) => {
+const babelPluginRequiredNamesFromGroupInfo = (
+  groupInfo,
+  { coverageInstrumentationRequired },
+) => {
   const { babelPluginRequiredNameArray } = groupInfo
 
   const babelPluginRequiredNames = babelPluginRequiredNameArray.slice()
@@ -108,7 +117,9 @@ const babelPluginRequiredNamesFromGroupInfo = (groupInfo, { coverageInstrumentat
   // When instrumentation CAN be handed by playwright
   // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
   // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
-  const transformInstrumentIndex = babelPluginRequiredNames.indexOf("transform-instrument")
+  const transformInstrumentIndex = babelPluginRequiredNames.indexOf(
+    "transform-instrument",
+  )
   if (transformInstrumentIndex > -1 && !coverageInstrumentationRequired) {
     babelPluginRequiredNames.splice(transformInstrumentIndex, 1)
   }
@@ -129,7 +140,9 @@ const supportsImportmap = async ({ remote = true } = {}) => {
   const importmapString = JSON.stringify(importMap, null, "  ")
   importmapScript.type = "importmap"
   if (remote) {
-    importmapScript.src = `data:application/json;base64,${window.btoa(importmapString)}`
+    importmapScript.src = `data:application/json;base64,${window.btoa(
+      importmapString,
+    )}`
   } else {
     importmapScript.textContent = importmapString
   }

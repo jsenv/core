@@ -1,4 +1,8 @@
-import { resolveUrl, fileSystemPathToUrl, urlIsInsideOf } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  fileSystemPathToUrl,
+  urlIsInsideOf,
+} from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -22,13 +26,21 @@ export const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
     visitor: {
       Identifier(path, opts) {
         const { filename } = opts
-        if (urlIsInsideOf(fileSystemPathToUrl(filename), regeneratorRuntimeHelperDirectoryUrl)) {
+        if (
+          urlIsInsideOf(
+            fileSystemPathToUrl(filename),
+            regeneratorRuntimeHelperDirectoryUrl,
+          )
+        ) {
           return
         }
 
         const { node } = path
         if (node.name === regeneratorRuntimeIdentifierName) {
-          addSideEffect(path.scope.getProgramParent().path, regeneratorRuntimeImportPath)
+          addSideEffect(
+            path.scope.getProgramParent().path,
+            regeneratorRuntimeImportPath,
+          )
         }
       },
     },

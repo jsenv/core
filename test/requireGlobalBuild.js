@@ -1,4 +1,8 @@
-import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/filesystem"
+import {
+  resolveDirectoryUrl,
+  resolveUrl,
+  urlToFileSystemPath,
+} from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 
 export const requireGlobalBuild = async ({
@@ -7,7 +11,10 @@ export const requireGlobalBuild = async ({
   mainRelativeUrl,
   globalName,
 }) => {
-  const buildDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
+  const buildDirectoryUrl = resolveDirectoryUrl(
+    buildDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
   const mainFileUrl = resolveUrl(mainRelativeUrl, buildDirectoryUrl)
   const mainFilePath = urlToFileSystemPath(mainFileUrl)
   // eslint-disable-next-line import/no-dynamic-require

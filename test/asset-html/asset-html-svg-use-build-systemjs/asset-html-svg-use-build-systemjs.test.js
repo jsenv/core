@@ -1,6 +1,11 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, readFile, resolveUrl } from "@jsenv/filesystem"
+import {
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  readFile,
+  resolveUrl,
+} from "@jsenv/filesystem"
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
@@ -11,7 +16,10 @@ import {
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
@@ -34,14 +42,20 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   return buildRelativeUrl
 }
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const svgBuildRelativeUrl = getBuildRelativeUrl("icon.svg")
 const svgBuildUrl = resolveUrl(svgBuildRelativeUrl, buildDirectoryUrl)
 const pngBuildRelativeUrl = getBuildRelativeUrl("img.png")
 const pngBuildUrl = resolveUrl(pngBuildRelativeUrl, buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
-const [firstUseNodeInBuild, secondUseNodeInBuild] = findAllNodeByTagName(htmlString, "use")
+const [firstUseNodeInBuild, secondUseNodeInBuild] = findAllNodeByTagName(
+  htmlString,
+  "use",
+)
 
 // ensure first use is untouched
 {

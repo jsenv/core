@@ -27,7 +27,10 @@ export const parseCssAsset = async (
     })
   }
 
-  const { atImports, urlDeclarations } = await parseCssUrls(cssString, cssTarget.targetUrl)
+  const { atImports, urlDeclarations } = await parseCssUrls(
+    cssString,
+    cssTarget.targetUrl,
+  )
 
   const urlNodeReferenceMapping = new Map()
   atImports.forEach((atImport) => {
@@ -100,10 +103,16 @@ export const parseCssAsset = async (
     // This is totally fine to do that because sourcemap and css file lives togethers
     // so this comment changes nothing regarding cache invalidation and is not important
     // to decide the filename for this css asset.
-    const cssSourceAfterTransformation = setCssSourceMappingUrl(code, cssSourcemapFilename)
+    const cssSourceAfterTransformation = setCssSourceMappingUrl(
+      code,
+      cssSourcemapFilename,
+    )
 
     registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
-      const cssBuildUrl = resolveUrl(cssTarget.targetBuildRelativeUrl, buildDirectoryUrl)
+      const cssBuildUrl = resolveUrl(
+        cssTarget.targetBuildRelativeUrl,
+        buildDirectoryUrl,
+      )
       const mapBuildUrl = resolveUrl(cssSourcemapFilename, cssBuildUrl)
       map.file = urlToFilename(cssBuildUrl)
       if (map.sources) {
@@ -114,7 +123,10 @@ export const parseCssAsset = async (
           : cssTarget.targetUrl
         map.sources = map.sources.map((source) => {
           const sourceUrl = resolveUrl(source, importerUrl)
-          const sourceUrlRelativeToSourceMap = urlToRelativeUrl(sourceUrl, mapBuildUrl)
+          const sourceUrlRelativeToSourceMap = urlToRelativeUrl(
+            sourceUrl,
+            mapBuildUrl,
+          )
           return sourceUrlRelativeToSourceMap
         })
       }

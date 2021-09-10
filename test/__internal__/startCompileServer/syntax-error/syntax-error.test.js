@@ -1,6 +1,10 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  urlToFileSystemPath,
+} from "@jsenv/filesystem"
 import { fetchUrl } from "@jsenv/server"
 import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -8,16 +12,20 @@ import { startCompileServer } from "@jsenv/core/src/internal/compiling/startComp
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-  ...COMPILE_SERVER_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-})
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
+  await startCompileServer({
+    ...COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+  })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
 const response = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
 const actual = {
@@ -35,7 +43,9 @@ const expected = {
   body: {
     message: actual.body.message,
     messageHTML: actual.body.messageHTML,
-    filename: urlToFileSystemPath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)),
+    filename: urlToFileSystemPath(
+      resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl),
+    ),
     lineNumber: 1,
     columnNumber: 11,
   },

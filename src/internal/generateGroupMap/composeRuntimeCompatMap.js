@@ -1,6 +1,9 @@
 import { findHighestVersion } from "../semantic-versioning/index.js"
 
-export const composeRuntimeCompatMap = (runtimeCompatMap, secondRuntimeCompatMap) => {
+export const composeRuntimeCompatMap = (
+  runtimeCompatMap,
+  secondRuntimeCompatMap,
+) => {
   return objectComposeValue(
     normalizeRuntimeCompatMapVersions(runtimeCompatMap),
     normalizeRuntimeCompatMapVersions(secondRuntimeCompatMap),
@@ -26,7 +29,8 @@ const objectComposeValue = (previous, object, callback) => {
   const composed = { ...previous }
 
   Object.keys(object).forEach((key) => {
-    composed[key] = key in composed ? callback(composed[key], object[key]) : object[key]
+    composed[key] =
+      key in composed ? callback(composed[key], object[key]) : object[key]
   })
 
   return composed

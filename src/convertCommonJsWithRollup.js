@@ -24,9 +24,15 @@ export const convertCommonJsWithRollup = async ({
   const { rollup } = await import("rollup")
   const { default: commonjs } = await import("@rollup/plugin-commonjs")
   const { nodeResolve } = await import("@rollup/plugin-node-resolve")
-  const { default: createJSONRollupPlugin } = await import("@rollup/plugin-json")
-  const { default: createReplaceRollupPlugin } = await import("@rollup/plugin-replace")
-  const { default: createNodeGlobalRollupPlugin } = await import("rollup-plugin-node-globals")
+  const { default: createJSONRollupPlugin } = await import(
+    "@rollup/plugin-json"
+  )
+  const { default: createReplaceRollupPlugin } = await import(
+    "@rollup/plugin-replace"
+  )
+  const { default: createNodeGlobalRollupPlugin } = await import(
+    "rollup-plugin-node-globals"
+  )
 
   const builtins = require("rollup-plugin-node-builtins-brofs")
 
@@ -63,7 +69,9 @@ export const convertCommonJsWithRollup = async ({
             ? { "process.env.NODE_ENV": JSON.stringify(processEnvNodeEnv) }
             : {}),
           ...(replaceGlobalObject ? { global: "globalThis" } : {}),
-          ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
+          ...(replaceGlobalFilename
+            ? { __filename: __filenameReplacement }
+            : {}),
           ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
           ...replaceMap,
         },
@@ -82,7 +90,9 @@ export const convertCommonJsWithRollup = async ({
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources: true,
-    ...(urlAfterTransform ? { dir: urlToFileSystemPath(resolveUrl("./", urlAfterTransform)) } : {}),
+    ...(urlAfterTransform
+      ? { dir: urlToFileSystemPath(resolveUrl("./", urlAfterTransform)) }
+      : {}),
   }
 
   const result = await rollupBuild.generate(generateOptions)

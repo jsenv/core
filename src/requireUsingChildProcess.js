@@ -35,10 +35,11 @@ export const requireUsingChildProcess = async (
         ...controllableNodeProcess,
         execute: async () => {
           try {
-            const namespace = await controllableNodeProcess.requestActionOnChildProcess({
-              actionType: "execute-using-require",
-              actionParams: { fileUrl },
-            })
+            const namespace =
+              await controllableNodeProcess.requestActionOnChildProcess({
+                actionType: "execute-using-require",
+                actionParams: { fileUrl },
+              })
 
             return {
               status: "ok",

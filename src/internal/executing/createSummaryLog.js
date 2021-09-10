@@ -1,5 +1,11 @@
-import { setANSIColor, magenta, yellow, red, green } from "./ansi.js"
-import { formatDuration } from "./formatDuration.js"
+import {
+  setANSIColor,
+  ANSI_MAGENTA,
+  ANSI_YELLOW,
+  ANSI_RED,
+  ANSI_GREEN,
+} from "../logs/log_style.js"
+import { msAsDuration } from "../logs/msAsDuration.js"
 
 export const createSummaryLog = (summary) => `
 -------------- summary -----------------
@@ -56,31 +62,41 @@ export const createSummaryDetails = ({
   })
 }
 
-const createAllDisconnectedDetails = () => `all ${setANSIColor(`disconnected`, magenta)}`
+const createAllDisconnectedDetails = () =>
+  `all ${setANSIColor(`disconnected`, ANSI_MAGENTA)}`
 
-const createAllTimedoutDetails = () => `all ${setANSIColor(`timed out`, yellow)}`
+const createAllTimedoutDetails = () =>
+  `all ${setANSIColor(`timed out`, ANSI_YELLOW)}`
 
-const createAllErroredDetails = () => `all ${setANSIColor(`errored`, red)}`
+const createAllErroredDetails = () => `all ${setANSIColor(`errored`, ANSI_RED)}`
 
-const createAllCompletedDetails = () => `all ${setANSIColor(`completed`, green)}`
+const createAllCompletedDetails = () =>
+  `all ${setANSIColor(`completed`, ANSI_GREEN)}`
 
-const createMixedDetails = ({ disconnectedCount, timedoutCount, erroredCount, completedCount }) => {
+const createMixedDetails = ({
+  disconnectedCount,
+  timedoutCount,
+  erroredCount,
+  completedCount,
+}) => {
   const parts = []
 
   if (disconnectedCount) {
-    parts.push(`${disconnectedCount} ${setANSIColor(`disconnected`, magenta)}`)
+    parts.push(
+      `${disconnectedCount} ${setANSIColor(`disconnected`, ANSI_MAGENTA)}`,
+    )
   }
 
   if (timedoutCount) {
-    parts.push(`${timedoutCount} ${setANSIColor(`timed out`, yellow)}`)
+    parts.push(`${timedoutCount} ${setANSIColor(`timed out`, ANSI_YELLOW)}`)
   }
 
   if (erroredCount) {
-    parts.push(`${erroredCount} ${setANSIColor(`errored`, red)}`)
+    parts.push(`${erroredCount} ${setANSIColor(`errored`, ANSI_RED)}`)
   }
 
   if (completedCount) {
-    parts.push(`${completedCount} ${setANSIColor(`completed`, green)}`)
+    parts.push(`${completedCount} ${setANSIColor(`completed`, ANSI_GREEN)}`)
   }
 
   return `${parts.join(", ")}`
@@ -90,5 +106,5 @@ const createTotalDurationMessage = ({ startMs, endMs }) => {
   if (!endMs) return ""
 
   return `
-total duration: ${formatDuration(endMs - startMs)}`
+total duration: ${msAsDuration(endMs - startMs)}`
 }

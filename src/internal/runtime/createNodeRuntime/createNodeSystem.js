@@ -9,7 +9,10 @@ import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierF
 import { createImportResolverForNode } from "@jsenv/core/src/internal/import-resolution/import-resolver-node.js"
 import { require } from "../../require.js"
 import "../s.js"
-import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
+import {
+  fromFunctionReturningNamespace,
+  fromUrl,
+} from "../module-registration.js"
 import { valueInstall } from "../valueInstall.js"
 import { evalSource } from "./evalSource.js"
 
@@ -44,7 +47,9 @@ export const createNodeSystem = async ({
         () => {
           // eslint-disable-next-line import/no-dynamic-require
           const moduleExportsForNativeNodeModule = require(url)
-          return moduleExportsToModuleNamespace(moduleExportsForNativeNodeModule)
+          return moduleExportsToModuleNamespace(
+            moduleExportsForNativeNodeModule,
+          )
         },
         {
           url,
@@ -104,14 +109,20 @@ export const createNodeSystem = async ({
   return nodeSystem
 }
 
-const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirectoryUrl }) => {
+const responseUrlToSourceUrl = (
+  responseUrl,
+  { compileServerOrigin, projectDirectoryUrl },
+) => {
   if (responseUrl.startsWith("file://")) {
     return urlToFileSystemPath(responseUrl)
   }
   // compileServerOrigin is optionnal
   // because we can also create a node system and use it to import a build
   // from filesystem. In that case there is no compileServerOrigin
-  if (compileServerOrigin && responseUrl.startsWith(`${compileServerOrigin}/`)) {
+  if (
+    compileServerOrigin &&
+    responseUrl.startsWith(`${compileServerOrigin}/`)
+  ) {
     const afterOrigin = responseUrl.slice(`${compileServerOrigin}/`.length)
     const fileUrl = resolveUrl(afterOrigin, projectDirectoryUrl)
     return urlToFileSystemPath(fileUrl)

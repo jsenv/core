@@ -1,5 +1,9 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, ensureEmptyDirectory, urlToFileSystemPath } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  ensureEmptyDirectory,
+  urlToFileSystemPath,
+} from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 

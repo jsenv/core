@@ -10,7 +10,10 @@ import { requireCommonJsBuild } from "@jsenv/core/test/requireCommonJsBuild.js"
 import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`

@@ -22,7 +22,11 @@ export const renderToolbarNotification = () => {
   }
 }
 
-export const notifyExecutionResult = (executedFileRelativeUrl, execution, previousExecution) => {
+export const notifyExecutionResult = (
+  executedFileRelativeUrl,
+  execution,
+  previousExecution,
+) => {
   const notificationEnabled = getNotificationPreference()
   if (!notificationEnabled) return
 
@@ -73,7 +77,10 @@ const getFaviconHref = () => {
 }
 
 const notify = notificationAvailable
-  ? async (title, { clickToFocus = false, clickToClose = false, ...options } = {}) => {
+  ? async (
+      title,
+      { clickToFocus = false, clickToClose = false, ...options } = {},
+    ) => {
       const permission = await requestPermission()
       if (permission === "granted") {
         const notification = new Notification(title, options)

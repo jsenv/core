@@ -1,5 +1,10 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, urlToBasename } from "@jsenv/filesystem"
+import {
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  resolveUrl,
+  urlToBasename,
+} from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -10,7 +15,10 @@ import {
 import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
@@ -29,7 +37,8 @@ const { buildMappings } = await buildProject({
 })
 
 {
-  const cssBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}style.css`]
+  const cssBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}style.css`]
   const { namespace, serverOrigin } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

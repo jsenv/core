@@ -27,10 +27,14 @@ export const getOrGenerateCompiledFile = async ({
   compile,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
-    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
+    throw new TypeError(
+      `projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`,
+    )
   }
   if (typeof originalFileUrl !== "string") {
-    throw new TypeError(`originalFileUrl must be a string, got ${originalFileUrl}`)
+    throw new TypeError(
+      `originalFileUrl must be a string, got ${originalFileUrl}`,
+    )
   }
   if (!originalFileUrl.startsWith(projectDirectoryUrl)) {
     throw new Error(
@@ -41,7 +45,9 @@ export const getOrGenerateCompiledFile = async ({
     )
   }
   if (typeof compiledFileUrl !== "string") {
-    throw new TypeError(`compiledFileUrl must be a string, got ${compiledFileUrl}`)
+    throw new TypeError(
+      `compiledFileUrl must be a string, got ${compiledFileUrl}`,
+    )
   }
   if (!compiledFileUrl.startsWith(projectDirectoryUrl)) {
     throw new Error(
@@ -59,18 +65,19 @@ export const getOrGenerateCompiledFile = async ({
   return startAsap(
     async () => {
       const lockTiming = lockTimeEnd()
-      const { meta, compileResult, compileResultStatus, timing } = await computeCompileReport({
-        originalFileUrl,
-        compiledFileUrl,
-        compile,
-        fileContentFallback,
-        ifEtagMatch,
-        ifModifiedSinceDate,
-        useFilesystemAsCache,
-        compileCacheSourcesValidation,
-        compileCacheAssetsValidation,
-        logger,
-      })
+      const { meta, compileResult, compileResultStatus, timing } =
+        await computeCompileReport({
+          originalFileUrl,
+          compiledFileUrl,
+          compile,
+          fileContentFallback,
+          ifEtagMatch,
+          ifModifiedSinceDate,
+          useFilesystemAsCache,
+          compileCacheSourcesValidation,
+          compileCacheAssetsValidation,
+          logger,
+        })
 
       let cacheWriteTiming = {}
       if (writeOnFilesystem) {
@@ -199,7 +206,12 @@ const computeCompileReport = async ({
   }
 }
 
-const callCompile = async ({ logger, originalFileUrl, fileContentFallback, compile }) => {
+const callCompile = async ({
+  logger,
+  originalFileUrl,
+  fileContentFallback,
+  compile,
+}) => {
   logger.debug(`compile ${originalFileUrl}`)
 
   const compileArgs =
@@ -218,10 +230,14 @@ const callCompile = async ({ logger, originalFileUrl, fileContentFallback, compi
   } = await compile(...compileArgs)
 
   if (typeof contentType !== "string") {
-    throw new TypeError(`compile must return a contentType string, got ${contentType}`)
+    throw new TypeError(
+      `compile must return a contentType string, got ${contentType}`,
+    )
   }
   if (typeof compiledSource !== "string") {
-    throw new TypeError(`compile must return a compiledSource string, got ${compiledSource}`)
+    throw new TypeError(
+      `compile must return a compiledSource string, got ${compiledSource}`,
+    )
   }
 
   return {
@@ -235,7 +251,10 @@ const callCompile = async ({ logger, originalFileUrl, fileContentFallback, compi
   }
 }
 
-const getArgumentsForCompile = async ({ originalFileUrl, fileContentFallback }) => {
+const getArgumentsForCompile = async ({
+  originalFileUrl,
+  fileContentFallback,
+}) => {
   let fileContent
   if (fileContentFallback) {
     try {

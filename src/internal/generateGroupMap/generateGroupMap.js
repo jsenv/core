@@ -52,13 +52,19 @@ export const generateGroupMap = ({
   runtimeWillAlwaysBeKnown = false,
 }) => {
   if (typeof babelPluginMap !== "object") {
-    throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`)
+    throw new TypeError(
+      `babelPluginMap must be an object, got ${babelPluginMap}`,
+    )
   }
   if (typeof jsenvPluginMap !== "object") {
-    throw new TypeError(`jsenvPluginMap must be an object, got ${jsenvPluginMap}`)
+    throw new TypeError(
+      `jsenvPluginMap must be an object, got ${jsenvPluginMap}`,
+    )
   }
   if (typeof runtimeScoreMap !== "object") {
-    throw new TypeError(`runtimeScoreMap must be an object, got ${runtimeScoreMap}`)
+    throw new TypeError(
+      `runtimeScoreMap must be an object, got ${runtimeScoreMap}`,
+    )
   }
   if (typeof groupCount < 1) {
     throw new TypeError(`groupCount must be above 1, got ${groupCount}`)
@@ -113,7 +119,8 @@ export const generateGroupMap = ({
     }
   }
 
-  const addOtherwiseToBeSafe = !runtimeAlwaysInsideRuntimeScoreMap || !runtimeWillAlwaysBeKnown
+  const addOtherwiseToBeSafe =
+    !runtimeAlwaysInsideRuntimeScoreMap || !runtimeWillAlwaysBeKnown
 
   const lastGroupIndex = addOtherwiseToBeSafe ? groupCount - 1 : groupCount
 

@@ -26,11 +26,14 @@ export const fetchAndEvalUsingScript = async (src) => {
       document.head.removeChild(script)
     }
 
-    const removeOnWindowError = () => window.removeEventListener("error", onwindowerror)
+    const removeOnWindowError = () =>
+      window.removeEventListener("error", onwindowerror)
 
-    const removeOnScriptError = () => script.removeEventListener("error", onscripterror)
+    const removeOnScriptError = () =>
+      script.removeEventListener("error", onscripterror)
 
-    const removeOnScriptLoad = () => script.removeEventListener("load", onscriptload)
+    const removeOnScriptLoad = () =>
+      script.removeEventListener("load", onscriptload)
 
     window.addEventListener("error", onwindowerror)
     script.addEventListener("error", onscripterror)

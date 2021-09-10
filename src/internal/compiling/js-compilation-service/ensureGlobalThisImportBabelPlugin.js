@@ -21,7 +21,10 @@ export const ensureGlobalThisImportBabelPlugin = (api, options) => {
 
         const { node } = path
         if (node.name === globalThisIdentifierName) {
-          addSideEffect(path.scope.getProgramParent().path, globalThisImportPath)
+          addSideEffect(
+            path.scope.getProgramParent().path,
+            globalThisImportPath,
+          )
         }
       },
     },

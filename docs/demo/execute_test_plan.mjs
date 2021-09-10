@@ -1,4 +1,8 @@
-import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
+import {
+  executeTestPlan,
+  launchChromiumTab,
+  launchFirefoxTab,
+} from "@jsenv/core"
 
 executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),

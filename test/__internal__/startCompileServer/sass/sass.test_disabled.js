@@ -12,7 +12,10 @@ import { jsenvCompilerForSass } from "@jsenv/core/packages/jsenv-sass/main.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl.slice(0, -1))
 const filename = `${testDirectoryname}.scss`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`

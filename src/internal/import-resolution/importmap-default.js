@@ -9,8 +9,14 @@ export const getDefaultImportMap = ({
   projectDirectoryUrl,
   compileDirectoryRelativeUrl,
 }) => {
-  const compileDirectoryUrl = resolveUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
-  const jsenvCoreDirectoryRelativeUrl = urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)
+  const compileDirectoryUrl = resolveUrl(
+    compileDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
+  const jsenvCoreDirectoryRelativeUrl = urlToRelativeUrl(
+    jsenvCoreDirectoryUrl,
+    projectDirectoryUrl,
+  )
   const jsenvCoreDirectoryCompileUrl = resolveUrl(
     jsenvCoreDirectoryRelativeUrl,
     compileDirectoryUrl,

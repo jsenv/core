@@ -69,7 +69,8 @@ const compileHtmlFile = ({
           {
             src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
           },
-          ...(jsenvToolbarInjection && originalFileUrl !== jsenvToolbarHtmlFileInfo.url
+          ...(jsenvToolbarInjection &&
+          originalFileUrl !== jsenvToolbarHtmlFileInfo.url
             ? [
                 {
                   src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
@@ -87,7 +88,11 @@ const compileHtmlFile = ({
         const srcAttribute = getHtmlNodeAttributeByName(script, "src")
 
         // remote
-        if (typeAttribute && typeAttribute.value === "importmap" && srcAttribute) {
+        if (
+          typeAttribute &&
+          typeAttribute.value === "importmap" &&
+          srcAttribute
+        ) {
           hasImportmap = true
           typeAttribute.value = "jsenv-importmap"
           return
@@ -97,7 +102,9 @@ const compileHtmlFile = ({
           removeHtmlNodeAttribute(script, srcAttribute)
           setHtmlNodeText(
             script,
-            `window.__jsenv__.executeFileUsingSystemJs(${JSON.stringify(srcAttribute.value)})`,
+            `window.__jsenv__.executeFileUsingSystemJs(${JSON.stringify(
+              srcAttribute.value,
+            )})`,
           )
           return
         }
@@ -108,14 +115,19 @@ const compileHtmlFile = ({
             compiledFileUrl,
             getUniqueNameForInlineHtmlNode(script, scripts, `[id].js`),
           )
-          const specifier = `./${urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)}`
+          const specifier = `./${urlToRelativeUrl(
+            scriptAssetUrl,
+            compiledFileUrl,
+          )}`
           inlineScriptsContentMap[specifier] = textNode.value
 
           removeHtmlNodeAttribute(script, typeAttribute)
           removeHtmlNodeAttribute(script, srcAttribute)
           setHtmlNodeText(
             script,
-            `window.__jsenv__.executeFileUsingSystemJs(${JSON.stringify(specifier)})`,
+            `window.__jsenv__.executeFileUsingSystemJs(${JSON.stringify(
+              specifier,
+            )})`,
           )
           return
         }
@@ -146,9 +158,18 @@ const compileHtmlFile = ({
       await Promise.all(
         Object.keys(inlineScriptsContentMap).map(async (scriptSrc) => {
           const scriptAssetUrl = resolveUrl(scriptSrc, compiledFileUrl)
-          const scriptBasename = urlToRelativeUrl(scriptAssetUrl, compiledFileUrl)
-          const scriptOriginalFileUrl = resolveUrl(scriptBasename, originalFileUrl)
-          const scriptAfterTransformFileUrl = resolveUrl(scriptBasename, compiledFileUrl)
+          const scriptBasename = urlToRelativeUrl(
+            scriptAssetUrl,
+            compiledFileUrl,
+          )
+          const scriptOriginalFileUrl = resolveUrl(
+            scriptBasename,
+            originalFileUrl,
+          )
+          const scriptAfterTransformFileUrl = resolveUrl(
+            scriptBasename,
+            compiledFileUrl,
+          )
 
           const scriptBeforeCompilation = inlineScriptsContentMap[scriptSrc]
           let scriptTransformResult
@@ -183,16 +204,26 @@ const compileHtmlFile = ({
             }
             throw e
           }
-          const sourcemapFileUrl = resolveUrl(`${scriptBasename}.map`, scriptAfterTransformFileUrl)
+          const sourcemapFileUrl = resolveUrl(
+            `${scriptBasename}.map`,
+            scriptAfterTransformFileUrl,
+          )
 
           let { code, map } = scriptTransformResult
           const sourcemapFileRelativePathForModule = urlToRelativeUrl(
             sourcemapFileUrl,
             compiledFileUrl,
           )
-          code = setJavaScriptSourceMappingUrl(code, sourcemapFileRelativePathForModule)
+          code = setJavaScriptSourceMappingUrl(
+            code,
+            sourcemapFileRelativePathForModule,
+          )
           assets = [...assets, scriptAssetUrl, sourcemapFileUrl]
-          assetsContent = [...assetsContent, code, JSON.stringify(map, null, "  ")]
+          assetsContent = [
+            ...assetsContent,
+            code,
+            JSON.stringify(map, null, "  "),
+          ]
         }),
       )
 

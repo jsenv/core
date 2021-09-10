@@ -26,8 +26,14 @@ export const compileFile = async ({
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
 }) => {
-  if (writeOnFilesystem && compileCacheStrategy !== "etag" && compileCacheStrategy !== "mtime") {
-    throw new Error(`compileCacheStrategy must be etag or mtime , got ${compileCacheStrategy}`)
+  if (
+    writeOnFilesystem &&
+    compileCacheStrategy !== "etag" &&
+    compileCacheStrategy !== "mtime"
+  ) {
+    throw new Error(
+      `compileCacheStrategy must be etag or mtime , got ${compileCacheStrategy}`,
+    )
   }
 
   const { headers = {} } = request
@@ -54,25 +60,29 @@ export const compileFile = async ({
   }
 
   try {
-    const { compileResult, compileResultStatus, timing } = await getOrGenerateCompiledFile({
-      logger,
-      projectDirectoryUrl,
-      originalFileUrl,
-      compiledFileUrl,
-      fileContentFallback,
-      ifEtagMatch,
-      ifModifiedSinceDate,
-      writeOnFilesystem,
-      useFilesystemAsCache,
-      cacheHitTracking: serverCompileCacheHitTracking,
-      compileCacheSourcesValidation,
-      compileCacheAssetsValidation,
-      compile,
-    })
+    const { compileResult, compileResultStatus, timing } =
+      await getOrGenerateCompiledFile({
+        logger,
+        projectDirectoryUrl,
+        originalFileUrl,
+        compiledFileUrl,
+        fileContentFallback,
+        ifEtagMatch,
+        ifModifiedSinceDate,
+        writeOnFilesystem,
+        useFilesystemAsCache,
+        cacheHitTracking: serverCompileCacheHitTracking,
+        compileCacheSourcesValidation,
+        compileCacheAssetsValidation,
+        compile,
+      })
 
     compileResult.sources.forEach((source) => {
       const sourceFileUrl = resolveUrl(source, compiledFileUrl)
-      projectFileRequestedCallback(urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl), request)
+      projectFileRequestedCallback(
+        urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl),
+        request,
+      )
     })
 
     const { contentType, compiledSource } = compileResult
@@ -131,7 +141,10 @@ export const compileFile = async ({
       const { data } = error
       const { filename } = data
       if (filename) {
-        const relativeUrl = urlToRelativeUrl(fileSystemPathToUrl(filename), projectDirectoryUrl)
+        const relativeUrl = urlToRelativeUrl(
+          fileSystemPathToUrl(filename),
+          projectDirectoryUrl,
+        )
         projectFileRequestedCallback(relativeUrl, request)
       }
       // on the correspondig file

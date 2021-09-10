@@ -1,5 +1,10 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, assertFilePresence, urlToBasename } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  assertFilePresence,
+  urlToBasename,
+} from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -12,7 +17,10 @@ import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModu
 import { nodeImportEsModuleBuild } from "@jsenv/core/test/nodeImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
@@ -27,8 +35,12 @@ const { buildMappings } = await buildProject({
   },
 })
 
-const iconBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}icon.svg`]
-const iconBuildUrl = resolveUrl(`./dist/esmodule/${iconBuildRelativeUrl}`, import.meta.url)
+const iconBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}icon.svg`]
+const iconBuildUrl = resolveUrl(
+  `./dist/esmodule/${iconBuildRelativeUrl}`,
+  import.meta.url,
+)
 
 await assertFilePresence(iconBuildUrl)
 
@@ -39,7 +51,9 @@ await assertFilePresence(iconBuildUrl)
   })
   const actual = namespace
   const expected = {
-    default: String(new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, serverOrigin)),
+    default: String(
+      new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, serverOrigin),
+    ),
   }
   assert({ actual, expected })
 }
@@ -51,7 +65,9 @@ await assertFilePresence(iconBuildUrl)
   })
   const actual = namespace
   const expected = {
-    default: String(new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, import.meta.url)),
+    default: String(
+      new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, import.meta.url),
+    ),
   }
   assert({ actual, expected })
 }

@@ -10,7 +10,10 @@ import {
 import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
@@ -44,10 +47,13 @@ const { buildMappings } = await buildProject({
     testDirectoryRelativeUrl,
     // debug: true,
   })
-  const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
+  const fileBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}file.js`]
   const actual = namespace
   const expected = {
-    jsUrl: String(new URL(`./dist/esmodule/${fileBuildRelativeUrl}`, serverOrigin)),
+    jsUrl: String(
+      new URL(`./dist/esmodule/${fileBuildRelativeUrl}`, serverOrigin),
+    ),
   }
   assert({ actual, expected })
 }

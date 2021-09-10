@@ -17,7 +17,10 @@ Link to extension: https://marketplace.visualstudio.com/items?itemName=msjsdiag.
       "type": "chrome",
       "request": "launch",
       "url": "http://127.0.0.1:3456/${relativeFile}",
-      "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"],
+      "runtimeArgs": [
+        "--allow-file-access-from-files",
+        "--disable-web-security"
+      ],
       "sourceMaps": true,
       "sourceMapPathOverrides": {
         "/*": "${workspaceFolder}/*"

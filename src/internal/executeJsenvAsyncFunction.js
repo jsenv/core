@@ -1,7 +1,13 @@
-import { executeAsyncFunction, createCancellationSource } from "@jsenv/cancellation"
+import {
+  executeAsyncFunction,
+  createCancellationSource,
+} from "@jsenv/cancellation"
 import { SIGINTSignal } from "@jsenv/node-signals"
 
-export const executeJsenvAsyncFunction = (fn, { cancelOnSIGINT = false } = {}) => {
+export const executeJsenvAsyncFunction = (
+  fn,
+  { cancelOnSIGINT = false } = {},
+) => {
   return executeAsyncFunction(
     async () => {
       const jsenvCancellationSource = createCancellationSource()

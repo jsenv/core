@@ -59,7 +59,10 @@ const executionResultPromise = readyPromise.then(async () => {
   }
 })
 
-const executeFileUsingDynamicImport = async (specifier, identifier = specifier) => {
+const executeFileUsingDynamicImport = async (
+  specifier,
+  identifier = specifier,
+) => {
   const { currentScript } = document
   const fileExecutionResultPromise = (async () => {
     try {
@@ -137,7 +140,9 @@ const onExecutionError = (executionResult, { currentScript }) => {
 
 const getBrowserRuntime = memoize(async () => {
   const compileServerOrigin = document.location.origin
-  const compileMetaResponse = await fetchUrl(`${compileServerOrigin}/.jsenv/compile-meta.json`)
+  const compileMetaResponse = await fetchUrl(
+    `${compileServerOrigin}/.jsenv/compile-meta.json`,
+  )
   const compileMeta = await compileMetaResponse.json()
   const { outDirectoryRelativeUrl, errorStackRemapping } = compileMeta
   const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
@@ -155,9 +160,12 @@ const getBrowserRuntime = memoize(async () => {
   })
 
   if (errorStackRemapping && Error.captureStackTrace) {
-    const { sourcemapMainFileRelativeUrl, sourcemapMappingFileRelativeUrl } = compileMeta
+    const { sourcemapMainFileRelativeUrl, sourcemapMappingFileRelativeUrl } =
+      compileMeta
 
-    await fetchAndEvalUsingFetch(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
+    await fetchAndEvalUsingFetch(
+      `${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`,
+    )
     const { SourceMapConsumer } = window.sourceMap
     SourceMapConsumer.initialize({
       "lib/mappings.wasm": `${compileServerOrigin}/${sourcemapMappingFileRelativeUrl}`,

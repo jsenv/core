@@ -1,4 +1,8 @@
-import { urlToRelativeUrl, urlToFileSystemPath, bufferToEtag } from "@jsenv/filesystem"
+import {
+  urlToRelativeUrl,
+  urlToFileSystemPath,
+  bufferToEtag,
+} from "@jsenv/filesystem"
 
 import { writeFileContent, testFilePresence } from "./fs-optimized-for-cache.js"
 import { getMetaJsonFileUrl } from "./compile-asset.js"
@@ -35,12 +39,17 @@ ${sourceFileUrl}`)
       }),
     )
     sources = sources.filter((source, index) => sourceExists[index])
-    sourcesContent = sourcesContent.filter((sourceContent, index) => sourceExists[index])
+    sourcesContent = sourcesContent.filter(
+      (sourceContent, index) => sourceExists[index],
+    )
 
-    const { writeCompiledSourceFile = true, writeAssetsFile = true } = compileResult
+    const { writeCompiledSourceFile = true, writeAssetsFile = true } =
+      compileResult
 
     if (writeCompiledSourceFile) {
-      logger.debug(`write compiled file at ${urlToFileSystemPath(compiledFileUrl)}`)
+      logger.debug(
+        `write compiled file at ${urlToFileSystemPath(compiledFileUrl)}`,
+      )
       promises.push(
         writeFileContent(compiledFileUrl, compiledSource, {
           fileLikelyNotFound: isNew,
@@ -51,7 +60,9 @@ ${sourceFileUrl}`)
     if (writeAssetsFile) {
       promises.push(
         ...assets.map((assetFileUrl, index) => {
-          logger.debug(`write compiled file asset at ${urlToFileSystemPath(assetFileUrl)}`)
+          logger.debug(
+            `write compiled file asset at ${urlToFileSystemPath(assetFileUrl)}`,
+          )
           return writeFileContent(assetFileUrl, assetsContent[index], {
             fileLikelyNotFound: isNew,
           })
@@ -66,10 +77,16 @@ ${sourceFileUrl}`)
     let latestMeta
 
     const sourceAndAssetProps = {
-      sources: sources.map((source) => urlToRelativeUrl(source, metaJsonFileUrl)),
-      sourcesEtag: sourcesContent.map((sourceContent) => bufferToEtag(Buffer.from(sourceContent))),
+      sources: sources.map((source) =>
+        urlToRelativeUrl(source, metaJsonFileUrl),
+      ),
+      sourcesEtag: sourcesContent.map((sourceContent) =>
+        bufferToEtag(Buffer.from(sourceContent)),
+      ),
       assets: assets.map((asset) => urlToRelativeUrl(asset, metaJsonFileUrl)),
-      assetsEtag: assetsContent.map((assetContent) => bufferToEtag(Buffer.from(assetContent))),
+      assetsEtag: assetsContent.map((assetContent) =>
+        bufferToEtag(Buffer.from(assetContent)),
+      ),
     }
 
     if (isNew) {
@@ -99,11 +116,17 @@ ${sourceFileUrl}`)
       }
     }
 
-    logger.debug(`write compiled file meta at ${urlToFileSystemPath(metaJsonFileUrl)}`)
+    logger.debug(
+      `write compiled file meta at ${urlToFileSystemPath(metaJsonFileUrl)}`,
+    )
     promises.push(
-      writeFileContent(metaJsonFileUrl, JSON.stringify(latestMeta, null, "  "), {
-        fileLikelyNotFound: isNew,
-      }),
+      writeFileContent(
+        metaJsonFileUrl,
+        JSON.stringify(latestMeta, null, "  "),
+        {
+          fileLikelyNotFound: isNew,
+        },
+      ),
     )
   }
 

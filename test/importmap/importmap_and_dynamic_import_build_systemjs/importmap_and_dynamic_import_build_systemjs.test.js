@@ -16,7 +16,10 @@ import {
 import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
@@ -39,21 +42,25 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   return buildRelativeUrl
 }
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 
 // importmap content
 {
   const importmapBuildRelativeUrl = getBuildRelativeUrl("import-map.importmap")
   const fileBuildRelativeUrl = getBuildRelativeUrl("file.js")
   const fooBuildRelativeUrl = getBuildRelativeUrl("foo.js")
-  const importmapBuildUrl = resolveUrl(importmapBuildRelativeUrl, buildDirectoryUrl)
+  const importmapBuildUrl = resolveUrl(
+    importmapBuildRelativeUrl,
+    buildDirectoryUrl,
+  )
   const importmapString = await readFile(importmapBuildUrl)
   const importmap = JSON.parse(importmapString)
   const actual = importmap
   const expected = {
     imports: {
-      // the original importmap remapping are still there (but an updated version)
-      "foo": `./${fooBuildRelativeUrl}`,
       // the importmap for foo is available
       "./file.js": `./${fileBuildRelativeUrl}`,
       "./foo.js": `./${fooBuildRelativeUrl}`,

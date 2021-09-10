@@ -45,7 +45,9 @@ export const dataUrlToRawData = ({ base64Flag, data }) => {
 }
 
 export const dataToBase64 =
-  typeof window === "object" ? window.atob : (data) => Buffer.from(data).toString("base64")
+  typeof window === "object"
+    ? window.atob
+    : (data) => Buffer.from(data).toString("base64")
 
 export const base64ToString =
   typeof window === "object"

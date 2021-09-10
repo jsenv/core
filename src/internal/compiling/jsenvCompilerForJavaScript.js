@@ -18,7 +18,10 @@ const compileJsFile = ({
 }) => {
   const contentType = urlToContentType(originalFileUrl)
 
-  if (contentType !== "application/javascript" && contentType !== "text/javascript") {
+  if (
+    contentType !== "application/javascript" &&
+    contentType !== "text/javascript"
+  ) {
     return null
   }
 
@@ -29,7 +32,10 @@ const compileJsFile = ({
         code: originalFileContent,
         url: originalFileUrl,
         urlAfterTransform: compiledFileUrl,
-        babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
+        babelPluginMap: compileIdToBabelPluginMap(compileId, {
+          groupMap,
+          babelPluginMap,
+        }),
         convertMap,
         transformTopLevelAwait,
         moduleOutFormat,
@@ -54,15 +60,21 @@ export const jsenvCompilerForJavaScript = {
   "jsenv-compiler-js": compileJsFile,
 }
 
-export const compileIdToBabelPluginMap = (compileId, { babelPluginMap, groupMap }) => {
+export const compileIdToBabelPluginMap = (
+  compileId,
+  { babelPluginMap, groupMap },
+) => {
   const babelPluginMapForGroupMap = {}
 
   const groupBabelPluginMap = {}
-  groupMap[compileId].babelPluginRequiredNameArray.forEach((babelPluginRequiredName) => {
-    if (babelPluginRequiredName in babelPluginMap) {
-      groupBabelPluginMap[babelPluginRequiredName] = babelPluginMap[babelPluginRequiredName]
-    }
-  })
+  groupMap[compileId].babelPluginRequiredNameArray.forEach(
+    (babelPluginRequiredName) => {
+      if (babelPluginRequiredName in babelPluginMap) {
+        groupBabelPluginMap[babelPluginRequiredName] =
+          babelPluginMap[babelPluginRequiredName]
+      }
+    },
+  )
 
   return {
     ...groupBabelPluginMap,

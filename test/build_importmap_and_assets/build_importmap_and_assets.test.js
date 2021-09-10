@@ -17,7 +17,10 @@ import {
 import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
@@ -39,7 +42,10 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   return buildRelativeUrl
 }
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 const jsBuildRelativeUrl = getBuildRelativeUrl(`main.js`)
 const imgRemapBuildRelativeUrl = getBuildRelativeUrl("img-remap.png")
 const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
@@ -47,7 +53,10 @@ const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
 // check importmap content
 {
   const importmapBuildRelativeUrl = getBuildRelativeUrl("import-map.importmap")
-  const importmapBuildUrl = resolveUrl(importmapBuildRelativeUrl, buildDirectoryUrl)
+  const importmapBuildUrl = resolveUrl(
+    importmapBuildRelativeUrl,
+    buildDirectoryUrl,
+  )
   const importmapString = await readFile(importmapBuildUrl)
   const importmap = JSON.parse(importmapString)
 
@@ -89,11 +98,20 @@ const imgBuildRelativeUrl = getBuildRelativeUrl("img.png")
     urlFromImportMetaNotation: namespace.urlFromImportMetaNotation,
   }
   const expected = {
-    urlFromStaticImport: resolveUrl(`dist/esmodule/${imgRemapBuildRelativeUrl}`, serverOrigin),
+    urlFromStaticImport: resolveUrl(
+      `dist/esmodule/${imgRemapBuildRelativeUrl}`,
+      serverOrigin,
+    ),
     urlFromDynamicImport: {
-      default: resolveUrl(`dist/esmodule/${imgRemapBuildRelativeUrl}`, serverOrigin),
+      default: resolveUrl(
+        `dist/esmodule/${imgRemapBuildRelativeUrl}`,
+        serverOrigin,
+      ),
     },
-    urlFromImportMetaNotation: resolveUrl(`dist/esmodule/${imgBuildRelativeUrl}`, serverOrigin),
+    urlFromImportMetaNotation: resolveUrl(
+      `dist/esmodule/${imgBuildRelativeUrl}`,
+      serverOrigin,
+    ),
   }
   assert({ actual, expected })
 }

@@ -1,5 +1,10 @@
 import { createRequire } from "module"
-import { urlToExtension, resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/filesystem"
+import {
+  urlToExtension,
+  resolveUrl,
+  urlToRelativeUrl,
+  readFile,
+} from "@jsenv/filesystem"
 import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -18,7 +23,9 @@ export const createImportResolverForNode = async ({
     )
   }
 
-  const defaultModuleResolution = await determineModuleSystem(projectDirectoryUrl)
+  const defaultModuleResolution = await determineModuleSystem(
+    projectDirectoryUrl,
+  )
 
   const resolveImport = async (specifier, importer) => {
     if (isSpecifierForNodeCoreModule(specifier)) {
@@ -37,7 +44,10 @@ export const createImportResolverForNode = async ({
     // for some reason
     if (specifier.startsWith("@jsenv/core/")) {
       if (projectDirectoryUrl === jsenvCoreDirectoryUrl) {
-        specifier = resolveUrl(specifier.slice("@jsenv/core/".length), projectDirectoryUrl)
+        specifier = resolveUrl(
+          specifier.slice("@jsenv/core/".length),
+          projectDirectoryUrl,
+        )
       }
     }
 
@@ -45,7 +55,8 @@ export const createImportResolverForNode = async ({
       ? moduleResolutionFromImporter(importer) || defaultModuleResolution
       : defaultModuleResolution
 
-    importer = importer || resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
+    importer =
+      importer || resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
 
     if (moduleResolutionAlgorithm === "esm") {
       return resolveUsingNodeEsModuleAlgorithm(specifier, {
@@ -69,7 +80,9 @@ export const createImportResolverForNode = async ({
 
 // https://nodejs.org/dist/latest-v16.x/docs/api/packages.html#packages_determining_module_system)
 const determineModuleSystem = async (projectDirectoryUrl) => {
-  const inputTypeIsModule = process.execArgv.some((argv) => argv === "--input-type=module")
+  const inputTypeIsModule = process.execArgv.some(
+    (argv) => argv === "--input-type=module",
+  )
   if (inputTypeIsModule) {
     return "esm"
   }
@@ -110,7 +123,12 @@ const moduleResolutionFromImporter = (importer) => {
 
 const resolveUsingNodeEsModuleAlgorithm = async (
   specifier,
-  { projectDirectoryUrl, compileServerOrigin, compileDirectoryRelativeUrl, importer },
+  {
+    projectDirectoryUrl,
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
+    importer,
+  },
 ) => {
   const importerFileUrl = fileUrlFromUrl(importer, {
     projectDirectoryUrl,
@@ -129,7 +147,12 @@ const resolveUsingNodeEsModuleAlgorithm = async (
 
 const resolveUsingNodeCommonJsAlgorithm = (
   specifier,
-  { projectDirectoryUrl, compileServerOrigin, compileDirectoryRelativeUrl, importer },
+  {
+    projectDirectoryUrl,
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
+    importer,
+  },
 ) => {
   const importerFileUrl = fileUrlFromUrl(importer, {
     projectDirectoryUrl,
@@ -148,7 +171,12 @@ const resolveUsingNodeCommonJsAlgorithm = (
 
 const transformResolvedUrl = (
   url,
-  { importer, projectDirectoryUrl, compileServerOrigin, compileDirectoryRelativeUrl },
+  {
+    importer,
+    projectDirectoryUrl,
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
+  },
 ) => {
   const compileServerUrl = compileServerUrlFromOriginalUrl(url, {
     importer,
@@ -176,20 +204,30 @@ const fileUrlFromUrl = (
     return url
   }
 
-  const afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length)
+  const afterCompileDirectory = afterOrigin.slice(
+    compileDirectoryRelativeUrl.length,
+  )
   return resolveUrl(afterCompileDirectory, projectDirectoryUrl)
 }
 
 const compileServerUrlFromOriginalUrl = (
   url,
-  { importer, projectDirectoryUrl, compileDirectoryRelativeUrl, compileServerOrigin },
+  {
+    importer,
+    projectDirectoryUrl,
+    compileDirectoryRelativeUrl,
+    compileServerOrigin,
+  },
 ) => {
   if (!url.startsWith(projectDirectoryUrl)) {
     return url
   }
 
   // si l'importer était compilé, compile aussi le fichier
-  const compileDirectoryServerUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
+  const compileDirectoryServerUrl = resolveUrl(
+    compileDirectoryRelativeUrl,
+    compileServerOrigin,
+  )
   if (importer.startsWith(compileDirectoryServerUrl)) {
     const projectRelativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
     return resolveUrl(projectRelativeUrl, compileDirectoryServerUrl)

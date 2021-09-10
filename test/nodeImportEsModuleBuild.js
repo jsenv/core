@@ -1,9 +1,16 @@
 import { fork } from "child_process"
-import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/filesystem"
+import {
+  resolveDirectoryUrl,
+  resolveUrl,
+  urlToFileSystemPath,
+} from "@jsenv/filesystem"
 import { createChildProcessOptions } from "@jsenv/core/src/internal/node-launcher/createChildProcessOptions.js"
 import { execArgvFromProcessOptions } from "@jsenv/core/src/internal/node-launcher/processOptions.js"
 
-const CONTROLLABLE_FILE_URL = resolveUrl("./controllable-file.js", import.meta.url)
+const CONTROLLABLE_FILE_URL = resolveUrl(
+  "./controllable-file.js",
+  import.meta.url,
+)
 
 export const nodeImportEsModuleBuild = async ({
   projectDirectoryUrl,
@@ -12,7 +19,10 @@ export const nodeImportEsModuleBuild = async ({
   awaitNamespace = true,
   topLevelAwait,
 }) => {
-  const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
+  const testDirectoryUrl = resolveDirectoryUrl(
+    testDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
   const jsFileUrl = resolveUrl(jsFileRelativeUrl, testDirectoryUrl)
   const childProcessOptions = await createChildProcessOptions({
     topLevelAwait,

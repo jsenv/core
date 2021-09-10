@@ -25,26 +25,39 @@ export const renderExecutionInToolbar = ({ executedFileRelativeUrl }) => {
   activateToolbarSection(document.querySelector("#file"))
   removeForceHideElement(document.querySelector("#file"))
 
-  window.parent.__jsenv__.executionResultPromise.then(({ status, startTime, endTime }) => {
-    const execution = { status, startTime, endTime }
-    applyExecutionIndicator(execution)
+  window.parent.__jsenv__.executionResultPromise.then(
+    ({ status, startTime, endTime }) => {
+      const execution = { status, startTime, endTime }
+      applyExecutionIndicator(execution)
 
-    const executionStorageKey = executedFileRelativeUrl
-    const previousExecution = sessionStorage.hasOwnProperty(executionStorageKey)
-      ? JSON.parse(sessionStorage.getItem(executionStorageKey))
-      : undefined
-    notifyExecutionResult(executedFileRelativeUrl, execution, previousExecution)
+      const executionStorageKey = executedFileRelativeUrl
+      const previousExecution = sessionStorage.hasOwnProperty(
+        executionStorageKey,
+      )
+        ? JSON.parse(sessionStorage.getItem(executionStorageKey))
+        : undefined
+      notifyExecutionResult(
+        executedFileRelativeUrl,
+        execution,
+        previousExecution,
+      )
 
-    sessionStorage.setItem(executedFileRelativeUrl, JSON.stringify(execution))
-  })
+      sessionStorage.setItem(executedFileRelativeUrl, JSON.stringify(execution))
+    },
+  )
 }
 
-const applyExecutionIndicator = ({ status = "running", startTime, endTime } = {}) => {
+const applyExecutionIndicator = ({
+  status = "running",
+  startTime,
+  endTime,
+} = {}) => {
   const executionIndicator = document.querySelector("#execution-indicator")
   enableVariant(executionIndicator, { execution: status })
   const variantNode = executionIndicator.querySelector("[data-when-active]")
 
-  variantNode.querySelector("button").onclick = () => toggleTooltip(executionIndicator)
+  variantNode.querySelector("button").onclick = () =>
+    toggleTooltip(executionIndicator)
   variantNode.querySelector(".tooltip").textContent = computeText({
     status,
     startTime,

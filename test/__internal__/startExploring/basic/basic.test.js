@@ -7,7 +7,10 @@ import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLOR
 import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.main.html`
@@ -17,10 +20,11 @@ const exploringServer = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
-const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
-  // { headless: false },
-)
+const { browser, pageLogs, pageErrors, executionResult } =
+  await openBrowserPage(
+    `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
+    // { headless: false },
+  )
 const actual = { pageLogs, pageErrors, executionResult }
 const expected = {
   pageLogs: [

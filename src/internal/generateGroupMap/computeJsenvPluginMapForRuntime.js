@@ -8,16 +8,22 @@ export const computeJsenvPluginMapForRuntime = ({
   runtimeVersion,
 }) => {
   if (typeof jsenvPluginMap !== "object") {
-    throw new TypeError(`jsenvPluginMap must be a object, got ${jsenvPluginMap}`)
+    throw new TypeError(
+      `jsenvPluginMap must be a object, got ${jsenvPluginMap}`,
+    )
   }
   if (typeof jsenvPluginCompatMap !== "object") {
-    throw new TypeError(`jsenvPluginCompatMap must be a string, got ${jsenvPluginCompatMap}`)
+    throw new TypeError(
+      `jsenvPluginCompatMap must be a string, got ${jsenvPluginCompatMap}`,
+    )
   }
   if (typeof runtimeName !== "string") {
     throw new TypeError(`runtimeName must be a string, got ${runtimeName}`)
   }
   if (typeof runtimeVersion !== "string") {
-    throw new TypeError(`runtimeVersion must be a string, got ${runtimeVersion}`)
+    throw new TypeError(
+      `runtimeVersion must be a string, got ${runtimeVersion}`,
+    )
   }
 
   const jsenvPluginMapForRuntime = {}
@@ -25,7 +31,8 @@ export const computeJsenvPluginMapForRuntime = ({
     const compatible = runtimeIsCompatibleWithFeature({
       runtimeName,
       runtimeVersion,
-      featureCompat: key in jsenvPluginCompatMap ? jsenvPluginCompatMap[key] : {},
+      featureCompat:
+        key in jsenvPluginCompatMap ? jsenvPluginCompatMap[key] : {},
     })
     if (!compatible) {
       jsenvPluginMapForRuntime[key] = jsenvPluginMap[key]
@@ -34,12 +41,19 @@ export const computeJsenvPluginMapForRuntime = ({
   return jsenvPluginMapForRuntime
 }
 
-const runtimeIsCompatibleWithFeature = ({ runtimeName, runtimeVersion, featureCompat }) => {
+const runtimeIsCompatibleWithFeature = ({
+  runtimeName,
+  runtimeVersion,
+  featureCompat,
+}) => {
   const runtimeCompatibleVersion = computeRuntimeCompatibleVersion({
     featureCompat,
     runtimeName,
   })
-  const highestVersion = findHighestVersion(runtimeVersion, runtimeCompatibleVersion)
+  const highestVersion = findHighestVersion(
+    runtimeVersion,
+    runtimeCompatibleVersion,
+  )
   return highestVersion === runtimeVersion
 }
 

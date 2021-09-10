@@ -6,11 +6,17 @@ export const replaceCssUrls = async (
   css,
   cssUrl,
   getUrlReplacementValue,
-  { cssMinification = false, cssMinificationOptions, sourcemapOptions = {} } = {},
+  {
+    cssMinification = false,
+    cssMinificationOptions,
+    sourcemapOptions = {},
+  } = {},
 ) => {
   const postcssPlugins = [
     postCssUrlHashPlugin,
-    ...(cssMinification ? [await getCssMinificationPlugin(cssMinificationOptions)] : []),
+    ...(cssMinification
+      ? [await getCssMinificationPlugin(cssMinificationOptions)]
+      : []),
   ]
   const postcssOptions = {
     getUrlReplacementValue,

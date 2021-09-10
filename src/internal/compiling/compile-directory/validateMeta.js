@@ -18,19 +18,20 @@ export const validateMeta = async ({
   compileCacheSourcesValidation = true,
   compileCacheAssetsValidation = true,
 }) => {
-  const [compiledFileValidationTiming, compiledFileValidation] = await timeFunction(
-    "cache compiled file validation",
-    () =>
+  const [compiledFileValidationTiming, compiledFileValidation] =
+    await timeFunction("cache compiled file validation", () =>
       validateCompiledFile({
         compiledFileUrl,
         ifEtagMatch,
         ifModifiedSinceDate,
       }),
-  )
+    )
 
   if (!compiledFileValidation.valid) {
     logger.debug(
-      `${urlToFileSystemPath(compiledFileUrl)} modified (${compiledFileValidation.code})`,
+      `${urlToFileSystemPath(compiledFileUrl)} modified (${
+        compiledFileValidation.code
+      })`,
     )
     return {
       ...compiledFileValidation,
@@ -40,7 +41,9 @@ export const validateMeta = async ({
   logger.debug(`${urlToFileSystemPath(compiledFileUrl)} not modified`)
 
   if (meta.sources.length === 0) {
-    logger.warn(`meta.sources is empty, cache considered as invalid by precaution`)
+    logger.warn(
+      `meta.sources is empty, cache considered as invalid by precaution`,
+    )
     return {
       code: "SOURCES_EMPTY",
       valid: false,
@@ -73,9 +76,9 @@ export const validateMeta = async ({
   const invalidSourceValidation = sourcesValidations.find(({ valid }) => !valid)
   if (invalidSourceValidation) {
     logger.debug(
-      `${urlToFileSystemPath(invalidSourceValidation.data.sourceFileUrl)} source modified (${
-        invalidSourceValidation.code
-      })`,
+      `${urlToFileSystemPath(
+        invalidSourceValidation.data.sourceFileUrl,
+      )} source modified (${invalidSourceValidation.code})`,
     )
     return {
       ...invalidSourceValidation,
@@ -89,9 +92,9 @@ export const validateMeta = async ({
   const invalidAssetValidation = assetValidations.find(({ valid }) => !valid)
   if (invalidAssetValidation) {
     logger.debug(
-      `${urlToFileSystemPath(invalidAssetValidation.data.assetFileUrl)} asset modified (${
-        invalidAssetValidation.code
-      })`,
+      `${urlToFileSystemPath(
+        invalidAssetValidation.data.assetFileUrl,
+      )} asset modified (${invalidAssetValidation.code})`,
     )
     return {
       ...invalidAssetValidation,
@@ -105,7 +108,9 @@ export const validateMeta = async ({
   logger.debug(`${urlToFileSystemPath(compiledFileUrl)} cache is valid`)
 
   const compiledSource = compiledFileValidation.data.compiledSource
-  const sourcesContent = sourcesValidations.map(({ data }) => data.sourceContent)
+  const sourcesContent = sourcesValidations.map(
+    ({ data }) => data.sourceContent,
+  )
   const assetsContent = assetValidations.find(({ data }) => data.assetContent)
 
   return {
@@ -123,7 +128,11 @@ export const validateMeta = async ({
   }
 }
 
-const validateCompiledFile = async ({ compiledFileUrl, ifEtagMatch, ifModifiedSinceDate }) => {
+const validateCompiledFile = async ({
+  compiledFileUrl,
+  ifEtagMatch,
+  ifModifiedSinceDate,
+}) => {
   try {
     const compiledSource = await readFileContent(compiledFileUrl)
 
@@ -139,7 +148,9 @@ const validateCompiledFile = async ({ compiledFileUrl, ifEtagMatch, ifModifiedSi
     }
 
     if (ifModifiedSinceDate) {
-      const compiledMtime = await readFileSystemNodeModificationTime(compiledFileUrl)
+      const compiledMtime = await readFileSystemNodeModificationTime(
+        compiledFileUrl,
+      )
       if (ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)) {
         return {
           code: "COMPILED_FILE_MTIME_OUTDATED",

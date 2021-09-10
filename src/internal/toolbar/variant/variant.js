@@ -3,19 +3,33 @@ export const enableVariant = (rootNode, variables) => {
     rootNode.querySelectorAll(`[${attributeIndicatingACondition}]`),
   )
   nodesNotMatching.forEach((nodeNotMatching) => {
-    const conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition)
+    const conditionAttributeValue = nodeNotMatching.getAttribute(
+      attributeIndicatingACondition,
+    )
     const matches = testCondition(conditionAttributeValue, variables)
     if (matches) {
-      renameAttribute(nodeNotMatching, attributeIndicatingACondition, attributeIndicatingAMatch)
+      renameAttribute(
+        nodeNotMatching,
+        attributeIndicatingACondition,
+        attributeIndicatingAMatch,
+      )
     }
   })
 
-  const nodesMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingAMatch}]`))
+  const nodesMatching = Array.from(
+    rootNode.querySelectorAll(`[${attributeIndicatingAMatch}]`),
+  )
   nodesMatching.forEach((nodeMatching) => {
-    const conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch)
+    const conditionAttributeValue = nodeMatching.getAttribute(
+      attributeIndicatingAMatch,
+    )
     const matches = testCondition(conditionAttributeValue, variables)
     if (!matches) {
-      renameAttribute(nodeMatching, attributeIndicatingAMatch, attributeIndicatingACondition)
+      renameAttribute(
+        nodeMatching,
+        attributeIndicatingAMatch,
+        attributeIndicatingACondition,
+      )
     }
   })
 }

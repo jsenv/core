@@ -13,7 +13,10 @@ export const browserImportEsModuleBuild = async ({
   awaitNamespace = true,
   debug = false,
 }) => {
-  const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
+  const testDirectoryUrl = resolveDirectoryUrl(
+    testDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
   const [server, browser] = await Promise.all([
     startTestServer({ testDirectoryUrl }),
     chromium.launch({

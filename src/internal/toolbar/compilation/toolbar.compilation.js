@@ -26,7 +26,9 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         browserSupport,
       })
       if (browserSupport === "no") {
-        browserSupportRootNode.querySelector(`a.no_support_read_more_link`).onclick = () => {
+        browserSupportRootNode.querySelector(
+          `a.no_support_read_more_link`,
+        ).onclick = () => {
           // eslint-disable-next-line no-alert
           window.alert(
             `Source files needs to be compiled to be executable in this browser because: ${getBrowserSupportMessage(
@@ -39,7 +41,9 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
           )
         }
       } else if (browserSupport === "partial") {
-        browserSupportRootNode.querySelector(`a.partial_support_read_more_link`).onclick = () => {
+        browserSupportRootNode.querySelector(
+          `a.partial_support_read_more_link`,
+        ).onclick = () => {
           // eslint-disable-next-line no-alert
           window.alert(
             `Source files (except html) can be executed directly in this browser because: ${getBrowserSupportMessage(
@@ -51,7 +55,9 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
           )
         }
       } else if (browserSupport === "full") {
-        browserSupportRootNode.querySelector(`a.full_support_read_more_link`).onclick = () => {
+        browserSupportRootNode.querySelector(
+          `a.full_support_read_more_link`,
+        ).onclick = () => {
           // eslint-disable-next-line no-alert
           window.alert(
             `Source files can be executed directly in this browser because: ${getBrowserSupportMessage(
@@ -73,17 +79,23 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         filesCompilation,
         compiled: compileGroup.compileId ? "yes" : "no",
       })
-      filesCompilationRootNode.querySelector("a.go_to_source_link").onclick = () => {
-        window.parent.location = `/${compileGroup.fileRelativeUrl}`
-      }
-      filesCompilationRootNode.querySelector("a.go_to_compiled_link").onclick = () => {
-        window.parent.location = `/${outDirectoryRelativeUrl}${compileId}/${compileGroup.fileRelativeUrl}`
-      }
+      filesCompilationRootNode.querySelector("a.go_to_source_link").onclick =
+        () => {
+          window.parent.location = `/${compileGroup.fileRelativeUrl}`
+        }
+      filesCompilationRootNode.querySelector("a.go_to_compiled_link").onclick =
+        () => {
+          window.parent.location = `/${outDirectoryRelativeUrl}${compileId}/${compileGroup.fileRelativeUrl}`
+        }
     },
   )
 }
 
-const getBrowserSupportMessage = ({ missingOnly, featuresReport, inlineImportMapIntoHTML }) => {
+const getBrowserSupportMessage = ({
+  missingOnly,
+  featuresReport,
+  inlineImportMapIntoHTML,
+}) => {
   const parts = []
 
   const { importmapSupported } = featuresReport
@@ -142,7 +154,9 @@ const getBrowserSupportMessage = ({ missingOnly, featuresReport, inlineImportMap
   if (customCompilerCount === 0) {
     // no need to talk about something unused
   } else {
-    parts.push(`${customCompilerCount} custom compilers enabled: ${customCompilerNames}`)
+    parts.push(
+      `${customCompilerCount} custom compilers enabled: ${customCompilerNames}`,
+    )
   }
 
   const { jsenvPluginRequiredNames } = featuresReport

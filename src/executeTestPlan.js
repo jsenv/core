@@ -1,5 +1,8 @@
 /* eslint-disable import/max-dependencies */
-import { createCancellationToken, composeCancellationToken } from "@jsenv/cancellation"
+import {
+  createCancellationToken,
+  composeCancellationToken,
+} from "@jsenv/cancellation"
 import {
   normalizeStructuredMetaMap,
   urlToFileSystemPath,
@@ -11,7 +14,10 @@ import {
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
-import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
+import {
+  assertProjectDirectoryUrl,
+  assertProjectDirectoryExists,
+} from "./internal/argUtils.js"
 import { executePlan } from "./internal/executing/executePlan.js"
 import { executionIsPassed } from "./internal/executing/executionIsPassed.js"
 import { generateCoverageJsonFile } from "./internal/executing/coverage/generateCoverageJsonFile.js"
@@ -42,7 +48,8 @@ export const executeTestPlan = async ({
   measureGlobalDuration = true,
   updateProcessExitCode = true,
 
-  coverage = process.argv.includes("--cover") || process.argv.includes("--coverage"),
+  coverage = process.argv.includes("--cover") ||
+    process.argv.includes("--coverage"),
   coverageConfig = jsenvCoverageConfig,
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
@@ -74,7 +81,10 @@ export const executeTestPlan = async ({
   jsenvDirectoryClean,
 }) => {
   const jsenvExecuteTestPlanFunction = async ({ jsenvCancellationToken }) => {
-    cancellationToken = composeCancellationToken(cancellationToken, jsenvCancellationToken)
+    cancellationToken = composeCancellationToken(
+      cancellationToken,
+      jsenvCancellationToken,
+    )
 
     const logger = createLogger({ logLevel })
 
@@ -93,7 +103,9 @@ export const executeTestPlan = async ({
 
     if (coverage) {
       if (typeof coverageConfig !== "object") {
-        throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`)
+        throw new TypeError(
+          `coverageConfig must be an object, got ${coverageConfig}`,
+        )
       }
       if (Object.keys(coverageConfig).length === 0) {
         logger.warn(
@@ -126,9 +138,12 @@ export const executeTestPlan = async ({
           // I think it is an error, it would be strange, for a given file
           // to be both covered and executed
           throw new Error(
-            createDetailedMessage(`some file will be both covered and executed`, {
-              patterns: patternsMatchingCoverAndExecute,
-            }),
+            createDetailedMessage(
+              `some file will be both covered and executed`,
+              {
+                patterns: patternsMatchingCoverAndExecute,
+              },
+            ),
           )
         }
       }
@@ -188,7 +203,9 @@ export const executeTestPlan = async ({
       await ensureEmptyDirectory(coverageHtmlDirectoryUrl)
       if (coverageHtmlDirectoryIndexLog) {
         const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`
-        logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`)
+        logger.info(
+          `-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`,
+        )
       }
       promises.push(
         generateCoverageHtmlDirectory(result.planCoverage, {
@@ -198,15 +215,23 @@ export const executeTestPlan = async ({
       )
     }
     if (coverage && coverageJsonFile) {
-      const coverageJsonFileUrl = resolveUrl(coverageJsonFileRelativeUrl, projectDirectoryUrl)
+      const coverageJsonFileUrl = resolveUrl(
+        coverageJsonFileRelativeUrl,
+        projectDirectoryUrl,
+      )
       if (coverageJsonFileLog) {
         logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
       }
-      promises.push(generateCoverageJsonFile(result.planCoverage, coverageJsonFileUrl))
+      promises.push(
+        generateCoverageJsonFile(result.planCoverage, coverageJsonFileUrl),
+      )
     }
     if (coverage && coverageTextLog) {
       promises.push(
-        generateCoverageTextLog(result.planCoverage, { coverageSkipEmpty, coverageSkipFull }),
+        generateCoverageTextLog(result.planCoverage, {
+          coverageSkipEmpty,
+          coverageSkipFull,
+        }),
       )
     }
     await Promise.all(promises)
@@ -218,5 +243,7 @@ export const executeTestPlan = async ({
     }
   }
 
-  return executeJsenvAsyncFunction(jsenvExecuteTestPlanFunction, { cancelOnSIGINT })
+  return executeJsenvAsyncFunction(jsenvExecuteTestPlanFunction, {
+    cancelOnSIGINT,
+  })
 }

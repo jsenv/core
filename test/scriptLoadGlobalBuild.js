@@ -12,7 +12,10 @@ export const scriptLoadGlobalBuild = async ({
   globalName,
   debug = false,
 }) => {
-  const buildDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
+  const buildDirectoryUrl = resolveDirectoryUrl(
+    buildDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
   const [server, browser] = await Promise.all([
     startTestServer({ buildDirectoryUrl }),
     chromium.launch({

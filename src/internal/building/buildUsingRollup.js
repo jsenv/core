@@ -13,6 +13,7 @@ export const buildUsingRollup = async ({
   compileServerOrigin,
   compileDirectoryRelativeUrl,
 
+  urlMappings,
   importResolutionMethod,
   importMapFileRelativeUrl,
   importDefaultExtension,
@@ -51,44 +52,46 @@ export const buildUsingRollup = async ({
   lineBreakNormalization,
   writeOnFileSystem,
 }) => {
-  const { jsenvRollupPlugin, getLastErrorMessage, getResult } = await createJsenvRollupPlugin({
-    cancellationToken,
-    logger,
+  const { jsenvRollupPlugin, getLastErrorMessage, getResult } =
+    await createJsenvRollupPlugin({
+      cancellationToken,
+      logger,
 
-    entryPointMap,
-    projectDirectoryUrl,
-    compileServerOrigin,
-    compileDirectoryRelativeUrl,
+      entryPointMap,
+      projectDirectoryUrl,
+      compileServerOrigin,
+      compileDirectoryRelativeUrl,
 
-    importResolutionMethod,
-    importMapFileRelativeUrl,
-    importDefaultExtension,
-    externalImportSpecifiers,
-    externalImportUrlPatterns,
-    importPaths,
+      urlMappings,
+      importResolutionMethod,
+      importMapFileRelativeUrl,
+      importDefaultExtension,
+      externalImportSpecifiers,
+      externalImportUrlPatterns,
+      importPaths,
 
-    babelPluginMap,
-    transformTopLevelAwait,
-    node,
-    browser,
+      babelPluginMap,
+      transformTopLevelAwait,
+      node,
+      browser,
 
-    format,
-    systemJsUrl,
-    buildDirectoryUrl,
+      format,
+      systemJsUrl,
+      buildDirectoryUrl,
 
-    jsConcatenation,
-    urlVersioning,
-    lineBreakNormalization,
-    useImportMapToImproveLongTermCaching,
-    minify,
-    minifyJsOptions,
-    minifyCssOptions,
-    minifyHtmlOptions,
+      jsConcatenation,
+      urlVersioning,
+      lineBreakNormalization,
+      useImportMapToImproveLongTermCaching,
+      minify,
+      minifyJsOptions,
+      minifyCssOptions,
+      minifyHtmlOptions,
 
-    assetManifestFile,
-    assetManifestFileRelativeUrl,
-    writeOnFileSystem,
-  })
+      assetManifestFile,
+      assetManifestFileRelativeUrl,
+      writeOnFileSystem,
+    })
 
   try {
     await useRollup({
@@ -119,19 +122,24 @@ export const buildUsingRollup = async ({
 
   if (writeOnFileSystem) {
     await Promise.all(
-      Object.keys(serviceWorkers).map(async (serviceWorkerProjectRelativeUrl) => {
-        const serviceWorkerBuildRelativeUrl = serviceWorkers[serviceWorkerProjectRelativeUrl]
-        await buildServiceWorker({
-          projectDirectoryUrl,
-          buildDirectoryUrl,
-          serviceWorkerProjectRelativeUrl,
-          serviceWorkerBuildRelativeUrl,
-          serviceWorkerTransformer: (code) =>
-            serviceWorkerFinalizer(code, jsenvBuild, { lineBreakNormalization }),
+      Object.keys(serviceWorkers).map(
+        async (serviceWorkerProjectRelativeUrl) => {
+          const serviceWorkerBuildRelativeUrl =
+            serviceWorkers[serviceWorkerProjectRelativeUrl]
+          await buildServiceWorker({
+            projectDirectoryUrl,
+            buildDirectoryUrl,
+            serviceWorkerProjectRelativeUrl,
+            serviceWorkerBuildRelativeUrl,
+            serviceWorkerTransformer: (code) =>
+              serviceWorkerFinalizer(code, jsenvBuild, {
+                lineBreakNormalization,
+              }),
 
-          minify,
-        })
-      }),
+            minify,
+          })
+        },
+      ),
     )
   }
 
@@ -167,11 +175,13 @@ const useRollup = async ({
     // to be very clear about what we want to ignore
     onwarn: (warning, warn) => {
       if (warning.code === "THIS_IS_UNDEFINED") return
-      if (warning.code === "EMPTY_BUNDLE" && warning.chunkName === "__empty__") return
+      if (warning.code === "EMPTY_BUNDLE" && warning.chunkName === "__empty__")
+        return
       // ignore file name conflict when sourcemap or importmap are re-emitted
       if (
         warning.code === "FILE_NAME_CONFLICT" &&
-        (warning.message.includes(".map") || warning.message.includes(".importmap"))
+        (warning.message.includes(".map") ||
+          warning.message.includes(".importmap"))
       ) {
         return
       }

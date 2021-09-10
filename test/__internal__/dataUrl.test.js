@@ -33,7 +33,9 @@ import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 }
 
 {
-  const actual = parseDataUrl("data:text/html,%3Ch1%3EHello%2C%20World!%3C%2Fh1%3E")
+  const actual = parseDataUrl(
+    "data:text/html,%3Ch1%3EHello%2C%20World!%3C%2Fh1%3E",
+  )
   const expected = {
     mediaType: "text/html",
     base64Flag: false,

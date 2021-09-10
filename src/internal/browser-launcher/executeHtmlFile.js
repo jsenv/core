@@ -1,4 +1,9 @@
-import { resolveUrl, assertFilePresence, urlToRelativeUrl, urlToExtension } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  assertFilePresence,
+  urlToRelativeUrl,
+  urlToExtension,
+} from "@jsenv/filesystem"
 
 import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { v8CoverageFromAllV8Coverages } from "@jsenv/core/src/internal/executing/coverage/v8CoverageFromAllV8Coverages.js"
@@ -25,7 +30,9 @@ export const executeHtmlFile = async (
 ) => {
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
   if (urlToExtension(fileUrl) !== ".html") {
-    throw new Error(`the file to execute must use .html extension, received ${fileRelativeUrl}.`)
+    throw new Error(
+      `the file to execute must use .html extension, received ${fileRelativeUrl}.`,
+    )
   }
 
   await assertFilePresence(fileUrl)
@@ -34,16 +41,22 @@ export const executeHtmlFile = async (
     jsenvCompileProxyHtmlFileInfo.url,
     projectDirectoryUrl,
   )
-  const compileProxyClientUrl = resolveUrl(compileProxyProjectRelativeUrl, compileServerOrigin)
+  const compileProxyClientUrl = resolveUrl(
+    compileProxyProjectRelativeUrl,
+    compileServerOrigin,
+  )
   await page.goto(compileProxyClientUrl)
 
-  const coverageInstrumentationRequired = coverageForceIstanbul || !coveragePlaywrightAPIAvailable
+  const coverageInstrumentationRequired =
+    coverageForceIstanbul || !coveragePlaywrightAPIAvailable
 
   const browserRuntimeFeaturesReport = await page.evaluate(
     /* istanbul ignore next */
     ({ coverageInstrumentationRequired }) => {
       // eslint-disable-next-line no-undef
-      return window.scanBrowserRuntimeFeatures({ coverageInstrumentationRequired })
+      return window.scanBrowserRuntimeFeatures({
+        coverageInstrumentationRequired,
+      })
     },
     { coverageInstrumentationRequired },
   )
@@ -136,14 +149,19 @@ const executeSource = async ({
       const v8CoveragesWithWebUrls = await page.coverage.stopJSCoverage()
       // we convert urls starting with http:// to file:// because we later
       // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
-      const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map((v8CoveragesWithWebUrl) => {
-        const relativeUrl = urlToRelativeUrl(v8CoveragesWithWebUrl.url, compileServerOrigin)
-        const fsUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
-        return {
-          ...v8CoveragesWithWebUrl,
-          url: fsUrl,
-        }
-      })
+      const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map(
+        (v8CoveragesWithWebUrl) => {
+          const relativeUrl = urlToRelativeUrl(
+            v8CoveragesWithWebUrl.url,
+            compileServerOrigin,
+          )
+          const fsUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
+          return {
+            ...v8CoveragesWithWebUrl,
+            url: fsUrl,
+          }
+        },
+      )
       const allV8Coverages = [{ result: v8CoveragesWithFsUrls }]
       const coverage = v8CoverageFromAllV8Coverages(allV8Coverages, {
         coverageRootUrl: projectDirectoryUrl,
@@ -168,14 +186,19 @@ const executeSource = async ({
   )
 
   const { fileExecutionResultMap } = executionResult
-  const fileErrored = Object.keys(fileExecutionResultMap).find((fileRelativeUrl) => {
-    const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
-    return fileExecutionResult.status === "errored"
-  })
+  const fileErrored = Object.keys(fileExecutionResultMap).find(
+    (fileRelativeUrl) => {
+      const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
+      return fileExecutionResult.status === "errored"
+    },
+  )
 
   if (fileErrored) {
     const { exceptionSource } = fileExecutionResultMap[fileErrored]
-    const error = evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin })
+    const error = evalException(exceptionSource, {
+      projectDirectoryUrl,
+      compileServerOrigin,
+    })
     return transformResult({
       status: "errored",
       error,
@@ -215,7 +238,10 @@ const executeCompiledVersion = async ({
   }
 
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
-  const compileDirectoryRemoteUrl = resolveUrl(compileDirectoryRelativeUrl, compileServerOrigin)
+  const compileDirectoryRemoteUrl = resolveUrl(
+    compileDirectoryRelativeUrl,
+    compileServerOrigin,
+  )
   const fileClientUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
   await page.goto(fileClientUrl, { timeout: 0 })
 
@@ -228,14 +254,19 @@ const executeCompiledVersion = async ({
   )
 
   const { fileExecutionResultMap } = executionResult
-  const fileErrored = Object.keys(fileExecutionResultMap).find((fileRelativeUrl) => {
-    const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
-    return fileExecutionResult.status === "errored"
-  })
+  const fileErrored = Object.keys(fileExecutionResultMap).find(
+    (fileRelativeUrl) => {
+      const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
+      return fileExecutionResult.status === "errored"
+    },
+  )
 
   if (fileErrored) {
     const { exceptionSource } = fileExecutionResultMap[fileErrored]
-    const error = evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin })
+    const error = evalException(exceptionSource, {
+      projectDirectoryUrl,
+      compileServerOrigin,
+    })
     return transformResult({
       status: "errored",
       error,
@@ -261,7 +292,10 @@ const generateCoverageForPage = (fileExecutionResultMap) => {
   return istanbulCoverage
 }
 
-const evalException = (exceptionSource, { projectDirectoryUrl, compileServerOrigin }) => {
+const evalException = (
+  exceptionSource,
+  { projectDirectoryUrl, compileServerOrigin },
+) => {
   const error = evalSource(exceptionSource)
 
   if (error && error instanceof Error) {

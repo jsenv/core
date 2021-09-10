@@ -1,6 +1,9 @@
 import { computeBuildRelativeUrl } from "./url-versioning.js"
 
-export const computeBuildRelativeUrlForTarget = (target, { lineBreakNormalization }) => {
+export const computeBuildRelativeUrlForTarget = (
+  target,
+  { lineBreakNormalization },
+) => {
   return computeBuildRelativeUrl(target.targetUrl, target.targetBuildBuffer, {
     pattern: targetToFileNamePattern(target),
     contentType: target.targetContentType,

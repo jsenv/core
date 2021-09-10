@@ -1,5 +1,8 @@
 import { require } from "../../require.js"
-import { filePathToBabelHelperName, babelHelperNameToImportSpecifier } from "./babelHelper.js"
+import {
+  filePathToBabelHelperName,
+  babelHelperNameToImportSpecifier,
+} from "./babelHelper.js"
 
 // named import approach found here:
 // https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
@@ -31,13 +34,16 @@ export const transformBabelHelperToImportBabelPlugin = (api) => {
         }
 
         const filePath = file.opts.filename
-        const babelHelperImportSpecifier = babelHelperNameToImportSpecifier(name)
+        const babelHelperImportSpecifier =
+          babelHelperNameToImportSpecifier(name)
 
         if (filePathToBabelHelperName(filePath) === name) {
           return undefined
         }
 
-        const helper = addDefault(file.path, babelHelperImportSpecifier, { nameHint: `_${name}` })
+        const helper = addDefault(file.path, babelHelperImportSpecifier, {
+          nameHint: `_${name}`,
+        })
         cachedHelpers[name] = helper
         return helper
       })

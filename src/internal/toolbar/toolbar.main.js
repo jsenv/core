@@ -6,10 +6,17 @@ import { fetchExploringJson } from "../exploring/fetchExploringJson.js"
 import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
 import "./focus/toolbar.focus.js"
 import { renderBackToListInToolbar } from "./backtolist/toolbar.backtolist.js"
-import { getToolbarIframe, deactivateToolbarSection, setStyles } from "./util/dom.js"
+import {
+  getToolbarIframe,
+  deactivateToolbarSection,
+  setStyles,
+} from "./util/dom.js"
 import { createPreference } from "./util/preferences.js"
 import { hideTooltip, hideAllTooltip } from "./tooltip/tooltip.js"
-import { renderToolbarSettings, hideSettings } from "./settings/toolbar.settings.js"
+import {
+  renderToolbarSettings,
+  hideSettings,
+} from "./settings/toolbar.settings.js"
 import { renderToolbarNotification } from "./notification/toolbar.notification.js"
 import { renderToolbarTheme } from "./theme/toolbar.theme.js"
 import { renderToolbarAnimation } from "./animation/toolbar.animation.js"
@@ -78,7 +85,8 @@ const renderToolbar = async () => {
   // if user click enter or space quickly while closing toolbar
   // it will cancel the closing
   // that's why I used toggleToolbar and not hideToolbar
-  document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar()
+  document.querySelector("#button-close-toolbar").onclick = () =>
+    toogleToolbar()
 }
 
 const exposeOnParentWindow = (object) => {
@@ -99,7 +107,8 @@ const toogleToolbar = () => {
   }
 }
 
-const toolbarIsVisible = () => document.documentElement.hasAttribute("data-toolbar-visible")
+const toolbarIsVisible = () =>
+  document.documentElement.hasAttribute("data-toolbar-visible")
 
 let hideToolbar = () => {
   // toolbar hidden by default, nothing to do to hide it by default
@@ -127,7 +136,8 @@ const showToolbar = ({ animate = true } = {}) => {
       ? parentWindow.document.documentElement
       : parentWindow.document.body
 
-  const scrollYMax = parentDocumentElement.scrollHeight - parentWindow.innerHeight
+  const scrollYMax =
+    parentDocumentElement.scrollHeight - parentWindow.innerHeight
   const scrollY = parentDocumentElement.scrollTop
   const scrollYRemaining = scrollYMax - scrollY
 
@@ -178,9 +188,14 @@ const getCompileGroup = ({
   outDirectoryRelativeUrl,
   compileServerOrigin,
 }) => {
-  const outDirectoryRemoteUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin))
+  const outDirectoryRemoteUrl = String(
+    new URL(outDirectoryRelativeUrl, compileServerOrigin),
+  )
   if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryRemoteUrl)) {
-    const afterCompileDirectory = urlToRelativeUrl(executedFileCompiledUrl, outDirectoryRemoteUrl)
+    const afterCompileDirectory = urlToRelativeUrl(
+      executedFileCompiledUrl,
+      outDirectoryRemoteUrl,
+    )
     const slashIndex = afterCompileDirectory.indexOf("/")
     const fileRelativeUrl = afterCompileDirectory.slice(slashIndex + 1)
     return {

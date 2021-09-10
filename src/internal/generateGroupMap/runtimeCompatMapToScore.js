@@ -1,14 +1,20 @@
-import { versionCompare, findHighestVersion } from "../semantic-versioning/index.js"
+import {
+  versionCompare,
+  findHighestVersion,
+} from "../semantic-versioning/index.js"
 
 export const runtimeCompatMapToScore = (runtimeCompatMap, runtimeScoreMap) => {
   return Object.keys(runtimeCompatMap).reduce((previous, runtimeName) => {
     const runtimeVersion = runtimeCompatMap[runtimeName]
-    return previous + runtimeToScore(runtimeName, runtimeVersion, runtimeScoreMap)
+    return (
+      previous + runtimeToScore(runtimeName, runtimeVersion, runtimeScoreMap)
+    )
   }, 0)
 }
 
 const runtimeToScore = (runtimeName, runtimeVersion, runtimeScoreMap) => {
-  if (runtimeName in runtimeScoreMap === false) return runtimeScoreMap.other || 0
+  if (runtimeName in runtimeScoreMap === false)
+    return runtimeScoreMap.other || 0
 
   const versionUsageMap = runtimeScoreMap[runtimeName]
   const versionArray = Object.keys(versionUsageMap)
@@ -22,7 +28,10 @@ const runtimeToScore = (runtimeName, runtimeVersion, runtimeScoreMap) => {
 
   const closestVersion = versionArrayAscending
     .reverse()
-    .find((version) => findHighestVersion(runtimeVersion, version) === runtimeVersion)
+    .find(
+      (version) =>
+        findHighestVersion(runtimeVersion, version) === runtimeVersion,
+    )
 
   if (!closestVersion) return runtimeScoreMap.other || 0
 

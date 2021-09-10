@@ -1,4 +1,4 @@
-# jsenv &middot; [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core) [![github main worflow](https://github.com/jsenv/jsenv-core/workflows/main/badge.svg)](https://github.com/jsenv/jsenv-core/actions?workflow=main) [![codecov coverage](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
+# jsenv [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core) [![github main worflow](https://github.com/jsenv/jsenv-core/workflows/main/badge.svg)](https://github.com/jsenv/jsenv-core/actions?workflow=main) [![codecov coverage](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
 `@jsenv/core` was first created to write tests that could be executed in different browsers AND Node.js. In the end it became a tool covering the core needs of a JavaScript project:
 
@@ -69,7 +69,11 @@ npm install --save-dev @jsenv/core
 3 - Create `execute_test_plan.mjs`
 
 ```js
-import { executeTestPlan, launchChromiumTab, launchFirefoxTab } from "@jsenv/core"
+import {
+  executeTestPlan,
+  launchChromiumTab,
+  launchFirefoxTab,
+} from "@jsenv/core"
 
 executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),

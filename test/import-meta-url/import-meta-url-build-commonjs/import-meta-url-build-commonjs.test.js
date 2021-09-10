@@ -1,6 +1,10 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import {
+  resolveDirectoryUrl,
+  resolveUrl,
+  urlToRelativeUrl,
+} from "@jsenv/filesystem"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   GENERATE_COMMONJS_BUILD_TEST_PARAMS,
@@ -10,7 +14,10 @@ import { requireCommonJsBuild } from "@jsenv/core/test/requireCommonJsBuild.js"
 import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
@@ -31,6 +38,9 @@ const { namespace: actual } = await requireCommonJsBuild({
   buildDirectoryRelativeUrl,
 })
 const expected = {
-  url: resolveUrl(`${buildDirectoryRelativeUrl}/main.cjs`, jsenvCoreDirectoryUrl),
+  url: resolveUrl(
+    `${buildDirectoryRelativeUrl}/main.cjs`,
+    jsenvCoreDirectoryUrl,
+  ),
 }
 assert({ actual, expected })

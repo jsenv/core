@@ -18,10 +18,15 @@ export const browserImportSystemJsBuild = async ({
   autoStop = !debug,
 }) => {
   if (!mainRelativeUrl) {
-    throw new TypeError(`mainRelativeUrl must be a string, received ${mainRelativeUrl}`)
+    throw new TypeError(
+      `mainRelativeUrl must be a string, received ${mainRelativeUrl}`,
+    )
   }
 
-  const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
+  const testDirectoryUrl = resolveDirectoryUrl(
+    testDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
   const [server, browser] = await Promise.all([
     startTestServer({ testDirectoryUrl }),
     chromium.launch({

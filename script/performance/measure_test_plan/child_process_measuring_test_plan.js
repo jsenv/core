@@ -11,7 +11,10 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 
 const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const currentDirectoryUrl = new URL("./", import.meta.url)
-const currentDirectoryRelativeUrl = new URL(currentDirectoryUrl, jsenvCoreDirectoryUrl)
+const currentDirectoryRelativeUrl = new URL(
+  currentDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const executeTestPlanParameters = {
   projectDirectoryUrl,
   testPlan: {
@@ -67,8 +70,10 @@ const afterRessourceUsage = resourceUsage()
 
 const msEllapsed = afterMs - beforeMs
 const heapUsed = afterHeapUsed - beforeHeapUsed
-const fileSystemReadOperationCount = afterRessourceUsage.fsRead - beforeRessourceUsage.fsRead
-const fileSystemWriteOperationCount = afterRessourceUsage.fsWrite - beforeRessourceUsage.fsWrite
+const fileSystemReadOperationCount =
+  afterRessourceUsage.fsRead - beforeRessourceUsage.fsRead
+const fileSystemWriteOperationCount =
+  afterRessourceUsage.fsWrite - beforeRessourceUsage.fsWrite
 process.send({
   heapUsed,
   msEllapsed,

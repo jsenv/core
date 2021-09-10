@@ -12,7 +12,10 @@ const computeTestBabelPluginMap = ({ coverageEnabled }) => {
     ...jsenvBabelPluginMap,
     ["transform-instrument"]: [
       babelPluginInstrument,
-      { projectDirectoryUrl: jsenvCoreDirectoryUrl, coverageConfig: jsenvCoverageConfig },
+      {
+        projectDirectoryUrl: jsenvCoreDirectoryUrl,
+        coverageConfig: jsenvCoverageConfig,
+      },
     ],
   }
 }

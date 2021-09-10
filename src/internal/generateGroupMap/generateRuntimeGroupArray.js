@@ -1,4 +1,7 @@
-import { findHighestVersion, versionCompare } from "../semantic-versioning/index.js"
+import {
+  findHighestVersion,
+  versionCompare,
+} from "../semantic-versioning/index.js"
 import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
 import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "../../jsenvPluginCompatMap.js"
 import { computeBabelPluginMapForRuntime } from "./computeBabelPluginMapForRuntime.js"
@@ -68,15 +71,17 @@ export const generateRuntimeGroupArray = ({
       },
     }
 
-    const groupWithSameRequirements = runtimeGroupArray.find((runtimeGroupCandidate) =>
-      groupHaveSameRequirements(runtimeGroupCandidate, group),
+    const groupWithSameRequirements = runtimeGroupArray.find(
+      (runtimeGroupCandidate) =>
+        groupHaveSameRequirements(runtimeGroupCandidate, group),
     )
 
     if (groupWithSameRequirements) {
-      groupWithSameRequirements.runtimeCompatMap[runtimeName] = findHighestVersion(
-        groupWithSameRequirements.runtimeCompatMap[runtimeName],
-        version,
-      )
+      groupWithSameRequirements.runtimeCompatMap[runtimeName] =
+        findHighestVersion(
+          groupWithSameRequirements.runtimeCompatMap[runtimeName],
+          version,
+        )
     } else {
       runtimeGroupArray.push(group)
     }

@@ -15,7 +15,10 @@ const userAgentToBrowser = (userAgent) => {
   if (/chrome|crios|crmo/i.test(userAgent)) {
     return {
       name: "chrome",
-      version: firstMatch(/(?:chrome|crios|crmo)\/(\d+(\.?_?\d+)+)/i, userAgent),
+      version: firstMatch(
+        /(?:chrome|crios|crmo)\/(\d+(\.?_?\d+)+)/i,
+        userAgent,
+      ),
     }
   }
 

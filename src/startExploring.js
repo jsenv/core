@@ -1,9 +1,19 @@
-import { createCancellationToken, composeCancellationToken } from "@jsenv/cancellation"
-import { normalizeStructuredMetaMap, collectFiles, urlToRelativeUrl } from "@jsenv/filesystem"
+import {
+  createCancellationToken,
+  composeCancellationToken,
+} from "@jsenv/cancellation"
+import {
+  normalizeStructuredMetaMap,
+  collectFiles,
+  urlToRelativeUrl,
+} from "@jsenv/filesystem"
 
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
-import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
+import {
+  assertProjectDirectoryUrl,
+  assertProjectDirectoryExists,
+} from "./internal/argUtils.js"
 import {
   startCompileServer,
   computeOutDirectoryRelativeUrl,
@@ -42,7 +52,10 @@ export const startExploring = async ({
   ...rest
 }) => {
   const jsenvStartExploringFunction = async ({ jsenvCancellationToken }) => {
-    cancellationToken = composeCancellationToken(cancellationToken, jsenvCancellationToken)
+    cancellationToken = composeCancellationToken(
+      cancellationToken,
+      jsenvCancellationToken,
+    )
 
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
@@ -101,7 +114,9 @@ export const startExploring = async ({
     return compileServer
   }
 
-  return executeJsenvAsyncFunction(jsenvStartExploringFunction, { cancelOnSIGINT })
+  return executeJsenvAsyncFunction(jsenvStartExploringFunction, {
+    cancelOnSIGINT,
+  })
 }
 
 const createRedirectFilesService = ({ projectDirectoryUrl }) => {
@@ -169,7 +184,10 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
     // "/.jsenv/jsenv-toolbar.js.map"
     // we could also inline sourcemap but it's not yet possible
     // inside buildProject
-    if (request.ressource === `/.jsenv/${jsenvToolbarJsFileInfo.sourcemapFilename}`) {
+    if (
+      request.ressource ===
+      `/.jsenv/${jsenvToolbarJsFileInfo.sourcemapFilename}`
+    ) {
       const jsenvToolbarJsBuildSourcemapServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}.map`
       return {
         status: 307,
@@ -190,11 +208,17 @@ const createExploringDataService = ({
   livereloading,
 }) => {
   return (request) => {
-    if (request.ressource === "/.jsenv/exploring.json" && request.method === "GET") {
+    if (
+      request.ressource === "/.jsenv/exploring.json" &&
+      request.method === "GET"
+    ) {
       const data = {
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
-        jsenvDirectoryRelativeUrl: urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl),
+        jsenvDirectoryRelativeUrl: urlToRelativeUrl(
+          jsenvCoreDirectoryUrl,
+          projectDirectoryUrl,
+        ),
         exploringHtmlFileRelativeUrl: urlToRelativeUrl(
           jsenvExploringIndexHtmlFileInfo.url,
           projectDirectoryUrl,
@@ -231,7 +255,10 @@ const createExplorableListAsJsonService = ({
   explorableConfig,
 }) => {
   return async (request) => {
-    if (request.ressource === "/.jsenv/explorables.json" && request.method === "GET") {
+    if (
+      request.ressource === "/.jsenv/explorables.json" &&
+      request.method === "GET"
+    ) {
       const structuredMetaMapRelativeForExplorable = {}
       Object.keys(explorableConfig).forEach((explorableGroup) => {
         const explorableGroupConfig = explorableConfig[explorableGroup]
@@ -249,12 +276,16 @@ const createExplorableListAsJsonService = ({
         directoryUrl: projectDirectoryUrl,
         structuredMetaMap: structuredMetaMapForExplorable,
         predicate: (meta) =>
-          Object.keys(meta).some((explorableGroup) => Boolean(meta[explorableGroup])),
+          Object.keys(meta).some((explorableGroup) =>
+            Boolean(meta[explorableGroup]),
+          ),
       })
-      const explorableFiles = matchingFileResultArray.map(({ relativeUrl, meta }) => ({
-        relativeUrl,
-        meta,
-      }))
+      const explorableFiles = matchingFileResultArray.map(
+        ({ relativeUrl, meta }) => ({
+          relativeUrl,
+          meta,
+        }),
+      )
       const json = JSON.stringify(explorableFiles)
       return {
         status: 200,

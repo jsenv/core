@@ -1,7 +1,10 @@
 import { createCancellationToken } from "@jsenv/cancellation"
 import { resolveUrl } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
-import { dataUrlToRawData, parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
+import {
+  dataUrlToRawData,
+  parseDataUrl,
+} from "@jsenv/core/src/internal/dataUrl.utils.js"
 import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
@@ -9,7 +12,10 @@ import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateRes
 export const fetchSourcemap = async (
   jsUrl,
   jsString,
-  { cancellationToken = createCancellationToken(), logger = createLogger() } = {},
+  {
+    cancellationToken = createCancellationToken(),
+    logger = createLogger(),
+  } = {},
 ) => {
   const jsSourcemapUrl = getJavaScriptSourceMappingUrl(jsString)
 
@@ -19,7 +25,11 @@ export const fetchSourcemap = async (
 
   if (jsSourcemapUrl.startsWith("data:")) {
     const jsSourcemapString = dataUrlToRawData(parseDataUrl(jsSourcemapUrl))
-    return parseSourcemapString(jsSourcemapString, jsSourcemapUrl, `inline comment in ${jsUrl}`)
+    return parseSourcemapString(
+      jsSourcemapString,
+      jsSourcemapUrl,
+      `inline comment in ${jsUrl}`,
+    )
   }
 
   const sourcemapUrl = resolveUrl(jsSourcemapUrl, jsUrl)
@@ -27,7 +37,9 @@ export const fetchSourcemap = async (
     cancellationToken,
     ignoreHttpsError: true,
   })
-  const okValidation = await validateResponseStatusIsOk(sourcemapResponse, jsUrl)
+  const okValidation = await validateResponseStatusIsOk(sourcemapResponse, {
+    importer: jsUrl,
+  })
 
   if (!okValidation.valid) {
     logger.warn(`unexpected response for sourcemap file:

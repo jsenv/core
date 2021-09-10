@@ -109,7 +109,9 @@ export const executeConcurrently = async (
         executionParams,
       }
 
-      const filePath = urlToFileSystemPath(`${projectDirectoryUrl}${fileRelativeUrl}`)
+      const filePath = urlToFileSystemPath(
+        `${projectDirectoryUrl}${fileRelativeUrl}`,
+      )
       const fileExists = await pathLeadsToFile(filePath)
       if (!fileExists) {
         mainFileNotFoundCallback(beforeExecutionInfo)
@@ -257,17 +259,24 @@ const reportToSummary = (report) => {
       return (
         previous +
         Object.keys(fileExecutionResult).filter((executionName) => {
-          const fileExecutionResultForRuntime = fileExecutionResult[executionName]
+          const fileExecutionResultForRuntime =
+            fileExecutionResult[executionName]
           return predicate(fileExecutionResultForRuntime)
         }).length
       )
     }, 0)
   }
 
-  const disconnectedCount = countResultMatching(({ status }) => status === "disconnected")
-  const timedoutCount = countResultMatching(({ status }) => status === "timedout")
+  const disconnectedCount = countResultMatching(
+    ({ status }) => status === "disconnected",
+  )
+  const timedoutCount = countResultMatching(
+    ({ status }) => status === "timedout",
+  )
   const erroredCount = countResultMatching(({ status }) => status === "errored")
-  const completedCount = countResultMatching(({ status }) => status === "completed")
+  const completedCount = countResultMatching(
+    ({ status }) => status === "completed",
+  )
 
   return {
     executionCount,

@@ -44,7 +44,10 @@ export const openBrowserPage = async (
     }
   })
 
-  const executionResult = await Promise.race([getHtmlExecutionResult(page), errorPromise])
+  const executionResult = await Promise.race([
+    getHtmlExecutionResult(page),
+    errorPromise,
+  ])
   removeErrorListener()
 
   if (executionResult.status === "errored") {

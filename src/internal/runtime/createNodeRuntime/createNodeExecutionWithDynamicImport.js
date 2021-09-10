@@ -3,7 +3,9 @@ import { resolveUrl } from "@jsenv/filesystem"
 import { unevalException } from "@jsenv/core/src/internal/unevalException.js"
 import { measureAsyncFnPerf } from "@jsenv/core/src/internal/perf_node.js"
 
-export const createNodeExecutionWithDynamicImport = ({ projectDirectoryUrl }) => {
+export const createNodeExecutionWithDynamicImport = ({
+  projectDirectoryUrl,
+}) => {
   const executeFile = async (
     specifier,
     { measurePerformance, errorExposureInConsole = false } = {},

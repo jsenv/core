@@ -181,7 +181,9 @@ const transformHTMLSourceFile = async ({
         removeHtmlNodeAttribute(script, srcAttribute)
         setHtmlNodeText(
           script,
-          `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(srcAttribute.value)})`,
+          `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(
+            srcAttribute.value,
+          )})`,
         )
         return
       }
@@ -224,7 +226,10 @@ const inlineImportmapScripts = async ({ logger, htmlAst, fileUrl }) => {
 
   await Promise.all(
     remoteImportmapScripts.map(async (remoteImportmapScript) => {
-      const srcAttribute = getHtmlNodeAttributeByName(remoteImportmapScript, "src")
+      const srcAttribute = getHtmlNodeAttributeByName(
+        remoteImportmapScript,
+        "src",
+      )
       const importMapUrl = resolveUrl(srcAttribute.value, fileUrl)
       const importMapResponse = await fetchUrl(importMapUrl)
       if (importMapResponse.status !== 200) {
@@ -245,10 +250,18 @@ const inlineImportmapScripts = async ({ logger, htmlAst, fileUrl }) => {
       }
 
       const importMapContent = await importMapResponse.json()
-      const importMapInlined = moveImportMap(importMapContent, importMapUrl, fileUrl)
+      const importMapInlined = moveImportMap(
+        importMapContent,
+        importMapUrl,
+        fileUrl,
+      )
       replaceHtmlNode(
         remoteImportmapScript,
-        `<script type="importmap">${JSON.stringify(importMapInlined, null, "  ")}</script>`,
+        `<script type="importmap">${JSON.stringify(
+          importMapInlined,
+          null,
+          "  ",
+        )}</script>`,
       )
     }),
   )

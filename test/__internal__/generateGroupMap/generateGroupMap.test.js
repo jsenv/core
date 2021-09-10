@@ -96,7 +96,10 @@ import { jsenvNodeVersionScoreMap } from "@jsenv/core/src/jsenvNodeVersionScoreM
 {
   const actual = generateGroupMap({
     babelPluginMap: jsenvBabelPluginMap,
-    runtimeScoreMap: { ...jsenvBrowserScoreMap, node: jsenvNodeVersionScoreMap },
+    runtimeScoreMap: {
+      ...jsenvBrowserScoreMap,
+      node: jsenvNodeVersionScoreMap,
+    },
     groupCount: 2,
   })
   const expected = {
@@ -114,7 +117,9 @@ import { jsenvNodeVersionScoreMap } from "@jsenv/core/src/jsenvNodeVersionScoreM
       },
     },
     otherwise: {
-      babelPluginRequiredNameArray: Object.keys(withoutSyntaxPlugins(jsenvBabelPluginMap)),
+      babelPluginRequiredNameArray: Object.keys(
+        withoutSyntaxPlugins(jsenvBabelPluginMap),
+      ),
       jsenvPluginRequiredNameArray: [],
       runtimeCompatMap: {},
     },

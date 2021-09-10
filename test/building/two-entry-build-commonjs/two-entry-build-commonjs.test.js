@@ -9,7 +9,10 @@ import { requireCommonJsBuild } from "@jsenv/core/test/requireCommonJsBuild.js"
 import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const firstEntryRelativeUrl = `${testDirectoryRelativeUrl}a.js`
@@ -40,7 +43,10 @@ const { buildManifest, buildMappings } = await buildProject({
 
 {
   const manifestFileRelativeUrl = `${buildDirectoryRelativeUrl}manifest.json`
-  const manifestFileUrl = resolveUrl(manifestFileRelativeUrl, jsenvCoreDirectoryUrl)
+  const manifestFileUrl = resolveUrl(
+    manifestFileRelativeUrl,
+    jsenvCoreDirectoryUrl,
+  )
   const manifestFileContent = await readFile(manifestFileUrl)
   const manifestFileObject = JSON.parse(manifestFileContent)
   const actual = manifestFileObject

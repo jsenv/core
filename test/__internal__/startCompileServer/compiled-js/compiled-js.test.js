@@ -14,7 +14,10 @@ import { startCompileServer } from "@jsenv/core/src/internal/compiling/startComp
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
@@ -31,7 +34,9 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
     compileCacheStrategy: "etag",
   })
   const fileServerUrl = `${compileServerOrigin}/${compiledFileRelativeUrl}`
-  const { status, statusText, headers } = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
+  const { status, statusText, headers } = await fetchUrl(fileServerUrl, {
+    ignoreHttpsError: true,
+  })
   {
     const actual = {
       status,
@@ -49,13 +54,16 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
 
 // etag caching
 {
-  const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-    ...COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-    compileCacheStrategy: "etag",
-  })
+  const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
+    await startCompileServer({
+      ...COMPILE_SERVER_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
+      compileCacheStrategy: "etag",
+    })
   const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-  const firstResponse = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
+  const firstResponse = await fetchUrl(fileServerUrl, {
+    ignoreHttpsError: true,
+  })
   {
     const actual = {
       status: firstResponse.status,
@@ -88,13 +96,16 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
 
 // mtime caching
 {
-  const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-    ...COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-    compileCacheStrategy: "mtime",
-  })
+  const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
+    await startCompileServer({
+      ...COMPILE_SERVER_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
+      compileCacheStrategy: "mtime",
+    })
   const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-  const firstResponse = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
+  const firstResponse = await fetchUrl(fileServerUrl, {
+    ignoreHttpsError: true,
+  })
   {
     const actual = {
       status: firstResponse.status,

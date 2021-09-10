@@ -21,7 +21,10 @@ import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystem
 import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
@@ -44,14 +47,20 @@ const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
   return buildRelativeUrl
 }
 
-const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, jsenvCoreDirectoryUrl)
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 const scriptBuildRelativeUrl = getBuildRelativeUrl("index.es5.js")
 const scriptBuildUrl = resolveUrl(scriptBuildRelativeUrl, buildDirectoryUrl)
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const scriptNode = findNodeByTagName(htmlString, "script")
 const sourcemapBuildRelativeUrl = getBuildRelativeUrl("index.es5.js.map")
-const sourcemapBuildUrl = resolveUrl(sourcemapBuildRelativeUrl, buildDirectoryUrl)
+const sourcemapBuildUrl = resolveUrl(
+  sourcemapBuildRelativeUrl,
+  buildDirectoryUrl,
+)
 
 {
   const srcAttribute = getHtmlNodeAttributeByName(scriptNode, "src")

@@ -7,7 +7,8 @@
 ```js
 import { launchChromium } from "@jsenv/chromium-launcher"
 
-const launchChromiumWithInterface = (options) => launchChromium({ ...options, headless: false })
+const launchChromiumWithInterface = (options) =>
+  launchChromium({ ...options, headless: false })
 ```
 
 When true, launched chromium browser will be headless.<br />

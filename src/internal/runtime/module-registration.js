@@ -77,7 +77,11 @@ export const fromUrl = async ({
 
   if (moduleResponse.status === 500 && contentType === "application/json") {
     const bodyAsJson = await moduleResponse.json()
-    if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
+    if (
+      bodyAsJson.message &&
+      bodyAsJson.filename &&
+      "columnNumber" in bodyAsJson
+    ) {
       const error = new Error(
         createDetailedMessage(`Module file cannot be parsed.`, {
           ["parsing error message"]: bodyAsJson.message,
@@ -111,7 +115,10 @@ export const fromUrl = async ({
   }
 
   // don't forget to keep in sync with loadModule in createJsenvRollupPlugin.js
-  if (contentType === "application/javascript" || contentType === "text/javascript") {
+  if (
+    contentType === "application/javascript" ||
+    contentType === "text/javascript"
+  ) {
     const bodyAsText = await moduleResponse.text()
     return fromFunctionReturningRegisteredModule(
       () => instantiateJavaScript(bodyAsText, moduleResponse.url),
@@ -205,14 +212,18 @@ const getModuleDetails = ({
 
   const details = notFound
     ? {
-        ...(importerUrl ? { ["import declared in"]: importerRelativeUrl || importerUrl } : {}),
+        ...(importerUrl
+          ? { ["import declared in"]: importerRelativeUrl || importerUrl }
+          : {}),
         ...(relativeUrl ? { file: relativeUrl } : {}),
         ["file url"]: url,
       }
     : {
         ...(relativeUrl ? { file: relativeUrl } : {}),
         ["file url"]: url,
-        ...(importerUrl ? { ["imported by"]: importerRelativeUrl || importerUrl } : {}),
+        ...(importerUrl
+          ? { ["imported by"]: importerRelativeUrl || importerUrl }
+          : {}),
       }
 
   return details
@@ -239,6 +250,8 @@ export const tryToFindProjectRelativeUrl = (
     return null
   }
 
-  const afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length)
+  const afterCompileDirectory = afterOrigin.slice(
+    compileDirectoryRelativeUrl.length,
+  )
   return afterCompileDirectory
 }

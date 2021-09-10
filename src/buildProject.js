@@ -1,10 +1,16 @@
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
-import { createCancellationToken, composeCancellationToken } from "@jsenv/cancellation"
+import {
+  createCancellationToken,
+  composeCancellationToken,
+} from "@jsenv/cancellation"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
-import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
+import {
+  assertProjectDirectoryUrl,
+  assertProjectDirectoryExists,
+} from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { buildUsingRollup } from "./internal/building/buildUsingRollup.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
@@ -22,13 +28,16 @@ export const buildProject = async ({
 
   format,
 
-  browser = format === "global" || format === "systemjs" || format === "esmodule",
+  browser = format === "global" ||
+    format === "systemjs" ||
+    format === "esmodule",
   node = format === "commonjs",
   entryPointMap,
   systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
   globalName,
   globals = {},
 
+  urlMappings = {},
   importResolutionMethod = format === "commonjs" ? "node" : "importmap",
   importMapFileRelativeUrl,
   importDefaultExtension,
@@ -92,7 +101,10 @@ export const buildProject = async ({
   ...rest
 }) => {
   const jsenvBuildFunction = async ({ jsenvCancellationToken }) => {
-    cancellationToken = composeCancellationToken(cancellationToken, jsenvCancellationToken)
+    cancellationToken = composeCancellationToken(
+      cancellationToken,
+      jsenvCancellationToken,
+    )
 
     logger = logger || createLogger({ logLevel })
     if (!["esmodule", "systemjs", "commonjs", "global"].includes(format)) {
@@ -114,8 +126,14 @@ export const buildProject = async ({
     }
 
     assertBuildDirectoryRelativeUrl({ buildDirectoryRelativeUrl })
-    const buildDirectoryUrl = resolveDirectoryUrl(buildDirectoryRelativeUrl, projectDirectoryUrl)
-    assertBuildDirectoryInsideProject({ buildDirectoryUrl, projectDirectoryUrl })
+    const buildDirectoryUrl = resolveDirectoryUrl(
+      buildDirectoryRelativeUrl,
+      projectDirectoryUrl,
+    )
+    assertBuildDirectoryInsideProject({
+      buildDirectoryUrl,
+      projectDirectoryUrl,
+    })
 
     const compileServer = await startCompileServer({
       cancellationToken,
@@ -153,7 +171,8 @@ export const buildProject = async ({
       ...rest,
     })
 
-    const { outDirectoryRelativeUrl, origin: compileServerOrigin } = compileServer
+    const { outDirectoryRelativeUrl, origin: compileServerOrigin } =
+      compileServer
 
     try {
       const result = await buildUsingRollup({
@@ -165,6 +184,7 @@ export const buildProject = async ({
         compileServerOrigin,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
 
+        urlMappings,
         importResolutionMethod,
         importMapFileRelativeUrl,
         importDefaultExtension,
@@ -248,13 +268,19 @@ const assertBuildDirectoryRelativeUrl = ({ buildDirectoryRelativeUrl }) => {
   }
 }
 
-const assertBuildDirectoryInsideProject = ({ buildDirectoryUrl, projectDirectoryUrl }) => {
+const assertBuildDirectoryInsideProject = ({
+  buildDirectoryUrl,
+  projectDirectoryUrl,
+}) => {
   if (!buildDirectoryUrl.startsWith(projectDirectoryUrl)) {
     throw new Error(
-      createDetailedMessage(`build directory must be inside project directory`, {
-        ["build directory url"]: buildDirectoryUrl,
-        ["project directory url"]: projectDirectoryUrl,
-      }),
+      createDetailedMessage(
+        `build directory must be inside project directory`,
+        {
+          ["build directory url"]: buildDirectoryUrl,
+          ["project directory url"]: projectDirectoryUrl,
+        },
+      ),
     )
   }
 }

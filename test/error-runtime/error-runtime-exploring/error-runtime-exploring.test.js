@@ -7,7 +7,10 @@ import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLOR
 import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.html`
@@ -20,9 +23,10 @@ const exploringServer = await startExploring({
 })
 const compiledFileUrl = `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
 
-const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(compiledFileUrl, {
-  headless: true,
-})
+const { browser, pageLogs, pageErrors, executionResult } =
+  await openBrowserPage(compiledFileUrl, {
+    headless: true,
+  })
 browser.close()
 
 {

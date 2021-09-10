@@ -1,6 +1,9 @@
 import { composeRuntimeCompatMap } from "./composeRuntimeCompatMap.js"
 
-const compositionMappingToComposeStrict = (compositionMapping, createInitial = () => ({})) => {
+const compositionMappingToComposeStrict = (
+  compositionMapping,
+  createInitial = () => ({}),
+) => {
   const reducer = compositionMappingToStrictReducer(compositionMapping)
   return (...objects) => objects.reduce(reducer, createInitial())
 }

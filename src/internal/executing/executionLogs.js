@@ -1,5 +1,14 @@
-import { magenta, cross, yellow, green, checkmark, grey, red, setANSIColor } from "./ansi.js"
-import { formatDuration } from "./formatDuration.js"
+import {
+  failureSignDefault,
+  okSignDefault,
+  setANSIColor,
+  ANSI_MAGENTA,
+  ANSI_YELLOW,
+  ANSI_RED,
+  ANSI_GREY,
+  ANSI_GREEN,
+} from "../logs/log_style.js"
+import { msAsDuration } from "../logs/msAsDuration.js"
 import { createSummaryDetails } from "./createSummaryLog.js"
 
 export const createExecutionResultLog = (
@@ -35,7 +44,8 @@ export const createExecutionResultLog = (
 ${description} ${summary}`
   }
 
-  const { runtimeName, runtimeVersion, consoleCalls, startMs, endMs, error } = executionResult
+  const { runtimeName, runtimeVersion, consoleCalls, startMs, endMs, error } =
+    executionResult
 
   const runtime = `${runtimeName}/${runtimeVersion}`
   return `
@@ -50,23 +60,26 @@ runtime: ${runtime}${appendDuration({
 const descriptionFormatters = {
   disconnected: ({ executionNumber, executionCount }) => {
     return setANSIColor(
-      `${cross} execution ${executionNumber} of ${executionCount} disconnected`,
-      magenta,
+      `${failureSignDefault} execution ${executionNumber} of ${executionCount} disconnected`,
+      ANSI_MAGENTA,
     )
   },
   timedout: ({ executionNumber, allocatedMs, executionCount }) => {
     return setANSIColor(
-      `${cross} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms`,
-      yellow,
+      `${failureSignDefault} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms`,
+      ANSI_YELLOW,
     )
   },
   errored: ({ executionNumber, executionCount }) => {
-    return setANSIColor(`${cross} execution ${executionNumber} of ${executionCount} error`, red)
+    return setANSIColor(
+      `${failureSignDefault} execution ${executionNumber} of ${executionCount} error`,
+      ANSI_RED,
+    )
   },
   completed: ({ executionNumber, executionCount }) => {
     return setANSIColor(
-      `${checkmark} execution ${executionNumber} of ${executionCount} completed`,
-      green,
+      `${okSignDefault} execution ${executionNumber} of ${executionCount} completed`,
+      ANSI_GREEN,
     )
   },
 }
@@ -75,7 +88,7 @@ const appendDuration = ({ endMs, startMs }) => {
   if (!endMs) return ""
 
   return `
-duration: ${formatDuration(endMs - startMs)}`
+duration: ${msAsDuration(endMs - startMs)}`
 }
 
 const appendConsole = (consoleCalls) => {
@@ -89,9 +102,9 @@ const appendConsole = (consoleCalls) => {
   if (consoleOutputTrimmed === "") return ""
 
   return `
-${setANSIColor(`-------- console --------`, grey)}
+${setANSIColor(`-------- console --------`, ANSI_GREY)}
 ${consoleOutputTrimmed}
-${setANSIColor(`-------------------------`, grey)}`
+${setANSIColor(`-------------------------`, ANSI_GREY)}`
 }
 
 const appendError = (error) => {

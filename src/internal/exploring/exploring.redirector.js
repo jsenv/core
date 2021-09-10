@@ -2,13 +2,14 @@ import { scanBrowserRuntimeFeatures } from "../runtime/createBrowserRuntime/scan
 import { fetchExploringJson } from "./fetchExploringJson.js"
 
 const redirect = async () => {
-  const [browserRuntimeFeaturesReport, { exploringHtmlFileRelativeUrl }] = await Promise.all([
-    scanBrowserRuntimeFeatures({
-      coverageInstrumentationRequired: false,
-      failFastOnFeatureDetection: true,
-    }),
-    fetchExploringJson(),
-  ])
+  const [browserRuntimeFeaturesReport, { exploringHtmlFileRelativeUrl }] =
+    await Promise.all([
+      scanBrowserRuntimeFeatures({
+        coverageInstrumentationRequired: false,
+        failFastOnFeatureDetection: true,
+      }),
+      fetchExploringJson(),
+    ])
 
   if (browserRuntimeFeaturesReport.canAvoidCompilation) {
     window.location.href = `/${exploringHtmlFileRelativeUrl}`

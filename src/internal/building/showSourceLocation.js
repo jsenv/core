@@ -3,17 +3,23 @@
 // https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/terminal-highlight.js#L50
 // https://github.com/babel/babel/blob/eea156b2cb8deecfcf82d52aa1b71ba4995c7d68/packages/babel-code-frame/src/index.js#L1
 
-import { grey, red, setANSIColor } from "../executing/ansi.js"
+import { setANSIColor, ANSI_GREY, ANSI_RED } from "../logs/log_style.js"
 
 export const showSourceLocation = (
   source,
-  { line, column, numberOfSurroundingLinesToShow = 1, lineMaxLength = 120, color = false },
+  {
+    line,
+    column,
+    numberOfSurroundingLinesToShow = 1,
+    lineMaxLength = 120,
+    color = false,
+  },
 ) => {
   let mark = (string) => string
   let aside = (string) => string
   if (color) {
-    mark = (string) => setANSIColor(string, red)
-    aside = (string) => setANSIColor(string, grey)
+    mark = (string) => setANSIColor(string, ANSI_RED)
+    aside = (string) => setANSIColor(string, ANSI_GREY)
   }
 
   const lines = source.split(/\r?\n/)
@@ -46,7 +52,9 @@ export const showSourceLocation = (
     const lineSourceTruncated = applyColumnRange(columnRange, lineSource)
     const lineNumberWidth = String(lineNumber).length
     // ensure if line moves from 7,8,9 to 10 the display is still great
-    const lineNumberRightSpacing = " ".repeat(lineNumberMaxWidth - lineNumberWidth)
+    const lineNumberRightSpacing = " ".repeat(
+      lineNumberMaxWidth - lineNumberWidth,
+    )
     const asideSource = `${lineNumber}${lineNumberRightSpacing} |`
     const lineFormatted = `${aside(asideSource)} ${lineSourceTruncated}`
     if (isMainLine) {
@@ -54,7 +62,10 @@ export const showSourceLocation = (
         return `${mark(">")} ${lineFormatted}`
       }
       const spacing = stringToSpaces(
-        `${asideSource} ${lineSourceTruncated.slice(0, column - columnRange.start - 1)}`,
+        `${asideSource} ${lineSourceTruncated.slice(
+          0,
+          column - columnRange.start - 1,
+        )}`,
       )
       return `${mark(">")} ${lineFormatted}
   ${spacing}${mark("^")}`
@@ -72,7 +83,9 @@ const applyColumnRange = ({ start, end }, line) => {
     throw new TypeError(`end must be a number, received ${end}`)
   }
   if (end < start) {
-    throw new Error(`end must be greater than start, but ${end} is smaller than ${start}`)
+    throw new Error(
+      `end must be greater than start, but ${end} is smaller than ${start}`,
+    )
   }
 
   const prefix = "…"

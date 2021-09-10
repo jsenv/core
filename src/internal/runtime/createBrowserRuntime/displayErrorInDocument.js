@@ -6,7 +6,9 @@ export const displayErrorInDocument = (error) => {
   if (error && error.parsingError) {
     theme = "light"
     const { parsingError } = error
-    message = errorToHTML(parsingError.messageHTML || escapeHtml(parsingError.message))
+    message = errorToHTML(
+      parsingError.messageHTML || escapeHtml(parsingError.message),
+    )
   } else {
     theme = "dark"
     message = errorToHTML(error)

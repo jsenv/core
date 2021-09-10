@@ -1,6 +1,7 @@
 import { firstMatch } from "./util.js"
 
-export const detectInternetExplorer = () => userAgentToBrowser(window.navigator.userAgent)
+export const detectInternetExplorer = () =>
+  userAgentToBrowser(window.navigator.userAgent)
 
 const userAgentToBrowser = (userAgent) => {
   if (/msie|trident/i.test(userAgent)) {

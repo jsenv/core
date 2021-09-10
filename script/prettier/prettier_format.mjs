@@ -1,4 +1,7 @@
-import { formatWithPrettier, jsenvProjectFilesConfig } from "@jsenv/prettier-check-project"
+import {
+  formatWithPrettier,
+  jsenvProjectFilesConfig,
+} from "@jsenv/prettier-check-project"
 
 import { projectDirectoryUrl } from "../../jsenv.config.js"
 
