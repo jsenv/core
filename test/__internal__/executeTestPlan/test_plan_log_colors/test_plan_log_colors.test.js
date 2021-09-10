@@ -24,7 +24,7 @@ const testDirectoryRelativePath = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const filename = `execute-test-plan.js`
+const filename = `execute_test_plan.js`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
@@ -80,12 +80,12 @@ if (process.platform !== "win32") {
   process.env.FORCE_COLOR = 1
   const actual = await getLogs()
   const expected = `
-[32m✔ execution 1 of 1 completed[0m (all [32mcompleted[0m)
+[32m✔ execution 1 of 1 completed[39m (all [32mcompleted[39m)
 file: ${testDirectoryRelativePath}file.js
 runtime: node/${process.version.slice(1)}
 
 -------------- summary -----------------
-1 execution: all [32mcompleted[0m
+1 execution: all [32mcompleted[39m
 ----------------------------------------
 
 `
