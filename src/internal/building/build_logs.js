@@ -1,20 +1,8 @@
-import { createDetailedMessage } from "@jsenv/logger"
-
 import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compiling/compileHtml.js"
+import { setANSIColor, ANSI_GREY, okSign } from "../logs.js"
+import { byteAsFileSize } from "../logs/byteAsFileSize.js"
+import { msAsDuration } from "../logs/msAsDuration.js"
 import { showSourceLocation } from "./showSourceLocation.js"
-
-export const formatBuildStartLog = ({ entryPointMap }) => {
-  const entryProjectRelativeUrls = Object.keys(entryPointMap)
-  const entryCount = entryProjectRelativeUrls.length
-
-  if (entryCount === 1) {
-    return `build start for ${entryProjectRelativeUrls[0]}`
-  }
-
-  return `build start for ${entryCount} files:
-- ${entryProjectRelativeUrls.join(`
-- `)}`
-}
 
 export const formatUseImportMapFromHtml = (importMapInfoFromHtml) => {
   return `
@@ -37,37 +25,69 @@ WARNING: Ressource never used for ${linkInfo.rel} link in ${showHtmlSourceLocati
 `
 }
 
-export const formatBuildDoneInfo = ({ rollupBuild, buildDirectoryRelativeUrl }) => {
+export const formatBuildDoneInfo = ({ buildStats, buildDirectoryRelativeUrl }) => {
   return `
-${createDetailedMessage(
-  `build end`,
-  formatBuildDoneDetails({ rollupBuild, buildDirectoryRelativeUrl }),
-)}
-`
+${formatBuildDoneDetails({ buildStats, buildDirectoryRelativeUrl })}
+
+${formatBuildSummary({ buildStats })}
+${okSign} build end`
 }
 
-const formatBuildDoneDetails = ({ rollupBuild, buildDirectoryRelativeUrl }) => {
-  const assetFilenames = Object.keys(rollupBuild)
-    .filter((key) => rollupBuild[key].type === "asset")
-    .map((key) => `${buildDirectoryRelativeUrl}${key}`)
-  const assetCount = assetFilenames.length
+const formatBuildDoneDetails = ({ buildStats, buildDirectoryRelativeUrl }) => {
+  const { buildFileSizes } = buildStats
+  const buildFiles = Object.keys(buildFileSizes).map((key) => {
+    const buildFileSize = buildFileSizes[key]
+    return `${buildDirectoryRelativeUrl}${key} (${byteAsFileSize(buildFileSize)})`
+  })
+  const buildFileCount = buildFiles.length
 
-  const chunkFilenames = Object.keys(rollupBuild)
-    .filter((key) => rollupBuild[key].type === "chunk")
-    .map((key) => `${buildDirectoryRelativeUrl}${key}`)
-  const chunkCount = chunkFilenames.length
+  const { buildSourcemapFileSizes } = buildStats
+  const sourcemapFiles = Object.keys(buildSourcemapFileSizes).map((key) => {
+    const buildSourcemapFileSize = buildSourcemapFileSizes[key]
+    return `${buildDirectoryRelativeUrl}${key} (${byteAsFileSize(buildSourcemapFileSize)})`
+  })
+  const sourcemapFileCount = sourcemapFiles.length
 
-  const assetDescription =
-    // eslint-disable-next-line no-nested-ternary
-    assetCount === 0 ? "" : assetCount === 1 ? "1 asset" : `${assetCount} assets`
-  const chunkDescription =
-    // eslint-disable-next-line no-nested-ternary
-    chunkCount === 0 ? "" : chunkCount === 1 ? "1 chunk" : `${chunkCount} chunks`
+  const buildFilesDescription = buildFileCount === 1 ? "1 file" : `${buildFileCount} files`
 
-  return {
-    ...(assetDescription ? { [assetDescription]: assetFilenames } : {}),
-    ...(chunkDescription ? { [chunkDescription]: chunkFilenames } : {}),
+  const buildSourcemapFilesDescription =
+    sourcemapFileCount === 0
+      ? ""
+      : sourcemapFileCount === 1
+      ? "with 1 sourcemap file"
+      : `with ${sourcemapFileCount} sourcemap files`
+
+  let message = `--- ${buildFilesDescription} ---
+${buildFiles.join("\n")}`
+
+  if (buildSourcemapFilesDescription) {
+    message += `
+--- ${buildSourcemapFilesDescription} ---
+${sourcemapFiles.join("\n")}`
   }
+
+  return message
+}
+
+const formatBuildSummary = ({ buildStats }) => {
+  const {
+    buildDuration,
+    projectFileSizes,
+    projectTotalFileSize,
+    buildFileSizes,
+    buildTotalFileSize,
+  } = buildStats
+
+  const projectFileCount = Object.keys(projectFileSizes).length
+  const buildFileCount = Object.keys(buildFileSizes).length
+
+  return `------- build summary -------
+${setANSIColor(`project files:`, ANSI_GREY)} ${projectFileCount} (${byteAsFileSize(
+    projectTotalFileSize,
+  )})
+${setANSIColor(`build files:`, ANSI_GREY)} ${buildFileCount} (${byteAsFileSize(buildTotalFileSize)})
+${setANSIColor(`build duration:`, ANSI_GREY)} ${msAsDuration(buildDuration)}
+------------------------------`
 }
 
 const showHtmlSourceLocation = ({ htmlNode, htmlUrl, htmlSource }) => {

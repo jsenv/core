@@ -20,12 +20,11 @@ import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { infoSign } from "@jsenv/core/src/internal/logs.js"
 
 import {
-  formatBuildStartLog,
   formatUseImportMapFromHtml,
   formatImportmapOutsideCompileDirectory,
   formatRessourceHintNeverUsedWarning,
@@ -42,6 +41,8 @@ import { minifyJs } from "./js/minifyJs.js"
 import { createImportResolverForNode } from "../import-resolution/import-resolver-node.js"
 import { createImportResolverForImportmap } from "../import-resolution/import-resolver-importmap.js"
 import { getDefaultImportMap } from "../import-resolution/importmap-default.js"
+import { createBuildFileContents } from "./build_file_contents.js"
+import { createBuildStats } from "./build_stats.js"
 
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
@@ -85,6 +86,9 @@ export const createJsenvRollupPlugin = async ({
   const virtualModules = {}
   const urlRedirectionMap = {}
   const jsModulesFromEntry = {}
+  let buildFileContents = {}
+  let buildStats = {}
+  const buildStartMs = Date.now()
 
   const {
     asRollupUrl,
@@ -179,13 +183,10 @@ export const createJsenvRollupPlugin = async ({
     name: "jsenv",
 
     async buildStart() {
-      logger.info(
-        formatBuildStartLog({
-          entryPointMap,
-        }),
-      )
+      logger.info(`build start...`)
 
       const entryPointsPrepared = await prepareEntryPoints(entryPointMap, {
+        logger,
         projectDirectoryUrl,
         buildDirectoryUrl,
         compileServerOrigin,
@@ -831,55 +832,34 @@ export const createJsenvRollupPlugin = async ({
         ...jsModuleBuild,
         ...assetBuild,
       }
-
       rollupBuild = sortObjectByPathnames(rollupBuild)
       buildManifest = sortObjectByPathnames(buildManifest)
       buildMappings = sortObjectByPathnames(buildMappings)
+      buildFileContents = createBuildFileContents({ rollupBuild, buildDirectoryUrl })
+      const buildDuration = Date.now() - buildStartMs
+      buildStats = createBuildStats({ buildFileContents, assetBuilder, buildDuration })
 
       if (assetManifestFile) {
         const assetManifestFileUrl = resolveUrl(assetManifestFileRelativeUrl, buildDirectoryUrl)
         await writeFile(assetManifestFileUrl, JSON.stringify(buildManifest, null, "  "))
       }
 
-      logger.info(
-        formatBuildDoneInfo({
-          rollupBuild,
-          buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
-        }),
-      )
-
       if (writeOnFileSystem) {
+        const buildRelativeUrls = Object.keys(buildFileContents)
         await Promise.all(
-          Object.keys(rollupBuild).map(async (buildRelativeUrl) => {
-            const file = rollupBuild[buildRelativeUrl]
+          buildRelativeUrls.map(async (buildRelativeUrl) => {
             const fileBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
-
-            if (file.type === "chunk") {
-              let fileCode = file.code
-              if (file.map) {
-                const sourcemapBuildRelativeUrl = `${buildRelativeUrl}.map`
-                if (sourcemapBuildRelativeUrl in rollupBuild === false) {
-                  const sourcemapBuildUrl = resolveUrl(sourcemapBuildRelativeUrl, buildDirectoryUrl)
-                  const fileSourcemapString = JSON.stringify(file.map, null, "  ")
-                  await writeFile(sourcemapBuildUrl, fileSourcemapString)
-
-                  const sourcemapBuildUrlRelativeToFileBuildUrl = urlToRelativeUrl(
-                    sourcemapBuildUrl,
-                    fileBuildUrl,
-                  )
-                  fileCode = setJavaScriptSourceMappingUrl(
-                    fileCode,
-                    sourcemapBuildUrlRelativeToFileBuildUrl,
-                  )
-                }
-              }
-              await writeFile(fileBuildUrl, fileCode)
-            } else {
-              await writeFile(fileBuildUrl, file.source)
-            }
+            await writeFile(fileBuildUrl, buildFileContents[buildRelativeUrl])
           }),
         )
       }
+
+      logger.info(
+        formatBuildDoneInfo({
+          buildStats,
+          buildDirectoryRelativeUrl: urlToRelativeUrl(buildDirectoryUrl, projectDirectoryUrl),
+        }),
+      )
     },
   }
 
@@ -1042,6 +1022,8 @@ export const createJsenvRollupPlugin = async ({
         buildMappings,
         buildManifest,
         buildImportMap: createImportMapForFilesUsedInJs(),
+        buildFileContents,
+        buildStats,
       }
     },
   }
@@ -1108,7 +1090,7 @@ const ensureTopLevelAwaitTranspilationIfNeeded = async ({
 
 const prepareEntryPoints = async (
   entryPointMap,
-  { projectDirectoryUrl, buildDirectoryUrl, compileServerOrigin, fetchFile },
+  { logger, projectDirectoryUrl, buildDirectoryUrl, compileServerOrigin, fetchFile },
 ) => {
   const entryFileRelativeUrls = Object.keys(entryPointMap)
   const entryPointsPrepared = []
@@ -1120,6 +1102,8 @@ const prepareEntryPoints = async (
 
     const entryProjectRelativeUrl = urlToRelativeUrl(entryProjectUrl, projectDirectoryUrl)
     const entryBuildRelativeUrl = urlToRelativeUrl(entryBuildUrl, buildDirectoryUrl)
+
+    logger.info(`${infoSign} load entry point ${entryProjectRelativeUrl}`)
 
     const entryServerUrl = resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
 

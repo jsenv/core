@@ -215,6 +215,9 @@
       "@babel/plugin-transform-react-jsx": [
         "./node_modules/@babel/plugin-transform-react-jsx/lib/index.js"
       ],
+      "@jsenv/importmap-eslint-resolver/*": [
+        "./node_modules/@jsenv/importmap-eslint-resolver/*"
+      ],
       "rollup-plugin-node-builtins-brofs": [
         "./node_modules/rollup-plugin-node-builtins-brofs/dist/rollup-plugin-node-builtins.cjs.js"
       ],
@@ -665,6 +668,9 @@
       "postcss": [
         "./node_modules/postcss/lib/postcss.mjs"
       ],
+      "bytes/*": [
+        "./node_modules/bytes/*"
+      ],
       "eslint": [
         "./node_modules/eslint/lib/api.js"
       ],
@@ -682,6 +688,9 @@
       ],
       "terser": [
         "./node_modules/terser/main.js"
+      ],
+      "bytes": [
+        "./node_modules/bytes/index.js"
       ],
       "cuid/*": [
         "./node_modules/cuid/*"

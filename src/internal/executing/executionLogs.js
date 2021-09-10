@@ -8,7 +8,7 @@ import {
   ANSI_GREY,
   ANSI_GREEN,
 } from "../logs.js"
-import { formatDuration } from "./formatDuration.js"
+import { msAsDuration } from "../logs/msAsDuration.js"
 import { createSummaryDetails } from "./createSummaryLog.js"
 
 export const createExecutionResultLog = (
@@ -87,7 +87,7 @@ const appendDuration = ({ endMs, startMs }) => {
   if (!endMs) return ""
 
   return `
-duration: ${formatDuration(endMs - startMs)}`
+duration: ${msAsDuration(endMs - startMs)}`
 }
 
 const appendConsole = (consoleCalls) => {

@@ -277,6 +277,13 @@ export const createAssetBuilder = (
     let target
     if (existingTarget) {
       target = existingTarget
+      // allow to update the targetBuffer on existingTarget
+      // this happens when rollup loads a js file and communicates to this code
+      // what was loaded
+      if (typeof targetBuffer !== "undefined") {
+        target.targetBuffer = targetBuffer
+        target.targetContentType = targetContentType
+      }
     } else {
       target = createTarget({
         targetContentType,

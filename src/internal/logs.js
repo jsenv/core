@@ -1,8 +1,12 @@
+// TODO: move this inside ./logs/
+
 import isUnicodeSupported from "is-unicode-supported"
 import { createSupportsColor } from "supports-color"
 
 const canUseUnicode = isUnicodeSupported()
 const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic
+
+console.log(processSupportsBasicColor)
 
 export const ANSI_RED = "\x1b[31m"
 export const ANSI_GREEN = "\x1b[32m"
@@ -13,7 +17,7 @@ export const ANSI_GREY = "\x1b[39m"
 export const ANSI_RESET = "\x1b[0m"
 
 export const setANSIColor = processSupportsBasicColor
-  ? (text, ANSI_COLOR) => `${ANSI_COLOR}${text}${ANSI_RESET}`
+  ? (text, ansiColor) => `${ansiColor}${text}${ANSI_RESET}`
   : (text) => text
 
 export const commandSign = setANSIColor(canUseUnicode ? `❯` : `>`, ANSI_GREY) // ANSI_MAGENTA)
