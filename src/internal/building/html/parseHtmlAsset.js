@@ -33,7 +33,10 @@ import {
   parseSrcset,
   stringifySrcset,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { getTargetAsBase64Url } from "../asset-builder.util.js"
+import {
+  getTargetAsBase64Url,
+  targetIsReferencedOnlyByRessourceHint,
+} from "../asset-builder.util.js"
 import { collectNodesMutations, htmlNodeToReferenceLocation } from "../parsing.utils.js"
 import { collectSvgMutations } from "../svg/parseSvgAsset.js"
 import { minifyHtml } from "./minifyHtml.js"
@@ -449,10 +452,7 @@ const linkHrefVisitor = (link, { notifyReferenceFound, ressourceHintNeverUsedCal
   return ({ getReferenceUrlRelativeToImporter }) => {
     const target = linkReference.target
     if (referenceIsRessourceHint) {
-      const otherReferences = target.targetReferences.filter((targetReference) => {
-        return !targetReference.referenceIsRessourceHint
-      })
-      if (otherReferences.length === 0) {
+      if (targetIsReferencedOnlyByRessourceHint(target)) {
         ressourceHintNeverUsedCallback({
           htmlNode: link,
           rel,

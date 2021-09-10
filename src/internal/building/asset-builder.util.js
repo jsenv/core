@@ -11,6 +11,12 @@ export const getTargetAsBase64Url = ({ targetBuildBuffer, targetContentType }) =
   })
 }
 
+export const targetIsReferencedOnlyByRessourceHint = (target) => {
+  return target.targetReferences.every((targetReference) => {
+    return targetReference.referenceIsRessourceHint
+  })
+}
+
 export const memoize = (fn) => {
   let called
   let previousCallReturnValue

@@ -1,5 +1,7 @@
 import { resolveUrl, urlToExtension } from "@jsenv/filesystem"
 
+import { targetIsReferencedOnlyByRessourceHint } from "./asset-builder.util.js"
+
 export const createBuildStats = ({ buildFileContents, assetBuilder, buildDuration }) => {
   const projectFileContents = getProjectFileContents(assetBuilder)
   const projectFileSizeInfo = sizeInfoFromFileContents(projectFileContents)
@@ -59,6 +61,11 @@ const getProjectFileContents = (assetBuilder) => {
     }
     if (targetIsExternal) {
       // external target are not handled, we would not have the targetBuffer
+      return
+    }
+    if (targetIsReferencedOnlyByRessourceHint(target)) {
+      // target is only referenced by ressource hint (link preload for example)
+      // it's never actually loaded-> we don't gave the targetBuffer (the ressource file content)
       return
     }
     projectFileContents[url] = targetBuffer
