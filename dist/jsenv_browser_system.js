@@ -3209,8 +3209,8 @@
     };
   };
 
-  // eslint-disable-next-line no-eval
   var evalSource = function evalSource(code, href) {
+    // eslint-disable-next-line no-eval
     return window.eval(appendSourceURL$1(code, href));
   };
 
