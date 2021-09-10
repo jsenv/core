@@ -1,22 +1,23 @@
 (function () {
   'use strict';
 
-  var urlIsInsideOf = function urlIsInsideOf(urlValue, otherUrlValue) {
-    var url = new URL(urlValue);
-    var otherUrl = new URL(otherUrlValue);
+  var urlIsInsideOf = function urlIsInsideOf(url, otherUrl) {
+    var urlObject = new URL(url);
+    var otherUrlObject = new URL(otherUrl);
 
-    if (url.origin !== otherUrl.origin) {
+    if (urlObject.origin !== otherUrlObject.origin) {
       return false;
     }
 
-    var urlPathname = url.pathname;
-    var otherUrlPathname = otherUrl.pathname;
+    var urlPathname = urlObject.pathname;
+    var otherUrlPathname = otherUrlObject.pathname;
 
     if (urlPathname === otherUrlPathname) {
       return false;
     }
 
-    return urlPathname.startsWith(otherUrlPathname);
+    var isInside = urlPathname.startsWith(otherUrlPathname);
+    return isInside;
   };
 
   var getCommonPathname = function getCommonPathname(pathname, otherPathname) {
@@ -73,35 +74,36 @@
     return pathname.slice(0, slashLastIndex + 1);
   };
 
-  var urlToRelativeUrl = function urlToRelativeUrl(urlArg, baseUrlArg) {
-    var url = new URL(urlArg);
-    var baseUrl = new URL(baseUrlArg);
+  var urlToRelativeUrl = function urlToRelativeUrl(url, baseUrl) {
+    var urlObject = new URL(url);
+    var baseUrlObject = new URL(baseUrl);
 
-    if (url.protocol !== baseUrl.protocol) {
-      return urlArg;
+    if (urlObject.protocol !== baseUrlObject.protocol) {
+      var urlAsString = String(url);
+      return urlAsString;
     }
 
-    if (url.username !== baseUrl.username || url.password !== baseUrl.password) {
-      return urlArg.slice(url.protocol.length);
+    if (urlObject.username !== baseUrlObject.username || urlObject.password !== baseUrlObject.password || urlObject.host !== baseUrlObject.host) {
+      var afterUrlScheme = String(url).slice(urlObject.protocol.length);
+      return afterUrlScheme;
     }
 
-    if (url.host !== baseUrl.host) {
-      return urlArg.slice(url.protocol.length);
-    }
-
-    var pathname = url.pathname,
-        hash = url.hash,
-        search = url.search;
+    var pathname = urlObject.pathname,
+        hash = urlObject.hash,
+        search = urlObject.search;
 
     if (pathname === "/") {
-      return baseUrl.pathname.slice(1);
+      var baseUrlRessourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
+      return baseUrlRessourceWithoutLeadingSlash;
     }
 
-    var basePathname = baseUrl.pathname;
+    var basePathname = baseUrlObject.pathname;
     var commonPathname = getCommonPathname(pathname, basePathname);
 
     if (!commonPathname) {
-      return urlArg;
+      var _urlAsString = String(url);
+
+      return _urlAsString;
     }
 
     var specificPathname = pathname.slice(commonPathname.length);
@@ -110,10 +112,14 @@
     if (baseSpecificPathname.includes("/")) {
       var baseSpecificParentPathname = pathnameToParentPathname(baseSpecificPathname);
       var relativeDirectoriesNotation = baseSpecificParentPathname.replace(/.*?\//g, "../");
-      return "".concat(relativeDirectoriesNotation).concat(specificPathname).concat(search).concat(hash);
+
+      var _relativeUrl = "".concat(relativeDirectoriesNotation).concat(specificPathname).concat(search).concat(hash);
+
+      return _relativeUrl;
     }
 
-    return "".concat(specificPathname).concat(search).concat(hash);
+    var relativeUrl = "".concat(specificPathname).concat(search).concat(hash);
+    return relativeUrl;
   };
 
   var _defineProperty = (function (obj, key, value) {

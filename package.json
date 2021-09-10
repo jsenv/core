@@ -30,8 +30,8 @@
   "scripts": {
     "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs",
     "generate-importmap": "node ./script/importmap/generate_importmap.js",
-    "generate-internal-builds": "node ./script/generate-internal-builds/generate-internal-builds.js",
-    "dist": "npm run generate-internal-builds",
+    "build": "node ./script/build/build.js",
+    "dist": "npm run build",
     "test": "node --experimental-import-meta-resolve ./script/test/test.js",
     "start-exploring": "node ./script/start-exploring/start-exploring.js",
     "test-with-coverage": "npm run test -- --coverage",

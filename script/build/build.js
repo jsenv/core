@@ -12,7 +12,7 @@ import {
 
 const commonParams = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  importMapFileRelativeUrl: "./import-map.importmap",
+  importMapFileRelativeUrl: "./node_resolution.importmap",
   buildDirectoryRelativeUrl: "dist",
 }
 

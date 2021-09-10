@@ -28,9 +28,9 @@ WARNING: Ressource never used for ${linkInfo.rel} link in ${showHtmlSourceLocati
 export const formatBuildDoneInfo = ({ buildStats, buildDirectoryRelativeUrl }) => {
   return `
 ${formatBuildDoneDetails({ buildStats, buildDirectoryRelativeUrl })}
-
 ${formatBuildSummary({ buildStats })}
-${okSign} build end`
+${okSign} build end
+`
 }
 
 const formatBuildDoneDetails = ({ buildStats, buildDirectoryRelativeUrl }) => {
@@ -48,14 +48,15 @@ const formatBuildDoneDetails = ({ buildStats, buildDirectoryRelativeUrl }) => {
   })
   const sourcemapFileCount = sourcemapFiles.length
 
-  const buildFilesDescription = buildFileCount === 1 ? "1 file" : `${buildFileCount} files`
+  const buildFilesDescription =
+    buildFileCount === 1 ? "build file" : `build files: ${buildFileCount}`
 
   const buildSourcemapFilesDescription =
     sourcemapFileCount === 0
       ? ""
       : sourcemapFileCount === 1
-      ? "with 1 sourcemap file"
-      : `with ${sourcemapFileCount} sourcemap files`
+      ? "build sourcemap file"
+      : `build sourcemap files: ${sourcemapFileCount}`
 
   let message = `--- ${buildFilesDescription} ---
 ${buildFiles.join("\n")}`

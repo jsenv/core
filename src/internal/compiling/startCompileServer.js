@@ -376,7 +376,7 @@ const setupOutDirectory = async ({
   jsenvDirectoryUrl,
 }) => {
   if (jsenvDirectoryClean) {
-    logger.info(`Cleaning jsenv directory because jsenvDirectoryClean parameter enabled`)
+    logger.debug(`Cleaning jsenv directory because jsenvDirectoryClean parameter enabled`)
     await ensureEmptyDirectory(jsenvDirectoryUrl)
   }
   const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
@@ -398,7 +398,7 @@ const setupOutDirectory = async ({
 
     if (outDirectoryChanges) {
       if (!jsenvDirectoryClean) {
-        logger.warn(
+        logger.debug(
           createDetailedMessage(
             `Cleaning jsenv ${urlToBasename(
               outDirectoryUrl.slice(0, -1),
