@@ -1,6 +1,6 @@
 import {
-  failureSign,
-  okSign,
+  failureSignDefault,
+  okSignDefault,
   setANSIColor,
   ANSI_MAGENTA,
   ANSI_YELLOW,
@@ -59,25 +59,25 @@ runtime: ${runtime}${appendDuration({
 const descriptionFormatters = {
   disconnected: ({ executionNumber, executionCount }) => {
     return setANSIColor(
-      `${failureSign} execution ${executionNumber} of ${executionCount} disconnected`,
+      `${failureSignDefault} execution ${executionNumber} of ${executionCount} disconnected`,
       ANSI_MAGENTA,
     )
   },
   timedout: ({ executionNumber, allocatedMs, executionCount }) => {
     return setANSIColor(
-      `${failureSign} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms`,
+      `${failureSignDefault} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms`,
       ANSI_YELLOW,
     )
   },
   errored: ({ executionNumber, executionCount }) => {
     return setANSIColor(
-      `${failureSign} execution ${executionNumber} of ${executionCount} error`,
+      `${failureSignDefault} execution ${executionNumber} of ${executionCount} error`,
       ANSI_RED,
     )
   },
   completed: ({ executionNumber, executionCount }) => {
     return setANSIColor(
-      `${okSign} execution ${executionNumber} of ${executionCount} completed`,
+      `${okSignDefault} execution ${executionNumber} of ${executionCount} completed`,
       ANSI_GREEN,
     )
   },
