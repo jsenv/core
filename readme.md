@@ -94,9 +94,22 @@ executeTestPlan({
 
 ```console
 > node ./execute_test_plan.mjs
-```
 
-![test execution terminal screenshot](./docs/demo_animals_chrome_and_firefox.png)
+✔ execution 1 of 2 completed (all completed)
+file: animals.test.html
+runtime: chromium/82.0.4057.0
+duration: 1.28 seconds
+
+✔ execution 2 of 2 completed (all completed)
+file: animals.test.html
+runtime: firefox/73.0b13
+duration: 2.42 seconds
+
+-------------- summary -----------------
+2 execution: all completed
+total duration: 3.72 seconds
+----------------------------------------
+```
 
 To read more about testing in jsenv, check [jsenv test runner documentation](./docs/testing/readme.md#jsenv-test-runner).
 
