@@ -156,6 +156,7 @@ startExploring({
 
 ```console
 > node ./start_dev_server.mjs
+
 server started at https://localhost:3456
 ```
 
@@ -175,7 +176,8 @@ To read more about jsenv dev server, also called exploring server, check [jsenv 
 
 # Build overview
 
-Following the steps below turns an `index.html` into an optimized `dist/main.html`. As the content of non-html files is trivial, only the content of html files will be shown below.
+Following the steps below turns an `index.html` into an optimized `dist/main.html`.
+Only the content of html files is shown below because the content of non-html files is trivial.
 
 ```html
 <!DOCTYPE html>
@@ -209,11 +211,11 @@ import { buildProject } from "@jsenv/core"
 await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "dist",
-  enryPointMap: {
-    "./index.html": "./main.html",
+  entryPointMap: {
+    "./main.html": "./main.prod.html",
   },
   format: "esmodule",
-  minify: false,
+  minify: true,
 })
 ```
 
@@ -221,9 +223,26 @@ await buildProject({
 
 ```console
 > node ./build.mjs
+
+building ./main.html...
+--- files in the build: 5 ---
+dist/assets/favicon-25e95a00.png (6.67 KB)
+dist/assets/main-feec3a1b.css (62 B)
+dist/main-63252261.js (50 Kb)
+dist/main.prod.html (392 B)
+dist/project-d2192ffe.importmap (29 B)
+--- sourcemap files in the build: 2 ---
+dist/assets/main-feec3a1b.css.map (198 B)
+dist/main-63252261.js.map (55Kb B)
+------- build summary -------
+project files: 27 (70.38 KB)
+build files: 5 (45.2 KB)
+build duration: 1.85 seconds
+------------------------------
+✔ build end
 ```
 
-4 - Open `dist/main.html`
+4 - Open `dist/main.prod.html`
 
 ```html
 <!DOCTYPE html>

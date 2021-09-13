@@ -34,8 +34,7 @@ export const formatBuildDoneInfo = ({
   buildStats,
   buildDirectoryRelativeUrl,
 }) => {
-  return `
-${formatBuildDoneDetails({ buildStats, buildDirectoryRelativeUrl })}
+  return `${formatBuildDoneDetails({ buildStats, buildDirectoryRelativeUrl })}
 ${formatBuildSummary({ buildStats })}
 ${okSign} build end
 `
@@ -61,14 +60,16 @@ const formatBuildDoneDetails = ({ buildStats, buildDirectoryRelativeUrl }) => {
   const sourcemapFileCount = sourcemapFiles.length
 
   const buildFilesDescription =
-    buildFileCount === 1 ? "build file" : `build files: ${buildFileCount}`
+    buildFileCount === 1
+      ? "file in the build: 1"
+      : `files in the build: ${buildFileCount}`
 
   const buildSourcemapFilesDescription =
     sourcemapFileCount === 0
       ? ""
       : sourcemapFileCount === 1
-      ? "build sourcemap file"
-      : `build sourcemap files: ${sourcemapFileCount}`
+      ? "sourcemap file in the build: 1"
+      : `sourcemap files in the build: ${sourcemapFileCount}`
 
   let message = `--- ${buildFilesDescription} ---
 ${buildFiles.join("\n")}`

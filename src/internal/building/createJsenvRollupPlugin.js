@@ -192,7 +192,14 @@ export const createJsenvRollupPlugin = async ({
     name: "jsenv",
 
     async buildStart() {
-      logger.info(`build start...`)
+      const entryFileRelativeUrls = Object.keys(entryPointMap)
+      if (entryFileRelativeUrls.length === 1) {
+        logger.info(`
+building ${entryFileRelativeUrls[0]}...`)
+      } else {
+        logger.info(`
+building ${entryFileRelativeUrls.length} entry files...`)
+      }
 
       const entryPointsPrepared = await prepareEntryPoints(entryPointMap, {
         logger,
@@ -1217,7 +1224,7 @@ const prepareEntryPoints = async (
       buildDirectoryUrl,
     )
 
-    logger.info(`${infoSign} load entry point ${entryProjectRelativeUrl}`)
+    logger.debug(`${infoSign} load entry point ${entryProjectRelativeUrl}`)
 
     const entryServerUrl = resolveUrl(
       entryProjectRelativeUrl,
