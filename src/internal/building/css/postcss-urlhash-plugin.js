@@ -126,10 +126,6 @@ export const postCssUrlHashPlugin = () => {
           },
         },
         Declaration: (declarationNode) => {
-          if (!declarationNodeContainsUrl(declarationNode)) {
-            return
-          }
-
           walkUrls(declarationNode, {
             parseCssValue,
             stringifyCssNodes,
@@ -175,10 +171,6 @@ export const postCssUrlHashPlugin = () => {
   }
 }
 postCssUrlHashPlugin.postcss = true
-
-const declarationNodeContainsUrl = (declarationNode) => {
-  return /^(?:url|(?:-webkit-)?image-set)\(/i.test(declarationNode.value)
-}
 
 const walkUrls = (
   declarationNode,
