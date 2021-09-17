@@ -51,10 +51,14 @@ export const createJsenvRollupPlugin = async ({
   cancellationToken,
   logger,
 
-  entryPointMap,
   projectDirectoryUrl,
+  entryPointMap,
   compileServerOrigin,
   compileDirectoryRelativeUrl,
+  buildDirectoryUrl,
+  assetManifestFile,
+  assetManifestFileRelativeUrl,
+  writeOnFileSystem,
 
   urlMappings,
   importResolutionMethod,
@@ -64,25 +68,21 @@ export const createJsenvRollupPlugin = async ({
   externalImportUrlPatterns,
   importPaths,
 
+  format,
+  systemJsUrl,
   babelPluginMap,
   transformTopLevelAwait,
   node,
 
-  format,
-  jsConcatenation,
   urlVersioning,
   lineBreakNormalization,
+  jsConcatenation,
   useImportMapToImproveLongTermCaching,
-  systemJsUrl,
+
   minify,
   minifyJsOptions,
   minifyCssOptions,
   minifyHtmlOptions,
-  assetManifestFile,
-  assetManifestFileRelativeUrl,
-  writeOnFileSystem,
-
-  buildDirectoryUrl,
 }) => {
   const urlImporterMap = {}
   const urlResponseBodyMap = {}

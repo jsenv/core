@@ -28,24 +28,23 @@ export const buildProject = async ({
 
   projectDirectoryUrl,
   entryPointMap,
-
   buildDirectoryRelativeUrl,
   buildDirectoryClean = false,
-  writeOnFileSystem = true,
   assetManifestFile = false,
   assetManifestFileRelativeUrl = "asset-manifest.json",
   sourcemapExcludeSources = false,
+  writeOnFileSystem = true,
 
   format,
   systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
   globalName,
   globals = {},
+  babelPluginMap = jsenvBabelPluginMap,
   runtimeSupport = format === "global" ||
   format === "systemjs" ||
   format === "esmodule"
     ? jsenvBrowserRuntimeSupport
     : jsenvNodeRuntimeSupport,
-  babelPluginMap = jsenvBabelPluginMap,
   transformTopLevelAwait = true,
 
   urlMappings = {},
@@ -60,21 +59,14 @@ export const buildProject = async ({
     : {},
   importPaths = {},
 
-  env = {},
-
-  compileServerProtocol,
-  compileServerPrivateKey,
-  compileServerCertificate,
-  compileServerIp,
-  compileServerPort,
-  jsenvDirectoryRelativeUrl,
-  jsenvDirectoryClean,
-
-  preserveEntrySignatures,
+  urlVersioning = true,
+  lineBreakNormalization = process.platform === "win32" && !minify,
   // when jsConcatenation is disabled rollup becomes almost useless
-  // except it can still do tree shaking but in practice tree shaking
-  // fails to catch many things so...
+  // except it can still do tree shaking
   jsConcatenation = true,
+  useImportMapToImproveLongTermCaching = format === "systemjs",
+  preserveEntrySignatures,
+
   minify = process.env.NODE_ENV === "production",
   // https://github.com/kangax/html-minifier#options-quick-reference
   minifyHtmlOptions = { collapseWhitespace: true },
@@ -83,9 +75,17 @@ export const buildProject = async ({
   // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default
   minifyCssOptions,
 
-  urlVersioning = true,
-  lineBreakNormalization = process.platform === "win32" && !minify,
-  useImportMapToImproveLongTermCaching = format === "systemjs",
+  serviceWorkers = {},
+  serviceWorkerFinalizer,
+
+  env = {},
+  compileServerProtocol,
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp,
+  compileServerPort,
+  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryClean,
 
   // when true .jsenv/out-build directory is generated
   // with all intermediated files used to produce the final build files.
@@ -97,9 +97,6 @@ export const buildProject = async ({
   // when asking them to the compile server
   // (to fix that sourcemap could be inlined)
   filesystemCache = true,
-
-  serviceWorkers = {},
-  serviceWorkerFinalizer,
 
   ...rest
 }) => {
@@ -186,6 +183,10 @@ export const buildProject = async ({
         projectDirectoryUrl,
         compileServerOrigin,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
+        buildDirectoryUrl,
+        buildDirectoryClean,
+        assetManifestFile,
+        assetManifestFileRelativeUrl,
 
         urlMappings,
         importResolutionMethod,
@@ -203,19 +204,12 @@ export const buildProject = async ({
         transformTopLevelAwait,
         runtimeSupport,
 
-        writeOnFileSystem,
-        sourcemapExcludeSources,
-
-        buildDirectoryUrl,
-        buildDirectoryClean,
-        assetManifestFile,
-        assetManifestFileRelativeUrl,
-
         urlVersioning,
         lineBreakNormalization,
         useImportMapToImproveLongTermCaching,
         preserveEntrySignatures,
         jsConcatenation,
+
         minify,
         minifyHtmlOptions,
         minifyJsOptions,
@@ -223,6 +217,9 @@ export const buildProject = async ({
 
         serviceWorkers,
         serviceWorkerFinalizer,
+
+        writeOnFileSystem,
+        sourcemapExcludeSources,
       })
 
       return result
