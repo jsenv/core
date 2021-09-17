@@ -24,7 +24,6 @@ executeTestPlan({
   logLevel: "info",
   jsenvDirectoryRelativeUrl,
   testPlan,
-  compileGroupCount: 1,
   completedExecutionLogAbbreviation: false,
   completedExecutionLogMerging: true,
   executionDefaultOptions: { allocatedMs: 5000 },

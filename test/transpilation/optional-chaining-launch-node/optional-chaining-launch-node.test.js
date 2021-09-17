@@ -23,7 +23,6 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
     ...START_COMPILE_SERVER_TEST_PARAMS,
-    compileGroupCount: 1, // ensure compileId always otherwise
     jsenvDirectoryRelativeUrl,
   })
 

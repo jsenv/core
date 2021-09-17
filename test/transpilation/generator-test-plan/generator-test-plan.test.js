@@ -25,7 +25,6 @@ const { testPlanSummary, testPlanReport } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
-  compileGroupCount: 1, // ensure compileId always otherwise
 })
 const actual = {
   testPlanSummary,

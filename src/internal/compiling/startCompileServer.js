@@ -87,9 +87,6 @@ export const startCompileServer = async ({
 
   // remaining options
   runtimeSupport,
-  runtimeSupportIsExhaustive,
-  runtimeWillAlwaysBeKnown,
-  compileGroupCount = 2,
 
   livereloadWatchConfig = {
     "./**": true,
@@ -133,9 +130,6 @@ export const startCompileServer = async ({
   const compileServerGroupMap = generateGroupMap({
     babelPluginMap,
     runtimeSupport,
-    runtimeSupportIsExhaustive,
-    runtimeWillAlwaysBeKnown,
-    compileGroupCount,
   })
 
   babelPluginMap = {

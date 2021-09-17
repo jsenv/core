@@ -167,10 +167,7 @@ export const buildProject = async ({
       // nor to inject jsenv script
       transformHtmlSourceFiles: false,
 
-      compileGroupCount: 1,
       runtimeSupport,
-      runtimeSupportIsExhaustive: true,
-      runtimeWillAlwaysBeKnown: true,
 
       // override with potential custom options
       ...rest,

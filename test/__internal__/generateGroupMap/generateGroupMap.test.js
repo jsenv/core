@@ -1,11 +1,9 @@
 import { assert } from "@jsenv/assert"
 
 import { jsenvBabelPluginMap } from "@jsenv/core"
-import {
-  generateGroupMap,
-  withoutSyntaxPlugins,
-} from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
+import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
 
+// supporting all node versions ("0.0.0")
 {
   const actual = generateGroupMap({
     babelPluginMap: {
@@ -14,51 +12,50 @@ import {
     runtimeSupport: {
       node: "0.0.0",
     },
-    compileGroupCount: 1,
-    runtimeSupportIsExhaustive: true,
-    runtimeWillAlwaysBeKnown: true,
   })
   const expected = {
+    best: {
+      babelPluginRequiredNameArray: ["transform-block-scoping"],
+      jsenvPluginRequiredNameArray: [],
+      minRuntimeVersions: {
+        node: "0.0.0",
+      },
+    },
     otherwise: {
       babelPluginRequiredNameArray: ["transform-block-scoping"],
       jsenvPluginRequiredNameArray: [],
-      runtimeCompatMap: {
-        node: "0.0.0",
-      },
+      minRuntimeVersions: {},
     },
   }
   assert({ actual, expected })
 }
 
+// supporting node 14.17
 {
   const actual = generateGroupMap({
     babelPluginMap: {
       "transform-block-scoping": true,
     },
     runtimeSupport: {
-      node: "0.0.0",
+      node: "14.17",
     },
-    compileGroupCount: 2,
-    runtimeSupportIsExhaustive: true,
-    runtimeWillAlwaysBeKnown: true,
   })
   const expected = {
     best: {
       babelPluginRequiredNameArray: [],
       jsenvPluginRequiredNameArray: [],
-      runtimeCompatMap: { node: "6" },
+      minRuntimeVersions: { node: "6" },
     },
-    worst: {
+    otherwise: {
       babelPluginRequiredNameArray: ["transform-block-scoping"],
       jsenvPluginRequiredNameArray: [],
-      runtimeCompatMap: {
-        node: "0.0.0",
-      },
+      minRuntimeVersions: {},
     },
   }
   assert({ actual, expected })
 }
 
+// supporting chrome and firefox
 {
   const actual = generateGroupMap({
     babelPluginMap: {
@@ -66,15 +63,18 @@ import {
       "transform-modules-systemjs": true,
     },
     runtimeSupport: {
-      node: "7.0.0",
+      chrome: "60",
+      firefox: "51",
     },
-    compileGroupCount: 2,
   })
   const expected = {
     best: {
       babelPluginRequiredNameArray: ["transform-modules-systemjs"],
       jsenvPluginRequiredNameArray: [],
-      runtimeCompatMap: { node: "6" },
+      minRuntimeVersions: {
+        chrome: "49",
+        firefox: "51",
+      },
     },
     otherwise: {
       babelPluginRequiredNameArray: [
@@ -82,141 +82,143 @@ import {
         "transform-modules-systemjs",
       ],
       jsenvPluginRequiredNameArray: [],
-      runtimeCompatMap: {},
+      minRuntimeVersions: {},
     },
   }
   assert({ actual, expected })
 }
 
+// supporting chrome + firefox + webkit
 {
   const actual = generateGroupMap({
     babelPluginMap: {
       "transform-block-scoping": true,
     },
     runtimeSupport: {
-      chrome: "0.0.0",
-      firefox: "0.0.0",
-      edge: "0.0.0",
-      electron: "0.0.0",
-      ios: "0.0.0",
-      opera: "0.0.0",
-      safari: "0.0.0",
+      chrome: "49",
+      firefox: "51.0.0",
+      safari: "12.0.0",
     },
-    compileGroupCount: 2,
-    runtimeSupportIsExhaustive: true,
-    runtimeWillAlwaysBeKnown: true,
   })
   const expected = {
     best: {
       babelPluginRequiredNameArray: [],
       jsenvPluginRequiredNameArray: [],
-      runtimeCompatMap: {
+      minRuntimeVersions: {
         chrome: "49",
-        firefox: "51",
-        edge: "14",
-        electron: "0.37",
-        ios: "11",
-        opera: "36",
+        firefox: "51.0.0",
         safari: "11",
       },
     },
-    worst: {
+    otherwise: {
       babelPluginRequiredNameArray: ["transform-block-scoping"],
       jsenvPluginRequiredNameArray: [],
-      runtimeCompatMap: {
+      minRuntimeVersions: {},
+    },
+  }
+  assert({ actual, expected })
+}
+
+// supporting any chrome + firefox + webkit
+{
+  const actual = generateGroupMap({
+    babelPluginMap: {
+      "transform-block-scoping": true,
+      "transform-modules-systemjs": true,
+    },
+    runtimeSupport: {
+      chrome: "0.0.0",
+      firefox: "0.0.0",
+      safari: "0.0.0",
+    },
+  })
+  const expected = {
+    best: {
+      babelPluginRequiredNameArray: [
+        "transform-block-scoping",
+        "transform-modules-systemjs",
+      ],
+      jsenvPluginRequiredNameArray: [],
+      minRuntimeVersions: {
         chrome: "0.0.0",
-        edge: "0.0.0",
-        electron: "0.0.0",
         firefox: "0.0.0",
-        ios: "0.0.0",
-        opera: "0.0.0",
         safari: "0.0.0",
       },
     },
-  }
-  assert({ actual, expected })
-}
-
-{
-  const actual = generateGroupMap({
-    babelPluginMap: {
-      "transform-block-scoping": true,
-      "transform-modules-systemjs": true,
-    },
-    runtimeSupport: {
-      chrome: "0.0.0",
-      firefox: "0.0.0",
-      edge: "0.0.0",
-      electron: "0.0.0",
-      ios: "0.0.0",
-      opera: "0.0.0",
-      safari: "0.0.0",
-    },
-    compileGroupCount: 2,
-  })
-  const expected = {
-    best: {
-      babelPluginRequiredNameArray: ["transform-modules-systemjs"],
-      jsenvPluginRequiredNameArray: [],
-      runtimeCompatMap: {
-        chrome: "49",
-        edge: "14",
-        electron: "0.37",
-        firefox: "51",
-        ios: "11",
-        opera: "36",
-        safari: "11",
-      },
-    },
     otherwise: {
       babelPluginRequiredNameArray: [
         "transform-block-scoping",
         "transform-modules-systemjs",
       ],
       jsenvPluginRequiredNameArray: [],
-      runtimeCompatMap: {},
+      minRuntimeVersions: {},
     },
   }
   assert({ actual, expected })
 }
 
+// close to reality (supporting recent runtimes and all jsenv babel plugins enabled)
 {
   const actual = generateGroupMap({
     babelPluginMap: jsenvBabelPluginMap,
     runtimeSupport: {
-      chrome: "0.0.0",
-      firefox: "0.0.0",
-      edge: "0.0.0",
-      electron: "0.0.0",
-      ios: "0.0.0",
-      opera: "0.0.0",
-      safari: "0.0.0",
-      node: "0.0.0",
+      chrome: "67.0.0",
+      firefox: "59.0.0",
+      safari: "13.0.0",
+      node: "14.0.0",
     },
-    compileGroupCount: 1,
-    runtimeSupportIsExhaustive: true,
-    runtimeWillAlwaysBeKnown: true,
   })
   const expected = {
     best: {
-      babelPluginRequiredNameArray: [],
+      babelPluginRequiredNameArray: [
+        "proposal-numeric-separator",
+        "proposal-optional-chaining",
+        "proposal-json-strings",
+        "proposal-unicode-property-regex",
+        "transform-dotall-regex",
+      ],
       jsenvPluginRequiredNameArray: [],
-      runtimeCompatMap: {
-        chrome: "75",
-        firefox: "70",
-        edge: "79",
-        electron: "6",
-        opera: "62",
-        safari: "13",
-        node: "12.5",
+      minRuntimeVersions: {
+        chrome: "38",
+        firefox: "3",
+        safari: "7.1",
+        node: "0.12",
       },
     },
     otherwise: {
-      babelPluginRequiredNameArray: Object.keys(
-        withoutSyntaxPlugins(jsenvBabelPluginMap),
-      ),
+      babelPluginRequiredNameArray: [
+        "proposal-numeric-separator",
+        "proposal-json-strings",
+        "proposal-object-rest-spread",
+        "proposal-optional-catch-binding",
+        "proposal-optional-chaining",
+        "proposal-unicode-property-regex",
+        "transform-async-to-promises",
+        "transform-arrow-functions",
+        "transform-block-scoped-functions",
+        "transform-block-scoping",
+        "transform-classes",
+        "transform-computed-properties",
+        "transform-destructuring",
+        "transform-dotall-regex",
+        "transform-duplicate-keys",
+        "transform-exponentiation-operator",
+        "transform-for-of",
+        "transform-function-name",
+        "transform-literals",
+        "transform-new-target",
+        "transform-object-super",
+        "transform-parameters",
+        "transform-regenerator",
+        "transform-shorthand-properties",
+        "transform-spread",
+        "transform-sticky-regex",
+        "transform-template-literals",
+        "transform-typeof-symbol",
+        "transform-unicode-regex",
+      ],
       jsenvPluginRequiredNameArray: [],
-      runtimeCompatMap: {},
+      minRuntimeVersions: {},
     },
   }
   assert({ actual, expected })

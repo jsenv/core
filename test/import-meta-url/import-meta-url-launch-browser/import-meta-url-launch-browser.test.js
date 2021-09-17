@@ -31,7 +31,6 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
     ...START_COMPILE_SERVER_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
-    compileGroupCount: 1, // ensure compileId always otherwise
   })
 
 await launchBrowsers(

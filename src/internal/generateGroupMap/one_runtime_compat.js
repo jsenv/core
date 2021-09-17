@@ -1,11 +1,11 @@
 import {
   findHighestVersion,
   findLowestVersion,
-} from "../../semantic-versioning/index.js"
-import { jsenvBabelPluginCompatMap } from "../jsenvBabelPluginCompatMap.js"
-import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "../jsenvPluginCompatMap.js"
+} from "../semantic-versioning/index.js"
+import { jsenvBabelPluginCompatMap } from "./jsenvBabelPluginCompatMap.js"
+import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "./jsenvPluginCompatMap.js"
 
-export const createRuntimeCompatForRuntime = ({
+export const createOneRuntimeCompat = ({
   runtimeName,
   runtimeVersion,
 
@@ -15,7 +15,7 @@ export const createRuntimeCompatForRuntime = ({
   jsenvPluginMap,
   jsenvPluginCompatMap = jsenvPluginCompatMapFallback,
 }) => {
-  let runtimeLowestVersion = runtimeVersion
+  let minRuntimeVersion = runtimeVersion
 
   const babelPluginRequiredNameArray = []
   Object.keys(babelPluginMap).forEach((babelPluginName) => {
@@ -30,8 +30,8 @@ export const createRuntimeCompatForRuntime = ({
     if (highestVersion !== runtimeVersion) {
       babelPluginRequiredNameArray.push(babelPluginName)
     }
-    runtimeLowestVersion = findLowestVersion(
-      runtimeLowestVersion,
+    minRuntimeVersion = findLowestVersion(
+      minRuntimeVersion,
       runtimeVersionCompatible,
     )
   })
@@ -49,8 +49,8 @@ export const createRuntimeCompatForRuntime = ({
     if (highestVersion !== runtimeVersion) {
       jsenvPluginRequiredNameArray.push(jsenvPluginName)
     }
-    runtimeLowestVersion = findLowestVersion(
-      runtimeLowestVersion,
+    minRuntimeVersion = findLowestVersion(
+      minRuntimeVersion,
       runtimeVersionCompatible,
     )
   })
@@ -58,8 +58,6 @@ export const createRuntimeCompatForRuntime = ({
   return {
     babelPluginRequiredNameArray,
     jsenvPluginRequiredNameArray,
-    runtimeCompatMap: {
-      [runtimeName]: runtimeLowestVersion,
-    },
+    minRuntimeVersion,
   }
 }

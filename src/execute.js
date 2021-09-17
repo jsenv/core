@@ -55,7 +55,6 @@ export const execute = async ({
   compileServerPort,
   babelPluginMap,
   convertMap,
-  compileGroupCount,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
   runtimeSupport = {
@@ -64,8 +63,6 @@ export const execute = async ({
     safari: PLAYWRIGHT_WEBKIT_VERSION,
     node: process.version.slice(1),
   },
-  runtimeSupportIsExhaustive = true,
-  runtimeWillAlwaysBeKnown = true,
 }) => {
   const jsenvExecutionFunction = async ({ jsenvCancellationToken }) => {
     cancellationToken = composeCancellationToken(
@@ -108,10 +105,7 @@ export const execute = async ({
       compileServerPort,
       babelPluginMap,
       convertMap,
-      compileGroupCount,
       runtimeSupport,
-      runtimeSupportIsExhaustive,
-      runtimeWillAlwaysBeKnown,
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
     })
