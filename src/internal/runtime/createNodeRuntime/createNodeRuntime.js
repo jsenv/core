@@ -54,6 +54,10 @@ export const createNodeRuntime = async ({
 
 const importJson = async (url) => {
   const response = await fetchSource(url)
+  const status = response.status
+  if (status !== 200) {
+    throw new Error(`unexpected response status for ${url}, got ${status}`)
+  }
   const object = await response.json()
   return object
 }
