@@ -1,4 +1,3 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import {
   resolveUrl,
@@ -6,8 +5,11 @@ import {
   readFile,
   bufferToEtag,
   readFileSystemNodeModificationTime,
+  urlToBasename,
 } from "@jsenv/filesystem"
 import { fetchUrl } from "@jsenv/server"
+
+import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
 import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
@@ -18,7 +20,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
@@ -32,6 +34,7 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
     ...COMPILE_SERVER_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     compileCacheStrategy: "etag",
+    runtimeSupport: jsenvRuntimeSupportDuringDev,
   })
   const fileServerUrl = `${compileServerOrigin}/${compiledFileRelativeUrl}`
   const { status, statusText, headers } = await fetchUrl(fileServerUrl, {
