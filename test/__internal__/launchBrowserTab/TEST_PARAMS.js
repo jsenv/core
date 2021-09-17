@@ -1,4 +1,5 @@
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
 import { testBabelPluginMap } from "@jsenv/core/test/testBabelPluginMap.js"
 import { coverageIsEnabled } from "@jsenv/core/test/coverageIsEnabled.js"
 
@@ -8,6 +9,7 @@ export const START_COMPILE_SERVER_TEST_PARAMS = {
   compileServerLogLevel: "off",
   jsenvDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
+  runtimeSupport: jsenvRuntimeSupportDuringDev,
 }
 
 export const EXECUTION_TEST_PARAMS = {
