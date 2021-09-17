@@ -1,6 +1,6 @@
-import { require } from "./internal/require.js"
-import { transformJs } from "./internal/compiling/js-compilation-service/transformJs.js"
-import { babelPluginReplaceExpressions } from "./internal/babel-plugin-replace-expressions.js"
+import { require } from "@jsenv/core/src/internal/require.js"
+import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
+import { babelPluginReplaceExpressions } from "@jsenv/core/src/internal/babel-plugin-replace-expressions.js"
 
 export const convertCommonJsWithBabel = async ({
   projectDirectoryUrl,
