@@ -5,22 +5,42 @@ import {
   generateGroupMap,
   withoutSyntaxPlugins,
 } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
-import {
-  jsenvBrowserScoreMap,
-  jsenvNodeVersionScoreMap,
-} from "@jsenv/core/src/internal/generateGroupMap/jsenvRuntimeScoreMap.js"
 
 {
-  const babelPluginMap = { "transform-block-scoping": true }
   const actual = generateGroupMap({
-    babelPluginMap,
+    babelPluginMap: {
+      "transform-block-scoping": true,
+    },
     runtimeSupport: {
       node: "0.0.0",
     },
-    runtimeScoreMap: {
-      node: jsenvNodeVersionScoreMap,
+    compileGroupCount: 1,
+    runtimeSupportIsExhaustive: true,
+    runtimeWillAlwaysBeKnown: true,
+  })
+  const expected = {
+    otherwise: {
+      babelPluginRequiredNameArray: ["transform-block-scoping"],
+      jsenvPluginRequiredNameArray: [],
+      runtimeCompatMap: {
+        node: "0.0.0",
+      },
     },
-    groupCount: 2,
+  }
+  assert({ actual, expected })
+}
+
+{
+  const actual = generateGroupMap({
+    babelPluginMap: {
+      "transform-block-scoping": true,
+    },
+    runtimeSupport: {
+      node: "0.0.0",
+    },
+    compileGroupCount: 2,
+    runtimeSupportIsExhaustive: true,
+    runtimeWillAlwaysBeKnown: true,
   })
   const expected = {
     best: {
@@ -28,8 +48,39 @@ import {
       jsenvPluginRequiredNameArray: [],
       runtimeCompatMap: { node: "6" },
     },
+    worst: {
+      babelPluginRequiredNameArray: ["transform-block-scoping"],
+      jsenvPluginRequiredNameArray: [],
+      runtimeCompatMap: {
+        node: "0.0.0",
+      },
+    },
+  }
+  assert({ actual, expected })
+}
+
+{
+  const actual = generateGroupMap({
+    babelPluginMap: {
+      "transform-block-scoping": true,
+      "transform-modules-systemjs": true,
+    },
+    runtimeSupport: {
+      node: "7.0.0",
+    },
+    compileGroupCount: 2,
+  })
+  const expected = {
+    best: {
+      babelPluginRequiredNameArray: ["transform-modules-systemjs"],
+      jsenvPluginRequiredNameArray: [],
+      runtimeCompatMap: { node: "6" },
+    },
     otherwise: {
-      babelPluginRequiredNameArray: Object.keys(babelPluginMap),
+      babelPluginRequiredNameArray: [
+        "transform-block-scoping",
+        "transform-modules-systemjs",
+      ],
       jsenvPluginRequiredNameArray: [],
       runtimeCompatMap: {},
     },
@@ -38,9 +89,10 @@ import {
 }
 
 {
-  const babelPluginMap = { "transform-block-scoping": true }
   const actual = generateGroupMap({
-    babelPluginMap,
+    babelPluginMap: {
+      "transform-block-scoping": true,
+    },
     runtimeSupport: {
       chrome: "0.0.0",
       firefox: "0.0.0",
@@ -50,8 +102,9 @@ import {
       opera: "0.0.0",
       safari: "0.0.0",
     },
-    runtimeScoreMap: jsenvBrowserScoreMap,
-    groupCount: 2,
+    compileGroupCount: 2,
+    runtimeSupportIsExhaustive: true,
+    runtimeWillAlwaysBeKnown: true,
   })
   const expected = {
     best: {
@@ -67,22 +120,29 @@ import {
         safari: "11",
       },
     },
-    otherwise: {
-      babelPluginRequiredNameArray: Object.keys(babelPluginMap),
+    worst: {
+      babelPluginRequiredNameArray: ["transform-block-scoping"],
       jsenvPluginRequiredNameArray: [],
-      runtimeCompatMap: {},
+      runtimeCompatMap: {
+        chrome: "0.0.0",
+        edge: "0.0.0",
+        electron: "0.0.0",
+        firefox: "0.0.0",
+        ios: "0.0.0",
+        opera: "0.0.0",
+        safari: "0.0.0",
+      },
     },
   }
   assert({ actual, expected })
 }
 
 {
-  const babelPluginMap = {
-    "transform-block-scoping": true,
-    "transform-modules-systemjs": true,
-  }
   const actual = generateGroupMap({
-    babelPluginMap,
+    babelPluginMap: {
+      "transform-block-scoping": true,
+      "transform-modules-systemjs": true,
+    },
     runtimeSupport: {
       chrome: "0.0.0",
       firefox: "0.0.0",
@@ -92,8 +152,7 @@ import {
       opera: "0.0.0",
       safari: "0.0.0",
     },
-    runtimeScoreMap: jsenvBrowserScoreMap,
-    groupCount: 2,
+    compileGroupCount: 2,
   })
   const expected = {
     best: {
@@ -101,16 +160,19 @@ import {
       jsenvPluginRequiredNameArray: [],
       runtimeCompatMap: {
         chrome: "49",
-        firefox: "51",
         edge: "14",
         electron: "0.37",
+        firefox: "51",
         ios: "11",
         opera: "36",
         safari: "11",
       },
     },
     otherwise: {
-      babelPluginRequiredNameArray: Object.keys(babelPluginMap),
+      babelPluginRequiredNameArray: [
+        "transform-block-scoping",
+        "transform-modules-systemjs",
+      ],
       jsenvPluginRequiredNameArray: [],
       runtimeCompatMap: {},
     },
@@ -131,11 +193,9 @@ import {
       safari: "0.0.0",
       node: "0.0.0",
     },
-    runtimeScoreMap: {
-      ...jsenvBrowserScoreMap,
-      node: jsenvNodeVersionScoreMap,
-    },
-    groupCount: 2,
+    compileGroupCount: 1,
+    runtimeSupportIsExhaustive: true,
+    runtimeWillAlwaysBeKnown: true,
   })
   const expected = {
     best: {

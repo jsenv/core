@@ -35,8 +35,9 @@ Take chars below to update legends
 import { COMPILE_ID_OTHERWISE, COMPILE_ID_BEST } from "../CONSTANTS.js"
 import { jsenvBabelPluginCompatMap } from "./jsenvBabelPluginCompatMap.js"
 import { jsenvRuntimeScoreMap } from "./jsenvRuntimeScoreMap.js"
-import { getRuntimeCompileInfo } from "./getRuntimeCompileInfo.js"
-import { createCompileGroups } from "./createCompileGroups.js"
+import { createRuntimeCompatForEveryRuntimeVersions } from "./runtime_compat/for_every_runtime_versions.js"
+import { createRuntimeCompatForOneRuntimeVersion } from "./runtime_compat/for_one_runtime_version.js"
+import { composeRuntimeCompat } from "./runtime_compat/runtime_compat_composition.js"
 import { runtimeCompatMapToScore } from "./runtimeCompatMapToScore.js"
 
 export const generateGroupMap = ({
@@ -85,34 +86,67 @@ export const generateGroupMap = ({
     runtimeCompatMap: {},
   }
 
-  // when there is only 1 group and we cannot ensure
-  // code is runned on a supported runtime,
-  // we'll use otherwise group to be safe
-  if (compileGroupCount === 1 && !runtimeSupportIsExhaustive) {
-    return {
-      [COMPILE_ID_OTHERWISE]: groupWithoutFeature,
-    }
-  }
   if (runtimeNames.length === 0) {
     return {
       [COMPILE_ID_OTHERWISE]: groupWithoutFeature,
     }
   }
 
-  const runtimeCompileInfos = {}
-  runtimeNames.forEach((runtimeName) => {
-    const runtimeVersion = runtimeSupport[runtimeName]
-    const runtimeCompileInfo = getRuntimeCompileInfo({
-      runtimeName,
-      runtimeVersion,
+  if (compileGroupCount === 1) {
+    if (!runtimeSupportIsExhaustive) {
+      // when there is only 1 group and we cannot ensure
+      // code is runned on a supported runtime,
+      // we'll use otherwise group to be safe
+      return {
+        [COMPILE_ID_OTHERWISE]: groupWithoutFeature,
+      }
+    }
+
+    const runtimeCompats = createRuntimeCompatForOneRuntimeVersion({
+      runtimeSupport,
+
       babelPluginMap,
-      jsenvPluginMap,
       babelPluginCompatMap,
+
+      jsenvPluginMap,
       jsenvPluginCompatMap,
     })
-    runtimeCompileInfos[runtimeName] = runtimeCompileInfo
+    const groupForRuntime = composeRuntimeCompat(...runtimeCompats)
+
+    return {
+      [COMPILE_ID_OTHERWISE]: groupForRuntime,
+    }
+  }
+
+  const addOtherwiseToBeSafe =
+    !runtimeSupportIsExhaustive || !runtimeWillAlwaysBeKnown
+  if (compileGroupCount === 2 && addOtherwiseToBeSafe) {
+    const runtimeCompats = createRuntimeCompatForOneRuntimeVersion({
+      runtimeSupport,
+
+      babelPluginMap,
+      babelPluginCompatMap,
+
+      jsenvPluginMap,
+      jsenvPluginCompatMap,
+    })
+    const groupForRuntime = composeRuntimeCompat(...runtimeCompats)
+
+    return {
+      [COMPILE_ID_BEST]: groupForRuntime,
+      [COMPILE_ID_OTHERWISE]: groupWithoutFeature,
+    }
+  }
+
+  const allGroups = createRuntimeCompatForEveryRuntimeVersions({
+    runtimeSupport,
+
+    babelPluginMap,
+    babelPluginCompatMap,
+
+    jsenvPluginMap,
+    jsenvPluginCompatMap,
   })
-  const allGroups = createCompileGroups(runtimeCompileInfos)
 
   const groupToScore = ({ runtimeCompatMap }) =>
     runtimeCompatMapToScore(runtimeCompatMap, runtimeScoreMap)
@@ -121,37 +155,34 @@ export const generateGroupMap = ({
     (a, b) => groupToScore(b) - groupToScore(a),
   )
 
-  const length = allGroups.length
+  const groups =
+    groupsSortedByScore.length + 1 > compileGroupCount
+      ? groupsSortedByScore.slice(0, compileGroupCount)
+      : groupsSortedByScore
+  const groupMap = createGroupMap(groups.slice(0, -1))
 
-  // if we arrive here and want a single group
-  // we take the worst group and consider it's our best group
-  // because it's the lowest runtime we want to support
-  if (compileGroupCount === 1) {
+  if (addOtherwiseToBeSafe) {
     return {
-      [COMPILE_ID_BEST]: groupsSortedByScore[length - 1],
+      ...groupMap,
+      [COMPILE_ID_OTHERWISE]: groupWithoutFeature,
     }
   }
 
-  const addOtherwiseToBeSafe =
-    !runtimeSupportIsExhaustive || !runtimeWillAlwaysBeKnown
-  const lastGroupIndex = addOtherwiseToBeSafe
-    ? compileGroupCount - 1
-    : compileGroupCount
-  const groups =
-    length + 1 > compileGroupCount
-      ? allGroups.slice(0, lastGroupIndex)
-      : allGroups
+  return {
+    ...groupMap,
+    worst: groups[groups.length - 1],
+  }
+}
+
+const createGroupMap = (groups) => {
   const groupMap = {}
   groups.forEach((group, index) => {
     if (index === 0) {
       groupMap[COMPILE_ID_BEST] = group
     } else {
-      groupMap[`intermediate-${index + 1}`] = group
+      groupMap[`intermediate-${index}`] = group
     }
   })
-  if (addOtherwiseToBeSafe) {
-    groupMap[COMPILE_ID_OTHERWISE] = groupWithoutFeature
-  }
   return groupMap
 }
 
