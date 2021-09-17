@@ -2061,9 +2061,7 @@
       return stringToVersion(value);
     }
 
-    throw new TypeError(createValueErrorMessage({
-      version: value
-    }));
+    throw new TypeError("version must be a number or a string, got ".concat(value));
   };
 
   var numberToVersion = function numberToVersion(number) {
@@ -2097,11 +2095,6 @@
       minor: 0,
       patch: 0
     };
-  };
-
-  var createValueErrorMessage = function createValueErrorMessage(_ref) {
-    var value = _ref.value;
-    return "value must be a number or a string.\nvalue: ".concat(value);
   };
 
   var versionCompare = function versionCompare(versionA, versionB) {
@@ -2163,13 +2156,13 @@
     var name = _ref.name,
         version = _ref.version;
     return Object.keys(groupMap).find(function (compileIdCandidate) {
-      var runtimeCompatMap = groupMap[compileIdCandidate].runtimeCompatMap;
+      var minRuntimeVersions = groupMap[compileIdCandidate].minRuntimeVersions;
 
-      if (name in runtimeCompatMap === false) {
+      if (name in minRuntimeVersions === false) {
         return false;
       }
 
-      var versionForGroup = runtimeCompatMap[name];
+      var versionForGroup = minRuntimeVersions[name];
       var highestVersion = findHighestVersion(version, versionForGroup);
       return highestVersion === version;
     });

@@ -7,7 +7,7 @@
 { ┌──────────┴────────────┐
   "transform-block-scoping": {─┐
     "chrome": "10",            │
-    "safari": "3.0",           runTimeCompatMap
+    "safari": "3.0",           minRuntimeVersions
     "firefox": "5.1"           │
 }────┼─────────┼───────────────┘
 }    │         └─────┐
@@ -20,7 +20,7 @@
     "babelPluginRequiredNameArray" : [
       "transform-block-scoping",
     ],
-    "runtimeCompatMap": {
+    "minRuntimeVersions": {
       "chrome": "10",
       "firefox": "6"
     }

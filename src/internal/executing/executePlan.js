@@ -40,7 +40,7 @@ export const executePlan = async (
     compileServerCanWriteOnFilesystem,
     babelPluginMap,
     convertMap,
-    runtimeSupportDuringDev,
+    runtimeSupport,
   } = {},
 ) => {
   if (coverage) {
@@ -79,7 +79,7 @@ export const executePlan = async (
     keepProcessAlive: true, // to be sure it stays alive
     babelPluginMap,
     convertMap,
-    runtimeSupportDuringDev,
+    runtimeSupport,
   })
 
   const executionSteps = await generateExecutionSteps(
