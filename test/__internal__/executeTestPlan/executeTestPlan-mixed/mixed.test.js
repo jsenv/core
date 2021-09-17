@@ -29,7 +29,9 @@ const { testPlanSummary } = await executeTestPlan({
   logLevel: "warn",
   jsenvDirectoryRelativeUrl,
   testPlan,
-  compileGroupCount: 1,
+  compileGroupOptions: {
+    groupCount: 1,
+  },
   completedExecutionLogAbbreviation: false,
   completedExecutionLogMerging: true,
 })

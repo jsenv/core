@@ -40,7 +40,7 @@ export const executePlan = async (
     compileServerCanWriteOnFilesystem,
     babelPluginMap,
     convertMap,
-    compileGroupCount,
+    compileGroupOptions,
   } = {},
 ) => {
   if (coverage) {
@@ -78,7 +78,7 @@ export const executePlan = async (
     keepProcessAlive: true, // to be sure it stays alive
     babelPluginMap,
     convertMap,
-    compileGroupCount,
+    compileGroupOptions,
   })
 
   const executionSteps = await generateExecutionSteps(

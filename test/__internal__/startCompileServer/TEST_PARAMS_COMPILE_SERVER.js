@@ -6,5 +6,4 @@ export const COMPILE_SERVER_TEST_PARAMS = {
   compileServerLogLevel: "warn",
   babelPluginMap: testBabelPluginMap,
   jsenvDirectoryClean: true,
-  compileGroupCount: 2,
 }

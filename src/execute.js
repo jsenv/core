@@ -50,7 +50,7 @@ export const execute = async ({
   compileServerPort,
   babelPluginMap,
   convertMap,
-  compileGroupCount = 2,
+  compileGroupOptions,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
 }) => {
@@ -94,7 +94,7 @@ export const execute = async ({
       compileServerPort,
       babelPluginMap,
       convertMap,
-      compileGroupCount,
+      compileGroupOptions,
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
     })

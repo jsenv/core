@@ -28,7 +28,10 @@ import { jsenvCompilerForSass } from "@jsenv/core/packages/jsenv-sass/main.js"
 import { jsenvCompilerForVue } from "@jsenv/core/packages/jsenv-vue/main.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 
 startExploring({
@@ -50,6 +53,5 @@ startExploring({
   stopOnPackageVersionChange: false,
   // useFilesystemAsCache: false,
   // writeOnFileSystem: false,
-  compileGroupCount: 2,
   // livereloading: false,
 })

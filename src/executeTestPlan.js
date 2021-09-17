@@ -77,7 +77,7 @@ export const executeTestPlan = async ({
   compileServerCanWriteOnFilesystem,
   babelPluginMap,
   convertMap,
-  compileGroupCount = 2,
+  compileGroupOptions,
   jsenvDirectoryClean,
 }) => {
   const jsenvExecuteTestPlanFunction = async ({ jsenvCancellationToken }) => {
@@ -184,7 +184,7 @@ export const executeTestPlan = async ({
       compileServerCanWriteOnFilesystem,
       babelPluginMap,
       convertMap,
-      compileGroupCount,
+      compileGroupOptions,
     })
 
     if (updateProcessExitCode && !executionIsPassed(result)) {

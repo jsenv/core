@@ -4,7 +4,7 @@ import { coverageIsEnabled } from "@jsenv/core/test/coverageIsEnabled.js"
 
 export const START_COMPILE_SERVER_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  compileGroupCount: 2,
+
   compileServerLogLevel: "off",
   jsenvDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
