@@ -28,7 +28,7 @@
     "/main.js"
   ],
   "scripts": {
-    "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs",
+    "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.html",
     "generate-importmap": "node ./script/importmap/generate_importmap.js",
     "build": "node ./script/build/build.js",
     "dist": "npm run build",
