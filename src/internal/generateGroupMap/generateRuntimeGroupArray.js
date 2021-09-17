@@ -2,8 +2,8 @@ import {
   findHighestVersion,
   versionCompare,
 } from "../semantic-versioning/index.js"
-import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
-import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "../../jsenvPluginCompatMap.js"
+import { jsenvBabelPluginCompatMap } from "./jsenvBabelPluginCompatMap.js"
+import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "./jsenvPluginCompatMap.js"
 import { computeBabelPluginMapForRuntime } from "./computeBabelPluginMapForRuntime.js"
 import { computeJsenvPluginMapForRuntime } from "./computeJsenvPluginMapForRuntime.js"
 import { groupHaveSameRequirements } from "./groupHaveSameRequirements.js"

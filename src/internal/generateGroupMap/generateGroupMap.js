@@ -33,6 +33,9 @@ Take chars below to update legends
 */
 
 import { COMPILE_ID_OTHERWISE, COMPILE_ID_BEST } from "../CONSTANTS.js"
+import { jsenvBabelPluginCompatMap } from "./jsenvBabelPluginCompatMap.js"
+import { jsenvBrowserScoreMap } from "./jsenvBrowserScoreMap.js"
+import { jsenvNodeVersionScoreMap } from "./jsenvNodeVersionScoreMap.js"
 import { generateAllRuntimeGroupArray } from "./generateAllRuntimeGroupArray.js"
 import { runtimeCompatMapToScore } from "./runtimeCompatMapToScore.js"
 
@@ -40,9 +43,12 @@ export const generateGroupMap = ({
   babelPluginMap,
   // jsenv plugin are for later, for now, nothing is using them
   jsenvPluginMap = {},
-  babelPluginCompatMap,
+  babelPluginCompatMap = jsenvBabelPluginCompatMap,
   jsenvPluginCompatMap,
-  runtimeScoreMap,
+  runtimeScoreMap = {
+    ...jsenvBrowserScoreMap,
+    node: jsenvNodeVersionScoreMap,
+  },
   groupCount = 1,
   // pass this to true if you don't care if someone tries to run your code
   // on a runtime which is not inside runtimeScoreMap.

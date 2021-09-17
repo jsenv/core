@@ -28,9 +28,6 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
-import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
-import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { createCallbackList } from "../createCallbackList.js"
@@ -89,11 +86,7 @@ export const startCompileServer = async ({
   stopOnPackageVersionChange = false,
 
   // remaining options
-  compileGroupCount = 2,
-  babelCompatMap = jsenvBabelPluginCompatMap,
-  browserScoreMap = jsenvBrowserScoreMap,
-  nodeVersionScoreMap = jsenvNodeVersionScoreMap,
-  runtimeAlwaysInsideRuntimeScoreMap = false,
+  compileGroupOptions,
 
   livereloadWatchConfig = {
     "./**": true,
@@ -136,10 +129,8 @@ export const startCompileServer = async ({
   const logger = createLogger({ logLevel: compileServerLogLevel })
   const compileServerGroupMap = generateGroupMap({
     babelPluginMap,
-    babelCompatMap,
-    runtimeScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
-    groupCount: compileGroupCount,
-    runtimeAlwaysInsideRuntimeScoreMap,
+    groupCount: 2,
+    ...compileGroupOptions,
   })
 
   babelPluginMap = {

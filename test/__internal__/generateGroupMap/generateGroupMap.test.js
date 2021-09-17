@@ -5,8 +5,8 @@ import {
   generateGroupMap,
   withoutSyntaxPlugins,
 } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
-import { jsenvBrowserScoreMap } from "@jsenv/core/src/jsenvBrowserScoreMap.js"
-import { jsenvNodeVersionScoreMap } from "@jsenv/core/src/jsenvNodeVersionScoreMap.js"
+import { jsenvBrowserScoreMap } from "@jsenv/core/src/internal/generateGroupMap/jsenvBrowserScoreMap.js"
+import { jsenvNodeVersionScoreMap } from "@jsenv/core/src/internal/generateGroupMap/jsenvNodeVersionScoreMap.js"
 
 {
   const babelPluginMap = { "transform-block-scoping": true }
