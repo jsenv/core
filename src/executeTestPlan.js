@@ -24,6 +24,11 @@ import { generateCoverageJsonFile } from "./internal/executing/coverage/generate
 import { generateCoverageHtmlDirectory } from "./internal/executing/coverage/generateCoverageHtmlDirectory.js"
 import { generateCoverageTextLog } from "./internal/executing/coverage/generateCoverageTextLog.js"
 import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
+import {
+  PLAYWRIGHT_CHROMIUM_VERSION,
+  PLAYWRIGHT_FIREFOX_VERSION,
+  PLAYWRIGHT_WEBKIT_VERSION,
+} from "./playwright_browser_versions.js"
 
 export const executeTestPlan = async ({
   logLevel = "info",
@@ -77,7 +82,13 @@ export const executeTestPlan = async ({
   compileServerCanWriteOnFilesystem,
   babelPluginMap,
   convertMap,
-  compileGroupOptions,
+  compileGroupCount,
+  runtimeSupport = {
+    chrome: PLAYWRIGHT_CHROMIUM_VERSION,
+    firefox: PLAYWRIGHT_FIREFOX_VERSION,
+    safari: PLAYWRIGHT_WEBKIT_VERSION,
+    node: process.version.slice(1),
+  },
   jsenvDirectoryClean,
 }) => {
   const jsenvExecuteTestPlanFunction = async ({ jsenvCancellationToken }) => {
@@ -184,7 +195,8 @@ export const executeTestPlan = async ({
       compileServerCanWriteOnFilesystem,
       babelPluginMap,
       convertMap,
-      compileGroupOptions,
+      compileGroupCount,
+      runtimeSupport,
     })
 
     if (updateProcessExitCode && !executionIsPassed(result)) {

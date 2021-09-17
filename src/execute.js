@@ -10,6 +10,11 @@ import {
 } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
+import {
+  PLAYWRIGHT_CHROMIUM_VERSION,
+  PLAYWRIGHT_FIREFOX_VERSION,
+  PLAYWRIGHT_WEBKIT_VERSION,
+} from "./playwright_browser_versions.js"
 
 export const execute = async ({
   logLevel = "warn",
@@ -50,7 +55,13 @@ export const execute = async ({
   compileServerPort,
   babelPluginMap,
   convertMap,
-  compileGroupOptions,
+  compileGroupCount,
+  runtimeSupport = {
+    chrome: PLAYWRIGHT_CHROMIUM_VERSION,
+    firefox: PLAYWRIGHT_FIREFOX_VERSION,
+    safari: PLAYWRIGHT_WEBKIT_VERSION,
+    node: process.version.slice(1),
+  },
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
 }) => {
@@ -84,6 +95,7 @@ export const execute = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
+      outDirectoryName: "out-execute",
 
       importDefaultExtension,
 
@@ -94,7 +106,8 @@ export const execute = async ({
       compileServerPort,
       babelPluginMap,
       convertMap,
-      compileGroupOptions,
+      compileGroupCount,
+      runtimeSupport,
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
     })

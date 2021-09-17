@@ -34,28 +34,26 @@ Take chars below to update legends
 
 import { COMPILE_ID_OTHERWISE, COMPILE_ID_BEST } from "../CONSTANTS.js"
 import { jsenvBabelPluginCompatMap } from "./jsenvBabelPluginCompatMap.js"
-import { jsenvBrowserScoreMap } from "./jsenvBrowserScoreMap.js"
-import { jsenvNodeVersionScoreMap } from "./jsenvNodeVersionScoreMap.js"
-import { generateAllRuntimeGroupArray } from "./generateAllRuntimeGroupArray.js"
+import { jsenvRuntimeScoreMap } from "./jsenvRuntimeScoreMap.js"
+import { getRuntimeCompileInfo } from "./getRuntimeCompileInfo.js"
+import { createCompileGroups } from "./createCompileGroups.js"
 import { runtimeCompatMapToScore } from "./runtimeCompatMapToScore.js"
 
 export const generateGroupMap = ({
   babelPluginMap,
-  // jsenv plugin are for later, for now, nothing is using them
-  jsenvPluginMap = {},
+  runtimeSupport,
+  compileGroupCount = 1,
   babelPluginCompatMap = jsenvBabelPluginCompatMap,
-  jsenvPluginCompatMap,
-  runtimeScoreMap = {
-    ...jsenvBrowserScoreMap,
-    node: jsenvNodeVersionScoreMap,
-  },
-  groupCount = 1,
   // pass this to true if you don't care if someone tries to run your code
-  // on a runtime which is not inside runtimeScoreMap.
-  runtimeAlwaysInsideRuntimeScoreMap = false,
+  // on a runtime which is not inside runtimeSupport.
+  runtimeSupportIsExhaustive = false,
   // pass this to true if you think you will always be able to detect
   // the runtime or that if you fail to do so you don't care.
   runtimeWillAlwaysBeKnown = false,
+  runtimeScoreMap = jsenvRuntimeScoreMap,
+  // jsenv plugin are for later, for now, nothing is using them
+  jsenvPluginMap = {},
+  jsenvPluginCompatMap,
 }) => {
   if (typeof babelPluginMap !== "object") {
     throw new TypeError(
@@ -67,76 +65,84 @@ export const generateGroupMap = ({
       `jsenvPluginMap must be an object, got ${jsenvPluginMap}`,
     )
   }
-  if (typeof runtimeScoreMap !== "object") {
+  if (typeof runtimeSupport !== "object") {
     throw new TypeError(
-      `runtimeScoreMap must be an object, got ${runtimeScoreMap}`,
+      `runtimeSupport must be an object, got ${runtimeSupport}`,
     )
   }
-  if (typeof groupCount < 1) {
-    throw new TypeError(`groupCount must be above 1, got ${groupCount}`)
+  if (typeof compileGroupCount < 1) {
+    throw new TypeError(
+      `compileGroupCount must be above 1, got ${compileGroupCount}`,
+    )
   }
 
-  babelPluginMap = withoutSyntaxPlugins(babelPluginMap)
+  const runtimeNames = Object.keys(runtimeSupport)
 
+  babelPluginMap = withoutSyntaxPlugins(babelPluginMap)
   const groupWithoutFeature = {
     babelPluginRequiredNameArray: Object.keys(babelPluginMap),
     jsenvPluginRequiredNameArray: Object.keys(jsenvPluginMap),
     runtimeCompatMap: {},
   }
 
-  // when we create one group and we cannot ensure
-  // code will be runned on a runtime inside runtimeScoreMap
-  // then we return otherwise group to be safe
-  if (groupCount === 1 && !runtimeAlwaysInsideRuntimeScoreMap) {
+  // when there is only 1 group and we cannot ensure
+  // code is runned on a supported runtime,
+  // we'll use otherwise group to be safe
+  if (compileGroupCount === 1 && !runtimeSupportIsExhaustive) {
+    return {
+      [COMPILE_ID_OTHERWISE]: groupWithoutFeature,
+    }
+  }
+  if (runtimeNames.length === 0) {
     return {
       [COMPILE_ID_OTHERWISE]: groupWithoutFeature,
     }
   }
 
-  const allRuntimeGroupArray = generateAllRuntimeGroupArray({
-    babelPluginMap,
-    babelPluginCompatMap,
-    jsenvPluginMap,
-    jsenvPluginCompatMap,
-    runtimeNames: arrayWithoutValue(Object.keys(runtimeScoreMap), "other"),
+  const runtimeCompileInfos = {}
+  runtimeNames.forEach((runtimeName) => {
+    const runtimeVersion = runtimeSupport[runtimeName]
+    const runtimeCompileInfo = getRuntimeCompileInfo({
+      runtimeName,
+      runtimeVersion,
+      babelPluginMap,
+      jsenvPluginMap,
+      babelPluginCompatMap,
+      jsenvPluginCompatMap,
+    })
+    runtimeCompileInfos[runtimeName] = runtimeCompileInfo
   })
-
-  if (allRuntimeGroupArray.length === 0) {
-    return {
-      [COMPILE_ID_OTHERWISE]: groupWithoutFeature,
-    }
-  }
+  const allGroups = createCompileGroups(runtimeCompileInfos)
 
   const groupToScore = ({ runtimeCompatMap }) =>
     runtimeCompatMapToScore(runtimeCompatMap, runtimeScoreMap)
 
-  const allRuntimeGroupArraySortedByScore = allRuntimeGroupArray.sort(
+  const groupsSortedByScore = allGroups.sort(
     (a, b) => groupToScore(b) - groupToScore(a),
   )
 
-  const length = allRuntimeGroupArraySortedByScore.length
+  const length = allGroups.length
 
   // if we arrive here and want a single group
   // we take the worst group and consider it's our best group
   // because it's the lowest runtime we want to support
-  if (groupCount === 1) {
+  if (compileGroupCount === 1) {
     return {
-      [COMPILE_ID_BEST]: allRuntimeGroupArraySortedByScore[length - 1],
+      [COMPILE_ID_BEST]: groupsSortedByScore[length - 1],
     }
   }
 
   const addOtherwiseToBeSafe =
-    !runtimeAlwaysInsideRuntimeScoreMap || !runtimeWillAlwaysBeKnown
-
-  const lastGroupIndex = addOtherwiseToBeSafe ? groupCount - 1 : groupCount
-
-  const groupArray =
-    length + 1 > groupCount
-      ? allRuntimeGroupArraySortedByScore.slice(0, lastGroupIndex)
-      : allRuntimeGroupArraySortedByScore
-
+    !runtimeSupportIsExhaustive || !runtimeWillAlwaysBeKnown
+  const lastGroupIndex = addOtherwiseToBeSafe
+    ? compileGroupCount - 1
+    : compileGroupCount
+  const groups =
+    length + 1 > compileGroupCount
+      ? allGroups.slice(0, lastGroupIndex)
+      : allGroups
   const groupMap = {}
-  groupArray.forEach((group, index) => {
+  groups.forEach((group, index) => {
     if (index === 0) {
       groupMap[COMPILE_ID_BEST] = group
     } else {
@@ -146,7 +152,6 @@ export const generateGroupMap = ({
   if (addOtherwiseToBeSafe) {
     groupMap[COMPILE_ID_OTHERWISE] = groupWithoutFeature
   }
-
   return groupMap
 }
 
@@ -160,6 +165,3 @@ export const withoutSyntaxPlugins = (babelPluginMap) => {
   })
   return babelPluginMapWithoutSyntaxPlugins
 }
-
-const arrayWithoutValue = (array, value) =>
-  array.filter((valueCandidate) => valueCandidate !== value)

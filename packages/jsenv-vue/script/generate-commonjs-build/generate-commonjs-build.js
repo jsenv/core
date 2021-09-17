@@ -1,10 +1,12 @@
-import { buildProject, getBabelPluginMapForNode } from "../../../../main.js"
+import { buildProject } from "../../../../main.js"
 import * as jsenvConfig from "../../../../jsenv.config.js"
 
-buildProject({
+await buildProject({
   ...jsenvConfig,
   format: "commonjs",
-  babelPluginMap: getBabelPluginMapForNode(),
+  runtimeSupport: {
+    node: "14.7",
+  },
   buildDirectoryRelativeUrl: "packages/jsenv-vue/dist/commonjs",
   entryPointMap: {
     "./packages/jsenv-vue/main.js": "./main.cjs",

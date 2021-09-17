@@ -5,14 +5,21 @@ import {
   generateGroupMap,
   withoutSyntaxPlugins,
 } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
-import { jsenvBrowserScoreMap } from "@jsenv/core/src/internal/generateGroupMap/jsenvBrowserScoreMap.js"
-import { jsenvNodeVersionScoreMap } from "@jsenv/core/src/internal/generateGroupMap/jsenvNodeVersionScoreMap.js"
+import {
+  jsenvBrowserScoreMap,
+  jsenvNodeVersionScoreMap,
+} from "@jsenv/core/src/internal/generateGroupMap/jsenvRuntimeScoreMap.js"
 
 {
   const babelPluginMap = { "transform-block-scoping": true }
   const actual = generateGroupMap({
     babelPluginMap,
-    runtimeScoreMap: { node: jsenvNodeVersionScoreMap },
+    runtimeSupport: {
+      node: "0.0.0",
+    },
+    runtimeScoreMap: {
+      node: jsenvNodeVersionScoreMap,
+    },
     groupCount: 2,
   })
   const expected = {
@@ -34,6 +41,15 @@ import { jsenvNodeVersionScoreMap } from "@jsenv/core/src/internal/generateGroup
   const babelPluginMap = { "transform-block-scoping": true }
   const actual = generateGroupMap({
     babelPluginMap,
+    runtimeSupport: {
+      chrome: "0.0.0",
+      firefox: "0.0.0",
+      edge: "0.0.0",
+      electron: "0.0.0",
+      ios: "0.0.0",
+      opera: "0.0.0",
+      safari: "0.0.0",
+    },
     runtimeScoreMap: jsenvBrowserScoreMap,
     groupCount: 2,
   })
@@ -67,6 +83,15 @@ import { jsenvNodeVersionScoreMap } from "@jsenv/core/src/internal/generateGroup
   }
   const actual = generateGroupMap({
     babelPluginMap,
+    runtimeSupport: {
+      chrome: "0.0.0",
+      firefox: "0.0.0",
+      edge: "0.0.0",
+      electron: "0.0.0",
+      ios: "0.0.0",
+      opera: "0.0.0",
+      safari: "0.0.0",
+    },
     runtimeScoreMap: jsenvBrowserScoreMap,
     groupCount: 2,
   })
@@ -96,6 +121,16 @@ import { jsenvNodeVersionScoreMap } from "@jsenv/core/src/internal/generateGroup
 {
   const actual = generateGroupMap({
     babelPluginMap: jsenvBabelPluginMap,
+    runtimeSupport: {
+      chrome: "0.0.0",
+      firefox: "0.0.0",
+      edge: "0.0.0",
+      electron: "0.0.0",
+      ios: "0.0.0",
+      opera: "0.0.0",
+      safari: "0.0.0",
+      node: "0.0.0",
+    },
     runtimeScoreMap: {
       ...jsenvBrowserScoreMap,
       node: jsenvNodeVersionScoreMap,
@@ -107,13 +142,13 @@ import { jsenvNodeVersionScoreMap } from "@jsenv/core/src/internal/generateGroup
       babelPluginRequiredNameArray: [],
       jsenvPluginRequiredNameArray: [],
       runtimeCompatMap: {
-        chrome: "80",
-        firefox: "78",
-        edge: "80",
-        electron: "8.1",
-        opera: "67",
-        safari: "13.1",
-        node: "14",
+        chrome: "75",
+        firefox: "70",
+        edge: "79",
+        electron: "6",
+        opera: "62",
+        safari: "13",
+        node: "12.5",
       },
     },
     otherwise: {

@@ -13,6 +13,10 @@ import {
 } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { buildUsingRollup } from "./internal/building/buildUsingRollup.js"
+import {
+  jsenvBrowserRuntimeSupport,
+  jsenvNodeRuntimeSupport,
+} from "./internal/generateGroupMap/jsenvRuntimeSupport.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 export const buildProject = async ({
@@ -23,19 +27,26 @@ export const buildProject = async ({
   logger,
 
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  jsenvDirectoryClean,
+  entryPointMap,
+
+  buildDirectoryRelativeUrl,
+  buildDirectoryClean = false,
+  writeOnFileSystem = true,
+  assetManifestFile = false,
+  assetManifestFileRelativeUrl = "asset-manifest.json",
+  sourcemapExcludeSources = false,
 
   format,
-
-  browser = format === "global" ||
-    format === "systemjs" ||
-    format === "esmodule",
-  node = format === "commonjs",
-  entryPointMap,
   systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
   globalName,
   globals = {},
+  runtimeSupport = format === "global" ||
+  format === "systemjs" ||
+  format === "esmodule"
+    ? jsenvBrowserRuntimeSupport
+    : jsenvNodeRuntimeSupport,
+  babelPluginMap = jsenvBabelPluginMap,
+  transformTopLevelAwait = true,
 
   urlMappings = {},
   importResolutionMethod = format === "commonjs" ? "node" : "importmap",
@@ -56,16 +67,8 @@ export const buildProject = async ({
   compileServerCertificate,
   compileServerIp,
   compileServerPort,
-  babelPluginMap = jsenvBabelPluginMap,
-  transformTopLevelAwait = true,
-
-  sourcemapExcludeSources = false,
-
-  buildDirectoryRelativeUrl,
-  buildDirectoryClean = false,
-  writeOnFileSystem = true,
-  assetManifestFile = false,
-  assetManifestFileRelativeUrl = "asset-manifest.json",
+  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryClean,
 
   preserveEntrySignatures,
   // when jsConcatenation is disabled rollup becomes almost useless
@@ -192,16 +195,15 @@ export const buildProject = async ({
         externalImportUrlPatterns,
         importPaths,
 
-        babelPluginMap,
-        transformTopLevelAwait,
-        node,
-        browser,
-        writeOnFileSystem,
-
         format,
         systemJsUrl,
         globalName,
         globals,
+        babelPluginMap,
+        transformTopLevelAwait,
+        runtimeSupport,
+
+        writeOnFileSystem,
         sourcemapExcludeSources,
 
         buildDirectoryUrl,

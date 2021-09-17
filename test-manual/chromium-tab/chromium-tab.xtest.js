@@ -38,9 +38,7 @@ const { testPlanSummary, testPlanReport } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
-  compileGroupOptions: {
-    groupCount: 1,
-  },
+  compileGroupCount: 1, // ensure compileId always otherwise
   // this test exists to ensure launchChromiumTab actually shares
   // the chromium browser and opens tab inside it
   // by passing stopAfterExecute: false,

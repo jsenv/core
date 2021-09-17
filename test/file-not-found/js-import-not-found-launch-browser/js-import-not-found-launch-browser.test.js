@@ -32,9 +32,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
     ...START_COMPILE_SERVER_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
-    compileGroupOptions: {
-      groupCount: 1, // ensure compileId always otherwise
-    },
+    compileGroupCount: 1, // ensure compileId always otherwise
   })
 const importedFileRelativeUrl = `${testDirectoryRelativeUrl}foo.js`
 const importedFileUrl = resolveUrl(

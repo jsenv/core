@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 // copied from
+// https://github.com/babel/babel/blob/e498bee10f0123bb208baa228ce6417542a2c3c4/packages/babel-compat-data/data/plugins.json#L1
 // https://github.com/babel/babel/blob/master/packages/babel-compat-data/data/plugins.json#L1
-// now moved at https://github.com/babel/babel/blob/548cb3ee89552ffc08ee5625b084bd33f8107530/packages/babel-compat-data/data/plugins.json#L1
 // Because this is an hidden implementation detail of @babel/preset-env
 // it could be deprecated or moved anytime.
 // For that reason it makes more sens to have it inlined here
@@ -9,34 +9,6 @@
 // Ideally it would be documented or a separate module
 
 export const jsenvBabelPluginCompatMap = {
-  "proposal-class-static-block": {
-    chrome: "91",
-    electron: "13.0",
-  },
-  "proposal-private-property-in-object": {
-    chrome: "91",
-    firefox: "90",
-    electron: "13.0",
-  },
-  "proposal-class-properties": {
-    chrome: "74",
-    opera: "62",
-    edge: "79",
-    firefox: "90",
-    safari: "14.1",
-    node: "12",
-    samsung: "11",
-    electron: "6.0",
-  },
-  "proposal-private-methods": {
-    chrome: "84",
-    opera: "70",
-    edge: "84",
-    firefox: "90",
-    safari: "15",
-    node: "14.6",
-    electron: "10.0",
-  },
   "proposal-numeric-separator": {
     chrome: "75",
     opera: "62",
@@ -46,17 +18,18 @@ export const jsenvBabelPluginCompatMap = {
     node: "12.5",
     ios: "13",
     samsung: "11",
-    electron: "6.0",
+    electron: "6",
   },
-  "proposal-logical-assignment-operators": {
-    chrome: "85",
+  "proposal-class-properties": {
+    chrome: "74",
+    opera: "61",
+    edge: "79",
+    node: "12",
+    electron: "6.1",
+  },
+  "proposal-private-methods": {
+    chrome: "84",
     opera: "71",
-    edge: "85",
-    firefox: "79",
-    safari: "14",
-    node: "15",
-    ios: "14",
-    electron: "10.0",
   },
   "proposal-nullish-coalescing-operator": {
     chrome: "80",
@@ -65,14 +38,16 @@ export const jsenvBabelPluginCompatMap = {
     firefox: "72",
     safari: "13.1",
     node: "14",
-    ios: "13.4",
-    samsung: "13",
-    electron: "8.0",
+    electron: "8.1",
   },
   "proposal-optional-chaining": {
+    chrome: "80",
+    opera: "67",
+    edge: "80",
     firefox: "74",
     safari: "13.1",
-    ios: "13.4",
+    node: "14",
+    electron: "8.1",
   },
   "proposal-json-strings": {
     chrome: "66",
@@ -83,7 +58,7 @@ export const jsenvBabelPluginCompatMap = {
     node: "10",
     ios: "12",
     samsung: "9",
-    electron: "3.0",
+    electron: "3",
   },
   "proposal-optional-catch-binding": {
     chrome: "66",
@@ -94,7 +69,7 @@ export const jsenvBabelPluginCompatMap = {
     node: "10",
     ios: "11.3",
     samsung: "9",
-    electron: "3.0",
+    electron: "3",
   },
   "transform-parameters": {
     chrome: "49",
@@ -116,7 +91,7 @@ export const jsenvBabelPluginCompatMap = {
     node: "10",
     ios: "12",
     samsung: "8",
-    electron: "3.0",
+    electron: "3",
   },
   "proposal-object-rest-spread": {
     chrome: "60",
@@ -127,7 +102,7 @@ export const jsenvBabelPluginCompatMap = {
     node: "8.3",
     ios: "11.3",
     samsung: "8",
-    electron: "2.0",
+    electron: "2",
   },
   "transform-dotall-regex": {
     chrome: "62",
@@ -138,7 +113,7 @@ export const jsenvBabelPluginCompatMap = {
     node: "8.10",
     ios: "11.3",
     samsung: "8",
-    electron: "3.0",
+    electron: "3",
   },
   "proposal-unicode-property-regex": {
     chrome: "64",
@@ -149,18 +124,17 @@ export const jsenvBabelPluginCompatMap = {
     node: "10",
     ios: "11.3",
     samsung: "9",
-    electron: "3.0",
+    electron: "3",
   },
   "transform-named-capturing-groups-regex": {
     chrome: "64",
     opera: "51",
     edge: "79",
-    firefox: "78",
     safari: "11.1",
     node: "10",
     ios: "11.3",
     samsung: "9",
-    electron: "3.0",
+    electron: "3",
   },
   "transform-async-to-generator": {
     chrome: "55",
@@ -193,7 +167,7 @@ export const jsenvBabelPluginCompatMap = {
     node: "4",
     ios: "13",
     samsung: "3.4",
-    electron: "0.21",
+    electron: "0.22",
   },
   "transform-literals": {
     chrome: "44",
@@ -221,12 +195,11 @@ export const jsenvBabelPluginCompatMap = {
     chrome: "47",
     opera: "34",
     edge: "13",
-    firefox: "43",
+    firefox: "45",
     safari: "10",
     node: "6",
     ios: "10",
     samsung: "5",
-    rhino: "1.7.13",
     electron: "0.36",
   },
   "transform-block-scoped-functions": {
@@ -239,7 +212,7 @@ export const jsenvBabelPluginCompatMap = {
     ie: "11",
     ios: "10",
     samsung: "3.4",
-    electron: "0.21",
+    electron: "0.22",
   },
   "transform-classes": {
     chrome: "46",
@@ -272,7 +245,7 @@ export const jsenvBabelPluginCompatMap = {
     node: "4",
     ios: "9",
     samsung: "4",
-    electron: "0.27",
+    electron: "0.28",
   },
   "transform-duplicate-keys": {
     chrome: "42",
@@ -344,7 +317,7 @@ export const jsenvBabelPluginCompatMap = {
     chrome: "46",
     opera: "33",
     edge: "13",
-    firefox: "45",
+    firefox: "36",
     safari: "10",
     node: "5",
     ios: "10",
@@ -382,14 +355,13 @@ export const jsenvBabelPluginCompatMap = {
     node: "0.12",
     ios: "9",
     samsung: "3",
-    rhino: "1.7.13",
     electron: "0.20",
   },
   "transform-new-target": {
     chrome: "46",
     opera: "33",
     edge: "14",
-    firefox: "45",
+    firefox: "41",
     safari: "10",
     node: "5",
     ios: "10",
@@ -419,7 +391,6 @@ export const jsenvBabelPluginCompatMap = {
     ios: "6",
     phantom: "2",
     samsung: "1",
-    rhino: "1.7.13",
     electron: "0.20",
   },
   "transform-property-literals": {
@@ -434,7 +405,6 @@ export const jsenvBabelPluginCompatMap = {
     ios: "6",
     phantom: "2",
     samsung: "1",
-    rhino: "1.7.13",
     electron: "0.20",
   },
   "transform-reserved-words": {
@@ -449,21 +419,7 @@ export const jsenvBabelPluginCompatMap = {
     ios: "6",
     phantom: "2",
     samsung: "1",
-    rhino: "1.7.13",
     electron: "0.20",
-  },
-  "proposal-export-namespace-from": {
-    chrome: "72",
-    and_chr: "72",
-    edge: "79",
-    firefox: "80",
-    and_ff: "80",
-    node: "13.2",
-    opera: "60",
-    op_mob: "51",
-    samsung: "11.0",
-    android: "72",
-    electron: "5.0",
   },
 }
 

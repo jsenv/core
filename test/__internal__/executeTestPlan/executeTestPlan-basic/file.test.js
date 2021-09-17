@@ -50,9 +50,7 @@ const { testPlanSummary, testPlanReport } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
-  compileGroupOptions: {
-    groupCount: 1,
-  },
+  compileGroupCount: 1,
 })
 const actual = {
   testPlanSummary,

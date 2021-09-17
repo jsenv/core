@@ -86,7 +86,8 @@ export const startCompileServer = async ({
   stopOnPackageVersionChange = false,
 
   // remaining options
-  compileGroupOptions,
+  runtimeSupport,
+  compileGroupCount = 5,
 
   livereloadWatchConfig = {
     "./**": true,
@@ -129,8 +130,8 @@ export const startCompileServer = async ({
   const logger = createLogger({ logLevel: compileServerLogLevel })
   const compileServerGroupMap = generateGroupMap({
     babelPluginMap,
-    groupCount: 2,
-    ...compileGroupOptions,
+    runtimeSupport,
+    compileGroupCount,
   })
 
   babelPluginMap = {
