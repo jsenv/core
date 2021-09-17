@@ -233,9 +233,6 @@
       "@jsenv/importmap-eslint-resolver": [
         "./node_modules/@jsenv/importmap-eslint-resolver/main.js"
       ],
-      "babel-plugin-transform-commonjs/*": [
-        "./node_modules/babel-plugin-transform-commonjs/*"
-      ],
       "@babel/plugin-transform-classes": [
         "./node_modules/@babel/plugin-transform-classes/lib/index.js"
       ],
@@ -244,9 +241,6 @@
       ],
       "@babel/plugin-transform-spread/*": [
         "./node_modules/@babel/plugin-transform-spread/*"
-      ],
-      "babel-plugin-transform-commonjs": [
-        "./node_modules/babel-plugin-transform-commonjs/dist/index.js"
       ],
       "@babel/plugin-transform-for-of": [
         "./node_modules/@babel/plugin-transform-for-of/lib/index.js"

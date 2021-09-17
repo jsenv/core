@@ -24,6 +24,7 @@ import { generateCoverageJsonFile } from "./internal/executing/coverage/generate
 import { generateCoverageHtmlDirectory } from "./internal/executing/coverage/generateCoverageHtmlDirectory.js"
 import { generateCoverageTextLog } from "./internal/executing/coverage/generateCoverageTextLog.js"
 import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
+import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
 
 export const executeTestPlan = async ({
   logLevel = "info",
@@ -77,7 +78,8 @@ export const executeTestPlan = async ({
   compileServerCanWriteOnFilesystem,
   babelPluginMap,
   convertMap,
-  compileGroupCount = 2,
+  // we could even affine depending on testPlan
+  runtimeSupportDuringDev = jsenvRuntimeSupportDuringDev,
   jsenvDirectoryClean,
 }) => {
   const jsenvExecuteTestPlanFunction = async ({ jsenvCancellationToken }) => {
@@ -184,7 +186,7 @@ export const executeTestPlan = async ({
       compileServerCanWriteOnFilesystem,
       babelPluginMap,
       convertMap,
-      compileGroupCount,
+      runtimeSupport: runtimeSupportDuringDev,
     })
 
     if (updateProcessExitCode && !executionIsPassed(result)) {

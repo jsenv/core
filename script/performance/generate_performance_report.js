@@ -14,7 +14,7 @@ export const generatePerformanceReport = async () => {
 
   return {
     groups: {
-      "@jsenv/performance-impact package": {
+      "@jsenv/core package": {
         ...importMetrics,
         ...npmTarballMetrics,
       },

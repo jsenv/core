@@ -43,7 +43,6 @@ export const startContinuousTesting = async ({
     "./**/*": true,
     ...TESTING_WATCH_EXCLUDE_DESCRIPTION,
   },
-  compileGroupCount = 2,
   babelPluginMap,
   convertMap,
   logLevel,
@@ -101,7 +100,6 @@ export const startContinuousTesting = async ({
       jsenvDirectoryClean,
       importDefaultExtension,
 
-      compileGroupCount,
       babelPluginMap,
       convertMap,
       projectFileRequestedCallback,

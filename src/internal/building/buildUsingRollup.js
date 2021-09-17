@@ -8,10 +8,24 @@ export const buildUsingRollup = async ({
   cancellationToken,
   logger,
 
-  entryPointMap,
   projectDirectoryUrl,
+  entryPointMap,
   compileServerOrigin,
   compileDirectoryRelativeUrl,
+  buildDirectoryUrl,
+  buildDirectoryClean,
+  assetManifestFile = false,
+  assetManifestFileRelativeUrl,
+  sourcemapExcludeSources,
+  writeOnFileSystem,
+
+  format,
+  systemJsUrl,
+  globalName,
+  globals,
+  babelPluginMap,
+  runtimeSupport,
+  transformTopLevelAwait,
 
   urlMappings,
   importResolutionMethod,
@@ -21,46 +35,52 @@ export const buildUsingRollup = async ({
   externalImportUrlPatterns,
   importPaths,
 
-  babelPluginMap,
-  transformTopLevelAwait,
-  node,
-  browser,
-
-  format,
-  systemJsUrl,
-  globals,
-  globalName,
-  sourcemapExcludeSources,
-
-  buildDirectoryUrl,
-  buildDirectoryClean,
-
   urlVersioning,
+  lineBreakNormalization,
+  jsConcatenation,
   useImportMapToImproveLongTermCaching,
   preserveEntrySignatures,
-  jsConcatenation,
+
   minify,
   minifyJsOptions,
   minifyCssOptions,
   minifyHtmlOptions,
-  assetManifestFile = false,
-  assetManifestFileRelativeUrl,
 
   serviceWorkers,
   serviceWorkerFinalizer,
-
-  lineBreakNormalization,
-  writeOnFileSystem,
 }) => {
+  const node = Boolean(runtimeSupport.node)
+  const browser = Boolean(
+    runtimeSupport.android ||
+      runtimeSupport.chrome ||
+      runtimeSupport.edge ||
+      runtimeSupport.electron ||
+      runtimeSupport.firefox ||
+      runtimeSupport.ios ||
+      runtimeSupport.opera ||
+      runtimeSupport.safari,
+  )
+
   const { jsenvRollupPlugin, getLastErrorMessage, getResult } =
     await createJsenvRollupPlugin({
       cancellationToken,
       logger,
 
-      entryPointMap,
       projectDirectoryUrl,
+      entryPointMap,
       compileServerOrigin,
       compileDirectoryRelativeUrl,
+      buildDirectoryUrl,
+      assetManifestFile,
+      assetManifestFileRelativeUrl,
+      writeOnFileSystem,
+
+      format,
+      systemJsUrl,
+      babelPluginMap,
+      transformTopLevelAwait,
+      node,
+      browser,
 
       urlMappings,
       importResolutionMethod,
@@ -70,27 +90,15 @@ export const buildUsingRollup = async ({
       externalImportUrlPatterns,
       importPaths,
 
-      babelPluginMap,
-      transformTopLevelAwait,
-      node,
-      browser,
-
-      format,
-      systemJsUrl,
-      buildDirectoryUrl,
-
-      jsConcatenation,
       urlVersioning,
       lineBreakNormalization,
+      jsConcatenation,
       useImportMapToImproveLongTermCaching,
+
       minify,
       minifyJsOptions,
       minifyCssOptions,
       minifyHtmlOptions,
-
-      assetManifestFile,
-      assetManifestFileRelativeUrl,
-      writeOnFileSystem,
     })
 
   try {

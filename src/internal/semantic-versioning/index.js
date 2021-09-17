@@ -1,3 +1,5 @@
 export { findLowestVersion } from "./findLowestVersion.js"
 export { findHighestVersion } from "./findHighestVersion.js"
+export { versionIsAbove } from "./versionIsAbove.js"
+export { versionIsBelow } from "./versionIsBelow.js"
 export { versionCompare } from "./versionCompare.js"

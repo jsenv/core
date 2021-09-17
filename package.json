@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "19.7.3",
+  "version": "20.0.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -28,7 +28,7 @@
     "/main.js"
   ],
   "scripts": {
-    "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs",
+    "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.html",
     "generate-importmap": "node ./script/importmap/generate_importmap.js",
     "build": "node ./script/build/build.js",
     "dist": "npm run build",
@@ -107,7 +107,6 @@
     "@rollup/plugin-replace": "3.0.0",
     "ansi-to-html": "0.7.1",
     "babel-plugin-transform-async-to-promises": "0.8.15",
-    "babel-plugin-transform-commonjs": "1.1.6",
     "bytes": "3.1.0",
     "cssnano": "5.0.8",
     "cssnano-preset-default": "5.1.4",

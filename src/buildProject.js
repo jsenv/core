@@ -6,13 +6,17 @@ import {
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
-import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
+import { COMPILE_ID_BEST } from "./internal/CONSTANTS.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
 } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { buildUsingRollup } from "./internal/building/buildUsingRollup.js"
+import {
+  jsenvBrowserRuntimeSupport,
+  jsenvNodeRuntimeSupport,
+} from "./internal/generateGroupMap/jsenvRuntimeSupport.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 export const buildProject = async ({
@@ -23,19 +27,25 @@ export const buildProject = async ({
   logger,
 
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  jsenvDirectoryClean,
+  entryPointMap,
+  buildDirectoryRelativeUrl,
+  buildDirectoryClean = false,
+  assetManifestFile = false,
+  assetManifestFileRelativeUrl = "asset-manifest.json",
+  sourcemapExcludeSources = false,
+  writeOnFileSystem = true,
 
   format,
-
-  browser = format === "global" ||
-    format === "systemjs" ||
-    format === "esmodule",
-  node = format === "commonjs",
-  entryPointMap,
   systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
   globalName,
   globals = {},
+  babelPluginMap = jsenvBabelPluginMap,
+  runtimeSupport = format === "global" ||
+  format === "systemjs" ||
+  format === "esmodule"
+    ? jsenvBrowserRuntimeSupport
+    : jsenvNodeRuntimeSupport,
+  transformTopLevelAwait = true,
 
   urlMappings = {},
   importResolutionMethod = format === "commonjs" ? "node" : "importmap",
@@ -49,29 +59,14 @@ export const buildProject = async ({
     : {},
   importPaths = {},
 
-  env = {},
-
-  compileServerProtocol,
-  compileServerPrivateKey,
-  compileServerCertificate,
-  compileServerIp,
-  compileServerPort,
-  babelPluginMap = jsenvBabelPluginMap,
-  transformTopLevelAwait = true,
-
-  sourcemapExcludeSources = false,
-
-  buildDirectoryRelativeUrl,
-  buildDirectoryClean = false,
-  writeOnFileSystem = true,
-  assetManifestFile = false,
-  assetManifestFileRelativeUrl = "asset-manifest.json",
-
-  preserveEntrySignatures,
+  urlVersioning = true,
+  lineBreakNormalization = process.platform === "win32" && !minify,
   // when jsConcatenation is disabled rollup becomes almost useless
-  // except it can still do tree shaking but in practice tree shaking
-  // fails to catch many things so...
+  // except it can still do tree shaking
   jsConcatenation = true,
+  useImportMapToImproveLongTermCaching = format === "systemjs",
+  preserveEntrySignatures,
+
   minify = process.env.NODE_ENV === "production",
   // https://github.com/kangax/html-minifier#options-quick-reference
   minifyHtmlOptions = { collapseWhitespace: true },
@@ -80,9 +75,17 @@ export const buildProject = async ({
   // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default
   minifyCssOptions,
 
-  urlVersioning = true,
-  lineBreakNormalization = process.platform === "win32" && !minify,
-  useImportMapToImproveLongTermCaching = format === "systemjs",
+  serviceWorkers = {},
+  serviceWorkerFinalizer,
+
+  env = {},
+  compileServerProtocol,
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp,
+  compileServerPort,
+  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryClean,
 
   // when true .jsenv/out-build directory is generated
   // with all intermediated files used to produce the final build files.
@@ -94,9 +97,6 @@ export const buildProject = async ({
   // when asking them to the compile server
   // (to fix that sourcemap could be inlined)
   filesystemCache = true,
-
-  serviceWorkers = {},
-  serviceWorkerFinalizer,
 
   ...rest
 }) => {
@@ -167,6 +167,8 @@ export const buildProject = async ({
       // nor to inject jsenv script
       transformHtmlSourceFiles: false,
 
+      runtimeSupport,
+
       // override with potential custom options
       ...rest,
     })
@@ -182,7 +184,11 @@ export const buildProject = async ({
         entryPointMap,
         projectDirectoryUrl,
         compileServerOrigin,
-        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
+        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_BEST}/`,
+        buildDirectoryUrl,
+        buildDirectoryClean,
+        assetManifestFile,
+        assetManifestFileRelativeUrl,
 
         urlMappings,
         importResolutionMethod,
@@ -192,28 +198,20 @@ export const buildProject = async ({
         externalImportUrlPatterns,
         importPaths,
 
-        babelPluginMap,
-        transformTopLevelAwait,
-        node,
-        browser,
-        writeOnFileSystem,
-
         format,
         systemJsUrl,
         globalName,
         globals,
-        sourcemapExcludeSources,
-
-        buildDirectoryUrl,
-        buildDirectoryClean,
-        assetManifestFile,
-        assetManifestFileRelativeUrl,
+        babelPluginMap,
+        transformTopLevelAwait,
+        runtimeSupport,
 
         urlVersioning,
         lineBreakNormalization,
         useImportMapToImproveLongTermCaching,
         preserveEntrySignatures,
         jsConcatenation,
+
         minify,
         minifyHtmlOptions,
         minifyJsOptions,
@@ -221,6 +219,9 @@ export const buildProject = async ({
 
         serviceWorkers,
         serviceWorkerFinalizer,
+
+        writeOnFileSystem,
+        sourcemapExcludeSources,
       })
 
       return result

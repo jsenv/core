@@ -2,11 +2,11 @@ import { findHighestVersion } from "../semantic-versioning/index.js"
 
 export const resolveGroup = ({ name, version }, groupMap) => {
   return Object.keys(groupMap).find((compileIdCandidate) => {
-    const { runtimeCompatMap } = groupMap[compileIdCandidate]
-    if (name in runtimeCompatMap === false) {
+    const { minRuntimeVersions } = groupMap[compileIdCandidate]
+    if (name in minRuntimeVersions === false) {
       return false
     }
-    const versionForGroup = runtimeCompatMap[name]
+    const versionForGroup = minRuntimeVersions[name]
 
     const highestVersion = findHighestVersion(version, versionForGroup)
     return highestVersion === version

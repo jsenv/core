@@ -10,6 +10,7 @@ import {
 } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
+import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
 
 export const execute = async ({
   logLevel = "warn",
@@ -50,9 +51,9 @@ export const execute = async ({
   compileServerPort,
   babelPluginMap,
   convertMap,
-  compileGroupCount = 2,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
+  runtimeSupportDuringDev = jsenvRuntimeSupportDuringDev,
 }) => {
   const jsenvExecutionFunction = async ({ jsenvCancellationToken }) => {
     cancellationToken = composeCancellationToken(
@@ -84,6 +85,7 @@ export const execute = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
+      outDirectoryName: "out-dev",
 
       importDefaultExtension,
 
@@ -94,7 +96,7 @@ export const execute = async ({
       compileServerPort,
       babelPluginMap,
       convertMap,
-      compileGroupCount,
+      runtimeSupport: runtimeSupportDuringDev,
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
     })

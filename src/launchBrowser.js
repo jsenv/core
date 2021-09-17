@@ -13,6 +13,11 @@ import { validateResponseStatusIsOk } from "./internal/validateResponseStatusIsO
 import { trackPageToNotify } from "./internal/browser-launcher/trackPageToNotify.js"
 import { createSharing } from "./internal/browser-launcher/createSharing.js"
 import { executeHtmlFile } from "./internal/browser-launcher/executeHtmlFile.js"
+import {
+  PLAYWRIGHT_CHROMIUM_VERSION,
+  PLAYWRIGHT_FIREFOX_VERSION,
+  PLAYWRIGHT_WEBKIT_VERSION,
+} from "./playwright_browser_versions.js"
 
 const chromiumSharing = createSharing()
 
@@ -99,7 +104,7 @@ export const launchChromium = async ({
   return {
     browser,
     runtimeName: "chromium",
-    runtimeVersion: "82.0.4057.0",
+    runtimeVersion: PLAYWRIGHT_CHROMIUM_VERSION,
     stop: ressourceTracker.cleanup,
     ...browserToRuntimeHooks(browser, {
       browserServerLogLevel,
@@ -175,7 +180,7 @@ export const launchFirefox = async ({
   return {
     browser,
     runtimeName: "firefox",
-    runtimeVersion: "73.0b13",
+    runtimeVersion: PLAYWRIGHT_FIREFOX_VERSION,
     stop: ressourceTracker.cleanup,
     ...browserToRuntimeHooks(browser, {
       browserServerLogLevel,
@@ -250,7 +255,7 @@ export const launchWebkit = async ({
   return {
     browser,
     runtimeName: "webkit",
-    runtimeVersion: "13.0.4",
+    runtimeVersion: PLAYWRIGHT_WEBKIT_VERSION,
     stop: ressourceTracker.cleanup,
     ...browserToRuntimeHooks(browser, {
       browserServerLogLevel,

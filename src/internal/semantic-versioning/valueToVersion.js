@@ -7,7 +7,7 @@ export const valueToVersion = (value) => {
     return stringToVersion(value)
   }
 
-  throw new TypeError(createValueErrorMessage({ version: value }))
+  throw new TypeError(`version must be a number or a string, got ${value}`)
 }
 
 const numberToVersion = (number) => {
@@ -42,8 +42,3 @@ const stringToVersion = (string) => {
     patch: 0,
   }
 }
-
-const createValueErrorMessage = ({
-  value,
-}) => `value must be a number or a string.
-value: ${value}`
