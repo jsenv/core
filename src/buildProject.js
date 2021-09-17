@@ -60,7 +60,7 @@ export const buildProject = async ({
   importPaths = {},
 
   urlVersioning = true,
-  lineBreakNormalization = process.platform === "win32" && !minify,
+  lineBreakNormalization = process.platform === "win32",
   // when jsConcatenation is disabled rollup becomes almost useless
   // except it can still do tree shaking
   jsConcatenation = true,
