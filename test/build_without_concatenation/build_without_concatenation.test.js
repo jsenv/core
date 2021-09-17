@@ -35,8 +35,8 @@ const { buildMappings } = await buildProject({
   const actual = buildMappings
   const expected = {
     [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
-    [`${testDirectoryRelativeUrl}file.js`]: "file-0ff3f8fb.js",
-    [`${testDirectoryRelativeUrl}main.js`]: "main-b972c195.js",
+    [`${testDirectoryRelativeUrl}file.js`]: "file-414e15ec.js",
+    [`${testDirectoryRelativeUrl}main.js`]: "main-b6d7ff70.js",
   }
   assert({ actual, expected })
 }

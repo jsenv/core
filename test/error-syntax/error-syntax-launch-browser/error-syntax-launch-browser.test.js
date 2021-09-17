@@ -8,6 +8,7 @@ import {
 
 import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import {
@@ -26,7 +27,7 @@ const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFilename = `${testDirectoryname}.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
-const compileId = "otherwise"
+const compileId = COMPILE_ID_BEST
 const importedFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
 const importedFileUrl = resolveUrl(
   importedFileRelativeUrl,

@@ -7,6 +7,7 @@ import {
 
 import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import {
@@ -26,7 +27,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const htmlFilename = `${testDirectoryBasename}.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryBasename}.js`
-const compileId = "otherwise"
+const compileId = COMPILE_ID_BEST
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
     ...START_COMPILE_SERVER_TEST_PARAMS,

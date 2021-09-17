@@ -7,6 +7,7 @@ import {
 
 import { launchChromium } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import {
@@ -24,7 +25,7 @@ const testDirectoryBasename = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const filename = `${testDirectoryBasename}.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const compileId = "otherwise"
+const compileId = COMPILE_ID_BEST
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
     ...START_COMPILE_SERVER_TEST_PARAMS,
