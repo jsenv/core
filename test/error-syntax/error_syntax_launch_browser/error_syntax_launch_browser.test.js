@@ -42,7 +42,12 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
 const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
 
 await launchBrowsers(
-  [launchChromium, launchFirefox, launchWebkit],
+  [
+    // comment force multiline
+    launchChromium,
+    launchFirefox,
+    launchWebkit,
+  ],
   async (launchBrowser) => {
     const result = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
@@ -57,7 +62,25 @@ await launchBrowsers(
       executeParams: {
         fileRelativeUrl: htmlFileRelativeUrl,
       },
+      // launchParams: {
+      //   headless: false,
+      // },
+      // stopAfterExecute: false,
     })
+
+    if (launchBrowser === launchChromium) {
+      const actual = {
+        status: result.status,
+        error: result.error,
+      }
+      const expected = {
+        status: "errored",
+        error: new SyntaxError("Unexpected end of input"),
+      }
+      assert({ actual, expected })
+      return
+    }
+
     const actual = {
       status: result.status,
       errorMessage: result.error.message,
