@@ -28,6 +28,7 @@ import {
   jsenvExploringIndexJsFileInfo,
   jsenvToolbarJsFileInfo,
 } from "./internal/jsenvInternalFiles.js"
+import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
 
 export const startExploring = async ({
   cancellationToken = createCancellationToken(),
@@ -36,12 +37,13 @@ export const startExploring = async ({
   explorableConfig = jsenvExplorableConfig,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  outDirectoryName,
+  outDirectoryName = 'out-dev',
   jsenvToolbar = true,
   livereloading = true,
   inlineImportMapIntoHTML = true,
   keepProcessAlive = true,
 
+  runtimeSupportDuringDev = jsenvRuntimeSupportDuringDev,
   compileServerLogLevel,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
@@ -105,6 +107,7 @@ export const startExploring = async ({
       compileServerLogLevel,
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
+      runtimeSupport: runtimeSupportDuringDev,
       ...rest,
     })
 

@@ -6,7 +6,7 @@ import {
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
-import { COMPILE_ID_OTHERWISE } from "./internal/CONSTANTS.js"
+import { COMPILE_ID_BEST } from "./internal/CONSTANTS.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
@@ -184,7 +184,7 @@ export const buildProject = async ({
         entryPointMap,
         projectDirectoryUrl,
         compileServerOrigin,
-        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
+        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_BEST}/`,
         buildDirectoryUrl,
         buildDirectoryClean,
         assetManifestFile,

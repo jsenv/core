@@ -40,7 +40,7 @@ export const executePlan = async (
     compileServerCanWriteOnFilesystem,
     babelPluginMap,
     convertMap,
-    runtimeSupport,
+    runtimeSupportDuringDev,
   } = {},
 ) => {
   if (coverage) {
@@ -64,7 +64,7 @@ export const executePlan = async (
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     jsenvDirectoryClean,
-    outDirectoryName: "out-execute",
+    outDirectoryName: "out-dev",
 
     importResolutionMethod,
     importDefaultExtension,
@@ -79,7 +79,7 @@ export const executePlan = async (
     keepProcessAlive: true, // to be sure it stays alive
     babelPluginMap,
     convertMap,
-    runtimeSupport,
+    runtimeSupportDuringDev,
   })
 
   const executionSteps = await generateExecutionSteps(
