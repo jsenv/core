@@ -35,13 +35,14 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
     jsenvDirectoryRelativeUrl,
   })
 const importedFileRelativeUrl = `${testDirectoryRelativeUrl}foo.js`
-const importedFileUrl = resolveUrl(
-  `${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`,
-  jsenvCoreDirectoryUrl,
-)
 
 await launchBrowsers(
-  [launchChromium, launchFirefox, launchWebkit],
+  [
+    // comment force multiline
+    launchChromium,
+    launchFirefox,
+    launchWebkit,
+  ],
   async (launchBrowser) => {
     const result = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
@@ -56,7 +57,33 @@ await launchBrowsers(
       executeParams: {
         fileRelativeUrl: htmlFileRelativeUrl,
       },
+      // launchParams: {
+      //   headless: false,
+      // },
+      // stopAfterExecute: false,
     })
+
+    if (launchBrowser === launchChromium) {
+      const importerFileUrl = resolveUrl(
+        importerFileRelativeUrl,
+        jsenvCoreDirectoryUrl,
+      )
+      const actual = {
+        status: result.status,
+        errorMessage: result.error.message,
+      }
+      const expected = {
+        status: "errored",
+        errorMessage: `Failed to fetch dynamically imported module: ${importerFileUrl}`,
+      }
+      assert({ actual, expected })
+      return
+    }
+
+    const importedFileUrl = resolveUrl(
+      `${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`,
+      jsenvCoreDirectoryUrl,
+    )
     const actual = {
       status: result.status,
       errorMessage: result.error.message,
