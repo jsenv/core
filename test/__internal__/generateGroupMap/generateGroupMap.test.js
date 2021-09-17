@@ -2,6 +2,7 @@ import { assert } from "@jsenv/assert"
 
 import { jsenvBabelPluginMap } from "@jsenv/core"
 import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
+import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
 
 // supporting all node versions ("0.0.0")
 {
@@ -106,7 +107,7 @@ import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/gene
       jsenvPluginRequiredNameArray: [],
       minRuntimeVersions: {
         chrome: "49",
-        firefox: "51.0.0",
+        firefox: "51",
         safari: "11",
       },
     },
@@ -179,10 +180,66 @@ import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/gene
       ],
       jsenvPluginRequiredNameArray: [],
       minRuntimeVersions: {
-        chrome: "38",
-        firefox: "3",
-        safari: "7.1",
-        node: "0.12",
+        chrome: "66",
+        firefox: "58",
+        safari: "13",
+        node: "14",
+      },
+    },
+    otherwise: {
+      babelPluginRequiredNameArray: [
+        "proposal-numeric-separator",
+        "proposal-json-strings",
+        "proposal-object-rest-spread",
+        "proposal-optional-catch-binding",
+        "proposal-optional-chaining",
+        "proposal-unicode-property-regex",
+        "transform-async-to-promises",
+        "transform-arrow-functions",
+        "transform-block-scoped-functions",
+        "transform-block-scoping",
+        "transform-classes",
+        "transform-computed-properties",
+        "transform-destructuring",
+        "transform-dotall-regex",
+        "transform-duplicate-keys",
+        "transform-exponentiation-operator",
+        "transform-for-of",
+        "transform-function-name",
+        "transform-literals",
+        "transform-new-target",
+        "transform-object-super",
+        "transform-parameters",
+        "transform-regenerator",
+        "transform-shorthand-properties",
+        "transform-spread",
+        "transform-sticky-regex",
+        "transform-template-literals",
+        "transform-typeof-symbol",
+        "transform-unicode-regex",
+      ],
+      jsenvPluginRequiredNameArray: [],
+      minRuntimeVersions: {},
+    },
+  }
+  assert({ actual, expected })
+}
+
+// during dev
+{
+  const actual = generateGroupMap({
+    babelPluginMap: jsenvBabelPluginMap,
+    runtimeSupport: jsenvRuntimeSupportDuringDev,
+  })
+  const expected = {
+    best: {
+      babelPluginRequiredNameArray: [],
+      jsenvPluginRequiredNameArray: [],
+      minRuntimeVersions: {
+        chrome: "80",
+        firefox: "78",
+        safari: "13.1",
+        node: "14",
       },
     },
     otherwise: {
