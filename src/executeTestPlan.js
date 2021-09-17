@@ -83,12 +83,15 @@ export const executeTestPlan = async ({
   babelPluginMap,
   convertMap,
   compileGroupCount,
+  // we could even affine depending on testPlan
   runtimeSupport = {
     chrome: PLAYWRIGHT_CHROMIUM_VERSION,
     firefox: PLAYWRIGHT_FIREFOX_VERSION,
     safari: PLAYWRIGHT_WEBKIT_VERSION,
     node: process.version.slice(1),
   },
+  runtimeSupportIsExhaustive = true,
+  runtimeWillAlwaysBeKnown = true,
   jsenvDirectoryClean,
 }) => {
   const jsenvExecuteTestPlanFunction = async ({ jsenvCancellationToken }) => {
@@ -197,6 +200,8 @@ export const executeTestPlan = async ({
       convertMap,
       compileGroupCount,
       runtimeSupport,
+      runtimeSupportIsExhaustive,
+      runtimeWillAlwaysBeKnown,
     })
 
     if (updateProcessExitCode && !executionIsPassed(result)) {

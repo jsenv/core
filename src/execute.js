@@ -56,14 +56,16 @@ export const execute = async ({
   babelPluginMap,
   convertMap,
   compileGroupCount,
+  compileServerCanReadFromFilesystem,
+  compileServerCanWriteOnFilesystem,
   runtimeSupport = {
     chrome: PLAYWRIGHT_CHROMIUM_VERSION,
     firefox: PLAYWRIGHT_FIREFOX_VERSION,
     safari: PLAYWRIGHT_WEBKIT_VERSION,
     node: process.version.slice(1),
   },
-  compileServerCanReadFromFilesystem,
-  compileServerCanWriteOnFilesystem,
+  runtimeSupportIsExhaustive = true,
+  runtimeWillAlwaysBeKnown = true,
 }) => {
   const jsenvExecutionFunction = async ({ jsenvCancellationToken }) => {
     cancellationToken = composeCancellationToken(
@@ -108,6 +110,8 @@ export const execute = async ({
       convertMap,
       compileGroupCount,
       runtimeSupport,
+      runtimeSupportIsExhaustive,
+      runtimeWillAlwaysBeKnown,
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
     })
