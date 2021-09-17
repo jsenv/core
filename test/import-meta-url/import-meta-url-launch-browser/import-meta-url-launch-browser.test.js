@@ -35,7 +35,12 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   })
 
 await launchBrowsers(
-  [launchChromium, launchFirefox, launchWebkit],
+  [
+    // comment force multiline
+    launchChromium,
+    launchFirefox,
+    launchWebkit,
+  ],
   async (launchBrowser) => {
     const actual = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
@@ -56,7 +61,10 @@ await launchBrowsers(
         [`./${testDirectoryBasename}.js`]: {
           status: "completed",
           namespace: {
-            default: `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`,
+            default:
+              launchBrowser === launchChromium
+                ? `${compileServerOrigin}/${fileRelativeUrl}`
+                : `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`,
           },
         },
       },
