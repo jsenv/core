@@ -301,12 +301,6 @@ const imageUrl = new URL("./img.png", import.meta.url)
 
 This pattern is recognized by jsenv build which detects the dependency to `"./img.png"`.
 
-The following pattern is also supported but should be avoided as it's not standard.
-
-```js
-import imageUrl from "./img.png"
-```
-
 # Long term caching
 
 Long term caching consists into configuring a web server to send a `cache-control` header when serving your files. When doing so, browser caches the file for the duration configured by the server. As long as it is valid, browser will not even ask server if the file changed.
