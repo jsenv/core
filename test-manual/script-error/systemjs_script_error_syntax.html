@@ -5,10 +5,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:," />
+    <script src="./s.js"></script>
   </head>
 
   <body>
-    <script id="main-script" type="module" src="./js-with-syntax-error.js"></script>
+    <script id="main-script">
+      window.System.import("./js_with_syntax_error.js")
+    </script>
     <script async>
       const mainScript = document.querySelector("script#main-script")
       mainScript.onerror = () => {

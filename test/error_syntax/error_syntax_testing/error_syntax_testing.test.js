@@ -36,13 +36,13 @@ const { testPlanCoverage } = await executeTestPlan({
   },
   coverage: true,
   coverageConfig: {
-    [`${testDirectoryRelativeUrl}error-syntax.js`]: true,
+    [`${testDirectoryRelativeUrl}error_syntax.js`]: true,
   },
 })
 const actual = testPlanCoverage
 const expected = {
-  [`./${testDirectoryRelativeUrl}error-syntax.js`]: {
-    ...actual[`./${testDirectoryRelativeUrl}error-syntax.js`],
+  [`./${testDirectoryRelativeUrl}error_syntax.js`]: {
+    ...actual[`./${testDirectoryRelativeUrl}error_syntax.js`],
     s: {},
   },
 }
