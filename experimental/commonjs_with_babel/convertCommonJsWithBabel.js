@@ -13,6 +13,7 @@ export const convertCommonJsWithBabel = async ({
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceMap = {},
 }) => {
+  // eslint-disable-next-line import/no-unresolved
   const transformCommonJs = require("babel-plugin-transform-commonjs")
 
   // maybe we should use babel core here instead of transformJs
