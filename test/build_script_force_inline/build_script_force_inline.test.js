@@ -44,27 +44,25 @@ await buildProject({
   )
   const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
   const htmlString = await readFile(htmlBuildUrl)
-  const style = findNodeByTagName(htmlString, "style")
-  const relAttribute = getHtmlNodeAttributeByName(style, "rel")
+  const script = findNodeByTagName(htmlString, "script")
+  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
   const forceInlineAttribute = getHtmlNodeAttributeByName(
-    style,
+    script,
     "data-jsenv-force-inline",
   )
-  const textNode = getHtmlNodeTextNode(style)
+  const textNode = getHtmlNodeTextNode(script)
 
   const actual = {
-    relAttribute,
+    srcAttribute,
     forceInlineAttribute,
     textNodeValue: textNode.value,
   }
   const expected = {
-    relAttribute: undefined,
+    srcAttribute: undefined,
     forceInlineAttribute: undefined,
-    textNodeValue: `body {
-  background: orange;
-}
-
-/*# sourceMappingURL=assets/style-ec00ed36.css.map */`,
+    textNodeValue: `const answer = 42;
+console.log(answer);
+//# sourceMappingURL=assets/file-17ac2dd9.js.map`,
   }
   assert({ actual, expected })
 }

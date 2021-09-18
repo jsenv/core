@@ -387,7 +387,7 @@ export const createAssetBuilder = (
           return
         }
 
-        const targetBuildBuffer = buildFileInfo.code
+        const targetBuildBuffer = Buffer.from(buildFileInfo.code)
         const targetFileName = buildFileInfo.fileName
         const targetBuildRelativeUrl =
           buildManifest[targetFileName] || targetFileName
@@ -543,7 +543,7 @@ export const createAssetBuilder = (
       const transform = assetTransformMap[targetUrl]
       if (typeof transform !== "function") {
         target.targetBuildEnd(
-          target.targetBuffer,
+          target.targetBuildBuffer || target.targetBuffer,
           target.targetBuildRelativeUrl,
         )
         return

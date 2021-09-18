@@ -38,7 +38,12 @@ import {
   parseSrcset,
   stringifySrcset,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import {
+  getJavaScriptSourceMappingUrl,
+  setJavaScriptSourceMappingUrl,
+  getCssSourceMappingUrl,
+  setCssSourceMappingUrl,
+} from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import {
   getTargetAsBase64Url,
   targetIsReferencedOnlyByRessourceHint,
@@ -146,7 +151,11 @@ export const parseHtmlAsset = async (
   }
 }
 
-const regularScriptSrcVisitor = (script, { notifyReferenceFound }) => {
+const regularScriptSrcVisitor = (
+  script,
+  { notifyReferenceFound },
+  htmlTarget,
+) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
   if (
     typeAttribute &&
@@ -172,8 +181,21 @@ const regularScriptSrcVisitor = (script, { notifyReferenceFound }) => {
 
     if (shouldInline({ reference: remoteScriptReference, htmlNode: script })) {
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { targetBuildBuffer } = remoteScriptReference.target
-      setHtmlNodeText(script, targetBuildBuffer)
+      const { target } = remoteScriptReference
+      const { targetBuildBuffer } = target
+      let jsString = String(targetBuildBuffer)
+
+      const sourcemapRelativeUrl = getJavaScriptSourceMappingUrl(jsString)
+      if (sourcemapRelativeUrl) {
+        const { targetBuildRelativeUrl } = target
+        const jsBuildUrl = resolveUrl(targetBuildRelativeUrl, "file:///")
+        const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, jsBuildUrl)
+        const htmlUrl = resolveUrl(htmlTarget.targetFileNamePattern, "file:///")
+        const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
+        jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapInlineUrl)
+      }
+
+      setHtmlNodeText(script, jsString)
       return
     }
 
@@ -226,7 +248,11 @@ const regularScriptTextNodeVisitor = (
   }
 }
 
-const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
+const moduleScriptSrcVisitor = (
+  script,
+  { format, notifyReferenceFound },
+  htmlTarget,
+) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
   if (!typeAttribute) {
     return null
@@ -259,14 +285,21 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { targetBuildBuffer } = remoteScriptReference.target
-      const jsString = String(targetBuildBuffer)
+      const { target } = remoteScriptReference
+      const { targetBuildBuffer } = target
+      let jsString = String(targetBuildBuffer)
 
-      const codeWithSourcemapComment = setJavaScriptSourceMappingUrl(
-        jsString,
-        `${remoteScriptReference.target.targetFileName}.map`
-      )
-      setHtmlNodeText(script, codeWithSourcemapComment)
+      const sourcemapRelativeUrl = getJavaScriptSourceMappingUrl(jsString)
+      if (sourcemapRelativeUrl) {
+        const { targetBuildRelativeUrl } = target
+        const jsBuildUrl = resolveUrl(targetBuildRelativeUrl, "file:///")
+        const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, jsBuildUrl)
+        const htmlUrl = resolveUrl(htmlTarget.targetFileNamePattern, "file:///")
+        const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
+        jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapInlineUrl)
+      }
+
+      setHtmlNodeText(script, jsString)
       return
     }
 
@@ -433,7 +466,11 @@ const importmapScriptTextNodeVisitor = (
   }
 }
 
-const linkStylesheetHrefVisitor = (link, { notifyReferenceFound }) => {
+const linkStylesheetHrefVisitor = (
+  link,
+  { notifyReferenceFound },
+  htmlTarget,
+) => {
   const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
   if (!hrefAttribute) {
     return null
@@ -457,8 +494,19 @@ const linkStylesheetHrefVisitor = (link, { notifyReferenceFound }) => {
     }
 
     if (shouldInline({ reference: cssReference, htmlNode: link })) {
-      const { targetBuildBuffer } = cssReference.target
-      replaceHtmlNode(link, `<style>${targetBuildBuffer}</style>`)
+      const { target } = cssReference
+      const { targetBuildBuffer } = target
+      let cssString = String(targetBuildBuffer)
+      const sourcemapRelativeUrl = getCssSourceMappingUrl(cssString)
+      if (sourcemapRelativeUrl) {
+        const { targetBuildRelativeUrl } = target
+        const cssBuildUrl = resolveUrl(targetBuildRelativeUrl, "file:///")
+        const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, cssBuildUrl)
+        const htmlUrl = resolveUrl(htmlTarget.targetFileNamePattern, "file:///")
+        const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
+        cssString = setCssSourceMappingUrl(cssString, sourcemapInlineUrl)
+      }
+      replaceHtmlNode(link, `<style>${cssString}</style>`)
       return
     }
 
