@@ -248,11 +248,7 @@ const regularScriptTextNodeVisitor = (
   }
 }
 
-const moduleScriptSrcVisitor = (
-  script,
-  { format, notifyReferenceFound },
-  htmlTarget,
-) => {
+const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
   if (!typeAttribute) {
     return null
@@ -289,15 +285,13 @@ const moduleScriptSrcVisitor = (
       const { targetBuildBuffer } = target
       let jsString = String(targetBuildBuffer)
 
-      const sourcemapRelativeUrl = getJavaScriptSourceMappingUrl(jsString)
-      if (sourcemapRelativeUrl) {
-        const { targetBuildRelativeUrl } = target
-        const jsBuildUrl = resolveUrl(targetBuildRelativeUrl, "file:///")
-        const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, jsBuildUrl)
-        const htmlUrl = resolveUrl(htmlTarget.targetFileNamePattern, "file:///")
-        const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
-        jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapInlineUrl)
-      }
+      // at this stage, for some reason the sourcemap url is not in the js
+      // (it will be added sshortly after by "injectSourcemapInRollupBuild")
+      // but we know that a script type module have a sourcemap
+      // and will be next to html file
+      // with these assumptions we can force the sourcemap url
+      const sourcemapUrl = `${target.targetBuildRelativeUrl}.map`
+      jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapUrl)
 
       setHtmlNodeText(script, jsString)
       return

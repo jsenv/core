@@ -60,9 +60,14 @@ await buildProject({
   const expected = {
     srcAttribute: undefined,
     forceInlineAttribute: undefined,
-    textNodeValue: `var answer = 42;
-console.log(answer);
-//# sourceMappingURL=file-dec1f3e9.js.map`,
+    textNodeValue: `// eslint-disable-next-line import/no-unresolved
+
+{
+  var answer = 42;
+  console.log(answer);
+}
+
+//# sourceMappingURL=file-3f98698a.js.map`,
   }
   assert({ actual, expected })
 }
