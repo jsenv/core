@@ -37,7 +37,7 @@ export const startExploring = async ({
   explorableConfig = jsenvExplorableConfig,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  outDirectoryName = 'out-dev',
+  outDirectoryName = "out-dev",
   jsenvToolbar = true,
   livereloading = true,
   inlineImportMapIntoHTML = true,
@@ -47,11 +47,12 @@ export const startExploring = async ({
   compileServerLogLevel,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
-  // ideally instead of rest, we should enumerate all
-  // params to help vscode autocompletion.
-  // it also helps to see what is available wihout having to open
-  // startCompileServer
-  ...rest
+  compileServerPort,
+  compileServerProtocol,
+  compileServerCertificate,
+  compileServerPrivateKey,
+  customCompilers,
+  livereloadWatchConfig,
 }) => {
   const jsenvStartExploringFunction = async ({ jsenvCancellationToken }) => {
     cancellationToken = composeCancellationToken(
@@ -100,6 +101,7 @@ export const startExploring = async ({
         "service:exploring-data": (request) => serveExploringData(request),
         "service:explorables": (request) => serveExplorableListAsJson(request),
       },
+      customCompilers,
       jsenvDirectoryRelativeUrl,
       outDirectoryName,
       inlineImportMapIntoHTML,
@@ -107,8 +109,12 @@ export const startExploring = async ({
       compileServerLogLevel,
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
+      compileServerPort,
+      compileServerProtocol,
+      compileServerCertificate,
+      compileServerPrivateKey,
       runtimeSupport: runtimeSupportDuringDev,
-      ...rest,
+      livereloadWatchConfig,
     })
 
     return compileServer
