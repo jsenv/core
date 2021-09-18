@@ -8,19 +8,19 @@ import {
 } from "@jsenv/filesystem"
 import { urlToContentType } from "@jsenv/server"
 
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
   COMPILE_ID_BUILD_GLOBAL_FILES,
   COMPILE_ID_BUILD_COMMONJS,
   COMPILE_ID_BUILD_COMMONJS_FILES,
   COMPILE_ID_OTHERWISE,
-} from "../CONSTANTS.js"
-import { buildUsingRollup } from "../building/buildUsingRollup.js"
-import { buildToCompilationResult } from "../building/buildToCompilationResult.js"
-import { transformResultToCompilationResult } from "./transformResultToCompilationResult.js"
-import { transformJs } from "./js-compilation-service/transformJs.js"
-import { compileIdToBabelPluginMap } from "./jsenvCompilerForJavaScript.js"
+} from "@jsenv/core/src/internal/CONSTANTS.js"
+import { buildUsingRollup } from "@jsenv/core/src/internal/building/buildUsingRollup.js"
+import { buildToCompilationResult } from "@jsenv/core/src/internal/building/buildToCompilationResult.js"
+import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
+import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
+import { compileIdToBabelPluginMap } from "@jsenv/core/src/internal/compiling/jsenvCompilerForJavaScript.js"
 
 const compileDynamicBuildFile = ({ compileId, originalFileUrl, ...rest }) => {
   const contentType = urlToContentType(originalFileUrl)

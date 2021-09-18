@@ -242,6 +242,7 @@ export const startCompileServer = async ({
 
       importDefaultExtension,
 
+      runtimeSupport,
       transformTopLevelAwait,
       groupMap: compileServerGroupMap,
       babelPluginMap,

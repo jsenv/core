@@ -1,6 +1,11 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/filesystem"
+import {
+  urlToRelativeUrl,
+  resolveUrl,
+  readFile,
+  urlToBasename,
+} from "@jsenv/filesystem"
+
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
@@ -14,7 +19,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryUrl)
+const testDirectoryname = urlToBasename(testDirectoryUrl)
 const filename = `${testDirectoryname}.js`
 const originalFileUrl = resolveUrl(`./${filename}`, testDirectoryUrl)
 const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/${filename}`

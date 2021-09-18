@@ -9,13 +9,11 @@ import {
   COMPILE_ID_BUILD_COMMONJS_FILES,
 } from "../CONSTANTS.js"
 import { compileFile } from "./compileFile.js"
-import { jsenvCompilerForDynamicBuild } from "./jsenvCompilerForDynamicBuild.js"
 import { jsenvCompilerForHtml } from "./jsenvCompilerForHtml.js"
 import { jsenvCompilerForImportmap } from "./jsenvCompilerForImportmap.js"
 import { jsenvCompilerForJavaScript } from "./jsenvCompilerForJavaScript.js"
 
 const jsenvCompilers = {
-  ...jsenvCompilerForDynamicBuild,
   ...jsenvCompilerForJavaScript,
   ...jsenvCompilerForHtml,
   ...jsenvCompilerForImportmap,
@@ -28,6 +26,7 @@ export const createCompiledFileService = ({
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
 
+  runtimeSupport,
   transformTopLevelAwait,
   moduleOutFormat,
   importMetaFormat,
@@ -35,6 +34,8 @@ export const createCompiledFileService = ({
   groupMap,
   convertMap,
   customCompilers,
+  urlMappings,
+
   jsenvToolbarInjection,
 
   projectFileRequestedCallback,
@@ -113,15 +114,18 @@ export const createCompiledFileService = ({
       compileId,
       outDirectoryRelativeUrl,
 
+      urlMappings,
+
       moduleOutFormat,
       importMetaFormat,
       groupMap,
       babelPluginMap,
       convertMap,
       transformTopLevelAwait,
+      runtimeSupport,
+
       writeOnFilesystem,
       sourcemapExcludeSources,
-
       jsenvToolbarInjection,
     }
     const compilerCandidates = { ...jsenvCompilers, ...customCompilers }

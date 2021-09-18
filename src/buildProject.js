@@ -112,6 +112,11 @@ export const buildProject = async ({
         `unexpected format: ${format}. Must be "esmodule", "systemjs", "commonjs" or "global".`,
       )
     }
+    if (typeof runtimeSupport !== "object" || runtimeSupport === null) {
+      throw new TypeError(
+        `runtimeSupport must be an object, got ${runtimeSupport}`,
+      )
+    }
 
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
