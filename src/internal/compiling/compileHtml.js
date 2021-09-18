@@ -286,9 +286,13 @@ export const replaceHtmlNode = (
 
   if (inheritAttributes) {
     newNode.attrs = [
-      // inherit script attributes except src, type, href
+      // inherit script attributes except src, type, href, rel
       ...node.attrs.filter(
-        ({ name }) => name !== "type" && name !== "src" && name !== "href",
+        ({ name }) =>
+          name !== "type" &&
+          name !== "src" &&
+          name !== "href" &&
+          name !== "rel",
       ),
       ...newNode.attrs,
     ]

@@ -38,6 +38,7 @@ import {
   parseSrcset,
   stringifySrcset,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
+import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import {
   getTargetAsBase64Url,
   targetIsReferencedOnlyByRessourceHint,
@@ -258,8 +259,14 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { targetBuildBuffer } = script.target
-      setHtmlNodeText(script, targetBuildBuffer)
+      const { targetBuildBuffer } = remoteScriptReference.target
+      const jsString = String(targetBuildBuffer)
+
+      const codeWithSourcemapComment = setJavaScriptSourceMappingUrl(
+        jsString,
+        `${remoteScriptReference.target.targetFileName}.map`
+      )
+      setHtmlNodeText(script, codeWithSourcemapComment)
       return
     }
 
@@ -669,6 +676,10 @@ const shouldInline = ({ reference, htmlNode }) => {
     return true
   }
 
+  return readAndRemoveForceInline(htmlNode)
+}
+
+const readAndRemoveForceInline = (htmlNode) => {
   const jsenvForceInlineAttribute = getHtmlNodeAttributeByName(
     htmlNode,
     "data-jsenv-force-inline",
