@@ -44,6 +44,7 @@ import { minifyJs } from "./js/minifyJs.js"
 import { createImportResolverForNode } from "../import-resolution/import-resolver-node.js"
 import { createImportResolverForImportmap } from "../import-resolution/import-resolver-importmap.js"
 import { getDefaultImportMap } from "../import-resolution/importmap-default.js"
+import { injectSourcemapInRollupBuild } from "./rollup_build_sourcemap.js"
 import { createBuildFileContents } from "./build_file_contents.js"
 import { createBuildStats } from "./build_stats.js"
 
@@ -901,12 +902,14 @@ building ${entryFileRelativeUrls.length} entry files...`)
         ...jsModuleBuild,
         ...assetBuild,
       }
+      rollupBuild = injectSourcemapInRollupBuild(rollupBuild, {
+        buildDirectoryUrl,
+      })
       rollupBuild = sortObjectByPathnames(rollupBuild)
       buildManifest = sortObjectByPathnames(buildManifest)
       buildMappings = sortObjectByPathnames(buildMappings)
       buildFileContents = createBuildFileContents({
         rollupBuild,
-        buildDirectoryUrl,
       })
       const buildDuration = Date.now() - buildStartMs
       buildStats = createBuildStats({
