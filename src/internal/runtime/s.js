@@ -591,11 +591,8 @@
   systemJSPrototype.createScript = function (url) {
     var script = document.createElement('script');
     script.async = true;
-    // Only add cross origin for actual cross origin
-    // this is because Safari triggers for all
-    // - https://bugs.webkit.org/show_bug.cgi?id=171566
-    if (url.indexOf(baseOrigin + '/'))
-      script.crossOrigin = 'anonymous';
+    // beware about https://bugs.webkit.org/show_bug.cgi?id=171566
+    script.crossOrigin = 'anonymous'
     var integrity = importMap.integrity[url];
     if (integrity)
       script.integrity = integrity;
