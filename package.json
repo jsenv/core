@@ -49,6 +49,7 @@
     "prettier-check": "npm run prettier-format -- --dry-run",
     "install-playwright": "npx playwright install-deps && npx playwright install",
     "link-packages": "node ./script/link-packages/link-packages.js",
+    "postinstall": "npm run generate-importmap && npm run install-playwright",
     "prepublishOnly": "node ./script/publish/remove_postinstall.mjs && npm run dist",
     "postpublish": "node ./script/publish/restore_postinstall.mjs"
   },

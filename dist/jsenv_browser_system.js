@@ -2517,7 +2517,7 @@
   });
 
   /*
-  * SJS 6.10.2
+  * SJS 6.10.3
   * Minimal SystemJS Build
   */
   (function () {
@@ -2988,15 +2988,26 @@
       window.addEventListener('DOMContentLoaded', processScripts);
     }
 
+    var inlineScripts = {};
+
     function processScripts() {
-      [].forEach.call(document.querySelectorAll('script'), function (script) {
+      [].forEach.call(document.querySelectorAll('script'), function (script, index) {
         if (script.sp) // sp marker = systemjs processed
           return; // TODO: deprecate systemjs-module in next major now that we have auto import
 
         if (script.type === 'systemjs-module') {
           script.sp = true;
-          if (!script.src) return;
-          System.import(script.src.slice(0, 7) === 'import:' ? script.src.slice(7) : resolveUrl(script.src, baseUrl)).catch(function (e) {
+          var scriptSrc = script.src;
+          var importUrl;
+
+          if (scriptSrc) {
+            importUrl = scriptSrc.slice(0, 7) === "import:" ? scriptSrc.slice(7) : resolveUrl(scriptSrc, baseUrl);
+          } else {
+            importUrl = document.location.href + "_inline_script_" + index;
+            inlineScripts[importUrl] = script.textContent;
+          }
+
+          System.import(importUrl).catch(function (e) {
             // if there is a script load error, dispatch an "error" event
             // on the script tag.
             if (e.message.indexOf('https://git.io/JvFET#3') > -1) {
@@ -3108,6 +3119,14 @@
       }
 
       var loader = this;
+      var inlineScriptContent = inlineScripts[url];
+
+      if (typeof inlineScriptContent === "string") {
+        if (inlineScriptContent.indexOf("//# sourceURL=") < 0) inlineScriptContent += "\n//# sourceURL=" + url;
+        (0, eval)(inlineScriptContent);
+        return loader.getRegister(url);
+      }
+
       return new Promise(function (resolve, reject) {
         var script = systemJSPrototype.createScript(url);
         script.addEventListener('error', function () {
@@ -3120,7 +3139,7 @@
           if (lastWindowErrorUrl === url) {
             reject(lastWindowError);
           } else {
-            var register = loader.getRegister(); // Clear any auto import registration for dynamic import scripts during load
+            var register = loader.getRegister(url); // Clear any auto import registration for dynamic import scripts during load
 
             if (register && register[0] === lastAutoImportDeps) clearTimeout(lastAutoImportTimeout);
             resolve(register);
@@ -3155,7 +3174,7 @@
         return res.text().then(function (source) {
           if (source.indexOf('//# sourceURL=') < 0) source += '\n//# sourceURL=' + url;
           (0, eval)(source);
-          return loader.getRegister();
+          return loader.getRegister(url);
         });
       });
     };
@@ -3191,7 +3210,7 @@
       var loader = this;
       return Promise.resolve().then(function () {
         importScripts(url);
-        return loader.getRegister();
+        return loader.getRegister(url);
       });
     };
   })();
