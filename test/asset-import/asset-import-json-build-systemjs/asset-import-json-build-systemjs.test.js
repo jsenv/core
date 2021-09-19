@@ -25,7 +25,6 @@ const mainFilename = `${testDirectoryname}.js`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
 }
-
 await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -33,12 +32,13 @@ await buildProject({
   entryPointMap,
   minify: true,
 })
-
-const { namespace: actual } = await browserImportSystemJsBuild({
+const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
   htmlFileRelativeUrl: "./index.html",
 })
+
+const actual = namespace
 const expected = {
   default: {
     whatever: "It's cool",

@@ -7,14 +7,16 @@ Which ends up in MODULE_NOT_FOUND error
 
 */
 
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
   resolveUrl,
   urlToRelativeUrl,
   readFile,
+  urlToBasename,
 } from "@jsenv/filesystem"
+
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { buildToCompilationResult } from "@jsenv/core/src/internal/building/buildToCompilationResult.js"
 import {
@@ -22,14 +24,13 @@ import {
   REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_BUILD_COMMONJS.js"
 import { requireCommonJsBuild } from "@jsenv/core/test/requireCommonJsBuild.js"
-import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`

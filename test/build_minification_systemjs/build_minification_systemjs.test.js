@@ -27,6 +27,7 @@ const { buildManifest, rollupBuild } = await buildProject({
 
 {
   const actual = rollupBuild[buildManifest["main.js"]].code.trim()
-  const expected = `System.register([],(function(e){"use strict";return{execute:function(){e("default",42)}}}));`
+  const expected = `System.register([],(function(e){"use strict";return{execute:function(){e("default",42)}}}));
+//# sourceMappingURL=main.js.map`
   assert({ actual, expected })
 }

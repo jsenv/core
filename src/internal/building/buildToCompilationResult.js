@@ -79,10 +79,12 @@ export const buildToCompilationResult = (
     if (fileName === mainFileName) return
 
     const rollupFile = rollupBuild[fileName]
+    if (rollupFile.type === "asset") return
+
     const file = parseRollupFile(rollupFile, {
       urlResponseBodyMap,
       compiledFileUrl,
-      sourcemapFileUrl: resolveUrl(file.map.file, compiledFileUrl),
+      sourcemapFileUrl: resolveUrl(rollupFile.map.file, compiledFileUrl),
     })
     trackDependencies(file.dependencyMap)
     assets.push(resolveUrl(fileName), compiledFileUrl)
