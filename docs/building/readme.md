@@ -397,7 +397,7 @@ When using the _systemjs_ format the generated html is a bit different:
     <title>Title</title>
     <meta charset="utf-8" />
     <link rel="icon" href="assets/favicon-5340s4789a.ico" />
-+   <script src="assets/s.min-550cb99a.js"></script>
++   <script src="assets/s.min-550cb99a.js" id="jsenv_inject_systemjs"></script>
 -   <script type="importmap" src="import-map-b237a334.importmap"></script>
 +   <script type="systemjs-importmap" src="import-map-b237a334.importmap"></script>
     <link rel="stylesheet" type="text/css" href="assets/main-3b329ff0.css" />
@@ -410,7 +410,7 @@ When using the _systemjs_ format the generated html is a bit different:
 </html>
 ```
 
-`<script src="assets/s.min-550cb99a.js"></script>` was injected into `<head>`: this is SystemJS script. SystemJS is injected only if the html source file contains a `<script type="module"></script>`, otherwise systemjs is not needed so it's not injected.
+`<script src="assets/s.min-550cb99a.js" id="jsenv_inject_systemjs"></script>` was injected into `<head>`: this is SystemJS script. SystemJS is injected only if the html source file contains a `<script type="module"></script>`, otherwise systemjs is not needed so it's not injected.
 
 `<script type="module">` are transformed into `<script type="systemjs-module">`. This is because systemjs will now load and execute these scripts. Amongst other things, it makes browser capable to execute code which had top level await or relies on importmap.
 

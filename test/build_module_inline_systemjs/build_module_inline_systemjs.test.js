@@ -25,7 +25,6 @@ const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
@@ -34,23 +33,16 @@ const { buildMappings } = await buildProject({
   entryPointMap,
   // minify: true,
 })
-
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-
-const inlinescriptBuildRelativeUrl = getBuildRelativeUrl(
-  `${testDirectoryname}.10.js`,
-)
-
-const { namespace: actual } = await browserImportSystemJsBuild({
+const inlinescriptBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}${testDirectoryname}.10.js`]
+const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
   mainRelativeUrl: `./${inlinescriptBuildRelativeUrl}`,
   // debug: true,
 })
+
+const actual = namespace
 const expected = {
   value: 42,
 }

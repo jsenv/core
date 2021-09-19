@@ -2,8 +2,10 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   parseHtmlString,
-  htmlAstContains,
+  findHtmlNode,
   htmlNodeIsScriptModule,
+  getHtmlNodeAttributeByName,
+  getHtmlNodeTextNode,
   manipulateHtmlAst,
   findFirstImportMapNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
@@ -53,11 +55,28 @@ export const parseTarget = (
             return
           }
 
-          const htmlContainsModuleScript = htmlAstContains(
-            htmlAst,
-            htmlNodeIsScriptModule,
-          )
-          if (!htmlContainsModuleScript) {
+          let hasModuleScript = false
+          let hasInlineModuleScript = false
+          findHtmlNode(htmlAst, (htmlNode) => {
+            const isScriptModule = htmlNodeIsScriptModule(htmlNode)
+            if (!isScriptModule) {
+              return false
+            }
+
+            hasModuleScript = true
+
+            const isInline =
+              getHtmlNodeAttributeByName(htmlNode, "data-jsenv-force-inline") ||
+              (!getHtmlNodeAttributeByName(htmlNode, "src") &&
+                getHtmlNodeTextNode(htmlNode))
+            if (!isInline) {
+              return false
+            }
+            hasInlineModuleScript = true
+            return true
+          })
+
+          if (!hasModuleScript) {
             return
           }
 
@@ -74,7 +93,11 @@ export const parseTarget = (
           manipulateHtmlAst(htmlAst, {
             scriptInjections: [
               {
+                id: "jsenv_inject_systemjs",
                 src: systemJsUrl,
+                ...(hasInlineModuleScript
+                  ? { "data-jsenv-force-inline": true }
+                  : {}),
               },
             ],
           })
@@ -96,7 +119,7 @@ export const parseTarget = (
             scriptInjections: [
               {
                 type: "importmap",
-                id: "jsenv-build-importmap",
+                id: "jsenv_inject_importmap",
                 text: "{}",
               },
             ],

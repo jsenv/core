@@ -2,11 +2,17 @@ import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
+  readFile,
+  resolveUrl,
   urlToBasename,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import {
+  findHtmlNodeById,
+  getHtmlNodeAttributeByName,
+} from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import {
   GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
@@ -25,7 +31,6 @@ const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-
 await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
@@ -36,10 +41,19 @@ await buildProject({
   // minify: true,
 })
 
-// TODO: systemjs is inlined (no http request needed)
+// systemjs is inlined (no http request needed)
 {
-  const actual = true
-  const expected = actual
+  const buildDirectoryUrl = resolveUrl(
+    buildDirectoryRelativeUrl,
+    jsenvCoreDirectoryUrl,
+  )
+  const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+  const htmlString = await readFile(htmlBuildUrl)
+  const systemJsScript = findHtmlNodeById(htmlString, "jsenv_inject_systemjs")
+  const srcAttribute = getHtmlNodeAttributeByName(systemJsScript, "src")
+
+  const actual = srcAttribute
+  const expected = undefined
   assert({ actual, expected })
 }
 

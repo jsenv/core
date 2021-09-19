@@ -67,14 +67,23 @@ export const findNodes = (htmlString, predicate) => {
 export const findNodeByTagName = (htmlString, tagName) =>
   findNode(htmlString, (node) => node.nodeName === tagName)
 
+export const findHtmlNodeById = (htmlString, id) => {
+  return findNode(htmlString, (node) => {
+    const idAttribute = getHtmlNodeAttributeByName(node, "id")
+    return idAttribute && idAttribute.value === id
+  })
+}
+
 export const findAllNodeByTagName = (htmlString, tagName) =>
   findNodes(htmlString, (node) => node.nodeName === tagName)
 
 export const findFirstImportMapNode = (htmlStringOrAst) =>
   findNode(htmlStringOrAst, htmlNodeIsScriptImportmap)
 
-export const getHtmlNodeAttributeByName = (htmlNode, attributeName) =>
-  htmlNode.attrs.find((attr) => attr.name === attributeName)
+export const getHtmlNodeAttributeByName = (htmlNode, attributeName) => {
+  const attrs = htmlNode.attrs
+  return attrs && attrs.find((attr) => attr.name === attributeName)
+}
 
 export const removeHtmlNodeAttribute = (htmlNode, attributeToRemove) => {
   let attrIndex
@@ -148,16 +157,16 @@ export const getHtmlNodeLocation = (htmlNode) => {
   }
 }
 
-export const htmlAstContains = (htmlAst, predicate) => {
-  let contains = false
+export const findHtmlNode = (htmlAst, predicate) => {
+  let nodeFound = null
   visitHtmlAst(htmlAst, (node) => {
     if (predicate(node)) {
-      contains = true
+      nodeFound = node
       return "stop"
     }
     return null
   })
-  return contains
+  return nodeFound
 }
 
 export const htmlNodeIsScriptModule = (htmlNode) => {
