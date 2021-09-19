@@ -106,3 +106,8 @@ export const jsenvToolbarJsFileInfo = {
   jsenvBuildUrl: resolveUrl("./dist/jsenv_toolbar.js", jsenvCoreDirectoryUrl),
   sourcemapFilename: "jsenv_toolbar.js.map",
 }
+
+export const jsenvSystemJsFileInfo = {
+  url: resolveUrl("./src/internal/runtime/s.js", jsenvCoreDirectoryUrl),
+  jsenvRelativeUrl: "./src/internal/runtime/s.js",
+}

@@ -405,7 +405,10 @@ const importmapScriptSrcVisitor = (
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
       const { targetBuildBuffer } = importmapReference.target
-      setHtmlNodeText(script, targetBuildBuffer)
+
+      const jsString = String(targetBuildBuffer)
+
+      setHtmlNodeText(script, jsString)
       return
     }
 

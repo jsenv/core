@@ -36,7 +36,7 @@ export const buildProject = async ({
   writeOnFileSystem = true,
 
   format,
-  systemJsUrl = "/node_modules/systemjs/dist/s.min.js",
+  systemJsUrl,
   globalName,
   globals = {},
   babelPluginMap = jsenvBabelPluginMap,

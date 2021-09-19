@@ -1,3 +1,5 @@
+import { urlToRelativeUrl } from "@jsenv/filesystem"
+
 import {
   parseHtmlString,
   htmlAstContains,
@@ -5,6 +7,7 @@ import {
   manipulateHtmlAst,
   findFirstImportMapNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
+import { jsenvSystemJsFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
 import { parseHtmlAsset } from "./html/parseHtmlAsset.js"
 import { parseImportmapAsset } from "./importmap/parseImportmapAsset.js"
@@ -18,6 +21,7 @@ export const parseTarget = (
   target,
   notifiers,
   {
+    projectDirectoryUrl,
     format,
     systemJsUrl,
     urlToOriginalFileUrl,
@@ -55,6 +59,16 @@ export const parseTarget = (
           )
           if (!htmlContainsModuleScript) {
             return
+          }
+
+          // use our own version of systemjs by default
+          // we should also detect if there is an inline script
+          // and, in that case, inline systemjs instead of using the url
+          if (typeof systemJsUrl === "undefined") {
+            systemJsUrl = `/${urlToRelativeUrl(
+              jsenvSystemJsFileInfo.url,
+              projectDirectoryUrl,
+            )}`
           }
 
           manipulateHtmlAst(htmlAst, {

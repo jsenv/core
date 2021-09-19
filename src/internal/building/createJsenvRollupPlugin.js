@@ -368,6 +368,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
             return parseTarget(target, notifiers, {
               format,
               systemJsUrl,
+              projectDirectoryUrl,
               urlToOriginalFileUrl: (url) => {
                 return asOriginalUrl(url)
               },
