@@ -27,7 +27,7 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
       })
       if (browserSupport === "no") {
         browserSupportRootNode.querySelector(
-          `a.no_support_read_more_link`,
+          `a.browser_support_read_more_link`,
         ).onclick = () => {
           // eslint-disable-next-line no-alert
           window.alert(
@@ -42,7 +42,7 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         }
       } else if (browserSupport === "partial") {
         browserSupportRootNode.querySelector(
-          `a.partial_support_read_more_link`,
+          `a.browser_support_read_more_link`,
         ).onclick = () => {
           // eslint-disable-next-line no-alert
           window.alert(
@@ -56,7 +56,7 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         }
       } else if (browserSupport === "full") {
         browserSupportRootNode.querySelector(
-          `a.full_support_read_more_link`,
+          `a.browser_support_read_more_link`,
         ).onclick = () => {
           // eslint-disable-next-line no-alert
           window.alert(
@@ -98,12 +98,18 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         document
           .querySelector(".browser_support_text")
           .setAttribute("data-warning", "")
+        document
+          .querySelector("#settings-button")
+          .setAttribute("data-warning", "")
       } else {
         document
           .querySelector(".files_compilation_text")
           .removeAttribute("data-warning")
         document
           .querySelector(".browser_support_text")
+          .removeAttribute("data-warning")
+        document
+          .querySelector("#settings-button")
           .removeAttribute("data-warning")
       }
     },

@@ -2417,7 +2417,7 @@
       });
 
       if (browserSupport === "no") {
-        browserSupportRootNode.querySelector("a.no_support_read_more_link").onclick = function () {
+        browserSupportRootNode.querySelector("a.browser_support_read_more_link").onclick = function () {
           // eslint-disable-next-line no-alert
           window.alert("Source files needs to be compiled to be executable in this browser because: ".concat(getBrowserSupportMessage({
             missingOnly: true,
@@ -2426,7 +2426,7 @@
           })));
         };
       } else if (browserSupport === "partial") {
-        browserSupportRootNode.querySelector("a.partial_support_read_more_link").onclick = function () {
+        browserSupportRootNode.querySelector("a.browser_support_read_more_link").onclick = function () {
           // eslint-disable-next-line no-alert
           window.alert("Source files (except html) can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
             featuresReport: featuresReport,
@@ -2434,7 +2434,7 @@
           })));
         };
       } else if (browserSupport === "full") {
-        browserSupportRootNode.querySelector("a.full_support_read_more_link").onclick = function () {
+        browserSupportRootNode.querySelector("a.browser_support_read_more_link").onclick = function () {
           // eslint-disable-next-line no-alert
           window.alert("Source files can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
             featuresReport: featuresReport,
@@ -2456,6 +2456,18 @@
       filesCompilationRootNode.querySelector("a.go_to_compiled_link").onclick = function () {
         window.parent.location = "/".concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(compileGroup.fileRelativeUrl);
       };
+
+      var shouldCompile = filesCompilation !== "yes" && browserSupport === "no";
+
+      if (shouldCompile) {
+        document.querySelector(".files_compilation_text").setAttribute("data-warning", "");
+        document.querySelector(".browser_support_text").setAttribute("data-warning", "");
+        document.querySelector("#settings-button").setAttribute("data-warning", "");
+      } else {
+        document.querySelector(".files_compilation_text").removeAttribute("data-warning");
+        document.querySelector(".browser_support_text").removeAttribute("data-warning");
+        document.querySelector("#settings-button").removeAttribute("data-warning");
+      }
     });
   };
 
