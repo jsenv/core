@@ -14,3 +14,9 @@
 #file_info ul li {
   text-align: left;
 }
+
+.browser_support_text[data-warning],
+.files_compilation_text[data-warning] {
+  background: orange;
+  color: black;
+}

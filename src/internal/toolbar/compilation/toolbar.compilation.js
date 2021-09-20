@@ -87,6 +87,25 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         () => {
           window.parent.location = `/${outDirectoryRelativeUrl}${compileId}/${compileGroup.fileRelativeUrl}`
         }
+
+      const shouldCompile =
+        filesCompilation !== "yes" && browserSupport === "no"
+
+      if (shouldCompile) {
+        document
+          .querySelector(".files_compilation_text")
+          .setAttribute("data-warning", "")
+        document
+          .querySelector(".browser_support_text")
+          .setAttribute("data-warning", "")
+      } else {
+        document
+          .querySelector(".files_compilation_text")
+          .removeAttribute("data-warning")
+        document
+          .querySelector(".browser_support_text")
+          .removeAttribute("data-warning")
+      }
     },
   )
 }

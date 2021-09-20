@@ -349,7 +349,9 @@
                   </div>
                   <div class="category-subtitle">
                     <div data-when="browserSupport:no">
-                      No browser support.
+                      <span class="browser_support_text"
+                        >No browser support</span
+                      >
                       <a
                         class="no_support_read_more_link"
                         href="javascript:void(0);"
@@ -357,7 +359,10 @@
                       >
                     </div>
                     <div data-when="browserSupport:partial">
-                      Excellent browser support <span class="emoji">❤️</span>.
+                      <span class="browser_support_text"
+                        >Excellent browser support</span
+                      >
+                      <span class="emoji">❤️</span>
                       <a
                         class="partial_support_read_more_link"
                         href="javascript:void(0);"
@@ -365,7 +370,10 @@
                       >
                     </div>
                     <div data-when="browserSupport:full">
-                      Perfect browser support <span class="emoji">❤️</span>.
+                      <span class="browser_support_text"
+                        >Perfect browser support</span
+                      >
+                      <span class="emoji">❤️</span>
                       <a
                         class="full_support_read_more_link"
                         href="javascript:void(0);"
@@ -382,14 +390,16 @@
                     Files compilation
                   </div>
                   <div class="category-subtitle">
-                    <div data-when="filesCompilation:no">
-                      Files shown are source files.
-                    </div>
-                    <div data-when="filesCompilation:html_only">
-                      Files shown are source files, except html.
-                    </div>
-                    <div data-when="filesCompilation:yes">
-                      Files shown are compiled.
+                    <div class="files_compilation_text">
+                      <span data-when="filesCompilation:no"
+                        >Files shown are source files</span
+                      >
+                      <span data-when="filesCompilation:html_only"
+                        >Files shown are source files, except html</span
+                      >
+                      <span data-when="filesCompilation:yes"
+                        >Files shown are compiled</span
+                      >
                     </div>
                     <a
                       data-when="compiled:yes"

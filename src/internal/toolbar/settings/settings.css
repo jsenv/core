@@ -97,7 +97,7 @@ label {
 }
 
 #settings-box .category-title svg {
-  fill: #24b1b0;
+  fill: currentColor;
   vertical-align: top;
   margin-right: 5px;
   width: 18px;
