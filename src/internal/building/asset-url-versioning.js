@@ -6,7 +6,7 @@ export const computeBuildRelativeUrlForTarget = (
 ) => {
   return computeBuildRelativeUrl(target.targetUrl, target.bufferAfterBuild, {
     pattern: targetToFileNamePattern(target),
-    contentType: target.targetContentType,
+    contentType: target.ressourceContentType,
     lineBreakNormalization,
   })
 }

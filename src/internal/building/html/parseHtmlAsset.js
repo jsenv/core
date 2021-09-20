@@ -236,7 +236,7 @@ const regularScriptTextNodeVisitor = (
     ),
     ...htmlNodeToReferenceLocation(script),
 
-    targetContentType: "application/javascript",
+    ressourceContentType: "application/javascript",
     bufferBeforeBuild: Buffer.from(textNode.value),
     targetIsInline: true,
   })
@@ -334,7 +334,7 @@ const moduleScriptTextNodeVisitor = (
     ),
     ...htmlNodeToReferenceLocation(script),
 
-    targetContentType: "application/javascript",
+    ressourceContentType: "application/javascript",
     bufferBeforeBuild: textNode.value,
     targetIsJsModule: true,
     targetIsInline: true,
@@ -445,7 +445,7 @@ const importmapScriptTextNodeVisitor = (
     ),
     ...htmlNodeToReferenceLocation(script),
 
-    targetContentType: "application/importmap+json",
+    ressourceContentType: "application/importmap+json",
     bufferBeforeBuild: Buffer.from(textNode.value),
     targetIsInline: true,
   })
@@ -615,7 +615,7 @@ const styleTextNodeVisitor = (
     ),
     ...htmlNodeToReferenceLocation(style),
 
-    targetContentType: "text/css",
+    ressourceContentType: "text/css",
     bufferBeforeBuild: Buffer.from(textNode.value),
     targetIsInline: true,
   })

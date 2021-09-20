@@ -5,12 +5,12 @@ import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
 export const getTargetAsBase64Url = ({
   bufferAfterBuild,
-  targetContentType,
+  ressourceContentType,
 }) => {
   return stringifyDataUrl({
     data: bufferAfterBuild,
     base64Flag: true,
-    mediaType: targetContentType,
+    mediaType: ressourceContentType,
   })
 }
 
@@ -80,13 +80,13 @@ export const checkContentType = (
   { logger, showReferenceSourceLocation },
 ) => {
   const { referenceExpectedContentType } = reference
-  const { targetContentType } = reference.target
+  const { ressourceContentType } = reference.target
 
   if (!referenceExpectedContentType) {
     return
   }
 
-  if (compareContentType(referenceExpectedContentType, targetContentType)) {
+  if (compareContentType(referenceExpectedContentType, ressourceContentType)) {
     return
   }
 
@@ -94,7 +94,7 @@ export const checkContentType = (
   const { targetUrl } = reference.target
   if (
     referenceExpectedContentType === "application/json" &&
-    targetContentType === "application/octet-stream" &&
+    ressourceContentType === "application/octet-stream" &&
     targetUrl.endsWith(".map")
   ) {
     return
@@ -112,10 +112,10 @@ const formatContentTypeMismatchLog = (
   { showReferenceSourceLocation },
 ) => {
   const { referenceExpectedContentType, target } = reference
-  const { targetContentType, targetUrl } = target
+  const { ressourceContentType, targetUrl } = target
 
   return createDetailedMessage(
-    `A reference was expecting ${referenceExpectedContentType} but found ${targetContentType} instead.`,
+    `A reference was expecting ${referenceExpectedContentType} but found ${ressourceContentType} instead.`,
     {
       ["reference"]: showReferenceSourceLocation(reference),
       ["target url"]: targetUrl,

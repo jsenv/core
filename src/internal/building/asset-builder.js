@@ -96,7 +96,7 @@ export const createAssetBuilder = (
       referenceLine: callerLocation.line,
       referenceColumn: callerLocation.column,
 
-      targetContentType: entryContentType,
+      ressourceContentType: entryContentType,
       bufferBeforeBuild: entryBuffer,
 
       targetIsEntry: true,
@@ -148,17 +148,17 @@ export const createAssetBuilder = (
     jsColumn,
 
     targetSpecifier,
-    targetContentType,
+    ressourceContentType,
     bufferBeforeBuild,
   }) => {
     const reference = createReference({
       referenceRessourceSpecifier: targetSpecifier,
-      referenceExpectedContentType: targetContentType,
+      referenceExpectedContentType: ressourceContentType,
       referenceUrl: jsUrl,
       referenceColumn: jsLine,
       referenceLine: jsColumn,
 
-      targetContentType,
+      ressourceContentType,
       bufferBeforeBuild,
     })
     await reference.target.getReadyPromise()
@@ -195,7 +195,7 @@ export const createAssetBuilder = (
     referenceColumn,
     referenceLine,
 
-    targetContentType,
+    ressourceContentType,
     bufferBeforeBuild,
     targetIsEntry,
     targetIsJsModule,
@@ -248,7 +248,7 @@ export const createAssetBuilder = (
       targetIsInline = true
       const { mediaType, base64Flag, data } = parseDataUrl(targetUrl)
       referenceExpectedContentType = mediaType
-      targetContentType = mediaType
+      ressourceContentType = mediaType
       bufferBeforeBuild = base64Flag
         ? Buffer.from(data, "base64")
         : decodeURI(data)
@@ -292,11 +292,11 @@ export const createAssetBuilder = (
       // what was loaded
       if (typeof bufferBeforeBuild !== "undefined") {
         target.bufferBeforeBuild = bufferBeforeBuild
-        target.targetContentType = targetContentType
+        target.ressourceContentType = ressourceContentType
       }
     } else {
       target = createTarget({
-        targetContentType,
+        ressourceContentType,
         targetUrl,
         bufferBeforeBuild,
 
@@ -318,7 +318,7 @@ export const createAssetBuilder = (
   const assetTransformMap = {}
 
   const createTarget = ({
-    targetContentType,
+    ressourceContentType,
     targetUrl,
     bufferBeforeBuild,
 
@@ -331,7 +331,7 @@ export const createAssetBuilder = (
     targetUrlVersioningDisabled = false,
   }) => {
     const target = {
-      targetContentType,
+      ressourceContentType,
       targetUrl,
       bufferBeforeBuild,
       firstStrongReference: null,
@@ -398,7 +398,7 @@ export const createAssetBuilder = (
         target.targetBuildRelativeUrl = targetBuildRelativeUrl
         target.targetFileName = targetFileName
         if (buildFileInfo.type === "chunk") {
-          target.targetContentType = "application/javascript"
+          target.ressourceContentType = "application/javascript"
         }
         // logger.debug(`resolve rollup chunk ${shortenUrl(targetUrl)}`)
         resolve()
@@ -440,7 +440,7 @@ export const createAssetBuilder = (
       }
 
       const responseContentTypeHeader = response.headers["content-type"]
-      target.targetContentType = responseContentTypeHeader
+      target.ressourceContentType = responseContentTypeHeader
 
       const responseBodyAsArrayBuffer = await response.arrayBuffer()
       target.bufferBeforeBuild = Buffer.from(responseBodyAsArrayBuffer)
@@ -467,7 +467,7 @@ export const createAssetBuilder = (
         referenceLine,
         referenceColumn,
 
-        targetContentType,
+        ressourceContentType,
         bufferBeforeBuild,
         targetIsJsModule = false,
         targetIsInline = false,
@@ -488,7 +488,7 @@ export const createAssetBuilder = (
           referenceIsRessourceHint,
           referenceExpectedContentType,
 
-          targetContentType,
+          ressourceContentType,
           bufferBeforeBuild,
           targetIsJsModule,
           targetIsInline,
@@ -667,7 +667,7 @@ export const createAssetBuilder = (
     const onReference = (reference, infoFromReference) => {
       const effects = []
       if (target.targetIsEntry) {
-        if (target.targetContentType === "text/html") {
+        if (target.ressourceContentType === "text/html") {
           effects.push(`parse html to find references`)
         }
       } else {
@@ -897,7 +897,7 @@ const precomputeBuildRelativeUrlForTarget = (
   target.bufferAfterBuild = bufferAfterBuild
   const precomputedBuildRelativeUrl = computeBuildRelativeUrlForTarget(target, {
     lineBreakNormalization,
-    contentType: target.targetContentType,
+    contentType: target.ressourceContentType,
   })
   target.bufferAfterBuild = undefined
   return precomputedBuildRelativeUrl

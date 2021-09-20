@@ -37,12 +37,12 @@ export const parseTarget = (
     minifyJsOptions,
   },
 ) => {
-  const { targetContentType } = target
-  if (!targetContentType) {
+  const { ressourceContentType } = target
+  if (!ressourceContentType) {
     return null
   }
 
-  if (targetContentType === "text/html") {
+  if (ressourceContentType === "text/html") {
     return parseHtmlAsset(target, notifiers, {
       minify,
       minifyHtmlOptions,
@@ -141,7 +141,7 @@ export const parseTarget = (
     })
   }
 
-  if (targetContentType === "text/css") {
+  if (ressourceContentType === "text/css") {
     return parseCssAsset(target, notifiers, {
       urlToOriginalServerUrl,
       minify,
@@ -149,7 +149,7 @@ export const parseTarget = (
     })
   }
 
-  if (targetContentType === "application/importmap+json") {
+  if (ressourceContentType === "application/importmap+json") {
     return parseImportmapAsset(target, notifiers, {
       minify,
       importMapToInject: useImportMapToImproveLongTermCaching
@@ -159,7 +159,7 @@ export const parseTarget = (
   }
 
   if (
-    targetContentType === "application/manifest+json" ||
+    ressourceContentType === "application/manifest+json" ||
     target.targetReferences[0].referenceExpectedContentType ===
       "application/manifest+json"
   ) {
@@ -167,8 +167,8 @@ export const parseTarget = (
   }
 
   if (
-    targetContentType === "application/javascript" ||
-    targetContentType === "text/javascript"
+    ressourceContentType === "application/javascript" ||
+    ressourceContentType === "text/javascript"
   ) {
     return parseJsAsset(target, notifiers, {
       urlToOriginalFileUrl,
@@ -178,13 +178,13 @@ export const parseTarget = (
     })
   }
 
-  if (targetContentType === "image/svg+xml") {
+  if (ressourceContentType === "image/svg+xml") {
     return parseSvgAsset(target, notifiers, { minify, minifyHtmlOptions })
   }
 
   if (
-    targetContentType === "application/json" ||
-    targetContentType.endsWith("+json")
+    ressourceContentType === "application/json" ||
+    ressourceContentType.endsWith("+json")
   ) {
     return parseJsonAsset(target, notifiers, { minify })
   }
