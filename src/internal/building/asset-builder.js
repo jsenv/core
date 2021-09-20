@@ -69,7 +69,7 @@ export const createAssetBuilder = (
     emitAsset,
     setAssetSource,
     onJsModuleReference = () => {},
-    resolveTargetUrl = ({ targetSpecifier, importerUrl }) =>
+    resolveRessourceUrl = ({ targetSpecifier, importerUrl }) =>
       resolveUrl(targetSpecifier, importerUrl),
     lineBreakNormalization,
   },
@@ -223,7 +223,7 @@ export const createAssetBuilder = (
       return null
     }
 
-    const resolveTargetReturnValue = resolveTargetUrl({
+    const resolveTargetReturnValue = resolveRessourceUrl({
       targetSpecifier: referenceRessourceSpecifier,
       targetIsJsModule,
       targetIsInline,

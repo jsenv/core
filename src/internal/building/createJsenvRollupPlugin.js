@@ -418,7 +418,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
             return urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
           },
           loadUrl: (url) => urlResponseBodyMap[url],
-          resolveTargetUrl: ({
+          resolveRessourceUrl: ({
             targetSpecifier,
             targetIsJsModule,
             importerUrl,
