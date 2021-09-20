@@ -297,7 +297,7 @@ export const replaceHtmlNode = (
     // inherit attributes except thoos listed in attributesToIgnore
     newNode.attrs = [
       ...node.attrs.filter(({ name }) => {
-        return attributesToIgnore.includes(name)
+        return !attributesToIgnore.includes(name)
       }),
       ...newNode.attrs,
     ]
