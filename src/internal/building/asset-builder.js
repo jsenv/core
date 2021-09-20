@@ -90,7 +90,7 @@ export const createAssetBuilder = (
     // as the reference to this target file
     const callerLocation = getCallerLocation()
     const entryReference = createReference({
-      referenceTargetSpecifier: entryUrl,
+      referenceRessourceSpecifier: entryUrl,
       referenceExpectedContentType: entryContentType,
       referenceUrl: callerLocation.url,
       referenceLine: callerLocation.line,
@@ -152,7 +152,7 @@ export const createAssetBuilder = (
     bufferBeforeBuild,
   }) => {
     const reference = createReference({
-      referenceTargetSpecifier: targetSpecifier,
+      referenceRessourceSpecifier: targetSpecifier,
       referenceExpectedContentType: targetContentType,
       referenceUrl: jsUrl,
       referenceColumn: jsLine,
@@ -190,7 +190,7 @@ export const createAssetBuilder = (
     referenceShouldNotEmitChunk,
     referenceIsRessourceHint,
     referenceExpectedContentType,
-    referenceTargetSpecifier,
+    referenceRessourceSpecifier,
     referenceUrl,
     referenceColumn,
     referenceLine,
@@ -214,7 +214,7 @@ export const createAssetBuilder = (
     const shouldBeIgnoredWarning = referenceShouldBeIgnoredWarning({
       targetIsJsModule,
       importerTarget,
-      referenceTargetSpecifier,
+      referenceRessourceSpecifier,
       referenceUrl,
       urlToHumanUrl,
     })
@@ -224,7 +224,7 @@ export const createAssetBuilder = (
     }
 
     const resolveTargetReturnValue = resolveTargetUrl({
-      targetSpecifier: referenceTargetSpecifier,
+      targetSpecifier: referenceRessourceSpecifier,
       targetIsJsModule,
       targetIsInline,
       importerUrl: referenceUrl,
@@ -463,7 +463,7 @@ export const createAssetBuilder = (
       const notifyReferenceFound = ({
         referenceIsRessourceHint,
         referenceExpectedContentType,
-        referenceTargetSpecifier,
+        referenceRessourceSpecifier,
         referenceLine,
         referenceColumn,
 
@@ -481,7 +481,7 @@ export const createAssetBuilder = (
         }
 
         const dependencyReference = createReference({
-          referenceTargetSpecifier,
+          referenceRessourceSpecifier,
           referenceUrl: targetUrl,
           referenceLine,
           referenceColumn,
@@ -954,7 +954,7 @@ const isEmitChunkNeeded = ({ target, reference }) => {
 const referenceShouldBeIgnoredWarning = ({
   targetIsJsModule,
   importerTarget,
-  referenceTargetSpecifier,
+  referenceRessourceSpecifier,
   referenceUrl,
   urlToHumanUrl,
 }) => {
@@ -974,7 +974,7 @@ const referenceShouldBeIgnoredWarning = ({
 
   return `
 WARNING: Ignoring reference to ${urlToHumanUrl(
-    referenceTargetSpecifier,
+    referenceRessourceSpecifier,
   )} found inside ${urlToHumanUrl(referenceUrl)}.
 `
 }

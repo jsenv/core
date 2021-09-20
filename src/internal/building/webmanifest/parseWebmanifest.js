@@ -11,7 +11,7 @@ export const parseWebmanifest = (
 
   const iconReferences = icons.map((icon) => {
     const iconReference = notifyReferenceFound({
-      referenceTargetSpecifier: icon.src,
+      referenceRessourceSpecifier: icon.src,
     })
     return iconReference
   })
