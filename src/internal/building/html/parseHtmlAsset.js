@@ -30,11 +30,9 @@ import {
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
   getUniqueNameForInlineHtmlNode,
-  addHtmlNodeAttribute,
   removeHtmlNodeAttribute,
   setHtmlNodeText,
   getHtmlNodeTextNode,
-  removeHtmlNodeText,
   parseSrcset,
   stringifySrcset,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
@@ -341,15 +339,12 @@ const moduleScriptTextNodeVisitor = (
     targetIsJsModule: true,
     targetIsInline: true,
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
+  return () => {
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-module"
     }
-
-    const urlRelativeToImporter = getReferenceUrlRelativeToImporter(jsReference)
-    const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter)
-    removeHtmlNodeText(script)
-    addHtmlNodeAttribute(script, { name: "src", value: relativeUrlNotation })
+    const { targetBuildBuffer } = jsReference.target
+    textNode.value = targetBuildBuffer
   }
 }
 
