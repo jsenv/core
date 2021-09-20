@@ -30,11 +30,9 @@ import {
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
   getUniqueNameForInlineHtmlNode,
-  addHtmlNodeAttribute,
   removeHtmlNodeAttribute,
   setHtmlNodeText,
   getHtmlNodeTextNode,
-  removeHtmlNodeText,
   parseSrcset,
   stringifySrcset,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
@@ -73,9 +71,9 @@ export const parseHtmlAsset = async (
 
   const linksMutations = collectNodesMutations(links, notifiers, htmlTarget, [
     linkStylesheetHrefVisitor,
-    (link, { notifyReferenceFound }) =>
+    (link, notifiers) =>
       linkHrefVisitor(link, {
-        notifyReferenceFound,
+        ...notifiers,
         ressourceHintNeverUsedCallback,
       }),
   ])
@@ -341,14 +339,12 @@ const moduleScriptTextNodeVisitor = (
     targetIsJsModule: true,
     targetIsInline: true,
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
+  return () => {
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-module"
     }
-    const urlRelativeToImporter = getReferenceUrlRelativeToImporter(jsReference)
-    const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter)
-    removeHtmlNodeText(script)
-    addHtmlNodeAttribute(script, { name: "src", value: relativeUrlNotation })
+    const { targetBuildBuffer } = jsReference.target
+    textNode.value = targetBuildBuffer
   }
 }
 
@@ -503,7 +499,10 @@ const linkStylesheetHrefVisitor = (
         const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
         cssString = setCssSourceMappingUrl(cssString, sourcemapInlineUrl)
       }
-      replaceHtmlNode(link, `<style>${cssString}</style>`)
+
+      replaceHtmlNode(link, `<style>${cssString}</style>`, {
+        attributesToIgnore: ["href", "rel", "as", "crossorigin", "type"],
+      })
       return
     }
 
@@ -515,7 +514,7 @@ const linkStylesheetHrefVisitor = (
 
 const linkHrefVisitor = (
   link,
-  { notifyReferenceFound, ressourceHintNeverUsedCallback },
+  { format, notifyReferenceFound, ressourceHintNeverUsedCallback },
 ) => {
   const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
   if (!hrefAttribute) {
@@ -569,6 +568,16 @@ const linkHrefVisitor = (
     }
 
     if (linkReference.target.targetIsExternal) {
+      return
+    }
+
+    if (format === "systemjs" && rel === "modulepreload") {
+      const urlRelativeToImporter =
+        getReferenceUrlRelativeToImporter(linkReference)
+      replaceHtmlNode(
+        link,
+        `<link rel="preload" href="${urlRelativeToImporter}" as="script" />`,
+      )
       return
     }
 

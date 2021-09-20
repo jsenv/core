@@ -255,6 +255,7 @@ const inlineImportmapScripts = async ({ logger, htmlAst, fileUrl }) => {
         importMapUrl,
         fileUrl,
       )
+
       replaceHtmlNode(
         remoteImportmapScript,
         `<script type="importmap">${JSON.stringify(
@@ -262,6 +263,9 @@ const inlineImportmapScripts = async ({ logger, htmlAst, fileUrl }) => {
           null,
           "  ",
         )}</script>`,
+        {
+          attributesToIgnore: ["src"],
+        },
       )
     }),
   )

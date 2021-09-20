@@ -284,7 +284,7 @@ export const parseHtmlAstRessources = (htmlAst) => {
 export const replaceHtmlNode = (
   node,
   replacement,
-  { inheritAttributes = true } = {},
+  { attributesInherit = true, attributesToIgnore = [] } = {},
 ) => {
   let newNode
   if (typeof replacement === "string") {
@@ -293,18 +293,23 @@ export const replaceHtmlNode = (
     newNode = replacement
   }
 
-  if (inheritAttributes) {
-    newNode.attrs = [
-      // inherit script attributes except src, type, href, rel
-      ...node.attrs.filter(
-        ({ name }) =>
-          name !== "type" &&
-          name !== "src" &&
-          name !== "href" &&
-          name !== "rel",
-      ),
-      ...newNode.attrs,
-    ]
+  if (attributesInherit) {
+    const attributeMap = {}
+    // inherit attributes except thoos listed in attributesToIgnore
+    node.attrs.forEach((attribute) => {
+      if (attributesToIgnore.includes(attribute.name)) {
+        return
+      }
+      attributeMap[attribute.name] = attribute
+    })
+    newNode.attrs.forEach((newAttribute) => {
+      attributeMap[newAttribute.name] = newAttribute
+    })
+    const attributes = []
+    Object.keys(attributeMap).forEach((attributeName) => {
+      attributes.push(attributeMap[attributeName])
+    })
+    newNode.attrs = attributes
   }
 
   replaceNode(node, newNode)

@@ -1,3 +1,16 @@
+#settings-button {
+  position: relative;
+}
+
+#settings-button[data-warning] svg {
+  fill: orange;
+  stroke: darkorange;
+}
+
+#settings-button[data-warning] svg:hover {
+  fill: darkorange !important;
+}
+
 #settings-box {
   display: none;
   position: absolute;
@@ -97,7 +110,7 @@ label {
 }
 
 #settings-box .category-title svg {
-  fill: #24b1b0;
+  fill: currentColor;
   vertical-align: top;
   margin-right: 5px;
   width: 18px;

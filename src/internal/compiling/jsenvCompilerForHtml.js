@@ -58,11 +58,11 @@ const compileHtmlFile = ({
 
   return {
     compile: async (htmlBeforeCompilation) => {
-      // parsing html should not throw any syntax error
+      // we don't have to try/catch html parsing because:
+      // parsing html is fault tolerant (it does not throw any syntax error)
       // invalid html markup is converted into some valid html
       // in the worst cases the faulty html string special characters
-      // will be html encoded.
-      // All this comment to say we don't have to try/catch html parsing
+      // will be html encoded
       const htmlAst = parseHtmlString(htmlBeforeCompilation)
       manipulateHtmlAst(htmlAst, {
         scriptInjections: [
@@ -79,6 +79,11 @@ const compileHtmlFile = ({
             : []),
         ],
       })
+      // here we must convert "modulepreload" into "preload"
+      if (moduleOutFormat !== "esmodule") {
+      
+      }
+
       const { scripts } = parseHtmlAstRessources(htmlAst)
 
       let hasImportmap = false
