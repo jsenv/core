@@ -16,7 +16,7 @@ export const parseSvgAsset = async (
   notifiers,
   { minify, minifyHtmlOptions },
 ) => {
-  const svgString = String(svgTarget.targetBuffer)
+  const svgString = String(svgTarget.bufferBeforeBuild)
   const svgAst = await parseSvgString(svgString)
   const htmlRessources = parseHtmlAstRessources(svgAst)
   const mutations = collectSvgMutations(htmlRessources, notifiers, svgTarget)

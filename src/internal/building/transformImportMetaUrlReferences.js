@@ -27,7 +27,7 @@ export const transformImportMetaUrlReferences = async ({
       // par contre on y applique pas les import map
       const targetUrl = resolveUrl(relativeUrl, url)
       const response = await fetch(targetUrl, url)
-      const targetBuffer = Buffer.from(await response.arrayBuffer())
+      const bufferBeforeBuild = Buffer.from(await response.arrayBuffer())
 
       const reference = await assetBuilder.createReferenceFoundInJs({
         jsUrl: url,
@@ -40,7 +40,7 @@ export const transformImportMetaUrlReferences = async ({
 
         targetSpecifier: targetUrl,
         targetContentType: response.headers["content-type"],
-        targetBuffer,
+        bufferBeforeBuild,
       })
       if (reference) {
         magicString.overwrite(

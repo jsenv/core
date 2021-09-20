@@ -59,21 +59,21 @@ const getProjectFileContents = (assetBuilder) => {
 
   Object.keys(targetMap).forEach((url) => {
     const target = targetMap[url]
-    const { targetIsInline, targetIsExternal, targetBuffer } = target
+    const { targetIsInline, targetIsExternal, bufferBeforeBuild } = target
     if (targetIsInline) {
       // inline ressources are not files
       return
     }
     if (targetIsExternal) {
-      // external target are not handled, we would not have the targetBuffer
+      // external target are not handled, we would not have the bufferBeforeBuild
       return
     }
     if (targetIsReferencedOnlyByRessourceHint(target)) {
       // target is only referenced by ressource hint (link preload for example)
-      // it's never actually loaded-> we don't gave the targetBuffer (the ressource file content)
+      // it's never actually loaded-> we don't gave the bufferBeforeBuild (the ressource file content)
       return
     }
-    projectFileContents[url] = targetBuffer
+    projectFileContents[url] = bufferBeforeBuild
   })
   return projectFileContents
 }

@@ -13,7 +13,7 @@ export const parseJsAsset = async (
   { urlToOriginalFileUrl, urlToOriginalServerUrl, minify, minifyJsOptions },
 ) => {
   const jsUrl = jsTarget.targetUrl
-  const jsString = String(jsTarget.targetBuffer)
+  const jsString = String(jsTarget.bufferBeforeBuild)
   const jsSourcemapUrl = getJavaScriptSourceMappingUrl(jsString)
   let sourcemapReference
 

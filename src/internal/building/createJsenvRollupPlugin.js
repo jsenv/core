@@ -649,7 +649,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
 
         targetIsJsenvHelperFile,
         targetContentType: responseContentType,
-        targetBuffer: Buffer.from(content),
+        bufferBeforeBuild: Buffer.from(content),
         targetIsJsModule: responseContentType === "application/javascript",
       })
 
@@ -1048,7 +1048,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
 
         targetSpecifier: moduleResponse.url,
         targetContentType,
-        targetBuffer: moduleResponseBodyAsBuffer,
+        bufferBeforeBuild: moduleResponseBodyAsBuffer,
       },
     )
     if (assetReferenceForImport) {

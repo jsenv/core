@@ -134,7 +134,7 @@ export const parseTarget = (
       ressourceHintNeverUsedCallback: (info) => {
         ressourceHintNeverUsedCallback({
           ...info,
-          htmlSource: String(target.targetBuffer),
+          htmlSource: String(target.bufferBeforeBuild),
           htmlUrl: urlToOriginalFileUrl(target.targetUrl),
         })
       },

@@ -97,7 +97,7 @@ export const createAssetBuilder = (
       referenceColumn: callerLocation.column,
 
       targetContentType: entryContentType,
-      targetBuffer: entryBuffer,
+      bufferBeforeBuild: entryBuffer,
 
       targetIsEntry: true,
 
@@ -149,7 +149,7 @@ export const createAssetBuilder = (
 
     targetSpecifier,
     targetContentType,
-    targetBuffer,
+    bufferBeforeBuild,
   }) => {
     const reference = createReference({
       referenceTargetSpecifier: targetSpecifier,
@@ -159,7 +159,7 @@ export const createAssetBuilder = (
       referenceLine: jsColumn,
 
       targetContentType,
-      targetBuffer,
+      bufferBeforeBuild,
     })
     await reference.target.getReadyPromise()
     return reference
@@ -196,7 +196,7 @@ export const createAssetBuilder = (
     referenceLine,
 
     targetContentType,
-    targetBuffer,
+    bufferBeforeBuild,
     targetIsEntry,
     targetIsJsModule,
     targetIsInline,
@@ -249,7 +249,9 @@ export const createAssetBuilder = (
       const { mediaType, base64Flag, data } = parseDataUrl(targetUrl)
       referenceExpectedContentType = mediaType
       targetContentType = mediaType
-      targetBuffer = base64Flag ? Buffer.from(data, "base64") : decodeURI(data)
+      bufferBeforeBuild = base64Flag
+        ? Buffer.from(data, "base64")
+        : decodeURI(data)
     }
 
     // any hash in the url would mess up with filenames
@@ -285,18 +287,18 @@ export const createAssetBuilder = (
     let target
     if (existingTarget) {
       target = existingTarget
-      // allow to update the targetBuffer on existingTarget
+      // allow to update the bufferBeforeBuild on existingTarget
       // this happens when rollup loads a js file and communicates to this code
       // what was loaded
-      if (typeof targetBuffer !== "undefined") {
-        target.targetBuffer = targetBuffer
+      if (typeof bufferBeforeBuild !== "undefined") {
+        target.bufferBeforeBuild = bufferBeforeBuild
         target.targetContentType = targetContentType
       }
     } else {
       target = createTarget({
         targetContentType,
         targetUrl,
-        targetBuffer,
+        bufferBeforeBuild,
 
         targetIsEntry,
         targetIsJsModule,
@@ -318,7 +320,7 @@ export const createAssetBuilder = (
   const createTarget = ({
     targetContentType,
     targetUrl,
-    targetBuffer,
+    bufferBeforeBuild,
 
     targetIsEntry = false,
     targetIsJsModule = false,
@@ -331,7 +333,7 @@ export const createAssetBuilder = (
     const target = {
       targetContentType,
       targetUrl,
-      targetBuffer,
+      bufferBeforeBuild,
       firstStrongReference: null,
       targetReferences: [],
 
@@ -441,9 +443,9 @@ export const createAssetBuilder = (
       target.targetContentType = responseContentTypeHeader
 
       const responseBodyAsArrayBuffer = await response.arrayBuffer()
-      target.targetBuffer = Buffer.from(responseBodyAsArrayBuffer)
+      target.bufferBeforeBuild = Buffer.from(responseBodyAsArrayBuffer)
     })
-    if (targetBuffer !== undefined) {
+    if (bufferBeforeBuild !== undefined) {
       getBufferAvailablePromise.forceMemoization(Promise.resolve())
     }
 
@@ -466,7 +468,7 @@ export const createAssetBuilder = (
         referenceColumn,
 
         targetContentType,
-        targetBuffer,
+        bufferBeforeBuild,
         targetIsJsModule = false,
         targetIsInline = false,
         targetUrlVersioningDisabled,
@@ -487,7 +489,7 @@ export const createAssetBuilder = (
           referenceExpectedContentType,
 
           targetContentType,
-          targetBuffer,
+          bufferBeforeBuild,
           targetIsJsModule,
           targetIsInline,
 
@@ -543,7 +545,7 @@ export const createAssetBuilder = (
       const transform = assetTransformMap[targetUrl]
       if (typeof transform !== "function") {
         target.targetBuildEnd(
-          target.targetBuildBuffer || target.targetBuffer,
+          target.targetBuildBuffer || target.bufferBeforeBuild,
           target.targetBuildRelativeUrl,
         )
         return
@@ -726,7 +728,7 @@ export const createAssetBuilder = (
         onJsModuleReference({
           jsModuleUrl,
           jsModuleIsInline: targetIsInline,
-          jsModuleSource: String(targetBuffer),
+          jsModuleSource: String(bufferBeforeBuild),
         })
 
         const basenameUrl = resolveUrl(urlToBasename(jsModuleUrl), jsModuleUrl)
@@ -837,7 +839,7 @@ export const createAssetBuilder = (
     const referenceUrl = reference.referenceUrl
     const referenceTarget = getTargetFromUrl(referenceUrl)
     const referenceSource = referenceTarget
-      ? referenceTarget.targetBuffer
+      ? referenceTarget.bufferBeforeBuild
       : loadUrl(referenceUrl)
     const referenceSourceAsString = referenceSource
       ? String(referenceSource)

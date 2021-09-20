@@ -13,7 +13,7 @@ export const parseCssAsset = async (
   { notifyReferenceFound },
   { urlToOriginalServerUrl, minify, minifyCssOptions },
 ) => {
-  const cssString = String(cssTarget.targetBuffer)
+  const cssString = String(cssTarget.bufferBeforeBuild)
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
   let sourcemapReference
   if (cssSourcemapUrl) {

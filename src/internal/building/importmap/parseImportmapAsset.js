@@ -3,7 +3,7 @@ export const parseImportmapAsset = (
   notifiers,
   { minify, importMapToInject },
 ) => {
-  const importmapString = String(importmapTarget.targetBuffer)
+  const importmapString = String(importmapTarget.bufferBeforeBuild)
 
   return () => {
     if (importMapToInject) {

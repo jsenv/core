@@ -64,7 +64,7 @@ export const parseHtmlAsset = async (
     ressourceHintNeverUsedCallback = () => {},
   } = {},
 ) => {
-  const htmlString = String(htmlTarget.targetBuffer)
+  const htmlString = String(htmlTarget.bufferBeforeBuild)
   const htmlAst = await htmlStringToHtmlAst(htmlString)
   const { links, styles, scripts, imgs, images, uses, sources } =
     parseHtmlAstRessources(htmlAst)
@@ -237,7 +237,7 @@ const regularScriptTextNodeVisitor = (
     ...htmlNodeToReferenceLocation(script),
 
     targetContentType: "application/javascript",
-    targetBuffer: Buffer.from(textNode.value),
+    bufferBeforeBuild: Buffer.from(textNode.value),
     targetIsInline: true,
   })
   return () => {
@@ -335,7 +335,7 @@ const moduleScriptTextNodeVisitor = (
     ...htmlNodeToReferenceLocation(script),
 
     targetContentType: "application/javascript",
-    targetBuffer: textNode.value,
+    bufferBeforeBuild: textNode.value,
     targetIsJsModule: true,
     targetIsInline: true,
   })
@@ -446,7 +446,7 @@ const importmapScriptTextNodeVisitor = (
     ...htmlNodeToReferenceLocation(script),
 
     targetContentType: "application/importmap+json",
-    targetBuffer: Buffer.from(textNode.value),
+    bufferBeforeBuild: Buffer.from(textNode.value),
     targetIsInline: true,
   })
   return () => {
@@ -616,7 +616,7 @@ const styleTextNodeVisitor = (
     ...htmlNodeToReferenceLocation(style),
 
     targetContentType: "text/css",
-    targetBuffer: Buffer.from(textNode.value),
+    bufferBeforeBuild: Buffer.from(textNode.value),
     targetIsInline: true,
   })
   return () => {
