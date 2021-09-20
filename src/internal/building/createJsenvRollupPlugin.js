@@ -892,7 +892,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
           projectDirectoryUrl,
         )
         // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
-        file.source = assetTarget.targetBuildBuffer
+        file.source = assetTarget.bufferAfterBuild
 
         assetBuild[buildRelativeUrl] = file
         buildMappings[originalProjectRelativeUrl] = buildRelativeUrl

@@ -4,11 +4,11 @@ import { createDetailedMessage } from "@jsenv/logger"
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
 export const getTargetAsBase64Url = ({
-  targetBuildBuffer,
+  bufferAfterBuild,
   targetContentType,
 }) => {
   return stringifyDataUrl({
-    data: targetBuildBuffer,
+    data: bufferAfterBuild,
     base64Flag: true,
     mediaType: targetContentType,
   })

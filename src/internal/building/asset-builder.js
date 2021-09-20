@@ -208,7 +208,7 @@ export const createAssetBuilder = (
       targetUrl: importerUrl,
       targetIsEntry: false, // maybe
       targetIsJsModule: true,
-      targetBuildBuffer: "",
+      bufferAfterBuild: "",
     }
 
     const shouldBeIgnoredWarning = referenceShouldBeIgnoredWarning({
@@ -346,7 +346,7 @@ export const createAssetBuilder = (
       targetFileNamePattern,
 
       targetRelativeUrl: urlToRelativeUrl(targetUrl, baseUrl),
-      targetBuildBuffer: undefined,
+      bufferAfterBuild: undefined,
     }
 
     target.usedPromise = new Promise((resolve) => {
@@ -389,12 +389,12 @@ export const createAssetBuilder = (
           return
         }
 
-        const targetBuildBuffer = Buffer.from(buildFileInfo.code)
+        const bufferAfterBuild = Buffer.from(buildFileInfo.code)
         const targetFileName = buildFileInfo.fileName
         const targetBuildRelativeUrl =
           buildManifest[targetFileName] || targetFileName
         // const targetFileName = targetFileNameFromBuildManifest(buildManifest, targetBuildRelativeUrl) || targetBuildRelativeUrl
-        target.targetBuildBuffer = targetBuildBuffer
+        target.bufferAfterBuild = bufferAfterBuild
         target.targetBuildRelativeUrl = targetBuildRelativeUrl
         target.targetFileName = targetFileName
         if (buildFileInfo.type === "chunk") {
@@ -545,7 +545,7 @@ export const createAssetBuilder = (
       const transform = assetTransformMap[targetUrl]
       if (typeof transform !== "function") {
         target.targetBuildEnd(
-          target.targetBuildBuffer || target.bufferBeforeBuild,
+          target.bufferAfterBuild || target.bufferBeforeBuild,
           target.targetBuildRelativeUrl,
         )
         return
@@ -569,9 +569,9 @@ export const createAssetBuilder = (
       )
       const assetEmitters = []
       const transformReturnValue = await transform({
-        precomputeBuildRelativeUrl: (targetBuildBuffer) =>
+        precomputeBuildRelativeUrl: (bufferAfterBuild) =>
           precomputeBuildRelativeUrlForTarget(target, {
-            targetBuildBuffer,
+            bufferAfterBuild,
             lineBreakNormalization,
           }),
         registerAssetEmitter: (callback) => {
@@ -610,18 +610,18 @@ export const createAssetBuilder = (
         throw new Error(`transform must return an object {code, map}`)
       }
 
-      let targetBuildBuffer
+      let bufferAfterBuild
       let targetBuildRelativeUrl
       if (typeof transformReturnValue === "string") {
-        targetBuildBuffer = transformReturnValue
+        bufferAfterBuild = transformReturnValue
       } else {
-        targetBuildBuffer = transformReturnValue.targetBuildBuffer
+        bufferAfterBuild = transformReturnValue.bufferAfterBuild
         if (transformReturnValue.targetBuildRelativeUrl) {
           targetBuildRelativeUrl = transformReturnValue.targetBuildRelativeUrl
         }
       }
 
-      target.targetBuildEnd(targetBuildBuffer, targetBuildRelativeUrl)
+      target.targetBuildEnd(bufferAfterBuild, targetBuildRelativeUrl)
       assetEmitters.forEach((callback) => {
         callback({
           emitAsset,
@@ -636,9 +636,9 @@ export const createAssetBuilder = (
       target.shouldBeIgnored = true
     }
 
-    const targetBuildEnd = (targetBuildBuffer, targetBuildRelativeUrl) => {
-      if (targetBuildBuffer !== undefined) {
-        target.targetBuildBuffer = targetBuildBuffer
+    const targetBuildEnd = (bufferAfterBuild, targetBuildRelativeUrl) => {
+      if (bufferAfterBuild !== undefined) {
+        target.bufferAfterBuild = bufferAfterBuild
         if (targetBuildRelativeUrl === undefined) {
           target.targetBuildRelativeUrl = computeBuildRelativeUrlForTarget(
             target,
@@ -654,13 +654,13 @@ export const createAssetBuilder = (
       }
 
       if (
-        // target.targetBuildBuffer can be undefined when target is only preloaded
+        // target.bufferAfterBuild can be undefined when target is only preloaded
         // and never used
-        target.targetBuildBuffer &&
+        target.bufferAfterBuild &&
         !target.targetIsInline &&
         !target.targetIsJsModule
       ) {
-        setAssetSource(target.rollupReferenceId, target.targetBuildBuffer)
+        setAssetSource(target.rollupReferenceId, target.bufferAfterBuild)
       }
     }
 
@@ -888,18 +888,18 @@ ${showSourceLocation(referenceSourceAsString, {
 
 const precomputeBuildRelativeUrlForTarget = (
   target,
-  { targetBuildBuffer = "", lineBreakNormalization } = {},
+  { bufferAfterBuild = "", lineBreakNormalization } = {},
 ) => {
   if (target.targetBuildRelativeUrl) {
     return target.targetBuildRelativeUrl
   }
 
-  target.targetBuildBuffer = targetBuildBuffer
+  target.bufferAfterBuild = bufferAfterBuild
   const precomputedBuildRelativeUrl = computeBuildRelativeUrlForTarget(target, {
     lineBreakNormalization,
     contentType: target.targetContentType,
   })
-  target.targetBuildBuffer = undefined
+  target.bufferAfterBuild = undefined
   return precomputedBuildRelativeUrl
 }
 

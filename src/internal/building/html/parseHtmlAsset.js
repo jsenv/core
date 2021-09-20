@@ -180,8 +180,8 @@ const regularScriptSrcVisitor = (
     if (shouldInline({ reference: remoteScriptReference, htmlNode: script })) {
       removeHtmlNodeAttribute(script, srcAttribute)
       const { target } = remoteScriptReference
-      const { targetBuildBuffer } = target
-      let jsString = String(targetBuildBuffer)
+      const { bufferAfterBuild } = target
+      let jsString = String(bufferAfterBuild)
 
       const sourcemapRelativeUrl = getJavaScriptSourceMappingUrl(jsString)
       if (sourcemapRelativeUrl) {
@@ -241,8 +241,8 @@ const regularScriptTextNodeVisitor = (
     targetIsInline: true,
   })
   return () => {
-    const { targetBuildBuffer } = jsReference.target
-    textNode.value = targetBuildBuffer
+    const { bufferAfterBuild } = jsReference.target
+    textNode.value = bufferAfterBuild
   }
 }
 
@@ -280,8 +280,8 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
       const { target } = remoteScriptReference
-      const { targetBuildBuffer } = target
-      let jsString = String(targetBuildBuffer)
+      const { bufferAfterBuild } = target
+      let jsString = String(bufferAfterBuild)
 
       // at this stage, for some reason the sourcemap url is not in the js
       // (it will be added sshortly after by "injectSourcemapInRollupBuild")
@@ -343,8 +343,8 @@ const moduleScriptTextNodeVisitor = (
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-module"
     }
-    const { targetBuildBuffer } = jsReference.target
-    textNode.value = targetBuildBuffer
+    const { bufferAfterBuild } = jsReference.target
+    textNode.value = bufferAfterBuild
   }
 }
 
@@ -400,9 +400,9 @@ const importmapScriptSrcVisitor = (
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { targetBuildBuffer } = importmapReference.target
+      const { bufferAfterBuild } = importmapReference.target
 
-      const jsString = String(targetBuildBuffer)
+      const jsString = String(bufferAfterBuild)
 
       setHtmlNodeText(script, jsString)
       return
@@ -454,8 +454,8 @@ const importmapScriptTextNodeVisitor = (
       typeAttribute.value = "systemjs-importmap"
     }
 
-    const { targetBuildBuffer } = importmapReference.target
-    textNode.value = targetBuildBuffer
+    const { bufferAfterBuild } = importmapReference.target
+    textNode.value = bufferAfterBuild
   }
 }
 
@@ -488,8 +488,8 @@ const linkStylesheetHrefVisitor = (
 
     if (shouldInline({ reference: cssReference, htmlNode: link })) {
       const { target } = cssReference
-      const { targetBuildBuffer } = target
-      let cssString = String(targetBuildBuffer)
+      const { bufferAfterBuild } = target
+      let cssString = String(bufferAfterBuild)
       const sourcemapRelativeUrl = getCssSourceMappingUrl(cssString)
       if (sourcemapRelativeUrl) {
         const { targetBuildRelativeUrl } = target
@@ -620,8 +620,8 @@ const styleTextNodeVisitor = (
     targetIsInline: true,
   })
   return () => {
-    const { targetBuildBuffer } = inlineStyleReference.target
-    textNode.value = targetBuildBuffer
+    const { bufferAfterBuild } = inlineStyleReference.target
+    textNode.value = bufferAfterBuild
   }
 }
 

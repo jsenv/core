@@ -4,7 +4,7 @@ export const computeBuildRelativeUrlForTarget = (
   target,
   { lineBreakNormalization },
 ) => {
-  return computeBuildRelativeUrl(target.targetUrl, target.targetBuildBuffer, {
+  return computeBuildRelativeUrl(target.targetUrl, target.bufferAfterBuild, {
     pattern: targetToFileNamePattern(target),
     contentType: target.targetContentType,
     lineBreakNormalization,

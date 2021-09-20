@@ -85,7 +85,7 @@ export const parseCssAsset = async (
         cssMinificationOptions: minifyCssOptions,
         // https://postcss.org/api/#sourcemapoptions
         sourcemapOptions: sourcemapReference
-          ? { prev: String(sourcemapReference.target.targetBuildBuffer) }
+          ? { prev: String(sourcemapReference.target.bufferAfterBuild) }
           : {},
       },
     )
@@ -135,7 +135,7 @@ export const parseCssAsset = async (
       const buildRelativeUrl = urlToRelativeUrl(mapBuildUrl, buildDirectoryUrl)
       if (sourcemapReference) {
         sourcemapReference.target.targetBuildRelativeUrl = buildRelativeUrl
-        sourcemapReference.target.targetBuildBuffer = mapSource
+        sourcemapReference.target.bufferAfterBuild = mapSource
       } else {
         emitAsset({
           fileName: buildRelativeUrl,
@@ -146,7 +146,7 @@ export const parseCssAsset = async (
 
     return {
       targetBuildRelativeUrl: cssBuildRelativeUrl,
-      targetBuildBuffer: cssSourceAfterTransformation,
+      bufferAfterBuild: cssSourceAfterTransformation,
     }
   }
 }
