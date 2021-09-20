@@ -294,13 +294,22 @@ export const replaceHtmlNode = (
   }
 
   if (attributesInherit) {
+    const attributeMap = {}
     // inherit attributes except thoos listed in attributesToIgnore
-    newNode.attrs = [
-      ...node.attrs.filter(({ name }) => {
-        return !attributesToIgnore.includes(name)
-      }),
-      ...newNode.attrs,
-    ]
+    node.attrs.forEach((attribute) => {
+      if (attributesToIgnore.includes(attribute.name)) {
+        return
+      }
+      attributeMap[attribute.name] = attribute
+    })
+    newNode.attrs.forEach((newAttribute) => {
+      attributeMap[newAttribute.name] = newAttribute
+    })
+    const attributes = []
+    Object.keys(attributeMap).forEach((attributeName) => {
+      attributes.push(attributeMap[attributeName])
+    })
+    newNode.attrs = attributes
   }
 
   replaceNode(node, newNode)
