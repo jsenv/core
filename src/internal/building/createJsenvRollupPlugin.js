@@ -419,7 +419,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
           },
           loadUrl: (url) => urlResponseBodyMap[url],
           resolveRessourceUrl: ({
-            targetSpecifier,
+            ressourceSpecifier,
             targetIsJsModule,
             importerUrl,
             importerIsEntry,
@@ -432,7 +432,10 @@ building ${entryFileRelativeUrls.length} entry files...`)
             // when html references a js we must wait for the compiled version of js
             if (isHtmlEntryPointReferencingAJsModule) {
               const htmlCompiledUrl = asCompiledServerUrl(importerUrl)
-              const jsModuleUrl = resolveUrl(targetSpecifier, htmlCompiledUrl)
+              const jsModuleUrl = resolveUrl(
+                ressourceSpecifier,
+                htmlCompiledUrl,
+              )
               return jsModuleUrl
             }
 
@@ -440,12 +443,12 @@ building ${entryFileRelativeUrls.length} entry files...`)
             if (
               isHtmlEntryPoint &&
               // parse and handle the untransformed importmap, not the one from compile server
-              !targetSpecifier.endsWith(".importmap")
+              !ressourceSpecifier.endsWith(".importmap")
             ) {
               const htmlCompiledUrl = asCompiledServerUrl(importerUrl)
-              targetUrl = resolveUrl(targetSpecifier, htmlCompiledUrl)
+              targetUrl = resolveUrl(ressourceSpecifier, htmlCompiledUrl)
             } else {
-              targetUrl = resolveUrl(targetSpecifier, importerUrl)
+              targetUrl = resolveUrl(ressourceSpecifier, importerUrl)
             }
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl
@@ -1046,7 +1049,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         jsLine: undefined,
         jsColumn: undefined,
 
-        targetSpecifier: moduleResponse.url,
+        ressourceSpecifier: moduleResponse.url,
         ressourceContentType,
         bufferBeforeBuild: moduleResponseBodyAsBuffer,
       },

@@ -69,8 +69,8 @@ export const createAssetBuilder = (
     emitAsset,
     setAssetSource,
     onJsModuleReference = () => {},
-    resolveRessourceUrl = ({ targetSpecifier, importerUrl }) =>
-      resolveUrl(targetSpecifier, importerUrl),
+    resolveRessourceUrl = ({ ressourceSpecifier, importerUrl }) =>
+      resolveUrl(ressourceSpecifier, importerUrl),
     lineBreakNormalization,
   },
 ) => {
@@ -147,12 +147,12 @@ export const createAssetBuilder = (
     jsLine,
     jsColumn,
 
-    targetSpecifier,
+    ressourceSpecifier,
     ressourceContentType,
     bufferBeforeBuild,
   }) => {
     const reference = createReference({
-      referenceRessourceSpecifier: targetSpecifier,
+      referenceRessourceSpecifier: ressourceSpecifier,
       referenceExpectedContentType: ressourceContentType,
       referenceUrl: jsUrl,
       referenceColumn: jsLine,
@@ -224,7 +224,7 @@ export const createAssetBuilder = (
     }
 
     const resolveTargetReturnValue = resolveRessourceUrl({
-      targetSpecifier: referenceRessourceSpecifier,
+      ressourceSpecifier: referenceRessourceSpecifier,
       targetIsJsModule,
       targetIsInline,
       importerUrl: referenceUrl,

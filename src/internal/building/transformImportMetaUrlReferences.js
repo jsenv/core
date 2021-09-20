@@ -38,7 +38,7 @@ export const transformImportMetaUrlReferences = async ({
             }
           : {}),
 
-        targetSpecifier: targetUrl,
+        ressourceSpecifier: targetUrl,
         ressourceContentType: response.headers["content-type"],
         bufferBeforeBuild,
       })
