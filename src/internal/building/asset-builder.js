@@ -180,7 +180,7 @@ export const createAssetBuilder = (
   }
 
   const ressourceMap = {}
-  const targetRedirectionMap = {}
+  const ressourceRedirectionMap = {}
   // ok il faudrait faire un truc dans ce genre:
   // lorsqu'on a un preload, on fait une promesse
   // pour le moment ou la ressource est référencé par un autre truc
@@ -205,7 +205,7 @@ export const createAssetBuilder = (
     targetUrlVersioningDisabled,
   }) => {
     const importerUrl = referenceUrl
-    const importerTarget = getTargetFromUrl(importerUrl) || {
+    const ressourceImporter = ressourceFromUrl(importerUrl) || {
       targetUrl: importerUrl,
       isEntryPoint: false, // maybe
       isJsModule: true,
@@ -214,7 +214,7 @@ export const createAssetBuilder = (
 
     const shouldBeIgnoredWarning = referenceShouldBeIgnoredWarning({
       isJsModule,
-      importerTarget,
+      ressourceImporter,
       ressourceSpecifier,
       referenceUrl,
       urlToHumanUrl,
@@ -229,25 +229,25 @@ export const createAssetBuilder = (
       isJsModule,
       isInline,
       importerUrl: referenceUrl,
-      importerIsEntry: importerTarget.isEntryPoint,
-      importerIsJsModule: importerTarget.isJsModule,
+      importerIsEntry: ressourceImporter.isEntryPoint,
+      importerIsJsModule: ressourceImporter.isJsModule,
     })
 
-    let targetUrl
+    let ressourceUrl
     let isExternal = false
     if (typeof resolveTargetReturnValue === "object") {
       if (resolveTargetReturnValue.external) {
         isExternal = true
       }
-      targetUrl = resolveTargetReturnValue.url
+      ressourceUrl = resolveTargetReturnValue.url
     } else {
-      targetUrl = resolveTargetReturnValue
+      ressourceUrl = resolveTargetReturnValue
     }
 
-    if (targetUrl.startsWith("data:")) {
+    if (ressourceUrl.startsWith("data:")) {
       isExternal = false
       isInline = true
-      const { mediaType, base64Flag, data } = parseDataUrl(targetUrl)
+      const { mediaType, base64Flag, data } = parseDataUrl(ressourceUrl)
       ressourceContentTypeExpected = mediaType
       ressourceContentType = mediaType
       bufferBeforeBuild = base64Flag
@@ -256,13 +256,13 @@ export const createAssetBuilder = (
     }
 
     // any hash in the url would mess up with filenames
-    targetUrl = removePotentialUrlHash(targetUrl)
+    ressourceUrl = removePotentialUrlHash(ressourceUrl)
 
     if (isInline && targetFileNamePattern === undefined) {
       // inherit parent directory location because it's an inline file
       targetFileNamePattern = () => {
-        const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(
-          importerTarget,
+        const importerBuildRelativeUrl = precomputeBuildRelativeUrlForRessource(
+          ressourceImporter,
           {
             lineBreakNormalization,
           },
@@ -284,7 +284,7 @@ export const createAssetBuilder = (
       referenceLine,
     }
 
-    const existingTarget = getTargetFromUrl(targetUrl)
+    const existingTarget = ressourceFromUrl(ressourceUrl)
     let ressource
     if (existingTarget) {
       ressource = existingTarget
@@ -298,7 +298,7 @@ export const createAssetBuilder = (
     } else {
       ressource = createTarget({
         ressourceContentType,
-        targetUrl,
+        targetUrl: ressourceUrl,
         bufferBeforeBuild,
 
         isEntryPoint,
@@ -308,7 +308,7 @@ export const createAssetBuilder = (
         targetFileNamePattern,
         targetUrlVersioningDisabled,
       })
-      ressourceMap[targetUrl] = ressource
+      ressourceMap[ressourceUrl] = ressource
     }
     reference.ressource = ressource
     ressource.addReference(reference, { isJsModule })
@@ -366,17 +366,16 @@ export const createAssetBuilder = (
         // - js was only preloaded/prefetched and never referenced afterwards
         // - js was only referenced by other js
         if (!buildFileInfo) {
-          const targetWasOnlyPreloadedOrPrefecthed =
-            !ressource.firstStrongReference
-          if (targetWasOnlyPreloadedOrPrefecthed) {
+          const referencedOnlyByRessourceHint = !ressource.firstStrongReference
+          if (referencedOnlyByRessourceHint) {
             resolve()
             return
           }
 
-          const targetWasOnlyReferencedByOtherJs = ressource.references.every(
+          const referencedOnlyByOtherJs = ressource.references.every(
             (ref) => ref.referenceShouldNotEmitChunk,
           )
-          if (targetWasOnlyReferencedByOtherJs) {
+          if (referencedOnlyByOtherJs) {
             resolve()
             return
           }
@@ -435,7 +434,7 @@ export const createAssetBuilder = (
         showReferenceSourceLocation(ressource.firstStrongReference),
       )
       if (response.url !== targetUrl) {
-        targetRedirectionMap[targetUrl] = response.url
+        ressourceRedirectionMap[targetUrl] = response.url
         ressource.targetUrl = response.url
       }
 
@@ -561,7 +560,7 @@ export const createAssetBuilder = (
       // we don't yet know the exact importerBuildRelativeUrl but we can generate a fake one
       // to ensure we resolve dependency against where the importer file will be
 
-      const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(
+      const importerBuildRelativeUrl = precomputeBuildRelativeUrlForRessource(
         ressource,
         {
           lineBreakNormalization,
@@ -570,7 +569,7 @@ export const createAssetBuilder = (
       const assetEmitters = []
       const transformReturnValue = await transform({
         precomputeBuildRelativeUrl: (bufferAfterBuild) =>
-          precomputeBuildRelativeUrlForTarget(ressource, {
+          precomputeBuildRelativeUrlForRessource(ressource, {
             bufferAfterBuild,
             lineBreakNormalization,
           }),
@@ -578,32 +577,32 @@ export const createAssetBuilder = (
           assetEmitters.push(callback)
         },
         getReferenceUrlRelativeToImporter: (reference) => {
-          const importerTarget = ressource
-          const referenceTarget = reference.ressource
+          const ressourceImporter = ressource
+          const referenceRessource = reference.ressource
 
-          let referenceTargetBuildRelativeUrl
+          let referenceBuildRelativeUrl
 
-          if (importerTarget.isJsModule) {
+          if (ressourceImporter.isJsModule) {
             // js can reference an url without versionning
             // and actually fetch the versioned url thanks to importmap
-            referenceTargetBuildRelativeUrl =
-              referenceTarget.targetFileName ||
-              referenceTarget.targetBuildRelativeUrl
+            referenceBuildRelativeUrl =
+              referenceRessource.targetFileName ||
+              referenceRessource.targetBuildRelativeUrl
           } else {
             // other ressource must use the exact url
-            referenceTargetBuildRelativeUrl =
-              referenceTarget.targetBuildRelativeUrl
+            referenceBuildRelativeUrl =
+              referenceRessource.targetBuildRelativeUrl
           }
 
-          const referenceTargetBuildUrl = resolveUrl(
-            referenceTargetBuildRelativeUrl,
+          const referenceBuildUrl = resolveUrl(
+            referenceBuildRelativeUrl,
             "file:///",
           )
           const importerBuildUrl = resolveUrl(
             importerBuildRelativeUrl,
             "file:///",
           )
-          return urlToRelativeUrl(referenceTargetBuildUrl, importerBuildUrl)
+          return urlToRelativeUrl(referenceBuildUrl, importerBuildUrl)
         },
       })
       if (transformReturnValue === null || transformReturnValue === undefined) {
@@ -611,17 +610,17 @@ export const createAssetBuilder = (
       }
 
       let bufferAfterBuild
-      let targetBuildRelativeUrl
+      let buildRelativeUrl
       if (typeof transformReturnValue === "string") {
         bufferAfterBuild = transformReturnValue
       } else {
         bufferAfterBuild = transformReturnValue.bufferAfterBuild
         if (transformReturnValue.targetBuildRelativeUrl) {
-          targetBuildRelativeUrl = transformReturnValue.targetBuildRelativeUrl
+          buildRelativeUrl = transformReturnValue.targetBuildRelativeUrl
         }
       }
 
-      ressource.targetBuildEnd(bufferAfterBuild, targetBuildRelativeUrl)
+      ressource.targetBuildEnd(bufferAfterBuild, buildRelativeUrl)
       assetEmitters.forEach((callback) => {
         callback({
           emitAsset,
@@ -808,12 +807,12 @@ export const createAssetBuilder = (
     })
   }
 
-  const getTargetFromUrl = (url) => {
+  const ressourceFromUrl = (url) => {
     if (url in ressourceMap) {
       return ressourceMap[url]
     }
-    if (url in targetRedirectionMap) {
-      return getTargetFromUrl(targetRedirectionMap[url])
+    if (url in ressourceRedirectionMap) {
+      return ressourceFromUrl(ressourceRedirectionMap[url])
     }
     return null
   }
@@ -837,9 +836,9 @@ export const createAssetBuilder = (
 
   const showReferenceSourceLocation = (reference) => {
     const referenceUrl = reference.referenceUrl
-    const referenceTarget = getTargetFromUrl(referenceUrl)
-    const referenceSource = referenceTarget
-      ? referenceTarget.bufferBeforeBuild
+    const referenceRessource = ressourceFromUrl(referenceUrl)
+    const referenceSource = referenceRessource
+      ? referenceRessource.bufferBeforeBuild
       : loadUrl(referenceUrl)
     const referenceSourceAsString = referenceSource
       ? String(referenceSource)
@@ -880,13 +879,13 @@ ${showSourceLocation(referenceSourceAsString, {
     inspect: () => {
       return {
         ressourceMap,
-        targetRedirectionMap,
+        ressourceRedirectionMap,
       }
     },
   }
 }
 
-const precomputeBuildRelativeUrlForTarget = (
+const precomputeBuildRelativeUrlForRessource = (
   ressource,
   { bufferAfterBuild = "", lineBreakNormalization } = {},
 ) => {
@@ -956,7 +955,7 @@ const isEmitChunkNeeded = ({ ressource, reference }) => {
  */
 const referenceShouldBeIgnoredWarning = ({
   isJsModule,
-  importerTarget,
+  ressourceImporter,
   ressourceSpecifier,
   referenceUrl,
   urlToHumanUrl,
@@ -966,12 +965,12 @@ const referenceShouldBeIgnoredWarning = ({
   }
 
   // js can reference js
-  if (importerTarget.isJsModule) {
+  if (ressourceImporter.isJsModule) {
     return false
   }
 
   // html can reference js
-  if (importerTarget.isEntryPoint) {
+  if (ressourceImporter.isEntryPoint) {
     return false
   }
 
