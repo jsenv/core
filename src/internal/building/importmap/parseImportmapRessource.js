@@ -1,9 +1,9 @@
-export const parseImportmapAsset = (
-  importmapTarget,
+export const parseImportmapRessource = (
+  importmapRessource,
   notifiers,
   { minify, importMapToInject },
 ) => {
-  const importmapString = String(importmapTarget.bufferBeforeBuild)
+  const importmapString = String(importmapRessource.bufferBeforeBuild)
 
   return () => {
     if (importMapToInject) {

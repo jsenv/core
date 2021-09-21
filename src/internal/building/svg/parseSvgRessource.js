@@ -11,15 +11,15 @@ import {
 import { getRessourceAsBase64Url } from "../asset-builder.util.js"
 import { minifyHtml } from "../html/minifyHtml.js"
 
-export const parseSvgAsset = async (
-  svgTarget,
+export const parseSvgRessource = async (
+  svgRessource,
   notifiers,
   { minify, minifyHtmlOptions },
 ) => {
-  const svgString = String(svgTarget.bufferBeforeBuild)
+  const svgString = String(svgRessource.bufferBeforeBuild)
   const svgAst = await parseSvgString(svgString)
   const htmlRessources = parseHtmlAstRessources(svgAst)
-  const mutations = collectSvgMutations(htmlRessources, notifiers, svgTarget)
+  const mutations = collectSvgMutations(htmlRessources, notifiers, svgRessource)
 
   return ({ getReferenceUrlRelativeToImporter }) => {
     mutations.forEach((mutationCallback) => {
@@ -33,11 +33,18 @@ export const parseSvgAsset = async (
   }
 }
 
-export const collectSvgMutations = ({ images, uses }, notifiers, svgTarget) => {
-  const imagesMutations = collectNodesMutations(images, notifiers, svgTarget, [
-    imageHrefVisitor,
-  ])
-  const usesMutations = collectNodesMutations(uses, notifiers, svgTarget, [
+export const collectSvgMutations = (
+  { images, uses },
+  notifiers,
+  svgRessource,
+) => {
+  const imagesMutations = collectNodesMutations(
+    images,
+    notifiers,
+    svgRessource,
+    [imageHrefVisitor],
+  )
+  const usesMutations = collectNodesMutations(uses, notifiers, svgRessource, [
     useHrefVisitor,
   ])
   const svgMutations = [...imagesMutations, ...usesMutations]

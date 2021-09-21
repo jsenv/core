@@ -7,13 +7,13 @@ import {
 import { bundleWorker } from "@jsenv/core/src/internal/building/bundleWorker.js"
 import { minifyJs } from "./minifyJs.js"
 
-export const parseJsAsset = async (
-  jsTarget,
+export const parseJsRessource = async (
+  jsRessource,
   { notifyReferenceFound },
   { urlToOriginalFileUrl, urlToOriginalServerUrl, minify, minifyJsOptions },
 ) => {
-  const jsUrl = jsTarget.targetUrl
-  const jsString = String(jsTarget.bufferBeforeBuild)
+  const jsUrl = jsRessource.ressourceUrl
+  const jsString = String(jsRessource.bufferBeforeBuild)
   const jsSourcemapUrl = getJavaScriptSourceMappingUrl(jsString)
   let sourcemapReference
 
@@ -41,7 +41,7 @@ export const parseJsAsset = async (
     // importScripts are inlined which is good for:
     // - not breaking things (otherwise we would have to copy imported files in the build directory)
     // - perf (one less http request)
-    const mightBeAWorkerScript = !jsTarget.isInline
+    const mightBeAWorkerScript = !jsRessource.isInline
 
     let jsSourceAfterTransformation
     if (mightBeAWorkerScript) {
@@ -57,12 +57,12 @@ export const parseJsAsset = async (
     }
 
     if (minify) {
-      const jsUrlRelativeToImporter = jsTarget.isInline
+      const jsUrlRelativeToImporter = jsRessource.isInline
         ? urlToRelativeUrl(
-            jsTarget.targetUrl,
-            jsTarget.references[0].referenceUrl,
+            jsRessource.ressourceUrl,
+            jsRessource.references[0].referenceUrl,
           )
-        : jsTarget.targetRelativeUrl
+        : jsRessource.ressourceRelativeUrl
       const result = await minifyJs(jsString, jsUrlRelativeToImporter, {
         sourceMap: {
           ...(map ? { content: JSON.stringify(map) } : {}),
@@ -88,15 +88,15 @@ export const parseJsAsset = async (
 
       registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
         const jsBuildUrl = resolveUrl(
-          jsTarget.targetBuildRelativeUrl,
+          jsRessource.ressourceBuildRelativeUrl,
           buildDirectoryUrl,
         )
         const mapBuildUrl = resolveUrl(jsSourcemapFilename, jsBuildUrl)
         map.file = urlToFilename(jsBuildUrl)
         if (map.sources) {
-          const importerUrl = jsTarget.isInline
-            ? urlToOriginalServerUrl(jsTarget.targetUrl)
-            : jsTarget.targetUrl
+          const importerUrl = jsRessource.isInline
+            ? urlToOriginalServerUrl(jsRessource.ressourceUrl)
+            : jsRessource.ressourceUrl
 
           map.sources = map.sources.map((source) => {
             const sourceUrl = resolveUrl(source, importerUrl)
@@ -115,7 +115,8 @@ export const parseJsAsset = async (
         )
 
         if (sourcemapReference) {
-          sourcemapReference.ressource.targetBuildRelativeUrl = buildRelativeUrl
+          sourcemapReference.ressource.ressourceBuildRelativeUrl =
+            buildRelativeUrl
           sourcemapReference.ressource.bufferAfterBuild = mapSource
         } else {
           emitAsset({
@@ -126,7 +127,7 @@ export const parseJsAsset = async (
       })
 
       return {
-        targetBuildRelativeUrl: jsBuildRelativeUrl,
+        ressourceBuildRelativeUrl: jsBuildRelativeUrl,
         bufferAfterBuild: jsSourceAfterTransformation,
       }
     }

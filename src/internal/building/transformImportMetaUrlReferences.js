@@ -25,8 +25,8 @@ export const transformImportMetaUrlReferences = async ({
 
       // hum on devrait le fetch pour obtenir l'url finale et le content-type
       // par contre on y applique pas les import map
-      const targetUrl = resolveUrl(relativeUrl, url)
-      const response = await fetch(targetUrl, url)
+      const ressourceUrl = resolveUrl(relativeUrl, url)
+      const response = await fetch(ressourceUrl, url)
       const bufferBeforeBuild = Buffer.from(await response.arrayBuffer())
 
       const reference = await assetBuilder.createReferenceFoundInJs({
@@ -38,7 +38,7 @@ export const transformImportMetaUrlReferences = async ({
             }
           : {}),
 
-        ressourceSpecifier: targetUrl,
+        ressourceSpecifier: ressourceUrl,
         ressourceContentType: response.headers["content-type"],
         bufferBeforeBuild,
       })
@@ -49,7 +49,7 @@ export const transformImportMetaUrlReferences = async ({
           referenceToCodeForRollup(reference),
         )
         markBuildRelativeUrlAsUsedByJs(
-          reference.ressource.targetBuildRelativeUrl,
+          reference.ressource.ressourceBuildRelativeUrl,
         )
       }
     },

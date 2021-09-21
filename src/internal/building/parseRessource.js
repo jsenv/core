@@ -11,16 +11,16 @@ import {
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { jsenvSystemJsFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
-import { parseHtmlAsset } from "./html/parseHtmlAsset.js"
-import { parseImportmapAsset } from "./importmap/parseImportmapAsset.js"
-import { parseSvgAsset } from "./svg/parseSvgAsset.js"
-import { parseCssAsset } from "./css/parseCssAsset.js"
-import { parseJsAsset } from "./js/parseJsAsset.js"
-import { parseJsonAsset } from "./json/parseJsonAsset.js"
-import { parseWebmanifest } from "./webmanifest/parseWebmanifest.js"
+import { parseHtmlRessource } from "./html/parseHtmlRessource.js"
+import { parseImportmapRessource } from "./importmap/parseImportmapRessource.js"
+import { parseSvgRessource } from "./svg/parseSvgRessource.js"
+import { parseCssRessource } from "./css/parseCssRessource.js"
+import { parseJsRessource } from "./js/parseJsRessource.js"
+import { parseJsonRessource } from "./json/parseJsonRessource.js"
+import { parseWebmanifestRessource } from "./webmanifest/parseWebmanifestRessource.js"
 
-export const parseTarget = (
-  target,
+export const parseRessource = (
+  ressource,
   notifiers,
   {
     projectDirectoryUrl,
@@ -37,13 +37,13 @@ export const parseTarget = (
     minifyJsOptions,
   },
 ) => {
-  const { ressourceContentType } = target
+  const { ressourceContentType } = ressource
   if (!ressourceContentType) {
     return null
   }
 
   if (ressourceContentType === "text/html") {
-    return parseHtmlAsset(target, notifiers, {
+    return parseHtmlRessource(ressource, notifiers, {
       minify,
       minifyHtmlOptions,
       htmlStringToHtmlAst: (htmlString) => {
@@ -135,7 +135,7 @@ export const parseTarget = (
         ressourceHintNeverUsedCallback({
           ...info,
           htmlSource: String(target.bufferBeforeBuild),
-          htmlUrl: urlToOriginalFileUrl(target.targetUrl),
+          htmlUrl: urlToOriginalFileUrl(target.ressourceUrl),
         })
       },
     })

@@ -44,7 +44,7 @@ import {
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import {
   getRessourceAsBase64Url,
-  ressourceIsReferencedOnlyByRessourceHint,
+  isReferencedOnlyByRessourceHint,
 } from "../asset-builder.util.js"
 import {
   collectNodesMutations,
@@ -53,8 +53,8 @@ import {
 import { collectSvgMutations } from "../svg/parseSvgAsset.js"
 import { minifyHtml } from "./minifyHtml.js"
 
-export const parseHtmlAsset = async (
-  htmlTarget,
+export const parseHtmlRessource = async (
+  htmlRessource,
   notifiers,
   {
     minify,
@@ -64,23 +64,28 @@ export const parseHtmlAsset = async (
     ressourceHintNeverUsedCallback = () => {},
   } = {},
 ) => {
-  const htmlString = String(htmlTarget.bufferBeforeBuild)
+  const htmlString = String(htmlRessource.bufferBeforeBuild)
   const htmlAst = await htmlStringToHtmlAst(htmlString)
   const { links, styles, scripts, imgs, images, uses, sources } =
     parseHtmlAstRessources(htmlAst)
 
-  const linksMutations = collectNodesMutations(links, notifiers, htmlTarget, [
-    linkStylesheetHrefVisitor,
-    (link, notifiers) =>
-      linkHrefVisitor(link, {
-        ...notifiers,
-        ressourceHintNeverUsedCallback,
-      }),
-  ])
+  const linksMutations = collectNodesMutations(
+    links,
+    notifiers,
+    htmlRessource,
+    [
+      linkStylesheetHrefVisitor,
+      (link, notifiers) =>
+        linkHrefVisitor(link, {
+          ...notifiers,
+          ressourceHintNeverUsedCallback,
+        }),
+    ],
+  )
   const scriptsMutations = collectNodesMutations(
     scripts,
     notifiers,
-    htmlTarget,
+    htmlRessource,
     [
       // regular javascript are not parseable by rollup
       // and we don't really care about there content
@@ -94,34 +99,40 @@ export const parseHtmlAsset = async (
       importmapScriptTextNodeVisitor,
     ],
   )
-  const stylesMutations = collectNodesMutations(styles, notifiers, htmlTarget, [
-    styleTextNodeVisitor,
-  ])
-  const imgsSrcMutations = collectNodesMutations(imgs, notifiers, htmlTarget, [
-    imgSrcVisitor,
-  ])
+  const stylesMutations = collectNodesMutations(
+    styles,
+    notifiers,
+    htmlRessource,
+    [styleTextNodeVisitor],
+  )
+  const imgsSrcMutations = collectNodesMutations(
+    imgs,
+    notifiers,
+    htmlRessource,
+    [imgSrcVisitor],
+  )
   const imgsSrcsetMutations = collectNodesMutations(
     imgs,
     notifiers,
-    htmlTarget,
+    htmlRessource,
     [srcsetVisitor],
   )
   const sourcesSrcMutations = collectNodesMutations(
     sources,
     notifiers,
-    htmlTarget,
+    htmlRessource,
     [sourceSrcVisitor],
   )
   const sourcesSrcsetMutations = collectNodesMutations(
     sources,
     notifiers,
-    htmlTarget,
+    htmlRessource,
     [srcsetVisitor],
   )
   const svgMutations = collectSvgMutations(
     { images, uses },
     notifiers,
-    htmlTarget,
+    htmlRessource,
   )
 
   const htmlMutations = [
@@ -152,7 +163,7 @@ export const parseHtmlAsset = async (
 const regularScriptSrcVisitor = (
   script,
   { notifyReferenceFound },
-  htmlTarget,
+  htmlRessource,
 ) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
   if (
@@ -179,16 +190,19 @@ const regularScriptSrcVisitor = (
 
     if (shouldInline({ reference: remoteScriptReference, htmlNode: script })) {
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { target } = remoteScriptReference
-      const { bufferAfterBuild } = target
+      const { ressource } = remoteScriptReference
+      const { bufferAfterBuild } = ressource
       let jsString = String(bufferAfterBuild)
 
       const sourcemapRelativeUrl = getJavaScriptSourceMappingUrl(jsString)
       if (sourcemapRelativeUrl) {
-        const { targetBuildRelativeUrl } = target
-        const jsBuildUrl = resolveUrl(targetBuildRelativeUrl, "file:///")
+        const { ressourceBuildRelativeUrl } = ressource
+        const jsBuildUrl = resolveUrl(ressourceBuildRelativeUrl, "file:///")
         const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, jsBuildUrl)
-        const htmlUrl = resolveUrl(htmlTarget.targetFileNamePattern, "file:///")
+        const htmlUrl = resolveUrl(
+          htmlRessource.ressourceFileNamePattern,
+          "file:///",
+        )
         const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
         jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapInlineUrl)
       }
@@ -207,7 +221,7 @@ const regularScriptSrcVisitor = (
 const regularScriptTextNodeVisitor = (
   script,
   { notifyReferenceFound },
-  htmlTarget,
+  htmlRessource,
   scripts,
 ) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
@@ -232,7 +246,7 @@ const regularScriptTextNodeVisitor = (
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
-      `${urlToBasename(htmlTarget.targetUrl)}.[id].js`,
+      `${urlToBasename(htmlRessource.ressourceUrl)}.[id].js`,
     ),
     ...htmlNodeToReferenceLocation(script),
 
@@ -279,8 +293,8 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { target } = remoteScriptReference
-      const { bufferAfterBuild } = target
+      const { ressource } = remoteScriptReference
+      const { bufferAfterBuild } = ressource
       let jsString = String(bufferAfterBuild)
 
       // at this stage, for some reason the sourcemap url is not in the js
@@ -288,7 +302,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       // but we know that a script type module have a sourcemap
       // and will be next to html file
       // with these assumptions we can force the sourcemap url
-      const sourcemapUrl = `${target.targetBuildRelativeUrl}.map`
+      const sourcemapUrl = `${ressource.ressourceBuildRelativeUrl}.map`
       jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapUrl)
 
       setHtmlNodeText(script, jsString)
@@ -306,7 +320,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
 const moduleScriptTextNodeVisitor = (
   script,
   { format, notifyReferenceFound },
-  htmlTarget,
+  htmlRessource,
   scripts,
 ) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
@@ -330,7 +344,7 @@ const moduleScriptTextNodeVisitor = (
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
-      `${urlToBasename(htmlTarget.targetUrl)}.[id].js`,
+      `${urlToBasename(htmlRessource.ressourceUrl)}.[id].js`,
     ),
     ...htmlNodeToReferenceLocation(script),
 
@@ -373,11 +387,11 @@ const importmapScriptSrcVisitor = (
     // so that we don't have to rewrite its content
     // the goal is to put the importmap at the same relative path
     // than in the project
-    targetFileNamePattern: () => {
+    ressourceFileNamePattern: () => {
       const importmapReferenceUrl = importmapReference.referenceUrl
-      const importmapTargetUrl = importmapReference.ressource.targetUrl
+      const importmapRessourceUrl = importmapReference.ressource.ressourceUrl
       const importmapUrlRelativeToImporter = urlToRelativeUrl(
-        importmapTargetUrl,
+        importmapRessourceUrl,
         importmapReferenceUrl,
       )
       const importmapParentRelativeUrl = urlToRelativeUrl(
@@ -417,7 +431,7 @@ const importmapScriptSrcVisitor = (
 const importmapScriptTextNodeVisitor = (
   script,
   { format, notifyReferenceFound },
-  htmlTarget,
+  htmlRessource,
   scripts,
 ) => {
   const typeAttribute = getHtmlNodeAttributeByName(script, "type")
@@ -441,7 +455,7 @@ const importmapScriptTextNodeVisitor = (
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
-      `${urlToBasename(htmlTarget.targetUrl)}.[id].importmap`,
+      `${urlToBasename(htmlRessource.ressourceUrl)}.[id].importmap`,
     ),
     ...htmlNodeToReferenceLocation(script),
 
@@ -462,7 +476,7 @@ const importmapScriptTextNodeVisitor = (
 const linkStylesheetHrefVisitor = (
   link,
   { notifyReferenceFound },
-  htmlTarget,
+  htmlRessource,
 ) => {
   const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
   if (!hrefAttribute) {
@@ -487,15 +501,18 @@ const linkStylesheetHrefVisitor = (
     }
 
     if (shouldInline({ reference: cssReference, htmlNode: link })) {
-      const { target } = cssReference
-      const { bufferAfterBuild } = target
+      const { ressource } = cssReference
+      const { bufferAfterBuild } = ressource
       let cssString = String(bufferAfterBuild)
       const sourcemapRelativeUrl = getCssSourceMappingUrl(cssString)
       if (sourcemapRelativeUrl) {
-        const { targetBuildRelativeUrl } = target
-        const cssBuildUrl = resolveUrl(targetBuildRelativeUrl, "file:///")
+        const { ressourceBuildRelativeUrl } = ressource
+        const cssBuildUrl = resolveUrl(ressourceBuildRelativeUrl, "file:///")
         const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, cssBuildUrl)
-        const htmlUrl = resolveUrl(htmlTarget.targetFileNamePattern, "file:///")
+        const htmlUrl = resolveUrl(
+          htmlRessource.ressourceFileNamePattern,
+          "file:///",
+        )
         const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
         cssString = setCssSourceMappingUrl(cssString, sourcemapInlineUrl)
       }
@@ -549,14 +566,14 @@ const linkHrefVisitor = (
     ressourceContentTypeExpected,
     ressourceSpecifier: hrefAttribute.value,
     ...htmlNodeToReferenceLocation(link),
-    targetUrlVersioningDisabled:
+    ressourceUrlVersioningDisabled:
       ressourceContentTypeExpected === "application/manifest+json",
     isJsModule,
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
-    const target = linkReference.ressource
+    const linkRessource = linkReference.ressource
     if (isRessourceHint) {
-      if (ressourceIsReferencedOnlyByRessourceHint(target)) {
+      if (isReferencedOnlyByRessourceHint(linkRessource)) {
         ressourceHintNeverUsedCallback({
           htmlNode: link,
           rel,
@@ -567,7 +584,7 @@ const linkHrefVisitor = (
       }
     }
 
-    if (linkReference.ressource.isExternal) {
+    if (linkRessource.isExternal) {
       return
     }
 
@@ -598,7 +615,7 @@ const linkHrefVisitor = (
 const styleTextNodeVisitor = (
   style,
   { notifyReferenceFound },
-  htmlTarget,
+  htmlRessource,
   styles,
 ) => {
   const textNode = getHtmlNodeTextNode(style)
@@ -611,7 +628,7 @@ const styleTextNodeVisitor = (
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       style,
       styles,
-      `${urlToBasename(htmlTarget.targetUrl)}.[id].css`,
+      `${urlToBasename(htmlRessource.ressourceUrl)}.[id].css`,
     ),
     ...htmlNodeToReferenceLocation(style),
 
@@ -707,7 +724,7 @@ const referenceToUrl = ({
   getReferenceUrlRelativeToImporter,
 }) => {
   if (reference.ressource.isExternal) {
-    return reference.ressource.targetUrl
+    return reference.ressource.ressourceUrl
   }
   if (shouldInline({ reference, htmlNode })) {
     return getRessourceAsBase64Url(reference.ressource)
@@ -724,9 +741,7 @@ const ensureRelativeUrlNotation = (relativeUrl) => {
 }
 
 const shouldInline = ({ reference, htmlNode }) => {
-  const { target } = reference
-  const { isInline } = target
-  if (isInline) {
+  if (reference.ressource.isInline) {
     return true
   }
 

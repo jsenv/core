@@ -8,12 +8,12 @@ import { getRessourceAsBase64Url } from "../asset-builder.util.js"
 import { parseCssUrls } from "./parseCssUrls.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
 
-export const parseCssAsset = async (
-  cssTarget,
+export const parseCssRessource = async (
+  cssRessource,
   { notifyReferenceFound },
   { urlToOriginalServerUrl, minify, minifyCssOptions },
 ) => {
-  const cssString = String(cssTarget.bufferBeforeBuild)
+  const cssString = String(cssRessource.bufferBeforeBuild)
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
   let sourcemapReference
   if (cssSourcemapUrl) {
@@ -29,7 +29,7 @@ export const parseCssAsset = async (
 
   const { atImports, urlDeclarations } = await parseCssUrls(
     cssString,
-    cssTarget.targetUrl,
+    cssRessource.ressourceUrl,
   )
 
   const urlNodeReferenceMapping = new Map()
@@ -55,7 +55,7 @@ export const parseCssAsset = async (
   }) => {
     const cssReplaceResult = await replaceCssUrls(
       cssString,
-      cssTarget.targetUrl,
+      cssRessource.ressourceUrl,
       ({ urlNode }) => {
         const nodeCandidates = Array.from(urlNodeReferenceMapping.keys())
         const urlNodeFound = nodeCandidates.find((urlNodeCandidate) =>
@@ -67,16 +67,16 @@ export const parseCssAsset = async (
 
         // url node nous dit quel réfrence y correspond
         const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
-        const { target } = urlNodeReference
+        const cssUrlRessource = urlNodeReference.ressource
 
-        const { isExternal } = target
+        const { isExternal } = cssUrlRessource
         if (isExternal) {
           return urlNode.value
         }
 
-        const { isInline } = target
+        const { isInline } = cssUrlRessource
         if (isInline) {
-          return getRessourceAsBase64Url(target)
+          return getRessourceAsBase64Url(cssUrlRessource)
         }
         return getReferenceUrlRelativeToImporter(urlNodeReference)
       },
@@ -110,7 +110,7 @@ export const parseCssAsset = async (
 
     registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
       const cssBuildUrl = resolveUrl(
-        cssTarget.targetBuildRelativeUrl,
+        cssRessource.ressourceBuildRelativeUrl,
         buildDirectoryUrl,
       )
       const mapBuildUrl = resolveUrl(cssSourcemapFilename, cssBuildUrl)
@@ -118,9 +118,9 @@ export const parseCssAsset = async (
       if (map.sources) {
         // hum en fait si css est inline, alors la source n'est pas le fichier compilé
         // mais bien le fichier html compilé ?
-        const importerUrl = cssTarget.isInline
-          ? urlToOriginalServerUrl(cssTarget.targetUrl)
-          : cssTarget.targetUrl
+        const importerUrl = cssRessource.isInline
+          ? urlToOriginalServerUrl(cssRessource.ressourceUrl)
+          : cssRessource.ressourceUrl
         map.sources = map.sources.map((source) => {
           const sourceUrl = resolveUrl(source, importerUrl)
           const sourceUrlRelativeToSourceMap = urlToRelativeUrl(
@@ -134,7 +134,8 @@ export const parseCssAsset = async (
       const mapSource = JSON.stringify(map, null, "  ")
       const buildRelativeUrl = urlToRelativeUrl(mapBuildUrl, buildDirectoryUrl)
       if (sourcemapReference) {
-        sourcemapReference.ressource.targetBuildRelativeUrl = buildRelativeUrl
+        sourcemapReference.ressource.ressourceBuildRelativeUrl =
+          buildRelativeUrl
         sourcemapReference.ressource.bufferAfterBuild = mapSource
       } else {
         emitAsset({
@@ -145,7 +146,7 @@ export const parseCssAsset = async (
     })
 
     return {
-      targetBuildRelativeUrl: cssBuildRelativeUrl,
+      ressourceBuildRelativeUrl: cssBuildRelativeUrl,
       bufferAfterBuild: cssSourceAfterTransformation,
     }
   }
@@ -190,7 +191,7 @@ const compareUrlNodeTypes = (firstUrlNodeType, secondUrlNodeType) => {
 }
 
 // minification may change url node value from './whatever.png' to 'whatever.png'
-// the value still revolves to the same target
+// the value still revolves to the same ressource
 const compareUrlNodeValue = (firstUrlNodeValue, secondUrlNodeValue) => {
   const firstValueNormalized = urlToRelativeUrl(
     resolveUrl(firstUrlNodeValue, "file:///"),

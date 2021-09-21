@@ -1,32 +1,36 @@
 import { computeBuildRelativeUrl } from "./url-versioning.js"
 
-export const computeBuildRelativeUrlForTarget = (
-  target,
+export const computeBuildRelativeUrlForRessource = (
+  ressource,
   { lineBreakNormalization },
 ) => {
-  return computeBuildRelativeUrl(target.targetUrl, target.bufferAfterBuild, {
-    pattern: targetToFileNamePattern(target),
-    contentType: target.ressourceContentType,
-    lineBreakNormalization,
-  })
+  return computeBuildRelativeUrl(
+    ressource.ressourceUrl,
+    ressource.bufferAfterBuild,
+    {
+      pattern: fileNamePatternFromRessource(ressource),
+      contentType: ressource.ressourceContentType,
+      lineBreakNormalization,
+    },
+  )
 }
 
 const assetFileNamePattern = "assets/[name]-[hash][extname]"
 const assetFileNamePatternWithoutHash = "assets/[name][extname]"
 
-const targetToFileNamePattern = (target) => {
-  if (target.targetFileNamePattern) {
-    return target.targetFileNamePattern
+const fileNamePatternFromRessource = (ressource) => {
+  if (ressource.ressourceFileNamePattern) {
+    return ressource.ressourceFileNamePattern
   }
 
-  if (target.targetUrlVersioningDisabled) {
-    if (target.isEntryPoint || target.isJsModule) {
+  if (ressource.ressourceUrlVersioningDisabled) {
+    if (ressource.isEntryPoint || ressource.isJsModule) {
       return `[name][extname]`
     }
     return assetFileNamePatternWithoutHash
   }
 
-  if (target.isEntryPoint || target.isJsModule) {
+  if (ressource.isEntryPoint || ressource.isJsModule) {
     return `[name]-[hash][extname]`
   }
   return assetFileNamePattern

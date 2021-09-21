@@ -1,5 +1,5 @@
-export const parseJsonAsset = (jsonTarget, notifiers, { minify }) => {
-  const jsonString = String(jsonTarget.bufferBeforeBuild)
+export const parseJsonRessource = (jsonRessource, notifiers, { minify }) => {
+  const jsonString = String(jsonRessource.bufferBeforeBuild)
   return () => {
     if (minify) {
       // this is to remove eventual whitespaces

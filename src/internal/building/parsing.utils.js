@@ -1,10 +1,15 @@
 import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 
-export const collectNodesMutations = (nodes, notifiers, target, candidates) => {
+export const collectNodesMutations = (
+  nodes,
+  notifiers,
+  ressource,
+  candidates,
+) => {
   const mutations = []
   nodes.forEach((node) => {
     mutations.push(
-      ...collectNodeMutations(node, notifiers, target, nodes, candidates),
+      ...collectNodeMutations(node, notifiers, ressource, nodes, candidates),
     )
   })
   return mutations
@@ -18,10 +23,16 @@ export const htmlNodeToReferenceLocation = (htmlNode) => {
   }
 }
 
-const collectNodeMutations = (node, notifiers, target, nodes, candidates) => {
+const collectNodeMutations = (
+  node,
+  notifiers,
+  ressource,
+  nodes,
+  candidates,
+) => {
   let firstValueReturned
   candidates.find((candidate) => {
-    const returnValue = candidate(node, notifiers, target, nodes)
+    const returnValue = candidate(node, notifiers, ressource, nodes)
     if (returnValue === null || returnValue === undefined) {
       return false
     }

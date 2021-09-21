@@ -1,6 +1,6 @@
 import { resolveUrl, urlToExtension } from "@jsenv/filesystem"
 
-import { ressourceIsReferencedOnlyByRessourceHint } from "./asset-builder.util.js"
+import { isReferencedOnlyByRessourceHint } from "./asset-builder.util.js"
 
 export const createBuildStats = ({
   buildFileContents,
@@ -58,19 +58,20 @@ const getProjectFileContents = (assetBuilder) => {
   const { ressourceMap } = assetBuilder.inspect()
 
   Object.keys(ressourceMap).forEach((url) => {
-    const target = ressourceMap[url]
-    const { isInline, isExternal, bufferBeforeBuild } = target
+    const ressource = ressourceMap[url]
+    const { isInline, isExternal, bufferBeforeBuild } = ressource
     if (isInline) {
       // inline ressources are not files
       return
     }
     if (isExternal) {
-      // external target are not handled, we would not have the bufferBeforeBuild
+      // external ressource are not handled, we would not have the bufferBeforeBuild
       return
     }
-    if (ressourceIsReferencedOnlyByRessourceHint(target)) {
-      // target is only referenced by ressource hint (link preload for example)
-      // it's never actually loaded-> we don't gave the bufferBeforeBuild (the ressource file content)
+    if (isReferencedOnlyByRessourceHint(ressource)) {
+      // ressource is only referenced by ressource hint (link preload for example)
+      // it's never actually loaded
+      // -> we don't gave the bufferBeforeBuild (the ressource file content)
       return
     }
     projectFileContents[url] = bufferBeforeBuild

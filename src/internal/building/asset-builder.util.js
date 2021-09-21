@@ -14,9 +14,9 @@ export const getRessourceAsBase64Url = ({
   })
 }
 
-export const ressourceIsReferencedOnlyByRessourceHint = (target) => {
-  return target.references.every((targetReference) => {
-    return targetReference.isRessourceHint
+export const isReferencedOnlyByRessourceHint = (ressource) => {
+  return ressource.references.every((reference) => {
+    return reference.isRessourceHint
   })
 }
 
@@ -91,11 +91,11 @@ export const checkContentType = (
   }
 
   // sourcemap content type is fine if we got octet-stream too
-  const { targetUrl } = reference.ressource
+  const { ressourceUrl } = reference.ressource
   if (
     ressourceContentTypeExpected === "application/json" &&
     ressourceContentType === "application/octet-stream" &&
-    targetUrl.endsWith(".map")
+    ressourceUrl.endsWith(".map")
   ) {
     return
   }
@@ -111,14 +111,14 @@ const formatContentTypeMismatchLog = (
   reference,
   { showReferenceSourceLocation },
 ) => {
-  const { ressourceContentTypeExpected, target } = reference
-  const { ressourceContentType, targetUrl } = target
+  const { ressourceContentTypeExpected, ressource } = reference
+  const { ressourceContentType, ressourceUrl } = ressource
 
   return createDetailedMessage(
     `A reference was expecting ${ressourceContentTypeExpected} but found ${ressourceContentType} instead.`,
     {
       ["reference"]: showReferenceSourceLocation(reference),
-      ["target url"]: targetUrl,
+      ["ressource url"]: ressourceUrl,
     },
   )
 }
@@ -138,8 +138,8 @@ export const formatFoundReference = ({
     })
   }
 
-  const { target } = reference
-  const { isEntryPoint } = target
+  const { ressource } = reference
+  const { isEntryPoint } = ressource
 
   if (isEntryPoint) {
     return formatCreateReferenceForEntry({
@@ -149,7 +149,7 @@ export const formatFoundReference = ({
     })
   }
 
-  const { isExternal } = target
+  const { isExternal } = ressource
 
   if (isExternal) {
     return formatFoundReferenceToExternalRessource({
@@ -159,7 +159,7 @@ export const formatFoundReference = ({
     })
   }
 
-  const { isInline, isJsModule } = target
+  const { isInline, isJsModule } = ressource
   if (isInline && !isJsModule) {
     return formatFoundReferenceToInlineAsset({
       reference,
@@ -193,9 +193,9 @@ export const formatFoundReference = ({
 
 const formatCreateReferenceForEntry = ({ reference, referenceEffects }) => {
   return `
-Start from entry file ${reference.ressource.targetRelativeUrl}${appendEffects(
-    referenceEffects,
-  )}`
+Start from entry file ${
+    reference.ressource.ressourceRelativeUrl
+  }${appendEffects(referenceEffects)}`
 }
 
 const formatFoundRessourceHint = ({
@@ -272,13 +272,16 @@ const appendEffects = (effects) => {
 -> `)}`
 }
 
-export const formatDependenciesCollectedMessage = ({ target, shortenUrl }) => {
+export const formatDependenciesCollectedMessage = ({
+  ressource,
+  shortenUrl,
+}) => {
   return createDetailedMessage(
     `
-Dependencies collected for ${shortenUrl(target.targetUrl)}`,
+Dependencies collected for ${shortenUrl(ressource.ressourceUrl)}`,
     {
-      dependencies: target.dependencies.map((dependencyReference) =>
-        shortenUrl(dependencyReference.ressource.targetUrl),
+      dependencies: ressource.dependencies.map((dependencyReference) =>
+        shortenUrl(dependencyReference.ressource.ressourceUrl),
       ),
     },
   )

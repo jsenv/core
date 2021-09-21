@@ -1,10 +1,10 @@
-export const parseWebmanifest = (
-  webmanifestTarget,
+export const parseWebmanifestRessource = (
+  webmanifestRessource,
   { notifyReferenceFound },
   { minify },
 ) => {
   // const manifestUrl = manifestTarget.url
-  const manifestString = String(webmanifestTarget.bufferBeforeBuild)
+  const manifestString = String(webmanifestRessource.bufferBeforeBuild)
 
   const manifest = JSON.parse(manifestString)
   const { icons = [] } = manifest
