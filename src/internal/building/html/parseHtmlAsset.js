@@ -168,7 +168,7 @@ const regularScriptSrcVisitor = (
   }
 
   const remoteScriptReference = notifyReferenceFound({
-    referenceExpectedContentType: "application/javascript",
+    ressourceContentTypeExpected: "application/javascript",
     referenceRessourceSpecifier: srcAttribute.value,
     ...htmlNodeToReferenceLocation(script),
   })
@@ -228,7 +228,7 @@ const regularScriptTextNodeVisitor = (
   }
 
   const jsReference = notifyReferenceFound({
-    referenceExpectedContentType: "application/javascript",
+    ressourceContentTypeExpected: "application/javascript",
     referenceRessourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
@@ -260,7 +260,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
   }
 
   const remoteScriptReference = notifyReferenceFound({
-    referenceExpectedContentType: "application/javascript",
+    ressourceContentTypeExpected: "application/javascript",
     referenceRessourceSpecifier: srcAttribute.value,
     ...htmlNodeToReferenceLocation(script),
 
@@ -326,7 +326,7 @@ const moduleScriptTextNodeVisitor = (
   }
 
   const jsReference = notifyReferenceFound({
-    referenceExpectedContentType: "application/javascript",
+    ressourceContentTypeExpected: "application/javascript",
     referenceRessourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
@@ -365,7 +365,7 @@ const importmapScriptSrcVisitor = (
   }
 
   const importmapReference = notifyReferenceFound({
-    referenceExpectedContentType: "application/importmap+json",
+    ressourceContentTypeExpected: "application/importmap+json",
     referenceRessourceSpecifier: srcAttribute.value,
     ...htmlNodeToReferenceLocation(script),
 
@@ -437,7 +437,7 @@ const importmapScriptTextNodeVisitor = (
   }
 
   const importmapReference = notifyReferenceFound({
-    referenceExpectedContentType: "application/importmap+json",
+    ressourceContentTypeExpected: "application/importmap+json",
     referenceRessourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
@@ -477,7 +477,7 @@ const linkStylesheetHrefVisitor = (
   }
 
   const cssReference = notifyReferenceFound({
-    referenceExpectedContentType: "text/css",
+    ressourceContentTypeExpected: "text/css",
     referenceRessourceSpecifier: hrefAttribute.value,
     ...htmlNodeToReferenceLocation(link),
   })
@@ -531,26 +531,26 @@ const linkHrefVisitor = (
     "modulepreload",
   ].includes(rel)
 
-  let referenceExpectedContentType
+  let ressourceContentTypeExpected
   const typeAttribute = getHtmlNodeAttributeByName(link, "type")
   const type = typeAttribute ? typeAttribute.value : ""
   let isJsModule = false
   if (type) {
-    referenceExpectedContentType = type
+    ressourceContentTypeExpected = type
   } else if (rel === "manifest") {
-    referenceExpectedContentType = "application/manifest+json"
+    ressourceContentTypeExpected = "application/manifest+json"
   } else if (rel === "modulepreload") {
-    referenceExpectedContentType = "application/javascript"
+    ressourceContentTypeExpected = "application/javascript"
     isJsModule = true
   }
 
   const linkReference = notifyReferenceFound({
     isRessourceHint,
-    referenceExpectedContentType,
+    ressourceContentTypeExpected,
     referenceRessourceSpecifier: hrefAttribute.value,
     ...htmlNodeToReferenceLocation(link),
     targetUrlVersioningDisabled:
-      referenceExpectedContentType === "application/manifest+json",
+      ressourceContentTypeExpected === "application/manifest+json",
     isJsModule,
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
@@ -607,7 +607,7 @@ const styleTextNodeVisitor = (
   }
 
   const inlineStyleReference = notifyReferenceFound({
-    referenceExpectedContentType: "text/css",
+    ressourceContentTypeExpected: "text/css",
     referenceRessourceSpecifier: getUniqueNameForInlineHtmlNode(
       style,
       styles,
@@ -685,7 +685,7 @@ const sourceSrcVisitor = (source, { notifyReferenceFound }) => {
 
   const typeAttribute = getHtmlNodeAttributeByName(source, "type")
   const srcReference = notifyReferenceFound({
-    referenceExpectedContentType: typeAttribute
+    ressourceContentTypeExpected: typeAttribute
       ? typeAttribute.value
       : undefined,
     referenceRessourceSpecifier: srcAttribute.value,

@@ -18,7 +18,7 @@ export const parseCssAsset = async (
   let sourcemapReference
   if (cssSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
-      referenceExpectedContentType: "application/json",
+      ressourceContentTypeExpected: "application/json",
       referenceRessourceSpecifier: cssSourcemapUrl,
       // we don't really know the line or column
       // but let's asusme it the last line and first column

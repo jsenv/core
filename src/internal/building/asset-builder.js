@@ -91,7 +91,7 @@ export const createAssetBuilder = (
     const callerLocation = getCallerLocation()
     const entryReference = createReference({
       referenceRessourceSpecifier: entryUrl,
-      referenceExpectedContentType: entryContentType,
+      ressourceContentTypeExpected: entryContentType,
       referenceUrl: callerLocation.url,
       referenceLine: callerLocation.line,
       referenceColumn: callerLocation.column,
@@ -112,7 +112,7 @@ export const createAssetBuilder = (
     await Promise.all(
       entryReference.target.dependencies.map(async (dependency) => {
         if (
-          dependency.referenceExpectedContentType ===
+          dependency.ressourceContentTypeExpected ===
           "application/importmap+json"
         ) {
           // don't await for importmap right away, it must be handled as the very last asset
@@ -153,7 +153,7 @@ export const createAssetBuilder = (
   }) => {
     const reference = createReference({
       referenceRessourceSpecifier: ressourceSpecifier,
-      referenceExpectedContentType: ressourceContentType,
+      ressourceContentTypeExpected: ressourceContentType,
       referenceUrl: jsUrl,
       referenceColumn: jsLine,
       referenceLine: jsColumn,
@@ -189,7 +189,7 @@ export const createAssetBuilder = (
   const createReference = ({
     referenceShouldNotEmitChunk,
     isRessourceHint,
-    referenceExpectedContentType,
+    ressourceContentTypeExpected,
     referenceRessourceSpecifier,
     referenceUrl,
     referenceColumn,
@@ -247,7 +247,7 @@ export const createAssetBuilder = (
       isExternal = false
       isInline = true
       const { mediaType, base64Flag, data } = parseDataUrl(targetUrl)
-      referenceExpectedContentType = mediaType
+      ressourceContentTypeExpected = mediaType
       ressourceContentType = mediaType
       bufferBeforeBuild = base64Flag
         ? Buffer.from(data, "base64")
@@ -277,7 +277,7 @@ export const createAssetBuilder = (
     const reference = {
       referenceShouldNotEmitChunk,
       isRessourceHint,
-      referenceExpectedContentType,
+      ressourceContentTypeExpected,
       referenceUrl,
       referenceColumn,
       referenceLine,
@@ -462,7 +462,7 @@ export const createAssetBuilder = (
       let parsingDone = false
       const notifyReferenceFound = ({
         isRessourceHint,
-        referenceExpectedContentType,
+        ressourceContentTypeExpected,
         referenceRessourceSpecifier,
         referenceLine,
         referenceColumn,
@@ -486,7 +486,7 @@ export const createAssetBuilder = (
           referenceLine,
           referenceColumn,
           isRessourceHint,
-          referenceExpectedContentType,
+          ressourceContentTypeExpected,
 
           ressourceContentType,
           bufferBeforeBuild,

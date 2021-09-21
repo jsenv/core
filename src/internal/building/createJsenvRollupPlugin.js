@@ -642,7 +642,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         // so we tell asset builder not to emit a chunk for this js reference
         // otherwise rollup would never concat module together
         referenceShouldNotEmitChunk: jsConcatenation,
-        referenceExpectedContentType: responseContentType,
+        ressourceContentTypeExpected: responseContentType,
         referenceUrl: importerUrl,
         referenceRessourceSpecifier: responseUrl,
         // rollup do not provide a way to know line and column for the static or dynamic import

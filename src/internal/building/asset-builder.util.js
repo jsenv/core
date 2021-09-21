@@ -79,21 +79,21 @@ export const checkContentType = (
   reference,
   { logger, showReferenceSourceLocation },
 ) => {
-  const { referenceExpectedContentType } = reference
+  const { ressourceContentTypeExpected } = reference
   const { ressourceContentType } = reference.target
 
-  if (!referenceExpectedContentType) {
+  if (!ressourceContentTypeExpected) {
     return
   }
 
-  if (compareContentType(referenceExpectedContentType, ressourceContentType)) {
+  if (compareContentType(ressourceContentTypeExpected, ressourceContentType)) {
     return
   }
 
   // sourcemap content type is fine if we got octet-stream too
   const { targetUrl } = reference.target
   if (
-    referenceExpectedContentType === "application/json" &&
+    ressourceContentTypeExpected === "application/json" &&
     ressourceContentType === "application/octet-stream" &&
     targetUrl.endsWith(".map")
   ) {
@@ -111,11 +111,11 @@ const formatContentTypeMismatchLog = (
   reference,
   { showReferenceSourceLocation },
 ) => {
-  const { referenceExpectedContentType, target } = reference
+  const { ressourceContentTypeExpected, target } = reference
   const { ressourceContentType, targetUrl } = target
 
   return createDetailedMessage(
-    `A reference was expecting ${referenceExpectedContentType} but found ${ressourceContentType} instead.`,
+    `A reference was expecting ${ressourceContentTypeExpected} but found ${ressourceContentType} instead.`,
     {
       ["reference"]: showReferenceSourceLocation(reference),
       ["target url"]: targetUrl,
