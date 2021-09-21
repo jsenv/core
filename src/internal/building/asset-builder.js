@@ -53,6 +53,7 @@ import {
 } from "./asset-builder.util.js"
 import { computeBuildRelativeUrlForTarget } from "./asset-url-versioning.js"
 
+// rename ressourceBuilder
 export const createAssetBuilder = (
   { fetch, parse },
   {
@@ -166,19 +167,19 @@ export const createAssetBuilder = (
   }
 
   const getAllAssetEntryEmittedPromise = async () => {
-    const urlToWait = Object.keys(targetMap).filter(
-      (url) => targetMap[url].isEntryPoint,
+    const urlToWait = Object.keys(ressourceMap).filter(
+      (url) => ressourceMap[url].isEntryPoint,
     )
     return Promise.all(
       urlToWait.map(async (url) => {
-        const target = targetMap[url]
+        const target = ressourceMap[url]
         await target.getReadyPromise()
         return target
       }),
     )
   }
 
-  const targetMap = {}
+  const ressourceMap = {}
   const targetRedirectionMap = {}
   // ok il faudrait faire un truc dans ce genre:
   // lorsqu'on a un preload, on fait une promesse
@@ -307,7 +308,7 @@ export const createAssetBuilder = (
         targetFileNamePattern,
         targetUrlVersioningDisabled,
       })
-      targetMap[targetUrl] = target
+      ressourceMap[targetUrl] = target
     }
     reference.target = target
     target.addReference(reference, { isJsModule })
@@ -789,8 +790,8 @@ export const createAssetBuilder = (
   }
 
   const buildEnd = ({ jsModuleBuild, buildManifest }) => {
-    Object.keys(targetMap).forEach((targetUrl) => {
-      const target = targetMap[targetUrl]
+    Object.keys(ressourceMap).forEach((targetUrl) => {
+      const target = ressourceMap[targetUrl]
       const { buildDoneCallback } = target
 
       const targetBuildRelativeUrl = Object.keys(jsModuleBuild).find(
@@ -809,8 +810,8 @@ export const createAssetBuilder = (
   }
 
   const getTargetFromUrl = (url) => {
-    if (url in targetMap) {
-      return targetMap[url]
+    if (url in ressourceMap) {
+      return ressourceMap[url]
     }
     if (url in targetRedirectionMap) {
       return getTargetFromUrl(targetRedirectionMap[url])
@@ -820,8 +821,8 @@ export const createAssetBuilder = (
 
   const findAsset = (predicate) => {
     let assetMatching = null
-    Object.keys(targetMap).find((assetUrl) => {
-      const assetCandidate = targetMap[assetUrl]
+    Object.keys(ressourceMap).find((assetUrl) => {
+      const assetCandidate = ressourceMap[assetUrl]
       if (predicate(assetCandidate)) {
         assetMatching = assetCandidate
         return true
@@ -879,7 +880,7 @@ ${showSourceLocation(referenceSourceAsString, {
 
     inspect: () => {
       return {
-        targetMap,
+        ressourceMap,
         targetRedirectionMap,
       }
     },

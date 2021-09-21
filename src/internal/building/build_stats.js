@@ -55,10 +55,10 @@ const sizeInfoFromFileContents = (fileContents) => {
 
 const getProjectFileContents = (assetBuilder) => {
   const projectFileContents = {}
-  const { targetMap } = assetBuilder.inspect()
+  const { ressourceMap } = assetBuilder.inspect()
 
-  Object.keys(targetMap).forEach((url) => {
-    const target = targetMap[url]
+  Object.keys(ressourceMap).forEach((url) => {
+    const target = ressourceMap[url]
     const { isInline, isExternal, bufferBeforeBuild } = target
     if (isInline) {
       // inline ressources are not files
