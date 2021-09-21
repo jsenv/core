@@ -102,8 +102,8 @@ export const createRessourceBuilder = (
       isEntryPoint: true,
 
       // don't hash asset entry points
-      ressourceUrlVersioningDisabled: true,
-      ressourceFileNamePattern: entryBuildRelativeUrl,
+      urlVersioningDisabled: true,
+      fileNamePattern: entryBuildRelativeUrl,
     })
 
     await entryReference.ressource.getDependenciesAvailablePromise()
@@ -200,8 +200,8 @@ export const createRessourceBuilder = (
     isEntryPoint,
     isJsModule,
     isInline,
-    ressourceFileNamePattern,
-    ressourceUrlVersioningDisabled,
+    fileNamePattern,
+    urlVersioningDisabled,
   }) => {
     const importerUrl = referenceUrl
     const ressourceImporter = ressourceFromUrl(importerUrl) || {
@@ -257,9 +257,9 @@ export const createRessourceBuilder = (
     // any hash in the url would mess up with filenames
     ressourceUrl = removePotentialUrlHash(ressourceUrl)
 
-    if (isInline && ressourceFileNamePattern === undefined) {
+    if (isInline && fileNamePattern === undefined) {
       // inherit parent directory location because it's an inline file
-      ressourceFileNamePattern = () => {
+      fileNamePattern = () => {
         const importerBuildRelativeUrl = precomputeBuildRelativeUrlForRessource(
           ressourceImporter,
           {
@@ -304,8 +304,8 @@ export const createRessourceBuilder = (
         isJsModule,
         isExternal,
         isInline,
-        ressourceFileNamePattern,
-        ressourceUrlVersioningDisabled,
+        fileNamePattern,
+        urlVersioningDisabled,
       })
       ressourceMap[ressourceUrl] = ressource
     }
@@ -327,8 +327,8 @@ export const createRessourceBuilder = (
     isExternal = false,
     isInline = false,
 
-    ressourceFileNamePattern,
-    ressourceUrlVersioningDisabled = false,
+    fileNamePattern,
+    urlVersioningDisabled = false,
   }) => {
     const ressource = {
       ressourceContentType,
@@ -342,8 +342,8 @@ export const createRessourceBuilder = (
       isInline,
       isExternal,
 
-      ressourceUrlVersioningDisabled,
-      ressourceFileNamePattern,
+      urlVersioningDisabled,
+      fileNamePattern,
 
       ressourceRelativeUrl: urlToRelativeUrl(ressourceUrl, baseUrl),
       bufferAfterBuild: undefined,
@@ -469,8 +469,8 @@ export const createRessourceBuilder = (
         bufferBeforeBuild,
         isJsModule = false,
         isInline = false,
-        ressourceUrlVersioningDisabled,
-        ressourceFileNamePattern,
+        urlVersioningDisabled,
+        fileNamePattern,
       }) => {
         if (parsingDone) {
           throw new Error(
@@ -491,8 +491,8 @@ export const createRessourceBuilder = (
           isJsModule,
           isInline,
 
-          ressourceUrlVersioningDisabled,
-          ressourceFileNamePattern,
+          urlVersioningDisabled,
+          fileNamePattern,
         })
 
         if (dependencyReference) {

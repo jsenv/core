@@ -199,10 +199,7 @@ const regularScriptSrcVisitor = (
         const { ressourceBuildRelativeUrl } = ressource
         const jsBuildUrl = resolveUrl(ressourceBuildRelativeUrl, "file:///")
         const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, jsBuildUrl)
-        const htmlUrl = resolveUrl(
-          htmlRessource.ressourceFileNamePattern,
-          "file:///",
-        )
+        const htmlUrl = resolveUrl(htmlRessource.fileNamePattern, "file:///")
         const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
         jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapInlineUrl)
       }
@@ -387,7 +384,7 @@ const importmapScriptSrcVisitor = (
     // so that we don't have to rewrite its content
     // the goal is to put the importmap at the same relative path
     // than in the project
-    ressourceFileNamePattern: () => {
+    fileNamePattern: () => {
       const importmapReferenceUrl = importmapReference.referenceUrl
       const importmapRessourceUrl = importmapReference.ressource.ressourceUrl
       const importmapUrlRelativeToImporter = urlToRelativeUrl(
@@ -509,10 +506,7 @@ const linkStylesheetHrefVisitor = (
         const { ressourceBuildRelativeUrl } = ressource
         const cssBuildUrl = resolveUrl(ressourceBuildRelativeUrl, "file:///")
         const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, cssBuildUrl)
-        const htmlUrl = resolveUrl(
-          htmlRessource.ressourceFileNamePattern,
-          "file:///",
-        )
+        const htmlUrl = resolveUrl(htmlRessource.fileNamePattern, "file:///")
         const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
         cssString = setCssSourceMappingUrl(cssString, sourcemapInlineUrl)
       }
@@ -566,7 +560,7 @@ const linkHrefVisitor = (
     ressourceContentTypeExpected,
     ressourceSpecifier: hrefAttribute.value,
     ...htmlNodeToReferenceLocation(link),
-    ressourceUrlVersioningDisabled:
+    urlVersioningDisabled:
       ressourceContentTypeExpected === "application/manifest+json",
     isJsModule,
   })

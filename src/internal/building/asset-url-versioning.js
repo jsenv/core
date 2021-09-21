@@ -19,11 +19,11 @@ const assetFileNamePattern = "assets/[name]-[hash][extname]"
 const assetFileNamePatternWithoutHash = "assets/[name][extname]"
 
 const fileNamePatternFromRessource = (ressource) => {
-  if (ressource.ressourceFileNamePattern) {
-    return ressource.ressourceFileNamePattern
+  if (ressource.fileNamePattern) {
+    return ressource.fileNamePattern
   }
 
-  if (ressource.ressourceUrlVersioningDisabled) {
+  if (ressource.urlVersioningDisabled) {
     if (ressource.isEntryPoint || ressource.isJsModule) {
       return `[name][extname]`
     }
