@@ -233,10 +233,10 @@ export const createAssetBuilder = (
     })
 
     let targetUrl
-    let targetIsExternal = false
+    let isExternal = false
     if (typeof resolveTargetReturnValue === "object") {
       if (resolveTargetReturnValue.external) {
-        targetIsExternal = true
+        isExternal = true
       }
       targetUrl = resolveTargetReturnValue.url
     } else {
@@ -244,7 +244,7 @@ export const createAssetBuilder = (
     }
 
     if (targetUrl.startsWith("data:")) {
-      targetIsExternal = false
+      isExternal = false
       isInline = true
       const { mediaType, base64Flag, data } = parseDataUrl(targetUrl)
       referenceExpectedContentType = mediaType
@@ -302,7 +302,7 @@ export const createAssetBuilder = (
 
         isEntryPoint,
         isJsModule,
-        targetIsExternal,
+        isExternal,
         isInline,
         targetFileNamePattern,
         targetUrlVersioningDisabled,
@@ -324,7 +324,7 @@ export const createAssetBuilder = (
 
     isEntryPoint = false,
     isJsModule = false,
-    targetIsExternal = false,
+    isExternal = false,
     isInline = false,
 
     targetFileNamePattern,
@@ -340,7 +340,7 @@ export const createAssetBuilder = (
       isEntryPoint,
       isJsModule,
       isInline,
-      targetIsExternal,
+      isExternal,
 
       targetUrlVersioningDisabled,
       targetFileNamePattern,
@@ -528,7 +528,7 @@ export const createAssetBuilder = (
     })
 
     const getReadyPromise = memoize(async () => {
-      if (targetIsExternal) {
+      if (isExternal) {
         // external urls are immediatly available and not modified
         return
       }
@@ -713,7 +713,7 @@ export const createAssetBuilder = (
 
       target.usedCallback()
 
-      if (targetIsExternal) {
+      if (isExternal) {
         // nothing to do
         return effects
       }

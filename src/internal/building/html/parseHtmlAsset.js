@@ -173,7 +173,7 @@ const regularScriptSrcVisitor = (
     ...htmlNodeToReferenceLocation(script),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
-    if (remoteScriptReference.target.targetIsExternal) {
+    if (remoteScriptReference.target.isExternal) {
       return
     }
 
@@ -271,7 +271,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       typeAttribute.value = "systemjs-module"
     }
 
-    if (remoteScriptReference.target.targetIsExternal) {
+    if (remoteScriptReference.target.isExternal) {
       return
     }
 
@@ -392,7 +392,7 @@ const importmapScriptSrcVisitor = (
       typeAttribute.value = "systemjs-importmap"
     }
 
-    if (importmapReference.target.targetIsExternal) {
+    if (importmapReference.target.isExternal) {
       return
     }
 
@@ -482,7 +482,7 @@ const linkStylesheetHrefVisitor = (
     ...htmlNodeToReferenceLocation(link),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
-    if (cssReference.target.targetIsExternal) {
+    if (cssReference.target.isExternal) {
       return
     }
 
@@ -567,7 +567,7 @@ const linkHrefVisitor = (
       }
     }
 
-    if (linkReference.target.targetIsExternal) {
+    if (linkReference.target.isExternal) {
       return
     }
 
@@ -706,7 +706,7 @@ const referenceToUrl = ({
   htmlNode,
   getReferenceUrlRelativeToImporter,
 }) => {
-  if (reference.target.targetIsExternal) {
+  if (reference.target.isExternal) {
     return reference.target.targetUrl
   }
   if (shouldInline({ reference, htmlNode })) {

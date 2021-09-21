@@ -149,9 +149,9 @@ export const formatFoundReference = ({
     })
   }
 
-  const { targetIsExternal } = target
+  const { isExternal } = target
 
-  if (targetIsExternal) {
+  if (isExternal) {
     return formatFoundReferenceToExternalRessource({
       reference,
       showReferenceSourceLocation,

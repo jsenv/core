@@ -69,8 +69,8 @@ export const parseCssAsset = async (
         const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
         const { target } = urlNodeReference
 
-        const { targetIsExternal } = target
-        if (targetIsExternal) {
+        const { isExternal } = target
+        if (isExternal) {
           return urlNode.value
         }
 
