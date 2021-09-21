@@ -3,14 +3,11 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
-export const getRessourceAsBase64Url = ({
-  bufferAfterBuild,
-  ressourceContentType,
-}) => {
+export const getRessourceAsBase64Url = ({ bufferAfterBuild, contentType }) => {
   return stringifyDataUrl({
     data: bufferAfterBuild,
     base64Flag: true,
-    mediaType: ressourceContentType,
+    mediaType: contentType,
   })
 }
 
@@ -80,13 +77,13 @@ export const checkContentType = (
   { logger, showReferenceSourceLocation },
 ) => {
   const { ressourceContentTypeExpected } = reference
-  const { ressourceContentType } = reference.ressource
+  const { contentType } = reference.ressource
 
   if (!ressourceContentTypeExpected) {
     return
   }
 
-  if (compareContentType(ressourceContentTypeExpected, ressourceContentType)) {
+  if (compareContentType(ressourceContentTypeExpected, contentType)) {
     return
   }
 
@@ -94,7 +91,7 @@ export const checkContentType = (
   const { ressourceUrl } = reference.ressource
   if (
     ressourceContentTypeExpected === "application/json" &&
-    ressourceContentType === "application/octet-stream" &&
+    contentType === "application/octet-stream" &&
     ressourceUrl.endsWith(".map")
   ) {
     return
@@ -112,10 +109,10 @@ const formatContentTypeMismatchLog = (
   { showReferenceSourceLocation },
 ) => {
   const { ressourceContentTypeExpected, ressource } = reference
-  const { ressourceContentType, ressourceUrl } = ressource
+  const { contentType, ressourceUrl } = ressource
 
   return createDetailedMessage(
-    `A reference was expecting ${ressourceContentTypeExpected} but found ${ressourceContentType} instead.`,
+    `A reference was expecting ${ressourceContentTypeExpected} but found ${contentType} instead.`,
     {
       ["reference"]: showReferenceSourceLocation(reference),
       ["ressource url"]: ressourceUrl,

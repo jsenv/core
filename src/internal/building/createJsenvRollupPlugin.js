@@ -651,7 +651,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         referenceLine: undefined,
 
         isJsenvHelperFile,
-        ressourceContentType: responseContentType,
+        contentType: responseContentType,
         bufferBeforeBuild: Buffer.from(content),
         isJsModule: responseContentType === "application/javascript",
       })
@@ -1038,7 +1038,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
     const moduleResponseBodyAsBuffer = Buffer.from(
       await moduleResponse.arrayBuffer(),
     )
-    const ressourceContentType = moduleResponse.headers["content-type"]
+    const contentType = moduleResponse.headers["content-type"]
     const assetReferenceForImport =
       await ressourceBuilder.createReferenceFoundInJs({
         // Reference to this target is corresponds to a static or dynamic import.
@@ -1048,9 +1048,9 @@ building ${entryFileRelativeUrls.length} entry files...`)
         jsUrl: importerUrl,
         jsLine: undefined,
         jsColumn: undefined,
-
         ressourceSpecifier: moduleResponse.url,
-        ressourceContentType,
+
+        contentType,
         bufferBeforeBuild: moduleResponseBodyAsBuffer,
       })
     if (assetReferenceForImport) {

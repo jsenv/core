@@ -96,7 +96,7 @@ export const createRessourceBuilder = (
       referenceLine: callerLocation.line,
       referenceColumn: callerLocation.column,
 
-      ressourceContentType: entryContentType,
+      contentType: entryContentType,
       bufferBeforeBuild: entryBuffer,
 
       isEntryPoint: true,
@@ -148,17 +148,17 @@ export const createRessourceBuilder = (
     jsColumn,
 
     ressourceSpecifier,
-    ressourceContentType,
+    contentType,
     bufferBeforeBuild,
   }) => {
     const reference = createReference({
       ressourceSpecifier,
-      ressourceContentTypeExpected: ressourceContentType,
+      ressourceContentTypeExpected: contentType,
       referenceUrl: jsUrl,
       referenceColumn: jsLine,
       referenceLine: jsColumn,
 
-      ressourceContentType,
+      contentType,
       bufferBeforeBuild,
     })
     await reference.ressource.getReadyPromise()
@@ -195,7 +195,7 @@ export const createRessourceBuilder = (
     referenceColumn,
     referenceLine,
 
-    ressourceContentType,
+    contentType,
     bufferBeforeBuild,
     isEntryPoint,
     isJsModule,
@@ -248,7 +248,7 @@ export const createRessourceBuilder = (
       isInline = true
       const { mediaType, base64Flag, data } = parseDataUrl(ressourceUrl)
       ressourceContentTypeExpected = mediaType
-      ressourceContentType = mediaType
+      contentType = mediaType
       bufferBeforeBuild = base64Flag
         ? Buffer.from(data, "base64")
         : decodeURI(data)
@@ -292,11 +292,11 @@ export const createRessourceBuilder = (
       // what was loaded
       if (typeof bufferBeforeBuild !== "undefined") {
         ressource.bufferBeforeBuild = bufferBeforeBuild
-        ressource.ressourceContentType = ressourceContentType
+        ressource.contentType = contentType
       }
     } else {
       ressource = createRessource({
-        ressourceContentType,
+        contentType,
         ressourceUrl,
         bufferBeforeBuild,
 
@@ -318,7 +318,7 @@ export const createRessourceBuilder = (
   const assetTransformMap = {}
 
   const createRessource = ({
-    ressourceContentType,
+    contentType,
     ressourceUrl,
     bufferBeforeBuild,
 
@@ -331,7 +331,7 @@ export const createRessourceBuilder = (
     urlVersioningDisabled = false,
   }) => {
     const ressource = {
-      ressourceContentType,
+      contentType,
       ressourceUrl,
       bufferBeforeBuild,
       firstStrongReference: null,
@@ -396,7 +396,7 @@ export const createRessourceBuilder = (
         ressource.ressourceBuildRelativeUrl = ressourceBuildRelativeUrl
         ressource.ressourceFileName = ressourceFileName
         if (buildFileInfo.type === "chunk") {
-          ressource.ressourceContentType = "application/javascript"
+          ressource.contentType = "application/javascript"
         }
         // logger.debug(`resolve rollup chunk ${shortenUrl(ressourceUrl)}`)
         resolve()
@@ -438,7 +438,7 @@ export const createRessourceBuilder = (
       }
 
       const responseContentTypeHeader = response.headers["content-type"]
-      ressource.ressourceContentType = responseContentTypeHeader
+      ressource.contentType = responseContentTypeHeader
 
       const responseBodyAsArrayBuffer = await response.arrayBuffer()
       ressource.bufferBeforeBuild = Buffer.from(responseBodyAsArrayBuffer)
@@ -465,7 +465,7 @@ export const createRessourceBuilder = (
         referenceLine,
         referenceColumn,
 
-        ressourceContentType,
+        contentType,
         bufferBeforeBuild,
         isJsModule = false,
         isInline = false,
@@ -486,7 +486,7 @@ export const createRessourceBuilder = (
           isRessourceHint,
           ressourceContentTypeExpected,
 
-          ressourceContentType,
+          contentType,
           bufferBeforeBuild,
           isJsModule,
           isInline,
@@ -663,7 +663,7 @@ export const createRessourceBuilder = (
     const onReference = (reference, infoFromReference) => {
       const effects = []
       if (ressource.isEntryPoint) {
-        if (ressource.ressourceContentType === "text/html") {
+        if (ressource.contentType === "text/html") {
           effects.push(`parse html to find references`)
         }
       } else {
@@ -895,7 +895,7 @@ const precomputeBuildRelativeUrlForRessource = (
     ressource,
     {
       lineBreakNormalization,
-      contentType: ressource.ressourceContentType,
+      contentType: ressource.contentType,
     },
   )
   ressource.bufferAfterBuild = undefined

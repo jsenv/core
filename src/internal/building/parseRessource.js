@@ -37,12 +37,12 @@ export const parseRessource = (
     minifyJsOptions,
   },
 ) => {
-  const { ressourceContentType } = ressource
-  if (!ressourceContentType) {
+  const { contentType } = ressource
+  if (!contentType) {
     return null
   }
 
-  if (ressourceContentType === "text/html") {
+  if (contentType === "text/html") {
     return parseHtmlRessource(ressource, notifiers, {
       minify,
       minifyHtmlOptions,
@@ -134,23 +134,23 @@ export const parseRessource = (
       ressourceHintNeverUsedCallback: (info) => {
         ressourceHintNeverUsedCallback({
           ...info,
-          htmlSource: String(target.bufferBeforeBuild),
-          htmlUrl: urlToOriginalFileUrl(target.ressourceUrl),
+          htmlSource: String(ressource.bufferBeforeBuild),
+          htmlUrl: urlToOriginalFileUrl(ressource.ressourceUrl),
         })
       },
     })
   }
 
-  if (ressourceContentType === "text/css") {
-    return parseCssAsset(target, notifiers, {
+  if (contentType === "text/css") {
+    return parseCssRessource(ressource, notifiers, {
       urlToOriginalServerUrl,
       minify,
       minifyCssOptions,
     })
   }
 
-  if (ressourceContentType === "application/importmap+json") {
-    return parseImportmapAsset(target, notifiers, {
+  if (contentType === "application/importmap+json") {
+    return parseImportmapRessource(ressource, notifiers, {
       minify,
       importMapToInject: useImportMapToImproveLongTermCaching
         ? createImportMapForFilesUsedInJs()
@@ -159,18 +159,18 @@ export const parseRessource = (
   }
 
   if (
-    ressourceContentType === "application/manifest+json" ||
-    target.references[0].ressourceContentTypeExpected ===
+    contentType === "application/manifest+json" ||
+    ressource.references[0].ressourceContentTypeExpected ===
       "application/manifest+json"
   ) {
-    return parseWebmanifest(target, notifiers, { minify })
+    return parseWebmanifestRessource(ressource, notifiers, { minify })
   }
 
   if (
-    ressourceContentType === "application/javascript" ||
-    ressourceContentType === "text/javascript"
+    contentType === "application/javascript" ||
+    contentType === "text/javascript"
   ) {
-    return parseJsAsset(target, notifiers, {
+    return parseJsRessource(ressource, notifiers, {
       urlToOriginalFileUrl,
       urlToOriginalServerUrl,
       minify,
@@ -178,15 +178,15 @@ export const parseRessource = (
     })
   }
 
-  if (ressourceContentType === "image/svg+xml") {
-    return parseSvgAsset(target, notifiers, { minify, minifyHtmlOptions })
+  if (contentType === "image/svg+xml") {
+    return parseSvgRessource(ressource, notifiers, {
+      minify,
+      minifyHtmlOptions,
+    })
   }
 
-  if (
-    ressourceContentType === "application/json" ||
-    ressourceContentType.endsWith("+json")
-  ) {
-    return parseJsonAsset(target, notifiers, { minify })
+  if (contentType === "application/json" || contentType.endsWith("+json")) {
+    return parseJsonRessource(ressource, notifiers, { minify })
   }
 
   return null
