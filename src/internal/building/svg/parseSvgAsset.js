@@ -8,7 +8,7 @@ import {
   collectNodesMutations,
   htmlNodeToReferenceLocation,
 } from "../parsing.utils.js"
-import { getTargetAsBase64Url } from "../asset-builder.util.js"
+import { getRessourceAsBase64Url } from "../asset-builder.util.js"
 import { minifyHtml } from "../html/minifyHtml.js"
 
 export const parseSvgAsset = async (
@@ -90,7 +90,7 @@ const useHrefVisitor = (use, { notifyReferenceFound }) => {
 const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
   const { isInline } = reference.target
   if (isInline) {
-    return getTargetAsBase64Url(reference.target)
+    return getRessourceAsBase64Url(reference.target)
   }
   return getReferenceUrlRelativeToImporter(reference)
 }

@@ -3,7 +3,7 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
-export const getTargetAsBase64Url = ({
+export const getRessourceAsBase64Url = ({
   bufferAfterBuild,
   ressourceContentType,
 }) => {
@@ -14,7 +14,7 @@ export const getTargetAsBase64Url = ({
   })
 }
 
-export const targetIsReferencedOnlyByRessourceHint = (target) => {
+export const ressourceIsReferencedOnlyByRessourceHint = (target) => {
   return target.targetReferences.every((targetReference) => {
     return targetReference.isRessourceHint
   })

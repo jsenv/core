@@ -43,8 +43,8 @@ import {
   setCssSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import {
-  getTargetAsBase64Url,
-  targetIsReferencedOnlyByRessourceHint,
+  getRessourceAsBase64Url,
+  ressourceIsReferencedOnlyByRessourceHint,
 } from "../asset-builder.util.js"
 import {
   collectNodesMutations,
@@ -556,7 +556,7 @@ const linkHrefVisitor = (
   return ({ getReferenceUrlRelativeToImporter }) => {
     const target = linkReference.target
     if (isRessourceHint) {
-      if (targetIsReferencedOnlyByRessourceHint(target)) {
+      if (ressourceIsReferencedOnlyByRessourceHint(target)) {
         ressourceHintNeverUsedCallback({
           htmlNode: link,
           rel,
@@ -584,7 +584,7 @@ const linkHrefVisitor = (
     if (shouldInline({ reference: linkReference, htmlNode: link })) {
       replaceHtmlNode(
         link,
-        `<link href="${getTargetAsBase64Url(linkReference.target)}" />`,
+        `<link href="${getRessourceAsBase64Url(linkReference.target)}" />`,
       )
       return
     }
@@ -710,7 +710,7 @@ const referenceToUrl = ({
     return reference.target.targetUrl
   }
   if (shouldInline({ reference, htmlNode })) {
-    return getTargetAsBase64Url(reference.target)
+    return getRessourceAsBase64Url(reference.target)
   }
   return getReferenceUrlRelativeToImporter(reference)
 }

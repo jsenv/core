@@ -4,7 +4,7 @@ import {
   getCssSourceMappingUrl,
   setCssSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
-import { getTargetAsBase64Url } from "../asset-builder.util.js"
+import { getRessourceAsBase64Url } from "../asset-builder.util.js"
 import { parseCssUrls } from "./parseCssUrls.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
 
@@ -76,7 +76,7 @@ export const parseCssAsset = async (
 
         const { isInline } = target
         if (isInline) {
-          return getTargetAsBase64Url(target)
+          return getRessourceAsBase64Url(target)
         }
         return getReferenceUrlRelativeToImporter(urlNodeReference)
       },

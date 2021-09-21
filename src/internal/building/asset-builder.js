@@ -44,7 +44,7 @@ import { parseDataUrl } from "../dataUrl.utils.js"
 import { showSourceLocation } from "./showSourceLocation.js"
 
 import {
-  getTargetAsBase64Url,
+  getRessourceAsBase64Url,
   memoize,
   getCallerLocation,
   formatFoundReference,
@@ -907,7 +907,7 @@ const precomputeBuildRelativeUrlForTarget = (
 export const referenceToCodeForRollup = (reference) => {
   const target = reference.target
   if (target.isInline) {
-    return getTargetAsBase64Url(target)
+    return getRessourceAsBase64Url(target)
   }
 
   return `import.meta.ROLLUP_FILE_URL_${target.rollupReferenceId}`
