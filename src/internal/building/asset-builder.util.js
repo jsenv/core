@@ -139,9 +139,9 @@ export const formatFoundReference = ({
   }
 
   const { target } = reference
-  const { targetIsEntry } = target
+  const { isEntryPoint } = target
 
-  if (targetIsEntry) {
+  if (isEntryPoint) {
     return formatCreateReferenceForEntry({
       reference,
       showReferenceSourceLocation,

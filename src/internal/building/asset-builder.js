@@ -99,7 +99,7 @@ export const createAssetBuilder = (
       ressourceContentType: entryContentType,
       bufferBeforeBuild: entryBuffer,
 
-      targetIsEntry: true,
+      isEntryPoint: true,
 
       // don't hash asset entry points
       targetUrlVersioningDisabled: true,
@@ -167,7 +167,7 @@ export const createAssetBuilder = (
 
   const getAllAssetEntryEmittedPromise = async () => {
     const urlToWait = Object.keys(targetMap).filter(
-      (url) => targetMap[url].targetIsEntry,
+      (url) => targetMap[url].isEntryPoint,
     )
     return Promise.all(
       urlToWait.map(async (url) => {
@@ -197,7 +197,7 @@ export const createAssetBuilder = (
 
     ressourceContentType,
     bufferBeforeBuild,
-    targetIsEntry,
+    isEntryPoint,
     isJsModule,
     isInline,
     targetFileNamePattern,
@@ -206,7 +206,7 @@ export const createAssetBuilder = (
     const importerUrl = referenceUrl
     const importerTarget = getTargetFromUrl(importerUrl) || {
       targetUrl: importerUrl,
-      targetIsEntry: false, // maybe
+      isEntryPoint: false, // maybe
       isJsModule: true,
       bufferAfterBuild: "",
     }
@@ -228,7 +228,7 @@ export const createAssetBuilder = (
       isJsModule,
       isInline,
       importerUrl: referenceUrl,
-      importerIsEntry: importerTarget.targetIsEntry,
+      importerIsEntry: importerTarget.isEntryPoint,
       importerIsJsModule: importerTarget.isJsModule,
     })
 
@@ -300,7 +300,7 @@ export const createAssetBuilder = (
         targetUrl,
         bufferBeforeBuild,
 
-        targetIsEntry,
+        isEntryPoint,
         isJsModule,
         targetIsExternal,
         isInline,
@@ -322,7 +322,7 @@ export const createAssetBuilder = (
     targetUrl,
     bufferBeforeBuild,
 
-    targetIsEntry = false,
+    isEntryPoint = false,
     isJsModule = false,
     targetIsExternal = false,
     isInline = false,
@@ -337,7 +337,7 @@ export const createAssetBuilder = (
       firstStrongReference: null,
       targetReferences: [],
 
-      targetIsEntry,
+      isEntryPoint,
       isJsModule,
       isInline,
       targetIsExternal,
@@ -503,7 +503,7 @@ export const createAssetBuilder = (
         return dependencyReference
       }
 
-      if (!target.targetIsEntry) {
+      if (!target.isEntryPoint) {
         logger.debug(`parse ${urlToHumanUrl(target.targetUrl)}`)
       }
 
@@ -666,7 +666,7 @@ export const createAssetBuilder = (
 
     const onReference = (reference, infoFromReference) => {
       const effects = []
-      if (target.targetIsEntry) {
+      if (target.isEntryPoint) {
         if (target.ressourceContentType === "text/html") {
           effects.push(`parse html to find references`)
         }
@@ -968,7 +968,7 @@ const referenceShouldBeIgnoredWarning = ({
   }
 
   // html can reference js
-  if (importerTarget.targetIsEntry) {
+  if (importerTarget.isEntryPoint) {
     return false
   }
 
