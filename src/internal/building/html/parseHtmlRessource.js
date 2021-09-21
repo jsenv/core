@@ -45,12 +45,12 @@ import {
 import {
   getRessourceAsBase64Url,
   isReferencedOnlyByRessourceHint,
-} from "../asset-builder.util.js"
+} from "../ressource_builder_util.js"
 import {
   collectNodesMutations,
   htmlNodeToReferenceLocation,
 } from "../parsing.utils.js"
-import { collectSvgMutations } from "../svg/parseSvgAsset.js"
+import { collectSvgMutations } from "../svg/parseSvgRessource.js"
 import { minifyHtml } from "./minifyHtml.js"
 
 export const parseHtmlRessource = async (

@@ -4,7 +4,7 @@ import {
   getCssSourceMappingUrl,
   setCssSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
-import { getRessourceAsBase64Url } from "../asset-builder.util.js"
+import { getRessourceAsBase64Url } from "../ressource_builder_util.js"
 import { parseCssUrls } from "./parseCssUrls.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
 

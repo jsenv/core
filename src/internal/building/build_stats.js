@@ -1,6 +1,6 @@
 import { resolveUrl, urlToExtension } from "@jsenv/filesystem"
 
-import { isReferencedOnlyByRessourceHint } from "./asset-builder.util.js"
+import { isReferencedOnlyByRessourceHint } from "./ressource_builder_util.js"
 
 export const createBuildStats = ({
   buildFileContents,

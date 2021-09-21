@@ -50,11 +50,10 @@ import {
   formatFoundReference,
   // formatDependenciesCollectedMessage,
   checkContentType,
-} from "./asset-builder.util.js"
+} from "./ressource_builder_util.js"
 import { computeBuildRelativeUrlForRessource } from "./asset-url-versioning.js"
 
-// rename ressourceBuilder
-export const createAssetBuilder = (
+export const createRessourceBuilder = (
   { fetch, parse },
   {
     logLevel,

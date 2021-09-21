@@ -1,6 +1,6 @@
 import { resolveUrl } from "@jsenv/filesystem"
 
-import { referenceToCodeForRollup } from "./asset-builder.js"
+import { referenceToCodeForRollup } from "./ressource_builder.js"
 
 export const transformImportMetaUrlReferences = async ({
   url,
