@@ -1056,7 +1056,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
     )
     if (assetReferenceForImport) {
       markBuildRelativeUrlAsUsedByJs(
-        assetReferenceForImport.target.targetBuildRelativeUrl,
+        assetReferenceForImport.ressource.targetBuildRelativeUrl,
       )
       const content = `export default ${referenceToCodeForRollup(
         assetReferenceForImport,

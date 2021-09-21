@@ -31,7 +31,9 @@ export const parseJsAsset = async (
   return async ({ precomputeBuildRelativeUrl, registerAssetEmitter }) => {
     let map
     if (sourcemapReference) {
-      const sourcemapString = String(sourcemapReference.target.bufferAfterBuild)
+      const sourcemapString = String(
+        sourcemapReference.ressource.bufferAfterBuild,
+      )
       map = JSON.parse(sourcemapString)
     }
 
@@ -113,8 +115,8 @@ export const parseJsAsset = async (
         )
 
         if (sourcemapReference) {
-          sourcemapReference.target.targetBuildRelativeUrl = buildRelativeUrl
-          sourcemapReference.target.bufferAfterBuild = mapSource
+          sourcemapReference.ressource.targetBuildRelativeUrl = buildRelativeUrl
+          sourcemapReference.ressource.bufferAfterBuild = mapSource
         } else {
           emitAsset({
             fileName: buildRelativeUrl,

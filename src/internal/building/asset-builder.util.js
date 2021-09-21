@@ -80,7 +80,7 @@ export const checkContentType = (
   { logger, showReferenceSourceLocation },
 ) => {
   const { ressourceContentTypeExpected } = reference
-  const { ressourceContentType } = reference.target
+  const { ressourceContentType } = reference.ressource
 
   if (!ressourceContentTypeExpected) {
     return
@@ -91,7 +91,7 @@ export const checkContentType = (
   }
 
   // sourcemap content type is fine if we got octet-stream too
-  const { targetUrl } = reference.target
+  const { targetUrl } = reference.ressource
   if (
     ressourceContentTypeExpected === "application/json" &&
     ressourceContentType === "application/octet-stream" &&
@@ -193,7 +193,7 @@ export const formatFoundReference = ({
 
 const formatCreateReferenceForEntry = ({ reference, referenceEffects }) => {
   return `
-Start from entry file ${reference.target.targetRelativeUrl}${appendEffects(
+Start from entry file ${reference.ressource.targetRelativeUrl}${appendEffects(
     referenceEffects,
   )}`
 }
@@ -278,7 +278,7 @@ export const formatDependenciesCollectedMessage = ({ target, shortenUrl }) => {
 Dependencies collected for ${shortenUrl(target.targetUrl)}`,
     {
       dependencies: target.dependencies.map((dependencyReference) =>
-        shortenUrl(dependencyReference.target.targetUrl),
+        shortenUrl(dependencyReference.ressource.targetUrl),
       ),
     },
   )
