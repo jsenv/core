@@ -336,7 +336,7 @@ export const createAssetBuilder = (
       targetUrl,
       bufferBeforeBuild,
       firstStrongReference: null,
-      targetReferences: [],
+      references: [],
 
       isEntryPoint,
       isJsModule,
@@ -373,10 +373,9 @@ export const createAssetBuilder = (
             return
           }
 
-          const targetWasOnlyReferencedByOtherJs =
-            target.targetReferences.every(
-              (ref) => ref.referenceShouldNotEmitChunk,
-            )
+          const targetWasOnlyReferencedByOtherJs = target.references.every(
+            (ref) => ref.referenceShouldNotEmitChunk,
+          )
           if (targetWasOnlyReferencedByOtherJs) {
             resolve()
             return
@@ -764,7 +763,7 @@ export const createAssetBuilder = (
     }
 
     const addReference = (reference, infoFromReference) => {
-      target.targetReferences.push(reference)
+      target.references.push(reference)
 
       const referenceEffects = onReference(reference, infoFromReference)
 
@@ -929,7 +928,7 @@ const removePotentialUrlHash = (url) => {
 const isEmitChunkNeeded = ({ target, reference }) => {
   if (reference.referenceShouldNotEmitChunk) {
     // si la target est preload ou prefetch
-    const targetIsReferencedByRessourceHint = target.targetReferences.some(
+    const targetIsReferencedByRessourceHint = target.references.some(
       (ref) => ref.isRessourceHint,
     )
     if (targetIsReferencedByRessourceHint) {

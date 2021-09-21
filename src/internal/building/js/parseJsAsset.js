@@ -58,7 +58,7 @@ export const parseJsAsset = async (
       const jsUrlRelativeToImporter = jsTarget.isInline
         ? urlToRelativeUrl(
             jsTarget.targetUrl,
-            jsTarget.targetReferences[0].referenceUrl,
+            jsTarget.references[0].referenceUrl,
           )
         : jsTarget.targetRelativeUrl
       const result = await minifyJs(jsString, jsUrlRelativeToImporter, {

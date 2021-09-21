@@ -15,7 +15,7 @@ export const getRessourceAsBase64Url = ({
 }
 
 export const ressourceIsReferencedOnlyByRessourceHint = (target) => {
-  return target.targetReferences.every((targetReference) => {
+  return target.references.every((targetReference) => {
     return targetReference.isRessourceHint
   })
 }
