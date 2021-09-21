@@ -16,7 +16,7 @@ export const getTargetAsBase64Url = ({
 
 export const targetIsReferencedOnlyByRessourceHint = (target) => {
   return target.targetReferences.every((targetReference) => {
-    return targetReference.referenceIsRessourceHint
+    return targetReference.isRessourceHint
   })
 }
 
@@ -128,9 +128,9 @@ export const formatFoundReference = ({
   showReferenceSourceLocation,
   referenceEffects,
 }) => {
-  const { referenceIsRessourceHint } = reference
+  const { isRessourceHint } = reference
 
-  if (referenceIsRessourceHint) {
+  if (isRessourceHint) {
     return formatFoundRessourceHint({
       reference,
       showReferenceSourceLocation,
@@ -159,8 +159,8 @@ export const formatFoundReference = ({
     })
   }
 
-  const { targetIsInline, targetIsJsModule } = target
-  if (targetIsInline && !targetIsJsModule) {
+  const { isInline, isJsModule } = target
+  if (isInline && !isJsModule) {
     return formatFoundReferenceToInlineAsset({
       reference,
       showReferenceSourceLocation,
@@ -168,7 +168,7 @@ export const formatFoundReference = ({
     })
   }
 
-  if (targetIsInline && targetIsJsModule) {
+  if (isInline && isJsModule) {
     return formatFoundReferenceToInlineModule({
       reference,
       showReferenceSourceLocation,
@@ -176,7 +176,7 @@ export const formatFoundReference = ({
     })
   }
 
-  if (!targetIsJsModule) {
+  if (!isJsModule) {
     return formatFoundReferenceToAsset({
       reference,
       showReferenceSourceLocation,

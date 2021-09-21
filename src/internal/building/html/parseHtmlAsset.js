@@ -238,7 +238,7 @@ const regularScriptTextNodeVisitor = (
 
     ressourceContentType: "application/javascript",
     bufferBeforeBuild: Buffer.from(textNode.value),
-    targetIsInline: true,
+    isInline: true,
   })
   return () => {
     const { bufferAfterBuild } = jsReference.target
@@ -264,7 +264,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
     referenceRessourceSpecifier: srcAttribute.value,
     ...htmlNodeToReferenceLocation(script),
 
-    targetIsJsModule: true,
+    isJsModule: true,
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     if (format === "systemjs") {
@@ -336,8 +336,8 @@ const moduleScriptTextNodeVisitor = (
 
     ressourceContentType: "application/javascript",
     bufferBeforeBuild: textNode.value,
-    targetIsJsModule: true,
-    targetIsInline: true,
+    isJsModule: true,
+    isInline: true,
   })
   return () => {
     if (format === "systemjs") {
@@ -447,7 +447,7 @@ const importmapScriptTextNodeVisitor = (
 
     ressourceContentType: "application/importmap+json",
     bufferBeforeBuild: Buffer.from(textNode.value),
-    targetIsInline: true,
+    isInline: true,
   })
   return () => {
     if (format === "systemjs") {
@@ -523,7 +523,7 @@ const linkHrefVisitor = (
 
   const relAttribute = getHtmlNodeAttributeByName(link, "rel")
   const rel = relAttribute ? relAttribute.value : undefined
-  const referenceIsRessourceHint = [
+  const isRessourceHint = [
     "preconnect",
     "dns-prefetch",
     "prefetch",
@@ -534,28 +534,28 @@ const linkHrefVisitor = (
   let referenceExpectedContentType
   const typeAttribute = getHtmlNodeAttributeByName(link, "type")
   const type = typeAttribute ? typeAttribute.value : ""
-  let targetIsJsModule = false
+  let isJsModule = false
   if (type) {
     referenceExpectedContentType = type
   } else if (rel === "manifest") {
     referenceExpectedContentType = "application/manifest+json"
   } else if (rel === "modulepreload") {
     referenceExpectedContentType = "application/javascript"
-    targetIsJsModule = true
+    isJsModule = true
   }
 
   const linkReference = notifyReferenceFound({
-    referenceIsRessourceHint,
+    isRessourceHint,
     referenceExpectedContentType,
     referenceRessourceSpecifier: hrefAttribute.value,
     ...htmlNodeToReferenceLocation(link),
     targetUrlVersioningDisabled:
       referenceExpectedContentType === "application/manifest+json",
-    targetIsJsModule,
+    isJsModule,
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     const target = linkReference.target
-    if (referenceIsRessourceHint) {
+    if (isRessourceHint) {
       if (targetIsReferencedOnlyByRessourceHint(target)) {
         ressourceHintNeverUsedCallback({
           htmlNode: link,
@@ -617,7 +617,7 @@ const styleTextNodeVisitor = (
 
     ressourceContentType: "text/css",
     bufferBeforeBuild: Buffer.from(textNode.value),
-    targetIsInline: true,
+    isInline: true,
   })
   return () => {
     const { bufferAfterBuild } = inlineStyleReference.target
@@ -725,8 +725,8 @@ const ensureRelativeUrlNotation = (relativeUrl) => {
 
 const shouldInline = ({ reference, htmlNode }) => {
   const { target } = reference
-  const { targetIsInline } = target
-  if (targetIsInline) {
+  const { isInline } = target
+  if (isInline) {
     return true
   }
 

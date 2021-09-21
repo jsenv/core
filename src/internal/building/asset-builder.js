@@ -125,7 +125,7 @@ export const createAssetBuilder = (
 
         const { target } = dependency
         const readyPromise = target.getReadyPromise()
-        if (target.targetIsJsModule) {
+        if (target.isJsModule) {
           // await internally for rollup to be done with this target js module
           // but don't await explicitely or rollup wait for asset builder
           // which is waiting for rollup
@@ -188,7 +188,7 @@ export const createAssetBuilder = (
   // malgré tout
   const createReference = ({
     referenceShouldNotEmitChunk,
-    referenceIsRessourceHint,
+    isRessourceHint,
     referenceExpectedContentType,
     referenceRessourceSpecifier,
     referenceUrl,
@@ -198,8 +198,8 @@ export const createAssetBuilder = (
     ressourceContentType,
     bufferBeforeBuild,
     targetIsEntry,
-    targetIsJsModule,
-    targetIsInline,
+    isJsModule,
+    isInline,
     targetFileNamePattern,
     targetUrlVersioningDisabled,
   }) => {
@@ -207,12 +207,12 @@ export const createAssetBuilder = (
     const importerTarget = getTargetFromUrl(importerUrl) || {
       targetUrl: importerUrl,
       targetIsEntry: false, // maybe
-      targetIsJsModule: true,
+      isJsModule: true,
       bufferAfterBuild: "",
     }
 
     const shouldBeIgnoredWarning = referenceShouldBeIgnoredWarning({
-      targetIsJsModule,
+      isJsModule,
       importerTarget,
       referenceRessourceSpecifier,
       referenceUrl,
@@ -225,11 +225,11 @@ export const createAssetBuilder = (
 
     const resolveTargetReturnValue = resolveRessourceUrl({
       ressourceSpecifier: referenceRessourceSpecifier,
-      targetIsJsModule,
-      targetIsInline,
+      isJsModule,
+      isInline,
       importerUrl: referenceUrl,
       importerIsEntry: importerTarget.targetIsEntry,
-      importerIsJsModule: importerTarget.targetIsJsModule,
+      importerIsJsModule: importerTarget.isJsModule,
     })
 
     let targetUrl
@@ -245,7 +245,7 @@ export const createAssetBuilder = (
 
     if (targetUrl.startsWith("data:")) {
       targetIsExternal = false
-      targetIsInline = true
+      isInline = true
       const { mediaType, base64Flag, data } = parseDataUrl(targetUrl)
       referenceExpectedContentType = mediaType
       ressourceContentType = mediaType
@@ -257,7 +257,7 @@ export const createAssetBuilder = (
     // any hash in the url would mess up with filenames
     targetUrl = removePotentialUrlHash(targetUrl)
 
-    if (targetIsInline && targetFileNamePattern === undefined) {
+    if (isInline && targetFileNamePattern === undefined) {
       // inherit parent directory location because it's an inline file
       targetFileNamePattern = () => {
         const importerBuildRelativeUrl = precomputeBuildRelativeUrlForTarget(
@@ -276,7 +276,7 @@ export const createAssetBuilder = (
 
     const reference = {
       referenceShouldNotEmitChunk,
-      referenceIsRessourceHint,
+      isRessourceHint,
       referenceExpectedContentType,
       referenceUrl,
       referenceColumn,
@@ -301,16 +301,16 @@ export const createAssetBuilder = (
         bufferBeforeBuild,
 
         targetIsEntry,
-        targetIsJsModule,
+        isJsModule,
         targetIsExternal,
-        targetIsInline,
+        isInline,
         targetFileNamePattern,
         targetUrlVersioningDisabled,
       })
       targetMap[targetUrl] = target
     }
     reference.target = target
-    target.addReference(reference, { targetIsJsModule })
+    target.addReference(reference, { isJsModule })
 
     return reference
   }
@@ -323,9 +323,9 @@ export const createAssetBuilder = (
     bufferBeforeBuild,
 
     targetIsEntry = false,
-    targetIsJsModule = false,
+    isJsModule = false,
     targetIsExternal = false,
-    targetIsInline = false,
+    isInline = false,
 
     targetFileNamePattern,
     targetUrlVersioningDisabled = false,
@@ -338,8 +338,8 @@ export const createAssetBuilder = (
       targetReferences: [],
 
       targetIsEntry,
-      targetIsJsModule,
-      targetIsInline,
+      isJsModule,
+      isInline,
       targetIsExternal,
 
       targetUrlVersioningDisabled,
@@ -354,7 +354,7 @@ export const createAssetBuilder = (
     })
     target.buildDonePromise = new Promise((resolve, reject) => {
       target.buildDoneCallback = ({ buildFileInfo, buildManifest }) => {
-        if (!target.targetIsJsModule) {
+        if (!target.isJsModule) {
           // nothing special to do for asset targets
           resolve()
           return
@@ -406,7 +406,7 @@ export const createAssetBuilder = (
     })
 
     const getBufferAvailablePromise = memoize(async () => {
-      if (target.targetIsJsModule) {
+      if (target.isJsModule) {
         await target.buildDonePromise
         return
       }
@@ -452,7 +452,7 @@ export const createAssetBuilder = (
     const getDependenciesAvailablePromise = memoize(async () => {
       await getBufferAvailablePromise()
 
-      if (target.targetIsJsModule) {
+      if (target.isJsModule) {
         target.dependencies = []
         return
       }
@@ -461,7 +461,7 @@ export const createAssetBuilder = (
 
       let parsingDone = false
       const notifyReferenceFound = ({
-        referenceIsRessourceHint,
+        isRessourceHint,
         referenceExpectedContentType,
         referenceRessourceSpecifier,
         referenceLine,
@@ -469,8 +469,8 @@ export const createAssetBuilder = (
 
         ressourceContentType,
         bufferBeforeBuild,
-        targetIsJsModule = false,
-        targetIsInline = false,
+        isJsModule = false,
+        isInline = false,
         targetUrlVersioningDisabled,
         targetFileNamePattern,
       }) => {
@@ -485,13 +485,13 @@ export const createAssetBuilder = (
           referenceUrl: targetUrl,
           referenceLine,
           referenceColumn,
-          referenceIsRessourceHint,
+          isRessourceHint,
           referenceExpectedContentType,
 
           ressourceContentType,
           bufferBeforeBuild,
-          targetIsJsModule,
-          targetIsInline,
+          isJsModule,
+          isInline,
 
           targetUrlVersioningDisabled,
           targetFileNamePattern,
@@ -583,7 +583,7 @@ export const createAssetBuilder = (
 
           let referenceTargetBuildRelativeUrl
 
-          if (importerTarget.targetIsJsModule) {
+          if (importerTarget.isJsModule) {
             // js can reference an url without versionning
             // and actually fetch the versioned url thanks to importmap
             referenceTargetBuildRelativeUrl =
@@ -657,8 +657,8 @@ export const createAssetBuilder = (
         // target.bufferAfterBuild can be undefined when target is only preloaded
         // and never used
         target.bufferAfterBuild &&
-        !target.targetIsInline &&
-        !target.targetIsJsModule
+        !target.isInline &&
+        !target.isJsModule
       ) {
         setAssetSource(target.rollupReferenceId, target.bufferAfterBuild)
       }
@@ -678,7 +678,7 @@ export const createAssetBuilder = (
         )
       }
 
-      if (reference.referenceIsRessourceHint) {
+      if (reference.isRessourceHint) {
         // do not try to load or fetch this file
         // we'll wait for something to reference it
         // if nothing references it a warning will be logged
@@ -706,9 +706,9 @@ export const createAssetBuilder = (
       // This happen for preload link following by a script type module
       // <link rel="preload" href="file.js" />
       // <script type="module" src="file.js"></script>
-      if (!target.targetIsJsModule && infoFromReference.targetIsJsModule) {
+      if (!target.isJsModule && infoFromReference.isJsModule) {
         effects.push(`mark ${urlToHumanUrl(targetUrl)} as js module`)
-        target.targetIsJsModule = infoFromReference.targetIsJsModule
+        target.isJsModule = infoFromReference.isJsModule
       }
 
       target.usedCallback()
@@ -718,7 +718,7 @@ export const createAssetBuilder = (
         return effects
       }
 
-      if (target.targetIsJsModule) {
+      if (target.isJsModule) {
         if (!isEmitChunkNeeded({ target, reference })) {
           return effects
         }
@@ -727,7 +727,7 @@ export const createAssetBuilder = (
 
         onJsModuleReference({
           jsModuleUrl,
-          jsModuleIsInline: targetIsInline,
+          jsModuleIsInline: isInline,
           jsModuleSource: String(bufferBeforeBuild),
         })
 
@@ -746,7 +746,7 @@ export const createAssetBuilder = (
         return effects
       }
 
-      if (targetIsInline) {
+      if (isInline) {
         // nothing to do
         return effects
       }
@@ -905,7 +905,7 @@ const precomputeBuildRelativeUrlForTarget = (
 
 export const referenceToCodeForRollup = (reference) => {
   const target = reference.target
-  if (target.targetIsInline) {
+  if (target.isInline) {
     return getTargetAsBase64Url(target)
   }
 
@@ -929,7 +929,7 @@ const isEmitChunkNeeded = ({ target, reference }) => {
   if (reference.referenceShouldNotEmitChunk) {
     // si la target est preload ou prefetch
     const targetIsReferencedByRessourceHint = target.targetReferences.some(
-      (ref) => ref.referenceIsRessourceHint,
+      (ref) => ref.isRessourceHint,
     )
     if (targetIsReferencedByRessourceHint) {
       return true
@@ -952,18 +952,18 @@ const isEmitChunkNeeded = ({ target, reference }) => {
  * -https://github.com/rollup/rollup/issues/2872
  */
 const referenceShouldBeIgnoredWarning = ({
-  targetIsJsModule,
+  isJsModule,
   importerTarget,
   referenceRessourceSpecifier,
   referenceUrl,
   urlToHumanUrl,
 }) => {
-  if (!targetIsJsModule) {
+  if (!isJsModule) {
     return false
   }
 
   // js can reference js
-  if (importerTarget.targetIsJsModule) {
+  if (importerTarget.isJsModule) {
     return false
   }
 

@@ -59,8 +59,8 @@ const getProjectFileContents = (assetBuilder) => {
 
   Object.keys(targetMap).forEach((url) => {
     const target = targetMap[url]
-    const { targetIsInline, targetIsExternal, bufferBeforeBuild } = target
-    if (targetIsInline) {
+    const { isInline, targetIsExternal, bufferBeforeBuild } = target
+    if (isInline) {
       // inline ressources are not files
       return
     }

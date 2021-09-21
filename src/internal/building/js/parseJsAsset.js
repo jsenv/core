@@ -39,7 +39,7 @@ export const parseJsAsset = async (
     // importScripts are inlined which is good for:
     // - not breaking things (otherwise we would have to copy imported files in the build directory)
     // - perf (one less http request)
-    const mightBeAWorkerScript = !jsTarget.targetIsInline
+    const mightBeAWorkerScript = !jsTarget.isInline
 
     let jsSourceAfterTransformation
     if (mightBeAWorkerScript) {
@@ -55,7 +55,7 @@ export const parseJsAsset = async (
     }
 
     if (minify) {
-      const jsUrlRelativeToImporter = jsTarget.targetIsInline
+      const jsUrlRelativeToImporter = jsTarget.isInline
         ? urlToRelativeUrl(
             jsTarget.targetUrl,
             jsTarget.targetReferences[0].referenceUrl,
@@ -92,7 +92,7 @@ export const parseJsAsset = async (
         const mapBuildUrl = resolveUrl(jsSourcemapFilename, jsBuildUrl)
         map.file = urlToFilename(jsBuildUrl)
         if (map.sources) {
-          const importerUrl = jsTarget.targetIsInline
+          const importerUrl = jsTarget.isInline
             ? urlToOriginalServerUrl(jsTarget.targetUrl)
             : jsTarget.targetUrl
 

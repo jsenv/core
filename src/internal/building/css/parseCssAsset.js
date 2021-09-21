@@ -74,8 +74,8 @@ export const parseCssAsset = async (
           return urlNode.value
         }
 
-        const { targetIsInline } = target
-        if (targetIsInline) {
+        const { isInline } = target
+        if (isInline) {
           return getTargetAsBase64Url(target)
         }
         return getReferenceUrlRelativeToImporter(urlNodeReference)
@@ -118,7 +118,7 @@ export const parseCssAsset = async (
       if (map.sources) {
         // hum en fait si css est inline, alors la source n'est pas le fichier compilé
         // mais bien le fichier html compilé ?
-        const importerUrl = cssTarget.targetIsInline
+        const importerUrl = cssTarget.isInline
           ? urlToOriginalServerUrl(cssTarget.targetUrl)
           : cssTarget.targetUrl
         map.sources = map.sources.map((source) => {

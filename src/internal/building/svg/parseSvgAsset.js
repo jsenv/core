@@ -88,8 +88,8 @@ const useHrefVisitor = (use, { notifyReferenceFound }) => {
 }
 
 const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
-  const { targetIsInline } = reference.target
-  if (targetIsInline) {
+  const { isInline } = reference.target
+  if (isInline) {
     return getTargetAsBase64Url(reference.target)
   }
   return getReferenceUrlRelativeToImporter(reference)

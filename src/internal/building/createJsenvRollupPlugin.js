@@ -420,14 +420,14 @@ building ${entryFileRelativeUrls.length} entry files...`)
           loadUrl: (url) => urlResponseBodyMap[url],
           resolveRessourceUrl: ({
             ressourceSpecifier,
-            targetIsJsModule,
+            isJsModule,
             importerUrl,
             importerIsEntry,
             importerIsJsModule,
           }) => {
             const isHtmlEntryPoint = importerIsEntry && !importerIsJsModule
             const isHtmlEntryPointReferencingAJsModule =
-              isHtmlEntryPoint && targetIsJsModule
+              isHtmlEntryPoint && isJsModule
 
             // when html references a js we must wait for the compiled version of js
             if (isHtmlEntryPointReferencingAJsModule) {
@@ -653,7 +653,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         targetIsJsenvHelperFile,
         ressourceContentType: responseContentType,
         bufferBeforeBuild: Buffer.from(content),
-        targetIsJsModule: responseContentType === "application/javascript",
+        isJsModule: responseContentType === "application/javascript",
       })
 
       saveUrlResponseBody(responseUrl, contentRaw)
