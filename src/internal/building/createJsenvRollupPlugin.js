@@ -644,7 +644,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         referenceShouldNotEmitChunk: jsConcatenation,
         ressourceContentTypeExpected: responseContentType,
         referenceUrl: importerUrl,
-        referenceRessourceSpecifier: responseUrl,
+        ressourceSpecifier: responseUrl,
         // rollup do not provide a way to know line and column for the static or dynamic import
         // referencing that file
         referenceColumn: undefined,

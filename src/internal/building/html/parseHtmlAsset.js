@@ -169,7 +169,7 @@ const regularScriptSrcVisitor = (
 
   const remoteScriptReference = notifyReferenceFound({
     ressourceContentTypeExpected: "application/javascript",
-    referenceRessourceSpecifier: srcAttribute.value,
+    ressourceSpecifier: srcAttribute.value,
     ...htmlNodeToReferenceLocation(script),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
@@ -229,7 +229,7 @@ const regularScriptTextNodeVisitor = (
 
   const jsReference = notifyReferenceFound({
     ressourceContentTypeExpected: "application/javascript",
-    referenceRessourceSpecifier: getUniqueNameForInlineHtmlNode(
+    ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
       `${urlToBasename(htmlTarget.targetUrl)}.[id].js`,
@@ -261,7 +261,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
 
   const remoteScriptReference = notifyReferenceFound({
     ressourceContentTypeExpected: "application/javascript",
-    referenceRessourceSpecifier: srcAttribute.value,
+    ressourceSpecifier: srcAttribute.value,
     ...htmlNodeToReferenceLocation(script),
 
     isJsModule: true,
@@ -327,7 +327,7 @@ const moduleScriptTextNodeVisitor = (
 
   const jsReference = notifyReferenceFound({
     ressourceContentTypeExpected: "application/javascript",
-    referenceRessourceSpecifier: getUniqueNameForInlineHtmlNode(
+    ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
       `${urlToBasename(htmlTarget.targetUrl)}.[id].js`,
@@ -366,7 +366,7 @@ const importmapScriptSrcVisitor = (
 
   const importmapReference = notifyReferenceFound({
     ressourceContentTypeExpected: "application/importmap+json",
-    referenceRessourceSpecifier: srcAttribute.value,
+    ressourceSpecifier: srcAttribute.value,
     ...htmlNodeToReferenceLocation(script),
 
     // here we want to force the fileName for the importmap
@@ -438,7 +438,7 @@ const importmapScriptTextNodeVisitor = (
 
   const importmapReference = notifyReferenceFound({
     ressourceContentTypeExpected: "application/importmap+json",
-    referenceRessourceSpecifier: getUniqueNameForInlineHtmlNode(
+    ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
       `${urlToBasename(htmlTarget.targetUrl)}.[id].importmap`,
@@ -478,7 +478,7 @@ const linkStylesheetHrefVisitor = (
 
   const cssReference = notifyReferenceFound({
     ressourceContentTypeExpected: "text/css",
-    referenceRessourceSpecifier: hrefAttribute.value,
+    ressourceSpecifier: hrefAttribute.value,
     ...htmlNodeToReferenceLocation(link),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
@@ -547,7 +547,7 @@ const linkHrefVisitor = (
   const linkReference = notifyReferenceFound({
     isRessourceHint,
     ressourceContentTypeExpected,
-    referenceRessourceSpecifier: hrefAttribute.value,
+    ressourceSpecifier: hrefAttribute.value,
     ...htmlNodeToReferenceLocation(link),
     targetUrlVersioningDisabled:
       ressourceContentTypeExpected === "application/manifest+json",
@@ -608,7 +608,7 @@ const styleTextNodeVisitor = (
 
   const inlineStyleReference = notifyReferenceFound({
     ressourceContentTypeExpected: "text/css",
-    referenceRessourceSpecifier: getUniqueNameForInlineHtmlNode(
+    ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       style,
       styles,
       `${urlToBasename(htmlTarget.targetUrl)}.[id].css`,
@@ -632,7 +632,7 @@ const imgSrcVisitor = (img, { notifyReferenceFound }) => {
   }
 
   const srcReference = notifyReferenceFound({
-    referenceRessourceSpecifier: srcAttribute.value,
+    ressourceSpecifier: srcAttribute.value,
     ...htmlNodeToReferenceLocation(img),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
@@ -654,7 +654,7 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
   const srcsetParts = parseSrcset(srcsetAttribute.value)
   const srcsetPartsReferences = srcsetParts.map(({ specifier }) =>
     notifyReferenceFound({
-      referenceRessourceSpecifier: specifier,
+      ressourceSpecifier: specifier,
       ...htmlNodeToReferenceLocation(htmlNode),
     }),
   )
@@ -688,7 +688,7 @@ const sourceSrcVisitor = (source, { notifyReferenceFound }) => {
     ressourceContentTypeExpected: typeAttribute
       ? typeAttribute.value
       : undefined,
-    referenceRessourceSpecifier: srcAttribute.value,
+    ressourceSpecifier: srcAttribute.value,
     ...htmlNodeToReferenceLocation(source),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {

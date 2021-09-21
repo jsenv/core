@@ -51,7 +51,7 @@ const imageHrefVisitor = (image, { notifyReferenceFound }) => {
   }
 
   const hrefReference = notifyReferenceFound({
-    referenceRessourceSpecifier: hrefAttribute.value,
+    ressourceSpecifier: hrefAttribute.value,
     ...htmlNodeToReferenceLocation(image),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
@@ -75,7 +75,7 @@ const useHrefVisitor = (use, { notifyReferenceFound }) => {
 
   const { hash } = new URL(href, "file://")
   const hrefReference = notifyReferenceFound({
-    referenceRessourceSpecifier: href,
+    ressourceSpecifier: href,
     ...htmlNodeToReferenceLocation(use),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
