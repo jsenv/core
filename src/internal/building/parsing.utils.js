@@ -1,5 +1,3 @@
-import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-
 export const collectNodesMutations = (
   nodes,
   notifiers,
@@ -13,14 +11,6 @@ export const collectNodesMutations = (
     )
   })
   return mutations
-}
-
-export const htmlNodeToReferenceLocation = (htmlNode) => {
-  const { line, column } = getHtmlNodeLocation(htmlNode)
-  return {
-    referenceLine: line,
-    referenceColumn: column,
-  }
 }
 
 const collectNodeMutations = (

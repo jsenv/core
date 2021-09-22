@@ -107,8 +107,14 @@ ${setANSIColor(`build duration:`, ANSI_GREY)} ${msAsDuration(buildDuration)}
 ------------------------------`
 }
 
-const showHtmlSourceLocation = ({ htmlNode, htmlUrl, htmlSource }) => {
-  const { line, column } = getHtmlNodeLocation(htmlNode)
+const showHtmlSourceLocation = ({
+  htmlNode,
+  htmlUrl,
+  htmlSource,
+  htmlAttributeName,
+}) => {
+  const { line, column } =
+    getHtmlNodeLocation(htmlNode, htmlAttributeName) || {}
 
   return `${htmlUrl}:${line}:${column}
 ${showSourceLocation(htmlSource, {

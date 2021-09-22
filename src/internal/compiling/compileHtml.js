@@ -145,12 +145,26 @@ export const removeHtmlNode = (htmlNode) => {
   childNodes.splice(childNodes.indexOf(htmlNode), 1)
 }
 
-export const getHtmlNodeLocation = (htmlNode) => {
+export const getHtmlNodeLocation = (htmlNode, htmlAttributeName) => {
   const { sourceCodeLocation } = htmlNode
   if (!sourceCodeLocation) {
-    return {}
+    return null
   }
-  const { startLine, startCol } = sourceCodeLocation
+
+  if (!htmlAttributeName) {
+    const { startLine, startCol } = sourceCodeLocation
+    return {
+      line: startLine,
+      column: startCol,
+    }
+  }
+
+  const attributeSourceCodeLocation =
+    sourceCodeLocation.attrs[htmlAttributeName]
+  if (!attributeSourceCodeLocation) {
+    return null
+  }
+  const { startLine, startCol } = attributeSourceCodeLocation
   return {
     line: startLine,
     column: startCol,

@@ -3,11 +3,9 @@ import {
   parseHtmlAstRessources,
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
+  getHtmlNodeLocation,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import {
-  collectNodesMutations,
-  htmlNodeToReferenceLocation,
-} from "../parsing.utils.js"
+import { collectNodesMutations } from "../parsing.utils.js"
 import { getRessourceAsBase64Url } from "../ressource_builder_util.js"
 import { minifyHtml } from "../html/minifyHtml.js"
 
@@ -59,7 +57,7 @@ const imageHrefVisitor = (image, { notifyReferenceFound }) => {
 
   const hrefReference = notifyReferenceFound({
     ressourceSpecifier: hrefAttribute.value,
-    ...htmlNodeToReferenceLocation(image),
+    ...referenceLocationFromHtmlNode(image, "href"),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     const hrefNewValue = referenceToUrl(
@@ -83,7 +81,7 @@ const useHrefVisitor = (use, { notifyReferenceFound }) => {
   const { hash } = new URL(href, "file://")
   const hrefReference = notifyReferenceFound({
     ressourceSpecifier: href,
-    ...htmlNodeToReferenceLocation(use),
+    ...referenceLocationFromHtmlNode(use, "href"),
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     const hrefNewValue = referenceToUrl(
@@ -100,4 +98,14 @@ const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
     return getRessourceAsBase64Url(reference.ressource)
   }
   return getReferenceUrlRelativeToImporter(reference)
+}
+
+const referenceLocationFromHtmlNode = (htmlNode, htmlAttributeName) => {
+  const locInfo = getHtmlNodeLocation(htmlNode, htmlAttributeName)
+  return locInfo
+    ? {
+        referenceLine: locInfo.line,
+        referenceColumn: locInfo.column,
+      }
+    : {}
 }
