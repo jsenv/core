@@ -88,11 +88,11 @@ export const checkContentType = (
   }
 
   // sourcemap content type is fine if we got octet-stream too
-  const { ressourceUrl } = reference.ressource
+  const { ressource } = reference
   if (
     ressourceContentTypeExpected === "application/json" &&
     contentType === "application/octet-stream" &&
-    ressourceUrl.endsWith(".map")
+    ressource.url.endsWith(".map")
   ) {
     return
   }
@@ -109,13 +109,13 @@ const formatContentTypeMismatchLog = (
   { showReferenceSourceLocation },
 ) => {
   const { ressourceContentTypeExpected, ressource } = reference
-  const { contentType, ressourceUrl } = ressource
+  const { contentType, url } = ressource
 
   return createDetailedMessage(
     `A reference was expecting ${ressourceContentTypeExpected} but found ${contentType} instead.`,
     {
       ["reference"]: showReferenceSourceLocation(reference),
-      ["ressource url"]: ressourceUrl,
+      ["ressource url"]: url,
     },
   )
 }
@@ -275,10 +275,10 @@ export const formatDependenciesCollectedMessage = ({
 }) => {
   return createDetailedMessage(
     `
-Dependencies collected for ${shortenUrl(ressource.ressourceUrl)}`,
+Dependencies collected for ${shortenUrl(ressource.url)}`,
     {
       dependencies: ressource.dependencies.map((dependencyReference) =>
-        shortenUrl(dependencyReference.ressource.ressourceUrl),
+        shortenUrl(dependencyReference.ressource.url),
       ),
     },
   )

@@ -29,7 +29,7 @@ export const parseCssRessource = async (
 
   const { atImports, urlDeclarations } = await parseCssUrls(
     cssString,
-    cssRessource.ressourceUrl,
+    cssRessource.url,
   )
 
   const urlNodeReferenceMapping = new Map()
@@ -55,7 +55,7 @@ export const parseCssRessource = async (
   }) => {
     const cssReplaceResult = await replaceCssUrls(
       cssString,
-      cssRessource.ressourceUrl,
+      cssRessource.url,
       ({ urlNode }) => {
         const nodeCandidates = Array.from(urlNodeReferenceMapping.keys())
         const urlNodeFound = nodeCandidates.find((urlNodeCandidate) =>
@@ -119,8 +119,8 @@ export const parseCssRessource = async (
         // hum en fait si css est inline, alors la source n'est pas le fichier compilé
         // mais bien le fichier html compilé ?
         const importerUrl = cssRessource.isInline
-          ? urlToOriginalServerUrl(cssRessource.ressourceUrl)
-          : cssRessource.ressourceUrl
+          ? urlToOriginalServerUrl(cssRessource.url)
+          : cssRessource.url
         map.sources = map.sources.map((source) => {
           const sourceUrl = resolveUrl(source, importerUrl)
           const sourceUrlRelativeToSourceMap = urlToRelativeUrl(

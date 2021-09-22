@@ -1,35 +1,3 @@
-/**
-
---- Inlining asset ---
-In the context of http2 and beyond http request
-is reused so saving http request by inlining asset is less
-attractive.
-You gain some speed because one big file is still faster
-than many small files.
-
-But inlined asset got two drawbacks:
-
-(1) they cannot be cached by the browser
-assets inlined in the html file have no hash
-and must be redownloaded every time.
--> No way to mitigate this
-
-(2) they cannot be shared by different files.
-assets inlined in the html cannot be shared
-because their source lives in the html.
-You might accidentatly load twice a css because it's
-referenced both in js and html for instance.
--> We could warn about asset inlined + referenced
-more than once
-
-Each time an asset needs to be inlined its dependencies
-must be re-resolved to its importer location.
-This is quite a lot of work to implement this.
-Considering that inlining is not that worth it and might
-duplicate them when imported more than once let's just not do it.
-
-*/
-
 import {
   resolveUrl,
   urlToRelativeUrl,
@@ -205,7 +173,7 @@ export const createRessourceBuilder = (
   }) => {
     const importerUrl = referenceUrl
     const ressourceImporter = ressourceFromUrl(importerUrl) || {
-      ressourceUrl: importerUrl,
+      url: importerUrl,
       isEntryPoint: false, // maybe
       isJsModule: true,
       bufferAfterBuild: "",
@@ -228,7 +196,7 @@ export const createRessourceBuilder = (
       isJsModule,
       isInline,
       importerUrl: referenceUrl,
-      importerIsEntry: ressourceImporter.isEntryPoint,
+      importerIsEntryPoint: ressourceImporter.isEntryPoint,
       importerIsJsModule: ressourceImporter.isJsModule,
     })
 
@@ -297,7 +265,7 @@ export const createRessourceBuilder = (
     } else {
       ressource = createRessource({
         contentType,
-        ressourceUrl,
+        url: ressourceUrl,
         bufferBeforeBuild,
 
         isEntryPoint,
@@ -434,7 +402,7 @@ export const createRessourceBuilder = (
       )
       if (response.url !== ressourceUrl) {
         ressourceRedirectionMap[ressourceUrl] = response.url
-        ressource.ressourceUrl = response.url
+        ressource.url = response.url
       }
 
       const responseContentTypeHeader = response.headers["content-type"]
@@ -502,7 +470,7 @@ export const createRessourceBuilder = (
       }
 
       if (!ressource.isEntryPoint) {
-        logger.debug(`parse ${urlToHumanUrl(ressource.ressourceUrl)}`)
+        logger.debug(`parse ${urlToHumanUrl(ressource.url)}`)
       }
 
       const parseReturnValue = await parse(ressource, {

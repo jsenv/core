@@ -243,7 +243,7 @@ const regularScriptTextNodeVisitor = (
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
-      `${urlToBasename(htmlRessource.ressourceUrl)}.[id].js`,
+      `${urlToBasename(htmlRessource.url)}.[id].js`,
     ),
     ...htmlNodeToReferenceLocation(script),
 
@@ -341,7 +341,7 @@ const moduleScriptTextNodeVisitor = (
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
-      `${urlToBasename(htmlRessource.ressourceUrl)}.[id].js`,
+      `${urlToBasename(htmlRessource.url)}.[id].js`,
     ),
     ...htmlNodeToReferenceLocation(script),
 
@@ -386,7 +386,7 @@ const importmapScriptSrcVisitor = (
     // than in the project
     fileNamePattern: () => {
       const importmapReferenceUrl = importmapReference.referenceUrl
-      const importmapRessourceUrl = importmapReference.ressource.ressourceUrl
+      const importmapRessourceUrl = importmapReference.ressource.url
       const importmapUrlRelativeToImporter = urlToRelativeUrl(
         importmapRessourceUrl,
         importmapReferenceUrl,
@@ -452,7 +452,7 @@ const importmapScriptTextNodeVisitor = (
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
-      `${urlToBasename(htmlRessource.ressourceUrl)}.[id].importmap`,
+      `${urlToBasename(htmlRessource.url)}.[id].importmap`,
     ),
     ...htmlNodeToReferenceLocation(script),
 
@@ -622,7 +622,7 @@ const styleTextNodeVisitor = (
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       style,
       styles,
-      `${urlToBasename(htmlRessource.ressourceUrl)}.[id].css`,
+      `${urlToBasename(htmlRessource.url)}.[id].css`,
     ),
     ...htmlNodeToReferenceLocation(style),
 
@@ -717,11 +717,12 @@ const referenceToUrl = ({
   htmlNode,
   getReferenceUrlRelativeToImporter,
 }) => {
-  if (reference.ressource.isExternal) {
-    return reference.ressource.ressourceUrl
+  const referenceRessource = reference.ressource
+  if (referenceRessource.isExternal) {
+    return referenceRessource.url
   }
   if (shouldInline({ reference, htmlNode })) {
-    return getRessourceAsBase64Url(reference.ressource)
+    return getRessourceAsBase64Url(referenceRessource)
   }
   return getReferenceUrlRelativeToImporter(reference)
 }

@@ -12,7 +12,7 @@ export const parseJsRessource = async (
   { notifyReferenceFound },
   { urlToOriginalFileUrl, urlToOriginalServerUrl, minify, minifyJsOptions },
 ) => {
-  const jsUrl = jsRessource.ressourceUrl
+  const jsUrl = jsRessource.url
   const jsString = String(jsRessource.bufferBeforeBuild)
   const jsSourcemapUrl = getJavaScriptSourceMappingUrl(jsString)
   let sourcemapReference
@@ -59,7 +59,7 @@ export const parseJsRessource = async (
     if (minify) {
       const jsUrlRelativeToImporter = jsRessource.isInline
         ? urlToRelativeUrl(
-            jsRessource.ressourceUrl,
+            jsRessource.url,
             jsRessource.references[0].referenceUrl,
           )
         : jsRessource.ressourceRelativeUrl
@@ -95,8 +95,8 @@ export const parseJsRessource = async (
         map.file = urlToFilename(jsBuildUrl)
         if (map.sources) {
           const importerUrl = jsRessource.isInline
-            ? urlToOriginalServerUrl(jsRessource.ressourceUrl)
-            : jsRessource.ressourceUrl
+            ? urlToOriginalServerUrl(jsRessource.url)
+            : jsRessource.url
 
           map.sources = map.sources.map((source) => {
             const sourceUrl = resolveUrl(source, importerUrl)

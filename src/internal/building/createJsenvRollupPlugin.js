@@ -889,7 +889,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
 
         const buildRelativeUrl = assetRessource.ressourceBuildRelativeUrl
         const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
-        const originalProjectUrl = asOriginalUrl(assetRessource.ressourceUrl)
+        const originalProjectUrl = asOriginalUrl(assetRessource.url)
         const originalProjectRelativeUrl = urlToRelativeUrl(
           originalProjectUrl,
           projectDirectoryUrl,

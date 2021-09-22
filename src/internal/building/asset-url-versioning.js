@@ -5,7 +5,7 @@ export const computeBuildRelativeUrlForRessource = (
   { lineBreakNormalization },
 ) => {
   return computeBuildRelativeUrl(
-    ressource.ressourceUrl,
+    ressource.url,
     ressource.bufferAfterBuild,
     {
       pattern: fileNamePatternFromRessource(ressource),
