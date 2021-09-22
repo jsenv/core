@@ -111,3 +111,11 @@ export const jsenvSystemJsFileInfo = {
   url: resolveUrl("./src/internal/runtime/s.js", jsenvCoreDirectoryUrl),
   jsenvRelativeUrl: "./src/internal/runtime/s.js",
 }
+
+export const jsenvResolveImportUrlHelper = {
+  url: resolveUrl(
+    "./src/internal/building/resolve_import_url_helper.js",
+    jsenvCoreDirectoryUrl,
+  ),
+  jsenvRelativeUrl: "./src/internal/building/resolve_import_url_helper.js",
+}

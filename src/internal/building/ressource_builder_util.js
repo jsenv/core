@@ -158,7 +158,7 @@ export const formatFoundReference = ({
 
   const { isInline, isJsModule } = ressource
   if (isInline && !isJsModule) {
-    return formatFoundReferenceToInlineAsset({
+    return formatFoundReferenceToInlineRessource({
       reference,
       showReferenceSourceLocation,
       referenceEffects,
@@ -174,7 +174,7 @@ export const formatFoundReference = ({
   }
 
   if (!isJsModule) {
-    return formatFoundReferenceToAsset({
+    return formatFoundReferenceToRessource({
       reference,
       showReferenceSourceLocation,
       referenceEffects,
@@ -190,9 +190,9 @@ export const formatFoundReference = ({
 
 const formatCreateReferenceForEntry = ({ reference, referenceEffects }) => {
   return `
-Start from entry file ${
-    reference.ressource.ressourceRelativeUrl
-  }${appendEffects(referenceEffects)}`
+Start from entry file ${reference.ressource.relativeUrl}${appendEffects(
+    referenceEffects,
+  )}`
 }
 
 const formatFoundRessourceHint = ({
@@ -212,18 +212,18 @@ const formatFoundReferenceToExternalRessource = ({
   referenceEffects,
 }) => {
   return `
-Found reference to an external url in ${showReferenceSourceLocation(
-    reference,
-  )}${appendEffects(referenceEffects)}`
+Found external url in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
 }
 
-const formatFoundReferenceToInlineAsset = ({
+const formatFoundReferenceToInlineRessource = ({
   reference,
   showReferenceSourceLocation,
   referenceEffects,
 }) => {
   return `
-Found reference to an inline asset in ${showReferenceSourceLocation(
+Found inline ressource in ${showReferenceSourceLocation(
     reference,
   )}${appendEffects(referenceEffects)}`
 }
@@ -234,20 +234,20 @@ const formatFoundReferenceToInlineModule = ({
   referenceEffects,
 }) => {
   return `
-Found reference to an inline module in ${showReferenceSourceLocation(
-    reference,
-  )}${appendEffects(referenceEffects)}`
+Found inline module in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
 }
 
-const formatFoundReferenceToAsset = ({
+const formatFoundReferenceToRessource = ({
   reference,
   showReferenceSourceLocation,
   referenceEffects,
 }) => {
   return `
-Found reference to an asset in ${showReferenceSourceLocation(
-    reference,
-  )}${appendEffects(referenceEffects)}`
+Found ressource in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
 }
 
 const formatFoundReferenceToModule = ({
@@ -256,9 +256,9 @@ const formatFoundReferenceToModule = ({
   referenceEffects,
 }) => {
   return `
-Found reference to a module in ${showReferenceSourceLocation(
-    reference,
-  )}${appendEffects(referenceEffects)}`
+Found module script in ${showReferenceSourceLocation(reference)}${appendEffects(
+    referenceEffects,
+  )}`
 }
 
 const appendEffects = (effects) => {

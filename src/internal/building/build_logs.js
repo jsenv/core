@@ -6,7 +6,7 @@ import { showSourceLocation } from "./showSourceLocation.js"
 
 export const formatUseImportMapFromHtml = (importMapInfoFromHtml) => {
   return `
-use importmap found in ${showHtmlSourceLocation(importMapInfoFromHtml)}`
+use importmap from html ${showHtmlSourceLocation(importMapInfoFromHtml)}`
 }
 
 export const formatImportmapOutsideCompileDirectory = ({

@@ -62,7 +62,7 @@ export const parseJsRessource = async (
             jsRessource.url,
             jsRessource.references[0].referenceUrl,
           )
-        : jsRessource.ressourceRelativeUrl
+        : jsRessource.relativeUrl
       const result = await minifyJs(jsString, jsUrlRelativeToImporter, {
         sourceMap: {
           ...(map ? { content: JSON.stringify(map) } : {}),

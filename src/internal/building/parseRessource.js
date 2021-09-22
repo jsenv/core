@@ -9,7 +9,10 @@ import {
   manipulateHtmlAst,
   findFirstImportMapNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { jsenvSystemJsFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import {
+  jsenvSystemJsFileInfo,
+  jsenvResolveImportUrlHelper,
+} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
 import { parseHtmlRessource } from "./html/parseHtmlRessource.js"
 import { parseImportmapRessource } from "./importmap/parseImportmapRessource.js"
@@ -29,7 +32,7 @@ export const parseRessource = (
     urlToOriginalFileUrl,
     urlToOriginalServerUrl,
     ressourceHintNeverUsedCallback,
-    useImportMapToImproveLongTermCaching,
+    useImportMapToMaximizeCacheReuse,
     createImportMapForFilesUsedInJs,
     minify,
     minifyHtmlOptions,
@@ -49,40 +52,12 @@ export const parseRessource = (
       htmlStringToHtmlAst: (htmlString) => {
         const htmlAst = parseHtmlString(htmlString)
 
-        // force presence of systemjs script if html contains a module script
-        const injectSystemJsScriptIfNeeded = (htmlAst) => {
-          if (format !== "systemjs") {
-            return
-          }
+        const { hasModuleScript, hasInlineModuleScript } =
+          getHtmlModuleScriptInfo(htmlAst)
 
-          let hasModuleScript = false
-          let hasInlineModuleScript = false
-          findHtmlNode(htmlAst, (htmlNode) => {
-            const isScriptModule = htmlNodeIsScriptModule(htmlNode)
-            if (!isScriptModule) {
-              return false
-            }
-
-            hasModuleScript = true
-
-            const isInline =
-              getHtmlNodeAttributeByName(htmlNode, "data-jsenv-force-inline") ||
-              (!getHtmlNodeAttributeByName(htmlNode, "src") &&
-                getHtmlNodeTextNode(htmlNode))
-            if (!isInline) {
-              return false
-            }
-            hasInlineModuleScript = true
-            return true
-          })
-
-          if (!hasModuleScript) {
-            return
-          }
-
+        if (hasModuleScript && format === "systemjs") {
+          // force presence of systemjs script if html contains a module script
           // use our own version of systemjs by default
-          // we should also detect if there is an inline script
-          // and, in that case, inline systemjs instead of using the url
           if (typeof systemJsUrl === "undefined") {
             systemJsUrl = `/${urlToRelativeUrl(
               jsenvSystemJsFileInfo.url,
@@ -103,31 +78,39 @@ export const parseRessource = (
           })
         }
 
-        // force the presence of a fake+inline+empty importmap script
-        // if html contains no importmap and we useImportMapToImproveLongTermCaching
-        // this inline importmap will be transformed later to have top level remapping
-        // required to target hashed js urls
-        const injectImportMapScriptIfNeeded = (htmlAst) => {
-          if (!useImportMapToImproveLongTermCaching) {
-            return
-          }
-          if (findFirstImportMapNode(htmlAst)) {
-            return
+        if (useImportMapToMaximizeCacheReuse) {
+          if (hasModuleScript && format === "esmodule") {
+            // inject an inline script helper to resolve url
+            manipulateHtmlAst(htmlAst, {
+              scriptInjections: [
+                {
+                  "id": "jsenv_import_url_resolution_helper",
+                  "src": `/${urlToRelativeUrl(
+                    jsenvResolveImportUrlHelper.url,
+                    projectDirectoryUrl,
+                  )}`,
+                  "data-jsenv-force-inline": true,
+                },
+              ],
+            })
           }
 
-          manipulateHtmlAst(htmlAst, {
-            scriptInjections: [
-              {
-                type: "importmap",
-                id: "jsenv_inject_importmap",
-                text: "{}",
-              },
-            ],
-          })
+          if (!findFirstImportMapNode(htmlAst)) {
+            // force the presence of a fake+inline+empty importmap script
+            // if html contains no importmap and we useImportMapToMaximizeCacheReuse
+            // this inline importmap will be transformed later to have top level remapping
+            // required to target hashed js urls
+            manipulateHtmlAst(htmlAst, {
+              scriptInjections: [
+                {
+                  type: "importmap",
+                  id: "jsenv_inject_importmap",
+                  text: "{}",
+                },
+              ],
+            })
+          }
         }
-
-        injectSystemJsScriptIfNeeded(htmlAst)
-        injectImportMapScriptIfNeeded(htmlAst)
 
         return htmlAst
       },
@@ -152,7 +135,7 @@ export const parseRessource = (
   if (contentType === "application/importmap+json") {
     return parseImportmapRessource(ressource, notifiers, {
       minify,
-      importMapToInject: useImportMapToImproveLongTermCaching
+      importMapToInject: useImportMapToMaximizeCacheReuse
         ? createImportMapForFilesUsedInJs()
         : undefined,
     })
@@ -190,4 +173,29 @@ export const parseRessource = (
   }
 
   return null
+}
+
+const getHtmlModuleScriptInfo = (htmlAst) => {
+  let hasModuleScript = false
+  let hasInlineModuleScript = false
+  findHtmlNode(htmlAst, (htmlNode) => {
+    const isScriptModule = htmlNodeIsScriptModule(htmlNode)
+    if (!isScriptModule) {
+      return false
+    }
+
+    hasModuleScript = true
+
+    const isInline =
+      getHtmlNodeAttributeByName(htmlNode, "data-jsenv-force-inline") ||
+      (!getHtmlNodeAttributeByName(htmlNode, "src") &&
+        getHtmlNodeTextNode(htmlNode))
+    if (!isInline) {
+      return false
+    }
+    hasInlineModuleScript = true
+    return true
+  })
+
+  return { hasModuleScript, hasInlineModuleScript }
 }

@@ -78,7 +78,7 @@ export const createJsenvRollupPlugin = async ({
   urlVersioning,
   lineBreakNormalization,
   jsConcatenation,
-  useImportMapToImproveLongTermCaching,
+  useImportMapToMaximizeCacheReuse,
 
   minify,
   minifyJsOptions,
@@ -378,7 +378,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
               ressourceHintNeverUsedCallback: (linkInfo) => {
                 logger.warn(formatRessourceHintNeverUsedWarning(linkInfo))
               },
-              useImportMapToImproveLongTermCaching,
+              useImportMapToMaximizeCacheReuse,
               createImportMapForFilesUsedInJs,
               minify,
               minifyHtmlOptions,
@@ -579,16 +579,27 @@ building ${entryFileRelativeUrls.length} entry files...`)
     },
 
     resolveFileUrl: ({ referenceId, fileName }) => {
-      const assetRessource = ressourceBuilder.findRessource((ressource) => {
+      const ressourceFound = ressourceBuilder.findRessource((ressource) => {
         return ressource.rollupReferenceId === referenceId
       })
-      const buildRelativeUrl = assetRessource
-        ? assetRessource.buildRelativeUrl
+      const buildRelativeUrl = ressourceFound
+        ? ressourceFound.buildRelativeUrl
         : fileName
+
       if (format === "esmodule") {
+        if (!node && useImportMapToMaximizeCacheReuse && urlVersioning) {
+          const buildRelativeUrlWithoutVersion =
+            buildRelativeUrlToFileName(buildRelativeUrl)
+          return `window.__resolveImportUrl__("./${buildRelativeUrlWithoutVersion}", import.meta.url)`
+        }
         return `new URL("${buildRelativeUrl}", import.meta.url).href`
       }
       if (format === "systemjs") {
+        if (useImportMapToMaximizeCacheReuse && urlVersioning) {
+          const buildRelativeUrlWithoutVersion =
+            buildRelativeUrlToFileName(buildRelativeUrl)
+          return `System.resolve("./${buildRelativeUrlWithoutVersion}", module.meta.url)`
+        }
         return `System.resolve("./${buildRelativeUrl}", module.meta.url)`
       }
       if (format === "global") {
@@ -665,23 +676,24 @@ building ${entryFileRelativeUrls.length} entry files...`)
       return { code: content, map }
     },
 
-    async transform(code, id) {
-      const ast = this.parse(code, {
+    async transform(codeInput, id) {
+      const ast = this.parse(codeInput, {
         // used to know node line and column
         locations: true,
       })
       // const moduleInfo = this.getModuleInfo(id)
       const url = asServerUrl(id)
       const importerUrl = urlImporterMap[url]
-      return transformImportMetaUrlReferences({
+      const { code, map } = await transformImportMetaUrlReferences({
         url,
         importerUrl,
-        code,
+        code: codeInput,
         ast,
         ressourceBuilder,
         fetch: jsenvFetchUrl,
         markBuildRelativeUrlAsUsedByJs,
       })
+      return { code, map }
     },
 
     // resolveImportMeta: () => {}
@@ -703,10 +715,9 @@ building ${entryFileRelativeUrls.length} entry files...`)
         return id
       }
       outputOptions.entryFileNames = `[name]${outputExtension}`
-      outputOptions.chunkFileNames =
-        useImportMapToImproveLongTermCaching || !urlVersioning
-          ? `[name]${outputExtension}`
-          : `[name]-[hash]${outputExtension}`
+      outputOptions.chunkFileNames = useImportMapToMaximizeCacheReuse
+        ? `[name]${outputExtension}`
+        : `[name]-[hash]${outputExtension}`
 
       // rollup does not expects to have http dependency in the mix: fix them
       outputOptions.sourcemapPathTransform = (relativePath, sourcemapPath) => {
@@ -812,7 +823,8 @@ building ${entryFileRelativeUrls.length} entry files...`)
         let buildRelativeUrl
         const canBeVersioned =
           asRollupUrl(file.url) in jsModulesFromEntry || !file.isEntry
-        if (urlVersioning && useImportMapToImproveLongTermCaching) {
+
+        if (urlVersioning) {
           if (canBeVersioned) {
             buildRelativeUrl = computeBuildRelativeUrl(
               resolveUrl(fileName, buildDirectoryUrl),
@@ -868,7 +880,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         }
 
         const assetRessource = ressourceBuilder.findRessource(
-          (ressource) => ressource.ressourceRelativeUrl === rollupFileId,
+          (ressource) => ressource.relativeUrl === rollupFileId,
         )
         if (!assetRessource) {
           const buildRelativeUrl = rollupFileId

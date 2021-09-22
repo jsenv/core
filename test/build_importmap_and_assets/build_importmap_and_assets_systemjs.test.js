@@ -27,7 +27,6 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
@@ -36,21 +35,20 @@ const { buildMappings } = await buildProject({
   entryPointMap,
   // minify: true,
 })
-
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const mainJsFileBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}main.js`]
-const imgRemapBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
+
+const importmapBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}import-map.importmap`]
+const mainBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
+const cssBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}style.css`]
 const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
 // check importmap content
 {
-  const importmapBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}import-map.importmap`]
   const importmapBuildUrl = resolveUrl(
     importmapBuildRelativeUrl,
     buildDirectoryUrl,
@@ -63,8 +61,7 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
     imports: {
       "./assets/img.png": `./${imgBuildRelativeUrl}`,
       // the importmap for img-remap is available
-      "./assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
-      "./main.js": `./${mainJsFileBuildRelativeUrl}`,
+      "./main.js": `./${mainBuildRelativeUrl}`,
       // and nothing more because js is referencing only img-remap
     },
   }
@@ -73,8 +70,6 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
 // assert asset url is correct for css (hashed)
 {
-  const cssBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}style.css`]
   const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
   const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
   const cssString = await readFile(cssBuildUrl)
@@ -90,26 +85,12 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
   const { namespace, serverOrigin } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    mainRelativeUrl: `./${mainJsFileBuildRelativeUrl}`,
+    mainRelativeUrl: `./${mainBuildRelativeUrl}`,
     // debug: true,
   })
 
-  const actual = {
-    urlFromStaticImport: namespace.urlFromStaticImport,
-    urlFromDynamicImport: namespace.urlFromDynamicImport,
-    urlFromImportMetaNotation: namespace.urlFromImportMetaNotation,
-  }
+  const actual = namespace
   const expected = {
-    urlFromStaticImport: resolveUrl(
-      `dist/systemjs/${imgRemapBuildRelativeUrl}`,
-      serverOrigin,
-    ),
-    urlFromDynamicImport: {
-      default: resolveUrl(
-        `dist/systemjs/${imgRemapBuildRelativeUrl}`,
-        serverOrigin,
-      ),
-    },
     // We MUST NOT introduce a build only importmap awareness
     // otherwise it would introduce a difference between dev/after build.
     // As new URL(relativeUrl, import.meta.url) is a standard url resolution where

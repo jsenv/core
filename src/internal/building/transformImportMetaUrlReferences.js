@@ -44,8 +44,8 @@ export const transformImportMetaUrlReferences = async ({
       })
       if (reference) {
         magicString.overwrite(
-          node.arguments[0].start,
-          node.arguments[0].end,
+          node.start,
+          node.end,
           referenceToCodeForRollup(reference),
         )
         markBuildRelativeUrlAsUsedByJs(reference.ressource.buildRelativeUrl)

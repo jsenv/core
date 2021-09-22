@@ -64,7 +64,7 @@ export const buildProject = async ({
   // when jsConcatenation is disabled rollup becomes almost useless
   // except it can still do tree shaking
   jsConcatenation = true,
-  useImportMapToImproveLongTermCaching = format === "systemjs",
+  useImportMapToMaximizeCacheReuse = true,
   preserveEntrySignatures,
 
   minify = process.env.NODE_ENV === "production",
@@ -213,7 +213,7 @@ export const buildProject = async ({
 
         urlVersioning,
         lineBreakNormalization,
-        useImportMapToImproveLongTermCaching,
+        useImportMapToMaximizeCacheReuse,
         preserveEntrySignatures,
         jsConcatenation,
 

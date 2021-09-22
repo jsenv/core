@@ -407,7 +407,12 @@ const importmapScriptSrcVisitor = (
       return
     }
 
-    if (shouldInline({ reference: importmapReference, htmlNode: script })) {
+    if (
+      // for esmodule we always inline the importmap
+      // as it's the only thing supported by Chrome
+      format === "esmodule" ||
+      shouldInline({ reference: importmapReference, htmlNode: script })
+    ) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)

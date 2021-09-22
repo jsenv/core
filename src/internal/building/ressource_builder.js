@@ -313,7 +313,7 @@ export const createRessourceBuilder = (
       urlVersioningDisabled,
       fileNamePattern,
 
-      ressourceRelativeUrl: urlToRelativeUrl(ressourceUrl, baseUrl),
+      relativeUrl: urlToRelativeUrl(ressourceUrl, baseUrl),
       bufferAfterBuild: undefined,
     }
 
@@ -381,7 +381,7 @@ export const createRessourceBuilder = (
         // Instead we wait for something else to reference the same ressource
         // This is by choice so that:
         // 1. The warning about "preload but never used" is prio fetch errors like "preload not found"
-        // 2. We don't start fetching a ressource froun in HTML while rollup
+        // 2. We don't start fetching a ressource found in HTML while rollup
         //    could do the same later. It means we should synchronize rollup
         //    and this asset builder fetching to avoid fetching twice.
         //    This scenario would be reproduced for every js module preloaded
@@ -493,7 +493,7 @@ export const createRessourceBuilder = (
     })
 
     const getReadyPromise = memoize(async () => {
-      if (isExternal) {
+      if (ressource.isExternal) {
         // external urls are immediatly available and not modified
         return
       }
@@ -676,7 +676,7 @@ export const createRessourceBuilder = (
 
       ressource.usedCallback()
 
-      if (isExternal) {
+      if (ressource.isExternal) {
         // nothing to do
         return effects
       }
@@ -690,7 +690,7 @@ export const createRessourceBuilder = (
 
         onJsModuleReference({
           jsModuleUrl,
-          jsModuleIsInline: isInline,
+          jsModuleIsInline: ressource.isInline,
           jsModuleSource: String(bufferBeforeBuild),
         })
 
@@ -709,17 +709,17 @@ export const createRessourceBuilder = (
         return effects
       }
 
-      if (isInline) {
+      if (ressource.isInline) {
         // nothing to do
         return effects
       }
 
       const rollupReferenceId = emitAsset({
-        fileName: ressource.ressourceRelativeUrl,
+        fileName: ressource.relativeUrl,
       })
       ressource.rollupReferenceId = rollupReferenceId
       effects.push(
-        `emit rollup asset "${ressource.ressourceRelativeUrl}" (${rollupReferenceId})`,
+        `emit rollup asset "${ressource.relativeUrl}" (${rollupReferenceId})`,
       )
 
       return effects
