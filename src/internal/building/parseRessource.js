@@ -81,14 +81,15 @@ export const parseRessource = (
         if (useImportMapToMaximizeCacheReuse) {
           if (hasModuleScript && format === "esmodule") {
             // inject an inline script helper to resolve url
+            const src = `/${urlToRelativeUrl(
+              jsenvResolveImportUrlHelper.url,
+              projectDirectoryUrl,
+            )}`
             manipulateHtmlAst(htmlAst, {
               scriptInjections: [
                 {
                   "id": "jsenv_import_url_resolution_helper",
-                  "src": `/${urlToRelativeUrl(
-                    jsenvResolveImportUrlHelper.url,
-                    projectDirectoryUrl,
-                  )}`,
+                  src,
                   "data-jsenv-force-inline": true,
                 },
               ],

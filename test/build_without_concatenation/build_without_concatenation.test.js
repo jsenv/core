@@ -36,8 +36,8 @@ const { buildMappings } = await buildProject({
     ["src/internal/building/resolve_import_url_helper.js"]:
       "assets/resolve_import_url_helper-8ba716d6.js",
     [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
-    [`${testDirectoryRelativeUrl}file.js`]: "file-414e15ec.js",
-    [`${testDirectoryRelativeUrl}main.js`]: "main-b6d7ff70.js",
+    [`${testDirectoryRelativeUrl}file.js`]: "file-d4d10f0c.js",
+    [`${testDirectoryRelativeUrl}main.js`]: "main-a10d6b06.js",
   }
   assert({ actual, expected })
 }

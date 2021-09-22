@@ -87,7 +87,7 @@ export const createJsenvRollupPlugin = async ({
 }) => {
   const urlImporterMap = {}
   const urlResponseBodyMap = {}
-  const virtualModules = {}
+  const inlineModuleScripts = {}
   const urlRedirectionMap = {}
   const jsModulesFromEntry = {}
   let buildFileContents = {}
@@ -475,7 +475,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
           }) => {
             atleastOneChunkEmitted = true
             if (jsModuleIsInline) {
-              virtualModules[jsModuleUrl] = jsModuleSource
+              inlineModuleScripts[jsModuleUrl] = jsModuleSource
             }
             urlImporterMap[jsModuleUrl] = resolveUrl(
               entryPointsPrepared[0].entryProjectRelativeUrl,
@@ -555,7 +555,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         return { id: specifier, external: true }
       }
 
-      if (virtualModules.hasOwnProperty(specifier)) {
+      if (inlineModuleScripts.hasOwnProperty(specifier)) {
         return specifier
       }
 
@@ -831,7 +831,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
           asRollupUrl(file.url) in jsModulesFromEntry || !file.isEntry
 
         if (urlVersioning) {
-          if (canBeVersioned) {
+          if (canBeVersioned && useImportMapToMaximizeCacheReuse) {
             buildRelativeUrl = computeBuildRelativeUrl(
               resolveUrl(fileName, buildDirectoryUrl),
               file.code,
@@ -855,13 +855,16 @@ building ${entryFileRelativeUrls.length} entry files...`)
           projectDirectoryUrl,
         )
 
-        if (canBeVersioned) {
-          markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
-        }
-
         jsModuleBuild[buildRelativeUrl] = file
-        buildManifest[fileName] = buildRelativeUrl
-        buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
+
+        const jsRessource = ressourceBuilder.findRessource(
+          (ressource) => ressource.url === file.url,
+        )
+        if (!jsRessource || !jsRessource.isInline) {
+          markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
+          buildManifest[fileName] = buildRelativeUrl
+          buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
+        }
       })
 
       // it's important to do this to emit late asset
@@ -902,6 +905,10 @@ building ${entryFileRelativeUrls.length} entry files...`)
         // - sourcemap re-emitted
         // - importmap re-emitted to have buildRelativeUrlMap
         if (assetRessource.shouldBeIgnored) {
+          return
+        }
+
+        if (assetRessource.isInline) {
           return
         }
 
@@ -987,8 +994,8 @@ building ${entryFileRelativeUrls.length} entry files...`)
     //   moduleInfo
     // },
   ) => {
-    if (moduleUrl in virtualModules) {
-      const codeInput = virtualModules[moduleUrl]
+    if (moduleUrl in inlineModuleScripts) {
+      const codeInput = inlineModuleScripts[moduleUrl]
 
       const { code, map } = await transformJs({
         projectDirectoryUrl,

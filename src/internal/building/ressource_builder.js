@@ -247,6 +247,17 @@ export const createRessourceBuilder = (
       referenceUrl,
       referenceColumn,
       referenceLine,
+
+      isInline,
+      inlinedCallback: () => {
+        reference.isInline = true
+        const allReferenceAreInline = ressource.references.every(
+          (reference) => reference.isInline,
+        )
+        if (allReferenceAreInline) {
+          ressource.isInline = true
+        }
+      },
     }
 
     const existingRessource = ressourceFromUrl(ressourceUrl)

@@ -205,6 +205,7 @@ const regularScriptSrcVisitor = (
       }
 
       setHtmlNodeText(script, jsString)
+      remoteScriptReference.inlinedCallback()
       return
     }
 
@@ -303,6 +304,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapUrl)
 
       setHtmlNodeText(script, jsString)
+      remoteScriptReference.inlinedCallback()
       return
     }
 
@@ -416,11 +418,13 @@ const importmapScriptSrcVisitor = (
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { bufferAfterBuild } = importmapReference.ressource
+      const { ressource } = importmapReference
+      const { bufferAfterBuild } = ressource
 
       const jsString = String(bufferAfterBuild)
 
       setHtmlNodeText(script, jsString)
+      importmapReference.inlinedCallback()
       return
     }
 
@@ -519,6 +523,7 @@ const linkStylesheetHrefVisitor = (
       replaceHtmlNode(link, `<style>${cssString}</style>`, {
         attributesToIgnore: ["href", "rel", "as", "crossorigin", "type"],
       })
+      cssReference.inlinedCallback()
       return
     }
 
@@ -602,6 +607,7 @@ const linkHrefVisitor = (
         link,
         `<link href="${getRessourceAsBase64Url(linkReference.ressource)}" />`,
       )
+      linkReference.inlinedCallback()
       return
     }
 
@@ -727,6 +733,7 @@ const referenceToUrl = ({
     return referenceRessource.url
   }
   if (shouldInline({ reference, htmlNode })) {
+    reference.inlinedCallback()
     return getRessourceAsBase64Url(referenceRessource)
   }
   return getReferenceUrlRelativeToImporter(reference)
@@ -744,7 +751,6 @@ const shouldInline = ({ reference, htmlNode }) => {
   if (reference.ressource.isInline) {
     return true
   }
-
   return readAndRemoveForceInline(htmlNode)
 }
 

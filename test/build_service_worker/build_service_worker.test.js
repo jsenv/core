@@ -52,7 +52,6 @@ if (process.platform !== "win32") {
   const expected = {
     generatedUrlsConfig: {
       "assets/style-b126d686.css": { versioned: true },
-      [`${testDirectoryname}.11-1503a69c.js`]: { versioned: true },
       "main.html": {
         versioned: false,
         // because when html file is modified, it's url is not
@@ -60,7 +59,7 @@ if (process.platform !== "win32") {
         // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
         // to include a hash for the html file.
         // -> when html file changes -> hash changes -> worker updates
-        version: "129e9c29",
+        version: "0797f3dd",
       },
     },
   }

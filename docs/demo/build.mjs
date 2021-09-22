@@ -7,5 +7,6 @@ await buildProject({
     "./main.html": "./main.prod.html",
   },
   format: "esmodule",
-  minify: true,
+
+  minify: false,
 })
