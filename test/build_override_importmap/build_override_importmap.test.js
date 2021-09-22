@@ -40,10 +40,8 @@ const { buildMappings } = await buildProject({
 {
   const actual = buildMappings
   const expected = {
-    "src/internal/building/resolve_import_url_helper.js":
-      "assets/resolve_import_url_helper-8ba716d6.js",
+    // the importmap is not in buildMappings as it was inlined by the build
     [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
-    [`${testDirectoryRelativeUrl}dev.importmap`]: "prod-6601b339.importmap",
     [`${testDirectoryRelativeUrl}main.js`]: "main-ca955363.js",
   }
   assert({ actual, expected })

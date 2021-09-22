@@ -45,7 +45,6 @@ import { createImportResolverForNode } from "../import-resolution/import-resolve
 import { createImportResolverForImportmap } from "../import-resolution/import-resolver-importmap.js"
 import { getDefaultImportMap } from "../import-resolution/importmap-default.js"
 import { injectSourcemapInRollupBuild } from "./rollup_build_sourcemap.js"
-import { createBuildFileContents } from "./build_file_contents.js"
 import { createBuildStats } from "./build_stats.js"
 
 export const createJsenvRollupPlugin = async ({
@@ -90,7 +89,8 @@ export const createJsenvRollupPlugin = async ({
   const inlineModuleScripts = {}
   const urlRedirectionMap = {}
   const jsModulesFromEntry = {}
-  let buildFileContents = {}
+  const buildFileContents = {}
+  const buildInlineFileContents = {}
   let buildStats = {}
   const buildStartMs = Date.now()
 
@@ -860,7 +860,9 @@ building ${entryFileRelativeUrls.length} entry files...`)
         const jsRessource = ressourceBuilder.findRessource(
           (ressource) => ressource.url === file.url,
         )
-        if (!jsRessource || !jsRessource.isInline) {
+        if (jsRessource && jsRessource.isInline) {
+          buildInlineFileContents[fileName] = file.code
+        } else {
           markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
           buildManifest[fileName] = buildRelativeUrl
           buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
@@ -908,23 +910,23 @@ building ${entryFileRelativeUrls.length} entry files...`)
           return
         }
 
-        if (assetRessource.isInline) {
-          return
-        }
-
         const buildRelativeUrl = assetRessource.buildRelativeUrl
         const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
-        const originalProjectUrl = asOriginalUrl(assetRessource.url)
-        const originalProjectRelativeUrl = urlToRelativeUrl(
-          originalProjectUrl,
-          projectDirectoryUrl,
-        )
-        // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
-        file.source = assetRessource.bufferAfterBuild
+        if (assetRessource.isInline) {
+          buildInlineFileContents[fileName] = file.source
+        } else {
+          const originalProjectUrl = asOriginalUrl(assetRessource.url)
+          const originalProjectRelativeUrl = urlToRelativeUrl(
+            originalProjectUrl,
+            projectDirectoryUrl,
+          )
+          // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
+          file.source = assetRessource.bufferAfterBuild
 
-        assetBuild[buildRelativeUrl] = file
-        buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
-        buildManifest[fileName] = buildRelativeUrl
+          assetBuild[buildRelativeUrl] = file
+          buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
+          buildManifest[fileName] = buildRelativeUrl
+        }
       })
 
       rollupBuild = {
@@ -937,8 +939,9 @@ building ${entryFileRelativeUrls.length} entry files...`)
       rollupBuild = sortObjectByPathnames(rollupBuild)
       buildManifest = sortObjectByPathnames(buildManifest)
       buildMappings = sortObjectByPathnames(buildMappings)
-      buildFileContents = createBuildFileContents({
-        rollupBuild,
+      Object.keys(rollupBuild).forEach((buildRelativeUrl) => {
+        const { type, source, code } = rollupBuild[buildRelativeUrl]
+        buildFileContents[buildRelativeUrl] = type === "asset" ? source : code
       })
       const buildDuration = Date.now() - buildStartMs
       buildStats = createBuildStats({
@@ -1157,6 +1160,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         buildManifest,
         buildImportMap: createImportMapForFilesUsedInJs(),
         buildFileContents,
+        buildInlineFileContents,
         buildStats,
       }
     },

@@ -33,8 +33,6 @@ const { buildMappings } = await buildProject({
 {
   const actual = buildMappings
   const expected = {
-    ["src/internal/building/resolve_import_url_helper.js"]:
-      "assets/resolve_import_url_helper-8ba716d6.js",
     [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
     [`${testDirectoryRelativeUrl}file.js`]: "file-d4d10f0c.js",
     [`${testDirectoryRelativeUrl}main.js`]: "main-a10d6b06.js",
