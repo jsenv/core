@@ -7,7 +7,7 @@ export const transformImportMetaUrlReferences = async ({
   // importerUrl,
   code,
   ast,
-  assetBuilder,
+  ressourceBuilder,
   fetch,
   markBuildRelativeUrlAsUsedByJs,
 }) => {
@@ -29,7 +29,7 @@ export const transformImportMetaUrlReferences = async ({
       const response = await fetch(ressourceUrl, url)
       const bufferBeforeBuild = Buffer.from(await response.arrayBuffer())
 
-      const reference = await assetBuilder.createReferenceFoundInJs({
+      const reference = await ressourceBuilder.createReferenceFoundInJs({
         jsUrl: url,
         ...(node.loc
           ? {

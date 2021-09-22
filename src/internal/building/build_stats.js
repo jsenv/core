@@ -4,10 +4,10 @@ import { isReferencedOnlyByRessourceHint } from "./ressource_builder_util.js"
 
 export const createBuildStats = ({
   buildFileContents,
-  assetBuilder,
+  ressourceBuilder,
   buildDuration,
 }) => {
-  const projectFileContents = getProjectFileContents(assetBuilder)
+  const projectFileContents = getProjectFileContents(ressourceBuilder)
   const projectFileSizeInfo = sizeInfoFromFileContents(projectFileContents)
 
   const { sourceFileContents, sourcemapFileContents } =
@@ -53,9 +53,9 @@ const sizeInfoFromFileContents = (fileContents) => {
   return { fileSizes, totalSize }
 }
 
-const getProjectFileContents = (assetBuilder) => {
+const getProjectFileContents = (ressourceBuilder) => {
   const projectFileContents = {}
-  const { ressourceMap } = assetBuilder.inspect()
+  const { ressourceMap } = ressourceBuilder.inspect()
 
   Object.keys(ressourceMap).forEach((url) => {
     const ressource = ressourceMap[url]

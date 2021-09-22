@@ -265,7 +265,7 @@ export const createRessourceBuilder = (
     } else {
       ressource = createRessource({
         contentType,
-        url: ressourceUrl,
+        ressourceUrl,
         bufferBeforeBuild,
 
         isEntryPoint,
@@ -300,7 +300,7 @@ export const createRessourceBuilder = (
   }) => {
     const ressource = {
       contentType,
-      ressourceUrl,
+      url: ressourceUrl,
       bufferBeforeBuild,
       firstStrongReference: null,
       references: [],
@@ -349,7 +349,7 @@ export const createRessourceBuilder = (
 
           reject(
             new Error(
-              `${shortenUrl(ressourceUrl)} cannot be found in the build info`,
+              `${shortenUrl(ressource.url)} cannot be found in the build info`,
             ),
           )
           return
@@ -396,11 +396,11 @@ export const createRessourceBuilder = (
       }
 
       const response = await fetch(
-        ressourceUrl,
+        ressource.url,
         showReferenceSourceLocation(ressource.firstStrongReference),
       )
-      if (response.url !== ressourceUrl) {
-        ressourceRedirectionMap[ressourceUrl] = response.url
+      if (response.url !== ressource.url) {
+        ressourceRedirectionMap[ressource.url] = response.url
         ressource.url = response.url
       }
 
@@ -441,13 +441,13 @@ export const createRessourceBuilder = (
       }) => {
         if (parsingDone) {
           throw new Error(
-            `notifyReferenceFound cannot be called once ${ressourceUrl} parsing is done.`,
+            `notifyReferenceFound cannot be called once ${ressource.url} parsing is done.`,
           )
         }
 
         const dependencyReference = createReference({
           ressourceSpecifier,
-          referenceUrl: ressourceUrl,
+          referenceUrl: ressource.url,
           referenceLine,
           referenceColumn,
           isRessourceHint,
@@ -484,7 +484,7 @@ export const createRessourceBuilder = (
         )
       }
       if (typeof parseReturnValue === "function") {
-        ressourceTransformMap[ressourceUrl] = parseReturnValue
+        ressourceTransformMap[ressource.url] = parseReturnValue
       }
       ressource.dependencies = dependencies
       // if (dependencies.length > 0) {
@@ -507,7 +507,7 @@ export const createRessourceBuilder = (
         }),
       )
 
-      const transform = ressourceTransformMap[ressourceUrl]
+      const transform = ressourceTransformMap[ressource.url]
       if (typeof transform !== "function") {
         ressource.buildEnd(
           ressource.bufferAfterBuild || ressource.bufferBeforeBuild,
@@ -635,9 +635,9 @@ export const createRessourceBuilder = (
         }
       } else {
         effects.push(
-          `mark ${urlToHumanUrl(ressourceUrl)} as referenced by ${urlToHumanUrl(
-            reference.referenceUrl,
-          )}`,
+          `mark ${urlToHumanUrl(
+            ressource.url,
+          )} as referenced by ${urlToHumanUrl(reference.referenceUrl)}`,
         )
       }
 
@@ -670,7 +670,7 @@ export const createRessourceBuilder = (
       // <link rel="preload" href="file.js" />
       // <script type="module" src="file.js"></script>
       if (!ressource.isJsModule && infoFromReference.isJsModule) {
-        effects.push(`mark ${urlToHumanUrl(ressourceUrl)} as js module`)
+        effects.push(`mark ${urlToHumanUrl(ressource.url)} as js module`)
         ressource.isJsModule = infoFromReference.isJsModule
       }
 
@@ -686,7 +686,7 @@ export const createRessourceBuilder = (
           return effects
         }
 
-        const jsModuleUrl = ressourceUrl
+        const jsModuleUrl = ressource.url
 
         onJsModuleReference({
           jsModuleUrl,
