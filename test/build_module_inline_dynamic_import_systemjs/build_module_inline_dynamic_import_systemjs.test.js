@@ -39,21 +39,18 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
+const inlineFileBuildRelativeUrl =
+  "build_module_inline_dynamic_import_systemjs.10.js"
+const inlineFileBuildUrl = resolveUrl(
+  inlineFileBuildRelativeUrl,
+  buildDirectoryUrl,
+)
+await writeFile(
+  inlineFileBuildUrl,
+  buildInlineFileContents[inlineFileBuildRelativeUrl],
+)
 
 {
-  const inlineFileBuildRelativeUrl =
-    "build_module_inline_dynamic_import_systemjs.10.js"
-  const inlineFileBuildUrl = resolveUrl(
-    inlineFileBuildRelativeUrl,
-    buildDirectoryUrl,
-  )
-  await writeFile(
-    inlineFileBuildUrl,
-    buildInlineFileContents[
-      "build_module_inline_dynamic_import_systemjs.10.js"
-    ],
-  )
-
   const result = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

@@ -38,11 +38,7 @@ const { buildMappings } = await buildProject({
 // assert only 2 files, 1 html, 1 js, are generated even if there is two js file used
 {
   const actual = Object.keys(buildMappings)
-  const expected = [
-    "src/internal/building/resolve_import_url_helper.js",
-    htmlFileRelativeUrl,
-    jsFileRelativeUrl,
-  ]
+  const expected = [htmlFileRelativeUrl, jsFileRelativeUrl]
   assert({ actual, expected })
 }
 
