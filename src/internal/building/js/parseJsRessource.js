@@ -88,7 +88,7 @@ export const parseJsRessource = async (
 
       registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
         const jsBuildUrl = resolveUrl(
-          jsRessource.ressourceBuildRelativeUrl,
+          jsRessource.buildRelativeUrl,
           buildDirectoryUrl,
         )
         const mapBuildUrl = resolveUrl(jsSourcemapFilename, jsBuildUrl)
@@ -115,8 +115,7 @@ export const parseJsRessource = async (
         )
 
         if (sourcemapReference) {
-          sourcemapReference.ressource.ressourceBuildRelativeUrl =
-            buildRelativeUrl
+          sourcemapReference.ressource.buildRelativeUrl = buildRelativeUrl
           sourcemapReference.ressource.bufferAfterBuild = mapSource
         } else {
           emitAsset({
@@ -127,7 +126,7 @@ export const parseJsRessource = async (
       })
 
       return {
-        ressourceBuildRelativeUrl: jsBuildRelativeUrl,
+        buildRelativeUrl: jsBuildRelativeUrl,
         bufferAfterBuild: jsSourceAfterTransformation,
       }
     }

@@ -17,7 +17,7 @@ export const ANSI_RED = ansiStyles.red
 export const ANSI_GREEN = ansiStyles.green
 export const ANSI_YELLOW = ansiStyles.yellow
 export const ANSI_BLUE = ansiStyles.blue
-export const ANSI_MAGENTA = ansiStyles.mangenta
+export const ANSI_MAGENTA = ansiStyles.magenta
 export const ANSI_GREY = ansiStyles.grey
 
 export const ANSI_RESET = "\x1b[0m"

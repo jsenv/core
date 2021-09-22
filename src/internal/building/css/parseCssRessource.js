@@ -110,7 +110,7 @@ export const parseCssRessource = async (
 
     registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
       const cssBuildUrl = resolveUrl(
-        cssRessource.ressourceBuildRelativeUrl,
+        cssRessource.buildRelativeUrl,
         buildDirectoryUrl,
       )
       const mapBuildUrl = resolveUrl(cssSourcemapFilename, cssBuildUrl)
@@ -134,8 +134,7 @@ export const parseCssRessource = async (
       const mapSource = JSON.stringify(map, null, "  ")
       const buildRelativeUrl = urlToRelativeUrl(mapBuildUrl, buildDirectoryUrl)
       if (sourcemapReference) {
-        sourcemapReference.ressource.ressourceBuildRelativeUrl =
-          buildRelativeUrl
+        sourcemapReference.ressource.buildRelativeUrl = buildRelativeUrl
         sourcemapReference.ressource.bufferAfterBuild = mapSource
       } else {
         emitAsset({
@@ -146,7 +145,7 @@ export const parseCssRessource = async (
     })
 
     return {
-      ressourceBuildRelativeUrl: cssBuildRelativeUrl,
+      buildRelativeUrl: cssBuildRelativeUrl,
       bufferAfterBuild: cssSourceAfterTransformation,
     }
   }

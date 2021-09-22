@@ -583,7 +583,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         return ressource.rollupReferenceId === referenceId
       })
       const buildRelativeUrl = assetRessource
-        ? assetRessource.ressourceBuildRelativeUrl
+        ? assetRessource.buildRelativeUrl
         : fileName
       if (format === "esmodule") {
         return `new URL("${buildRelativeUrl}", import.meta.url).href`
@@ -858,7 +858,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
       // et mettre a jour leur dépendance vers ce fichier js
       ressourceBuilder.buildEnd({ jsModuleBuild, buildManifest })
       // wait html files to be emitted
-      await ressourceBuilder.getAllAssetEntryEmittedPromise()
+      await ressourceBuilder.getAllEntryPointsEmittedPromise()
 
       const assetBuild = {}
       Object.keys(rollupResult).forEach((rollupFileId) => {
@@ -887,7 +887,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
           return
         }
 
-        const buildRelativeUrl = assetRessource.ressourceBuildRelativeUrl
+        const buildRelativeUrl = assetRessource.buildRelativeUrl
         const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
         const originalProjectUrl = asOriginalUrl(assetRessource.url)
         const originalProjectRelativeUrl = urlToRelativeUrl(
@@ -1055,7 +1055,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
       })
     if (assetReferenceForImport) {
       markBuildRelativeUrlAsUsedByJs(
-        assetReferenceForImport.ressource.ressourceBuildRelativeUrl,
+        assetReferenceForImport.ressource.buildRelativeUrl,
       )
       const content = `export default ${referenceToCodeForRollup(
         assetReferenceForImport,

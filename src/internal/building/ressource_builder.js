@@ -19,7 +19,7 @@ import {
   // formatDependenciesCollectedMessage,
   checkContentType,
 } from "./ressource_builder_util.js"
-import { computeBuildRelativeUrlForRessource } from "./asset-url-versioning.js"
+import { computeBuildRelativeUrlForRessource } from "./asset_url_versioning.js"
 
 export const createRessourceBuilder = (
   { fetch, parse },
@@ -133,7 +133,7 @@ export const createRessourceBuilder = (
     return reference
   }
 
-  const getAllAssetEntryEmittedPromise = async () => {
+  const getAllEntryPointsEmittedPromise = async () => {
     const urlToWait = Object.keys(ressourceMap).filter(
       (url) => ressourceMap[url].isEntryPoint,
     )
@@ -283,7 +283,7 @@ export const createRessourceBuilder = (
     return reference
   }
 
-  const assetTransformMap = {}
+  const ressourceTransformMap = {}
 
   const createRessource = ({
     contentType,
@@ -356,13 +356,12 @@ export const createRessourceBuilder = (
         }
 
         const bufferAfterBuild = Buffer.from(buildFileInfo.code)
-        const ressourceFileName = buildFileInfo.fileName
-        const ressourceBuildRelativeUrl =
-          buildManifest[ressourceFileName] || ressourceFileName
-        // const ressourceFileName = targetFileNameFromBuildManifest(buildManifest, ressourceBuildRelativeUrl) || ressourceBuildRelativeUrl
+        const fileName = buildFileInfo.fileName
+        const buildRelativeUrl = buildManifest[fileName] || fileName
+        // const fileName = targetFileNameFromBuildManifest(buildManifest, buildRelativeUrl) || buildRelativeUrl
         ressource.bufferAfterBuild = bufferAfterBuild
-        ressource.ressourceBuildRelativeUrl = ressourceBuildRelativeUrl
-        ressource.ressourceFileName = ressourceFileName
+        ressource.buildRelativeUrl = buildRelativeUrl
+        ressource.fileName = fileName
         if (buildFileInfo.type === "chunk") {
           ressource.contentType = "application/javascript"
         }
@@ -485,7 +484,7 @@ export const createRessourceBuilder = (
         )
       }
       if (typeof parseReturnValue === "function") {
-        assetTransformMap[ressourceUrl] = parseReturnValue
+        ressourceTransformMap[ressourceUrl] = parseReturnValue
       }
       ressource.dependencies = dependencies
       // if (dependencies.length > 0) {
@@ -508,11 +507,11 @@ export const createRessourceBuilder = (
         }),
       )
 
-      const transform = assetTransformMap[ressourceUrl]
+      const transform = ressourceTransformMap[ressourceUrl]
       if (typeof transform !== "function") {
         ressource.buildEnd(
           ressource.bufferAfterBuild || ressource.bufferBeforeBuild,
-          ressource.ressourceBuildRelativeUrl,
+          ressource.buildRelativeUrl,
         )
         return
       }
@@ -553,12 +552,10 @@ export const createRessourceBuilder = (
             // js can reference an url without versionning
             // and actually fetch the versioned url thanks to importmap
             referenceBuildRelativeUrl =
-              referenceRessource.ressourceFileName ||
-              referenceRessource.ressourceBuildRelativeUrl
+              referenceRessource.fileName || referenceRessource.buildRelativeUrl
           } else {
             // other ressource must use the exact url
-            referenceBuildRelativeUrl =
-              referenceRessource.ressourceBuildRelativeUrl
+            referenceBuildRelativeUrl = referenceRessource.buildRelativeUrl
           }
 
           const referenceBuildUrl = resolveUrl(
@@ -582,8 +579,8 @@ export const createRessourceBuilder = (
         bufferAfterBuild = transformReturnValue
       } else {
         bufferAfterBuild = transformReturnValue.bufferAfterBuild
-        if (transformReturnValue.ressourceBuildRelativeUrl) {
-          buildRelativeUrl = transformReturnValue.ressourceBuildRelativeUrl
+        if (transformReturnValue.buildRelativeUrl) {
+          buildRelativeUrl = transformReturnValue.buildRelativeUrl
         }
       }
 
@@ -602,19 +599,21 @@ export const createRessourceBuilder = (
       ressource.shouldBeIgnored = true
     }
 
-    const buildEnd = (bufferAfterBuild, ressourceBuildRelativeUrl) => {
+    const buildEnd = (bufferAfterBuild, buildRelativeUrl) => {
       if (bufferAfterBuild !== undefined) {
         ressource.bufferAfterBuild = bufferAfterBuild
-        if (ressourceBuildRelativeUrl === undefined) {
-          ressource.ressourceBuildRelativeUrl =
-            computeBuildRelativeUrlForRessource(ressource, {
+        if (buildRelativeUrl === undefined) {
+          ressource.buildRelativeUrl = computeBuildRelativeUrlForRessource(
+            ressource,
+            {
               lineBreakNormalization,
-            })
+            },
+          )
         }
       }
 
-      if (ressourceBuildRelativeUrl !== undefined) {
-        ressource.ressourceBuildRelativeUrl = ressourceBuildRelativeUrl
+      if (buildRelativeUrl !== undefined) {
+        ressource.buildRelativeUrl = buildRelativeUrl
       }
 
       if (
@@ -757,13 +756,13 @@ export const createRessourceBuilder = (
       const ressource = ressourceMap[ressourceUrl]
       const { buildDoneCallback } = ressource
 
-      const ressourceBuildRelativeUrl = Object.keys(jsModuleBuild).find(
+      const buildRelativeUrl = Object.keys(jsModuleBuild).find(
         (buildRelativeUrlCandidate) => {
           const file = jsModuleBuild[buildRelativeUrlCandidate]
           return file.url === ressourceUrl
         },
       )
-      const buildFileInfo = jsModuleBuild[ressourceBuildRelativeUrl]
+      const buildFileInfo = jsModuleBuild[buildRelativeUrl]
 
       buildDoneCallback({
         buildFileInfo,
@@ -783,16 +782,16 @@ export const createRessourceBuilder = (
   }
 
   const findRessource = (predicate) => {
-    let assetMatching = null
-    Object.keys(ressourceMap).find((assetUrl) => {
-      const assetCandidate = ressourceMap[assetUrl]
-      if (predicate(assetCandidate)) {
-        assetMatching = assetCandidate
+    let ressourceFound = null
+    Object.keys(ressourceMap).find((url) => {
+      const ressourceCandidate = ressourceMap[url]
+      if (predicate(ressourceCandidate)) {
+        ressourceFound = ressourceCandidate
         return true
       }
       return false
     })
-    return assetMatching
+    return ressourceFound
   }
 
   const shortenUrl = (url) => {
@@ -838,7 +837,7 @@ ${showSourceLocation(referenceSourceAsString, {
     createReferenceFoundInJs,
 
     buildEnd,
-    getAllAssetEntryEmittedPromise,
+    getAllEntryPointsEmittedPromise,
     findRessource,
 
     inspect: () => {
@@ -854,8 +853,8 @@ const precomputeBuildRelativeUrlForRessource = (
   ressource,
   { bufferAfterBuild = "", lineBreakNormalization } = {},
 ) => {
-  if (ressource.ressourceBuildRelativeUrl) {
-    return ressource.ressourceBuildRelativeUrl
+  if (ressource.buildRelativeUrl) {
+    return ressource.buildRelativeUrl
   }
 
   ressource.bufferAfterBuild = bufferAfterBuild
@@ -879,9 +878,9 @@ export const referenceToCodeForRollup = (reference) => {
   return `import.meta.ROLLUP_FILE_URL_${ressource.rollupReferenceId}`
 }
 
-// const targetFileNameFromBuildManifest = (buildManifest, ressourceBuildRelativeUrl) => {
+// const targetFileNameFromBuildManifest = (buildManifest, buildRelativeUrl) => {
 //   const key = Object.keys(buildManifest).find((keyCandidate) => {
-//     return buildManifest[keyCandidate] === ressourceBuildRelativeUrl
+//     return buildManifest[keyCandidate] === buildRelativeUrl
 //   })
 //   return buildManifest[key]
 // }

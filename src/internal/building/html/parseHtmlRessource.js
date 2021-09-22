@@ -196,8 +196,8 @@ const regularScriptSrcVisitor = (
 
       const sourcemapRelativeUrl = getJavaScriptSourceMappingUrl(jsString)
       if (sourcemapRelativeUrl) {
-        const { ressourceBuildRelativeUrl } = ressource
-        const jsBuildUrl = resolveUrl(ressourceBuildRelativeUrl, "file:///")
+        const { buildRelativeUrl } = ressource
+        const jsBuildUrl = resolveUrl(buildRelativeUrl, "file:///")
         const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, jsBuildUrl)
         const htmlUrl = resolveUrl(htmlRessource.fileNamePattern, "file:///")
         const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
@@ -299,7 +299,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       // but we know that a script type module have a sourcemap
       // and will be next to html file
       // with these assumptions we can force the sourcemap url
-      const sourcemapUrl = `${ressource.ressourceBuildRelativeUrl}.map`
+      const sourcemapUrl = `${ressource.buildRelativeUrl}.map`
       jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapUrl)
 
       setHtmlNodeText(script, jsString)
@@ -503,8 +503,8 @@ const linkStylesheetHrefVisitor = (
       let cssString = String(bufferAfterBuild)
       const sourcemapRelativeUrl = getCssSourceMappingUrl(cssString)
       if (sourcemapRelativeUrl) {
-        const { ressourceBuildRelativeUrl } = ressource
-        const cssBuildUrl = resolveUrl(ressourceBuildRelativeUrl, "file:///")
+        const { buildRelativeUrl } = ressource
+        const cssBuildUrl = resolveUrl(buildRelativeUrl, "file:///")
         const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, cssBuildUrl)
         const htmlUrl = resolveUrl(htmlRessource.fileNamePattern, "file:///")
         const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
