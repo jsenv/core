@@ -223,7 +223,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         throw error
       }
 
-      if (typeof useImportMapToMaximizeCacheReuse === 'undefined') {
+      if (typeof useImportMapToMaximizeCacheReuse === "undefined") {
         useImportMapToMaximizeCacheReuse = htmlEntryPointCount !== 0
       }
 
@@ -425,17 +425,16 @@ building ${entryFileRelativeUrls.length} entry files...`)
           resolveRessourceUrl: ({
             ressourceSpecifier,
             isJsModule,
-            importerUrl,
-            importerIsEntry,
-            importerIsJsModule,
+            ressourceImporter,
           }) => {
-            const isHtmlEntryPoint = importerIsEntry && !importerIsJsModule
+            const isHtmlEntryPoint =
+              ressourceImporter.isEntryPoint && !ressourceImporter.isJsModule
             const isHtmlEntryPointReferencingAJsModule =
               isHtmlEntryPoint && isJsModule
 
             // when html references a js we must wait for the compiled version of js
             if (isHtmlEntryPointReferencingAJsModule) {
-              const htmlCompiledUrl = asCompiledServerUrl(importerUrl)
+              const htmlCompiledUrl = asCompiledServerUrl(ressourceImporter.url)
               const jsModuleUrl = resolveUrl(
                 ressourceSpecifier,
                 htmlCompiledUrl,
@@ -449,10 +448,13 @@ building ${entryFileRelativeUrls.length} entry files...`)
               // parse and handle the untransformed importmap, not the one from compile server
               !ressourceSpecifier.endsWith(".importmap")
             ) {
-              const htmlCompiledUrl = asCompiledServerUrl(importerUrl)
+              const htmlCompiledUrl = asCompiledServerUrl(ressourceImporter.url)
               ressourceUrl = resolveUrl(ressourceSpecifier, htmlCompiledUrl)
             } else {
-              ressourceUrl = resolveUrl(ressourceSpecifier, importerUrl)
+              ressourceUrl = resolveUrl(
+                ressourceSpecifier,
+                ressourceImporter.url,
+              )
             }
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl

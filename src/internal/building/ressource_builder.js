@@ -195,9 +195,7 @@ export const createRessourceBuilder = (
       ressourceSpecifier,
       isJsModule,
       isInline,
-      importerUrl: referenceUrl,
-      importerIsEntryPoint: ressourceImporter.isEntryPoint,
-      importerIsJsModule: ressourceImporter.isJsModule,
+      ressourceImporter,
     })
 
     let ressourceUrl

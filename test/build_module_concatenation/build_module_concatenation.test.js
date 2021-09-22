@@ -26,7 +26,6 @@ const jsFileRelativeUrl = `${testDirectoryRelativeUrl}main.js`
 const entryPointMap = {
   [`./${htmlFileRelativeUrl}`]: "./main.html",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "debug",
@@ -39,18 +38,16 @@ const { buildMappings } = await buildProject({
 // assert only 2 files, 1 html, 1 js, are generated even if there is two js file used
 {
   const actual = Object.keys(buildMappings)
-  const expected = [htmlFileRelativeUrl, jsFileRelativeUrl]
+  const expected = [
+    "src/internal/building/resolve_import_url_helper.js",
+    htmlFileRelativeUrl,
+    jsFileRelativeUrl,
+  ]
   assert({ actual, expected })
 }
 
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-
 {
-  const mainJsRelativeUrl = getBuildRelativeUrl("main.js")
+  const mainJsRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

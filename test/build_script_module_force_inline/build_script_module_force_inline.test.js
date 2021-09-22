@@ -67,7 +67,7 @@ await buildProject({
   console.log(answer);
 }
 
-//# sourceMappingURL=file-3f98698a.js.map`,
+//# sourceMappingURL=file-02c226c4.js.map`,
   }
   assert({ actual, expected })
 }
