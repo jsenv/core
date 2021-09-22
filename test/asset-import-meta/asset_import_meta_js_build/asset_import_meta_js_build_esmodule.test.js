@@ -1,7 +1,7 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+
 import { buildProject } from "@jsenv/core"
 import {
   GENERATE_ESMODULE_BUILD_TEST_PARAMS,
@@ -14,37 +14,27 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.js`
+const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
+  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
 })
-
-// assert build mappings does not contains dep.js
-// -> js was handled like an asset (no parsing)
-{
-  const actual = Object.keys(buildMappings)
-  const expected = [
-    `${testDirectoryRelativeUrl}${testDirectoryname}.js`,
-    `${testDirectoryRelativeUrl}file.js`,
-    `${testDirectoryRelativeUrl}file.js.map`,
-  ]
-  assert({ actual, expected })
-}
+const indexFileBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}index.js`]
 
 {
   const { namespace, serverOrigin } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
+    jsFileRelativeUrl: `./${indexFileBuildRelativeUrl}`,
     // debug: true,
   })
   const fileBuildRelativeUrl =

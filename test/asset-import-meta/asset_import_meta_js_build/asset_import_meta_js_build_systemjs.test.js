@@ -1,7 +1,7 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+
 import { buildProject } from "@jsenv/core"
 import {
   GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
@@ -14,14 +14,13 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
@@ -29,33 +28,26 @@ const { buildMappings } = await buildProject({
   buildDirectoryRelativeUrl,
   entryPointMap,
 })
+const depFileBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}dep.js`]
+const indexFileBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}index.js`]
+const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
 
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-
-// assert build mappings does not contains dep.js
-// -> js was handled like an asset (no parsing)
+// assert build mappings does not contains dep.js (concatenation)
 {
-  const depRelativeUrl = getBuildRelativeUrl("dep.js")
-  const actual = Object.keys(buildMappings).includes(depRelativeUrl)
+  const actual = Object.keys(buildMappings).includes(depFileBuildRelativeUrl)
   const expected = false
   assert({ actual, expected })
 }
-
-const indexRelativeUrl = getBuildRelativeUrl("index.js")
 
 {
   const { namespace, serverOrigin } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    mainRelativeUrl: `./${indexRelativeUrl}`,
+    mainRelativeUrl: `./${indexFileBuildRelativeUrl}`,
     // debug: true,
   })
-  const fileBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}file.js`]
   const actual = namespace
   const expected = {
     jsUrl: String(

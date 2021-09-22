@@ -1,5 +1,3 @@
-import { basename } from "path"
-
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
@@ -16,10 +14,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
-const mainFilename = `${testDirectoryname}.js`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/global/`
+const mainFilename = `index.js`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
 }

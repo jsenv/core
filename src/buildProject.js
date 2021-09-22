@@ -64,7 +64,10 @@ export const buildProject = async ({
   // when jsConcatenation is disabled rollup becomes almost useless
   // except it can still do tree shaking
   jsConcatenation = true,
-  useImportMapToMaximizeCacheReuse = true,
+  // useImportMapToMaximizeCacheReuse is enabled by default when entry point is an HTML file
+  // otherwise it's disabled. It can still be explicitely enabled for non HTML entry file
+  // in that case the returned buildImportMap must be injected into an html file
+  useImportMapToMaximizeCacheReuse,
   preserveEntrySignatures,
 
   minify = process.env.NODE_ENV === "production",

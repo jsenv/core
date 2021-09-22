@@ -223,6 +223,10 @@ building ${entryFileRelativeUrls.length} entry files...`)
         throw error
       }
 
+      if (typeof useImportMapToMaximizeCacheReuse === 'undefined') {
+        useImportMapToMaximizeCacheReuse = htmlEntryPointCount !== 0
+      }
+
       // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
       // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
       rollupEmitFile = (...args) => this.emitFile(...args)
