@@ -569,15 +569,21 @@ const linkHrefVisitor = (
       ressourceContentTypeExpected === "application/manifest+json",
     isJsModule,
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
+  return ({ getReferenceUrlRelativeToImporter, getOriginalRessource }) => {
     const linkRessource = linkReference.ressource
     if (isRessourceHint) {
-      if (isReferencedOnlyByRessourceHint(linkRessource)) {
+      const originalRessource = getOriginalRessource(linkRessource)
+      if (
+        originalRessource
+          ? isReferencedOnlyByRessourceHint(linkRessource) &&
+            isReferencedOnlyByRessourceHint(originalRessource)
+          : isReferencedOnlyByRessourceHint(linkRessource)
+      ) {
         ressourceHintNeverUsedCallback({
           htmlNode: link,
           rel,
           href: hrefAttribute.value,
-          htmlAttributeName: "rel",
+          htmlAttributeName: "href",
         })
         // we could remove the HTML node but better keep it untouched and let user decide what to do
         return

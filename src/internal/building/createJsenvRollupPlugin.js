@@ -404,6 +404,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
             projectDirectoryUrl,
           ),
 
+          asOriginalServerUrl,
           urlToCompiledServerUrl: (url) => {
             return asCompiledServerUrl(url)
           },
@@ -425,6 +426,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
           resolveRessourceUrl: ({
             ressourceSpecifier,
             isJsModule,
+            // isRessourceHint,
             ressourceImporter,
           }) => {
             const isHtmlEntryPoint =

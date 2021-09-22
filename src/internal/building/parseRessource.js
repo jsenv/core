@@ -120,7 +120,7 @@ export const parseRessource = (
           ...info,
           htmlSource: String(ressource.bufferBeforeBuild),
           htmlUrl: urlToOriginalFileUrl(ressource.url),
-          htmlAttributeName: "rel",
+          htmlAttributeName: "href",
         })
       },
     })

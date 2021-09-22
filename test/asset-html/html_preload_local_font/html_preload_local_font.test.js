@@ -25,7 +25,7 @@ const entryPointMap = {
 
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  // logLevel: "info",
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
@@ -46,6 +46,6 @@ const cssString = await readFile(cssFileBuildUrl)
   const fontSpecifier = cssUrls.urlDeclarations[0].specifier
 
   const actual = fontSpecifier
-  const expected = "roboto-v27-latin-regular-cc46322d.woff2"
+  const expected = "roboto_v27_latin_regular-cc46322d.woff2"
   assert({ actual, expected })
 }

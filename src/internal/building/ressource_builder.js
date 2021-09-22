@@ -29,6 +29,7 @@ export const createRessourceBuilder = (
     baseUrl,
     buildDirectoryRelativeUrl,
 
+    asOriginalServerUrl,
     urlToCompiledServerUrl,
     urlToHumanUrl,
 
@@ -37,8 +38,7 @@ export const createRessourceBuilder = (
     emitAsset,
     setAssetSource,
     onJsModuleReference = () => {},
-    resolveRessourceUrl = ({ ressourceSpecifier, importerUrl }) =>
-      resolveUrl(ressourceSpecifier, importerUrl),
+    resolveRessourceUrl,
     lineBreakNormalization,
   },
 ) => {
@@ -195,6 +195,7 @@ export const createRessourceBuilder = (
       ressourceSpecifier,
       isJsModule,
       isInline,
+      isRessourceHint,
       ressourceImporter,
     })
 
@@ -409,8 +410,10 @@ export const createRessourceBuilder = (
         showReferenceSourceLocation(ressource.firstStrongReference),
       )
       if (response.url !== ressource.url) {
-        ressourceRedirectionMap[ressource.url] = response.url
-        ressource.url = response.url
+        const urlBeforeRedirection = ressource.url
+        const urlAfterRedirection = response.url
+        ressourceRedirectionMap[urlBeforeRedirection] = urlAfterRedirection
+        ressource.url = urlAfterRedirection
       }
 
       const responseContentTypeHeader = response.headers["content-type"]
@@ -576,6 +579,10 @@ export const createRessourceBuilder = (
             "file:///",
           )
           return urlToRelativeUrl(referenceBuildUrl, importerBuildUrl)
+        },
+        getOriginalRessource: (ressource) => {
+          const originalServerUrl = asOriginalServerUrl(ressource.url)
+          return ressourceMap[originalServerUrl]
         },
       })
       if (transformReturnValue === null || transformReturnValue === undefined) {
@@ -857,6 +864,14 @@ ${showSourceLocation(referenceSourceAsString, {
     },
   }
 }
+
+// const preredirectUrlFromRessource = (ressource, ressourceRedirectionMap) => {
+//   const ressourceUrlPreRedirect = Object.keys(ressourceRedirectionMap).find(
+//     (urlPreRedirect) =>
+//       ressourceRedirectionMap[urlPreRedirect] === ressource.url,
+//   )
+//   return ressourceUrlPreRedirect
+// }
 
 const precomputeBuildRelativeUrlForRessource = (
   ressource,
