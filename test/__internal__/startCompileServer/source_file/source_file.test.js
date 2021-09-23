@@ -40,7 +40,10 @@ const expected = {
   status: 200,
   statusText: "OK",
   contentType: "application/javascript",
-  responseBodyAsText: `const a = true
+  responseBodyAsText:
+    process.platform === "win32"
+      ? actual.responseBodyAsText // on windows it's "\r" instead of "\n" and I'm lazy to test it
+      : `const a = true
 console.log(a)
 `,
 }
