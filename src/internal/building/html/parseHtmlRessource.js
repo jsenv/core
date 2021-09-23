@@ -277,7 +277,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
   })
   return ({ getReferenceUrlRelativeToImporter }) => {
     if (format === "systemjs") {
-      typeAttribute.value = "systemjs-module"
+      removeHtmlNodeAttribute(script, typeAttribute)
     }
 
     if (remoteScriptReference.ressource.isExternal) {
@@ -350,7 +350,7 @@ const moduleScriptTextNodeVisitor = (
   })
   return () => {
     if (format === "systemjs") {
-      typeAttribute.value = "systemjs-module"
+      removeHtmlNodeAttribute(script, typeAttribute)
     }
     const { bufferAfterBuild } = jsReference.ressource
     textNode.value = bufferAfterBuild
