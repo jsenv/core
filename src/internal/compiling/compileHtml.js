@@ -451,11 +451,12 @@ export const getUniqueNameForInlineHtmlNode = (node, nodes, pattern) => {
       }
 
       const { line, column } = getHtmlNodeLocation(node)
-      const lineTaken = nodes.some(
-        (nodeCandidate) =>
-          nodeCandidate !== node &&
-          getHtmlNodeLocation(nodeCandidate).line === line,
-      )
+      const lineTaken = nodes.some((nodeCandidate) => {
+        if (nodeCandidate === node) return false
+        const htmlNodeLocation = getHtmlNodeLocation(nodeCandidate)
+        if (!htmlNodeLocation) return false
+        return htmlNodeLocation.line === line
+      })
       if (lineTaken) {
         return `${line}.${column}`
       }
