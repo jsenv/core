@@ -1,4 +1,4 @@
-import { urlToRelativeUrl } from "@jsenv/filesystem"
+import { readFile, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   parseHtmlString,
@@ -49,7 +49,7 @@ export const parseRessource = (
     return parseHtmlRessource(ressource, notifiers, {
       minify,
       minifyHtmlOptions,
-      htmlStringToHtmlAst: (htmlString) => {
+      htmlStringToHtmlAst: async (htmlString) => {
         const htmlAst = parseHtmlString(htmlString)
 
         const { hasModuleScript, hasInlineModuleScript } =
@@ -81,16 +81,11 @@ export const parseRessource = (
         if (useImportMapToMaximizeCacheReuse) {
           if (hasModuleScript && format === "esmodule") {
             // inject an inline script helper to resolve url
-            const src = `/${urlToRelativeUrl(
-              jsenvResolveImportUrlHelper.url,
-              projectDirectoryUrl,
-            )}`
             manipulateHtmlAst(htmlAst, {
               scriptInjections: [
                 {
-                  "id": "jsenv_import_url_resolution_helper",
-                  src,
-                  "data-jsenv-force-inline": true,
+                  id: "jsenv_import_url_resolution_helper",
+                  text: await readFile(jsenvResolveImportUrlHelper.url),
                 },
               ],
             })
