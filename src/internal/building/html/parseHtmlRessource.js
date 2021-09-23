@@ -587,7 +587,7 @@ const linkHrefVisitor = (
     }
 
     if (format === "systemjs" && rel === "modulepreload") {
-      const urlRelativeToImporter = getUrlRelativeToImporter(linkReference)
+      const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
       replaceHtmlNode(
         link,
         `<link rel="preload" href="${urlRelativeToImporter}" as="script" />`,

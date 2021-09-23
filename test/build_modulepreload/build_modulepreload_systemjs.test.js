@@ -44,8 +44,15 @@ await buildProject({
   const htmlString = await readFile(htmlBuildUrl, { as: "string" })
   const linkNode = findNodeByTagName(htmlString, "link")
   const relAttribute = getHtmlNodeAttributeByName(linkNode, "rel")
+  const hrefAttribute = getHtmlNodeAttributeByName(linkNode, "href")
 
-  const actual = relAttribute.value
-  const expected = "preload"
+  const actual = {
+    rel: relAttribute.value,
+    href: hrefAttribute.value,
+  }
+  const expected = {
+    rel: "preload",
+    href: "main-a6ec8fb0.js",
+  }
   assert({ actual, expected })
 }
