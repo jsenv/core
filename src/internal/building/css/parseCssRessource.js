@@ -49,7 +49,7 @@ export const parseCssRessource = async (
   })
 
   return async ({
-    getReferenceUrlRelativeToImporter,
+    getUrlRelativeToImporter,
     precomputeBuildRelativeUrl,
     registerAssetEmitter,
   }) => {
@@ -78,7 +78,7 @@ export const parseCssRessource = async (
         if (isInline) {
           return getRessourceAsBase64Url(cssUrlRessource)
         }
-        return getReferenceUrlRelativeToImporter(urlNodeReference)
+        return getUrlRelativeToImporter(cssUrlRessource)
       },
       {
         cssMinification: minify,

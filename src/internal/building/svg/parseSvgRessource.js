@@ -19,9 +19,9 @@ export const parseSvgRessource = async (
   const htmlRessources = parseHtmlAstRessources(svgAst)
   const mutations = collectSvgMutations(htmlRessources, notifiers, svgRessource)
 
-  return ({ getReferenceUrlRelativeToImporter }) => {
+  return ({ getUrlRelativeToImporter }) => {
     mutations.forEach((mutationCallback) => {
-      mutationCallback({ getReferenceUrlRelativeToImporter })
+      mutationCallback({ getUrlRelativeToImporter })
     })
     const svgAfterTransformation = stringifyHtmlAst(svgAst)
     // could also benefit of minification https://github.com/svg/svgo
@@ -59,11 +59,8 @@ const imageHrefVisitor = (image, { notifyReferenceFound }) => {
     ressourceSpecifier: hrefAttribute.value,
     ...referenceLocationFromHtmlNode(image, "href"),
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
-    const hrefNewValue = referenceToUrl(
-      hrefReference,
-      getReferenceUrlRelativeToImporter,
-    )
+  return ({ getUrlRelativeToImporter }) => {
+    const hrefNewValue = referenceToUrl(hrefReference, getUrlRelativeToImporter)
     hrefAttribute.value = hrefNewValue
   }
 }
@@ -83,21 +80,18 @@ const useHrefVisitor = (use, { notifyReferenceFound }) => {
     ressourceSpecifier: href,
     ...referenceLocationFromHtmlNode(use, "href"),
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
-    const hrefNewValue = referenceToUrl(
-      hrefReference,
-      getReferenceUrlRelativeToImporter,
-    )
+  return ({ getUrlRelativeToImporter }) => {
+    const hrefNewValue = referenceToUrl(hrefReference, getUrlRelativeToImporter)
     hrefAttribute.value = `${hrefNewValue}${hash}`
   }
 }
 
-const referenceToUrl = (reference, getReferenceUrlRelativeToImporter) => {
-  const { isInline } = reference.ressource
-  if (isInline) {
-    return getRessourceAsBase64Url(reference.ressource)
+const referenceToUrl = (reference, getUrlRelativeToImporter) => {
+  const { ressource } = reference
+  if (ressource.isInline) {
+    return getRessourceAsBase64Url(ressource)
   }
-  return getReferenceUrlRelativeToImporter(reference)
+  return getUrlRelativeToImporter(ressource)
 }
 
 const referenceLocationFromHtmlNode = (htmlNode, htmlAttributeName) => {

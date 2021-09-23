@@ -554,9 +554,8 @@ export const createRessourceBuilder = (
         registerAssetEmitter: (callback) => {
           assetEmitters.push(callback)
         },
-        getReferenceUrlRelativeToImporter: (reference) => {
+        getUrlRelativeToImporter: (referencedRessource) => {
           const ressourceImporter = ressource
-          const referenceRessource = reference.ressource
 
           let referenceBuildRelativeUrl
 
@@ -564,10 +563,11 @@ export const createRessourceBuilder = (
             // js can reference an url without versionning
             // and actually fetch the versioned url thanks to importmap
             referenceBuildRelativeUrl =
-              referenceRessource.fileName || referenceRessource.buildRelativeUrl
+              referencedRessource.fileName ||
+              referencedRessource.buildRelativeUrl
           } else {
             // other ressource must use the exact url
-            referenceBuildRelativeUrl = referenceRessource.buildRelativeUrl
+            referenceBuildRelativeUrl = referencedRessource.buildRelativeUrl
           }
 
           const referenceBuildUrl = resolveUrl(

@@ -182,14 +182,15 @@ const regularScriptSrcVisitor = (
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(script, "src"),
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
-    if (remoteScriptReference.ressource.isExternal) {
+  return ({ getUrlRelativeToImporter }) => {
+    const ressource = remoteScriptReference.ressource
+
+    if (ressource.isExternal) {
       return
     }
 
-    if (shouldInline({ reference: remoteScriptReference, htmlNode: script })) {
+    if (shouldInline({ ressource, htmlNode: script })) {
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { ressource } = remoteScriptReference
       const { bufferAfterBuild } = ressource
       let jsString = String(bufferAfterBuild)
 
@@ -208,9 +209,7 @@ const regularScriptSrcVisitor = (
       return
     }
 
-    const urlRelativeToImporter = getReferenceUrlRelativeToImporter(
-      remoteScriptReference,
-    )
+    const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     srcAttribute.value = urlRelativeToImporter
   }
 }
@@ -275,20 +274,21 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
     ...referenceLocationFromHtmlNode(script, "src"),
     isJsModule: true,
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
+  return ({ getUrlRelativeToImporter }) => {
+    const { ressource } = remoteScriptReference
+
     if (format === "systemjs") {
       removeHtmlNodeAttribute(script, typeAttribute)
     }
 
-    if (remoteScriptReference.ressource.isExternal) {
+    if (ressource.isExternal) {
       return
     }
 
-    if (shouldInline({ reference: remoteScriptReference, htmlNode: script })) {
+    if (shouldInline({ ressource, htmlNode: script })) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       removeHtmlNodeAttribute(script, srcAttribute)
-      const { ressource } = remoteScriptReference
       const { bufferAfterBuild } = ressource
       let jsString = String(bufferAfterBuild)
 
@@ -305,9 +305,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       return
     }
 
-    const urlRelativeToImporter = getReferenceUrlRelativeToImporter(
-      remoteScriptReference,
-    )
+    const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter)
     srcAttribute.value = relativeUrlNotation
   }
@@ -395,12 +393,14 @@ const importmapScriptSrcVisitor = (
       return `${importmapParentRelativeUrl}[name]-[hash][extname]`
     },
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
+  return ({ getUrlRelativeToImporter }) => {
+    const { ressource } = importmapReference
+
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-importmap"
     }
 
-    if (importmapReference.ressource.isExternal) {
+    if (ressource.isExternal) {
       return
     }
 
@@ -408,12 +408,10 @@ const importmapScriptSrcVisitor = (
       // for esmodule we always inline the importmap
       // as it's the only thing supported by Chrome
       format === "esmodule" ||
-      shouldInline({ reference: importmapReference, htmlNode: script })
+      shouldInline({ ressource, htmlNode: script })
     ) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
-      removeHtmlNodeAttribute(script, srcAttribute)
-      const { ressource } = importmapReference
       const { bufferAfterBuild } = ressource
 
       const jsString = String(bufferAfterBuild)
@@ -423,8 +421,7 @@ const importmapScriptSrcVisitor = (
       return
     }
 
-    const urlRelativeToImporter =
-      getReferenceUrlRelativeToImporter(importmapReference)
+    const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     srcAttribute.value = urlRelativeToImporter
   }
 }
@@ -496,13 +493,14 @@ const linkStylesheetHrefVisitor = (
     ressourceSpecifier: hrefAttribute.value,
     ...referenceLocationFromHtmlNode(link, "href"),
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
-    if (cssReference.ressource.isExternal) {
+  return ({ getUrlRelativeToImporter }) => {
+    const { ressource } = cssReference
+
+    if (ressource.isExternal) {
       return
     }
 
-    if (shouldInline({ reference: cssReference, htmlNode: link })) {
-      const { ressource } = cssReference
+    if (shouldInline({ ressource, htmlNode: link })) {
       const { bufferAfterBuild } = ressource
       let cssString = String(bufferAfterBuild)
       const sourcemapRelativeUrl = getCssSourceMappingUrl(cssString)
@@ -522,8 +520,7 @@ const linkStylesheetHrefVisitor = (
       return
     }
 
-    const urlRelativeToImporter =
-      getReferenceUrlRelativeToImporter(cssReference)
+    const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     hrefAttribute.value = urlRelativeToImporter
   }
 }
@@ -569,16 +566,13 @@ const linkHrefVisitor = (
       ressourceContentTypeExpected === "application/manifest+json",
     isJsModule,
   })
-  return ({ getReferenceUrlRelativeToImporter, getOriginalRessource }) => {
+  return ({ getUrlRelativeToImporter, getOriginalRessource }) => {
     const linkRessource = linkReference.ressource
+    const originalRessource = getOriginalRessource(linkRessource)
+    const ressource = originalRessource || linkRessource
+
     if (isRessourceHint) {
-      const originalRessource = getOriginalRessource(linkRessource)
-      if (
-        originalRessource
-          ? isReferencedOnlyByRessourceHint(linkRessource) &&
-            isReferencedOnlyByRessourceHint(originalRessource)
-          : isReferencedOnlyByRessourceHint(linkRessource)
-      ) {
+      if (isReferencedOnlyByRessourceHint(ressource)) {
         ressourceHintNeverUsedCallback({
           htmlNode: link,
           rel,
@@ -590,13 +584,12 @@ const linkHrefVisitor = (
       }
     }
 
-    if (linkRessource.isExternal) {
+    if (ressource.isExternal) {
       return
     }
 
     if (format === "systemjs" && rel === "modulepreload") {
-      const urlRelativeToImporter =
-        getReferenceUrlRelativeToImporter(linkReference)
+      const urlRelativeToImporter = getUrlRelativeToImporter(linkReference)
       replaceHtmlNode(
         link,
         `<link rel="preload" href="${urlRelativeToImporter}" as="script" />`,
@@ -604,17 +597,16 @@ const linkHrefVisitor = (
       return
     }
 
-    if (shouldInline({ reference: linkReference, htmlNode: link })) {
+    if (shouldInline({ ressource, htmlNode: link })) {
       replaceHtmlNode(
         link,
-        `<link href="${getRessourceAsBase64Url(linkReference.ressource)}" />`,
+        `<link href="${getRessourceAsBase64Url(ressource)}" />`,
       )
       linkReference.inlinedCallback()
       return
     }
 
-    const urlRelativeToImporter =
-      getReferenceUrlRelativeToImporter(linkReference)
+    const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     hrefAttribute.value = urlRelativeToImporter
   }
 }
@@ -659,11 +651,11 @@ const imgSrcVisitor = (img, { notifyReferenceFound }) => {
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(img, "src"),
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
+  return ({ getUrlRelativeToImporter }) => {
     const srcNewValue = referenceToUrl({
       reference: srcReference,
       htmlNode: img,
-      getReferenceUrlRelativeToImporter,
+      getUrlRelativeToImporter,
     })
     srcAttribute.value = srcNewValue
   }
@@ -686,13 +678,13 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
     return null
   }
 
-  return ({ getReferenceUrlRelativeToImporter }) => {
+  return ({ getUrlRelativeToImporter }) => {
     srcsetParts.forEach((srcsetPart, index) => {
       const reference = srcsetPartsReferences[index]
       srcsetPart.specifier = referenceToUrl({
         reference,
         htmlNode,
-        getReferenceUrlRelativeToImporter,
+        getUrlRelativeToImporter,
       })
     })
 
@@ -715,30 +707,26 @@ const sourceSrcVisitor = (source, { notifyReferenceFound }) => {
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(source, "src"),
   })
-  return ({ getReferenceUrlRelativeToImporter }) => {
+  return ({ getUrlRelativeToImporter }) => {
     const srcNewValue = referenceToUrl({
       reference: srcReference,
       htmlNode: source,
-      getReferenceUrlRelativeToImporter,
+      getUrlRelativeToImporter,
     })
     srcAttribute.value = srcNewValue
   }
 }
 
-const referenceToUrl = ({
-  reference,
-  htmlNode,
-  getReferenceUrlRelativeToImporter,
-}) => {
-  const referenceRessource = reference.ressource
-  if (referenceRessource.isExternal) {
-    return referenceRessource.url
+const referenceToUrl = ({ reference, htmlNode, getUrlRelativeToImporter }) => {
+  const { ressource } = reference
+  if (ressource.isExternal) {
+    return ressource.url
   }
-  if (shouldInline({ reference, htmlNode })) {
+  if (shouldInline({ ressource, htmlNode })) {
     reference.inlinedCallback()
-    return getRessourceAsBase64Url(referenceRessource)
+    return getRessourceAsBase64Url(ressource)
   }
-  return getReferenceUrlRelativeToImporter(reference)
+  return getUrlRelativeToImporter(ressource)
 }
 
 const referenceLocationFromHtmlNode = (htmlNode, htmlAttributeName) => {
@@ -759,8 +747,8 @@ const ensureRelativeUrlNotation = (relativeUrl) => {
   return `./${relativeUrl}`
 }
 
-const shouldInline = ({ reference, htmlNode }) => {
-  if (reference.ressource.isInline) {
+const shouldInline = ({ ressource, htmlNode }) => {
+  if (ressource.isInline) {
     return true
   }
   return readAndRemoveForceInline(htmlNode)

@@ -96,6 +96,8 @@ const compileHtmlFile = ({
             // request made by fetch matches the ressource hints
             // but in that case we must also ensure any preload link for a ressource
             // would also match if the ressource is redirected (it's the case for assets like fonts)
+            // we could do that by updating the preload link to target the original
+            // ressource instead of the compiled ressource (when ressource is redirected by compile server)
           })
         })
         mutations.forEach((mutation) => mutation())

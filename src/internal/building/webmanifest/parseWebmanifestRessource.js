@@ -16,7 +16,7 @@ export const parseWebmanifestRessource = (
     return iconReference
   })
 
-  return ({ getReferenceUrlRelativeToImporter }) => {
+  return ({ getUrlRelativeToImporter }) => {
     if (icons.length === 0) {
       if (minify) {
         // this is to remove eventual whitespaces
@@ -27,8 +27,8 @@ export const parseWebmanifestRessource = (
 
     const iconsAfterBuild = icons.map((icon, index) => {
       const iconAfterBuild = { ...icon }
-      iconAfterBuild.src = getReferenceUrlRelativeToImporter(
-        iconReferences[index],
+      iconAfterBuild.src = getUrlRelativeToImporter(
+        iconReferences[index].ressource,
       )
       return iconAfterBuild
     })
