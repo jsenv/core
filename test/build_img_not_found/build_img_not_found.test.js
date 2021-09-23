@@ -32,11 +32,11 @@ try {
 --- url ---
 ${imgUrl}
 --- imported by ---
-${testDirectoryRelativeUrl}${testDirectoryname}.html:9:5
+${testDirectoryRelativeUrl}${testDirectoryname}.html:9:10
 
   8  |   <body>
 > 9  |     <img src="./img.png" />
-           ^
+                ^
   10 |   </body>`
   assert({ actual, expected })
 }
