@@ -161,6 +161,11 @@ export const createCompiledFileService = ({
     }
 
     // no compiler -> serve original file
-    return sourceFileService(request)
+    // we don't redirect otherwise it complexify ressource tracking
+    // and url resolution
+    return sourceFileService({
+      ...request,
+      ressource: `/${originalFileRelativeUrl}`,
+    })
   }
 }
