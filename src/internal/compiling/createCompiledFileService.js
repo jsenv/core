@@ -39,6 +39,7 @@ export const createCompiledFileService = ({
   jsenvToolbarInjection,
 
   projectFileRequestedCallback,
+  projectFileEtagEnabled,
   useFilesystemAsCache,
   writeOnFilesystem,
   compileCacheStrategy,
@@ -159,13 +160,16 @@ export const createCompiledFileService = ({
       })
     }
 
-    // no compiler ? -> redirect to source version that will be served as file
-    const originalFileServerUrl = resolveUrl(originalFileRelativeUrl, origin)
-    return {
-      status: 307,
-      headers: {
-        location: originalFileServerUrl,
-      },
+    // no compiler -> serve original file
+    projectFileRequestedCallback(originalFileRelativeUrl, request)
+    const requestForProjectFile = {
+      ...request,
+      ressource: `/${originalFileRelativeUrl}`,
     }
+    const responsePromise = serveFile(requestForProjectFile, {
+      rootDirectoryUrl: projectDirectoryUrl,
+      etagEnabled: projectFileEtagEnabled,
+    })
+    return responsePromise
   }
 }

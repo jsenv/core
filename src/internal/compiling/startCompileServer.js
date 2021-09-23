@@ -253,6 +253,7 @@ export const startCompileServer = async ({
       jsenvToolbarInjection,
 
       projectFileRequestedCallback,
+      projectFileEtagEnabled,
       useFilesystemAsCache: compileServerCanReadFromFilesystem,
       writeOnFilesystem: compileServerCanWriteOnFilesystem,
       sourcemapExcludeSources,

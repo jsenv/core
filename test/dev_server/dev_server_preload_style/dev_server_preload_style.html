@@ -1,0 +1,24 @@
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <link rel="preload" href="./style.css" as="style" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+
+  <body>
+    <script type="module">
+      const cssUrl = new URL("./style.css", import.meta.url)
+      const link = document.createElement("link")
+      link.rel = "stylesheet"
+      link.href = cssUrl
+      document.head.appendChild(link)
+
+      // Let browser time to log the warning about preload link not used
+      await new Promise((resolve) => {
+        setTimeout(resolve, 5000)
+      })
+    </script>
+  </body>
+</html>

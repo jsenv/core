@@ -1,12 +1,11 @@
 import { urlToContentType } from "@jsenv/server"
-import { resolveUrl, urlIsInsideOf, urlToRelativeUrl } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   jsenvBrowserSystemFileInfo,
   jsenvToolbarHtmlFileInfo,
   jsenvToolbarInjectorFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
@@ -251,15 +250,7 @@ const compileHtmlFile = ({
 }
 
 // transform <link type="modulepreload"> into <link type="preload">
-const mutateRessourceHints = async (
-  htmlAst,
-  {
-    projectDirectoryUrl,
-    compileServerOrigin,
-    outDirectoryRelativeUrl,
-    compiledFileUrl,
-  },
-) => {
+const mutateRessourceHints = async (htmlAst) => {
   const ressourceHints = []
   visitHtmlAst(htmlAst, (htmlNode) => {
     if (htmlNode.nodeName !== "link") return
@@ -278,18 +269,18 @@ const mutateRessourceHints = async (
   })
 
   const mutations = []
-  const compiledFileRelativeUrl = urlToRelativeUrl(
-    compiledFileUrl,
-    projectDirectoryUrl,
-  )
-  const compiledFileServerUrl = resolveUrl(
-    compiledFileRelativeUrl,
-    compileServerOrigin,
-  )
-  const outDirectoryServerUrl = resolveUrl(
-    outDirectoryRelativeUrl,
-    compileServerOrigin,
-  )
+  // const compiledFileRelativeUrl = urlToRelativeUrl(
+  //   compiledFileUrl,
+  //   projectDirectoryUrl,
+  // )
+  // const compiledFileServerUrl = resolveUrl(
+  //   compiledFileRelativeUrl,
+  //   compileServerOrigin,
+  // )
+  // const outDirectoryServerUrl = resolveUrl(
+  //   outDirectoryRelativeUrl,
+  //   compileServerOrigin,
+  // )
 
   await Promise.all(
     ressourceHints.map(async (ressourceHint) => {
@@ -328,25 +319,25 @@ const mutateRessourceHints = async (
         return
       }
 
-      const url = resolveUrl(href, compiledFileServerUrl)
-      if (!urlIsInsideOf(url, outDirectoryServerUrl)) {
-        return
-      }
+      // const url = resolveUrl(href, compiledFileServerUrl)
+      // if (!urlIsInsideOf(url, outDirectoryServerUrl)) {
+      //   return
+      // }
 
-      try {
-        const response = await fetchUrl(url)
-        const responseUrl = response.url
-        if (responseUrl === url) return
+      // try {
+      //   const response = await fetchUrl(url)
+      //   const responseUrl = response.url
+      //   if (responseUrl === url) return
 
-        mutations.push(() => {
-          const newHref = urlIsInsideOf(responseUrl, compileServerOrigin)
-            ? `/${urlToRelativeUrl(responseUrl, compileServerOrigin)}`
-            : responseUrl
-          replaceHtmlNode(ressourceHint.htmlNode, `<link href="${newHref}" />`)
-        })
-      } catch (e) {
-        return
-      }
+      //   mutations.push(() => {
+      //     const newHref = urlIsInsideOf(responseUrl, compileServerOrigin)
+      //       ? `/${urlToRelativeUrl(responseUrl, compileServerOrigin)}`
+      //       : responseUrl
+      //     replaceHtmlNode(ressourceHint.htmlNode, `<link href="${newHref}" />`)
+      //   })
+      // } catch (e) {
+      //   return
+      // }
     }),
   )
   mutations.forEach((mutation) => mutation())

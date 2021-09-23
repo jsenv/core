@@ -73,7 +73,7 @@ You can also decide to use an url starting with `/` on purpose to avoid compilat
 
 ## What happens for assets?
 
-If server is requested to compile a file but has no compiler associated, it will redirect to the original file. As there is no compiler for `.ico` files, following html would get the original `favicon.ico` file.
+If server is requested to compile a file but has no compiler associated, it will serve the original file. As there is no compiler for `.ico` files, following html would get the original `favicon.ico` file.
 
 ```html
 <link rel="favicon" href="./favicon.ico" />
