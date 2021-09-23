@@ -1,0 +1,25 @@
+export const parseImportmapRessource = (
+  importmapRessource,
+  notifiers,
+  { minify, importMapToInject },
+) => {
+  const importmapString = String(importmapRessource.bufferBeforeBuild)
+
+  return () => {
+    if (importMapToInject) {
+      return minify
+        ? valueToCompactJsonString(importMapToInject)
+        : valueToReadableJsonString(importMapToInject)
+    }
+
+    return minify
+      ? valueToCompactJsonString(JSON.parse(importmapString))
+      : importmapString
+  }
+}
+
+// removes eventual whitespace in json
+const valueToCompactJsonString = (json) => JSON.stringify(json)
+
+// prefer a readable json when minification is disabled
+const valueToReadableJsonString = (json) => JSON.stringify(json, null, "  ")

@@ -44,7 +44,7 @@ export const measureTestPlan = async ({ iterations = 5 } = {}) => {
   return computeMetricsMedian(metrics)
 }
 
-const executeAndLog = process.argv.includes("--log")
+const executeAndLog = process.argv.includes("--local")
 if (executeAndLog) {
   const performanceMetrics = await measureTestPlan({ iterations: 1 })
   logPerformanceMetrics(performanceMetrics)

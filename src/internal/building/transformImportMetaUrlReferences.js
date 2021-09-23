@@ -1,13 +1,13 @@
 import { resolveUrl } from "@jsenv/filesystem"
 
-import { referenceToCodeForRollup } from "./asset-builder.js"
+import { referenceToCodeForRollup } from "./ressource_builder.js"
 
 export const transformImportMetaUrlReferences = async ({
   url,
   // importerUrl,
   code,
   ast,
-  assetBuilder,
+  ressourceBuilder,
   fetch,
   markBuildRelativeUrlAsUsedByJs,
 }) => {
@@ -25,11 +25,11 @@ export const transformImportMetaUrlReferences = async ({
 
       // hum on devrait le fetch pour obtenir l'url finale et le content-type
       // par contre on y applique pas les import map
-      const targetUrl = resolveUrl(relativeUrl, url)
-      const response = await fetch(targetUrl, url)
-      const targetBuffer = Buffer.from(await response.arrayBuffer())
+      const ressourceUrl = resolveUrl(relativeUrl, url)
+      const response = await fetch(ressourceUrl, url)
+      const bufferBeforeBuild = Buffer.from(await response.arrayBuffer())
 
-      const reference = await assetBuilder.createReferenceFoundInJs({
+      const reference = await ressourceBuilder.createReferenceFoundInJs({
         jsUrl: url,
         ...(node.loc
           ? {
@@ -38,17 +38,17 @@ export const transformImportMetaUrlReferences = async ({
             }
           : {}),
 
-        targetSpecifier: targetUrl,
-        targetContentType: response.headers["content-type"],
-        targetBuffer,
+        ressourceSpecifier: ressourceUrl,
+        contentType: response.headers["content-type"],
+        bufferBeforeBuild,
       })
       if (reference) {
         magicString.overwrite(
-          node.arguments[0].start,
-          node.arguments[0].end,
+          node.start,
+          node.end,
           referenceToCodeForRollup(reference),
         )
-        markBuildRelativeUrlAsUsedByJs(reference.target.targetBuildRelativeUrl)
+        markBuildRelativeUrlAsUsedByJs(reference.ressource.buildRelativeUrl)
       }
     },
   })

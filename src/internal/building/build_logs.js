@@ -6,7 +6,7 @@ import { showSourceLocation } from "./showSourceLocation.js"
 
 export const formatUseImportMapFromHtml = (importMapInfoFromHtml) => {
   return `
-use importmap found in ${showHtmlSourceLocation(importMapInfoFromHtml)}`
+use importmap from html ${showHtmlSourceLocation(importMapInfoFromHtml)}`
 }
 
 export const formatImportmapOutsideCompileDirectory = ({
@@ -107,8 +107,14 @@ ${setANSIColor(`build duration:`, ANSI_GREY)} ${msAsDuration(buildDuration)}
 ------------------------------`
 }
 
-const showHtmlSourceLocation = ({ htmlNode, htmlUrl, htmlSource }) => {
-  const { line, column } = getHtmlNodeLocation(htmlNode)
+const showHtmlSourceLocation = ({
+  htmlNode,
+  htmlUrl,
+  htmlSource,
+  htmlAttributeName,
+}) => {
+  const { line, column } =
+    getHtmlNodeLocation(htmlNode, htmlAttributeName) || {}
 
   return `${htmlUrl}:${line}:${column}
 ${showSourceLocation(htmlSource, {

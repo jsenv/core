@@ -20,6 +20,8 @@ import {
   getUniqueNameForInlineHtmlNode,
   removeHtmlNodeAttribute,
   setHtmlNodeText,
+  visitHtmlAst,
+  replaceHtmlNode,
 } from "./compileHtml.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
@@ -58,12 +60,13 @@ const compileHtmlFile = ({
 
   return {
     compile: async (htmlBeforeCompilation) => {
-      // we don't have to try/catch html parsing because:
-      // parsing html is fault tolerant (it does not throw any syntax error)
-      // invalid html markup is converted into some valid html
-      // in the worst cases the faulty html string special characters
-      // will be html encoded
+      // ideally we should try/catch html syntax error
       const htmlAst = parseHtmlString(htmlBeforeCompilation)
+
+      if (moduleOutFormat !== "esmodule") {
+        await mutateRessourceHints(htmlAst)
+      }
+
       manipulateHtmlAst(htmlAst, {
         scriptInjections: [
           {
@@ -79,10 +82,6 @@ const compileHtmlFile = ({
             : []),
         ],
       })
-      // here we must convert "modulepreload" into "preload"
-      if (moduleOutFormat !== "esmodule") {
-      
-      }
 
       const { scripts } = parseHtmlAstRessources(htmlAst)
 
@@ -242,6 +241,67 @@ const compileHtmlFile = ({
       }
     },
   }
+}
+
+// transform <link type="modulepreload"> into <link type="preload">
+const mutateRessourceHints = async (htmlAst) => {
+  const ressourceHints = []
+  visitHtmlAst(htmlAst, (htmlNode) => {
+    if (htmlNode.nodeName !== "link") return
+    const relAttribute = getHtmlNodeAttributeByName(htmlNode, "rel")
+    const rel = relAttribute ? relAttribute.value : ""
+    const isRessourceHint = [
+      "preconnect",
+      "dns-prefetch",
+      "prefetch",
+      "preload",
+      "modulepreload",
+    ].includes(rel)
+    if (!isRessourceHint) return
+
+    ressourceHints.push({ rel, htmlNode })
+  })
+
+  const mutations = []
+  await Promise.all(
+    ressourceHints.map(async (ressourceHint) => {
+      const hrefAttribute = getHtmlNodeAttributeByName(
+        ressourceHint.htmlNode,
+        "href",
+      )
+      const href = hrefAttribute ? hrefAttribute.value : ""
+      if (!href) return
+
+      // - as="script" -> as="fetch" because jsenv uses
+      //   fetch to load ressources (see "fetchSource" in createBrowserRuntime.js)
+      // - "modulepreload" -> "preload" because it's now regular js script
+      const asAttribute = getHtmlNodeAttributeByName(
+        ressourceHint.htmlNode,
+        "as",
+      )
+
+      if (ressourceHint.rel === "modulepreload") {
+        mutations.push(() => {
+          replaceHtmlNode(
+            ressourceHint.htmlNode,
+            `<link rel="preload" as="fetch" crossorigin />`,
+          )
+        })
+        return
+      }
+
+      if (asAttribute && asAttribute.value === "script") {
+        mutations.push(() => {
+          replaceHtmlNode(
+            ressourceHint.htmlNode,
+            `<link as="fetch" crossorigin />`,
+          )
+        })
+        return
+      }
+    }),
+  )
+  mutations.forEach((mutation) => mutation())
 }
 
 export const jsenvCompilerForHtml = {

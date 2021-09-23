@@ -40,9 +40,9 @@ const { buildMappings } = await buildProject({
 {
   const actual = buildMappings
   const expected = {
+    // the importmap is not in buildMappings as it was inlined by the build
     [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
-    [`${testDirectoryRelativeUrl}dev.importmap`]: "prod-4caf283d.importmap",
-    [`${testDirectoryRelativeUrl}main.js`]: "main-019ca92a.js",
+    [`${testDirectoryRelativeUrl}main.js`]: "main-ca955363.js",
   }
   assert({ actual, expected })
 }

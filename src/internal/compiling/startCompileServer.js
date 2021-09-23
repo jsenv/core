@@ -215,6 +215,31 @@ export const startCompileServer = async ({
     })
   }
 
+  const sourceFileService = composeServicesWithTiming({
+    ...(transformHtmlSourceFiles
+      ? {
+          "service:transform html source file":
+            createTransformHtmlSourceFileService({
+              logger,
+              projectDirectoryUrl,
+              inlineImportMapIntoHTML,
+              jsenvScriptInjection,
+              jsenvToolbarInjection,
+            }),
+        }
+      : {}),
+    "service:source file": createSourceFileService({
+      logger,
+      projectDirectoryUrl,
+      projectFileRequestedCallback,
+      projectFileEtagEnabled,
+      transformHtmlSourceFiles,
+      inlineImportMapIntoHTML,
+      jsenvScriptInjection,
+      jsenvToolbarInjection,
+    }),
+  })
+
   const jsenvServices = {
     "service:compilation asset": createCompilationAssetFileService({
       projectDirectoryUrl,
@@ -234,6 +259,7 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
     }),
     "service:compiled file": createCompiledFileService({
+      sourceFileService,
       cancellationToken,
       logger,
 
@@ -257,28 +283,6 @@ export const startCompileServer = async ({
       writeOnFilesystem: compileServerCanWriteOnFilesystem,
       sourcemapExcludeSources,
       compileCacheStrategy,
-    }),
-    ...(transformHtmlSourceFiles
-      ? {
-          "service:transform html source file":
-            createTransformHtmlSourceFileService({
-              logger,
-              projectDirectoryUrl,
-              inlineImportMapIntoHTML,
-              jsenvScriptInjection,
-              jsenvToolbarInjection,
-            }),
-        }
-      : {}),
-    "service:source file": createSourceFileService({
-      logger,
-      projectDirectoryUrl,
-      projectFileRequestedCallback,
-      projectFileEtagEnabled,
-      transformHtmlSourceFiles,
-      inlineImportMapIntoHTML,
-      jsenvScriptInjection,
-      jsenvToolbarInjection,
     }),
   }
 
@@ -664,9 +668,9 @@ const setupServerSentEventsForLivereload = ({
       }
     }
 
-    if ("referer" in request.headers) {
+    const { referer } = request.headers
+    if (referer) {
       const { origin } = request
-      const { referer } = request.headers
       // referer is likely the exploringServer
       if (referer !== origin && !urlIsInsideOf(referer, origin)) {
         return {

@@ -23,7 +23,7 @@ const mainFilename = `${testDirectoryname}.js`
 
 const firstBuild = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  useImportMapToImproveLongTermCaching: false,
+  useImportMapToMaximizeCacheReuse: false,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
@@ -43,7 +43,7 @@ assert({ actual, expected })
 {
   const secondBuild = await buildProject({
     ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-    useImportMapToImproveLongTermCaching: false,
+    useImportMapToMaximizeCacheReuse: false,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
     entryPointMap: {

@@ -38,7 +38,7 @@ export const buildUsingRollup = async ({
   urlVersioning,
   lineBreakNormalization,
   jsConcatenation,
-  useImportMapToImproveLongTermCaching,
+  useImportMapToMaximizeCacheReuse,
   preserveEntrySignatures,
 
   minify,
@@ -93,7 +93,7 @@ export const buildUsingRollup = async ({
       urlVersioning,
       lineBreakNormalization,
       jsConcatenation,
-      useImportMapToImproveLongTermCaching,
+      useImportMapToMaximizeCacheReuse,
 
       minify,
       minifyJsOptions,

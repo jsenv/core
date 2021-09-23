@@ -28,7 +28,7 @@ const entryPointMap = {
 
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  useImportMapToImproveLongTermCaching: false,
+  useImportMapToMaximizeCacheReuse: false,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,

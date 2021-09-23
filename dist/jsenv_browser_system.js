@@ -2988,26 +2988,15 @@
       window.addEventListener('DOMContentLoaded', processScripts);
     }
 
-    var inlineScripts = {};
-
     function processScripts() {
-      [].forEach.call(document.querySelectorAll('script'), function (script, index) {
+      [].forEach.call(document.querySelectorAll('script'), function (script) {
         if (script.sp) // sp marker = systemjs processed
           return; // TODO: deprecate systemjs-module in next major now that we have auto import
 
         if (script.type === 'systemjs-module') {
           script.sp = true;
-          var scriptSrc = script.src;
-          var importUrl;
-
-          if (scriptSrc) {
-            importUrl = scriptSrc.slice(0, 7) === "import:" ? scriptSrc.slice(7) : resolveUrl(scriptSrc, baseUrl);
-          } else {
-            importUrl = document.location.href + "_inline_script_" + index;
-            inlineScripts[importUrl] = script.textContent;
-          }
-
-          System.import(importUrl).catch(function (e) {
+          if (!script.src) return;
+          System.import(script.src.slice(0, 7) === 'import:' ? script.src.slice(7) : resolveUrl(script.src, baseUrl)).catch(function (e) {
             // if there is a script load error, dispatch an "error" event
             // on the script tag.
             if (e.message.indexOf('https://git.io/JvFET#3') > -1) {
@@ -3085,22 +3074,29 @@
     var lastAutoImportDeps, lastAutoImportTimeout;
     var autoImportCandidates = {};
     var systemRegister = systemJSPrototype.register;
+    var inlineScriptCount = 0;
 
     systemJSPrototype.register = function (deps, declare) {
       if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
         var scripts = document.querySelectorAll('script[src]');
         var lastScript = scripts[scripts.length - 1];
+        var lastAutoImportUrl;
+        lastAutoImportDeps = deps;
 
         if (lastScript) {
-          lastAutoImportDeps = deps; // if this is already a System load, then the instantiate has already begun
-          // so this re-import has no consequence
+          lastAutoImportUrl = lastScript.src;
+        } else {
+          inlineScriptCount++;
+          lastAutoImportUrl = document.location.href + "__inline_script__" + inlineScriptCount;
+        } // if this is already a System load, then the instantiate has already begun
+        // so this re-import has no consequence
 
-          var loader = this;
-          lastAutoImportTimeout = setTimeout(function () {
-            autoImportCandidates[lastScript.src] = [deps, declare];
-            loader.import(lastScript.src);
-          });
-        }
+
+        var loader = this;
+        lastAutoImportTimeout = setTimeout(function () {
+          autoImportCandidates[lastAutoImportUrl] = [deps, declare];
+          loader.import(lastAutoImportUrl);
+        });
       } else {
         lastAutoImportDeps = undefined;
       }
@@ -3119,14 +3115,6 @@
       }
 
       var loader = this;
-      var inlineScriptContent = inlineScripts[url];
-
-      if (typeof inlineScriptContent === "string") {
-        if (inlineScriptContent.indexOf("//# sourceURL=") < 0) inlineScriptContent += "\n//# sourceURL=" + url;
-        (0, eval)(inlineScriptContent);
-        return loader.getRegister(url);
-      }
-
       return new Promise(function (resolve, reject) {
         var script = systemJSPrototype.createScript(url);
         script.addEventListener('error', function () {
@@ -3651,15 +3639,11 @@
   var createBrowserRuntime = _async$6(function (_ref) {
     var compileServerOrigin = _ref.compileServerOrigin,
         outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
-        compileId = _ref.compileId,
-        htmlFileRelativeUrl = _ref.htmlFileRelativeUrl;
+        compileId = _ref.compileId;
 
     var fetchSource = function fetchSource(url) {
       return fetchUrl(url, {
-        credentials: "include",
-        headers: _objectSpread2({}, htmlFileRelativeUrl ? {
-          "x-jsenv-execution-id": htmlFileRelativeUrl
-        } : {})
+        credentials: "same-origin"
       });
     };
 
@@ -5068,13 +5052,10 @@
         var afterOutDirectory = document.location.href.slice(outDirectoryUrl.length);
         var parts = afterOutDirectory.split("/");
         var compileId = parts[0];
-        var remaining = parts.slice(1).join("/");
-        var htmlFileRelativeUrl = remaining;
         return _await(createBrowserRuntime({
           compileServerOrigin: compileServerOrigin,
           outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-          compileId: compileId,
-          htmlFileRelativeUrl: htmlFileRelativeUrl
+          compileId: compileId
         }), function (browserRuntime) {
           return _invoke(function () {
             if (errorStackRemapping && Error.captureStackTrace) {

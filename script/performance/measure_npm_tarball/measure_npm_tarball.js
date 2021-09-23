@@ -14,7 +14,7 @@ export const measureNpmTarball = async () => {
   }
 }
 
-const executeAndLog = process.argv.includes("--log")
+const executeAndLog = process.argv.includes("--local")
 if (executeAndLog) {
   const performanceMetrics = await measureNpmTarball()
   logPerformanceMetrics(performanceMetrics)

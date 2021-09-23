@@ -1,10 +1,16 @@
-import { measureImport } from "./measure_import/measure_import.js"
-import { measureNpmTarball } from "./measure_npm_tarball/measure_npm_tarball.js"
-import { measureExploring } from "./measure_exploring/measure_exploring.js"
-import { measureBuild } from "./measure_build/measure_build.js"
-import { measureTestPlan } from "./measure_test_plan/measure_test_plan.js"
-
 export const generatePerformanceReport = async () => {
+  const { measureImport } = await import("./measure_import/measure_import.js")
+  const { measureNpmTarball } = await import(
+    "./measure_npm_tarball/measure_npm_tarball.js"
+  )
+  const { measureExploring } = await import(
+    "./measure_exploring/measure_exploring.js"
+  )
+  const { measureBuild } = await import("./measure_build/measure_build.js")
+  const { measureTestPlan } = await import(
+    "./measure_test_plan/measure_test_plan.js"
+  )
+
   const importMetrics = await measureImport()
   const npmTarballMetrics = await measureNpmTarball()
 
@@ -29,4 +35,13 @@ export const generatePerformanceReport = async () => {
       },
     },
   }
+}
+
+const executeAndLog = process.argv.includes("--local")
+if (executeAndLog) {
+  await import("./measure_import/measure_import.js")
+  await import("./measure_npm_tarball/measure_npm_tarball.js")
+  await import("./measure_exploring/measure_exploring.js")
+  await import("./measure_build/measure_build.js")
+  await import("./measure_test_plan/measure_test_plan.js")
 }

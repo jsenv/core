@@ -19,7 +19,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -35,19 +34,15 @@ const { buildMappings } = await buildProject({
   const actual = buildMappings
   const expected = {
     [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
-    [`${testDirectoryRelativeUrl}file.js`]: "file-414e15ec.js",
-    [`${testDirectoryRelativeUrl}main.js`]: "main-b6d7ff70.js",
+    [`${testDirectoryRelativeUrl}file.js`]: "file-d4d10f0c.js",
+    [`${testDirectoryRelativeUrl}main.js`]: "main-a10d6b06.js",
   }
   assert({ actual, expected })
 }
 
 {
-  const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-    const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-    const buildRelativeUrl = buildMappings[relativeUrl]
-    return buildRelativeUrl
-  }
-  const mainJsFileRelativeUrl = getBuildRelativeUrl("main.js")
+  const mainJsFileRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}main.js`]
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

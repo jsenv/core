@@ -1,13 +1,13 @@
 import { resolveUrl, urlToExtension } from "@jsenv/filesystem"
 
-import { targetIsReferencedOnlyByRessourceHint } from "./asset-builder.util.js"
+import { isReferencedOnlyByRessourceHint } from "./ressource_builder_util.js"
 
 export const createBuildStats = ({
   buildFileContents,
-  assetBuilder,
+  ressourceBuilder,
   buildDuration,
 }) => {
-  const projectFileContents = getProjectFileContents(assetBuilder)
+  const projectFileContents = getProjectFileContents(ressourceBuilder)
   const projectFileSizeInfo = sizeInfoFromFileContents(projectFileContents)
 
   const { sourceFileContents, sourcemapFileContents } =
@@ -53,27 +53,28 @@ const sizeInfoFromFileContents = (fileContents) => {
   return { fileSizes, totalSize }
 }
 
-const getProjectFileContents = (assetBuilder) => {
+const getProjectFileContents = (ressourceBuilder) => {
   const projectFileContents = {}
-  const { targetMap } = assetBuilder.inspect()
+  const { ressourceMap } = ressourceBuilder.inspect()
 
-  Object.keys(targetMap).forEach((url) => {
-    const target = targetMap[url]
-    const { targetIsInline, targetIsExternal, targetBuffer } = target
-    if (targetIsInline) {
+  Object.keys(ressourceMap).forEach((url) => {
+    const ressource = ressourceMap[url]
+    const { isInline, isExternal, bufferBeforeBuild } = ressource
+    if (isInline) {
       // inline ressources are not files
       return
     }
-    if (targetIsExternal) {
-      // external target are not handled, we would not have the targetBuffer
+    if (isExternal) {
+      // external ressource are not handled, we would not have the bufferBeforeBuild
       return
     }
-    if (targetIsReferencedOnlyByRessourceHint(target)) {
-      // target is only referenced by ressource hint (link preload for example)
-      // it's never actually loaded-> we don't gave the targetBuffer (the ressource file content)
+    if (isReferencedOnlyByRessourceHint(ressource)) {
+      // ressource is only referenced by ressource hint (link preload for example)
+      // it's never actually loaded
+      // -> we don't gave the bufferBeforeBuild (the ressource file content)
       return
     }
-    projectFileContents[url] = targetBuffer
+    projectFileContents[url] = bufferBeforeBuild
   })
   return projectFileContents
 }

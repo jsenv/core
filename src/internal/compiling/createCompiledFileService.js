@@ -20,6 +20,7 @@ const jsenvCompilers = {
 }
 
 export const createCompiledFileService = ({
+  sourceFileService,
   cancellationToken,
   logger,
 
@@ -55,7 +56,7 @@ export const createCompiledFileService = ({
 
     // not inside compile directory -> nothing to compile
     if (!requestCompileInfo.insideCompileDirectory) {
-      return null
+      return sourceFileService(request)
     }
 
     const { compileId, afterCompileId } = requestCompileInfo
@@ -85,7 +86,7 @@ export const createCompiledFileService = ({
 
     // nothing after compileId, we don't know what to compile (not supposed to happen)
     if (afterCompileId === "") {
-      return null
+      return sourceFileService(request)
     }
 
     const originalFileRelativeUrl = afterCompileId
@@ -159,13 +160,12 @@ export const createCompiledFileService = ({
       })
     }
 
-    // no compiler ? -> redirect to source version that will be served as file
-    const originalFileServerUrl = resolveUrl(originalFileRelativeUrl, origin)
-    return {
-      status: 307,
-      headers: {
-        location: originalFileServerUrl,
-      },
-    }
+    // no compiler -> serve original file
+    // we don't redirect otherwise it complexify ressource tracking
+    // and url resolution
+    return sourceFileService({
+      ...request,
+      ressource: `/${originalFileRelativeUrl}`,
+    })
   }
 }

@@ -3,6 +3,8 @@ import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   urlToBasename,
+  writeFile,
+  resolveUrl,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -25,8 +27,7 @@ const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-
-const { buildMappings } = await buildProject({
+const { buildInlineFileContents } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -34,21 +35,26 @@ const { buildMappings } = await buildProject({
   entryPointMap,
   // minify: true,
 })
-
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
+const inlineFileBuildRelativeUrl =
+  "build_module_inline_dynamic_import_systemjs.10.js"
+const inlineFileBuildUrl = resolveUrl(
+  inlineFileBuildRelativeUrl,
+  buildDirectoryUrl,
+)
+await writeFile(
+  inlineFileBuildUrl,
+  buildInlineFileContents[inlineFileBuildRelativeUrl],
+)
 
 {
-  const inlinescriptBuildRelativeUrl = getBuildRelativeUrl(
-    `${testDirectoryname}.10.js`,
-  )
   const result = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    mainRelativeUrl: `./${inlinescriptBuildRelativeUrl}`,
+    mainRelativeUrl: `./${inlineFileBuildRelativeUrl}`,
     // debug: true,
   })
   const actual = result.namespace

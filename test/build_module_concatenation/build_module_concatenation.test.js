@@ -26,7 +26,6 @@ const jsFileRelativeUrl = `${testDirectoryRelativeUrl}main.js`
 const entryPointMap = {
   [`./${htmlFileRelativeUrl}`]: "./main.html",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "debug",
@@ -43,14 +42,8 @@ const { buildMappings } = await buildProject({
   assert({ actual, expected })
 }
 
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-
 {
-  const mainJsRelativeUrl = getBuildRelativeUrl("main.js")
+  const mainJsRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

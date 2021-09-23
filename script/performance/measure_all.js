@@ -1,5 +1,0 @@
-await import("./measure_import/measure_import.js")
-await import("./measure_npm_tarball/measure_npm_tarball.js")
-await import("./measure_exploring/measure_exploring.js")
-await import("./measure_build/measure_build.js")
-await import("./measure_test_plan/measure_test_plan.js")

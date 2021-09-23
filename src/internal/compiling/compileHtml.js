@@ -145,12 +145,26 @@ export const removeHtmlNode = (htmlNode) => {
   childNodes.splice(childNodes.indexOf(htmlNode), 1)
 }
 
-export const getHtmlNodeLocation = (htmlNode) => {
+export const getHtmlNodeLocation = (htmlNode, htmlAttributeName) => {
   const { sourceCodeLocation } = htmlNode
   if (!sourceCodeLocation) {
-    return {}
+    return null
   }
-  const { startLine, startCol } = sourceCodeLocation
+
+  if (!htmlAttributeName) {
+    const { startLine, startCol } = sourceCodeLocation
+    return {
+      line: startLine,
+      column: startCol,
+    }
+  }
+
+  const attributeSourceCodeLocation =
+    sourceCodeLocation.attrs[htmlAttributeName]
+  if (!attributeSourceCodeLocation) {
+    return null
+  }
+  const { startLine, startCol } = attributeSourceCodeLocation
   return {
     line: startLine,
     column: startCol,
@@ -437,11 +451,12 @@ export const getUniqueNameForInlineHtmlNode = (node, nodes, pattern) => {
       }
 
       const { line, column } = getHtmlNodeLocation(node)
-      const lineTaken = nodes.some(
-        (nodeCandidate) =>
-          nodeCandidate !== node &&
-          getHtmlNodeLocation(nodeCandidate).line === line,
-      )
+      const lineTaken = nodes.some((nodeCandidate) => {
+        if (nodeCandidate === node) return false
+        const htmlNodeLocation = getHtmlNodeLocation(nodeCandidate)
+        if (!htmlNodeLocation) return false
+        return htmlNodeLocation.line === line
+      })
       if (lineTaken) {
         return `${line}.${column}`
       }

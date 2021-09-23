@@ -22,7 +22,6 @@ const mainFilename = `style.css`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./style.css",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "info",
@@ -30,7 +29,6 @@ const { buildMappings } = await buildProject({
   buildDirectoryRelativeUrl,
   entryPointMap,
 })
-
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
