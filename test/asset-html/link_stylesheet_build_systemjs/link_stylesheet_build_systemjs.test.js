@@ -1,4 +1,3 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
@@ -6,7 +5,10 @@ import {
   resolveUrl,
   readFile,
   assertFilePresence,
+  urlToBasename,
 } from "@jsenv/filesystem"
+
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   findNodeByTagName,
@@ -14,21 +16,19 @@ import {
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls.js"
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
-import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryRelativeUrl)
+const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
@@ -36,13 +36,6 @@ const { buildMappings } = await buildProject({
   buildDirectoryRelativeUrl,
   entryPointMap,
 })
-
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
@@ -50,8 +43,10 @@ const buildDirectoryUrl = resolveUrl(
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const link = findNodeByTagName(htmlString, "link")
-const maincssBuildRelativeUrl = getBuildRelativeUrl("style.css")
-const depcssBuildRelativeUrl = getBuildRelativeUrl("dir/dep.css")
+const maincssBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}style.css`]
+const depcssBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}dir/dep.css`]
 const mainCssBuildUrl = resolveUrl(maincssBuildRelativeUrl, buildDirectoryUrl)
 const depCssBuildUrl = resolveUrl(depcssBuildRelativeUrl, buildDirectoryUrl)
 
