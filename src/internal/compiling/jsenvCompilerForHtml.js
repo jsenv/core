@@ -21,7 +21,8 @@ import {
   removeHtmlNodeAttribute,
   setHtmlNodeText,
   visitHtmlAst,
-  replaceHtmlNode,
+  // replaceHtmlNode,
+  removeHtmlNode,
 } from "./compileHtml.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
@@ -65,12 +66,39 @@ const compileHtmlFile = ({
 
       // transform <link type="modulepreload"> into <link type="preload">
       if (moduleOutFormat !== "esmodule") {
+        const mutations = []
         visitHtmlAst(htmlAst, (htmlNode) => {
           if (htmlNode.nodeName !== "link") return
           const relAttribute = getHtmlNodeAttributeByName(htmlNode, "rel")
-          if (relAttribute.value !== "modulepreload") return
-          replaceHtmlNode(htmlNode, `<link rel="preload" as="script" />`)
+          const rel = relAttribute.value || ""
+          const isRessourceHint = [
+            "preconnect",
+            "dns-prefetch",
+            "prefetch",
+            "preload",
+            "modulepreload",
+          ].includes(rel)
+          if (!isRessourceHint) return
+
+          mutations.push(() => {
+            // Ideally we should replace "modulepreload" with "preload as fetch"
+            // and "preload as script" with "preload as fetch"
+            // because jsenv uses fetch to load ressources (see "fetchSource" in createBrowserRuntime.js)
+            // replaceHtmlNode(
+            //   htmlNode,
+            //   `<link rel="preload" as="fetch" crossorigin />`,
+            // )
+            // However jsenv uses a custom request header that would defeat the ressource preloading
+            // so instead we disable ressource hints during dev otherwise they would put warnings in the console
+            removeHtmlNode(htmlNode)
+
+            // Note that we could remove the "x-jsenv-execution-id" custom header and ensure the
+            // request made by fetch matches the ressource hints
+            // but in that case we must also ensure any preload link for a ressource
+            // would also match if the ressource is redirected (it's the case for assets like fonts)
+          })
         })
+        mutations.forEach((mutation) => mutation())
       }
 
       manipulateHtmlAst(htmlAst, {

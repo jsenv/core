@@ -22,7 +22,7 @@ export const createBrowserRuntime = async ({
 }) => {
   const fetchSource = (url) => {
     return fetchUrl(url, {
-      credentials: "include",
+      credentials: "same-origin",
       headers: {
         ...(htmlFileRelativeUrl
           ? { "x-jsenv-execution-id": htmlFileRelativeUrl }
