@@ -22,6 +22,7 @@ import {
   removeHtmlNodeAttribute,
   setHtmlNodeText,
   visitHtmlAst,
+  replaceHtmlNode,
 } from "./compileHtml.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
@@ -299,38 +300,32 @@ const mutateRessourceHints = async (
       const href = hrefAttribute ? hrefAttribute.value : ""
       if (!href) return
 
-      // as "script" -> as "fetch" because jsenv uses
-      // fetch to load ressources (see "fetchSource" in createBrowserRuntime.js)
+      // - as="script" -> as="fetch" because jsenv uses
+      //   fetch to load ressources (see "fetchSource" in createBrowserRuntime.js)
+      // - "modulepreload" -> "preload" because it's now regular js script
       const asAttribute = getHtmlNodeAttributeByName(
         ressourceHint.htmlNode,
         "as",
       )
-      // modulepreload -> preload
+
       if (ressourceHint.rel === "modulepreload") {
         mutations.push(() => {
-          const relAttribute = getHtmlNodeAttributeByName(
+          replaceHtmlNode(
             ressourceHint.htmlNode,
-            "rel",
+            `<link rel="preload" as="fetch" crossorigin />`,
           )
-          relAttribute.value = "preload"
-          if (asAttribute) {
-            asAttribute.value = "script"
-          } else {
-            ressourceHint.htmlNode.attrs.push({
-              name: "as",
-              value: "fetch",
-            })
-          }
-          ressourceHint.htmlNode.attrs.push({
-            name: "crossorigin",
-            value: "",
-          })
         })
+        return
       }
+
       if (asAttribute && asAttribute.value === "script") {
         mutations.push(() => {
-          asAttribute.value = "fetch"
+          replaceHtmlNode(
+            ressourceHint.htmlNode,
+            `<link as="fetch" crossorigin />`,
+          )
         })
+        return
       }
 
       const url = resolveUrl(href, compiledFileServerUrl)
@@ -344,10 +339,10 @@ const mutateRessourceHints = async (
         if (responseUrl === url) return
 
         mutations.push(() => {
-          const newUrl = urlIsInsideOf(responseUrl, compileServerOrigin)
+          const newHref = urlIsInsideOf(responseUrl, compileServerOrigin)
             ? `/${urlToRelativeUrl(responseUrl, compileServerOrigin)}`
             : responseUrl
-          hrefAttribute.value = newUrl
+          replaceHtmlNode(ressourceHint.htmlNode, `<link href="${newHref}" />`)
         })
       } catch (e) {
         return
