@@ -20,6 +20,7 @@ const jsenvCompilers = {
 }
 
 export const createCompiledFileService = ({
+  sourceFileService,
   cancellationToken,
   logger,
 
@@ -39,7 +40,6 @@ export const createCompiledFileService = ({
   jsenvToolbarInjection,
 
   projectFileRequestedCallback,
-  projectFileEtagEnabled,
   useFilesystemAsCache,
   writeOnFilesystem,
   compileCacheStrategy,
@@ -56,7 +56,7 @@ export const createCompiledFileService = ({
 
     // not inside compile directory -> nothing to compile
     if (!requestCompileInfo.insideCompileDirectory) {
-      return null
+      return sourceFileService(request)
     }
 
     const { compileId, afterCompileId } = requestCompileInfo
@@ -86,7 +86,7 @@ export const createCompiledFileService = ({
 
     // nothing after compileId, we don't know what to compile (not supposed to happen)
     if (afterCompileId === "") {
-      return null
+      return sourceFileService(request)
     }
 
     const originalFileRelativeUrl = afterCompileId
@@ -161,15 +161,6 @@ export const createCompiledFileService = ({
     }
 
     // no compiler -> serve original file
-    projectFileRequestedCallback(originalFileRelativeUrl, request)
-    const requestForProjectFile = {
-      ...request,
-      ressource: `/${originalFileRelativeUrl}`,
-    }
-    const responsePromise = serveFile(requestForProjectFile, {
-      rootDirectoryUrl: projectDirectoryUrl,
-      etagEnabled: projectFileEtagEnabled,
-    })
-    return responsePromise
+    return sourceFileService(request)
   }
 }

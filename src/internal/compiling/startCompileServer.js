@@ -215,50 +215,7 @@ export const startCompileServer = async ({
     })
   }
 
-  const jsenvServices = {
-    "service:compilation asset": createCompilationAssetFileService({
-      projectDirectoryUrl,
-    }),
-    "service:browser script": createBrowserScriptService({
-      projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-    }),
-    "service:out files": await createOutFilesService({
-      logger,
-      projectDirectoryUrl,
-      compileServerCanWriteOnFilesystem,
-      outDirectoryUrl,
-      outJSONFiles,
-    }),
-    "service: compile proxy": createCompileProxyService({
-      projectDirectoryUrl,
-    }),
-    "service:compiled file": createCompiledFileService({
-      cancellationToken,
-      logger,
-
-      projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-
-      importDefaultExtension,
-
-      runtimeSupport,
-      transformTopLevelAwait,
-      groupMap: compileServerGroupMap,
-      babelPluginMap,
-      convertMap,
-      customCompilers,
-      moduleOutFormat,
-      importMetaFormat,
-      jsenvToolbarInjection,
-
-      projectFileRequestedCallback,
-      projectFileEtagEnabled,
-      useFilesystemAsCache: compileServerCanReadFromFilesystem,
-      writeOnFilesystem: compileServerCanWriteOnFilesystem,
-      sourcemapExcludeSources,
-      compileCacheStrategy,
-    }),
+  const sourceFileService = composeServicesWithTiming({
     ...(transformHtmlSourceFiles
       ? {
           "service:transform html source file":
@@ -280,6 +237,52 @@ export const startCompileServer = async ({
       inlineImportMapIntoHTML,
       jsenvScriptInjection,
       jsenvToolbarInjection,
+    }),
+  })
+
+  const jsenvServices = {
+    "service:compilation asset": createCompilationAssetFileService({
+      projectDirectoryUrl,
+    }),
+    "service:browser script": createBrowserScriptService({
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+    }),
+    "service:out files": await createOutFilesService({
+      logger,
+      projectDirectoryUrl,
+      compileServerCanWriteOnFilesystem,
+      outDirectoryUrl,
+      outJSONFiles,
+    }),
+    "service: compile proxy": createCompileProxyService({
+      projectDirectoryUrl,
+    }),
+    "service:compiled file": createCompiledFileService({
+      sourceFileService,
+      cancellationToken,
+      logger,
+
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+
+      importDefaultExtension,
+
+      runtimeSupport,
+      transformTopLevelAwait,
+      groupMap: compileServerGroupMap,
+      babelPluginMap,
+      convertMap,
+      customCompilers,
+      moduleOutFormat,
+      importMetaFormat,
+      jsenvToolbarInjection,
+
+      projectFileRequestedCallback,
+      useFilesystemAsCache: compileServerCanReadFromFilesystem,
+      writeOnFilesystem: compileServerCanWriteOnFilesystem,
+      sourcemapExcludeSources,
+      compileCacheStrategy,
     }),
   }
 
