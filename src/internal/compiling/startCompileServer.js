@@ -668,9 +668,9 @@ const setupServerSentEventsForLivereload = ({
       }
     }
 
-    if ("referer" in request.headers) {
+    const { referer } = request.headers
+    if (referer) {
       const { origin } = request
-      const { referer } = request.headers
       // referer is likely the exploringServer
       if (referer !== origin && !urlIsInsideOf(referer, origin)) {
         return {
