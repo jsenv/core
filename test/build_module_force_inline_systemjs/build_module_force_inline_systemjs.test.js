@@ -62,10 +62,16 @@ await buildProject({
   const { namespace } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    codeToRunInBrowser: `({
+    codeToRunInBrowser: `(async () => {
+  await new Promise(resolve => {
+    setTimeout(resolve, 500)
+  })
+
+  return {
     hello: window.hello,
     answer: window.answer
-  })`,
+  }
+})()`,
     // debug: true,
   })
   const actual = namespace
