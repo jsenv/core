@@ -3637,7 +3637,7 @@
 
     var fetchSource = function fetchSource(url) {
       return fetchUrl(url, {
-        credentials: "include",
+        credentials: "same-origin",
         headers: _objectSpread2({}, htmlFileRelativeUrl ? {
           "x-jsenv-execution-id": htmlFileRelativeUrl
         } : {})
