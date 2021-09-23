@@ -1,0 +1,25 @@
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <link
+      rel="preload"
+      href="./roboto_v27_latin_regular.woff2"
+      as="font"
+      type="font/woff2"
+      id="font_preload_link"
+      crossorigin
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+
+  <body>
+    <script type="module">
+      // Let browser time to log the warning about preload link not used
+      await new Promise((resolve) => {
+        setTimeout(resolve, 5000)
+      })
+    </script>
+  </body>
+</html>

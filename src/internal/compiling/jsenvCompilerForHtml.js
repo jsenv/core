@@ -1,11 +1,12 @@
 import { urlToContentType } from "@jsenv/server"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { resolveUrl, urlIsInsideOf, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   jsenvBrowserSystemFileInfo,
   jsenvToolbarHtmlFileInfo,
   jsenvToolbarInjectorFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
 import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
@@ -21,8 +22,6 @@ import {
   removeHtmlNodeAttribute,
   setHtmlNodeText,
   visitHtmlAst,
-  // replaceHtmlNode,
-  removeHtmlNode,
 } from "./compileHtml.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
@@ -32,6 +31,7 @@ const compileHtmlFile = ({
   // request,
 
   projectDirectoryUrl,
+  compileServerOrigin,
   outDirectoryRelativeUrl,
   originalFileUrl,
   compiledFileUrl,
@@ -64,43 +64,13 @@ const compileHtmlFile = ({
       // ideally we should try/catch html syntax error
       const htmlAst = parseHtmlString(htmlBeforeCompilation)
 
-      // transform <link type="modulepreload"> into <link type="preload">
       if (moduleOutFormat !== "esmodule") {
-        const mutations = []
-        visitHtmlAst(htmlAst, (htmlNode) => {
-          if (htmlNode.nodeName !== "link") return
-          const relAttribute = getHtmlNodeAttributeByName(htmlNode, "rel")
-          const rel = relAttribute.value || ""
-          const isRessourceHint = [
-            "preconnect",
-            "dns-prefetch",
-            "prefetch",
-            "preload",
-            "modulepreload",
-          ].includes(rel)
-          if (!isRessourceHint) return
-
-          mutations.push(() => {
-            // Ideally we should replace "modulepreload" with "preload as fetch"
-            // and "preload as script" with "preload as fetch"
-            // because jsenv uses fetch to load ressources (see "fetchSource" in createBrowserRuntime.js)
-            // replaceHtmlNode(
-            //   htmlNode,
-            //   `<link rel="preload" as="fetch" crossorigin />`,
-            // )
-            // However jsenv uses a custom request header that would defeat the ressource preloading
-            // so instead we disable ressource hints during dev otherwise they would put warnings in the console
-            removeHtmlNode(htmlNode)
-
-            // Note that we could remove the "x-jsenv-execution-id" custom header and ensure the
-            // request made by fetch matches the ressource hints
-            // but in that case we must also ensure any preload link for a ressource
-            // would also match if the ressource is redirected (it's the case for assets like fonts)
-            // we could do that by updating the preload link to target the original
-            // ressource instead of the compiled ressource (when ressource is redirected by compile server)
-          })
+        await mutateRessourceHints(htmlAst, {
+          projectDirectoryUrl,
+          compileServerOrigin,
+          outDirectoryRelativeUrl,
+          compiledFileUrl,
         })
-        mutations.forEach((mutation) => mutation())
       }
 
       manipulateHtmlAst(htmlAst, {
@@ -277,6 +247,104 @@ const compileHtmlFile = ({
       }
     },
   }
+}
+
+// transform <link type="modulepreload"> into <link type="preload">
+const mutateRessourceHints = async (
+  htmlAst,
+  {
+    projectDirectoryUrl,
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+    compiledFileUrl,
+  },
+) => {
+  const ressourceHints = []
+  visitHtmlAst(htmlAst, (htmlNode) => {
+    if (htmlNode.nodeName !== "link") return
+    const relAttribute = getHtmlNodeAttributeByName(htmlNode, "rel")
+    const rel = relAttribute.value || ""
+    const isRessourceHint = [
+      "preconnect",
+      "dns-prefetch",
+      "prefetch",
+      "preload",
+      "modulepreload",
+    ].includes(rel)
+    if (!isRessourceHint) return
+
+    ressourceHints.push({ rel, htmlNode })
+  })
+
+  const mutations = []
+  const compiledFileRelativeUrl = urlToRelativeUrl(
+    compiledFileUrl,
+    projectDirectoryUrl,
+  )
+  const compiledFileServerUrl = resolveUrl(
+    compiledFileRelativeUrl,
+    compileServerOrigin,
+  )
+  const outDirectoryServerUrl = resolveUrl(
+    outDirectoryRelativeUrl,
+    compileServerOrigin,
+  )
+
+  await Promise.all(
+    ressourceHints.map(async (ressourceHint) => {
+      const hrefAttribute = getHtmlNodeAttributeByName(
+        ressourceHint.htmlNode,
+        "href",
+      )
+      const href = hrefAttribute.value || ""
+      if (!href) return
+
+      // modulepreload -> preload
+      if (ressourceHint.rel === "modulepreload") {
+        mutations.push(() => {
+          const relAttribute = getHtmlNodeAttributeByName(
+            ressourceHint.htmlNode,
+            "rel",
+          )
+          relAttribute.value = "preload"
+        })
+      } else {
+        // as "script" -> as "fetch" because jsenv uses
+        // fetch to load ressources (see "fetchSource" in createBrowserRuntime.js)
+        const asAttribute = getHtmlNodeAttributeByName(
+          ressourceHint.htmlNode,
+          "as",
+        )
+        const as = asAttribute.value || ""
+        if (as === "script") {
+          mutations.push(() => {
+            asAttribute.value = "fetch"
+          })
+        }
+      }
+
+      const url = resolveUrl(href, compiledFileServerUrl)
+      if (!urlIsInsideOf(url, outDirectoryServerUrl)) {
+        return
+      }
+
+      try {
+        const response = await fetchUrl(url)
+        const responseUrl = response.url
+        if (responseUrl === url) return
+
+        mutations.push(() => {
+          const newUrl = urlIsInsideOf(responseUrl, compileServerOrigin)
+            ? `/${urlToRelativeUrl(responseUrl, compileServerOrigin)}`
+            : responseUrl
+          hrefAttribute.value = newUrl
+        })
+      } catch (e) {
+        return
+      }
+    }),
+  )
+  mutations.forEach((mutation) => mutation())
 }
 
 export const jsenvCompilerForHtml = {

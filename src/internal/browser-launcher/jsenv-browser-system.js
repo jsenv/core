@@ -149,14 +149,11 @@ const getBrowserRuntime = memoize(async () => {
   const afterOutDirectory = document.location.href.slice(outDirectoryUrl.length)
   const parts = afterOutDirectory.split("/")
   const compileId = parts[0]
-  const remaining = parts.slice(1).join("/")
-  const htmlFileRelativeUrl = remaining
 
   const browserRuntime = await createBrowserRuntime({
     compileServerOrigin,
     outDirectoryRelativeUrl,
     compileId,
-    htmlFileRelativeUrl,
   })
 
   if (errorStackRemapping && Error.captureStackTrace) {
