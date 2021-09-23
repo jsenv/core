@@ -6,6 +6,8 @@ import {
   readFile,
   urlToBasename,
 } from "@jsenv/filesystem"
+
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   findNodeByTagName,
@@ -16,7 +18,6 @@ import {
   setCssSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
-import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -30,7 +31,6 @@ const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
@@ -39,13 +39,6 @@ const { buildMappings } = await buildProject({
   entryPointMap,
   minify: true,
 })
-
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
@@ -53,7 +46,7 @@ const buildDirectoryUrl = resolveUrl(
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const styleNode = findNodeByTagName(htmlString, "style")
-const depBuildRelativeUrl = getBuildRelativeUrl("dep.css")
+const depBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}dep.css`]
 const depBuildUrl = resolveUrl(depBuildRelativeUrl, buildDirectoryUrl)
 const textNode = getHtmlNodeTextNode(styleNode)
 const text = textNode.value
@@ -107,7 +100,9 @@ const depFileContent = await readFile(depBuildUrl)
   const actual = sourcemap
   const expected = {
     version: 3,
-    sources: ["../../../dep.css"],
+    sources: [
+      `../../../.jsenv/out-build/best/${testDirectoryRelativeUrl}dep.css`,
+    ],
     names: actual.names,
     mappings: actual.mappings,
     file: actual.file,
