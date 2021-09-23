@@ -13,9 +13,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.main.html`
+const filename = `${testDirectoryname}.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-
 const exploringServer = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -25,6 +24,7 @@ const { browser, pageLogs, pageErrors, executionResult } =
     `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
     // { headless: false },
   )
+
 const actual = { pageLogs, pageErrors, executionResult }
 const expected = {
   pageLogs: [
@@ -37,7 +37,7 @@ const expected = {
     startTime: actual.executionResult.startTime,
     endTime: actual.executionResult.endTime,
     fileExecutionResultMap: {
-      "./basic.main.js": {
+      "./dev_server_basic.js": {
         status: "completed",
         namespace: { default: 42 },
       },

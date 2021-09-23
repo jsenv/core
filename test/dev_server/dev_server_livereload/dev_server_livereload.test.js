@@ -22,7 +22,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.main.html`
+const filename = `${testDirectoryname}.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const filePath = urlToFileSystemPath(
   resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl),
@@ -50,7 +50,7 @@ const { browser, page, pageLogs, pageErrors, executionResult } =
       startTime: assert.any(Number),
       endTime: assert.any(Number),
       fileExecutionResultMap: {
-        "./livereload.main.js": {
+        "./dev_server_livereload.js": {
           status: "completed",
           namespace: { default: 42 },
         },
@@ -67,8 +67,9 @@ const { browser, page, pageLogs, pageErrors, executionResult } =
   await navigationPromise
   const afterReloadExecutionResult = await getHtmlExecutionResult(page)
   const actual =
-    afterReloadExecutionResult.fileExecutionResultMap["./livereload.main.js"]
-      .namespace
+    afterReloadExecutionResult.fileExecutionResultMap[
+      "./dev_server_livereload.js"
+    ].namespace
   const expected = {
     default: 43,
   }
@@ -83,8 +84,9 @@ const { browser, page, pageLogs, pageErrors, executionResult } =
   await navigationPromise
   const afterReloadExecutionResult = await getHtmlExecutionResult(page)
   const actual =
-    afterReloadExecutionResult.fileExecutionResultMap["./livereload.main.js"]
-      .namespace
+    afterReloadExecutionResult.fileExecutionResultMap[
+      "./dev_server_livereload.js"
+    ].namespace
   const expected = {
     default: 44,
   }

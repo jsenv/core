@@ -1,4 +1,4 @@
-import value from "./other-file.js"
+import value from "./other_file.js"
 
 console.log(value)
 
