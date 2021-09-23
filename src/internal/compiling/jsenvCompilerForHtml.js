@@ -20,6 +20,8 @@ import {
   getUniqueNameForInlineHtmlNode,
   removeHtmlNodeAttribute,
   setHtmlNodeText,
+  visitHtmlAst,
+  replaceHtmlNode,
 } from "./compileHtml.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
 
@@ -58,12 +60,19 @@ const compileHtmlFile = ({
 
   return {
     compile: async (htmlBeforeCompilation) => {
-      // we don't have to try/catch html parsing because:
-      // parsing html is fault tolerant (it does not throw any syntax error)
-      // invalid html markup is converted into some valid html
-      // in the worst cases the faulty html string special characters
-      // will be html encoded
+      // ideally we should try/catch html syntax error
       const htmlAst = parseHtmlString(htmlBeforeCompilation)
+
+      // transform <link type="modulepreload"> into <link type="preload">
+      if (moduleOutFormat !== "esmodule") {
+        visitHtmlAst(htmlAst, (htmlNode) => {
+          if (htmlNode.nodeName !== "link") return
+          const relAttribute = getHtmlNodeAttributeByName(htmlNode, "rel")
+          if (relAttribute.value !== "modulepreload") return
+          replaceHtmlNode(htmlNode, `<link rel="preload" as="script" />`)
+        })
+      }
+
       manipulateHtmlAst(htmlAst, {
         scriptInjections: [
           {
@@ -79,10 +88,6 @@ const compileHtmlFile = ({
             : []),
         ],
       })
-      // here we must convert "modulepreload" into "preload"
-      if (moduleOutFormat !== "esmodule") {
-      
-      }
 
       const { scripts } = parseHtmlAstRessources(htmlAst)
 
