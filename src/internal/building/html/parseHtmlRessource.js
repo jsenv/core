@@ -566,10 +566,8 @@ const linkHrefVisitor = (
       ressourceContentTypeExpected === "application/manifest+json",
     isJsModule,
   })
-  return ({ getUrlRelativeToImporter, getOriginalRessource }) => {
-    const linkRessource = linkReference.ressource
-    const originalRessource = getOriginalRessource(linkRessource)
-    const ressource = originalRessource || linkRessource
+  return ({ getUrlRelativeToImporter }) => {
+    const { ressource } = linkReference
 
     if (isRessourceHint) {
       if (isReferencedOnlyByRessourceHint(ressource)) {

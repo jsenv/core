@@ -31,7 +31,6 @@ const compileHtmlFile = ({
   // request,
 
   projectDirectoryUrl,
-  compileServerOrigin,
   outDirectoryRelativeUrl,
   originalFileUrl,
   compiledFileUrl,
@@ -65,12 +64,7 @@ const compileHtmlFile = ({
       const htmlAst = parseHtmlString(htmlBeforeCompilation)
 
       if (moduleOutFormat !== "esmodule") {
-        await mutateRessourceHints(htmlAst, {
-          projectDirectoryUrl,
-          compileServerOrigin,
-          outDirectoryRelativeUrl,
-          compiledFileUrl,
-        })
+        await mutateRessourceHints(htmlAst)
       }
 
       manipulateHtmlAst(htmlAst, {
@@ -269,19 +263,6 @@ const mutateRessourceHints = async (htmlAst) => {
   })
 
   const mutations = []
-  // const compiledFileRelativeUrl = urlToRelativeUrl(
-  //   compiledFileUrl,
-  //   projectDirectoryUrl,
-  // )
-  // const compiledFileServerUrl = resolveUrl(
-  //   compiledFileRelativeUrl,
-  //   compileServerOrigin,
-  // )
-  // const outDirectoryServerUrl = resolveUrl(
-  //   outDirectoryRelativeUrl,
-  //   compileServerOrigin,
-  // )
-
   await Promise.all(
     ressourceHints.map(async (ressourceHint) => {
       const hrefAttribute = getHtmlNodeAttributeByName(
@@ -318,26 +299,6 @@ const mutateRessourceHints = async (htmlAst) => {
         })
         return
       }
-
-      // const url = resolveUrl(href, compiledFileServerUrl)
-      // if (!urlIsInsideOf(url, outDirectoryServerUrl)) {
-      //   return
-      // }
-
-      // try {
-      //   const response = await fetchUrl(url)
-      //   const responseUrl = response.url
-      //   if (responseUrl === url) return
-
-      //   mutations.push(() => {
-      //     const newHref = urlIsInsideOf(responseUrl, compileServerOrigin)
-      //       ? `/${urlToRelativeUrl(responseUrl, compileServerOrigin)}`
-      //       : responseUrl
-      //     replaceHtmlNode(ressourceHint.htmlNode, `<link href="${newHref}" />`)
-      //   })
-      // } catch (e) {
-      //   return
-      // }
     }),
   )
   mutations.forEach((mutation) => mutation())
