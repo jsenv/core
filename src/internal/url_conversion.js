@@ -81,7 +81,7 @@ export const createUrlConverter = ({
 
   const asOriginalServerUrl = (url) => {
     const projectOriginalUrl = asOriginalUrl(url)
-    return asServerUrl(projectOriginalUrl)
+    return projectOriginalUrl ? asServerUrl(projectOriginalUrl) : null
   }
 
   // Url can
