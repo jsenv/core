@@ -22,7 +22,7 @@ const exploringServer = await startExploring({
 const { browser, pageLogs, pageErrors } = await openBrowserPage(
   `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
   {
-    // debug: true
+    // debug: true,
   },
 )
 

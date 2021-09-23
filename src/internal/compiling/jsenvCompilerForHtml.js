@@ -263,7 +263,7 @@ const mutateRessourceHints = async (
   visitHtmlAst(htmlAst, (htmlNode) => {
     if (htmlNode.nodeName !== "link") return
     const relAttribute = getHtmlNodeAttributeByName(htmlNode, "rel")
-    const rel = relAttribute.value || ""
+    const rel = relAttribute ? relAttribute.value : ""
     const isRessourceHint = [
       "preconnect",
       "dns-prefetch",
@@ -296,9 +296,15 @@ const mutateRessourceHints = async (
         ressourceHint.htmlNode,
         "href",
       )
-      const href = hrefAttribute.value || ""
+      const href = hrefAttribute ? hrefAttribute.value : ""
       if (!href) return
 
+      // as "script" -> as "fetch" because jsenv uses
+      // fetch to load ressources (see "fetchSource" in createBrowserRuntime.js)
+      const asAttribute = getHtmlNodeAttributeByName(
+        ressourceHint.htmlNode,
+        "as",
+      )
       // modulepreload -> preload
       if (ressourceHint.rel === "modulepreload") {
         mutations.push(() => {
@@ -307,20 +313,24 @@ const mutateRessourceHints = async (
             "rel",
           )
           relAttribute.value = "preload"
-        })
-      } else {
-        // as "script" -> as "fetch" because jsenv uses
-        // fetch to load ressources (see "fetchSource" in createBrowserRuntime.js)
-        const asAttribute = getHtmlNodeAttributeByName(
-          ressourceHint.htmlNode,
-          "as",
-        )
-        const as = asAttribute.value || ""
-        if (as === "script") {
-          mutations.push(() => {
-            asAttribute.value = "fetch"
+          if (asAttribute) {
+            asAttribute.value = "script"
+          } else {
+            ressourceHint.htmlNode.attrs.push({
+              name: "as",
+              value: "fetch",
+            })
+          }
+          ressourceHint.htmlNode.attrs.push({
+            name: "crossorigin",
+            value: "",
           })
-        }
+        })
+      }
+      if (asAttribute && asAttribute.value === "script") {
+        mutations.push(() => {
+          asAttribute.value = "fetch"
+        })
       }
 
       const url = resolveUrl(href, compiledFileServerUrl)
