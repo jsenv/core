@@ -128,7 +128,7 @@ const html = await response.text()
   }
   const expected = {
     srcAttribute: undefined,
-    text: `window.__jsenv__.executeFileUsingDynamicImport("./source_html_script_inline_module_script.js")`,
+    text: `window.__jsenv__.executeFileUsingDynamicImport("./module_script.js")`,
   }
   assert({ actual, expected })
 }
