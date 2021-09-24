@@ -16,16 +16,18 @@ import {
   urlToExtension,
   readFile,
   urlToBasename,
+  urlIsInsideOf,
 } from "@jsenv/filesystem"
-import { fetchUrl } from "@jsenv/server"
 import { moveImportMap } from "@jsenv/import-map"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import {
   jsenvToolbarHtmlFileInfo,
   jsenvBrowserSystemFileInfo,
   jsenvToolbarInjectorFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
@@ -38,6 +40,7 @@ import {
   setHtmlNodeText,
   getUniqueNameForInlineHtmlNode,
 } from "./compileHtml.js"
+import { projectDirectoryUrl } from "@jsenv/core/jsenv.config.js"
 
 export const createTransformHtmlSourceFileService = ({
   logger,
@@ -138,10 +141,17 @@ const transformHTMLSourceFile = async ({
     await inlineImportmapScripts({
       logger,
       htmlAst,
-      fileUrl,
+      htmlFileUrl: fileUrl,
       projectDirectoryUrl,
     })
   }
+
+  await forceInlineRessources({
+    logger,
+    htmlAst,
+    htmlFileUrl: fileUrl,
+    projectDirectoryUrl,
+  })
 
   const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
     jsenvBrowserSystemFileInfo.jsenvBuildUrl,
@@ -213,7 +223,7 @@ const transformHTMLSourceFile = async ({
   return stringifyHtmlAst(htmlAst)
 }
 
-const inlineImportmapScripts = async ({ logger, htmlAst, fileUrl }) => {
+const inlineImportmapScripts = async ({ logger, htmlAst, htmlFileUrl }) => {
   const { scripts } = parseHtmlAstRessources(htmlAst)
   const remoteImportmapScripts = scripts.filter((script) => {
     const typeAttribute = getHtmlNodeAttributeByName(script, "type")
@@ -230,7 +240,7 @@ const inlineImportmapScripts = async ({ logger, htmlAst, fileUrl }) => {
         remoteImportmapScript,
         "src",
       )
-      const importMapUrl = resolveUrl(srcAttribute.value, fileUrl)
+      const importMapUrl = resolveUrl(srcAttribute.value, htmlFileUrl)
       const importMapResponse = await fetchUrl(importMapUrl)
       if (importMapResponse.status !== 200) {
         logger.warn(
@@ -241,7 +251,7 @@ const inlineImportmapScripts = async ({ logger, htmlAst, fileUrl }) => {
             {
               "importmap script src": srcAttribute.value,
               "importmap url": importMapUrl,
-              "html url": fileUrl,
+              "html url": htmlFileUrl,
             },
           ),
         )
@@ -253,7 +263,7 @@ const inlineImportmapScripts = async ({ logger, htmlAst, fileUrl }) => {
       const importMapInlined = moveImportMap(
         importMapContent,
         importMapUrl,
-        fileUrl,
+        htmlFileUrl,
       )
 
       replaceHtmlNode(
@@ -269,4 +279,98 @@ const inlineImportmapScripts = async ({ logger, htmlAst, fileUrl }) => {
       )
     }),
   )
+}
+
+const forceInlineRessources = async ({ htmlAst, htmlFileUrl }) => {
+  const { scripts, links, imgs } = parseHtmlAstRessources(htmlAst)
+
+  const inlineOperations = []
+  scripts.forEach((script) => {
+    const forceInlineAttribute = getJsenvForceInlineAttribute(script)
+    if (!forceInlineAttribute) {
+      return
+    }
+    const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+    const src = srcAttribute ? srcAttribute.value : ""
+    if (!src) {
+      return
+    }
+    inlineOperations.push({
+      specifier: src,
+      mutateHtml: async (response) => {
+        replaceHtmlNode(script, `<script>${await response.text()}</script>`, {
+          attributesToIgnore: ["src"],
+        })
+      },
+    })
+  })
+  links.forEach((link) => {
+    const forceInlineAttribute = getJsenvForceInlineAttribute(link)
+    if (!forceInlineAttribute) {
+      return
+    }
+    const relAttribute = getHtmlNodeAttributeByName(link, "rel")
+    const rel = relAttribute ? relAttribute.value : ""
+    if (rel !== "stylesheet") {
+      return
+    }
+    const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
+    const href = hrefAttribute ? hrefAttribute.value : ""
+    if (!href) {
+      return
+    }
+    inlineOperations.push({
+      specifier: href,
+      mutateHtml: async (response) => {
+        replaceHtmlNode(link, `<style>${await response.text()}</style>`, {
+          attributesToIgnore: ["rel", "href"],
+        })
+      },
+    })
+  })
+  imgs.forEach((img) => {
+    const forceInlineAttribute = getJsenvForceInlineAttribute(img)
+    if (!forceInlineAttribute) {
+      return
+    }
+    const srcAttribute = getHtmlNodeAttributeByName(img, "src")
+    const src = srcAttribute ? srcAttribute.value : ""
+    if (!src) {
+      return
+    }
+    inlineOperations.push({
+      specifier: src,
+      mutateHtml: async (response) => {
+        const responseArrayBuffer = await response.arrayBuffer()
+        const responseAsBase64 = stringifyDataUrl({
+          data: responseArrayBuffer,
+          base64Flag: true,
+          mediaType: response.headers["content-type"],
+        })
+        replaceHtmlNode(img, `<img src=${responseAsBase64} />`)
+      },
+    })
+  })
+
+  await Promise.all(
+    inlineOperations.map(async (inlineOperation) => {
+      const url = resolveUrl(inlineOperation.specifier, htmlFileUrl)
+      if (!urlIsInsideOf(url, projectDirectoryUrl)) {
+        return
+      }
+      const response = await fetchUrl(url)
+      if (response.status !== 200) {
+        return
+      }
+      await inlineOperation.mutateHtml(response)
+    }),
+  )
+}
+
+const getJsenvForceInlineAttribute = (htmlNode) => {
+  const jsenvForceInlineAttribute = getHtmlNodeAttributeByName(
+    htmlNode,
+    "data-jsenv-force-inline",
+  )
+  return jsenvForceInlineAttribute
 }
