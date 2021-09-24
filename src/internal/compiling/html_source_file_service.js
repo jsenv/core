@@ -40,7 +40,6 @@ import {
   setHtmlNodeText,
   getUniqueNameForInlineHtmlNode,
 } from "./compileHtml.js"
-import { projectDirectoryUrl } from "@jsenv/core/jsenv.config.js"
 
 export const createTransformHtmlSourceFileService = ({
   logger,
@@ -281,7 +280,11 @@ const inlineImportmapScripts = async ({ logger, htmlAst, htmlFileUrl }) => {
   )
 }
 
-const forceInlineRessources = async ({ htmlAst, htmlFileUrl }) => {
+const forceInlineRessources = async ({
+  htmlAst,
+  htmlFileUrl,
+  projectDirectoryUrl,
+}) => {
   const { scripts, links, imgs } = parseHtmlAstRessources(htmlAst)
 
   const inlineOperations = []
