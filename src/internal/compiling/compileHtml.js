@@ -450,7 +450,7 @@ export const getUniqueNameForInlineHtmlNode = (node, nodes, pattern) => {
         return idAttribute.value
       }
 
-      const { line, column } = getHtmlNodeLocation(node)
+      const { line, column } = getHtmlNodeLocation(node) || {}
       const lineTaken = nodes.some((nodeCandidate) => {
         if (nodeCandidate === node) return false
         const htmlNodeLocation = getHtmlNodeLocation(nodeCandidate)

@@ -145,13 +145,6 @@ const transformHTMLSourceFile = async ({
     })
   }
 
-  await forceInlineRessources({
-    logger,
-    htmlAst,
-    htmlFileUrl: fileUrl,
-    projectDirectoryUrl,
-  })
-
   const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
     jsenvBrowserSystemFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
@@ -218,6 +211,13 @@ const transformHTMLSourceFile = async ({
       }
     })
   }
+
+  await forceInlineRessources({
+    logger,
+    htmlAst,
+    htmlFileUrl: fileUrl,
+    projectDirectoryUrl,
+  })
 
   return stringifyHtmlAst(htmlAst)
 }
