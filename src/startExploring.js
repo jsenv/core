@@ -43,6 +43,7 @@ export const startExploring = async ({
   inlineImportMapIntoHTML = true,
   keepProcessAlive = true,
 
+  babelPluginMap,
   runtimeSupportDuringDev = jsenvRuntimeSupportDuringDev,
   compileServerLogLevel,
   compileServerCanReadFromFilesystem,
@@ -113,6 +114,7 @@ export const startExploring = async ({
       compileServerProtocol,
       compileServerCertificate,
       compileServerPrivateKey,
+      babelPluginMap,
       runtimeSupport: runtimeSupportDuringDev,
       livereloadWatchConfig,
     })
