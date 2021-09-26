@@ -586,6 +586,10 @@ building ${entryFileRelativeUrls.length} entry files...`)
       return asRollupUrl(importUrl)
     },
 
+    // TODO: when code is using new URL() pattern
+    // the code after build is currently returning a string instead of an url object
+    // can we always return an url object because resolveFileUrl is always called
+    // by this pattern?
     resolveFileUrl: ({ referenceId, fileName }) => {
       const ressourceFound = ressourceBuilder.findRessource((ressource) => {
         return ressource.rollupReferenceId === referenceId
@@ -815,14 +819,8 @@ building ${entryFileRelativeUrls.length} entry files...`)
         jsChunks[fileName] = fileCopy
       })
       await ensureTopLevelAwaitTranspilationIfNeeded({
-        jsChunks,
         format,
-        babelPluginMap,
         transformTopLevelAwait,
-        projectDirectoryUrl,
-        asProjectUrl,
-        minify,
-        minifyJsOptions,
       })
 
       const jsModuleBuild = {}
@@ -1170,62 +1168,23 @@ building ${entryFileRelativeUrls.length} entry files...`)
 }
 
 const ensureTopLevelAwaitTranspilationIfNeeded = async ({
-  jsChunks,
   format,
   transformTopLevelAwait,
-  babelPluginMap,
-  projectDirectoryUrl,
-  asProjectUrl,
-  minify,
-  minifyJsOptions,
 }) => {
   if (!transformTopLevelAwait) {
     return
   }
 
-  if (format !== "systemjs") {
+  if (format === "esmodule") {
     // transform-async-to-promises won't be able to transform top level await
     // for "esmodule", so it would be useless
     return
   }
 
-  // ideally we would do that only if top level await was used
-  // this is not something we know at this stage
-  await Promise.all(
-    Object.keys(jsChunks).map(async (fileName) => {
-      const file = jsChunks[fileName]
-
-      let { code, map } = await transformJs({
-        projectDirectoryUrl,
-        code: file.code,
-        map: file.map,
-        url: asProjectUrl(file.url), // transformJs expect a file:// url
-        babelPluginMap,
-        // the top level await transformation should not need any new babel helper
-        // if so let them be inlined
-        babelHelpersInjectionAsImport: false,
-        transformGenerator: false, // assume it was done
-        transformGlobalThis: false,
-        // moduleOutFormat: format, // we are compiling for rollup output must be "esmodule"
-      })
-
-      if (minify) {
-        const result = await minifyJs(code, file.fileName, {
-          sourceMap: {
-            ...(map ? { content: JSON.stringify(map) } : {}),
-            asObject: true,
-          },
-          ...(format === "global" ? { toplevel: false } : { toplevel: true }),
-          ...minifyJsOptions,
-        })
-        code = result.code
-        map = result.map
-      }
-
-      file.code = code
-      file.map = map
-    }),
-  )
+  if (format === "systemjs") {
+    // top level await is an async function for systemjs
+    return
+  }
 }
 
 const prepareEntryPoints = async (
