@@ -16,23 +16,35 @@ export const displayErrorInDocument = (error) => {
 
   const css = `
     .jsenv-console {
-      position: static;
-      left: 0;
+      background: rgba(0, 0, 0, 0.8);
+      position: absolute;
       top: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center
       z-index: 1000;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 1em;
+    }
+
+    .jsenv-console h1 {
+      color: red;
+      display: flex;
+      align-items: center;
     }
 
     #button-close-jsenv-console {
-      position: absolute;
-      right: 8px;
+      margin-left: 10px;
     }
 
     .jsenv-console pre {
       overflow: auto;
+      max-width: 70em;
       /* avoid scrollbar to hide the text behind it */
-      padding-top: 20px;
-      padding-right: 20px;
-      padding-bottom: 20px;
+      padding: 20px;
     }
 
     .jsenv-console pre[data-theme="dark"] {
