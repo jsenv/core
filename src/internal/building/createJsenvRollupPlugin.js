@@ -429,35 +429,49 @@ building ${entryFileRelativeUrls.length} entry files...`)
             // isRessourceHint,
             ressourceImporter,
           }) => {
-            const isHtmlEntryPoint =
-              ressourceImporter.isEntryPoint && !ressourceImporter.isJsModule
-            const isHtmlEntryPointReferencingAJsModule =
-              isHtmlEntryPoint && isJsModule
-
-            // when html references a js we must wait for the compiled version of js
-            if (isHtmlEntryPointReferencingAJsModule) {
-              const htmlCompiledUrl = asCompiledServerUrl(ressourceImporter.url)
+            // Entry point is not a JS module and references a js module
+            // -> html referencing js
+            // we must wait for rollup build to be done to generate the html asset
+            if (
+              ressourceImporter.isEntryPoint &&
+              !ressourceImporter.isJsModule &&
+              isJsModule
+            ) {
+              const importerCompiledUrl = asCompiledServerUrl(
+                ressourceImporter.url,
+              )
               const jsModuleUrl = resolveUrl(
                 ressourceSpecifier,
-                htmlCompiledUrl,
+                importerCompiledUrl,
               )
               return jsModuleUrl
             }
 
             let ressourceUrl
             if (
-              isHtmlEntryPoint &&
-              // parse and handle the untransformed importmap, not the one from compile server
-              !ressourceSpecifier.endsWith(".importmap")
+              ressourceImporter.isEntryPoint &&
+              !ressourceImporter.isJsModule
             ) {
-              const htmlCompiledUrl = asCompiledServerUrl(ressourceImporter.url)
-              ressourceUrl = resolveUrl(ressourceSpecifier, htmlCompiledUrl)
+              // Entry point (likely html, unlikely css) is referecing a ressource
+              // when importmap, parse the original importmap ressource
+              if (ressourceSpecifier.endsWith(".importmap")) {
+                ressourceUrl = resolveUrl(
+                  ressourceSpecifier,
+                  ressourceImporter.url,
+                )
+              } else {
+                const importerCompiled = asCompiledServerUrl(
+                  ressourceImporter.url,
+                )
+                ressourceUrl = resolveUrl(ressourceSpecifier, importerCompiled)
+              }
             } else {
               ressourceUrl = resolveUrl(
                 ressourceSpecifier,
                 ressourceImporter.url,
               )
             }
+
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl
             // and ignore them and console.info/debug about remote url (https, http, ...)
@@ -508,16 +522,19 @@ building ${entryFileRelativeUrls.length} entry files...`)
               return
             }
 
-            if (entryContentType !== "text/html") {
+            if (
+              entryContentType !== "text/html" &&
+              entryContentType !== "text/css"
+            ) {
               logger.warn(
-                `Unusual content type for ${entryProjectRelativeUrl} ${entryContentType} will be handled as text/html`,
+                `Unusual content type for entry point, got "${entryContentType}" for ${entryProjectRelativeUrl}`,
               )
             }
             const entryUrl = resolveUrl(
               entryProjectRelativeUrl,
               compileServerOrigin,
             )
-            await ressourceBuilder.createReferenceForHTMLEntry({
+            await ressourceBuilder.createReferenceForEntryPoint({
               entryContentType,
               entryUrl,
               entryBuffer,
@@ -726,10 +743,17 @@ building ${entryFileRelativeUrls.length} entry files...`)
         }
         return id
       }
-      outputOptions.entryFileNames = `[name]${outputExtension}`
-      outputOptions.chunkFileNames = useImportMapToMaximizeCacheReuse
-        ? `[name]${outputExtension}`
-        : `[name]-[hash]${outputExtension}`
+      outputOptions.entryFileNames = () => {
+        return `[name]${outputExtension}`
+      }
+      outputOptions.chunkFileNames = () => {
+        // const originalUrl = asOriginalUrl(chunkInfo.facadeModuleId)
+        // const basename = urlToBasename(originalUrl)
+        if (useImportMapToMaximizeCacheReuse) {
+          return `[name]${outputExtension}`
+        }
+        return `[name]-[hash]${outputExtension}`
+      }
 
       // rollup does not expects to have http dependency in the mix: fix them
       outputOptions.sourcemapPathTransform = (relativePath, sourcemapPath) => {
