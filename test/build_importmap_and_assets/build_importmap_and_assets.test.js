@@ -93,7 +93,8 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
   const actual = namespace
   const expected = {
-    urlFromImportMetaNotation: resolveUrl(
+    imgUrlIsInstanceOfUrl: true,
+    imgUrlString: resolveUrl(
       `dist/esmodule/${imgBuildRelativeUrl}`,
       serverOrigin,
     ),
