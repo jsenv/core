@@ -29,7 +29,7 @@ export const transformImportMetaUrlReferences = async ({
       const response = await fetch(ressourceUrl, url)
       const bufferBeforeBuild = Buffer.from(await response.arrayBuffer())
 
-      const reference = await ressourceBuilder.createReferenceFoundInJs({
+      const reference = await ressourceBuilder.createReferenceFoundInJsModule({
         jsUrl: url,
         ...(node.loc
           ? {

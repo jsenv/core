@@ -23,7 +23,6 @@ const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.html`
-
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -33,7 +32,6 @@ const { buildMappings } = await buildProject({
   },
   // logLevel: "debug",
 })
-
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
