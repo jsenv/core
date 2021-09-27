@@ -407,16 +407,26 @@ const importmapScriptSrcVisitor = (
     if (
       // for esmodule we always inline the importmap
       // as it's the only thing supported by Chrome
+      // window.__resolveImportUrl__ also expects importmap to be inlined
       format === "esmodule" ||
+      // for systemjs we inline as well to save http request for the scenario
+      // where many ressources are inlined in the HTML file
+      format === "systemjs" ||
       shouldInline({ ressource, htmlNode: script })
     ) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       const { bufferAfterBuild } = ressource
 
-      const jsString = String(bufferAfterBuild)
-
-      setHtmlNodeText(script, jsString)
+      const importmapString = String(bufferAfterBuild)
+      replaceHtmlNode(
+        script,
+        `<script>
+${importmapString}</script>`,
+        {
+          attributesToIgnore: ["src"],
+        },
+      )
       importmapReference.inlinedCallback()
       return
     }
