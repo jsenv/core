@@ -25,7 +25,6 @@ const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.js`
-
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -34,7 +33,6 @@ const { buildMappings } = await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
   },
 })
-
 const iconBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}icon.svg`]
 const iconBuildUrl = resolveUrl(
@@ -51,7 +49,8 @@ await assertFilePresence(iconBuildUrl)
   })
   const actual = namespace
   const expected = {
-    default: String(
+    svgUrlInstanceOfUrl: true,
+    svgUrlString: String(
       new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, serverOrigin),
     ),
   }
@@ -65,7 +64,8 @@ await assertFilePresence(iconBuildUrl)
   })
   const actual = namespace
   const expected = {
-    default: String(
+    svgUrlInstanceOfUrl: true,
+    svgUrlString: String(
       new URL(`./dist/esmodule/${iconBuildRelativeUrl}`, import.meta.url),
     ),
   }

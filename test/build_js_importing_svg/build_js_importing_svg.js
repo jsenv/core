@@ -1,3 +1,5 @@
 import svgUrl from "./icon.svg"
 
-export default svgUrl
+export const svgUrlInstanceOfUrl = svgUrl instanceof URL
+
+export const svgUrlString = String(svgUrl)

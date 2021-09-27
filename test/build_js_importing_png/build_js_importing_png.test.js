@@ -28,7 +28,6 @@ const mainFilename = `${testDirectoryname}.js`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
 }
-
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "debug",
@@ -55,7 +54,8 @@ await buildProject({
   })
   const actual = namespace
   const expected = {
-    default: String(
+    pngUrlInstanceOfUrl: true,
+    pngUrlString: String(
       new URL("./dist/esmodule/assets/jsenv-25e95a00.png", serverOrigin),
     ),
   }
@@ -69,7 +69,8 @@ await buildProject({
   })
   const actual = namespace
   const expected = {
-    default: String(
+    pngUrlInstanceOfUrl: true,
+    pngUrlString: String(
       new URL("./dist/esmodule/assets/jsenv-25e95a00.png", import.meta.url),
     ),
   }

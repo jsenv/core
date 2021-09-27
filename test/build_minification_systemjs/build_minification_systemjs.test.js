@@ -16,7 +16,6 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${testDirectoryname}.js`]: "./main.js",
 }
-
 const { buildManifest, rollupBuild } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -25,9 +24,8 @@ const { buildManifest, rollupBuild } = await buildProject({
   minify: true,
 })
 
-{
-  const actual = rollupBuild[buildManifest["main.js"]].code.trim()
-  const expected = `System.register([],(function(e){"use strict";return{execute:function(){e("default",42)}}}));
+const actual = rollupBuild[buildManifest["main.js"]].code.trim()
+const expected = `System.register([],(function(e){"use strict";return{execute:function(){e("default",42)}}}));
+
 //# sourceMappingURL=main.js.map`
-  assert({ actual, expected })
-}
+assert({ actual, expected })

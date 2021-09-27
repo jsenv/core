@@ -48,7 +48,11 @@ const { buildMappings } = await buildProject({
 
   const actual = namespace
   const expected = {
-    cssUrl: resolveUrl(`/dist/systemjs/${cssBuildRelativeUrl}`, serverOrigin),
+    cssUrlIstanceOfUrl: true,
+    cssUrlString: resolveUrl(
+      `/dist/systemjs/${cssBuildRelativeUrl}`,
+      serverOrigin,
+    ),
   }
   assert({ actual, expected })
 }

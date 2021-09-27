@@ -29,21 +29,19 @@ const { buildMappings } = await buildProject({
 })
 const indexFileBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}index.js`]
+const { namespace, serverOrigin } = await browserImportEsModuleBuild({
+  ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
+  testDirectoryRelativeUrl,
+  jsFileRelativeUrl: `./${indexFileBuildRelativeUrl}`,
+  // debug: true,
+})
+const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
 
-{
-  const { namespace, serverOrigin } = await browserImportEsModuleBuild({
-    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
-    jsFileRelativeUrl: `./${indexFileBuildRelativeUrl}`,
-    // debug: true,
-  })
-  const fileBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}file.js`]
-  const actual = namespace
-  const expected = {
-    jsUrl: String(
-      new URL(`./dist/esmodule/${fileBuildRelativeUrl}`, serverOrigin),
-    ),
-  }
-  assert({ actual, expected })
+const actual = namespace
+const expected = {
+  jsUrlInstanceOfUrl: true,
+  jsUrlString: String(
+    new URL(`./dist/esmodule/${fileBuildRelativeUrl}`, serverOrigin),
+  ),
 }
+assert({ actual, expected })

@@ -52,7 +52,7 @@ await buildProject({
   }
   const expected = {
     rel: "preload",
-    href: "main-a6ec8fb0.js",
+    href: "main-2f012c65.js",
   }
   assert({ actual, expected })
 }

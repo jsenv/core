@@ -24,7 +24,6 @@ const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
     ...START_COMPILE_SERVER_TEST_PARAMS,
@@ -48,7 +47,8 @@ const actual = await launchAndExecute({
 const expected = {
   status: "completed",
   namespace: {
-    default: `${jsenvCoreDirectoryUrl}${fileRelativeUrl}`,
+    isInstanceOfUrl: false,
+    urlString: `${jsenvCoreDirectoryUrl}${fileRelativeUrl}`,
   },
 }
 assert({ actual, expected })

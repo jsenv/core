@@ -22,25 +22,25 @@ const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${testDirectoryname}.js`]: "./main.js",
+  [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
 }
-
-await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
 })
+const jsFileBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}import_meta_url.js`]
+const { namespace, serverOrigin } = await browserImportSystemJsBuild({
+  ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
+  testDirectoryRelativeUrl,
+  mainRelativeUrl: `./${jsFileBuildRelativeUrl}`,
+})
 
-{
-  const { namespace, serverOrigin } = await browserImportSystemJsBuild({
-    ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
-    htmlFileRelativeUrl: "./index.html",
-  })
-  const actual = namespace
-  const expected = {
-    default: `${serverOrigin}/dist/systemjs/main.js`,
-  }
-  assert({ actual, expected })
+const actual = namespace
+const expected = {
+  isInstanceOfUrl: false,
+  urlString: `${serverOrigin}/dist/systemjs/${jsFileBuildRelativeUrl}`,
 }
+assert({ actual, expected })

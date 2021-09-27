@@ -604,21 +604,21 @@ building ${entryFileRelativeUrls.length} entry files...`)
             buildRelativeUrlToFileName(buildRelativeUrl)
           return `window.__resolveImportUrl__("./${buildRelativeUrlWithoutVersion}", import.meta.url)`
         }
-        return `new URL("${buildRelativeUrl}", import.meta.url).href`
+        return `new URL("${buildRelativeUrl}", import.meta.url)`
       }
       if (format === "systemjs") {
         if (useImportMapToMaximizeCacheReuse && urlVersioning) {
           const buildRelativeUrlWithoutVersion =
             buildRelativeUrlToFileName(buildRelativeUrl)
-          return `System.resolve("./${buildRelativeUrlWithoutVersion}", module.meta.url)`
+          return `new URL(System.resolve("./${buildRelativeUrlWithoutVersion}", module.meta.url))`
         }
-        return `System.resolve("./${buildRelativeUrl}", module.meta.url)`
+        return `new URL(System.resolve("./${buildRelativeUrl}", module.meta.url))`
       }
       if (format === "global") {
-        return `new URL("${buildRelativeUrl}", document.currentScript && document.currentScript.src || document.baseURI).href`
+        return `new URL("${buildRelativeUrl}", document.currentScript && document.currentScript.src || document.baseURI)`
       }
       if (format === "commonjs") {
-        return `new URL("${buildRelativeUrl}", "file:///" + __filename.replace(/\\/g, "/")).href`
+        return `new URL("${buildRelativeUrl}", "file:///" + __filename.replace(/\\/g, "/"))`
       }
       return null
     },

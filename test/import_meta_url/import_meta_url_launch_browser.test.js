@@ -61,7 +61,8 @@ await launchBrowsers(
         [`./${testDirectoryBasename}.js`]: {
           status: "completed",
           namespace: {
-            default:
+            isInstanceOfUrl: false,
+            urlString:
               launchBrowser === launchChromium
                 ? `${compileServerOrigin}/${fileRelativeUrl}`
                 : `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`,
