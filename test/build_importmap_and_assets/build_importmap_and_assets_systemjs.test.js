@@ -91,13 +91,8 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
   const actual = namespace
   const expected = {
-    // We MUST NOT introduce a build only importmap awareness
-    // otherwise it would introduce a difference between dev/after build.
-    // As new URL(relativeUrl, import.meta.url) is a standard url resolution where
-    // importmap does not apply. Dev does not change that, and files after build neither.
-    // That being said. when output format is systemjs we still use importmap to avoid
-    // having to invalidate the js because an asset changes.
-    urlFromImportMetaNotation: resolveUrl(
+    imgUrlIsInstanceOfUrl: true,
+    imgUrlString: resolveUrl(
       `dist/systemjs/${imgBuildRelativeUrl}`,
       serverOrigin,
     ),

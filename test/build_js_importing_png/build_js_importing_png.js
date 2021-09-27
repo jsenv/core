@@ -1,3 +1,5 @@
 import pngUrl from "./jsenv.png"
 
-export default pngUrl
+export const pngUrlInstanceOfUrl = pngUrl instanceof URL
+
+export const pngUrlString = String(pngUrl)
