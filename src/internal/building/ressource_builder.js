@@ -305,10 +305,13 @@ export const createRessourceBuilder = (
     }
 
     reference.ressource = ressource
-    if (existingRessource && fromRollup) {
+    if (fromRollup && ressourceImporter.isEntryPoint) {
       // do not add that reference, it's already know and would duplicate the html referencing a js file
+      // but do apply its effects
+      ressource.applyReferenceEffects(reference, { isJsModule })
     } else {
-      ressource.addReference(reference, { isJsModule })
+      ressource.references.push(reference)
+      ressource.applyReferenceEffects(reference, { isJsModule })
     }
 
     return reference
@@ -758,9 +761,7 @@ export const createRessourceBuilder = (
       return effects
     }
 
-    const addReference = (reference, infoFromReference) => {
-      ressource.references.push(reference)
-
+    const applyReferenceEffects = (reference, infoFromReference) => {
       const referenceEffects = onReference(reference, infoFromReference)
 
       logger.debug(
@@ -773,7 +774,7 @@ export const createRessourceBuilder = (
     }
 
     Object.assign(ressource, {
-      addReference,
+      applyReferenceEffects,
       getBufferAvailablePromise,
       getDependenciesAvailablePromise,
       getReadyPromise,
