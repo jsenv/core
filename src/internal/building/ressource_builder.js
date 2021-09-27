@@ -30,7 +30,6 @@ export const createRessourceBuilder = (
     buildDirectoryRelativeUrl,
 
     asOriginalServerUrl,
-    urlToCompiledServerUrl,
     urlToHumanUrl,
 
     loadUrl = () => null,
@@ -46,7 +45,7 @@ export const createRessourceBuilder = (
 
   const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, baseUrl)
 
-  const createReferenceForHTMLEntry = async ({
+  const createReferenceForEntryPoint = async ({
     entryContentType,
     entryUrl,
     entryBuffer,
@@ -710,12 +709,7 @@ export const createRessourceBuilder = (
           jsModuleSource: String(bufferBeforeBuild),
         })
 
-        const basenameUrl = resolveUrl(urlToBasename(jsModuleUrl), jsModuleUrl)
-        const importerUrl = urlToCompiledServerUrl(reference.referenceUrl)
-        const name = urlToRelativeUrl(basenameUrl, importerUrl).replace(
-          new RegExp("../", "g"),
-          "",
-        )
+        const name = urlToBasename(jsModuleUrl)
         const rollupReferenceId = emitChunk({
           id: jsModuleUrl,
           name,
@@ -848,9 +842,9 @@ ${showSourceLocation(referenceSourceAsString, {
   }
 
   return {
-    createReference,
-    createReferenceForHTMLEntry,
+    createReferenceForEntryPoint,
     createReferenceFoundInJs,
+    createReference,
 
     buildEnd,
     getAllEntryPointsEmittedPromise,
@@ -957,7 +951,7 @@ const referenceShouldBeIgnoredWarning = ({
     return false
   }
 
-  // html can reference js
+  // entry point can reference js (html)
   if (ressourceImporter.isEntryPoint) {
     return false
   }

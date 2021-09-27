@@ -1,9 +1,10 @@
-import { fork } from "child_process"
+import { fork } from "node:child_process"
 import {
   resolveDirectoryUrl,
   resolveUrl,
   urlToFileSystemPath,
 } from "@jsenv/filesystem"
+
 import { createChildProcessOptions } from "@jsenv/core/src/internal/node-launcher/createChildProcessOptions.js"
 import { execArgvFromProcessOptions } from "@jsenv/core/src/internal/node-launcher/processOptions.js"
 

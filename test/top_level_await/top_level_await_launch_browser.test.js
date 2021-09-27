@@ -32,7 +32,12 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   })
 
 await launchBrowsers(
-  [launchChromium, launchFirefox, launchWebkit],
+  [
+    // comment to force-multiline
+    launchChromium,
+    launchFirefox,
+    launchWebkit,
+  ],
   async (launchBrowser) => {
     const actual = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
@@ -51,7 +56,7 @@ await launchBrowsers(
     const expected = {
       status: "completed",
       namespace: {
-        "./top-level-await-launch-browser.js": {
+        "./top_level_await.js": {
           status: "completed",
           namespace: {
             default: 42,
