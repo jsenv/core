@@ -1104,17 +1104,18 @@ building ${entryFileRelativeUrls.length} entry files...`)
       }
     }
 
-    // In a browser such import would throw
-    // it's not standard but we'll return the file content as string
-    // for now
-    const moduleResponseBodyAsBuffer = Buffer.from(
-      await moduleResponse.arrayBuffer(),
+    const urlRelativeToImporter = urlToRelativeUrl(moduleUrl, importerUrl)
+    const jsenvPluginError = new Error(
+      `"${responseContentType}" is not a valid type for JavaScript module
+--- js module url ---
+${asOriginalUrl(moduleUrl)}
+--- importer url ---
+${asOriginalUrl(importerUrl)}
+--- suggestion ---
+non-js ressources can be used with new URL("${urlRelativeToImporter}", import.meta.url)`,
     )
-    return {
-      ...commonData,
-      contentRaw: String(moduleResponseBodyAsBuffer),
-      content: String(moduleResponseBodyAsBuffer),
-    }
+    storeLatestJsenvPluginError(jsenvPluginError)
+    throw jsenvPluginError
   }
 
   const jsenvFetchUrl = async (url, importer) => {

@@ -2,17 +2,12 @@ import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  resolveUrl,
   urlToBasename,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
-import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
+import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -26,33 +21,25 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${testDirectoryname}.js`]: "./main.js",
 }
 
-const { buildMappings } = await buildProject({
-  ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  useImportMapToMaximizeCacheReuse: false,
-  jsenvDirectoryRelativeUrl,
-  buildDirectoryRelativeUrl,
-  entryPointMap,
-  // logLevel: "debug",
-  // minify: true,
-})
-
-{
-  const cssBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}style.css`]
-  const { namespace, serverOrigin } = await browserImportSystemJsBuild({
-    ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
-    htmlFileRelativeUrl: "./index.html",
-    // debug: true,
+try {
+  await buildProject({
+    ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
+    useImportMapToMaximizeCacheReuse: false,
+    jsenvDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
+    entryPointMap,
+    // logLevel: "debug",
+    // minify: true,
   })
-
-  const actual = namespace
-  const expected = {
-    cssUrlIstanceOfUrl: true,
-    cssUrlString: resolveUrl(
-      `/dist/systemjs/${cssBuildRelativeUrl}`,
-      serverOrigin,
-    ),
-  }
+  throw new Error("should throw")
+} catch (e) {
+  const actual = e.message
+  const expected = `"text/css" is not a valid type for JavaScript module
+--- js module url ---
+${testDirectoryUrl}style.css
+--- importer url ---
+${testDirectoryUrl}${testDirectoryname}.js
+--- suggestion ---
+non-js ressources can be used with new URL("style.css", import.meta.url)`
   assert({ actual, expected })
 }
