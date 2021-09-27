@@ -36,6 +36,7 @@ import {
   parseSrcset,
   stringifySrcset,
   getHtmlNodeLocation,
+  removeHtmlNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import {
   getJavaScriptSourceMappingUrl,
@@ -590,6 +591,10 @@ const linkHrefVisitor = (
         // we could remove the HTML node but better keep it untouched and let user decide what to do
         return
       }
+
+      ressource.inlinedCallbacks.push(() => {
+        removeHtmlNode(link)
+      })
     }
 
     if (ressource.isExternal) {

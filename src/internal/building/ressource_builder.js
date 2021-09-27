@@ -51,9 +51,8 @@ export const createRessourceBuilder = (
     entryBuffer,
     entryBuildRelativeUrl,
   }) => {
-    // we don't really know where this reference to that asset file comes from
-    // we could almost say it's from the script calling this function
-    // so we could analyse stack trace here to put this function caller
+    // The entry point is conceptually referenced by code passing "entryPointMap"
+    // to buildProject. So we analyse stack trace to put this function caller
     // as the reference to this ressource file
     const callerLocation = getCallerLocation()
     const entryReference = createReference({
@@ -109,7 +108,14 @@ export const createRessourceBuilder = (
     )
   }
 
-  const createReferenceFoundInJs = async ({
+  const createReferenceFoundByRollup = async (params) => {
+    return createReference({
+      fromRollup: true,
+      ...params,
+    })
+  }
+
+  const createReferenceFoundInJsModule = async ({
     jsUrl,
     jsLine,
     jsColumn,
@@ -147,12 +153,6 @@ export const createRessourceBuilder = (
 
   const ressourceMap = {}
   const ressourceRedirectionMap = {}
-  // ok il faudrait faire un truc dans ce genre:
-  // lorsqu'on a un preload, on fait une promesse
-  // pour le moment ou la ressource est référencé par un autre truc
-  // ensuite dans le callback lorsque le build rollup est fini
-  // la on considere que ça n'a jamais été référencé, on resoud la promesse
-  // malgré tout
   const createReference = ({
     referenceShouldNotEmitChunk,
     isRessourceHint,
@@ -169,13 +169,29 @@ export const createRessourceBuilder = (
     isInline,
     fileNamePattern,
     urlVersioningDisabled,
+
+    fromRollup,
   }) => {
-    const importerUrl = referenceUrl
-    const ressourceImporter = ressourceFromUrl(importerUrl) || {
-      url: importerUrl,
-      isEntryPoint: false, // maybe
-      isJsModule: true,
-      bufferAfterBuild: "",
+    const existingRessourceForReference = ressourceFromUrl(referenceUrl)
+    let ressourceImporter
+    if (existingRessourceForReference) {
+      ressourceImporter = existingRessourceForReference
+    } else {
+      const referenceOriginalUrl = asOriginalServerUrl(referenceUrl)
+      if (referenceOriginalUrl) {
+        ressourceImporter = ressourceFromUrl(referenceOriginalUrl)
+      }
+      if (!ressourceImporter) {
+        // happens only for entry points?
+        // in that case the importer is theoric
+        // see "getCallerLocation()" in createReferenceForEntryPoint
+        ressourceImporter = {
+          url: referenceUrl,
+          isEntryPoint: false,
+          isJsModule: true,
+          bufferAfterBuild: "",
+        }
+      }
     }
 
     const shouldBeIgnoredWarning = referenceShouldBeIgnoredWarning({
@@ -240,26 +256,6 @@ export const createRessourceBuilder = (
       }
     }
 
-    const reference = {
-      referenceShouldNotEmitChunk,
-      isRessourceHint,
-      ressourceContentTypeExpected,
-      referenceUrl,
-      referenceColumn,
-      referenceLine,
-
-      isInline,
-      inlinedCallback: () => {
-        reference.isInline = true
-        const allReferenceAreInline = ressource.references.every(
-          (reference) => reference.isInline,
-        )
-        if (allReferenceAreInline) {
-          ressource.isInline = true
-        }
-      },
-    }
-
     const existingRessource = ressourceFromUrl(ressourceUrl)
     let ressource
     if (existingRessource) {
@@ -267,7 +263,7 @@ export const createRessourceBuilder = (
       // allow to update the bufferBeforeBuild on existingRessource
       // this happens when rollup loads a js file and communicates to this code
       // what was loaded
-      if (typeof bufferBeforeBuild !== "undefined") {
+      if (fromRollup) {
         ressource.bufferBeforeBuild = bufferBeforeBuild
         ressource.contentType = contentType
       }
@@ -286,8 +282,34 @@ export const createRessourceBuilder = (
       })
       ressourceMap[ressourceUrl] = ressource
     }
+
+    const reference = {
+      referenceShouldNotEmitChunk,
+      isRessourceHint,
+      ressourceContentTypeExpected,
+      referenceUrl,
+      referenceColumn,
+      referenceLine,
+
+      isInline,
+      inlinedCallback: () => {
+        reference.isInline = true
+        const allStrongReferenceAreInline = ressource.references.every(
+          (reference) => reference.isRessourceHint || reference.isInline,
+        )
+        if (allStrongReferenceAreInline) {
+          ressource.isInline = true
+          ressource.inlinedCallbacks.forEach((callback) => callback())
+        }
+      },
+    }
+
     reference.ressource = ressource
-    ressource.addReference(reference, { isJsModule })
+    if (existingRessource && fromRollup) {
+      // do not add that reference, it's already know and would duplicate the html referencing a js file
+    } else {
+      ressource.addReference(reference, { isJsModule })
+    }
 
     return reference
   }
@@ -329,6 +351,7 @@ export const createRessourceBuilder = (
     ressource.usedPromise = new Promise((resolve) => {
       ressource.usedCallback = resolve
     })
+    ressource.inlinedCallbacks = []
     ressource.buildDonePromise = new Promise((resolve, reject) => {
       ressource.buildDoneCallback = ({ buildFileInfo, buildManifest }) => {
         if (!ressource.isJsModule) {
@@ -761,7 +784,7 @@ export const createRessourceBuilder = (
     return ressource
   }
 
-  const buildEnd = ({ jsModuleBuild, buildManifest }) => {
+  const rollupBuildEnd = ({ jsModuleBuild, buildManifest }) => {
     Object.keys(ressourceMap).forEach((ressourceUrl) => {
       const ressource = ressourceMap[ressourceUrl]
       const { buildDoneCallback } = ressource
@@ -843,10 +866,10 @@ ${showSourceLocation(referenceSourceAsString, {
 
   return {
     createReferenceForEntryPoint,
-    createReferenceFoundInJs,
-    createReference,
+    createReferenceFoundByRollup,
+    createReferenceFoundInJsModule,
 
-    buildEnd,
+    rollupBuildEnd,
     getAllEntryPointsEmittedPromise,
     findRessource,
 

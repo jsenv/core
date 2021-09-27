@@ -28,22 +28,54 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
 const entryPointMap = {
   [`./${fileRelativeUrl}`]: "./main.html",
 }
-await buildProject({
-  ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  // logLevel: "debug",
-  jsenvDirectoryRelativeUrl,
+const { buildManifest, buildFileContents, buildInlineFileContents } =
+  await buildProject({
+    ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+    // logLevel: "debug",
+    jsenvDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
+    entryPointMap,
+  })
+
+// ensuire buildManifest, fileContents and inlineFileContents looks good
+{
+  const actual = {
+    buildManifest,
+    buildFileContents,
+    buildInlineFileContents,
+  }
+  const expected = {
+    buildManifest: {
+      "main.html": "main.html",
+    },
+    buildFileContents: {
+      "file-02c226c4.js.map": assert.any(String),
+      "main.html": assert.any(String),
+    },
+    buildInlineFileContents: {
+      "file-02c226c4.js": assert.any(String),
+    },
+  }
+  assert({ actual, expected })
+}
+
+const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
-  entryPointMap,
-})
+  jsenvCoreDirectoryUrl,
+)
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const htmlString = await readFile(htmlBuildUrl)
+
+// ensure link preload is removed (because ressource is inlined)
+{
+  const link = findNodeByTagName(htmlString, "link")
+  const actual = link
+  const expected = null
+  assert({ actual, expected })
+}
 
 // ensure src is properly inlined
 {
-  const buildDirectoryUrl = resolveUrl(
-    buildDirectoryRelativeUrl,
-    jsenvCoreDirectoryUrl,
-  )
-  const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
-  const htmlString = await readFile(htmlBuildUrl)
   const script = findNodeByTagName(htmlString, "script")
   const srcAttribute = getHtmlNodeAttributeByName(script, "src")
   const forceInlineAttribute = getHtmlNodeAttributeByName(

@@ -33,10 +33,7 @@ import {
 import { importMapsFromHtml } from "./html/htmlScan.js"
 import { parseRessource } from "./parseRessource.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
-import {
-  createRessourceBuilder,
-  referenceToCodeForRollup,
-} from "./ressource_builder.js"
+import { createRessourceBuilder } from "./ressource_builder.js"
 import { computeBuildRelativeUrl } from "./url-versioning.js"
 import { transformImportMetaUrlReferences } from "./transformImportMetaUrlReferences.js"
 
@@ -429,9 +426,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
             // isRessourceHint,
             ressourceImporter,
           }) => {
-            // Entry point is not a JS module and references a js module
-            // -> html referencing js
-            // we must wait for rollup build to be done to generate the html asset
+            // Entry point is not a JS module and references a js module (html referencing js)
             if (
               ressourceImporter.isEntryPoint &&
               !ressourceImporter.isJsModule &&
@@ -652,6 +647,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
 
       const moduleInfo = this.getModuleInfo(id)
       const url = asServerUrl(id)
+      const importerUrl = urlImporterMap[url]
 
       // logger.debug(`loads ${url}`)
       const {
@@ -664,8 +660,6 @@ building ${entryFileRelativeUrls.length} entry files...`)
         moduleInfo,
       })
 
-      const importerUrl = urlImporterMap[url]
-
       // Jsenv helpers are injected as import statements to provide code like babel helpers
       // For now we just compute the information that the target file is a jsenv helper
       // without doing anything special with "targetIsJsenvHelperFile" information
@@ -675,8 +669,9 @@ building ${entryFileRelativeUrls.length} entry files...`)
         jsenvHelpersDirectoryInfo.url,
       )
 
-      // Store the fact that this file is referenced by js (static or dynamic import)
-      ressourceBuilder.createReference({
+      // Store the fact that this ressource exists
+      // Happens when entry point references js, also for every static and dynamic imports
+      ressourceBuilder.createReferenceFoundByRollup({
         // we don't want to emit a js chunk for every js file found
         // (However we want if the file is preload/prefetch by something else)
         // so we tell asset builder not to emit a chunk for this js reference
@@ -685,7 +680,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         ressourceContentTypeExpected: responseContentType,
         referenceUrl: importerUrl,
         ressourceSpecifier: responseUrl,
-        // rollup do not provide a way to know line and column for the static or dynamic import
+        // rollup do not expose a way to know line and column for the static or dynamic import
         // referencing that file
         referenceColumn: undefined,
         referenceLine: undefined,
@@ -884,6 +879,8 @@ building ${entryFileRelativeUrls.length} entry files...`)
         const jsRessource = ressourceBuilder.findRessource(
           (ressource) => ressource.url === file.url,
         )
+        // avant buildEnd il se peut que certaines ressources ne soit pas encore inline
+        // donc dans inlinedCallback on voudras ptet delete ces ressources?
         if (jsRessource && jsRessource.isInline) {
           buildInlineFileContents[fileName] = file.code
         } else {
@@ -903,7 +900,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
-      ressourceBuilder.buildEnd({ jsModuleBuild, buildManifest })
+      ressourceBuilder.rollupBuildEnd({ jsModuleBuild, buildManifest })
       // wait html files to be emitted
       await ressourceBuilder.getAllEntryPointsEmittedPromise()
 
@@ -960,6 +957,26 @@ building ${entryFileRelativeUrls.length} entry files...`)
       rollupBuild = injectSourcemapInRollupBuild(rollupBuild, {
         buildDirectoryUrl,
       })
+
+      // update rollupBuild, buildInlineFilesContents, buildManifest and buildMappings
+      // in case some ressources where inlined by ressourceBuilder.rollupBuildEnd
+      Object.keys(buildManifest).forEach((fileName) => {
+        const buildRelativeUrl = buildManifest[fileName]
+        const ressource = ressourceBuilder.findRessource(
+          (ressource) => ressource.buildRelativeUrl === buildRelativeUrl,
+        )
+        if (ressource && ressource.isInline) {
+          delete buildManifest[fileName]
+          const originalProjectUrl = asOriginalUrl(ressource.url)
+          delete buildMappings[
+            urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
+          ]
+          buildInlineFileContents[buildRelativeUrl] =
+            rollupBuild[buildRelativeUrl].code
+          delete rollupBuild[buildRelativeUrl]
+        }
+      })
+
       rollupBuild = sortObjectByPathnames(rollupBuild)
       buildManifest = sortObjectByPathnames(buildManifest)
       buildMappings = sortObjectByPathnames(buildMappings)
@@ -1087,39 +1104,12 @@ building ${entryFileRelativeUrls.length} entry files...`)
       }
     }
 
+    // In a browser such import would throw
+    // it's not standard but we'll return the file content as string
+    // for now
     const moduleResponseBodyAsBuffer = Buffer.from(
       await moduleResponse.arrayBuffer(),
     )
-    const contentType = moduleResponse.headers["content-type"]
-    const assetReferenceForImport =
-      await ressourceBuilder.createReferenceFoundInJs({
-        // Reference to this target is corresponds to a static or dynamic import.
-        // found in a given file (importerUrl).
-        // But we don't know the line and colum because rollup
-        // does not tell us that information
-        jsUrl: importerUrl,
-        jsLine: undefined,
-        jsColumn: undefined,
-        ressourceSpecifier: moduleResponse.url,
-
-        contentType,
-        bufferBeforeBuild: moduleResponseBodyAsBuffer,
-      })
-    if (assetReferenceForImport) {
-      markBuildRelativeUrlAsUsedByJs(
-        assetReferenceForImport.ressource.buildRelativeUrl,
-      )
-      const content = `export default ${referenceToCodeForRollup(
-        assetReferenceForImport,
-      )}`
-
-      return {
-        ...commonData,
-        contentRaw: String(moduleResponseBodyAsBuffer),
-        content,
-      }
-    }
-
     return {
       ...commonData,
       contentRaw: String(moduleResponseBodyAsBuffer),
