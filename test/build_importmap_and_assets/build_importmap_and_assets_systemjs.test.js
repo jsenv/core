@@ -15,6 +15,10 @@ import {
   IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
+import {
+  findHtmlNodeById,
+  getHtmlNodeTextNode,
+} from "@jsenv/core/src/internal/compiling/compileHtml.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -39,9 +43,6 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-
-const importmapBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}import-map.importmap`]
 const mainBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
 const cssBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}style.css`]
@@ -49,11 +50,11 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
 // check importmap content
 {
-  const importmapBuildUrl = resolveUrl(
-    importmapBuildRelativeUrl,
-    buildDirectoryUrl,
-  )
-  const importmapString = await readFile(importmapBuildUrl)
+  const htmlBuildFileUrl = resolveUrl("main.html", buildDirectoryUrl)
+  const html = await readFile(htmlBuildFileUrl)
+  const importmapHtmlNode = findHtmlNodeById(html, "importmap")
+  const importmapTextNode = getHtmlNodeTextNode(importmapHtmlNode)
+  const importmapString = importmapTextNode.value
   const importmap = JSON.parse(importmapString)
 
   const actual = importmap

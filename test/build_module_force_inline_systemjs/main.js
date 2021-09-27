@@ -1,5 +1,6 @@
 /* eslint-env browser */
 
-await import("./file.js")
+// eslint-disable-next-line import/no-unresolved
+await import("./file")
 
 window.answer = 42

@@ -12,6 +12,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import {
   findHtmlNodeById,
   getHtmlNodeAttributeByName,
+  getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import {
   GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
@@ -40,20 +41,42 @@ await buildProject({
   systemJsName: "toto",
   // minify: true,
 })
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
+const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const htmlString = await readFile(htmlBuildUrl)
 
 // systemjs is inlined (no http request needed)
 {
-  const buildDirectoryUrl = resolveUrl(
-    buildDirectoryRelativeUrl,
-    jsenvCoreDirectoryUrl,
-  )
-  const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
-  const htmlString = await readFile(htmlBuildUrl)
   const systemJsScript = findHtmlNodeById(htmlString, "jsenv_inject_systemjs")
   const srcAttribute = getHtmlNodeAttributeByName(systemJsScript, "src")
 
   const actual = srcAttribute
   const expected = undefined
+  assert({ actual, expected })
+}
+
+// importmap is inlined
+{
+  const importmapScript = findHtmlNodeById(htmlString, "importmap")
+  const srcAttribute = getHtmlNodeAttributeByName(importmapScript, "src")
+  const textNode = getHtmlNodeTextNode(importmapScript)
+
+  const actual = {
+    srcAttribute,
+    mappings: JSON.parse(textNode.value),
+  }
+  const expected = {
+    srcAttribute: undefined,
+    mappings: {
+      imports: {
+        "./file.js": "./file-ec1c9738.js",
+        "./main.js": "./main-007250a8.js",
+      },
+    },
+  }
   assert({ actual, expected })
 }
 

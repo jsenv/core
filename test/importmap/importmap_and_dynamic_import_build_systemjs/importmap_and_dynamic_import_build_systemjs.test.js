@@ -14,6 +14,10 @@ import {
   IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
+import {
+  findHtmlNodeById,
+  getHtmlNodeTextNode,
+} from "@jsenv/core/src/internal/compiling/compileHtml.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -27,7 +31,6 @@ const mainFilename = `${testDirectoryname}.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
@@ -36,12 +39,6 @@ const { buildMappings } = await buildProject({
   entryPointMap,
   // minify: true,
 })
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
@@ -49,15 +46,16 @@ const buildDirectoryUrl = resolveUrl(
 
 // importmap content
 {
-  const importmapBuildRelativeUrl = getBuildRelativeUrl("import-map.importmap")
-  const fileBuildRelativeUrl = getBuildRelativeUrl("file.js")
-  const fooBuildRelativeUrl = getBuildRelativeUrl("foo.js")
-  const importmapBuildUrl = resolveUrl(
-    importmapBuildRelativeUrl,
-    buildDirectoryUrl,
-  )
-  const importmapString = await readFile(importmapBuildUrl)
+  const htmlBuildFileUrl = resolveUrl("main.html", buildDirectoryUrl)
+  const html = await readFile(htmlBuildFileUrl)
+  const importmapHtmlNode = findHtmlNodeById(html, "importmap")
+  const importmapTextNode = getHtmlNodeTextNode(importmapHtmlNode)
+  const importmapString = importmapTextNode.value
   const importmap = JSON.parse(importmapString)
+  const fileBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}file.js`]
+  const fooBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}foo.js`]
+
   const actual = importmap
   const expected = {
     imports: {
@@ -72,7 +70,7 @@ const buildDirectoryUrl = resolveUrl(
 
 // assert asset url is correct for javascript (remapped + hashed)
 {
-  const mainRelativeUrl = getBuildRelativeUrl("file.js")
+  const mainRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
   const { namespace } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
