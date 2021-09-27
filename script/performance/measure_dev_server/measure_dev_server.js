@@ -7,9 +7,9 @@ import {
   logPerformanceMetrics,
 } from "@jsenv/performance-impact"
 
-export const measureExploring = async ({ iterations = 10 } = {}) => {
+export const measureDevServer = async ({ iterations = 10 } = {}) => {
   const childProcessFileUrl = new URL(
-    "./child_process_measuring_exploring.js",
+    "./child_process_measuring_dev_server.js",
     import.meta.url,
   )
   const childProcessFilePath = fileURLToPath(childProcessFileUrl)
@@ -31,8 +31,8 @@ export const measureExploring = async ({ iterations = 10 } = {}) => {
       })
 
       return {
-        "start exploring duration": { value: msEllapsed, unit: "ms" },
-        "start exploring memory heap used": { value: heapUsed, unit: "byte" },
+        "start duration": { value: msEllapsed, unit: "ms" },
+        "dev server memory heap used": { value: heapUsed, unit: "byte" },
         "number of fs read operation": { value: fileSystemReadOperationCount },
         "number of fs write operation": {
           value: fileSystemWriteOperationCount,
@@ -47,6 +47,6 @@ export const measureExploring = async ({ iterations = 10 } = {}) => {
 
 const executeAndLog = process.argv.includes("--local")
 if (executeAndLog) {
-  const performanceMetrics = await measureExploring({ iterations: 1 })
+  const performanceMetrics = await measureDevServer({ iterations: 1 })
   logPerformanceMetrics(performanceMetrics)
 }
