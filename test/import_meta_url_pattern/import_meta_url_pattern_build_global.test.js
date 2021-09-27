@@ -20,7 +20,6 @@ const mainFilename = `index.js`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
 }
-
 await buildProject({
   ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -31,7 +30,14 @@ const { globalValue, serverOrigin } = await scriptLoadGlobalBuild({
   ...SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
 })
+
 // it would be great to have an error or at least a warning.
-const actual = globalValue.jsUrl
-const expected = String(new URL(`./file.js`, serverOrigin))
+const actual = {
+  jsUrlInstanceOfUrl: globalValue.jsUrlInstanceOfUrl,
+  jsUrlString: globalValue.jsUrlString,
+}
+const expected = {
+  jsUrlInstanceOfUrl: true,
+  jsUrlString: String(new URL(`./file.js`, serverOrigin)),
+}
 assert({ actual, expected })

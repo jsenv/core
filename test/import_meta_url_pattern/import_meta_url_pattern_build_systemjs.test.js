@@ -50,7 +50,8 @@ const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
   })
   const actual = namespace
   const expected = {
-    jsUrl: String(
+    jsUrlInstanceOfUrl: true,
+    jsUrlString: String(
       new URL(`./dist/systemjs/${fileBuildRelativeUrl}`, serverOrigin),
     ),
   }
