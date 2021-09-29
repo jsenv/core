@@ -131,9 +131,13 @@ export const createCompiledFileService = ({
     }
     const compilerCandidates = { ...jsenvCompilers, ...customCompilers }
     Object.keys(compilerCandidates).find((compilerCandidateName) => {
-      const returnValue = compilerCandidates[compilerCandidateName](
-        compilerCandidateParams,
-      )
+      const compilerCandidate = compilerCandidates[compilerCandidateName]
+      if (typeof compilerCandidate !== "function") {
+        throw new TypeError(
+          `"${compilerCandidateName}" compiler is not a function, got ${compilerCandidate}`,
+        )
+      }
+      const returnValue = compilerCandidate(compilerCandidateParams)
       if (returnValue && typeof returnValue === "object") {
         compilerOptions = returnValue
         return true

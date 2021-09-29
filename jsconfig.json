@@ -335,6 +335,9 @@
       "postcss/lib/stringifier": [
         "./node_modules/postcss/lib/stringifier.js"
       ],
+      "preact/compat/scheduler": [
+        "./node_modules/preact/compat/scheduler.mjs"
+      ],
       "@jsenv/package-publish": [
         "./node_modules/@jsenv/package-publish/index.js"
       ],
@@ -346,6 +349,9 @@
       ],
       "istanbul-lib-coverage/*": [
         "./node_modules/istanbul-lib-coverage/*"
+      ],
+      "preact/jsx-dev-runtime": [
+        "./node_modules/preact/jsx-runtime/dist/jsxRuntime.mjs"
       ],
       "vue-template-compiler/*": [
         "./node_modules/vue-template-compiler/*"
@@ -416,6 +422,9 @@
       "postcss/package.json": [
         "./node_modules/postcss/package.json"
       ],
+      "preact/compat/server": [
+        "./node_modules/preact/compat/server.mjs"
+      ],
       "regenerator-runtime/*": [
         "./node_modules/regenerator-runtime/*"
       ],
@@ -449,6 +458,9 @@
       "postcss/lib/warning": [
         "./node_modules/postcss/lib/warning.js"
       ],
+      "preact/package.json": [
+        "./node_modules/preact/package.json"
+      ],
       "regenerator-runtime": [
         "./node_modules/regenerator-runtime/runtime.js"
       ],
@@ -473,6 +485,9 @@
       "postcss/lib/result": [
         "./node_modules/postcss/lib/result.js"
       ],
+      "preact/jsx-runtime": [
+        "./node_modules/preact/jsx-runtime/dist/jsxRuntime.mjs"
+      ],
       "@c88/v8-coverage/*": [
         "./node_modules/@c88/v8-coverage/*"
       ],
@@ -493,6 +508,9 @@
       ],
       "postcss/lib/parse": [
         "./node_modules/postcss/lib/parse.js"
+      ],
+      "preact/test-utils": [
+        "./node_modules/preact/test-utils/dist/testUtils.mjs"
       ],
       "terser/bin/terser": [
         "./node_modules/terser/bin/terser"
@@ -517,6 +535,9 @@
       ],
       "@babel/helpers/*": [
         "./node_modules/@babel/helpers/*"
+      ],
+      "preact/devtools": [
+        "./node_modules/preact/devtools/dist/devtools.mjs"
       ],
       "v8-to-istanbul/*": [
         "./node_modules/v8-to-istanbul/*"
@@ -584,6 +605,9 @@
       "node-notifier": [
         "./node_modules/node-notifier/index.js"
       ],
+      "preact/compat": [
+        "./node_modules/preact/compat/dist/compat.mjs"
+      ],
       "systemjs/s.js": [
         "./node_modules/systemjs/dist/s.min.js"
       ],
@@ -598,6 +622,12 @@
       ],
       "magic-string": [
         "./node_modules/magic-string/dist/magic-string.cjs.js"
+      ],
+      "preact/debug": [
+        "./node_modules/preact/debug/dist/debug.mjs"
+      ],
+      "preact/hooks": [
+        "./node_modules/preact/hooks/dist/hooks.mjs"
       ],
       "rollup/dist/*": [
         "./node_modules/rollup/dist/*"
@@ -662,6 +692,9 @@
       "postcss": [
         "./node_modules/postcss/lib/postcss.mjs"
       ],
+      "preact/*": [
+        "./node_modules/preact/*"
+      ],
       "bytes/*": [
         "./node_modules/bytes/*"
       ],
@@ -670,6 +703,9 @@
       ],
       "parse5": [
         "./node_modules/parse5/lib/index.js"
+      ],
+      "preact": [
+        "./node_modules/preact/dist/preact.mjs"
       ],
       "react/*": [
         "./node_modules/react/*"
