@@ -78,20 +78,7 @@ export const transformResultToCompilationResult = async (
     } else {
       await Promise.all(
         map.sources.map(async (source, index) => {
-          // be careful here we might received C:/Directory/file.js path from babel
-          // also in case we receive relative path like directory\file.js we replace \ with slash
-          // for url resolution
-          const sourceFileUrl =
-            isWindows && startsWithWindowsDriveLetter(source)
-              ? windowsFilePathToUrl(source)
-              : ensureWindowsDriveLetter(
-                  resolveUrl(
-                    isWindows ? replaceBackSlashesWithSlashes(source) : source,
-                    sourcemapFileUrl,
-                  ),
-                  sourcemapFileUrl,
-                )
-
+          const sourceFileUrl = resolveSourceUrl({ source, sourcemapFileUrl })
           if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
             // do not track dependency outside project
             // it means cache stays valid for those external sources
@@ -158,6 +145,24 @@ export const transformResultToCompilationResult = async (
     assets,
     assetsContent,
   }
+}
+
+const resolveSourceUrl = ({ source, sourcemapFileUrl }) => {
+  if (isWindows) {
+    // we can receive:
+    // - "C:/Directory/file.js" path from babel
+    // - relative path like "directory\file.js" (-> we replace \ with slash)
+    if (startsWithWindowsDriveLetter(source)) {
+      return windowsFilePathToUrl(source)
+    }
+    const url = resolveUrl(
+      replaceBackSlashesWithSlashes(source),
+      sourcemapFileUrl,
+    )
+    return ensureWindowsDriveLetter(url)
+  }
+
+  return resolveUrl(source, sourcemapFileUrl)
 }
 
 const stringifyMap = (object) => JSON.stringify(object, null, "  ")

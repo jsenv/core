@@ -179,10 +179,11 @@ const compileHtmlFile = ({
           let scriptTransformResult
           try {
             scriptTransformResult = await transformJs({
-              projectDirectoryUrl,
               code: scriptBeforeCompilation,
               url: scriptOriginalFileUrl,
               urlAfterTransform: scriptAfterTransformFileUrl,
+              projectDirectoryUrl,
+
               babelPluginMap: compileIdToBabelPluginMap(compileId, {
                 groupMap,
                 babelPluginMap,

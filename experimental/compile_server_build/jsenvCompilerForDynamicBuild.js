@@ -161,10 +161,11 @@ const handleDynamicBuildFile = ({
   return {
     compile: async (originalFileContent) => {
       const transformResult = await transformJs({
-        projectDirectoryUrl,
         code: originalFileContent,
         url: originalFileUrl,
         urlAfterTransform: compiledFileUrl,
+        projectDirectoryUrl,
+
         babelPluginMap: compileIdToBabelPluginMap(getWorstCompileId(groupMap), {
           groupMap,
           babelPluginMap,

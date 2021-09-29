@@ -1039,12 +1039,11 @@ building ${entryFileRelativeUrls.length} entry files...`)
     // },
   ) => {
     if (moduleUrl in inlineModuleScripts) {
-      const codeInput = inlineModuleScripts[moduleUrl]
-
       const { code, map } = await transformJs({
-        projectDirectoryUrl,
-        code: codeInput,
+        code: inlineModuleScripts[moduleUrl],
         url: asProjectUrl(moduleUrl), // transformJs expect a file:// url
+        projectDirectoryUrl,
+
         babelPluginMap,
         // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
       })

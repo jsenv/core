@@ -52,12 +52,16 @@ const compileVueFile = ({
       })
 
       const transformResult = await transformJs({
-        projectDirectoryUrl,
         code,
         map,
         url: originalFileUrl,
         urlAfterTransform: compiledFileUrl,
-        babelPluginMap: compileIdToBabelPluginMap(compileId, { groupMap, babelPluginMap }),
+        projectDirectoryUrl,
+
+        babelPluginMap: compileIdToBabelPluginMap(compileId, {
+          groupMap,
+          babelPluginMap,
+        }),
         convertMap,
         transformTopLevelAwait,
         moduleOutFormat,

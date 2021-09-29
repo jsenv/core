@@ -1,23 +1,22 @@
 import {
-  urlToFileSystemPath,
   urlToRelativeUrl,
   normalizeStructuredMetaMap,
   urlToMeta,
 } from "@jsenv/filesystem"
+
 import { jsenvTransform } from "./jsenvTransform.js"
 
 export const transformJs = async ({
-  projectDirectoryUrl,
   code,
+  map,
   url,
   urlAfterTransform,
-  map,
+  projectDirectoryUrl,
 
   babelPluginMap,
   convertMap = {},
   moduleOutFormat = "esmodule",
   importMetaFormat = moduleOutFormat,
-
   babelHelpersInjectionAsImport = true,
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
@@ -42,24 +41,27 @@ export const transformJs = async ({
     throw new TypeError(`url must be a string, got ${url}`)
   }
 
-  const { inputCode, inputMap } = await computeInputCodeAndInputMap({
-    code: String(code),
+  const conversionResult = await applyConvertMap({
+    code,
+    map,
     url,
     urlAfterTransform,
-    map,
     projectDirectoryUrl,
+
     convertMap,
     sourcemapEnabled,
     allowTopLevelAwait,
   })
-  const inputPath = computeInputPath(url)
-  const inputRelativePath = computeInputRelativePath(url, projectDirectoryUrl)
+  code = conversionResult.code
+  map = conversionResult.map
 
-  return jsenvTransform({
-    inputCode,
-    inputMap,
-    inputPath,
-    inputRelativePath,
+  const transformResult = await jsenvTransform({
+    code,
+    map,
+    url,
+    relativeUrl: url.startsWith(projectDirectoryUrl)
+      ? urlToRelativeUrl(url, projectDirectoryUrl)
+      : undefined,
 
     babelPluginMap,
     convertMap,
@@ -73,14 +75,18 @@ export const transformJs = async ({
     transformGlobalThis,
     sourcemapEnabled,
   })
+  code = transformResult.code
+  map = transformResult.map
+  return { code, map }
 }
 
-const computeInputCodeAndInputMap = async ({
+const applyConvertMap = async ({
   code,
+  map,
   url,
   urlAfterTransform,
-  map,
   projectDirectoryUrl,
+
   convertMap,
   remap,
   allowTopLevelAwait,
@@ -93,46 +99,33 @@ const computeInputCodeAndInputMap = async ({
   )
   const { convert } = urlToMeta({ url, structuredMetaMap })
   if (!convert) {
-    return { inputCode: code, inputMap: map }
+    return { code, map }
   }
 
   if (typeof convert !== "function") {
     throw new TypeError(`convert must be a function, got ${convert}`)
   }
-  const conversionResult = await convert({
-    projectDirectoryUrl,
-    url,
-    urlAfterTransform,
+  const convertReturnValue = await convert({
     code,
     map,
+    url,
+    urlAfterTransform,
+    projectDirectoryUrl,
+
     remap,
     allowTopLevelAwait,
   })
-  if (typeof conversionResult !== "object") {
+  if (typeof convertReturnValue !== "object") {
     throw new TypeError(
-      `convert must return an object, got ${conversionResult}`,
+      `convert must return an object, got ${convertReturnValue}`,
     )
   }
-  const inputCode = conversionResult.code
-  if (typeof inputCode !== "string") {
+  code = convertReturnValue.code
+  map = convertReturnValue.map
+  if (typeof code !== "string") {
     throw new TypeError(
-      `convert must return { code } string, got { code: ${inputCode} } `,
+      `convert return value "code" property must be a string, got ${code}`,
     )
   }
-  const inputMap = conversionResult.map
-  return { inputCode, inputMap }
-}
-
-const computeInputPath = (url) => {
-  if (url.startsWith("file://")) {
-    return urlToFileSystemPath(url)
-  }
-  return url
-}
-
-const computeInputRelativePath = (url, projectDirectoryUrl) => {
-  if (url.startsWith(projectDirectoryUrl)) {
-    return urlToRelativeUrl(url, projectDirectoryUrl)
-  }
-  return undefined
+  return { code, map }
 }
