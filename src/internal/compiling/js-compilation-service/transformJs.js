@@ -99,12 +99,11 @@ const computeInputCodeAndInputMap = async ({
   if (typeof convert !== "function") {
     throw new TypeError(`convert must be a function, got ${convert}`)
   }
-  // TODO: handle map when passed
   const conversionResult = await convert({
     projectDirectoryUrl,
-    code,
     url,
     urlAfterTransform,
+    code,
     map,
     remap,
     allowTopLevelAwait,
