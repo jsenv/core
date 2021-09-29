@@ -77,7 +77,8 @@ export const transformJs = async ({
   })
   code = transformResult.code
   map = transformResult.map
-  return { code, map }
+  const { metadata } = transformResult
+  return { code, map, metadata }
 }
 
 const applyConvertMap = async ({
