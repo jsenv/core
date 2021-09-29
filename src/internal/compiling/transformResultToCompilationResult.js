@@ -76,23 +76,27 @@ export const transformResultToCompilationResult = async (
       sources.push(originalFileUrl)
       sourcesContent.push(originalFileContent)
     } else {
+      map.sources.forEach((source, index) => {
+        const sourceFileUrl = resolveSourceUrl({ source, sourcemapFileUrl })
+        if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
+          // do not track dependency outside project
+          // it means cache stays valid for those external sources
+          return
+        }
+        map.sources[index] = urlToRelativeUrl(sourceFileUrl, sourcemapFileUrl)
+        sources[index] = sourceFileUrl
+      })
+
       await Promise.all(
-        map.sources.map(async (source, index) => {
-          const sourceFileUrl = resolveSourceUrl({ source, sourcemapFileUrl })
-          if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
-            // do not track dependency outside project
-            // it means cache stays valid for those external sources
-            return
-          }
-
-          map.sources[index] = urlToRelativeUrl(sourceFileUrl, sourcemapFileUrl)
-          sources[index] = sourceFileUrl
-
-          if (map.sourcesContent && map.sourcesContent[index]) {
-            sourcesContent[index] = map.sourcesContent[index]
+        sources.map(async (sourceUrl, index) => {
+          const contentFromSourcemap = map.sourcesContent
+            ? map.sourcesContent[index]
+            : null
+          if (contentFromSourcemap) {
+            sourcesContent[index] = contentFromSourcemap
           } else {
-            const sourceFileContent = await readFile(sourceFileUrl)
-            sourcesContent[index] = sourceFileContent
+            const contentFromFile = await readFile(sourceUrl)
+            sourcesContent[index] = contentFromFile
           }
         }),
       )
