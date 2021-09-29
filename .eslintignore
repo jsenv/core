@@ -5,13 +5,17 @@ dist/
 /coverage/
 /helpers/chromium/
 /helpers/regenerator-runtime/
+
 **/s.js
 /src/**/system.js
+**/jquery.js
+**/flight.js
 /**/*syntax_error*.js
 /**/*syntax_error*.html
 !/**/*syntax_error*.test.js
 /**/*error_syntax*.js
 !/**/*error_syntax*.test.js
+
 /test-manual/**/coverage/
 /**/*.es5.js
 !.eslintrc.js

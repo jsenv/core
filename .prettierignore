@@ -6,12 +6,16 @@
 /helpers/babel/
 /helpers/regenerator-runtime/
 /node_modules/
+
 **/s.js
 /src/**/system.js
+**/jquery.js
+**/flight.js
 /**/*syntax_error*.js
 !/**/*syntax_error*.test.js
 /**/*error_syntax*.js
 !/**/*error_syntax*.test.js
+
 /**/*.es5.js
 /jsconfig.json
 /package-lock.json
