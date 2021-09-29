@@ -163,7 +163,7 @@ const resolveSourceUrl = ({ source, sourcemapFileUrl }) => {
       replaceBackSlashesWithSlashes(source),
       sourcemapFileUrl,
     )
-    return ensureWindowsDriveLetter(url)
+    return ensureWindowsDriveLetter(url, sourcemapFileUrl)
   }
 
   return resolveUrl(source, sourcemapFileUrl)

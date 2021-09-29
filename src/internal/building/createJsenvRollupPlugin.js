@@ -701,6 +701,8 @@ building ${entryFileRelativeUrls.length} entry files...`)
     },
 
     async transform(codeInput, id) {
+      // we should try/catch here?
+      // because this.parse might fail
       const ast = this.parse(codeInput, {
         // used to know node line and column
         locations: true,
