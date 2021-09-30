@@ -890,12 +890,14 @@ const createOutJSONFiles = ({
   )
   const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
   const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
+  const customCompilerPatterns = Object.keys(customCompilers)
   const outDirectoryMeta = {
     jsenvCorePackageVersion,
     babelPluginMap,
     compileServerGroupMap,
     replaceProcessEnvNodeEnv,
     processEnvNodeEnv,
+    customCompilerPatterns,
   }
   outJSONFiles.meta = {
     url: metaOutFileUrl,
@@ -909,7 +911,7 @@ const createOutJSONFiles = ({
     outDirectoryRelativeUrl,
     importDefaultExtension,
     inlineImportMapIntoHTML,
-    customCompilerPatterns: Object.keys(customCompilers),
+    customCompilerPatterns,
   }
   outJSONFiles.env = {
     url: envOutFileUrl,

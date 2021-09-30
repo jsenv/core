@@ -41,9 +41,7 @@ export const validateMeta = async ({
   logger.debug(`${urlToFileSystemPath(compiledFileUrl)} not modified`)
 
   if (meta.sources.length === 0) {
-    logger.warn(
-      `meta.sources is empty, cache considered as invalid by precaution`,
-    )
+    logger.warn(`WARNING: meta.sources is empty for ${compiledFileUrl}`)
     return {
       code: "SOURCES_EMPTY",
       valid: false,
