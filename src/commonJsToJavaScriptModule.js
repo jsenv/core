@@ -60,7 +60,9 @@ export const commonJsToJavaScriptModule = async ({
     buffer: replaceBuffer,
   })
 
-  const commonJsRollupPlugin = commonjs()
+  const commonJsRollupPlugin = commonjs({
+    esmExternals: true,
+  })
 
   const rollupBuild = await rollup({
     input: filePath,
