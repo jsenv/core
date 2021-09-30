@@ -28,10 +28,11 @@ const compileJsFile = ({
   return {
     compile: async (originalFileContent) => {
       const transformResult = await transformJs({
-        projectDirectoryUrl,
         code: originalFileContent,
         url: originalFileUrl,
         urlAfterTransform: compiledFileUrl,
+        projectDirectoryUrl,
+
         babelPluginMap: compileIdToBabelPluginMap(compileId, {
           groupMap,
           babelPluginMap,

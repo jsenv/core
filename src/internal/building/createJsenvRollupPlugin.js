@@ -598,10 +598,6 @@ building ${entryFileRelativeUrls.length} entry files...`)
       return asRollupUrl(importUrl)
     },
 
-    // TODO: when code is using new URL() pattern
-    // the code after build is currently returning a string instead of an url object
-    // can we always return an url object because resolveFileUrl is always called
-    // by this pattern?
     resolveFileUrl: ({ referenceId, fileName }) => {
       const ressourceFound = ressourceBuilder.findRessource((ressource) => {
         return ressource.rollupReferenceId === referenceId
@@ -701,6 +697,8 @@ building ${entryFileRelativeUrls.length} entry files...`)
     },
 
     async transform(codeInput, id) {
+      // we should try/catch here?
+      // because this.parse might fail
       const ast = this.parse(codeInput, {
         // used to know node line and column
         locations: true,
@@ -1039,12 +1037,11 @@ building ${entryFileRelativeUrls.length} entry files...`)
     // },
   ) => {
     if (moduleUrl in inlineModuleScripts) {
-      const codeInput = inlineModuleScripts[moduleUrl]
-
       const { code, map } = await transformJs({
-        projectDirectoryUrl,
-        code: codeInput,
+        code: inlineModuleScripts[moduleUrl],
         url: asProjectUrl(moduleUrl), // transformJs expect a file:// url
+        projectDirectoryUrl,
+
         babelPluginMap,
         // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
       })

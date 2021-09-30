@@ -1,3 +1,6 @@
+// to update the index.es5.js.map
+// you can use getSourceMap from @jsenv/core/test/get_source_map.js
+
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import {

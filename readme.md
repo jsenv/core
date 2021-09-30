@@ -348,6 +348,20 @@ To get a better idea see [jsenv.config.js](./jsenv.config.js). The file can be i
 
 That being said it's only a recommendation. There is nothing enforcing or checking the presence of _jsenv.config.mjs_.
 
+## CommonJS
+
+CommonJS module format rely on `module.exports` and `require`. It was invented by Node.js and is not standard JavaScript. If your code or one of your dependency uses it, it requires some configuration. The jsenv config below makes jsenv compatible with a package named _"whatever"_ that would be written in CommonJS.
+
+_jsenv.config.mjs to use code written in CommonJS_:
+
+```js
+import { jsenvBabelPluginMap, convertCommonJsWithRollup } from "@jsenv/core"
+
+export const convertMap = {
+  "./node_modules/whatever/index.js": convertCommonJsWithRollup,
+}
+```
+
 ## React
 
 React is written in CommonJS and comes with jsx. If you use react and or jsx it requires some configuration.
@@ -424,20 +438,6 @@ See also
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
 - [importDefaultExtension](./docs/shared-parameters.md#importDefaultExtension)
 - [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
-
-## CommonJS
-
-CommonJS module format rely on `module.exports` and `require`. It was invented by Node.js and is not standard JavaScript. If your code or one of your dependency uses it, it requires some configuration. The jsenv config below makes jsenv compatible with a package named _"whatever"_ that would be written in CommonJS.
-
-_jsenv.config.mjs to use code written in CommonJS_:
-
-```js
-import { jsenvBabelPluginMap, convertCommonJsWithRollup } from "@jsenv/core"
-
-export const convertMap = {
-  "./node_modules/whatever/index.js": convertCommonJsWithRollup,
-}
-```
 
 # See also
 

@@ -52,6 +52,6 @@ export const writeFileContent = async (
   }
 }
 
-export const testFilePresence = async (url) => {
+export const testFilePresence = (url) => {
   return existsSync(urlToFileSystemPath(url))
 }

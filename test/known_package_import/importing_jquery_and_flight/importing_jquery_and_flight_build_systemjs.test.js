@@ -1,11 +1,7 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { buildProject, convertCommonJsWithRollup } from "@jsenv/core"
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
@@ -18,42 +14,29 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.html`
+const mainFilename = `importing_jquery_and_flight.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-const convertMap = {
-  "./node_modules/react/index.js": (options) =>
-    convertCommonJsWithRollup({
-      ...options,
-      processEnvNodeEnv: "production",
-    }),
-}
-
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  // compileServerLogLevel: "debug",
-  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
-  // filesystemCache: true,
   buildDirectoryRelativeUrl,
   entryPointMap,
-  convertMap,
 })
-const mainRelativeUrl = `./${
-  buildMappings[`${testDirectoryRelativeUrl}${testDirectoryname}.js`]
-}`
-const { namespace: actual } = await browserImportSystemJsBuild({
+const mainJsBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}importing_jquery_and_flight.js`]
+const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
-  mainRelativeUrl,
-  // headless: false,
-  // autoStop: false,
+  mainRelativeUrl: `./${mainJsBuildRelativeUrl}`,
 })
+
+const actual = namespace
 const expected = {
-  default: "object",
+  jqueryType: "function",
+  flightComponentType: "function",
 }
 assert({ actual, expected })

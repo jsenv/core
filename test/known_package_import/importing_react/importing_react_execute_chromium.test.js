@@ -11,7 +11,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}react-execute.html`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}importing_react.html`
 const convertMap = {
   "./node_modules/react/index.js": (options) =>
     convertCommonJsWithRollup({ ...options, processEnvNodeEnv: "production" }),
@@ -23,12 +23,12 @@ const actual = await execute({
   convertMap,
   launch: launchChromium,
   stopAfterExecute: true,
-  fileRelativeUrl,
+  fileRelativeUrl: htmlFileRelativeUrl,
 })
 const expected = {
   status: "completed",
   namespace: {
-    "./react-execute.js": {
+    "./importing_react.js": {
       status: "completed",
       namespace: {
         default: "object",

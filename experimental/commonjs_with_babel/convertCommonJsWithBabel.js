@@ -3,9 +3,10 @@ import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-s
 import { babelPluginReplaceExpressions } from "@jsenv/core/src/internal/babel-plugin-replace-expressions.js"
 
 export const convertCommonJsWithBabel = async ({
-  projectDirectoryUrl,
   code,
   url,
+  projectDirectoryUrl,
+
   replaceGlobalObject = true,
   replaceGlobalFilename = true,
   replaceGlobalDirname = true,
@@ -18,9 +19,10 @@ export const convertCommonJsWithBabel = async ({
 
   // maybe we should use babel core here instead of transformJs
   const result = await transformJs({
-    projectDirectoryUrl,
     code,
     url,
+    projectDirectoryUrl,
+
     babelPluginMap: {
       "transform-commonjs": [transformCommonJs],
       "transform-replace-expressions": [

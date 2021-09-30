@@ -18,30 +18,42 @@ export const updateMeta = async ({
   const isNew = compileResultStatus === "created"
   const isUpdated = compileResultStatus === "updated"
   const isCached = compileResultStatus === "cached"
-  const { compiledSource, contentType, assets, assetsContent } = compileResult
-  let { sources, sourcesContent } = compileResult
+  const {
+    compiledSource,
+    contentType,
+    sources,
+    sourcesContent,
+    assets,
+    assetsContent,
+  } = compileResult
 
   const promises = []
   if (isNew || isUpdated) {
     // ensure source that does not leads to concrete files are not capable to invalidate the cache
-    const sourceExists = await Promise.all(
-      sources.map(async (sourceFileUrl) => {
-        const sourceFileExists = await testFilePresence(sourceFileUrl)
-        if (sourceFileExists) {
-          return true
+    const sourcesToRemove = []
+    sources.forEach((sourceFileUrl) => {
+      const sourceFileExists = testFilePresence(sourceFileUrl)
+      if (sourceFileExists) {
+        return
+      }
+
+      sourcesToRemove.push(sourceFileUrl)
+    })
+    const sourceNotFoundCount = sourcesToRemove.length
+    if (sourceNotFoundCount > 0) {
+      logger.warn(`SOURCE_META_NOT_FOUND: ${sourceNotFoundCount} source file(s) not found.
+--- consequence ---
+cache will be reused even if one of the source file is modified
+--- source files not found ---
+${sourcesToRemove.join(`\n`)}`)
+      sourcesToRemove.forEach((url) => {
+        const sourceIndex = sources.indexOf(url)
+        if (sourceIndex) {
+          sources.splice(sourceIndex, 1)
+          sourcesContent.splice(sourceIndex, 1)
         }
-        // this can lead to cache never invalidated by itself
-        // it's a very important warning
-        logger.warn(`a source file cannot be found -> excluded from meta.sources & meta.sourcesEtag.
---- source ---
-${sourceFileUrl}`)
-        return false
-      }),
-    )
-    sources = sources.filter((source, index) => sourceExists[index])
-    sourcesContent = sourcesContent.filter(
-      (sourceContent, index) => sourceExists[index],
-    )
+      })
+    }
 
     const { writeCompiledSourceFile = true, writeAssetsFile = true } =
       compileResult

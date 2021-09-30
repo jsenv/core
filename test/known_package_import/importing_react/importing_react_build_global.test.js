@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject, convertCommonJsWithRollup } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -18,10 +14,10 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
+
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/global/`
-const mainFilename = `${testDirectoryname}.html`
+const mainFilename = `importing_react.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
@@ -29,7 +25,6 @@ const convertMap = {
   "./node_modules/react/index.js": (options) =>
     convertCommonJsWithRollup({ ...options, processEnvNodeEnv: "dev" }),
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -37,13 +32,14 @@ const { buildMappings } = await buildProject({
   entryPointMap,
   convertMap,
 })
-const mainRelativeUrl = `./${
-  buildMappings[`${testDirectoryRelativeUrl}${testDirectoryname}.js`]
-}`
-const { globalValue: actual } = await scriptLoadGlobalBuild({
+const mainJsFileBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}importing_react.js`]
+const { globalValue } = await scriptLoadGlobalBuild({
   ...SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
-  mainRelativeUrl,
+  mainRelativeUrl: `./${mainJsFileBuildRelativeUrl}`,
 })
+
+const actual = globalValue
 const expected = "object"
 assert({ actual, expected })

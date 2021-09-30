@@ -1,4 +1,6 @@
 /* eslint-disable import/max-dependencies */
+import { urlToFileSystemPath } from "@jsenv/filesystem"
+
 import { require } from "@jsenv/core/src/internal/require.js"
 import { getMinimalBabelPluginArray } from "@jsenv/core/src/internal/minimalBabelPluginArray.js"
 import { babelPluginTransformImportMeta } from "@jsenv/core/src/internal/babel-plugin-transform-import-meta.js"
@@ -11,11 +13,11 @@ import { transformBabelHelperToImportBabelPlugin } from "./transformBabelHelperT
 import { filePathToBabelHelperName } from "./babelHelper.js"
 
 export const jsenvTransform = async ({
-  inputCode,
-  inputPath,
-  inputRelativePath,
-  inputAst,
-  inputMap,
+  code,
+  map,
+  ast, // optional
+  url,
+  relativeUrl, // optional
 
   babelPluginMap,
   moduleOutFormat,
@@ -32,11 +34,13 @@ export const jsenvTransform = async ({
   const transformModulesSystemJs = require("@babel/plugin-transform-modules-systemjs")
   const proposalDynamicImport = require("@babel/plugin-proposal-dynamic-import")
 
+  const inputPath = computeInputPath(url)
+
   // https://babeljs.io/docs/en/options
   const options = {
     filename: inputPath,
-    filenameRelative: inputRelativePath,
-    inputSourceMap: inputMap,
+    filenameRelative: relativeUrl,
+    inputSourceMap: map,
     configFile: false,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,
@@ -163,8 +167,8 @@ export const jsenvTransform = async ({
 
     // put body inside something like (async () => {})()
     const result = await babelTransform({
-      ast: inputAst,
-      code: inputCode,
+      ast,
+      code,
       options: {
         ...options,
         plugins: [
@@ -213,15 +217,26 @@ export const jsenvTransform = async ({
       ? [[proposalDynamicImport], [transformModulesSystemJs]]
       : []),
   ]
-  const result = await babelTransform({
-    ast: inputAst,
-    code: inputCode,
+  const babelTransformReturnValue = await babelTransform({
+    ast,
+    code,
     options: {
       ...options,
       plugins: babelPluginArray,
     },
   })
-  return result
+  code = babelTransformReturnValue.code
+  map = babelTransformReturnValue.map
+  ast = babelTransformReturnValue.ast
+  const { metadata } = babelTransformReturnValue
+  return { code, map, metadata, ast }
+}
+
+const computeInputPath = (url) => {
+  if (url.startsWith("file://")) {
+    return urlToFileSystemPath(url)
+  }
+  return url
 }
 
 const babelTransform = async ({ ast, code, options }) => {
