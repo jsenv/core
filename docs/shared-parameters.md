@@ -76,10 +76,10 @@ Please note that if you have a `.babelrc` file, jsenv will not read it. jsenv ne
 But if your code or some of your dependencies use an other format you need to convert it using this parameter. For instance, the following code makes jsenv compatible with `react`.
 
 ```js
-import { commonJsToEsModule } from "@jsenv/core"
+import { commonJsToJavaScriptModule } from "@jsenv/core"
 
 const customCompilers = {
-  "./node_modules/react/index.js": commonJsToEsModule,
+  "./node_modules/react/index.js": commonJsToJavaScriptModule,
 }
 ```
 

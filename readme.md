@@ -355,10 +355,10 @@ CommonJS module format rely on `module.exports` and `require`. It was invented b
 _jsenv.config.mjs to use code written in CommonJS_:
 
 ```js
-import { jsenvBabelPluginMap, commonJsToEsModule } from "@jsenv/core"
+import { jsenvBabelPluginMap, commonJsToJavaScriptModule } from "@jsenv/core"
 
 export const customCompilers = {
-  "./node_modules/whatever/index.js": commonJsToEsModule,
+  "./node_modules/whatever/index.js": commonJsToJavaScriptModule,
 }
 ```
 
@@ -370,7 +370,7 @@ _jsenv.config.mjs for react and jsx:_
 
 ```js
 import { createRequire } from "module"
-import { jsenvBabelPluginMap, commonJsToEsModule } from "@jsenv/core"
+import { jsenvBabelPluginMap, commonJsToJavaScriptModule } from "@jsenv/core"
 
 const require = createRequire(import.meta.url)
 const transformReactJSX = require("@babel/plugin-transform-react-jsx")
@@ -384,9 +384,9 @@ export const babelPluginMap = {
 }
 
 export const customCompilers = {
-  "./node_modules/react/index.js": commonJsToEsModule,
+  "./node_modules/react/index.js": commonJsToJavaScriptModule,
   "./node_modules/react-dom/index.js": (options) => {
-    return commonJsToEsModule({ ...options, external: ["react"] })
+    return commonJsToJavaScriptModule({ ...options, external: ["react"] })
   },
 }
 ```
