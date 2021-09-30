@@ -39,9 +39,9 @@ const actual = await transformResultToCompilationResult(
   },
 )
 const expected = {
+  contentType: "application/javascript",
   compiledSource: actual.compiledSource,
   sourcemap: assert.any(Object),
-  contentType: "application/javascript",
   sources: [originalFileUrl],
   sourcesContent: [originalFileContent],
   assets: [sourcemapFileUrl],
