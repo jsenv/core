@@ -21,8 +21,7 @@ export const scanBrowserRuntimeFeatures = async ({
     groupMap,
   })
   const groupInfo = groupMap[compileId]
-  const { inlineImportMapIntoHTML, customCompilerNames, convertPatterns } =
-    envJson
+  const { inlineImportMapIntoHTML, customCompilerPatterns } = envJson
 
   const featuresReport = {
     babelPluginRequiredNames: babelPluginRequiredNamesFromGroupInfo(groupInfo, {
@@ -32,16 +31,14 @@ export const scanBrowserRuntimeFeatures = async ({
       failFastOnFeatureDetection,
       groupInfo,
       inlineImportMapIntoHTML,
-      customCompilerNames,
+      customCompilerPatterns,
       coverageInstrumentationRequired,
     })),
-    customCompilerNames,
-    convertPatterns,
+    customCompilerPatterns,
   }
 
   const canAvoidCompilation =
-    featuresReport.convertPatterns.length === 0 &&
-    featuresReport.customCompilerNames.length === 0 &&
+    featuresReport.customCompilerPatterns.length === 0 &&
     featuresReport.jsenvPluginRequiredNames.length === 0 &&
     featuresReport.babelPluginRequiredNames.length === 0 &&
     featuresReport.importmapSupported &&

@@ -166,13 +166,13 @@ const getBrowserSupportMessage = ({
     )
   }
 
-  const { customCompilerNames } = featuresReport
-  const customCompilerCount = customCompilerNames.length
+  const { customCompilerPatterns } = featuresReport
+  const customCompilerCount = customCompilerPatterns.length
   if (customCompilerCount === 0) {
     // no need to talk about something unused
   } else {
     parts.push(
-      `${customCompilerCount} custom compilers enabled: ${customCompilerNames}`,
+      `${customCompilerCount} custom compilers enabled: ${customCompilerPatterns}`,
     )
   }
 

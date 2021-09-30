@@ -909,7 +909,7 @@ const createOutJSONFiles = ({
     outDirectoryRelativeUrl,
     importDefaultExtension,
     inlineImportMapIntoHTML,
-    customCompilerNames: Object.keys(customCompilers),
+    customCompilerPatterns: Object.keys(customCompilers),
   }
   outJSONFiles.env = {
     url: envOutFileUrl,
