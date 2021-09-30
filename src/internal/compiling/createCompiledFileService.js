@@ -209,8 +209,9 @@ const getCompiler = ({ originalFileUrl, compileMeta }) => {
   return async (params) => {
     const customResult = await customCompiler(params)
     const jsenvResult = await jsenvCompiler({
-      code: customResult.code,
-      map: customResult.map,
+      ...params,
+      code: customResult.compiledSource,
+      map: customResult.sourcemap,
     })
     return jsenvResult
   }

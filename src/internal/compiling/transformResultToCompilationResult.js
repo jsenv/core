@@ -152,6 +152,7 @@ export const transformResultToCompilationResult = async (
   return {
     contentType,
     compiledSource: output,
+    sourcemap: map,
     sources,
     sourcesContent,
     assets,
