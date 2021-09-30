@@ -26,7 +26,7 @@ const importMetaEnvFileRelativeUrl = `${testDirectoryRelativeUrl}env.js`
 
 // esmodule
 {
-  const transformResult = await transformJs({
+  const { code } = await transformJs({
     ...TRANSFORM_JS_TEST_PARAMS,
     moduleOutFormat: "esmodule",
     importMetaEnvFileRelativeUrl,
@@ -35,7 +35,7 @@ const importMetaEnvFileRelativeUrl = `${testDirectoryRelativeUrl}env.js`
   })
   const distFileUrl = resolveUrl("dist/file.js", testDirectoryUrl)
   const envDistFileUrl = resolveUrl("dist/env.js", testDirectoryUrl)
-  await writeFile(distFileUrl, transformResult.code)
+  await writeFile(distFileUrl, code)
   await copyFileSystemNode({
     from: resolveUrl(importMetaEnvFileRelativeUrl, jsenvCoreDirectoryUrl),
     to: envDistFileUrl,

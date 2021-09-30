@@ -27,7 +27,10 @@ const transformResult = await transformJs({
   url: originalFileUrl,
 })
 const compilationResult = await transformResultToCompilationResult(
-  transformResult,
+  {
+    contentType: "application/javascript",
+    ...transformResult,
+  },
   {
     ...TRANSFORM_RESULT_TEST_PARAMS,
     originalFileContent,
