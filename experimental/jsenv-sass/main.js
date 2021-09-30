@@ -1,1 +1,1 @@
-export { jsenvCompilerForSass } from "./src/jsenvCompilerForSass.js"
+export { compileScss } from "./src/compileScss.js"

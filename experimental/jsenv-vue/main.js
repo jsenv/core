@@ -1,1 +1,1 @@
-export { jsenvCompilerForVue } from "./src/jsenvCompilerForVue.js"
+export { compileVue } from "./src/compileVue.js"
