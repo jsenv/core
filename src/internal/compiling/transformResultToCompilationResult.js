@@ -15,6 +15,7 @@ import {
   sourcemapToBase64Url,
 } from "../sourceMappingURLUtils.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
+import { testFilePresence } from "./compile-directory/fs-optimized-for-cache.js"
 
 const isWindows = process.platform === "win32"
 
@@ -77,14 +78,17 @@ export const transformResultToCompilationResult = async (
       sourcesContent.push(originalFileContent)
     } else {
       map.sources.forEach((source, index) => {
-        const sourceFileUrl = resolveSourceUrl({ source, sourcemapFileUrl })
-        if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
-          // do not track dependency outside project
-          // it means cache stays valid for those external sources
-          return
+        const sourceFileUrl = resolveSourceFile({
+          source,
+          sourcemapFileUrl,
+          originalFileUrl,
+          compiledFileUrl,
+          projectDirectoryUrl,
+        })
+        if (sourceFileUrl) {
+          map.sources[index] = urlToRelativeUrl(sourceFileUrl, sourcemapFileUrl)
+          sources[index] = sourceFileUrl
         }
-        map.sources[index] = urlToRelativeUrl(sourceFileUrl, sourcemapFileUrl)
-        sources[index] = sourceFileUrl
       })
 
       await Promise.all(
@@ -149,6 +153,31 @@ export const transformResultToCompilationResult = async (
     assets,
     assetsContent,
   }
+}
+
+const resolveSourceFile = ({
+  source,
+  sourcemapFileUrl,
+  originalFileUrl,
+  compiledFileUrl,
+  projectDirectoryUrl,
+}) => {
+  const sourceFileUrl = resolveSourceUrl({ source, sourcemapFileUrl })
+  if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
+    // do not track dependency outside project
+    // it means cache stays valid for those external sources
+    return null
+  }
+
+  const fileFound = testFilePresence(sourceFileUrl)
+  if (fileFound) {
+    return sourceFileUrl
+  }
+
+  // prefer original source file
+  const relativeUrl = urlToRelativeUrl(sourceFileUrl, compiledFileUrl)
+  const originalSourceUrl = resolveUrl(relativeUrl, originalFileUrl)
+  return originalSourceUrl
 }
 
 const resolveSourceUrl = ({ source, sourcemapFileUrl }) => {

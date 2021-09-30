@@ -2,7 +2,6 @@ import {
   urlToRelativeUrl,
   urlToFileSystemPath,
   bufferToEtag,
-  resolveUrl,
 } from "@jsenv/filesystem"
 
 import { writeFileContent, testFilePresence } from "./fs-optimized-for-cache.js"
@@ -12,7 +11,6 @@ export const updateMeta = async ({
   logger,
   meta,
   compiledFileUrl,
-  originalFileUrl,
   cacheHitTracking,
   compileResult,
   compileResultStatus,
@@ -33,18 +31,9 @@ export const updateMeta = async ({
   if (isNew || isUpdated) {
     // ensure source that does not leads to concrete files are not capable to invalidate the cache
     const sourcesToRemove = []
-    sources.forEach((sourceFileUrl, index) => {
+    sources.forEach((sourceFileUrl) => {
       const sourceFileExists = testFilePresence(sourceFileUrl)
       if (sourceFileExists) {
-        return
-      }
-
-      // try on original source file
-      const relativeUrl = urlToRelativeUrl(sourceFileUrl, compiledFileUrl)
-      const originalSourceUrl = resolveUrl(relativeUrl, originalFileUrl)
-      const originalSourceFileExists = testFilePresence(originalSourceUrl)
-      if (originalSourceFileExists) {
-        sources[index] = originalSourceUrl
         return
       }
 
