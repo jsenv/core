@@ -1,6 +1,6 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/filesystem"
+
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
@@ -14,8 +14,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryUrl)
-const filename = `${testDirectoryname}.js`
+const filename = `empty.js`
 const originalFileUrl = resolveUrl(`./${filename}`, testDirectoryUrl)
 const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/${filename}`
 const sourcemapFileUrl = `${compiledFileUrl}.map`
@@ -40,8 +39,9 @@ const actual = await transformResultToCompilationResult(
   },
 )
 const expected = {
-  compiledSource: actual.compiledSource,
   contentType: "application/javascript",
+  compiledSource: actual.compiledSource,
+  sourcemap: assert.any(Object),
   sources: [originalFileUrl],
   sourcesContent: [originalFileContent],
   assets: [sourcemapFileUrl],

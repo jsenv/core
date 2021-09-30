@@ -5,7 +5,6 @@ import {
   writeFile,
   urlToRelativeUrl,
   copyFileSystemNode,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -18,8 +17,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryUrl)
-const filename = `${testDirectoryname}.js`
+const filename = `import_meta.js`
 const originalFileUrl = resolveUrl(`./${filename}`, testDirectoryUrl)
 const originalFileContent = await readFile(originalFileUrl)
 const importMetaEnvFileRelativeUrl = `${testDirectoryRelativeUrl}env.js`

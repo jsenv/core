@@ -1,12 +1,11 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, readFile } from "@jsenv/filesystem"
+
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS_TRANSFORM_JS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryname = basename(testDirectoryUrl)
-const filename = `${testDirectoryname}.js`
+const filename = `top_level_await.js`
 const originalFileUrl = resolveUrl(`./${filename}`, testDirectoryUrl)
 const originalFileContent = await readFile(originalFileUrl)
 

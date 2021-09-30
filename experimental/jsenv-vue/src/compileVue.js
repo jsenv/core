@@ -6,6 +6,7 @@ import { transformResultToCompilationResult } from "@jsenv/core/src/internal/com
 
 const require = createRequire(import.meta.url)
 
+// eslint-disable-next-line import/no-unresolved
 const VueComponentCompiler = require("@vue/component-compiler")
 
 const VueCompiler = VueComponentCompiler.createDefaultCompiler()

@@ -299,9 +299,6 @@
       "@rollup/plugin-commonjs/*": [
         "./node_modules/@rollup/plugin-commonjs/*"
       ],
-      "@vue/component-compiler/*": [
-        "./node_modules/@vue/component-compiler/*"
-      ],
       "istanbul-lib-instrument/*": [
         "./node_modules/istanbul-lib-instrument/*"
       ],
@@ -316,9 +313,6 @@
       ],
       "@rollup/plugin-replace/*": [
         "./node_modules/@rollup/plugin-replace/*"
-      ],
-      "@vue/component-compiler": [
-        "./node_modules/@vue/component-compiler/dist/index.js"
       ],
       "cssnano-preset-default/*": [
         "./node_modules/cssnano-preset-default/*"
@@ -353,9 +347,6 @@
       "preact/jsx-dev-runtime": [
         "./node_modules/preact/jsx-runtime/dist/jsxRuntime.mjs"
       ],
-      "vue-template-compiler/*": [
-        "./node_modules/vue-template-compiler/*"
-      ],
       "@jsenv/codecov-upload": [
         "./node_modules/@jsenv/codecov-upload/index.js"
       ],
@@ -385,9 +376,6 @@
       ],
       "systemjs/package.json": [
         "./node_modules/systemjs/package.json"
-      ],
-      "vue-template-compiler": [
-        "./node_modules/vue-template-compiler/index.js"
       ],
       "@babel/eslint-parser": [
         "./node_modules/@babel/eslint-parser/lib/index.cjs"
@@ -731,14 +719,8 @@
       "redux": [
         "./node_modules/redux/lib/redux.js"
       ],
-      "sass/*": [
-        "./node_modules/sass/*"
-      ],
       "cuid": [
         "./node_modules/cuid/index.js"
-      ],
-      "sass": [
-        "./node_modules/sass/sass.dart.js"
       ]
     }
   },

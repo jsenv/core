@@ -14,6 +14,7 @@ export const compileScss = ({
 
   sourcemapExcludeSources,
 }) => {
+  // eslint-disable-next-line import/no-unresolved
   const sass = require("sass")
 
   const result = sass.renderSync({
