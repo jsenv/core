@@ -5,6 +5,7 @@ import { require } from "./internal/require.js"
 export const convertCommonJsWithRollup = async ({
   url,
   urlAfterTransform,
+
   replaceGlobalObject = true,
   replaceGlobalFilename = true,
   replaceGlobalDirname = true,
@@ -96,9 +97,10 @@ export const convertCommonJsWithRollup = async ({
       : {}),
   }
 
-  const result = await rollupBuild.generate(generateOptions)
+  const { output } = await rollupBuild.generate(generateOptions)
+  const { code, map } = output[0]
 
-  return result.output[0]
+  return { code, map }
 }
 
 const __filenameReplacement = `import.meta.url.slice('file:///'.length)`

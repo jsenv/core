@@ -598,10 +598,6 @@ building ${entryFileRelativeUrls.length} entry files...`)
       return asRollupUrl(importUrl)
     },
 
-    // TODO: when code is using new URL() pattern
-    // the code after build is currently returning a string instead of an url object
-    // can we always return an url object because resolveFileUrl is always called
-    // by this pattern?
     resolveFileUrl: ({ referenceId, fileName }) => {
       const ressourceFound = ressourceBuilder.findRessource((ressource) => {
         return ressource.rollupReferenceId === referenceId

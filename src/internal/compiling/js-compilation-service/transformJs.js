@@ -64,7 +64,6 @@ export const transformJs = async ({
       : undefined,
 
     babelPluginMap,
-    convertMap,
     moduleOutFormat,
     importMetaFormat,
 
