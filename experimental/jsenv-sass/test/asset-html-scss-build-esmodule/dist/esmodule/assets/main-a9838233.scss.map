@@ -1,0 +1,16 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../file.scss",
+    "../../../.jsenv/out-build/otherwise/test/asset-html/asset-html-scss-build-esmodule/main.scss",
+    "../../../main.scss"
+  ],
+  "names": [],
+  "mappings": "AAAA;EACE,gBAAA;ACCF;;ACEA;EACE,kBAHM;ADIR;ACCE;EACE,kBAAA;ADCJ",
+  "file": "main-a9838233.scss",
+  "sourcesContent": [
+    "body {\n  margin-top: 40px;\n}\n",
+    "body {\n  margin-top: 40px;\n}\n\nbody {\n  background: violet;\n}\nbody p {\n  background: yellow;\n}\n\n/*# sourceMappingURL=main.scss.map */",
+    "@import \"./file.scss\";\n\n$color: violet;\n\nbody {\n  background: $color;\n\n  p {\n    background: yellow;\n  }\n}\n"
+  ]
+}

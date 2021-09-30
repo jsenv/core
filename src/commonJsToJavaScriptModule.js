@@ -3,7 +3,7 @@ import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
 import { require } from "./internal/require.js"
 import { transformResultToCompilationResult } from "./internal/compiling/transformResultToCompilationResult.js"
 
-export const commonJsToEsModule = async ({
+export const commonJsToJavaScriptModule = async ({
   url,
   compiledUrl,
   projectDirectoryUrl,

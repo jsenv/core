@@ -1,7 +1,11 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { execute, launchChromium, commonJsToEsModule } from "@jsenv/core"
+import {
+  execute,
+  launchChromium,
+  commonJsToJavaScriptModule,
+} from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXECUTE.js"
 
@@ -18,7 +22,7 @@ const actual = await execute({
   jsenvDirectoryRelativeUrl,
   customCompilers: {
     "./node_modules/react/index.js": (options) =>
-      commonJsToEsModule({
+      commonJsToJavaScriptModule({
         ...options,
         processEnvNodeEnv: "production",
       }),

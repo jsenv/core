@@ -10,7 +10,7 @@ import {
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { jsenvCompilerForSass } from "@jsenv/core/packages/jsenv-sass/main.js"
+import { compileScss } from "../../src/compileScss.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -33,7 +33,7 @@ const { buildMappings } = await buildProject({
   buildDirectoryRelativeUrl,
   entryPointMap,
   customCompilers: {
-    ...jsenvCompilerForSass,
+    "**/*.scss": compileScss,
   },
 })
 

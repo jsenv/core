@@ -1,0 +1,14 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../../../file.scss",
+    "../../../../../../main.scss"
+  ],
+  "names": [],
+  "mappings": "AAAA;EACE;;;ACGF;EACE,YAHM;;AAKN;EACE",
+  "file": "main.scss",
+  "sourcesContent": [
+    "body {\n  margin-top: 40px;\n}\n",
+    "@import \"./file.scss\";\n\n$color: violet;\n\nbody {\n  background: $color;\n\n  p {\n    background: yellow;\n  }\n}\n"
+  ]
+}

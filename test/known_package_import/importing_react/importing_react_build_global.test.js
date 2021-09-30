@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { buildProject, commonJsToEsModule } from "@jsenv/core"
+import { buildProject, commonJsToJavaScriptModule } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   GENERATE_GLOBAL_BUILD_TEST_PARAMS,
@@ -29,7 +29,10 @@ const { buildMappings } = await buildProject({
   entryPointMap,
   customCompilers: {
     "./node_modules/react/index.js": (options) =>
-      commonJsToEsModule({ ...options, processEnvNodeEnv: "dev" }),
+      commonJsToJavaScriptModule({
+        ...options,
+        processEnvNodeEnv: "dev",
+      }),
   },
 })
 const mainJsFileBuildRelativeUrl =

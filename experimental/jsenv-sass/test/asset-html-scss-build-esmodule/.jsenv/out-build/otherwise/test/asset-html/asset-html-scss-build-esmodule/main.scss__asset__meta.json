@@ -1,0 +1,19 @@
+{
+  "contentType": "text/css",
+  "sources": [
+    "../../../../../../file.scss",
+    "../../../../../../main.scss"
+  ],
+  "sourcesEtag": [
+    "\"1d-MY+Li3Y3SK07aiWFW4ME+9r/ERU\"",
+    "\"6b-c/HkSCjO7T+D9t+/hEtIQRw9JuU\""
+  ],
+  "assets": [
+    "main.scss.map"
+  ],
+  "assetsEtag": [
+    "\"18a-0tM/Ot5L+yPqtzcmj7TgkNmL/hE\""
+  ],
+  "createdMs": 1631112301332,
+  "lastModifiedMs": 1631112301332
+}
