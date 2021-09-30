@@ -33,16 +33,23 @@ const transformResult = await transformJs({
   },
 })
 
-const actual = await transformResultToCompilationResult(transformResult, {
-  ...TRANSFORM_RESULT_TEST_PARAMS,
-  originalFileContent,
-  originalFileUrl,
-  compiledFileUrl,
-  sourcemapFileUrl,
-})
+const actual = await transformResultToCompilationResult(
+  {
+    contentType: "application/javascript",
+    ...transformResult,
+  },
+  {
+    ...TRANSFORM_RESULT_TEST_PARAMS,
+    originalFileContent,
+    originalFileUrl,
+    compiledFileUrl,
+    sourcemapFileUrl,
+  },
+)
 const expected = {
-  compiledSource: actual.compiledSource,
   contentType: "application/javascript",
+  compiledSource: actual.compiledSource,
+  sourcemap: assert.any(Object),
   sources: [originalFileUrl],
   sourcesContent: [originalFileContent],
   assets: [sourcemapFileUrl, `${compiledFileUrl}__asset__coverage.json`],

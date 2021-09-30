@@ -98,7 +98,7 @@ There is more parameters listed here. Their documentation is regrouped in an oth
 
 - [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
-- [convertMap](../shared-parameters.md#convertMap)
+- [customCompilers](../shared-parameters.md#customCompilers)
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
 - [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
 

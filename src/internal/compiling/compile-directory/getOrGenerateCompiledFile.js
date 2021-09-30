@@ -215,21 +215,28 @@ const callCompile = async ({
 }) => {
   logger.debug(`compile ${originalFileUrl}`)
 
-  const compileArgs =
+  const codeBeforeCompile =
     compile.length === 0
-      ? []
-      : await getArgumentsForCompile({ originalFileUrl, fileContentFallback })
+      ? ""
+      : await getCodeToCompile({ originalFileUrl, fileContentFallback })
 
+  const compileReturnValue = await compile({
+    code: codeBeforeCompile,
+    map: undefined,
+  })
+  if (typeof compileReturnValue !== "object" || compileReturnValue === null) {
+    throw new TypeError(
+      `compile must return an object, got ${compileReturnValue}`,
+    )
+  }
   const {
+    contentType,
+    compiledSource,
     sources = [],
     sourcesContent = [],
     assets = [],
     assetsContent = [],
-    contentType,
-    compiledSource,
-    ...rest
-  } = await compile(...compileArgs)
-
+  } = compileReturnValue
   if (typeof contentType !== "string") {
     throw new TypeError(
       `compile must return a contentType string, got ${contentType}`,
@@ -248,14 +255,10 @@ const callCompile = async ({
     sourcesContent,
     assets,
     assetsContent,
-    ...rest,
   }
 }
 
-const getArgumentsForCompile = async ({
-  originalFileUrl,
-  fileContentFallback,
-}) => {
+const getCodeToCompile = async ({ originalFileUrl, fileContentFallback }) => {
   let fileContent
   if (fileContentFallback) {
     try {
@@ -270,7 +273,7 @@ const getArgumentsForCompile = async ({
   } else {
     fileContent = await readFileContent(originalFileUrl)
   }
-  return [fileContent]
+  return fileContent
 }
 
 const startAsap = async (fn, { logger, compiledFileUrl }) => {

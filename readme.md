@@ -355,10 +355,10 @@ CommonJS module format rely on `module.exports` and `require`. It was invented b
 _jsenv.config.mjs to use code written in CommonJS_:
 
 ```js
-import { jsenvBabelPluginMap, convertCommonJsWithRollup } from "@jsenv/core"
+import { jsenvBabelPluginMap, commonJsToJavaScriptModule } from "@jsenv/core"
 
-export const convertMap = {
-  "./node_modules/whatever/index.js": convertCommonJsWithRollup,
+export const customCompilers = {
+  "./node_modules/whatever/index.js": commonJsToJavaScriptModule,
 }
 ```
 
@@ -370,7 +370,7 @@ _jsenv.config.mjs for react and jsx:_
 
 ```js
 import { createRequire } from "module"
-import { jsenvBabelPluginMap, convertCommonJsWithRollup } from "@jsenv/core"
+import { jsenvBabelPluginMap, commonJsToJavaScriptModule } from "@jsenv/core"
 
 const require = createRequire(import.meta.url)
 const transformReactJSX = require("@babel/plugin-transform-react-jsx")
@@ -383,10 +383,10 @@ export const babelPluginMap = {
   ],
 }
 
-export const convertMap = {
-  "./node_modules/react/index.js": convertCommonJsWithRollup,
+export const customCompilers = {
+  "./node_modules/react/index.js": commonJsToJavaScriptModule,
   "./node_modules/react-dom/index.js": (options) => {
-    return convertCommonJsWithRollup({ ...options, external: ["react"] })
+    return commonJsToJavaScriptModule({ ...options, external: ["react"] })
   },
 }
 ```
@@ -408,7 +408,7 @@ See also
 
 - [@jsenv/importmap-node-module](https://github.com/jsenv/importmap-node-module#import-map-node-module)
 - [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
-- [convertMap](./docs/shared-parameters.md#convertMap)
+- [customCompilers](./docs/shared-parameters.md#customCompilers)
 - [transform-react-jsx on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-react-jsx.html)
 - [importmap spec](https://github.com/WICG/import-maps#import-maps)
 

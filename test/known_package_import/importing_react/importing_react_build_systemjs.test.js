@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { buildProject, convertCommonJsWithRollup } from "@jsenv/core"
+import { buildProject, commonJsToJavaScriptModule } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
@@ -20,9 +20,9 @@ const mainFilename = `importing_react.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-const convertMap = {
+const customCompilers = {
   "./node_modules/react/index.js": (options) =>
-    convertCommonJsWithRollup({
+    commonJsToJavaScriptModule({
       ...options,
       processEnvNodeEnv: "production",
     }),
@@ -35,7 +35,7 @@ const { buildMappings } = await buildProject({
   // filesystemCache: true,
   buildDirectoryRelativeUrl,
   entryPointMap,
-  convertMap,
+  customCompilers,
 })
 const mainJsBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}importing_react.js`]

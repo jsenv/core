@@ -1,84 +1,47 @@
-import { urlToContentType } from "@jsenv/server"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./transformResultToCompilationResult.js"
 
-const compileJsFile = ({
+export const compileJavascript = async ({
+  code,
+  map,
+  url,
+  compiledUrl,
   projectDirectoryUrl,
-  originalFileUrl,
-  compiledFileUrl,
-  compileId,
-  groupMap,
+
   babelPluginMap,
-  convertMap,
   transformTopLevelAwait,
   moduleOutFormat,
   importMetaFormat,
-  writeOnFilesystem,
+
   sourcemapExcludeSources,
 }) => {
-  const contentType = urlToContentType(originalFileUrl)
+  const transformResult = await transformJs({
+    code,
+    map,
+    url,
+    compiledUrl,
+    projectDirectoryUrl,
 
-  if (
-    contentType !== "application/javascript" &&
-    contentType !== "text/javascript"
-  ) {
-    return null
-  }
+    babelPluginMap,
+    transformTopLevelAwait,
+    moduleOutFormat,
+    importMetaFormat,
+  })
 
-  return {
-    compile: async (originalFileContent) => {
-      const transformResult = await transformJs({
-        code: originalFileContent,
-        url: originalFileUrl,
-        urlAfterTransform: compiledFileUrl,
-        projectDirectoryUrl,
-
-        babelPluginMap: compileIdToBabelPluginMap(compileId, {
-          groupMap,
-          babelPluginMap,
-        }),
-        convertMap,
-        transformTopLevelAwait,
-        moduleOutFormat,
-        importMetaFormat,
-      })
-      const sourcemapFileUrl = `${compiledFileUrl}.map`
-
-      return transformResultToCompilationResult(transformResult, {
-        projectDirectoryUrl,
-        originalFileContent,
-        originalFileUrl,
-        compiledFileUrl,
-        sourcemapFileUrl,
-        sourcemapMethod: writeOnFilesystem ? "comment" : "inline",
-        sourcemapExcludeSources,
-      })
+  return transformResultToCompilationResult(
+    {
+      contentType: "application/javascript",
+      code: transformResult.code,
+      map: transformResult.map,
+      metadata: transformResult.metadata,
     },
-  }
-}
-
-export const jsenvCompilerForJavaScript = {
-  "jsenv-compiler-js": compileJsFile,
-}
-
-export const compileIdToBabelPluginMap = (
-  compileId,
-  { babelPluginMap, groupMap },
-) => {
-  const babelPluginMapForGroupMap = {}
-
-  const groupBabelPluginMap = {}
-  groupMap[compileId].babelPluginRequiredNameArray.forEach(
-    (babelPluginRequiredName) => {
-      if (babelPluginRequiredName in babelPluginMap) {
-        groupBabelPluginMap[babelPluginRequiredName] =
-          babelPluginMap[babelPluginRequiredName]
-      }
+    {
+      projectDirectoryUrl,
+      originalFileContent: code,
+      originalFileUrl: url,
+      compiledFileUrl: compiledUrl,
+      sourcemapFileUrl: `${compiledUrl}.map`,
+      sourcemapExcludeSources,
     },
   )
-
-  return {
-    ...groupBabelPluginMap,
-    ...babelPluginMapForGroupMap,
-  }
 }

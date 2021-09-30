@@ -72,7 +72,6 @@ export const startCompileServer = async ({
   replaceGlobalDirname = false,
   replaceMap = {},
   babelPluginMap = jsenvBabelPluginMap,
-  convertMap = {},
   customCompilers = {},
 
   // options related to the server itself
@@ -201,7 +200,6 @@ export const startCompileServer = async ({
     importDefaultExtension,
     compileServerGroupMap,
     env,
-    convertMap,
     inlineImportMapIntoHTML,
     customCompilers,
   })
@@ -272,7 +270,6 @@ export const startCompileServer = async ({
       transformTopLevelAwait,
       groupMap: compileServerGroupMap,
       babelPluginMap,
-      convertMap,
       customCompilers,
       moduleOutFormat,
       importMetaFormat,
@@ -874,7 +871,6 @@ const createOutJSONFiles = ({
   importDefaultExtension,
   compileServerGroupMap,
   babelPluginMap,
-  convertMap,
   replaceProcessEnvNodeEnv,
   processEnvNodeEnv,
   env,
@@ -897,7 +893,6 @@ const createOutJSONFiles = ({
   const outDirectoryMeta = {
     jsenvCorePackageVersion,
     babelPluginMap,
-    convertMap,
     compileServerGroupMap,
     replaceProcessEnvNodeEnv,
     processEnvNodeEnv,
@@ -914,8 +909,7 @@ const createOutJSONFiles = ({
     outDirectoryRelativeUrl,
     importDefaultExtension,
     inlineImportMapIntoHTML,
-    customCompilerNames: Object.keys(customCompilers),
-    convertPatterns: Object.keys(convertMap),
+    customCompilerPatterns: Object.keys(customCompilers),
   }
   outJSONFiles.env = {
     url: envOutFileUrl,

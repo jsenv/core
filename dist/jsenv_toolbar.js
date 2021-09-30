@@ -2247,8 +2247,7 @@
         });
         var groupInfo = groupMap[compileId];
         var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML,
-            customCompilerNames = envJson.customCompilerNames,
-            convertPatterns = envJson.convertPatterns;
+            customCompilerPatterns = envJson.customCompilerPatterns;
 
         var _babelPluginRequiredN = babelPluginRequiredNamesFromGroupInfo(groupInfo, {
           coverageInstrumentationRequired: coverageInstrumentationRequired
@@ -2258,17 +2257,16 @@
           failFastOnFeatureDetection: failFastOnFeatureDetection,
           groupInfo: groupInfo,
           inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-          customCompilerNames: customCompilerNames,
+          customCompilerPatterns: customCompilerPatterns,
           coverageInstrumentationRequired: coverageInstrumentationRequired
         }), function (_getFeaturesReport) {
           var featuresReport = _objectSpread2(_objectSpread2({
             babelPluginRequiredNames: _babelPluginRequiredN
           }, _getFeaturesReport), {}, {
-            customCompilerNames: customCompilerNames,
-            convertPatterns: convertPatterns
+            customCompilerPatterns: customCompilerPatterns
           });
 
-          var canAvoidCompilation = featuresReport.convertPatterns.length === 0 && featuresReport.customCompilerNames.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
+          var canAvoidCompilation = featuresReport.customCompilerPatterns.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
           return {
             featuresReport: featuresReport,
             canAvoidCompilation: canAvoidCompilation,
@@ -2521,18 +2519,11 @@
       parts.push("".concat(babelPluginRequiredCount, " babel plugins are mandatory: ").concat(babelPluginRequiredNames));
     }
 
-    var convertPatterns = featuresReport.convertPatterns;
-    var convertPatternCount = convertPatterns.length;
-
-    if (convertPatternCount === 0) ; else {
-      parts.push("convertMap is used with the following keys: ".concat(convertPatterns));
-    }
-
-    var customCompilerNames = featuresReport.customCompilerNames;
-    var customCompilerCount = customCompilerNames.length;
+    var customCompilerPatterns = featuresReport.customCompilerPatterns;
+    var customCompilerCount = customCompilerPatterns.length;
 
     if (customCompilerCount === 0) ; else {
-      parts.push("".concat(customCompilerCount, " custom compilers enabled: ").concat(customCompilerNames));
+      parts.push("".concat(customCompilerCount, " custom compilers enabled: ").concat(customCompilerPatterns));
     }
 
     var jsenvPluginRequiredNames = featuresReport.jsenvPluginRequiredNames;

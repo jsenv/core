@@ -14,7 +14,7 @@ import { filePathToBabelHelperName } from "./babelHelper.js"
 
 export const jsenvTransform = async ({
   code,
-  map,
+  map, // optional
   ast, // optional
   url,
   relativeUrl, // optional

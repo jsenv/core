@@ -1,0 +1,10 @@
+/.jsenv/
+/dist/
+/coverage/
+/node_modules/
+/test/**/dist/
+/test/**/.jsenv/
+/import-map.importmap
+/jsconfig.json
+/package-lock.json
+/secrets.json

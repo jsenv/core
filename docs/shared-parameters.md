@@ -3,7 +3,7 @@
 - [projectDirectoryUrl](#projectDirectoryUrl)
 - [importDefaultExtension](#importDefaultExtension)
 - [babelPluginMap](#babelPluginMap)
-- [convertMap](#convertMap)
+- [customCompilers](#customCompilers)
 - [compileServerLogLevel](#compileServerLogLevel)
 - [compileServerProtocol](#compileServerProtocol)
 - [compileServerPrivateKey](#compileServerPrivateKey)
@@ -69,17 +69,17 @@ const babelPluginMap = {
 
 Please note that if you have a `.babelrc` file, jsenv will not read it. jsenv needs to know the list of babel plugin you want to use in an explicit way.
 
-# convertMap
+# customCompilers
 
-`convertMap` parameter is an object describing how to convert files to modules format.This parameter is optionnal with a default value of `{}`. The default value means all your project files uses modules format and nothing needs to be converted.
+`customCompilers` parameter is an object describing how file should be compiled. This parameter is optionnal with a default value of `{}`. The default value means all your project files uses standard files and nothing needs to be compiled.
 
 But if your code or some of your dependencies use an other format you need to convert it using this parameter. For instance, the following code makes jsenv compatible with `react`.
 
 ```js
-import { convertCommonJsWithRollup } from "@jsenv/core"
+import { commonJsToJavaScriptModule } from "@jsenv/core"
 
-const convertMap = {
-  "./node_modules/react/index.js": convertCommonJsWithRollup,
+const customCompilers = {
+  "./node_modules/react/index.js": commonJsToJavaScriptModule,
 }
 ```
 

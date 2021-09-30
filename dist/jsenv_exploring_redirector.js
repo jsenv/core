@@ -1252,8 +1252,7 @@
         });
         var groupInfo = groupMap[compileId];
         var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML,
-            customCompilerNames = envJson.customCompilerNames,
-            convertPatterns = envJson.convertPatterns;
+            customCompilerPatterns = envJson.customCompilerPatterns;
 
         var _babelPluginRequiredN = babelPluginRequiredNamesFromGroupInfo(groupInfo, {
           coverageInstrumentationRequired: coverageInstrumentationRequired
@@ -1263,17 +1262,16 @@
           failFastOnFeatureDetection: failFastOnFeatureDetection,
           groupInfo: groupInfo,
           inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-          customCompilerNames: customCompilerNames,
+          customCompilerPatterns: customCompilerPatterns,
           coverageInstrumentationRequired: coverageInstrumentationRequired
         }), function (_getFeaturesReport) {
           var featuresReport = _objectSpread2(_objectSpread2({
             babelPluginRequiredNames: _babelPluginRequiredN
           }, _getFeaturesReport), {}, {
-            customCompilerNames: customCompilerNames,
-            convertPatterns: convertPatterns
+            customCompilerPatterns: customCompilerPatterns
           });
 
-          var canAvoidCompilation = featuresReport.convertPatterns.length === 0 && featuresReport.customCompilerNames.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
+          var canAvoidCompilation = featuresReport.customCompilerPatterns.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
           return {
             featuresReport: featuresReport,
             canAvoidCompilation: canAvoidCompilation,
