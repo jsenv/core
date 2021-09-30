@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -18,11 +14,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
-const mainFilename = `${testDirectoryname}.js`
-
+const mainFilename = `dynamic_import_without_top_level_await.js`
 await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -37,5 +31,5 @@ const { namespace } = await requireCommonJsBuild({
   buildDirectoryRelativeUrl,
 })
 const actual = await namespace.value
-const expected = { default: 42 }
+const expected = { answer: 42 }
 assert({ actual, expected })

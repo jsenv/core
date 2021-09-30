@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -21,9 +17,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `${testDirectoryname}.html`
+const filename = `dynamic_import.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
@@ -32,7 +27,12 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   })
 
 await launchBrowsers(
-  [launchChromium, launchFirefox, launchWebkit],
+  [
+    // comment to force-multiline
+    launchChromium,
+    launchFirefox,
+    launchWebkit,
+  ],
   async (launchBrowser) => {
     const actual = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
@@ -49,7 +49,7 @@ await launchBrowsers(
     const expected = {
       status: "completed",
       namespace: {
-        "./dynamic-import-launch-browser.js": {
+        "./dynamic_import.js": {
           status: "completed",
           namespace: {
             default: 42,

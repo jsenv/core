@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -14,25 +14,28 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.js`
+const mainFilename = `dynamic_import.html`
 
-await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   useImportMapToMaximizeCacheReuse: false,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
   },
 })
-const { namespace: actual } = await browserImportSystemJsBuild({
+const mainBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}dynamic_import.js`]
+const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
-  htmlFileRelativeUrl: "./index.html",
+  mainRelativeUrl: `./${mainBuildRelativeUrl}`,
 })
+
+const actual = namespace
 const expected = {
   default: 42,
 }
