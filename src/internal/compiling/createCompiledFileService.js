@@ -43,7 +43,6 @@ export const createCompiledFileService = ({
   importMetaFormat,
   babelPluginMap,
   groupMap,
-  // convertMap,
   customCompilers,
 
   jsenvToolbarInjection,

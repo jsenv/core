@@ -230,7 +230,7 @@ To avoid duplication some parameter are linked to a generic documentation.
 - [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
-- [convertMap](../shared-parameters.md#convertMap)
+- [customCompilers](../shared-parameters.md#customCompilers)
 - [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
 - [compileServerProtocol](../shared-parameters.md#compileServerProtocol)
 - [compileServerPrivateKey](../shared-parameters.md#compileServerPrivateKey)

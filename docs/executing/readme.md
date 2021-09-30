@@ -77,7 +77,7 @@ To avoid duplication some parameter are linked to a generic documentation.
 
 - [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
-- [convertMap](../shared-parameters.md#convertMap)
+- [customCompilers](../shared-parameters.md#customCompilers)
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
 - [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
 - [compileServerProtocol](../shared-parameters.md#compileServerProtocol)

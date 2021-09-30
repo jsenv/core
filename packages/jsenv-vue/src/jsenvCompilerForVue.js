@@ -20,7 +20,6 @@ const compileVueFile = ({
 
   groupMap,
   babelPluginMap,
-  convertMap,
   transformTopLevelAwait,
   moduleOutFormat,
   importMetaFormat,
@@ -62,7 +61,6 @@ const compileVueFile = ({
           groupMap,
           babelPluginMap,
         }),
-        convertMap,
         transformTopLevelAwait,
         moduleOutFormat,
         importMetaFormat,

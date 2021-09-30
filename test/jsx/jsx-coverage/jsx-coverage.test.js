@@ -1,7 +1,16 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import {
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  urlToBasename,
+} from "@jsenv/filesystem"
 
-import { executeTestPlan, launchNode, launchChromium, convertCommonJsWithRollup } from "@jsenv/core"
+import {
+  executeTestPlan,
+  launchNode,
+  launchChromium,
+  commonJsToEsModule,
+} from "@jsenv/core"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
@@ -9,7 +18,10 @@ import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TEST
 const transformReactJSX = require("@babel/plugin-transform-react-jsx")
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.html`
@@ -18,10 +30,13 @@ const { testPlanCoverage } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   babelPluginMap: {
-    "transform-react-jsx": [transformReactJSX, { pragma: "React.createElement" }],
+    "transform-react-jsx": [
+      transformReactJSX,
+      { pragma: "React.createElement" },
+    ],
   },
-  convertMap: {
-    "./node_modules/react/index.js": convertCommonJsWithRollup,
+  customCompilers: {
+    "./node_modules/react/index.js": commonJsToEsModule,
   },
   testPlan: {
     [htmlFileRelativeUrl]: {
