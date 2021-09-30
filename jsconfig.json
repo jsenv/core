@@ -318,7 +318,7 @@
         "./node_modules/cssnano-preset-default/*"
       ],
       "istanbul-lib-instrument": [
-        "./node_modules/istanbul-lib-instrument/dist/index.js"
+        "./node_modules/istanbul-lib-instrument/src/index.js"
       ],
       "postcss/lib/declaration": [
         "./node_modules/postcss/lib/declaration.js"
