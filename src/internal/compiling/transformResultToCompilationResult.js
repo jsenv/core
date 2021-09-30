@@ -4,6 +4,7 @@ import {
   readFile,
   ensureWindowsDriveLetter,
 } from "@jsenv/filesystem"
+
 import {
   replaceBackSlashesWithSlashes,
   startsWithWindowsDriveLetter,
@@ -20,7 +21,7 @@ import { testFilePresence } from "./compile-directory/fs-optimized-for-cache.js"
 const isWindows = process.platform === "win32"
 
 export const transformResultToCompilationResult = async (
-  { code, map, contentType = "application/javascript", metadata = {} },
+  { contentType, code, map, metadata = {} },
   {
     projectDirectoryUrl,
     originalFileContent,
@@ -37,6 +38,9 @@ export const transformResultToCompilationResult = async (
     sourcemapMethod = "comment", // "comment", "inline"
   },
 ) => {
+  if (typeof contentType !== "string") {
+    throw new TypeError(`contentType must be a string, got ${contentType}`)
+  }
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(
       `projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`,
@@ -146,8 +150,8 @@ export const transformResultToCompilationResult = async (
   }
 
   return {
-    compiledSource: output,
     contentType,
+    compiledSource: output,
     sources,
     sourcesContent,
     assets,

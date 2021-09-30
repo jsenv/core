@@ -1,5 +1,10 @@
 import { serveFile } from "@jsenv/server"
-import { resolveUrl, resolveDirectoryUrl } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  resolveDirectoryUrl,
+  normalizeStructuredMetaMap,
+  urlToMeta,
+} from "@jsenv/filesystem"
 
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 import {
@@ -9,14 +14,19 @@ import {
   COMPILE_ID_BUILD_COMMONJS_FILES,
 } from "../CONSTANTS.js"
 import { compileFile } from "./compileFile.js"
-import { jsenvCompilerForHtml } from "./jsenvCompilerForHtml.js"
-import { jsenvCompilerForImportmap } from "./jsenvCompilerForImportmap.js"
-import { jsenvCompilerForJavaScript } from "./jsenvCompilerForJavaScript.js"
+import { compileHtml } from "./jsenvCompilerForHtml.js"
+import { compileImportmap } from "./jsenvCompilerForImportmap.js"
+import { compileJavascript } from "./jsenvCompilerForJavaScript.js"
 
 const jsenvCompilers = {
-  ...jsenvCompilerForJavaScript,
-  ...jsenvCompilerForHtml,
-  ...jsenvCompilerForImportmap,
+  "**/*.js": compileJavascript,
+  "**/*.jsx": compileJavascript,
+  "**/*.ts": compileJavascript,
+  "**/*.tsx": compileJavascript,
+  "**/*.mjs": compileJavascript,
+
+  "**/*.html": compileHtml,
+  "**/*.importmap": compileImportmap,
 }
 
 export const createCompiledFileService = ({
@@ -33,18 +43,35 @@ export const createCompiledFileService = ({
   importMetaFormat,
   babelPluginMap,
   groupMap,
-  convertMap,
+  // convertMap,
   customCompilers,
-  urlMappings,
 
   jsenvToolbarInjection,
 
   projectFileRequestedCallback,
   useFilesystemAsCache,
-  writeOnFilesystem,
   compileCacheStrategy,
   sourcemapExcludeSources,
 }) => {
+  const compilerCandidates = {
+    ...jsenvCompilers,
+    ...customCompilers,
+  }
+  Object.keys(compilerCandidates).forEach((key) => {
+    const value = compilerCandidates[key]
+    if (typeof value !== "function") {
+      throw new TypeError(
+        `A compiler must be a function, found ${value} for "${key}"`,
+      )
+    }
+  })
+  const compileStructuredMetaMap = normalizeStructuredMetaMap(
+    {
+      compile: compilerCandidates,
+    },
+    projectDirectoryUrl,
+  )
+
   return (request) => {
     const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
@@ -102,74 +129,83 @@ export const createCompiledFileService = ({
       originalFileRelativeUrl,
       compileDirectoryUrl,
     )
-
-    let compilerOptions = null
-    const compilerCandidateParams = {
-      cancellationToken,
-      logger,
-
-      compileServerOrigin: request.origin,
-      projectDirectoryUrl,
-      originalFileUrl,
-      compiledFileUrl,
-      compileId,
-      outDirectoryRelativeUrl,
-
-      urlMappings,
-
-      moduleOutFormat,
-      importMetaFormat,
-      groupMap,
-      babelPluginMap,
-      convertMap,
-      transformTopLevelAwait,
-      runtimeSupport,
-
-      writeOnFilesystem,
-      sourcemapExcludeSources,
-      jsenvToolbarInjection,
-    }
-    const compilerCandidates = { ...jsenvCompilers, ...customCompilers }
-    Object.keys(compilerCandidates).find((compilerCandidateName) => {
-      const compilerCandidate = compilerCandidates[compilerCandidateName]
-      if (typeof compilerCandidate !== "function") {
-        throw new TypeError(
-          `"${compilerCandidateName}" compiler is not a function, got ${compilerCandidate}`,
-        )
-      }
-      const returnValue = compilerCandidate(compilerCandidateParams)
-      if (returnValue && typeof returnValue === "object") {
-        compilerOptions = returnValue
-        return true
-      }
-      return false
+    const { compile } = urlToMeta({
+      url: originalFileUrl,
+      structuredMetaMap: compileStructuredMetaMap,
     })
-
-    if (compilerOptions) {
-      return compileFile({
-        cancellationToken,
-        logger,
-
-        projectDirectoryUrl,
-        originalFileUrl,
-        compiledFileUrl,
-
-        writeOnFilesystem: true, // we always need them
-        useFilesystemAsCache,
-        compileCacheStrategy,
-        projectFileRequestedCallback,
-        request,
-
-        ...compilerOptions,
-      })
-    }
 
     // no compiler -> serve original file
     // we don't redirect otherwise it complexify ressource tracking
     // and url resolution
-    return sourceFileService({
-      ...request,
-      ressource: `/${originalFileRelativeUrl}`,
+    if (!compile) {
+      return sourceFileService({
+        ...request,
+        ressource: `/${originalFileRelativeUrl}`,
+      })
+    }
+
+    // compile this if needed
+    const compileResponsePromise = compileFile({
+      cancellationToken,
+      logger,
+
+      projectDirectoryUrl,
+      originalFileUrl,
+      compiledFileUrl,
+
+      writeOnFilesystem: true, // we always need them
+      useFilesystemAsCache,
+      compileCacheStrategy,
+      projectFileRequestedCallback,
+      request,
+      compile: ({ code, map }) => {
+        return compile({
+          cancellationToken,
+          logger,
+
+          code,
+          map,
+          url: originalFileUrl,
+          compiledUrl: compiledFileUrl,
+          projectDirectoryUrl,
+          compileServerOrigin: request.origin,
+          outDirectoryRelativeUrl,
+          compileId,
+
+          runtimeSupport,
+          moduleOutFormat,
+          importMetaFormat,
+          transformTopLevelAwait,
+          babelPluginMap: compileIdToBabelPluginMap(compileId, {
+            babelPluginMap,
+            groupMap,
+          }),
+
+          sourcemapMethod: "comment", // "inline" is also possible
+          sourcemapExcludeSources,
+          jsenvToolbarInjection,
+        })
+      },
     })
+    return compileResponsePromise
+  }
+}
+
+const compileIdToBabelPluginMap = (compileId, { babelPluginMap, groupMap }) => {
+  const babelPluginMapForGroupMap = {}
+
+  const groupBabelPluginMap = {}
+  groupMap[compileId].babelPluginRequiredNameArray.forEach(
+    (babelPluginRequiredName) => {
+      if (babelPluginRequiredName in babelPluginMap) {
+        groupBabelPluginMap[babelPluginRequiredName] =
+          babelPluginMap[babelPluginRequiredName]
+      }
+    },
+  )
+
+  return {
+    ...groupBabelPluginMap,
+    ...babelPluginMapForGroupMap,
   }
 }

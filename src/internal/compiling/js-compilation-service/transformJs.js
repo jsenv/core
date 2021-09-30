@@ -10,7 +10,7 @@ export const transformJs = async ({
   code,
   map,
   url,
-  urlAfterTransform,
+  compiledUrl,
   projectDirectoryUrl,
 
   babelPluginMap,
@@ -45,7 +45,7 @@ export const transformJs = async ({
     code,
     map,
     url,
-    urlAfterTransform,
+    compiledUrl,
     projectDirectoryUrl,
 
     convertMap,
@@ -84,7 +84,7 @@ const applyConvertMap = async ({
   code,
   map,
   url,
-  urlAfterTransform,
+  compiledUrl,
   projectDirectoryUrl,
 
   convertMap,
@@ -109,7 +109,7 @@ const applyConvertMap = async ({
     code,
     map,
     url,
-    urlAfterTransform,
+    compiledUrl,
     projectDirectoryUrl,
 
     remap,
