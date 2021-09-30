@@ -5,7 +5,6 @@ import {
   readFile,
   bufferToEtag,
   readFileSystemNodeModificationTime,
-  urlToBasename,
 } from "@jsenv/filesystem"
 import { fetchUrl } from "@jsenv/server"
 
@@ -20,8 +19,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
-const filename = `${testDirectoryname}.js`
+const filename = `file.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 // const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
