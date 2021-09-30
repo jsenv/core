@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 export { buildProject } from "./src/buildProject.js"
-export { convertCommonJsWithRollup } from "./src/convertCommonJsWithRollup.js"
+export { commonJsToEsModule } from "./src/commonJsToEsModule.js"
 export { execute } from "./src/execute.js"
 export { executeTestPlan } from "./src/executeTestPlan.js"
 export { importUsingChildProcess } from "./src/importUsingChildProcess.js"

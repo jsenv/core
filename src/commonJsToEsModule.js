@@ -1,10 +1,14 @@
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
 
 import { require } from "./internal/require.js"
+import { transformResultToCompilationResult } from "./internal/compiling/transformResultToCompilationResult.js"
 
-export const convertCommonJsWithRollup = async ({
+export const commonJsToEsModule = async ({
   url,
-  urlAfterTransform,
+  compiledUrl,
+  projectDirectoryUrl,
+
+  sourcemapExcludeSources,
 
   replaceGlobalObject = true,
   replaceGlobalFilename = true,
@@ -92,15 +96,29 @@ export const convertCommonJsWithRollup = async ({
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources: true,
-    ...(urlAfterTransform
-      ? { dir: urlToFileSystemPath(resolveUrl("./", urlAfterTransform)) }
+    ...(compiledUrl
+      ? { dir: urlToFileSystemPath(resolveUrl("./", compiledUrl)) }
       : {}),
   }
 
   const { output } = await rollupBuild.generate(generateOptions)
   const { code, map } = output[0]
 
-  return { code, map }
+  return transformResultToCompilationResult(
+    {
+      contentType: "application/javascript",
+      code,
+      map,
+    },
+    {
+      projectDirectoryUrl,
+      originalFileContent: code,
+      originalFileUrl: url,
+      compiledFileUrl: compiledUrl,
+      sourcemapFileUrl: `${compiledUrl}.map`,
+      sourcemapExcludeSources,
+    },
+  )
 }
 
 const __filenameReplacement = `import.meta.url.slice('file:///'.length)`

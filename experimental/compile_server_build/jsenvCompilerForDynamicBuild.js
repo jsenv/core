@@ -20,7 +20,9 @@ import { buildUsingRollup } from "@jsenv/core/src/internal/building/buildUsingRo
 import { buildToCompilationResult } from "@jsenv/core/src/internal/building/buildToCompilationResult.js"
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-import { compileIdToBabelPluginMap } from "@jsenv/core/src/internal/compiling/jsenvCompilerForJavaScript.js"
+// import { compileIdToBabelPluginMap } from "@jsenv/core/src/internal/compiling/jsenvCompilerForJavaScript.js"
+
+const compileIdToBabelPluginMap = () => {}
 
 const compileDynamicBuildFile = ({ compileId, originalFileUrl, ...rest }) => {
   const contentType = urlToContentType(originalFileUrl)
