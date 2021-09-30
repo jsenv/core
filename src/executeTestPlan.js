@@ -77,7 +77,7 @@ export const executeTestPlan = async ({
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
   babelPluginMap,
-  convertMap,
+  customCompilers,
   // we could even affine depending on testPlan
   runtimeSupportDuringDev = jsenvRuntimeSupportDuringDev,
   jsenvDirectoryClean,
@@ -185,7 +185,7 @@ export const executeTestPlan = async ({
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
       babelPluginMap,
-      convertMap,
+      customCompilers,
       runtimeSupport: runtimeSupportDuringDev,
     })
 

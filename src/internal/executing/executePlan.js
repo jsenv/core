@@ -39,7 +39,7 @@ export const executePlan = async (
     compileServerCanReadFromFilesystem,
     compileServerCanWriteOnFilesystem,
     babelPluginMap,
-    convertMap,
+    customCompilers,
     runtimeSupport,
   } = {},
 ) => {
@@ -78,7 +78,7 @@ export const executePlan = async (
     compileServerCanWriteOnFilesystem,
     keepProcessAlive: true, // to be sure it stays alive
     babelPluginMap,
-    convertMap,
+    customCompilers,
     runtimeSupport,
   })
 

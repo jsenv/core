@@ -53,21 +53,18 @@ export const createCompiledFileService = ({
   compileCacheStrategy,
   sourcemapExcludeSources,
 }) => {
-  const compilerCandidates = {
-    ...jsenvCompilers,
-    ...customCompilers,
-  }
-  Object.keys(compilerCandidates).forEach((key) => {
-    const value = compilerCandidates[key]
+  Object.keys(customCompilers).forEach((key) => {
+    const value = customCompilers[key]
     if (typeof value !== "function") {
       throw new TypeError(
-        `A compiler must be a function, found ${value} for "${key}"`,
+        `Compiler must be a function, found ${value} for "${key}"`,
       )
     }
   })
-  const compileStructuredMetaMap = normalizeStructuredMetaMap(
+  const compileMeta = normalizeStructuredMetaMap(
     {
-      compile: compilerCandidates,
+      jsenvCompiler: jsenvCompilers,
+      customCompiler: customCompilers,
     },
     projectDirectoryUrl,
   )
@@ -129,15 +126,12 @@ export const createCompiledFileService = ({
       originalFileRelativeUrl,
       compileDirectoryUrl,
     )
-    const { compile } = urlToMeta({
-      url: originalFileUrl,
-      structuredMetaMap: compileStructuredMetaMap,
-    })
 
+    const compiler = getCompiler({ originalFileUrl, compileMeta })
     // no compiler -> serve original file
     // we don't redirect otherwise it complexify ressource tracking
     // and url resolution
-    if (!compile) {
+    if (!compiler) {
       return sourceFileService({
         ...request,
         ressource: `/${originalFileRelativeUrl}`,
@@ -159,7 +153,7 @@ export const createCompiledFileService = ({
       projectFileRequestedCallback,
       request,
       compile: ({ code, map }) => {
-        return compile({
+        return compiler({
           cancellationToken,
           logger,
 
@@ -188,6 +182,37 @@ export const createCompiledFileService = ({
       },
     })
     return compileResponsePromise
+  }
+}
+
+const getCompiler = ({ originalFileUrl, compileMeta }) => {
+  const { jsenvCompiler, customCompiler } = urlToMeta({
+    url: originalFileUrl,
+    structuredMetaMap: compileMeta,
+  })
+
+  if (!jsenvCompiler && !customCompiler) {
+    return null
+  }
+
+  if (!jsenvCompiler && customCompiler) {
+    return customCompiler
+  }
+
+  // there is only a jsenvCompiler
+  if (jsenvCompiler && !customCompiler) {
+    return jsenvCompiler
+  }
+
+  // both project and jsenv wants to compile the file
+  // we'll do the custom compilation first, then jsenv compilation
+  return async (params) => {
+    const customResult = await customCompiler(params)
+    const jsenvResult = await jsenvCompiler({
+      code: customResult.code,
+      map: customResult.map,
+    })
+    return jsenvResult
   }
 }
 

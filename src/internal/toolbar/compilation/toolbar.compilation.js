@@ -166,14 +166,6 @@ const getBrowserSupportMessage = ({
     )
   }
 
-  const { convertPatterns } = featuresReport
-  const convertPatternCount = convertPatterns.length
-  if (convertPatternCount === 0) {
-    // no need to talk about something unused
-  } else {
-    parts.push(`convertMap is used with the following keys: ${convertPatterns}`)
-  }
-
   const { customCompilerNames } = featuresReport
   const customCompilerCount = customCompilerNames.length
   if (customCompilerCount === 0) {

@@ -44,7 +44,6 @@ export const startExploring = async ({
   keepProcessAlive = true,
 
   babelPluginMap,
-  convertMap,
   runtimeSupportDuringDev = jsenvRuntimeSupportDuringDev,
   compileServerLogLevel,
   compileServerCanReadFromFilesystem,
@@ -116,7 +115,6 @@ export const startExploring = async ({
       compileServerCertificate,
       compileServerPrivateKey,
       babelPluginMap,
-      convertMap,
       runtimeSupport: runtimeSupportDuringDev,
       livereloadWatchConfig,
     })

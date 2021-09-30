@@ -1,8 +1,4 @@
-import {
-  urlToRelativeUrl,
-  normalizeStructuredMetaMap,
-  urlToMeta,
-} from "@jsenv/filesystem"
+import { urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { jsenvTransform } from "./jsenvTransform.js"
 
@@ -10,11 +6,9 @@ export const transformJs = async ({
   code,
   map,
   url,
-  compiledUrl,
   projectDirectoryUrl,
 
   babelPluginMap,
-  convertMap = {},
   moduleOutFormat = "esmodule",
   importMetaFormat = moduleOutFormat,
   babelHelpersInjectionAsImport = true,
@@ -41,20 +35,6 @@ export const transformJs = async ({
     throw new TypeError(`url must be a string, got ${url}`)
   }
 
-  const conversionResult = await applyConvertMap({
-    code,
-    map,
-    url,
-    compiledUrl,
-    projectDirectoryUrl,
-
-    convertMap,
-    sourcemapEnabled,
-    allowTopLevelAwait,
-  })
-  code = conversionResult.code
-  map = conversionResult.map
-
   const transformResult = await jsenvTransform({
     code,
     map,
@@ -78,54 +58,4 @@ export const transformJs = async ({
   map = transformResult.map
   const { metadata } = transformResult
   return { code, map, metadata }
-}
-
-const applyConvertMap = async ({
-  code,
-  map,
-  url,
-  compiledUrl,
-  projectDirectoryUrl,
-
-  convertMap,
-  remap,
-  allowTopLevelAwait,
-}) => {
-  const structuredMetaMap = normalizeStructuredMetaMap(
-    {
-      convert: convertMap,
-    },
-    projectDirectoryUrl,
-  )
-  const { convert } = urlToMeta({ url, structuredMetaMap })
-  if (!convert) {
-    return { code, map }
-  }
-
-  if (typeof convert !== "function") {
-    throw new TypeError(`convert must be a function, got ${convert}`)
-  }
-  const convertReturnValue = await convert({
-    code,
-    map,
-    url,
-    compiledUrl,
-    projectDirectoryUrl,
-
-    remap,
-    allowTopLevelAwait,
-  })
-  if (typeof convertReturnValue !== "object") {
-    throw new TypeError(
-      `convert must return an object, got ${convertReturnValue}`,
-    )
-  }
-  code = convertReturnValue.code
-  map = convertReturnValue.map
-  if (typeof code !== "string") {
-    throw new TypeError(
-      `convert return value "code" property must be a string, got ${code}`,
-    )
-  }
-  return { code, map }
 }
