@@ -4,7 +4,6 @@ import {
   urlToRelativeUrl,
   readFile,
   resolveUrl,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -25,14 +24,13 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.html`
+const mainFilename = `build_module_force_inline.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -72,8 +70,8 @@ const htmlString = await readFile(htmlBuildUrl)
     srcAttribute: undefined,
     mappings: {
       imports: {
-        "./file.js": "./file-ec1c9738.js",
-        "./main.js": "./main-007250a8.js",
+        "./file.js": `./${buildMappings[`${testDirectoryRelativeUrl}file.js`]}`,
+        "./main.js": `./main-fddc88f1.js`, // should not here because was inlined but that's ok
       },
     },
   }
