@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { executeTestPlan, launchNode, launchChromium } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -15,9 +11,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
-const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}error_syntax.html`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}importing_error_syntax.js`
 const { testPlanCoverage } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   executionLogLevel: "off",

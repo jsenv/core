@@ -3,7 +3,6 @@ import {
   resolveUrl,
   urlToRelativeUrl,
   urlToFileSystemPath,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { launchNode } from "@jsenv/core"
@@ -21,9 +20,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.js`
+const filename = `error_syntax.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
 const filePath = urlToFileSystemPath(fileUrl)
@@ -68,22 +66,22 @@ const test = async ({ canUseNativeModuleSystem } = {}) => {
     canUseNativeModuleSystem: false,
   })
   const parsingError = {
-    message: `${filePath}: Unexpected token (1:14)
+    message: `${filePath}: Unexpected token (1:11)
 
-> 1 | const node = (
-    |               ^`,
+> 1 | const a = (
+    |            ^`,
     messageHTML: assert.any(String),
     filename: filePath,
     lineNumber: 1,
-    columnNumber: 14,
+    columnNumber: 11,
   }
   const expectedError = Object.assign(
     new Error(`Module file cannot be parsed.
 --- parsing error message ---
-${filePath}: Unexpected token (1:14)
+${filePath}: Unexpected token (1:11)
 
-> 1 | const node = (
-    |               ^
+> 1 | const a = (
+    |            ^
 --- file ---
 ${fileRelativeUrl}
 --- file url ---

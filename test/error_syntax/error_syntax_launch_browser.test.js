@@ -3,7 +3,6 @@ import {
   resolveUrl,
   urlToRelativeUrl,
   urlToFileSystemPath,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
@@ -23,12 +22,11 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFilename = `${testDirectoryname}.html`
+const htmlFilename = `error_syntax.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
 const compileId = COMPILE_ID_BEST
-const importedFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
+const importedFileRelativeUrl = `${testDirectoryRelativeUrl}error_syntax.js`
 const importedFileUrl = resolveUrl(
   importedFileRelativeUrl,
   jsenvCoreDirectoryUrl,
@@ -90,23 +88,23 @@ await launchBrowsers(
       status: "errored",
       errorMessage: `Module file cannot be parsed.
 --- parsing error message ---
-${importedFilePath}: Unexpected token (1:17)
+${importedFilePath}: Unexpected token (1:11)
 
-> 1 | const browser = (
-    |                  ^
+> 1 | const a = (
+    |            ^
 --- file ---
 ${importedFileRelativeUrl}
 --- file url ---
 ${compiledFileUrl}`,
       errorParsingErrror: {
-        message: `${importedFilePath}: Unexpected token (1:17)
+        message: `${importedFilePath}: Unexpected token (1:11)
 
-> 1 | const browser = (
-    |                  ^`,
+> 1 | const a = (
+    |            ^`,
         messageHTML: assert.any(String),
         filename: importedFilePath,
         lineNumber: 1,
-        columnNumber: 17,
+        columnNumber: 11,
       },
     }
     assert({ actual, expected })

@@ -3,7 +3,6 @@ import {
   urlToRelativeUrl,
   urlToFileSystemPath,
   resolveUrl,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { startExploring } from "@jsenv/core"
@@ -16,11 +15,10 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFilename = `${testDirectoryname}.html`
+const htmlFilename = `error_syntax.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
-const importedFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
+const importedFileRelativeUrl = `${testDirectoryRelativeUrl}error_syntax.js`
 const importedFileUrl = resolveUrl(
   importedFileRelativeUrl,
   jsenvCoreDirectoryUrl,
@@ -42,16 +40,16 @@ const { browser, pageLogs, pageErrors, executionResult } =
 browser.close()
 
 const actual = { pageLogs, pageErrors, executionResult }
-const expectedParsingErrorMessage = `${importedFilePath}: Unexpected token (1:17)
+const expectedParsingErrorMessage = `${importedFilePath}: Unexpected token (1:11)
 
-> 1 | const browser = (
-    |                  ^`
+> 1 | const a = (
+    |            ^`
 const expectedParsingError = {
   message: expectedParsingErrorMessage,
   messageHTML: assert.any(String),
   filename: importedFilePath,
   lineNumber: 1,
-  columnNumber: 17,
+  columnNumber: 11,
 }
 const expectedError = Object.assign(
   new Error(`Module file cannot be parsed.
@@ -85,7 +83,7 @@ const expected = {
     startTime: assert.any(Number),
     endTime: assert.any(Number),
     fileExecutionResultMap: {
-      [`./${testDirectoryname}.js`]: {
+      [`./error_syntax.js`]: {
         status: "errored",
         exceptionSource: assert.any(String),
       },
