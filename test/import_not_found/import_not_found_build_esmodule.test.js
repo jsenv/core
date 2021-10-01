@@ -3,7 +3,6 @@ import {
   resolveUrl,
   urlToRelativeUrl,
   urlToFileSystemPath,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -15,10 +14,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.js`
+const mainFilename = `import_not_found.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
 const entryPointMap = {
   [`./${fileRelativeUrl}`]: "./main.js",

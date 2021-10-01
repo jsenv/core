@@ -3,7 +3,6 @@ import {
   resolveUrl,
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
@@ -23,11 +22,10 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const htmlFilename = `${testDirectoryname}.html`
+const htmlFilename = `import_not_found.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
-const importerFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
+const importerFileRelativeUrl = `${testDirectoryRelativeUrl}import_not_found.js`
 const compileId = COMPILE_ID_BEST
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({

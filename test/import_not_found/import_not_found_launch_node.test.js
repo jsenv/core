@@ -4,7 +4,6 @@ import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   urlToFileSystemPath,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { launchNode } from "@jsenv/core"
@@ -22,9 +21,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.js`
+const filename = `import_not_found.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
