@@ -1,3 +1,5 @@
-import React from "react"
+import React, { useEffect } from "react"
 
-export default typeof React
+export const defaultExportType = typeof React
+
+export const useEffectType = typeof useEffect

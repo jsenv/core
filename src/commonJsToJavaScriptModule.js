@@ -61,7 +61,9 @@ export const commonJsToJavaScriptModule = async ({
   })
 
   const commonJsRollupPlugin = commonjs({
-    esmExternals: true,
+    // esmExternals: true,
+    // defaultIsModuleExports: true,
+    // requireReturnsDefault: "namespace",
   })
 
   const rollupBuild = await rollup({
