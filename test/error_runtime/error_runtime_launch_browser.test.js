@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -21,9 +17,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryBasename = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryBasename}.html`
+const filename = `error_runtime.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({

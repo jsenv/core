@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { startExploring } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -11,9 +11,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.html`
+const filename = `error_runtime.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const compileId = "best"
 
@@ -44,7 +43,7 @@ browser.close()
       startTime: assert.any(Number),
       endTime: assert.any(Number),
       fileExecutionResultMap: {
-        [`./${testDirectoryname}.js`]: {
+        [`./error_runtime.js`]: {
           status: "errored",
           exceptionSource: assert.any(String),
         },
@@ -62,8 +61,8 @@ browser.close()
 {
   const stack = executionResult.error.stack
   const expected = `Error: error
-  at triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}trigger-error.js:2:9)
-  at Object.triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}${testDirectoryname}.js:3:1)`
+  at triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}trigger_error.js:2:9)
+  at Object.triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}error_runtime.js:3:1)`
   const actual = stack.slice(0, expected.length)
   assert({ actual, expected })
 }
@@ -71,8 +70,8 @@ browser.close()
 {
   const stack = pageLogs[0].text
   const expected = `Error: error
-  at triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}trigger-error.js:2:9)
-  at Object.triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}${testDirectoryname}.js:3:1)`
+  at triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}trigger_error.js:2:9)
+  at Object.triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}error_runtime.js:3:1)`
   const actual = stack.slice(0, expected.length)
   assert({ actual, expected })
 }

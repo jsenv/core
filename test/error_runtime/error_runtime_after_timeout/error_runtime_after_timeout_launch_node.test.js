@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { launchNode } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -11,14 +11,13 @@ import {
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 
-const testDirectoryUrl = resolveUrl("./", import.meta.url)
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.js`
+const filename = `error_runtime_after_timeout.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
@@ -26,7 +25,8 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
     jsenvDirectoryRelativeUrl,
   })
 
-const result = await launchAndExecute({
+let errorCallbackArgValue
+const actual = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
   launchAndExecuteLogLevel: "off",
   launch: (options) =>
@@ -39,19 +39,21 @@ const result = await launchAndExecute({
   executeParams: {
     fileRelativeUrl,
   },
-  captureConsole: true,
+  runtimeErrorCallback: (value) => {
+    errorCallbackArgValue = value
+  },
 })
-
-const actual = {
-  status: result.status,
-  errorMessage: result.error.message,
-  consoleCallsContainsString: result.consoleCalls.some(({ text }) =>
-    text.includes("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
-  ),
-}
 const expected = {
-  status: "errored",
-  errorMessage: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
-  consoleCallsContainsString: false,
+  status: "completed",
+  namespace: {},
 }
 assert({ actual, expected })
+
+process.on("beforeExit", () => {
+  const actual = errorCallbackArgValue
+  const expected = {
+    error: Object.assign(new Error("child exited with 1"), { exitCode: 1 }),
+    timing: "after-execution",
+  }
+  assert({ actual, expected })
+})

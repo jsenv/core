@@ -1,10 +1,6 @@
 import { createCancellationSource } from "@jsenv/cancellation"
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { launchChromium } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -21,9 +17,8 @@ const testDirectoryRelativePath = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryBasename = urlToBasename(testDirectoryRelativePath)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const filename = `${testDirectoryBasename}.html`
+const filename = `error_runtime_after_timeout.html`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
@@ -57,7 +52,7 @@ const actual = await launchAndExecute({
 const expected = {
   status: "completed",
   namespace: {
-    [`./${testDirectoryBasename}.js`]: {
+    [`./error_runtime_after_timeout.js`]: {
       status: "completed",
       namespace: {},
     },
