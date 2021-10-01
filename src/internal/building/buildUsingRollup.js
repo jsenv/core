@@ -1,5 +1,10 @@
 import { createOperation } from "@jsenv/cancellation"
-import { urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/filesystem"
+import {
+  urlToFileSystemPath,
+  ensureEmptyDirectory,
+  readFile,
+  urlToRelativeUrl,
+} from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
@@ -62,45 +67,50 @@ export const buildUsingRollup = async ({
       runtimeSupport.safari,
   )
 
-  const { jsenvRollupPlugin, getLastErrorMessage, getResult, asOriginalUrl } =
-    await createJsenvRollupPlugin({
-      cancellationToken,
-      logger,
+  const {
+    jsenvRollupPlugin,
+    getLastErrorMessage,
+    getResult,
+    asOriginalUrl,
+    asProjectUrl,
+  } = await createJsenvRollupPlugin({
+    cancellationToken,
+    logger,
 
-      projectDirectoryUrl,
-      entryPointMap,
-      compileServerOrigin,
-      compileDirectoryRelativeUrl,
-      buildDirectoryUrl,
-      assetManifestFile,
-      assetManifestFileRelativeUrl,
-      writeOnFileSystem,
+    projectDirectoryUrl,
+    entryPointMap,
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
+    buildDirectoryUrl,
+    assetManifestFile,
+    assetManifestFileRelativeUrl,
+    writeOnFileSystem,
 
-      format,
-      systemJsUrl,
-      babelPluginMap,
-      transformTopLevelAwait,
-      node,
-      browser,
+    format,
+    systemJsUrl,
+    babelPluginMap,
+    transformTopLevelAwait,
+    node,
+    browser,
 
-      urlMappings,
-      importResolutionMethod,
-      importMapFileRelativeUrl,
-      importDefaultExtension,
-      externalImportSpecifiers,
-      externalImportUrlPatterns,
-      importPaths,
+    urlMappings,
+    importResolutionMethod,
+    importMapFileRelativeUrl,
+    importDefaultExtension,
+    externalImportSpecifiers,
+    externalImportUrlPatterns,
+    importPaths,
 
-      urlVersioning,
-      lineBreakNormalization,
-      jsConcatenation,
-      useImportMapToMaximizeCacheReuse,
+    urlVersioning,
+    lineBreakNormalization,
+    jsConcatenation,
+    useImportMapToMaximizeCacheReuse,
 
-      minify,
-      minifyJsOptions,
-      minifyCssOptions,
-      minifyHtmlOptions,
-    })
+    minify,
+    minifyJsOptions,
+    minifyCssOptions,
+    minifyHtmlOptions,
+  })
 
   try {
     await useRollup({
@@ -130,11 +140,18 @@ export const buildUsingRollup = async ({
       message = message.replace(/(www|http:|https:)+[^\s]+[\w]/g, (url) =>
         asOriginalUrl(url),
       )
+      const importedFileRollupUrl = e.message.match(/not exported by (.*?),/)[1]
+      const convertSuggestion = await getConvertSuggestion({
+        importedFileRollupUrl,
+        asProjectUrl,
+        asOriginalUrl,
+        projectDirectoryUrl,
+      })
       const detailedMessage = createDetailedMessage(message, {
         frame: e.frame,
+        ...convertSuggestion,
       })
-      const error = new Error(detailedMessage, { cause: e })
-      throw error
+      throw new Error(detailedMessage, { cause: e })
     }
     throw e
   }
@@ -260,4 +277,34 @@ const formatToRollupFormat = (format) => {
   if (format === "systemjs") return "system"
   if (format === "esmodule") return "esm"
   throw new Error(`unexpected format, got ${format}`)
+}
+
+const getConvertSuggestion = async ({
+  importedFileRollupUrl,
+  asProjectUrl,
+  asOriginalUrl,
+  projectDirectoryUrl,
+}) => {
+  const importedFileUrl = asProjectUrl(importedFileRollupUrl)
+  const importedFileContent = await readFile(importedFileUrl)
+  const looksLikeCommonJs =
+    importedFileContent.includes("module.exports = ") ||
+    importedFileContent.includes("exports.")
+
+  if (!looksLikeCommonJs) {
+    return null
+  }
+
+  const importerFileOriginalUrl = asOriginalUrl(importedFileUrl)
+  const importedFileOriginalRelativeUrl = urlToRelativeUrl(
+    importerFileOriginalUrl,
+    projectDirectoryUrl,
+  )
+  return {
+    suggestion: `The file seems written in commonjs, you should use "customCompiler" to convert it to js module
+{
+  "./${importedFileOriginalRelativeUrl}": commonJsToJavaScriptModule
+}
+As documented in https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters.md#customcompilers`,
+  }
 }
