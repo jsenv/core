@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { launchNode } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -16,9 +16,8 @@ const testDirectoryRelativePath = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativePath)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const filename = `${testDirectoryname}.js`
+const filename = `error_stack.js`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
@@ -45,7 +44,7 @@ const result = await launchAndExecute({
 const stack = result.error.stack
 
 const expected = `Error: error
-    at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
-    at ${testDirectoryUrl}${testDirectoryname}.js:3:1`
+    at triggerError (${testDirectoryUrl}trigger_error.js:2:9)
+    at ${testDirectoryUrl}error_stack.js:3:1`
 const actual = stack.slice(0, expected.length)
 assert({ actual, expected })

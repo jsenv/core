@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -17,9 +17,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryBasename = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `${testDirectoryBasename}.html`
+const filename = `error_stack.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
@@ -59,8 +58,8 @@ await launchBrowsers(
 
     if (launchBrowser === launchChromium) {
       const expected = `Error: error
-    at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
-    at ${testDirectoryUrl}${testDirectoryBasename}.js:3:1`
+    at triggerError (${testDirectoryUrl}trigger_error.js:2:9)
+    at ${testDirectoryUrl}error_stack.js:3:1`
       const actual = stack.slice(0, expected.length)
       assert({ actual, expected })
     } else if (launchBrowser === launchFirefox) {
