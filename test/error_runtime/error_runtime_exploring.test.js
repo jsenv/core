@@ -48,7 +48,7 @@ browser.close()
           exceptionSource: assert.any(String),
         },
       },
-      error: Object.assign(new Error("error"), {
+      error: Object.assign(new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"), {
         filename: actual.executionResult.error.filename,
         lineno: actual.executionResult.error.lineno,
         columnno: actual.executionResult.error.columnno,
@@ -60,7 +60,7 @@ browser.close()
 
 {
   const stack = executionResult.error.stack
-  const expected = `Error: error
+  const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
   at triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}trigger_error.js:2:9)
   at Object.triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}error_runtime.js:3:1)`
   const actual = stack.slice(0, expected.length)
@@ -69,7 +69,7 @@ browser.close()
 
 {
   const stack = pageLogs[0].text
-  const expected = `Error: error
+  const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
   at triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}trigger_error.js:2:9)
   at Object.triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}error_runtime.js:3:1)`
   const actual = stack.slice(0, expected.length)
