@@ -15,20 +15,20 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}build_modulepreload.html`]: "./main.html",
 }
+
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
-  format: "systemjs",
   // logLevel: "debug",
 })
 
-// ensure link.rel becomes "preload"
+// ensure link.href is updated
 {
   const buildDirectoryUrl = resolveUrl(
     buildDirectoryRelativeUrl,
@@ -36,17 +36,10 @@ const { buildMappings } = await buildProject({
   )
   const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
   const htmlString = await readFile(htmlBuildUrl, { as: "string" })
-  const linkNode = findNodeByTagName(htmlString, "link")
-  const relAttribute = getHtmlNodeAttributeByName(linkNode, "rel")
-  const hrefAttribute = getHtmlNodeAttributeByName(linkNode, "href")
+  const preloadLinkNode = findNodeByTagName(htmlString, "link")
+  const hrefAttribute = getHtmlNodeAttributeByName(preloadLinkNode, "href")
 
-  const actual = {
-    rel: relAttribute.value,
-    href: hrefAttribute.value,
-  }
-  const expected = {
-    rel: "preload",
-    href: buildMappings[`${testDirectoryRelativeUrl}main.js`],
-  }
+  const actual = hrefAttribute.value
+  const expected = buildMappings[`${testDirectoryRelativeUrl}main.js`]
   assert({ actual, expected })
 }

@@ -167,6 +167,8 @@ export const createJsenvRollupPlugin = async ({
   let ressourceBuilder
   let rollupEmitFile = () => {}
   let rollupSetAssetSource = () => {}
+  let _rollupGetModuleInfo = () => {}
+  const rollupGetModuleInfo = (id) => _rollupGetModuleInfo(id)
   let importResolver
 
   const emitAsset = ({ fileName, source }) => {
@@ -228,6 +230,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
       // https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
       rollupEmitFile = (...args) => this.emitFile(...args)
       rollupSetAssetSource = (...args) => this.setAssetSource(...args)
+      _rollupGetModuleInfo = (id) => this.getModuleInfo(id)
 
       let importMapInfoFromHtml = null
       if (htmlEntryPointCount === 1) {
@@ -1176,6 +1179,9 @@ non-js ressources can be used with new URL("${urlRelativeToImporter}", import.me
         buildStats,
       }
     },
+    asOriginalUrl,
+    asProjectUrl,
+    rollupGetModuleInfo,
   }
 }
 
