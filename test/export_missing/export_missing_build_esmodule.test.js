@@ -12,7 +12,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `export_not_found.js`
+const mainFilename = `export_missing.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
 const entryPointMap = {
   [`./${fileRelativeUrl}`]: "./main.js",
@@ -36,6 +36,6 @@ try {
 2: import { answer } from "./file.js";
             ^
 3: console.log(answer);
-4: //# sourceMappingURL=export_not_found.js.map`
+4: //# sourceMappingURL=export_missing.js.map`
   assert({ actual, expected })
 }

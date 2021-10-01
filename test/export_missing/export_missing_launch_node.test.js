@@ -21,7 +21,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const mainFilename = `export_not_found.js`
+const mainFilename = `export_missing.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({

@@ -18,7 +18,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const htmlFilename = `export_not_found.html`
+const htmlFilename = `export_missing.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
 
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
