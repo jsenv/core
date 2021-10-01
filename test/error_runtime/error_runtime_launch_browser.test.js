@@ -50,6 +50,7 @@ await launchBrowsers(
       },
       captureConsole: true,
     })
+
     const actual = {
       status: result.status,
       errorMessage: result.error.message,
@@ -59,5 +60,25 @@ await launchBrowsers(
       errorMessage: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
     }
     assert({ actual, expected })
+
+    // error stack
+    {
+      const stack = result.error.stack
+      if (launchBrowser === launchChromium) {
+        const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
+    at triggerError (${testDirectoryUrl}trigger_error.js:2:9)
+    at ${testDirectoryUrl}error_runtime.js:3:1`
+        const actual = stack.slice(0, expected.length)
+        assert({ actual, expected })
+      } else if (launchBrowser === launchFirefox) {
+        const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE`
+        const actual = stack.slice(0, expected.length)
+        assert({ actual, expected })
+      } else {
+        const actual = typeof stack
+        const expected = `string`
+        assert({ actual, expected })
+      }
+    }
   },
 )

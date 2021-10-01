@@ -54,3 +54,12 @@ const expected = {
   consoleCallsContainsString: false,
 }
 assert({ actual, expected })
+
+{
+  const stack = result.error.stack
+  const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
+    at triggerError (${testDirectoryUrl}trigger_error.js:2:9)
+    at ${testDirectoryUrl}error_runtime.js:3:1`
+  const actual = stack.slice(0, expected.length)
+  assert({ actual, expected })
+}
