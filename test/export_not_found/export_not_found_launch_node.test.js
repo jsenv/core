@@ -45,7 +45,7 @@ const result = await launchAndExecute({
   },
 })
 const stack = result.error.stack
-const expected = `${importerFileUrl}:1
+const expected = `${importerFileUrl}:2
 import { answer } from "./file.js"
          ^^^^^^
 SyntaxError: The requested module './file.js' does not provide an export named 'answer'`

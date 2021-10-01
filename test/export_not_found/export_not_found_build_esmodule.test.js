@@ -32,9 +32,10 @@ try {
   const actual = e.message
   const expected = `'answer' is not exported by ${importedFileUrl}, imported by ${importerFileUrl}
 --- frame ---
-1: import { answer } from "./file.js";
+1: // eslint-disable-next-line import/named
+2: import { answer } from "./file.js";
             ^
-2: console.log(answer);
-3: //# sourceMappingURL=export_not_found.js.map`
+3: console.log(answer);
+4: //# sourceMappingURL=export_not_found.js.map`
   assert({ actual, expected })
 }
