@@ -1,5 +1,6 @@
 import { createOperation } from "@jsenv/cancellation"
 import { urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/filesystem"
+import { createDetailedMessage } from "@jsenv/logger"
 
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
@@ -61,7 +62,7 @@ export const buildUsingRollup = async ({
       runtimeSupport.safari,
   )
 
-  const { jsenvRollupPlugin, getLastErrorMessage, getResult } =
+  const { jsenvRollupPlugin, getLastErrorMessage, getResult, asOriginalUrl } =
     await createJsenvRollupPlugin({
       cancellationToken,
       logger,
@@ -122,6 +123,18 @@ export const buildUsingRollup = async ({
         e.message = jsenvPluginErrorMessage
       }
       throw e
+    }
+    if (e.code === "MISSING_EXPORT") {
+      let message = e.message
+      message = message.replace(e.id, (url) => asOriginalUrl(url))
+      message = message.replace(/(www|http:|https:)+[^\s]+[\w]/g, (url) =>
+        asOriginalUrl(url),
+      )
+      const detailedMessage = createDetailedMessage(message, {
+        frame: e.frame,
+      })
+      const error = new Error(detailedMessage, { cause: e })
+      throw error
     }
     throw e
   }

@@ -1176,6 +1176,7 @@ non-js ressources can be used with new URL("${urlRelativeToImporter}", import.me
         buildStats,
       }
     },
+    asOriginalUrl
   }
 }
 
