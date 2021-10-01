@@ -37,7 +37,8 @@ const expected = {
     "./importing_react.js": {
       status: "completed",
       namespace: {
-        default: "object",
+        ReactDefaultExport: true,
+        useEffectExport: true,
       },
     },
   },

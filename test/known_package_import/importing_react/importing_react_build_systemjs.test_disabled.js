@@ -49,7 +49,7 @@ const { namespace } = await browserImportSystemJsBuild({
 
 const actual = namespace
 const expected = {
-  defaultExportType: "object",
-  useEffectType: "function",
+  ReactDefaultExport: true,
+  useEffectExport: true,
 }
 assert({ actual, expected })
