@@ -5,26 +5,27 @@ import { fileURLToPath } from "node:url"
 import { VM as VM2 } from "vm2"
 import isValidIdentifier from "is-valid-identifier"
 import resolve from "resolve"
-import { parse } from "cjs-module-lexer"
+import { init, parse } from "cjs-module-lexer"
+import { fileSystemPathToUrl, urlToFileSystemPath } from "@jsenv/filesystem"
 
 export const rollupPluginCommonJsNamedExports = ({ logger }) => {
   const inputSummaries = {}
   const cjsScannedNamedExports = {}
 
   return {
-    buildStart(inputOptions) {
+    async buildStart(inputOptions) {
+      await init()
+
       const input = inputOptions.input
 
       Object.keys(input).forEach((key) => {
-        const inputFileRelativeUrl = input[key]
-        // TODO: resolve inputFileUrl, or we will certainly pass
-        // an lready resolved "url" so we just have to convert it to an url
-        const inputFileUrl = inputFileRelativeUrl
+        const inputFilePath = input[key]
+        const inputFileUrl = fileSystemPathToUrl(inputFilePath)
         inputSummaries[inputFileUrl] = {
           all: false,
           default: false,
           namespace: false,
-          named: false,
+          named: [],
         }
 
         const cjsExports =
@@ -51,17 +52,18 @@ export const rollupPluginCommonJsNamedExports = ({ logger }) => {
 
       const inputFileUrl = id.substring("jsenv:".length)
       const inputSummary = inputSummaries[inputFileUrl]
-      let uniqueNamedExports = Array.from(new Set(inputSummary.named))
+      let uniqueNamedExports = inputSummary.named
       const scannedNamedExports = cjsScannedNamedExports[inputFileUrl]
-      if (scannedNamedExports && inputSummary.namespace) {
+      if (scannedNamedExports) {
         uniqueNamedExports = scannedNamedExports || []
         inputSummary.default = true
       }
-      return stringifyReExports({
+      const codeForExports = generateCodeForExports({
         uniqueNamedExports,
         inputSummary,
         inputFileUrl,
       })
+      return codeForExports
     },
   }
 }
@@ -87,11 +89,13 @@ const detectStaticExports = ({ logger, fileUrl, visited = new Set() }) => {
     let resolvedReexports = []
     if (reexports.length > 0) {
       reexports.forEach((reexport) => {
+        const reExportedFilePath = resolve.sync(reexport, {
+          basedir: fileURLToPath(new URL("./", fileUrl)),
+        })
+        const reExportedFileUrl = fileSystemPathToUrl(reExportedFilePath)
         const staticExports = detectStaticExports({
           logger,
-          filename: resolve.sync(reexport, {
-            basedir: fileURLToPath(new URL("./", fileUrl)),
-          }),
+          fileUrl: reExportedFileUrl,
           visited,
         })
         if (staticExports) {
@@ -149,21 +153,18 @@ ${code};;
 module.exports;`
 }
 
-const stringifyReExports = ({
+const generateCodeForExports = ({
   uniqueNamedExports,
   inputSummary,
   inputFileUrl,
 }) => {
+  const from = urlToFileSystemPath(inputFileUrl)
   const lines = [
-    ...(inputSummary.namespace
-      ? [stringifyNamespaceReExport({ from: inputFileUrl })]
-      : []),
-    ...(inputSummary.default
-      ? [stringifyDefaultReExport({ from: inputFileUrl })]
-      : []),
+    ...(inputSummary.namespace ? [stringifyNamespaceReExport({ from })] : []),
+    ...(inputSummary.default ? [stringifyDefaultReExport({ from })] : []),
     stringifyNamedReExports({
       namedExports: uniqueNamedExports,
-      from: inputFileUrl,
+      from,
     }),
   ]
   return lines.join(`
@@ -180,5 +181,5 @@ export default __jsenv_default_import__;`
 }
 
 const stringifyNamedReExports = ({ namedExports, from }) => {
-  return `export { ${namedExports.join(",")} from "${from}";`
+  return `export { ${namedExports.join(",")} } from "${from}";`
 }
