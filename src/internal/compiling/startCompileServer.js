@@ -28,7 +28,7 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
+import { loadBabelConfigFromFile } from "./loadBabelConfigFromFile.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { createCallbackList } from "../createCallbackList.js"
 import {
@@ -71,7 +71,7 @@ export const startCompileServer = async ({
   replaceGlobalFilename = false,
   replaceGlobalDirname = false,
   replaceMap = {},
-  babelPluginMap = jsenvBabelPluginMap,
+  babelPluginMap,
   customCompilers = {},
 
   // options related to the server itself
@@ -124,6 +124,14 @@ export const startCompileServer = async ({
     jsenvDirectoryUrl,
     projectDirectoryUrl,
   )
+
+  const configFromFile = await loadBabelConfigFromFile({
+    projectDirectoryUrl,
+  })
+  babelPluginMap = {
+    ...configFromFile.babelPluginMap,
+    ...babelPluginMap
+  }
 
   const logger = createLogger({ logLevel: compileServerLogLevel })
   const compileServerGroupMap = generateGroupMap({

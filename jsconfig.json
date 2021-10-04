@@ -467,6 +467,9 @@
       "terser/package.json": [
         "./node_modules/terser/package.json"
       ],
+      "@babel/preset-env/*": [
+        "./node_modules/@babel/preset-env/*"
+      ],
       "@jsenv/filesystem/*": [
         "./node_modules/@jsenv/filesystem/*"
       ],
@@ -487,6 +490,9 @@
       ],
       "preact/jsx-runtime": [
         "./node_modules/preact/jsx-runtime/dist/jsxRuntime.mjs"
+      ],
+      "@babel/preset-env": [
+        "./node_modules/@babel/preset-env/lib/index.js"
       ],
       "@c88/v8-coverage/*": [
         "./node_modules/@c88/v8-coverage/*"
@@ -667,9 +673,6 @@
       ],
       "tree-kill/*": [
         "./node_modules/tree-kill/*"
-      ],
-      "esinstall": [
-        "./node_modules/esinstall/index.esm.mjs"
       ],
       "prettier/*": [
         "./node_modules/prettier/*"

@@ -2,8 +2,8 @@
 
 - [projectDirectoryUrl](#projectDirectoryUrl)
 - [importDefaultExtension](#importDefaultExtension)
-- [babelPluginMap](#babelPluginMap)
 - [customCompilers](#customCompilers)
+- [babelPluginMap](#babelPluginMap)
 - [compileServerLogLevel](#compileServerLogLevel)
 - [compileServerProtocol](#compileServerProtocol)
 - [compileServerPrivateKey](#compileServerPrivateKey)
@@ -53,22 +53,6 @@ _importDefaultExtension_ is a boolean or string parameter controlling if an exte
 Expecting a tool to add an extension introduces complexity and makes your code dependent on magic extensions configuration.
 This parameter only adds an extension on extensionless import, it cannot try different extension and choose the right one.
 
-# babelPluginMap
-
-`babelPluginMap` parameter is an object describing all babel plugin used by your project. This parameter is optionnal with a default value enabling standard babel plugins. See [src/jsenvBabelPluginMap.js](../src/jsenvBabelPluginMap.js). If you want to make jsenv compatible with non standard syntaxes you can use your own `babelPluginMap`. For instance, the following code makes jsenv compatible with `jsx`.
-
-```js
-const { jsenvBabelPluginMap } = require("@jsenv/core")
-const transformReactJSX = require("@babel/plugin-transform-react-jsx")
-
-const babelPluginMap = {
-  ...jsenvBabelPluginMap,
-  "transform-react-jsx": [transformReactJSX, { pragma: "dom" }],
-}
-```
-
-Please note that if you have a `.babelrc` file, jsenv will not read it. jsenv needs to know the list of babel plugin you want to use in an explicit way.
-
 # customCompilers
 
 `customCompilers` parameter is an object describing how file should be compiled. This parameter is optionnal with a default value of `{}`. The default value means all your project files uses standard files and nothing needs to be compiled.
@@ -81,6 +65,25 @@ import { commonJsToJavaScriptModule } from "@jsenv/core"
 const customCompilers = {
   "./node_modules/react/index.js": commonJsToJavaScriptModule,
 }
+```
+
+# babelPluginMap
+
+`babelPluginMap` parameter is an object that can be used to override the babel plugins declared in your [babel config file](https://babeljs.io/docs/en/config-files).
+
+```js
+import { startExploring } from "@jsenv/core"
+import { createRequire } from "node:module"
+
+const require = createRequire(import.meta.url)
+
+const transformReactJSX = require("@babel/plugin-transform-react-jsx")
+
+await startExploring({
+  babelPluginMap: {
+    "transform-react-jsx": [transformReactJSX, { pragma: "dom" }],
+  },
+})
 ```
 
 # compileServerLogLevel

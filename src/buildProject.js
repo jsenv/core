@@ -17,7 +17,6 @@ import {
   jsenvBrowserRuntimeSupport,
   jsenvNodeRuntimeSupport,
 } from "./internal/generateGroupMap/jsenvRuntimeSupport.js"
-import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 export const buildProject = async ({
   cancellationToken = createCancellationToken(),
@@ -39,7 +38,7 @@ export const buildProject = async ({
   systemJsUrl,
   globalName,
   globals = {},
-  babelPluginMap = jsenvBabelPluginMap,
+  babelPluginMap,
   runtimeSupport = format === "global" ||
   format === "systemjs" ||
   format === "esmodule"

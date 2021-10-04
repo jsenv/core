@@ -1,8 +1,8 @@
 import { assert } from "@jsenv/assert"
 
-import { jsenvBabelPluginMap } from "@jsenv/core"
 import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
 import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
+import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
 
 // supporting all node versions ("0.0.0")
 {

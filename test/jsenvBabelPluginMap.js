@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 
-import { require } from "./internal/require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 
 const proposalJSONStrings = require("@babel/plugin-proposal-json-strings")
 const proposalNumericSeparator = require("@babel/plugin-proposal-numeric-separator")
