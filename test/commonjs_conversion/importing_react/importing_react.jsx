@@ -28,4 +28,4 @@ const firstMountPromise = new Promise((resolve) => {
 
 export const ready = await firstMountPromise
 
-export const reactExportNames = Object.keys(reactAll)
+export const reactExportNames = Object.keys(reactAll).sort()
