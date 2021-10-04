@@ -35,7 +35,7 @@ const { namespace } = await nodeImportEsModuleBuild({
 const actual = namespace
 const expected = {
   namedExports: {
-    // argl, it should be { answer: 42 } not inside behind default export :(
+    answer: 42,
     default: {
       answer: 42,
     },

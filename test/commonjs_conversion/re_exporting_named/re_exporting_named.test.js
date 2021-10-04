@@ -33,5 +33,11 @@ const { namespace } = await nodeImportEsModuleBuild({
 })
 
 const actual = namespace
-const expected = { answer: 42 }
+const expected = {
+  answer: 42,
+  all: {
+    answer: 42,
+    default: { answer: 42 },
+  },
+}
 assert({ actual, expected })

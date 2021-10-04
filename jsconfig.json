@@ -392,6 +392,9 @@
       "eslint-plugin-import": [
         "./node_modules/eslint-plugin-import/lib/index.js"
       ],
+      "eslint-plugin-react/*": [
+        "./node_modules/eslint-plugin-react/*"
+      ],
       "is-unicode-supported": [
         "./node_modules/is-unicode-supported/index.js"
       ],
@@ -430,6 +433,9 @@
       ],
       "eslint-plugin-html/*": [
         "./node_modules/eslint-plugin-html/*"
+      ],
+      "eslint-plugin-react": [
+        "./node_modules/eslint-plugin-react/index.js"
       ],
       "is-valid-identifier": [
         "./node_modules/is-valid-identifier/index.js"
@@ -653,6 +659,9 @@
       "playwright": [
         "./node_modules/playwright/index.mjs"
       ],
+      "react-dom/*": [
+        "./node_modules/react-dom/*"
+      ],
       "source-map": [
         "./node_modules/source-map/source-map.js"
       ],
@@ -664,6 +673,9 @@
       ],
       "prettier/*": [
         "./node_modules/prettier/*"
+      ],
+      "react-dom": [
+        "./node_modules/react-dom/index.js"
       ],
       "tree-kill": [
         "./node_modules/tree-kill/index.js"
