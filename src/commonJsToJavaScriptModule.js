@@ -101,7 +101,6 @@ export const commonJsToJavaScriptModule = async ({
   const nodeBuiltinsRollupPlugin = builtins()
 
   const { rollup } = await import("rollup")
-  console.log({ filePath })
   const rollupBuild = await rollup({
     input: filePath,
     inlineDynamicImports: true,

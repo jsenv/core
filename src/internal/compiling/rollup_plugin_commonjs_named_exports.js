@@ -19,7 +19,6 @@ export const rollupPluginCommonJsNamedExports = ({ logger }) => {
       Object.keys(input).forEach((key) => {
         const inputFilePath = input[key]
         const inputFileUrl = fileSystemPathToUrl(inputFilePath)
-        console.log({ inputFileUrl })
         inputSummaries[inputFileUrl] = {
           all: false,
           default: false,
@@ -158,6 +157,10 @@ const generateCodeForExports = ({
   inputFileUrl,
 }) => {
   const from = urlToFileSystemPath(inputFileUrl)
+  console.log({
+    inputFileUrl,
+    from,
+  })
   const lines = [
     ...(inputSummary.namespace ? [stringifyNamespaceReExport({ from })] : []),
     ...(inputSummary.default ? [stringifyDefaultReExport({ from })] : []),
