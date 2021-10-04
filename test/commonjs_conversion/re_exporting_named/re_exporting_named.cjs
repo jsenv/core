@@ -1,2 +1,1 @@
-// eslint-disable-next-line import/no-unresolved
-module.exports = require("./reexported")
+module.exports = require("./re_exported")
