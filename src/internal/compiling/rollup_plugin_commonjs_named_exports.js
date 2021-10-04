@@ -6,7 +6,7 @@ import { VM as VM2 } from "vm2"
 import isValidIdentifier from "is-valid-identifier"
 import resolve from "resolve"
 import { init, parse } from "cjs-module-lexer"
-import { fileSystemPathToUrl, urlToFileSystemPath } from "@jsenv/filesystem"
+import { fileSystemPathToUrl } from "@jsenv/filesystem"
 
 export const rollupPluginCommonJsNamedExports = ({ logger }) => {
   const inputSummaries = {}
@@ -156,11 +156,7 @@ const generateCodeForExports = ({
   inputSummary,
   inputFileUrl,
 }) => {
-  const from = urlToFileSystemPath(inputFileUrl)
-  console.log({
-    inputFileUrl,
-    from,
-  })
+  const from = inputFileUrl.slice("file://".length)
   const lines = [
     ...(inputSummary.namespace ? [stringifyNamespaceReExport({ from })] : []),
     ...(inputSummary.default ? [stringifyDefaultReExport({ from })] : []),
