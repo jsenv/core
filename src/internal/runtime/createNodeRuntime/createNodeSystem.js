@@ -46,8 +46,11 @@ export const createNodeSystem = async ({
     if (isSpecifierForNodeCoreModule(url)) {
       return fromFunctionReturningNamespace(
         () => {
+          const coreNodeModuleSpecifier = url.startsWith("node:")
+            ? url.slice("node:".length)
+            : url
           // eslint-disable-next-line import/no-dynamic-require
-          const moduleExportsForNativeNodeModule = require(url)
+          const moduleExportsForNativeNodeModule = require(coreNodeModuleSpecifier)
           return moduleExportsToModuleNamespace(
             moduleExportsForNativeNodeModule,
           )

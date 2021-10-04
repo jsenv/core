@@ -1,4 +1,8 @@
-import { urlToFileSystemPath } from "@jsenv/filesystem"
+import {
+  isFileSystemPath,
+  fileSystemPathToUrl,
+  urlToFileSystemPath,
+} from "@jsenv/filesystem"
 
 export const loadBabelConfigFromFile = async ({ projectDirectoryUrl }) => {
   const { loadOptionsAsync } = await import("@babel/core")
@@ -17,7 +21,8 @@ export const loadBabelConfigFromFile = async ({ projectDirectoryUrl }) => {
 
 const babelPluginNameFromPlugin = ({ key }) => {
   if (
-    key.endsWith(
+    isFileSystemPath(key) &&
+    fileSystemPathToUrl(key).endsWith(
       "babel-plugin-transform-async-to-promises/async-to-promises.js",
     )
   ) {

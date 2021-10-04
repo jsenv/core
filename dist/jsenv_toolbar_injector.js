@@ -1087,6 +1087,6 @@
     window.addEventListener("load", injectToolbar);
   }
 
-}());
+})();
 
 //# sourceMappingURL=jsenv_toolbar_injector.js.map

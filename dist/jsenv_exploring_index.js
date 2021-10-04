@@ -1234,6 +1234,6 @@
 
   run();
 
-}());
+})();
 
 //# sourceMappingURL=jsenv_exploring_index.js.map

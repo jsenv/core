@@ -1401,6 +1401,6 @@
   /* eslint-env browser */
   window.scanBrowserRuntimeFeatures = scanBrowserRuntimeFeatures;
 
-}());
+})();
 
 //# sourceMappingURL=jsenv_compile_proxy.js.map
