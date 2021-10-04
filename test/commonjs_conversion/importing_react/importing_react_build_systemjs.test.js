@@ -27,12 +27,15 @@ const customCompilers = {
   "./node_modules/react/index.js": (options) => {
     return commonJsToJavaScriptModule({
       ...options,
-      // processEnvNodeEnv: "production",
+      processEnvNodeEnv: "production",
     })
   },
   "./node_modules/react-dom/index.js": async (options) => {
     return commonJsToJavaScriptModule({
       ...options,
+      // BEWARE: IF YOU FORGET THIS (putting node env to production for react-dom as well)
+      // the code generated never resolves
+      processEnvNodeEnv: "production",
       external: ["react"],
     })
   },

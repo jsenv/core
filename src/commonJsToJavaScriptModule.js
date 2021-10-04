@@ -35,7 +35,16 @@ export const commonJsToJavaScriptModule = async ({
 
   const { nodeResolve } = await import("@rollup/plugin-node-resolve")
   const nodeResolveRollupPlugin = nodeResolve({
-    mainFields: ["main"],
+    mainFields: [
+      "browser:module",
+      "module",
+      "browser",
+      "main:esnext",
+      "jsnext:main",
+      "main",
+    ],
+    extensions: [".mjs", ".cjs", ".js", ".json"],
+    exportConditions: [],
   })
 
   const { default: createJSONRollupPlugin } = await import(
