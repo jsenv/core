@@ -1,5 +1,6 @@
-exports.export1 = 1
-exports.export2 = "foo"
-exports.export3 = function foo() {}
-exports.export4 = () => {}
-exports.export5 = null
+exports.aNumber = 1
+exports.aString = "foo"
+exports.aFunction = function foo() {
+  return "ret"
+}
+exports.nullValue = null
