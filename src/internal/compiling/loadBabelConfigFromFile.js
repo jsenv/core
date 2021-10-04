@@ -21,7 +21,7 @@ const babelPluginNameFromPlugin = ({ key }) => {
       "babel-plugin-transform-async-to-promises/async-to-promises.js",
     )
   ) {
-    return "babel-plugin-transform-async-to-promises"
+    return "transform-async-to-promises"
   }
   return key
 }

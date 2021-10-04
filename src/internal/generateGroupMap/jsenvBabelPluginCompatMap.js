@@ -427,3 +427,6 @@ export const jsenvBabelPluginCompatMap = {
 // so that async is not transpiled when supported
 jsenvBabelPluginCompatMap["transform-async-to-promises"] =
   jsenvBabelPluginCompatMap["transform-async-to-generator"]
+
+jsenvBabelPluginCompatMap["regenerator-transform"] =
+  jsenvBabelPluginCompatMap["transform-regenerator"]

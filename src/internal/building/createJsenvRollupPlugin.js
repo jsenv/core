@@ -560,7 +560,11 @@ building ${entryFileRelativeUrls.length} entry files...`)
         importer = asServerUrl(importer)
       }
 
-      if (node && isSpecifierForNodeCoreModule(specifier)) {
+      if (
+        node &&
+        specifier.startsWith("node:") &&
+        isSpecifierForNodeCoreModule(specifier)
+      ) {
         logger.debug(`${specifier} is native module -> marked as external`)
         return false
       }

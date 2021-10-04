@@ -42,7 +42,7 @@ export const createNodeSystem = async ({
   nodeSystem.resolve = resolve
 
   nodeSystem.instantiate = async (url, importerUrl) => {
-    if (isSpecifierForNodeCoreModule(url)) {
+    if (url.startsWith("node:") && isSpecifierForNodeCoreModule(url)) {
       return fromFunctionReturningNamespace(
         () => {
           // eslint-disable-next-line import/no-dynamic-require

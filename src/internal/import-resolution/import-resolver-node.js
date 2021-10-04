@@ -28,7 +28,10 @@ export const createImportResolverForNode = async ({
   )
 
   const resolveImport = async (specifier, importer) => {
-    if (isSpecifierForNodeCoreModule(specifier)) {
+    if (
+      specifier.startsWith("node:") &&
+      isSpecifierForNodeCoreModule(specifier)
+    ) {
       return specifier
     }
 
