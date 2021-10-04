@@ -130,7 +130,7 @@ export const startCompileServer = async ({
   })
   babelPluginMap = {
     ...configFromFile.babelPluginMap,
-    ...babelPluginMap
+    ...babelPluginMap,
   }
 
   const logger = createLogger({ logLevel: compileServerLogLevel })
@@ -209,6 +209,7 @@ export const startCompileServer = async ({
     compileServerGroupMap,
     env,
     inlineImportMapIntoHTML,
+    babelPluginMap,
     customCompilers,
   })
   if (compileServerCanWriteOnFilesystem) {
@@ -901,7 +902,7 @@ const createOutJSONFiles = ({
   const customCompilerPatterns = Object.keys(customCompilers)
   const outDirectoryMeta = {
     jsenvCorePackageVersion,
-    babelPluginMap,
+    babelPluginMap: babelPluginMapAsData(babelPluginMap),
     compileServerGroupMap,
     replaceProcessEnvNodeEnv,
     processEnvNodeEnv,
@@ -933,6 +934,25 @@ const createOutJSONFiles = ({
   }
 
   return outJSONFiles
+}
+
+const babelPluginMapAsData = (babelPluginMap) => {
+  const data = {}
+  Object.keys(babelPluginMap).forEach((key) => {
+    const value = babelPluginMap[key]
+    if (Array.isArray(value)) {
+      data[key] = value
+      return
+    }
+    if (typeof value === "object") {
+      data[key] = {
+        options: value.options,
+      }
+      return
+    }
+    data[key] = value
+  })
+  return data
 }
 
 const createOutFilesService = async ({
