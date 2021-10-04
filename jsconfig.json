@@ -248,9 +248,6 @@
       "@babel/plugin-transform-spread": [
         "./node_modules/@babel/plugin-transform-spread/lib/index.js"
       ],
-      "@jsenv/node-module-import-map/*": [
-        "./node_modules/@jsenv/node-module-import-map/*"
-      ],
       "postcss/lib/terminal-highlight": [
         "./node_modules/postcss/lib/terminal-highlight.js"
       ],
@@ -262,9 +259,6 @@
       ],
       "@jsenv/importmap-node-module/*": [
         "./node_modules/@jsenv/importmap-node-module/*"
-      ],
-      "@jsenv/node-module-import-map": [
-        "./node_modules/@jsenv/node-module-import-map/index.js"
       ],
       "@jsenv/prettier-check-project": [
         "./node_modules/@jsenv/prettier-check-project/index.js"
@@ -473,9 +467,6 @@
       "@jsenv/filesystem/*": [
         "./node_modules/@jsenv/filesystem/*"
       ],
-      "@jsenv/import-map/*": [
-        "./node_modules/@jsenv/import-map/*"
-      ],
       "eslint-plugin-html": [
         "./node_modules/eslint-plugin-html/src/index.js"
       ],
@@ -500,8 +491,8 @@
       "@jsenv/filesystem": [
         "./node_modules/@jsenv/filesystem/main.js"
       ],
-      "@jsenv/import-map": [
-        "./node_modules/@jsenv/import-map/index.js"
+      "@jsenv/importmap/*": [
+        "./node_modules/@jsenv/importmap/*"
       ],
       "humanize-duration": [
         "./node_modules/humanize-duration/humanize-duration.js"
@@ -523,6 +514,9 @@
       ],
       "@c88/v8-coverage": [
         "./node_modules/@c88/v8-coverage/index.js"
+      ],
+      "@jsenv/importmap": [
+        "./node_modules/@jsenv/importmap/index.js"
       ],
       "cjs-module-lexer": [
         "./node_modules/cjs-module-lexer/dist/lexer.mjs"

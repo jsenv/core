@@ -5,7 +5,7 @@ import {
   urlToRelativeUrl,
   readFile,
 } from "@jsenv/filesystem"
-import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
+import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 
@@ -28,10 +28,7 @@ export const createImportResolverForNode = async ({
   )
 
   const resolveImport = async (specifier, importer) => {
-    if (
-      specifier.startsWith("node:") &&
-      isSpecifierForNodeCoreModule(specifier)
-    ) {
+    if (isSpecifierForNodeCoreModule(specifier)) {
       return specifier
     }
 

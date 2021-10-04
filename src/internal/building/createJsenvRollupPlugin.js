@@ -1,7 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { extname } from "node:path"
-import { normalizeImportMap } from "@jsenv/import-map"
-import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
+import { normalizeImportMap } from "@jsenv/importmap"
+import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
 import { loggerToLogLevel } from "@jsenv/logger"
 import {
   isFileSystemPath,
@@ -560,11 +560,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         importer = asServerUrl(importer)
       }
 
-      if (
-        node &&
-        specifier.startsWith("node:") &&
-        isSpecifierForNodeCoreModule(specifier)
-      ) {
+      if (node && isSpecifierForNodeCoreModule(specifier)) {
         logger.debug(`${specifier} is native module -> marked as external`)
         return false
       }
