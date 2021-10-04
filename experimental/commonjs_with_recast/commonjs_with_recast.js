@@ -13,6 +13,7 @@ export const convertCommonJsWithRecast = ({
 
   sourcemapExcludeSources,
 }) => {
+  // eslint-disable-next-line import/no-unresolved
   const cjsToEsModule = require("commonjs-to-es-module-codemod")
 
   const output = applyTransform(cjsToEsModule, {}, { source: code })
