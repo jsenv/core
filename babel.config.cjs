@@ -1,3 +1,8 @@
+// Jsenv uses many standard features such as const, spread operator, arrow function etc
+// Jsenv internal files might execute in old environments without these features
+// And we don't jnow in advance in which environments
+// This is why the babel config below enables every standard babel plugins
+
 module.exports = {
   plugins: [
     "@babel/plugin-proposal-json-strings",
