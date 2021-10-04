@@ -13,14 +13,13 @@ export const rollupPluginCommonJsNamedExports = ({ logger }) => {
   const cjsScannedNamedExports = {}
 
   return {
-    async buildStart(inputOptions) {
+    async buildStart({ input }) {
       await init()
-
-      const input = inputOptions.input
 
       Object.keys(input).forEach((key) => {
         const inputFilePath = input[key]
         const inputFileUrl = fileSystemPathToUrl(inputFilePath)
+        console.log({ inputFileUrl })
         inputSummaries[inputFileUrl] = {
           all: false,
           default: false,
