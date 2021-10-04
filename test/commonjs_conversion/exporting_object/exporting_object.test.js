@@ -14,7 +14,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}file.js`]: "./file.js",
+  [`./${testDirectoryRelativeUrl}main.mjs`]: "./main.js",
 }
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
@@ -23,22 +23,18 @@ await buildProject({
   buildDirectoryRelativeUrl,
   entryPointMap,
   customCompilers: {
-    "**/file_umd.js": commonJsToJavaScriptModule,
+    "**/*.cjs": commonJsToJavaScriptModule,
   },
 })
 const { namespace } = await nodeImportEsModuleBuild({
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   testDirectoryRelativeUrl,
-  jsFileRelativeUrl: "dist/esmodule/file.js",
+  jsFileRelativeUrl: "dist/esmodule/main.js",
 })
 
 const actual = namespace
 const expected = {
-  namedExports: {
-    // argl, it should be { answer: 42 } not inside behind default export :(
-    default: {
-      answer: 42,
-    },
-  },
+  export1: "foo",
+  export2: "bar",
 }
 assert({ actual, expected })

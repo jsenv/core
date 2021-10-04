@@ -14,7 +14,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}main.js`]: "./main.js",
+  [`./${testDirectoryRelativeUrl}main.mjs`]: "./main.js",
 }
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
@@ -34,9 +34,10 @@ const { namespace } = await nodeImportEsModuleBuild({
 
 const actual = namespace
 const expected = {
-  namedExports: {
+  all: {
     answer: 42,
-    default: { answer: 42 }, // it's duplicated on default, that's fine
+    default: { answer: 42 },
   },
+  answer: 42,
 }
 assert({ actual, expected })

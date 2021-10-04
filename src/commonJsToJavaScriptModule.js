@@ -1,9 +1,13 @@
+/* eslint-disable import/max-dependencies */
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
 
-import { require } from "./internal/require.js"
-import { transformResultToCompilationResult } from "./internal/compiling/transformResultToCompilationResult.js"
+import { require } from "@jsenv/core/src/internal/require.js"
+import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
+import { rollupPluginCommonJsNamedExports } from "@jsenv/core/src/internal/compiling/rollup_plugin_commonjs_named_exports.js"
 
 export const commonJsToJavaScriptModule = async ({
+  logger,
+
   url,
   compiledUrl,
   projectDirectoryUrl,
@@ -27,69 +31,88 @@ export const commonJsToJavaScriptModule = async ({
     throw new Error(`compatible only with file:// protocol, got ${url}`)
   }
 
-  const { rollup } = await import("rollup")
-  const { default: commonjs } = await import("@rollup/plugin-commonjs")
+  const filePath = urlToFileSystemPath(url)
+
   const { nodeResolve } = await import("@rollup/plugin-node-resolve")
+  const nodeResolveRollupPlugin = nodeResolve({
+    mainFields: [
+      "browser:module",
+      "module",
+      "browser",
+      "main:esnext",
+      "jsnext:main",
+      "main",
+    ],
+    extensions: [".mjs", ".cjs", ".js", ".json"],
+    exportConditions: [],
+  })
+
   const { default: createJSONRollupPlugin } = await import(
     "@rollup/plugin-json"
   )
+  const jsonRollupPlugin = createJSONRollupPlugin({
+    preferConst: true,
+    indent: "  ",
+    compact: false,
+    namedExports: true,
+  })
+
   const { default: createReplaceRollupPlugin } = await import(
     "@rollup/plugin-replace"
   )
+  const replaceRollupPlugin = createReplaceRollupPlugin({
+    preventAssignment: true,
+    values: {
+      ...(replaceProcessEnvNodeEnv
+        ? { "process.env.NODE_ENV": JSON.stringify(processEnvNodeEnv) }
+        : {}),
+      ...(replaceGlobalObject ? { global: "globalThis" } : {}),
+      ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
+      ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
+      ...replaceMap,
+    },
+  })
+
+  const { default: commonjs } = await import("@rollup/plugin-commonjs")
+  const commonJsRollupPlugin = commonjs({
+    extensions: [".js", ".cjs"],
+    // esmExternals: true,
+    // defaultIsModuleExports: true,
+    // requireReturnsDefault: "namespace",
+    requireReturnsDefault: "auto",
+  })
+
   const { default: createNodeGlobalRollupPlugin } = await import(
     "rollup-plugin-node-globals"
   )
-
-  const builtins = require("rollup-plugin-node-builtins-brofs")
-
-  const filePath = urlToFileSystemPath(url)
-
-  const nodeBuiltinsRollupPlugin = builtins()
-
-  const nodeResolveRollupPlugin = nodeResolve({
-    mainFields: ["main"],
-  })
-
-  const jsonRollupPlugin = createJSONRollupPlugin()
-
   const nodeGlobalRollupPlugin = createNodeGlobalRollupPlugin({
     global: false, // handled by replaceMap
     dirname: false, // handled by replaceMap
-    filename: false, //  handled by replaceMap
+    filename: false, // handled by replaceMap
     process: replaceProcess,
     buffer: replaceBuffer,
   })
 
-  const commonJsRollupPlugin = commonjs({
-    // esmExternals: true,
-    // defaultIsModuleExports: true,
-    // requireReturnsDefault: "namespace",
+  const commonJsNamedExportsRollupPlugin = rollupPluginCommonJsNamedExports({
+    logger,
   })
 
+  const builtins = require("rollup-plugin-node-builtins-brofs")
+  const nodeBuiltinsRollupPlugin = builtins()
+
+  const { rollup } = await import("rollup")
   const rollupBuild = await rollup({
     input: filePath,
     inlineDynamicImports: true,
     external,
     plugins: [
-      commonJsRollupPlugin,
-      createReplaceRollupPlugin({
-        preventAssignment: true,
-        values: {
-          ...(replaceProcessEnvNodeEnv
-            ? { "process.env.NODE_ENV": JSON.stringify(processEnvNodeEnv) }
-            : {}),
-          ...(replaceGlobalObject ? { global: "globalThis" } : {}),
-          ...(replaceGlobalFilename
-            ? { __filename: __filenameReplacement }
-            : {}),
-          ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
-          ...replaceMap,
-        },
-      }),
-      nodeGlobalRollupPlugin,
-      ...(convertBuiltinsToBrowser ? [nodeBuiltinsRollupPlugin] : []),
       nodeResolveRollupPlugin,
       jsonRollupPlugin,
+      replaceRollupPlugin,
+      commonJsRollupPlugin,
+      commonJsNamedExportsRollupPlugin,
+      nodeGlobalRollupPlugin,
+      ...(convertBuiltinsToBrowser ? [nodeBuiltinsRollupPlugin] : []),
     ],
   })
 
@@ -100,6 +123,7 @@ export const commonJsToJavaScriptModule = async ({
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources: true,
+    exports: "named",
     ...(compiledUrl
       ? { dir: urlToFileSystemPath(resolveUrl("./", compiledUrl)) }
       : {}),

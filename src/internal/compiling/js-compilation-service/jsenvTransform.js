@@ -251,8 +251,10 @@ const babelTransform = async ({ ast, code, options }) => {
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
       const message = error.message
+      const messageWithoutAnsi = message.replace(ansiRegex, "")
       throw createParseError({
-        message: message.replace(ansiRegex, ""),
+        cause: error,
+        message: messageWithoutAnsi,
         messageHTML: ansiToHTML(message),
         filename: options.filename,
         lineNumber: error.loc.line,
@@ -269,11 +271,13 @@ const pattern = [
 ].join("|")
 const ansiRegex = new RegExp(pattern, "g")
 
-const createParseError = (data) => {
-  const { message } = data
-  const parseError = new Error(message)
+const createParseError = ({ message, cause, ...data }) => {
+  const parseError = new Error(message, { cause })
   parseError.code = "PARSE_ERROR"
-  parseError.data = data
+  parseError.data = {
+    message,
+    ...data,
+  }
 
   return parseError
 }

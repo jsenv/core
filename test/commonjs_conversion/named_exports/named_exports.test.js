@@ -14,7 +14,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}main.js`]: "./main.js",
+  [`./${testDirectoryRelativeUrl}main.mjs`]: "./main.js",
 }
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
@@ -34,9 +34,14 @@ const { namespace } = await nodeImportEsModuleBuild({
 
 const actual = namespace
 const expected = {
-  namedExports: {
-    // argl, it should be { answer: 42 } not inside behind default export :(
-    default: { answer: 42 },
+  aFunctionReturnValue: "ret",
+  aNumber: 1,
+  aString: "foo",
+  default: {
+    aNumber: 1,
+    aString: "foo",
+    nullValue: null,
   },
+  nullValue: null,
 }
 assert({ actual, expected })

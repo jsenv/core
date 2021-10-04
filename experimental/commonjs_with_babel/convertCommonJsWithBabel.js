@@ -1,11 +1,16 @@
 import { require } from "@jsenv/core/src/internal/require.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import { babelPluginReplaceExpressions } from "@jsenv/core/src/internal/babel-plugin-replace-expressions.js"
+import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
 
 export const convertCommonJsWithBabel = async ({
   code,
+  map,
   url,
+  compiledUrl,
   projectDirectoryUrl,
+
+  sourcemapExcludeSources,
 
   replaceGlobalObject = true,
   replaceGlobalFilename = true,
@@ -17,9 +22,9 @@ export const convertCommonJsWithBabel = async ({
   // eslint-disable-next-line import/no-unresolved
   const transformCommonJs = require("babel-plugin-transform-commonjs")
 
-  // maybe we should use babel core here instead of transformJs
-  const result = await transformJs({
+  const transformResult = await transformJs({
     code,
+    map,
     url,
     projectDirectoryUrl,
 
@@ -45,7 +50,22 @@ export const convertCommonJsWithBabel = async ({
       ],
     },
   })
-  return result
+
+  return transformResultToCompilationResult(
+    {
+      contentType: "application/javascript",
+      code: transformResult.code,
+      map: transformResult.map,
+    },
+    {
+      projectDirectoryUrl,
+      originalFileContent: code,
+      originalFileUrl: url,
+      compiledFileUrl: compiledUrl,
+      sourcemapFileUrl: `${compiledUrl}.map`,
+      sourcemapExcludeSources,
+    },
+  )
 }
 
 const __filenameReplacement = `import.meta.url.slice('file:///'.length)`
