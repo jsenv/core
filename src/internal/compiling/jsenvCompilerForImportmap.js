@@ -7,7 +7,8 @@
  */
 
 import { urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
-import { composeTwoImportMaps } from "@jsenv/import-map"
+import { composeTwoImportMaps } from "@jsenv/importmap"
+
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
 export const compileImportmap = async ({ code, url }) => {
