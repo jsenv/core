@@ -1,5 +1,5 @@
 var mod = {
-  "a": "b",
+  "a": 42,
   ")": "ooops, this is an invalid identifier",
 }
 
