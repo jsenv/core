@@ -50,7 +50,12 @@ export const commonJsToJavaScriptModule = async ({
     mainFields: ["main"],
   })
 
-  const jsonRollupPlugin = createJSONRollupPlugin()
+  const jsonRollupPlugin = createJSONRollupPlugin({
+    preferConst: true,
+    indent: "  ",
+    compact: false,
+    namedExports: true,
+  })
 
   const nodeGlobalRollupPlugin = createNodeGlobalRollupPlugin({
     global: false, // handled by replaceMap
@@ -61,9 +66,11 @@ export const commonJsToJavaScriptModule = async ({
   })
 
   const commonJsRollupPlugin = commonjs({
+    extensions: [".js", ".cjs"],
     // esmExternals: true,
     // defaultIsModuleExports: true,
     // requireReturnsDefault: "namespace",
+    requireReturnsDefault: "auto",
   })
 
   const rollupBuild = await rollup({
@@ -100,6 +107,7 @@ export const commonJsToJavaScriptModule = async ({
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources: true,
+    exports: "named",
     ...(compiledUrl
       ? { dir: urlToFileSystemPath(resolveUrl("./", compiledUrl)) }
       : {}),

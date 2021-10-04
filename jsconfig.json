@@ -395,6 +395,9 @@
       "is-unicode-supported": [
         "./node_modules/is-unicode-supported/index.js"
       ],
+      "is-valid-identifier/*": [
+        "./node_modules/is-valid-identifier/*"
+      ],
       "istanbul-lib-report/*": [
         "./node_modules/istanbul-lib-report/*"
       ],
@@ -427,6 +430,9 @@
       ],
       "eslint-plugin-html/*": [
         "./node_modules/eslint-plugin-html/*"
+      ],
+      "is-valid-identifier": [
+        "./node_modules/is-valid-identifier/index.js"
       ],
       "istanbul-lib-report": [
         "./node_modules/istanbul-lib-report/index.js"
@@ -505,6 +511,9 @@
       ],
       "@c88/v8-coverage": [
         "./node_modules/@c88/v8-coverage/index.js"
+      ],
+      "cjs-module-lexer": [
+        "./node_modules/cjs-module-lexer/dist/lexer.mjs"
       ],
       "istanbul-reports": [
         "./node_modules/istanbul-reports/index.js"
@@ -650,6 +659,9 @@
       "tree-kill/*": [
         "./node_modules/tree-kill/*"
       ],
+      "esinstall": [
+        "./node_modules/esinstall/index.esm.mjs"
+      ],
       "prettier/*": [
         "./node_modules/prettier/*"
       ],
@@ -664,6 +676,9 @@
       ],
       "prettier": [
         "./node_modules/prettier/index.js"
+      ],
+      "resolve/*": [
+        "./node_modules/resolve/*"
       ],
       "systemjs": [
         "./node_modules/systemjs/dist/system-node.cjs"
@@ -682,6 +697,9 @@
       ],
       "preact/*": [
         "./node_modules/preact/*"
+      ],
+      "resolve": [
+        "./node_modules/resolve/index.js"
       ],
       "bytes/*": [
         "./node_modules/bytes/*"
@@ -721,6 +739,12 @@
       ],
       "cuid": [
         "./node_modules/cuid/index.js"
+      ],
+      "vm2/*": [
+        "./node_modules/vm2/*"
+      ],
+      "vm2": [
+        "./node_modules/vm2/index.js"
       ]
     }
   },
