@@ -6,7 +6,7 @@
 - A development server
 - A build tool to optimize files for production
 
-Jsenv integrates naturally with standard html, css and js. It can be configured to work with TypeScript and React.
+Jsenv integrates naturally with standard html, css and js. It can be configured to work with React and JSX.
 
 # Jsenv iconic features
 
@@ -332,7 +332,7 @@ Jsenv can execute standard JavaScript and be configured to run non-standard Java
 
 Standard corresponds to [JavaScript Modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules), destructuring, optional chaining and so on.
 
-Non-standard corresponds to [CommonJS modules](https://code-trotter.com/web/understand-the-different-javascript-modules-formats/#commonjs-cjs), [JSX](https://reactjs.org/docs/introducing-jsx.html) or [TypeScript](https://www.typescriptlang.org).
+Non-standard corresponds to [CommonJS modules](https://code-trotter.com/web/understand-the-different-javascript-modules-formats/#commonjs-cjs) and [JSX](https://reactjs.org/docs/introducing-jsx.html).
 
 > Keep in mind one of your dependency may use non-standard JavaScript. For instance react uses CommonJS modules.
 
@@ -364,24 +364,16 @@ export const customCompilers = {
 
 ## React
 
-React is written in CommonJS and comes with jsx. If you use react and or jsx it requires some configuration.
+When your code imports react, it needs to be configured as shown below.
 
-_jsenv.config.mjs for react and jsx:_
+_jsenv.config.mjs:_
 
 ```js
-import { createRequire } from "module"
 import { commonJsToJavaScriptModule } from "@jsenv/core"
 
-const require = createRequire(import.meta.url)
-const transformReactJSX = require("@babel/plugin-transform-react-jsx")
-
-export const babelPluginMap = {
-  "transform-react-jsx": [
-    transformReactJSX,
-    { pragma: "React.createElement", pragmaFrag: "React.Fragment" },
-  ],
-}
-
+// "react" and "react-dom" are written in commonJs, they
+// must be converted to javascript modules
+// see https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters.md#customCompilers
 export const customCompilers = {
   "./node_modules/react/index.js": commonJsToJavaScriptModule,
   "./node_modules/react-dom/index.js": (options) => {
@@ -390,7 +382,7 @@ export const customCompilers = {
 }
 ```
 
-You must also add an importmap file in your html to remap react imports.
+You must also add an [importmap](https://github.com/WICG/import-maps#import-maps) file in your html to remap react imports.
 
 ```html
 <script type="importmap">
@@ -403,38 +395,29 @@ You must also add an importmap file in your html to remap react imports.
 </script>
 ```
 
-See also
+## JSX
 
-- [@jsenv/importmap-node-module](https://github.com/jsenv/importmap-node-module#import-map-node-module)
-- [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
-- [customCompilers](./docs/shared-parameters.md#customCompilers)
-- [transform-react-jsx on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-react-jsx.html)
-- [importmap spec](https://github.com/WICG/import-maps#import-maps)
+If you want to use jsx, you need [@babel/plugin-transform-react-jsx](https://babeljs.io/docs/en/next/babel-plugin-transform-react-jsx.html) in your babel config file.
 
-</details>
-
-## TypeScript (experimental)
-
-_jsenv.config.mjs for TypeScript_:
-
-```js
-import { createRequire } from "module"
-
-const require = createRequire(import.meta.url)
-const transformTypeScript = require("@babel/plugin-transform-typescript")
-
-export const babelPluginMap = {
-  "transform-typescript": [transformTypeScript, { allowNamespaces: true }],
-}
-
-export const importDefaultExtension = true
+```console
+npm i --save-dev @babel/plugin-transform-react-jsx
 ```
 
-See also
+_babel.config.cjs_:
 
-- [babelPluginMap](./docs/shared-parameters.md#babelPluginMap)
-- [importDefaultExtension](./docs/shared-parameters.md#importDefaultExtension)
-- [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
+```js
+module.exports = {
+  plugins: [
+    [
+      "@babel/plugin-transform-react-jsx",
+      {
+        pragma: "React.createElement",
+        pragmaFrag: "React.Fragment",
+      },
+    ],
+  ],
+}
+```
 
 # See also
 
