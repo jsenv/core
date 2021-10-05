@@ -1,7 +1,5 @@
-/* eslint-disable import/max-dependencies */
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
 
-import { require } from "@jsenv/core/src/internal/require.js"
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
 import { rollupPluginCommonJsNamedExports } from "@jsenv/core/src/internal/compiling/rollup_plugin_commonjs_named_exports.js"
 
@@ -44,6 +42,7 @@ export const commonJsToJavaScriptModule = async ({
       "main",
     ],
     extensions: [".mjs", ".cjs", ".js", ".json"],
+    preferBuiltins: false,
     exportConditions: [],
   })
 
@@ -97,8 +96,9 @@ export const commonJsToJavaScriptModule = async ({
     logger,
   })
 
-  const builtins = require("rollup-plugin-node-builtins-brofs")
-  const nodeBuiltinsRollupPlugin = builtins()
+  const { default: rollupPluginNodePolyfills } = await import(
+    "rollup-plugin-polyfill-node"
+  )
 
   const { rollup } = await import("rollup")
   const rollupBuild = await rollup({
@@ -112,7 +112,13 @@ export const commonJsToJavaScriptModule = async ({
       commonJsRollupPlugin,
       commonJsNamedExportsRollupPlugin,
       nodeGlobalRollupPlugin,
-      ...(convertBuiltinsToBrowser ? [nodeBuiltinsRollupPlugin] : []),
+      ...(convertBuiltinsToBrowser
+        ? [
+            rollupPluginNodePolyfills({
+              include: null,
+            }),
+          ]
+        : []),
     ],
   })
 
