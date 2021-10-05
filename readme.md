@@ -329,17 +329,11 @@ npm install --save-dev @jsenv/core
 # Configuration
 
 Jsenv can execute standard JavaScript and be configured to run non-standard JavaScript.
-
-_non-standard JavaScript examples:_
-
-- [CommonJS modules](https://code-trotter.com/web/understand-the-different-javascript-modules-formats/#commonjs-cjs)
-- [JSX](https://reactjs.org/docs/introducing-jsx.html)
-
-> Keep in mind one of your dependency may use non-standard JavaScript. For instance react uses CommonJS modules.
+The configuration is done via `jsenv.config.mjs` and `babel.config.cjs`.
 
 ## jsenv.config.mjs
 
-Jsenv codebase regroups configuration in a top level [jsenv.config.mjs](./jsenv.config.js) file.
+Jsenv codebase regroups configuration in a top level [jsenv.config.mjs](./jsenv.config.mjs) file.
 The file is meant to be imported and passed using the spread operator.
 
 ![screenshot about jsenv config import and spread operator](./docs/jsenv-config-spread.png)
@@ -352,42 +346,11 @@ This technic helps to see jsenv custom configuration quickly and share it betwee
 
 When code needs to be transformed, the project must contain a [babel config file](https://babeljs.io/docs/en/config-files).
 
-There is 2 scenarios where it happens:
-
-- Code needs to be compatible with old browsers
-- Code is not standard (jsx for instance)
-
-In that case, it's recommended to use the following babel plugins declared in `babel.config.cjs`
+It's recommended to use the following babel plugins declared in `babel.config.cjs`
 
 ```js
-/*
- * This file is used to configure a list of babel plugins as documented in
- * https://babeljs.io/docs/en/config-files
- *
- * During dev: babel plugins natively supported by browsers and Node.js are not used.
- * During build:
- *  - When "runtimeSupport" is configured, babel plugins already supported by these runtime won't be used
- *  See https://github.com/jsenv/jsenv-template-pwa/blob/main/jsenv.config.mjs#L12
- *  - Otherwise all babel plugins are use
- *
- */
-
-// "@babel/preset-env" transforms async function to generators
-// but it's verbose and slow compared to using promises, so we:
-// 1. Exclude "transform-async-to-generator", "transform-regenerator"
-// 2. Enable "babel-plugin-transform-async-to-promises"
-// See https://github.com/babel/babel/issues/8121
 module.exports = {
-  presets: [
-    [
-      "@babel/preset-env",
-      {
-        modules: false,
-        exclude: ["transform-async-to-generator", "transform-regenerator"],
-      },
-    ],
-  ],
-  plugins: ["babel-plugin-transform-async-to-promises"],
+  presets: ["@jsenv/babel-preset"],
 }
 ```
 
@@ -446,10 +409,11 @@ If you want to use jsx, you need [@babel/plugin-transform-react-jsx](https://bab
 npm i --save-dev @babel/plugin-transform-react-jsx
 ```
 
-_babel.config.cjs_:
+_babel.config.cjs for JSX_:
 
 ```js
 module.exports = {
+  presets: ["@jsenv/babel-preset"],
   plugins: [
     [
       "@babel/plugin-transform-react-jsx",
