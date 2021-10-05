@@ -337,7 +337,7 @@ The file is meant to be imported and passed using the spread operator.
 
 ![screenshot about jsenv config import and spread operator](./docs/jsenv-config-spread.png)
 
-— See [script/test/test.js](https://github.com/jsenv/jsenv-core/blob/e44e362241e8e2142010322cb4552983b3bc9744/script/test/test.js#L2)
+— See [script/test/test.js](https://github.com/jsenv/jsenv-core/blob/8da56c4aeb70891be1245f388bfe5d3088145ec6/script/test/test.js#L3)
 
 This technic helps to see jsenv custom configuration quickly and share it between files. That being said you are free to organize your configuration as you want.
 
