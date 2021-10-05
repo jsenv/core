@@ -26,44 +26,46 @@ const executeParams = {
   mirrorConsole: false,
 }
 
-await Promise.all(
-  [
-    // comment to ensure multiline
-    launchChromium,
-    launchFirefox,
-    launchWebkit,
-  ].map(async (launchBrowser) => {
-    const actual = await execute({
-      ...executeParams,
-      launch: launchBrowser,
-      measurePerformance: true,
-      collectPerformance: true,
-      // launchParams: {
-      //   headless: false,
-      // },
-      // stopAfterExecute: false,
-    })
-    const expected = {
-      status: "completed",
-      namespace: {
-        [`./${testDirectoryname}.js`]: {
-          status: "completed",
-          namespace: {},
+if (process.platform !== "win32") {
+  await Promise.all(
+    [
+      // comment to ensure multiline
+      launchChromium,
+      launchFirefox,
+      launchWebkit,
+    ].map(async (launchBrowser) => {
+      const actual = await execute({
+        ...executeParams,
+        launch: launchBrowser,
+        measurePerformance: true,
+        collectPerformance: true,
+        // launchParams: {
+        //   headless: false,
+        // },
+        // stopAfterExecute: false,
+      })
+      const expected = {
+        status: "completed",
+        namespace: {
+          [`./${testDirectoryname}.js`]: {
+            status: "completed",
+            namespace: {},
+          },
         },
-      },
-      performance: {
-        timeOrigin: assert.any(Number),
-        timing: actual.performance.timing,
-        navigation: {
-          type: 0,
-          redirectCount: 0,
+        performance: {
+          timeOrigin: assert.any(Number),
+          timing: actual.performance.timing,
+          navigation: {
+            type: 0,
+            redirectCount: 0,
+          },
+          measures: {
+            "jsenv_file_import": assert.any(Number),
+            "a to b": assert.any(Number),
+          },
         },
-        measures: {
-          "jsenv_file_import": assert.any(Number),
-          "a to b": assert.any(Number),
-        },
-      },
-    }
-    assert({ actual, expected })
-  }),
-)
+      }
+      assert({ actual, expected })
+    }),
+  )
+}
