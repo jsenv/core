@@ -38,19 +38,18 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
   const { status, statusText, headers } = await fetchUrl(fileServerUrl, {
     ignoreHttpsError: true,
   })
-  {
-    const actual = {
-      status,
-      statusText,
-      contentType: headers.get("content-type"),
-    }
-    const expected = {
-      status: 200,
-      statusText: "OK",
-      contentType: "application/javascript",
-    }
-    assert({ actual, expected })
+
+  const actual = {
+    status,
+    statusText,
+    contentType: headers.get("content-type"),
   }
+  const expected = {
+    status: 200,
+    statusText: "OK",
+    contentType: "application/javascript",
+  }
+  assert({ actual, expected })
 }
 
 // etag caching
