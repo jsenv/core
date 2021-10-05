@@ -28,7 +28,7 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { loadBabelConfigFromFile } from "./loadBabelConfigFromFile.js"
+import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { createCallbackList } from "../createCallbackList.js"
@@ -127,16 +127,37 @@ export const startCompileServer = async ({
     projectDirectoryUrl,
   )
 
-  const configFromFile = await loadBabelConfigFromFile({
+  const logger = createLogger({ logLevel: compileServerLogLevel })
+
+  const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
     projectDirectoryUrl,
     babelConfigFileUrl,
   })
   babelPluginMap = {
-    ...configFromFile.babelPluginMap,
+    ...babelPluginMapFromFile,
     ...babelPluginMap,
   }
+  Object.keys(babelPluginMap).forEach((key) => {
+    if (
+      key === "transform-modules-commonjs" ||
+      key === "transform-modules-amd" ||
+      key === "transform-modules-systemjs"
+    ) {
+      const declaredInFile = Boolean(babelPluginMapFromFile[key])
+      logger.warn(
+        createDetailedMessage(
+          `WARNING: "${key}" babel plugin should not be enabled, it will be ignored`,
+          {
+            suggestion: declaredInFile
+              ? `To get rid of this warning, remove "${key}" from babel config file. Either with "modules": false in @babel/preset-env or removing "@babel/${key}" from plugins`
+              : `To get rid of this warning, remove "${key}" from babelPluginMap parameter`,
+          },
+        ),
+      )
+      delete babelPluginMap[key]
+    }
+  })
 
-  const logger = createLogger({ logLevel: compileServerLogLevel })
   const { babelSyntaxPluginMap, babelPluginMapWithoutSyntax } =
     extractSyntaxBabelPluginMap(babelPluginMap)
   const compileServerGroupMap = generateGroupMap({

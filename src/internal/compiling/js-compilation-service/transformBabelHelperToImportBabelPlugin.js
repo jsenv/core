@@ -25,17 +25,6 @@ export const transformBabelHelperToImportBabelPlugin = (api) => {
         // the list of possible helpers name
         // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
 
-        if (name === "interopRequireDefault") {
-          // interopRequireDefault is used by "addDefault" which will call
-          // helperGenerator creating an infinite call stack
-          // for this specific helper we use the original babel helper code
-          const t = api.types
-          return t.memberExpression(
-            t.identifier("babelHelpers"),
-            t.identifier(name),
-          )
-        }
-
         if (!file.availableHelper(name)) {
           return undefined
         }
@@ -54,6 +43,9 @@ export const transformBabelHelperToImportBabelPlugin = (api) => {
 
         const helper = addDefault(file.path, babelHelperImportSpecifier, {
           nameHint: `_${name}`,
+          // disable interop, useless as we work only with js modules
+          importedType: "es6",
+          // importedInterop: "uncompiled",
         })
         cachedHelpers[name] = helper
         return helper

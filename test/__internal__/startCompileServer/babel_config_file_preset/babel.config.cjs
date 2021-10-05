@@ -3,6 +3,7 @@ module.exports = {
     [
       "@babel/preset-env",
       {
+        modules: false,
         targets: {
           safari: "10",
           edge: "17",
