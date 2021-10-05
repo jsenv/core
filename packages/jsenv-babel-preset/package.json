@@ -19,17 +19,7 @@
     "/src/",
     "/jsenv_babel_preset.cjs"
   ],
-  "scripts": {
-    "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.html",
-    "generate-importmap": "node ./script/importmap/generate_importmap.js",
-    "dist": "npm run build",
-    "test": "node --experimental-import-meta-resolve ./script/test/test.js",
-    "prettier-format": "node ./script/prettier/prettier_format.mjs",
-    "prettier-format-stage": "npm run prettier-format -- --staged",
-    "prettier-check": "npm run prettier-format -- --dry-run",
-    "prepublishOnly": "node ./script/publish/remove_postinstall.mjs && npm run dist",
-    "postpublish": "node ./script/publish/restore_postinstall.mjs"
-  },
+  "scripts": {},
   "dependencies": {
     "@babel/plugin-transform-modules-systemjs": "7.15.4",
     "@babel/plugin-proposal-json-strings": "7.14.5",
