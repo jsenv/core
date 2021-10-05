@@ -1,14 +1,5 @@
 import { require } from "@jsenv/core/src/internal/require.js"
 
-export const babelPluginNamesToRemoveFromBest = [
-  "proposal-private-property-in-object",
-  "proposal-logical-assignment-operators",
-  "proposal-export-namespace-from",
-  "proposal-class-properties",
-  "proposal-private-methods",
-  "transform-named-capturing-groups-regex",
-]
-
 export const getMinimalBabelPluginMap = () => {
   const syntaxDynamicImport = require("@babel/plugin-syntax-dynamic-import")
   const syntaxImportMeta = require("@babel/plugin-syntax-import-meta")
