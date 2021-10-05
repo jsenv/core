@@ -4,10 +4,16 @@ import {
   urlToFileSystemPath,
 } from "@jsenv/filesystem"
 
-export const loadBabelConfigFromFile = async ({ projectDirectoryUrl }) => {
+export const loadBabelConfigFromFile = async ({
+  projectDirectoryUrl,
+  babelConfigFileUrl,
+}) => {
   const { loadOptionsAsync } = await import("@babel/core")
   const babelOptions = await loadOptionsAsync({
-    root: urlToFileSystemPath(projectDirectoryUrl),
+    cwd: urlToFileSystemPath(projectDirectoryUrl),
+    configFile: babelConfigFileUrl
+      ? urlToFileSystemPath(babelConfigFileUrl)
+      : undefined,
   })
 
   const babelPluginMap = {}

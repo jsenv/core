@@ -29,6 +29,7 @@ import {
 } from "@jsenv/filesystem"
 
 import { loadBabelConfigFromFile } from "./loadBabelConfigFromFile.js"
+import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { createCallbackList } from "../createCallbackList.js"
 import {
@@ -72,6 +73,7 @@ export const startCompileServer = async ({
   replaceGlobalDirname = false,
   replaceMap = {},
   babelPluginMap,
+  babelConfigFileUrl,
   customCompilers = {},
 
   // options related to the server itself
@@ -127,6 +129,7 @@ export const startCompileServer = async ({
 
   const configFromFile = await loadBabelConfigFromFile({
     projectDirectoryUrl,
+    babelConfigFileUrl,
   })
   babelPluginMap = {
     ...configFromFile.babelPluginMap,
@@ -134,8 +137,10 @@ export const startCompileServer = async ({
   }
 
   const logger = createLogger({ logLevel: compileServerLogLevel })
+  const { babelSyntaxPluginMap, babelPluginMapWithoutSyntax } =
+    extractSyntaxBabelPluginMap(babelPluginMap)
   const compileServerGroupMap = generateGroupMap({
-    babelPluginMap,
+    babelPluginMap: babelPluginMapWithoutSyntax,
     runtimeSupport,
   })
 
@@ -157,6 +162,7 @@ export const startCompileServer = async ({
         allowConflictingReplacements: true,
       },
     ],
+    ...babelSyntaxPluginMap,
     ...babelPluginMap,
   }
 

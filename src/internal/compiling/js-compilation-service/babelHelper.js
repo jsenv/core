@@ -121,7 +121,11 @@ export const filePathToBabelHelperName = (filePath) => {
     const afterBabelHelper = fileUrl.slice(
       fileUrl.indexOf(babelHelperPrefix) + babelHelperPrefix.length,
     )
-    return afterBabelHelper.slice(0, afterBabelHelper.indexOf("/"))
+    const babelHelperName = afterBabelHelper.slice(
+      0,
+      afterBabelHelper.indexOf("/"),
+    )
+    return babelHelperName
   }
 
   if (fileUrl.includes(babelHelperAbstractScope)) {
@@ -129,7 +133,11 @@ export const filePathToBabelHelperName = (filePath) => {
       fileUrl.indexOf(babelHelperAbstractScope) +
         babelHelperAbstractScope.length,
     )
-    return afterBabelHelper.slice(0, afterBabelHelper.indexOf("/"))
+    const babelHelperName = afterBabelHelper.slice(
+      0,
+      afterBabelHelper.indexOf("/"),
+    )
+    return babelHelperName
   }
 
   return null

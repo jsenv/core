@@ -1,7 +1,13 @@
+// TODO: check if this works for jsx
+
 import { createOperation } from "@jsenv/cancellation"
 import { resolveUrl, urlToFileSystemPath, readFile } from "@jsenv/filesystem"
 
-import { getMinimalBabelPluginArray } from "../../minimalBabelPluginArray.js"
+import {
+  babelPluginsFromBabelPluginMap,
+  getMinimalBabelPluginMap,
+} from "@jsenv/core/src/internal/compiling/babel_plugins.js"
+
 import { babelPluginInstrument } from "./babel-plugin-instrument.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
@@ -17,14 +23,6 @@ export const relativeUrlToEmptyCoverage = async (
     start: () => readFile(fileUrl),
   })
 
-  const plugins = [...getMinimalBabelPluginArray()]
-  Object.keys(babelPluginMap).forEach((babelPluginName) => {
-    if (babelPluginName !== "transform-instrument") {
-      plugins.push(babelPluginMap[babelPluginName])
-    }
-  })
-  plugins.push([babelPluginInstrument, { projectDirectoryUrl }])
-
   try {
     const { metadata } = await createOperation({
       cancellationToken,
@@ -37,7 +35,14 @@ export const relativeUrlToEmptyCoverage = async (
           parserOpts: {
             allowAwaitOutsideFunction: true,
           },
-          plugins,
+          plugins: babelPluginsFromBabelPluginMap({
+            ...getMinimalBabelPluginMap(),
+            ...babelPluginMap,
+            "transform-instrument": [
+              babelPluginInstrument,
+              { projectDirectoryUrl },
+            ],
+          }),
         }),
     })
 

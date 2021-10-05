@@ -61,7 +61,6 @@ export const generateGroupMap = ({
   }
 
   const runtimeNames = Object.keys(runtimeSupport)
-  babelPluginMap = withoutSyntaxPlugins(babelPluginMap)
 
   const groupWithoutFeature = {
     babelPluginRequiredNameArray: Object.keys(babelPluginMap),
@@ -88,15 +87,4 @@ export const generateGroupMap = ({
     [COMPILE_ID_BEST]: runtimeCompat,
     [COMPILE_ID_OTHERWISE]: groupWithoutFeature,
   }
-}
-
-export const withoutSyntaxPlugins = (babelPluginMap) => {
-  const babelPluginMapWithoutSyntaxPlugins = {}
-  Object.keys(babelPluginMap).forEach((key) => {
-    if (key.startsWith("syntax-")) {
-      return
-    }
-    babelPluginMapWithoutSyntaxPlugins[key] = babelPluginMap[key]
-  })
-  return babelPluginMapWithoutSyntaxPlugins
 }
