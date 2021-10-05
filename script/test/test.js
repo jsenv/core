@@ -1,6 +1,6 @@
 import { executeTestPlan, launchNode } from "@jsenv/core"
 
-import * as jsenvConfig from "../../jsenv.config.js"
+import * as jsenvConfig from "../../jsenv.config.mjs"
 
 await executeTestPlan({
   ...jsenvConfig,
@@ -47,7 +47,6 @@ await executeTestPlan({
   coverageConfig: {
     "./index.js": true,
     "./src/**/*.js": true,
-    "./src/**/continuous-testing/": false,
     "./**/*.test.*": false,
     "./**/test/": false,
   },

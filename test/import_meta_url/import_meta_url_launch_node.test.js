@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { launchNode } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -20,35 +16,63 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.js`
+const filename = `import_meta_url.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-  await startCompileServer({
-    ...START_COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-    importMapFileRelativeUrl: `${testDirectoryRelativeUrl}test.importmap`,
+const test = async ({ babelPluginMap } = {}) => {
+  const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
+    await startCompileServer({
+      ...START_COMPILE_SERVER_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
+      importMapFileRelativeUrl: `${testDirectoryRelativeUrl}test.importmap`,
+      babelPluginMap,
+    })
+
+  const result = await launchAndExecute({
+    ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
+    launch: (options) =>
+      launchNode({
+        ...LAUNCH_TEST_PARAMS,
+        ...options,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+      }),
+    executeParams: {
+      fileRelativeUrl,
+    },
   })
 
-const actual = await launchAndExecute({
-  ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
-  launch: (options) =>
-    launchNode({
-      ...LAUNCH_TEST_PARAMS,
-      ...options,
-      outDirectoryRelativeUrl,
-      compileServerOrigin,
-    }),
-  executeParams: {
-    fileRelativeUrl,
-  },
-})
-const expected = {
-  status: "completed",
-  namespace: {
-    isInstanceOfUrl: false,
-    urlString: `${jsenvCoreDirectoryUrl}${fileRelativeUrl}`,
-  },
+  return result
 }
-assert({ actual, expected })
+
+// all babel plugin supported
+{
+  const actual = await test()
+  const expected = {
+    status: "completed",
+    namespace: {
+      isInstanceOfUrl: false,
+      urlString: `${testDirectoryUrl}${filename}`,
+    },
+  }
+  assert({ actual, expected })
+}
+
+// with a non-supported babel plugin
+{
+  const actual = await test({
+    babelPluginMap: {
+      "not-supported": () => {
+        return {}
+      },
+    },
+  })
+  const expected = {
+    status: "completed",
+    namespace: {
+      isInstanceOfUrl: false,
+      urlString: `${testDirectoryUrl}.jsenv/out/best/${fileRelativeUrl}`,
+    },
+  }
+  assert({ actual, expected })
+}

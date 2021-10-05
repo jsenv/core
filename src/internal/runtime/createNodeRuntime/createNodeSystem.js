@@ -91,14 +91,14 @@ export const createNodeSystem = async ({
 
   // https://github.com/systemjs/systemjs/blob/master/docs/hooks.md#createcontexturl---object
   nodeSystem.createContext = (url) => {
-    const fileUrl = nodeImporterResolver.fileUrlFromUrl(url, {
+    const projectUrl = nodeImporterResolver.asProjectUrl(url, {
       projectDirectoryUrl,
       compileDirectoryRelativeUrl,
       compileServerOrigin,
     })
 
     return {
-      url: fileUrl,
+      url: projectUrl || url,
       resolve: async (specifier) => {
         const urlResolved = await resolve(specifier, url)
         return nodeImporterResolver.fileUrlFromUrl(urlResolved, {

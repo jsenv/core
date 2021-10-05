@@ -1,5 +1,5 @@
 import { buildProject } from "../../../../main.js"
-import * as jsenvConfig from "../../../../jsenv.config.js"
+import * as jsenvConfig from "../../../../jsenv.config.mjs"
 
 await buildProject({
   ...jsenvConfig,

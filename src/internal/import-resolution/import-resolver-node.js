@@ -1,4 +1,4 @@
-import { createRequire } from "module"
+import { createRequire } from "node:module"
 import {
   urlToExtension,
   resolveUrl,
@@ -75,7 +75,7 @@ export const createImportResolverForNode = async ({
     })
   }
 
-  return { resolveImport, fileUrlFromUrl }
+  return { resolveImport, asProjectUrl, asOriginalUrl }
 }
 
 // https://nodejs.org/dist/latest-v16.x/docs/api/packages.html#packages_determining_module_system)
@@ -130,11 +130,12 @@ const resolveUsingNodeEsModuleAlgorithm = async (
     importer,
   },
 ) => {
-  const importerFileUrl = fileUrlFromUrl(importer, {
-    projectDirectoryUrl,
-    compileServerOrigin,
-    compileDirectoryRelativeUrl,
-  })
+  const importerFileUrl =
+    asOriginalUrl(importer, {
+      projectDirectoryUrl,
+      compileServerOrigin,
+      compileDirectoryRelativeUrl,
+    }) || importer
 
   const importResolution = await import.meta.resolve(specifier, importerFileUrl)
   return transformResolvedUrl(importResolution, {
@@ -154,11 +155,12 @@ const resolveUsingNodeCommonJsAlgorithm = (
     importer,
   },
 ) => {
-  const importerFileUrl = fileUrlFromUrl(importer, {
-    projectDirectoryUrl,
-    compileDirectoryRelativeUrl,
-    compileServerOrigin,
-  })
+  const importerFileUrl =
+    asOriginalUrl(importer, {
+      projectDirectoryUrl,
+      compileDirectoryRelativeUrl,
+      compileServerOrigin,
+    }) || importer
   const require = createRequire(importerFileUrl)
   const requireResolution = require.resolve(specifier)
   return transformResolvedUrl(requireResolution, {
@@ -187,7 +189,21 @@ const transformResolvedUrl = (
   return compileServerUrl
 }
 
-const fileUrlFromUrl = (
+const asProjectUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
+  if (url.startsWith(projectDirectoryUrl)) {
+    return url
+  }
+
+  if (url.startsWith(compileServerOrigin)) {
+    return `${projectDirectoryUrl}${url.slice(
+      `${compileServerOrigin}/`.length,
+    )}`
+  }
+
+  return null
+}
+
+const asOriginalUrl = (
   url,
   { projectDirectoryUrl, compileDirectoryRelativeUrl, compileServerOrigin },
 ) => {
@@ -196,7 +212,7 @@ const fileUrlFromUrl = (
   }
 
   if (url === compileServerOrigin) {
-    return url
+    return projectDirectoryUrl
   }
 
   const afterOrigin = url.slice(`${compileServerOrigin}/`.length)

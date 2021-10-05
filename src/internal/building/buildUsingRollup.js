@@ -234,16 +234,16 @@ const useRollup = async ({
       ) {
         return
       }
+      warning.message = warning.message.replace(
+        /http:\/\/jsenv.com\/[^\s]+[\w]/g,
+        (url) => {
+          return asOriginalUrl(url)
+        },
+      )
       if (warning.code === "CIRCULAR_DEPENDENCY") {
         warning.cycle.forEach((url, index) => {
           warning.cycle[index] = asOriginalUrl(url)
         })
-        warning.message = warning.message.replace(
-          /http:\/\/jsenv.com\/[^\s]+[\w]/g,
-          (url) => {
-            return asOriginalUrl(url)
-          },
-        )
       }
       logger.warn(String(warning))
     },

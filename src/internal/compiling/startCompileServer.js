@@ -31,7 +31,6 @@ import {
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import {
   extractSyntaxBabelPluginMap,
-  babelPluginNamesToRemoveFromBest,
 } from "./babel_plugins.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { createCallbackList } from "../createCallbackList.js"
@@ -167,22 +166,6 @@ export const startCompileServer = async ({
     babelPluginMap: babelPluginMapWithoutSyntax,
     runtimeSupport,
   })
-
-  const { best } = compileServerGroupMap
-  if (best) {
-    // here it's just that @babel/preset-env is a bit aggressive in the list of babel plugins
-    // that it enables
-    // we don't want to end up transforming code that could run without any compile step
-    // ideally we should maintain our own babel preset list
-    // (would just be the jsenvBabelPluginMap)
-    // so that we have the correct list of babel plugins
-    // and we are not forced to remove some of them
-    // we should also fix the node system not working anymore
-    best.babelPluginRequiredNameArray =
-      best.babelPluginRequiredNameArray.filter((babelPluginName) => {
-        return !babelPluginNamesToRemoveFromBest.includes(babelPluginName)
-      })
-  }
 
   babelPluginMap = {
     "transform-replace-expressions": [

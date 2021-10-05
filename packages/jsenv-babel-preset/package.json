@@ -1,0 +1,70 @@
+{
+  "name": "@jsenv/babel-preset",
+  "version": "1.0.0",
+  "description": "Set of babel plugins to use with jsenv",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/jsenv-core",
+    "directory": "packages/jsenv-babel-preset"
+  },
+  "engines": {
+    "node": ">=14.9.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "jsenv_babel_preset.cjs",
+  "files": [
+    "/src/",
+    "/jsenv_babel_preset.cjs"
+  ],
+  "scripts": {
+    "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.html",
+    "generate-importmap": "node ./script/importmap/generate_importmap.js",
+    "dist": "npm run build",
+    "test": "node --experimental-import-meta-resolve ./script/test/test.js",
+    "prettier-format": "node ./script/prettier/prettier_format.mjs",
+    "prettier-format-stage": "npm run prettier-format -- --staged",
+    "prettier-check": "npm run prettier-format -- --dry-run",
+    "prepublishOnly": "node ./script/publish/remove_postinstall.mjs && npm run dist",
+    "postpublish": "node ./script/publish/restore_postinstall.mjs"
+  },
+  "dependencies": {
+    "@babel/plugin-transform-modules-systemjs": "7.15.4",
+    "@babel/plugin-proposal-json-strings": "7.14.5",
+    "@babel/plugin-proposal-numeric-separator": "7.14.5",
+    "@babel/plugin-proposal-object-rest-spread": "7.15.6",
+    "@babel/plugin-proposal-optional-catch-binding": "7.14.5",
+    "@babel/plugin-proposal-optional-chaining": "7.14.5",
+    "@babel/plugin-proposal-unicode-property-regex": "7.14.5",
+    "@babel/plugin-syntax-object-rest-spread": "7.8.3",
+    "@babel/plugin-syntax-optional-catch-binding": "7.8.3",
+    "@babel/plugin-transform-arrow-functions": "7.14.5",
+    "@babel/plugin-transform-block-scoped-functions": "7.14.5",
+    "@babel/plugin-transform-block-scoping": "7.15.3",
+    "@babel/plugin-transform-classes": "7.15.4",
+    "@babel/plugin-transform-computed-properties": "7.14.5",
+    "@babel/plugin-transform-destructuring": "7.14.7",
+    "@babel/plugin-transform-dotall-regex": "7.14.5",
+    "@babel/plugin-transform-duplicate-keys": "7.14.5",
+    "@babel/plugin-transform-exponentiation-operator": "7.14.5",
+    "@babel/plugin-transform-for-of": "7.15.4",
+    "@babel/plugin-transform-function-name": "7.14.5",
+    "@babel/plugin-transform-literals": "7.14.5",
+    "@babel/plugin-transform-new-target": "7.14.5",
+    "@babel/plugin-transform-object-super": "7.14.5",
+    "@babel/plugin-transform-parameters": "7.15.4",
+    "@babel/plugin-transform-react-jsx": "7.14.9",
+    "@babel/plugin-transform-regenerator": "7.14.5",
+    "@babel/plugin-transform-shorthand-properties": "7.14.5",
+    "@babel/plugin-transform-spread": "7.14.6",
+    "@babel/plugin-transform-sticky-regex": "7.14.5",
+    "@babel/plugin-transform-template-literals": "7.14.5",
+    "@babel/plugin-transform-typeof-symbol": "7.14.5",
+    "@babel/plugin-transform-typescript": "7.15.4",
+    "@babel/plugin-transform-unicode-regex": "7.14.5",
+    "babel-plugin-transform-async-to-promises": "0.8.15"
+  },
+  "devDependencies": {}
+}
