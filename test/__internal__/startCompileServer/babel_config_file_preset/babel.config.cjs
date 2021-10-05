@@ -10,6 +10,7 @@ module.exports = {
           chrome: "47",
           firefox: "48",
         },
+        exclude: ["transform-async-to-generator", "transform-regenerator"],
       },
     ],
   ],
@@ -21,5 +22,6 @@ module.exports = {
         pragmaFrag: "React.Fragment",
       },
     ],
+    "babel-plugin-transform-async-to-promises",
   ],
 }
