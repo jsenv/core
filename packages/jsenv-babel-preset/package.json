@@ -14,10 +14,10 @@
   "publishConfig": {
     "access": "public"
   },
-  "main": "main.cjs",
+  "main": "jsenv_babel_preset.cjs",
   "files": [
     "/src/",
-    "/main.cjs"
+    "/jsenv_babel_preset.cjs"
   ],
   "scripts": {
     "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.html",

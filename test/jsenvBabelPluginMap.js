@@ -1,72 +1,31 @@
-/* eslint-disable import/max-dependencies */
-
-import { require } from "@jsenv/core/src/internal/require.js"
-
-const proposalJSONStrings = require("@babel/plugin-proposal-json-strings")
-const proposalNumericSeparator = require("@babel/plugin-proposal-numeric-separator")
-const proposalObjectRestSpread = require("@babel/plugin-proposal-object-rest-spread")
-const proposalOptionalCatchBinding = require("@babel/plugin-proposal-optional-catch-binding")
-const proposalOptionalChaining = require("@babel/plugin-proposal-optional-chaining")
-const proposalUnicodePropertyRegex = require("@babel/plugin-proposal-unicode-property-regex")
-const transformArrowFunction = require("@babel/plugin-transform-arrow-functions")
-const transformAsyncToPromises = require("babel-plugin-transform-async-to-promises")
-const transformBlockScopedFunctions = require("@babel/plugin-transform-block-scoped-functions")
-const transformBlockScoping = require("@babel/plugin-transform-block-scoping")
-const transformClasses = require("@babel/plugin-transform-classes")
-const transformComputedProperties = require("@babel/plugin-transform-computed-properties")
-const transformDestructuring = require("@babel/plugin-transform-destructuring")
-const transformDotAllRegex = require("@babel/plugin-transform-dotall-regex")
-const transformDuplicateKeys = require("@babel/plugin-transform-duplicate-keys")
-const transformExponentiationOperator = require("@babel/plugin-transform-exponentiation-operator")
-const transformForOf = require("@babel/plugin-transform-for-of")
-const transformFunctionName = require("@babel/plugin-transform-function-name")
-const transformLiterals = require("@babel/plugin-transform-literals")
-const transformNewTarget = require("@babel/plugin-transform-new-target")
-const transformObjectSuper = require("@babel/plugin-transform-object-super")
-const transformParameters = require("@babel/plugin-transform-parameters")
-const transformRegenerator = require("@babel/plugin-transform-regenerator")
-const transformShorthandProperties = require("@babel/plugin-transform-shorthand-properties")
-const transformSpread = require("@babel/plugin-transform-spread")
-const transformStickyRegex = require("@babel/plugin-transform-sticky-regex")
-const transformTemplateLiterals = require("@babel/plugin-transform-template-literals")
-const transformTypeOfSymbol = require("@babel/plugin-transform-typeof-symbol")
-const transformUnicodeRegex = require("@babel/plugin-transform-unicode-regex")
-
 export const jsenvBabelPluginMap = {
-  "proposal-numeric-separator": [proposalNumericSeparator],
-  "proposal-json-strings": [proposalJSONStrings],
-  "proposal-object-rest-spread": [proposalObjectRestSpread],
-  "proposal-optional-catch-binding": [proposalOptionalCatchBinding],
-  "proposal-optional-chaining": [proposalOptionalChaining],
-  "proposal-unicode-property-regex": [proposalUnicodePropertyRegex],
-  "transform-async-to-promises": [transformAsyncToPromises],
-  "transform-arrow-functions": [transformArrowFunction],
-  "transform-block-scoped-functions": [transformBlockScopedFunctions],
-  "transform-block-scoping": [transformBlockScoping],
-  "transform-classes": [transformClasses],
-  "transform-computed-properties": [transformComputedProperties],
-  "transform-destructuring": [transformDestructuring],
-  "transform-dotall-regex": [transformDotAllRegex],
-  "transform-duplicate-keys": [transformDuplicateKeys],
-  "transform-exponentiation-operator": [transformExponentiationOperator],
-  "transform-for-of": [transformForOf],
-  "transform-function-name": [transformFunctionName],
-  "transform-literals": [transformLiterals],
-  "transform-new-target": [transformNewTarget],
-  "transform-object-super": [transformObjectSuper],
-  "transform-parameters": [transformParameters],
-  "transform-regenerator": [
-    transformRegenerator,
-    {
-      asyncGenerators: true,
-      generators: true,
-      async: false,
-    },
-  ],
-  "transform-shorthand-properties": [transformShorthandProperties],
-  "transform-spread": [transformSpread],
-  "transform-sticky-regex": [transformStickyRegex],
-  "transform-template-literals": [transformTemplateLiterals],
-  "transform-typeof-symbol": [transformTypeOfSymbol],
-  "transform-unicode-regex": [transformUnicodeRegex],
+  "proposal-numeric-separator": null,
+  "proposal-json-strings": null,
+  "proposal-object-rest-spread": null,
+  "proposal-optional-catch-binding": null,
+  "proposal-optional-chaining": null,
+  "proposal-unicode-property-regex": null,
+  "transform-async-to-promises": null,
+  "transform-arrow-functions": null,
+  "transform-block-scoped-functions": null,
+  "transform-block-scoping": null,
+  "transform-classes": null,
+  "transform-computed-properties": null,
+  "transform-destructuring": null,
+  "transform-dotall-regex": null,
+  "transform-duplicate-keys": null,
+  "transform-exponentiation-operator": null,
+  "transform-for-of": null,
+  "transform-function-name": null,
+  "transform-literals": null,
+  "transform-new-target": null,
+  "transform-object-super": null,
+  "transform-parameters": null,
+  "transform-regenerator": null,
+  "transform-shorthand-properties": null,
+  "transform-spread": null,
+  "transform-sticky-regex": null,
+  "transform-template-literals": null,
+  "transform-typeof-symbol": null,
+  "transform-unicode-regex": null,
 }

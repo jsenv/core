@@ -2,104 +2,17 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@babel/plugin-transform-exponentiation-operator/*": [
-        "./node_modules/@babel/plugin-transform-exponentiation-operator/*"
-      ],
-      "@babel/plugin-transform-block-scoped-functions/*": [
-        "./node_modules/@babel/plugin-transform-block-scoped-functions/*"
-      ],
-      "@babel/plugin-transform-exponentiation-operator": [
-        "./node_modules/@babel/plugin-transform-exponentiation-operator/lib/index.js"
-      ],
-      "@babel/plugin-proposal-optional-catch-binding/*": [
-        "./node_modules/@babel/plugin-proposal-optional-catch-binding/*"
-      ],
-      "@babel/plugin-proposal-unicode-property-regex/*": [
-        "./node_modules/@babel/plugin-proposal-unicode-property-regex/*"
-      ],
-      "@babel/plugin-transform-block-scoped-functions": [
-        "./node_modules/@babel/plugin-transform-block-scoped-functions/lib/index.js"
-      ],
-      "@babel/plugin-proposal-optional-catch-binding": [
-        "./node_modules/@babel/plugin-proposal-optional-catch-binding/lib/index.js"
-      ],
-      "@babel/plugin-proposal-unicode-property-regex": [
-        "./node_modules/@babel/plugin-proposal-unicode-property-regex/lib/index.js"
-      ],
-      "@babel/plugin-transform-shorthand-properties/*": [
-        "./node_modules/@babel/plugin-transform-shorthand-properties/*"
-      ],
-      "@babel/plugin-syntax-optional-catch-binding/*": [
-        "./node_modules/@babel/plugin-syntax-optional-catch-binding/*"
-      ],
-      "@babel/plugin-transform-computed-properties/*": [
-        "./node_modules/@babel/plugin-transform-computed-properties/*"
-      ],
-      "@babel/plugin-transform-shorthand-properties": [
-        "./node_modules/@babel/plugin-transform-shorthand-properties/lib/index.js"
-      ],
-      "@babel/plugin-syntax-optional-catch-binding": [
-        "./node_modules/@babel/plugin-syntax-optional-catch-binding/lib/index.js"
-      ],
-      "@babel/plugin-transform-computed-properties": [
-        "./node_modules/@babel/plugin-transform-computed-properties/lib/index.js"
-      ],
-      "@babel/plugin-proposal-object-rest-spread/*": [
-        "./node_modules/@babel/plugin-proposal-object-rest-spread/*"
-      ],
-      "@babel/plugin-transform-template-literals/*": [
-        "./node_modules/@babel/plugin-transform-template-literals/*"
-      ],
-      "@babel/plugin-proposal-numeric-separator/*": [
-        "./node_modules/@babel/plugin-proposal-numeric-separator/*"
-      ],
-      "@babel/plugin-proposal-object-rest-spread": [
-        "./node_modules/@babel/plugin-proposal-object-rest-spread/lib/index.js"
-      ],
-      "@babel/plugin-proposal-optional-chaining/*": [
-        "./node_modules/@babel/plugin-proposal-optional-chaining/*"
-      ],
       "@babel/plugin-transform-modules-systemjs/*": [
         "./node_modules/@babel/plugin-transform-modules-systemjs/*"
-      ],
-      "@babel/plugin-transform-template-literals": [
-        "./node_modules/@babel/plugin-transform-template-literals/lib/index.js"
-      ],
-      "babel-plugin-transform-async-to-promises/*": [
-        "./node_modules/babel-plugin-transform-async-to-promises/*"
       ],
       "@babel/eslint-parser/experimental-worker": [
         "./node_modules/@babel/eslint-parser/lib/experimental-worker.cjs"
       ],
-      "@babel/plugin-proposal-numeric-separator": [
-        "./node_modules/@babel/plugin-proposal-numeric-separator/lib/index.js"
-      ],
-      "@babel/plugin-proposal-optional-chaining": [
-        "./node_modules/@babel/plugin-proposal-optional-chaining/lib/index.js"
-      ],
-      "@babel/plugin-syntax-object-rest-spread/*": [
-        "./node_modules/@babel/plugin-syntax-object-rest-spread/*"
-      ],
-      "@babel/plugin-transform-arrow-functions/*": [
-        "./node_modules/@babel/plugin-transform-arrow-functions/*"
-      ],
       "@babel/plugin-transform-modules-systemjs": [
         "./node_modules/@babel/plugin-transform-modules-systemjs/lib/index.js"
       ],
-      "babel-plugin-transform-async-to-promises": [
-        "./node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js"
-      ],
       "@babel/plugin-syntax-numeric-separator/*": [
         "./node_modules/@babel/plugin-syntax-numeric-separator/*"
-      ],
-      "@babel/plugin-syntax-object-rest-spread": [
-        "./node_modules/@babel/plugin-syntax-object-rest-spread/lib/index.js"
-      ],
-      "@babel/plugin-transform-arrow-functions": [
-        "./node_modules/@babel/plugin-transform-arrow-functions/lib/index.js"
-      ],
-      "@babel/plugin-transform-duplicate-keys/*": [
-        "./node_modules/@babel/plugin-transform-duplicate-keys/*"
       ],
       "@babel/plugin-proposal-dynamic-import/*": [
         "./node_modules/@babel/plugin-proposal-dynamic-import/*"
@@ -110,92 +23,20 @@
       "@babel/plugin-transform-block-scoping/*": [
         "./node_modules/@babel/plugin-transform-block-scoping/*"
       ],
-      "@babel/plugin-transform-destructuring/*": [
-        "./node_modules/@babel/plugin-transform-destructuring/*"
-      ],
-      "@babel/plugin-transform-duplicate-keys": [
-        "./node_modules/@babel/plugin-transform-duplicate-keys/lib/index.js"
-      ],
-      "@babel/plugin-transform-function-name/*": [
-        "./node_modules/@babel/plugin-transform-function-name/*"
-      ],
-      "@babel/plugin-transform-typeof-symbol/*": [
-        "./node_modules/@babel/plugin-transform-typeof-symbol/*"
-      ],
-      "@babel/plugin-transform-unicode-regex/*": [
-        "./node_modules/@babel/plugin-transform-unicode-regex/*"
-      ],
       "@babel/plugin-proposal-dynamic-import": [
         "./node_modules/@babel/plugin-proposal-dynamic-import/lib/index.js"
       ],
       "@babel/plugin-transform-block-scoping": [
         "./node_modules/@babel/plugin-transform-block-scoping/lib/index.js"
       ],
-      "@babel/plugin-transform-destructuring": [
-        "./node_modules/@babel/plugin-transform-destructuring/lib/index.js"
-      ],
-      "@babel/plugin-transform-dotall-regex/*": [
-        "./node_modules/@babel/plugin-transform-dotall-regex/*"
-      ],
-      "@babel/plugin-transform-function-name": [
-        "./node_modules/@babel/plugin-transform-function-name/lib/index.js"
-      ],
-      "@babel/plugin-transform-object-super/*": [
-        "./node_modules/@babel/plugin-transform-object-super/*"
-      ],
-      "@babel/plugin-transform-sticky-regex/*": [
-        "./node_modules/@babel/plugin-transform-sticky-regex/*"
-      ],
-      "@babel/plugin-transform-typeof-symbol": [
-        "./node_modules/@babel/plugin-transform-typeof-symbol/lib/index.js"
-      ],
-      "@babel/plugin-transform-unicode-regex": [
-        "./node_modules/@babel/plugin-transform-unicode-regex/lib/index.js"
-      ],
-      "@babel/plugin-proposal-json-strings/*": [
-        "./node_modules/@babel/plugin-proposal-json-strings/*"
-      ],
       "@babel/plugin-syntax-dynamic-import/*": [
         "./node_modules/@babel/plugin-syntax-dynamic-import/*"
-      ],
-      "@babel/plugin-transform-dotall-regex": [
-        "./node_modules/@babel/plugin-transform-dotall-regex/lib/index.js"
-      ],
-      "@babel/plugin-transform-object-super": [
-        "./node_modules/@babel/plugin-transform-object-super/lib/index.js"
-      ],
-      "@babel/plugin-transform-regenerator/*": [
-        "./node_modules/@babel/plugin-transform-regenerator/*"
-      ],
-      "@babel/plugin-transform-sticky-regex": [
-        "./node_modules/@babel/plugin-transform-sticky-regex/lib/index.js"
-      ],
-      "@babel/plugin-proposal-json-strings": [
-        "./node_modules/@babel/plugin-proposal-json-strings/lib/index.js"
       ],
       "@babel/plugin-syntax-dynamic-import": [
         "./node_modules/@babel/plugin-syntax-dynamic-import/lib/index.js"
       ],
-      "@babel/plugin-transform-new-target/*": [
-        "./node_modules/@babel/plugin-transform-new-target/*"
-      ],
-      "@babel/plugin-transform-parameters/*": [
-        "./node_modules/@babel/plugin-transform-parameters/*"
-      ],
-      "@babel/plugin-transform-regenerator": [
-        "./node_modules/@babel/plugin-transform-regenerator/lib/index.js"
-      ],
       "@babel/plugin-transform-typescript/*": [
         "./node_modules/@babel/plugin-transform-typescript/*"
-      ],
-      "@babel/plugin-transform-new-target": [
-        "./node_modules/@babel/plugin-transform-new-target/lib/index.js"
-      ],
-      "@babel/plugin-transform-parameters": [
-        "./node_modules/@babel/plugin-transform-parameters/lib/index.js"
-      ],
-      "@babel/plugin-transform-react-jsx/*": [
-        "./node_modules/@babel/plugin-transform-react-jsx/*"
       ],
       "@babel/plugin-transform-typescript": [
         "./node_modules/@babel/plugin-transform-typescript/lib/index.js"
@@ -209,12 +50,6 @@
       "@babel/plugin-syntax-import-meta/*": [
         "./node_modules/@babel/plugin-syntax-import-meta/*"
       ],
-      "@babel/plugin-transform-literals/*": [
-        "./node_modules/@babel/plugin-transform-literals/*"
-      ],
-      "@babel/plugin-transform-react-jsx": [
-        "./node_modules/@babel/plugin-transform-react-jsx/lib/index.js"
-      ],
       "@jsenv/importmap-eslint-resolver/*": [
         "./node_modules/@jsenv/importmap-eslint-resolver/*"
       ],
@@ -224,29 +59,8 @@
       "@babel/plugin-syntax-import-meta": [
         "./node_modules/@babel/plugin-syntax-import-meta/lib/index.js"
       ],
-      "@babel/plugin-transform-classes/*": [
-        "./node_modules/@babel/plugin-transform-classes/*"
-      ],
-      "@babel/plugin-transform-literals": [
-        "./node_modules/@babel/plugin-transform-literals/lib/index.js"
-      ],
       "@jsenv/importmap-eslint-resolver": [
         "./node_modules/@jsenv/importmap-eslint-resolver/main.js"
-      ],
-      "@babel/plugin-transform-classes": [
-        "./node_modules/@babel/plugin-transform-classes/lib/index.js"
-      ],
-      "@babel/plugin-transform-for-of/*": [
-        "./node_modules/@babel/plugin-transform-for-of/*"
-      ],
-      "@babel/plugin-transform-spread/*": [
-        "./node_modules/@babel/plugin-transform-spread/*"
-      ],
-      "@babel/plugin-transform-for-of": [
-        "./node_modules/@babel/plugin-transform-for-of/lib/index.js"
-      ],
-      "@babel/plugin-transform-spread": [
-        "./node_modules/@babel/plugin-transform-spread/lib/index.js"
       ],
       "postcss/lib/terminal-highlight": [
         "./node_modules/postcss/lib/terminal-highlight.js"
@@ -290,11 +104,17 @@
       "rollup-plugin-node-globals": [
         "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.es6.js"
       ],
+      "@babel/plugin-syntax-jsx/*": [
+        "./node_modules/@babel/plugin-syntax-jsx/*"
+      ],
       "@jsenv/performance-impact": [
         "./node_modules/@jsenv/performance-impact/main.js"
       ],
       "postcss/lib/map-generator": [
         "./node_modules/postcss/lib/map-generator.js"
+      ],
+      "@babel/plugin-syntax-jsx": [
+        "./node_modules/@babel/plugin-syntax-jsx/lib/index.js"
       ],
       "@rollup/plugin-commonjs/*": [
         "./node_modules/@rollup/plugin-commonjs/*"
@@ -380,6 +200,9 @@
       "@babel/eslint-parser": [
         "./node_modules/@babel/eslint-parser/lib/index.cjs"
       ],
+      "@jsenv/babel-preset/*": [
+        "./node_modules/@jsenv/babel-preset/*"
+      ],
       "@jsenv/cancellation/*": [
         "./node_modules/@jsenv/cancellation/*"
       ],
@@ -421,6 +244,9 @@
       ],
       "regenerator-runtime/*": [
         "./node_modules/regenerator-runtime/*"
+      ],
+      "@jsenv/babel-preset": [
+        "./node_modules/@jsenv/babel-preset/jsenv_babel_preset.cjs"
       ],
       "@jsenv/cancellation": [
         "./node_modules/@jsenv/cancellation/main.node.js"
