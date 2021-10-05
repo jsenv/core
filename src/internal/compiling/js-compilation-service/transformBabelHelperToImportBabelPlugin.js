@@ -43,6 +43,9 @@ export const transformBabelHelperToImportBabelPlugin = (api) => {
 
         const helper = addDefault(file.path, babelHelperImportSpecifier, {
           nameHint: `_${name}`,
+          // disable interop, useless as we work only with js modules
+          importedType: "es6",
+          // importedInterop: "uncompiled",
         })
         cachedHelpers[name] = helper
         return helper

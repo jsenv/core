@@ -28,7 +28,8 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
+import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
+import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { createCallbackList } from "../createCallbackList.js"
 import {
@@ -71,7 +72,8 @@ export const startCompileServer = async ({
   replaceGlobalFilename = false,
   replaceGlobalDirname = false,
   replaceMap = {},
-  babelPluginMap = jsenvBabelPluginMap,
+  babelPluginMap,
+  babelConfigFileUrl,
   customCompilers = {},
 
   // options related to the server itself
@@ -126,8 +128,40 @@ export const startCompileServer = async ({
   )
 
   const logger = createLogger({ logLevel: compileServerLogLevel })
+
+  const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
+    projectDirectoryUrl,
+    babelConfigFileUrl,
+  })
+  babelPluginMap = {
+    ...babelPluginMapFromFile,
+    ...babelPluginMap,
+  }
+  Object.keys(babelPluginMap).forEach((key) => {
+    if (
+      key === "transform-modules-commonjs" ||
+      key === "transform-modules-amd" ||
+      key === "transform-modules-systemjs"
+    ) {
+      const declaredInFile = Boolean(babelPluginMapFromFile[key])
+      logger.warn(
+        createDetailedMessage(
+          `WARNING: "${key}" babel plugin should not be enabled, it will be ignored`,
+          {
+            suggestion: declaredInFile
+              ? `To get rid of this warning, remove "${key}" from babel config file. Either with "modules": false in @babel/preset-env or removing "@babel/${key}" from plugins`
+              : `To get rid of this warning, remove "${key}" from babelPluginMap parameter`,
+          },
+        ),
+      )
+      delete babelPluginMap[key]
+    }
+  })
+
+  const { babelSyntaxPluginMap, babelPluginMapWithoutSyntax } =
+    extractSyntaxBabelPluginMap(babelPluginMap)
   const compileServerGroupMap = generateGroupMap({
-    babelPluginMap,
+    babelPluginMap: babelPluginMapWithoutSyntax,
     runtimeSupport,
   })
 
@@ -149,6 +183,7 @@ export const startCompileServer = async ({
         allowConflictingReplacements: true,
       },
     ],
+    ...babelSyntaxPluginMap,
     ...babelPluginMap,
   }
 
@@ -201,6 +236,7 @@ export const startCompileServer = async ({
     compileServerGroupMap,
     env,
     inlineImportMapIntoHTML,
+    babelPluginMap,
     customCompilers,
   })
   if (compileServerCanWriteOnFilesystem) {
@@ -335,6 +371,7 @@ export const startCompileServer = async ({
     outDirectoryRelativeUrl,
     ...compileServer,
     compileServerGroupMap,
+    babelPluginMap,
   }
 }
 
@@ -893,7 +930,7 @@ const createOutJSONFiles = ({
   const customCompilerPatterns = Object.keys(customCompilers)
   const outDirectoryMeta = {
     jsenvCorePackageVersion,
-    babelPluginMap,
+    babelPluginMap: babelPluginMapAsData(babelPluginMap),
     compileServerGroupMap,
     replaceProcessEnvNodeEnv,
     processEnvNodeEnv,
@@ -925,6 +962,25 @@ const createOutJSONFiles = ({
   }
 
   return outJSONFiles
+}
+
+const babelPluginMapAsData = (babelPluginMap) => {
+  const data = {}
+  Object.keys(babelPluginMap).forEach((key) => {
+    const value = babelPluginMap[key]
+    if (Array.isArray(value)) {
+      data[key] = value
+      return
+    }
+    if (typeof value === "object") {
+      data[key] = {
+        options: value.options,
+      }
+      return
+    }
+    data[key] = value
+  })
+  return data
 }
 
 const createOutFilesService = async ({

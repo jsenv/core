@@ -2,8 +2,12 @@
 import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
-import { getMinimalBabelPluginArray } from "@jsenv/core/src/internal/minimalBabelPluginArray.js"
 import { babelPluginTransformImportMeta } from "@jsenv/core/src/internal/babel-plugin-transform-import-meta.js"
+import {
+  getMinimalBabelPluginMap,
+  babelPluginsFromBabelPluginMap,
+  extractSyntaxBabelPluginMap,
+} from "@jsenv/core/src/internal/compiling/babel_plugins.js"
 
 import { findAsyncPluginNameInBabelPluginMap } from "./findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"
@@ -55,12 +59,8 @@ export const jsenvTransform = async ({
   const babelHelperName = filePathToBabelHelperName(inputPath)
   // to prevent typeof circular dependency
   if (babelHelperName === "typeof") {
-    const babelPluginMapWithoutTransformTypeOf = {}
-    Object.keys(babelPluginMap).forEach((key) => {
-      if (key !== "transform-typeof-symbol") {
-        babelPluginMapWithoutTransformTypeOf[key] = babelPluginMap[key]
-      }
-    })
+    const babelPluginMapWithoutTransformTypeOf = { ...babelPluginMap }
+    delete babelPluginMapWithoutTransformTypeOf["transform-typeof-symbol"]
     babelPluginMap = babelPluginMapWithoutTransformTypeOf
   }
 
@@ -84,6 +84,7 @@ export const jsenvTransform = async ({
   }
 
   babelPluginMap = {
+    ...getMinimalBabelPluginMap(),
     "transform-import-meta": [
       babelPluginTransformImportMeta,
       {
@@ -158,12 +159,12 @@ export const jsenvTransform = async ({
     transformTopLevelAwait &&
     asyncPluginName
   ) {
-    const babelPluginArrayWithoutAsync = []
-    Object.keys(babelPluginMap).forEach((name) => {
-      if (name !== asyncPluginName) {
-        babelPluginArrayWithoutAsync.push(babelPluginMap[name])
-      }
-    })
+    const babelPluginMapWithoutAsync = {
+      ...babelPluginMap,
+      "proposal-dynamic-import": [proposalDynamicImport],
+      "transform-modules-systemjs": [transformModulesSystemJs],
+    }
+    delete babelPluginMapWithoutAsync[asyncPluginName]
 
     // put body inside something like (async () => {})()
     const result = await babelTransform({
@@ -171,12 +172,7 @@ export const jsenvTransform = async ({
       code,
       options: {
         ...options,
-        plugins: [
-          ...getMinimalBabelPluginArray(),
-          ...babelPluginArrayWithoutAsync,
-          [proposalDynamicImport],
-          [transformModulesSystemJs],
-        ],
+        plugins: babelPluginsFromBabelPluginMap(babelPluginMapWithoutAsync),
       },
     })
 
@@ -184,7 +180,7 @@ export const jsenvTransform = async ({
     // inside Systemjs function.
     // They are ignored, at least by transform-async-to-promises
     // see https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/26
-
+    const { babelSyntaxPluginMap } = extractSyntaxBabelPluginMap(babelPluginMap)
     const finalResult = await babelTransform({
       // ast: result.ast,
       code: result.code,
@@ -194,10 +190,10 @@ export const jsenvTransform = async ({
         // https://github.com/babel/babel/blob/eac4c5bc17133c2857f2c94c1a6a8643e3b547a7/packages/babel-core/src/transformation/file/generate.js#L57
         // https://github.com/babel/babel/blob/090c364a90fe73d36a30707fc612ce037bdbbb24/packages/babel-core/src/transformation/file/merge-map.js#L6s
         inputSourceMap: result.map,
-        plugins: [
-          ...getMinimalBabelPluginArray(),
-          babelPluginMap[asyncPluginName],
-        ],
+        plugins: babelPluginsFromBabelPluginMap({
+          ...babelSyntaxPluginMap,
+          [asyncPluginName]: babelPluginMap[asyncPluginName],
+        }),
       },
     })
 
@@ -208,21 +204,20 @@ export const jsenvTransform = async ({
     }
   }
 
-  const babelPluginArray = [
-    ...getMinimalBabelPluginArray(),
-    ...Object.keys(babelPluginMap).map(
-      (babelPluginName) => babelPluginMap[babelPluginName],
-    ),
-    ...(moduleOutFormat === "systemjs"
-      ? [[proposalDynamicImport], [transformModulesSystemJs]]
-      : []),
-  ]
   const babelTransformReturnValue = await babelTransform({
     ast,
     code,
     options: {
       ...options,
-      plugins: babelPluginArray,
+      plugins: babelPluginsFromBabelPluginMap({
+        ...babelPluginMap,
+        ...(moduleOutFormat === "systemjs"
+          ? {
+              "proposal-dynamic-import": [proposalDynamicImport],
+              "transform-modules-systemjs": [transformModulesSystemJs],
+            }
+          : {}),
+      }),
     },
   })
   code = babelTransformReturnValue.code
@@ -240,7 +235,7 @@ const computeInputPath = (url) => {
 }
 
 const babelTransform = async ({ ast, code, options }) => {
-  const { transformAsync, transformFromAstAsync } = require("@babel/core")
+  const { transformAsync, transformFromAstAsync } = await import("@babel/core")
 
   try {
     if (ast) {

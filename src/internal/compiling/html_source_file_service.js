@@ -18,7 +18,7 @@ import {
   urlToBasename,
   urlIsInsideOf,
 } from "@jsenv/filesystem"
-import { moveImportMap } from "@jsenv/import-map"
+import { moveImportMap } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"

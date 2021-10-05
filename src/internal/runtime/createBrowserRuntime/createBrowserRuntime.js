@@ -1,4 +1,4 @@
-import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
+import { normalizeImportMap } from "@jsenv/importmap/src/normalizeImportMap.js"
 
 import { unevalException } from "../../unevalException.js"
 // do not use memoize from @jsenv/filesystem to avoid pulling @jsenv/filesystem code into the browser build

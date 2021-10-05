@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 
-import { require } from "./internal/require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 
 const proposalJSONStrings = require("@babel/plugin-proposal-json-strings")
 const proposalNumericSeparator = require("@babel/plugin-proposal-numeric-separator")
@@ -8,8 +8,6 @@ const proposalObjectRestSpread = require("@babel/plugin-proposal-object-rest-spr
 const proposalOptionalCatchBinding = require("@babel/plugin-proposal-optional-catch-binding")
 const proposalOptionalChaining = require("@babel/plugin-proposal-optional-chaining")
 const proposalUnicodePropertyRegex = require("@babel/plugin-proposal-unicode-property-regex")
-const syntaxObjectRestSpread = require("@babel/plugin-syntax-object-rest-spread")
-const syntaxOptionalCatchBinding = require("@babel/plugin-syntax-optional-catch-binding")
 const transformArrowFunction = require("@babel/plugin-transform-arrow-functions")
 const transformAsyncToPromises = require("babel-plugin-transform-async-to-promises")
 const transformBlockScopedFunctions = require("@babel/plugin-transform-block-scoped-functions")
@@ -41,8 +39,6 @@ export const jsenvBabelPluginMap = {
   "proposal-optional-catch-binding": [proposalOptionalCatchBinding],
   "proposal-optional-chaining": [proposalOptionalChaining],
   "proposal-unicode-property-regex": [proposalUnicodePropertyRegex],
-  "syntax-object-rest-spread": [syntaxObjectRestSpread],
-  "syntax-optional-catch-binding": [syntaxOptionalCatchBinding],
   "transform-async-to-promises": [transformAsyncToPromises],
   "transform-arrow-functions": [transformArrowFunction],
   "transform-block-scoped-functions": [transformBlockScopedFunctions],

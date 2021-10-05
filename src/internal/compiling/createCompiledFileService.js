@@ -169,7 +169,7 @@ export const createCompiledFileService = ({
           moduleOutFormat,
           importMetaFormat,
           transformTopLevelAwait,
-          babelPluginMap: compileIdToBabelPluginMap(compileId, {
+          babelPluginMap: babelPluginMapFromCompileId(compileId, {
             babelPluginMap,
             groupMap,
           }),
@@ -216,21 +216,26 @@ const getCompiler = ({ originalFileUrl, compileMeta }) => {
   }
 }
 
-const compileIdToBabelPluginMap = (compileId, { babelPluginMap, groupMap }) => {
-  const babelPluginMapForGroupMap = {}
+const babelPluginMapFromCompileId = (
+  compileId,
+  { babelPluginMap, groupMap },
+) => {
+  const babelPluginMapForGroup = {}
 
-  const groupBabelPluginMap = {}
   groupMap[compileId].babelPluginRequiredNameArray.forEach(
     (babelPluginRequiredName) => {
       if (babelPluginRequiredName in babelPluginMap) {
-        groupBabelPluginMap[babelPluginRequiredName] =
+        babelPluginMapForGroup[babelPluginRequiredName] =
           babelPluginMap[babelPluginRequiredName]
       }
     },
   )
 
-  return {
-    ...groupBabelPluginMap,
-    ...babelPluginMapForGroupMap,
-  }
+  Object.keys(babelPluginMap).forEach((key) => {
+    if (key.startsWith("syntax-")) {
+      babelPluginMapForGroup[key] = babelPluginMap[key]
+    }
+  })
+
+  return babelPluginMapForGroup
 }

@@ -5,7 +5,8 @@ We could use https://nodejs.org/api/esm.html#esm_loaders once it gets stable
 */
 
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
-import { isSpecifierForNodeCoreModule } from "@jsenv/import-map/src/isSpecifierForNodeCoreModule.js"
+import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
+
 import { createImportResolverForNode } from "@jsenv/core/src/internal/import-resolution/import-resolver-node.js"
 import { require } from "../../require.js"
 import "../s.js"
@@ -45,8 +46,11 @@ export const createNodeSystem = async ({
     if (isSpecifierForNodeCoreModule(url)) {
       return fromFunctionReturningNamespace(
         () => {
+          const coreNodeModuleSpecifier = url.startsWith("node:")
+            ? url.slice("node:".length)
+            : url
           // eslint-disable-next-line import/no-dynamic-require
-          const moduleExportsForNativeNodeModule = require(url)
+          const moduleExportsForNativeNodeModule = require(coreNodeModuleSpecifier)
           return moduleExportsToModuleNamespace(
             moduleExportsForNativeNodeModule,
           )

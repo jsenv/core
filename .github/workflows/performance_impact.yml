@@ -22,6 +22,6 @@ jobs:
       - name: Setup playwright
         run: npx playwright install-deps
       - name: Report performance impact
-        run: node ./.github/workflows/performance_impact/report_performance_impact.js
+        run: node --expose-gc ./.github/workflows/performance_impact/report_performance_impact.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
