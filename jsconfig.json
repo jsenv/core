@@ -219,7 +219,7 @@
         "./node_modules/@jsenv/importmap-eslint-resolver/*"
       ],
       "rollup-plugin-node-builtins-brofs": [
-        "./node_modules/rollup-plugin-node-builtins-brofs/dist/rollup-plugin-node-builtins.cjs.js"
+        "./node_modules/rollup-plugin-node-builtins-brofs/dist/rollup-plugin-node-builtins.es6.js"
       ],
       "@babel/plugin-syntax-import-meta": [
         "./node_modules/@babel/plugin-syntax-import-meta/lib/index.js"
@@ -272,17 +272,23 @@
       "postcss/lib/css-syntax-error": [
         "./node_modules/postcss/lib/css-syntax-error.js"
       ],
+      "rollup-plugin-polyfill-node/*": [
+        "./node_modules/rollup-plugin-polyfill-node/*"
+      ],
       "@rollup/plugin-node-resolve": [
         "./node_modules/@rollup/plugin-node-resolve/dist/es/index.js"
       ],
       "rollup-plugin-node-globals/*": [
         "./node_modules/rollup-plugin-node-globals/*"
       ],
+      "rollup-plugin-polyfill-node": [
+        "./node_modules/rollup-plugin-polyfill-node/dist/index.mjs"
+      ],
       "@jsenv/performance-impact/*": [
         "./node_modules/@jsenv/performance-impact/*"
       ],
       "rollup-plugin-node-globals": [
-        "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.cjs.js"
+        "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.es6.js"
       ],
       "@jsenv/performance-impact": [
         "./node_modules/@jsenv/performance-impact/main.js"
@@ -303,7 +309,7 @@
         "./node_modules/@jsenv/package-publish/*"
       ],
       "@rollup/plugin-commonjs": [
-        "./node_modules/@rollup/plugin-commonjs/dist/index.js"
+        "./node_modules/@rollup/plugin-commonjs/dist/index.es.js"
       ],
       "@rollup/plugin-replace/*": [
         "./node_modules/@rollup/plugin-replace/*"
@@ -330,7 +336,7 @@
         "./node_modules/@jsenv/package-publish/index.js"
       ],
       "@rollup/plugin-replace": [
-        "./node_modules/@rollup/plugin-replace/dist/rollup-plugin-replace.cjs.js"
+        "./node_modules/@rollup/plugin-replace/dist/rollup-plugin-replace.es.js"
       ],
       "cssnano-preset-default": [
         "./node_modules/cssnano-preset-default/dist/index.js"
@@ -423,7 +429,7 @@
         "./node_modules/@jsenv/node-signals/index.js"
       ],
       "@rollup/plugin-json": [
-        "./node_modules/@rollup/plugin-json/dist/index.js"
+        "./node_modules/@rollup/plugin-json/dist/index.es.js"
       ],
       "eslint-plugin-html/*": [
         "./node_modules/eslint-plugin-html/*"
@@ -624,7 +630,7 @@
         "./node_modules/ansi-to-html/lib/ansi_to_html.js"
       ],
       "magic-string": [
-        "./node_modules/magic-string/dist/magic-string.cjs.js"
+        "./node_modules/magic-string/dist/magic-string.es.js"
       ],
       "preact/debug": [
         "./node_modules/preact/debug/dist/debug.mjs"
@@ -744,7 +750,7 @@
         "./node_modules/react/index.js"
       ],
       "redux": [
-        "./node_modules/redux/lib/redux.js"
+        "./node_modules/redux/es/redux.js"
       ],
       "cuid": [
         "./node_modules/cuid/index.js"
