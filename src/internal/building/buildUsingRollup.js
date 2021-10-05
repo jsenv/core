@@ -125,6 +125,8 @@ export const buildUsingRollup = async ({
       // jsConcatenation,
       buildDirectoryUrl,
       buildDirectoryClean,
+
+      asOriginalUrl,
     })
   } catch (e) {
     if (e.plugin === "jsenv") {
@@ -195,6 +197,7 @@ const useRollup = async ({
   // jsConcatenation,
   buildDirectoryUrl,
   buildDirectoryClean,
+  asOriginalUrl,
 }) => {
   const { rollup } = await import("rollup")
 
@@ -212,9 +215,15 @@ const useRollup = async ({
     // please use https://rollupjs.org/guide/en#onwarn
     // to be very clear about what we want to ignore
     onwarn: (warning, warn) => {
-      if (warning.code === "THIS_IS_UNDEFINED") return
-      if (warning.code === "EMPTY_BUNDLE" && warning.chunkName === "__empty__")
+      if (warning.code === "THIS_IS_UNDEFINED") {
         return
+      }
+      if (
+        warning.code === "EMPTY_BUNDLE" &&
+        warning.chunkName === "__empty__"
+      ) {
+        return
+      }
       // ignore file name conflict when sourcemap or importmap are re-emitted
       if (
         warning.code === "FILE_NAME_CONFLICT" &&
@@ -222,6 +231,17 @@ const useRollup = async ({
           warning.message.includes(".importmap"))
       ) {
         return
+      }
+      if (warning.code === "CIRCULAR_DEPENDENCY") {
+        warning.cycle.forEach((url, index) => {
+          warning.cycle[index] = asOriginalUrl(url)
+        })
+        warning.message = warning.message.replace(
+          /http:\/\/jsenv.com\/[^\s]+[\w]/g,
+          (url) => {
+            return asOriginalUrl(url)
+          },
+        )
       }
       warn(warning)
     },
