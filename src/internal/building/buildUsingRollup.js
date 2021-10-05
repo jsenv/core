@@ -115,8 +115,9 @@ export const buildUsingRollup = async ({
   try {
     await useRollup({
       cancellationToken,
-      jsenvRollupPlugin,
+      logger,
 
+      jsenvRollupPlugin,
       format,
       globals,
       globalName,
@@ -188,6 +189,7 @@ export const buildUsingRollup = async ({
 
 const useRollup = async ({
   cancellationToken,
+  logger,
   jsenvRollupPlugin,
   format,
   globals,
@@ -214,7 +216,7 @@ const useRollup = async ({
     // if we want to ignore some warning
     // please use https://rollupjs.org/guide/en#onwarn
     // to be very clear about what we want to ignore
-    onwarn: (warning, warn) => {
+    onwarn: (warning) => {
       if (warning.code === "THIS_IS_UNDEFINED") {
         return
       }
@@ -243,7 +245,7 @@ const useRollup = async ({
           },
         )
       }
-      warn(warning)
+      logger.warn(String(warning))
     },
     // on passe input: [] car c'est le plusign jsenv qui se chargera d'emit des chunks
     // en fonction de entryPointMap

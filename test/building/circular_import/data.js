@@ -1,8 +1,8 @@
 import { executionOrder } from "./execution_order.js"
-import { Data } from "./data.js"
 import { Tag } from "./tag.js"
 import "./index.js"
 
-executionOrder.push(`main: ${Data()} ${Tag()}`)
+executionOrder.push("data")
 
-export { executionOrder }
+export const data = () => "data"
+export const Data = () => `Tag: ${Tag()}`

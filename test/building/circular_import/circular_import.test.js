@@ -1,3 +1,5 @@
+// https://github.com/rollup/rollup/tree/dba6f13132a1d7dac507d5056399d8af0eed6375/test/function/samples/preserve-modules-circular-order
+
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
@@ -18,7 +20,7 @@ const entryPointMap = {
 }
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  // logLevel: "debug",
+  logLevel: "error", // to disable CIRCULAR_DEPENDENCY warning
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
@@ -31,6 +33,6 @@ const { namespace } = await nodeImportEsModuleBuild({
 
 const actual = namespace
 const expected = {
-  answer: 42,
+  executionOrder: ["index", "tag", "data", "main: Tag: Tag data Tag data"],
 }
 assert({ actual, expected })
