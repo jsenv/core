@@ -180,7 +180,7 @@ export const startCompileServer = async ({
     // we should also fix the node system not working anymore
     best.babelPluginRequiredNameArray =
       best.babelPluginRequiredNameArray.filter((babelPluginName) => {
-        return babelPluginNamesToRemoveFromBest.includes(babelPluginName)
+        return !babelPluginNamesToRemoveFromBest.includes(babelPluginName)
       })
   }
 
