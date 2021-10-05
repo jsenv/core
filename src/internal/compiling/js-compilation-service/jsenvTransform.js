@@ -235,7 +235,7 @@ const computeInputPath = (url) => {
 }
 
 const babelTransform = async ({ ast, code, options }) => {
-  const { transformAsync, transformFromAstAsync } = require("@babel/core")
+  const { transformAsync, transformFromAstAsync } = await import("@babel/core")
 
   try {
     if (ast) {

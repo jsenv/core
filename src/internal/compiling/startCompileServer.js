@@ -350,6 +350,7 @@ export const startCompileServer = async ({
     outDirectoryRelativeUrl,
     ...compileServer,
     compileServerGroupMap,
+    babelPluginMap,
   }
 }
 

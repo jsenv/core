@@ -13,22 +13,25 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-
 const { testPlanCoverage } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   coverage: true,
   testPlan: {},
   coverageConfig: {
-    [`./${testDirectoryRelativeUrl}coverage-empty.js`]: true,
+    [`./${testDirectoryRelativeUrl}coverage_empty.js`]: true,
   },
 })
+
 const actual = testPlanCoverage
 const expected = {
-  [`./${testDirectoryRelativeUrl}coverage-empty.js`]: {
-    ...testPlanCoverage[`./${testDirectoryRelativeUrl}coverage-empty.js`],
+  [`./${testDirectoryRelativeUrl}coverage_empty.js`]: {
+    ...testPlanCoverage[`./${testDirectoryRelativeUrl}coverage_empty.js`],
     s: {
       0: 0,
       1: 0,

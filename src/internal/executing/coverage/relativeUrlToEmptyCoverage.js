@@ -1,5 +1,3 @@
-// TODO: check if this works for jsx
-
 import { createOperation } from "@jsenv/cancellation"
 import { resolveUrl, urlToFileSystemPath, readFile } from "@jsenv/filesystem"
 
@@ -26,24 +24,29 @@ export const relativeUrlToEmptyCoverage = async (
   try {
     const { metadata } = await createOperation({
       cancellationToken,
-      start: () =>
-        transformAsync(source, {
+      start: async () => {
+        babelPluginMap = {
+          ...getMinimalBabelPluginMap(),
+          ...babelPluginMap,
+          "transform-instrument": [
+            babelPluginInstrument,
+            { projectDirectoryUrl },
+          ],
+        }
+
+        const { metadata } = await transformAsync(source, {
           filename: urlToFileSystemPath(fileUrl),
           filenameRelative: relativeUrl,
           configFile: false,
           babelrc: false,
+          ast: true,
           parserOpts: {
             allowAwaitOutsideFunction: true,
           },
-          plugins: babelPluginsFromBabelPluginMap({
-            ...getMinimalBabelPluginMap(),
-            ...babelPluginMap,
-            "transform-instrument": [
-              babelPluginInstrument,
-              { projectDirectoryUrl },
-            ],
-          }),
-        }),
+          plugins: babelPluginsFromBabelPluginMap(babelPluginMap),
+        })
+        return { metadata }
+      },
     })
 
     const { coverage } = metadata

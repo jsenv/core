@@ -39,6 +39,7 @@ export const executePlan = async (
     compileServerCanReadFromFilesystem,
     compileServerCanWriteOnFilesystem,
     babelPluginMap,
+    babelConfigFileUrl,
     customCompilers,
     runtimeSupport,
   } = {},
@@ -53,11 +54,7 @@ export const executePlan = async (
     }
   }
 
-  const {
-    origin: compileServerOrigin,
-    outDirectoryRelativeUrl,
-    stop,
-  } = await startCompileServer({
+  const compileServer = await startCompileServer({
     cancellationToken,
     compileServerLogLevel,
 
@@ -78,6 +75,7 @@ export const executePlan = async (
     compileServerCanWriteOnFilesystem,
     keepProcessAlive: true, // to be sure it stays alive
     babelPluginMap,
+    babelConfigFileUrl,
     customCompilers,
     runtimeSupport,
   })
@@ -85,7 +83,7 @@ export const executePlan = async (
   const executionSteps = await generateExecutionSteps(
     {
       ...plan,
-      [outDirectoryRelativeUrl]: null,
+      [compileServer.outDirectoryRelativeUrl]: null,
     },
     {
       cancellationToken,
@@ -99,14 +97,14 @@ export const executePlan = async (
     cancellationToken,
 
     projectDirectoryUrl,
-    compileServerOrigin,
-    outDirectoryRelativeUrl,
+    compileServerOrigin: compileServer.origin,
+    outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
 
     // not sure we actually have to pass import params to executeConcurrently
     importResolutionMethod,
     importDefaultExtension,
 
-    babelPluginMap,
+    babelPluginMap: compileServer.babelPluginMap,
 
     defaultMsAllocatedPerExecution,
     concurrencyLimit,
@@ -122,7 +120,7 @@ export const executePlan = async (
     coverageV8MergeConflictIsExpected,
   })
 
-  stop("all execution done")
+  compileServer.stop("all execution done")
 
   return {
     planSummary: result.summary,
