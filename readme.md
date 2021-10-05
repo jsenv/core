@@ -330,23 +330,66 @@ npm install --save-dev @jsenv/core
 
 Jsenv can execute standard JavaScript and be configured to run non-standard JavaScript.
 
-Standard corresponds to [JavaScript Modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules), destructuring, optional chaining and so on.
+_non-standard JavaScript examples:_
 
-Non-standard corresponds to [CommonJS modules](https://code-trotter.com/web/understand-the-different-javascript-modules-formats/#commonjs-cjs) and [JSX](https://reactjs.org/docs/introducing-jsx.html).
+- [CommonJS modules](https://code-trotter.com/web/understand-the-different-javascript-modules-formats/#commonjs-cjs)
+- [JSX](https://reactjs.org/docs/introducing-jsx.html)
 
 > Keep in mind one of your dependency may use non-standard JavaScript. For instance react uses CommonJS modules.
 
 ## jsenv.config.mjs
 
-We recommend to regroup configuration in a _jsenv.config.mjs_ file at the root of your working directory.
-
-To get a better idea see [jsenv.config.js](./jsenv.config.js). The file can be imported and passed using the spread operator. This technic helps to see jsenv custom configuration quickly and share it between files.
+Jsenv codebase regroups configuration in a top level [jsenv.config.mjs](./jsenv.config.js) file.
+The file is meant to be imported and passed using the spread operator.
 
 ![screenshot about jsenv config import and spread operator](./docs/jsenv-config-spread.png)
 
 — See [script/test/test.js](https://github.com/jsenv/jsenv-core/blob/e44e362241e8e2142010322cb4552983b3bc9744/script/test/test.js#L2)
 
-That being said it's only a recommendation. There is nothing enforcing or checking the presence of _jsenv.config.mjs_.
+This technic helps to see jsenv custom configuration quickly and share it between files. That being said you are free to organize your configuration as you want.
+
+## babel.config.cjs
+
+When code needs to be transformed, the project must contain a [babel config file](https://babeljs.io/docs/en/config-files).
+
+There is 2 scenarios where it happens:
+
+- Code needs to be compatible with old browsers
+- Code is not standard (jsx for instance)
+
+In that case, it's recommended to use the following babel plugins declared in `babel.config.cjs`
+
+```js
+/*
+ * This file is used to configure a list of babel plugins as documented in
+ * https://babeljs.io/docs/en/config-files
+ *
+ * During dev: babel plugins natively supported by browsers and Node.js are not used.
+ * During build:
+ *  - When "runtimeSupport" is configured, babel plugins already supported by these runtime won't be used
+ *  See https://github.com/jsenv/jsenv-template-pwa/blob/main/jsenv.config.mjs#L12
+ *  - Otherwise all babel plugins are use
+ *
+ */
+
+// "@babel/preset-env" transforms async function to generators
+// but it's verbose and slow compared to using promises, so we:
+// 1. Exclude "transform-async-to-generator", "transform-regenerator"
+// 2. Enable "babel-plugin-transform-async-to-promises"
+// See https://github.com/babel/babel/issues/8121
+module.exports = {
+  presets: [
+    [
+      "@babel/preset-env",
+      {
+        modules: false,
+        exclude: ["transform-async-to-generator", "transform-regenerator"],
+      },
+    ],
+  ],
+  plugins: ["babel-plugin-transform-async-to-promises"],
+}
+```
 
 ## CommonJS
 
