@@ -20,28 +20,28 @@ module.exports = (api, { transformRegeneratorOptions = {} } = {}) => {
   const plugins = []
 
   plugins.push(
-    "proposal-numeric-separator",
-    "proposal-json-strings",
-    "proposal-object-rest-spread",
-    "proposal-optional-catch-binding",
-    "proposal-optional-chaining",
-    "proposal-unicode-property-regex",
-    "transform-async-to-promises",
-    "transform-arrow-functions",
-    "transform-block-scoped-functions",
-    "transform-block-scoping",
-    "transform-classes",
-    "transform-computed-properties",
-    "transform-destructuring",
-    "transform-dotall-regex",
-    "transform-duplicate-keys",
-    "transform-exponentiation-operator",
-    "transform-for-of",
-    "transform-function-name",
-    "transform-literals",
-    "transform-new-target",
-    "transform-object-super",
-    "transform-parameters",
+    "@babel/proposal-numeric-separator",
+    "@babel/proposal-json-strings",
+    "@babel/proposal-object-rest-spread",
+    "@babel/proposal-optional-catch-binding",
+    "@babel/proposal-optional-chaining",
+    "@babel/proposal-unicode-property-regex",
+    "babel-plugin-transform-async-to-promises",
+    "@babel/transform-arrow-functions",
+    "@babel/transform-block-scoped-functions",
+    "@babel/transform-block-scoping",
+    "@babel/transform-classes",
+    "@babel/transform-computed-properties",
+    "@babel/transform-destructuring",
+    "@babel/transform-dotall-regex",
+    "@babel/transform-duplicate-keys",
+    "@babel/transform-exponentiation-operator",
+    "@babel/transform-for-of",
+    "@babel/transform-function-name",
+    "@babel/transform-literals",
+    "@babel/transform-new-target",
+    "@babel/transform-object-super",
+    "@babel/transform-parameters",
   )
 
   const {
@@ -50,7 +50,7 @@ module.exports = (api, { transformRegeneratorOptions = {} } = {}) => {
     async = false,
   } = transformRegeneratorOptions
   plugins.push([
-    "transform-regenerator",
+    "@babel/transform-regenerator",
     {
       asyncGenerators,
       generators,
@@ -59,12 +59,12 @@ module.exports = (api, { transformRegeneratorOptions = {} } = {}) => {
   ])
 
   plugins.push(
-    "transform-shorthand-properties",
-    "transform-spread",
-    "transform-sticky-regex",
-    "transform-template-literals",
-    "transform-typeof-symbol",
-    "transform-unicode-regex",
+    "@babel/transform-shorthand-properties",
+    "@babel/transform-spread",
+    "@babel/transform-sticky-regex",
+    "@babel/transform-template-literals",
+    "@babel/transform-typeof-symbol",
+    "@babel/transform-unicode-regex",
   )
 
   return { plugins }
