@@ -1,3 +1,3 @@
 module.exports = {
-  presets: [require("@jsenv/babel-preset")],
+  presets: ["@jsenv/babel-preset"],
 }

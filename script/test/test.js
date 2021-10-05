@@ -47,7 +47,6 @@ await executeTestPlan({
   coverageConfig: {
     "./index.js": true,
     "./src/**/*.js": true,
-    "./src/**/continuous-testing/": false,
     "./**/*.test.*": false,
     "./**/test/": false,
   },

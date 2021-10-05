@@ -101,12 +101,11 @@ export const createNodeSystem = async ({
       url: projectUrl || url,
       resolve: async (specifier) => {
         const urlResolved = await resolve(specifier, url)
-        return urlResolved
-        // return nodeImporterResolver.fileUrlFromUrl(urlResolved, {
-        //   projectDirectoryUrl,
-        //   compileDirectoryRelativeUrl,
-        //   compileServerOrigin,
-        // })
+        return nodeImporterResolver.fileUrlFromUrl(urlResolved, {
+          projectDirectoryUrl,
+          compileDirectoryRelativeUrl,
+          compileServerOrigin,
+        })
       },
     }
   }
