@@ -28,7 +28,6 @@ const actual = await execute({
     "./node_modules/react-dom/index.js": async (options) => {
       return commonJsToJavaScriptModule({
         ...options,
-
         external: ["react"],
       })
     },

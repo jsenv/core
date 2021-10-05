@@ -120,6 +120,25 @@ export const commonJsToJavaScriptModule = async ({
           ]
         : []),
     ],
+    onwarn: (warning) => {
+      const { loc, message } = warning
+      const logMessage = loc
+        ? `${loc.file}:${loc.line}:${loc.column} ${message}`
+        : message
+
+      // These warnings are usually harmless in packages, so don't show them by default
+      if (
+        warning.code === "CIRCULAR_DEPENDENCY" ||
+        warning.code === "NAMESPACE_CONFLICT" ||
+        warning.code === "THIS_IS_UNDEFINED" ||
+        warning.code === "EMPTY_BUNDLE" ||
+        warning.code === "UNUSED_EXTERNAL_IMPORT"
+      ) {
+        logger.debug(logMessage)
+      } else {
+        logger.warn(logMessage)
+      }
+    },
   })
 
   const generateOptions = {
