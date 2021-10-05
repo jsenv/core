@@ -328,8 +328,7 @@ npm install --save-dev @jsenv/core
 
 # Configuration
 
-Jsenv can execute standard JavaScript and be configured to run non-standard JavaScript.
-The configuration is done via `jsenv.config.mjs` and `babel.config.cjs`.
+Jsenv configuration is done in [jsenv.config.mjs](https://github.com/jsenv/jsenv-core#jsenvconfigmjs) and [babel.config.cjs](https://github.com/jsenv/jsenv-core#babelconfigcjs).
 
 ## jsenv.config.mjs
 
@@ -346,7 +345,7 @@ This technic helps to see jsenv custom configuration quickly and share it betwee
 
 When code needs to be transformed, the project must contain a [babel config file](https://babeljs.io/docs/en/config-files).
 
-It's recommended to use the following babel plugins declared in `babel.config.cjs`
+It's recommended to use the following `babel.config.cjs`
 
 ```js
 module.exports = {
@@ -372,7 +371,7 @@ export const customCompilers = {
 
 When your code imports react, it needs to be configured as shown below.
 
-_jsenv.config.mjs:_
+_jsenv.config.mjs for react:_
 
 ```js
 import { commonJsToJavaScriptModule } from "@jsenv/core"
