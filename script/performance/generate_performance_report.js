@@ -1,5 +1,4 @@
 export const generatePerformanceReport = async () => {
-  const { measureImport } = await import("./measure_import/measure_import.js")
   const { measureNpmTarball } = await import(
     "./measure_npm_tarball/measure_npm_tarball.js"
   )
@@ -11,17 +10,14 @@ export const generatePerformanceReport = async () => {
     "./measure_test_plan/measure_test_plan.js"
   )
 
-  const importMetrics = await measureImport()
   const npmTarballMetrics = await measureNpmTarball()
-
   const devServerMetrics = await measureDevServer()
   const buildMetrics = await measureBuild()
   const testPlanMetrics = await measureTestPlan()
 
   return {
     groups: {
-      "@jsenv/core metrics": {
-        ...importMetrics,
+      "package metrics": {
         ...npmTarballMetrics,
       },
       "dev server metrics": {
@@ -39,7 +35,6 @@ export const generatePerformanceReport = async () => {
 
 const executeAndLog = process.argv.includes("--local")
 if (executeAndLog) {
-  await import("./measure_import/measure_import.js")
   await import("./measure_npm_tarball/measure_npm_tarball.js")
   await import("./measure_dev_server/measure_dev_server.js")
   await import("./measure_build/measure_build.js")

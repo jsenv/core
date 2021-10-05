@@ -1,20 +1,19 @@
 /* eslint-disable no-unused-vars */
+import { parentPort } from "node:worker_threads"
 import { resourceUsage, memoryUsage } from "node:process"
-import { startExploring } from "@jsenv/core"
-
-const startExploringParams = {
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  compileServerLogLevel: "warn",
-  compileServerProtocol: "http",
-  keepProcessAlive: false,
-}
 
 global.gc()
 const beforeHeapUsed = memoryUsage().heapUsed
 const beforeRessourceUsage = resourceUsage()
 const beforeMs = Date.now()
 
-await startExploring(startExploringParams)
+const { startExploring } = await import("@jsenv/core")
+await startExploring({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  compileServerLogLevel: "warn",
+  compileServerProtocol: "http",
+  keepProcessAlive: false,
+})
 
 const afterMs = Date.now()
 const afterHeapUsed = memoryUsage().heapUsed
@@ -26,7 +25,7 @@ const fileSystemReadOperationCount =
   afterRessourceUsage.fsRead - beforeRessourceUsage.fsRead
 const fileSystemWriteOperationCount =
   afterRessourceUsage.fsWrite - beforeRessourceUsage.fsWrite
-process.send({
+parentPort.postMessage({
   heapUsed,
   msEllapsed,
   fileSystemReadOperationCount,

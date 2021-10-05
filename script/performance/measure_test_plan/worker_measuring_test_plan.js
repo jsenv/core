@@ -1,21 +1,26 @@
+import { parentPort } from "node:worker_threads"
 import { resourceUsage, memoryUsage } from "node:process"
 
-import {
+global.gc()
+const beforeHeapUsed = memoryUsage().heapUsed
+const beforeRessourceUsage = resourceUsage()
+const beforeMs = Date.now()
+
+const {
   executeTestPlan,
   launchChromium,
   launchFirefox,
   launchWebkit,
   launchNode,
-} from "@jsenv/core"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+} = await import("@jsenv/core")
 
-const projectDirectoryUrl = jsenvCoreDirectoryUrl
+const projectDirectoryUrl = new URL("../../../", import.meta.url)
 const currentDirectoryUrl = new URL("./", import.meta.url)
 const currentDirectoryRelativeUrl = new URL(
   currentDirectoryUrl,
-  jsenvCoreDirectoryUrl,
+  projectDirectoryUrl,
 )
-const executeTestPlanParameters = {
+await executeTestPlan({
   projectDirectoryUrl,
   testPlan: {
     [`${currentDirectoryRelativeUrl}animals.test.html`]: {
@@ -48,21 +53,13 @@ const executeTestPlanParameters = {
   coverage: true,
   coverageHtmlDirectory: false,
   coverageTextLog: false,
+  // here we should also clean jsenv directory to ensure
+  // the compile server cannot reuse cache
+  // to mitigate this compileServerCanReadFromFilesystem and compileServerCanWriteOnFilesystem
+  // are false for now
   compileServerCanReadFromFilesystem: false,
   compileServerCanWriteOnFilesystem: false,
-}
-
-// here we should also clean jsenv directory to ensure
-// the compile server cannot reuse cache
-// to mitigate this compileServerCanReadFromFilesystem and compileServerCanWriteOnFilesystem
-// are false for now
-
-global.gc()
-const beforeHeapUsed = memoryUsage().heapUsed
-const beforeRessourceUsage = resourceUsage()
-const beforeMs = Date.now()
-
-await executeTestPlan(executeTestPlanParameters)
+})
 
 const afterMs = Date.now()
 const afterHeapUsed = memoryUsage().heapUsed
@@ -74,7 +71,7 @@ const fileSystemReadOperationCount =
   afterRessourceUsage.fsRead - beforeRessourceUsage.fsRead
 const fileSystemWriteOperationCount =
   afterRessourceUsage.fsWrite - beforeRessourceUsage.fsWrite
-process.send({
+parentPort.postMessage({
   heapUsed,
   msEllapsed,
   fileSystemReadOperationCount,

@@ -1,10 +1,16 @@
-import { resourceUsage, memoryUsage } from "process"
-import { buildProject } from "@jsenv/core"
+import { parentPort } from "node:worker_threads"
+import { resourceUsage, memoryUsage } from "node:process"
 
-const buildProjectParameters = {
-  format: "esmodule",
+global.gc()
+const beforeHeapUsed = memoryUsage().heapUsed
+const beforeRessourceUsage = resourceUsage()
+const beforeMs = Date.now()
+
+const { buildProject } = await import("@jsenv/core")
+await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "./dist/",
+  format: "esmodule",
   entryPointMap: {
     "./main.html": "./main.min.html",
   },
@@ -12,14 +18,7 @@ const buildProjectParameters = {
   buildDirectoryClean: true,
   logLevel: "warn",
   minify: true,
-}
-
-global.gc()
-const beforeHeapUsed = memoryUsage().heapUsed
-const beforeRessourceUsage = resourceUsage()
-const beforeMs = Date.now()
-
-await buildProject(buildProjectParameters)
+})
 
 const afterMs = Date.now()
 const afterHeapUsed = memoryUsage().heapUsed
@@ -31,7 +30,7 @@ const fileSystemReadOperationCount =
   afterRessourceUsage.fsRead - beforeRessourceUsage.fsRead
 const fileSystemWriteOperationCount =
   afterRessourceUsage.fsWrite - beforeRessourceUsage.fsWrite
-process.send({
+parentPort.postMessage({
   heapUsed,
   msEllapsed,
   fileSystemReadOperationCount,

@@ -1,6 +1,5 @@
-import { fork } from "child_process"
-import { fileURLToPath } from "url"
-
+import { Worker } from "node:worker_threads"
+import { fileURLToPath } from "node:url"
 import {
   measurePerformanceMultipleTimes,
   computeMetricsMedian,
@@ -8,26 +7,26 @@ import {
 } from "@jsenv/performance-impact"
 
 export const measureDevServer = async ({ iterations = 10 } = {}) => {
-  const childProcessFileUrl = new URL(
-    "./child_process_measuring_dev_server.js",
+  if (!global.gc) {
+    throw new Error("missing --expose-gc")
+  }
+  const workerFileUrl = new URL(
+    "./worker_measuring_dev_server.js",
     import.meta.url,
   )
-  const childProcessFilePath = fileURLToPath(childProcessFileUrl)
+  const workerFilePath = fileURLToPath(workerFileUrl)
 
   const metrics = await measurePerformanceMultipleTimes(
     async () => {
-      const childProcess = fork(childProcessFilePath, {
-        execArgv: ["--expose-gc"],
-      })
+      const worker = new Worker(workerFilePath)
       const {
         heapUsed,
         msEllapsed,
         fileSystemReadOperationCount,
         fileSystemWriteOperationCount,
-      } = await new Promise((resolve) => {
-        childProcess.on("message", (message) => {
-          resolve(message)
-        })
+      } = await new Promise((resolve, reject) => {
+        worker.on("message", resolve)
+        worker.on("error", reject)
       })
 
       return {
@@ -40,7 +39,7 @@ export const measureDevServer = async ({ iterations = 10 } = {}) => {
       }
     },
     iterations,
-    { msToWaitBetweenEachMeasure: 50 },
+    { msToWaitBetweenEachMeasure: 100 },
   )
   return computeMetricsMedian(metrics)
 }
