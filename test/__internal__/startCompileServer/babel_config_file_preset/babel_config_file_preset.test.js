@@ -16,20 +16,48 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const filename = `file.jsx`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const compileServer = await startCompileServer({
-  ...COMPILE_SERVER_TEST_PARAMS,
-  babelConfigFileUrl: new URL("./babel.config.cjs", import.meta.url),
-  jsenvDirectoryRelativeUrl,
-  runtimeSupport: jsenvRuntimeSupportDuringDev,
-})
 
-// no syntax error on jsx
+// syntax error when syntax-jsx is not enabled
 {
+  const compileServer = await startCompileServer({
+    ...COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    runtimeSupport: jsenvRuntimeSupportDuringDev,
+    babelConfigFileUrl: undefined,
+  })
   const compiledFileRelativeUrl = `${jsenvDirectoryRelativeUrl}out/${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
   const fileServerUrl = `${compileServer.origin}/${compiledFileRelativeUrl}`
-  const response = await fetchUrl(fileServerUrl, {
-    ignoreHttpsError: true,
+  const response = await fetchUrl(fileServerUrl)
+  const responseBodyAsJson = await response.json()
+
+  const actual = {
+    status: response.status,
+    statusText: response.statusText,
+    contentType: response.headers.get("content-type"),
+    responseIncludesJsxNotEnabled: responseBodyAsJson.message.includes(
+      `Support for the experimental syntax 'jsx' isn't currently enabled`,
+    ),
+  }
+  const expected = {
+    status: 500,
+    statusText: "parse error",
+    contentType: "application/json",
+    responseIncludesJsxNotEnabled: true,
+  }
+  assert({ actual, expected })
+}
+
+// ok when syntax-jsx plugin is enabled
+{
+  const compileServer = await startCompileServer({
+    ...COMPILE_SERVER_TEST_PARAMS,
+    babelConfigFileUrl: new URL("./babel.config.cjs", import.meta.url),
+    jsenvDirectoryRelativeUrl,
+    runtimeSupport: jsenvRuntimeSupportDuringDev,
   })
+  const compiledFileRelativeUrl = `${jsenvDirectoryRelativeUrl}out/${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
+  const fileServerUrl = `${compileServer.origin}/${compiledFileRelativeUrl}`
+  const response = await fetchUrl(fileServerUrl)
 
   const actual = {
     status: response.status,
