@@ -115,8 +115,9 @@ export const buildUsingRollup = async ({
   try {
     await useRollup({
       cancellationToken,
-      jsenvRollupPlugin,
+      logger,
 
+      jsenvRollupPlugin,
       format,
       globals,
       globalName,
@@ -125,6 +126,8 @@ export const buildUsingRollup = async ({
       // jsConcatenation,
       buildDirectoryUrl,
       buildDirectoryClean,
+
+      asOriginalUrl,
     })
   } catch (e) {
     if (e.plugin === "jsenv") {
@@ -186,6 +189,7 @@ export const buildUsingRollup = async ({
 
 const useRollup = async ({
   cancellationToken,
+  logger,
   jsenvRollupPlugin,
   format,
   globals,
@@ -195,6 +199,7 @@ const useRollup = async ({
   // jsConcatenation,
   buildDirectoryUrl,
   buildDirectoryClean,
+  asOriginalUrl,
 }) => {
   const { rollup } = await import("rollup")
 
@@ -211,10 +216,16 @@ const useRollup = async ({
     // if we want to ignore some warning
     // please use https://rollupjs.org/guide/en#onwarn
     // to be very clear about what we want to ignore
-    onwarn: (warning, warn) => {
-      if (warning.code === "THIS_IS_UNDEFINED") return
-      if (warning.code === "EMPTY_BUNDLE" && warning.chunkName === "__empty__")
+    onwarn: (warning) => {
+      if (warning.code === "THIS_IS_UNDEFINED") {
         return
+      }
+      if (
+        warning.code === "EMPTY_BUNDLE" &&
+        warning.chunkName === "__empty__"
+      ) {
+        return
+      }
       // ignore file name conflict when sourcemap or importmap are re-emitted
       if (
         warning.code === "FILE_NAME_CONFLICT" &&
@@ -223,7 +234,18 @@ const useRollup = async ({
       ) {
         return
       }
-      warn(warning)
+      if (warning.code === "CIRCULAR_DEPENDENCY") {
+        warning.cycle.forEach((url, index) => {
+          warning.cycle[index] = asOriginalUrl(url)
+        })
+        warning.message = warning.message.replace(
+          /http:\/\/jsenv.com\/[^\s]+[\w]/g,
+          (url) => {
+            return asOriginalUrl(url)
+          },
+        )
+      }
+      logger.warn(String(warning))
     },
     // on passe input: [] car c'est le plusign jsenv qui se chargera d'emit des chunks
     // en fonction de entryPointMap

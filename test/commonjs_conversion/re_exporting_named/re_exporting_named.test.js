@@ -35,6 +35,9 @@ const { namespace } = await nodeImportEsModuleBuild({
 const actual = namespace
 const expected = {
   all: {
+    __moduleExports: {
+      answer: 42,
+    },
     answer: 42,
     default: { answer: 42 },
   },

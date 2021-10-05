@@ -20,9 +20,9 @@ export const rollupPluginCommonJsNamedExports = ({ logger }) => {
         const inputFilePath = input[key]
         const inputFileUrl = fileSystemPathToUrl(inputFilePath)
         inputSummaries[inputFileUrl] = {
-          all: false,
-          default: false,
-          namespace: false,
+          all: true,
+          default: true,
+          namespace: true,
           named: [],
         }
 
@@ -127,7 +127,8 @@ const detectExportsUsingSandboxedRuntime = ({ logger, fileUrl }) => {
   try {
     const fileContents = readFileSync(new URL(fileUrl), "utf8")
     const vm = new VM2({ wasm: false, fixAsync: false })
-    const vmResult = vm.run(wrapCodeToRunInVm(fileContents))
+    const codeToRun = wrapCodeToRunInVm(fileContents)
+    const vmResult = vm.run(codeToRun)
     const exportsResult = Object.keys(vmResult)
     logger.debug(
       `detectExportsUsingSandboxedRuntime success ${fileUrl}: ${exportsResult}`,

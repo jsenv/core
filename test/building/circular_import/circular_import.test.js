@@ -1,7 +1,9 @@
+// https://github.com/rollup/rollup/tree/dba6f13132a1d7dac507d5056399d8af0eed6375/test/function/samples/preserve-modules-circular-order
+
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { buildProject, commonJsToJavaScriptModule } from "@jsenv/core"
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 import { nodeImportEsModuleBuild } from "@jsenv/core/test/nodeImportEsModuleBuild.js"
@@ -14,17 +16,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}main.mjs`]: "./main.js",
+  [`./${testDirectoryRelativeUrl}main.js`]: "./main.js",
 }
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  // logLevel: "debug",
+  logLevel: "error", // to disable CIRCULAR_DEPENDENCY warning
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
-  customCompilers: {
-    "**/*.cjs": commonJsToJavaScriptModule,
-  },
 })
 const { namespace } = await nodeImportEsModuleBuild({
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
@@ -34,16 +33,6 @@ const { namespace } = await nodeImportEsModuleBuild({
 
 const actual = namespace
 const expected = {
-  all: {
-    __moduleExports: {
-      "a": 42,
-      ")": "ooops, this is an invalid identifier",
-    },
-    a: 42,
-    default: {
-      "a": 42,
-      ")": "ooops, this is an invalid identifier",
-    },
-  },
+  executionOrder: ["index", "tag", "data", "main: Tag: Tag data Tag data"],
 }
 assert({ actual, expected })

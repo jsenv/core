@@ -34,16 +34,6 @@ const { namespace } = await nodeImportEsModuleBuild({
 
 const actual = namespace
 const expected = {
-  all: {
-    __moduleExports: {
-      "a": 42,
-      ")": "ooops, this is an invalid identifier",
-    },
-    a: 42,
-    default: {
-      "a": 42,
-      ")": "ooops, this is an invalid identifier",
-    },
-  },
+  answer: 42,
 }
 assert({ actual, expected })
