@@ -3,10 +3,6 @@
  * https://babeljs.io/docs/en/presets
  *
  * This list of babel plugins is meant to be used in project using jsenv.
- * It's almost equivalent to @babel/preset-env with the following differences:
- * - Prefer "transform-async-to-promises" over "transform-async-to-generator"
- *   It's because generator are more verbose and slow, see https://github.com/babel/babel/issues/8121
- * - List only babel plugins with at least one browser/runtime supporting the feature natively
  *
  * Jsenv decides to use a subset of babel plugins with the following logic:
  * - During dev babel plugins natively supported by browsers and Node.js are not used.
@@ -16,9 +12,21 @@
  *   - Otherwise all babel plugins are used
  */
 
-module.exports = (api, { transformRegeneratorOptions = {} } = {}) => {
+module.exports = (
+  api,
+  {
+    // pass false if your codebase never uses generators
+    generators = true,
+    // pass false if your codebase never uses async generators
+    asyncGenerators = true,
+  } = {},
+) => {
   const plugins = []
 
+  // The default list of babel plugins MUST be in compatMap
+  // https://github.com/jsenv/jsenv-core/blob/master/src/internal/generateGroupMap/jsenvBabelPluginCompatMap.js#L11
+  // Otherwise it means there is no runtime supporting the babel plugins
+  // and the compilation is always required
   plugins.push(
     require("@babel/plugin-proposal-numeric-separator"),
     require("@babel/plugin-proposal-json-strings"),
@@ -52,19 +60,16 @@ module.exports = (api, { transformRegeneratorOptions = {} } = {}) => {
     require("@babel/plugin-transform-parameters"),
   )
 
-  const {
-    asyncGenerators = true,
-    generators = true,
-    async = false,
-  } = transformRegeneratorOptions
-  plugins.push([
-    require("@babel/plugin-transform-regenerator"),
-    {
-      asyncGenerators,
-      generators,
-      async,
-    },
-  ])
+  if (generators || asyncGenerators) {
+    plugins.push([
+      require("@babel/plugin-transform-regenerator"),
+      {
+        asyncGenerators,
+        generators,
+        async: false,
+      },
+    ])
+  }
 
   plugins.push(
     require("@babel/plugin-transform-shorthand-properties"),
