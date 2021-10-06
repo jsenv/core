@@ -8,8 +8,16 @@
 
 [^1]: This is because generator are more verbose and slow than promises. See https://github.com/babel/babel/issues/8121
 
-## Installation
+## Usage
 
 ```console
 npm install --save-dev @jsenv/babel-preset
+```
+
+_babel.config.cjs:_
+
+```js
+module.exports = {
+  presets: ["@jsenv/babel-preset"],
+}
 ```

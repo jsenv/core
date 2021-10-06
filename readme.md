@@ -332,7 +332,12 @@ Jsenv configuration is done in [jsenv.config.mjs](https://github.com/jsenv/jsenv
 
 ## jsenv.config.mjs
 
-Jsenv codebase regroups configuration in a top level [jsenv.config.mjs](./jsenv.config.mjs) file.
+Jsenv codebase usually puts configuration in a top level [jsenv.config.mjs](./jsenv.config.mjs) file.
+
+```js
+export const projectDirectoryUrl = String(new URL("./", import.meta.url))
+```
+
 The file is meant to be imported and passed using the spread operator.
 
 ![screenshot about jsenv config import and spread operator](./docs/jsenv-config-spread.png)
@@ -348,6 +353,10 @@ When code needs to be transformed, the project must contain a [babel config file
 It's recommended to use the following `babel.config.cjs`
 
 ```js
+/*
+ * See "@jsenv/babel-preset documentation at
+ * https://github.com/jsenv/jsenv-core/tree/master/packages/jsenv-babel-preset
+ */
 module.exports = {
   presets: ["@jsenv/babel-preset"],
 }
