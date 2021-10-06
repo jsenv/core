@@ -17,7 +17,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `build_module_not_found.html`
+const mainFilename = `main.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
@@ -38,7 +38,7 @@ try {
   const expected = `404 on js url
 --- js url ---
 ${jsFileUrl}
---- import trace ---
+--- url trace ---
 ${urlToFileSystemPath(htmlFileUrl)}`
   assert({ actual, expected })
 }

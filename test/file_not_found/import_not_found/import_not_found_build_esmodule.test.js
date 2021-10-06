@@ -38,7 +38,7 @@ try {
   const expected = `404 on js url
 --- js url ---
 ${fooFileUrl}
---- import trace ---
+--- url trace ---
 ${urlToFileSystemPath(intermediateFileUrl)}
   imported by ${urlToFileSystemPath(mainFileUrl)}
   imported by ${urlToFileSystemPath(jsenvCoreDirectoryUrl)}`

@@ -39,7 +39,7 @@ try {
   const expected = `404 on importmap url
 --- importmap url ---
 ${importMapFileUrl}
---- import trace ---
+--- url trace ---
 importMapFileRelativeUrl parameter`
   assert({ actual, expected })
 }

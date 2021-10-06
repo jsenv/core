@@ -1,5 +1,9 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  urlToFileSystemPath,
+} from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -13,9 +17,10 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}build_img_not_found.html`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}img_not_found.html`]: "./main.html",
 }
 const imgUrl = resolveUrl("img.png", import.meta.url)
+const htmlFileUrl = resolveUrl("img_not_found.html", import.meta.url)
 
 try {
   await buildProject({
@@ -30,9 +35,8 @@ try {
   const expected = `404 on url
 --- url ---
 ${imgUrl}
---- import trace ---
-${testDirectoryRelativeUrl}build_img_not_found.html:9:10
-
+--- url trace ---
+${urlToFileSystemPath(htmlFileUrl)}:9:10
   8  |   <body>
 > 9  |     <img src="./img.png" />
                 ^
