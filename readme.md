@@ -332,7 +332,9 @@ Jsenv configuration is done in [jsenv.config.mjs](https://github.com/jsenv/jsenv
 
 ## jsenv.config.mjs
 
-Jsenv codebase usually puts configuration in a top level [jsenv.config.mjs](./jsenv.config.mjs) file.
+Jsenv codebase usually puts configuration in a top level file named `jsenv.config.mjs`.
+
+It's recommended to use the following `jsenv.config.mjs`
 
 ```js
 /*
