@@ -19,18 +19,19 @@ Which is way more readable
 
 import { assert } from "@jsenv/assert"
 
-import { showSourceLocation } from "@jsenv/core/src/internal/building/showSourceLocation.js"
+import { showSourceLocation } from "@jsenv/core/src/internal/building/ressource_trace.js"
 
 {
-  const actual = showSourceLocation(
-    `const a = false;
+  const actual = showSourceLocation({
+    source: `const a = false;
 const b = true;
 const c = true;
 const d = true;
 const e = false;
 `,
-    { column: 1, line: 3 },
-  )
+    column: 1,
+    line: 3,
+  })
   const expected = `
   2 | const b = true;
 > 3 | const c = true;
@@ -40,18 +41,16 @@ const e = false;
 }
 
 {
-  const actual = showSourceLocation(
-    `const a = false;
+  const actual = showSourceLocation({
+    source: `const a = false;
 const b = true;
 const c = true;
 const d = true;
 const e = false;`,
-    {
-      column: 7,
-      line: 3,
-      numberOfSurroundingLinesToShow: 10,
-    },
-  )
+    column: 7,
+    line: 3,
+    numberOfSurroundingLinesToShow: 10,
+  })
   const expected = `
   1 | const a = false;
   2 | const b = true;
@@ -64,19 +63,17 @@ const e = false;`,
 
 // empty last line is shown
 {
-  const actual = showSourceLocation(
-    `const a = false;
+  const actual = showSourceLocation({
+    source: `const a = false;
 const b = true;
 const c = true;
 const d = true;
 const e = false;
 `,
-    {
-      column: 1,
-      line: 3,
-      numberOfSurroundingLinesToShow: 10,
-    },
-  )
+    column: 1,
+    line: 3,
+    numberOfSurroundingLinesToShow: 10,
+  })
   const expected = `
   1 | const a = false;
   2 | const b = true;
@@ -90,15 +87,15 @@ const e = false;
 
 // no column given
 {
-  const actual = showSourceLocation(
-    `const a = false;
+  const actual = showSourceLocation({
+    source: `const a = false;
 const b = true;
 const c = true;
 const d = true;
 const e = false;
 `,
-    { line: 3 },
-  )
+    line: 3,
+  })
   const expected = `
   2 | const b = true;
 > 3 | const c = true;
@@ -108,8 +105,8 @@ const e = false;
 
 // line number goes from 1 digit to 2 digits
 {
-  const actual = showSourceLocation(
-    `const a = false;
+  const actual = showSourceLocation({
+    source: `const a = false;
 const b = false;
 const c = false;
 const d = false;
@@ -121,8 +118,8 @@ const i = true;
 const j = true;
 const k = true;
 const l = true;`,
-    { line: 10 },
-  )
+    line: 10,
+  })
   const expected = `
   9  | const i = true;
 > 10 | const j = true;
@@ -132,15 +129,16 @@ const l = true;`,
 
 // line is too long and column is undefined
 {
-  const actual = showSourceLocation(
-    `const a = false;
+  const actual = showSourceLocation({
+    source: `const a = false;
 const b = true;
 const thisVariableNameisQuiteLong = true;
 const d = true;
 const e = false;
 `,
-    { line: 3, lineMaxLength: 15 },
-  )
+    line: 3,
+    lineMaxLength: 15,
+  })
   const expected = `
   2 | const b = true;
 > 3 | const thisVari…
@@ -150,15 +148,17 @@ const e = false;
 
 // line is too long and column is near beginning
 {
-  const actual = showSourceLocation(
-    `const a = false;
+  const actual = showSourceLocation({
+    source: `const a = false;
 const b = true;
 const thisVariableNameisQuiteLong = true;
 const d = true;
 const e = false;
 `,
-    { line: 3, column: 4, lineMaxLength: 15 },
-  )
+    line: 3,
+    column: 4,
+    lineMaxLength: 15,
+  })
   const expected = `
   2 | const b = true;
 > 3 | const thisVari…
@@ -169,15 +169,17 @@ const e = false;
 
 // line is too long and column is near middle
 {
-  const actual = showSourceLocation(
-    `const a = false;
+  const actual = showSourceLocation({
+    source: `const a = false;
 const b = true
 const thisVariableNameisQuiteLong = true;
 const d = tru
 const e = false;
 `,
-    { line: 3, column: 20, lineMaxLength: 15 },
-  )
+    line: 3,
+    column: 20,
+    lineMaxLength: 15,
+  })
   const expected = `
   2 |${" "}
 > 3 | …ableNameisQui…
@@ -188,15 +190,17 @@ const e = false;
 
 // line is too long and column is near end
 {
-  const actual = showSourceLocation(
-    `const a = false;
+  const actual = showSourceLocation({
+    source: `const a = false;
 
 const thisVariableNameisQuiteLong = true;
 const d = tru
 const e = false;
 `,
-    { line: 3, column: 35, lineMaxLength: 15 },
-  )
+    line: 3,
+    column: 35,
+    lineMaxLength: 15,
+  })
   const expected = `
   2 |${" "}
 > 3 | …Long = true;

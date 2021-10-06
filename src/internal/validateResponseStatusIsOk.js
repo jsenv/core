@@ -1,6 +1,7 @@
 import { createDetailedMessage } from "@jsenv/logger"
-import { urlToFileSystemPath } from "@jsenv/filesystem"
 import { urlToContentType } from "@jsenv/server"
+
+import { stringifyUrlTrace } from "./building/url_trace.js"
 
 export const validateResponseStatusIsOk = async (
   response,
@@ -15,7 +16,7 @@ export const validateResponseStatusIsOk = async (
       valid: false,
       message: createDetailedMessage(`404 on ${urlName}`, {
         [urlName]: url,
-        ...formatImportTrace(importer),
+        ...formatUrlTrace(importer),
       }),
     }
   }
@@ -26,7 +27,7 @@ export const validateResponseStatusIsOk = async (
         valid: false,
         message: createDetailedMessage(`error on ${urlName}`, {
           [urlName]: url,
-          ...formatImportTrace(importer),
+          ...formatUrlTrace(importer),
           "parse error": JSON.stringify(await response.json(), null, "  "),
         }),
       }
@@ -43,7 +44,7 @@ export const validateResponseStatusIsOk = async (
       `unexpected response status for ${urlName}`,
       {
         [urlName]: url,
-        ...formatImportTrace(importer),
+        ...formatUrlTrace(importer),
         "response status": status,
         "response text": await response.text(),
       },
@@ -55,38 +56,23 @@ const responseStatusIsOk = (responseStatus) => {
   return responseStatus >= 200 && responseStatus < 300
 }
 
-const formatImportTrace = (importer) => {
+const formatUrlTrace = (importer) => {
   if (!importer) {
     return {
-      "import trace": undefined,
+      "url trace": undefined,
     }
   }
 
   if (typeof importer === "function") {
-    const importTrace = importer().map((importer) => importerToLog(importer))
-      .join(`
-  imported by `)
+    const trace = importer()
     return {
-      "import trace": importTrace,
+      "url trace": stringifyUrlTrace(trace),
     }
   }
 
   return {
-    "import trace": importer,
+    "url trace": importer,
   }
-}
-
-const importerToLog = (importer) => {
-  if (importer.startsWith("file://")) {
-    if (importer.includes("\n")) {
-      // it happens when importer is a source location.
-      // In that case string starts with file:// but is not a file url
-      // It contains information that looks like an error stack trace
-      return importer
-    }
-    return urlToFileSystemPath(importer)
-  }
-  return importer
 }
 
 const urlNameFromResponse = (response) => {

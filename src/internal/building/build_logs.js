@@ -2,7 +2,7 @@ import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compiling/compileH
 import { setANSIColor, ANSI_GREY, okSign } from "../logs/log_style.js"
 import { byteAsFileSize } from "../logs/byteAsFileSize.js"
 import { msAsDuration } from "../logs/msAsDuration.js"
-import { showSourceLocation } from "./showSourceLocation.js"
+import { stringifyUrlSite } from "./url_trace.js"
 
 export const formatUseImportMapFromHtml = (importMapInfoFromHtml) => {
   return `
@@ -116,10 +116,10 @@ const showHtmlSourceLocation = ({
   const { line, column } =
     getHtmlNodeLocation(htmlNode, htmlAttributeName) || {}
 
-  return `${htmlUrl}:${line}:${column}
-${showSourceLocation(htmlSource, {
-  line,
-  column,
-})}
-`
+  return stringifyUrlSite({
+    url: htmlUrl,
+    line,
+    column,
+    source: htmlSource,
+  })
 }

@@ -416,11 +416,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
             ) {
               return url
             }
-            const originalProjectUrl = asOriginalUrl(url)
-            if (!originalProjectUrl) {
-              return url
-            }
-            return urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
+            return asOriginalUrl(url) || url
           },
           loadUrl: (url) => urlResponseBodyMap[url],
           resolveRessourceUrl: ({
@@ -1275,9 +1271,13 @@ const createImportTrace = ({
   asProjectUrl,
   urlImporterMap,
 }) => {
-  const importers = [
-    asOriginalUrl(importer) || asProjectUrl(importer) || importer,
+  const trace = [
+    {
+      type: "entry",
+      url: asOriginalUrl(importer) || asProjectUrl(importer) || importer,
+    },
   ]
+
   const next = (importerUrl) => {
     const previousImporterUrl = urlImporterMap[importerUrl]
     if (!previousImporterUrl) {
@@ -1287,11 +1287,15 @@ const createImportTrace = ({
       asOriginalUrl(previousImporterUrl) ||
       asProjectUrl(previousImporterUrl) ||
       previousImporterUrl
-    importers.push(previousImporterOriginalUrl)
+    trace.push({
+      type: "import",
+      url: previousImporterOriginalUrl,
+    })
     next(previousImporterUrl)
   }
   next(asServerUrl(importer))
-  return importers
+
+  return trace
 }
 
 const fixRollupUrl = (rollupUrl) => {

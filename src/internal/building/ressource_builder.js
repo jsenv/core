@@ -9,7 +9,6 @@ import { createLogger } from "@jsenv/logger"
 
 import { promiseTrackRace } from "../promise_track_race.js"
 import { parseDataUrl } from "../dataUrl.utils.js"
-import { showSourceLocation } from "./showSourceLocation.js"
 
 import {
   getRessourceAsBase64Url,
@@ -20,6 +19,7 @@ import {
   checkContentType,
 } from "./ressource_builder_util.js"
 import { computeBuildRelativeUrlForRessource } from "./asset_url_versioning.js"
+import { stringifyUrlSite } from "./url_trace.js"
 
 export const createRessourceBuilder = (
   { fetch, parse },
@@ -54,6 +54,7 @@ export const createRessourceBuilder = (
     // The entry point is conceptually referenced by code passing "entryPointMap"
     // to buildProject. So we analyse stack trace to put this function caller
     // as the reference to this ressource file
+    // we store this info in reference.isProgrammatic
     const callerLocation = getCallerLocation()
     const entryReference = createReference({
       ressourceSpecifier: entryUrl,
@@ -71,6 +72,7 @@ export const createRessourceBuilder = (
       urlVersioningDisabled: true,
       fileNamePattern: entryBuildRelativeUrl,
     })
+    entryReference.isProgrammatic = true
 
     await entryReference.ressource.getDependenciesAvailablePromise()
 
@@ -172,14 +174,14 @@ export const createRessourceBuilder = (
 
     fromRollup,
   }) => {
-    const existingRessourceForReference = ressourceFromUrl(referenceUrl)
+    const existingRessourceForReference = findRessourceByUrl(referenceUrl)
     let ressourceImporter
     if (existingRessourceForReference) {
       ressourceImporter = existingRessourceForReference
     } else {
       const referenceOriginalUrl = asOriginalServerUrl(referenceUrl)
       if (referenceOriginalUrl) {
-        ressourceImporter = ressourceFromUrl(referenceOriginalUrl)
+        ressourceImporter = findRessourceByUrl(referenceOriginalUrl)
       }
       if (!ressourceImporter) {
         // happens only for entry points?
@@ -256,7 +258,7 @@ export const createRessourceBuilder = (
       }
     }
 
-    const existingRessource = ressourceFromUrl(ressourceUrl)
+    const existingRessource = findRessourceByUrl(ressourceUrl)
     let ressource
     if (existingRessource) {
       ressource = existingRessource
@@ -430,9 +432,12 @@ export const createRessourceBuilder = (
         }
       }
 
-      const response = await fetch(
-        ressource.url,
-        showReferenceSourceLocation(ressource.firstStrongReference),
+      const response = await fetch(ressource.url, () =>
+        createRessourceTrace({
+          ressource,
+          createUrlSiteFromReference,
+          findRessourceByUrl,
+        }),
       )
       if (response.url !== ressource.url) {
         const urlBeforeRedirection = ressource.url
@@ -805,12 +810,12 @@ export const createRessourceBuilder = (
     })
   }
 
-  const ressourceFromUrl = (url) => {
+  const findRessourceByUrl = (url) => {
     if (url in ressourceMap) {
       return ressourceMap[url]
     }
     if (url in ressourceRedirectionMap) {
-      return ressourceFromUrl(ressourceRedirectionMap[url])
+      return findRessourceByUrl(ressourceRedirectionMap[url])
     }
     return null
   }
@@ -832,9 +837,9 @@ export const createRessourceBuilder = (
     return urlIsInsideOf(url, baseUrl) ? urlToRelativeUrl(url, baseUrl) : url
   }
 
-  const showReferenceSourceLocation = (reference) => {
-    const referenceUrl = reference.referenceUrl
-    const referenceRessource = ressourceFromUrl(referenceUrl)
+  const createUrlSiteFromReference = (reference) => {
+    const { referenceUrl, referenceLine, referenceColumn } = reference
+    const referenceRessource = findRessourceByUrl(referenceUrl)
     const referenceSource = referenceRessource
       ? referenceRessource.bufferBeforeBuild
       : loadUrl(referenceUrl)
@@ -842,27 +847,20 @@ export const createRessourceBuilder = (
       ? String(referenceSource)
       : ""
 
-    let message = `${urlToHumanUrl(referenceUrl)}`
-    if (typeof reference.referenceLine === "number") {
-      message += `:${reference.referenceLine}`
-      if (typeof reference.referenceColumn === "number") {
-        message += `:${reference.referenceColumn}`
-      }
+    return {
+      type:
+        referenceRessource && referenceRessource.isJsModule
+          ? "import"
+          : "reference",
+      url: urlToHumanUrl(referenceUrl),
+      line: referenceLine,
+      column: referenceColumn,
+      source: referenceSourceAsString,
     }
+  }
 
-    if (
-      referenceSourceAsString &&
-      typeof reference.referenceLine === "number"
-    ) {
-      return `${message}
-
-${showSourceLocation(referenceSourceAsString, {
-  line: reference.referenceLine,
-  column: reference.referenceColumn,
-})}`
-    }
-
-    return `${message}`
+  const showReferenceSourceLocation = (reference) => {
+    return stringifyUrlSite(createUrlSiteFromReference(reference))
   }
 
   return {
@@ -926,6 +924,43 @@ export const referenceToCodeForRollup = (reference) => {
 //   })
 //   return buildManifest[key]
 // }
+
+const createRessourceTrace = ({
+  ressource,
+  createUrlSiteFromReference,
+  findRessourceByUrl,
+}) => {
+  // we could pass a way to build the import trace
+  // it can be deduced by starting with the firstStrongReference
+  // and trying to get a ressource for that reference
+  // to get an other firstStrongReference
+  // everytime we could build the sourcelocation
+  // but for importer after the first once just line and column are enough
+  // the source code would be too much
+
+  const { firstStrongReference } = ressource
+  const trace = [createUrlSiteFromReference(firstStrongReference)]
+
+  const next = (reference) => {
+    const referenceRessource = findRessourceByUrl(reference.referenceUrl)
+    if (!referenceRessource) {
+      return
+    }
+    const { firstStrongReference } = referenceRessource
+    if (!firstStrongReference) {
+      return
+    }
+    // ignore the programmatic reference
+    if (firstStrongReference.isProgrammatic) {
+      return
+    }
+    trace.push(createUrlSiteFromReference(firstStrongReference))
+    next(firstStrongReference)
+  }
+  next(firstStrongReference)
+
+  return trace
+}
 
 const removePotentialUrlHash = (url) => {
   const urlObject = new URL(url)
