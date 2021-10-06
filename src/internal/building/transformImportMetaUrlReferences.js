@@ -8,7 +8,6 @@ export const transformImportMetaUrlReferences = async ({
   code,
   ast,
   ressourceBuilder,
-  fetch,
   markBuildRelativeUrlAsUsedByJs,
 }) => {
   const { default: MagicString } = await import("magic-string")
@@ -23,11 +22,7 @@ export const transformImportMetaUrlReferences = async ({
       }
       const relativeUrl = node.arguments[0].value
 
-      // hum on devrait le fetch pour obtenir l'url finale et le content-type
-      // par contre on y applique pas les import map
       const ressourceUrl = resolveUrl(relativeUrl, url)
-      const response = await fetch(ressourceUrl, url)
-      const bufferBeforeBuild = Buffer.from(await response.arrayBuffer())
 
       const reference = await ressourceBuilder.createReferenceFoundInJsModule({
         jsUrl: url,
@@ -39,8 +34,6 @@ export const transformImportMetaUrlReferences = async ({
           : {}),
 
         ressourceSpecifier: ressourceUrl,
-        contentType: response.headers["content-type"],
-        bufferBeforeBuild,
       })
       if (reference) {
         magicString.overwrite(

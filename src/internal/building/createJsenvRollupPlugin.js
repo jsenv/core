@@ -416,11 +416,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
             ) {
               return url
             }
-            const originalProjectUrl = asOriginalUrl(url)
-            if (!originalProjectUrl) {
-              return url
-            }
-            return urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
+            return asOriginalUrl(url) || url
           },
           loadUrl: (url) => urlResponseBodyMap[url],
           resolveRessourceUrl: ({
@@ -715,7 +711,6 @@ building ${entryFileRelativeUrls.length} entry files...`)
         code: codeInput,
         ast,
         ressourceBuilder,
-        fetch: jsenvFetchUrl,
         markBuildRelativeUrlAsUsedByJs,
       })
       return { code, map }
@@ -1058,10 +1053,15 @@ building ${entryFileRelativeUrls.length} entry files...`)
     }
 
     const importerUrl = urlImporterMap[moduleUrl]
-    const moduleResponse = await jsenvFetchUrl(
-      moduleUrl,
-      asProjectUrl(importerUrl) || importerUrl,
-    )
+    const moduleResponse = await jsenvFetchUrl(moduleUrl, () => {
+      return createImportTrace({
+        importer: asProjectUrl(importerUrl) || importerUrl,
+        asServerUrl,
+        asOriginalUrl,
+        asProjectUrl,
+        urlImporterMap,
+      })
+    })
     const responseContentType = moduleResponse.headers["content-type"] || ""
     const commonData = {
       responseContentType,
@@ -1130,25 +1130,7 @@ non-js ressources can be used with new URL("${urlRelativeToImporter}", import.me
     const okValidation = await validateResponseStatusIsOk(response, {
       originalUrl:
         asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl,
-      traceImport: () => {
-        const importers = [
-          asOriginalUrl(importer) || asProjectUrl(importer) || importer,
-        ]
-        const next = (importerUrl) => {
-          const previousImporterUrl = urlImporterMap[importerUrl]
-          if (!previousImporterUrl) {
-            return
-          }
-          const previousImporterOriginalUrl =
-            asOriginalUrl(previousImporterUrl) ||
-            asProjectUrl(previousImporterUrl) ||
-            previousImporterUrl
-          importers.push(previousImporterOriginalUrl)
-          next(previousImporterUrl)
-        }
-        next(asServerUrl(importer))
-        return importers
-      },
+      importer,
     })
     if (!okValidation.valid) {
       const jsenvPluginError = new Error(okValidation.message)
@@ -1279,6 +1261,40 @@ const prepareEntryPoints = async (
   }, Promise.resolve())
 
   return entryPointsPrepared
+}
+
+const createImportTrace = ({
+  importer,
+  asServerUrl,
+  asOriginalUrl,
+  asProjectUrl,
+  urlImporterMap,
+}) => {
+  const trace = [
+    {
+      type: "entry",
+      url: asOriginalUrl(importer) || asProjectUrl(importer) || importer,
+    },
+  ]
+
+  const next = (importerUrl) => {
+    const previousImporterUrl = urlImporterMap[importerUrl]
+    if (!previousImporterUrl) {
+      return
+    }
+    const previousImporterOriginalUrl =
+      asOriginalUrl(previousImporterUrl) ||
+      asProjectUrl(previousImporterUrl) ||
+      previousImporterUrl
+    trace.push({
+      type: "import",
+      url: previousImporterOriginalUrl,
+    })
+    next(previousImporterUrl)
+  }
+  next(asServerUrl(importer))
+
+  return trace
 }
 
 const fixRollupUrl = (rollupUrl) => {

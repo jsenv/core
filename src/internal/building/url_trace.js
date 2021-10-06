@@ -3,18 +3,89 @@
 // https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/terminal-highlight.js#L50
 // https://github.com/babel/babel/blob/eea156b2cb8deecfcf82d52aa1b71ba4995c7d68/packages/babel-code-frame/src/index.js#L1
 
+import { urlToFileSystemPath } from "@jsenv/filesystem"
+
 import { setANSIColor, ANSI_GREY, ANSI_RED } from "../logs/log_style.js"
 
-export const showSourceLocation = (
-  source,
+export const stringifyUrlTrace = (trace) => {
+  let string = ""
+  trace.forEach(({ type, url, line, column, source }, index) => {
+    if (index === 0) {
+      string += stringifyUrlSite({ url, line, column, source })
+      return
+    }
+
+    if (type === "import") {
+      string += `\n  imported by ${stringifyUrlSite({
+        url,
+        line,
+        column,
+      })}`
+      return
+    }
+
+    string += `\n  referenced by ${stringifyUrlSite({
+      url,
+      line,
+      column,
+    })}`
+  }, "")
+
+  return string
+}
+
+export const stringifyUrlSite = (
+  { url, line, column, source },
   {
+    showCodeFrame = true,
+    numberOfSurroundingLinesToShow,
+    lineMaxLength,
+    color,
+  } = {},
+) => {
+  let string = `${humanizeUrl(url)}`
+
+  if (typeof line === "number") {
+    string += `:${line}`
+    if (typeof column === "number") {
+      string += `:${column}`
+    }
+  }
+
+  if (!showCodeFrame || typeof line !== "number" || !source) {
+    return string
+  }
+
+  const sourceLoc = showSourceLocation({
+    source,
     line,
     column,
-    numberOfSurroundingLinesToShow = 1,
-    lineMaxLength = 120,
-    color = false,
-  },
-) => {
+    numberOfSurroundingLinesToShow,
+    lineMaxLength,
+    color,
+  })
+
+  return `${string}
+${sourceLoc}`
+}
+
+const humanizeUrl = (url) => {
+  if (url.startsWith("file://")) {
+    // we prefer file system path because vscode reliably make them clickable
+    // and sometimes it won't for file:// urls
+    return urlToFileSystemPath(url)
+  }
+  return url
+}
+
+export const showSourceLocation = ({
+  source,
+  line,
+  column,
+  numberOfSurroundingLinesToShow = 1,
+  lineMaxLength = 120,
+  color = false,
+} = {}) => {
   let mark = (string) => string
   let aside = (string) => string
   if (color) {

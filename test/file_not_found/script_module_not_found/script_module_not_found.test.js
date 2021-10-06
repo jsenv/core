@@ -1,7 +1,8 @@
 import { assert } from "@jsenv/assert"
 import {
-  resolveUrl,
+  resolveDirectoryUrl,
   urlToRelativeUrl,
+  resolveUrl,
   urlToFileSystemPath,
 } from "@jsenv/filesystem"
 
@@ -9,25 +10,24 @@ import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
-const testDirectoryUrl = resolveUrl("./", import.meta.url)
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `import_not_found.js`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
+const mainFilename = `main.html`
 const entryPointMap = {
-  [`./${fileRelativeUrl}`]: "./main.js",
+  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-const mainFileUrl = resolveUrl(mainFilename, import.meta.url)
-const intermediateFileUrl = resolveUrl("./intermediate.js", import.meta.url)
-const fooFileUrl = resolveUrl("foo.js", import.meta.url)
+const jsFileUrl = resolveUrl("./404.js", testDirectoryUrl)
+const htmlFileUrl = resolveUrl(`./${mainFilename}`, testDirectoryUrl)
 
 try {
   await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+    // logLevel: "debug",
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
     entryPointMap,
@@ -37,10 +37,8 @@ try {
   const actual = e.message
   const expected = `404 on js url
 --- js url ---
-${fooFileUrl}
---- import trace ---
-${urlToFileSystemPath(intermediateFileUrl)}
-  imported by ${urlToFileSystemPath(mainFileUrl)}
-  imported by ${urlToFileSystemPath(jsenvCoreDirectoryUrl)}`
+${jsFileUrl}
+--- url trace ---
+${urlToFileSystemPath(htmlFileUrl)}`
   assert({ actual, expected })
 }
