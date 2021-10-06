@@ -19,7 +19,7 @@ Which is way more readable
 
 import { assert } from "@jsenv/assert"
 
-import { showSourceLocation } from "@jsenv/core/src/internal/building/ressource_trace.js"
+import { showSourceLocation } from "@jsenv/core/src/internal/building/url_trace.js"
 
 {
   const actual = showSourceLocation({
