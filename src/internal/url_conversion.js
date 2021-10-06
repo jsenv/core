@@ -290,6 +290,9 @@ const originalProjectUrlFromUrl = (
     compileDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
+  if (projectUrl === compileDirectoryUrl) {
+    return projectDirectoryUrl
+  }
   if (!urlIsInsideOf(projectUrl, compileDirectoryUrl)) {
     return projectUrl
   }

@@ -1127,12 +1127,28 @@ non-js ressources can be used with new URL("${urlRelativeToImporter}", import.me
     })
     const responseUrl = response.url
 
-    importer = asOriginalUrl(importer) || asProjectUrl(importer) || importer
-
     const okValidation = await validateResponseStatusIsOk(response, {
       originalUrl:
         asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl,
-      importer,
+      traceImport: () => {
+        const importers = [
+          asOriginalUrl(importer) || asProjectUrl(importer) || importer,
+        ]
+        const next = (importerUrl) => {
+          const previousImporterUrl = urlImporterMap[importerUrl]
+          if (!previousImporterUrl) {
+            return
+          }
+          const previousImporterOriginalUrl =
+            asOriginalUrl(previousImporterUrl) ||
+            asProjectUrl(previousImporterUrl) ||
+            previousImporterUrl
+          importers.push(previousImporterOriginalUrl)
+          next(previousImporterUrl)
+        }
+        next(asServerUrl(importer))
+        return importers
+      },
     })
     if (!okValidation.valid) {
       const jsenvPluginError = new Error(okValidation.message)
@@ -1150,8 +1166,8 @@ non-js ressources can be used with new URL("${urlRelativeToImporter}", import.me
   const fetchImportMapFromUrl = async (importMapUrl, importer) => {
     const importMapResponse = await jsenvFetchUrl(importMapUrl, importer)
     const okValidation = await validateResponseStatusIsOk(importMapResponse, {
-      importer,
       originalUrl: asOriginalUrl(importMapUrl),
+      traceImport: () => [importer],
     })
     if (!okValidation.valid) {
       throw new Error(okValidation.message)

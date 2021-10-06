@@ -4,7 +4,7 @@ import { urlToContentType } from "@jsenv/server"
 
 export const validateResponseStatusIsOk = async (
   response,
-  { originalUrl, importer } = {},
+  { originalUrl, traceImport } = {},
 ) => {
   const { status } = response
   const url = originalUrl || response.url
@@ -15,7 +15,7 @@ export const validateResponseStatusIsOk = async (
       valid: false,
       message: createDetailedMessage(`404 on ${urlName}`, {
         [urlName]: url,
-        "imported by": importerToLog(importer),
+        ...formatImportTrace({ traceImport }),
       }),
     }
   }
@@ -26,7 +26,7 @@ export const validateResponseStatusIsOk = async (
         valid: false,
         message: createDetailedMessage(`error on ${urlName}`, {
           [urlName]: url,
-          "imported by": importerToLog(importer),
+          ...formatImportTrace({ traceImport }),
           "parse error": JSON.stringify(await response.json(), null, "  "),
         }),
       }
@@ -43,7 +43,7 @@ export const validateResponseStatusIsOk = async (
       `unexpected response status for ${urlName}`,
       {
         [urlName]: url,
-        "imported by": importerToLog(importer),
+        ...formatImportTrace({ traceImport }),
         "response status": status,
         "response text": await response.text(),
       },
@@ -53,6 +53,19 @@ export const validateResponseStatusIsOk = async (
 
 const responseStatusIsOk = (responseStatus) => {
   return responseStatus >= 200 && responseStatus < 300
+}
+
+const formatImportTrace = ({ traceImport }) => {
+  if (!traceImport) {
+    return { "imported by": "undefined" }
+  }
+
+  const importTrace = traceImport().map((importer) => importerToLog(importer))
+    .join(`
+  imported by `)
+  return {
+    "import trace": importTrace,
+  }
 }
 
 const importerToLog = (importer) => {

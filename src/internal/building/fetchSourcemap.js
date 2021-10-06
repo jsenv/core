@@ -38,7 +38,7 @@ export const fetchSourcemap = async (
     ignoreHttpsError: true,
   })
   const okValidation = await validateResponseStatusIsOk(sourcemapResponse, {
-    importer: jsUrl,
+    traceImport: () => [jsUrl],
   })
 
   if (!okValidation.valid) {

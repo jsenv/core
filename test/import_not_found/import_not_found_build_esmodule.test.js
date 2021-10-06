@@ -21,7 +21,8 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
 const entryPointMap = {
   [`./${fileRelativeUrl}`]: "./main.js",
 }
-const fileUrl = resolveUrl(mainFilename, import.meta.url)
+const mainFileUrl = resolveUrl(mainFilename, import.meta.url)
+const intermediateFileUrl = resolveUrl("./intermediate.js", import.meta.url)
 const fooFileUrl = resolveUrl("foo.js", import.meta.url)
 
 try {
@@ -37,7 +38,9 @@ try {
   const expected = `404 on js url
 --- js url ---
 ${fooFileUrl}
---- imported by ---
-${urlToFileSystemPath(fileUrl)}`
+--- import trace ---
+${urlToFileSystemPath(intermediateFileUrl)}
+  imported by ${urlToFileSystemPath(mainFileUrl)}
+  imported by ${urlToFileSystemPath(jsenvCoreDirectoryUrl)}`
   assert({ actual, expected })
 }
