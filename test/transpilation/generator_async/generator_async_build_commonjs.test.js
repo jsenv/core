@@ -1,6 +1,10 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import {
+  readFile,
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+} from "@jsenv/filesystem"
+
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
@@ -14,14 +18,12 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
-const mainFilename = `${testDirectoryname}.js`
+const mainFilename = `generator_async.js`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
 }
-
 await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -29,20 +31,33 @@ await buildProject({
   entryPointMap,
 })
 
-const {
-  namespace: { ask },
-} = await requireCommonJsBuild({
-  ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
-  buildDirectoryRelativeUrl,
-})
-const iterator = ask()
+// generator was transpiled
 {
-  const actual = await iterator.next()
-  const expected = { value: 42, done: false }
+  const fileContent = await readFile(
+    new URL("./dist/commonjs/main.cjs", import.meta.url),
+  )
+  const actual = fileContent.includes("function*")
+  const expected = false
   assert({ actual, expected })
 }
+
+// generator works as expected
 {
-  const actual = await iterator.next()
-  const expected = { value: undefined, done: true }
+  const { namespace } = await requireCommonJsBuild({
+    ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
+    buildDirectoryRelativeUrl,
+  })
+  const iterator = namespace.ask()
+  const first = await iterator.next()
+  const second = await iterator.next()
+
+  const actual = {
+    first,
+    second,
+  }
+  const expected = {
+    first: { value: 42, done: false },
+    second: { value: undefined, done: true },
+  }
   assert({ actual, expected })
 }
