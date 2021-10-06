@@ -1,5 +1,9 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import {
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  readFile,
+} from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -26,6 +30,17 @@ await buildProject({
   entryPointMap,
 })
 
+// async was transpiled
+{
+  const fileContent = await readFile(
+    new URL("./dist/commonjs/main.cjs", import.meta.url),
+  )
+  const actual = fileContent.includes("async function")
+  const expected = false
+  assert({ actual, expected })
+}
+
+// code works normally
 {
   const { namespace } = await requireCommonJsBuild({
     ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
