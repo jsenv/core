@@ -4,7 +4,7 @@ import { urlToContentType } from "@jsenv/server"
 
 export const validateResponseStatusIsOk = async (
   response,
-  { originalUrl, traceImport } = {},
+  { originalUrl, importer } = {},
 ) => {
   const { status } = response
   const url = originalUrl || response.url
@@ -15,7 +15,7 @@ export const validateResponseStatusIsOk = async (
       valid: false,
       message: createDetailedMessage(`404 on ${urlName}`, {
         [urlName]: url,
-        ...formatImportTrace({ traceImport }),
+        ...formatImportTrace(importer),
       }),
     }
   }
@@ -26,7 +26,7 @@ export const validateResponseStatusIsOk = async (
         valid: false,
         message: createDetailedMessage(`error on ${urlName}`, {
           [urlName]: url,
-          ...formatImportTrace({ traceImport }),
+          ...formatImportTrace(importer),
           "parse error": JSON.stringify(await response.json(), null, "  "),
         }),
       }
@@ -43,7 +43,7 @@ export const validateResponseStatusIsOk = async (
       `unexpected response status for ${urlName}`,
       {
         [urlName]: url,
-        ...formatImportTrace({ traceImport }),
+        ...formatImportTrace(importer),
         "response status": status,
         "response text": await response.text(),
       },
@@ -55,16 +55,24 @@ const responseStatusIsOk = (responseStatus) => {
   return responseStatus >= 200 && responseStatus < 300
 }
 
-const formatImportTrace = ({ traceImport }) => {
-  if (!traceImport) {
-    return { "import trace": "undefined" }
+const formatImportTrace = (importer) => {
+  if (!importer) {
+    return {
+      "import trace": undefined,
+    }
   }
 
-  const importTrace = traceImport().map((importer) => importerToLog(importer))
-    .join(`
+  if (typeof importer === "function") {
+    const importTrace = importer().map((importer) => importerToLog(importer))
+      .join(`
   imported by `)
+    return {
+      "import trace": importTrace,
+    }
+  }
+
   return {
-    "import trace": importTrace,
+    "import trace": importer,
   }
 }
 
