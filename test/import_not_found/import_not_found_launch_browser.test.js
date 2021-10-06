@@ -25,7 +25,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const htmlFilename = `import_not_found.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
-const importerFileRelativeUrl = `${testDirectoryRelativeUrl}import_not_found.js`
+const mainFileRelativeUrl = `${testDirectoryRelativeUrl}import_not_found.js`
+const importerFileRelativeUrl = `${testDirectoryRelativeUrl}intermediate.js`
 const compileId = COMPILE_ID_BEST
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
@@ -62,17 +63,14 @@ await launchBrowsers(
     })
 
     if (launchBrowser === launchChromium) {
-      const importerFileUrl = resolveUrl(
-        importerFileRelativeUrl,
-        jsenvCoreDirectoryUrl,
-      )
+      const mainFileUrl = resolveUrl(mainFileRelativeUrl, jsenvCoreDirectoryUrl)
       const actual = {
         status: result.status,
         errorMessage: result.error.message,
       }
       const expected = {
         status: "errored",
-        errorMessage: `Failed to fetch dynamically imported module: ${importerFileUrl}`,
+        errorMessage: `Failed to fetch dynamically imported module: ${mainFileUrl}`,
       }
       assert({ actual, expected })
       return

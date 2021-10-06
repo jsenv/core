@@ -22,14 +22,15 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `import_not_found.js`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const mainFilename = `import_not_found.js`
+const mainFileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
+const importerFileRelativeUrl = "intermediate.js"
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
     ...START_COMPILE_SERVER_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
   })
-const importerFileUrl = resolveUrl(filename, testDirectoryUrl)
+const importerFileUrl = resolveUrl(importerFileRelativeUrl, testDirectoryUrl)
 const importedFileUrl = resolveUrl("foo.js", testDirectoryUrl)
 
 const actual = await launchAndExecute({
@@ -43,7 +44,7 @@ const actual = await launchAndExecute({
       compileServerOrigin,
     }),
   executeParams: {
-    fileRelativeUrl,
+    fileRelativeUrl: mainFileRelativeUrl,
   },
 })
 const expected = {
