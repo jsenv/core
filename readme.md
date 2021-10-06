@@ -335,6 +335,15 @@ Jsenv configuration is done in [jsenv.config.mjs](https://github.com/jsenv/jsenv
 Jsenv codebase usually puts configuration in a top level [jsenv.config.mjs](./jsenv.config.mjs) file.
 
 ```js
+/*
+ * This file exports configuration reused by jsenv scripts such as
+ *
+ * script/test/test.mjs
+ * script/build/build.mjs
+ *
+ * Read more at https://github.com/jsenv/jsenv-core#jsenvconfigmjs
+ */
+
 export const projectDirectoryUrl = String(new URL("./", import.meta.url))
 ```
 
@@ -354,9 +363,12 @@ It's recommended to use the following `babel.config.cjs`
 
 ```js
 /*
- * See "@jsenv/babel-preset documentation at
- * https://github.com/jsenv/jsenv-core/tree/master/packages/jsenv-babel-preset
+ * This file configure the list of babel plugins enabled
+ * in this codebase
+ *
+ * Read more at https://github.com/jsenv/jsenv-core/tree/master/packages/jsenv-babel-preset
  */
+
 module.exports = {
   presets: ["@jsenv/babel-preset"],
 }
