@@ -57,7 +57,7 @@ const responseStatusIsOk = (responseStatus) => {
 
 const formatImportTrace = ({ traceImport }) => {
   if (!traceImport) {
-    return { "imported by": "undefined" }
+    return { "import trace": "undefined" }
   }
 
   const importTrace = traceImport().map((importer) => importerToLog(importer))

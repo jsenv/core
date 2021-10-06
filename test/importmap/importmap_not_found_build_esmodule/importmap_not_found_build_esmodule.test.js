@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -14,10 +14,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.js`
+const mainFilename = `importmap_not_found_build_esmodule.js`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
 }
@@ -40,7 +39,7 @@ try {
   const expected = `404 on importmap url
 --- importmap url ---
 ${importMapFileUrl}
---- imported by ---
+--- import trace ---
 importMapFileRelativeUrl parameter`
   assert({ actual, expected })
 }

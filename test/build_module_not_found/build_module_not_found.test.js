@@ -2,7 +2,6 @@ import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  urlToBasename,
   resolveUrl,
   urlToFileSystemPath,
 } from "@jsenv/filesystem"
@@ -16,10 +15,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.html`
+const mainFilename = `build_module_not_found.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
@@ -40,7 +38,7 @@ try {
   const expected = `404 on js url
 --- js url ---
 ${jsFileUrl}
---- imported by ---
+--- import trace ---
 ${urlToFileSystemPath(htmlFileUrl)}`
   assert({ actual, expected })
 }
