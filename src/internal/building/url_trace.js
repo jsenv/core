@@ -78,14 +78,14 @@ const humanizeUrl = (url) => {
   return url
 }
 
-export const showSourceLocation = (
-  { source, line, column },
-  {
-    numberOfSurroundingLinesToShow = 1,
-    lineMaxLength = 120,
-    color = false,
-  } = {},
-) => {
+export const showSourceLocation = ({
+  source,
+  line,
+  column,
+  numberOfSurroundingLinesToShow = 1,
+  lineMaxLength = 120,
+  color = false,
+} = {}) => {
   let mark = (string) => string
   let aside = (string) => string
   if (color) {

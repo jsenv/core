@@ -711,7 +711,17 @@ building ${entryFileRelativeUrls.length} entry files...`)
         code: codeInput,
         ast,
         ressourceBuilder,
-        fetch: jsenvFetchUrl,
+        fetch: (url) => {
+          return jsenvFetchUrl(url, () => {
+            return createImportTrace({
+              importer: asProjectUrl(importerUrl) || importerUrl,
+              asServerUrl,
+              asOriginalUrl,
+              asProjectUrl,
+              urlImporterMap,
+            })
+          })
+        },
         markBuildRelativeUrlAsUsedByJs,
       })
       return { code, map }

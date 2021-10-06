@@ -130,8 +130,8 @@ export const createRessourceBuilder = (
       ressourceSpecifier,
       ressourceContentTypeExpected: contentType,
       referenceUrl: jsUrl,
-      referenceColumn: jsLine,
-      referenceLine: jsColumn,
+      referenceLine: jsLine,
+      referenceColumn: jsColumn,
 
       contentType,
       bufferBeforeBuild,
