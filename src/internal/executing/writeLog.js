@@ -3,12 +3,13 @@ import readline from "readline"
 import stringWidth from "string-width"
 import { memoize } from "@jsenv/filesystem"
 
-export const writeLog = (string, { stream = process.stdout } = {}) => {
+export const writeLog = (
+  string,
+  { mightUpdate = true, stream = process.stdout } = {},
+) => {
   string = `${string}
 `
   stream.write(string)
-
-  const consoleModified = spyConsoleModification()
 
   const moveCursorToLineAbove = () => {
     readline.moveCursor(stream, 0, -1)
@@ -47,23 +48,29 @@ export const writeLog = (string, { stream = process.stdout } = {}) => {
     // readline.clearScreenDown(stream)
   })
 
-  let updated = false
-  const update = (newString) => {
-    if (updated) {
-      console.warn(`cannot update twice`)
-      return null
-    }
-    updated = true
+  if (mightUpdate) {
+    const consoleModified = spyConsoleModification()
 
-    if (!consoleModified()) {
-      remove()
+    let updated = false
+    const update = (newString) => {
+      if (updated) {
+        console.warn(`cannot update twice`)
+        return null
+      }
+      updated = true
+
+      if (!consoleModified()) {
+        remove()
+      }
+      return writeLog(newString, { stream })
     }
-    return writeLog(newString, { stream })
+
+    return { remove, update }
   }
 
   return {
     remove,
-    update,
+    update: null,
   }
 }
 
@@ -78,13 +85,13 @@ const spyConsoleModification = () => {
 
   let modified = false
 
-  stdout.write = (chunk, encoding, callback) => {
+  stdout.write = function (...args /* chunk, encoding, callback */) {
     modified = true
-    return originalStdoutWrite.call(stdout, chunk, encoding, callback)
+    return originalStdoutWrite.call(stdout, ...args)
   }
-  stderr.write = (chunk, encoding, callback) => {
+  stderr.write = function (...args) {
     modified = true
-    return originalStdErrWrite.call(stderr, chunk, encoding, callback)
+    return originalStdErrWrite.call(stderr, ...args)
   }
 
   const uninstall = () => {

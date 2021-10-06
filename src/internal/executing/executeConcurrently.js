@@ -186,7 +186,9 @@ export const executeConcurrently = async (
         ) {
           previousExecutionLog = previousExecutionLog.update(log)
         } else {
-          previousExecutionLog = writeLog(log)
+          previousExecutionLog = writeLog(log, {
+            mightUpdate: completedExecutionLogMerging,
+          })
         }
       }
 
