@@ -236,8 +236,6 @@ const mutateRessourceHints = async (htmlAst) => {
       const href = hrefAttribute ? hrefAttribute.value : ""
       if (!href) return
 
-      // - as="script" -> as="fetch" because jsenv uses
-      //   fetch to load ressources (see "fetchSource" in createBrowserRuntime.js)
       // - "modulepreload" -> "preload" because it's now regular js script
       const asAttribute = getHtmlNodeAttributeByName(
         ressourceHint.htmlNode,
@@ -248,7 +246,7 @@ const mutateRessourceHints = async (htmlAst) => {
         mutations.push(() => {
           replaceHtmlNode(
             ressourceHint.htmlNode,
-            `<link rel="preload" as="fetch" crossorigin />`,
+            `<link rel="preload" as="script" />`,
           )
         })
         return
@@ -256,10 +254,7 @@ const mutateRessourceHints = async (htmlAst) => {
 
       if (asAttribute && asAttribute.value === "script") {
         mutations.push(() => {
-          replaceHtmlNode(
-            ressourceHint.htmlNode,
-            `<link as="fetch" crossorigin />`,
-          )
+          replaceHtmlNode(ressourceHint.htmlNode, `<link as="script" />`)
         })
         return
       }
