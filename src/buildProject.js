@@ -39,6 +39,7 @@ export const buildProject = async ({
   globalName,
   globals = {},
   babelPluginMap,
+  customCompilers,
   runtimeSupport = format === "global" ||
   format === "systemjs" ||
   format === "esmodule"
@@ -166,6 +167,7 @@ export const buildProject = async ({
       env,
       babelPluginMap,
       transformTopLevelAwait,
+      customCompilers,
       runtimeSupport,
 
       compileServerCanReadFromFileSystem: filesystemCache,
