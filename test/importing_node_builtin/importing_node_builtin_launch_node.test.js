@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { launchNode } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -20,9 +16,8 @@ const testDirectoryRelativePath = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativePath)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const filename = `${testDirectoryname}.js`
+const filename = `importing_fs.js`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
