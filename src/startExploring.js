@@ -54,6 +54,7 @@ export const startExploring = async ({
   compileServerPrivateKey,
   customCompilers,
   livereloadWatchConfig,
+  jsenvDirectoryClean,
 }) => {
   const jsenvStartExploringFunction = async ({ jsenvCancellationToken }) => {
     cancellationToken = composeCancellationToken(
@@ -117,6 +118,7 @@ export const startExploring = async ({
       babelPluginMap,
       runtimeSupport: runtimeSupportDuringDev,
       livereloadWatchConfig,
+      jsenvDirectoryClean,
     })
 
     return compileServer
