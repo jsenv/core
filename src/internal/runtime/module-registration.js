@@ -19,7 +19,106 @@ export const fromFunctionReturningNamespace = (fn, data) => {
   }, data)
 }
 
-const fromFunctionReturningRegisteredModule = (fn, data) => {
+export const getJavaScriptModuleResponseError = async (
+  response,
+  {
+    url,
+    importerUrl,
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
+    jsonContentTypeAccepted,
+  },
+) => {
+  if (response.status === 404) {
+    return new Error(
+      createDetailedMessage(
+        `JavaScript module file cannot be found`,
+        getModuleDetails({
+          url,
+          importerUrl,
+          compileServerOrigin,
+          compileDirectoryRelativeUrl,
+          notFound: true,
+        }),
+      ),
+    )
+  }
+
+  const contentType = response.headers["content-type"] || ""
+  if (response.status === 500 && contentType === "application/json") {
+    const bodyAsJson = await response.json()
+    if (
+      bodyAsJson.message &&
+      bodyAsJson.filename &&
+      "columnNumber" in bodyAsJson
+    ) {
+      const error = new Error(
+        createDetailedMessage(`JavaScript module file cannot be parsed`, {
+          ["parsing error message"]: bodyAsJson.message,
+          ...getModuleDetails({
+            url,
+            importerUrl,
+            compileServerOrigin,
+            compileDirectoryRelativeUrl,
+          }),
+        }),
+      )
+      error.parsingError = bodyAsJson
+      return error
+    }
+  }
+
+  if (response.status < 200 || response.status >= 300) {
+    return new Error(
+      createDetailedMessage(
+        `JavaScript module file response status is unexpected`,
+        {
+          ["status"]: response.status,
+          ["allowed status"]: "200 to 299",
+          ["statusText"]: response.statusText,
+          ...getModuleDetails({
+            url,
+            importerUrl,
+            compileServerOrigin,
+            compileDirectoryRelativeUrl,
+          }),
+        },
+      ),
+    )
+  }
+
+  if (
+    jsonContentTypeAccepted &&
+    (contentType === "application/json" || contentType.endsWith("+json"))
+  ) {
+    return null
+  }
+
+  if (
+    contentType !== "application/javascript" &&
+    contentType !== "text/javascript"
+  ) {
+    return new Error(
+      createDetailedMessage(
+        `Failed to load module script: Expected a JavaScript module script but the server responded with a MIME type of "${contentType}". Strict MIME type checking is enforced for module scripts per HTML spec.`,
+        {
+          ...getModuleDetails({
+            url,
+            importerUrl,
+            compileServerOrigin,
+            compileDirectoryRelativeUrl,
+          }),
+          "suggestion": `Prefer import.meta.url as documented in https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md#How-to-reference-js-assets`,
+          "suggestion 2": `Use customCompilers to convert non-js to js`,
+        },
+      ),
+    )
+  }
+
+  return null
+}
+
+export const fromFunctionReturningRegisteredModule = (fn, data) => {
   try {
     return fn()
   } catch (error) {
@@ -40,160 +139,7 @@ const fromFunctionReturningRegisteredModule = (fn, data) => {
   }
 }
 
-export const fromUrl = async ({
-  url,
-  importerUrl,
-  fetchSource,
-  instantiateJavaScript,
-  compileServerOrigin,
-  compileDirectoryRelativeUrl,
-}) => {
-  let moduleResponse
-  try {
-    moduleResponse = await fetchSource(url, {
-      importerUrl,
-    })
-
-    if (moduleResponse.status === 404) {
-      throw new Error(
-        createDetailedMessage(
-          `Module file cannot be found.`,
-          getModuleDetails({
-            url,
-            importerUrl,
-            compileServerOrigin,
-            compileDirectoryRelativeUrl,
-            notFound: true,
-          }),
-        ),
-      )
-    }
-  } catch (e) {
-    e.code = "NETWORK_FAILURE"
-    throw e
-  }
-
-  const contentType = moduleResponse.headers["content-type"] || ""
-
-  if (moduleResponse.status === 500 && contentType === "application/json") {
-    const bodyAsJson = await moduleResponse.json()
-    if (
-      bodyAsJson.message &&
-      bodyAsJson.filename &&
-      "columnNumber" in bodyAsJson
-    ) {
-      const error = new Error(
-        createDetailedMessage(`Module file cannot be parsed.`, {
-          ["parsing error message"]: bodyAsJson.message,
-          ...getModuleDetails({
-            url,
-            importerUrl,
-            compileServerOrigin,
-            compileDirectoryRelativeUrl,
-          }),
-        }),
-      )
-      error.parsingError = bodyAsJson
-      throw error
-    }
-  }
-
-  if (moduleResponse.status < 200 || moduleResponse.status >= 300) {
-    throw new Error(
-      createDetailedMessage(`Module file response status is unexpected.`, {
-        ["status"]: moduleResponse.status,
-        ["allowed status"]: "200 to 299",
-        ["statusText"]: moduleResponse.statusText,
-        ...getModuleDetails({
-          url,
-          importerUrl,
-          compileServerOrigin,
-          compileDirectoryRelativeUrl,
-        }),
-      }),
-    )
-  }
-
-  // don't forget to keep in sync with loadModule in createJsenvRollupPlugin.js
-  if (
-    contentType === "application/javascript" ||
-    contentType === "text/javascript"
-  ) {
-    const bodyAsText = await moduleResponse.text()
-    return fromFunctionReturningRegisteredModule(
-      () => instantiateJavaScript(bodyAsText, moduleResponse.url),
-      {
-        url: moduleResponse.url,
-        importerUrl,
-        compileServerOrigin,
-        compileDirectoryRelativeUrl,
-      },
-    )
-  }
-
-  if (contentType === "application/json" || contentType.endsWith("+json")) {
-    const bodyAsJson = await moduleResponse.json()
-    return fromFunctionReturningNamespace(
-      () => {
-        return {
-          default: bodyAsJson,
-        }
-      },
-      {
-        url: moduleResponse.url,
-        importerUrl,
-        compileServerOrigin,
-        compileDirectoryRelativeUrl,
-      },
-    )
-  }
-
-  if (contentType) {
-    console.warn(
-      createDetailedMessage(`Ressource content-type is unusual`, {
-        "content-type": contentType,
-        "allowed content-type": ["application/javascript", "application/json"],
-        ...getModuleDetails({
-          url,
-          importerUrl,
-          compileServerOrigin,
-          compileDirectoryRelativeUrl,
-        }),
-        "suggestion": `Prefer import.meta.url as documented in https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md#How-to-reference-js-assets`,
-      }),
-    )
-  } else {
-    console.warn(`Ressource content-type is missing`, {
-      "allowed content-type": ["application/javascript", "application/json"],
-      ...getModuleDetails({
-        url,
-        importerUrl,
-        compileServerOrigin,
-        compileDirectoryRelativeUrl,
-      }),
-    })
-  }
-
-  return fromFunctionReturningNamespace(
-    () => {
-      return {
-        default: moduleResponse.url,
-      }
-    },
-    {
-      url: moduleResponse.url,
-      importerUrl,
-      compileServerOrigin,
-      compileDirectoryRelativeUrl,
-    },
-  )
-}
-// const textToBase64 =
-//   typeof window === "object"
-//     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
-//     : (text) => Buffer.from(text, "utf8").toString("base64")
-
-const getModuleDetails = ({
+export const getModuleDetails = ({
   url,
   importerUrl,
   compileServerOrigin,
@@ -255,3 +201,8 @@ export const tryToFindProjectRelativeUrl = (
   )
   return afterCompileDirectory
 }
+
+// const textToBase64 =
+//   typeof window === "object"
+//     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
+//     : (text) => Buffer.from(text, "utf8").toString("base64")

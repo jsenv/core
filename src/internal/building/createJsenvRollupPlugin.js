@@ -1089,8 +1089,9 @@ building ${entryFileRelativeUrls.length} entry files...`)
     }
 
     if (
-      responseContentType === "application/json" ||
-      responseContentType.endsWith("+json")
+      acceptsJsonContentType({ node, format }) &&
+      (responseContentType === "application/json" ||
+        responseContentType.endsWith("+json"))
     ) {
       const responseBodyAsString = await moduleResponse.text()
       // there is no need to minify the json string
@@ -1351,4 +1352,17 @@ const externalImportUrlPatternsToExternalUrlPredicate = (
     })
     return Boolean(meta.external)
   }
+}
+
+const acceptsJsonContentType = ({ node, format }) => {
+  if (!node) {
+    return false
+  }
+  if (format === "commonjs") {
+    return true
+  }
+  if (process.execArgv.includes("--experimental-json-modules")) {
+    return true
+  }
+  return false
 }

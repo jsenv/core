@@ -12,7 +12,8 @@ import { require } from "../../require.js"
 import "../s.js"
 import {
   fromFunctionReturningNamespace,
-  fromUrl,
+  getJavaScriptModuleResponseError,
+  fromFunctionReturningRegisteredModule,
 } from "../module-registration.js"
 import { valueInstall } from "../valueInstall.js"
 import { evalSource } from "./evalSource.js"
@@ -64,16 +65,55 @@ export const createNodeSystem = async ({
       )
     }
 
-    return fromUrl({
+    let response
+    try {
+      response = await fetchSource(url, {
+        importerUrl,
+      })
+    } catch (e) {
+      e.code = "NETWORK_FAILURE"
+      throw e
+    }
+
+    const responseError = await getJavaScriptModuleResponseError(response, {
       url,
       importerUrl,
-      fetchSource,
-      instantiateJavaScript: (responseBody, responseUrl) => {
+      compileServerOrigin,
+      compileDirectoryRelativeUrl,
+      jsonContentTypeAccepted: process.execArgv.includes(
+        "--experimental-json-modules",
+      ),
+    })
+    if (responseError) {
+      throw responseError
+    }
+
+    const contentType = response.headers["content-type"]
+    if (contentType === "application/json" || contentType.endsWith("+json")) {
+      const responseBodyAsJson = await response.json()
+      return fromFunctionReturningNamespace(
+        () => {
+          return {
+            default: responseBodyAsJson,
+          }
+        },
+        {
+          url: response.url,
+          importerUrl,
+          compileServerOrigin,
+          compileDirectoryRelativeUrl,
+        },
+      )
+    }
+
+    const responseBodyAsText = await response.text()
+    return fromFunctionReturningRegisteredModule(
+      () => {
         const uninstallSystemGlobal = valueInstall(global, "System", nodeSystem)
         try {
           evalSource(
-            responseBody,
-            responseUrlToSourceUrl(responseUrl, {
+            responseBodyAsText,
+            responseUrlToSourceUrl(response.url, {
               projectDirectoryUrl,
               compileServerOrigin,
             }),
@@ -84,9 +124,13 @@ export const createNodeSystem = async ({
 
         return nodeSystem.getRegister()
       },
-      compileDirectoryRelativeUrl,
-      compileServerOrigin,
-    })
+      {
+        url: response.url,
+        importerUrl,
+        compileServerOrigin,
+        compileDirectoryRelativeUrl,
+      },
+    )
   }
 
   // https://github.com/systemjs/systemjs/blob/master/docs/hooks.md#createcontexturl---object
