@@ -69,7 +69,7 @@ export const stringifyUrlSite = (
 ${sourceLoc}`
 }
 
-const humanizeUrl = (url) => {
+export const humanizeUrl = (url) => {
   if (url.startsWith("file://")) {
     // we prefer file system path because vscode reliably make them clickable
     // and sometimes it won't for file:// urls

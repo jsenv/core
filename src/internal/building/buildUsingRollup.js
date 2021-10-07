@@ -8,6 +8,7 @@ import {
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
+import { humanizeUrl } from "@jsenv/core/src/internal/building/url_trace.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
 export const buildUsingRollup = async ({
@@ -139,9 +140,11 @@ export const buildUsingRollup = async ({
     }
     if (e.code === "MISSING_EXPORT") {
       let message = e.message
-      message = message.replace(e.id, (url) => asOriginalUrl(url))
+      message = message.replace(e.id, (url) =>
+        humanizeUrl(asOriginalUrl(url) || url),
+      )
       message = message.replace(/(www|http:|https:)+[^\s]+[\w]/g, (url) =>
-        asOriginalUrl(url),
+        humanizeUrl(asOriginalUrl(url) || url),
       )
       const importedFileRollupUrl = e.message.match(/not exported by (.*?),/)[1]
       const convertSuggestion = await getConvertSuggestion({
@@ -237,12 +240,12 @@ const useRollup = async ({
       warning.message = warning.message.replace(
         /http:\/\/jsenv.com\/[^\s]+[\w]/g,
         (url) => {
-          return asOriginalUrl(url)
+          return humanizeUrl(asOriginalUrl(url) || url)
         },
       )
       if (warning.code === "CIRCULAR_DEPENDENCY") {
         warning.cycle.forEach((url, index) => {
-          warning.cycle[index] = asOriginalUrl(url)
+          warning.cycle[index] = humanizeUrl(asOriginalUrl(url) || url)
         })
       }
       logger.warn(String(warning))
