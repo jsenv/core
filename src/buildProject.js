@@ -39,6 +39,7 @@ export const buildProject = async ({
   globalName,
   globals = {},
   babelPluginMap,
+  customCompilers,
   runtimeSupport = format === "global" ||
   format === "systemjs" ||
   format === "esmodule"
@@ -101,8 +102,6 @@ export const buildProject = async ({
   // when asking them to the compile server
   // (to fix that sourcemap could be inlined)
   filesystemCache = true,
-
-  ...rest
 }) => {
   const jsenvBuildFunction = async ({ jsenvCancellationToken }) => {
     cancellationToken = composeCancellationToken(
@@ -168,6 +167,8 @@ export const buildProject = async ({
       env,
       babelPluginMap,
       transformTopLevelAwait,
+      customCompilers,
+      runtimeSupport,
 
       compileServerCanReadFromFileSystem: filesystemCache,
       compileServerCanWriteOnFilesystem: filesystemCache,
@@ -175,11 +176,6 @@ export const buildProject = async ({
       // here we don't need to inline importmap
       // nor to inject jsenv script
       transformHtmlSourceFiles: false,
-
-      runtimeSupport,
-
-      // override with potential custom options
-      ...rest,
     })
 
     const { outDirectoryRelativeUrl, origin: compileServerOrigin } =

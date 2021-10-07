@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <!-- <link rel="icon" href="data:," /> -->
+
+    <link rel="modulepreload" href="./main.js" id="modulepreload_link" />
+  </head>
+
+  <body>
+    <script type="module">
+      import("./main.js")
+    </script>
+    <script type="module">
+      // Let browser time to log the warning about preload link not used
+      await new Promise((resolve) => {
+        setTimeout(resolve, 5000)
+      })
+    </script>
+  </body>
+</html>

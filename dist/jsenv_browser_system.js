@@ -1346,7 +1346,7 @@
   // fallback to this polyfill (or even use an existing polyfill would be better)
   // https://github.com/github/fetch/blob/master/fetch.js
 
-  function _await$b(value, then, direct) {
+  function _await$c(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -1358,7 +1358,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$b(f) {
+  function _async$c(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -1385,7 +1385,7 @@
     }
   }
 
-  var fetchUsingXHR = _async$b(function (url) {
+  var fetchUsingXHR = _async$c(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         _ref$cancellationToke = _ref.cancellationToken,
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
@@ -1468,7 +1468,7 @@
     }
 
     xhr.send(body);
-    return _await$b(headersPromise, function () {
+    return _await$c(headersPromise, function () {
       // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
       var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
       var responseStatus = xhr.status;
@@ -1476,7 +1476,7 @@
       var responseHeaders = getHeadersFromXHR(xhr);
 
       var readBody = function readBody() {
-        return _await$b(bodyPromise, function () {
+        return _await$c(bodyPromise, function () {
           var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
           if (status === 0) {
@@ -1512,7 +1512,7 @@
         return _call$1(text, JSON.parse);
       };
 
-      var blob = _async$b(function () {
+      var blob = _async$c(function () {
         if (!hasBlob) {
           throw new Error("blob not supported");
         }
@@ -1549,7 +1549,7 @@
         });
       };
 
-      var formData = _async$b(function () {
+      var formData = _async$c(function () {
         if (!hasFormData) {
           throw new Error("formData not supported");
         }
@@ -1730,7 +1730,7 @@
     return form;
   };
 
-  var blobToArrayBuffer = _async$b(function (blob) {
+  var blobToArrayBuffer = _async$c(function (blob) {
     var reader = new FileReader();
     var promise = fileReaderReady(reader);
     reader.readAsArrayBuffer(blob);
@@ -1781,7 +1781,7 @@
 
   var _excluded = ["cancellationToken", "mode"];
 
-  function _await$a(value, then, direct) {
+  function _await$b(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -1793,7 +1793,7 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchNative = _async$a(function (url) {
+  var fetchNative = _async$b(function (url) {
 
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -1811,7 +1811,7 @@
     });
     var response;
     return _continue$3(_catch$5(function () {
-      return _await$a(window.fetch(url, _objectSpread2({
+      return _await$b(window.fetch(url, _objectSpread2({
         signal: abortController.signal,
         mode: mode
       }, options)), function (_window$fetch) {
@@ -1874,7 +1874,7 @@
     return value && value.then ? value.then(then) : then(value);
   }
 
-  function _async$a(f) {
+  function _async$b(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -2078,7 +2078,7 @@
     return url;
   };
 
-  function _await$9(value, then, direct) {
+  function _await$a(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -2088,20 +2088,6 @@
     }
 
     return then ? value.then(then) : value;
-  }
-
-  function _catch$4(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
   }
 
   function _invoke$5(body, then) {
@@ -2114,11 +2100,7 @@
     return then(result);
   }
 
-  function _continue$2(value, then) {
-    return value && value.then ? value.then(then) : then(value);
-  }
-
-  function _async$9(f) {
+  function _async$a(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -2131,175 +2113,61 @@
       }
     };
   }
-
-  var fromFunctionReturningNamespace = function fromFunctionReturningNamespace(fn, data) {
-    return fromFunctionReturningRegisteredModule(function () {
-      // should we compute the namespace here
-      // or as it is done below, defer to execute ?
-      // I think defer to execute is better
-      return [[], function (_export) {
-        return {
-          execute: function execute() {
-            var namespace = fn();
-
-            _export(namespace);
-          }
-        };
-      }];
-    }, data);
-  };
-
-  var fromFunctionReturningRegisteredModule = function fromFunctionReturningRegisteredModule(fn, data) {
-    try {
-      return fn();
-    } catch (error) {
-      if (error.name === "SyntaxError") {
-        throw new Error(createDetailedMessage("Syntax error in module.", _objectSpread2({
-          "syntax error stack": error.stack
-        }, getModuleDetails(data))));
-      }
-
-      throw new Error(createDetailedMessage("Module instantiation error.", _objectSpread2(_defineProperty({}, "instantiation error stack", error.stack), getModuleDetails(data))));
-    }
-  };
-
-  var fromUrl = _async$9(function (_ref) {
+  var getJavaScriptModuleResponseError = _async$a(function (response, _ref) {
+    var _exit = false;
     var url = _ref.url,
         importerUrl = _ref.importerUrl,
-        fetchSource = _ref.fetchSource,
-        instantiateJavaScript = _ref.instantiateJavaScript,
         compileServerOrigin = _ref.compileServerOrigin,
-        compileDirectoryRelativeUrl = _ref.compileDirectoryRelativeUrl;
-    var moduleResponse;
-    return _continue$2(_catch$4(function () {
-      return _await$9(fetchSource(url, {
-        importerUrl: importerUrl
-      }), function (_fetchSource) {
-        moduleResponse = _fetchSource;
+        compileDirectoryRelativeUrl = _ref.compileDirectoryRelativeUrl,
+        jsonContentTypeAccepted = _ref.jsonContentTypeAccepted;
 
-        if (moduleResponse.status === 404) {
-          throw new Error(createDetailedMessage("Module file cannot be found.", getModuleDetails({
-            url: url,
-            importerUrl: importerUrl,
-            compileServerOrigin: compileServerOrigin,
-            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
-            notFound: true
-          })));
-        }
-      });
-    }, function (e) {
-      e.code = "NETWORK_FAILURE";
-      throw e;
-    }), function (_result) {
-      var contentType = moduleResponse.headers["content-type"] || "";
-      return _invoke$5(function () {
-        if (moduleResponse.status === 500 && contentType === "application/json") {
-          return _await$9(moduleResponse.json(), function (bodyAsJson) {
-            if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
-              var error = new Error(createDetailedMessage("Module file cannot be parsed.", _objectSpread2(_defineProperty({}, "parsing error message", bodyAsJson.message), getModuleDetails({
-                url: url,
-                importerUrl: importerUrl,
-                compileServerOrigin: compileServerOrigin,
-                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-              }))));
-              error.parsingError = bodyAsJson;
-              throw error;
-            }
-          });
-        }
-      }, function (_result2) {
-        var _exit3 = false;
+    if (response.status === 404) {
+      return new Error(createDetailedMessage("JavaScript module file cannot be found", getModuleDetails({
+        url: url,
+        importerUrl: importerUrl,
+        compileServerOrigin: compileServerOrigin,
+        compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+        notFound: true
+      })));
+    }
 
-        if (moduleResponse.status < 200 || moduleResponse.status >= 300) {
-          var _objectSpread4;
-
-          throw new Error(createDetailedMessage("Module file response status is unexpected.", _objectSpread2((_objectSpread4 = {}, _defineProperty(_objectSpread4, "status", moduleResponse.status), _defineProperty(_objectSpread4, "allowed status", "200 to 299"), _defineProperty(_objectSpread4, "statusText", moduleResponse.statusText), _objectSpread4), getModuleDetails({
-            url: url,
-            importerUrl: importerUrl,
-            compileServerOrigin: compileServerOrigin,
-            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-          }))));
-        } // don't forget to keep in sync with loadModule in createJsenvRollupPlugin.js
-
-
-        return _invoke$5(function () {
-          if (contentType === "application/javascript" || contentType === "text/javascript") {
-            return _await$9(moduleResponse.text(), function (bodyAsText) {
-              _exit3 = true;
-              return fromFunctionReturningRegisteredModule(function () {
-                return instantiateJavaScript(bodyAsText, moduleResponse.url);
-              }, {
-                url: moduleResponse.url,
-                importerUrl: importerUrl,
-                compileServerOrigin: compileServerOrigin,
-                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-              });
-            });
-          }
-        }, function (_result3) {
-          var _exit4 = false;
-          if (_exit3) return _result3;
-          return _invoke$5(function () {
-            if (contentType === "application/json" || contentType.endsWith("+json")) {
-              return _await$9(moduleResponse.json(), function (bodyAsJson) {
-                _exit4 = true;
-                return fromFunctionReturningNamespace(function () {
-                  return {
-                    default: bodyAsJson
-                  };
-                }, {
-                  url: moduleResponse.url,
-                  importerUrl: importerUrl,
-                  compileServerOrigin: compileServerOrigin,
-                  compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-                });
-              });
-            }
-          }, function (_result4) {
-            if (_exit4) return _result4;
-
-            if (contentType) {
-              console.warn(createDetailedMessage("Ressource content-type is unusual", _objectSpread2(_objectSpread2({
-                "content-type": contentType,
-                "allowed content-type": ["application/javascript", "application/json"]
-              }, getModuleDetails({
-                url: url,
-                importerUrl: importerUrl,
-                compileServerOrigin: compileServerOrigin,
-                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-              })), {}, {
-                "suggestion": "Prefer import.meta.url as documented in https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md#How-to-reference-js-assets"
-              })));
-            } else {
-              console.warn("Ressource content-type is missing", _objectSpread2({
-                "allowed content-type": ["application/javascript", "application/json"]
-              }, getModuleDetails({
-                url: url,
-                importerUrl: importerUrl,
-                compileServerOrigin: compileServerOrigin,
-                compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-              })));
-            }
-
-            return fromFunctionReturningNamespace(function () {
-              return {
-                default: moduleResponse.url
-              };
-            }, {
-              url: moduleResponse.url,
+    var contentType = response.headers["content-type"] || "";
+    return _invoke$5(function () {
+      if (response.status === 500 && contentType === "application/json") {
+        return _await$a(response.json(), function (bodyAsJson) {
+          if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
+            var error = new Error(createDetailedMessage("JavaScript module file cannot be parsed", _objectSpread2(_defineProperty({}, "parsing error message", bodyAsJson.message), getModuleDetails({
+              url: url,
               importerUrl: importerUrl,
               compileServerOrigin: compileServerOrigin,
               compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
-            });
-          });
+            }))));
+            error.parsingError = bodyAsJson;
+            _exit = true;
+            return error;
+          }
         });
-      });
-    });
-  }); // const textToBase64 =
-  //   typeof window === "object"
-  //     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
-  //     : (text) => Buffer.from(text, "utf8").toString("base64")
+      }
+    }, function (_result) {
+      var _objectSpread3;
 
+      if (_exit) return _result;
+      return response.status < 200 || response.status >= 300 ? new Error(createDetailedMessage("JavaScript module file response status is unexpected", _objectSpread2((_objectSpread3 = {}, _defineProperty(_objectSpread3, "status", response.status), _defineProperty(_objectSpread3, "allowed status", "200 to 299"), _defineProperty(_objectSpread3, "statusText", response.statusText), _objectSpread3), getModuleDetails({
+        url: url,
+        importerUrl: importerUrl,
+        compileServerOrigin: compileServerOrigin,
+        compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+      })))) : jsonContentTypeAccepted && (contentType === "application/json" || contentType.endsWith("+json")) ? null : contentType !== "application/javascript" && contentType !== "text/javascript" ? new Error(createDetailedMessage("Failed to load module script: Expected a JavaScript module script but the server responded with a MIME type of \"".concat(contentType, "\". Strict MIME type checking is enforced for module scripts per HTML spec."), _objectSpread2(_objectSpread2({}, getModuleDetails({
+        url: url,
+        importerUrl: importerUrl,
+        compileServerOrigin: compileServerOrigin,
+        compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+      })), {}, {
+        "suggestion": "Prefer import.meta.url as documented in https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md#How-to-reference-js-assets",
+        "suggestion 2": "Use customCompilers to convert non-js to js"
+      }))) : null;
+    });
+  });
   var getModuleDetails = function getModuleDetails(_ref2) {
     var url = _ref2.url,
         importerUrl = _ref2.importerUrl,
@@ -2322,7 +2190,6 @@
     } : {}), {}, _defineProperty({}, "file url", url), importerUrl ? _defineProperty({}, "imported by", importerRelativeUrl || importerUrl) : {});
     return details;
   };
-
   var tryToFindProjectRelativeUrl = function tryToFindProjectRelativeUrl(url, _ref5) {
     var compileServerOrigin = _ref5.compileServerOrigin,
         compileDirectoryRelativeUrl = _ref5.compileDirectoryRelativeUrl;
@@ -2347,7 +2214,10 @@
 
     var afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length);
     return afterCompileDirectory;
-  };
+  }; // const textToBase64 =
+  //   typeof window === "object"
+  //     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
+  //     : (text) => Buffer.from(text, "utf8").toString("base64")
 
   var applyDefaultExtension = function applyDefaultExtension(specifier, importer) {
     if (!importer) {
@@ -2394,7 +2264,7 @@
     return extension;
   };
 
-  function _await$8(value, then, direct) {
+  function _await$9(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -2447,7 +2317,7 @@
       });
     };
 
-    return _await$8({
+    return _await$9({
       resolveImport: _resolveImport
     });
   };
@@ -2491,7 +2361,7 @@
     return finalizer(false, result);
   }
 
-  function _async$8(f) {
+  function _async$9(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -2505,14 +2375,14 @@
     };
   }
 
-  var measureAsyncFnPerf = performance$1 ? _async$8(function (fn, name) {
+  var measureAsyncFnPerf = performance$1 ? _async$9(function (fn, name) {
     var perfMarkStartName = "".concat(name, "_start");
     performance$1.mark(perfMarkStartName);
     return _finallyRethrows(fn, function (_wasThrown, _result) {
       performance$1.measure(name, perfMarkStartName);
       return _rethrow(_wasThrown, _result);
     });
-  }) : _async$8(function (fn) {
+  }) : _async$9(function (fn) {
     return fn();
   });
 
@@ -3203,27 +3073,49 @@
     };
   })();
 
-  var valueInstall = function valueInstall(object, name, value) {
-    var has = (name in object);
-    var previous = object[name];
-    object[name] = value;
+  function _await$8(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _catch$4(body, recover) {
+    try {
+      var result = body();
+    } catch (e) {
+      return recover(e);
+    }
+
+    if (result && result.then) {
+      return result.then(void 0, recover);
+    }
+
+    return result;
+  }
+
+  function _async$8(f) {
     return function () {
-      if (has) {
-        object[name] = previous;
-      } else {
-        delete object[name];
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
       }
     };
-  };
+  }
 
-  var evalSource = function evalSource(code, href) {
-    // eslint-disable-next-line no-eval
-    return window.eval(appendSourceURL$1(code, href));
-  };
-
-  var appendSourceURL$1 = function appendSourceURL(code, sourceURL) {
-    return "".concat(code, "\n", "//#", " sourceURL=").concat(sourceURL);
-  };
+  function _continue$2(value, then) {
+    return value && value.then ? value.then(then) : then(value);
+  }
 
   var createBrowserSystem = function createBrowserSystem(_ref) {
     var compileServerOrigin = _ref.compileServerOrigin,
@@ -3243,27 +3135,25 @@
     };
 
     browserSystem.resolve = _resolve;
+    var instantiate = browserSystem.instantiate;
+    browserSystem.instantiate = _async$8(function (url, importerUrl) {
+      var _this = this;
 
-    browserSystem.instantiate = function (url, importerUrl) {
-      return fromUrl({
-        url: url,
-        importerUrl: importerUrl,
-        fetchSource: fetchSource,
-        instantiateJavaScript: function instantiateJavaScript(source, responseUrl) {
-          var uninstallSystemGlobal = valueInstall(window, "System", browserSystem);
-
-          try {
-            evalSource(source, responseUrl);
-          } finally {
-            uninstallSystemGlobal();
-          }
-
-          return browserSystem.getRegister();
-        },
-        compileServerOrigin: compileServerOrigin,
-        compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+      return _catch$4(function () {
+        return _await$8(instantiate.call(_this, url, importerUrl));
+      }, function (e) {
+        return _await$8(createDetailedInstantiateError({
+          instantiateError: e,
+          url: url,
+          importerUrl: importerUrl,
+          compileServerOrigin: compileServerOrigin,
+          compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+          fetchSource: fetchSource
+        }), function (jsenvError) {
+          throw jsenvError;
+        });
       });
-    };
+    });
 
     browserSystem.createContext = function (importerUrl) {
       return {
@@ -3276,6 +3166,37 @@
 
     return browserSystem;
   };
+
+  var createDetailedInstantiateError = _async$8(function (_ref2) {
+    var _exit = false;
+    var instantiateError = _ref2.instantiateError,
+        url = _ref2.url,
+        importerUrl = _ref2.importerUrl,
+        compileServerOrigin = _ref2.compileServerOrigin,
+        compileDirectoryRelativeUrl = _ref2.compileDirectoryRelativeUrl,
+        fetchSource = _ref2.fetchSource;
+    var response;
+    return _continue$2(_catch$4(function () {
+      return _await$8(fetchSource(url, {
+        importerUrl: importerUrl
+      }), function (_fetchSource) {
+        response = _fetchSource;
+      });
+    }, function (e) {
+      e.code = "NETWORK_FAILURE";
+      _exit = true;
+      return e;
+    }), function (_result) {
+      return _exit ? _result : _await$8(getJavaScriptModuleResponseError(response, {
+        url: url,
+        importerUrl: importerUrl,
+        compileServerOrigin: compileServerOrigin,
+        compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
+      }), function (jsModuleResponseError) {
+        return jsModuleResponseError || instantiateError;
+      });
+    });
+  });
 
   var displayErrorInDocument = function displayErrorInDocument(error) {
     var title = "An error occured";
@@ -3291,7 +3212,7 @@
       message = errorToHTML(error);
     }
 
-    var css = "\n    .jsenv-console {\n      background: rgba(0, 0, 0, 0.8);\n      position: absolute;\n      top: 0;\n      left: 0;\n      width: 100%;\n      display: flex;\n      flex-direction: column;\n      align-items: center\n      z-index: 1000;\n      width: 100%;\n      box-sizing: border-box;\n      padding: 1em;\n    }\n\n    .jsenv-console h1 {\n      color: red;\n      display: flex;\n      align-items: center;\n    }\n\n    #button-close-jsenv-console {\n      margin-left: 10px;\n    }\n\n    .jsenv-console pre {\n      overflow: auto;\n      max-width: 70em;\n      /* avoid scrollbar to hide the text behind it */\n      padding: 20px;\n    }\n\n    .jsenv-console pre[data-theme=\"dark\"] {\n      background: transparent;\n      border: 1px solid black;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] {\n      background: #1E1E1E;\n      border: 1px solid white;\n      color: #EEEEEE;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] a {\n      color: inherit;\n    }\n    ";
+    var css = "\n    .jsenv-console {\n      background: rgba(0, 0, 0, 0.8);\n      position: absolute;\n      top: 0;\n      left: 0;\n      width: 100%;\n      display: flex;\n      flex-direction: column;\n      align-items: center;\n      z-index: 1000;\n      width: 100%;\n      box-sizing: border-box;\n      padding: 1em;\n    }\n\n    .jsenv-console h1 {\n      color: red;\n      display: flex;\n      align-items: center;\n    }\n\n    #button-close-jsenv-console {\n      margin-left: 10px;\n    }\n\n    .jsenv-console pre {\n      overflow: auto;\n      max-width: 70em;\n      /* avoid scrollbar to hide the text behind it */\n      padding: 20px;\n    }\n\n    .jsenv-console pre[data-theme=\"dark\"] {\n      background: transparent;\n      border: 1px solid black;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] {\n      background: #1E1E1E;\n      border: 1px solid white;\n      color: #EEEEEE;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] a {\n      color: inherit;\n    }\n    ";
     var html = "\n      <style type=\"text/css\">".concat(css, "></style>\n      <div class=\"jsenv-console\">\n        <h1>").concat(title, " <button id=\"button-close-jsenv-console\">X</button></h1>\n        <pre data-theme=\"").concat(theme, "\">").concat(message, "</pre>\n      </div>\n      ");
     var removeJsenvConsole = appendHMTLInside(html, document.body);
 

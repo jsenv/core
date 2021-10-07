@@ -86,7 +86,7 @@ await launchBrowsers(
     }
     const expected = {
       status: "errored",
-      errorMessage: `Module file cannot be found.
+      errorMessage: `JavaScript module file cannot be found
 --- import declared in ---
 ${importerFileRelativeUrl}
 --- file ---

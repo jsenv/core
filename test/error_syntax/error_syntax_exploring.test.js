@@ -52,7 +52,7 @@ const expectedParsingError = {
   columnNumber: 11,
 }
 const expectedError = Object.assign(
-  new Error(`Module file cannot be parsed.
+  new Error(`JavaScript module file cannot be parsed
 --- parsing error message ---
 ${expectedParsingError.message}
 --- file ---
@@ -66,12 +66,14 @@ ${compiledImportedFileUrl}`),
     columnno: actual.executionResult.error.columnno,
   },
 )
+const error500Log = {
+  type: "error",
+  text: "Failed to load resource: the server responded with a status of 500 (parse error)",
+}
 const expected = {
   pageLogs: [
-    {
-      type: "error",
-      text: "Failed to load resource: the server responded with a status of 500 (parse error)",
-    },
+    error500Log,
+    { ...error500Log },
     {
       type: "error",
       text: assert.any(String),
@@ -94,7 +96,7 @@ const expected = {
 assert({ actual, expected })
 
 {
-  const stack = pageLogs[1].text
+  const stack = pageLogs[pageLogs.length - 1].text
   const expected = `Error: ${expectedError.message}`
   const actual = stack.slice(0, expected.length)
   assert({ actual, expected })

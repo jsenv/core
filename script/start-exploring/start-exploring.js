@@ -8,16 +8,16 @@ startExploring({
   compileServerPort: 3456,
   explorableConfig: {
     source: {
-      "./index.js": false,
-      "./src/**/*.js": false,
-      "./**/docs/**/*.js": false,
+      "./index.html": false,
+      "./src/**/*.html": false,
+      "./**/docs/**/*.html": false,
       "./**/.jsenv/": false,
       "./**/node_modules/": false,
     },
     test: {
-      "./test/**/*.js": false,
-      "./**/docs/**/*.js": false,
-      "./test-manual/**/*.js": true,
+      "./test/**/*.html": false,
+      "./**/docs/**/*.html": false,
+      "./test-manual/**/*.html": true,
       "./**/.jsenv/": false,
       "./**/node_modules/": false,
     },

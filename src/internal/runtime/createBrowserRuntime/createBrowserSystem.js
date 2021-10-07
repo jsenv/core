@@ -1,7 +1,6 @@
+import { getJavaScriptModuleResponseError } from "../module-registration.js"
+
 import "../s.js"
-import { valueInstall } from "../valueInstall.js"
-import { fromUrl } from "../module-registration.js"
-import { evalSource } from "./evalSource.js"
 
 export const createBrowserSystem = ({
   compileServerOrigin,
@@ -21,28 +20,22 @@ export const createBrowserSystem = ({
 
   browserSystem.resolve = resolve
 
-  browserSystem.instantiate = (url, importerUrl) => {
-    return fromUrl({
-      url,
-      importerUrl,
-      fetchSource,
-      instantiateJavaScript: (source, responseUrl) => {
-        const uninstallSystemGlobal = valueInstall(
-          window,
-          "System",
-          browserSystem,
-        )
-        try {
-          evalSource(source, responseUrl)
-        } finally {
-          uninstallSystemGlobal()
-        }
-
-        return browserSystem.getRegister()
-      },
-      compileServerOrigin,
-      compileDirectoryRelativeUrl,
-    })
+  const instantiate = browserSystem.instantiate
+  browserSystem.instantiate = async function (url, importerUrl) {
+    try {
+      const returnValue = await instantiate.call(this, url, importerUrl)
+      return returnValue
+    } catch (e) {
+      const jsenvError = await createDetailedInstantiateError({
+        instantiateError: e,
+        url,
+        importerUrl,
+        compileServerOrigin,
+        compileDirectoryRelativeUrl,
+        fetchSource,
+      })
+      throw jsenvError
+    }
   }
 
   browserSystem.createContext = (importerUrl) => {
@@ -53,4 +46,34 @@ export const createBrowserSystem = ({
   }
 
   return browserSystem
+}
+
+const createDetailedInstantiateError = async ({
+  instantiateError,
+  url,
+  importerUrl,
+  compileServerOrigin,
+  compileDirectoryRelativeUrl,
+  fetchSource,
+}) => {
+  let response
+  try {
+    response = await fetchSource(url, {
+      importerUrl,
+    })
+  } catch (e) {
+    e.code = "NETWORK_FAILURE"
+    return e
+  }
+
+  const jsModuleResponseError = await getJavaScriptModuleResponseError(
+    response,
+    {
+      url,
+      importerUrl,
+      compileServerOrigin,
+      compileDirectoryRelativeUrl,
+    },
+  )
+  return jsModuleResponseError || instantiateError
 }

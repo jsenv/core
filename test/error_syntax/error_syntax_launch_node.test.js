@@ -76,7 +76,7 @@ const test = async ({ canUseNativeModuleSystem } = {}) => {
     columnNumber: 11,
   }
   const expectedError = Object.assign(
-    new Error(`Module file cannot be parsed.
+    new Error(`JavaScript module file cannot be parsed
 --- parsing error message ---
 ${filePath}: Unexpected token (1:11)
 
