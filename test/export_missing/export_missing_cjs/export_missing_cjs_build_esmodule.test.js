@@ -1,5 +1,9 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  urlToFileSystemPath,
+} from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -34,7 +38,9 @@ try {
   throw new Error("should throw")
 } catch (e) {
   const actual = e.message
-  const expected = `'answer' is not exported by ${importedFileUrl}, imported by ${importerFileUrl}
+  const expected = `'answer' is not exported by ${urlToFileSystemPath(
+    importedFileUrl,
+  )}, imported by ${urlToFileSystemPath(importerFileUrl)}
 --- frame ---
 1: import { answer } from "./file_written_in_commonjs.js";
             ^
