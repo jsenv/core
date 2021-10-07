@@ -7,6 +7,7 @@ import {
 } from "@jsenv/filesystem"
 
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
+import { setUrlExtension } from "../url_utils.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
   COMPILE_ID_BUILD_GLOBAL_FILES,
@@ -194,26 +195,58 @@ const getCompiler = ({ originalFileUrl, compileMeta }) => {
     return null
   }
 
-  if (!jsenvCompiler && customCompiler) {
-    return customCompiler
-  }
-
   // there is only a jsenvCompiler
   if (jsenvCompiler && !customCompiler) {
     return jsenvCompiler
   }
 
-  // both project and jsenv wants to compile the file
-  // we'll do the custom compilation first, then jsenv compilation
+  // there is a custom compiler and potentially a jsenv compiler
   return async (params) => {
+    // do custom compilation first
     const customResult = await customCompiler(params)
-    const jsenvResult = await jsenvCompiler({
+    // then check if jsenv compiler should apply
+    // to the new result contentType
+    const jsenvCompilerAfterCustomCompilation =
+      getJsenvCompilerAfterCustomCompilation({
+        url: originalFileUrl,
+        contentType: customResult.contentType,
+        compileMeta,
+      })
+    if (!jsenvCompilerAfterCustomCompilation) {
+      return customResult
+    }
+    const jsenvResult = await jsenvCompilerAfterCustomCompilation({
       ...params,
       code: customResult.compiledSource,
       map: customResult.sourcemap,
     })
     return jsenvResult
   }
+}
+
+const getJsenvCompilerAfterCustomCompilation = ({
+  url,
+  contentType,
+  compileMeta,
+}) => {
+  const extensionToForce = contentTypeExtensions[contentType]
+  const urlForcingExtension = extensionToForce
+    ? setUrlExtension(url, extensionToForce)
+    : url
+  const { jsenvCompiler } = urlToMeta({
+    url: urlForcingExtension,
+    structuredMetaMap: compileMeta,
+  })
+  return jsenvCompiler
+}
+
+// should match contentType where there is a jsenv compiler
+// back to an extension
+const contentTypeExtensions = {
+  "application/javascript": ".js",
+  "text/html": ".html",
+  "application/importmap+json": ".importmap",
+  // "text/css": ".css",
 }
 
 const babelPluginMapFromCompileId = (
