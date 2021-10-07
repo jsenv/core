@@ -60,10 +60,10 @@ await launchBrowsers(
       executeParams: {
         fileRelativeUrl: htmlFileRelativeUrl,
       },
-      launchParams: {
-        headless: false,
-      },
-      stopAfterExecute: false,
+      // launchParams: {
+      //   headless: false,
+      // },
+      // stopAfterExecute: false,
     })
 
     if (launchBrowser === launchChromium) {
