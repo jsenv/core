@@ -1,39 +1,38 @@
 import { assert } from "@jsenv/assert"
 import {
-  resolveUrl,
+  resolveDirectoryUrl,
   urlToRelativeUrl,
-  urlToBasename,
+  resolveUrl,
   readFile,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 import {
   findNodeByTagName,
   getHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
-const testDirectoryUrl = resolveUrl("./", import.meta.url)
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.html`
-
+const mainFilename = `preload_json_never_used.html`
+const entryPointMap = {
+  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
+}
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
-  },
+  entryPointMap,
   logLevel: "error", // ideally we should catch the exact warning and assert it is correct
 })
-
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
@@ -46,6 +45,6 @@ const link = findNodeByTagName(htmlString, "link")
 {
   const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
   const actual = hrefAttribute.value
-  const expected = "./404.json"
+  const expected = "./data.json"
   assert({ actual, expected })
 }

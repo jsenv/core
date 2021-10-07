@@ -1,10 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-  readFile,
-} from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -23,10 +18,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.html`
+const mainFilename = `modulepreload_dependency.html`
 
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
@@ -42,14 +36,10 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-
-const mainJsBuildRelativeUrl = getBuildRelativeUrl("main.js")
-const fileJsBuildRelativeUrl = getBuildRelativeUrl("file.js")
+const mainJsBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}main.js`]
+const dependencyJsBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}dependency.js`]
 
 // ensure link is updated and importing file works
 {
@@ -73,7 +63,7 @@ const fileJsBuildRelativeUrl = getBuildRelativeUrl("file.js")
     namespace,
   }
   const expected = {
-    preloadLinkHref: fileJsBuildRelativeUrl,
+    preloadLinkHref: dependencyJsBuildRelativeUrl,
     namespace: { value: 42 },
   }
   assert({ actual, expected })

@@ -12,5 +12,11 @@
     <script type="module">
       import("./main.js")
     </script>
+    <script type="module">
+      // Let browser time to log the warning about preload link not used
+      await new Promise((resolve) => {
+        setTimeout(resolve, 5000)
+      })
+    </script>
   </body>
 </html>

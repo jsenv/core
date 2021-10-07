@@ -12,7 +12,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `dev_server_link_modulepreloadx.html`
+const filename = `modulepreload.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const exploringServer = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,

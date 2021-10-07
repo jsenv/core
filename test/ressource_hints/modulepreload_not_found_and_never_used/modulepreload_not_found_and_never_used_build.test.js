@@ -1,10 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-  readFile,
-} from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -19,13 +14,12 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}modulepreload_not_found_and_never_used.html`]:
+    "./main.html",
 }
-
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
