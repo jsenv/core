@@ -23,7 +23,7 @@ export const displayErrorInDocument = (error) => {
       width: 100%;
       display: flex;
       flex-direction: column;
-      align-items: center
+      align-items: center;
       z-index: 1000;
       width: 100%;
       box-sizing: border-box;
