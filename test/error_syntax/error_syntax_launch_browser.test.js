@@ -60,10 +60,10 @@ await launchBrowsers(
       executeParams: {
         fileRelativeUrl: htmlFileRelativeUrl,
       },
-      // launchParams: {
-      //   headless: false,
-      // },
-      // stopAfterExecute: false,
+      launchParams: {
+        headless: false,
+      },
+      stopAfterExecute: false,
     })
 
     if (launchBrowser === launchChromium) {
@@ -86,7 +86,7 @@ await launchBrowsers(
     }
     const expected = {
       status: "errored",
-      errorMessage: `Module file cannot be parsed.
+      errorMessage: `JavaScript module file cannot be parsed
 --- parsing error message ---
 ${importedFilePath}: Unexpected token (1:11)
 
