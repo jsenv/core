@@ -16,7 +16,7 @@ export const displayErrorInDocument = (error) => {
 
   const css = `
     .jsenv-console {
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.95);
       position: absolute;
       top: 0;
       left: 0;
@@ -48,8 +48,9 @@ export const displayErrorInDocument = (error) => {
     }
 
     .jsenv-console pre[data-theme="dark"] {
-      background: transparent;
-      border: 1px solid black;
+      background: #111;
+      border: 1px solid #333;
+      color: #eee;
     }
 
     .jsenv-console pre[data-theme="light"] {
@@ -58,7 +59,7 @@ export const displayErrorInDocument = (error) => {
       color: #EEEEEE;
     }
 
-    .jsenv-console pre[data-theme="light"] a {
+    .jsenv-console pre a {
       color: inherit;
     }
     `
