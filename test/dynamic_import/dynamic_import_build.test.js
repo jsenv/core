@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -16,42 +16,58 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${testDirectoryname}.js`]: "./main.js",
-}
-
-await buildProject({
-  ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-  buildDirectoryRelativeUrl,
-  entryPointMap,
-  // logLevel: "debug",
-})
 
 {
+  const { buildMappings } = await buildProject({
+    ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
+    entryPointMap: {
+      [`./${testDirectoryRelativeUrl}dynamic_import.html`]: "./main.html",
+    },
+  })
+  const mainJsFileBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}dynamic_import.js`]
+
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    htmlFileRelativeUrl: "./main.html",
-    jsFileRelativeUrl: "./dist/esmodule/main.js",
+    jsFileRelativeUrl: `./${mainJsFileBuildRelativeUrl}`,
     // debug: true,
   })
 
   const actual = namespace
-  const expected = { value: 42 }
+  const expected = { default: 42 }
   assert({ actual, expected })
 }
 
+// test importing with nodejs now
 {
+  const { buildMappings } = await buildProject({
+    ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
+    // we build the HTML instead of the JS file on purpose
+    // to test the warning about html + node
+    entryPointMap: {
+      [`./${testDirectoryRelativeUrl}dynamic_import.html`]: "./main.html",
+    },
+    runtimeSupport: {
+      node: "14",
+    },
+  })
+  const mainJsFileBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}dynamic_import.js`]
+
   const { namespace } = await nodeImportEsModuleBuild({
     ...NODE_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
+    jsFileRelativeUrl: `./dist/esmodule/${mainJsFileBuildRelativeUrl}`,
   })
 
   const actual = namespace
-  const expected = { value: 42 }
+  const expected = { default: 42 }
   assert({ actual, expected })
 }

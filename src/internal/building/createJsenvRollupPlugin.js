@@ -214,6 +214,11 @@ building ${entryFileRelativeUrls.length} entry files...`)
         },
       )
       const htmlEntryPointCount = htmlEntryPoints.length
+      if (node && htmlEntryPointCount > 0) {
+        logger.warn(
+          `WARNING: Found an HTML entry point and "node" is part of "runtimeSupport", it's not supposed to happen`,
+        )
+      }
       if (htmlEntryPointCount > 1) {
         const error = new Error(
           `Cannot handle more than one html entry point, got ${htmlEntryPointCount}`,
@@ -223,7 +228,10 @@ building ${entryFileRelativeUrls.length} entry files...`)
       }
 
       if (typeof useImportMapToMaximizeCacheReuse === "undefined") {
-        useImportMapToMaximizeCacheReuse = htmlEntryPointCount !== 0
+        useImportMapToMaximizeCacheReuse =
+          htmlEntryPointCount > 0 &&
+          // node has no importmap concept, le'ts use the versionned url in that case
+          !node
       }
 
       // https://github.com/easesu/rollup-plugin-html-input/blob/master/index.js
