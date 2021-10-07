@@ -96,7 +96,7 @@ const expected = {
 assert({ actual, expected })
 
 {
-  const stack = pageLogs[1].text
+  const stack = pageLogs[pageLogs.length - 1].text
   const expected = `Error: ${expectedError.message}`
   const actual = stack.slice(0, expected.length)
   assert({ actual, expected })
