@@ -39,7 +39,7 @@ export const measureTestPlan = async ({ iterations = 5 } = {}) => {
       }
     },
     iterations,
-    { msToWaitBetweenEachMeasure: 50 },
+    { msToWaitBetweenEachMeasure: 1000 },
   )
   return computeMetricsMedian(metrics)
 }
