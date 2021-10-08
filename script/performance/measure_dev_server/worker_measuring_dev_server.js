@@ -15,6 +15,7 @@ await startExploring({
   keepProcessAlive: false,
 })
 
+global.gc()
 const afterMs = Date.now()
 const afterHeapUsed = memoryUsage().heapUsed
 const afterRessourceUsage = resourceUsage()

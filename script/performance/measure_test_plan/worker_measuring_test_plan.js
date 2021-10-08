@@ -61,6 +61,7 @@ await executeTestPlan({
   compileServerCanWriteOnFilesystem: false,
 })
 
+global.gc()
 const afterMs = Date.now()
 const afterHeapUsed = memoryUsage().heapUsed
 const afterRessourceUsage = resourceUsage()
