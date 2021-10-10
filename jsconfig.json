@@ -17,11 +17,17 @@
       "babel-plugin-transform-async-to-promises": [
         "./node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js"
       ],
+      "@babel/plugin-syntax-import-assertions/*": [
+        "./node_modules/@babel/plugin-syntax-import-assertions/*"
+      ],
       "@babel/plugin-syntax-numeric-separator/*": [
         "./node_modules/@babel/plugin-syntax-numeric-separator/*"
       ],
       "@babel/plugin-proposal-dynamic-import/*": [
         "./node_modules/@babel/plugin-proposal-dynamic-import/*"
+      ],
+      "@babel/plugin-syntax-import-assertions": [
+        "./node_modules/@babel/plugin-syntax-import-assertions/lib/index.js"
       ],
       "@babel/plugin-syntax-numeric-separator": [
         "./node_modules/@babel/plugin-syntax-numeric-separator/lib/index.js"
@@ -37,6 +43,9 @@
       ],
       "@babel/plugin-syntax-dynamic-import/*": [
         "./node_modules/@babel/plugin-syntax-dynamic-import/*"
+      ],
+      "acorn-import-assertions/package.json": [
+        "./node_modules/acorn-import-assertions/package.json"
       ],
       "@babel/plugin-syntax-dynamic-import": [
         "./node_modules/@babel/plugin-syntax-dynamic-import/lib/index.js"
@@ -131,6 +140,9 @@
       "@rollup/plugin-commonjs/*": [
         "./node_modules/@rollup/plugin-commonjs/*"
       ],
+      "acorn-import-assertions/*": [
+        "./node_modules/acorn-import-assertions/*"
+      ],
       "istanbul-lib-instrument/*": [
         "./node_modules/istanbul-lib-instrument/*"
       ],
@@ -145,6 +157,9 @@
       ],
       "@rollup/plugin-replace/*": [
         "./node_modules/@rollup/plugin-replace/*"
+      ],
+      "acorn-import-assertions": [
+        "./node_modules/acorn-import-assertions/lib/index.mjs"
       ],
       "cssnano-preset-default/*": [
         "./node_modules/cssnano-preset-default/*"

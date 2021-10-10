@@ -205,6 +205,7 @@ const useRollup = async ({
   asOriginalUrl,
 }) => {
   const { rollup } = await import("rollup")
+  const { importAssertions } = await import("acorn-import-assertions")
 
   const rollupInputOptions = {
     // about cache here, we should/could reuse previous rollup call
@@ -256,6 +257,7 @@ const useRollup = async ({
     input: [],
     preserveEntrySignatures,
     plugins: [jsenvRollupPlugin],
+    acornInjectPlugins: [importAssertions],
   }
   const rollupOutputOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait
