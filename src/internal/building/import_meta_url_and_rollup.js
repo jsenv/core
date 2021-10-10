@@ -32,7 +32,6 @@ export const transformImportMetaUrlReferences = async ({
               jsColumn: node.loc.start.column,
             }
           : {}),
-
         ressourceSpecifier: ressourceUrl,
       })
       if (reference) {

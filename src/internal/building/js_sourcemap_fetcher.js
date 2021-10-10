@@ -1,24 +1,23 @@
 import { createCancellationToken } from "@jsenv/cancellation"
 import { resolveUrl } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
+
 import {
   dataUrlToRawData,
   parseDataUrl,
 } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
-import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
+import { validateResponse } from "@jsenv/core/src/internal/response_validation.js"
 
-export const fetchSourcemap = async (
-  jsUrl,
-  jsString,
-  {
-    cancellationToken = createCancellationToken(),
-    logger = createLogger(),
-  } = {},
-) => {
-  const jsSourcemapUrl = getJavaScriptSourceMappingUrl(jsString)
+export const fetchJavaScriptSourcemap = async ({
+  cancellationToken = createCancellationToken(),
+  logger = createLogger(),
 
+  code,
+  url,
+} = {}) => {
+  const jsSourcemapUrl = getJavaScriptSourceMappingUrl(code)
   if (!jsSourcemapUrl) {
     return null
   }
@@ -28,29 +27,32 @@ export const fetchSourcemap = async (
     return parseSourcemapString(
       jsSourcemapString,
       jsSourcemapUrl,
-      `inline comment in ${jsUrl}`,
+      `inline comment in ${url}`,
     )
   }
 
-  const sourcemapUrl = resolveUrl(jsSourcemapUrl, jsUrl)
+  const sourcemapUrl = resolveUrl(jsSourcemapUrl, url)
   const sourcemapResponse = await fetchUrl(sourcemapUrl, {
     cancellationToken,
     ignoreHttpsError: true,
   })
-  const okValidation = await validateResponseStatusIsOk(sourcemapResponse, {
-    traceImport: () => [jsUrl],
+  const { isValid, details } = await validateResponse(sourcemapResponse, {
+    // we could have a better trace
+    // by appending the reference found in code
+    // to an existing urlTrace array
+    // good enough for now
+    urlTrace: url,
+    contentTypeExpected: "application/json",
   })
-
-  if (!okValidation.valid) {
-    logger.warn(`unexpected response for sourcemap file:
-${okValidation.message}`)
+  if (!isValid) {
+    logger.warn(
+      createDetailedMessage(`unexpected response for sourcemap`, details),
+    )
     return null
   }
 
-  // in theory we should also check sourcemapResponse content-type is correctly set
-  // but not really important.
   const sourcemapBodyAsText = await sourcemapResponse.text()
-  return parseSourcemapString(sourcemapBodyAsText, sourcemapUrl, jsUrl)
+  return parseSourcemapString(sourcemapBodyAsText, sourcemapUrl, url)
 }
 
 const parseSourcemapString = (sourcemapString, sourcemapUrl, importer) => {

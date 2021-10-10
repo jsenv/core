@@ -738,6 +738,8 @@ export const createRessourceBuilder = (
           jsModuleUrl,
           jsModuleIsInline: ressource.isInline,
           jsModuleSource: String(bufferBeforeBuild),
+          line: reference.referenceLine,
+          column: reference.referenceColumn,
         })
 
         const name = urlToBasename(jsModuleUrl)

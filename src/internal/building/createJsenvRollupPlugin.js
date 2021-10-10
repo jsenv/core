@@ -2,7 +2,7 @@
 import { extname } from "node:path"
 import { normalizeImportMap } from "@jsenv/importmap"
 import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
-import { loggerToLogLevel } from "@jsenv/logger"
+import { createDetailedMessage, loggerToLogLevel } from "@jsenv/logger"
 import {
   isFileSystemPath,
   fileSystemPathToUrl,
@@ -18,8 +18,9 @@ import {
 
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
-import { validateResponseStatusIsOk } from "@jsenv/core/src/internal/validateResponseStatusIsOk.js"
+import { validateResponse } from "@jsenv/core/src/internal/response_validation.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
+import { escapeTemplateStringSpecialCharacters } from "@jsenv/core/src/internal/escapeTemplateStringSpecialCharacters.js"
 import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { infoSign } from "@jsenv/core/src/internal/logs/log_style.js"
@@ -32,10 +33,11 @@ import {
 } from "./build_logs.js"
 import { importMapsFromHtml } from "./html/htmlScan.js"
 import { parseRessource } from "./parseRessource.js"
-import { fetchSourcemap } from "./fetchSourcemap.js"
+import { fetchJavaScriptSourcemap } from "./js_sourcemap_fetcher.js"
 import { createRessourceBuilder } from "./ressource_builder.js"
 import { computeBuildRelativeUrl } from "./url-versioning.js"
-import { transformImportMetaUrlReferences } from "./transformImportMetaUrlReferences.js"
+import { transformImportMetaUrlReferences } from "./import_meta_url_and_rollup.js"
+import { transformImportAssertions } from "./import_assertions_and_rollup.js"
 
 import { minifyJs } from "./js/minifyJs.js"
 import { createImportResolverForNode } from "../import-resolution/import-resolver-node.js"
@@ -495,10 +497,14 @@ building ${entryFileRelativeUrls.length} entry files...`)
             if (jsModuleIsInline) {
               inlineModuleScripts[jsModuleUrl] = jsModuleSource
             }
-            urlImporterMap[jsModuleUrl] = resolveUrl(
-              entryPointsPrepared[0].entryProjectRelativeUrl,
-              compileDirectoryRemoteUrl,
-            )
+            urlImporterMap[jsModuleUrl] = {
+              url: resolveUrl(
+                entryPointsPrepared[0].entryProjectRelativeUrl,
+                compileDirectoryRemoteUrl,
+              ),
+              line: undefined,
+              column: undefined,
+            }
             jsModulesFromEntry[asRollupUrl(jsModuleUrl)] = true
           },
           lineBreakNormalization,
@@ -553,7 +559,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
       }
     },
 
-    async resolveId(specifier, importer) {
+    async resolveId(specifier, importer, { skipUrlImportTrace }) {
       if (importer === undefined) {
         if (specifier.endsWith(".html")) {
           importer = compileServerOrigin
@@ -585,9 +591,17 @@ building ${entryFileRelativeUrls.length} entry files...`)
       }
 
       const importUrl = await importResolver.resolveImport(specifier, importer)
-      const existingImporter = urlImporterMap[importUrl]
-      if (!existingImporter) {
-        urlImporterMap[importUrl] = importer
+      if (!skipUrlImportTrace) {
+        const existingImporter = urlImporterMap[importUrl]
+        if (!existingImporter) {
+          urlImporterMap[importUrl] = {
+            url: importer,
+            // rollup do not expose a way to know line and column for the static or dynamic import
+            // referencing that file
+            column: undefined,
+            line: undefined,
+          }
+        }
       }
 
       // keep external url intact
@@ -643,24 +657,32 @@ building ${entryFileRelativeUrls.length} entry files...`)
 
     // },
 
-    async load(id) {
-      if (id === EMPTY_CHUNK_URL) {
+    async load(rollupUrl) {
+      if (rollupUrl === EMPTY_CHUNK_URL) {
         return ""
       }
 
-      const moduleInfo = this.getModuleInfo(id)
-      const url = asServerUrl(id)
-      const importerUrl = urlImporterMap[url]
+      const rollupModuleInfo = this.getModuleInfo(rollupUrl)
+      const url = asServerUrl(rollupUrl)
 
-      // logger.debug(`loads ${url}`)
-      const {
-        responseUrl,
-        responseContentType,
-        contentRaw,
-        content = "",
-        map,
-      } = await loadModule(url, {
-        moduleInfo,
+      const loadResult = await loadUrl({
+        cancellationToken,
+        logger,
+
+        url,
+        rollupUrl,
+        rollupModuleInfo,
+        projectDirectoryUrl,
+        babelPluginMap,
+        asServerUrl,
+        asProjectUrl,
+        asOriginalUrl,
+        urlImporterMap,
+        inlineModuleScripts,
+
+        minify,
+        node,
+        format,
       })
 
       // Jsenv helpers are injected as import statements to provide code like babel helpers
@@ -672,55 +694,90 @@ building ${entryFileRelativeUrls.length} entry files...`)
         jsenvHelpersDirectoryInfo.url,
       )
 
-      // Store the fact that this ressource exists
-      // Happens when entry point references js, also for every static and dynamic imports
+      const importer = urlImporterMap[url]
+      // Inform ressource builder that this js module exists
+      // It can only be a js module and happens when:
+      // - entry point (html) references js
+      // - js is referenced by static or dynamic imports
+      // For import assertions, the imported ressource (css,json,...)
+      // is arelady converted to a js module
       ressourceBuilder.createReferenceFoundByRollup({
         // we don't want to emit a js chunk for every js file found
         // (However we want if the file is preload/prefetch by something else)
         // so we tell asset builder not to emit a chunk for this js reference
         // otherwise rollup would never concat module together
         referenceShouldNotEmitChunk: jsConcatenation,
-        ressourceContentTypeExpected: responseContentType,
-        referenceUrl: importerUrl,
-        ressourceSpecifier: responseUrl,
-        // rollup do not expose a way to know line and column for the static or dynamic import
-        // referencing that file
-        referenceColumn: undefined,
-        referenceLine: undefined,
+        ressourceContentTypeExpected: "application/javascript",
+        referenceUrl: importer.url,
+        referenceColumn: importer.column,
+        referenceLine: importer.line,
+        ressourceSpecifier: loadResult.url,
 
         isJsenvHelperFile,
-        contentType: responseContentType,
-        bufferBeforeBuild: Buffer.from(content),
-        isJsModule: responseContentType === "application/javascript",
+        contentType: "application/javascript",
+        bufferBeforeBuild: Buffer.from(loadResult.code),
+        isJsModule: true,
       })
 
-      saveUrlResponseBody(responseUrl, contentRaw)
+      saveUrlResponseBody(url, loadResult.code)
       // handle redirection
-      if (responseUrl !== url) {
-        saveUrlResponseBody(url, contentRaw)
+      if (loadResult.url !== url) {
+        saveUrlResponseBody(url, loadResult.code)
       }
 
-      return { code: content, map }
+      return {
+        code: loadResult.code,
+        map: loadResult.map,
+      }
     },
 
-    async transform(codeInput, id) {
+    async transform(code, id) {
+      let map = null
       // we should try/catch here?
       // because this.parse might fail
-      const ast = this.parse(codeInput, {
+      const ast = this.parse(code, {
         // used to know node line and column
         locations: true,
       })
       // const moduleInfo = this.getModuleInfo(id)
       const url = asServerUrl(id)
       const importerUrl = urlImporterMap[url]
-      const { code, map } = await transformImportMetaUrlReferences({
+
+      const importMetaResult = await transformImportMetaUrlReferences({
+        code,
+        map,
+        ast,
         url,
         importerUrl,
-        code: codeInput,
-        ast,
+
         ressourceBuilder,
         markBuildRelativeUrlAsUsedByJs,
       })
+      code = importMetaResult.code
+      map = importMetaResult.map
+
+      const importAssertionsResult = await transformImportAssertions({
+        code,
+        map,
+        ast,
+        url,
+        importerUrl,
+      })
+      code = importAssertionsResult.code
+      map = importAssertionsResult.map
+
+      Object.keys(importAssertionsResult.importAssertions).forEach(
+        (importedUrl) => {
+          const { importNode } =
+            importAssertionsResult.importAssertions[importedUrl]
+          urlImporterMap[importedUrl] = {
+            url,
+            line: importNode.loc.start.line,
+            column: importNode.loc.start.column,
+          }
+        },
+      )
+
       return { code, map }
     },
 
@@ -1036,98 +1093,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
     }
   }
 
-  const loadModule = async (
-    moduleUrl,
-    // {
-    //   moduleInfo
-    // },
-  ) => {
-    if (moduleUrl in inlineModuleScripts) {
-      const { code, map } = await transformJs({
-        code: inlineModuleScripts[moduleUrl],
-        url: asProjectUrl(moduleUrl), // transformJs expect a file:// url
-        projectDirectoryUrl,
-
-        babelPluginMap,
-        // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
-      })
-
-      return {
-        responseUrl: moduleUrl,
-        contentRaw: code,
-        content: code,
-        map,
-      }
-    }
-
-    const importerUrl = urlImporterMap[moduleUrl]
-    const moduleResponse = await jsenvFetchUrl(moduleUrl, () => {
-      return createImportTrace({
-        importer: asProjectUrl(importerUrl) || importerUrl,
-        asServerUrl,
-        asOriginalUrl,
-        asProjectUrl,
-        urlImporterMap,
-      })
-    })
-    const responseContentType = moduleResponse.headers["content-type"] || ""
-    const commonData = {
-      responseContentType,
-      responseUrl: moduleResponse.url,
-    }
-
-    // keep this in sync with module-registration.js
-    if (
-      responseContentType === "application/javascript" ||
-      responseContentType === "text/javascript"
-    ) {
-      const jsModuleString = await moduleResponse.text()
-      const map = await fetchSourcemap(moduleUrl, jsModuleString, {
-        cancellationToken,
-        logger,
-      })
-
-      return {
-        ...commonData,
-        responseContentType: "application/javascript", // normalize
-        contentRaw: jsModuleString,
-        content: jsModuleString,
-        map,
-      }
-    }
-
-    if (
-      acceptsJsonContentType({ node, format }) &&
-      (responseContentType === "application/json" ||
-        responseContentType.endsWith("+json"))
-    ) {
-      const responseBodyAsString = await moduleResponse.text()
-      // there is no need to minify the json string
-      // because it becomes valid javascript
-      // that will be minified by minifyJs inside renderChunk
-      const json = responseBodyAsString
-      return {
-        ...commonData,
-        contentRaw: json,
-        content: `export default ${json}`,
-      }
-    }
-
-    const urlRelativeToImporter = urlToRelativeUrl(moduleUrl, importerUrl)
-    const jsenvPluginError = new Error(
-      `"${responseContentType}" is not a valid type for JavaScript module
---- js module url ---
-${asOriginalUrl(moduleUrl)}
---- importer url ---
-${asOriginalUrl(importerUrl)}
---- suggestion ---
-non-js ressources can be used with new URL("${urlRelativeToImporter}", import.meta.url)`,
-    )
-    storeLatestJsenvPluginError(jsenvPluginError)
-    throw jsenvPluginError
-  }
-
-  const jsenvFetchUrl = async (url, importer) => {
+  const jsenvFetchUrl = async (url, urlTrace) => {
     const urlToFetch = applyUrlMappings(url)
 
     const response = await fetchUrl(urlToFetch, {
@@ -1136,13 +1102,15 @@ non-js ressources can be used with new URL("${urlRelativeToImporter}", import.me
     })
     const responseUrl = response.url
 
-    const okValidation = await validateResponseStatusIsOk(response, {
+    const { isValid, message, details } = await validateResponse(response, {
       originalUrl:
         asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl,
-      importer,
+      urlTrace,
     })
-    if (!okValidation.valid) {
-      const jsenvPluginError = new Error(okValidation.message)
+    if (!isValid) {
+      const jsenvPluginError = new Error(
+        createDetailedMessage(message, details),
+      )
       storeLatestJsenvPluginError(jsenvPluginError)
       throw jsenvPluginError
     }
@@ -1156,13 +1124,6 @@ non-js ressources can be used with new URL("${urlRelativeToImporter}", import.me
 
   const fetchImportMapFromUrl = async (importMapUrl, importer) => {
     const importMapResponse = await jsenvFetchUrl(importMapUrl, importer)
-    const okValidation = await validateResponseStatusIsOk(importMapResponse, {
-      originalUrl: asOriginalUrl(importMapUrl),
-      traceImport: () => [importer],
-    })
-    if (!okValidation.valid) {
-      throw new Error(okValidation.message)
-    }
     const importMap = await importMapResponse.json()
     const importMapNormalized = normalizeImportMap(
       importMap,
@@ -1190,6 +1151,160 @@ non-js ressources can be used with new URL("${urlRelativeToImporter}", import.me
     asProjectUrl,
     rollupGetModuleInfo,
   }
+}
+
+const loadUrl = async ({
+  cancellationToken,
+  logger,
+
+  url,
+  rollupUrl,
+  // rollupModuleInfo,
+  projectDirectoryUrl,
+  babelPluginMap,
+  asServerUrl,
+  asProjectUrl,
+  asOriginalUrl,
+  urlImporterMap,
+  inlineModuleScripts,
+
+  minify,
+  node,
+  format,
+}) => {
+  // importing CSS from JS with import assertions
+  if (rollupUrl.startsWith("import_type_css:")) {
+    const url = asServerUrl(rollupUrl.slice("import_type_css:".length))
+    // TODO: we should we use the ressource builder to fetch this url
+    // so that:
+    // - it knows this css exists
+    // - it performs the css minification, parsing and url replacements
+    const response = await fetchUrl(url)
+    const { isValid, message, details } = await validateResponse(response, {
+      originalUrl:
+        asOriginalUrl(response.url) ||
+        asProjectUrl(response.url) ||
+        response.url,
+      urlTrace: () =>
+        createImportTrace({
+          url,
+          urlImporterMap,
+          // asServerUrl,
+          asOriginalUrl,
+          asProjectUrl,
+        }),
+      contentTypeExpected: "text/css",
+    })
+    if (!isValid) {
+      throw new Error(createDetailedMessage(message, details))
+    }
+    const cssText = await response.text()
+    const cssAsJsModule = convertCssTextToJavascriptModule(cssText)
+    return {
+      url: response.url,
+      code: cssAsJsModule,
+      map: null, // TODO: parse and fetch sourcemap from cssText
+    }
+  }
+
+  if (url in inlineModuleScripts) {
+    const { code, map } = await transformJs({
+      code: inlineModuleScripts[url],
+      url: asProjectUrl(url), // transformJs expect a file:// url
+      projectDirectoryUrl,
+      babelPluginMap,
+      // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
+    })
+
+    return {
+      url,
+      code,
+      map,
+    }
+  }
+
+  const response = await fetchUrl(url)
+  const responseValidity = await validateResponse(response, {
+    originalUrl:
+      asOriginalUrl(response.url) || asProjectUrl(response.url) || response.url,
+    urlTrace: () =>
+      createImportTrace({
+        url,
+        urlImporterMap,
+        // asServerUrl,
+        asOriginalUrl,
+        asProjectUrl,
+      }),
+    contentTypeExpected: [
+      "application/javascript",
+      ...(acceptsJsonContentType({ node, format }) ? "application/json" : []),
+    ],
+  })
+  if (!responseValidity.isValid) {
+    const { message, details } = responseValidity
+    if (!responseValidity.contentType.isValid) {
+      const importerUrl = urlImporterMap[url].url
+      const urlRelativeToImporter = urlToRelativeUrl(url, importerUrl)
+      details.suggestion = `non-js ressources can be used with new URL("${urlRelativeToImporter}", import.meta.url)`
+    }
+    throw new Error(createDetailedMessage(message, details))
+  }
+
+  const contentType = response.headers["content-type"]
+  if (contentType === "application/javascript") {
+    const jsText = await response.text()
+    const map = await fetchJavaScriptSourcemap({
+      cancellationToken,
+      logger,
+      code: jsText,
+      url,
+    })
+    return {
+      url: response.url,
+      code: jsText,
+      map,
+    }
+  }
+
+  // no need to check for json content-type, if it's not JS, it's JSON
+  // if (contentType === "application/json") {
+  // there is no need to minify the json string
+  // because it becomes valid javascript
+  // that will be minified by minifyJs inside renderChunk
+  const jsonText = await response.text()
+  const jsonAsJsModule = convertJsonTextToJavascriptModule(jsonText, { minify })
+  return {
+    url: response.url,
+    code: jsonAsJsModule,
+    map: null,
+  }
+}
+
+const convertCssTextToJavascriptModule = (cssText) => {
+  // should we perform CSS minification here?
+  // is it already done by ressource builder or something?
+
+  return `
+const stylesheet = new CSSStyleSheet()
+
+stylesheet.replaceSync(${escapeTemplateStringSpecialCharacters(cssText)})
+
+export default stylesheet`
+}
+
+const convertJsonTextToJavascriptModule = (jsonText, { minify }) => {
+  // here we could do the following
+  // return export default jsonText
+  // This would return valid js, that would be minified later
+  // however we will prefer using JSON.parse because it's faster
+  // for js engine to parse JSON than JS
+
+  if (minify) {
+    const jsonTextWithoutSpaces = JSON.stringify(JSON.parse(jsonText))
+    return `export default JSON.parse(${jsonTextWithoutSpaces})`
+  }
+
+  return `export default JSON.parse(jsonText)`
 }
 
 const ensureTopLevelAwaitTranspilationIfNeeded = async ({
@@ -1273,35 +1388,43 @@ const prepareEntryPoints = async (
 }
 
 const createImportTrace = ({
-  importer,
-  asServerUrl,
+  url,
+  urlImporterMap,
+  // asServerUrl,
   asOriginalUrl,
   asProjectUrl,
-  urlImporterMap,
 }) => {
+  const firstImporter = urlImporterMap[url]
+
   const trace = [
     {
       type: "entry",
-      url: asOriginalUrl(importer) || asProjectUrl(importer) || importer,
+      url:
+        asOriginalUrl(firstImporter.url) ||
+        asProjectUrl(firstImporter.url) ||
+        firstImporter.url,
+      line: firstImporter.line,
+      column: firstImporter.column,
     },
   ]
 
   const next = (importerUrl) => {
-    const previousImporterUrl = urlImporterMap[importerUrl]
-    if (!previousImporterUrl) {
+    const previousImporter = urlImporterMap[importerUrl]
+    if (!previousImporter) {
       return
     }
-    const previousImporterOriginalUrl =
-      asOriginalUrl(previousImporterUrl) ||
-      asProjectUrl(previousImporterUrl) ||
-      previousImporterUrl
     trace.push({
       type: "import",
-      url: previousImporterOriginalUrl,
+      url:
+        asOriginalUrl(previousImporter.url) ||
+        asProjectUrl(previousImporter.url) ||
+        previousImporter.url,
+      line: previousImporter.line,
+      column: previousImporter.column,
     })
-    next(previousImporterUrl)
+    next(previousImporter.url)
   }
-  next(asServerUrl(importer))
+  next(firstImporter.url)
 
   return trace
 }
