@@ -3,27 +3,20 @@ import { escapeTemplateStringSpecialCharacters } from "@jsenv/core/src/internal/
 import { fetchJavaScriptSourcemap } from "./js_sourcemap_fetcher.js"
 
 export const createUrlLoader = ({
-  urlFetcher,
+  asServerUrl,
   asProjectUrl,
+  asOriginalUrl,
+  urlFetcher,
   ressourceBuilder,
+  projectDirectoryUrl,
+  babelPluginMap,
+  urlImporterMap,
+  inlineModuleScripts,
+  allowJson,
 }) => {
   const urlResponseBodyMap = {}
 
-  const loadUrl = async ({
-    cancellationToken,
-    logger,
-
-    url,
-    urlTrace,
-    rollupUrl,
-    // rollupModuleInfo,
-    projectDirectoryUrl,
-    babelPluginMap,
-    asServerUrl,
-    asProjectUrl,
-    inlineModuleScripts,
-    allowJson,
-  }) => {
+  const loadUrl = async (rollupUrl, { cancellationToken, logger }) => {
     // importing CSS from JS with import assertions
     if (rollupUrl.startsWith("import_type_css:")) {
       const url = asServerUrl(rollupUrl.slice("import_type_css:".length))
@@ -44,6 +37,7 @@ export const createUrlLoader = ({
       }
     }
 
+    const url = asServerUrl(rollupUrl)
     if (url in inlineModuleScripts) {
       const { code, map } = await transformJs({
         code: inlineModuleScripts[url],
@@ -66,7 +60,14 @@ export const createUrlLoader = ({
         "application/javascript",
         ...(allowJson ? "application/json" : []),
       ],
-      urlTrace,
+      urlTrace: () => {
+        return createImportTrace({
+          url,
+          urlImporterMap,
+          asOriginalUrl,
+          asProjectUrl,
+        })
+      },
     })
 
     const contentType = response.headers["content-type"]
@@ -122,6 +123,48 @@ export const createUrlLoader = ({
     getUrlResponseTextFromMemory,
     getUrlResponseBodyMap: () => urlResponseBodyMap,
   }
+}
+
+const createImportTrace = ({
+  url,
+  urlImporterMap,
+  // asServerUrl,
+  asOriginalUrl,
+  asProjectUrl,
+}) => {
+  const firstImporter = urlImporterMap[url]
+
+  const trace = [
+    {
+      type: "entry",
+      url:
+        asOriginalUrl(firstImporter.url) ||
+        asProjectUrl(firstImporter.url) ||
+        firstImporter.url,
+      line: firstImporter.line,
+      column: firstImporter.column,
+    },
+  ]
+
+  const next = (importerUrl) => {
+    const previousImporter = urlImporterMap[importerUrl]
+    if (!previousImporter) {
+      return
+    }
+    trace.push({
+      type: "import",
+      url:
+        asOriginalUrl(previousImporter.url) ||
+        asProjectUrl(previousImporter.url) ||
+        previousImporter.url,
+      line: previousImporter.line,
+      column: previousImporter.column,
+    })
+    next(previousImporter.url)
+  }
+  next(firstImporter.url)
+
+  return trace
 }
 
 const convertCssTextToJavascriptModule = (cssText) => {

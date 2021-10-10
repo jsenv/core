@@ -119,8 +119,16 @@ export const createJsenvRollupPlugin = async ({
   })
 
   const urlLoader = createUrlLoader({
-    urlFetcher,
+    asServerUrl,
     asProjectUrl,
+    asOriginalUrl,
+    urlFetcher,
+    ressourceBuilder,
+    projectDirectoryUrl,
+    babelPluginMap,
+    // rollupModuleInfo,
+    inlineModuleScripts,
+    allowJson: acceptsJsonContentType({ node, format }),
   })
 
   const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(
@@ -668,44 +676,22 @@ building ${entryFileRelativeUrls.length} entry files...`)
         return ""
       }
 
-      const rollupModuleInfo = this.getModuleInfo(rollupUrl)
-      const url = asServerUrl(rollupUrl)
-
-      const loadResult = await urlLoader.loadUrl({
+      const loadResult = await urlLoader.loadUrl(rollupUrl, {
         cancellationToken,
         logger,
-
-        url,
-        urlTrace: () => {
-          return createImportTrace({
-            url,
-            urlImporterMap,
-            // asServerUrl,
-            asOriginalUrl,
-            asProjectUrl,
-          })
-        },
-        rollupUrl,
-        rollupModuleInfo,
-        projectDirectoryUrl,
-        babelPluginMap,
-        asServerUrl,
-        asProjectUrl,
-        asOriginalUrl,
-        urlImporterMap,
-        inlineModuleScripts,
-        allowJson: acceptsJsonContentType({ node, format }),
+        // rollupModuleInfo: this.getModuleInfo(rollupUrl)
       })
 
       // Jsenv helpers are injected as import statements to provide code like babel helpers
       // For now we just compute the information that the target file is a jsenv helper
       // without doing anything special with "targetIsJsenvHelperFile" information
-      const originalUrl = asOriginalUrl(url)
+      const originalUrl = asOriginalUrl(rollupUrl)
       const isJsenvHelperFile = urlIsInsideOf(
         originalUrl,
         jsenvHelpersDirectoryInfo.url,
       )
 
+      const url = asServerUrl(url)
       const importer = urlImporterMap[url]
       // Inform ressource builder that this js module exists
       // It can only be a js module and happens when:
@@ -1203,48 +1189,6 @@ const prepareEntryPoints = async (
   }, Promise.resolve())
 
   return entryPointsPrepared
-}
-
-const createImportTrace = ({
-  url,
-  urlImporterMap,
-  // asServerUrl,
-  asOriginalUrl,
-  asProjectUrl,
-}) => {
-  const firstImporter = urlImporterMap[url]
-
-  const trace = [
-    {
-      type: "entry",
-      url:
-        asOriginalUrl(firstImporter.url) ||
-        asProjectUrl(firstImporter.url) ||
-        firstImporter.url,
-      line: firstImporter.line,
-      column: firstImporter.column,
-    },
-  ]
-
-  const next = (importerUrl) => {
-    const previousImporter = urlImporterMap[importerUrl]
-    if (!previousImporter) {
-      return
-    }
-    trace.push({
-      type: "import",
-      url:
-        asOriginalUrl(previousImporter.url) ||
-        asProjectUrl(previousImporter.url) ||
-        previousImporter.url,
-      line: previousImporter.line,
-      column: previousImporter.column,
-    })
-    next(previousImporter.url)
-  }
-  next(firstImporter.url)
-
-  return trace
 }
 
 const fixRollupUrl = (rollupUrl) => {
