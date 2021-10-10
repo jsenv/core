@@ -14,6 +14,7 @@ import {
   urlIsInsideOf,
   normalizeStructuredMetaMap,
   urlToMeta,
+  urlToExtension,
 } from "@jsenv/filesystem"
 
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
@@ -208,7 +209,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         projectDirectoryUrl,
         buildDirectoryUrl,
         compileServerOrigin,
-        fetchFile: jsenvFetchUrl,
+        jsenvFetchUrl,
       })
       const htmlEntryPoints = entryPointsPrepared.filter(
         (entryPointPrepared) => {
@@ -401,7 +402,9 @@ building ${entryFileRelativeUrls.length} entry files...`)
             })
           },
           fetch: async (url, importer) => {
-            const moduleResponse = await jsenvFetchUrl(url, importer)
+            const moduleResponse = await jsenvFetchUrl(url, {
+              urlTrace: importer,
+            })
             return moduleResponse
           },
         },
@@ -670,6 +673,15 @@ building ${entryFileRelativeUrls.length} entry files...`)
         logger,
 
         url,
+        urlTrace: () => {
+          return createImportTrace({
+            url,
+            urlImporterMap,
+            // asServerUrl,
+            asOriginalUrl,
+            asProjectUrl,
+          })
+        },
         rollupUrl,
         rollupModuleInfo,
         projectDirectoryUrl,
@@ -679,6 +691,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         asOriginalUrl,
         urlImporterMap,
         inlineModuleScripts,
+        jsenvFetchUrl,
 
         minify,
         node,
@@ -1093,7 +1106,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
     }
   }
 
-  const jsenvFetchUrl = async (url, urlTrace) => {
+  const jsenvFetchUrl = async (url, { urlTrace, contentTypeExpected }) => {
     const urlToFetch = applyUrlMappings(url)
 
     const response = await fetchUrl(urlToFetch, {
@@ -1102,12 +1115,27 @@ building ${entryFileRelativeUrls.length} entry files...`)
     })
     const responseUrl = response.url
 
-    const { isValid, message, details } = await validateResponse(response, {
+    const responseValidity = await validateResponse(response, {
       originalUrl:
         asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl,
       urlTrace,
+      contentTypeExpected,
     })
-    if (!isValid) {
+    if (!responseValidity.isValid) {
+      const { message, details } = responseValidity
+      if (
+        contentTypeExpected === "application/javascript" &&
+        !responseValidity.contentType.isValid
+      ) {
+        const importerUrl = urlImporterMap[url].url
+        const urlRelativeToImporter = urlToRelativeUrl(url, importerUrl)
+        details.suggestion = ` use import.meta.url: new URL("${urlRelativeToImporter}", import.meta.url)`
+        if (urlToExtension(url) === ".css") {
+          details[
+            "suggestion 2"
+          ] = `use import assertion: import css from "${urlRelativeToImporter}" assert { type: "css" }`
+        }
+      }
       const jsenvPluginError = new Error(
         createDetailedMessage(message, details),
       )
@@ -1123,7 +1151,10 @@ building ${entryFileRelativeUrls.length} entry files...`)
   }
 
   const fetchImportMapFromUrl = async (importMapUrl, importer) => {
-    const importMapResponse = await jsenvFetchUrl(importMapUrl, importer)
+    const importMapResponse = await jsenvFetchUrl(importMapUrl, {
+      urlTrace: importer,
+      contentTypeExpected: "application/importmap+json",
+    })
     const importMap = await importMapResponse.json()
     const importMapNormalized = normalizeImportMap(
       importMap,
@@ -1158,15 +1189,15 @@ const loadUrl = async ({
   logger,
 
   url,
+  urlTrace,
   rollupUrl,
   // rollupModuleInfo,
   projectDirectoryUrl,
   babelPluginMap,
   asServerUrl,
   asProjectUrl,
-  asOriginalUrl,
-  urlImporterMap,
   inlineModuleScripts,
+  jsenvFetchUrl,
 
   minify,
   node,
@@ -1179,25 +1210,10 @@ const loadUrl = async ({
     // so that:
     // - it knows this css exists
     // - it performs the css minification, parsing and url replacements
-    const response = await fetchUrl(url)
-    const { isValid, message, details } = await validateResponse(response, {
-      originalUrl:
-        asOriginalUrl(response.url) ||
-        asProjectUrl(response.url) ||
-        response.url,
-      urlTrace: () =>
-        createImportTrace({
-          url,
-          urlImporterMap,
-          // asServerUrl,
-          asOriginalUrl,
-          asProjectUrl,
-        }),
+    const response = await jsenvFetchUrl(url, {
+      urlTrace,
       contentTypeExpected: "text/css",
     })
-    if (!isValid) {
-      throw new Error(createDetailedMessage(message, details))
-    }
     const cssText = await response.text()
     const cssAsJsModule = convertCssTextToJavascriptModule(cssText)
     return {
@@ -1223,32 +1239,13 @@ const loadUrl = async ({
     }
   }
 
-  const response = await fetchUrl(url)
-  const responseValidity = await validateResponse(response, {
-    originalUrl:
-      asOriginalUrl(response.url) || asProjectUrl(response.url) || response.url,
-    urlTrace: () =>
-      createImportTrace({
-        url,
-        urlImporterMap,
-        // asServerUrl,
-        asOriginalUrl,
-        asProjectUrl,
-      }),
+  const response = await jsenvFetchUrl(url, {
     contentTypeExpected: [
       "application/javascript",
       ...(acceptsJsonContentType({ node, format }) ? "application/json" : []),
     ],
+    urlTrace,
   })
-  if (!responseValidity.isValid) {
-    const { message, details } = responseValidity
-    if (!responseValidity.contentType.isValid) {
-      const importerUrl = urlImporterMap[url].url
-      const urlRelativeToImporter = urlToRelativeUrl(url, importerUrl)
-      details.suggestion = `non-js ressources can be used with new URL("${urlRelativeToImporter}", import.meta.url)`
-    }
-    throw new Error(createDetailedMessage(message, details))
-  }
 
   const contentType = response.headers["content-type"]
   if (contentType === "application/javascript") {
@@ -1334,7 +1331,7 @@ const prepareEntryPoints = async (
     projectDirectoryUrl,
     buildDirectoryUrl,
     compileServerOrigin,
-    fetchFile,
+    jsenvFetchUrl,
   },
 ) => {
   const entryFileRelativeUrls = Object.keys(entryPointMap)
@@ -1367,7 +1364,9 @@ const prepareEntryPoints = async (
       compileServerOrigin,
     )
 
-    const entryResponse = await fetchFile(entryServerUrl, `entryPointMap`)
+    const entryResponse = await jsenvFetchUrl(entryServerUrl, {
+      urlTrace: `entryPointMap`,
+    })
     const entryContentType = entryResponse.headers["content-type"]
     const isHtml = entryContentType === "text/html"
 

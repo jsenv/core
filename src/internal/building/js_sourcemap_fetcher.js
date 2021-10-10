@@ -42,7 +42,7 @@ export const fetchJavaScriptSourcemap = async ({
     // to an existing urlTrace array
     // good enough for now
     urlTrace: url,
-    contentTypeExpected: "application/json",
+    contentTypeExpected: ["application/json", "application/octet-stream"],
   })
   if (!isValid) {
     logger.warn(

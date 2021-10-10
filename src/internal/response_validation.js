@@ -16,9 +16,8 @@ export const validateResponse = async (
       originalUrl,
       urlTrace,
     })
-    validity.status = statusValidity
-    if (!statusValidity.isValid) {
-      validity.isValid = false
+    mergeValidity(validity, "status", statusValidity)
+    if (!validity.isValid) {
       return validity
     }
   }
@@ -29,14 +28,20 @@ export const validateResponse = async (
       urlTrace,
       contentTypeExpected,
     })
-    validity.contentType = contentTypeValidity
-    if (!contentTypeValidity.isValid) {
-      validity.isValid = false
+    mergeValidity(validity, "contentType", contentTypeValidity)
+    if (!validity.isValid) {
       return validity
     }
   }
 
   return validity
+}
+
+const mergeValidity = (parentValidity, childValidityName, childValidity) => {
+  parentValidity.isValid = childValidity.isValid
+  parentValidity.message = childValidity.message
+  parentValidity.details = childValidity.details
+  parentValidity[childValidityName] = childValidity
 }
 
 const checkStatus = async (response, { originalUrl, urlTrace }) => {
@@ -45,7 +50,7 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
 
   if (status === 404) {
     return {
-      statusIsValid: false,
+      isValid: false,
       message: `404 on url`,
       details: {
         url,
@@ -57,7 +62,7 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
   if (status === 500) {
     if (response.headers["content-type"] === "application/json") {
       return {
-        statusIsValid: false,
+        isValid: false,
         message: `error 500 on url`,
         details: {
           url,
@@ -70,7 +75,7 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
 
   if (status < 200 || status > 299) {
     return {
-      statusIsValid: false,
+      isValid: false,
       message: `invalid response status on url`,
       details: {
         url,
@@ -81,7 +86,7 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
     }
   }
 
-  return { statusIsValid: true }
+  return { isValid: true }
 }
 
 const checkContentType = async (
@@ -89,15 +94,21 @@ const checkContentType = async (
   { originalUrl, urlTrace, contentTypeExpected },
 ) => {
   const url = originalUrl || response.url
-  const contentType = response.headers["content-type"] || ""
+  const responseContentType = response.headers["content-type"] || ""
 
-  if (contentType !== contentTypeExpected) {
+  const isOk = Array.isArray(contentTypeExpected)
+    ? contentTypeExpected.includes(responseContentType)
+    : responseContentType === contentTypeExpected
+
+  if (!isOk) {
     return {
-      valid: false,
+      isValid: false,
       message: `invalid content-type on url`,
       details: {
-        "content-type": contentType,
-        "expected content-type": contentTypeExpected,
+        "content-type": responseContentType,
+        "expected content-type": Array.isArray(contentTypeExpected)
+          ? contentTypeExpected.join(`,\n`)
+          : contentTypeExpected,
         url,
         ...formatUrlTrace(urlTrace),
       },
@@ -105,7 +116,7 @@ const checkContentType = async (
   }
 
   return {
-    valid: true,
+    isValid: true,
   }
 }
 
