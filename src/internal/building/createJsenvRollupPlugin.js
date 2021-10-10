@@ -2,7 +2,7 @@
 import { extname } from "node:path"
 import { normalizeImportMap } from "@jsenv/importmap"
 import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
-import { createDetailedMessage, loggerToLogLevel } from "@jsenv/logger"
+import { loggerToLogLevel } from "@jsenv/logger"
 import {
   isFileSystemPath,
   fileSystemPathToUrl,
@@ -14,14 +14,10 @@ import {
   urlIsInsideOf,
   normalizeStructuredMetaMap,
   urlToMeta,
-  urlToExtension,
 } from "@jsenv/filesystem"
 
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
-import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
-import { validateResponse } from "@jsenv/core/src/internal/response_validation.js"
-import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-import { escapeTemplateStringSpecialCharacters } from "@jsenv/core/src/internal/escapeTemplateStringSpecialCharacters.js"
+import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js"
 import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { infoSign } from "@jsenv/core/src/internal/logs/log_style.js"
@@ -34,7 +30,6 @@ import {
 } from "./build_logs.js"
 import { importMapsFromHtml } from "./html/htmlScan.js"
 import { parseRessource } from "./parseRessource.js"
-import { fetchJavaScriptSourcemap } from "./js_sourcemap_fetcher.js"
 import { createRessourceBuilder } from "./ressource_builder.js"
 import { computeBuildRelativeUrl } from "./url-versioning.js"
 import { transformImportMetaUrlReferences } from "./import_meta_url_and_rollup.js"
@@ -85,14 +80,17 @@ export const createJsenvRollupPlugin = async ({
   minifyHtmlOptions,
 }) => {
   const urlImporterMap = {}
-  const urlResponseBodyMap = {}
   const inlineModuleScripts = {}
-  const urlRedirectionMap = {}
   const jsModulesFromEntry = {}
   const buildFileContents = {}
   const buildInlineFileContents = {}
   let buildStats = {}
   const buildStartMs = Date.now()
+
+  let lastErrorMessage
+  const storeLatestJsenvPluginError = (error) => {
+    lastErrorMessage = error.message
+  }
 
   const {
     asRollupUrl,
@@ -109,10 +107,15 @@ export const createJsenvRollupPlugin = async ({
     urlMappings,
   })
 
-  let lastErrorMessage
-  const storeLatestJsenvPluginError = (error) => {
-    lastErrorMessage = error.message
-  }
+  const urlLoader = createUrlLoader({
+    asOriginalUrl,
+    asProjectUrl,
+    applyUrlMappings,
+    urlImporterMap,
+    beforeThrowingResponseValidationError: (error) => {
+      storeLatestJsenvPluginError(error)
+    },
+  })
 
   const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(
     externalImportUrlPatterns,
@@ -209,7 +212,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         projectDirectoryUrl,
         buildDirectoryUrl,
         compileServerOrigin,
-        jsenvFetchUrl,
+        urlLoader,
       })
       const htmlEntryPoints = entryPointsPrepared.filter(
         (entryPointPrepared) => {
@@ -379,7 +382,8 @@ building ${entryFileRelativeUrls.length} entry files...`)
       let atleastOneChunkEmitted = false
       ressourceBuilder = createRessourceBuilder(
         {
-          parse: async (ressource, notifiers) => {
+          urlLoader,
+          parseRessource: async (ressource, notifiers) => {
             return parseRessource(ressource, notifiers, {
               format,
               systemJsUrl,
@@ -400,12 +404,6 @@ building ${entryFileRelativeUrls.length} entry files...`)
               minifyCssOptions,
               minifyJsOptions,
             })
-          },
-          fetch: async (url, importer) => {
-            const moduleResponse = await jsenvFetchUrl(url, {
-              urlTrace: importer,
-            })
-            return moduleResponse
           },
         },
         {
@@ -431,7 +429,6 @@ building ${entryFileRelativeUrls.length} entry files...`)
             }
             return asOriginalUrl(url) || url
           },
-          loadUrl: (url) => urlResponseBodyMap[url],
           resolveRessourceUrl: ({
             ressourceSpecifier,
             isJsModule,
@@ -668,7 +665,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
       const rollupModuleInfo = this.getModuleInfo(rollupUrl)
       const url = asServerUrl(rollupUrl)
 
-      const loadResult = await loadUrl({
+      const loadResult = await urlLoader.loadUrl({
         cancellationToken,
         logger,
 
@@ -691,11 +688,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         asOriginalUrl,
         urlImporterMap,
         inlineModuleScripts,
-        jsenvFetchUrl,
-
-        minify,
-        node,
-        format,
+        allowJson: acceptsJsonContentType({ node, format }),
       })
 
       // Jsenv helpers are injected as import statements to provide code like babel helpers
@@ -732,12 +725,6 @@ building ${entryFileRelativeUrls.length} entry files...`)
         isJsModule: true,
       })
 
-      saveUrlResponseBody(url, loadResult.code)
-      // handle redirection
-      if (loadResult.url !== url) {
-        saveUrlResponseBody(url, loadResult.code)
-      }
-
       return {
         code: loadResult.code,
         map: loadResult.map,
@@ -754,14 +741,14 @@ building ${entryFileRelativeUrls.length} entry files...`)
       })
       // const moduleInfo = this.getModuleInfo(id)
       const url = asServerUrl(id)
-      const importerUrl = urlImporterMap[url]
+      const importer = urlImporterMap[url]
 
       const importMetaResult = await transformImportMetaUrlReferences({
         code,
         map,
         ast,
         url,
-        importerUrl,
+        importerUrl: importer.url,
 
         ressourceBuilder,
         markBuildRelativeUrlAsUsedByJs,
@@ -774,7 +761,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         map,
         ast,
         url,
-        importerUrl,
+        importerUrl: importer.url,
       })
       code = importAssertionsResult.code
       map = importAssertionsResult.map
@@ -830,9 +817,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         const url = relativePathToUrl(relativePath, sourcemapUrl)
         const serverUrl = asServerUrl(url)
         const finalUrl =
-          serverUrl in urlRedirectionMap
-            ? urlRedirectionMap[serverUrl]
-            : serverUrl
+          urlLoader.getUrlBeforeRedirection(serverUrl) || serverUrl
         const projectUrl = asProjectUrl(finalUrl)
 
         if (projectUrl) {
@@ -1098,60 +1083,8 @@ building ${entryFileRelativeUrls.length} entry files...`)
     },
   }
 
-  const saveUrlResponseBody = (url, responseBody) => {
-    urlResponseBodyMap[url] = responseBody
-    const projectUrl = asProjectUrl(url)
-    if (projectUrl && projectUrl !== url) {
-      urlResponseBodyMap[projectUrl] = responseBody
-    }
-  }
-
-  const jsenvFetchUrl = async (url, { urlTrace, contentTypeExpected }) => {
-    const urlToFetch = applyUrlMappings(url)
-
-    const response = await fetchUrl(urlToFetch, {
-      cancellationToken,
-      ignoreHttpsError: true,
-    })
-    const responseUrl = response.url
-
-    const responseValidity = await validateResponse(response, {
-      originalUrl:
-        asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl,
-      urlTrace,
-      contentTypeExpected,
-    })
-    if (!responseValidity.isValid) {
-      const { message, details } = responseValidity
-      if (
-        contentTypeExpected === "application/javascript" &&
-        !responseValidity.contentType.isValid
-      ) {
-        const importerUrl = urlImporterMap[url].url
-        const urlRelativeToImporter = urlToRelativeUrl(url, importerUrl)
-        details.suggestion = ` use import.meta.url: new URL("${urlRelativeToImporter}", import.meta.url)`
-        if (urlToExtension(url) === ".css") {
-          details[
-            "suggestion 2"
-          ] = `use import assertion: import css from "${urlRelativeToImporter}" assert { type: "css" }`
-        }
-      }
-      const jsenvPluginError = new Error(
-        createDetailedMessage(message, details),
-      )
-      storeLatestJsenvPluginError(jsenvPluginError)
-      throw jsenvPluginError
-    }
-
-    if (url !== responseUrl) {
-      urlRedirectionMap[url] = responseUrl
-    }
-
-    return response
-  }
-
   const fetchImportMapFromUrl = async (importMapUrl, importer) => {
-    const importMapResponse = await jsenvFetchUrl(importMapUrl, {
+    const importMapResponse = await urlLoader.fetchUrl(importMapUrl, {
       urlTrace: importer,
       contentTypeExpected: "application/importmap+json",
     })
@@ -1169,7 +1102,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
     getResult: () => {
       return {
         rollupBuild,
-        urlResponseBodyMap,
+        urlResponseBodyMap: urlLoader.getUrlResponseBodyMap(),
         buildMappings,
         buildManifest,
         buildImportMap: createImportMapForFilesUsedInJs(),
@@ -1182,126 +1115,6 @@ building ${entryFileRelativeUrls.length} entry files...`)
     asProjectUrl,
     rollupGetModuleInfo,
   }
-}
-
-const loadUrl = async ({
-  cancellationToken,
-  logger,
-
-  url,
-  urlTrace,
-  rollupUrl,
-  // rollupModuleInfo,
-  projectDirectoryUrl,
-  babelPluginMap,
-  asServerUrl,
-  asProjectUrl,
-  inlineModuleScripts,
-  jsenvFetchUrl,
-
-  minify,
-  node,
-  format,
-}) => {
-  // importing CSS from JS with import assertions
-  if (rollupUrl.startsWith("import_type_css:")) {
-    const url = asServerUrl(rollupUrl.slice("import_type_css:".length))
-    // TODO: we should we use the ressource builder to fetch this url
-    // so that:
-    // - it knows this css exists
-    // - it performs the css minification, parsing and url replacements
-    const response = await jsenvFetchUrl(url, {
-      urlTrace,
-      contentTypeExpected: "text/css",
-    })
-    const cssText = await response.text()
-    const cssAsJsModule = convertCssTextToJavascriptModule(cssText)
-    return {
-      url: response.url,
-      code: cssAsJsModule,
-      map: null, // TODO: parse and fetch sourcemap from cssText
-    }
-  }
-
-  if (url in inlineModuleScripts) {
-    const { code, map } = await transformJs({
-      code: inlineModuleScripts[url],
-      url: asProjectUrl(url), // transformJs expect a file:// url
-      projectDirectoryUrl,
-      babelPluginMap,
-      // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
-    })
-
-    return {
-      url,
-      code,
-      map,
-    }
-  }
-
-  const response = await jsenvFetchUrl(url, {
-    contentTypeExpected: [
-      "application/javascript",
-      ...(acceptsJsonContentType({ node, format }) ? "application/json" : []),
-    ],
-    urlTrace,
-  })
-
-  const contentType = response.headers["content-type"]
-  if (contentType === "application/javascript") {
-    const jsText = await response.text()
-    const map = await fetchJavaScriptSourcemap({
-      cancellationToken,
-      logger,
-      code: jsText,
-      url,
-    })
-    return {
-      url: response.url,
-      code: jsText,
-      map,
-    }
-  }
-
-  // no need to check for json content-type, if it's not JS, it's JSON
-  // if (contentType === "application/json") {
-  // there is no need to minify the json string
-  // because it becomes valid javascript
-  // that will be minified by minifyJs inside renderChunk
-  const jsonText = await response.text()
-  const jsonAsJsModule = convertJsonTextToJavascriptModule(jsonText, { minify })
-  return {
-    url: response.url,
-    code: jsonAsJsModule,
-    map: null,
-  }
-}
-
-const convertCssTextToJavascriptModule = (cssText) => {
-  // should we perform CSS minification here?
-  // is it already done by ressource builder or something?
-
-  return `
-const stylesheet = new CSSStyleSheet()
-
-stylesheet.replaceSync(${escapeTemplateStringSpecialCharacters(cssText)})
-
-export default stylesheet`
-}
-
-const convertJsonTextToJavascriptModule = (jsonText, { minify }) => {
-  // here we could do the following
-  // return export default jsonText
-  // This would return valid js, that would be minified later
-  // however we will prefer using JSON.parse because it's faster
-  // for js engine to parse JSON than JS
-
-  if (minify) {
-    const jsonTextWithoutSpaces = JSON.stringify(JSON.parse(jsonText))
-    return `export default JSON.parse(${jsonTextWithoutSpaces})`
-  }
-
-  return `export default JSON.parse(jsonText)`
 }
 
 const ensureTopLevelAwaitTranspilationIfNeeded = async ({

@@ -22,7 +22,7 @@ import { computeBuildRelativeUrlForRessource } from "./asset_url_versioning.js"
 import { stringifyUrlSite } from "./url_trace.js"
 
 export const createRessourceBuilder = (
-  { fetch, parse },
+  { urlLoader, parseRessource },
   {
     logLevel,
     format,
@@ -32,7 +32,6 @@ export const createRessourceBuilder = (
     asOriginalServerUrl,
     urlToHumanUrl,
 
-    loadUrl = () => null,
     emitChunk,
     emitAsset,
     setAssetSource,
@@ -432,13 +431,14 @@ export const createRessourceBuilder = (
         }
       }
 
-      const response = await fetch(ressource.url, () =>
-        createRessourceTrace({
-          ressource,
-          createUrlSiteFromReference,
-          findRessourceByUrl,
-        }),
-      )
+      const response = await urlLoader.fetchUrl(ressource.url, {
+        urlTrace: () =>
+          createRessourceTrace({
+            ressource,
+            createUrlSiteFromReference,
+            findRessourceByUrl,
+          }),
+      })
       if (response.url !== ressource.url) {
         const urlBeforeRedirection = ressource.url
         const urlAfterRedirection = response.url
@@ -514,7 +514,7 @@ export const createRessourceBuilder = (
         logger.debug(`parse ${urlToHumanUrl(ressource.url)}`)
       }
 
-      const parseReturnValue = await parse(ressource, {
+      const parseReturnValue = await parseRessource(ressource, {
         format,
         notifyReferenceFound,
       })
@@ -844,7 +844,7 @@ export const createRessourceBuilder = (
     const referenceRessource = findRessourceByUrl(referenceUrl)
     const referenceSource = referenceRessource
       ? referenceRessource.bufferBeforeBuild
-      : loadUrl(referenceUrl)
+      : urlLoader.getUrlResponseTextFromMemory(referenceUrl)
     const referenceSourceAsString = referenceSource
       ? String(referenceSource)
       : ""
