@@ -35,5 +35,17 @@ const { namespace } = await browserImportEsModuleBuild({
 })
 
 const actual = namespace
-const expected = actual
+const expected = {
+  backgroundBodyColor: "rgb(255, 0, 0)",
+}
 assert({ actual, expected })
+
+// TODO:
+// ensure css file are not written in assets
+// ensure css sourcemap file is written
+// WAIT FOR NEXT TEST BEFORE TESTING: ensure css sourcemap comment is resolved
+
+// write an other test to ensure:
+// css url are hashed and targets the correct location
+// we might have to prveent assets to be written in assets directory otherwise url resolution won't work
+// reference that css from html too

@@ -1,43 +1,47 @@
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import { escapeTemplateStringSpecialCharacters } from "@jsenv/core/src/internal/escapeTemplateStringSpecialCharacters.js"
+import { getUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
 import { fetchJavaScriptSourcemap } from "./js_sourcemap_fetcher.js"
 
 export const createUrlLoader = ({
+  projectDirectoryUrl,
+  babelPluginMap,
+  allowJson,
+  urlImporterMap,
+  inlineModuleScripts,
+
   asServerUrl,
   asProjectUrl,
   asOriginalUrl,
+
   urlFetcher,
-  ressourceBuilder,
-  projectDirectoryUrl,
-  babelPluginMap,
-  urlImporterMap,
-  inlineModuleScripts,
-  allowJson,
+
+  loadRessource,
 }) => {
   const urlResponseBodyMap = {}
 
   const loadUrl = async (rollupUrl, { cancellationToken, logger }) => {
+    const { import_type } = getUrlSearchParamsDescriptor(rollupUrl)
+    const url = asServerUrl(rollupUrl)
+
     // importing CSS from JS with import assertions
-    if (rollupUrl.startsWith("import_type_css:")) {
-      const url = asServerUrl(rollupUrl.slice("import_type_css:".length))
-      const reference = await ressourceBuilder.createReferenceFoundInJsModule({
-        jsUrl: url,
-        // the location can be found using urlImporterMap
-        ressourceSpecifier: url,
+    if (import_type === "css") {
+      const ressourceInfo = await loadRessource({
+        url,
         contentTypeExpected: "text/css",
       })
-      await reference.ressource.getReadyPromise()
-
-      const cssText = String(reference.ressource.bufferAfterBuild)
-      const cssAsJsModule = convertCssTextToJavascriptModule(cssText)
+      const cssAsJsModule = convertCssTextToJavascriptModule(ressourceInfo.code)
       return {
-        url: response.url,
+        url: ressourceInfo.url,
         code: cssAsJsModule,
-        map: null, // TODO: parse and fetch sourcemap from cssText
+        // TODO: parse and fetch sourcemap from cssText
+        // maybe we can get it from ressource builder, it might have that info?
+        // if so should we return it?
+        // because it's likely already handled by the ressource builder itself
+        map: null,
       }
     }
 
-    const url = asServerUrl(rollupUrl)
     if (url in inlineModuleScripts) {
       const { code, map } = await transformJs({
         code: inlineModuleScripts[url],
@@ -171,10 +175,12 @@ const convertCssTextToJavascriptModule = (cssText) => {
   // should we perform CSS minification here?
   // is it already done by ressource builder or something?
 
+  const cssTextEscaped = escapeTemplateStringSpecialCharacters(cssText)
+
   return `
 const stylesheet = new CSSStyleSheet()
 
-stylesheet.replaceSync(${escapeTemplateStringSpecialCharacters(cssText)})
+stylesheet.replaceSync(\`${cssTextEscaped}\`)
 
 export default stylesheet`
 }

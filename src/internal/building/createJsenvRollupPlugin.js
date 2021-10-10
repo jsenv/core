@@ -93,6 +93,9 @@ export const createJsenvRollupPlugin = async ({
     lastErrorMessage = error.message
   }
 
+  let ressourceBuilder
+  let importResolver
+
   const {
     asRollupUrl,
     asProjectUrl,
@@ -119,16 +122,34 @@ export const createJsenvRollupPlugin = async ({
   })
 
   const urlLoader = createUrlLoader({
+    projectDirectoryUrl,
+    babelPluginMap,
+    allowJson: acceptsJsonContentType({ node, format }),
+    urlImporterMap,
+    inlineModuleScripts,
+
     asServerUrl,
     asProjectUrl,
     asOriginalUrl,
+
     urlFetcher,
-    ressourceBuilder,
-    projectDirectoryUrl,
-    babelPluginMap,
-    // rollupModuleInfo,
-    inlineModuleScripts,
-    allowJson: acceptsJsonContentType({ node, format }),
+
+    loadRessource: async ({ url, contentTypeExpected }) => {
+      const importer = urlImporterMap[url]
+      const reference = await ressourceBuilder.createReferenceFoundInJsModule({
+        jsUrl: importer.url,
+        jsLine: importer.line,
+        jsColumn: importer.column,
+        ressourceSpecifier: url,
+        contentTypeExpected,
+      })
+      await reference.ressource.getReadyPromise()
+
+      return {
+        url,
+        code: String(reference.ressource.bufferAfterBuild),
+      }
+    },
   })
 
   const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(
@@ -184,12 +205,10 @@ export const createJsenvRollupPlugin = async ({
     compileServerOrigin,
   )
 
-  let ressourceBuilder
   let rollupEmitFile = () => {}
   let rollupSetAssetSource = () => {}
   let _rollupGetModuleInfo = () => {}
   const rollupGetModuleInfo = (id) => _rollupGetModuleInfo(id)
-  let importResolver
 
   const emitAsset = ({ fileName, source }) => {
     return rollupEmitFile({
@@ -691,7 +710,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         jsenvHelpersDirectoryInfo.url,
       )
 
-      const url = asServerUrl(url)
+      const url = asServerUrl(rollupUrl)
       const importer = urlImporterMap[url]
       // Inform ressource builder that this js module exists
       // It can only be a js module and happens when:
@@ -754,6 +773,9 @@ building ${entryFileRelativeUrls.length} entry files...`)
         ast,
         url,
         importerUrl: importer.url,
+        resolve: (specifier, importer, options) => {
+          return this.resolve(specifier, importer, options)
+        },
       })
       code = importAssertionsResult.code
       map = importAssertionsResult.map
@@ -762,6 +784,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         (importedUrl) => {
           const { importNode } =
             importAssertionsResult.importAssertions[importedUrl]
+          importedUrl = asServerUrl(importedUrl)
           urlImporterMap[importedUrl] = {
             url,
             line: importNode.loc.start.line,

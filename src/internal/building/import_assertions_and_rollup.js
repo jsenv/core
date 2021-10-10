@@ -1,3 +1,5 @@
+import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
+
 export const transformImportAssertions = async ({
   code,
   url,
@@ -41,12 +43,17 @@ export const transformImportAssertions = async ({
       }
 
       const { type } = parseImportAssertionsAttributes(assertions)
+      const importedUrlWithoutAssertion = id
+      const importedUrlWithAssertion = setUrlSearchParamsDescriptor(id, {
+        import_type: type,
+      })
       magicString.overwrite(
         source.start,
         source.end,
-        `"import_type_${type}:${id}"`,
+        `"${importedUrlWithAssertion}"`,
       )
-      importAssertions[id] = {
+      importAssertions[importedUrlWithAssertion] = {
+        importedUrlWithoutAssertion,
         importNode: source,
       }
     },
