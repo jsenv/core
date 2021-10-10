@@ -22,7 +22,7 @@ import { computeBuildRelativeUrlForRessource } from "./asset_url_versioning.js"
 import { stringifyUrlSite } from "./url_trace.js"
 
 export const createRessourceBuilder = (
-  { urlLoader, parseRessource },
+  { urlFetcher, urlLoader, parseRessource },
   {
     logLevel,
     format,
@@ -431,7 +431,7 @@ export const createRessourceBuilder = (
         }
       }
 
-      const response = await urlLoader.fetchUrl(ressource.url, {
+      const response = await urlFetcher.fetchUrl(ressource.url, {
         urlTrace: () =>
           createRessourceTrace({
             ressource,

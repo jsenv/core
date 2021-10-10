@@ -17,6 +17,7 @@ import {
 } from "@jsenv/filesystem"
 
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
+import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
 import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js"
 import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
@@ -107,7 +108,7 @@ export const createJsenvRollupPlugin = async ({
     urlMappings,
   })
 
-  const urlLoader = createUrlLoader({
+  const urlFetcher = createUrlFetcher({
     asOriginalUrl,
     asProjectUrl,
     applyUrlMappings,
@@ -115,6 +116,11 @@ export const createJsenvRollupPlugin = async ({
     beforeThrowingResponseValidationError: (error) => {
       storeLatestJsenvPluginError(error)
     },
+  })
+
+  const urlLoader = createUrlLoader({
+    urlFetcher,
+    asProjectUrl,
   })
 
   const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(
@@ -212,7 +218,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         projectDirectoryUrl,
         buildDirectoryUrl,
         compileServerOrigin,
-        urlLoader,
+        urlFetcher,
       })
       const htmlEntryPoints = entryPointsPrepared.filter(
         (entryPointPrepared) => {
@@ -373,15 +379,15 @@ building ${entryFileRelativeUrls.length} entry files...`)
         })
       }
 
-      // rollup will yell at us telling we did not provide an input option
-      // if we provide only an html file without any script type module in it
-      // but this can be desired to produce a build with only assets (html, css, images)
-      // without any js
-      // we emit an empty chunk, discards rollup warning about it. This chunk is
-      // later ignored by in generateBundle hooks
+      // rollup expects an input option, if we provide only an html file
+      // without any script type module in it, we won't emit "chunk" and rollup will throw.
+      // It is valid to build an html not referencing any js (rare but valid)
+      // In that case jsenv emits an empty chunk and discards rollup warning about it
+      // This chunk is later ignored in "generateBundle" hook
       let atleastOneChunkEmitted = false
       ressourceBuilder = createRessourceBuilder(
         {
+          urlFetcher,
           urlLoader,
           parseRessource: async (ressource, notifiers) => {
             return parseRessource(ressource, notifiers, {
@@ -817,7 +823,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
         const url = relativePathToUrl(relativePath, sourcemapUrl)
         const serverUrl = asServerUrl(url)
         const finalUrl =
-          urlLoader.getUrlBeforeRedirection(serverUrl) || serverUrl
+          urlFetcher.getUrlBeforeRedirection(serverUrl) || serverUrl
         const projectUrl = asProjectUrl(finalUrl)
 
         if (projectUrl) {
@@ -1084,7 +1090,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
   }
 
   const fetchImportMapFromUrl = async (importMapUrl, importer) => {
-    const importMapResponse = await urlLoader.fetchUrl(importMapUrl, {
+    const importMapResponse = await urlFetcher.fetchUrl(importMapUrl, {
       urlTrace: importer,
       contentTypeExpected: "application/importmap+json",
     })
@@ -1144,7 +1150,7 @@ const prepareEntryPoints = async (
     projectDirectoryUrl,
     buildDirectoryUrl,
     compileServerOrigin,
-    jsenvFetchUrl,
+    urlFetcher,
   },
 ) => {
   const entryFileRelativeUrls = Object.keys(entryPointMap)
@@ -1177,7 +1183,7 @@ const prepareEntryPoints = async (
       compileServerOrigin,
     )
 
-    const entryResponse = await jsenvFetchUrl(entryServerUrl, {
+    const entryResponse = await urlFetcher.fetchUrl(entryServerUrl, {
       urlTrace: `entryPointMap`,
     })
     const entryContentType = entryResponse.headers["content-type"]

@@ -1,69 +1,9 @@
-import { createDetailedMessage } from "@jsenv/logger"
-import { urlToExtension, urlToRelativeUrl } from "@jsenv/filesystem"
-
-import { fetchUrl as jsenvFetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
-import { escapeTemplateStringSpecialCharacters } from "@jsenv/core/src/internal/escapeTemplateStringSpecialCharacters.js"
-import { validateResponse } from "@jsenv/core/src/internal/response_validation.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-
+import { escapeTemplateStringSpecialCharacters } from "@jsenv/core/src/internal/escapeTemplateStringSpecialCharacters.js"
 import { fetchJavaScriptSourcemap } from "./js_sourcemap_fetcher.js"
 
-export const createUrlLoader = ({
-  asOriginalUrl,
-  asProjectUrl,
-  applyUrlMappings,
-  urlImporterMap,
-  beforeThrowingResponseValidationError,
-}) => {
-  const urlRedirectionMap = {}
+export const createUrlLoader = ({ urlFetcher, asProjectUrl }) => {
   const urlResponseBodyMap = {}
-
-  const fetchUrl = async (
-    url,
-    { cancellationToken, urlTrace, contentTypeExpected },
-  ) => {
-    const urlToFetch = applyUrlMappings(url)
-
-    const response = await jsenvFetchUrl(urlToFetch, {
-      cancellationToken,
-      ignoreHttpsError: true,
-    })
-    const responseUrl = response.url
-
-    const responseValidity = await validateResponse(response, {
-      originalUrl:
-        asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl,
-      urlTrace,
-      contentTypeExpected,
-    })
-    if (!responseValidity.isValid) {
-      const { message, details } = responseValidity
-      if (
-        contentTypeExpected === "application/javascript" &&
-        !responseValidity.contentType.isValid
-      ) {
-        const importerUrl = urlImporterMap[url].url
-        const urlRelativeToImporter = urlToRelativeUrl(url, importerUrl)
-        details.suggestion = ` use import.meta.url: new URL("${urlRelativeToImporter}", import.meta.url)`
-        if (urlToExtension(url) === ".css") {
-          details[
-            "suggestion 2"
-          ] = `use import assertion: import css from "${urlRelativeToImporter}" assert { type: "css" }`
-        }
-      }
-      const responseValidationError = new Error(
-        createDetailedMessage(message, details),
-      )
-      beforeThrowingResponseValidationError(responseValidationError)
-      throw responseValidationError
-    }
-
-    if (url !== responseUrl) {
-      urlRedirectionMap[url] = responseUrl
-    }
-
-    return response
-  }
 
   const loadUrl = async ({
     cancellationToken,
@@ -87,7 +27,7 @@ export const createUrlLoader = ({
       // so that:
       // - it knows this css exists
       // - it performs the css minification, parsing and url replacements
-      const response = await fetchUrl(url, {
+      const response = await urlFetcher.fetchUrl(url, {
         cancellationToken,
         urlTrace,
         contentTypeExpected: "text/css",
@@ -117,7 +57,7 @@ export const createUrlLoader = ({
       }
     }
 
-    const response = await fetchUrl(url, {
+    const response = await urlFetcher.fetchUrl(url, {
       cancellationToken,
       contentTypeExpected: [
         "application/javascript",
@@ -159,7 +99,7 @@ export const createUrlLoader = ({
   }
 
   const saveUrlResponseBody = (url, responseBodyAsText) => {
-    const urlBeforeRedirection = getUrlBeforeRedirection(url)
+    const urlBeforeRedirection = urlFetcher.getUrlBeforeRedirection(url)
     if (urlBeforeRedirection) {
       saveUrlResponseBody(urlBeforeRedirection, responseBodyAsText)
     }
@@ -171,19 +111,12 @@ export const createUrlLoader = ({
     }
   }
 
-  const getUrlBeforeRedirection = (url) => {
-    const urlBeforeRedirection = urlRedirectionMap[url]
-    return urlBeforeRedirection
-  }
-
   const getUrlResponseTextFromMemory = (url) => {
     return urlResponseBodyMap[url]
   }
 
   return {
-    fetchUrl,
     loadUrl,
-    getUrlBeforeRedirection,
     getUrlResponseTextFromMemory,
     getUrlResponseBodyMap: () => urlResponseBodyMap,
   }
