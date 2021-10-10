@@ -9,13 +9,17 @@ export const validateResponse = async (
     contentTypeExpected = null,
   } = {},
 ) => {
+  const validity = { isValid: true }
+
   if (statusValidation) {
     const statusValidity = await checkStatus(response, {
       originalUrl,
       urlTrace,
     })
-    if (!statusValidity.valid) {
-      return statusValidity
+    validity.status = statusValidity
+    if (!statusValidity.isValid) {
+      validity.isValid = false
+      return validity
     }
   }
 
@@ -25,12 +29,14 @@ export const validateResponse = async (
       urlTrace,
       contentTypeExpected,
     })
-    if (!contentTypeValidity.valid) {
-      return contentTypeValidity
+    validity.contentType = contentTypeValidity
+    if (!contentTypeValidity.isValid) {
+      validity.isValid = false
+      return validity
     }
   }
 
-  return { valid: true }
+  return validity
 }
 
 const checkStatus = async (response, { originalUrl, urlTrace }) => {
@@ -39,7 +45,7 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
 
   if (status === 404) {
     return {
-      valid: false,
+      statusIsValid: false,
       message: `404 on url`,
       details: {
         url,
@@ -51,7 +57,7 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
   if (status === 500) {
     if (response.headers["content-type"] === "application/json") {
       return {
-        valid: false,
+        statusIsValid: false,
         message: `error 500 on url`,
         details: {
           url,
@@ -64,7 +70,7 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
 
   if (status < 200 || status > 299) {
     return {
-      valid: false,
+      statusIsValid: false,
       message: `invalid response status on url`,
       details: {
         url,
@@ -75,7 +81,7 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
     }
   }
 
-  return { valid: true }
+  return { statusIsValid: true }
 }
 
 const checkContentType = async (

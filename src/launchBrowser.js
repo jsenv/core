@@ -5,11 +5,12 @@ import {
   createCancellationToken,
   createStoppableOperation,
 } from "@jsenv/cancellation"
+import { createDetailedMessage } from "@jsenv/logger"
 import { teardownSignal } from "@jsenv/node-signals"
 
 import { trackRessources } from "./internal/trackRessources.js"
 import { fetchUrl } from "./internal/fetchUrl.js"
-import { validateResponseStatusIsOk } from "./internal/validateResponseStatusIsOk.js"
+import { validateResponse } from "./internal/response_validation.js"
 import { trackPageToNotify } from "./internal/browser-launcher/trackPageToNotify.js"
 import { createSharing } from "./internal/browser-launcher/createSharing.js"
 import { executeHtmlFile } from "./internal/browser-launcher/executeHtmlFile.js"
@@ -91,9 +92,11 @@ export const launchChromium = async ({
       cancellationToken,
       ignoreHttpsError: true,
     })
-    const { valid, message } = await validateResponseStatusIsOk(browserResponse)
-    if (!valid) {
-      throw new Error(message)
+    const { isValid, message, details } = await validateResponse(
+      browserResponse,
+    )
+    if (!isValid) {
+      throw new Error(createDetailedMessage(message, details))
     }
 
     const browserResponseObject = JSON.parse(browserResponse.body)
