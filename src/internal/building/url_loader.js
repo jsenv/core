@@ -2,7 +2,11 @@ import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-s
 import { escapeTemplateStringSpecialCharacters } from "@jsenv/core/src/internal/escapeTemplateStringSpecialCharacters.js"
 import { fetchJavaScriptSourcemap } from "./js_sourcemap_fetcher.js"
 
-export const createUrlLoader = ({ urlFetcher, asProjectUrl }) => {
+export const createUrlLoader = ({
+  urlFetcher,
+  asProjectUrl,
+  ressourceBuilder,
+}) => {
   const urlResponseBodyMap = {}
 
   const loadUrl = async ({
@@ -23,16 +27,15 @@ export const createUrlLoader = ({ urlFetcher, asProjectUrl }) => {
     // importing CSS from JS with import assertions
     if (rollupUrl.startsWith("import_type_css:")) {
       const url = asServerUrl(rollupUrl.slice("import_type_css:".length))
-      // TODO: we should we use the ressource builder to fetch this url
-      // so that:
-      // - it knows this css exists
-      // - it performs the css minification, parsing and url replacements
-      const response = await urlFetcher.fetchUrl(url, {
-        cancellationToken,
-        urlTrace,
+      const reference = await ressourceBuilder.createReferenceFoundInJsModule({
+        jsUrl: url,
+        // the location can be found using urlImporterMap
+        ressourceSpecifier: url,
         contentTypeExpected: "text/css",
       })
-      const cssText = await response.text()
+      await reference.ressource.getReadyPromise()
+
+      const cssText = String(reference.ressource.bufferAfterBuild)
       const cssAsJsModule = convertCssTextToJavascriptModule(cssText)
       return {
         url: response.url,
@@ -83,11 +86,10 @@ export const createUrlLoader = ({ urlFetcher, asProjectUrl }) => {
       }
     }
 
-    // no need to check for json content-type, if it's not JS, it's JSON
-    // if (contentType === "application/json") {
-    // there is no need to minify the json string
-    // because it becomes valid javascript
-    // that will be minified by minifyJs inside renderChunk
+    // When json is referenced from js without import assertion and minify is enabled
+    // you can get non-minified json (json with spaces)
+    // We could fix that by removing white spaces here but that means forwarding minify
+    // param and this is only possible in Node.js where minification is less (not?) important
     const jsonText = await response.text()
     saveUrlResponseBody(response.url, jsonText)
     const jsonAsJsModule = convertJsonTextToJavascriptModule(jsonText)

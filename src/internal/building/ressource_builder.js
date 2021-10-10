@@ -57,7 +57,7 @@ export const createRessourceBuilder = (
     const callerLocation = getCallerLocation()
     const entryReference = createReference({
       ressourceSpecifier: entryUrl,
-      ressourceContentTypeExpected: entryContentType,
+      contentTypeExpected: entryContentType,
       referenceUrl: callerLocation.url,
       referenceLine: callerLocation.line,
       referenceColumn: callerLocation.column,
@@ -78,10 +78,7 @@ export const createRessourceBuilder = (
     // on await que les assets, pour le js rollup s'en occupe
     await Promise.all(
       entryReference.ressource.dependencies.map(async (dependency) => {
-        if (
-          dependency.ressourceContentTypeExpected ===
-          "application/importmap+json"
-        ) {
+        if (dependency.contentTypeExpected === "application/importmap+json") {
           // don't await for importmap right away, it must be handled as the very last asset
           // to be aware of build mappings.
           // getReadyPromise() for that importmap will be called during getAllAssetEntryEmittedPromise
@@ -121,13 +118,14 @@ export const createRessourceBuilder = (
     jsLine,
     jsColumn,
 
+    contentTypeExpected,
     ressourceSpecifier,
     contentType,
     bufferBeforeBuild,
   }) => {
     const reference = createReference({
       ressourceSpecifier,
-      ressourceContentTypeExpected: contentType,
+      contentTypeExpected,
       referenceUrl: jsUrl,
       referenceLine: jsLine,
       referenceColumn: jsColumn,
@@ -157,7 +155,7 @@ export const createRessourceBuilder = (
   const createReference = ({
     referenceShouldNotEmitChunk,
     isRessourceHint,
-    ressourceContentTypeExpected,
+    contentTypeExpected,
     ressourceSpecifier,
     referenceUrl,
     referenceColumn,
@@ -230,7 +228,7 @@ export const createRessourceBuilder = (
       isExternal = false
       isInline = true
       const { mediaType, base64Flag, data } = parseDataUrl(ressourceUrl)
-      ressourceContentTypeExpected = mediaType
+      contentTypeExpected = mediaType
       contentType = mediaType
       bufferBeforeBuild = base64Flag
         ? Buffer.from(data, "base64")
@@ -287,7 +285,7 @@ export const createRessourceBuilder = (
     const reference = {
       referenceShouldNotEmitChunk,
       isRessourceHint,
-      ressourceContentTypeExpected,
+      contentTypeExpected,
       referenceUrl,
       referenceColumn,
       referenceLine,
@@ -432,6 +430,7 @@ export const createRessourceBuilder = (
       }
 
       const response = await urlFetcher.fetchUrl(ressource.url, {
+        contentTypeExpected: ressource.firstStrongReference.contentTypeExpected,
         urlTrace: () =>
           createRessourceTrace({
             ressource,
@@ -469,7 +468,7 @@ export const createRessourceBuilder = (
       let parsingDone = false
       const notifyReferenceFound = ({
         isRessourceHint,
-        ressourceContentTypeExpected,
+        contentTypeExpected,
         ressourceSpecifier,
         referenceLine,
         referenceColumn,
@@ -493,7 +492,7 @@ export const createRessourceBuilder = (
           referenceLine,
           referenceColumn,
           isRessourceHint,
-          ressourceContentTypeExpected,
+          contentTypeExpected,
 
           contentType,
           bufferBeforeBuild,

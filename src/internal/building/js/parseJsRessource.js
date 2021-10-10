@@ -19,7 +19,7 @@ export const parseJsRessource = async (
 
   if (jsSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
-      ressourceContentTypeExpected: "application/json",
+      contentTypeExpected: ["application/json", "application/octet-stream"],
       ressourceSpecifier: jsSourcemapUrl,
       // we don't really know the line or column
       // but let's asusme it the last line and first column

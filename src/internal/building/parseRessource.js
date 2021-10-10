@@ -140,8 +140,7 @@ export const parseRessource = (
 
   if (
     contentType === "application/manifest+json" ||
-    ressource.references[0].ressourceContentTypeExpected ===
-      "application/manifest+json"
+    ressource.references[0].contentTypeExpected === "application/manifest+json"
   ) {
     return parseWebmanifestRessource(ressource, notifiers, { minify })
   }

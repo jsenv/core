@@ -179,7 +179,7 @@ const regularScriptSrcVisitor = (
   }
 
   const remoteScriptReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "application/javascript",
+    contentTypeExpected: "application/javascript",
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(script, "src"),
   })
@@ -239,7 +239,7 @@ const regularScriptTextNodeVisitor = (
   }
 
   const jsReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "application/javascript",
+    contentTypeExpected: "application/javascript",
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
@@ -270,7 +270,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
   }
 
   const remoteScriptReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "application/javascript",
+    contentTypeExpected: "application/javascript",
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(script, "src"),
     isJsModule: true,
@@ -335,7 +335,7 @@ const moduleScriptTextNodeVisitor = (
   }
 
   const jsReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "application/javascript",
+    contentTypeExpected: "application/javascript",
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
@@ -373,7 +373,7 @@ const importmapScriptSrcVisitor = (
   }
 
   const importmapReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "application/importmap+json",
+    contentTypeExpected: "application/importmap+json",
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(script, "src"),
     // here we want to force the fileName for the importmap
@@ -460,7 +460,7 @@ const importmapScriptTextNodeVisitor = (
   }
 
   const importmapReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "application/importmap+json",
+    contentTypeExpected: "application/importmap+json",
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
@@ -500,7 +500,7 @@ const linkStylesheetHrefVisitor = (
   }
 
   const cssReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "text/css",
+    contentTypeExpected: "text/css",
     ressourceSpecifier: hrefAttribute.value,
     ...referenceLocationFromHtmlNode(link, "href"),
   })
@@ -555,26 +555,25 @@ const linkHrefVisitor = (
     "modulepreload",
   ].includes(rel)
 
-  let ressourceContentTypeExpected
+  let contentTypeExpected
   const typeAttribute = getHtmlNodeAttributeByName(link, "type")
   const type = typeAttribute ? typeAttribute.value : ""
   let isJsModule = false
   if (type) {
-    ressourceContentTypeExpected = type
+    contentTypeExpected = type
   } else if (rel === "manifest") {
-    ressourceContentTypeExpected = "application/manifest+json"
+    contentTypeExpected = "application/manifest+json"
   } else if (rel === "modulepreload") {
-    ressourceContentTypeExpected = "application/javascript"
+    contentTypeExpected = "application/javascript"
     isJsModule = true
   }
 
   const linkReference = notifyReferenceFound({
     isRessourceHint,
-    ressourceContentTypeExpected,
+    contentTypeExpected,
     ressourceSpecifier: hrefAttribute.value,
     ...referenceLocationFromHtmlNode(link, "href"),
-    urlVersioningDisabled:
-      ressourceContentTypeExpected === "application/manifest+json",
+    urlVersioningDisabled: contentTypeExpected === "application/manifest+json",
     isJsModule,
   })
   return ({ getUrlRelativeToImporter }) => {
@@ -636,7 +635,7 @@ const styleTextNodeVisitor = (
   }
 
   const inlineStyleReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "text/css",
+    contentTypeExpected: "text/css",
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       style,
       styles,
@@ -714,9 +713,7 @@ const sourceSrcVisitor = (source, { notifyReferenceFound }) => {
 
   const typeAttribute = getHtmlNodeAttributeByName(source, "type")
   const srcReference = notifyReferenceFound({
-    ressourceContentTypeExpected: typeAttribute
-      ? typeAttribute.value
-      : undefined,
+    contentTypeExpected: typeAttribute ? typeAttribute.value : undefined,
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(source, "src"),
   })
