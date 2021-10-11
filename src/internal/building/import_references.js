@@ -10,6 +10,8 @@ export const transformImportReferences = async ({
   ast,
 
   ressourceBuilder,
+  jsConcatenation,
+  importAssertionsSupport,
   resolve,
 }) => {
   const { asyncWalk } = await import("estree-walker")
@@ -30,6 +32,8 @@ export const transformImportReferences = async ({
         mutations,
         url,
         resolve,
+        jsConcatenation,
+        importAssertionsSupport,
         importAssertions,
       })
     },
@@ -109,7 +113,14 @@ const isNewUrlImportMetaUrl = (node) => {
 
 const importAssertionsVisitor = async (
   node,
-  { mutations, url, resolve, importAssertions },
+  {
+    mutations,
+    url,
+    resolve,
+    jsConcatenation,
+    importAssertionsSupport,
+    importAssertions,
+  },
 ) => {
   if (node.type !== "ImportDeclaration") {
     return
@@ -127,9 +138,11 @@ const importAssertionsVisitor = async (
   }
 
   const importSpecifier = source.value
+  const { type } = parseImportAssertionsAttributes(assertions)
+
   const urlResolution = await resolve(importSpecifier, url, {
     custom: {
-      skipUrlImportTrace: true,
+      importAssertionType: type,
     },
   })
   if (urlResolution === null) {
@@ -144,7 +157,16 @@ const importAssertionsVisitor = async (
     return
   }
 
-  const { type } = parseImportAssertionsAttributes(assertions)
+  if (!jsConcatenation && importAssertionsSupport[type]) {
+    // The rollup way to reference an asset is with
+    // "import.meta.ROLLUP_FILE_URL_${rollupAssetId}"
+    // However it would not work here because
+    // It's the static import path that we want to override, not a variable in the script
+    console.warn(
+      `Due to technical limitations ${url} file will be transformed to js module even if it could be kept as ${type} module`,
+    )
+  }
+
   const importedUrlWithoutAssertion = id
   const importedUrlWithAssertion = setUrlSearchParamsDescriptor(id, {
     import_type: type,
@@ -158,6 +180,7 @@ const importAssertionsVisitor = async (
   importAssertions[importedUrlWithAssertion] = {
     importedUrlWithoutAssertion,
     importNode: source,
+    type,
   }
 }
 

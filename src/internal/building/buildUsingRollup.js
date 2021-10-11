@@ -9,6 +9,8 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 import { humanizeUrl } from "@jsenv/core/src/internal/building/url_trace.js"
+import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
+import { jsenvPluginCompatMap } from "@jsenv/core/src/internal/generateGroupMap/jsenvPluginCompatMap.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
 export const buildUsingRollup = async ({
@@ -68,6 +70,28 @@ export const buildUsingRollup = async ({
       runtimeSupport.safari,
   )
 
+  const runtimeCompatMap = createRuntimeCompat({
+    runtimeSupport,
+
+    babelPluginMap: {},
+    jsenvPluginMap: {
+      ...jsenvPluginCompatMap,
+    },
+    jsenvPluginCompatMap,
+  })
+  const importAssertionsSupport = {
+    json:
+      format === "esmodule" &&
+      !runtimeCompatMap.jsenvPluginRequiredNameArray.includes(
+        "import_assertion_type_json",
+      ),
+    css:
+      format === "esmodule" &&
+      !runtimeCompatMap.jsenvPluginRequiredNameArray.includes(
+        "import_assertion_type_json",
+      ),
+  }
+
   const {
     jsenvRollupPlugin,
     getLastErrorMessage,
@@ -93,6 +117,7 @@ export const buildUsingRollup = async ({
     transformTopLevelAwait,
     node,
     browser,
+    importAssertionsSupport,
 
     urlMappings,
     importResolutionMethod,

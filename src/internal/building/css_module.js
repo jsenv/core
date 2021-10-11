@@ -8,20 +8,20 @@ import {
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 
 export const convertCssTextToJavascriptModule = async ({
-  url,
+  cssUrl,
   jsUrl,
   code,
   map,
 }) => {
-  const directoryUrl = resolveUrl("./", url)
+  const directoryUrl = resolveUrl("./", cssUrl)
   const jsDirectoryUrl = resolveUrl("./", jsUrl)
   if (directoryUrl !== jsDirectoryUrl) {
     const cssUrlReplaceResult = await replaceCssUrls({
-      url,
+      url: cssUrl,
       code,
       map,
       getUrlReplacementValue: ({ specifier }) => {
-        const urlForCss = resolveUrl(specifier, url)
+        const urlForCss = resolveUrl(specifier, cssUrl)
         const urlForJs = urlToRelativeUrl(urlForCss, jsUrl)
         return urlForJs
       },
@@ -29,7 +29,7 @@ export const convertCssTextToJavascriptModule = async ({
     code = cssUrlReplaceResult.code
     map = cssUrlReplaceResult.map
     const sourcemapUrlSpecifier = getCssSourceMappingUrl(code)
-    const sourcemapUrlForCss = resolveUrl(sourcemapUrlSpecifier, url)
+    const sourcemapUrlForCss = resolveUrl(sourcemapUrlSpecifier, cssUrl)
     const sourcemapUrlForJs = urlToRelativeUrl(sourcemapUrlForCss, jsUrl)
     code = setCssSourceMappingUrl(code, sourcemapUrlForJs)
   }

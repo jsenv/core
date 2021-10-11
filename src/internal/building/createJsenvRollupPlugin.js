@@ -2,7 +2,7 @@
 import { extname } from "node:path"
 import { normalizeImportMap } from "@jsenv/importmap"
 import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
-import { loggerToLogLevel } from "@jsenv/logger"
+import { createDetailedMessage, loggerToLogLevel } from "@jsenv/logger"
 import {
   isFileSystemPath,
   fileSystemPathToUrl,
@@ -14,12 +14,12 @@ import {
   urlIsInsideOf,
   normalizeStructuredMetaMap,
   urlToMeta,
-  urlToFilename,
 } from "@jsenv/filesystem"
 
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
 import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js"
+import { stringifyUrlTrace } from "@jsenv/core/src/internal/building/url_trace.js"
 import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { infoSign } from "@jsenv/core/src/internal/logs/log_style.js"
@@ -69,6 +69,7 @@ export const createJsenvRollupPlugin = async ({
   babelPluginMap,
   transformTopLevelAwait,
   node,
+  importAssertionsSupport,
 
   urlVersioning,
   lineBreakNormalization,
@@ -127,44 +128,21 @@ export const createJsenvRollupPlugin = async ({
 
   const urlLoader = createUrlLoader({
     projectDirectoryUrl,
+    buildDirectoryUrl,
     babelPluginMap,
     allowJson: acceptsJsonContentType({ node, format }),
     urlImporterMap,
     inlineModuleScripts,
+    jsConcatenation,
 
     asServerUrl,
     asProjectUrl,
     asOriginalUrl,
 
     urlFetcher,
-
-    loadRessource: async ({ url, contentTypeExpected }) => {
-      const importer = urlImporterMap[url]
-      const reference = await ressourceBuilder.createReferenceFoundInJsModule({
-        jsUrl: importer.url,
-        jsLine: importer.line,
-        jsColumn: importer.column,
-        ressourceSpecifier: url,
-        contentTypeExpected,
-      })
-      await reference.ressource.getReadyPromise()
-      // this reference is "inlined" because it becomes something else
-      // (css string becomes a js module for example)
-      reference.inlinedCallback()
-
-      // const moduleInfo = rollupGetModuleInfo(asRollupUrl(importer.url))
-      const jsUrl = resolveUrl(urlToFilename(importer.url), buildDirectoryUrl)
-
-      return {
-        url: resolveUrl(
-          reference.ressource.buildRelativeUrl,
-          buildDirectoryUrl,
-        ),
-        jsUrl,
-        importer,
-        code: String(reference.ressource.bufferAfterBuild),
-      }
-    },
+    // use a function to get ressourceBuilder because it's not yet created
+    // and there is a circular dependency between urlFetcher, urlLoader and ressourceBuilder
+    getRessourceBuilder: () => ressourceBuilder,
   })
 
   const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(
@@ -634,7 +612,9 @@ building ${entryFileRelativeUrls.length} entry files...`)
       }
 
       const importUrl = await importResolver.resolveImport(specifier, importer)
-      if (!custom.skipUrlImportTrace) {
+
+      const { importAssertionType } = custom
+      if (!importAssertionType) {
         const existingImporter = urlImporterMap[importUrl]
         if (!existingImporter) {
           urlImporterMap[importUrl] = {
@@ -709,7 +689,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
       const loadResult = await urlLoader.loadUrl(rollupUrl, {
         cancellationToken,
         logger,
-        // rollupModuleInfo: this.getModuleInfo(rollupUrl)
+        rollupModuleInfo: this.getModuleInfo(rollupUrl),
       })
 
       url = loadResult.url
@@ -773,6 +753,8 @@ building ${entryFileRelativeUrls.length} entry files...`)
         ast,
 
         ressourceBuilder,
+        jsConcatenation,
+        importAssertionsSupport,
         resolve: (...args) => this.resolve(...args),
       })
       code = importReferenceResult.code
@@ -787,12 +769,25 @@ building ${entryFileRelativeUrls.length} entry files...`)
 
       const { importAssertions } = importReferenceResult
       Object.keys(importAssertions).forEach((importedUrl) => {
-        const { importNode } = importAssertions[importedUrl]
+        const { importNode, type } = importAssertions[importedUrl]
         importedUrl = asServerUrl(importedUrl)
         urlImporterMap[importedUrl] = {
           url,
           line: importNode.loc.start.line,
           column: importNode.loc.start.column,
+        }
+
+        if (type === "css" && node) {
+          throw new Error(
+            createDetailedMessage(
+              `{ type: "css" } is not supported when "node" is in "runtimeSupport"`,
+              {
+                "import assertion trace": stringifyUrlTrace(
+                  urlLoader.createUrlTrace(importedUrl),
+                ),
+              },
+            ),
+          )
         }
       })
 
@@ -800,7 +795,6 @@ building ${entryFileRelativeUrls.length} entry files...`)
     },
 
     // resolveImportMeta: () => {}
-
     outputOptions: (outputOptions) => {
       const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
       const outputExtension = extension === ".html" ? ".js" : extension
