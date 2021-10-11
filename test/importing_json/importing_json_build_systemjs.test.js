@@ -3,6 +3,7 @@ import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   resolveUrl,
+  urlToFileSystemPath,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -21,6 +22,7 @@ const entryPointMap = {
 }
 const jsonFileUrl = resolveUrl("./file.json", import.meta.url)
 const jsFileUrl = resolveUrl("./main.js", import.meta.url)
+const htmlFileUrl = resolveUrl("./main.html", import.meta.url)
 
 try {
   await buildProject({
@@ -33,12 +35,19 @@ try {
   throw new Error("should throw")
 } catch (e) {
   const actual = e.message
-  const expected = `"application/json" is not a valid type for JavaScript module
---- js module url ---
+  const expected = `invalid "content-type" on url
+--- content-type ---
+"application/json"
+--- expected content-type ---
+"application/javascript"
+--- url ---
 ${jsonFileUrl}
---- importer url ---
-${jsFileUrl}
+--- url trace ---
+${urlToFileSystemPath(jsFileUrl)}
+  imported by ${urlToFileSystemPath(htmlFileUrl)}
 --- suggestion ---
-non-js ressources can be used with new URL("file.json", import.meta.url)`
+use import.meta.url: new URL("./file.json", import.meta.url)
+--- suggestion 2 ---
+use import assertion: import data from "./file.json" assert { type: "json" }`
   assert({ actual, expected })
 }

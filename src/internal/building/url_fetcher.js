@@ -40,10 +40,16 @@ export const createUrlFetcher = ({
         const importerUrl = urlImporterMap[url].url
         const urlRelativeToImporter = `./${urlToRelativeUrl(url, importerUrl)}`
         details.suggestion = `use import.meta.url: new URL("${urlRelativeToImporter}", import.meta.url)`
-        if (urlToExtension(url) === ".css") {
+        const extension = urlToExtension(url)
+        if (extension === ".css") {
           details[
             "suggestion 2"
           ] = `use import assertion: import css from "${urlRelativeToImporter}" assert { type: "css" }`
+        }
+        if (extension === ".json") {
+          details[
+            "suggestion 2"
+          ] = `use import assertion: import data from "${urlRelativeToImporter}" assert { type: "json" }`
         }
       }
       const responseValidationError = new Error(
