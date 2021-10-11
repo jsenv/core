@@ -7,6 +7,12 @@
   </head>
 
   <body>
-    <script type="module" src="./index.js"></script>
+    <script type="module">
+      const jsUrl = new URL("./file.js", import.meta.url)
+
+      export const jsUrlInstanceOfUrl = jsUrl instanceof URL
+
+      export const jsUrlString = String(jsUrl)
+    </script>
   </body>
 </html>

@@ -1,8 +1,8 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { resolveUrl, urlToRelativeUrl, writeFile } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
@@ -14,25 +14,35 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.html`
+const mainFilename = `import_meta_url_pattern.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-const { buildMappings } = await buildProject({
+const { buildMappings, buildInlineFileContents } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
 })
-const indexFileBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}index.js`]
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
+const inlineFileBuildRelativeUrl = "import_meta_url_pattern.10.js"
+const inlineFileBuildUrl = resolveUrl(
+  inlineFileBuildRelativeUrl,
+  buildDirectoryUrl,
+)
+await writeFile(
+  inlineFileBuildUrl,
+  buildInlineFileContents[inlineFileBuildRelativeUrl],
+)
 const { namespace, serverOrigin } = await browserImportEsModuleBuild({
   ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
-  jsFileRelativeUrl: `./${indexFileBuildRelativeUrl}`,
+  jsFileRelativeUrl: `./${inlineFileBuildRelativeUrl}`,
   // debug: true,
 })
 const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
