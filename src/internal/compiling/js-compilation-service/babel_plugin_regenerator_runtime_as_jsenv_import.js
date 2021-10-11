@@ -12,7 +12,7 @@ const regeneratorRuntimeHelperDirectoryUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 
-export const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
+export const babelPluginRegeneratorRuntimeAsJsenvImport = (api, options) => {
   const { addSideEffect } = require("@babel/helper-module-imports")
 
   api.assertVersion(7)

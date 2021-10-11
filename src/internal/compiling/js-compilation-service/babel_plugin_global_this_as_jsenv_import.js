@@ -1,6 +1,6 @@
 import { require } from "../../require.js"
 
-export const ensureGlobalThisImportBabelPlugin = (api, options) => {
+export const babelPluginGlobalThisAsJsenvImport = (api, options) => {
   const { addSideEffect } = require("@babel/helper-module-imports")
 
   api.assertVersion(7)
@@ -20,6 +20,7 @@ export const ensureGlobalThisImportBabelPlugin = (api, options) => {
         }
 
         const { node } = path
+        // we should do this once, tree shaking will remote it but still
         if (node.name === globalThisIdentifierName) {
           addSideEffect(
             path.scope.getProgramParent().path,

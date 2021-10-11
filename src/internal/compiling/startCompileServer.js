@@ -29,9 +29,7 @@ import {
 } from "@jsenv/filesystem"
 
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
-import {
-  extractSyntaxBabelPluginMap,
-} from "./babel_plugins.js"
+import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { createCallbackList } from "../createCallbackList.js"
 import {
@@ -40,7 +38,7 @@ import {
   sourcemapMappingFileInfo,
 } from "../jsenvInternalFiles.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
+import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
 import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
 import { createTransformHtmlSourceFileService } from "./html_source_file_service.js"
@@ -138,6 +136,8 @@ export const startCompileServer = async ({
   babelPluginMap = {
     ...babelPluginMapFromFile,
     ...babelPluginMap,
+    "transform-import-assertion-json": () => {}
+    "transform-import-assertion-css": () => {},
   }
   Object.keys(babelPluginMap).forEach((key) => {
     if (

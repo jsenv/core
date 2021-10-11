@@ -12,7 +12,7 @@ import {
 // a named import
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-plugin-external-helpers/src/index.js
 
-export const transformBabelHelperToImportBabelPlugin = (api) => {
+export const babelPluginBabelHelpersAsJsenvImports = (api) => {
   // https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
   const { addDefault } = require("@babel/helper-module-imports")
 
