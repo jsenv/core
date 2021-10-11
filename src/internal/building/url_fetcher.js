@@ -34,12 +34,12 @@ export const createUrlFetcher = ({
     if (!responseValidity.isValid) {
       const { message, details } = responseValidity
       if (
-        contentTypeExpected === "application/javascript" &&
+        contentTypeExpected.includes("application/javascript") &&
         !responseValidity.contentType.isValid
       ) {
         const importerUrl = urlImporterMap[url].url
-        const urlRelativeToImporter = urlToRelativeUrl(url, importerUrl)
-        details.suggestion = ` use import.meta.url: new URL("${urlRelativeToImporter}", import.meta.url)`
+        const urlRelativeToImporter = `./${urlToRelativeUrl(url, importerUrl)}`
+        details.suggestion = `use import.meta.url: new URL("${urlRelativeToImporter}", import.meta.url)`
         if (urlToExtension(url) === ".css") {
           details[
             "suggestion 2"

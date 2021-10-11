@@ -103,12 +103,10 @@ const checkContentType = async (
   if (!isOk) {
     return {
       isValid: false,
-      message: `invalid content-type on url`,
+      message: `invalid "content-type" on url`,
       details: {
-        "content-type": responseContentType,
-        "expected content-type": Array.isArray(contentTypeExpected)
-          ? contentTypeExpected.join(`,\n`)
-          : contentTypeExpected,
+        "content-type": `"${responseContentType}"`,
+        "expected content-type": formatExpectedContentType(contentTypeExpected),
         url,
         ...formatUrlTrace(urlTrace),
       },
@@ -118,6 +116,14 @@ const checkContentType = async (
   return {
     isValid: true,
   }
+}
+
+const formatExpectedContentType = (contentTypeExpected) => {
+  if (Array.isArray(contentTypeExpected)) {
+    return contentTypeExpected.map((value) => `"${value}"`).join(`,\n`)
+  }
+
+  return `"${contentTypeExpected}"`
 }
 
 const formatUrlTrace = (urlTrace) => {

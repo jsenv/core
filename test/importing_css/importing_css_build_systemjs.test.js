@@ -1,8 +1,9 @@
 import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
+  urlToFileSystemPath,
   urlToRelativeUrl,
-  urlToBasename,
+  resolveUrl,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -14,11 +15,10 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${testDirectoryname}.js`]: "./main.js",
+  [`./${testDirectoryRelativeUrl}main.js`]: "./main.js",
 }
 
 try {
@@ -33,13 +33,23 @@ try {
   })
   throw new Error("should throw")
 } catch (e) {
+  const cssFileUrl = resolveUrl("./style.css", testDirectoryUrl)
+  const jsFileUrl = resolveUrl("./main.js", testDirectoryUrl)
+
   const actual = e.message
-  const expected = `"text/css" is not a valid type for JavaScript module
---- js module url ---
-${testDirectoryUrl}style.css
---- importer url ---
-${testDirectoryUrl}${testDirectoryname}.js
+  const expected = `invalid "content-type" on url
+--- content-type ---
+"text/css"
+--- expected content-type ---
+"application/javascript"
+--- url ---
+${cssFileUrl}
+--- url trace ---
+${urlToFileSystemPath(jsFileUrl)}
+  imported by ${urlToFileSystemPath(jsenvCoreDirectoryUrl)}
 --- suggestion ---
-non-js ressources can be used with new URL("style.css", import.meta.url)`
+use import.meta.url: new URL("./style.css", import.meta.url)
+--- suggestion 2 ---
+use import assertion: import css from "./style.css" assert { type: "css" }`
   assert({ actual, expected })
 }
