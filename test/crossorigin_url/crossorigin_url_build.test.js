@@ -1,10 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-  readFile,
-} from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -19,7 +14,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const { buildMappings } = await buildProject({
@@ -27,7 +21,7 @@ const { buildMappings } = await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
+    [`./${testDirectoryRelativeUrl}main.html`]: "./main.html",
   },
   lineBreakNormalization: true,
   // logLevel: "debug",
@@ -36,7 +30,7 @@ const { buildMappings } = await buildProject({
 {
   const actual = buildMappings
   const expected = {
-    [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
+    [`${testDirectoryRelativeUrl}main.html`]: "main.html",
     [`${testDirectoryRelativeUrl}main.css`]: "assets/main-a3f2aec7.css",
   }
   assert({ actual, expected })

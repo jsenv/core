@@ -13,7 +13,6 @@ import {
   resolveUrl,
   urlToRelativeUrl,
   readFile,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -30,10 +29,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
-const mainFilename = `${testDirectoryname}.js`
+const mainFilename = `main.js`
 const mainFileRelativeUrl = `./${testDirectoryRelativeUrl}${mainFilename}`
 const mainFileUrl = resolveUrl(mainFilename, import.meta.url)
 
@@ -74,7 +72,7 @@ const compilationResult = buildToCompilationResult(build, {
   const expected = {
     version: actual.version,
     file: "main.cjs",
-    sources: [`../../${testDirectoryname}.js`],
+    sources: [`../../main.js`],
     sourcesContent: [await readFile(mainFileUrl)],
     names: actual.names,
     mappings: actual.mappings,
