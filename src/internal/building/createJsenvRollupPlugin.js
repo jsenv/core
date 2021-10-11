@@ -14,6 +14,7 @@ import {
   urlIsInsideOf,
   normalizeStructuredMetaMap,
   urlToMeta,
+  urlToFilename,
 } from "@jsenv/filesystem"
 
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
@@ -33,8 +34,7 @@ import { importMapsFromHtml } from "./html/htmlScan.js"
 import { parseRessource } from "./parseRessource.js"
 import { createRessourceBuilder } from "./ressource_builder.js"
 import { computeBuildRelativeUrl } from "./url-versioning.js"
-import { transformImportMetaUrlReferences } from "./import_meta_url_and_rollup.js"
-import { transformImportAssertions } from "./import_assertions_and_rollup.js"
+import { transformImportReferences } from "./import_references.js"
 
 import { minifyJs } from "./js/minifyJs.js"
 import { createImportResolverForNode } from "../import-resolution/import-resolver-node.js"
@@ -95,6 +95,10 @@ export const createJsenvRollupPlugin = async ({
 
   let ressourceBuilder
   let importResolver
+  let rollupEmitFile = () => {}
+  let rollupSetAssetSource = () => {}
+  let _rollupGetModuleInfo = () => {}
+  const rollupGetModuleInfo = (id) => _rollupGetModuleInfo(id)
 
   const {
     asRollupUrl,
@@ -148,8 +152,16 @@ export const createJsenvRollupPlugin = async ({
       // (css string becomes a js module for example)
       reference.inlinedCallback()
 
+      // const moduleInfo = rollupGetModuleInfo(asRollupUrl(importer.url))
+      const jsUrl = resolveUrl(urlToFilename(importer.url), buildDirectoryUrl)
+
       return {
-        url,
+        url: resolveUrl(
+          reference.ressource.buildRelativeUrl,
+          buildDirectoryUrl,
+        ),
+        jsUrl,
+        importer,
         code: String(reference.ressource.bufferAfterBuild),
       }
     },
@@ -207,11 +219,6 @@ export const createJsenvRollupPlugin = async ({
     compileDirectoryRelativeUrl,
     compileServerOrigin,
   )
-
-  let rollupEmitFile = () => {}
-  let rollupSetAssetSource = () => {}
-  let _rollupGetModuleInfo = () => {}
-  const rollupGetModuleInfo = (id) => _rollupGetModuleInfo(id)
 
   const emitAsset = ({ fileName, source }) => {
     return rollupEmitFile({
@@ -757,44 +764,36 @@ building ${entryFileRelativeUrls.length} entry files...`)
       const url = asServerUrl(id)
       const importer = urlImporterMap[url]
 
-      const importMetaResult = await transformImportMetaUrlReferences({
+      const importReferenceResult = await transformImportReferences({
+        url,
+        importerUrl: importer.url,
         code,
         map,
         ast,
-        url,
-        importerUrl: importer.url,
 
         ressourceBuilder,
-        markBuildRelativeUrlAsUsedByJs,
+        resolve: (...args) => this.resolve(...args),
       })
-      code = importMetaResult.code
-      map = importMetaResult.map
+      code = importReferenceResult.code
+      map = importReferenceResult.map
 
-      const importAssertionsResult = await transformImportAssertions({
-        code,
-        map,
-        ast,
-        url,
-        importerUrl: importer.url,
-        resolve: (specifier, importer, options) => {
-          return this.resolve(specifier, importer, options)
-        },
+      const { urlAndImportMetaUrls } = importReferenceResult
+      Object.keys(urlAndImportMetaUrls).forEach((key) => {
+        markBuildRelativeUrlAsUsedByJs(
+          urlAndImportMetaUrls[key].ressource.buildRelativeUrl,
+        )
       })
-      code = importAssertionsResult.code
-      map = importAssertionsResult.map
 
-      Object.keys(importAssertionsResult.importAssertions).forEach(
-        (importedUrl) => {
-          const { importNode } =
-            importAssertionsResult.importAssertions[importedUrl]
-          importedUrl = asServerUrl(importedUrl)
-          urlImporterMap[importedUrl] = {
-            url,
-            line: importNode.loc.start.line,
-            column: importNode.loc.start.column,
-          }
-        },
-      )
+      const { importAssertions } = importReferenceResult
+      Object.keys(importAssertions).forEach((importedUrl) => {
+        const { importNode } = importAssertions[importedUrl]
+        importedUrl = asServerUrl(importedUrl)
+        urlImporterMap[importedUrl] = {
+          url,
+          line: importNode.loc.start.line,
+          column: importNode.loc.start.column,
+        }
+      })
 
       return { code, map }
     },
