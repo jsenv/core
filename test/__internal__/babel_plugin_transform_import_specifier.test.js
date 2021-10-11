@@ -1,7 +1,42 @@
 import { transformAsync } from "@babel/core"
+import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
-import { babelPluginTransformImportSpecifier } from "./babel-plugin-transform-import-specifier.js"
+import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
+import { babelPluginTransformImportSpecifier } from "@jsenv/core/src/internal/compiling/babel_plugin_transform_import_specifier.js"
+
+// import assertions
+{
+  const input = `import sheet from "./style.css" assert { type: "css" }`
+  const { code } = await transformAsync(input, {
+    plugins: [
+      [
+        babelPluginTransformImportSpecifier,
+        {
+          transformImportSpecifier: ({ specifier }) => {
+            const fakeOrigin = "http://jsenv.com"
+            const url = new URL(specifier, fakeOrigin)
+            const urlWithImportType = setUrlSearchParamsDescriptor(url, {
+              import_type: "css",
+            })
+            if (urlWithImportType.startsWith(fakeOrigin)) {
+              // url wa relative
+              const specifierWithImportType = urlToRelativeUrl(
+                urlWithImportType,
+                fakeOrigin,
+              )
+              return `./${specifierWithImportType}`
+            }
+            return urlWithImportType
+          },
+        },
+      ],
+    ],
+  })
+  const actual = code
+  const expected = `import sheet from "./style.css?import_type=css" assert { type: "css" };`
+  assert({ actual, expected })
+}
 
 // dynamic import
 {
@@ -11,7 +46,8 @@ import { babelPluginTransformImportSpecifier } from "./babel-plugin-transform-im
       [
         babelPluginTransformImportSpecifier,
         {
-          transformImportSpecifier: (specifier) => `${specifier}-transformed`,
+          transformImportSpecifier: ({ specifier }) =>
+            `${specifier}-transformed`,
         },
       ],
     ],
@@ -29,7 +65,8 @@ import { babelPluginTransformImportSpecifier } from "./babel-plugin-transform-im
       [
         babelPluginTransformImportSpecifier,
         {
-          transformImportSpecifier: (specifier) => `${specifier}-transformed`,
+          transformImportSpecifier: ({ specifier }) =>
+            `${specifier}-transformed`,
         },
       ],
     ],
@@ -47,7 +84,8 @@ import { babelPluginTransformImportSpecifier } from "./babel-plugin-transform-im
       [
         babelPluginTransformImportSpecifier,
         {
-          transformImportSpecifier: (specifier) => `${specifier}-transformed`,
+          transformImportSpecifier: ({ specifier }) =>
+            `${specifier}-transformed`,
         },
       ],
     ],
@@ -65,7 +103,8 @@ import { babelPluginTransformImportSpecifier } from "./babel-plugin-transform-im
       [
         babelPluginTransformImportSpecifier,
         {
-          transformImportSpecifier: (specifier) => `${specifier}-transformed`,
+          transformImportSpecifier: ({ specifier }) =>
+            `${specifier}-transformed`,
         },
       ],
     ],
@@ -83,7 +122,8 @@ import { babelPluginTransformImportSpecifier } from "./babel-plugin-transform-im
       [
         babelPluginTransformImportSpecifier,
         {
-          transformImportSpecifier: (specifier) => `${specifier}-transformed`,
+          transformImportSpecifier: ({ specifier }) =>
+            `${specifier}-transformed`,
         },
       ],
     ],
@@ -101,7 +141,8 @@ import { babelPluginTransformImportSpecifier } from "./babel-plugin-transform-im
       [
         babelPluginTransformImportSpecifier,
         {
-          transformImportSpecifier: (specifier) => `${specifier}-transformed`,
+          transformImportSpecifier: ({ specifier }) =>
+            `${specifier}-transformed`,
         },
       ],
     ],

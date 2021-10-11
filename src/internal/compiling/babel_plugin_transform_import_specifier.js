@@ -1,20 +1,21 @@
-// not used in the codebase: just here in case it can be useful some day
 // https://github.com/jamiebuilds/babel-handbook/blob/master/translations/en/plugin-handbook.md
 // https://github.com/mjackson/babel-plugin-import-visitor
 
 export const babelPluginTransformImportSpecifier = (
   babel,
-  { transformImportSpecifier = (value) => value } = {},
+  { transformImportSpecifier = ({ specifier }) => specifier } = {},
 ) => {
   return {
-    manipulateOptions(opts, parserOpts) {
-      parserOpts.plugins.push(
-        "dynamicImport",
-        "exportDefaultFrom",
-        "exportNamespaceFrom",
-        "importMeta",
-      )
-    },
+    name: "transform-import-specifier",
+
+    // manipulateOptions(opts, parserOpts) {
+    //   parserOpts.plugins.push(
+    //     "dynamicImport",
+    //     "exportDefaultFrom",
+    //     "exportNamespaceFrom",
+    //     "importMeta",
+    //   )
+    // },
 
     visitor: {
       CallExpression: (path) => {
@@ -30,11 +31,19 @@ export const babelPluginTransformImportSpecifier = (
           return
         }
 
-        transformStringLiteralAtPath(path.get("arguments")[0], transformImportSpecifier, babel)
+        transformStringLiteralAtPath(
+          path.get("arguments")[0],
+          transformImportSpecifier,
+          babel,
+        )
       },
 
       ExportAllDeclaration: (path) => {
-        transformStringLiteralAtPath(path.get("source"), transformImportSpecifier, babel)
+        transformStringLiteralAtPath(
+          path.get("source"),
+          transformImportSpecifier,
+          babel,
+        )
       },
 
       ExportNamedDeclaration: (path) => {
@@ -47,11 +56,19 @@ export const babelPluginTransformImportSpecifier = (
           return
         }
 
-        transformStringLiteralAtPath(path.get("source"), transformImportSpecifier, babel)
+        transformStringLiteralAtPath(
+          path.get("source"),
+          transformImportSpecifier,
+          babel,
+        )
       },
 
       ImportDeclaration: (path) => {
-        transformStringLiteralAtPath(path.get("source"), transformImportSpecifier, babel)
+        transformStringLiteralAtPath(
+          path.get("source"),
+          transformImportSpecifier,
+          babel,
+        )
       },
     },
   }
@@ -59,8 +76,21 @@ export const babelPluginTransformImportSpecifier = (
 
 const transformStringLiteralAtPath = (path, transform, babel) => {
   const value = path.node.value
-  const valueTransformed = transform(value)
+  const valueTransformed = transform({
+    specifier: value,
+    node: path.node,
+    assertionsDescriptor: getImportAssertionsDescriptor(path.parent.assertions),
+  })
   if (valueTransformed !== value) {
     path.replaceWith(babel.types.stringLiteral(valueTransformed))
   }
+}
+
+const getImportAssertionsDescriptor = (importAssertions) => {
+  const importAssertionsDescriptor = {}
+  importAssertions.forEach((importAssertion) => {
+    importAssertionsDescriptor[importAssertion.key.name] =
+      importAssertion.value.value
+  })
+  return importAssertionsDescriptor
 }
