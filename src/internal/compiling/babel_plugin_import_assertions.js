@@ -5,19 +5,19 @@ import { babelPluginTransformImportSpecifier } from "./babel_plugin_transform_im
 
 export const babelPluginImportAssertions = (
   babel,
-  { transformCss = false, transformJson = false },
+  { transformJson = true, transformCss = true },
 ) => {
   return {
     ...babelPluginTransformImportSpecifier(babel, {
       transformImportSpecifier: ({ specifier, assertionsDescriptor }) => {
         const { type } = assertionsDescriptor
 
-        if (type === "css" && transformCss) {
-          return forceImportTypeOnSpecifier(specifier, "css")
-        }
-
         if (type === "json" && transformJson) {
           return forceImportTypeOnSpecifier(specifier, "json")
+        }
+
+        if (type === "css" && transformCss) {
+          return forceImportTypeOnSpecifier(specifier, "css")
         }
 
         return specifier
