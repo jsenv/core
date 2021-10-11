@@ -6,6 +6,7 @@ import { referenceToCodeForRollup } from "./ressource_builder.js"
 export const transformImportReferences = async ({
   url,
   code,
+  map,
   ast,
 
   ressourceBuilder,
@@ -45,16 +46,13 @@ export const transformImportReferences = async ({
   const { default: MagicString } = await import("magic-string")
   const magicString = new MagicString(code)
   mutations.forEach((mutation) => {
-    magicString.overwrite(
-      mutation.node.start,
-      mutation.node.end,
-      mutation.value,
-    )
+    const { node, value } = mutation()
+    magicString.overwrite(node.start, node.end, value)
   })
-  const codeOutput = magicString.toString()
-  const map = magicString.generateMap({ hires: true })
+  code = magicString.toString()
+  map = magicString.generateMap({ hires: true })
   return {
-    code: codeOutput,
+    code,
     map,
     urlAndImportMetaUrls,
     importAssertions,
@@ -130,7 +128,9 @@ const importAssertionsVisitor = async (
 
   const importSpecifier = source.value
   const urlResolution = await resolve(importSpecifier, url, {
-    skipUrlImportTrace: true,
+    custom: {
+      skipUrlImportTrace: true,
+    },
   })
   if (urlResolution === null) {
     return

@@ -41,7 +41,7 @@ const test = async ({ jsConcatenation }) => {
 }
 
 {
-  const { buildMappings } = await test({ jsConcatenation: false })
+  const { buildMappings } = await test({ jsConcatenation: true })
   const jsFileBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}main.js`]
   const { namespace } = await browserImportEsModuleBuild({

@@ -602,7 +602,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
       }
     },
 
-    async resolveId(specifier, importer, { skipUrlImportTrace }) {
+    async resolveId(specifier, importer, { custom }) {
       if (importer === undefined) {
         if (specifier.endsWith(".html")) {
           importer = compileServerOrigin
@@ -634,7 +634,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
       }
 
       const importUrl = await importResolver.resolveImport(specifier, importer)
-      if (!skipUrlImportTrace) {
+      if (!custom.skipUrlImportTrace) {
         const existingImporter = urlImporterMap[importUrl]
         if (!existingImporter) {
           urlImporterMap[importUrl] = {
@@ -705,11 +705,16 @@ building ${entryFileRelativeUrls.length} entry files...`)
         return ""
       }
 
+      let url = asServerUrl(rollupUrl)
       const loadResult = await urlLoader.loadUrl(rollupUrl, {
         cancellationToken,
         logger,
         // rollupModuleInfo: this.getModuleInfo(rollupUrl)
       })
+
+      url = loadResult.url
+      const code = loadResult.code
+      const map = loadResult.map
 
       // Jsenv helpers are injected as import statements to provide code like babel helpers
       // For now we just compute the information that the target file is a jsenv helper
@@ -720,7 +725,6 @@ building ${entryFileRelativeUrls.length} entry files...`)
         jsenvHelpersDirectoryInfo.url,
       )
 
-      const url = asServerUrl(rollupUrl)
       const importer = urlImporterMap[url]
       // Inform ressource builder that this js module exists
       // It can only be a js module and happens when:
@@ -738,17 +742,17 @@ building ${entryFileRelativeUrls.length} entry files...`)
         referenceUrl: importer.url,
         referenceColumn: importer.column,
         referenceLine: importer.line,
-        ressourceSpecifier: loadResult.url,
+        ressourceSpecifier: url,
 
         isJsenvHelperFile,
         contentType: "application/javascript",
-        bufferBeforeBuild: Buffer.from(loadResult.code),
+        bufferBeforeBuild: Buffer.from(code),
         isJsModule: true,
       })
 
       return {
-        code: loadResult.code,
-        map: loadResult.map,
+        code,
+        map,
       }
     },
 
@@ -762,11 +766,8 @@ building ${entryFileRelativeUrls.length} entry files...`)
       })
       // const moduleInfo = this.getModuleInfo(id)
       const url = asServerUrl(id)
-      const importer = urlImporterMap[url]
-
       const importReferenceResult = await transformImportReferences({
         url,
-        importerUrl: importer.url,
         code,
         map,
         ast,

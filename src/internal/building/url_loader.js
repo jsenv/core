@@ -56,7 +56,7 @@ export const createUrlLoader = ({
       map = jsModuleConversionResult.map
 
       return {
-        url,
+        url: asServerUrl(rollupUrl),
         code,
         map,
       }
