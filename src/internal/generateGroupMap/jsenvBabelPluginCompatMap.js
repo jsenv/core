@@ -430,3 +430,12 @@ jsenvBabelPluginCompatMap["transform-async-to-promises"] =
 
 jsenvBabelPluginCompatMap["regenerator-transform"] =
   jsenvBabelPluginCompatMap["transform-regenerator"]
+
+jsenvBabelPluginCompatMap["transform-import-assertion-json"] = {
+  chrome: "91",
+  edge: "91",
+}
+jsenvBabelPluginCompatMap["transform-import-assertion-css"] = {
+  chrome: "93",
+  edge: "93",
+}
