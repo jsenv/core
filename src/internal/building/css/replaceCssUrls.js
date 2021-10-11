@@ -5,10 +5,10 @@ import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
 export const replaceCssUrls = async ({
   url,
   code,
+  map,
   getUrlReplacementValue,
   cssMinification = false,
   cssMinificationOptions,
-  sourcemapOptions = {},
 } = {}) => {
   const postcssPlugins = [
     postCssPluginUrlVisitor,
@@ -20,11 +20,16 @@ export const replaceCssUrls = async ({
     getUrlReplacementValue,
     map: {
       inline: false,
-      ...sourcemapOptions,
+      // https://postcss.org/api/#sourcemapoptions
+      ...(map ? { prev: JSON.stringify(map) } : {}),
     },
   }
   const result = await applyPostCss(code, url, postcssPlugins, postcssOptions)
-  return result
+
+  return {
+    code: result.css,
+    map: result.map.toJSON(),
+  }
 }
 
 const getCssMinificationPlugin = async (cssMinificationOptions = {}) => {

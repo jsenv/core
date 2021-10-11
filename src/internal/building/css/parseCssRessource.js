@@ -54,9 +54,12 @@ export const parseCssRessource = async (
     precomputeBuildRelativeUrl,
     registerAssetEmitter,
   }) => {
-    const cssReplaceResult = await replaceCssUrls({
+    const { code, map } = await replaceCssUrls({
       url: cssRessource.url,
       code: cssString,
+      map: sourcemapReference
+        ? JSON.parse(String(sourcemapReference.ressource.bufferAfterBuild))
+        : undefined,
       getUrlReplacementValue: ({ urlNode }) => {
         const nodeCandidates = Array.from(urlNodeReferenceMapping.keys())
         const urlNodeFound = nodeCandidates.find((urlNodeCandidate) =>
@@ -83,13 +86,7 @@ export const parseCssRessource = async (
       },
       cssMinification: minify,
       cssMinificationOptions: minifyCssOptions,
-      // https://postcss.org/api/#sourcemapoptions
-      sourcemapOptions: sourcemapReference
-        ? { prev: String(sourcemapReference.ressource.bufferAfterBuild) }
-        : {},
     })
-    const code = cssReplaceResult.css
-    const map = cssReplaceResult.map.toJSON()
     const cssBuildRelativeUrl = precomputeBuildRelativeUrl(code)
 
     const cssSourcemapFilename = `${basename(cssBuildRelativeUrl)}.map`

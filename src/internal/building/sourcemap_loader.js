@@ -6,32 +6,32 @@ import {
   dataUrlToRawData,
   parseDataUrl,
 } from "@jsenv/core/src/internal/dataUrl.utils.js"
-import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponse } from "@jsenv/core/src/internal/response_validation.js"
 
-export const fetchJavaScriptSourcemap = async ({
+export const loadSourcemap = async ({
   cancellationToken = createCancellationToken(),
   logger = createLogger(),
 
   code,
   url,
+  getSourceMappingUrl,
 } = {}) => {
-  const jsSourcemapUrl = getJavaScriptSourceMappingUrl(code)
-  if (!jsSourcemapUrl) {
+  const sourcemapSpecifier = getSourceMappingUrl(code)
+  if (!sourcemapSpecifier) {
     return null
   }
 
-  if (jsSourcemapUrl.startsWith("data:")) {
-    const jsSourcemapString = dataUrlToRawData(parseDataUrl(jsSourcemapUrl))
+  const sourcemapUrl = resolveUrl(sourcemapSpecifier, url)
+  if (sourcemapUrl.startsWith("data:")) {
+    const sourcemapString = dataUrlToRawData(parseDataUrl(sourcemapUrl))
     return parseSourcemapString(
-      jsSourcemapString,
-      jsSourcemapUrl,
+      sourcemapString,
+      sourcemapUrl,
       `inline comment in ${url}`,
     )
   }
 
-  const sourcemapUrl = resolveUrl(jsSourcemapUrl, url)
   const sourcemapResponse = await fetchUrl(sourcemapUrl, {
     cancellationToken,
     ignoreHttpsError: true,

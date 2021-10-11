@@ -2,7 +2,11 @@ import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-s
 
 import { getUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
 import { convertCssTextToJavascriptModule } from "@jsenv/core/src/internal/building/css_module.js"
-import { fetchJavaScriptSourcemap } from "./js_sourcemap_fetcher.js"
+import {
+  getJavaScriptSourceMappingUrl,
+  getCssSourceMappingUrl,
+} from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { loadSourcemap } from "./sourcemap_loader.js"
 
 export const createUrlLoader = ({
   projectDirectoryUrl,
@@ -23,7 +27,7 @@ export const createUrlLoader = ({
 
   const loadUrl = async (rollupUrl, { cancellationToken, logger }) => {
     const { import_type } = getUrlSearchParamsDescriptor(rollupUrl)
-    const url = asServerUrl(rollupUrl)
+    let url = asServerUrl(rollupUrl)
 
     // importing CSS from JS with import assertions
     if (import_type === "css") {
@@ -31,17 +35,28 @@ export const createUrlLoader = ({
         url,
         contentTypeExpected: "text/css",
       })
-      const { code, map } = await convertCssTextToJavascriptModule({
-        code: ressourceInfo.code,
-        // TODO: parse and fetch sourcemap from cssText
-        // maybe we can get it from ressource builder, it might have that info?
-        // if so should we return it?
-        // because it's likely already handled by the ressource builder itself
-        map: null,
+      url = ressourceInfo.url
+      let code = ressourceInfo.code
+      let map = await loadSourcemap({
+        cancellationToken,
+        logger,
+
+        url,
+        code,
+        getSourceMappingUrl: getCssSourceMappingUrl,
+      })
+      const jsModuleConversionResult = await convertCssTextToJavascriptModule({
+        url,
+        jsUrl: ressourceInfo.jsUrl,
+        code,
+        map,
       })
 
+      code = jsModuleConversionResult.code
+      map = jsModuleConversionResult.map
+
       return {
-        url: ressourceInfo.url,
+        url,
         code,
         map,
       }
@@ -83,11 +98,13 @@ export const createUrlLoader = ({
     if (contentType === "application/javascript") {
       const jsText = await response.text()
       saveUrlResponseBody(response.url, jsText)
-      const map = await fetchJavaScriptSourcemap({
+      const map = await loadSourcemap({
         cancellationToken,
         logger,
-        code: jsText,
+
         url,
+        code: jsText,
+        getSourceMappingUrl: getJavaScriptSourceMappingUrl,
       })
       return {
         url: response.url,
