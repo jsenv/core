@@ -7,6 +7,7 @@
   },
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "eslint.validate": ["javascript", "html"],
-  "eslint.runtime": "node"
+  "eslint.runtime": "node",
+  "html.validate.scripts": false
   // "debug.javascript.autoAttachFilter": "always"
 }

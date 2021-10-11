@@ -4,6 +4,7 @@ import {
   urlToRelativeUrl,
   resolveUrl,
   readFile,
+  writeFile,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -30,20 +31,30 @@ const buildDirectoryUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 const test = async (params) => {
-  const build = await buildProject({
+  const { buildMappings, buildInlineFileContents } = await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
     entryPointMap,
     ...params,
   })
-  return build
+  const buildDirectoryUrl = resolveUrl(
+    buildDirectoryRelativeUrl,
+    jsenvCoreDirectoryUrl,
+  )
+  const jsFileBuildRelativeUrl = "main.10.js"
+  const jsFileBuildUrl = resolveUrl(jsFileBuildRelativeUrl, buildDirectoryUrl)
+  await writeFile(
+    jsFileBuildUrl,
+    buildInlineFileContents[jsFileBuildRelativeUrl],
+  )
+  return { buildMappings, jsFileBuildRelativeUrl }
 }
 
 {
-  const { buildMappings } = await test({ jsConcatenation: true })
-  const jsFileBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}main.js`]
+  const { buildMappings, jsFileBuildRelativeUrl } = await test({
+    jsConcatenation: true,
+  })
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
@@ -65,7 +76,6 @@ const test = async (params) => {
     buildMappings: {
       [`${testDirectoryRelativeUrl}src/jsenv.png`]: assert.any(String),
       [`${testDirectoryRelativeUrl}main.html`]: assert.any(String),
-      [`${testDirectoryRelativeUrl}main.js`]: assert.any(String),
     },
     namespace: {
       backgroundBodyColor: "rgb(255, 0, 0)",
@@ -76,12 +86,10 @@ const test = async (params) => {
 
 // no concatenation + runtime support enough
 {
-  const { buildMappings } = await test({
+  const { buildMappings, jsFileBuildRelativeUrl } = await test({
     jsConcatenation: false,
     runtimeSupport: { chrome: "96" },
   })
-  const jsFileBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}main.js`]
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
@@ -103,7 +111,6 @@ const test = async (params) => {
     buildMappings: {
       [`${testDirectoryRelativeUrl}src/jsenv.png`]: assert.any(String),
       [`${testDirectoryRelativeUrl}main.html`]: assert.any(String),
-      [`${testDirectoryRelativeUrl}main.js`]: assert.any(String),
     },
     namespace: {
       backgroundBodyColor: "rgb(255, 0, 0)",

@@ -7,6 +7,14 @@
   </head>
 
   <body>
-    <script type="module" src="./main.js"></script>
+    <script type="module">
+      import sheet from "./src/style.css" assert { type: "css" }
+
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
+
+      export const backgroundBodyColor = getComputedStyle(
+        document.body,
+      ).backgroundColor
+    </script>
   </body>
 </html>
