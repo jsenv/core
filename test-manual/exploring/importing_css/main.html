@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import sheet from "./src/style.css" assert { type: "css" }
+
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
+
+      export const backgroundBodyColor = getComputedStyle(
+        document.body,
+      ).backgroundColor
+    </script>
+  </body>
+</html>
