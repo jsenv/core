@@ -1,5 +1,10 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import {
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  resolveUrl,
+  readFile,
+} from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -15,37 +20,56 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `main.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.prod.html",
 }
-const { buildMappings } = await buildProject({
-  ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
+const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
-  entryPointMap,
-})
-const jsFileBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}main.js`]
-const { namespace } = await browserImportEsModuleBuild({
-  ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  jsFileRelativeUrl: `./${jsFileBuildRelativeUrl}`,
-})
-
-const actual = namespace
-const expected = {
-  backgroundBodyColor: "rgb(255, 0, 0)",
+  jsenvCoreDirectoryUrl,
+)
+const test = async ({ jsConcatenation }) => {
+  const build = await buildProject({
+    ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
+    entryPointMap,
+    jsConcatenation,
+  })
+  return build
 }
-assert({ actual, expected })
 
-// TODO:
-// ensure css file are not written in assets
-// ensure css sourcemap file is written
-// WAIT FOR NEXT TEST BEFORE TESTING: ensure css sourcemap comment is resolved
+{
+  const { buildMappings } = await test({ jsConcatenation: false })
+  const jsFileBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}main.js`]
+  const { namespace } = await browserImportEsModuleBuild({
+    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
+    testDirectoryRelativeUrl,
+    jsFileRelativeUrl: `./${jsFileBuildRelativeUrl}`,
+  })
+  const jsFileBuildUrl = resolveUrl(jsFileBuildRelativeUrl, buildDirectoryUrl)
+  const jsFileContent = await readFile(jsFileBuildUrl)
+  const jsFileContainsImgBuildRelativeUrl = jsFileContent.includes(
+    buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`],
+  )
 
-// write an other test to ensure:
-// css url are hashed and targets the correct location
-// we might have to prveent assets to be written in assets directory otherwise url resolution won't work
-// reference that css from html too
+  const actual = {
+    jsFileContainsImgBuildRelativeUrl,
+    buildMappings,
+    namespace,
+  }
+  const expected = {
+    jsFileContainsImgBuildRelativeUrl: true,
+    buildMappings: {
+      [`${testDirectoryRelativeUrl}src/jsenv.png`]: assert.any(String),
+      [`${testDirectoryRelativeUrl}main.html`]: assert.any(String),
+      [`${testDirectoryRelativeUrl}main.js`]: assert.any(String),
+    },
+    namespace: {
+      backgroundBodyColor: "rgb(255, 0, 0)",
+    },
+  }
+  assert({ actual, expected })
+}
