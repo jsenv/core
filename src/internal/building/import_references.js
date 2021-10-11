@@ -138,7 +138,7 @@ const importAssertionsVisitor = async (
   }
 
   const importSpecifier = source.value
-  const { type } = parseImportAssertionsAttributes(assertions)
+  const { type } = getImportAssertionsDescriptor(assertions)
 
   const urlResolution = await resolve(importSpecifier, url, {
     custom: {
@@ -184,7 +184,7 @@ const importAssertionsVisitor = async (
   }
 }
 
-const parseImportAssertionsAttributes = (importAssertions) => {
+const getImportAssertionsDescriptor = (importAssertions) => {
   const assertionAttributes = {}
   importAssertions.forEach((importAssertion) => {
     assertionAttributes[importAssertion.key.name] = importAssertion.value.value
