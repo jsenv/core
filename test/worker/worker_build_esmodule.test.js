@@ -1,8 +1,8 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+
 import { buildProject } from "@jsenv/core"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   BROWSER_IMPORT_BUILD_TEST_PARAMS,
@@ -14,11 +14,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.js`
-
+const mainFilename = `main.js`
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -27,16 +25,14 @@ await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
   },
 })
+const { namespace } = await browserImportEsModuleBuild({
+  ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
+  testDirectoryRelativeUrl,
+  // debug: true,
+})
 
-{
-  const { namespace } = await browserImportEsModuleBuild({
-    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
-    // debug: true,
-  })
-  const actual = namespace
-  const expected = {
-    workerPingPromise: "pong",
-  }
-  assert({ actual, expected })
+const actual = namespace
+const expected = {
+  workerPingPromise: "pong",
 }
+assert({ actual, expected })

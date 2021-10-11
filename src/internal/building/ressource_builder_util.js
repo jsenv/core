@@ -83,7 +83,13 @@ export const checkContentType = (
     return
   }
 
-  if (compareContentType(contentTypeExpected, contentType)) {
+  const contentTypeIsOk = Array.isArray(contentTypeExpected)
+    ? contentTypeExpected.some((allowedContentType) => {
+        return compareContentType(allowedContentType, contentType)
+      })
+    : compareContentType(contentTypeExpected, contentType)
+
+  if (contentTypeIsOk) {
     return
   }
 
