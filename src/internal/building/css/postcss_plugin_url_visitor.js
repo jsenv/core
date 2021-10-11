@@ -27,6 +27,7 @@ export const postCssPluginUrlVisitor = () => {
         getUrlReplacementValue = () => undefined,
       } = result.opts
       const fromUrl = fileSystemPathToUrl(from)
+      const mutations = []
       return {
         AtRule: {
           import: (atImportNode, { AtRule }) => {
@@ -126,10 +127,12 @@ export const postCssPluginUrlVisitor = () => {
           },
         },
         Declaration: (declarationNode) => {
-          walkUrls(declarationNode, {
-            parseCssValue,
+          const parsed = parseCssValue(declarationNode.value)
+          const urlMutations = []
+
+          walkUrls(parsed, {
             stringifyCssNodes,
-            visitor: (url, urlNode) => {
+            visitor: ({ url, urlNode }) => {
               // Empty URL
               if (!urlNode || url.length === 0) {
                 declarationNode.warn(
@@ -155,15 +158,31 @@ export const postCssPluginUrlVisitor = () => {
                 urlNode,
               }
 
-              const urlNewValue = getUrlReplacementValue(urlReference)
-              if (urlNewValue) {
-                urlNode.value = urlNewValue
-              }
-
               if (collectUrls) {
                 result.messages.push(urlReference)
               }
+
+              const urlNewValue = getUrlReplacementValue(urlReference)
+              if (urlNewValue) {
+                urlMutations.push(() => {
+                  urlNode.value = urlNewValue
+                })
+              }
             },
+          })
+
+          if (urlMutations.length) {
+            mutations.push(() => {
+              urlMutations.forEach((urlMutation) => {
+                urlMutation()
+              })
+              declarationNode.value = parsed.toString()
+            })
+          }
+        },
+        OnceExit: () => {
+          mutations.forEach((mutation) => {
+            mutation()
           })
         },
       }
@@ -172,11 +191,7 @@ export const postCssPluginUrlVisitor = () => {
 }
 postCssPluginUrlVisitor.postcss = true
 
-const walkUrls = (
-  declarationNode,
-  { parseCssValue, stringifyCssNodes, visitor },
-) => {
-  const parsed = parseCssValue(declarationNode.value)
+const walkUrls = (parsed, { stringifyCssNodes, visitor }) => {
   parsed.walk((node) => {
     // https://github.com/andyjansson/postcss-functions
     if (isUrlFunctionNode(node)) {
@@ -186,14 +201,20 @@ const walkUrls = (
         urlNode && urlNode.type === "string"
           ? urlNode.value
           : stringifyCssNodes(nodes)
-      visitor(url.trim(), urlNode)
+      visitor({
+        url: url.trim(),
+        urlNode,
+      })
       return
     }
 
     if (isImageSetFunctionNode(node)) {
       Array.from(node.nodes).forEach((childNode) => {
         if (childNode.type === "string") {
-          visitor(childNode.value.trim(), childNode)
+          visitor({
+            url: childNode.value.trim(),
+            urlNode: childNode,
+          })
           return
         }
 
@@ -204,14 +225,15 @@ const walkUrls = (
             urlNode && urlNode.type === "string"
               ? urlNode.value
               : stringifyCssNodes(nodes)
-          visitor(url.trim(), urlNode)
+          visitor({
+            url: url.trim(),
+            urlNode,
+          })
           return
         }
       })
     }
   })
-
-  declarationNode.value = parsed.toString()
 }
 
 const isUrlFunctionNode = (node) => {
