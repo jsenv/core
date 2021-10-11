@@ -1,11 +1,11 @@
 import { applyPostCss } from "./applyPostCss.js"
-import { postCssUrlHashPlugin } from "./postcss-urlhash-plugin.js"
+import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
 
 export const parseCssUrls = async (css, cssUrl = "file:///file.css") => {
   const atImports = []
   const urlDeclarations = []
 
-  const postCssPlugins = [postCssUrlHashPlugin]
+  const postCssPlugins = [postCssPluginUrlVisitor]
   const postCssOptions = { collectUrls: true }
   const result = await applyPostCss(css, cssUrl, postCssPlugins, postCssOptions)
 

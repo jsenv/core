@@ -144,6 +144,9 @@ export const createJsenvRollupPlugin = async ({
         contentTypeExpected,
       })
       await reference.ressource.getReadyPromise()
+      // this reference is "inlined" because it becomes something else
+      // (css string becomes a js module for example)
+      reference.inlinedCallback()
 
       return {
         url,

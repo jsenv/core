@@ -1,5 +1,6 @@
-import { basename } from "path"
+import { basename } from "node:path"
 import { urlToFilename, urlToRelativeUrl, resolveUrl } from "@jsenv/filesystem"
+
 import {
   getCssSourceMappingUrl,
   setCssSourceMappingUrl,
@@ -53,10 +54,10 @@ export const parseCssRessource = async (
     precomputeBuildRelativeUrl,
     registerAssetEmitter,
   }) => {
-    const cssReplaceResult = await replaceCssUrls(
-      cssString,
-      cssRessource.url,
-      ({ urlNode }) => {
+    const cssReplaceResult = await replaceCssUrls({
+      url: cssRessource.url,
+      code: cssString,
+      getUrlReplacementValue: ({ urlNode }) => {
         const nodeCandidates = Array.from(urlNodeReferenceMapping.keys())
         const urlNodeFound = nodeCandidates.find((urlNodeCandidate) =>
           isSameCssDocumentUrlNode(urlNodeCandidate, urlNode),
@@ -65,7 +66,7 @@ export const parseCssRessource = async (
           return urlNode.value
         }
 
-        // url node nous dit quel réfrence y correspond
+        // url node nous dit quel référence y correspond
         const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
         const cssUrlRessource = urlNodeReference.ressource
 
@@ -80,15 +81,13 @@ export const parseCssRessource = async (
         }
         return getUrlRelativeToImporter(cssUrlRessource)
       },
-      {
-        cssMinification: minify,
-        cssMinificationOptions: minifyCssOptions,
-        // https://postcss.org/api/#sourcemapoptions
-        sourcemapOptions: sourcemapReference
-          ? { prev: String(sourcemapReference.ressource.bufferAfterBuild) }
-          : {},
-      },
-    )
+      cssMinification: minify,
+      cssMinificationOptions: minifyCssOptions,
+      // https://postcss.org/api/#sourcemapoptions
+      sourcemapOptions: sourcemapReference
+        ? { prev: String(sourcemapReference.ressource.bufferAfterBuild) }
+        : {},
+    })
     const code = cssReplaceResult.css
     const map = cssReplaceResult.map.toJSON()
     const cssBuildRelativeUrl = precomputeBuildRelativeUrl(code)

@@ -14,12 +14,12 @@ hence sourcemap cannot point the original source location
 import { fileSystemPathToUrl, resolveUrl } from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 
-export const postCssUrlHashPlugin = () => {
+export const postCssPluginUrlVisitor = () => {
   const parseCssValue = require("postcss-value-parser")
   const stringifyCssNodes = parseCssValue.stringify
 
   return {
-    postcssPlugin: "urlhash",
+    postcssPlugin: "url_visitor",
     prepare: (result) => {
       const {
         from,
@@ -170,7 +170,7 @@ export const postCssUrlHashPlugin = () => {
     },
   }
 }
-postCssUrlHashPlugin.postcss = true
+postCssPluginUrlVisitor.postcss = true
 
 const walkUrls = (
   declarationNode,

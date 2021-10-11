@@ -1,6 +1,7 @@
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-import { escapeTemplateStringSpecialCharacters } from "@jsenv/core/src/internal/escapeTemplateStringSpecialCharacters.js"
+
 import { getUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
+import { convertCssTextToJavascriptModule } from "@jsenv/core/src/internal/building/css_module.js"
 import { fetchJavaScriptSourcemap } from "./js_sourcemap_fetcher.js"
 
 export const createUrlLoader = ({
@@ -30,15 +31,19 @@ export const createUrlLoader = ({
         url,
         contentTypeExpected: "text/css",
       })
-      const cssAsJsModule = convertCssTextToJavascriptModule(ressourceInfo.code)
-      return {
-        url: ressourceInfo.url,
-        code: cssAsJsModule,
+      const { code, map } = await convertCssTextToJavascriptModule({
+        code: ressourceInfo.code,
         // TODO: parse and fetch sourcemap from cssText
         // maybe we can get it from ressource builder, it might have that info?
         // if so should we return it?
         // because it's likely already handled by the ressource builder itself
         map: null,
+      })
+
+      return {
+        url: ressourceInfo.url,
+        code,
+        map,
       }
     }
 
@@ -169,20 +174,6 @@ const createImportTrace = ({
   next(firstImporter.url)
 
   return trace
-}
-
-const convertCssTextToJavascriptModule = (cssText) => {
-  // should we perform CSS minification here?
-  // is it already done by ressource builder or something?
-
-  const cssTextEscaped = escapeTemplateStringSpecialCharacters(cssText)
-
-  return `
-const stylesheet = new CSSStyleSheet()
-
-stylesheet.replaceSync(\`${cssTextEscaped}\`)
-
-export default stylesheet`
 }
 
 const convertJsonTextToJavascriptModule = (jsonText) => {
