@@ -4,7 +4,6 @@ import {
   urlToRelativeUrl,
   resolveUrl,
   urlToFileSystemPath,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
@@ -17,10 +16,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `${testDirectoryname}.html`
+const mainFilename = `main.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
