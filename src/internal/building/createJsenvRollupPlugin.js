@@ -1048,8 +1048,7 @@ building ${entryFileRelativeUrls.length} entry files...`)
           delete buildMappings[
             urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
           ]
-          buildInlineFileContents[buildRelativeUrl] =
-            rollupBuild[buildRelativeUrl].code
+          buildInlineFileContents[fileName] = rollupFileInfo.code
           delete rollupBuild[buildRelativeUrl]
         }
       })
