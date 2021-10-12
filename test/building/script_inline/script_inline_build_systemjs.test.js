@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert"
 import {
-  urlToBasename,
   resolveDirectoryUrl,
   urlToRelativeUrl,
   readFile,
@@ -25,10 +24,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.html`
+const mainFilename = `script_inline.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
@@ -81,7 +79,7 @@ const text = textNode.value
   const actual = sourcemap
   const expected = {
     version: 3,
-    sources: [`../../${testDirectoryname}.10.js`],
+    sources: [`../../script_inline.10.js`],
     names: actual.names,
     mappings: actual.mappings,
     sourcesContent: [sourceContent],

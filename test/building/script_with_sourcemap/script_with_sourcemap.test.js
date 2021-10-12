@@ -1,7 +1,10 @@
-// to update the index.es5.js.map
-// you can use getSourceMap from @jsenv/core/test/get_source_map.js
+/*
+ * to update the index.es5.js.map
+ * you can use getSourceMap from @jsenv/core/test/get_source_map.js
+ *
+ * TODO: test sourcemap produced when minification is enabled
+ */
 
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
@@ -10,6 +13,8 @@ import {
   readFile,
   urlToFilename,
 } from "@jsenv/filesystem"
+
+import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   findNodeByTagName,
@@ -21,21 +26,18 @@ import {
   IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
-import { buildProject } from "@jsenv/core"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.html`
+const mainFilename = `script_with_sourcemap.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
@@ -44,22 +46,18 @@ const { buildMappings } = await buildProject({
   entryPointMap,
 })
 
-const getBuildRelativeUrl = (urlRelativeToTestDirectory) => {
-  const relativeUrl = `${testDirectoryRelativeUrl}${urlRelativeToTestDirectory}`
-  const buildRelativeUrl = buildMappings[relativeUrl]
-  return buildRelativeUrl
-}
-
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const scriptBuildRelativeUrl = getBuildRelativeUrl("index.es5.js")
+const scriptBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}index.es5.js`]
 const scriptBuildUrl = resolveUrl(scriptBuildRelativeUrl, buildDirectoryUrl)
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const scriptNode = findNodeByTagName(htmlString, "script")
-const sourcemapBuildRelativeUrl = getBuildRelativeUrl("index.es5.js.map")
+const sourcemapBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}index.es5.js.map`]
 const sourcemapBuildUrl = resolveUrl(
   sourcemapBuildRelativeUrl,
   buildDirectoryUrl,
