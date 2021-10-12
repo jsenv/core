@@ -431,6 +431,17 @@ jsenvBabelPluginCompatMap["transform-async-to-promises"] =
 jsenvBabelPluginCompatMap["regenerator-transform"] =
   jsenvBabelPluginCompatMap["transform-regenerator"]
 
+// https://caniuse.com/?search=globalThis
+jsenvBabelPluginCompatMap["global-this-as-jsenv-import"] = {
+  edge: "79",
+  firefox: "65",
+  chrome: "71",
+  safari: "12.1",
+  opera: "58",
+  ios: "12.2",
+  android: "94",
+}
+
 // jsenvBabelPluginCompatMap["transform-import-assertion-json"] = {
 //   chrome: "91",
 //   edge: "91",
@@ -444,13 +455,7 @@ jsenvBabelPluginCompatMap["transform-import-assertions"] = {
   edge: "93",
 }
 
-// https://caniuse.com/?search=globalThis
-jsenvBabelPluginCompatMap["global-this-as-jsenv-import"] = {
-  edge: "79",
-  firefox: "65",
-  chrome: "71",
-  safari: "12.1",
-  opera: "58",
-  ios: "12.2",
-  android: "94",
+jsenvBabelPluginCompatMap["new-stylesheet-as-jsenv-import"] = {
+  chrome: "93",
+  edge: "93",
 }

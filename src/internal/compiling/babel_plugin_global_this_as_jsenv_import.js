@@ -11,6 +11,7 @@ export const babelPluginGlobalThisAsJsenvImport = (api, options) => {
   } = options
 
   return {
+    name: "global-this-as-jsenv-import",
     visitor: {
       Identifier(path, opts) {
         const { filename } = opts

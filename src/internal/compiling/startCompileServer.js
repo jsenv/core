@@ -40,6 +40,7 @@ import {
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
 import { babelPluginGlobalThisAsJsenvImport } from "./babel_plugin_global_this_as_jsenv_import.js"
+import { babelPluginNewStylesheetAsJsenvImport } from "./babel_plugin_new_stylesheet_as_jsenv_import.js"
 import { babelPluginImportAssertions } from "./babel_plugin_import_assertions.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
 import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
@@ -139,6 +140,7 @@ export const startCompileServer = async ({
     ...babelPluginMapFromFile,
     ...babelPluginMap,
     "global-this-as-jsenv-import": babelPluginGlobalThisAsJsenvImport,
+    "new-stylesheet-as-jsenv-import": babelPluginNewStylesheetAsJsenvImport,
     "transform-import-assertions": babelPluginImportAssertions,
   }
   Object.keys(babelPluginMap).forEach((key) => {
