@@ -20,9 +20,11 @@ export const parseWebmanifestRessource = (
     if (icons.length === 0) {
       if (minify) {
         // this is to remove eventual whitespaces
-        return JSON.stringify(manifest)
+        webmanifestRessource.buildEnd(JSON.stringify(manifest))
+        return
       }
-      return JSON.stringify(manifestString)
+      webmanifestRessource.buildEnd(JSON.stringify(manifest, null, "  "))
+      return
     }
 
     const iconsAfterBuild = icons.map((icon, index) => {
@@ -35,8 +37,11 @@ export const parseWebmanifestRessource = (
     const manifestAfterBuild = { ...manifest }
     manifestAfterBuild.icons = iconsAfterBuild
     if (minify) {
-      return JSON.stringify(manifestAfterBuild)
+      webmanifestRessource.buildEnd(JSON.stringify(manifestAfterBuild))
+      return
     }
-    return JSON.stringify(manifestAfterBuild, null, "  ")
+    webmanifestRessource.buildEnd(
+      JSON.stringify(manifestAfterBuild, null, "  "),
+    )
   }
 }

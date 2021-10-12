@@ -25,5 +25,9 @@ export const minifyJs = async ({
   code = terserResult.code
   map = terserResult.map
 
+  if (!map.sourcesContent) {
+    map.sourcesContent = [code]
+  }
+
   return { code, map }
 }

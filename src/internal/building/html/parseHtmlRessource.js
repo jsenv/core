@@ -239,13 +239,14 @@ const regularScriptTextNodeVisitor = (
     return null
   }
 
+  const ressourceSpecifier = getUniqueNameForInlineHtmlNode(
+    script,
+    scripts,
+    `${urlToBasename(htmlRessource.url)}.[id].js`,
+  )
   const jsReference = notifyReferenceFound({
     contentTypeExpected: "application/javascript",
-    ressourceSpecifier: getUniqueNameForInlineHtmlNode(
-      script,
-      scripts,
-      `${urlToBasename(htmlRessource.url)}.[id].js`,
-    ),
+    ressourceSpecifier,
     ...referenceLocationFromHtmlNode(script),
     contentType: "application/javascript",
     bufferBeforeBuild: Buffer.from(textNode.value),
@@ -335,13 +336,14 @@ const moduleScriptTextNodeVisitor = (
     return null
   }
 
+  const ressourceSpecifier = getUniqueNameForInlineHtmlNode(
+    script,
+    scripts,
+    `${urlToBasename(htmlRessource.url)}.[id].js`,
+  )
   const jsReference = notifyReferenceFound({
     contentTypeExpected: "application/javascript",
-    ressourceSpecifier: getUniqueNameForInlineHtmlNode(
-      script,
-      scripts,
-      `${urlToBasename(htmlRessource.url)}.[id].js`,
-    ),
+    ressourceSpecifier,
     ...referenceLocationFromHtmlNode(script),
     contentType: "application/javascript",
     bufferBeforeBuild: textNode.value,

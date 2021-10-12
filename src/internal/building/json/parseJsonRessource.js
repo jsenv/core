@@ -3,8 +3,9 @@ export const parseJsonRessource = (jsonRessource, notifiers, { minify }) => {
   return () => {
     if (minify) {
       // this is to remove eventual whitespaces
-      return JSON.stringify(JSON.parse(jsonString))
+      jsonRessource.buildEnd(JSON.stringify(JSON.parse(jsonString)))
+      return
     }
-    return jsonString
+    jsonRessource.buildEnd(jsonString)
   }
 }

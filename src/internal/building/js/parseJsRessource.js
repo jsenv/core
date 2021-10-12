@@ -67,7 +67,7 @@ export const parseJsRessource = async (
 
     if (minify) {
       const result = await minifyJs({
-        url: jsOriginalUrl,
+        url: map ? jsOriginalUrl : jsCompiledUrl,
         code: jsString,
         map,
         toplevel: false,
@@ -75,12 +75,13 @@ export const parseJsRessource = async (
       })
       code = result.code
       map = result.map
-      if (!map.sourcesContent) {
-        map.sourcesContent = [jsString]
-      }
     }
 
     jsRessource.buildEnd(code)
+
+    if (!map) {
+      return
+    }
 
     // In theory code should never be modified once buildEnd() is called
     // because buildRelativeUrl might be versioned based on file content
