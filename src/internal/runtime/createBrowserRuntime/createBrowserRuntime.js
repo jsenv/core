@@ -19,14 +19,17 @@ export const createBrowserRuntime = async ({
   outDirectoryRelativeUrl,
   compileId,
 }) => {
-  const fetchSource = (url) => {
+  const fetchSource = (url, { contentTypeExpected }) => {
     return fetchUrl(url, {
       credentials: "same-origin",
+      contentTypeExpected,
     })
   }
 
   const fetchJson = async (url) => {
-    const response = await fetchSource(url)
+    const response = await fetchSource(url, {
+      contentTypeExpected: "application/json",
+    })
     const json = await response.json()
     return json
   }
@@ -46,7 +49,9 @@ export const createBrowserRuntime = async ({
     let importmapRaw
     if (importmapScript.src) {
       importMapUrl = importmapScript.src
-      const importmapFileResponse = await fetchSource(importMapUrl)
+      const importmapFileResponse = await fetchSource(importMapUrl, {
+        contentTypeExpected: "application/importmap+json",
+      })
       importmapRaw =
         importmapFileResponse.status === 404
           ? {}
