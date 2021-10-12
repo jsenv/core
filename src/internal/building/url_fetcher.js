@@ -34,9 +34,9 @@ export const createUrlFetcher = ({
     if (!responseValidity.isValid) {
       const { message, details } = responseValidity
       if (
-        contentTypeExpected &&
-        contentTypeExpected.includes("application/javascript") &&
-        !responseValidity.contentType.isValid
+        responseValidity.contentType &&
+        !responseValidity.contentType.isValid &&
+        contentTypeExpected.includes("application/javascript")
       ) {
         const importerUrl = urlImporterMap[url].url
         const urlRelativeToImporter = `./${urlToRelativeUrl(url, importerUrl)}`

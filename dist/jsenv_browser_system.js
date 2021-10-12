@@ -991,7 +991,7 @@
   };
 
   // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
-  var resolveUrl = function resolveUrl(specifier, baseUrl) {
+  var resolveUrl$1 = function resolveUrl(specifier, baseUrl) {
     if (baseUrl) {
       if (typeof baseUrl !== "string") {
         throw new TypeError(writeBaseUrlMustBeAString({
@@ -1094,13 +1094,13 @@
   };
 
   var tryUrlResolution = function tryUrlResolution(string, url) {
-    var result = resolveUrl(string, url);
+    var result = resolveUrl$1(string, url);
     return hasScheme(result) ? result : null;
   };
 
   var resolveSpecifier = function resolveSpecifier(specifier, importer) {
     if (specifier === "." || specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
-      return resolveUrl(specifier, importer);
+      return resolveUrl$1(specifier, importer);
     }
 
     if (hasScheme(specifier)) {
@@ -2040,7 +2040,7 @@
         importer: importer,
         createBareSpecifierError: createBareSpecifierError,
         onImportMapping: onImportMapping
-      }) : resolveUrl(specifier, importer),
+      }) : resolveUrl$1(specifier, importer),
       importer: importer,
       defaultExtension: defaultExtension
     });
@@ -2090,7 +2090,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _invoke$5(body, then) {
+  function _invoke$6(body, then) {
     var result = body();
 
     if (result && result.then) {
@@ -2132,7 +2132,7 @@
     }
 
     var contentType = response.headers["content-type"] || "";
-    return _invoke$5(function () {
+    return _invoke$6(function () {
       if (response.status === 500 && contentType === "application/json") {
         return _await$a(response.json(), function (bodyAsJson) {
           if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
@@ -3085,6 +3085,16 @@
     return then ? value.then(then) : value;
   }
 
+  function _invoke$5(body, then) {
+    var result = body();
+
+    if (result && result.then) {
+      return result.then(then);
+    }
+
+    return then(result);
+  }
+
   function _catch$4(body, recover) {
     try {
       var result = body();
@@ -3137,10 +3147,42 @@
     browserSystem.resolve = _resolve;
     var instantiate = browserSystem.instantiate;
     browserSystem.instantiate = _async$8(function (url, importerUrl) {
+      var _exit = false;
+
       var _this = this;
 
       return _catch$4(function () {
-        return _await$8(instantiate.call(_this, url, importerUrl));
+        var _extractImportTypeFro = extractImportTypeFromUrl(url),
+            importType = _extractImportTypeFro.importType,
+            urlWithoutImportType = _extractImportTypeFro.urlWithoutImportType;
+
+        return _invoke$5(function () {
+          if (importType === "json") {
+            return _await$8(instantiateAsJsonModule(urlWithoutImportType, {
+              loader: _this,
+              fetchSource: fetchSource
+            }), function (jsonModule) {
+              _exit = true;
+              return jsonModule;
+            });
+          }
+        }, function (_result) {
+          var _exit2 = false;
+          if (_exit) return _result;
+          return _invoke$5(function () {
+            if (importType === "css") {
+              return _await$8(instantiateAsCssModule(urlWithoutImportType, {
+                loader: _this,
+                fetchSource: fetchSource
+              }), function (cssModule) {
+                _exit2 = true;
+                return cssModule;
+              });
+            }
+          }, function (_result2) {
+            return _exit2 ? _result2 : _await$8(instantiate.call(_this, url, importerUrl));
+          });
+        });
       }, function (e) {
         return _await$8(createDetailedInstantiateError({
           instantiateError: e,
@@ -3167,14 +3209,66 @@
     return browserSystem;
   };
 
-  var createDetailedInstantiateError = _async$8(function (_ref2) {
-    var _exit = false;
-    var instantiateError = _ref2.instantiateError,
-        url = _ref2.url,
-        importerUrl = _ref2.importerUrl,
-        compileServerOrigin = _ref2.compileServerOrigin,
-        compileDirectoryRelativeUrl = _ref2.compileDirectoryRelativeUrl,
+  var extractImportTypeFromUrl = function extractImportTypeFromUrl(url) {
+    var urlObject = new URL(url);
+    var search = urlObject.search;
+    var searchParams = new URLSearchParams(search);
+    var importType = searchParams.get("import_type");
+
+    if (!importType) {
+      return {};
+    }
+
+    searchParams.delete("import_type");
+    urlObject.search = String(searchParams);
+    return {
+      importType: importType,
+      urlWithoutImportType: urlObject.href
+    };
+  };
+
+  var instantiateAsJsonModule = _async$8(function (url, _ref2) {
+    var loader = _ref2.loader,
         fetchSource = _ref2.fetchSource;
+    return _await$8(fetchSource(url), function (response) {
+      return _await$8(response.text(), function (jsonAsText) {
+        var jsonAsJsModule = "System.register([], function (export) {\n  return{\n    execute: function () {\n     export(\"default\", '".concat(jsonAsText, "')\n    }\n  }\n})") // eslint-disable-next-line no-eval
+        ;
+        (0, window.eval)(jsonAsJsModule);
+        return loader.getRegister(url);
+      });
+    });
+  });
+
+  var instantiateAsCssModule = _async$8(function (url, _ref3) {
+    var loader = _ref3.loader,
+        fetchSource = _ref3.fetchSource;
+    return _await$8(fetchSource(url), function (response) {
+      return _await$8(response.text(), function (cssTextOriginal) {
+        // https://github.com/systemjs/systemjs/blob/98609dbeef01ec62447e4b21449ce47e55f818bd/src/extras/module-types.js#L37
+        var cssTextRelocated = cssTextOriginal.replace(/url\(\s*(?:(["'])((?:\\.|[^\n\\"'])+)\1|((?:\\.|[^\s,"'()\\])+))\s*\)/g, function (match, quotes, relUrl1, relUrl2) {
+          return "url(\" ".concat(quotes).concat(resolveUrl(relUrl1 || relUrl2)).concat(quotes, "\")");
+        });
+        var cssAsJsModule = "System.register([], function (export) {\n  return {\n    execute: function () {\n      var sheet = new CSSStyleSheet()\n      sheet.replaceSync(".concat(JSON.stringify(cssTextRelocated), ")\n      export('default', sheet)\n    }\n  }\n})") // eslint-disable-next-line no-eval
+        ;
+        (0, window.eval)(cssAsJsModule);
+        return loader.getRegister(url);
+      });
+    });
+  });
+
+  var resolveUrl = function resolveUrl(specifier) {
+    return new URL(specifier).href;
+  };
+
+  var createDetailedInstantiateError = _async$8(function (_ref4) {
+    var _exit3 = false;
+    var instantiateError = _ref4.instantiateError,
+        url = _ref4.url,
+        importerUrl = _ref4.importerUrl,
+        compileServerOrigin = _ref4.compileServerOrigin,
+        compileDirectoryRelativeUrl = _ref4.compileDirectoryRelativeUrl,
+        fetchSource = _ref4.fetchSource;
     var response;
     return _continue$2(_catch$4(function () {
       return _await$8(fetchSource(url, {
@@ -3184,10 +3278,10 @@
       });
     }, function (e) {
       e.code = "NETWORK_FAILURE";
-      _exit = true;
+      _exit3 = true;
       return e;
-    }), function (_result) {
-      return _exit ? _result : _await$8(getJavaScriptModuleResponseError(response, {
+    }), function (_result3) {
+      return _exit3 ? _result3 : _await$8(getJavaScriptModuleResponseError(response, {
         url: url,
         importerUrl: importerUrl,
         compileServerOrigin: compileServerOrigin,
@@ -3212,7 +3306,7 @@
       message = errorToHTML(error);
     }
 
-    var css = "\n    .jsenv-console {\n      background: rgba(0, 0, 0, 0.95);\n      position: absolute;\n      top: 0;\n      left: 0;\n      width: 100%;\n      display: flex;\n      flex-direction: column;\n      align-items: center;\n      z-index: 1000;\n      width: 100%;\n      box-sizing: border-box;\n      padding: 1em;\n    }\n\n    .jsenv-console h1 {\n      color: red;\n      display: flex;\n      align-items: center;\n    }\n\n    #button-close-jsenv-console {\n      margin-left: 10px;\n    }\n\n    .jsenv-console pre {\n      overflow: auto;\n      max-width: 70em;\n      /* avoid scrollbar to hide the text behind it */\n      padding: 20px;\n    }\n\n    .jsenv-console pre[data-theme=\"dark\"] {\n      background: #111;\n      border: 1px solid #333;\n      color: #eee;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] {\n      background: #1E1E1E;\n      border: 1px solid white;\n      color: #EEEEEE;\n    }\n\n    .jsenv-console pre a {\n      color: inherit;\n    }\n    ";
+    var css = "\n    .jsenv-console {\n      background: rgba(0, 0, 0, 0.95);\n      position: absolute;\n      top: 0;\n      left: 0;\n      width: 100%;\n      height: 100%;\n      display: flex;\n      flex-direction: column;\n      align-items: center;\n      z-index: 1000;\n      box-sizing: border-box;\n      padding: 1em;\n    }\n\n    .jsenv-console h1 {\n      color: red;\n      display: flex;\n      align-items: center;\n    }\n\n    #button-close-jsenv-console {\n      margin-left: 10px;\n    }\n\n    .jsenv-console pre {\n      overflow: auto;\n      max-width: 70em;\n      /* avoid scrollbar to hide the text behind it */\n      padding: 20px;\n    }\n\n    .jsenv-console pre[data-theme=\"dark\"] {\n      background: #111;\n      border: 1px solid #333;\n      color: #eee;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] {\n      background: #1E1E1E;\n      border: 1px solid white;\n      color: #EEEEEE;\n    }\n\n    .jsenv-console pre a {\n      color: inherit;\n    }\n    ";
     var html = "\n      <style type=\"text/css\">".concat(css, "></style>\n      <div class=\"jsenv-console\">\n        <h1>").concat(title, " <button id=\"button-close-jsenv-console\">X</button></h1>\n        <pre data-theme=\"").concat(theme, "\">").concat(message, "</pre>\n      </div>\n      ");
     var removeJsenvConsole = appendHMTLInside(html, document.body);
 

@@ -88,9 +88,11 @@ const transformStringLiteralAtPath = (path, transform, babel) => {
 
 const getImportAssertionsDescriptor = (importAssertions) => {
   const importAssertionsDescriptor = {}
-  importAssertions.forEach((importAssertion) => {
-    importAssertionsDescriptor[importAssertion.key.name] =
-      importAssertion.value.value
-  })
+  if (importAssertions) {
+    importAssertions.forEach((importAssertion) => {
+      importAssertionsDescriptor[importAssertion.key.name] =
+        importAssertion.value.value
+    })
+  }
   return importAssertionsDescriptor
 }
