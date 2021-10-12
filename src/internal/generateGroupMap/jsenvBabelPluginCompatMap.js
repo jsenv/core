@@ -443,3 +443,14 @@ jsenvBabelPluginCompatMap["transform-import-assertions"] = {
   chrome: "93",
   edge: "93",
 }
+
+// https://caniuse.com/?search=globalThis
+jsenvBabelPluginCompatMap["global-this-as-jsenv-import"] = {
+  edge: "79",
+  firefox: "65",
+  chrome: "71",
+  safari: "12.1",
+  opera: "58",
+  ios: "12.2",
+  android: "94",
+}

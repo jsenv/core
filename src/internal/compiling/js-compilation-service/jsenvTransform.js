@@ -12,7 +12,6 @@ import {
 import { findAsyncPluginNameInBabelPluginMap } from "./findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"
 import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./babel_plugin_regenerator_runtime_as_jsenv_import.js"
-import { babelPluginGlobalThisAsJsenvImport } from "./babel_plugin_global_this_as_jsenv_import.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js"
 import { filePathToBabelHelperName } from "./babelHelper.js"
 
@@ -31,7 +30,6 @@ export const jsenvTransform = async ({
   allowTopLevelAwait,
   transformTopLevelAwait,
   transformGenerator,
-  transformGlobalThis,
   regeneratorRuntimeImportPath,
   sourcemapEnabled,
 }) => {
@@ -73,13 +71,6 @@ export const jsenvTransform = async ({
           regeneratorRuntimeImportPath,
         },
       ],
-    }
-  }
-
-  if (transformGlobalThis) {
-    babelPluginMap = {
-      ...babelPluginMap,
-      "global-this-as-jsenv-import": [babelPluginGlobalThisAsJsenvImport],
     }
   }
 

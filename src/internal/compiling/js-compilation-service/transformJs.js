@@ -15,7 +15,6 @@ export const transformJs = async ({
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
   transformGenerator = true,
-  transformGlobalThis = true,
   sourcemapEnabled = true,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -51,7 +50,6 @@ export const transformJs = async ({
     allowTopLevelAwait,
     transformTopLevelAwait,
     transformGenerator,
-    transformGlobalThis,
     sourcemapEnabled,
   })
   code = transformResult.code
