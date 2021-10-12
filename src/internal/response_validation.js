@@ -64,12 +64,13 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
   }
 
   if (status < 200 || status > 299) {
+    const responseText = await response.text()
     return {
       isValid: false,
       message: `invalid response status on url`,
       details: {
         "response status": status,
-        "response text": await response.text(),
+        ...(responseText ? { "response text": responseText } : {}),
         url,
         ...formatUrlTrace(urlTrace),
       },
