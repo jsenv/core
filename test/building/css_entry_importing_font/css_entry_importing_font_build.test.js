@@ -37,16 +37,14 @@ const cssBuildUrl = resolveUrl("style_build.css", buildDirectoryUrl)
 const cssString = await readFile(cssBuildUrl)
 
 // ensure font urls properly updated in css file
-{
-  const cssUrls = await parseCssUrls(cssString, cssBuildUrl)
-  const fontSpecifier = cssUrls.urlDeclarations[0].specifier
-  const fontBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}Roboto-Thin.ttf`]
-  const fontBuildUrl = resolveUrl(fontBuildRelativeUrl, buildDirectoryUrl)
+const cssUrls = await parseCssUrls(cssString, cssBuildUrl)
+const fontSpecifier = cssUrls.urlDeclarations[0].specifier
+const fontBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}roboto_thin.ttf`]
+const fontBuildUrl = resolveUrl(fontBuildRelativeUrl, buildDirectoryUrl)
 
-  const actual = fontSpecifier
-  const expected = urlToRelativeUrl(fontBuildUrl, cssBuildUrl)
-  assert({ actual, expected })
+const actual = fontSpecifier
+const expected = urlToRelativeUrl(fontBuildUrl, cssBuildUrl)
+assert({ actual, expected })
 
-  await assertFilePresence(fontBuildUrl)
-}
+await assertFilePresence(fontBuildUrl)
