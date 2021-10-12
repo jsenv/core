@@ -1,6 +1,5 @@
 /* eslint-disable import/max-dependencies */
-import { Script } from "vm"
-
+import { Script } from "node:vm"
 import cuid from "cuid"
 import { loggerToLogLevel } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"

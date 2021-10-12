@@ -454,15 +454,9 @@ jsenvBabelPluginCompatMap["global-this-as-jsenv-import"] = {
 jsenvBabelPluginCompatMap["transform-import-assertions"] = {
   chrome: "93",
   edge: "93",
-  // we assume no one will try to use import assertions with node
-  // and we fake node support this to avoid compilation on node
-  node: "0",
 }
 
 jsenvBabelPluginCompatMap["new-stylesheet-as-jsenv-import"] = {
   chrome: "93",
   edge: "93",
-  // we assume no one will try to use import assertions with node
-  // and we fake node support this to avoid compilation on node
-  node: "0",
 }

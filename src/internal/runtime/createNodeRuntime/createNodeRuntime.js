@@ -95,16 +95,22 @@ const nodeRuntimeSupportsAllFeatures = async ({
 
 const countRequiredBabelPlugins = (groupInfo) => {
   const { babelPluginRequiredNameArray } = groupInfo
-  let count = babelPluginRequiredNameArray.length
 
+  const babelPlugingNames = babelPluginRequiredNameArray.filter(
+    (babelPluginName) => !babelPluginIgnored.includes(babelPluginName),
+  )
+
+  return babelPlugingNames.length
+}
+
+const babelPluginIgnored = [
   // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
   // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
   // "transform-instrument" becomes non mandatory
-  const transformInstrumentIndex = babelPluginRequiredNameArray.indexOf(
-    "transform-instrument",
-  )
-  if (transformInstrumentIndex > -1 && process.env.NODE_V8_COVERAGE) {
-    count--
-  }
-  return count
-}
+  ...(process.env.NODE_V8_COVERAGE ? ["transform-instrument"] : []),
+  // We assume import assertions and constructable stylesheet won't be used
+  // in code executed in Node.js
+  // so event they are conceptually required, they are ignored
+  "transform-import-assertions",
+  "new-stylesheet-as-jsenv-import",
+]
