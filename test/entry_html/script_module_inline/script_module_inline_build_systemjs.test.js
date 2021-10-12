@@ -66,7 +66,8 @@ const sourcemap = await readFile(sourcemapUrl, { as: "json" })
   assert({ actual, expected })
 }
 
-const inlineFileBuildRelativeUrl = "build_module_inline_systemjs.10.js"
+const inlineFileBuildRelativeUrl =
+  "script_module_inline.script_module_inline.js"
 const inlineFileBuildUrl = resolveUrl(
   inlineFileBuildRelativeUrl,
   buildDirectoryUrl,

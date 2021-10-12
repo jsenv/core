@@ -827,6 +827,7 @@ export const createRessourceBuilder = (
       )
       const sourcemapUrlForJs = `${urlToFilename(jsBuildUrl)}.map`
       code = setJavaScriptSourceMappingUrl(code, sourcemapUrlForJs)
+      buildFileInfo.code = code
       ressource.bufferAfterBuild = code
     }
   }
