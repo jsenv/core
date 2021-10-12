@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert"
 import {
-  urlToBasename,
   resolveDirectoryUrl,
   urlToRelativeUrl,
   resolveUrl,
@@ -17,13 +16,12 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}html_entry_css_background_url.html`]:
+    "./main.html",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "info",
@@ -32,7 +30,6 @@ const { buildMappings } = await buildProject({
   entryPointMap,
   minify: true,
 })
-
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
@@ -44,11 +41,9 @@ const styleBuildUrl = resolveUrl(styleBuildRelativeUrl, buildDirectoryUrl)
 const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
 
 // ensure background image url is properly updated
-{
-  const styleCssString = await readFile(styleBuildUrl)
-  const styleUrls = await parseCssUrls(styleCssString, styleBuildUrl)
+const styleCssString = await readFile(styleBuildUrl)
+const styleUrls = await parseCssUrls(styleCssString, styleBuildUrl)
 
-  const actual = styleUrls.urlDeclarations[0].specifier
-  const expected = urlToRelativeUrl(imgBuildUrl, styleBuildUrl)
-  assert({ actual, expected })
-}
+const actual = styleUrls.urlDeclarations[0].specifier
+const expected = urlToRelativeUrl(imgBuildUrl, styleBuildUrl)
+assert({ actual, expected })
