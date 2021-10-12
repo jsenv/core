@@ -25,13 +25,16 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
     ...START_COMPILE_SERVER_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
   })
+const imgRelativeUrl = `${testDirectoryRelativeUrl}src/jsenv.png`
+const imgCompiledRelativeUrl = `${outDirectoryRelativeUrl}best/${imgRelativeUrl}`
+const imgCompiledUrl = resolveUrl(imgCompiledRelativeUrl, compileServerOrigin)
 
 await launchBrowsers(
   [
     // comment force multiline
-    // launchChromium,
+    launchChromium,
     launchFirefox,
-    // launchWebkit,
+    launchWebkit,
   ],
   async (launchBrowser) => {
     const result = await launchAndExecute({
@@ -60,10 +63,11 @@ await launchBrowsers(
     const expected = {
       status: "completed",
       namespace: {
-        "./main_script_inline_10.js": {
+        "./main.html__asset__10.js": {
           status: "completed",
           namespace: {
-            backgroundBodyColor: "rgb(255, 0, 0)",
+            bodyBackgroundColor: "rgb(255, 0, 0)",
+            bodyBackgroundImage: `url("${imgCompiledUrl}")`,
           },
         },
       },

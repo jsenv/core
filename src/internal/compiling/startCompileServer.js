@@ -137,11 +137,11 @@ export const startCompileServer = async ({
     babelConfigFileUrl,
   })
   babelPluginMap = {
-    ...babelPluginMapFromFile,
-    ...babelPluginMap,
     "global-this-as-jsenv-import": babelPluginGlobalThisAsJsenvImport,
     "new-stylesheet-as-jsenv-import": babelPluginNewStylesheetAsJsenvImport,
     "transform-import-assertions": babelPluginImportAssertions,
+    ...babelPluginMapFromFile,
+    ...babelPluginMap,
   }
   Object.keys(babelPluginMap).forEach((key) => {
     if (

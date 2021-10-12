@@ -12,9 +12,28 @@
 
       document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
 
-      export const backgroundBodyColor = getComputedStyle(
+      // on firefox we have to wait a bit,
+      // it seems the styles are applied on next js event loop
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50)
+      })
+
+      export const bodyBackgroundColor = getComputedStyle(
         document.body,
       ).backgroundColor
+
+      console.log({ bodyBackgroundColor })
+
+      // let 500ms for the background image to load
+      await new Promise((resolve) => {
+        setTimeout(resolve, 500)
+      })
+
+      export const bodyBackgroundImage = getComputedStyle(
+        document.body,
+      ).backgroundImage
+
+      console.log({ bodyBackgroundImage })
     </script>
   </body>
 </html>

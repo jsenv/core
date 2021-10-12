@@ -92,7 +92,7 @@ export const babelPluginNewStylesheetAsJsenvImport = (
 
 const hasImportTypeCssAssertion = (path) => {
   const importAssertionsDescriptor = getImportAssertionsDescriptor(
-    path.assertions,
+    path.node.assertions,
   )
   return Boolean(importAssertionsDescriptor.type === "css")
 }
