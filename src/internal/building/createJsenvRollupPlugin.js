@@ -1031,13 +1031,19 @@ building ${entryFileRelativeUrls.length} entry files...`)
 
       // update rollupBuild, buildInlineFilesContents, buildManifest and buildMappings
       // in case some ressources where inlined by ressourceBuilder.rollupBuildEnd
-      Object.keys(buildManifest).forEach((fileName) => {
-        const buildRelativeUrl = buildManifest[fileName]
-        const ressource = ressourceBuilder.findRessource(
-          (ressource) => ressource.buildRelativeUrl === buildRelativeUrl,
-        )
+      Object.keys(rollupBuild).forEach((buildRelativeUrl) => {
+        const rollupFileInfo = rollupBuild[buildRelativeUrl]
+        const ressource = ressourceBuilder.findRessource((ressource) => {
+          return (
+            ressource.buildRelativeUrl === buildRelativeUrl ||
+            rollupFileInfo.facadeModuleId === ressource.url
+          )
+        })
         if (ressource && ressource.isInline) {
-          delete buildManifest[fileName]
+          const fileName = buildRelativeUrlToFileName(buildRelativeUrl)
+          if (fileName) {
+            delete buildManifest[fileName]
+          }
           const originalProjectUrl = asOriginalUrl(ressource.url)
           delete buildMappings[
             urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
