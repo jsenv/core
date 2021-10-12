@@ -46,52 +46,17 @@ const test = async (params) => {
   return { buildMappings, jsFileBuildRelativeUrl }
 }
 
-// {
-//   const { buildMappings, jsFileBuildRelativeUrl } = await test({
-//     jsConcatenation: true,
-//   })
-//   const { namespace } = await browserImportEsModuleBuild({
-//     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-//     testDirectoryRelativeUrl,
-//     jsFileRelativeUrl: `./${jsFileBuildRelativeUrl}`,
-//   })
-//   const jsFileBuildUrl = resolveUrl(jsFileBuildRelativeUrl, buildDirectoryUrl)
-//   const jsFileContent = await readFile(jsFileBuildUrl)
-//   const jsFileContainsImgBuildRelativeUrl = jsFileContent.includes(
-//     buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`],
-//   )
-
-//   const actual = {
-//     jsFileContainsImgBuildRelativeUrl,
-//     buildMappings,
-//     namespace,
-//   }
-//   const expected = {
-//     jsFileContainsImgBuildRelativeUrl: true,
-//     buildMappings: {
-//       [`${testDirectoryRelativeUrl}src/jsenv.png`]: assert.any(String),
-//       [`${testDirectoryRelativeUrl}main.html`]: assert.any(String),
-//     },
-//     namespace: {
-//       backgroundBodyColor: "rgb(255, 0, 0)",
-//     },
-//   }
-//   assert({ actual, expected })
-// }
-
-// no concatenation + runtime support enough
 {
   const { buildMappings, jsFileBuildRelativeUrl } = await test({
-    jsConcatenation: false,
-    runtimeSupport: { chrome: "96" },
+    jsConcatenation: true,
   })
+  const imgBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
   const { namespace, serverOrigin } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
     jsFileRelativeUrl: `./${jsFileBuildRelativeUrl}`,
   })
-  const imgBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
 
   const actual = {
     buildMappings,
@@ -100,6 +65,39 @@ const test = async (params) => {
   const expected = {
     buildMappings: {
       [`${testDirectoryRelativeUrl}src/jsenv.png`]: assert.any(String),
+      [`${testDirectoryRelativeUrl}src/style.css.map`]: assert.any(String),
+      [`${testDirectoryRelativeUrl}main.html`]: assert.any(String),
+    },
+    namespace: {
+      bodyBackgroundColor: "rgb(255, 0, 0)",
+      bodyBackgroundImage: `url("${serverOrigin}/dist/esmodule/${imgBuildRelativeUrl}")`,
+    },
+  }
+  assert({ actual, expected })
+}
+
+// no concatenation + runtime support enough
+{
+  const { buildMappings, jsFileBuildRelativeUrl } = await test({
+    jsConcatenation: false,
+    runtimeSupport: { chrome: "96" },
+  })
+  const imgBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
+  const { namespace, serverOrigin } = await browserImportEsModuleBuild({
+    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
+    testDirectoryRelativeUrl,
+    jsFileRelativeUrl: `./${jsFileBuildRelativeUrl}`,
+  })
+
+  const actual = {
+    buildMappings,
+    namespace,
+  }
+  const expected = {
+    buildMappings: {
+      [`${testDirectoryRelativeUrl}src/jsenv.png`]: assert.any(String),
+      [`${testDirectoryRelativeUrl}src/style.css.map`]: assert.any(String),
       [`${testDirectoryRelativeUrl}main.html`]: assert.any(String),
     },
     namespace: {
