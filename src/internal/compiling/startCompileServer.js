@@ -240,6 +240,7 @@ export const startCompileServer = async ({
     inlineImportMapIntoHTML,
     babelPluginMap,
     customCompilers,
+    jsenvToolbarInjection,
   })
   if (compileServerCanWriteOnFilesystem) {
     await setupOutDirectory({
@@ -915,6 +916,7 @@ const createOutJSONFiles = ({
   env,
   inlineImportMapIntoHTML,
   customCompilers,
+  jsenvToolbarInjection,
 }) => {
   const outJSONFiles = {}
   const outDirectoryUrl = resolveUrl(
@@ -937,6 +939,7 @@ const createOutJSONFiles = ({
     replaceProcessEnvNodeEnv,
     processEnvNodeEnv,
     customCompilerPatterns,
+    jsenvToolbarInjection,
   }
   outJSONFiles.meta = {
     url: metaOutFileUrl,
