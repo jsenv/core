@@ -19,8 +19,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}html_entry_css_background_url.html`]:
-    "./main.html",
+  [`./${testDirectoryRelativeUrl}css_background_url.html`]: "./main.html",
 }
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
