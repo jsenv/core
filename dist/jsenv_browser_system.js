@@ -3281,7 +3281,7 @@
   }); // CSSStyleSheet accepts a "baseUrl" parameter
   // as documented in https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet/CSSStyleSheet#parameters
   // Unfortunately the polyfill do not seems to implement it
-  // So we reuse "systemjs" strategy from  https://github.com/systemjs/systemjs/blob/98609dbeef01ec62447e4b21449ce47e55f818bd/src/extras/module-types.js#L37
+  // So we reuse "systemjs" strategy from https://github.com/systemjs/systemjs/blob/98609dbeef01ec62447e4b21449ce47e55f818bd/src/extras/module-types.js#L37
 
 
   var cssWithBaseUrl = function cssWithBaseUrl(_ref5) {
@@ -3296,8 +3296,8 @@
     }
 
     var cssTextRelocated = cssText.replace(/url\(\s*(?:(["'])((?:\\.|[^\n\\"'])+)\1|((?:\\.|[^\s,"'()\\])+))\s*\)/g, function (match, quotes, relUrl1, relUrl2) {
-      var urlRelativeToBase = new URL(relUrl1 || relUrl2, baseUrl).href;
-      return "url(\"".concat(quotes).concat(urlRelativeToBase).concat(quotes, "\")");
+      var absoluteUrl = new URL(relUrl1 || relUrl2, cssUrl).href;
+      return "url(".concat(quotes).concat(absoluteUrl).concat(quotes, ")");
     });
     return cssTextRelocated;
   };

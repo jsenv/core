@@ -152,7 +152,7 @@ const instantiateAsCssModule = async (
 // CSSStyleSheet accepts a "baseUrl" parameter
 // as documented in https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet/CSSStyleSheet#parameters
 // Unfortunately the polyfill do not seems to implement it
-// So we reuse "systemjs" strategy from  https://github.com/systemjs/systemjs/blob/98609dbeef01ec62447e4b21449ce47e55f818bd/src/extras/module-types.js#L37
+// So we reuse "systemjs" strategy from https://github.com/systemjs/systemjs/blob/98609dbeef01ec62447e4b21449ce47e55f818bd/src/extras/module-types.js#L37
 const cssWithBaseUrl = ({ cssUrl, cssText, baseUrl }) => {
   const cssDirectoryUrl = new URL("./", cssUrl).href
   const baseDirectoryUrl = new URL("./", baseUrl).href
@@ -163,8 +163,8 @@ const cssWithBaseUrl = ({ cssUrl, cssText, baseUrl }) => {
   const cssTextRelocated = cssText.replace(
     /url\(\s*(?:(["'])((?:\\.|[^\n\\"'])+)\1|((?:\\.|[^\s,"'()\\])+))\s*\)/g,
     (match, quotes, relUrl1, relUrl2) => {
-      const urlRelativeToBase = new URL(relUrl1 || relUrl2, baseUrl).href
-      return `url("${quotes}${urlRelativeToBase}${quotes}")`
+      const absoluteUrl = new URL(relUrl1 || relUrl2, cssUrl).href
+      return `url(${quotes}${absoluteUrl}${quotes})`
     },
   )
   return cssTextRelocated
