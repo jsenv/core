@@ -25,6 +25,7 @@ import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInterna
 import { infoSign } from "@jsenv/core/src/internal/logs/log_style.js"
 
 import {
+  formatBuildStartLog,
   formatUseImportMapFromHtml,
   formatImportmapOutsideCompileDirectory,
   formatRessourceHintNeverUsedWarning,
@@ -219,14 +220,7 @@ export const createJsenvRollupPlugin = async ({
     name: "jsenv",
 
     async buildStart() {
-      const entryFileRelativeUrls = Object.keys(entryPointMap)
-      if (entryFileRelativeUrls.length === 1) {
-        logger.info(`
-building ${entryFileRelativeUrls[0]}...`)
-      } else {
-        logger.info(`
-building ${entryFileRelativeUrls.length} entry files...`)
-      }
+      logger.info(formatBuildStartLog({ entryPointMap }))
 
       const entryPointsPrepared = await prepareEntryPoints(entryPointMap, {
         logger,
@@ -979,6 +973,11 @@ building ${entryFileRelativeUrls.length} entry files...`)
       Object.keys(rollupResult).forEach((rollupFileId) => {
         const file = rollupResult[rollupFileId]
         if (file.type !== "asset") {
+          return
+        }
+
+        const { facadeModuleId } = file
+        if (facadeModuleId === EMPTY_CHUNK_URL) {
           return
         }
 

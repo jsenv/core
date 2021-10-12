@@ -122,7 +122,6 @@ export const formatFoundReference = ({
   referenceEffects,
 }) => {
   const { isRessourceHint } = reference
-
   if (isRessourceHint) {
     return formatFoundRessourceHint({
       reference,
@@ -133,7 +132,6 @@ export const formatFoundReference = ({
 
   const { ressource } = reference
   const { isEntryPoint } = ressource
-
   if (isEntryPoint) {
     return formatCreateReferenceForEntry({
       reference,
@@ -143,9 +141,17 @@ export const formatFoundReference = ({
   }
 
   const { isExternal } = ressource
-
   if (isExternal) {
     return formatFoundReferenceToExternalRessource({
+      reference,
+      showReferenceSourceLocation,
+      referenceEffects,
+    })
+  }
+
+  const { isPlaceholder } = ressource
+  if (isPlaceholder) {
+    return formatCreateRessourcePlaceholder({
       reference,
       showReferenceSourceLocation,
       referenceEffects,
@@ -211,6 +217,17 @@ const formatFoundReferenceToExternalRessource = ({
 Found external url in ${showReferenceSourceLocation(reference)}${appendEffects(
     referenceEffects,
   )}`
+}
+
+const formatCreateRessourcePlaceholder = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
+  return `
+Create placeholder for ressource in ${showReferenceSourceLocation(
+    reference,
+  )}${appendEffects(referenceEffects)}`
 }
 
 const formatFoundReferenceToInlineRessource = ({

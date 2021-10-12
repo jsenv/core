@@ -101,6 +101,9 @@ export const createRessourceBuilder = (
           // for asset builder which is waiting for rollup
           return
         }
+        if (ressource.isPlaceholder) {
+          return
+        }
         await readyPromise
       }),
     )
@@ -166,6 +169,7 @@ export const createRessourceBuilder = (
     isEntryPoint,
     isJsModule,
     isInline,
+    isPlaceholder,
     fileNamePattern,
     urlVersioningDisabled,
 
@@ -276,6 +280,7 @@ export const createRessourceBuilder = (
         isJsModule,
         isExternal,
         isInline,
+        isPlaceholder,
         fileNamePattern,
         urlVersioningDisabled,
       })
@@ -327,6 +332,7 @@ export const createRessourceBuilder = (
     isJsModule = false,
     isExternal = false,
     isInline = false,
+    isPlaceholder = false,
 
     fileNamePattern,
     urlVersioningDisabled = false,
@@ -342,6 +348,7 @@ export const createRessourceBuilder = (
       isJsModule,
       isInline,
       isExternal,
+      isPlaceholder,
 
       urlVersioningDisabled,
       fileNamePattern,
@@ -354,58 +361,19 @@ export const createRessourceBuilder = (
       ressource.usedCallback = resolve
     })
     ressource.inlinedCallbacks = []
-    ressource.buildDonePromise = new Promise((resolve, reject) => {
-      ressource.buildDoneCallback = ({ buildFileInfo, buildManifest }) => {
-        if (!ressource.isJsModule) {
-          // nothing special to do for asset targets
-          resolve()
-          return
-        }
-
-        // If the module is not in the rollup build, that's an error except when
-        // rollup chunk was not emitted, which happens when:
-        // - js was only preloaded/prefetched and never referenced afterwards
-        // - js was only referenced by other js
-        if (!buildFileInfo) {
-          const referencedOnlyByRessourceHint = !ressource.firstStrongReference
-          if (referencedOnlyByRessourceHint) {
-            resolve()
-            return
-          }
-
-          const referencedOnlyByOtherJs = ressource.references.every(
-            (ref) => ref.referenceShouldNotEmitChunk,
-          )
-          if (referencedOnlyByOtherJs) {
-            resolve()
-            return
-          }
-
-          reject(
-            new Error(
-              `${shortenUrl(ressource.url)} cannot be found in the build info`,
-            ),
-          )
-          return
-        }
-
-        const bufferAfterBuild = Buffer.from(buildFileInfo.code)
-        const fileName = buildFileInfo.fileName
-        const buildRelativeUrl = buildManifest[fileName] || fileName
-        // const fileName = targetFileNameFromBuildManifest(buildManifest, buildRelativeUrl) || buildRelativeUrl
-        ressource.bufferAfterBuild = bufferAfterBuild
-        ressource.buildRelativeUrl = buildRelativeUrl
-        ressource.fileName = fileName
-        if (buildFileInfo.type === "chunk") {
-          ressource.contentType = "application/javascript"
-        }
-        // logger.debug(`resolve rollup chunk ${shortenUrl(ressourceUrl)}`)
-        resolve()
-      }
+    ressource.buildDoneCallbacks = []
+    ressource.buildDonePromise = new Promise((resolve) => {
+      ressource.buildDoneCallbacks.push(resolve)
     })
 
     const getBufferAvailablePromise = memoize(async () => {
       if (ressource.isJsModule) {
+        await ressource.buildDonePromise
+        return
+      }
+
+      // sourcemap placeholder buffer is ready only once the build is done
+      if (ressource.isPlaceholder) {
         await ressource.buildDonePromise
         return
       }
@@ -477,6 +445,7 @@ export const createRessourceBuilder = (
         bufferBeforeBuild,
         isJsModule = false,
         isInline = false,
+        isPlaceholder = false,
         urlVersioningDisabled,
         fileNamePattern,
       }) => {
@@ -498,6 +467,7 @@ export const createRessourceBuilder = (
           bufferBeforeBuild,
           isJsModule,
           isInline,
+          isPlaceholder,
 
           urlVersioningDisabled,
           fileNamePattern,
@@ -544,12 +514,19 @@ export const createRessourceBuilder = (
       const dependencies = ressource.dependencies
       await Promise.all(
         dependencies.map(async (dependencyReference) => {
-          await dependencyReference.ressource.getReadyPromise()
+          const dependencyRessource = dependencyReference.ressource
+          if (dependencyRessource.isPlaceholder) {
+            return
+          }
+          await dependencyRessource.getReadyPromise()
         }),
       )
 
       const transform = ressourceTransformMap[ressource.url]
       if (typeof transform !== "function") {
+        if (ressource.isPlaceholder) {
+          return
+        }
         ressource.buildEnd(
           ressource.bufferAfterBuild || ressource.bufferBeforeBuild,
           ressource.buildRelativeUrl,
@@ -573,16 +550,8 @@ export const createRessourceBuilder = (
           lineBreakNormalization,
         },
       )
-      const assetEmitters = []
-      const transformReturnValue = await transform({
-        precomputeBuildRelativeUrl: (bufferAfterBuild) =>
-          precomputeBuildRelativeUrlForRessource(ressource, {
-            bufferAfterBuild,
-            lineBreakNormalization,
-          }),
-        registerAssetEmitter: (callback) => {
-          assetEmitters.push(callback)
-        },
+      await transform({
+        buildDirectoryUrl,
         getUrlRelativeToImporter: (referencedRessource) => {
           const ressourceImporter = ressource
 
@@ -614,28 +583,9 @@ export const createRessourceBuilder = (
           return ressourceMap[originalServerUrl]
         },
       })
-      if (transformReturnValue === null || transformReturnValue === undefined) {
-        throw new Error(`transform must return an object {code, map}`)
+      if (typeof ressource.bufferAfterBuild === "undefined") {
+        throw new Error(`transform must call ressource.buildEnd()`)
       }
-
-      let bufferAfterBuild
-      let buildRelativeUrl
-      if (typeof transformReturnValue === "string") {
-        bufferAfterBuild = transformReturnValue
-      } else {
-        bufferAfterBuild = transformReturnValue.bufferAfterBuild
-        if (transformReturnValue.buildRelativeUrl) {
-          buildRelativeUrl = transformReturnValue.buildRelativeUrl
-        }
-      }
-
-      ressource.buildEnd(bufferAfterBuild, buildRelativeUrl)
-      assetEmitters.forEach((callback) => {
-        callback({
-          emitAsset,
-          buildDirectoryUrl,
-        })
-      })
     })
 
     // was used to remove sourcemap files that are renamed after they are emitted
@@ -794,7 +744,6 @@ export const createRessourceBuilder = (
   const rollupBuildEnd = ({ jsModuleBuild, buildManifest }) => {
     Object.keys(ressourceMap).forEach((ressourceUrl) => {
       const ressource = ressourceMap[ressourceUrl]
-      const { buildDoneCallback } = ressource
 
       const buildRelativeUrl = Object.keys(jsModuleBuild).find(
         (buildRelativeUrlCandidate) => {
@@ -803,12 +752,55 @@ export const createRessourceBuilder = (
         },
       )
       const buildFileInfo = jsModuleBuild[buildRelativeUrl]
-
-      buildDoneCallback({
-        buildFileInfo,
-        buildManifest,
+      applyBuildEndEffects(ressource, { buildFileInfo, buildManifest })
+      const { buildDoneCallbacks } = ressource
+      buildDoneCallbacks.forEach((buildDoneCallback) => {
+        buildDoneCallback({ buildDirectoryUrl })
       })
     })
+  }
+
+  const applyBuildEndEffects = (
+    ressource,
+    { buildFileInfo, buildManifest },
+  ) => {
+    if (!ressource.isJsModule) {
+      // nothing special to do for non-js ressources
+      return
+    }
+
+    // If the module is not in the rollup build, that's an error except when
+    // rollup chunk was not emitted, which happens when:
+    // - js was only preloaded/prefetched and never referenced afterwards
+    // - js was only referenced by other js
+    if (!buildFileInfo) {
+      const referencedOnlyByRessourceHint = !ressource.firstStrongReference
+      if (referencedOnlyByRessourceHint) {
+        return
+      }
+
+      const referencedOnlyByOtherJs = ressource.references.every(
+        (ref) => ref.referenceShouldNotEmitChunk,
+      )
+      if (referencedOnlyByOtherJs) {
+        return
+      }
+
+      throw new Error(
+        `${shortenUrl(ressource.url)} cannot be found in the build info`,
+      )
+    }
+
+    const bufferAfterBuild = Buffer.from(buildFileInfo.code)
+    const fileName = buildFileInfo.fileName
+    const buildRelativeUrl = buildManifest[fileName] || fileName
+    // const fileName = targetFileNameFromBuildManifest(buildManifest, buildRelativeUrl) || buildRelativeUrl
+    ressource.bufferAfterBuild = bufferAfterBuild
+    ressource.buildRelativeUrl = buildRelativeUrl
+    ressource.fileName = fileName
+    if (buildFileInfo.type === "chunk") {
+      ressource.contentType = "application/javascript"
+    }
   }
 
   const findRessourceByUrl = (url) => {

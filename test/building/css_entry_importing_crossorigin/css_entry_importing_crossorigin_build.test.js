@@ -24,7 +24,7 @@ const entryPointMap = {
 }
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  // logLevel: "info",
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
@@ -39,11 +39,9 @@ const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
 const cssString = await readFile(cssBuildUrl)
 
 // ensure font urls properly updated in css file
-{
-  const cssUrls = await parseCssUrls(cssString, cssBuildUrl)
-  const fontSpecifier = cssUrls.atImports[0].specifier
+const cssUrls = await parseCssUrls(cssString, cssBuildUrl)
+const fontSpecifier = cssUrls.atImports[0].specifier
 
-  const actual = fontSpecifier
-  const expected = "https://fonts.googleapis.com/css2?family=Roboto"
-  assert({ actual, expected })
-}
+const actual = fontSpecifier
+const expected = "https://fonts.googleapis.com/css2?family=Roboto"
+assert({ actual, expected })

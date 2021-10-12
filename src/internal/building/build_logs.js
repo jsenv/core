@@ -4,6 +4,17 @@ import { byteAsFileSize } from "../logs/byteAsFileSize.js"
 import { msAsDuration } from "../logs/msAsDuration.js"
 import { stringifyUrlSite } from "./url_trace.js"
 
+export const formatBuildStartLog = ({ entryPointMap }) => {
+  const entryFileRelativeUrls = Object.keys(entryPointMap)
+  if (entryFileRelativeUrls.length === 1) {
+    return `
+building ${entryFileRelativeUrls[0]}...`
+  }
+
+  return `
+building ${entryFileRelativeUrls.length} entry files...`
+}
+
 export const formatUseImportMapFromHtml = (importMapInfoFromHtml) => {
   return `
 use importmap from html ${showHtmlSourceLocation(importMapInfoFromHtml)}`

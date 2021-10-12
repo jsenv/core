@@ -59,7 +59,7 @@ const getProjectFileContents = (ressourceBuilder) => {
 
   Object.keys(ressourceMap).forEach((url) => {
     const ressource = ressourceMap[url]
-    const { isInline, isExternal, bufferBeforeBuild } = ressource
+    const { isInline, isExternal, isPlaceholder, bufferBeforeBuild } = ressource
     if (isInline) {
       // inline ressources are not files
       return
@@ -72,6 +72,12 @@ const getProjectFileContents = (ressourceBuilder) => {
       // ressource is only referenced by ressource hint (link preload for example)
       // it's never actually loaded
       // -> we don't gave the bufferBeforeBuild (the ressource file content)
+      return
+    }
+    if (isPlaceholder) {
+      // placeholders (used for sourcemap files)
+      // means the file did not exists in the project is there is a placeholder
+      // to generate it in the build
       return
     }
     projectFileContents[url] = bufferBeforeBuild
