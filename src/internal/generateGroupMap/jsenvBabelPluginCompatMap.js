@@ -431,7 +431,7 @@ jsenvBabelPluginCompatMap["transform-async-to-promises"] =
 jsenvBabelPluginCompatMap["regenerator-transform"] =
   jsenvBabelPluginCompatMap["transform-regenerator"]
 
-// https://caniuse.com/?search=globalThis
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
 jsenvBabelPluginCompatMap["global-this-as-jsenv-import"] = {
   edge: "79",
   firefox: "65",
@@ -440,6 +440,7 @@ jsenvBabelPluginCompatMap["global-this-as-jsenv-import"] = {
   opera: "58",
   ios: "12.2",
   android: "94",
+  node: "12",
 }
 
 // jsenvBabelPluginCompatMap["transform-import-assertion-json"] = {
@@ -453,9 +454,15 @@ jsenvBabelPluginCompatMap["global-this-as-jsenv-import"] = {
 jsenvBabelPluginCompatMap["transform-import-assertions"] = {
   chrome: "93",
   edge: "93",
+  // we assume no one will try to use import assertions with node
+  // and we fake node support this to avoid compilation on node
+  node: "0",
 }
 
 jsenvBabelPluginCompatMap["new-stylesheet-as-jsenv-import"] = {
   chrome: "93",
   edge: "93",
+  // we assume no one will try to use import assertions with node
+  // and we fake node support this to avoid compilation on node
+  node: "0",
 }
