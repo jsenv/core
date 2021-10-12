@@ -10,7 +10,6 @@ import { createDetailedMessage } from "@jsenv/logger"
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 import { humanizeUrl } from "@jsenv/core/src/internal/building/url_trace.js"
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
-import { jsenvPluginCompatMap } from "@jsenv/core/src/internal/generateGroupMap/jsenvPluginCompatMap.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
 export const buildUsingRollup = async ({
@@ -72,22 +71,30 @@ export const buildUsingRollup = async ({
 
   const runtimeCompatMap = createRuntimeCompat({
     runtimeSupport,
-
-    babelPluginMap: {},
-    jsenvPluginMap: {
-      ...jsenvPluginCompatMap,
+    babelPluginMap: {
+      import_assertion_type_json: true,
+      import_assertion_type_css: true,
     },
-    jsenvPluginCompatMap,
+    babelPluginCompatMap: {
+      import_assertion_type_json: {
+        chrome: "91",
+        edge: "91",
+      },
+      import_assertion_type_css: {
+        chrome: "93",
+        edge: "93",
+      },
+    },
   })
   const importAssertionsSupport = {
     json:
       format === "esmodule" &&
-      !runtimeCompatMap.jsenvPluginRequiredNameArray.includes(
+      !runtimeCompatMap.babelPluginRequiredNameArray.includes(
         "import_assertion_type_json",
       ),
     css:
       format === "esmodule" &&
-      !runtimeCompatMap.jsenvPluginRequiredNameArray.includes(
+      !runtimeCompatMap.babelPluginRequiredNameArray.includes(
         "import_assertion_type_json",
       ),
   }
