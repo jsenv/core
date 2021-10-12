@@ -189,7 +189,10 @@ const getBrowserRuntime = memoize(async () => {
   return browserRuntime
 })
 
+const livereloadingCallbacks = {}
+
 window.__jsenv__ = {
+  livereloadingCallbacks,
   executionResultPromise,
   executeFileUsingDynamicImport,
   executeFileUsingSystemJs,

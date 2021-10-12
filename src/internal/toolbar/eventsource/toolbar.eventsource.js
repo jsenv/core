@@ -18,8 +18,13 @@ export const initToolbarEventSource = ({
   executedFileRelativeUrl,
   livereloading,
 }) => {
+  const getLivereloadCallback = (originalFileProjectRelativeUrl) => {
+    const callbacks = window.parent.__jsenv__.livereloadingCallbacks
+    return callbacks[originalFileProjectRelativeUrl]
+  }
+
   removeForceHideElement(document.querySelector("#eventsource-indicator"))
-  connectEventSource(executedFileRelativeUrl)
+  connectEventSource({ executedFileRelativeUrl, getLivereloadCallback })
   livereloadingAvailableOnServer = livereloading
   if (!livereloadingAvailableOnServer) {
     disableLivereloadSetting()
@@ -54,11 +59,18 @@ let eventSourceHooks = {}
 let eventSourceConnection
 let connectionReadyPromise
 
-const handleFileChange = (file, type) => {
-  latestChangeMap[file] = type
+const handleFileChange = ({ file, eventType, livereloadCallback }) => {
+  latestChangeMap[file] = eventType
   updateEventSourceIndicator()
+
   if (shouldLivereload()) {
-    if (
+    if (livereloadCallback) {
+      livereloadCallback({
+        file,
+        latestChangeMap,
+        reloadPage,
+      })
+    } else if (
       file.endsWith(".css") ||
       file.endsWith(".scss") ||
       file.endsWith(".sass")
@@ -109,7 +121,10 @@ const reloadChanges = () => {
   }
 }
 
-const connectEventSource = (executedFileRelativeUrl) => {
+const connectEventSource = ({
+  executedFileRelativeUrl,
+  getLivereloadCallback,
+}) => {
   updateEventSourceIndicator()
   connectionReadyPromise = createPromiseAndHooks()
 
@@ -117,13 +132,25 @@ const connectEventSource = (executedFileRelativeUrl) => {
     executedFileRelativeUrl,
     {
       onFileModified: (file) => {
-        handleFileChange(file, "modified")
+        handleFileChange({
+          file,
+          eventType: "modified",
+          livereloadCallback: getLivereloadCallback(file),
+        })
       },
       onFileRemoved: (file) => {
-        handleFileChange(file, "removed")
+        handleFileChange({
+          file,
+          eventType: "removed",
+          livereloadCallback: getLivereloadCallback(file),
+        })
       },
       onFileAdded: (file) => {
-        handleFileChange(file, "added")
+        handleFileChange({
+          file,
+          eventType: "added",
+          livereloadCallback: getLivereloadCallback(file),
+        })
       },
       onConnecting: ({ cancel }) => {
         eventSourceState = "connecting"

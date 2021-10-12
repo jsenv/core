@@ -34,6 +34,7 @@ export const createBrowserSystem = ({
     if (importType === "css") {
       const cssModule = await instantiateAsCssModule(urlWithoutImportType, {
         importerUrl,
+        compileDirectoryRelativeUrl,
         loader: this,
         fetchSource,
       })
@@ -104,7 +105,7 @@ const instantiateAsJsonModule = async (url, { loader, fetchSource }) => {
 
 const instantiateAsCssModule = async (
   url,
-  { importerUrl, loader, fetchSource },
+  { importerUrl, compileDirectoryRelativeUrl, loader, fetchSource },
 ) => {
   const response = await fetchSource(url, {
     contentTypeExpected: "text/css",
@@ -115,6 +116,7 @@ const instantiateAsCssModule = async (
     cssUrl: url,
     baseUrl: importerUrl,
   })
+
   const cssAsJsModule = `System.register([], function (_export) {
   return {
     execute: function () {
@@ -127,6 +129,23 @@ const instantiateAsCssModule = async (
 
   // eslint-disable-next-line no-eval
   ;(0, window.eval)(cssAsJsModule)
+
+  // There is a logic inside "toolbar.eventsource.js" which is reloading
+  // all link rel="stylesheet" when file ending with ".css" are modified
+  // But here it would not work because we have to replace the css in
+  // the adopted stylsheet + all module importing this css module
+  // should be reinstantiated
+  // -> store a livereload callback forcing whole page reload
+  const compileDirectoryServerUrl = `${window.location.origin}/${compileDirectoryRelativeUrl}`
+  const originalFileRelativeUrl = response.url.slice(
+    compileDirectoryServerUrl.length,
+  )
+  window.__jsenv__.livereloadingCallbacks[originalFileRelativeUrl] = ({
+    reloadPage,
+  }) => {
+    reloadPage()
+  }
+
   return loader.getRegister(url)
 }
 

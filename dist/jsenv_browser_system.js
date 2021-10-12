@@ -991,7 +991,7 @@
   };
 
   // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
-  var resolveUrl$1 = function resolveUrl(specifier, baseUrl) {
+  var resolveUrl = function resolveUrl(specifier, baseUrl) {
     if (baseUrl) {
       if (typeof baseUrl !== "string") {
         throw new TypeError(writeBaseUrlMustBeAString({
@@ -1094,13 +1094,13 @@
   };
 
   var tryUrlResolution = function tryUrlResolution(string, url) {
-    var result = resolveUrl$1(string, url);
+    var result = resolveUrl(string, url);
     return hasScheme(result) ? result : null;
   };
 
   var resolveSpecifier = function resolveSpecifier(specifier, importer) {
     if (specifier === "." || specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
-      return resolveUrl$1(specifier, importer);
+      return resolveUrl(specifier, importer);
     }
 
     if (hasScheme(specifier)) {
@@ -2040,7 +2040,7 @@
         importer: importer,
         createBareSpecifierError: createBareSpecifierError,
         onImportMapping: onImportMapping
-      }) : resolveUrl$1(specifier, importer),
+      }) : resolveUrl(specifier, importer),
       importer: importer,
       defaultExtension: defaultExtension
     });
@@ -3085,16 +3085,6 @@
     return then ? value.then(then) : value;
   }
 
-  function _invoke$5(body, then) {
-    var result = body();
-
-    if (result && result.then) {
-      return result.then(then);
-    }
-
-    return then(result);
-  }
-
   function _catch$4(body, recover) {
     try {
       var result = body();
@@ -3107,6 +3097,16 @@
     }
 
     return result;
+  }
+
+  function _invoke$5(body, then) {
+    var result = body();
+
+    if (result && result.then) {
+      return result.then(then);
+    }
+
+    return then(result);
   }
 
   function _async$8(f) {
@@ -3151,48 +3151,50 @@
 
       var _this = this;
 
-      return _catch$4(function () {
-        var _extractImportTypeFro = extractImportTypeFromUrl(url),
-            importType = _extractImportTypeFro.importType,
-            urlWithoutImportType = _extractImportTypeFro.urlWithoutImportType;
+      var _extractImportTypeFro = extractImportTypeFromUrl(url),
+          importType = _extractImportTypeFro.importType,
+          urlWithoutImportType = _extractImportTypeFro.urlWithoutImportType;
 
+      return _invoke$5(function () {
+        if (importType === "json") {
+          return _await$8(instantiateAsJsonModule(urlWithoutImportType, {
+            loader: _this,
+            fetchSource: fetchSource
+          }), function (jsonModule) {
+            _exit = true;
+            return jsonModule;
+          });
+        }
+      }, function (_result) {
+        var _exit2 = false;
+        if (_exit) return _result;
         return _invoke$5(function () {
-          if (importType === "json") {
-            return _await$8(instantiateAsJsonModule(urlWithoutImportType, {
+          if (importType === "css") {
+            return _await$8(instantiateAsCssModule(urlWithoutImportType, {
+              importerUrl: importerUrl,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
               loader: _this,
               fetchSource: fetchSource
-            }), function (jsonModule) {
-              _exit = true;
-              return jsonModule;
+            }), function (cssModule) {
+              _exit2 = true;
+              return cssModule;
             });
           }
-        }, function (_result) {
-          var _exit2 = false;
-          if (_exit) return _result;
-          return _invoke$5(function () {
-            if (importType === "css") {
-              return _await$8(instantiateAsCssModule(urlWithoutImportType, {
-                loader: _this,
-                fetchSource: fetchSource
-              }), function (cssModule) {
-                _exit2 = true;
-                return cssModule;
-              });
-            }
-          }, function (_result2) {
-            return _exit2 ? _result2 : _await$8(instantiate.call(_this, url, importerUrl));
+        }, function (_result2) {
+          return _exit2 ? _result2 : _catch$4(function () {
+            return _await$8(instantiate.call(_this, url, importerUrl));
+          }, function (e) {
+            return _await$8(createDetailedInstantiateError({
+              instantiateError: e,
+              url: url,
+              importerUrl: importerUrl,
+              compileServerOrigin: compileServerOrigin,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+              fetchSource: fetchSource
+            }), function (jsenvError) {
+              throw jsenvError;
+            });
           });
-        });
-      }, function (e) {
-        return _await$8(createDetailedInstantiateError({
-          instantiateError: e,
-          url: url,
-          importerUrl: importerUrl,
-          compileServerOrigin: compileServerOrigin,
-          compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
-          fetchSource: fetchSource
-        }), function (jsenvError) {
-          throw jsenvError;
         });
       });
     });
@@ -3230,9 +3232,11 @@
   var instantiateAsJsonModule = _async$8(function (url, _ref2) {
     var loader = _ref2.loader,
         fetchSource = _ref2.fetchSource;
-    return _await$8(fetchSource(url), function (response) {
+    return _await$8(fetchSource(url, {
+      contentTypeExpected: "application/json"
+    }), function (response) {
       return _await$8(response.text(), function (jsonAsText) {
-        var jsonAsJsModule = "System.register([], function (export) {\n  return{\n    execute: function () {\n     export(\"default\", '".concat(jsonAsText, "')\n    }\n  }\n})") // eslint-disable-next-line no-eval
+        var jsonAsJsModule = "System.register([], function (_export) {\n  return{\n    execute: function () {\n     _export(\"default\", '".concat(jsonAsText, "')\n    }\n  }\n})") // eslint-disable-next-line no-eval
         ;
         (0, window.eval)(jsonAsJsModule);
         return loader.getRegister(url);
@@ -3241,38 +3245,76 @@
   });
 
   var instantiateAsCssModule = _async$8(function (url, _ref3) {
-    var loader = _ref3.loader,
+    var importerUrl = _ref3.importerUrl,
+        compileDirectoryRelativeUrl = _ref3.compileDirectoryRelativeUrl,
+        loader = _ref3.loader,
         fetchSource = _ref3.fetchSource;
-    return _await$8(fetchSource(url), function (response) {
-      return _await$8(response.text(), function (cssTextOriginal) {
-        // https://github.com/systemjs/systemjs/blob/98609dbeef01ec62447e4b21449ce47e55f818bd/src/extras/module-types.js#L37
-        var cssTextRelocated = cssTextOriginal.replace(/url\(\s*(?:(["'])((?:\\.|[^\n\\"'])+)\1|((?:\\.|[^\s,"'()\\])+))\s*\)/g, function (match, quotes, relUrl1, relUrl2) {
-          return "url(\" ".concat(quotes).concat(resolveUrl(relUrl1 || relUrl2)).concat(quotes, "\")");
+    return _await$8(fetchSource(url, {
+      contentTypeExpected: "text/css"
+    }), function (response) {
+      return _await$8(response.text(), function (cssText) {
+        var cssTextWithBaseUrl = cssWithBaseUrl({
+          cssText: cssText,
+          cssUrl: url,
+          baseUrl: importerUrl
         });
-        var cssAsJsModule = "System.register([], function (export) {\n  return {\n    execute: function () {\n      var sheet = new CSSStyleSheet()\n      sheet.replaceSync(".concat(JSON.stringify(cssTextRelocated), ")\n      export('default', sheet)\n    }\n  }\n})") // eslint-disable-next-line no-eval
+        var cssAsJsModule = "System.register([], function (_export) {\n  return {\n    execute: function () {\n      var sheet = new CSSStyleSheet()\n      sheet.replaceSync(".concat(JSON.stringify(cssTextWithBaseUrl), ")\n      _export('default', sheet)\n    }\n  }\n})") // eslint-disable-next-line no-eval
         ;
-        (0, window.eval)(cssAsJsModule);
+        (0, window.eval)(cssAsJsModule); // There is a logic inside "toolbar.eventsource.js" which is reloading
+        // all link rel="stylesheet" when file ending with ".css" are modified
+        // But here it would not work because we have to replace the css in
+        // the adopted stylsheet + all module importing this css module
+        // should be reinstantiated
+        // -> store a livereload callback forcing whole page reload
+
+        var compileDirectoryServerUrl = "".concat(window.location.origin, "/").concat(compileDirectoryRelativeUrl);
+        var originalFileRelativeUrl = response.url.slice(compileDirectoryServerUrl.length);
+
+        window.__jsenv__.livereloadingCallbacks[originalFileRelativeUrl] = function (_ref4) {
+          var reloadPage = _ref4.reloadPage;
+          reloadPage();
+        };
+
         return loader.getRegister(url);
       });
     });
-  });
+  }); // CSSStyleSheet accepts a "baseUrl" parameter
+  // as documented in https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet/CSSStyleSheet#parameters
+  // Unfortunately the polyfill do not seems to implement it
+  // So we reuse "systemjs" strategy from  https://github.com/systemjs/systemjs/blob/98609dbeef01ec62447e4b21449ce47e55f818bd/src/extras/module-types.js#L37
 
-  var resolveUrl = function resolveUrl(specifier) {
-    return new URL(specifier).href;
+
+  var cssWithBaseUrl = function cssWithBaseUrl(_ref5) {
+    var cssUrl = _ref5.cssUrl,
+        cssText = _ref5.cssText,
+        baseUrl = _ref5.baseUrl;
+    var cssDirectoryUrl = new URL("./", cssUrl).href;
+    var baseDirectoryUrl = new URL("./", baseUrl).href;
+
+    if (cssDirectoryUrl === baseDirectoryUrl) {
+      return cssText;
+    }
+
+    var cssTextRelocated = cssText.replace(/url\(\s*(?:(["'])((?:\\.|[^\n\\"'])+)\1|((?:\\.|[^\s,"'()\\])+))\s*\)/g, function (match, quotes, relUrl1, relUrl2) {
+      var urlRelativeToBase = new URL(relUrl1 || relUrl2, baseUrl).href;
+      return "url(\"".concat(quotes).concat(urlRelativeToBase).concat(quotes, "\")");
+    });
+    return cssTextRelocated;
   };
 
-  var createDetailedInstantiateError = _async$8(function (_ref4) {
+  var createDetailedInstantiateError = _async$8(function (_ref6) {
     var _exit3 = false;
-    var instantiateError = _ref4.instantiateError,
-        url = _ref4.url,
-        importerUrl = _ref4.importerUrl,
-        compileServerOrigin = _ref4.compileServerOrigin,
-        compileDirectoryRelativeUrl = _ref4.compileDirectoryRelativeUrl,
-        fetchSource = _ref4.fetchSource;
+    var instantiateError = _ref6.instantiateError,
+        url = _ref6.url,
+        importerUrl = _ref6.importerUrl,
+        compileServerOrigin = _ref6.compileServerOrigin,
+        compileDirectoryRelativeUrl = _ref6.compileDirectoryRelativeUrl,
+        fetchSource = _ref6.fetchSource;
     var response;
     return _continue$2(_catch$4(function () {
       return _await$8(fetchSource(url, {
-        importerUrl: importerUrl
+        importerUrl: importerUrl,
+        contentTypeExpected: "application/javascript"
       }), function (_fetchSource) {
         response = _fetchSource;
       });
@@ -3656,22 +3698,26 @@
         outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
         compileId = _ref.compileId;
 
-    var fetchSource = function fetchSource(url) {
+    var fetchSource = function fetchSource(url, _ref2) {
+      var contentTypeExpected = _ref2.contentTypeExpected;
       return fetchUrl(url, {
-        credentials: "same-origin"
+        credentials: "same-origin",
+        contentTypeExpected: contentTypeExpected
       });
     };
 
     var fetchJson = _async$6(function (url) {
-      return _await$6(fetchSource(url), function (response) {
+      return _await$6(fetchSource(url, {
+        contentTypeExpected: "application/json"
+      }), function (response) {
         return _await$6(response.json());
       });
     });
 
     var outDirectoryUrl = "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl);
     var envUrl = String(new URL("env.json", outDirectoryUrl));
-    return _await$6(fetchJson(envUrl), function (_ref2) {
-      var importDefaultExtension = _ref2.importDefaultExtension;
+    return _await$6(fetchJson(envUrl), function (_ref3) {
+      var importDefaultExtension = _ref3.importDefaultExtension;
       var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/"); // if there is an importmap in the document we use it instead of fetching.
       // systemjs style with systemjs-importmap
 
@@ -3684,7 +3730,9 @@
           return _invoke$4(function () {
             if (importmapScript.src) {
               importMapUrl = importmapScript.src;
-              return _await$6(fetchSource(importMapUrl), function (importmapFileResponse) {
+              return _await$6(fetchSource(importMapUrl, {
+                contentTypeExpected: "application/importmap+json"
+              }), function (importmapFileResponse) {
                 var _temp = importmapFileResponse.status === 404;
 
                 return _await$6(_temp ? {} : importmapFileResponse.json(), function (_importmapFileRespons) {
@@ -3720,22 +3768,22 @@
           });
 
           var executeFile = _async$6(function (specifier) {
-            var _ref3 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-                _ref3$transferableNam = _ref3.transferableNamespace,
-                transferableNamespace = _ref3$transferableNam === void 0 ? false : _ref3$transferableNam,
-                _ref3$errorExposureIn = _ref3.errorExposureInConsole,
-                errorExposureInConsole = _ref3$errorExposureIn === void 0 ? true : _ref3$errorExposureIn,
-                _ref3$errorExposureIn2 = _ref3.errorExposureInNotification,
-                errorExposureInNotification = _ref3$errorExposureIn2 === void 0 ? false : _ref3$errorExposureIn2,
-                _ref3$errorExposureIn3 = _ref3.errorExposureInDocument,
-                errorExposureInDocument = _ref3$errorExposureIn3 === void 0 ? true : _ref3$errorExposureIn3,
-                _ref3$executionExposu = _ref3.executionExposureOnWindow,
-                executionExposureOnWindow = _ref3$executionExposu === void 0 ? false : _ref3$executionExposu,
-                _ref3$errorTransform = _ref3.errorTransform,
-                errorTransform = _ref3$errorTransform === void 0 ? function (error) {
+            var _ref4 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+                _ref4$transferableNam = _ref4.transferableNamespace,
+                transferableNamespace = _ref4$transferableNam === void 0 ? false : _ref4$transferableNam,
+                _ref4$errorExposureIn = _ref4.errorExposureInConsole,
+                errorExposureInConsole = _ref4$errorExposureIn === void 0 ? true : _ref4$errorExposureIn,
+                _ref4$errorExposureIn2 = _ref4.errorExposureInNotification,
+                errorExposureInNotification = _ref4$errorExposureIn2 === void 0 ? false : _ref4$errorExposureIn2,
+                _ref4$errorExposureIn3 = _ref4.errorExposureInDocument,
+                errorExposureInDocument = _ref4$errorExposureIn3 === void 0 ? true : _ref4$errorExposureIn3,
+                _ref4$executionExposu = _ref4.executionExposureOnWindow,
+                executionExposureOnWindow = _ref4$executionExposu === void 0 ? false : _ref4$executionExposu,
+                _ref4$errorTransform = _ref4.errorTransform,
+                errorTransform = _ref4$errorTransform === void 0 ? function (error) {
               return error;
-            } : _ref3$errorTransform,
-                measurePerformance = _ref3.measurePerformance;
+            } : _ref4$errorTransform,
+                measurePerformance = _ref4.measurePerformance;
 
             return _await$6(memoizedCreateBrowserSystem({
               compileServerOrigin: compileServerOrigin,
@@ -5111,7 +5159,9 @@
       });
     });
   }));
+  var livereloadingCallbacks = {};
   window.__jsenv__ = {
+    livereloadingCallbacks: livereloadingCallbacks,
     executionResultPromise: executionResultPromise,
     executeFileUsingDynamicImport: executeFileUsingDynamicImport,
     executeFileUsingSystemJs: executeFileUsingSystemJs

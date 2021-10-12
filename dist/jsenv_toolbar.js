@@ -2858,8 +2858,17 @@
   var initToolbarEventSource = function initToolbarEventSource(_ref) {
     var executedFileRelativeUrl = _ref.executedFileRelativeUrl,
         livereloading = _ref.livereloading;
+
+    var getLivereloadCallback = function getLivereloadCallback(originalFileProjectRelativeUrl) {
+      var callbacks = window.parent.__jsenv__.livereloadingCallbacks;
+      return callbacks[originalFileProjectRelativeUrl];
+    };
+
     removeForceHideElement(document.querySelector("#eventsource-indicator"));
-    connectEventSource(executedFileRelativeUrl);
+    connectEventSource({
+      executedFileRelativeUrl: executedFileRelativeUrl,
+      getLivereloadCallback: getLivereloadCallback
+    });
     livereloadingAvailableOnServer = livereloading;
 
     if (!livereloadingAvailableOnServer) {
@@ -2894,12 +2903,21 @@
   var eventSourceConnection;
   var connectionReadyPromise;
 
-  var handleFileChange = function handleFileChange(file, type) {
-    latestChangeMap[file] = type;
+  var handleFileChange = function handleFileChange(_ref2) {
+    var file = _ref2.file,
+        eventType = _ref2.eventType,
+        livereloadCallback = _ref2.livereloadCallback;
+    latestChangeMap[file] = eventType;
     updateEventSourceIndicator();
 
     if (shouldLivereload()) {
-      if (file.endsWith(".css") || file.endsWith(".scss") || file.endsWith(".sass")) {
+      if (livereloadCallback) {
+        livereloadCallback({
+          file: file,
+          latestChangeMap: latestChangeMap,
+          reloadPage: reloadPage
+        });
+      } else if (file.endsWith(".css") || file.endsWith(".scss") || file.endsWith(".sass")) {
         reloadAllCss();
         delete latestChangeMap[file];
         updateEventSourceIndicator();
@@ -2950,45 +2968,59 @@
     }
   };
 
-  var connectEventSource = function connectEventSource(executedFileRelativeUrl) {
+  var connectEventSource = function connectEventSource(_ref3) {
+    var executedFileRelativeUrl = _ref3.executedFileRelativeUrl,
+        getLivereloadCallback = _ref3.getLivereloadCallback;
     updateEventSourceIndicator();
     connectionReadyPromise = createPromiseAndHooks();
     eventSourceConnection = connectCompileServerEventSource(executedFileRelativeUrl, {
       onFileModified: function onFileModified(file) {
-        handleFileChange(file, "modified");
+        handleFileChange({
+          file: file,
+          eventType: "modified",
+          livereloadCallback: getLivereloadCallback(file)
+        });
       },
       onFileRemoved: function onFileRemoved(file) {
-        handleFileChange(file, "removed");
+        handleFileChange({
+          file: file,
+          eventType: "removed",
+          livereloadCallback: getLivereloadCallback(file)
+        });
       },
       onFileAdded: function onFileAdded(file) {
-        handleFileChange(file, "added");
+        handleFileChange({
+          file: file,
+          eventType: "added",
+          livereloadCallback: getLivereloadCallback(file)
+        });
       },
-      onConnecting: function onConnecting(_ref2) {
-        var cancel = _ref2.cancel;
+      onConnecting: function onConnecting(_ref4) {
+        var cancel = _ref4.cancel;
         eventSourceState = "connecting";
         eventSourceHooks = {
           abort: cancel
         };
         updateEventSourceIndicator();
       },
-      onConnectionCancelled: function onConnectionCancelled(_ref3) {
-        var connect = _ref3.connect;
+      onConnectionCancelled: function onConnectionCancelled(_ref5) {
+        var connect = _ref5.connect;
         eventSourceState = "disabled";
         eventSourceHooks = {
           connect: connect
         };
         updateEventSourceIndicator();
       },
-      onConnectionFailed: function onConnectionFailed(_ref4) {
-        var connect = _ref4.connect;
+      onConnectionFailed: function onConnectionFailed(_ref6) {
+        var connect = _ref6.connect;
         eventSourceState = "failed";
         eventSourceHooks = {
           reconnect: connect
         };
         updateEventSourceIndicator();
       },
-      onConnected: function onConnected(_ref5) {
-        var cancel = _ref5.cancel;
+      onConnected: function onConnected(_ref7) {
+        var cancel = _ref7.cancel;
         eventSourceState = "connected";
         eventSourceHooks = {
           disconnect: cancel
@@ -3348,10 +3380,10 @@
     var executedFileCompiledUrl = _ref3.executedFileCompiledUrl,
         outDirectoryRelativeUrl = _ref3.outDirectoryRelativeUrl,
         compileServerOrigin = _ref3.compileServerOrigin;
-    var outDirectoryRemoteUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
+    var outDirectoryServerUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
 
-    if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryRemoteUrl)) {
-      var afterCompileDirectory = urlToRelativeUrl(executedFileCompiledUrl, outDirectoryRemoteUrl);
+    if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryServerUrl)) {
+      var afterCompileDirectory = urlToRelativeUrl(executedFileCompiledUrl, outDirectoryServerUrl);
       var slashIndex = afterCompileDirectory.indexOf("/");
       var fileRelativeUrl = afterCompileDirectory.slice(slashIndex + 1);
       return {
