@@ -4,9 +4,11 @@ import {
   urlIsInsideOf,
   urlToParentUrl,
   urlToBasename,
+  urlToFilename,
 } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
+import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { promiseTrackRace } from "../promise_track_race.js"
 import { parseDataUrl } from "../dataUrl.utils.js"
 
@@ -772,7 +774,10 @@ export const createRessourceBuilder = (
 
   const applyBuildEndEffects = (
     ressource,
-    { buildFileInfo, buildManifest },
+    {
+      buildFileInfo,
+      // buildManifest
+    },
   ) => {
     if (!ressource.isJsModule) {
       // nothing special to do for non-js ressources
@@ -801,15 +806,28 @@ export const createRessourceBuilder = (
       )
     }
 
-    const bufferAfterBuild = Buffer.from(buildFileInfo.code)
     const fileName = buildFileInfo.fileName
-    const buildRelativeUrl = buildManifest[fileName] || fileName
-    // const fileName = targetFileNameFromBuildManifest(buildManifest, buildRelativeUrl) || buildRelativeUrl
-    ressource.bufferAfterBuild = bufferAfterBuild
-    ressource.buildRelativeUrl = buildRelativeUrl
-    ressource.fileName = fileName
+    // const buildRelativeUrl = buildManifest[fileName] || fileName
+    let code = buildFileInfo.code
+
     if (buildFileInfo.type === "chunk") {
       ressource.contentType = "application/javascript"
+    }
+    ressource.fileName = fileName
+    ressource.buildEnd(
+      code,
+      // buildRelativeUrl
+    )
+
+    const map = buildFileInfo.map
+    if (map) {
+      const jsBuildUrl = resolveUrl(
+        ressource.buildRelativeUrl,
+        buildDirectoryUrl,
+      )
+      const sourcemapUrlForJs = `${urlToFilename(jsBuildUrl)}.map`
+      code = setJavaScriptSourceMappingUrl(code, sourcemapUrlForJs)
+      ressource.bufferAfterBuild = code
     }
   }
 
