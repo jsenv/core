@@ -3,7 +3,6 @@ import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   resolveUrl,
-  readFile,
   writeFile,
 } from "@jsenv/filesystem"
 
@@ -26,10 +25,6 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.prod.html",
 }
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const buildDirectoryUrl = resolveUrl(
-  buildDirectoryRelativeUrl,
-  jsenvCoreDirectoryUrl,
-)
 const test = async (params) => {
   const { buildMappings, buildInlineFileContents } = await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
@@ -51,38 +46,38 @@ const test = async (params) => {
   return { buildMappings, jsFileBuildRelativeUrl }
 }
 
-{
-  const { buildMappings, jsFileBuildRelativeUrl } = await test({
-    jsConcatenation: true,
-  })
-  const { namespace } = await browserImportEsModuleBuild({
-    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
-    jsFileRelativeUrl: `./${jsFileBuildRelativeUrl}`,
-  })
-  const jsFileBuildUrl = resolveUrl(jsFileBuildRelativeUrl, buildDirectoryUrl)
-  const jsFileContent = await readFile(jsFileBuildUrl)
-  const jsFileContainsImgBuildRelativeUrl = jsFileContent.includes(
-    buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`],
-  )
+// {
+//   const { buildMappings, jsFileBuildRelativeUrl } = await test({
+//     jsConcatenation: true,
+//   })
+//   const { namespace } = await browserImportEsModuleBuild({
+//     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
+//     testDirectoryRelativeUrl,
+//     jsFileRelativeUrl: `./${jsFileBuildRelativeUrl}`,
+//   })
+//   const jsFileBuildUrl = resolveUrl(jsFileBuildRelativeUrl, buildDirectoryUrl)
+//   const jsFileContent = await readFile(jsFileBuildUrl)
+//   const jsFileContainsImgBuildRelativeUrl = jsFileContent.includes(
+//     buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`],
+//   )
 
-  const actual = {
-    jsFileContainsImgBuildRelativeUrl,
-    buildMappings,
-    namespace,
-  }
-  const expected = {
-    jsFileContainsImgBuildRelativeUrl: true,
-    buildMappings: {
-      [`${testDirectoryRelativeUrl}src/jsenv.png`]: assert.any(String),
-      [`${testDirectoryRelativeUrl}main.html`]: assert.any(String),
-    },
-    namespace: {
-      backgroundBodyColor: "rgb(255, 0, 0)",
-    },
-  }
-  assert({ actual, expected })
-}
+//   const actual = {
+//     jsFileContainsImgBuildRelativeUrl,
+//     buildMappings,
+//     namespace,
+//   }
+//   const expected = {
+//     jsFileContainsImgBuildRelativeUrl: true,
+//     buildMappings: {
+//       [`${testDirectoryRelativeUrl}src/jsenv.png`]: assert.any(String),
+//       [`${testDirectoryRelativeUrl}main.html`]: assert.any(String),
+//     },
+//     namespace: {
+//       backgroundBodyColor: "rgb(255, 0, 0)",
+//     },
+//   }
+//   assert({ actual, expected })
+// }
 
 // no concatenation + runtime support enough
 {
@@ -90,30 +85,26 @@ const test = async (params) => {
     jsConcatenation: false,
     runtimeSupport: { chrome: "96" },
   })
-  const { namespace } = await browserImportEsModuleBuild({
+  const { namespace, serverOrigin } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
     jsFileRelativeUrl: `./${jsFileBuildRelativeUrl}`,
   })
-  const jsFileBuildUrl = resolveUrl(jsFileBuildRelativeUrl, buildDirectoryUrl)
-  const jsFileContent = await readFile(jsFileBuildUrl)
-  const jsFileContainsImgBuildRelativeUrl = jsFileContent.includes(
-    buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`],
-  )
+  const imgBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
 
   const actual = {
-    jsFileContainsImgBuildRelativeUrl,
     buildMappings,
     namespace,
   }
   const expected = {
-    jsFileContainsImgBuildRelativeUrl: true,
     buildMappings: {
       [`${testDirectoryRelativeUrl}src/jsenv.png`]: assert.any(String),
       [`${testDirectoryRelativeUrl}main.html`]: assert.any(String),
     },
     namespace: {
-      backgroundBodyColor: "rgb(255, 0, 0)",
+      bodyBackgroundColor: "rgb(255, 0, 0)",
+      bodyBackgroundImage: `url("${serverOrigin}/dist/esmodule/${imgBuildRelativeUrl}")`,
     },
   }
   assert({ actual, expected })
