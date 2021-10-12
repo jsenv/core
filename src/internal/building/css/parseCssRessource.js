@@ -11,7 +11,7 @@ import { replaceCssUrls } from "./replaceCssUrls.js"
 export const parseCssRessource = async (
   cssRessource,
   { notifyReferenceFound },
-  { urlToOriginalServerUrl, minify, minifyCssOptions },
+  { urlToOriginalFileUrl, minify, minifyCssOptions },
 ) => {
   const cssString = String(cssRessource.bufferBeforeBuild)
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
@@ -24,12 +24,14 @@ export const parseCssRessource = async (
       // but let's asusme it the last line and first column
       referenceLine: cssString.split(/\r?\n/).length - 1,
       referenceColumn: 0,
+      isSourcemap: true,
     })
   } else {
     sourcemapReference = notifyReferenceFound({
+      contentType: "application/octet-stream",
       ressourceSpecifier: `${urlToFilename(cssRessource.url)}.map`,
       isPlaceholder: true,
-      contentType: "application/octet-stream",
+      isSourcemap: true,
     })
   }
 
@@ -56,12 +58,19 @@ export const parseCssRessource = async (
 
   return async ({ getUrlRelativeToImporter, buildDirectoryUrl }) => {
     const sourcemapRessource = sourcemapReference.ressource
+
+    const cssOriginalUrl = urlToOriginalFileUrl(
+      cssRessource.isInline
+        ? cssRessource.references[0].referenceUrl
+        : cssRessource.url,
+    )
+
     const { code, map } = await replaceCssUrls({
-      url: cssRessource.url,
+      url: cssRessource.url, // cssOriginalUrl ?
       code: cssString,
       map: sourcemapRessource.isPlaceholder
         ? undefined
-        : JSON.parse(String(sourcemapRessource.bufferAfterBuild)),
+        : JSON.parse(String(sourcemapRessource.bufferBeforeBuild)),
       getUrlReplacementValue: ({ urlNode }) => {
         const nodeCandidates = Array.from(urlNodeReferenceMapping.keys())
         const urlNodeFound = nodeCandidates.find((urlNodeCandidate) =>
@@ -110,13 +119,8 @@ export const parseCssRessource = async (
 
     map.file = urlToFilename(cssBuildUrl)
     if (map.sources) {
-      // hum en fait si css est inline, alors la source n'est pas le fichier compilé
-      // mais bien le fichier html compilé ?
-      const importerUrl = cssRessource.isInline
-        ? urlToOriginalServerUrl(cssRessource.url)
-        : cssRessource.url
       map.sources = map.sources.map((source) => {
-        const sourceUrl = resolveUrl(source, importerUrl)
+        const sourceUrl = resolveUrl(source, cssOriginalUrl)
         const sourceUrlRelativeToSourceMap = urlToRelativeUrl(
           sourceUrl,
           sourcemapPrecomputedBuildUrl,

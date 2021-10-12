@@ -4,7 +4,6 @@ import {
   urlToRelativeUrl,
   resolveUrl,
   readFile,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -24,10 +23,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryUrl.slice(0, -1))
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.html`
+const mainFilename = `style_inline.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
@@ -73,7 +71,7 @@ const text = textNode.value
   const actual = sourcemap
   const expected = {
     version: 3,
-    sources: [`../../${testDirectoryname}.7.css`],
+    sources: [`../../style_inline.7.css`],
     names: actual.names,
     mappings: actual.mappings,
     file: actual.file,
@@ -100,9 +98,7 @@ const depFileContent = await readFile(depBuildUrl)
   const actual = sourcemap
   const expected = {
     version: 3,
-    sources: [
-      `../../../.jsenv/out-build/best/${testDirectoryRelativeUrl}dep.css`,
-    ],
+    sources: [`../../../dep.css`],
     names: actual.names,
     mappings: actual.mappings,
     file: actual.file,

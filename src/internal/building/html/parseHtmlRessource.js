@@ -154,9 +154,10 @@ export const parseHtmlRessource = async (
     })
 
     const htmlAfterTransformation = htmlAstToHtmlString(htmlAst)
-    return minify
+    const html = minify
       ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions)
       : htmlAfterTransformation
+    htmlRessource.buildEnd(html)
   }
 }
 
@@ -352,7 +353,9 @@ const moduleScriptTextNodeVisitor = (
       removeHtmlNodeAttribute(script, typeAttribute)
     }
     const { bufferAfterBuild } = jsReference.ressource
-    textNode.value = bufferAfterBuild
+    const jsText = String(bufferAfterBuild)
+    // ici on voudrait que lorsque l'importmap est faite on lui mette un commentaire
+    textNode.value = jsText
   }
 }
 

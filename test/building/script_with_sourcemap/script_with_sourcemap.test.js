@@ -1,8 +1,6 @@
 /*
  * to update the index.es5.js.map
  * you can use getSourceMap from @jsenv/core/test/get_source_map.js
- *
- * TODO: test sourcemap produced when minification is enabled
  */
 
 import { assert } from "@jsenv/assert"
@@ -38,70 +36,111 @@ const mainFilename = `script_with_sourcemap.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-const { buildMappings } = await buildProject({
-  ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  // logLevel: "info",
-  jsenvDirectoryRelativeUrl,
-  buildDirectoryRelativeUrl,
-  entryPointMap,
-})
-
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const scriptBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}index.es5.js`]
-const scriptBuildUrl = resolveUrl(scriptBuildRelativeUrl, buildDirectoryUrl)
-const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBuildUrl)
-const scriptNode = findNodeByTagName(htmlString, "script")
-const sourcemapBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}index.es5.js.map`]
-const sourcemapBuildUrl = resolveUrl(
-  sourcemapBuildRelativeUrl,
-  buildDirectoryUrl,
-)
-
-{
-  const srcAttribute = getHtmlNodeAttributeByName(scriptNode, "src")
-  const actual = srcAttribute.value
-  const expected = scriptBuildRelativeUrl
-  assert({ actual, expected })
-}
-
-// sourcemap file is copied too
-{
-  const scriptString = await readFile(scriptBuildUrl)
-  const actual = getJavaScriptSourceMappingUrl(scriptString)
-  const expected = urlToRelativeUrl(sourcemapBuildUrl, scriptBuildUrl)
-  assert({ actual, expected })
-}
-
-// souremap file content
-{
-  const sourcemapString = await readFile(sourcemapBuildUrl)
-  const sourcemap = JSON.parse(sourcemapString)
-  const actual = {
-    file: sourcemap.file,
-    sources: sourcemap.sources,
-  }
-  const expected = {
-    file: urlToFilename(scriptBuildUrl),
-    sources: ["../../../index.source.js"],
-  }
-  assert({ actual, expected })
-}
-
-{
-  const { namespace } = await browserImportSystemJsBuild({
-    ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
-    codeToRunInBrowser: "window.whatever",
-    mainRelativeUrl: `./${scriptBuildUrl}`,
-    // debug: true,
+const test = async (params) => {
+  const { buildMappings } = await buildProject({
+    ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
+    // logLevel: "info",
+    jsenvDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
+    entryPointMap,
+    ...params,
   })
-  const actual = namespace
-  const expected = 42
-  assert({ actual, expected })
+  const scriptBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}index.es5.js`]
+  const sourcemapBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}index.es5.js.map`]
+
+  return {
+    scriptBuildRelativeUrl,
+    sourcemapBuildRelativeUrl,
+  }
+}
+
+// without minification
+{
+  const { scriptBuildRelativeUrl, sourcemapBuildRelativeUrl } = await test()
+  const sourcemapBuildUrl = resolveUrl(
+    sourcemapBuildRelativeUrl,
+    buildDirectoryUrl,
+  )
+  const scriptBuildUrl = resolveUrl(scriptBuildRelativeUrl, buildDirectoryUrl)
+  const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+  const htmlString = await readFile(htmlBuildUrl)
+  const scriptNode = findNodeByTagName(htmlString, "script")
+
+  // script.src is correct
+  {
+    const srcAttribute = getHtmlNodeAttributeByName(scriptNode, "src")
+    const actual = srcAttribute.value
+    const expected = scriptBuildRelativeUrl
+    assert({ actual, expected })
+  }
+
+  // sourcemap file is copied too
+  {
+    const scriptString = await readFile(scriptBuildUrl)
+    const actual = getJavaScriptSourceMappingUrl(scriptString)
+    const expected = urlToRelativeUrl(sourcemapBuildUrl, scriptBuildUrl)
+    assert({ actual, expected })
+  }
+
+  // souremap file content
+  {
+    const sourcemapString = await readFile(sourcemapBuildUrl)
+    const sourcemap = JSON.parse(sourcemapString)
+    const actual = {
+      file: sourcemap.file,
+      sources: sourcemap.sources,
+    }
+    const expected = {
+      file: urlToFilename(scriptBuildUrl),
+      sources: ["../../../index.source.js"],
+    }
+    assert({ actual, expected })
+  }
+
+  // execution works
+  {
+    const { namespace } = await browserImportSystemJsBuild({
+      ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
+      testDirectoryRelativeUrl,
+      codeToRunInBrowser: "window.whatever",
+      mainRelativeUrl: `./${scriptBuildUrl}`,
+      // debug: true,
+    })
+    const actual = namespace
+    const expected = 42
+    assert({ actual, expected })
+  }
+}
+
+// with minification
+{
+  const { scriptBuildRelativeUrl, sourcemapBuildRelativeUrl } = await test({
+    minify: true,
+  })
+  const sourcemapBuildUrl = resolveUrl(
+    sourcemapBuildRelativeUrl,
+    buildDirectoryUrl,
+  )
+  const scriptBuildUrl = resolveUrl(scriptBuildRelativeUrl, buildDirectoryUrl)
+
+  // souremap file content
+  {
+    const sourcemapString = await readFile(sourcemapBuildUrl)
+    const sourcemap = JSON.parse(sourcemapString)
+    const actual = {
+      file: sourcemap.file,
+      sources: sourcemap.sources,
+    }
+    const expected = {
+      file: urlToFilename(scriptBuildUrl),
+      sources: ["../../../index.source.js"],
+    }
+    assert({ actual, expected })
+  }
 }

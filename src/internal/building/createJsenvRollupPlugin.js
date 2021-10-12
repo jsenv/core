@@ -424,11 +424,9 @@ export const createJsenvRollupPlugin = async ({
         {
           logLevel: loggerToLogLevel(logger),
           format,
-          baseUrl: compileServerOrigin,
-          buildDirectoryRelativeUrl: urlToRelativeUrl(
-            buildDirectoryUrl,
-            projectDirectoryUrl,
-          ),
+          // projectDirectoryUrl,
+          compileServerOrigin,
+          buildDirectoryUrl,
 
           asOriginalServerUrl,
           urlToCompiledServerUrl: (url) => {
@@ -854,11 +852,10 @@ export const createJsenvRollupPlugin = async ({
       }
 
       // TODO: maybe replace chunk.fileName with chunk.facadeModuleId?
-      const result = await minifyJs(code, chunk.fileName, {
-        sourceMap: {
-          ...(map ? { content: JSON.stringify(map) } : {}),
-          asObject: true,
-        },
+      const result = await minifyJs({
+        url: chunk.fileName,
+        code,
+        map,
         ...(format === "global" ? { toplevel: false } : { toplevel: true }),
         ...minifyJsOptions,
       })

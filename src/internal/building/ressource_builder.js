@@ -26,8 +26,8 @@ export const createRessourceBuilder = (
   {
     logLevel,
     format,
-    baseUrl,
-    buildDirectoryRelativeUrl,
+    compileServerOrigin,
+    buildDirectoryUrl,
 
     asOriginalServerUrl,
     urlToHumanUrl,
@@ -41,8 +41,6 @@ export const createRessourceBuilder = (
   },
 ) => {
   const logger = createLogger({ logLevel })
-
-  const buildDirectoryUrl = resolveUrl(buildDirectoryRelativeUrl, baseUrl)
 
   const createReferenceForEntryPoint = async ({
     entryContentType,
@@ -168,6 +166,7 @@ export const createRessourceBuilder = (
     bufferBeforeBuild,
     isEntryPoint,
     isJsModule,
+    isSourcemap,
     isInline,
     isPlaceholder,
     fileNamePattern,
@@ -278,6 +277,7 @@ export const createRessourceBuilder = (
 
         isEntryPoint,
         isJsModule,
+        isSourcemap,
         isExternal,
         isInline,
         isPlaceholder,
@@ -330,6 +330,7 @@ export const createRessourceBuilder = (
 
     isEntryPoint = false,
     isJsModule = false,
+    isSourcemap = false,
     isExternal = false,
     isInline = false,
     isPlaceholder = false,
@@ -346,6 +347,7 @@ export const createRessourceBuilder = (
 
       isEntryPoint,
       isJsModule,
+      isSourcemap,
       isInline,
       isExternal,
       isPlaceholder,
@@ -353,7 +355,7 @@ export const createRessourceBuilder = (
       urlVersioningDisabled,
       fileNamePattern,
 
-      relativeUrl: urlToRelativeUrl(ressourceUrl, baseUrl),
+      relativeUrl: urlToRelativeUrl(ressourceUrl, compileServerOrigin),
       bufferAfterBuild: undefined,
     }
 
@@ -445,6 +447,7 @@ export const createRessourceBuilder = (
         bufferBeforeBuild,
         isJsModule = false,
         isInline = false,
+        isSourcemap = false,
         isPlaceholder = false,
         urlVersioningDisabled,
         fileNamePattern,
@@ -467,6 +470,7 @@ export const createRessourceBuilder = (
           bufferBeforeBuild,
           isJsModule,
           isInline,
+          isSourcemap,
           isPlaceholder,
 
           urlVersioningDisabled,
@@ -527,6 +531,11 @@ export const createRessourceBuilder = (
         if (ressource.isPlaceholder) {
           return
         }
+        // sourcemap content depends on their source file
+        // sourcemap.buildEnd() will be called by the source file
+        if (ressource.isSourcemap) {
+          return
+        }
         ressource.buildEnd(
           ressource.bufferAfterBuild || ressource.bufferBeforeBuild,
           ressource.buildRelativeUrl,
@@ -543,7 +552,6 @@ export const createRessourceBuilder = (
       // }
       // we don't yet know the exact importerBuildRelativeUrl but we can generate a fake one
       // to ensure we resolve dependency against where the importer file will be
-
       const importerBuildRelativeUrl = precomputeBuildRelativeUrlForRessource(
         ressource,
         {
@@ -584,7 +592,9 @@ export const createRessourceBuilder = (
         },
       })
       if (typeof ressource.bufferAfterBuild === "undefined") {
-        throw new Error(`transform must call ressource.buildEnd()`)
+        throw new Error(
+          `transform must call ressource.buildEnd() for ${ressource.url}`,
+        )
       }
     })
 
@@ -755,7 +765,7 @@ export const createRessourceBuilder = (
       applyBuildEndEffects(ressource, { buildFileInfo, buildManifest })
       const { buildDoneCallbacks } = ressource
       buildDoneCallbacks.forEach((buildDoneCallback) => {
-        buildDoneCallback({ buildDirectoryUrl })
+        buildDoneCallback()
       })
     })
   }
@@ -827,7 +837,9 @@ export const createRessourceBuilder = (
   }
 
   const shortenUrl = (url) => {
-    return urlIsInsideOf(url, baseUrl) ? urlToRelativeUrl(url, baseUrl) : url
+    return urlIsInsideOf(url, compileServerOrigin)
+      ? urlToRelativeUrl(url, compileServerOrigin)
+      : url
   }
 
   const createUrlSiteFromReference = (reference) => {

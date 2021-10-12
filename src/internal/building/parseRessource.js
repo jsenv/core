@@ -123,6 +123,7 @@ export const parseRessource = (
 
   if (contentType === "text/css") {
     return parseCssRessource(ressource, notifiers, {
+      urlToOriginalFileUrl,
       urlToOriginalServerUrl,
       minify,
       minifyCssOptions,
@@ -150,6 +151,7 @@ export const parseRessource = (
     contentType === "text/javascript"
   ) {
     return parseJsRessource(ressource, notifiers, {
+      projectDirectoryUrl,
       urlToOriginalFileUrl,
       urlToOriginalServerUrl,
       minify,

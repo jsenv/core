@@ -7,14 +7,17 @@ export const parseImportmapRessource = (
 
   return () => {
     if (importMapToInject) {
-      return minify
+      const jsonText = minify
         ? valueToCompactJsonString(importMapToInject)
         : valueToReadableJsonString(importMapToInject)
+      importmapRessource.buildEnd(jsonText)
+      return
     }
 
-    return minify
+    const jsonText = minify
       ? valueToCompactJsonString(JSON.parse(importmapString))
       : importmapString
+    importmapRessource.buildEnd(jsonText)
   }
 }
 
