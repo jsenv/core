@@ -48,26 +48,16 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
   const url = originalUrl || response.url
   const { status } = response
 
-  if (status === 404) {
-    return {
-      isValid: false,
-      message: `404 on url`,
-      details: {
-        url,
-        ...formatUrlTrace(urlTrace),
-      },
-    }
-  }
-
   if (status === 500) {
     if (response.headers["content-type"] === "application/json") {
       return {
         isValid: false,
         message: `error 500 on url`,
         details: {
+          "response status": status,
+          "response json": JSON.stringify(await response.json(), null, "  "),
           url,
           ...formatUrlTrace(urlTrace),
-          error: JSON.stringify(await response.json(), null, "  "),
         },
       }
     }
@@ -78,10 +68,10 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
       isValid: false,
       message: `invalid response status on url`,
       details: {
-        url,
-        ...formatUrlTrace(urlTrace),
         "response status": status,
         "response text": await response.text(),
+        url,
+        ...formatUrlTrace(urlTrace),
       },
     }
   }
