@@ -354,7 +354,6 @@ const moduleScriptTextNodeVisitor = (
     }
     const { bufferAfterBuild } = jsReference.ressource
     const jsText = String(bufferAfterBuild)
-    // Here we should update the sourcemap url comment
     // ici on voudrait pouvoir ajouter le commentaire de la sourcemap
     // sauf que cela se produit un poil plus tard je crois?
     textNode.value = jsText
