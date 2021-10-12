@@ -4,7 +4,6 @@ import {
   urlToRelativeUrl,
   readFile,
   resolveUrl,
-  writeFile,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -30,7 +29,7 @@ const mainFilename = `script_inline.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-const { buildInlineFileContents } = await buildProject({
+await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -41,15 +40,6 @@ const { buildInlineFileContents } = await buildProject({
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
-)
-const inlineFileBuildRelativeUrl = "html_script_inline_build.10.js"
-const inlineFileBuildUrl = resolveUrl(
-  inlineFileBuildRelativeUrl,
-  buildDirectoryUrl,
-)
-await writeFile(
-  inlineFileBuildUrl,
-  buildInlineFileContents[inlineFileBuildRelativeUrl],
 )
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)

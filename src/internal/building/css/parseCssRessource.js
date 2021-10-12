@@ -11,7 +11,7 @@ import { replaceCssUrls } from "./replaceCssUrls.js"
 export const parseCssRessource = async (
   cssRessource,
   { notifyReferenceFound },
-  { urlToOriginalFileUrl, minify, minifyCssOptions },
+  { asProjectUrl, asOriginalUrl, minify, minifyCssOptions },
 ) => {
   const cssString = String(cssRessource.bufferBeforeBuild)
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
@@ -59,14 +59,11 @@ export const parseCssRessource = async (
   return async ({ getUrlRelativeToImporter, buildDirectoryUrl }) => {
     const sourcemapRessource = sourcemapReference.ressource
 
-    const cssOriginalUrl = urlToOriginalFileUrl(
-      cssRessource.isInline
-        ? cssRessource.references[0].referenceUrl
-        : cssRessource.url,
-    )
+    const cssCompiledUrl = cssRessource.url
+    const cssOriginalUrl = asOriginalUrl(cssCompiledUrl)
 
     const { code, map } = await replaceCssUrls({
-      url: cssRessource.url, // cssOriginalUrl ?
+      url: map ? asProjectUrl(cssCompiledUrl) : cssOriginalUrl,
       code: cssString,
       map: sourcemapRessource.isPlaceholder
         ? undefined

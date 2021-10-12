@@ -29,8 +29,9 @@ export const parseRessource = (
     projectDirectoryUrl,
     format,
     systemJsUrl,
-    urlToOriginalFileUrl,
-    urlToOriginalServerUrl,
+    asProjectUrl,
+    asOriginalUrl,
+    asOriginalServerUrl,
     ressourceHintNeverUsedCallback,
     useImportMapToMaximizeCacheReuse,
     createImportMapForFilesUsedInJs,
@@ -114,7 +115,7 @@ export const parseRessource = (
         ressourceHintNeverUsedCallback({
           ...info,
           htmlSource: String(ressource.bufferBeforeBuild),
-          htmlUrl: urlToOriginalFileUrl(ressource.url),
+          htmlUrl: asOriginalUrl(ressource.url),
           htmlAttributeName: "href",
         })
       },
@@ -123,8 +124,8 @@ export const parseRessource = (
 
   if (contentType === "text/css") {
     return parseCssRessource(ressource, notifiers, {
-      urlToOriginalFileUrl,
-      urlToOriginalServerUrl,
+      asOriginalUrl,
+      asOriginalServerUrl,
       minify,
       minifyCssOptions,
     })
@@ -152,8 +153,9 @@ export const parseRessource = (
   ) {
     return parseJsRessource(ressource, notifiers, {
       projectDirectoryUrl,
-      urlToOriginalFileUrl,
-      urlToOriginalServerUrl,
+      asProjectUrl,
+      asOriginalUrl,
+      asOriginalServerUrl,
       minify,
       minifyJsOptions,
     })

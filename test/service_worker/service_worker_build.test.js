@@ -4,6 +4,7 @@ import {
   urlToRelativeUrl,
   resolveUrl,
   urlToFileSystemPath,
+  readFile,
 } from "@jsenv/filesystem"
 
 import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
@@ -22,8 +23,7 @@ const mainFilename = `main.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-
-await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -33,15 +33,30 @@ await buildProject({
     [`${testDirectoryRelativeUrl}sw.js`]: "sw.cjs",
   },
   serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
-  // minify: true,
+  minify: true,
 })
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
+
+// sourcemap looks good
+{
+  const sourcemapBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}main.js.map`]
+  const sourcemapBuildUrl = resolveUrl(
+    sourcemapBuildRelativeUrl,
+    buildDirectoryUrl,
+  )
+  const sourcemap = await readFile(sourcemapBuildUrl, { as: "json" })
+  const actual = sourcemap
+  const expected = actual
+  assert({ actual, expected })
+}
 
 if (process.platform !== "win32") {
   // hash differ because of line endings
-  const buildDirectoryUrl = resolveUrl(
-    buildDirectoryRelativeUrl,
-    jsenvCoreDirectoryUrl,
-  )
+
   const serviceWorkerBuildUrl = resolveUrl("sw.cjs", buildDirectoryUrl)
   global.self = {}
   // eslint-disable-next-line import/no-dynamic-require

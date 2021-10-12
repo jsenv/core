@@ -403,12 +403,9 @@ export const createJsenvRollupPlugin = async ({
               format,
               systemJsUrl,
               projectDirectoryUrl,
-              urlToOriginalFileUrl: (url) => {
-                return asOriginalUrl(url)
-              },
-              urlToOriginalServerUrl: (url) => {
-                return asOriginalServerUrl(url)
-              },
+              asProjectUrl,
+              asOriginalUrl,
+              asOriginalServerUrl,
               ressourceHintNeverUsedCallback: (linkInfo) => {
                 logger.warn(formatRessourceHintNeverUsedWarning(linkInfo))
               },
@@ -851,9 +848,8 @@ export const createJsenvRollupPlugin = async ({
         return null
       }
 
-      // TODO: maybe replace chunk.fileName with chunk.facadeModuleId?
       const result = await minifyJs({
-        url: chunk.fileName,
+        url: asOriginalUrl(chunk.facadeModuleId),
         code,
         map,
         ...(format === "global" ? { toplevel: false } : { toplevel: true }),

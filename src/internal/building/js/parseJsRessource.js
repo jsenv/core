@@ -10,7 +10,7 @@ import { minifyJs } from "./minifyJs.js"
 export const parseJsRessource = async (
   jsRessource,
   { notifyReferenceFound },
-  { urlToOriginalFileUrl, minify, minifyJsOptions },
+  { asProjectUrl, asOriginalUrl, minify, minifyJsOptions },
 ) => {
   const jsUrl = jsRessource.url
   const jsString = String(jsRessource.bufferBeforeBuild)
@@ -51,7 +51,7 @@ export const parseJsRessource = async (
     // - perf (one less http request)
     const mightBeAWorkerScript = !jsRessource.isInline
     if (mightBeAWorkerScript) {
-      const workerScriptUrl = urlToOriginalFileUrl(jsUrl)
+      const workerScriptUrl = asOriginalUrl(jsUrl)
       const workerBundle = await bundleWorker({
         workerScriptUrl,
         workerScriptSourceMap: map,
@@ -63,11 +63,11 @@ export const parseJsRessource = async (
     }
 
     const jsCompiledUrl = jsRessource.url
-    const jsOriginalUrl = urlToOriginalFileUrl(jsCompiledUrl)
+    const jsOriginalUrl = asOriginalUrl(jsCompiledUrl)
 
     if (minify) {
       const result = await minifyJs({
-        url: map ? jsOriginalUrl : jsCompiledUrl,
+        url: map ? asProjectUrl(jsCompiledUrl) : jsOriginalUrl,
         code: jsString,
         map,
         toplevel: false,
@@ -111,8 +111,8 @@ export const parseJsRessource = async (
         return sourceUrlRelativeToSourceMap
       })
     }
-    const mapSource = JSON.stringify(map, null, "  ")
-    sourcemapRessource.buildEnd(mapSource)
+    const mapAsText = JSON.stringify(map, null, "  ")
+    sourcemapRessource.buildEnd(mapAsText)
 
     const sourcemapBuildUrl = resolveUrl(
       sourcemapRessource.buildRelativeUrl,
