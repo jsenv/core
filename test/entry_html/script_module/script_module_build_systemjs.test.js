@@ -2,7 +2,8 @@ import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  urlToBasename,
+  readFile,
+  resolveUrl,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -18,22 +19,47 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}script_module.html`]: "./main.html",
 }
-
+const buildDirectoryUrl = resolveUrl(
+  buildDirectoryRelativeUrl,
+  jsenvCoreDirectoryUrl,
+)
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
-  // minify: true,
+  minify: true,
 })
+const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
 
+// sourcemap looks good
+{
+  const sourcemapBuildRelativeUrl = `${jsBuildRelativeUrl}.map`
+  const sourcemapBuildUrl = resolveUrl(
+    sourcemapBuildRelativeUrl,
+    buildDirectoryUrl,
+  )
+  const sourcemap = await readFile(sourcemapBuildUrl, { as: "json" })
+
+  const actual = sourcemap
+  const expected = {
+    version: 3,
+    file: "main.js",
+    sources: ["../../main.js"],
+    sourcesContent: [await readFile(new URL("./main.js", import.meta.url))],
+    names: assert.any(Array),
+    mappings: assert.any(String),
+  }
+  assert({ actual, expected })
+}
+
+// execution works
 {
   const mainJsRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
   const { namespace } = await browserImportSystemJsBuild({

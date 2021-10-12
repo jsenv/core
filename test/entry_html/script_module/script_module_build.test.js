@@ -24,7 +24,6 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}script_module.html`]: "./main.html",
 }
-const jsUrl = resolveUrl("./main.js", import.meta.url)
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
@@ -57,7 +56,7 @@ const sourcemap = await readFile(sourcemapBuildUrl, { as: "json" })
     version: 3,
     file: "main.js",
     sources: ["../../main.js"],
-    sourcesContent: [await readFile(jsUrl)],
+    sourcesContent: [await readFile(new URL("./main.js", import.meta.url))],
     names: assert.any(Array),
     mappings: assert.any(String),
   }
@@ -95,7 +94,7 @@ const sourcemap = await readFile(sourcemapBuildUrl, { as: "json" })
     version: 3,
     file: "main.js",
     sources: ["../../main.js"],
-    sourcesContent: [await readFile(jsUrl)],
+    sourcesContent: [await readFile(new URL("./main.js", import.meta.url))],
     names: assert.any(Array),
     mappings: assert.any(String),
   }
