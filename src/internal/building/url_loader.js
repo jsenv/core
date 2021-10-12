@@ -67,14 +67,15 @@ export const createUrlLoader = ({
     }
 
     if (url in inlineModuleScripts) {
-      const { code, map } = await transformJs({
+      const transformResult = await transformJs({
         code: inlineModuleScripts[url],
         url: asProjectUrl(url), // transformJs expect a file:// url
         projectDirectoryUrl,
         babelPluginMap,
         // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
       })
-
+      let code = transformResult.code
+      let map = transformResult.map
       return {
         url,
         code,

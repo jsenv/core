@@ -314,7 +314,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
 
 const moduleScriptTextNodeVisitor = (
   script,
-  { format, notifyReferenceFound, rollupGetModuleInfo },
+  { format, notifyReferenceFound },
   htmlRessource,
   scripts,
 ) => {
