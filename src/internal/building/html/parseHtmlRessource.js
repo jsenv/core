@@ -71,20 +71,18 @@ export const parseHtmlRessource = async (
 
   const linksMutations = collectNodesMutations(
     links,
-    notifiers,
+    {
+      ...notifiers,
+      ressourceHintNeverUsedCallback,
+    },
     htmlRessource,
-    [
-      linkStylesheetHrefVisitor,
-      (link, notifiers) =>
-        linkHrefVisitor(link, {
-          ...notifiers,
-          ressourceHintNeverUsedCallback,
-        }),
-    ],
+    [linkStylesheetHrefVisitor, linkHrefVisitor],
   )
   const scriptsMutations = collectNodesMutations(
     scripts,
-    notifiers,
+    {
+      ...notifiers,
+    },
     htmlRessource,
     [
       // regular javascript are not parseable by rollup
@@ -316,7 +314,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
 
 const moduleScriptTextNodeVisitor = (
   script,
-  { format, notifyReferenceFound },
+  { format, notifyReferenceFound, rollupGetModuleInfo },
   htmlRessource,
   scripts,
 ) => {
@@ -356,7 +354,9 @@ const moduleScriptTextNodeVisitor = (
     }
     const { bufferAfterBuild } = jsReference.ressource
     const jsText = String(bufferAfterBuild)
-    // ici on voudrait que lorsque l'importmap est faite on lui mette un commentaire
+    // Here we should update the sourcemap url comment
+    // ici on voudrait pouvoir ajouter le commentaire de la sourcemap
+    // sauf que cela se produit un poil plus tard je crois?
     textNode.value = jsText
   }
 }

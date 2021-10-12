@@ -59,15 +59,18 @@ export const parseCssRessource = async (
   return async ({ getUrlRelativeToImporter, buildDirectoryUrl }) => {
     const sourcemapRessource = sourcemapReference.ressource
 
+    let code = cssString
+    let map = sourcemapRessource.isPlaceholder
+      ? undefined
+      : JSON.parse(String(sourcemapRessource.bufferBeforeBuild))
+
     const cssCompiledUrl = cssRessource.url
     const cssOriginalUrl = asOriginalUrl(cssCompiledUrl)
 
-    const { code, map } = await replaceCssUrls({
+    const replaceCssResult = await replaceCssUrls({
       url: map ? asProjectUrl(cssCompiledUrl) : cssOriginalUrl,
       code: cssString,
-      map: sourcemapRessource.isPlaceholder
-        ? undefined
-        : JSON.parse(String(sourcemapRessource.bufferBeforeBuild)),
+      map,
       getUrlReplacementValue: ({ urlNode }) => {
         const nodeCandidates = Array.from(urlNodeReferenceMapping.keys())
         const urlNodeFound = nodeCandidates.find((urlNodeCandidate) =>
@@ -95,6 +98,9 @@ export const parseCssRessource = async (
       cssMinification: minify,
       cssMinificationOptions: minifyCssOptions,
     })
+    code = replaceCssResult.code
+    map = replaceCssResult.map
+
     cssRessource.buildEnd(code)
 
     // In theory code should never be modified once buildEnd() is called
