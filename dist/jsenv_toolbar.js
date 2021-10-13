@@ -2249,24 +2249,21 @@
         var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML,
             customCompilerPatterns = envJson.customCompilerPatterns;
 
-        var _babelPluginRequiredN = babelPluginRequiredNamesFromGroupInfo(groupInfo, {
+        var _pluginRequiredNamesF = pluginRequiredNamesFromGroupInfo(groupInfo, {
           coverageInstrumentationRequired: coverageInstrumentationRequired
         });
 
         return _await(getFeaturesReport({
           failFastOnFeatureDetection: failFastOnFeatureDetection,
-          groupInfo: groupInfo,
-          inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-          customCompilerPatterns: customCompilerPatterns,
-          coverageInstrumentationRequired: coverageInstrumentationRequired
+          inlineImportMapIntoHTML: inlineImportMapIntoHTML
         }), function (_getFeaturesReport) {
           var featuresReport = _objectSpread2(_objectSpread2({
-            babelPluginRequiredNames: _babelPluginRequiredN
+            pluginRequiredNameArray: _pluginRequiredNamesF
           }, _getFeaturesReport), {}, {
             customCompilerPatterns: customCompilerPatterns
           });
 
-          var canAvoidCompilation = featuresReport.customCompilerPatterns.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
+          var canAvoidCompilation = featuresReport.customCompilerPatterns.length === 0 && featuresReport.pluginRequiredNameArray.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
           return {
             featuresReport: featuresReport,
             canAvoidCompilation: canAvoidCompilation,
@@ -2281,17 +2278,16 @@
 
   var getFeaturesReport = _async$1(function (_ref5) {
     var failFastOnFeatureDetection = _ref5.failFastOnFeatureDetection,
-        groupInfo = _ref5.groupInfo,
         inlineImportMapIntoHTML = _ref5.inlineImportMapIntoHTML;
     var featuresReport = {
-      jsenvPluginRequiredNames: [],
       importmapSupported: undefined,
       dynamicImportSupported: undefined,
       topLevelAwaitSupported: undefined
-    };
-    var jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray;
-    featuresReport.jsenvPluginRequiredNames = jsenvPluginRequiredNames;
-    return jsenvPluginRequiredNames.length > 0 && failFastOnFeatureDetection ? featuresReport : _await(supportsImportmap({
+    }; // start testing importmap support first and not in paralell
+    // so that there is not module script loaded beore importmap is injected
+    // it would log an error in chrome console and return undefined
+
+    return _await(supportsImportmap({
       // chrome supports inline but not remote importmap
       // https://github.com/WICG/import-maps/issues/235
       // at this stage we won't know if the html file will use
@@ -2313,20 +2309,20 @@
     });
   });
 
-  var babelPluginRequiredNamesFromGroupInfo = function babelPluginRequiredNamesFromGroupInfo(groupInfo, _ref6) {
+  var pluginRequiredNamesFromGroupInfo = function pluginRequiredNamesFromGroupInfo(groupInfo, _ref6) {
     var coverageInstrumentationRequired = _ref6.coverageInstrumentationRequired;
-    var babelPluginRequiredNameArray = groupInfo.babelPluginRequiredNameArray;
-    var babelPluginRequiredNames = babelPluginRequiredNameArray.slice(); // When instrumentation CAN be handed by playwright
+    var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
+    var pluginRequiredNames = pluginRequiredNameArray.slice(); // When instrumentation CAN be handed by playwright
     // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
     // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
 
-    var transformInstrumentIndex = babelPluginRequiredNames.indexOf("transform-instrument");
+    var transformInstrumentIndex = pluginRequiredNames.indexOf("transform-instrument");
 
     if (transformInstrumentIndex > -1 && !coverageInstrumentationRequired) {
-      babelPluginRequiredNames.splice(transformInstrumentIndex, 1);
+      pluginRequiredNames.splice(transformInstrumentIndex, 1);
     }
 
-    return babelPluginRequiredNames;
+    return pluginRequiredNames;
   };
 
   var supportsImportmap = _async$1(function () {
@@ -2508,15 +2504,15 @@
       parts.push("top level await is not supported");
     }
 
-    var babelPluginRequiredNames = featuresReport.babelPluginRequiredNames;
-    var babelPluginRequiredCount = babelPluginRequiredNames.length;
+    var pluginRequiredNameArray = featuresReport.pluginRequiredNameArray;
+    var pluginRequiredCount = pluginRequiredNameArray.length;
 
-    if (babelPluginRequiredCount === 0) {
+    if (pluginRequiredCount === 0) {
       if (!missingOnly) {
-        parts.push("all babel plugins are natively supported");
+        parts.push("all plugins are natively supported");
       }
     } else {
-      parts.push("".concat(babelPluginRequiredCount, " babel plugins are mandatory: ").concat(babelPluginRequiredNames));
+      parts.push("".concat(pluginRequiredCount, " plugins are mandatory: ").concat(pluginRequiredNameArray));
     }
 
     var customCompilerPatterns = featuresReport.customCompilerPatterns;
@@ -2524,13 +2520,6 @@
 
     if (customCompilerCount === 0) ; else {
       parts.push("".concat(customCompilerCount, " custom compilers enabled: ").concat(customCompilerPatterns));
-    }
-
-    var jsenvPluginRequiredNames = featuresReport.jsenvPluginRequiredNames;
-    var jsenvPluginRequiredCount = jsenvPluginRequiredNames.length;
-
-    if (jsenvPluginRequiredCount === 0) ; else {
-      parts.push("".concat(jsenvPluginRequiredCount, " jsenv plugins are mandatory: ").concat(jsenvPluginRequiredNames));
     }
 
     return "\n- ".concat(parts.join("\n- "));
