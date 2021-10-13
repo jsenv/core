@@ -22,8 +22,8 @@ import {
 
 const chromiumSharing = createSharing()
 export const chromiumRuntime = {
-  runtimeName: "chromium",
-  runtimeVersion: PLAYWRIGHT_CHROMIUM_VERSION,
+  name: "chromium",
+  version: PLAYWRIGHT_CHROMIUM_VERSION,
 }
 chromiumRuntime.launch = async ({
   browserServerLogLevel,
@@ -139,8 +139,8 @@ export const chromiumTabRuntime = {
 
 const firefoxSharing = createSharing()
 export const firefoxRuntime = {
-  runtimeName: "firefox",
-  runtimeVersion: PLAYWRIGHT_FIREFOX_VERSION,
+  name: "firefox",
+  version: PLAYWRIGHT_FIREFOX_VERSION,
 }
 firefoxRuntime.launch = async ({
   cancellationToken = createCancellationToken(),
@@ -217,8 +217,8 @@ export const firefoxTabRuntime = {
 
 const webkitSharing = createSharing()
 export const webkitRuntime = {
-  runtimeName: "webkit",
-  runtimeVersion: PLAYWRIGHT_WEBKIT_VERSION,
+  name: "webkit",
+  version: PLAYWRIGHT_WEBKIT_VERSION,
 }
 webkitRuntime.launch = async ({
   browserServerLogLevel,

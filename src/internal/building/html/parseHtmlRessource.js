@@ -17,7 +17,7 @@ Or be sure to also reference this url somewhere in the html file like
 */
 
 import {
-  urlToBasename,
+  urlToFilename,
   urlToRelativeUrl,
   resolveUrl,
   urlToParentUrl,
@@ -240,7 +240,7 @@ const regularScriptTextNodeVisitor = (
   const ressourceSpecifier = getUniqueNameForInlineHtmlNode(
     script,
     scripts,
-    `${urlToBasename(htmlRessource.url)}.[id].js`,
+    `${urlToFilename(htmlRessource.url)}__inline__[id].js`,
   )
   const jsReference = notifyReferenceFound({
     contentTypeExpected: "application/javascript",
@@ -337,7 +337,7 @@ const moduleScriptTextNodeVisitor = (
   const ressourceSpecifier = getUniqueNameForInlineHtmlNode(
     script,
     scripts,
-    `${urlToBasename(htmlRessource.url)}.[id].js`,
+    `${urlToFilename(htmlRessource.url)}__inline__[id].js`,
   )
   const jsReference = notifyReferenceFound({
     contentTypeExpected: "application/javascript",
@@ -468,7 +468,7 @@ const importmapScriptTextNodeVisitor = (
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
-      `${urlToBasename(htmlRessource.url)}.[id].importmap`,
+      `${urlToFilename(htmlRessource.url)}__inline__[id].importmap`,
     ),
     ...referenceLocationFromHtmlNode(script),
 
@@ -643,7 +643,7 @@ const styleTextNodeVisitor = (
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       style,
       styles,
-      `${urlToBasename(htmlRessource.url)}.[id].css`,
+      `${urlToFilename(htmlRessource.url)}__inline__[id].css`,
     ),
     ...referenceLocationFromHtmlNode(style),
 

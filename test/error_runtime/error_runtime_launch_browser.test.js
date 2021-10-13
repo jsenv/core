@@ -63,13 +63,13 @@ await launchBrowsers(
     // error stack
     {
       const stack = result.error.stack
-      if (launchBrowser === chromiumRuntime) {
+      if (browserRuntime === chromiumRuntime) {
         const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
     at triggerError (${testDirectoryUrl}trigger_error.js:2:9)
     at ${testDirectoryUrl}error_runtime.js:3:1`
         const actual = stack.slice(0, expected.length)
         assert({ actual, expected })
-      } else if (launchBrowser === firefoxRuntime) {
+      } else if (browserRuntime === firefoxRuntime) {
         const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE`
         const actual = stack.slice(0, expected.length)
         assert({ actual, expected })

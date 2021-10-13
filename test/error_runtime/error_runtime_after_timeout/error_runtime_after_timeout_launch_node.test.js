@@ -31,10 +31,10 @@ const actual = await launchAndExecute({
   launchAndExecuteLogLevel: "off",
   runtime: nodeRuntime,
   runtimeParams: {
-      ...LAUNCH_TEST_PARAMS,
-      outDirectoryRelativeUrl,
-      compileServerOrigin,
-    }
+    ...LAUNCH_TEST_PARAMS,
+    outDirectoryRelativeUrl,
+    compileServerOrigin,
+  },
   executeParams: {
     fileRelativeUrl,
   },
