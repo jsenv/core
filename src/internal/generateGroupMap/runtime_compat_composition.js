@@ -69,15 +69,6 @@ const sortObjectKeys = (object) => {
 //       ...babelPluginNamesCurrent,
 //     ]).sort()
 //   },
-//   jsenvPluginRequiredNameArray: (
-//     jsenvPluginNamesPrevious,
-//     jsenvPluginNamesCurrent,
-//   ) => {
-//     return arrayWithoutDuplicate([
-//       ...jsenvPluginNamesPrevious,
-//       ...jsenvPluginNamesCurrent,
-//     ]).sort()
-//   },
 //   minRuntimeVersions: composeMinRuntimeVersions,
 // })
 

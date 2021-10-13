@@ -71,12 +71,8 @@ const nodeRuntimeSupportsAllFeatures = async ({
     return false
   }
 
-  const requiredBabelPluginCount = countRequiredBabelPlugins(groupInfo)
-  if (requiredBabelPluginCount > 0) {
-    return false
-  }
-
-  if (groupInfo.jsenvPluginRequiredNameArray.length > 0) {
+  const requiredPluginCount = countRequiredPlugins(groupInfo)
+  if (requiredPluginCount > 0) {
     return false
   }
 
@@ -93,7 +89,7 @@ const nodeRuntimeSupportsAllFeatures = async ({
   return true
 }
 
-const countRequiredBabelPlugins = (groupInfo) => {
+const countRequiredPlugins = (groupInfo) => {
   const { pluginRequiredNameArray } = groupInfo
 
   const pluginNames = pluginRequiredNameArray.filter(
