@@ -71,11 +71,11 @@ export const buildUsingRollup = async ({
 
   const runtimeCompatMap = createRuntimeCompat({
     runtimeSupport,
-    babelPluginMap: {
+    pluginMap: {
       import_assertion_type_json: true,
       import_assertion_type_css: true,
     },
-    babelPluginCompatMap: {
+    pluginCompatMap: {
       import_assertion_type_json: {
         chrome: "91",
         edge: "91",
@@ -89,12 +89,12 @@ export const buildUsingRollup = async ({
   const importAssertionsSupport = {
     json:
       format === "esmodule" &&
-      !runtimeCompatMap.babelPluginRequiredNameArray.includes(
+      !runtimeCompatMap.pluginRequiredNameArray.includes(
         "import_assertion_type_json",
       ),
     css:
       format === "esmodule" &&
-      !runtimeCompatMap.babelPluginRequiredNameArray.includes(
+      !runtimeCompatMap.pluginRequiredNameArray.includes(
         "import_assertion_type_json",
       ),
   }

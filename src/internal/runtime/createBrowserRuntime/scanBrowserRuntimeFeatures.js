@@ -24,7 +24,7 @@ export const scanBrowserRuntimeFeatures = async ({
   const { inlineImportMapIntoHTML, customCompilerPatterns } = envJson
 
   const featuresReport = {
-    babelPluginRequiredNames: babelPluginRequiredNamesFromGroupInfo(groupInfo, {
+    pluginRequiredNameArray: pluginRequiredNamesFromGroupInfo(groupInfo, {
       coverageInstrumentationRequired,
     }),
     ...(await getFeaturesReport({
@@ -39,8 +39,7 @@ export const scanBrowserRuntimeFeatures = async ({
 
   const canAvoidCompilation =
     featuresReport.customCompilerPatterns.length === 0 &&
-    featuresReport.jsenvPluginRequiredNames.length === 0 &&
-    featuresReport.babelPluginRequiredNames.length === 0 &&
+    featuresReport.pluginRequiredNameArray.length === 0 &&
     featuresReport.importmapSupported &&
     featuresReport.dynamicImportSupported &&
     featuresReport.topLevelAwaitSupported
@@ -103,25 +102,25 @@ const getFeaturesReport = async ({
   return featuresReport
 }
 
-const babelPluginRequiredNamesFromGroupInfo = (
+const pluginRequiredNamesFromGroupInfo = (
   groupInfo,
   { coverageInstrumentationRequired },
 ) => {
-  const { babelPluginRequiredNameArray } = groupInfo
+  const { pluginRequiredNameArray } = groupInfo
 
-  const babelPluginRequiredNames = babelPluginRequiredNameArray.slice()
+  const pluginRequiredNames = pluginRequiredNameArray.slice()
 
   // When instrumentation CAN be handed by playwright
   // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
   // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
-  const transformInstrumentIndex = babelPluginRequiredNames.indexOf(
+  const transformInstrumentIndex = pluginRequiredNames.indexOf(
     "transform-instrument",
   )
   if (transformInstrumentIndex > -1 && !coverageInstrumentationRequired) {
-    babelPluginRequiredNames.splice(transformInstrumentIndex, 1)
+    pluginRequiredNames.splice(transformInstrumentIndex, 1)
   }
 
-  return babelPluginRequiredNames
+  return pluginRequiredNames
 }
 
 const supportsImportmap = async ({ remote = true } = {}) => {

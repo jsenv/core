@@ -94,16 +94,16 @@ const nodeRuntimeSupportsAllFeatures = async ({
 }
 
 const countRequiredBabelPlugins = (groupInfo) => {
-  const { babelPluginRequiredNameArray } = groupInfo
+  const { pluginRequiredNameArray } = groupInfo
 
-  const babelPlugingNames = babelPluginRequiredNameArray.filter(
-    (babelPluginName) => !babelPluginIgnored.includes(babelPluginName),
+  const pluginNames = pluginRequiredNameArray.filter(
+    (pluginName) => !pluginsIgnored.includes(pluginName),
   )
 
-  return babelPlugingNames.length
+  return pluginNames.length
 }
 
-const babelPluginIgnored = [
+const pluginsIgnored = [
   // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
   // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
   // "transform-instrument" becomes non mandatory

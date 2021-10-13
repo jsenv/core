@@ -1,27 +1,20 @@
 import { findHighestVersion } from "../semantic-versioning/index.js"
-import { jsenvBabelPluginCompatMap } from "./jsenvBabelPluginCompatMap.js"
-import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "./jsenvPluginCompatMap.js"
 
 export const createOneRuntimeCompat = ({
   runtimeName,
   runtimeVersion,
 
-  babelPluginMap,
-  babelPluginCompatMap = jsenvBabelPluginCompatMap,
-
-  jsenvPluginMap,
-  jsenvPluginCompatMap = jsenvPluginCompatMapFallback,
+  pluginMap,
+  pluginCompatMap,
 }) => {
-  const babelPluginRequiredNameArray = []
-  const jsenvPluginRequiredNameArray = []
+  const pluginRequiredNameArray = []
   // will be the first runtime version compatible with all features not listed in
-  // babelPluginRequiredNameArray or jsenvPluginRequiredNameArray
+  // pluginRequiredNameArray
   let minRuntimeVersion
 
-  Object.keys(babelPluginMap).forEach((babelPluginName) => {
-    const babelPluginCompat = babelPluginCompatMap[babelPluginName] || {}
-    const runtimeVersionCompatible =
-      babelPluginCompat[runtimeName] || "Infinity"
+  Object.keys(pluginMap).forEach((pluginName) => {
+    const pluginCompat = pluginCompatMap[pluginName] || {}
+    const runtimeVersionCompatible = pluginCompat[runtimeName] || "Infinity"
 
     const highestVersion = findHighestVersion(
       runtimeVersion,
@@ -29,7 +22,7 @@ export const createOneRuntimeCompat = ({
     )
     const compatible = highestVersion === runtimeVersion
     if (!compatible) {
-      babelPluginRequiredNameArray.push(babelPluginName)
+      pluginRequiredNameArray.push(pluginName)
     }
 
     if (compatible && runtimeVersionCompatible !== "Infinity") {
@@ -41,30 +34,8 @@ export const createOneRuntimeCompat = ({
     }
   })
 
-  Object.keys(jsenvPluginMap).forEach((jsenvPluginName) => {
-    const jsenvPluginCompat = jsenvPluginCompatMap[jsenvPluginName] || {}
-    const runtimeVersionCompatible =
-      jsenvPluginCompat[runtimeName] || "Infinity"
-
-    const highestVersion = findHighestVersion(
-      runtimeVersion,
-      runtimeVersionCompatible,
-    )
-    if (highestVersion === runtimeVersion) {
-      // compatible, in that case the min runtime version can be updated
-      minRuntimeVersion = findHighestVersion(
-        minRuntimeVersion || "0.0.0",
-        runtimeVersionCompatible,
-      )
-    } else {
-      // not compatible, no need to increase runtime version
-      jsenvPluginRequiredNameArray.push(jsenvPluginName)
-    }
-  })
-
   return {
-    babelPluginRequiredNameArray,
-    jsenvPluginRequiredNameArray,
+    pluginRequiredNameArray,
     minRuntimeVersion: minRuntimeVersion || runtimeVersion,
   }
 }

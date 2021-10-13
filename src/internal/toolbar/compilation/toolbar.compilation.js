@@ -154,15 +154,15 @@ const getBrowserSupportMessage = ({
     parts.push(`top level await is not supported`)
   }
 
-  const { babelPluginRequiredNames } = featuresReport
-  const babelPluginRequiredCount = babelPluginRequiredNames.length
-  if (babelPluginRequiredCount === 0) {
+  const { pluginRequiredNameArray } = featuresReport
+  const pluginRequiredCount = pluginRequiredNameArray.length
+  if (pluginRequiredCount === 0) {
     if (!missingOnly) {
-      parts.push(`all babel plugins are natively supported`)
+      parts.push(`all plugins are natively supported`)
     }
   } else {
     parts.push(
-      `${babelPluginRequiredCount} babel plugins are mandatory: ${babelPluginRequiredNames}`,
+      `${pluginRequiredCount} plugins are mandatory: ${pluginRequiredNameArray}`,
     )
   }
 
