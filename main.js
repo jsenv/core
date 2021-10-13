@@ -17,6 +17,6 @@ export {
   webkitRuntime,
   webkitTabRuntime,
 } from "./src/launchBrowser.js"
-export { nodeRuntime } from "./src/nodeRuntime.js"
+export { nodeRuntime } from "./src/launchNode.js"
 export { requireUsingChildProcess } from "./src/requireUsingChildProcess.js"
 export { startExploring } from "./src/startExploring.js"

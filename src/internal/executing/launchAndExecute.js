@@ -488,21 +488,6 @@ const validateLaunchReturnValue = (launchReturnValue) => {
     throw new Error(`launch must return an object, got ${launchReturnValue}`)
   }
 
-  const { runtimeName } = launchReturnValue
-  if (typeof runtimeName !== "string") {
-    throw new Error(
-      `launch must return a runtimeName string, got ${runtimeName}`,
-    )
-  }
-
-  const { runtimeVersion } = launchReturnValue
-  if (
-    typeof runtimeVersion !== "string" &&
-    typeof runtimeVersion !== "number"
-  ) {
-    throw new Error(`launch must return a runtimeVersion, got ${runtimeName}`)
-  }
-
   const { execute } = launchReturnValue
   if (typeof execute !== "function") {
     throw new Error(`launch must return an execute function, got ${execute}`)

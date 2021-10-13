@@ -54,22 +54,17 @@ export const executePlan = async (
     }
   }
 
-  const executionSteps = await generateExecutionSteps(
-    {
-      ...plan,
-      [compileServer.outDirectoryRelativeUrl]: null,
-    },
-    {
-      cancellationToken,
-      projectDirectoryUrl,
-    },
-  )
-
   const runtimeSupport = {}
-  executionSteps.forEach((step) => {
-    const { runtime } = step
-    mergeRuntimeSupport(runtimeSupport, {
-      [runtime.name]: runtime.version,
+  Object.keys(plan).forEach((filePattern) => {
+    const filePlan = plan[filePattern]
+    Object.keys(filePlan).forEach((executionName) => {
+      const executionConfig = filePlan[executionName]
+      const { runtime } = executionConfig
+      if (runtime) {
+        mergeRuntimeSupport(runtimeSupport, {
+          [runtime.name]: runtime.version,
+        })
+      }
     })
   })
 
@@ -98,6 +93,17 @@ export const executePlan = async (
     customCompilers,
     runtimeSupport,
   })
+
+  const executionSteps = await generateExecutionSteps(
+    {
+      ...plan,
+      [compileServer.outDirectoryRelativeUrl]: null,
+    },
+    {
+      cancellationToken,
+      projectDirectoryUrl,
+    },
+  )
 
   const result = await executeConcurrently(executionSteps, {
     logger,
