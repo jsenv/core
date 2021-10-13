@@ -1,18 +1,16 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { chromiumRuntime, firefoxRuntime, webkitRuntime } from "@jsenv/core"
+import {
+  execute,
+  chromiumRuntime,
+  firefoxRuntime,
+  webkitRuntime,
+} from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import {
-  START_COMPILE_SERVER_TEST_PARAMS,
-  EXECUTION_TEST_PARAMS,
+  EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
 import { launchBrowsers } from "@jsenv/core/test/launchBrowsers.js"
@@ -22,17 +20,11 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryBasename = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const htmlFilename = `${testDirectoryBasename}.html`
+const htmlFilename = `import_meta_url.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryBasename}.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}import_meta_url.js`
 const compileId = COMPILE_ID_BEST
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-  await startCompileServer({
-    ...START_COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-  })
 
 await launchBrowsers(
   [
@@ -42,27 +34,30 @@ await launchBrowsers(
     webkitRuntime,
   ],
   async (browserRuntime) => {
-    const actual = await launchAndExecute({
-      ...EXECUTION_TEST_PARAMS,
-      runtime: browserRuntime,
-      runtimeParams: {
-        ...LAUNCH_TEST_PARAMS,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-      },
-      executeParams: {
+    const { status, namespace, compileServerOrigin, outDirectoryRelativeUrl } =
+      await execute({
+        ...EXECUTE_TEST_PARAMS,
+        jsenvDirectoryRelativeUrl,
+        runtime: browserRuntime,
+        runtimeParams: {
+          ...LAUNCH_TEST_PARAMS,
+        },
         fileRelativeUrl: htmlFileRelativeUrl,
-      },
-    })
+        collectCompileServerInfo: true,
+      })
+    const actual = {
+      status,
+      namespace,
+    }
     const expected = {
       status: "completed",
       namespace: {
-        [`./${testDirectoryBasename}.js`]: {
+        [`./import_meta_url.js`]: {
           status: "completed",
           namespace: {
             isInstanceOfUrl: false,
             urlString:
-              launchBrowser === chromiumRuntime
+              browserRuntime === chromiumRuntime
                 ? `${compileServerOrigin}/${fileRelativeUrl}`
                 : `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`,
           },

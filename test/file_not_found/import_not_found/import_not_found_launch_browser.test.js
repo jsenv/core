@@ -5,15 +5,17 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
-import { chromiumRuntime, firefoxRuntime, webkitRuntime } from "@jsenv/core"
+import {
+  execute,
+  chromiumRuntime,
+  firefoxRuntime,
+  webkitRuntime,
+} from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import { launchBrowsers } from "@jsenv/core/test/launchBrowsers.js"
 import {
-  START_COMPILE_SERVER_TEST_PARAMS,
-  EXECUTION_TEST_PARAMS,
+  EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
 
@@ -28,11 +30,6 @@ const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
 const mainFileRelativeUrl = `${testDirectoryRelativeUrl}import_not_found.js`
 const importerFileRelativeUrl = `${testDirectoryRelativeUrl}intermediate.js`
 const compileId = COMPILE_ID_BEST
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-  await startCompileServer({
-    ...START_COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-  })
 const importedFileRelativeUrl = `${testDirectoryRelativeUrl}foo.js`
 
 await launchBrowsers(
@@ -43,25 +40,22 @@ await launchBrowsers(
     webkitRuntime,
   ],
   async (browserRuntime) => {
-    const result = await launchAndExecute({
-      ...EXECUTION_TEST_PARAMS,
+    const result = await execute({
+      ...EXECUTE_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
       launchAndExecuteLogLevel: "off",
       runtime: browserRuntime,
-runtimeParams: {
-          ...LAUNCH_TEST_PARAMS,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-        }
-      executeParams: {
-        fileRelativeUrl: htmlFileRelativeUrl,
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
       },
+      fileRelativeUrl: htmlFileRelativeUrl,
       // runtimeParams: {
       //   headless: false,
       // },
       // stopAfterExecute: false,
     })
 
-    if (launchBrowser === chromiumRuntime) {
+    if (browserRuntime === chromiumRuntime) {
       const mainFileUrl = resolveUrl(mainFileRelativeUrl, jsenvCoreDirectoryUrl)
       const actual = {
         status: result.status,
@@ -76,7 +70,7 @@ runtimeParams: {
     }
 
     const importedFileUrl = resolveUrl(
-      `${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`,
+      `./.jsenv/out/${compileId}/${importedFileRelativeUrl}`,
       jsenvCoreDirectoryUrl,
     )
     const actual = {

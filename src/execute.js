@@ -39,6 +39,7 @@ export const execute = async ({
   collectCoverage,
   measurePerformance,
   collectPerformance,
+  collectCompileServerInfo = false,
   stopAfterExecute = false,
   stopAfterExecuteReason,
   gracefulStopAllocatedMs,
@@ -140,6 +141,11 @@ export const execute = async ({
     })
 
     stop("single-execution-done")
+
+    if (collectCompileServerInfo) {
+      result.outDirectoryRelativeUrl = outDirectoryRelativeUrl
+      result.compileServerOrigin = compileServerOrigin
+    }
 
     return result
   }
