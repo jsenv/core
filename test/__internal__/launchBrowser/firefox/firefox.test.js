@@ -5,7 +5,7 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { launchFirefox } from "@jsenv/core"
+import { firefoxRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
@@ -32,14 +32,13 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
 
 const actual = await launchAndExecute({
   ...EXECUTION_TEST_PARAMS,
-  launch: (options) =>
-    launchFirefox({
-      ...LAUNCH_TEST_PARAMS,
-      ...options,
-      compileServerOrigin,
-      outDirectoryRelativeUrl,
-      // headless: false,
-    }),
+  runtime: firefoxRuntime,
+  runtimeParams: {
+    ...LAUNCH_TEST_PARAMS,
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+    // headless: false,
+  },
   executeParams: {
     fileRelativeUrl,
   },

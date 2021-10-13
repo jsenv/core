@@ -3,9 +3,9 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   execute,
-  launchChromium,
-  launchFirefox,
-  launchWebkit,
+  chromiumRuntime,
+  firefoxRuntime,
+  webkitRuntime,
 } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXECUTE.js"
@@ -21,14 +21,14 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}file.html`
 await Promise.all(
   [
     // ensure multiline
-    launchChromium,
-    launchFirefox,
-    launchWebkit,
-  ].map(async (launchBrowser) => {
+    chromiumRuntime,
+    firefoxRuntime,
+    webkitRuntime,
+  ].map(async (browserRuntime) => {
     const actual = await execute({
       ...EXECUTE_TEST_PARAMS,
       jsenvDirectoryRelativeUrl,
-      launch: launchBrowser,
+      runtime: browserRuntime,
       fileRelativeUrl,
       stopAfterExecute: true,
       mirrorConsole: false,

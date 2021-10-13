@@ -10,7 +10,6 @@ import {
 } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
-import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
 
 export const execute = async ({
   logLevel = "warn",
@@ -26,8 +25,8 @@ export const execute = async ({
   importDefaultExtension,
 
   fileRelativeUrl,
-  launch,
-  launchParams,
+  runtime,
+  runtimeParams,
 
   allocatedMs,
   measureDuration,
@@ -53,7 +52,6 @@ export const execute = async ({
   customCompilers,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
-  runtimeSupportDuringDev = jsenvRuntimeSupportDuringDev,
 }) => {
   const jsenvExecutionFunction = async ({ jsenvCancellationToken }) => {
     cancellationToken = composeCancellationToken(
@@ -70,8 +68,14 @@ export const execute = async ({
       )
     }
     fileRelativeUrl = fileRelativeUrl.replace(/\\/g, "/")
-    if (typeof launch !== "function") {
-      throw new TypeError(`launch must be a function, got ${launch}`)
+
+    if (typeof runtime !== "object") {
+      throw new TypeError(`runtime must be an object, got ${runtime}`)
+    }
+    if (typeof runtime.launch !== "function") {
+      throw new TypeError(
+        `runtime.launch must be a function, got ${runtime.launch}`,
+      )
     }
 
     const {
@@ -96,7 +100,9 @@ export const execute = async ({
       compileServerPort,
       babelPluginMap,
       customCompilers,
-      runtimeSupport: runtimeSupportDuringDev,
+      runtimeSupport: {
+        [runtime.name]: runtime.version,
+      },
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
     })
@@ -105,12 +111,12 @@ export const execute = async ({
       launchAndExecuteLogLevel,
       cancellationToken,
 
-      launch,
-      launchParams: {
+      runtime,
+      runtimeParams: {
         projectDirectoryUrl,
         compileServerOrigin,
         outDirectoryRelativeUrl,
-        ...launchParams,
+        ...runtimeParams,
       },
       executeParams: {
         fileRelativeUrl,

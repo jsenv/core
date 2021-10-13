@@ -7,7 +7,7 @@ import {
   removeFileSystemNode,
 } from "@jsenv/filesystem"
 
-import { execute, launchNode } from "@jsenv/core"
+import { execute, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXECUTE.js"
 
@@ -23,7 +23,7 @@ const executeParams = {
   ...EXECUTE_TEST_PARAMS,
   launchLogLevel: "info",
   jsenvDirectoryRelativeUrl,
-  launch: launchNode,
+  runtime: nodeRuntime,
   fileRelativeUrl,
 }
 const jsenvDirectoryUrl = resolveUrl(".jsenv/", testDirectoryUrl)

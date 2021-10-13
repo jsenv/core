@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
-import { executeTestPlan, launchNode } from "@jsenv/core"
+import { executeTestPlan, nodeRuntime } from "@jsenv/core"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -16,11 +16,10 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
 const testPlan = {
   [fileRelativeUrl]: {
     node: {
-      launch: (options) =>
-        launchNode({
-          ...options,
-          env: { AWAIT_FOREVER: true },
-        }),
+      runtime: nodeRuntime,
+      runtimeParams: {
+        env: { AWAIT_FOREVER: true },
+      },
       allocatedMs: 8000,
       gracefulStopAllocatedMs: 5000,
       measureDuration: false,

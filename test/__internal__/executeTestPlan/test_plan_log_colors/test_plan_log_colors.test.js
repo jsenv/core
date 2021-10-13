@@ -8,7 +8,7 @@ It is documented in https://nodejs.org/api/tty.html#tty_writestream_getcolordept
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { launchNode } from "@jsenv/core"
+import { nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
@@ -35,8 +35,8 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
 const getLogs = async () => {
   const result = await launchAndExecute({
     ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
-    launch: launchNode,
-    launchParams: {
+    runtime: nodeRuntime,
+    runtimeParams: {
       ...LAUNCH_TEST_PARAMS,
       compileServerOrigin,
       outDirectoryRelativeUrl,

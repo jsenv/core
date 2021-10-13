@@ -1,9 +1,12 @@
-import { execute, launchNode } from "@jsenv/core"
+import { execute, nodeRuntime } from "@jsenv/core"
 
 import * as jsenvConfig from "../../jsenv.config.mjs"
 
-execute({
+await execute({
   ...jsenvConfig,
-  launch: (options) => launchNode({ ...options, debugPort: 40000 }),
+  runtime: nodeRuntime,
+  runtimeParams: {
+    debugPort: 40000,
+  },
   fileRelativeUrl: process.argv[2],
 })

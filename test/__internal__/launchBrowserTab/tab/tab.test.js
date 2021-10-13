@@ -5,7 +5,7 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { launchChromiumTab } from "@jsenv/core"
+import { chromiumRuntimeTab } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
@@ -33,14 +33,13 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
 
 const actual = await launchAndExecute({
   ...EXECUTION_TEST_PARAMS,
-  launch: (options) =>
-    launchChromiumTab({
-      ...LAUNCH_TEST_PARAMS,
-      ...options,
-      outDirectoryRelativeUrl,
-      compileServerOrigin,
-      // headless: false,
-    }),
+  runtime: chromiumRuntimeTab,
+  runtimeParams: {
+    ...LAUNCH_TEST_PARAMS,
+    outDirectoryRelativeUrl,
+    compileServerOrigin,
+    // headless: false,
+  },
   executeParams: {
     fileRelativeUrl,
   },

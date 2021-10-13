@@ -8,10 +8,10 @@ const beforeMs = Date.now()
 
 const {
   executeTestPlan,
-  launchChromium,
-  launchFirefox,
-  launchWebkit,
-  launchNode,
+  chromiumRuntime,
+  firefoxRuntime,
+  webkitRuntime,
+  nodeRuntime,
 } = await import("@jsenv/core")
 
 const projectDirectoryUrl = new URL("../../../", import.meta.url)
@@ -25,24 +25,24 @@ await executeTestPlan({
   testPlan: {
     [`${currentDirectoryRelativeUrl}animals.test.html`]: {
       chromium: {
-        launch: launchChromium,
+        runtime: chromiumRuntime,
         measureDuration: false,
         captureConsole: false,
       },
       firefox: {
-        launch: launchFirefox,
+        runtime: firefoxRuntime,
         measureDuration: false,
         captureConsole: false,
       },
       webkit: {
-        launch: launchWebkit,
+        runtime: webkitRuntime,
         measureDuration: false,
         captureConsole: false,
       },
     },
     [`${currentDirectoryRelativeUrl}animals.test.js`]: {
       node: {
-        launch: launchNode,
+        runtime: nodeRuntime,
         measureDuration: false,
         captureConsole: false,
       },

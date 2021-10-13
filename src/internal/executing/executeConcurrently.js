@@ -126,14 +126,14 @@ export const executeConcurrently = async (
 
         ...executionParams,
         collectCoverage: coverage,
-        launchParams: {
+        runtimeParams: {
           projectDirectoryUrl,
           compileServerOrigin,
           outDirectoryRelativeUrl,
           collectCoverage: coverage,
           coverageConfig,
           coverageForceIstanbul,
-          ...executionParams.launchParams,
+          ...executionParams.runtimeParams,
         },
         executeParams: {
           fileRelativeUrl,

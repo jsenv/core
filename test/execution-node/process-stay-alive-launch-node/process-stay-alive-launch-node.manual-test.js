@@ -4,7 +4,7 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
-import { launchNode } from "@jsenv/core"
+import { nodeRuntime } from "@jsenv/core"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   LAUNCH_AND_EXECUTE_TEST_PARAMS,
@@ -29,13 +29,12 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
 const actual = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
   fileRelativeUrl,
-  launch: (options) =>
-    launchNode({
-      ...LAUNCH_TEST_PARAMS,
-      ...options,
-      outDirectoryRelativeUrl,
-      compileServerOrigin,
-    }),
+  runtime: nodeRuntime,
+  runtimeParams: {
+    ...LAUNCH_TEST_PARAMS,
+    outDirectoryRelativeUrl,
+    compileServerOrigin,
+  },
 })
 const expected = {
   status: "completed",

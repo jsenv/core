@@ -18,41 +18,45 @@ export const importUsingChildProcess = async (
   const result = await launchAndExecute({
     stopAfterExecute: true,
     fileRelativeUrl: String(fileUrl),
-    launch: async () => {
-      const controllableNodeProcess = await createControllableNodeProcess({
-        logLevel,
-        debugPort,
-        debugMode,
-        debugModeInheritBreak,
-        env,
-        commandLineOptions,
-        stdin,
-        stdout,
-        stderr,
-      })
+    runtime: {
+      name: "node",
+      version: process.version.slice(1),
+      launch: async () => {
+        const controllableNodeProcess = await createControllableNodeProcess({
+          logLevel,
+          debugPort,
+          debugMode,
+          debugModeInheritBreak,
+          env,
+          commandLineOptions,
+          stdin,
+          stdout,
+          stderr,
+        })
 
-      return {
-        ...controllableNodeProcess,
-        execute: async () => {
-          try {
-            const namespace =
-              await controllableNodeProcess.requestActionOnChildProcess({
-                actionType: "execute-using-import",
-                actionParams: { fileUrl },
-              })
+        return {
+          ...controllableNodeProcess,
+          execute: async () => {
+            try {
+              const namespace =
+                await controllableNodeProcess.requestActionOnChildProcess({
+                  actionType: "execute-using-import",
+                  actionParams: { fileUrl },
+                })
 
-            return {
-              status: "ok",
-              namespace,
+              return {
+                status: "ok",
+                namespace,
+              }
+            } catch (e) {
+              return {
+                status: "errored",
+                error: e,
+              }
             }
-          } catch (e) {
-            return {
-              status: "errored",
-              error: e,
-            }
-          }
-        },
-      }
+          },
+        }
+      },
     },
   })
   if (result.status === "errored") {

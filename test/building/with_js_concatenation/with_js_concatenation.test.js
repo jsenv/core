@@ -17,7 +17,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}with_js_concatenation.html`
-const jsFileRelativeUrl = `${testDirectoryRelativeUrl}main.js`
 const entryPointMap = {
   [`./${htmlFileRelativeUrl}`]: "./main.html",
 }
@@ -33,7 +32,10 @@ const { buildMappings } = await buildProject({
 // assert only 2 files, 1 html, 1 js, are generated even if there is two js file used
 {
   const actual = Object.keys(buildMappings)
-  const expected = [htmlFileRelativeUrl, jsFileRelativeUrl]
+  const expected = [
+    `${testDirectoryRelativeUrl}main.js`,
+    `${testDirectoryRelativeUrl}with_js_concatenation.html`,
+  ]
   assert({ actual, expected })
 }
 

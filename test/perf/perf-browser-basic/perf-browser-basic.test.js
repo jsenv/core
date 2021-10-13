@@ -3,9 +3,9 @@ import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
 
 import {
   execute,
-  launchChromium,
-  launchFirefox,
-  launchWebkit,
+  chromiumRuntime,
+  firefoxRuntime,
+  webkitRuntime,
 } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXECUTE.js"
@@ -30,16 +30,16 @@ if (process.platform !== "win32") {
   await Promise.all(
     [
       // comment to ensure multiline
-      launchChromium,
-      launchFirefox,
-      launchWebkit,
-    ].map(async (launchBrowser) => {
+      chromiumRuntime,
+      firefoxRuntime,
+      webkitRuntime,
+    ].map(async (browserRuntime) => {
       const actual = await execute({
         ...executeParams,
-        launch: launchBrowser,
+        runtime: browserRuntime,
         measurePerformance: true,
         collectPerformance: true,
-        // launchParams: {
+        // runtimeParams: {
         //   headless: false,
         // },
         // stopAfterExecute: false,

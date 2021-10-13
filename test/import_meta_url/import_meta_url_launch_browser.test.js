@@ -5,7 +5,7 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
+import { chromiumRuntime, firefoxRuntime, webkitRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
@@ -37,20 +37,19 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
 await launchBrowsers(
   [
     // comment force multiline
-    launchChromium,
-    launchFirefox,
-    launchWebkit,
+    chromiumRuntime,
+    firefoxRuntime,
+    webkitRuntime,
   ],
-  async (launchBrowser) => {
+  async (browserRuntime) => {
     const actual = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
-      launch: (options) =>
-        launchBrowser({
-          ...LAUNCH_TEST_PARAMS,
-          ...options,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-        }),
+      runtime: browserRuntime,
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+      },
       executeParams: {
         fileRelativeUrl: htmlFileRelativeUrl,
       },
@@ -63,7 +62,7 @@ await launchBrowsers(
           namespace: {
             isInstanceOfUrl: false,
             urlString:
-              launchBrowser === launchChromium
+              launchBrowser === chromiumRuntime
                 ? `${compileServerOrigin}/${fileRelativeUrl}`
                 : `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`,
           },

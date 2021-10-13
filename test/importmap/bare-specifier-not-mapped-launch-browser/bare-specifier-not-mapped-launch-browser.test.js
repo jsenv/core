@@ -5,7 +5,7 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { launchChromium, launchFirefox, execute } from "@jsenv/core"
+import { chromiumRuntime, firefoxRuntime, execute } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 
@@ -38,7 +38,7 @@ const test = async (params) => {
 }
 
 {
-  const actual = await test({ launch: launchFirefox })
+  const actual = await test({ runtime: firefoxRuntime })
   const expected = {
     executionResultStatus: "errored",
     executionResultErrorMessage: `Unmapped bare specifier.
@@ -53,7 +53,7 @@ Add a mapping for "foo" into the importmap file at ${importMapFileRelativeUrl}`,
 }
 
 {
-  const actual = await test({ launch: launchChromium })
+  const actual = await test({ runtime: chromiumRuntime })
   const expected = {
     executionResultStatus: "errored",
     executionResultErrorMessage: `Failed to resolve module specifier "foo". Relative references must start with either "/", "./", or "../".`,

@@ -1,23 +1,25 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
 
-import { executeTestPlan, launchNode } from "@jsenv/core"
+import { executeTestPlan, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
 const testPlan = {
   [fileRelativeUrl]: {
     node: {
-      launch: (options) =>
-        launchNode({
-          ...options,
-          env: { AWAIT_FOREVER: true },
-        }),
+      runtime: nodeRuntime,
+      runtimeParams: {
+        env: { AWAIT_FOREVER: true },
+      },
       allocatedMs: 8000,
       gracefulStopAllocatedMs: 1000,
     },

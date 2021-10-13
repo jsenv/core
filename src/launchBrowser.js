@@ -21,8 +21,11 @@ import {
 } from "./playwright_browser_versions.js"
 
 const chromiumSharing = createSharing()
-
-export const launchChromium = async ({
+export const chromiumRuntime = {
+  runtimeName: "chromium",
+  runtimeVersion: PLAYWRIGHT_CHROMIUM_VERSION,
+}
+chromiumRuntime.launch = async ({
   browserServerLogLevel,
   cancellationToken = createCancellationToken(),
   chromiumExecutablePath,
@@ -106,8 +109,6 @@ export const launchChromium = async ({
 
   return {
     browser,
-    runtimeName: "chromium",
-    runtimeVersion: PLAYWRIGHT_CHROMIUM_VERSION,
     stop: ressourceTracker.cleanup,
     ...browserToRuntimeHooks(browser, {
       browserServerLogLevel,
@@ -127,16 +128,21 @@ export const launchChromium = async ({
     }),
   }
 }
-
-export const launchChromiumTab = (namedArgs) =>
-  launchChromium({
-    share: true,
-    ...namedArgs,
-  })
+export const chromiumTabRuntime = {
+  ...chromiumRuntime,
+  launch: (params) =>
+    chromiumRuntime.launch({
+      shared: true,
+      ...params,
+    }),
+}
 
 const firefoxSharing = createSharing()
-
-export const launchFirefox = async ({
+export const firefoxRuntime = {
+  runtimeName: "firefox",
+  runtimeVersion: PLAYWRIGHT_FIREFOX_VERSION,
+}
+firefoxRuntime.launch = async ({
   cancellationToken = createCancellationToken(),
   firefoxExecutablePath,
   browserServerLogLevel,
@@ -182,8 +188,6 @@ export const launchFirefox = async ({
 
   return {
     browser,
-    runtimeName: "firefox",
-    runtimeVersion: PLAYWRIGHT_FIREFOX_VERSION,
     stop: ressourceTracker.cleanup,
     ...browserToRuntimeHooks(browser, {
       browserServerLogLevel,
@@ -202,16 +206,21 @@ export const launchFirefox = async ({
     }),
   }
 }
-
-export const launchFirefoxTab = (namedArgs) =>
-  launchFirefox({
-    share: true,
-    ...namedArgs,
-  })
+export const firefoxTabRuntime = {
+  ...firefoxRuntime,
+  launch: (params) =>
+    firefoxRuntime.launch({
+      shared: true,
+      ...params,
+    }),
+}
 
 const webkitSharing = createSharing()
-
-export const launchWebkit = async ({
+export const webkitRuntime = {
+  runtimeName: "webkit",
+  runtimeVersion: PLAYWRIGHT_WEBKIT_VERSION,
+}
+webkitRuntime.launch = async ({
   browserServerLogLevel,
   cancellationToken = createCancellationToken(),
   webkitExecutablePath,
@@ -257,8 +266,7 @@ export const launchWebkit = async ({
 
   return {
     browser,
-    runtimeName: "webkit",
-    runtimeVersion: PLAYWRIGHT_WEBKIT_VERSION,
+
     stop: ressourceTracker.cleanup,
     ...browserToRuntimeHooks(browser, {
       browserServerLogLevel,
@@ -277,12 +285,14 @@ export const launchWebkit = async ({
     }),
   }
 }
-
-export const launchWebkitTab = (namedArgs) =>
-  launchWebkit({
-    share: true,
-    ...namedArgs,
-  })
+export const webkitTabRuntime = {
+  ...webkitRuntime,
+  launch: (params) =>
+    webkitRuntime.launch({
+      shared: true,
+      ...params,
+    }),
+}
 
 const launchBrowser = async (
   browserName,

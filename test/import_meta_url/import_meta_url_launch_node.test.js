@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { launchNode } from "@jsenv/core"
+import { nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
@@ -30,13 +30,12 @@ const test = async ({ babelPluginMap } = {}) => {
 
   const result = await launchAndExecute({
     ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
-    launch: (options) =>
-      launchNode({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-      }),
+    runtime: nodeRuntime,
+    runtimeParams: {
+      ...LAUNCH_TEST_PARAMS,
+      outDirectoryRelativeUrl,
+      compileServerOrigin,
+    },
     executeParams: {
       fileRelativeUrl,
     },

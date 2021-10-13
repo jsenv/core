@@ -5,7 +5,7 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
-import { launchNode } from "@jsenv/core"
+import { nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
@@ -33,13 +33,12 @@ const importerFileUrl = resolveUrl(mainFilename, testDirectoryUrl)
 const result = await launchAndExecute({
   ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
   launchAndExecuteLogLevel: "off",
-  launch: (options) =>
-    launchNode({
+  runtime: nodeRuntime,
+  runtimeParams: {
       ...LAUNCH_TEST_PARAMS,
-      ...options,
       outDirectoryRelativeUrl,
       compileServerOrigin,
-    }),
+    }
   executeParams: {
     fileRelativeUrl,
   },

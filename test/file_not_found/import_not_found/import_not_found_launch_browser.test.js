@@ -5,7 +5,7 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
-import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
+import { chromiumRuntime, firefoxRuntime, webkitRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
@@ -38,31 +38,30 @@ const importedFileRelativeUrl = `${testDirectoryRelativeUrl}foo.js`
 await launchBrowsers(
   [
     // comment force multiline
-    launchChromium,
-    launchFirefox,
-    launchWebkit,
+    chromiumRuntime,
+    firefoxRuntime,
+    webkitRuntime,
   ],
-  async (launchBrowser) => {
+  async (browserRuntime) => {
     const result = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
       launchAndExecuteLogLevel: "off",
-      launch: (options) =>
-        launchBrowser({
+      runtime: browserRuntime,
+runtimeParams: {
           ...LAUNCH_TEST_PARAMS,
-          ...options,
           outDirectoryRelativeUrl,
           compileServerOrigin,
-        }),
+        }
       executeParams: {
         fileRelativeUrl: htmlFileRelativeUrl,
       },
-      // launchParams: {
+      // runtimeParams: {
       //   headless: false,
       // },
       // stopAfterExecute: false,
     })
 
-    if (launchBrowser === launchChromium) {
+    if (launchBrowser === chromiumRuntime) {
       const mainFileUrl = resolveUrl(mainFileRelativeUrl, jsenvCoreDirectoryUrl)
       const actual = {
         status: result.status,

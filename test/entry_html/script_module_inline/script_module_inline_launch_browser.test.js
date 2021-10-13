@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
+import { chromiumRuntime, firefoxRuntime, webkitRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
@@ -29,21 +29,20 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
 await launchBrowsers(
   [
     // comment to ensure multiline
-    launchChromium,
-    launchFirefox,
-    launchWebkit,
+    chromiumRuntime,
+    firefoxRuntime,
+    webkitRuntime,
   ],
-  async (launchBrowser) => {
+  async (browserRuntime) => {
     const actual = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
-      launch: (options) =>
-        launchBrowser({
-          ...LAUNCH_TEST_PARAMS,
-          ...options,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-          // headless: false,
-        }),
+      runtime: browserRuntime,
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+        // headless: false,
+      },
       executeParams: {
         fileRelativeUrl,
       },
@@ -53,7 +52,7 @@ await launchBrowsers(
     const expected = {
       status: "completed",
       namespace: {
-        [launchBrowser === launchChromium
+        [launchBrowser === chromiumRuntime
           ? `./script_module_inline_script_module_inline.js`
           : `./script_module_inline.html__asset__script_module_inline.js`]: {
           status: "completed",

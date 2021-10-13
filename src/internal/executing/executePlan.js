@@ -1,3 +1,4 @@
+import { jsenvRuntimeSupportDuringDev } from "../../jsenvRuntimeSupportDuringDev.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
 import { babelPluginInstrument } from "./coverage/babel-plugin-instrument.js"
 import { generateExecutionSteps } from "./generateExecutionSteps.js"
@@ -41,7 +42,7 @@ export const executePlan = async (
     babelPluginMap,
     babelConfigFileUrl,
     customCompilers,
-    runtimeSupport,
+    runtimeSupportDuringDev = jsenvRuntimeSupportDuringDev,
   } = {},
 ) => {
   if (coverage) {
@@ -53,6 +54,26 @@ export const executePlan = async (
       ],
     }
   }
+
+  const executionSteps = await generateExecutionSteps(
+    {
+      ...plan,
+      [compileServer.outDirectoryRelativeUrl]: null,
+    },
+    {
+      cancellationToken,
+      projectDirectoryUrl,
+    },
+  )
+
+  let runtimeFoundInPlan = {}
+
+  executionSteps.forEach((step) => {
+    const { launch } = step
+    if (launch === chromiumRuntime) {
+      runtimeFoundInPlan.push(runtimeFoundInPlan)
+    }
+  })
 
   const compileServer = await startCompileServer({
     cancellationToken,
@@ -77,19 +98,8 @@ export const executePlan = async (
     babelPluginMap,
     babelConfigFileUrl,
     customCompilers,
-    runtimeSupport,
+    runtimeSupport: runtimeSupportDuringDev,
   })
-
-  const executionSteps = await generateExecutionSteps(
-    {
-      ...plan,
-      [compileServer.outDirectoryRelativeUrl]: null,
-    },
-    {
-      cancellationToken,
-      projectDirectoryUrl,
-    },
-  )
 
   const result = await executeConcurrently(executionSteps, {
     logger,

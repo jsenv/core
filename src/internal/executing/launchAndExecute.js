@@ -19,8 +19,8 @@ export const launchAndExecute = async ({
   launchAndExecuteLogLevel,
   cancellationToken = createCancellationToken(),
 
-  launch,
-  launchParams,
+  runtime,
+  runtimeParams,
   executeParams,
 
   allocatedMs,
@@ -54,8 +54,13 @@ export const launchAndExecute = async ({
 } = {}) => {
   const logger = createLogger({ logLevel: launchAndExecuteLogLevel })
 
-  if (typeof launch !== "function") {
-    throw new TypeError(`launch must be a function, got ${launch}`)
+  if (typeof runtime !== "object") {
+    throw new TypeError(`runtime must be an object, got ${runtime}`)
+  }
+  if (typeof runtime.launch !== "function") {
+    throw new TypeError(
+      `runtime.launch must be a function, got ${runtime.launch}`,
+    )
   }
 
   let executionResultTransformer = (executionResult) => executionResult
@@ -104,31 +109,21 @@ export const launchAndExecute = async ({
   }
 
   if (collectRuntimeName) {
-    runtimeStartedCallback = composeCallback(
-      runtimeStartedCallback,
-      ({ runtimeName }) => {
-        executionResultTransformer = composeTransformer(
-          executionResultTransformer,
-          (executionResult) => {
-            executionResult.runtimeName = runtimeName
-            return executionResult
-          },
-        )
+    executionResultTransformer = composeTransformer(
+      executionResultTransformer,
+      (executionResult) => {
+        executionResult.runtimeName = runtime.name
+        return executionResult
       },
     )
   }
 
   if (collectRuntimeVersion) {
-    runtimeStartedCallback = composeCallback(
-      runtimeStartedCallback,
-      ({ runtimeVersion }) => {
-        executionResultTransformer = composeTransformer(
-          executionResultTransformer,
-          (executionResult) => {
-            executionResult.runtimeVersion = runtimeVersion
-            return executionResult
-          },
-        )
+    executionResultTransformer = composeTransformer(
+      executionResultTransformer,
+      (executionResult) => {
+        executionResult.runtimeVersion = runtime.version
+        return executionResult
       },
     )
   }
@@ -198,11 +193,11 @@ export const launchAndExecute = async ({
     logger,
     cancellationToken,
 
-    launch,
-    launchParams: {
+    runtime,
+    runtimeParams: {
       measurePerformance,
       collectPerformance,
-      ...launchParams,
+      ...runtimeParams,
     },
     executeParams,
 
@@ -275,8 +270,8 @@ const computeExecutionResult = async ({
   logger,
   cancellationToken,
 
-  launch,
-  launchParams,
+  runtime,
+  runtimeParams,
   executeParams,
 
   stopAfterExecute,
@@ -288,29 +283,23 @@ const computeExecutionResult = async ({
   runtimeErrorCallback,
   runtimeDisconnectCallback,
 }) => {
-  logger.debug(`launch a runtime to execute something in it`)
+  const runtimeLabel = `${runtime.name}/${runtime.version}`
+
+  logger.debug(`launch ${runtimeLabel} to execute something in it`)
 
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
-      const value = await launch({
+      const value = await runtime.launch({
         logger,
         cancellationToken,
         stopAfterExecute,
-        ...launchParams,
+        ...runtimeParams,
       })
-      runtimeStartedCallback({
-        runtimeName: value.runtimeName,
-        runtimeVersion: value.runtimeVersion,
-      })
+      runtimeStartedCallback()
       return value
     },
-    stop: async (
-      { runtimeName, runtimeVersion, gracefulStop, stop },
-      reason,
-    ) => {
-      const runtime = `${runtimeName}/${runtimeVersion}`
-
+    stop: async ({ gracefulStop, stop }, reason) => {
       // external code can cancel using cancellationToken at any time.
       // it is important to keep the code inside this stop function because once cancelled
       // all code after the operation won't execute because it will be rejected with
@@ -319,7 +308,9 @@ const computeExecutionResult = async ({
       let stoppedGracefully
 
       if (gracefulStop && gracefulStopAllocatedMs) {
-        logger.debug(`${runtime}: runtime.gracefulStop() because ${reason}`)
+        logger.debug(
+          `${runtimeLabel}: runtime.gracefulStop() because ${reason}`,
+        )
 
         const gracefulStopPromise = (async () => {
           await gracefulStop({ reason })
@@ -343,7 +334,7 @@ const computeExecutionResult = async ({
           }
 
           logger.debug(
-            `${runtime}: runtime.stop() because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
+            `${runtimeLabel}: runtime.stop() because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
           )
           await stop({ reason, gracefulFailed: true })
           return false
@@ -359,7 +350,9 @@ const computeExecutionResult = async ({
       }
 
       logger.debug(
-        `${runtime}: runtime stopped${stoppedGracefully ? " gracefully" : ""}`,
+        `${runtimeLabel}: runtime stopped${
+          stoppedGracefully ? " gracefully" : ""
+        }`,
       )
       runtimeStoppedCallback({ stoppedGracefully })
     },
@@ -368,8 +361,6 @@ const computeExecutionResult = async ({
   const launchReturnValue = await launchOperation
   validateLaunchReturnValue(launchReturnValue)
   const {
-    runtimeName,
-    runtimeVersion,
     execute,
     disconnected,
     registerErrorCallback = () => {},
@@ -377,11 +368,9 @@ const computeExecutionResult = async ({
     finalizeExecutionResult = (executionResult) => executionResult,
   } = launchReturnValue
 
-  const runtime = `${runtimeName}/${runtimeVersion}`
+  logger.debug(createDetailedMessage(`${runtimeLabel}: runtime launched.`))
 
-  logger.debug(createDetailedMessage(`${runtime}: runtime launched.`))
-
-  logger.debug(`${runtime}: start execution.`)
+  logger.debug(`${runtimeLabel}: start execution.`)
   registerConsoleCallback(runtimeConsoleCallback)
 
   const executeOperation = createOperation({
@@ -390,7 +379,7 @@ const computeExecutionResult = async ({
       let timing = TIMING_BEFORE_EXECUTION
 
       disconnected.then(() => {
-        logger.debug(`${runtime}: runtime disconnected ${timing}.`)
+        logger.debug(`${runtimeLabel}: runtime disconnected ${timing}.`)
         runtimeDisconnectCallback({ timing })
       })
 
@@ -403,7 +392,7 @@ const computeExecutionResult = async ({
           createDetailedMessage(`error ${timing}.`, {
             ["error stack"]: error.stack,
             ["execute params"]: JSON.stringify(executeParams, null, "  "),
-            ["runtime"]: runtime,
+            ["runtime"]: runtimeLabel,
           }),
         )
         runtimeErrorCallback({ error, timing })
@@ -440,7 +429,7 @@ const computeExecutionResult = async ({
         )
       }
 
-      logger.debug(`${runtime}: execution completed.`)
+      logger.debug(`${runtimeLabel}: execution completed.`)
       return finalizeExecutionResult(
         createCompletedExecutionResult(executionResult),
       )

@@ -3,7 +3,7 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   execute,
-  launchChromium,
+  chromiumRuntime,
   commonJsToJavaScriptModule,
 } from "@jsenv/core"
 import { require } from "@jsenv/core/src/internal/require.js"
@@ -38,7 +38,7 @@ const actual = await execute({
       { pragma: "React.createElement", pragmaFrag: "React.Fragment" },
     ],
   },
-  launch: launchChromium,
+  runtime: chromiumRuntime,
   stopAfterExecute: true,
   fileRelativeUrl: htmlFileRelativeUrl,
 })

@@ -3,9 +3,9 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   executeTestPlan,
-  launchChromiumTab,
-  launchChromium,
-  launchNode,
+  chromiumRuntimeTab,
+  chromiumRuntime,
+  nodeRuntime,
 } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
@@ -21,16 +21,19 @@ const headless = false
 const testPlan = {
   [fileRelativeUrl]: {
     tab1: {
-      launch: (options) => launchChromiumTab({ ...options, headless }),
+      runtime: chromiumRuntimeTab,
+      runtimeParams: { headless },
     },
     chromium: {
-      launch: (options) => launchChromium({ ...options, headless }),
+      runtime: chromiumRuntime,
+      runtimeParams: { headless },
     },
     tab2: {
-      launch: (options) => launchChromiumTab({ ...options, headless }),
+      runtime: chromiumRuntimeTab,
+      runtimeParams: { headless },
     },
     node: {
-      launch: launchNode,
+      runtime: nodeRuntime,
     },
   },
 }
@@ -38,7 +41,7 @@ const { testPlanSummary, testPlanReport } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
-  // this test exists to ensure launchChromiumTab actually shares
+  // this test exists to ensure chromiumRuntimeTab actually shares
   // the chromium browser and opens tab inside it
   // by passing stopAfterExecute: false,
   // I can manually ensure that after executeTestPlan

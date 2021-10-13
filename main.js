@@ -10,13 +10,13 @@ export { jsenvCoverageConfig } from "./src/jsenvCoverageConfig.js"
 export { jsenvExplorableConfig } from "./src/jsenvExplorableConfig.js"
 export { jsenvServiceWorkerFinalizer } from "./src/jsenvServiceWorkerFinalizer.js"
 export {
-  launchChromium,
-  launchChromiumTab,
-  launchFirefox,
-  launchFirefoxTab,
-  launchWebkit,
-  launchWebkitTab,
+  chromiumRuntime,
+  chromiumTabRuntime,
+  firefoxRuntime,
+  firefoxTabRuntime,
+  webkitRuntime,
+  webkitTabRuntime,
 } from "./src/launchBrowser.js"
-export { launchNode } from "./src/launchNode.js"
+export { nodeRuntime } from "./src/nodeRuntime.js"
 export { requireUsingChildProcess } from "./src/requireUsingChildProcess.js"
 export { startExploring } from "./src/startExploring.js"

@@ -1,6 +1,6 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { executeTestPlan, launchNode } from "@jsenv/core"
+import { executeTestPlan, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -12,7 +12,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const testPlan = {
   [`${testDirectoryRelativeUrl}*.spec.js`]: {
     node: {
-      launch: launchNode,
+      runtime: nodeRuntime,
       measureDuration: true,
       captureConsole: true,
     },

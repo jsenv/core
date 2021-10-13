@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
+import { chromiumRuntime, firefoxRuntime, webkitRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
@@ -29,22 +29,21 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
 await launchBrowsers(
   [
     // comment to ensure multiline
-    launchChromium,
-    launchFirefox,
-    launchWebkit,
+    chromiumRuntime,
+    firefoxRuntime,
+    webkitRuntime,
   ],
-  async (launchBrowser) => {
+  async (browserRuntime) => {
     const result = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
       launchAndExecuteLogLevel: "off",
-      launch: (options) =>
-        launchBrowser({
-          ...LAUNCH_TEST_PARAMS,
-          ...options,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-          // headless: false,
-        }),
+      runtime: browserRuntime,
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+        // headless: false,
+      },
       executeParams: {
         fileRelativeUrl,
       },
@@ -64,13 +63,13 @@ await launchBrowsers(
     // error stack
     {
       const stack = result.error.stack
-      if (launchBrowser === launchChromium) {
+      if (launchBrowser === chromiumRuntime) {
         const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
     at triggerError (${testDirectoryUrl}trigger_error.js:2:9)
     at ${testDirectoryUrl}error_runtime.js:3:1`
         const actual = stack.slice(0, expected.length)
         assert({ actual, expected })
-      } else if (launchBrowser === launchFirefox) {
+      } else if (launchBrowser === firefoxRuntime) {
         const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE`
         const actual = stack.slice(0, expected.length)
         assert({ actual, expected })

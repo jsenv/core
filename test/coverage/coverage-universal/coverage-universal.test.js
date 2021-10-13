@@ -3,16 +3,19 @@ import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
 
 import {
   executeTestPlan,
-  launchNode,
-  launchChromium,
-  launchFirefox,
-  launchWebkit,
+  nodeRuntime,
+  chromiumRuntime,
+  firefoxRuntime,
+  webkitRuntime,
 } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.html`
@@ -20,21 +23,21 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
 const testPlan = {
   [htmlFileRelativeUrl]: {
     chromium: {
-      launch: launchChromium,
+      runtime: chromiumRuntime,
     },
     firefox: {
-      launch: launchFirefox,
+      runtime: firefoxRuntime,
     },
     webkit: {
-      launch: launchWebkit,
+      runtime: webkitRuntime,
     },
   },
   [fileRelativeUrl]: {
     node: {
-      launch: launchNode,
+      runtime: nodeRuntime,
     },
     node2: {
-      launch: launchNode,
+      runtime: nodeRuntime,
     },
   },
 }
