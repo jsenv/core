@@ -1,4 +1,4 @@
-import { jsenvRuntimeSupportDuringDev } from "../../jsenvRuntimeSupportDuringDev.js"
+import { mergeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
 import { babelPluginInstrument } from "./coverage/babel-plugin-instrument.js"
 import { generateExecutionSteps } from "./generateExecutionSteps.js"
@@ -42,7 +42,6 @@ export const executePlan = async (
     babelPluginMap,
     babelConfigFileUrl,
     customCompilers,
-    runtimeSupportDuringDev = jsenvRuntimeSupportDuringDev,
   } = {},
 ) => {
   if (coverage) {
@@ -66,13 +65,12 @@ export const executePlan = async (
     },
   )
 
-  let runtimeFoundInPlan = {}
-
+  const runtimeSupport = {}
   executionSteps.forEach((step) => {
-    const { launch } = step
-    if (launch === chromiumRuntime) {
-      runtimeFoundInPlan.push(runtimeFoundInPlan)
-    }
+    const { runtime } = step
+    mergeRuntimeSupport(runtimeSupport, {
+      [runtime.name]: runtime.version,
+    })
   })
 
   const compileServer = await startCompileServer({
@@ -98,7 +96,7 @@ export const executePlan = async (
     babelPluginMap,
     babelConfigFileUrl,
     customCompilers,
-    runtimeSupport: runtimeSupportDuringDev,
+    runtimeSupport,
   })
 
   const result = await executeConcurrently(executionSteps, {

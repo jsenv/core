@@ -3,6 +3,7 @@ import {
   composeCancellationToken,
 } from "@jsenv/cancellation"
 
+import { normalizeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import {
   assertProjectDirectoryUrl,
@@ -100,9 +101,9 @@ export const execute = async ({
       compileServerPort,
       babelPluginMap,
       customCompilers,
-      runtimeSupport: {
+      runtimeSupport: normalizeRuntimeSupport({
         [runtime.name]: runtime.version,
-      },
+      }),
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
     })

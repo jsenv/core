@@ -78,7 +78,6 @@ export const executeTestPlan = async ({
   babelPluginMap,
   babelConfigFileUrl,
   customCompilers,
-  runtimeSupportDuringDev,
   jsenvDirectoryClean,
 }) => {
   const jsenvExecuteTestPlanFunction = async ({ jsenvCancellationToken }) => {
@@ -186,7 +185,6 @@ export const executeTestPlan = async ({
       babelPluginMap,
       babelConfigFileUrl,
       customCompilers,
-      runtimeSupportDuringDev,
     })
 
     if (updateProcessExitCode && !executionIsPassed(result)) {
