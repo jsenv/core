@@ -29,10 +29,7 @@ export const scanBrowserRuntimeFeatures = async ({
     }),
     ...(await getFeaturesReport({
       failFastOnFeatureDetection,
-      groupInfo,
       inlineImportMapIntoHTML,
-      customCompilerPatterns,
-      coverageInstrumentationRequired,
     })),
     customCompilerPatterns,
   }
@@ -55,20 +52,12 @@ export const scanBrowserRuntimeFeatures = async ({
 
 const getFeaturesReport = async ({
   failFastOnFeatureDetection,
-  groupInfo,
   inlineImportMapIntoHTML,
 }) => {
   const featuresReport = {
-    jsenvPluginRequiredNames: [],
     importmapSupported: undefined,
     dynamicImportSupported: undefined,
     topLevelAwaitSupported: undefined,
-  }
-
-  const jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray
-  featuresReport.jsenvPluginRequiredNames = jsenvPluginRequiredNames
-  if (jsenvPluginRequiredNames.length > 0 && failFastOnFeatureDetection) {
-    return featuresReport
   }
 
   // start testing importmap support first and not in paralell

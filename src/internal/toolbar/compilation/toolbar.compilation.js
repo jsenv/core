@@ -176,16 +176,6 @@ const getBrowserSupportMessage = ({
     )
   }
 
-  const { jsenvPluginRequiredNames } = featuresReport
-  const jsenvPluginRequiredCount = jsenvPluginRequiredNames.length
-  if (jsenvPluginRequiredCount === 0) {
-    // no need to talk about something unused
-  } else {
-    parts.push(
-      `${jsenvPluginRequiredCount} jsenv plugins are mandatory: ${jsenvPluginRequiredNames}`,
-    )
-  }
-
   return `
 - ${parts.join(`
 - `)}`
