@@ -12,6 +12,17 @@ export const START_COMPILE_SERVER_TEST_PARAMS = {
   runtimeSupport: jsenvRuntimeSupportDuringDev,
 }
 
+export const EXECUTE_TEST_PARAMS = {
+  projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  jsenvDirectoryClean: true,
+  compileServerLogLevel: "warn",
+  babelPluginMap: testBabelPluginMap,
+
+  executionLogLevel: "warn",
+  inheritCoverage: coverageIsEnabled(),
+  stopAfterExecute: true,
+}
+
 export const EXECUTION_TEST_PARAMS = {
   logLevel: "info",
   stopAfterExecute: true,
