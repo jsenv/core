@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -21,9 +17,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `${testDirectoryname}.html`
+const filename = `script_module_inline.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
@@ -59,11 +54,11 @@ await launchBrowsers(
       status: "completed",
       namespace: {
         [launchBrowser === launchChromium
-          ? `./${testDirectoryname}_script_inline_foo.js`
-          : `./${testDirectoryname}.html__asset__foo.js`]: {
+          ? `./script_module_inline_script_module_inline.js`
+          : `./script_module_inline.html__asset__script_module_inline.js`]: {
           status: "completed",
           namespace: {
-            default: 42,
+            value: 42,
           },
         },
       },

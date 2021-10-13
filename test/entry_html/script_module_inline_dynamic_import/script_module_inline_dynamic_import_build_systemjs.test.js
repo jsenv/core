@@ -2,7 +2,6 @@ import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  urlToBasename,
   writeFile,
   resolveUrl,
 } from "@jsenv/filesystem"
@@ -20,10 +19,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.html`
+const mainFilename = `script_module_inline_dynamic_import.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
@@ -39,8 +37,7 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const inlineFileBuildRelativeUrl =
-  "build_module_inline_dynamic_import_systemjs.10.js"
+const inlineFileBuildRelativeUrl = "script_module_inline_dynamic_import.10.js"
 const inlineFileBuildUrl = resolveUrl(
   inlineFileBuildRelativeUrl,
   buildDirectoryUrl,

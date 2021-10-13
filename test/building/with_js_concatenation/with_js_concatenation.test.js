@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -18,47 +14,39 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}with_js_concatenation.html`
+const jsFileRelativeUrl = `${testDirectoryRelativeUrl}main.js`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
+  [`./${htmlFileRelativeUrl}`]: "./main.html",
 }
-
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
-  urlMappings: {
-    [`./${testDirectoryRelativeUrl}dev.importmap`]: `./${testDirectoryRelativeUrl}prod.importmap`,
-  },
   // minify: true,
-  // logLevel: "debug",
 })
 
+// assert only 2 files, 1 html, 1 js, are generated even if there is two js file used
 {
-  const actual = buildMappings
-  const expected = {
-    // the importmap is not in buildMappings as it was inlined by the build
-    [`${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "main.html",
-    [`${testDirectoryRelativeUrl}main.js`]: "main-ca955363.js",
-  }
+  const actual = Object.keys(buildMappings)
+  const expected = [htmlFileRelativeUrl, jsFileRelativeUrl]
   assert({ actual, expected })
 }
 
 {
+  const mainJsRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    jsFileRelativeUrl: `./${
-      buildMappings[`${testDirectoryRelativeUrl}main.js`]
-    }`,
+    jsFileRelativeUrl: `./${mainJsRelativeUrl}`,
     // debug: true,
   })
+
   const actual = namespace
-  const expected = {
-    env: "prod",
-  }
+  const expected = { value: 42 }
   assert({ actual, expected })
 }

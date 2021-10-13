@@ -5,7 +5,6 @@ import {
   resolveUrl,
   readFile,
   assertFilePresence,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -21,11 +20,10 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}link_icon.html`]: "./main.html",
 }
 
 const { buildMappings } = await buildProject({
