@@ -22,7 +22,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `html_preload_local_font.html`
+const mainFilename = `preload_local_font.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: `./${mainFilename}`,
 }

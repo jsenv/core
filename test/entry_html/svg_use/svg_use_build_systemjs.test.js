@@ -2,19 +2,17 @@ import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  resolveUrl,
   readFile,
-  assertFilePresence,
-  urlToBasename,
+  resolveUrl,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  findNodeByTagName,
+  findAllNodeByTagName,
   getHtmlNodeAttributeByName,
+  findNodeByTagName,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls.js"
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -22,10 +20,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.html`
+const mainFilename = `svg_use.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
@@ -41,33 +38,38 @@ const buildDirectoryUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
+const svgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}icon.svg`]
+const svgBuildUrl = resolveUrl(svgBuildRelativeUrl, buildDirectoryUrl)
+const pngBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
+const pngBuildUrl = resolveUrl(pngBuildRelativeUrl, buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
-const link = findNodeByTagName(htmlString, "link")
-const maincssBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}style.css`]
-const depcssBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}dir/dep.css`]
-const mainCssBuildUrl = resolveUrl(maincssBuildRelativeUrl, buildDirectoryUrl)
-const depCssBuildUrl = resolveUrl(depcssBuildRelativeUrl, buildDirectoryUrl)
+const [firstUseNodeInBuild, secondUseNodeInBuild] = findAllNodeByTagName(
+  htmlString,
+  "use",
+)
 
-// ensure link.href is properly updated
+// ensure first use is untouched
 {
-  const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
+  const hrefAttribute = getHtmlNodeAttributeByName(firstUseNodeInBuild, "href")
   const actual = hrefAttribute.value
-  const expected = maincssBuildRelativeUrl
+  const expected = "#icon-1"
   assert({ actual, expected })
-  // ensure corresponding file exists
-  const imgABuildUrl = resolveUrl(maincssBuildRelativeUrl, buildDirectoryUrl)
-  await assertFilePresence(imgABuildUrl)
 }
 
-// ensure dep is properly updated in @import
+// ensure second use.href is updated
 {
-  const mainCssString = await readFile(mainCssBuildUrl)
-  const mainCssUrls = await parseCssUrls(mainCssString, mainCssBuildUrl)
-  const actual = mainCssUrls.atImports[0].specifier
-  const expected = urlToRelativeUrl(depCssBuildUrl, mainCssBuildUrl)
+  const hrefAttribute = getHtmlNodeAttributeByName(secondUseNodeInBuild, "href")
+  const actual = hrefAttribute.value
+  const expected = `${svgBuildRelativeUrl}#icon-1`
   assert({ actual, expected })
+}
 
-  await assertFilePresence(depCssBuildUrl)
+// ensure href in icon file is updated
+{
+  const svgString = await readFile(svgBuildUrl)
+  const image = findNodeByTagName(svgString, "image")
+  const hrefAttribute = getHtmlNodeAttributeByName(image, "href")
+  const actual = hrefAttribute.value
+  const expected = urlToRelativeUrl(pngBuildUrl, svgBuildUrl)
+  assert({ actual, expected })
 }
