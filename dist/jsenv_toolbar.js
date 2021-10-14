@@ -3489,6 +3489,6 @@
 
   window.renderToolbar = renderToolbar;
 
-}());
+})();
 
 //# sourceMappingURL=jsenv_toolbar.js.map

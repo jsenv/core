@@ -1584,6 +1584,6 @@
 
   redirect();
 
-}());
+})();
 
 //# sourceMappingURL=jsenv_exploring_redirector.js.map

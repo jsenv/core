@@ -3235,10 +3235,14 @@
     return _await$8(fetchSource(url, {
       contentTypeExpected: "application/json"
     }), function (response) {
-      return _await$8(response.text(), function (jsonAsText) {
-        var jsonAsJsModule = "System.register([], function (_export) {\n  return{\n    execute: function () {\n     _export(\"default\", '".concat(jsonAsText, "')\n    }\n  }\n})") // eslint-disable-next-line no-eval
-        ;
-        (0, window.eval)(jsonAsJsModule);
+      return _await$8(response.json(), function (json) {
+        window.System.register([], function (_export) {
+          return {
+            execute: function execute() {
+              _export("default", json);
+            }
+          };
+        });
         return loader.getRegister(url);
       });
     });
@@ -3258,9 +3262,16 @@
           cssUrl: url,
           baseUrl: importerUrl
         });
-        var cssAsJsModule = "System.register([], function (_export) {\n  return {\n    execute: function () {\n      var sheet = new CSSStyleSheet()\n      sheet.replaceSync(".concat(JSON.stringify(cssTextWithBaseUrl), ")\n      _export('default', sheet)\n    }\n  }\n})") // eslint-disable-next-line no-eval
-        ;
-        (0, window.eval)(cssAsJsModule); // There is a logic inside "toolbar.eventsource.js" which is reloading
+        window.System.register([], function (_export) {
+          return {
+            execute: function execute() {
+              var sheet = new CSSStyleSheet();
+              sheet.replaceSync(cssTextWithBaseUrl);
+
+              _export("default", sheet);
+            }
+          };
+        }); // There is a logic inside "toolbar.eventsource.js" which is reloading
         // all link rel="stylesheet" when file ending with ".css" are modified
         // But here it would not work because we have to replace the css in
         // the adopted stylsheet + all module importing this css module
@@ -5167,6 +5178,6 @@
     executeFileUsingSystemJs: executeFileUsingSystemJs
   };
 
-}());
+})();
 
 //# sourceMappingURL=jsenv_browser_system.js.map

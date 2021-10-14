@@ -89,17 +89,14 @@ const instantiateAsJsonModule = async (url, { loader, fetchSource }) => {
   const response = await fetchSource(url, {
     contentTypeExpected: "application/json",
   })
-  const jsonAsText = await response.text()
-  const jsonAsJsModule = `System.register([], function (_export) {
-  return{
-    execute: function () {
-     _export("default", '${jsonAsText}')
+  const json = await response.json()
+  window.System.register([], (_export) => {
+    return {
+      execute: () => {
+        _export("default", json)
+      },
     }
-  }
-})`
-
-  // eslint-disable-next-line no-eval
-  ;(0, window.eval)(jsonAsJsModule)
+  })
   return loader.getRegister(url)
 }
 
@@ -117,18 +114,15 @@ const instantiateAsCssModule = async (
     baseUrl: importerUrl,
   })
 
-  const cssAsJsModule = `System.register([], function (_export) {
-  return {
-    execute: function () {
-      var sheet = new CSSStyleSheet()
-      sheet.replaceSync(${JSON.stringify(cssTextWithBaseUrl)})
-      _export('default', sheet)
+  window.System.register([], (_export) => {
+    return {
+      execute: () => {
+        var sheet = new CSSStyleSheet()
+        sheet.replaceSync(cssTextWithBaseUrl)
+        _export("default", sheet)
+      },
     }
-  }
-})`
-
-  // eslint-disable-next-line no-eval
-  ;(0, window.eval)(cssAsJsModule)
+  })
 
   // There is a logic inside "toolbar.eventsource.js" which is reloading
   // all link rel="stylesheet" when file ending with ".css" are modified
