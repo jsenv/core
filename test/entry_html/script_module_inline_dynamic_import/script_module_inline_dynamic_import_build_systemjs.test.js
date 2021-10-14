@@ -1,10 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  writeFile,
-  resolveUrl,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -25,7 +20,7 @@ const mainFilename = `script_module_inline_dynamic_import.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-const { buildInlineFileContents } = await buildProject({
+await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -33,28 +28,14 @@ const { buildInlineFileContents } = await buildProject({
   entryPointMap,
   // minify: true,
 })
-const buildDirectoryUrl = resolveUrl(
-  buildDirectoryRelativeUrl,
-  jsenvCoreDirectoryUrl,
-)
-const inlineFileBuildRelativeUrl = "script_module_inline_dynamic_import.10.js"
-const inlineFileBuildUrl = resolveUrl(
-  inlineFileBuildRelativeUrl,
-  buildDirectoryUrl,
-)
-await writeFile(
-  inlineFileBuildUrl,
-  buildInlineFileContents[inlineFileBuildRelativeUrl],
-)
 
-{
-  const result = await browserImportSystemJsBuild({
-    ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
-    mainRelativeUrl: `./${inlineFileBuildRelativeUrl}`,
-    // debug: true,
-  })
-  const actual = result.namespace
-  const expected = { value: 42 }
-  assert({ actual, expected })
-}
+const { namespace } = await browserImportSystemJsBuild({
+  ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
+  testDirectoryRelativeUrl,
+  codeToRunInBrowser: `window.namespace`,
+  // debug: true,
+})
+
+const actual = namespace
+const expected = { answer: 42 }
+assert({ actual, expected })

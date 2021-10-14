@@ -12,13 +12,18 @@
 
       document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
 
+      let resolveNamespace
+      window.namespace = new Promise((resolve) => {
+        resolveNamespace = resolve
+      })
+
       // on firefox we have to wait a bit,
       // it seems the styles are applied on next js event loop
       await new Promise((resolve) => {
         setTimeout(resolve, 50)
       })
 
-      export const bodyBackgroundColor = getComputedStyle(
+      const bodyBackgroundColor = getComputedStyle(
         document.body,
       ).backgroundColor
 
@@ -29,11 +34,18 @@
         setTimeout(resolve, 500)
       })
 
-      export const bodyBackgroundImage = getComputedStyle(
+      const bodyBackgroundImage = getComputedStyle(
         document.body,
       ).backgroundImage
 
       console.log({ bodyBackgroundImage })
+
+      resolveNamespace({
+        bodyBackgroundColor,
+        bodyBackgroundImage,
+      })
+
+      export { bodyBackgroundColor, bodyBackgroundImage }
     </script>
   </body>
 </html>

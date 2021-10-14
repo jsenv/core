@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, writeFile } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -20,26 +20,14 @@ const mainFilename = `import_meta_url_pattern.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-const { buildMappings, buildInlineFileContents } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
 })
-const buildDirectoryUrl = resolveUrl(
-  buildDirectoryRelativeUrl,
-  jsenvCoreDirectoryUrl,
-)
-const inlineFileBuildRelativeUrl = "import_meta_url_pattern.10.js"
-const inlineFileBuildUrl = resolveUrl(
-  inlineFileBuildRelativeUrl,
-  buildDirectoryUrl,
-)
-await writeFile(
-  inlineFileBuildUrl,
-  buildInlineFileContents[inlineFileBuildRelativeUrl],
-)
+
 const depFileBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}dep.js`]
 const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
@@ -55,9 +43,10 @@ const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
   const { namespace, serverOrigin } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    mainRelativeUrl: `./${inlineFileBuildRelativeUrl}`,
+    codeToRunInBrowser: `window.namespace`,
     // debug: true,
   })
+
   const actual = namespace
   const expected = {
     jsUrlInstanceOfUrl: true,

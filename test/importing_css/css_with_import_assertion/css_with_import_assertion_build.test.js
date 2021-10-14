@@ -1,10 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  resolveUrl,
-  writeFile,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -26,28 +21,18 @@ const entryPointMap = {
 }
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const test = async (params) => {
-  const { buildMappings, buildInlineFileContents } = await buildProject({
+  const { buildMappings } = await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
     entryPointMap,
     ...params,
   })
-  const buildDirectoryUrl = resolveUrl(
-    buildDirectoryRelativeUrl,
-    jsenvCoreDirectoryUrl,
-  )
-  const jsFileBuildRelativeUrl = "main.html__inline__10.js"
-  const jsFileBuildUrl = resolveUrl(jsFileBuildRelativeUrl, buildDirectoryUrl)
-  await writeFile(
-    jsFileBuildUrl,
-    buildInlineFileContents[jsFileBuildRelativeUrl],
-  )
-  return { buildMappings, jsFileBuildRelativeUrl }
+  return { buildMappings }
 }
 
 {
-  const { buildMappings, jsFileBuildRelativeUrl } = await test({
+  const { buildMappings } = await test({
     jsConcatenation: true,
   })
   const imgBuildRelativeUrl =
@@ -55,7 +40,8 @@ const test = async (params) => {
   const { namespace, serverOrigin } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    jsFileRelativeUrl: `./${jsFileBuildRelativeUrl}`,
+    htmlFileRelativeUrl: "./dist/esmodule/main.prod.html",
+    codeToRunInBrowser: `window.namespace`,
   })
 
   const actual = {
@@ -78,7 +64,7 @@ const test = async (params) => {
 
 // no concatenation + runtime support enough
 {
-  const { buildMappings, jsFileBuildRelativeUrl } = await test({
+  const { buildMappings } = await test({
     jsConcatenation: false,
     runtimeSupport: { chrome: "96" },
   })
@@ -87,7 +73,8 @@ const test = async (params) => {
   const { namespace, serverOrigin } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    jsFileRelativeUrl: `./${jsFileBuildRelativeUrl}`,
+    htmlFileRelativeUrl: "./dist/esmodule/main.prod.html",
+    codeToRunInBrowser: `window.namespace`,
   })
 
   const actual = {

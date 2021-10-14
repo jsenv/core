@@ -10,7 +10,13 @@
     <script type="module" id="script_module_inline">
       import value from "./main.js"
 
-      window.answer = value
+      const answer = value
+
+      window.namespace = {
+        answer,
+      }
+
+      export { answer }
     </script>
   </body>
 </html>

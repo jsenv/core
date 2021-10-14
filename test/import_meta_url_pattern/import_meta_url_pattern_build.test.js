@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, writeFile } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -20,29 +20,17 @@ const mainFilename = `import_meta_url_pattern.html`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
-const { buildMappings, buildInlineFileContents } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
 })
-const buildDirectoryUrl = resolveUrl(
-  buildDirectoryRelativeUrl,
-  jsenvCoreDirectoryUrl,
-)
-const inlineFileBuildRelativeUrl = "import_meta_url_pattern.html__inline__10.js"
-const inlineFileBuildUrl = resolveUrl(
-  inlineFileBuildRelativeUrl,
-  buildDirectoryUrl,
-)
-await writeFile(
-  inlineFileBuildUrl,
-  buildInlineFileContents[inlineFileBuildRelativeUrl],
-)
+
 const { namespace, serverOrigin } = await browserImportEsModuleBuild({
   ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
-  jsFileRelativeUrl: `./${inlineFileBuildRelativeUrl}`,
+  codeToRunInBrowser: `window.namespace`,
   // debug: true,
 })
 const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]

@@ -10,9 +10,16 @@
     <script type="module">
       const jsUrl = new URL("./file.js", import.meta.url)
 
-      export const jsUrlInstanceOfUrl = jsUrl instanceof URL
+      const jsUrlInstanceOfUrl = jsUrl instanceof URL
 
-      export const jsUrlString = String(jsUrl)
+      const jsUrlString = String(jsUrl)
+
+      window.namespace = {
+        jsUrlInstanceOfUrl,
+        jsUrlString,
+      }
+
+      export { jsUrlInstanceOfUrl, jsUrlString }
     </script>
   </body>
 </html>

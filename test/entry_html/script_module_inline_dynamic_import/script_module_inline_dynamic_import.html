@@ -10,7 +10,11 @@
     <script type="module">
       const { value } = await import("./file.js")
 
-      export { value }
+      const answer = value
+
+      window.namespace = {
+        answer,
+      }
     </script>
   </body>
 </html>
