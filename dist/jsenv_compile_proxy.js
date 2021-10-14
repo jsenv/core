@@ -21,44 +21,6 @@
     return obj;
   });
 
-  /* eslint-disable no-eq-null, eqeqeq */
-  function arrayLikeToArray(arr, len) {
-    if (len == null || len > arr.length) len = arr.length;
-    var arr2 = new Array(len);
-
-    for (var i = 0; i < len; i++) {
-      arr2[i] = arr[i];
-    }
-
-    return arr2;
-  }
-
-  var arrayWithoutHoles = (function (arr) {
-    if (Array.isArray(arr)) return arrayLikeToArray(arr);
-  });
-
-  function _iterableToArray(iter) {
-    if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
-  }
-
-  /* eslint-disable consistent-return */
-  function unsupportedIterableToArray(o, minLen) {
-    if (!o) return;
-    if (typeof o === "string") return arrayLikeToArray(o, minLen);
-    var n = Object.prototype.toString.call(o).slice(8, -1);
-    if (n === "Object" && o.constructor) n = o.constructor.name;
-    if (n === "Map" || n === "Set") return Array.from(o);
-    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
-  }
-
-  var nonIterableSpread = (function () {
-    throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-  });
-
-  var _toConsumableArray = (function (arr) {
-    return arrayWithoutHoles(arr) || _iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
-  });
-
   // eslint-disable-next-line consistent-return
   var arrayWithHoles = (function (arr) {
     if (Array.isArray(arr)) return arr;
@@ -101,6 +63,28 @@
     }
 
     return _arr;
+  }
+
+  /* eslint-disable no-eq-null, eqeqeq */
+  function arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+    var arr2 = new Array(len);
+
+    for (var i = 0; i < len; i++) {
+      arr2[i] = arr[i];
+    }
+
+    return arr2;
+  }
+
+  /* eslint-disable consistent-return */
+  function unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
   }
 
   var nonIterableRest = (function () {
@@ -1224,6 +1208,16 @@
     }
   }
 
+  function _invoke(body, then) {
+    var result = body();
+
+    if (result && result.then) {
+      return result.then(then);
+    }
+
+    return then(result);
+  }
+
   function _catch(body, recover) {
     try {
       var result = body();
@@ -1262,41 +1256,47 @@
         var groupInfo = groupMap[compileId];
         var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML,
             customCompilerPatterns = envJson.customCompilerPatterns;
-        return _await(getFeaturesReport({
+        var featuresReport = {
+          importmap: undefined,
+          dynamicImport: undefined,
+          topLevelAwait: undefined,
+          jsonImportAssertions: undefined,
+          cssImportAssertions: undefined,
+          newStylesheet: undefined
+        };
+        return _await(detectSupportedFeatures({
+          featuresReport: featuresReport,
           failFastOnFeatureDetection: failFastOnFeatureDetection,
           inlineImportMapIntoHTML: inlineImportMapIntoHTML
-        }), function (featuresReport) {
-          var pluginRequiredNameArray = pluginRequiredNamesFromGroupInfo(groupInfo, {
-            coverageHandledFromOutside: coverageHandledFromOutside,
-            featuresReport: featuresReport
-          });
-          var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
-          return {
-            canAvoidCompilation: canAvoidCompilation,
+        }), function () {
+          return _await(pluginRequiredNamesFromGroupInfo(groupInfo, {
             featuresReport: featuresReport,
-            customCompilerPatterns: customCompilerPatterns,
-            pluginRequiredNameArray: pluginRequiredNameArray,
-            inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-            compileId: compileId,
-            browser: browser
-          };
+            coverageHandledFromOutside: coverageHandledFromOutside
+          }), function (pluginRequiredNameArray) {
+            var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmap && featuresReport.dynamicImport && featuresReport.topLevelAwait;
+            return {
+              canAvoidCompilation: canAvoidCompilation,
+              featuresReport: featuresReport,
+              customCompilerPatterns: customCompilerPatterns,
+              pluginRequiredNameArray: pluginRequiredNameArray,
+              inlineImportMapIntoHTML: inlineImportMapIntoHTML,
+              outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+              compileId: compileId,
+              browser: browser
+            };
+          });
         });
       });
     });
   });
 
-  var getFeaturesReport = _async(function (_ref5) {
-    var failFastOnFeatureDetection = _ref5.failFastOnFeatureDetection,
+  var detectSupportedFeatures = _async(function (_ref5) {
+    var featuresReport = _ref5.featuresReport,
+        failFastOnFeatureDetection = _ref5.failFastOnFeatureDetection,
         inlineImportMapIntoHTML = _ref5.inlineImportMapIntoHTML;
-    var featuresReport = {
-      importmapSupported: undefined,
-      dynamicImportSupported: undefined,
-      topLevelAwaitSupported: undefined
-    }; // start testing importmap support first and not in paralell
+    // start testing importmap support first and not in paralell
     // so that there is not module script loaded beore importmap is injected
     // it would log an error in chrome console and return undefined
-
     return _await(supportsImportmap({
       // chrome supports inline but not remote importmap
       // https://github.com/WICG/import-maps/issues/235
@@ -1307,35 +1307,71 @@
       // and in that case we can test only the local importmap support
       // so we test importmap support and the remote one
       remote: !inlineImportMapIntoHTML
-    }), function (importmapSupported) {
-      featuresReport.importmapSupported = importmapSupported;
-      return !importmapSupported && failFastOnFeatureDetection ? featuresReport : _call(supportsDynamicImport, function (dynamicImportSupported) {
-        featuresReport.dynamicImportSupported = dynamicImportSupported;
-        return !dynamicImportSupported && failFastOnFeatureDetection ? featuresReport : _call(supportsTopLevelAwait, function (topLevelAwaitSupported) {
-          featuresReport.topLevelAwaitSupported = topLevelAwaitSupported;
-          return !topLevelAwaitSupported && failFastOnFeatureDetection ? featuresReport : _call(supportsJsonImportAssertions, function (jsonImportAssertionsSupported) {
-            featuresReport.jsonImportAssertionsSupported = jsonImportAssertionsSupported;
-            return !jsonImportAssertionsSupported && failFastOnFeatureDetection ? featuresReport : _call(supportsCssImportAssertions, function (cssImportAssertionsSupported) {
-              featuresReport.cssImportAssertionsSupported = cssImportAssertionsSupported;
-              return !cssImportAssertionsSupported && failFastOnFeatureDetection ? featuresReport : featuresReport;
-            });
-          });
+    }), function (importmap) {
+      featuresReport.importmap = importmap;
+
+      if (!importmap && failFastOnFeatureDetection) {
+        return;
+      }
+
+      return _call(supportsDynamicImport, function (dynamicImport) {
+        featuresReport.dynamicImport = dynamicImport;
+
+        if (!dynamicImport && failFastOnFeatureDetection) {
+          return;
+        }
+
+        return _call(supportsTopLevelAwait, function (topLevelAwait) {
+          featuresReport.topLevelAwait = topLevelAwait;
         });
       });
     });
   });
 
-  var pluginRequiredNamesFromGroupInfo = function pluginRequiredNamesFromGroupInfo(groupInfo, _ref6) {
-    var coverageHandledFromOutside = _ref6.coverageHandledFromOutside,
-        featuresReport = _ref6.featuresReport;
+  var pluginRequiredNamesFromGroupInfo = _async(function (groupInfo, _ref6) {
+    var featuresReport = _ref6.featuresReport,
+        coverageHandledFromOutside = _ref6.coverageHandledFromOutside;
     var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
-    var importAssertionsSupported = featuresReport.jsonImportAssertionsSupported && featuresReport.cssImportAssertionsSupported;
-    var pluginsToIgnore = [].concat(_toConsumableArray(coverageHandledFromOutside ? ["transform-instrument"] : []), _toConsumableArray(supportsNewStylesheet() ? ["new-stylesheet-as-jsenv-import"] : []), _toConsumableArray(importAssertionsSupported ? ["transform-import-assertions"] : []));
-    var pluginRequiredNames = pluginRequiredNameArray.filter(function (pluginName) {
-      return !pluginsToIgnore.includes(pluginName);
+    var requiredPluginNames = pluginRequiredNameArray.slice();
+
+    var markPluginAsSupported = function markPluginAsSupported(name) {
+      var index = requiredPluginNames.indexOf(name);
+
+      if (index > -1) {
+        requiredPluginNames.splice(index, 1);
+      }
+    }; // When instrumentation CAN be handed by playwright
+    // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
+    // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
+
+
+    if (coverageHandledFromOutside) {
+      markPluginAsSupported("transform-instrument");
+    }
+
+    return _invoke(function () {
+      if (pluginRequiredNameArray.includes("transform-import-assertions")) {
+        return _call(supportsJsonImportAssertions, function (jsonImportAssertions) {
+          featuresReport.jsonImportAssertions = jsonImportAssertions;
+          return _call(supportsCssImportAssertions, function (cssImportAssertions) {
+            featuresReport.cssImportAssertions = cssImportAssertions;
+
+            if (jsonImportAssertions && cssImportAssertions) {
+              markPluginAsSupported("transform-import-assertions");
+            }
+          });
+        });
+      }
+    }, function () {
+      if (pluginRequiredNameArray.includes("new-stylesheet-as-jsenv-import")) {
+        var newStylesheet = supportsNewStylesheet();
+        featuresReport.newStylesheet = newStylesheet;
+        markPluginAsSupported("new-stylesheet-as-jsenv-import");
+      }
+
+      return requiredPluginNames;
     });
-    return pluginRequiredNames;
-  };
+  });
 
   var supportsNewStylesheet = function supportsNewStylesheet() {
     try {

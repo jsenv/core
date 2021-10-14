@@ -108,10 +108,8 @@ const pluginRequiredNamesFromGroupInfo = async (
   { featuresReport, coverageHandledFromOutside },
 ) => {
   const { pluginRequiredNameArray } = groupInfo
-
   const requiredPluginNames = pluginRequiredNameArray.slice()
-
-  const removePlugin = (name) => {
+  const markPluginAsSupported = (name) => {
     const index = requiredPluginNames.indexOf(name)
     if (index > -1) {
       requiredPluginNames.splice(index, 1)
@@ -122,7 +120,7 @@ const pluginRequiredNamesFromGroupInfo = async (
   // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
   // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
   if (coverageHandledFromOutside) {
-    removePlugin("transform-instrument")
+    markPluginAsSupported("transform-instrument")
   }
 
   if (pluginRequiredNameArray.includes("transform-import-assertions")) {
@@ -133,14 +131,14 @@ const pluginRequiredNamesFromGroupInfo = async (
     featuresReport.cssImportAssertions = cssImportAssertions
 
     if (jsonImportAssertions && cssImportAssertions) {
-      removePlugin("transform-import-assertions")
+      markPluginAsSupported("transform-import-assertions")
     }
   }
 
   if (pluginRequiredNameArray.includes("new-stylesheet-as-jsenv-import")) {
     const newStylesheet = supportsNewStylesheet()
     featuresReport.newStylesheet = newStylesheet
-    removePlugin("new-stylesheet-as-jsenv-import")
+    markPluginAsSupported("new-stylesheet-as-jsenv-import")
   }
 
   return requiredPluginNames
