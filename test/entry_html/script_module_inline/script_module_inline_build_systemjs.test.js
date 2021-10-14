@@ -3,7 +3,6 @@ import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   resolveUrl,
-  writeFile,
   readFile,
 } from "@jsenv/filesystem"
 
@@ -28,6 +27,10 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `script_module_inline.html`
+const htmlUrl = resolveUrl("script_module_inline.html", import.meta.url)
+const htmlString = await readFile(htmlUrl)
+const inlineScriptNode = findHtmlNodeById(htmlString, "script_module_inline")
+const inlineScriptContent = getHtmlNodeTextNode(inlineScriptNode).value
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
 }
@@ -35,7 +38,7 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const { buildInlineFileContents } = await buildProject({
+await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
@@ -43,13 +46,15 @@ const { buildInlineFileContents } = await buildProject({
   entryPointMap,
   // minify: true,
 })
-
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
-const htmlString = await readFile(htmlBuildUrl)
-const scriptNode = findHtmlNodeById(htmlString, "script_module_inline")
-const textNode = getHtmlNodeTextNode(scriptNode)
+const htmlBuildString = await readFile(htmlBuildUrl)
+const buildInlineScript = findHtmlNodeById(
+  htmlBuildString,
+  "script_module_inline",
+)
+const buildInlineScriptContent = getHtmlNodeTextNode(buildInlineScript).value
 const sourcemapUrlForInlineScript = getJavaScriptSourceMappingUrl(
-  textNode.value,
+  buildInlineScriptContent,
 )
 const sourcemapUrl = resolveUrl(sourcemapUrlForInlineScript, htmlBuildUrl)
 const sourcemap = await readFile(sourcemapUrl, { as: "json" })
@@ -58,33 +63,29 @@ const sourcemap = await readFile(sourcemapUrl, { as: "json" })
   const expected = {
     version: 3,
     file: "script_module_inline.html__inline__script_module_inline.js",
-    sources: ["../../main.js"],
-    sourcesContent: [await readFile(new URL("./main.js", import.meta.url))],
-    names: [],
+    sources: [
+      "../../main.js",
+      "../../script_module_inline.html__inline__script_module_inline.js",
+    ],
+    sourcesContent: [
+      await readFile(new URL("./main.js", import.meta.url)),
+      inlineScriptContent,
+    ],
+    names: assert.any(Array),
     mappings: assert.any(String),
   }
   assert({ actual, expected })
 }
 
-const inlineFileBuildRelativeUrl =
-  "script_module_inline.script_module_inline.js"
-const inlineFileBuildUrl = resolveUrl(
-  inlineFileBuildRelativeUrl,
-  buildDirectoryUrl,
-)
-await writeFile(
-  inlineFileBuildUrl,
-  buildInlineFileContents[inlineFileBuildRelativeUrl],
-)
 const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
-  mainRelativeUrl: `./${inlineFileBuildRelativeUrl}`,
+  codeToRunInBrowser: `(() => {
+  return window.answer
+})()`,
   // debug: true,
 })
 
 const actual = namespace
-const expected = {
-  value: 42,
-}
+const expected = 42
 assert({ actual, expected })

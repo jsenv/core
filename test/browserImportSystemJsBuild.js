@@ -17,7 +17,7 @@ export const browserImportSystemJsBuild = async ({
   headless = !debug,
   autoStop = !debug,
 }) => {
-  if (!mainRelativeUrl) {
+  if (!mainRelativeUrl && !codeToRunInBrowser) {
     throw new TypeError(
       `mainRelativeUrl must be a string, received ${mainRelativeUrl}`,
     )
