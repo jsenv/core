@@ -22,7 +22,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFilename = `main.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
-const imgRelativeUrl = `${testDirectoryRelativeUrl}src/jsenv.png`
 
 await launchBrowsers(
   [
@@ -32,24 +31,17 @@ await launchBrowsers(
     webkitRuntime,
   ],
   async (browserRuntime) => {
-    const { status, namespace, compileServerOrigin, outDirectoryRelativeUrl } =
-      await execute({
-        ...EXECUTE_TEST_PARAMS,
-        jsenvDirectoryRelativeUrl,
-        launchAndExecuteLogLevel: "off",
-        runtime: browserRuntime,
-        runtimeParams: {
-          ...LAUNCH_TEST_PARAMS,
-          // headless: false,
-        },
-        // stopAfterExecute: false,
-        fileRelativeUrl: htmlFileRelativeUrl,
-        collectCompileServerInfo: true,
-      })
-    const backgroundUrl =
-      browserRuntime === chromiumRuntime
-        ? `${compileServerOrigin}/${imgRelativeUrl}`
-        : `${compileServerOrigin}/${outDirectoryRelativeUrl}best/${imgRelativeUrl}`
+    const { status, namespace } = await execute({
+      ...EXECUTE_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
+      runtime: browserRuntime,
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        // headless: false,
+      },
+      // stopAfterExecute: false,
+      fileRelativeUrl: htmlFileRelativeUrl,
+    })
 
     const actual = {
       status,
@@ -58,13 +50,10 @@ await launchBrowsers(
     const expected = {
       status: "completed",
       namespace: {
-        [browserRuntime === chromiumRuntime
-          ? `./main.html__inline__10.js`
-          : `./main.html__asset__10.js`]: {
+        "./main.js": {
           status: "completed",
           namespace: {
-            bodyBackgroundColor: "rgb(255, 0, 0)",
-            bodyBackgroundImage: `url("${backgroundUrl}")`,
+            data: 42,
           },
         },
       },
