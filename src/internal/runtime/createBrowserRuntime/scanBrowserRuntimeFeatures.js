@@ -25,21 +25,33 @@ export const scanBrowserRuntimeFeatures = async ({
   const groupInfo = groupMap[compileId]
   const { inlineImportMapIntoHTML, customCompilerPatterns } = envJson
 
-  const featuresReport = await getFeaturesReport({
+  const featuresReport = {
+    importmap: undefined,
+    dynamicImport: undefined,
+    topLevelAwait: undefined,
+    jsonImportAssertions: undefined,
+    cssImportAssertions: undefined,
+    newStylesheet: undefined,
+  }
+  await detectSupportedFeatures({
+    featuresReport,
     failFastOnFeatureDetection,
     inlineImportMapIntoHTML,
   })
-  const pluginRequiredNameArray = pluginRequiredNamesFromGroupInfo(groupInfo, {
-    coverageHandledFromOutside,
-    featuresReport,
-  })
+  const pluginRequiredNameArray = await pluginRequiredNamesFromGroupInfo(
+    groupInfo,
+    {
+      featuresReport,
+      coverageHandledFromOutside,
+    },
+  )
 
   const canAvoidCompilation =
     customCompilerPatterns.length === 0 &&
     pluginRequiredNameArray.length === 0 &&
-    featuresReport.importmapSupported &&
-    featuresReport.dynamicImportSupported &&
-    featuresReport.topLevelAwaitSupported
+    featuresReport.importmap &&
+    featuresReport.dynamicImport &&
+    featuresReport.topLevelAwait
 
   return {
     canAvoidCompilation,
@@ -53,20 +65,15 @@ export const scanBrowserRuntimeFeatures = async ({
   }
 }
 
-const getFeaturesReport = async ({
+const detectSupportedFeatures = async ({
+  featuresReport,
   failFastOnFeatureDetection,
   inlineImportMapIntoHTML,
 }) => {
-  const featuresReport = {
-    importmapSupported: undefined,
-    dynamicImportSupported: undefined,
-    topLevelAwaitSupported: undefined,
-  }
-
   // start testing importmap support first and not in paralell
   // so that there is not module script loaded beore importmap is injected
   // it would log an error in chrome console and return undefined
-  const importmapSupported = await supportsImportmap({
+  const importmap = await supportsImportmap({
     // chrome supports inline but not remote importmap
     // https://github.com/WICG/import-maps/issues/235
 
@@ -78,62 +85,65 @@ const getFeaturesReport = async ({
     // so we test importmap support and the remote one
     remote: !inlineImportMapIntoHTML,
   })
-  featuresReport.importmapSupported = importmapSupported
-  if (!importmapSupported && failFastOnFeatureDetection) {
-    return featuresReport
+  featuresReport.importmap = importmap
+  if (!importmap && failFastOnFeatureDetection) {
+    return
   }
 
-  const dynamicImportSupported = await supportsDynamicImport()
-  featuresReport.dynamicImportSupported = dynamicImportSupported
-  if (!dynamicImportSupported && failFastOnFeatureDetection) {
-    return featuresReport
+  const dynamicImport = await supportsDynamicImport()
+  featuresReport.dynamicImport = dynamicImport
+  if (!dynamicImport && failFastOnFeatureDetection) {
+    return
   }
 
-  const topLevelAwaitSupported = await supportsTopLevelAwait()
-  featuresReport.topLevelAwaitSupported = topLevelAwaitSupported
-  if (!topLevelAwaitSupported && failFastOnFeatureDetection) {
-    return featuresReport
+  const topLevelAwait = await supportsTopLevelAwait()
+  featuresReport.topLevelAwait = topLevelAwait
+  if (!topLevelAwait && failFastOnFeatureDetection) {
+    return
   }
-
-  const jsonImportAssertionsSupported = await supportsJsonImportAssertions()
-  featuresReport.jsonImportAssertionsSupported = jsonImportAssertionsSupported
-  if (!jsonImportAssertionsSupported && failFastOnFeatureDetection) {
-    return featuresReport
-  }
-
-  const cssImportAssertionsSupported = await supportsCssImportAssertions()
-  featuresReport.cssImportAssertionsSupported = cssImportAssertionsSupported
-  if (!cssImportAssertionsSupported && failFastOnFeatureDetection) {
-    return featuresReport
-  }
-
-  return featuresReport
 }
 
-const pluginRequiredNamesFromGroupInfo = (
+const pluginRequiredNamesFromGroupInfo = async (
   groupInfo,
-  { coverageHandledFromOutside, featuresReport },
+  { featuresReport, coverageHandledFromOutside },
 ) => {
   const { pluginRequiredNameArray } = groupInfo
 
-  const importAssertionsSupported =
-    featuresReport.jsonImportAssertionsSupported &&
-    featuresReport.cssImportAssertionsSupported
+  const requiredPluginNames = pluginRequiredNameArray.slice()
 
-  const pluginsToIgnore = [
-    // When instrumentation CAN be handed by playwright
-    // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-    // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
-    ...(coverageHandledFromOutside ? ["transform-instrument"] : []),
-    ...(supportsNewStylesheet() ? ["new-stylesheet-as-jsenv-import"] : []),
-    ...(importAssertionsSupported ? ["transform-import-assertions"] : []),
-  ]
+  const removePlugin = (name) => {
+    const index = requiredPluginNames.indexOf(name)
+    if (index > -1) {
+      requiredPluginNames.splice(index, 1)
+    }
+  }
 
-  const pluginRequiredNames = pluginRequiredNameArray.filter(
-    (pluginName) => !pluginsToIgnore.includes(pluginName),
-  )
+  // When instrumentation CAN be handed by playwright
+  // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
+  // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
+  if (coverageHandledFromOutside) {
+    removePlugin("transform-instrument")
+  }
 
-  return pluginRequiredNames
+  if (pluginRequiredNameArray.includes("transform-import-assertions")) {
+    const jsonImportAssertions = await supportsJsonImportAssertions()
+    featuresReport.jsonImportAssertions = jsonImportAssertions
+
+    const cssImportAssertions = await supportsCssImportAssertions()
+    featuresReport.cssImportAssertions = cssImportAssertions
+
+    if (jsonImportAssertions && cssImportAssertions) {
+      removePlugin("transform-import-assertions")
+    }
+  }
+
+  if (pluginRequiredNameArray.includes("new-stylesheet-as-jsenv-import")) {
+    const newStylesheet = supportsNewStylesheet()
+    featuresReport.newStylesheet = newStylesheet
+    removePlugin("new-stylesheet-as-jsenv-import")
+  }
+
+  return requiredPluginNames
 }
 
 const supportsNewStylesheet = () => {
