@@ -9,6 +9,7 @@ import {
 } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXECUTE.js"
+import { launchBrowsers } from "@jsenv/core/test/launchBrowsers.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -18,13 +19,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}file.html`
 
-await Promise.all(
+await launchBrowsers(
   [
     // ensure multiline
     chromiumRuntime,
     firefoxRuntime,
     webkitRuntime,
-  ].map(async (browserRuntime) => {
+  ],
+  async (browserRuntime) => {
     const actual = await execute({
       ...EXECUTE_TEST_PARAMS,
       jsenvDirectoryRelativeUrl,
@@ -43,5 +45,5 @@ await Promise.all(
       },
     }
     assert({ actual, expected })
-  }),
+  },
 )
