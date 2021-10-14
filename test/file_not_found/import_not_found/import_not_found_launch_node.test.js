@@ -34,6 +34,7 @@ const actual = await execute({
     ...LAUNCH_TEST_PARAMS,
   },
   fileRelativeUrl: mainFileRelativeUrl,
+  ignoreError: true,
 })
 const expected = {
   status: "errored",

@@ -49,6 +49,7 @@ await launchBrowsers(
         ...LAUNCH_TEST_PARAMS,
       },
       fileRelativeUrl: htmlFileRelativeUrl,
+      ignoreError: true,
       // runtimeParams: {
       //   headless: false,
       // },

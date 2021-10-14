@@ -43,6 +43,7 @@ await launchBrowsers(
       // stopAfterExecute: false,
       fileRelativeUrl: htmlFileRelativeUrl,
       captureConsole: true,
+      ignoreError: true,
     })
 
     if (browserRuntime === chromiumRuntime) {

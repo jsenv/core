@@ -940,7 +940,7 @@ export const createJsenvRollupPlugin = async ({
         // avant buildEnd il se peut que certaines ressources ne soit pas encore inline
         // donc dans inlinedCallback on voudras ptet delete ces ressources?
         if (jsRessource && jsRessource.isInline) {
-          buildInlineFileContents[fileName] = file.code
+          buildInlineFileContents[buildRelativeUrl] = file.code
         } else {
           markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
           buildManifest[fileName] = buildRelativeUrl
@@ -997,7 +997,7 @@ export const createJsenvRollupPlugin = async ({
         const buildRelativeUrl = assetRessource.buildRelativeUrl
         const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
         if (assetRessource.isInline) {
-          buildInlineFileContents[fileName] = file.source
+          buildInlineFileContents[buildRelativeUrl] = file.source
         } else {
           const originalProjectUrl = asOriginalUrl(assetRessource.url)
           const originalProjectRelativeUrl = urlToRelativeUrl(
@@ -1040,7 +1040,7 @@ export const createJsenvRollupPlugin = async ({
           delete buildMappings[
             urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
           ]
-          buildInlineFileContents[fileName] = rollupFileInfo.code
+          buildInlineFileContents[buildRelativeUrl] = rollupFileInfo.code
           delete rollupBuild[buildRelativeUrl]
         }
       })

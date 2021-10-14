@@ -52,12 +52,11 @@ await launchBrowsers(
       runtime: browserRuntime,
       runtimeParams: {
         ...LAUNCH_TEST_PARAMS,
+        // headless: false,
       },
-      fileRelativeUrl: htmlFileRelativeUrl,
-      // runtimeParams: {
-      //   headless: false,
-      // },
       // stopAfterExecute: false,
+      fileRelativeUrl: htmlFileRelativeUrl,
+      ignoreError: true,
     })
 
     if (browserRuntime === chromiumRuntime) {

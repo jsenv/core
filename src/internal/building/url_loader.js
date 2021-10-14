@@ -87,7 +87,7 @@ export const createUrlLoader = ({
       cancellationToken,
       contentTypeExpected: [
         "application/javascript",
-        ...(allowJson ? "application/json" : []),
+        ...(allowJson ? ["application/json"] : []),
       ],
       urlTrace: () => createUrlTrace(url),
     })

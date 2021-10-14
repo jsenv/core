@@ -58,7 +58,7 @@ await buildProject({
   background: orange;
 }
 
-/*# sourceMappingURL=assets/style-ec00ed36.css.map */`,
+/*# sourceMappingURL=assets/style.css-2419a9f7.map */`,
   }
   assert({ actual, expected })
 }

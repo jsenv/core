@@ -56,7 +56,7 @@ await buildProject({
     forceInlineAttribute: undefined,
     textNodeValue: `const answer = 42;
 console.log(answer);
-//# sourceMappingURL=assets/file-17ac2dd9.js.map`,
+//# sourceMappingURL=assets/file.js-ebc40214.map`,
   }
   assert({ actual, expected })
 }

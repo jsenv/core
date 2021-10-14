@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   execute,
@@ -23,9 +19,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `${testDirectoryname}.html`
+const filename = `browser_logs.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
 await launchBrowsers(
@@ -46,12 +41,11 @@ await launchBrowsers(
       },
       fileRelativeUrl,
       captureConsole: true,
-      stopAfterExecute: true,
     })
     const expected = {
       status: "completed",
       namespace: {
-        [`./${testDirectoryname}.js`]: {
+        [`./browser_logs.js`]: {
           status: "completed",
           namespace: {},
         },

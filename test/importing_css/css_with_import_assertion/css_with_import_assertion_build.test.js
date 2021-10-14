@@ -37,7 +37,7 @@ const test = async (params) => {
     buildDirectoryRelativeUrl,
     jsenvCoreDirectoryUrl,
   )
-  const jsFileBuildRelativeUrl = "main.10.js"
+  const jsFileBuildRelativeUrl = "main.html__inline__10.js"
   const jsFileBuildUrl = resolveUrl(jsFileBuildRelativeUrl, buildDirectoryUrl)
   await writeFile(
     jsFileBuildUrl,

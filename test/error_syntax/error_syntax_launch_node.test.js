@@ -36,6 +36,7 @@ const test = async ({ canUseNativeModuleSystem } = {}) => {
       canUseNativeModuleSystem,
     },
     fileRelativeUrl,
+    ignoreError: true,
   })
   return result
 }

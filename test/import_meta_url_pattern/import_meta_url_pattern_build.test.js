@@ -30,7 +30,7 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const inlineFileBuildRelativeUrl = "import_meta_url_pattern.10.js"
+const inlineFileBuildRelativeUrl = "import_meta_url_pattern.html__inline__10.js"
 const inlineFileBuildUrl = resolveUrl(
   inlineFileBuildRelativeUrl,
   buildDirectoryUrl,

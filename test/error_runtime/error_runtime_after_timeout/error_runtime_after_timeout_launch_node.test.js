@@ -4,7 +4,7 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { execute, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  LAUNCH_AND_EXECUTE_TEST_PARAMS,
+  EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 
@@ -19,7 +19,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
 let errorCallbackArgValue
 const actual = await execute({
-  ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
+  ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   launchAndExecuteLogLevel: "off",
   runtime: nodeRuntime,

@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { execute, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -17,9 +13,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.js`
+const filename = `process-disconnect-late-launch-node.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
 let disconnectCallbackArg
@@ -30,9 +25,7 @@ const actual = await execute({
   runtimeParams: {
     ...LAUNCH_TEST_PARAMS,
   },
-  executeParams: {
-    fileRelativeUrl,
-  },
+  fileRelativeUrl,
   runtimeDisconnectCallback: (argValue) => {
     disconnectCallbackArg = argValue
   },

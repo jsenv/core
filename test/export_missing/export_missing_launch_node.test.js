@@ -31,6 +31,7 @@ const result = await execute({
     ...LAUNCH_TEST_PARAMS,
   },
   fileRelativeUrl,
+  ignoreError: true,
 })
 const stack = result.error.stack
 const expected = `${importerFileUrl}:2

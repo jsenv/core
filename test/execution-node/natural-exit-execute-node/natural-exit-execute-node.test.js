@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { execute, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -10,9 +10,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}natural-exit-execute-node.js`
 
 let nodeRuntimeHooks
 {
@@ -23,7 +22,10 @@ let nodeRuntimeHooks
     runtime: {
       ...nodeRuntime,
       launch: async (params) => {
-        nodeRuntimeHooks = await nodeRuntime({ ...params, debugPort: 40001 })
+        nodeRuntimeHooks = await nodeRuntime.launch({
+          ...params,
+          debugPort: 40001,
+        })
         return nodeRuntimeHooks
       },
     },

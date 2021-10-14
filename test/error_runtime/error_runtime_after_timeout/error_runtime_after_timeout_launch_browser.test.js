@@ -5,7 +5,7 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { execute, chromiumRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  EXECUTION_TEST_PARAMS,
+  EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
 
@@ -21,7 +21,7 @@ const { cancel, token: cancellationToken } = createCancellationSource()
 
 let errorCallbackArg
 const actual = await execute({
-  ...EXECUTION_TEST_PARAMS,
+  ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   launchAndExecuteLogLevel: "off",
   cancellationToken,

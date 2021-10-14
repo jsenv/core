@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   execute,
@@ -15,16 +15,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.html`
-const executeParams = {
-  ...EXECUTE_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-  fileRelativeUrl,
-  stopAfterExecute: true,
-  mirrorConsole: false,
-}
+const fileRelativeUrl = `${testDirectoryRelativeUrl}perf-browser-basic.html`
 
 if (process.platform !== "win32") {
   await Promise.all(
@@ -35,8 +27,12 @@ if (process.platform !== "win32") {
       webkitRuntime,
     ].map(async (browserRuntime) => {
       const actual = await execute({
-        ...executeParams,
+        ...EXECUTE_TEST_PARAMS,
+        jsenvDirectoryRelativeUrl,
         runtime: browserRuntime,
+        fileRelativeUrl,
+        stopAfterExecute: true,
+        mirrorConsole: false,
         measurePerformance: true,
         collectPerformance: true,
         // runtimeParams: {
@@ -47,7 +43,7 @@ if (process.platform !== "win32") {
       const expected = {
         status: "completed",
         namespace: {
-          [`./${testDirectoryname}.js`]: {
+          [`./perf-browser-basic.js`]: {
             status: "completed",
             namespace: {},
           },

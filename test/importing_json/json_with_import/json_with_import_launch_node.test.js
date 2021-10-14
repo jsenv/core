@@ -31,6 +31,7 @@ const test = async ({ jsonModulesFlag = false } = {}) => {
       ],
     },
     fileRelativeUrl,
+    ignoreError: true,
   })
   return result
 }

@@ -56,7 +56,7 @@ const test = async ({ babelPluginMap } = {}) => {
     status: "completed",
     namespace: {
       isInstanceOfUrl: false,
-      urlString: `${testDirectoryUrl}.jsenv/out/best/${fileRelativeUrl}`,
+      urlString: `${testDirectoryUrl}.jsenv/out-dev/best/${fileRelativeUrl}`,
     },
   }
   assert({ actual, expected })

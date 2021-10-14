@@ -42,6 +42,7 @@ await launchBrowsers(
       },
       fileRelativeUrl,
       captureConsole: true,
+      ignoreError: true,
     })
 
     const actual = {
