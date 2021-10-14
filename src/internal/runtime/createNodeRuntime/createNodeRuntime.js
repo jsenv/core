@@ -93,13 +93,13 @@ const countRequiredPlugins = (groupInfo) => {
   const { pluginRequiredNameArray } = groupInfo
 
   const pluginNames = pluginRequiredNameArray.filter(
-    (pluginName) => !pluginsIgnored.includes(pluginName),
+    (pluginName) => !pluginsToIgnore.includes(pluginName),
   )
 
   return pluginNames.length
 }
 
-const pluginsIgnored = [
+const pluginsToIgnore = [
   // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
   // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
   // "transform-instrument" becomes non mandatory

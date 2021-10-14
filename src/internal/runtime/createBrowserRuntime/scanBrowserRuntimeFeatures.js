@@ -23,20 +23,18 @@ export const scanBrowserRuntimeFeatures = async ({
   const groupInfo = groupMap[compileId]
   const { inlineImportMapIntoHTML, customCompilerPatterns } = envJson
 
-  const featuresReport = {
-    pluginRequiredNameArray: pluginRequiredNamesFromGroupInfo(groupInfo, {
-      coverageInstrumentationRequired,
-    }),
-    ...(await getFeaturesReport({
-      failFastOnFeatureDetection,
-      inlineImportMapIntoHTML,
-    })),
-    customCompilerPatterns,
-  }
+  const featuresReport = await getFeaturesReport({
+    failFastOnFeatureDetection,
+    inlineImportMapIntoHTML,
+  })
+  const pluginRequiredNameArray = pluginRequiredNamesFromGroupInfo(groupInfo, {
+    coverageInstrumentationRequired,
+    featuresReport,
+  })
 
   const canAvoidCompilation =
-    featuresReport.customCompilerPatterns.length === 0 &&
-    featuresReport.pluginRequiredNameArray.length === 0 &&
+    customCompilerPatterns.length === 0 &&
+    pluginRequiredNameArray.length === 0 &&
     featuresReport.importmapSupported &&
     featuresReport.dynamicImportSupported &&
     featuresReport.topLevelAwaitSupported
@@ -88,36 +86,66 @@ const getFeaturesReport = async ({
 
   const topLevelAwaitSupported = await supportsTopLevelAwait()
   featuresReport.topLevelAwaitSupported = topLevelAwaitSupported
+  if (!topLevelAwaitSupported && failFastOnFeatureDetection) {
+    return featuresReport
+  }
+
+  const jsonImportAssertionsSupported = await supportsJsonImportAssertions()
+  featuresReport.jsonImportAssertionsSupported = jsonImportAssertionsSupported
+  if (!jsonImportAssertionsSupported && failFastOnFeatureDetection) {
+    return featuresReport
+  }
+
+  const cssImportAssertionsSupported = await supportsCssImportAssertions()
+  featuresReport.cssImportAssertionsSupported = cssImportAssertionsSupported
+  if (!cssImportAssertionsSupported && failFastOnFeatureDetection) {
+    return featuresReport
+  }
+
   return featuresReport
 }
 
 const pluginRequiredNamesFromGroupInfo = (
   groupInfo,
-  { coverageInstrumentationRequired },
+  { coverageInstrumentationRequired, featuresReport },
 ) => {
   const { pluginRequiredNameArray } = groupInfo
 
-  const pluginRequiredNames = pluginRequiredNameArray.slice()
+  const pluginsToIgnore = [
+    // When instrumentation CAN be handed by playwright
+    // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
+    // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
+    coverageInstrumentationRequired ? [] : ["transform-instrument"],
+    ...(supportsNewStylesheet() ? ["new-stylesheet-as-jsenv-import"] : []),
+    ...(featuresReport.jsonImportAssertionsSupported &&
+    featuresReport.cssImportAssertionsSupported
+      ? ["transform-import-assertions"]
+      : []),
+  ]
 
-  // When instrumentation CAN be handed by playwright
-  // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-  // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
-  const transformInstrumentIndex = pluginRequiredNames.indexOf(
-    "transform-instrument",
+  const pluginRequiredNames = pluginRequiredNameArray.filter(
+    (pluginName) => !pluginsToIgnore.includes(pluginName),
   )
-  if (transformInstrumentIndex > -1 && !coverageInstrumentationRequired) {
-    pluginRequiredNames.splice(transformInstrumentIndex, 1)
-  }
 
   return pluginRequiredNames
 }
 
+const supportsNewStylesheet = () => {
+  try {
+    // eslint-disable-next-line no-new
+    new CSSStyleSheet()
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
 const supportsImportmap = async ({ remote = true } = {}) => {
-  const specifier = jsToTextUrl(`export default false`)
+  const specifier = asBase64Url(`export default false`)
 
   const importMap = {
     imports: {
-      [specifier]: jsToTextUrl(`export default true`),
+      [specifier]: asBase64Url(`export default true`),
     },
   }
 
@@ -136,7 +164,7 @@ const supportsImportmap = async ({ remote = true } = {}) => {
 
   const scriptModule = document.createElement("script")
   scriptModule.type = "module"
-  scriptModule.src = jsToTextUrl(
+  scriptModule.src = asBase64Url(
     `import supported from "${specifier}"; window.__importmap_supported = supported`,
   )
 
@@ -157,12 +185,8 @@ const supportsImportmap = async ({ remote = true } = {}) => {
   })
 }
 
-const jsToTextUrl = (js) => {
-  return `data:text/javascript;base64,${window.btoa(js)}`
-}
-
 const supportsDynamicImport = async () => {
-  const moduleSource = jsToTextUrl(`export default 42`)
+  const moduleSource = asBase64Url(`export default 42`)
   try {
     const namespace = await import(moduleSource)
     return namespace.default === 42
@@ -172,11 +196,41 @@ const supportsDynamicImport = async () => {
 }
 
 const supportsTopLevelAwait = async () => {
-  const moduleSource = jsToTextUrl(`export default await Promise.resolve(42)`)
+  const moduleSource = asBase64Url(`export default await Promise.resolve(42)`)
   try {
     const namespace = await import(moduleSource)
     return namespace.default === 42
   } catch (e) {
     return false
   }
+}
+
+const supportsJsonImportAssertions = async () => {
+  const jsonBase64Url = asBase64Url("42", "application/json")
+  const moduleSource = asBase64Url(
+    `export { default } from "${jsonBase64Url}" assert { type: "json" }`,
+  )
+  try {
+    const namespace = await import(moduleSource)
+    return namespace.default === 42
+  } catch (e) {
+    return false
+  }
+}
+
+const supportsCssImportAssertions = async () => {
+  const cssBase64Url = asBase64Url("p { color: red; }", "text/css")
+  const moduleSource = asBase64Url(
+    `export { default } from "${cssBase64Url}" assert { type: "css" }`,
+  )
+  try {
+    const namespace = await import(moduleSource)
+    return namespace.default instanceof CSSStyleSheet
+  } catch (e) {
+    return false
+  }
+}
+
+const asBase64Url = (text, mimeType = "application/javascript") => {
+  return `data:${mimeType};base64,${window.btoa(text)}`
 }
