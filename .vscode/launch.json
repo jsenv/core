@@ -106,7 +106,10 @@
       "type": "chrome",
       "request": "launch",
       "url": "http://127.0.0.1:3456/node_modules/@jsenv/core/src/internal/jsenv-html-file.html?file=${relativeFile}",
-      "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"],
+      "runtimeArgs": [
+        "--allow-file-access-from-files",
+        "--disable-web-security"
+      ],
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}",
       "smartStep": true,

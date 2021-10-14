@@ -52,7 +52,7 @@ const test = async (options = {}) => {
     },
     ...options,
     // concurrencyLimit: 1,
-    logLevel: "info",
+    // logLevel: "info",
     // coverageHtmlDirectory: true,
   })
   return result.testPlanCoverage
@@ -61,7 +61,7 @@ const test = async (options = {}) => {
 // without forcing istanbul
 {
   const actual = await test({
-    // coverageV8MergeConflictIsExpected: true,
+    coverageV8MergeConflictIsExpected: true,
   })
   const expected = {
     [`./${testDirectoryRelativeUrl}file.js`]: {

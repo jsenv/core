@@ -20,6 +20,7 @@ const normalizeRuntimeName = (name) => {
 
 const runtimeNameMapping = {
   chromium: "chrome",
+  webkit: "safari",
 }
 
 const normalizeRuntimeVersion = (version) => {

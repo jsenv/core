@@ -61,9 +61,6 @@ export const executeHtmlFile = async (
     },
     { coverageHandledFromOutside },
   )
-  // ici si on peut avoid compilation alors on pourrait visiter la page de base
-  // mais il faudrait alors un moyen d'obtenir:
-  // coverage et namespace des scripts qui s'éxécute
 
   try {
     let executionResult
