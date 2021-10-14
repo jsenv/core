@@ -20,18 +20,18 @@ const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.prod.html",
 }
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-
-await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
 })
+const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
 const { namespace } = await browserImportEsModuleBuild({
   ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
   htmlFileRelativeUrl: "./dist/esmodule/main.prod.html",
-  codeToRunInBrowser: `window.namespace`,
+  jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
 })
 
 const actual = namespace

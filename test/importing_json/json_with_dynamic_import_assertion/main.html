@@ -7,21 +7,6 @@
   </head>
 
   <body>
-    <script type="module">
-      let resolveNamespace
-      window.namespace = new Promise((resolve) => {
-        resolveNamespace = resolve
-      })
-
-      const data = await import("./data.json", {
-        assert: { type: "json" },
-      })
-
-      resolveNamespace({
-        data,
-      })
-
-      export { data }
-    </script>
+    <script type="module" src="./main.js"></script>
   </body>
 </html>

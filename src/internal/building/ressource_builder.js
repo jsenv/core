@@ -120,6 +120,7 @@ export const createRessourceBuilder = (
     jsUrl,
     jsLine,
     jsColumn,
+    isImportAssertion,
 
     contentTypeExpected,
     ressourceSpecifier,
@@ -127,6 +128,7 @@ export const createRessourceBuilder = (
     bufferBeforeBuild,
   }) => {
     const reference = createReference({
+      isImportAssertion,
       ressourceSpecifier,
       contentTypeExpected,
       referenceUrl: jsUrl,
@@ -158,6 +160,7 @@ export const createRessourceBuilder = (
   const createReference = ({
     referenceShouldNotEmitChunk,
     isRessourceHint,
+    isImportAssertion,
     contentTypeExpected,
     ressourceSpecifier,
     referenceUrl,
@@ -292,6 +295,7 @@ export const createRessourceBuilder = (
     const reference = {
       referenceShouldNotEmitChunk,
       isRessourceHint,
+      isImportAssertion,
       contentTypeExpected,
       referenceUrl,
       referenceColumn,

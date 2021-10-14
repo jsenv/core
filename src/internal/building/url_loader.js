@@ -1,7 +1,6 @@
 import { resolveUrl, urlToFilename } from "@jsenv/filesystem"
 
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-import { getUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
 import { convertCssTextToJavascriptModule } from "@jsenv/core/src/internal/building/css_module.js"
 import {
   getJavaScriptSourceMappingUrl,
@@ -22,42 +21,54 @@ export const createUrlLoader = ({
   asOriginalUrl,
 
   urlFetcher,
-  getRessourceBuilder,
 }) => {
   const urlResponseBodyMap = {}
 
   const loadUrl = async (
     rollupUrl,
-    { cancellationToken, logger, markBuildRelativeUrlAsUsedByJs },
+    { cancellationToken, logger, ressourceBuilder },
   ) => {
-    const { import_type } = getUrlSearchParamsDescriptor(rollupUrl)
     let url = asServerUrl(rollupUrl)
+    const { importType, urlWithoutImportType } = extractImportTypeFromUrl(url)
 
     // importing CSS from JS with import assertions
-    if (import_type === "css") {
-      const ressourceAsImportAssertion = await loadRessourceAsImportAssertion({
+    if (importType === "css") {
+      const importer = urlImporterMap[url]
+      const cssReference =
+        await ressourceBuilder.createReferenceFoundInJsModule({
+          // If all references to a ressource are only import assertions
+          // the file referenced do not need to be written on filesystem
+          // as it was converted to a js file
+          // We pass "isImportAssertion: true" for this purpose
+          isImportAssertion: true,
+          jsUrl: importer.url,
+          jsLine: importer.line,
+          jsColumn: importer.column,
+          ressourceSpecifier: urlWithoutImportType,
+          contentTypeExpected: "text/css",
+        })
+      await cssReference.ressource.getReadyPromise()
+      const cssBuildUrl = resolveUrl(
+        cssReference.ressource.buildRelativeUrl,
         buildDirectoryUrl,
-        url,
-        urlImporterMap,
-        ressourceBuilder: getRessourceBuilder(),
-        contentTypeExpected: "text/css",
-      })
-      // TODO: only when import is dynamic
-      markBuildRelativeUrlAsUsedByJs(
-        ressourceAsImportAssertion.buildRelativeUrl,
       )
-      let code = ressourceAsImportAssertion.code
+      const jsBuildUrl = resolveUrl(
+        urlToFilename(importer.url),
+        buildDirectoryUrl,
+      )
+      let code = String(cssReference.ressource.bufferAfterBuild)
       let map = await loadSourcemap({
         cancellationToken,
         logger,
 
-        url: ressourceAsImportAssertion.ressourceBuildUrl,
+        url: cssBuildUrl,
         code,
         getSourceMappingUrl: getCssSourceMappingUrl,
       })
+
       const jsModuleConversionResult = await convertCssTextToJavascriptModule({
-        cssUrl: ressourceAsImportAssertion.ressourceBuildUrl,
-        jsUrl: ressourceAsImportAssertion.jsBuildUrl,
+        cssUrl: cssBuildUrl,
+        jsUrl: jsBuildUrl,
         code,
         map,
       })
@@ -72,21 +83,25 @@ export const createUrlLoader = ({
     }
 
     // importing json from JS with import assertion
-    if (import_type === "json") {
-      const ressourceAsImportAssertion = await loadRessourceAsImportAssertion({
-        buildDirectoryUrl,
-        url,
-        urlImporterMap,
-        ressourceBuilder: getRessourceBuilder(),
-        contentTypeExpected: "application/json",
-      })
-      // TODO: only when import is dynamic
-      markBuildRelativeUrlAsUsedByJs(
-        ressourceAsImportAssertion.buildRelativeUrl,
-      )
-
-      let code = ressourceAsImportAssertion.code
+    if (importType === "json") {
+      const importer = urlImporterMap[url]
+      const jsonReference =
+        await ressourceBuilder.createReferenceFoundInJsModule({
+          // If all references to a ressource are only import assertions
+          // the file referenced do not need to be written on filesystem
+          // as it was converted to a js file
+          // We pass "isImportAssertion: true" for this purpose
+          isImportAssertion: true,
+          jsUrl: importer.url,
+          jsLine: importer.line,
+          jsColumn: importer.column,
+          ressourceSpecifier: asServerUrl(urlWithoutImportType),
+          contentTypeExpected: "application/json",
+        })
+      await jsonReference.ressource.getReadyPromise()
+      let code = String(jsonReference.ressource.bufferAfterBuild)
       let map
+
       const jsModuleConversionResult = await convertJsonTextToJavascriptModule({
         code,
         map,
@@ -123,7 +138,15 @@ export const createUrlLoader = ({
         "application/javascript",
         ...(allowJson ? ["application/json"] : []),
       ],
-      urlTrace: () => createUrlTrace(url),
+      urlTrace: () => {
+        url = asOriginalUrl(url) || asProjectUrl(url) || url
+        const firstImporter = urlImporterMap[url]
+        return createUrlTrace({
+          url: firstImporter.url,
+          line: firstImporter.line,
+          column: firstImporter.column,
+        })
+      },
     })
 
     const contentType = response.headers["content-type"]
@@ -176,21 +199,16 @@ export const createUrlLoader = ({
     return urlResponseBodyMap[url]
   }
 
-  const createUrlTrace = (url) => {
-    const firstImporter = urlImporterMap[url]
-
+  const createUrlTrace = ({ url, line, column }) => {
+    url = asOriginalUrl(url) || asProjectUrl(url) || url
     const trace = [
       {
         type: "entry",
-        url:
-          asOriginalUrl(firstImporter.url) ||
-          asProjectUrl(firstImporter.url) ||
-          firstImporter.url,
-        line: firstImporter.line,
-        column: firstImporter.column,
+        url,
+        line,
+        column,
       },
     ]
-
     const next = (importerUrl) => {
       const previousImporter = urlImporterMap[importerUrl]
       if (!previousImporter) {
@@ -207,7 +225,7 @@ export const createUrlLoader = ({
       })
       next(previousImporter.url)
     }
-    next(firstImporter.url)
+    next(url)
 
     return trace
   }
@@ -220,38 +238,21 @@ export const createUrlLoader = ({
   }
 }
 
-const loadRessourceAsImportAssertion = async ({
-  buildDirectoryUrl,
-  url,
-  urlImporterMap,
-  ressourceBuilder,
-  contentTypeExpected,
-}) => {
-  const importer = urlImporterMap[url]
-  const reference = await ressourceBuilder.createReferenceFoundInJsModule({
-    jsUrl: importer.url,
-    jsLine: importer.line,
-    jsColumn: importer.column,
-    ressourceSpecifier: url,
-    contentTypeExpected,
-  })
-  await reference.ressource.getReadyPromise()
-  // this reference is "inlined" because it becomes something else
-  // (css string becomes a js module for example)
-  reference.inlinedCallback()
+const extractImportTypeFromUrl = (url) => {
+  const urlObject = new URL(url)
+  const { search } = urlObject
+  const searchParams = new URLSearchParams(search)
 
-  // const moduleInfo = rollupGetModuleInfo(asRollupUrl(importer.url))
-  const ressourceBuildUrl = resolveUrl(
-    reference.ressource.buildRelativeUrl,
-    buildDirectoryUrl,
-  )
-  const jsBuildUrl = resolveUrl(urlToFilename(importer.url), buildDirectoryUrl)
-  const code = String(reference.ressource.bufferAfterBuild)
+  const importType = searchParams.get("import_type")
+  if (!importType) {
+    return {}
+  }
 
+  searchParams.delete("import_type")
+  urlObject.search = String(searchParams)
   return {
-    ressourceBuildUrl,
-    jsBuildUrl,
-    code,
+    importType,
+    urlWithoutImportType: urlObject.href,
   }
 }
 
