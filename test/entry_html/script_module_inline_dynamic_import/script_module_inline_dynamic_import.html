@@ -8,13 +8,18 @@
 
   <body>
     <script type="module">
+      let resolveNamespace
+      window.namespace = new Promise((resolve) => {
+        resolveNamespace = resolve
+      })
+
       const { value } = await import("./file.js")
 
       const answer = value
 
-      window.namespace = {
+      resolveNamespace({
         answer,
-      }
+      })
     </script>
   </body>
 </html>

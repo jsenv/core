@@ -38,7 +38,7 @@ try {
   const expected = `invalid response status on url
 --- response status ---
 404
---- js url ---
+--- url ---
 ${jsFileUrl}
 --- url trace ---
 ${urlToFileSystemPath(htmlFileUrl)}`

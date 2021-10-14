@@ -228,5 +228,5 @@ const convertJsonTextToJavascriptModule = (jsonText) => {
   // however we will prefer using JSON.parse because it's faster
   // for js engine to parse JSON than JS
 
-  return `export default JSON.parse(${jsonText})`
+  return `export default JSON.parse(${JSON.stringify(jsonText)})`
 }

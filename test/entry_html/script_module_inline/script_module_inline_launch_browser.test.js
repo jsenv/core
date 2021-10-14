@@ -52,7 +52,7 @@ await launchBrowsers(
           : `./script_module_inline.html__asset__script_module_inline.js`]: {
           status: "completed",
           namespace: {
-            value: 42,
+            answer: 42,
           },
         },
       },

@@ -44,12 +44,12 @@ await launchBrowsers(
         },
         // stopAfterExecute: false,
         fileRelativeUrl: htmlFileRelativeUrl,
+        collectCompileServerInfo: true,
       })
-    const imgCompiledRelativeUrl = `${outDirectoryRelativeUrl}best/${imgRelativeUrl}`
-    const imgCompiledUrl = resolveUrl(
-      imgCompiledRelativeUrl,
-      compileServerOrigin,
-    )
+    const backgroundUrl =
+      browserRuntime === chromiumRuntime
+        ? `${compileServerOrigin}/${imgRelativeUrl}`
+        : `${compileServerOrigin}/${outDirectoryRelativeUrl}best/${imgRelativeUrl}`
 
     const actual = {
       status,
@@ -58,11 +58,13 @@ await launchBrowsers(
     const expected = {
       status: "completed",
       namespace: {
-        "./main.html__inline__10.js": {
+        [browserRuntime === chromiumRuntime
+          ? `./main.html__inline__10.js`
+          : `./main.html__asset__10.js`]: {
           status: "completed",
           namespace: {
             bodyBackgroundColor: "rgb(255, 0, 0)",
-            bodyBackgroundImage: `url("${imgCompiledUrl}")`,
+            bodyBackgroundImage: `url("${backgroundUrl}")`,
           },
         },
       },

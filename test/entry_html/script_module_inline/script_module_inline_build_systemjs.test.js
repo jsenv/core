@@ -80,12 +80,10 @@ const sourcemap = await readFile(sourcemapUrl, { as: "json" })
 const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
-  codeToRunInBrowser: `(() => {
-  return window.answer
-})()`,
+  codeToRunInBrowser: `window.namespace`,
   // debug: true,
 })
 
 const actual = namespace
-const expected = 42
+const expected = { answer: 42 }
 assert({ actual, expected })
