@@ -136,8 +136,8 @@ export const createUrlLoader = ({
         ...(allowJson ? ["application/json"] : []),
       ],
       urlTrace: () => {
-        url = asOriginalUrl(url) || asProjectUrl(url) || url
         const firstImporter = urlImporterMap[url]
+        url = asOriginalUrl(url) || asProjectUrl(url) || url
         return createUrlTrace({
           url: firstImporter.url,
           line: firstImporter.line,
@@ -197,11 +197,10 @@ export const createUrlLoader = ({
   }
 
   const createUrlTrace = ({ url, line, column }) => {
-    url = asOriginalUrl(url) || asProjectUrl(url) || url
     const trace = [
       {
         type: "entry",
-        url,
+        url: asOriginalUrl(url) || asProjectUrl(url) || url,
         line,
         column,
       },
