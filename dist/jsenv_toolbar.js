@@ -2173,19 +2173,15 @@
         version = _ref.version;
     return Object.keys(groupMap).find(function (compileIdCandidate) {
       var minRuntimeVersions = groupMap[compileIdCandidate].minRuntimeVersions;
+      var versionForGroup = minRuntimeVersions[name];
 
-      if (name in minRuntimeVersions === false) {
+      if (!versionForGroup) {
         return false;
       }
 
-      var versionForGroup = minRuntimeVersions[name];
       var highestVersion = findHighestVersion(version, versionForGroup);
       return highestVersion === version;
     });
-  };
-
-  var resolveBrowserGroup = function resolveBrowserGroup(groupMap) {
-    return resolveGroup(detectBrowser(), groupMap);
   };
 
   function _await(value, then, direct) {
@@ -2243,8 +2239,8 @@
 
   var scanBrowserRuntimeFeatures = _async$1(function () {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        _ref$coverageInstrume = _ref.coverageInstrumentationRequired,
-        coverageInstrumentationRequired = _ref$coverageInstrume === void 0 ? true : _ref$coverageInstrume,
+        _ref$coverageHandledF = _ref.coverageHandledFromOutside,
+        coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF,
         _ref$failFastOnFeatur = _ref.failFastOnFeatureDetection,
         failFastOnFeatureDetection = _ref$failFastOnFeatur === void 0 ? false : _ref$failFastOnFeatur;
 
@@ -2257,8 +2253,9 @@
             groupMap = _ref4[0],
             envJson = _ref4[1];
 
+        var browser = detectBrowser();
         var compileId = computeCompileIdFromGroupId({
-          groupId: resolveBrowserGroup(groupMap),
+          groupId: resolveGroup(browser, groupMap),
           groupMap: groupMap
         });
         var groupInfo = groupMap[compileId];
@@ -2269,7 +2266,7 @@
           inlineImportMapIntoHTML: inlineImportMapIntoHTML
         }), function (featuresReport) {
           var pluginRequiredNameArray = pluginRequiredNamesFromGroupInfo(groupInfo, {
-            coverageInstrumentationRequired: coverageInstrumentationRequired,
+            coverageHandledFromOutside: coverageHandledFromOutside,
             featuresReport: featuresReport
           });
           var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
@@ -2280,7 +2277,8 @@
             pluginRequiredNameArray: pluginRequiredNameArray,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-            compileId: compileId
+            compileId: compileId,
+            browser: browser
           };
         });
       });
@@ -2327,13 +2325,11 @@
   });
 
   var pluginRequiredNamesFromGroupInfo = function pluginRequiredNamesFromGroupInfo(groupInfo, _ref6) {
-    var coverageInstrumentationRequired = _ref6.coverageInstrumentationRequired,
+    var coverageHandledFromOutside = _ref6.coverageHandledFromOutside,
         featuresReport = _ref6.featuresReport;
     var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
-    var pluginsToIgnore = [// When instrumentation CAN be handed by playwright
-    // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-    // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
-    coverageInstrumentationRequired ? [] : ["transform-instrument"]].concat(_toConsumableArray(supportsNewStylesheet() ? ["new-stylesheet-as-jsenv-import"] : []), _toConsumableArray(featuresReport.jsonImportAssertionsSupported && featuresReport.cssImportAssertionsSupported ? ["transform-import-assertions"] : []));
+    var importAssertionsSupported = featuresReport.jsonImportAssertionsSupported && featuresReport.cssImportAssertionsSupported;
+    var pluginsToIgnore = [].concat(_toConsumableArray(coverageHandledFromOutside ? ["transform-instrument"] : []), _toConsumableArray(supportsNewStylesheet() ? ["new-stylesheet-as-jsenv-import"] : []), _toConsumableArray(importAssertionsSupported ? ["transform-import-assertions"] : []));
     var pluginRequiredNames = pluginRequiredNameArray.filter(function (pluginName) {
       return !pluginsToIgnore.includes(pluginName);
     });

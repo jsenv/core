@@ -47,18 +47,19 @@ export const executeHtmlFile = async (
   )
   await page.goto(compileProxyClientUrl)
 
-  const coverageInstrumentationRequired =
-    coverageForceIstanbul || !coveragePlaywrightAPIAvailable
+  const coverageHandledFromOutside =
+    coveragePlaywrightAPIAvailable && !coverageForceIstanbul
 
   const browserRuntimeFeaturesReport = await page.evaluate(
     /* istanbul ignore next */
-    ({ coverageInstrumentationRequired }) => {
+    ({ coverageHandledFromOutside }) => {
       // eslint-disable-next-line no-undef
       return window.scanBrowserRuntimeFeatures({
-        coverageInstrumentationRequired,
+        coverageHandledFromOutside,
+        failFastOnFeatureDetection: true,
       })
     },
-    { coverageInstrumentationRequired },
+    { coverageHandledFromOutside },
   )
   // ici si on peut avoid compilation alors on pourrait visiter la page de base
   // mais il faudrait alors un moyen d'obtenir:

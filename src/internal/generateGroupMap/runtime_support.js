@@ -4,21 +4,27 @@ export const normalizeRuntimeSupport = (runtimeSupport) => {
   const runtimeSupportNormalized = {}
 
   Object.keys(runtimeSupport).forEach((runtimeName) => {
-    const runtimeVersion = normalizeVersion(runtimeSupport[runtimeName])
-    const runtimeNameNormalized = runtimeNameMapping[runtimeName]
-    if (runtimeNameNormalized) {
-      mergeRuntimeSupport(runtimeSupportNormalized, {
-        [runtimeNameNormalized]: runtimeVersion,
-      })
-    } else {
-      runtimeSupportNormalized[runtimeName] = runtimeVersion
-    }
+    const runtimeVersion = normalizeRuntimeVersion(runtimeSupport[runtimeName])
+    const runtimeNameNormalized = normalizeRuntimeName(
+      runtimeNameMapping[runtimeName],
+    )
+    mergeRuntimeSupport(runtimeSupportNormalized, {
+      [runtimeNameNormalized]: runtimeVersion,
+    })
   })
 
   return runtimeSupportNormalized
 }
 
-const normalizeVersion = (version) => {
+const normalizeRuntimeName = (name) => {
+  return runtimeNameMapping[name] || name
+}
+
+const runtimeNameMapping = {
+  chromium: "chrome",
+}
+
+const normalizeRuntimeVersion = (version) => {
   if (version.indexOf(".") > -1) {
     const parts = version.split(".")
     // remove extraneous .
@@ -34,17 +40,14 @@ const normalizeVersion = (version) => {
   return version
 }
 
-const runtimeNameMapping = {
-  chromium: "chrome",
-}
-
 export const mergeRuntimeSupport = (runtimeSupport, childRuntimeSupport) => {
   Object.keys(childRuntimeSupport).forEach((runtimeName) => {
-    const runtimeVersion = runtimeSupport[runtimeName]
-    const childRuntimeVersion = normalizeVersion(
+    const childRuntimeVersion = normalizeRuntimeVersion(
       childRuntimeSupport[runtimeName],
     )
-    runtimeSupport[runtimeName] = runtimeVersion
+    const childRuntimeNameNormalized = normalizeRuntimeName(runtimeName)
+    const runtimeVersion = runtimeSupport[childRuntimeNameNormalized]
+    runtimeSupport[childRuntimeNameNormalized] = runtimeVersion
       ? findLowestVersion(runtimeVersion, childRuntimeVersion)
       : childRuntimeVersion
   })

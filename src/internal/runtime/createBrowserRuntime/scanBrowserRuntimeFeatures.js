@@ -1,9 +1,10 @@
 import { fetchJson } from "../../browser-utils/fetchJson.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
-import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
+import { detectBrowser } from "../detectBrowser/detectBrowser.js"
+import { resolveGroup } from "../resolveGroup.js"
 
 export const scanBrowserRuntimeFeatures = async ({
-  coverageInstrumentationRequired = true,
+  coverageHandledFromOutside = false,
   failFastOnFeatureDetection = false,
 } = {}) => {
   const { outDirectoryRelativeUrl } = await fetchJson(
@@ -16,8 +17,9 @@ export const scanBrowserRuntimeFeatures = async ({
     fetchJson(envFileUrl),
   ])
 
+  const browser = detectBrowser()
   const compileId = computeCompileIdFromGroupId({
-    groupId: resolveBrowserGroup(groupMap),
+    groupId: resolveGroup(browser, groupMap),
     groupMap,
   })
   const groupInfo = groupMap[compileId]
@@ -28,7 +30,7 @@ export const scanBrowserRuntimeFeatures = async ({
     inlineImportMapIntoHTML,
   })
   const pluginRequiredNameArray = pluginRequiredNamesFromGroupInfo(groupInfo, {
-    coverageInstrumentationRequired,
+    coverageHandledFromOutside,
     featuresReport,
   })
 
@@ -47,6 +49,7 @@ export const scanBrowserRuntimeFeatures = async ({
     inlineImportMapIntoHTML,
     outDirectoryRelativeUrl,
     compileId,
+    browser,
   }
 }
 
@@ -109,20 +112,21 @@ const getFeaturesReport = async ({
 
 const pluginRequiredNamesFromGroupInfo = (
   groupInfo,
-  { coverageInstrumentationRequired, featuresReport },
+  { coverageHandledFromOutside, featuresReport },
 ) => {
   const { pluginRequiredNameArray } = groupInfo
+
+  const importAssertionsSupported =
+    featuresReport.jsonImportAssertionsSupported &&
+    featuresReport.cssImportAssertionsSupported
 
   const pluginsToIgnore = [
     // When instrumentation CAN be handed by playwright
     // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-    // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
-    coverageInstrumentationRequired ? [] : ["transform-instrument"],
+    // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
+    ...(coverageHandledFromOutside ? ["transform-instrument"] : []),
     ...(supportsNewStylesheet() ? ["new-stylesheet-as-jsenv-import"] : []),
-    ...(featuresReport.jsonImportAssertionsSupported &&
-    featuresReport.cssImportAssertionsSupported
-      ? ["transform-import-assertions"]
-      : []),
+    ...(importAssertionsSupported ? ["transform-import-assertions"] : []),
   ]
 
   const pluginRequiredNames = pluginRequiredNameArray.filter(
