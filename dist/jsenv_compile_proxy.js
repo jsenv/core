@@ -21,43 +21,43 @@
     return obj;
   });
 
-  function ownKeys(object, enumerableOnly) {
-    var keys = Object.keys(object);
+  /* eslint-disable no-eq-null, eqeqeq */
+  function arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+    var arr2 = new Array(len);
 
-    if (Object.getOwnPropertySymbols) {
-      var symbols = Object.getOwnPropertySymbols(object);
-
-      if (enumerableOnly) {
-        symbols = symbols.filter(function (sym) {
-          return Object.getOwnPropertyDescriptor(object, sym).enumerable;
-        });
-      }
-
-      keys.push.apply(keys, symbols);
+    for (var i = 0; i < len; i++) {
+      arr2[i] = arr[i];
     }
 
-    return keys;
+    return arr2;
   }
 
-  function _objectSpread2(target) {
-    for (var i = 1; i < arguments.length; i++) {
-      var source = arguments[i] != null ? arguments[i] : {};
+  var arrayWithoutHoles = (function (arr) {
+    if (Array.isArray(arr)) return arrayLikeToArray(arr);
+  });
 
-      if (i % 2) {
-        ownKeys(Object(source), true).forEach(function (key) {
-          _defineProperty(target, key, source[key]);
-        });
-      } else if (Object.getOwnPropertyDescriptors) {
-        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
-      } else {
-        ownKeys(Object(source)).forEach(function (key) {
-          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
-        });
-      }
-    }
-
-    return target;
+  function _iterableToArray(iter) {
+    if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
   }
+
+  /* eslint-disable consistent-return */
+  function unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
+  }
+
+  var nonIterableSpread = (function () {
+    throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  });
+
+  var _toConsumableArray = (function (arr) {
+    return arrayWithoutHoles(arr) || _iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
+  });
 
   // eslint-disable-next-line consistent-return
   var arrayWithHoles = (function (arr) {
@@ -103,28 +103,6 @@
     return _arr;
   }
 
-  /* eslint-disable no-eq-null, eqeqeq */
-  function arrayLikeToArray(arr, len) {
-    if (len == null || len > arr.length) len = arr.length;
-    var arr2 = new Array(len);
-
-    for (var i = 0; i < len; i++) {
-      arr2[i] = arr[i];
-    }
-
-    return arr2;
-  }
-
-  /* eslint-disable consistent-return */
-  function unsupportedIterableToArray(o, minLen) {
-    if (!o) return;
-    if (typeof o === "string") return arrayLikeToArray(o, minLen);
-    var n = Object.prototype.toString.call(o).slice(8, -1);
-    if (n === "Object" && o.constructor) n = o.constructor.name;
-    if (n === "Map" || n === "Set") return Array.from(o);
-    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
-  }
-
   var nonIterableRest = (function () {
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   });
@@ -132,6 +110,44 @@
   var _slicedToArray = (function (arr, i) {
     return arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
   });
+
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+
+      if (enumerableOnly) {
+        symbols = symbols.filter(function (sym) {
+          return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+        });
+      }
+
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i] != null ? arguments[i] : {};
+
+      if (i % 2) {
+        ownKeys(Object(source), true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(Object(source)).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
+      }
+    }
+
+    return target;
+  }
 
   var objectWithoutPropertiesLoose = (function (source, excluded) {
     if (source === null) return {};
@@ -1249,22 +1265,15 @@
         var groupInfo = groupMap[compileId];
         var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML,
             customCompilerPatterns = envJson.customCompilerPatterns;
-
-        var _pluginRequiredNamesF = pluginRequiredNamesFromGroupInfo(groupInfo, {
-          coverageInstrumentationRequired: coverageInstrumentationRequired
-        });
-
         return _await(getFeaturesReport({
           failFastOnFeatureDetection: failFastOnFeatureDetection,
           inlineImportMapIntoHTML: inlineImportMapIntoHTML
-        }), function (_getFeaturesReport) {
-          var featuresReport = _objectSpread2(_objectSpread2({
-            pluginRequiredNameArray: _pluginRequiredNamesF
-          }, _getFeaturesReport), {}, {
-            customCompilerPatterns: customCompilerPatterns
+        }), function (featuresReport) {
+          var pluginRequiredNameArray = pluginRequiredNamesFromGroupInfo(groupInfo, {
+            coverageInstrumentationRequired: coverageInstrumentationRequired,
+            featuresReport: featuresReport
           });
-
-          var canAvoidCompilation = featuresReport.customCompilerPatterns.length === 0 && featuresReport.pluginRequiredNameArray.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
+          var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
           return {
             featuresReport: featuresReport,
             canAvoidCompilation: canAvoidCompilation,
@@ -1304,26 +1313,40 @@
         featuresReport.dynamicImportSupported = dynamicImportSupported;
         return !dynamicImportSupported && failFastOnFeatureDetection ? featuresReport : _call(supportsTopLevelAwait, function (topLevelAwaitSupported) {
           featuresReport.topLevelAwaitSupported = topLevelAwaitSupported;
-          return featuresReport;
+          return !topLevelAwaitSupported && failFastOnFeatureDetection ? featuresReport : _call(supportsJsonImportAssertions, function (jsonImportAssertionsSupported) {
+            featuresReport.jsonImportAssertionsSupported = jsonImportAssertionsSupported;
+            return !jsonImportAssertionsSupported && failFastOnFeatureDetection ? featuresReport : _call(supportsCssImportAssertions, function (cssImportAssertionsSupported) {
+              featuresReport.cssImportAssertionsSupported = cssImportAssertionsSupported;
+              return !cssImportAssertionsSupported && failFastOnFeatureDetection ? featuresReport : featuresReport;
+            });
+          });
         });
       });
     });
   });
 
   var pluginRequiredNamesFromGroupInfo = function pluginRequiredNamesFromGroupInfo(groupInfo, _ref6) {
-    var coverageInstrumentationRequired = _ref6.coverageInstrumentationRequired;
+    var coverageInstrumentationRequired = _ref6.coverageInstrumentationRequired,
+        featuresReport = _ref6.featuresReport;
     var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
-    var pluginRequiredNames = pluginRequiredNameArray.slice(); // When instrumentation CAN be handed by playwright
+    var pluginsToIgnore = [// When instrumentation CAN be handed by playwright
     // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
     // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
-
-    var transformInstrumentIndex = pluginRequiredNames.indexOf("transform-instrument");
-
-    if (transformInstrumentIndex > -1 && !coverageInstrumentationRequired) {
-      pluginRequiredNames.splice(transformInstrumentIndex, 1);
-    }
-
+    coverageInstrumentationRequired ? [] : ["transform-instrument"]].concat(_toConsumableArray(supportsNewStylesheet() ? ["new-stylesheet-as-jsenv-import"] : []), _toConsumableArray(featuresReport.jsonImportAssertionsSupported && featuresReport.cssImportAssertionsSupported ? ["transform-import-assertions"] : []));
+    var pluginRequiredNames = pluginRequiredNameArray.filter(function (pluginName) {
+      return !pluginsToIgnore.includes(pluginName);
+    });
     return pluginRequiredNames;
+  };
+
+  var supportsNewStylesheet = function supportsNewStylesheet() {
+    try {
+      // eslint-disable-next-line no-new
+      new CSSStyleSheet();
+      return true;
+    } catch (e) {
+      return false;
+    }
   };
 
   var supportsImportmap = _async(function () {
@@ -1331,9 +1354,9 @@
         _ref7$remote = _ref7.remote,
         remote = _ref7$remote === void 0 ? true : _ref7$remote;
 
-    var specifier = jsToTextUrl("export default false");
+    var specifier = asBase64Url("export default false");
     var importMap = {
-      imports: _defineProperty({}, specifier, jsToTextUrl("export default true"))
+      imports: _defineProperty({}, specifier, asBase64Url("export default true"))
     };
     var importmapScript = document.createElement("script");
     var importmapString = JSON.stringify(importMap, null, "  ");
@@ -1348,7 +1371,7 @@
     document.body.appendChild(importmapScript);
     var scriptModule = document.createElement("script");
     scriptModule.type = "module";
-    scriptModule.src = jsToTextUrl("import supported from \"".concat(specifier, "\"; window.__importmap_supported = supported"));
+    scriptModule.src = asBase64Url("import supported from \"".concat(specifier, "\"; window.__importmap_supported = supported"));
     return new Promise(function (resolve, reject) {
       scriptModule.onload = function () {
         var supported = window.__importmap_supported;
@@ -1368,12 +1391,8 @@
     });
   });
 
-  var jsToTextUrl = function jsToTextUrl(js) {
-    return "data:text/javascript;base64,".concat(window.btoa(js));
-  };
-
   var supportsDynamicImport = _async(function () {
-    var moduleSource = jsToTextUrl("export default 42");
+    var moduleSource = asBase64Url("export default 42");
     return _catch(function () {
       return _await(import(moduleSource), function (namespace) {
         return namespace.default === 42;
@@ -1384,7 +1403,7 @@
   });
 
   var supportsTopLevelAwait = _async(function () {
-    var moduleSource = jsToTextUrl("export default await Promise.resolve(42)");
+    var moduleSource = asBase64Url("export default await Promise.resolve(42)");
     return _catch(function () {
       return _await(import(moduleSource), function (namespace) {
         return namespace.default === 42;
@@ -1393,6 +1412,35 @@
       return false;
     });
   });
+
+  var supportsJsonImportAssertions = _async(function () {
+    var jsonBase64Url = asBase64Url("42", "application/json");
+    var moduleSource = asBase64Url("export { default } from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }"));
+    return _catch(function () {
+      return _await(import(moduleSource), function (namespace) {
+        return namespace.default === 42;
+      });
+    }, function () {
+      return false;
+    });
+  });
+
+  var supportsCssImportAssertions = _async(function () {
+    var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
+    var moduleSource = asBase64Url("export { default } from \"".concat(cssBase64Url, "\" assert { type: \"css\" }"));
+    return _catch(function () {
+      return _await(import(moduleSource), function (namespace) {
+        return namespace.default instanceof CSSStyleSheet;
+      });
+    }, function () {
+      return false;
+    });
+  });
+
+  var asBase64Url = function asBase64Url(text) {
+    var mimeType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "application/javascript";
+    return "data:".concat(mimeType, ";base64,").concat(window.btoa(text));
+  };
 
   /* eslint-env browser */
   window.scanBrowserRuntimeFeatures = scanBrowserRuntimeFeatures;

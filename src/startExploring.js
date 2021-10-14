@@ -147,6 +147,19 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
     projectDirectoryUrl,
   )
 
+  // unfortunately browser resolves sourcemap to url before redirection (not after).
+  // It means browser tries to load source map from "/.jsenv/jsenv-toolbar.js.map"
+  // we could also inline sourcemap but it's not yet possible
+  // inside buildProject
+  const jsenvExploringIndexSourcemapInfo = {
+    pathForBrowser: `/.jsenv/jsenv_exploring_index.js.map`,
+    pathForServer: `/${jsenvExploringJsBuildRelativeUrlForProject}.map`,
+  }
+  const jsenvToolbarSourcemapInfo = {
+    pathForBrowser: `/.jsenv/jsenv_toolbar.js.map`,
+    pathForServer: `/${jsenvToolbarJsBuildRelativeUrlForProject}.map`,
+  }
+
   return (request) => {
     // exploring redirection
     if (request.ressource === "/") {
@@ -178,6 +191,14 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
         },
       }
     }
+    if (request.ressource === jsenvExploringIndexSourcemapInfo.pathForBrowser) {
+      return {
+        status: 307,
+        headers: {
+          location: `${request.origin}${jsenvExploringIndexSourcemapInfo.pathForServer}`,
+        },
+      }
+    }
 
     // toolbar
     if (request.ressource === "/.jsenv/toolbar.main.js") {
@@ -189,20 +210,11 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
         },
       }
     }
-    // unfortunately browser don't resolve sourcemap to url after redirection
-    // but to url before. It means browser tries to load source map from
-    // "/.jsenv/jsenv-toolbar.js.map"
-    // we could also inline sourcemap but it's not yet possible
-    // inside buildProject
-    if (
-      request.ressource ===
-      `/.jsenv/${jsenvToolbarJsFileInfo.sourcemapFilename}`
-    ) {
-      const jsenvToolbarJsBuildSourcemapServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}.map`
+    if (request.ressource === jsenvToolbarSourcemapInfo.pathForBrowser) {
       return {
         status: 307,
         headers: {
-          location: jsenvToolbarJsBuildSourcemapServerUrl,
+          location: `${request.origin}${jsenvToolbarSourcemapInfo.pathForServer}`,
         },
       }
     }
