@@ -4,10 +4,8 @@ export const normalizeRuntimeSupport = (runtimeSupport) => {
   const runtimeSupportNormalized = {}
 
   Object.keys(runtimeSupport).forEach((runtimeName) => {
+    const runtimeNameNormalized = normalizeRuntimeName(runtimeName)
     const runtimeVersion = normalizeRuntimeVersion(runtimeSupport[runtimeName])
-    const runtimeNameNormalized = normalizeRuntimeName(
-      runtimeNameMapping[runtimeName],
-    )
     mergeRuntimeSupport(runtimeSupportNormalized, {
       [runtimeNameNormalized]: runtimeVersion,
     })

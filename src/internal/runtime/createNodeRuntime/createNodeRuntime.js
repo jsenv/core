@@ -6,13 +6,14 @@ export const createNodeRuntime = async ({
   projectDirectoryUrl,
   compileServerOrigin,
   outDirectoryRelativeUrl,
-  canUseNativeModuleSystem,
+  canUseNativeModuleSystem = true,
 }) => {
+  const nodeFeatures = await scanNodeRuntimeFeatures({
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+  })
   const { canAvoidCompilation, compileId, importDefaultExtension } =
-    await scanNodeRuntimeFeatures({
-      compileServerOrigin,
-      outDirectoryRelativeUrl,
-    })
+    nodeFeatures
 
   if (canAvoidCompilation && canUseNativeModuleSystem) {
     return createNodeExecutionWithDynamicImport({

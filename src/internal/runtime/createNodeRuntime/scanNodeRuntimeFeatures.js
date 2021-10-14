@@ -55,6 +55,7 @@ export const scanNodeRuntimeFeatures = async ({
   return {
     canAvoidCompilation,
     featuresReport,
+    pluginRequiredNameArray,
     compileId,
     importDefaultExtension,
     node,
