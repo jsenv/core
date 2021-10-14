@@ -29,9 +29,7 @@ import {
 } from "@jsenv/filesystem"
 
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
-import {
-  extractSyntaxBabelPluginMap,
-} from "./babel_plugins.js"
+import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
 import { createCallbackList } from "../createCallbackList.js"
 import {
@@ -40,7 +38,10 @@ import {
   sourcemapMappingFileInfo,
 } from "../jsenvInternalFiles.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { babelPluginReplaceExpressions } from "../babel-plugin-replace-expressions.js"
+import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
+import { babelPluginGlobalThisAsJsenvImport } from "./babel_plugin_global_this_as_jsenv_import.js"
+import { babelPluginNewStylesheetAsJsenvImport } from "./babel_plugin_new_stylesheet_as_jsenv_import.js"
+import { babelPluginImportAssertions } from "./babel_plugin_import_assertions.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
 import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
 import { createTransformHtmlSourceFileService } from "./html_source_file_service.js"
@@ -136,6 +137,9 @@ export const startCompileServer = async ({
     babelConfigFileUrl,
   })
   babelPluginMap = {
+    "global-this-as-jsenv-import": babelPluginGlobalThisAsJsenvImport,
+    "new-stylesheet-as-jsenv-import": babelPluginNewStylesheetAsJsenvImport,
+    "transform-import-assertions": babelPluginImportAssertions,
     ...babelPluginMapFromFile,
     ...babelPluginMap,
   }
@@ -240,6 +244,7 @@ export const startCompileServer = async ({
     inlineImportMapIntoHTML,
     babelPluginMap,
     customCompilers,
+    jsenvToolbarInjection,
   })
   if (compileServerCanWriteOnFilesystem) {
     await setupOutDirectory({
@@ -915,6 +920,7 @@ const createOutJSONFiles = ({
   env,
   inlineImportMapIntoHTML,
   customCompilers,
+  jsenvToolbarInjection,
 }) => {
   const outJSONFiles = {}
   const outDirectoryUrl = resolveUrl(
@@ -937,6 +943,7 @@ const createOutJSONFiles = ({
     replaceProcessEnvNodeEnv,
     processEnvNodeEnv,
     customCompilerPatterns,
+    jsenvToolbarInjection,
   }
   outJSONFiles.meta = {
     url: metaOutFileUrl,

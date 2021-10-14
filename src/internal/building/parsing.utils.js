@@ -1,28 +1,17 @@
-export const collectNodesMutations = (
-  nodes,
-  notifiers,
-  ressource,
-  candidates,
-) => {
+export const collectNodesMutations = (nodes, params, ressource, candidates) => {
   const mutations = []
   nodes.forEach((node) => {
     mutations.push(
-      ...collectNodeMutations(node, notifiers, ressource, nodes, candidates),
+      ...collectNodeMutations(node, params, ressource, nodes, candidates),
     )
   })
   return mutations
 }
 
-const collectNodeMutations = (
-  node,
-  notifiers,
-  ressource,
-  nodes,
-  candidates,
-) => {
+const collectNodeMutations = (node, params, ressource, nodes, candidates) => {
   let firstValueReturned
   candidates.find((candidate) => {
-    const returnValue = candidate(node, notifiers, ressource, nodes)
+    const returnValue = candidate(node, params, ressource, nodes)
     if (returnValue === null || returnValue === undefined) {
       return false
     }

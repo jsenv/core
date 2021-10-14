@@ -31,8 +31,7 @@ const sortObjectKeys = (object) => {
 
 // export const composeRuntimeCompat = (...runtimeCompats) => {
 //   return runtimeCompats.reduce(runtimeCompatComposer, {
-//     babelPluginRequiredNameArray: [],
-//     jsenvPluginRequiredNameArray: [],
+//     pluginRequiredNameArray: [],
 //     runtimeCompatMap: {},
 //   })
 // }
@@ -61,22 +60,13 @@ const sortObjectKeys = (object) => {
 // }
 
 // const runtimeCompatComposer = compositionMappingToStrictReducer({
-//   babelPluginRequiredNameArray: (
+//   pluginRequiredNameArray: (
 //     babelPluginNamesPrevious,
 //     babelPluginNamesCurrent,
 //   ) => {
 //     return arrayWithoutDuplicate([
 //       ...babelPluginNamesPrevious,
 //       ...babelPluginNamesCurrent,
-//     ]).sort()
-//   },
-//   jsenvPluginRequiredNameArray: (
-//     jsenvPluginNamesPrevious,
-//     jsenvPluginNamesCurrent,
-//   ) => {
-//     return arrayWithoutDuplicate([
-//       ...jsenvPluginNamesPrevious,
-//       ...jsenvPluginNamesCurrent,
 //     ]).sort()
 //   },
 //   minRuntimeVersions: composeMinRuntimeVersions,

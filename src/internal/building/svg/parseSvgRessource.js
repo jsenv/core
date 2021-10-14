@@ -25,9 +25,13 @@ export const parseSvgRessource = async (
     })
     const svgAfterTransformation = stringifyHtmlAst(svgAst)
     // could also benefit of minification https://github.com/svg/svgo
-    return minify
-      ? minifyHtml(svgAfterTransformation, minifyHtmlOptions)
-      : svgAfterTransformation
+    if (minify) {
+      svgRessource.buildEnd(
+        minifyHtml(svgAfterTransformation, minifyHtmlOptions),
+      )
+      return
+    }
+    svgRessource.buildEnd(svgAfterTransformation)
   }
 }
 

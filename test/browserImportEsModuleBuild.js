@@ -10,6 +10,7 @@ export const browserImportEsModuleBuild = async ({
   testDirectoryRelativeUrl,
   htmlFileRelativeUrl = "./dist/esmodule/main.html",
   jsFileRelativeUrl,
+  codeToRunInBrowser,
   awaitNamespace = true,
   debug = false,
 }) => {
@@ -33,7 +34,12 @@ export const browserImportEsModuleBuild = async ({
   try {
     const namespace = await page.evaluate(
       /* istanbul ignore next */
-      ({ debug, jsFileRelativeUrl, awaitNamespace }) => {
+      ({ debug, jsFileRelativeUrl, codeToRunInBrowser, awaitNamespace }) => {
+        if (codeToRunInBrowser) {
+          // eslint-disable-next-line no-eval
+          return window.eval(codeToRunInBrowser)
+        }
+
         /* globals window */
         const run = async () => {
           const namespace = await import(jsFileRelativeUrl)
@@ -63,6 +69,7 @@ export const browserImportEsModuleBuild = async ({
       {
         debug,
         jsFileRelativeUrl,
+        codeToRunInBrowser,
         awaitNamespace,
       },
     )

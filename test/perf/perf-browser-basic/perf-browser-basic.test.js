@@ -1,45 +1,43 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   execute,
-  launchChromium,
-  launchFirefox,
-  launchWebkit,
+  chromiumRuntime,
+  firefoxRuntime,
+  webkitRuntime,
 } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXECUTE.js"
+import { launchBrowsers } from "@jsenv/core/test/launchBrowsers.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.html`
-const executeParams = {
-  ...EXECUTE_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-  fileRelativeUrl,
-  stopAfterExecute: true,
-  mirrorConsole: false,
-}
+const fileRelativeUrl = `${testDirectoryRelativeUrl}perf-browser-basic.html`
 
 if (process.platform !== "win32") {
-  await Promise.all(
+  await launchBrowsers(
     [
       // comment to ensure multiline
-      launchChromium,
-      launchFirefox,
-      launchWebkit,
-    ].map(async (launchBrowser) => {
+      chromiumRuntime,
+      firefoxRuntime,
+      webkitRuntime,
+    ],
+    async (browserRuntime) => {
       const actual = await execute({
-        ...executeParams,
-        launch: launchBrowser,
+        ...EXECUTE_TEST_PARAMS,
+        jsenvDirectoryRelativeUrl,
+        runtime: browserRuntime,
+        fileRelativeUrl,
+        stopAfterExecute: true,
+        mirrorConsole: false,
         measurePerformance: true,
         collectPerformance: true,
-        // launchParams: {
+        // runtimeParams: {
         //   headless: false,
         // },
         // stopAfterExecute: false,
@@ -47,7 +45,7 @@ if (process.platform !== "win32") {
       const expected = {
         status: "completed",
         namespace: {
-          [`./${testDirectoryname}.js`]: {
+          [`./perf-browser-basic.js`]: {
             status: "completed",
             namespace: {},
           },
@@ -66,6 +64,6 @@ if (process.platform !== "win32") {
         },
       }
       assert({ actual, expected })
-    }),
+    },
   )
 }

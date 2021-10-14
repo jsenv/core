@@ -1,14 +1,14 @@
-## `launchChromium` params
+## `chromiumRuntime` params
 
 ### headless
 
 > Controls launched chromium headless mode.
 
 ```js
-import { launchChromium } from "@jsenv/chromium-launcher"
+import { chromiumRuntime } from "@jsenv/chromium-launcher"
 
-const launchChromiumWithInterface = (options) =>
-  launchChromium({ ...options, headless: false })
+const chromiumRuntimeWithInterface = (options) =>
+  chromiumRuntime({ ...options, headless: false })
 ```
 
 When true, launched chromium browser will be headless.<br />

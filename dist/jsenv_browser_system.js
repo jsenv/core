@@ -2090,7 +2090,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _invoke$5(body, then) {
+  function _invoke$6(body, then) {
     var result = body();
 
     if (result && result.then) {
@@ -2132,7 +2132,7 @@
     }
 
     var contentType = response.headers["content-type"] || "";
-    return _invoke$5(function () {
+    return _invoke$6(function () {
       if (response.status === 500 && contentType === "application/json") {
         return _await$a(response.json(), function (bodyAsJson) {
           if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
@@ -3099,6 +3099,16 @@
     return result;
   }
 
+  function _invoke$5(body, then) {
+    var result = body();
+
+    if (result && result.then) {
+      return result.then(then);
+    }
+
+    return then(result);
+  }
+
   function _async$8(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
@@ -3137,20 +3147,54 @@
     browserSystem.resolve = _resolve;
     var instantiate = browserSystem.instantiate;
     browserSystem.instantiate = _async$8(function (url, importerUrl) {
+      var _exit = false;
+
       var _this = this;
 
-      return _catch$4(function () {
-        return _await$8(instantiate.call(_this, url, importerUrl));
-      }, function (e) {
-        return _await$8(createDetailedInstantiateError({
-          instantiateError: e,
-          url: url,
-          importerUrl: importerUrl,
-          compileServerOrigin: compileServerOrigin,
-          compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
-          fetchSource: fetchSource
-        }), function (jsenvError) {
-          throw jsenvError;
+      var _extractImportTypeFro = extractImportTypeFromUrl(url),
+          importType = _extractImportTypeFro.importType,
+          urlWithoutImportType = _extractImportTypeFro.urlWithoutImportType;
+
+      return _invoke$5(function () {
+        if (importType === "json") {
+          return _await$8(instantiateAsJsonModule(urlWithoutImportType, {
+            loader: _this,
+            fetchSource: fetchSource
+          }), function (jsonModule) {
+            _exit = true;
+            return jsonModule;
+          });
+        }
+      }, function (_result) {
+        var _exit2 = false;
+        if (_exit) return _result;
+        return _invoke$5(function () {
+          if (importType === "css") {
+            return _await$8(instantiateAsCssModule(urlWithoutImportType, {
+              importerUrl: importerUrl,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+              loader: _this,
+              fetchSource: fetchSource
+            }), function (cssModule) {
+              _exit2 = true;
+              return cssModule;
+            });
+          }
+        }, function (_result2) {
+          return _exit2 ? _result2 : _catch$4(function () {
+            return _await$8(instantiate.call(_this, url, importerUrl));
+          }, function (e) {
+            return _await$8(createDetailedInstantiateError({
+              instantiateError: e,
+              url: url,
+              importerUrl: importerUrl,
+              compileServerOrigin: compileServerOrigin,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+              fetchSource: fetchSource
+            }), function (jsenvError) {
+              throw jsenvError;
+            });
+          });
         });
       });
     });
@@ -3167,27 +3211,130 @@
     return browserSystem;
   };
 
-  var createDetailedInstantiateError = _async$8(function (_ref2) {
-    var _exit = false;
-    var instantiateError = _ref2.instantiateError,
-        url = _ref2.url,
-        importerUrl = _ref2.importerUrl,
-        compileServerOrigin = _ref2.compileServerOrigin,
-        compileDirectoryRelativeUrl = _ref2.compileDirectoryRelativeUrl,
+  var extractImportTypeFromUrl = function extractImportTypeFromUrl(url) {
+    var urlObject = new URL(url);
+    var search = urlObject.search;
+    var searchParams = new URLSearchParams(search);
+    var importType = searchParams.get("import_type");
+
+    if (!importType) {
+      return {};
+    }
+
+    searchParams.delete("import_type");
+    urlObject.search = String(searchParams);
+    return {
+      importType: importType,
+      urlWithoutImportType: urlObject.href
+    };
+  };
+
+  var instantiateAsJsonModule = _async$8(function (url, _ref2) {
+    var loader = _ref2.loader,
         fetchSource = _ref2.fetchSource;
+    return _await$8(fetchSource(url, {
+      contentTypeExpected: "application/json"
+    }), function (response) {
+      return _await$8(response.json(), function (json) {
+        window.System.register([], function (_export) {
+          return {
+            execute: function execute() {
+              _export("default", json);
+            }
+          };
+        });
+        return loader.getRegister(url);
+      });
+    });
+  });
+
+  var instantiateAsCssModule = _async$8(function (url, _ref3) {
+    var importerUrl = _ref3.importerUrl,
+        compileDirectoryRelativeUrl = _ref3.compileDirectoryRelativeUrl,
+        loader = _ref3.loader,
+        fetchSource = _ref3.fetchSource;
+    return _await$8(fetchSource(url, {
+      contentTypeExpected: "text/css"
+    }), function (response) {
+      return _await$8(response.text(), function (cssText) {
+        var cssTextWithBaseUrl = cssWithBaseUrl({
+          cssText: cssText,
+          cssUrl: url,
+          baseUrl: importerUrl
+        });
+        window.System.register([], function (_export) {
+          return {
+            execute: function execute() {
+              var sheet = new CSSStyleSheet();
+              sheet.replaceSync(cssTextWithBaseUrl);
+
+              _export("default", sheet);
+            }
+          };
+        }); // There is a logic inside "toolbar.eventsource.js" which is reloading
+        // all link rel="stylesheet" when file ending with ".css" are modified
+        // But here it would not work because we have to replace the css in
+        // the adopted stylsheet + all module importing this css module
+        // should be reinstantiated
+        // -> store a livereload callback forcing whole page reload
+
+        var compileDirectoryServerUrl = "".concat(window.location.origin, "/").concat(compileDirectoryRelativeUrl);
+        var originalFileRelativeUrl = response.url.slice(compileDirectoryServerUrl.length);
+
+        window.__jsenv__.livereloadingCallbacks[originalFileRelativeUrl] = function (_ref4) {
+          var reloadPage = _ref4.reloadPage;
+          reloadPage();
+        };
+
+        return loader.getRegister(url);
+      });
+    });
+  }); // CSSStyleSheet accepts a "baseUrl" parameter
+  // as documented in https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet/CSSStyleSheet#parameters
+  // Unfortunately the polyfill do not seems to implement it
+  // So we reuse "systemjs" strategy from https://github.com/systemjs/systemjs/blob/98609dbeef01ec62447e4b21449ce47e55f818bd/src/extras/module-types.js#L37
+
+
+  var cssWithBaseUrl = function cssWithBaseUrl(_ref5) {
+    var cssUrl = _ref5.cssUrl,
+        cssText = _ref5.cssText,
+        baseUrl = _ref5.baseUrl;
+    var cssDirectoryUrl = new URL("./", cssUrl).href;
+    var baseDirectoryUrl = new URL("./", baseUrl).href;
+
+    if (cssDirectoryUrl === baseDirectoryUrl) {
+      return cssText;
+    }
+
+    var cssTextRelocated = cssText.replace(/url\(\s*(?:(["'])((?:\\.|[^\n\\"'])+)\1|((?:\\.|[^\s,"'()\\])+))\s*\)/g, function (match, quotes, relUrl1, relUrl2) {
+      var absoluteUrl = new URL(relUrl1 || relUrl2, cssUrl).href;
+      return "url(".concat(quotes).concat(absoluteUrl).concat(quotes, ")");
+    });
+    return cssTextRelocated;
+  };
+
+  var createDetailedInstantiateError = _async$8(function (_ref6) {
+    var _exit3 = false;
+    var instantiateError = _ref6.instantiateError,
+        url = _ref6.url,
+        importerUrl = _ref6.importerUrl,
+        compileServerOrigin = _ref6.compileServerOrigin,
+        compileDirectoryRelativeUrl = _ref6.compileDirectoryRelativeUrl,
+        fetchSource = _ref6.fetchSource;
     var response;
     return _continue$2(_catch$4(function () {
       return _await$8(fetchSource(url, {
-        importerUrl: importerUrl
+        importerUrl: importerUrl,
+        contentTypeExpected: "application/javascript"
       }), function (_fetchSource) {
         response = _fetchSource;
       });
     }, function (e) {
       e.code = "NETWORK_FAILURE";
-      _exit = true;
+      _exit3 = true;
       return e;
-    }), function (_result) {
-      return _exit ? _result : _await$8(getJavaScriptModuleResponseError(response, {
+    }), function (_result3) {
+      return _exit3 ? _result3 : _await$8(getJavaScriptModuleResponseError(response, {
         url: url,
         importerUrl: importerUrl,
         compileServerOrigin: compileServerOrigin,
@@ -3212,7 +3359,7 @@
       message = errorToHTML(error);
     }
 
-    var css = "\n    .jsenv-console {\n      background: rgba(0, 0, 0, 0.95);\n      position: absolute;\n      top: 0;\n      left: 0;\n      width: 100%;\n      display: flex;\n      flex-direction: column;\n      align-items: center;\n      z-index: 1000;\n      width: 100%;\n      box-sizing: border-box;\n      padding: 1em;\n    }\n\n    .jsenv-console h1 {\n      color: red;\n      display: flex;\n      align-items: center;\n    }\n\n    #button-close-jsenv-console {\n      margin-left: 10px;\n    }\n\n    .jsenv-console pre {\n      overflow: auto;\n      max-width: 70em;\n      /* avoid scrollbar to hide the text behind it */\n      padding: 20px;\n    }\n\n    .jsenv-console pre[data-theme=\"dark\"] {\n      background: #111;\n      border: 1px solid #333;\n      color: #eee;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] {\n      background: #1E1E1E;\n      border: 1px solid white;\n      color: #EEEEEE;\n    }\n\n    .jsenv-console pre a {\n      color: inherit;\n    }\n    ";
+    var css = "\n    .jsenv-console {\n      background: rgba(0, 0, 0, 0.95);\n      position: absolute;\n      top: 0;\n      left: 0;\n      width: 100%;\n      height: 100%;\n      display: flex;\n      flex-direction: column;\n      align-items: center;\n      z-index: 1000;\n      box-sizing: border-box;\n      padding: 1em;\n    }\n\n    .jsenv-console h1 {\n      color: red;\n      display: flex;\n      align-items: center;\n    }\n\n    #button-close-jsenv-console {\n      margin-left: 10px;\n    }\n\n    .jsenv-console pre {\n      overflow: auto;\n      max-width: 70em;\n      /* avoid scrollbar to hide the text behind it */\n      padding: 20px;\n    }\n\n    .jsenv-console pre[data-theme=\"dark\"] {\n      background: #111;\n      border: 1px solid #333;\n      color: #eee;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] {\n      background: #1E1E1E;\n      border: 1px solid white;\n      color: #EEEEEE;\n    }\n\n    .jsenv-console pre a {\n      color: inherit;\n    }\n    ";
     var html = "\n      <style type=\"text/css\">".concat(css, "></style>\n      <div class=\"jsenv-console\">\n        <h1>").concat(title, " <button id=\"button-close-jsenv-console\">X</button></h1>\n        <pre data-theme=\"").concat(theme, "\">").concat(message, "</pre>\n      </div>\n      ");
     var removeJsenvConsole = appendHMTLInside(html, document.body);
 
@@ -3562,22 +3709,26 @@
         outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
         compileId = _ref.compileId;
 
-    var fetchSource = function fetchSource(url) {
+    var fetchSource = function fetchSource(url, _ref2) {
+      var contentTypeExpected = _ref2.contentTypeExpected;
       return fetchUrl(url, {
-        credentials: "same-origin"
+        credentials: "same-origin",
+        contentTypeExpected: contentTypeExpected
       });
     };
 
     var fetchJson = _async$6(function (url) {
-      return _await$6(fetchSource(url), function (response) {
+      return _await$6(fetchSource(url, {
+        contentTypeExpected: "application/json"
+      }), function (response) {
         return _await$6(response.json());
       });
     });
 
     var outDirectoryUrl = "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl);
     var envUrl = String(new URL("env.json", outDirectoryUrl));
-    return _await$6(fetchJson(envUrl), function (_ref2) {
-      var importDefaultExtension = _ref2.importDefaultExtension;
+    return _await$6(fetchJson(envUrl), function (_ref3) {
+      var importDefaultExtension = _ref3.importDefaultExtension;
       var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/"); // if there is an importmap in the document we use it instead of fetching.
       // systemjs style with systemjs-importmap
 
@@ -3590,7 +3741,9 @@
           return _invoke$4(function () {
             if (importmapScript.src) {
               importMapUrl = importmapScript.src;
-              return _await$6(fetchSource(importMapUrl), function (importmapFileResponse) {
+              return _await$6(fetchSource(importMapUrl, {
+                contentTypeExpected: "application/importmap+json"
+              }), function (importmapFileResponse) {
                 var _temp = importmapFileResponse.status === 404;
 
                 return _await$6(_temp ? {} : importmapFileResponse.json(), function (_importmapFileRespons) {
@@ -3626,22 +3779,22 @@
           });
 
           var executeFile = _async$6(function (specifier) {
-            var _ref3 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-                _ref3$transferableNam = _ref3.transferableNamespace,
-                transferableNamespace = _ref3$transferableNam === void 0 ? false : _ref3$transferableNam,
-                _ref3$errorExposureIn = _ref3.errorExposureInConsole,
-                errorExposureInConsole = _ref3$errorExposureIn === void 0 ? true : _ref3$errorExposureIn,
-                _ref3$errorExposureIn2 = _ref3.errorExposureInNotification,
-                errorExposureInNotification = _ref3$errorExposureIn2 === void 0 ? false : _ref3$errorExposureIn2,
-                _ref3$errorExposureIn3 = _ref3.errorExposureInDocument,
-                errorExposureInDocument = _ref3$errorExposureIn3 === void 0 ? true : _ref3$errorExposureIn3,
-                _ref3$executionExposu = _ref3.executionExposureOnWindow,
-                executionExposureOnWindow = _ref3$executionExposu === void 0 ? false : _ref3$executionExposu,
-                _ref3$errorTransform = _ref3.errorTransform,
-                errorTransform = _ref3$errorTransform === void 0 ? function (error) {
+            var _ref4 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+                _ref4$transferableNam = _ref4.transferableNamespace,
+                transferableNamespace = _ref4$transferableNam === void 0 ? false : _ref4$transferableNam,
+                _ref4$errorExposureIn = _ref4.errorExposureInConsole,
+                errorExposureInConsole = _ref4$errorExposureIn === void 0 ? true : _ref4$errorExposureIn,
+                _ref4$errorExposureIn2 = _ref4.errorExposureInNotification,
+                errorExposureInNotification = _ref4$errorExposureIn2 === void 0 ? false : _ref4$errorExposureIn2,
+                _ref4$errorExposureIn3 = _ref4.errorExposureInDocument,
+                errorExposureInDocument = _ref4$errorExposureIn3 === void 0 ? true : _ref4$errorExposureIn3,
+                _ref4$executionExposu = _ref4.executionExposureOnWindow,
+                executionExposureOnWindow = _ref4$executionExposu === void 0 ? false : _ref4$executionExposu,
+                _ref4$errorTransform = _ref4.errorTransform,
+                errorTransform = _ref4$errorTransform === void 0 ? function (error) {
               return error;
-            } : _ref3$errorTransform,
-                measurePerformance = _ref3.measurePerformance;
+            } : _ref4$errorTransform,
+                measurePerformance = _ref4.measurePerformance;
 
             return _await$6(memoizedCreateBrowserSystem({
               compileServerOrigin: compileServerOrigin,
@@ -5017,7 +5170,9 @@
       });
     });
   }));
+  var livereloadingCallbacks = {};
   window.__jsenv__ = {
+    livereloadingCallbacks: livereloadingCallbacks,
     executionResultPromise: executionResultPromise,
     executeFileUsingDynamicImport: executeFileUsingDynamicImport,
     executeFileUsingSystemJs: executeFileUsingSystemJs

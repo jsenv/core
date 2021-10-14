@@ -2,7 +2,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { execute, launchNode } from "@jsenv/core"
+import { execute, nodeRuntime } from "@jsenv/core"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -17,7 +17,10 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
 const actual = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  launch: (options) => launchNode({ ...options, debugPort: 40001 }),
+  runtime: nodeRuntime,
+  runtimeParams: {
+    debugPort: 40001,
+  },
   fileRelativeUrl,
   stopAfterExecute: true,
 })

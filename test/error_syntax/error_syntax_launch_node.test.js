@@ -5,13 +5,10 @@ import {
   urlToFileSystemPath,
 } from "@jsenv/filesystem"
 
-import { launchNode } from "@jsenv/core"
+import { execute, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import {
-  START_COMPILE_SERVER_TEST_PARAMS,
-  LAUNCH_AND_EXECUTE_TEST_PARAMS,
+  EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 
@@ -26,28 +23,20 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
 const filePath = urlToFileSystemPath(fileUrl)
 const compileId = "best"
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-  await startCompileServer({
-    ...START_COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-  })
-const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
 
 const test = async ({ canUseNativeModuleSystem } = {}) => {
-  const result = await launchAndExecute({
-    ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
+  const result = await execute({
+    ...EXECUTE_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
     launchAndExecuteLogLevel: "off",
-    launch: (options) =>
-      launchNode({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        canUseNativeModuleSystem,
-      }),
-    executeParams: {
-      fileRelativeUrl,
+    runtime: nodeRuntime,
+    runtimeParams: {
+      ...LAUNCH_TEST_PARAMS,
+      canUseNativeModuleSystem,
     },
+    fileRelativeUrl,
+    collectCompileServerInfo: true,
+    ignoreError: true,
   })
   return result
 }
@@ -62,9 +51,15 @@ const test = async ({ canUseNativeModuleSystem } = {}) => {
 
 // with systemjs
 {
-  const actual = await test({
+  const { status, error, outDirectoryRelativeUrl } = await test({
     canUseNativeModuleSystem: false,
   })
+  const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
+
+  const actual = {
+    status,
+    error,
+  }
   const parsingError = {
     message: `${filePath}: Unexpected token (1:11)
 
@@ -88,9 +83,9 @@ ${fileRelativeUrl}
 ${compiledFileUrl}`),
     {
       parsingError,
-      filename: actual.error.filename,
-      lineno: actual.error.lineno,
-      columnno: actual.error.columnno,
+      filename: error.filename,
+      lineno: error.lineno,
+      columnno: error.columnno,
     },
   )
   const expected = {

@@ -9,6 +9,7 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 import { humanizeUrl } from "@jsenv/core/src/internal/building/url_trace.js"
+import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
 export const buildUsingRollup = async ({
@@ -68,6 +69,36 @@ export const buildUsingRollup = async ({
       runtimeSupport.safari,
   )
 
+  const runtimeCompatMap = createRuntimeCompat({
+    runtimeSupport,
+    pluginMap: {
+      import_assertion_type_json: true,
+      import_assertion_type_css: true,
+    },
+    pluginCompatMap: {
+      import_assertion_type_json: {
+        chrome: "91",
+        edge: "91",
+      },
+      import_assertion_type_css: {
+        chrome: "93",
+        edge: "93",
+      },
+    },
+  })
+  const importAssertionsSupport = {
+    json:
+      format === "esmodule" &&
+      !runtimeCompatMap.pluginRequiredNameArray.includes(
+        "import_assertion_type_json",
+      ),
+    css:
+      format === "esmodule" &&
+      !runtimeCompatMap.pluginRequiredNameArray.includes(
+        "import_assertion_type_json",
+      ),
+  }
+
   const {
     jsenvRollupPlugin,
     getLastErrorMessage,
@@ -93,6 +124,7 @@ export const buildUsingRollup = async ({
     transformTopLevelAwait,
     node,
     browser,
+    importAssertionsSupport,
 
     urlMappings,
     importResolutionMethod,
@@ -205,6 +237,7 @@ const useRollup = async ({
   asOriginalUrl,
 }) => {
   const { rollup } = await import("rollup")
+  const { importAssertions } = await import("acorn-import-assertions")
 
   const rollupInputOptions = {
     // about cache here, we should/could reuse previous rollup call
@@ -256,6 +289,7 @@ const useRollup = async ({
     input: [],
     preserveEntrySignatures,
     plugins: [jsenvRollupPlugin],
+    acornInjectPlugins: [importAssertions],
   }
   const rollupOutputOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait

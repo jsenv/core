@@ -17,7 +17,7 @@ Or be sure to also reference this url somewhere in the html file like
 */
 
 import {
-  urlToBasename,
+  urlToFilename,
   urlToRelativeUrl,
   resolveUrl,
   urlToParentUrl,
@@ -71,20 +71,18 @@ export const parseHtmlRessource = async (
 
   const linksMutations = collectNodesMutations(
     links,
-    notifiers,
+    {
+      ...notifiers,
+      ressourceHintNeverUsedCallback,
+    },
     htmlRessource,
-    [
-      linkStylesheetHrefVisitor,
-      (link, notifiers) =>
-        linkHrefVisitor(link, {
-          ...notifiers,
-          ressourceHintNeverUsedCallback,
-        }),
-    ],
+    [linkStylesheetHrefVisitor, linkHrefVisitor],
   )
   const scriptsMutations = collectNodesMutations(
     scripts,
-    notifiers,
+    {
+      ...notifiers,
+    },
     htmlRessource,
     [
       // regular javascript are not parseable by rollup
@@ -154,9 +152,10 @@ export const parseHtmlRessource = async (
     })
 
     const htmlAfterTransformation = htmlAstToHtmlString(htmlAst)
-    return minify
+    const html = minify
       ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions)
       : htmlAfterTransformation
+    htmlRessource.buildEnd(html)
   }
 }
 
@@ -179,7 +178,7 @@ const regularScriptSrcVisitor = (
   }
 
   const remoteScriptReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "application/javascript",
+    contentTypeExpected: "application/javascript",
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(script, "src"),
   })
@@ -238,13 +237,14 @@ const regularScriptTextNodeVisitor = (
     return null
   }
 
+  const ressourceSpecifier = getUniqueNameForInlineHtmlNode(
+    script,
+    scripts,
+    `${urlToFilename(htmlRessource.url)}__inline__[id].js`,
+  )
   const jsReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "application/javascript",
-    ressourceSpecifier: getUniqueNameForInlineHtmlNode(
-      script,
-      scripts,
-      `${urlToBasename(htmlRessource.url)}.[id].js`,
-    ),
+    contentTypeExpected: "application/javascript",
+    ressourceSpecifier,
     ...referenceLocationFromHtmlNode(script),
     contentType: "application/javascript",
     bufferBeforeBuild: Buffer.from(textNode.value),
@@ -270,7 +270,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
   }
 
   const remoteScriptReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "application/javascript",
+    contentTypeExpected: "application/javascript",
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(script, "src"),
     isJsModule: true,
@@ -334,13 +334,14 @@ const moduleScriptTextNodeVisitor = (
     return null
   }
 
+  const ressourceSpecifier = getUniqueNameForInlineHtmlNode(
+    script,
+    scripts,
+    `${urlToFilename(htmlRessource.url)}__inline__[id].js`,
+  )
   const jsReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "application/javascript",
-    ressourceSpecifier: getUniqueNameForInlineHtmlNode(
-      script,
-      scripts,
-      `${urlToBasename(htmlRessource.url)}.[id].js`,
-    ),
+    contentTypeExpected: "application/javascript",
+    ressourceSpecifier,
     ...referenceLocationFromHtmlNode(script),
     contentType: "application/javascript",
     bufferBeforeBuild: textNode.value,
@@ -352,7 +353,10 @@ const moduleScriptTextNodeVisitor = (
       removeHtmlNodeAttribute(script, typeAttribute)
     }
     const { bufferAfterBuild } = jsReference.ressource
-    textNode.value = bufferAfterBuild
+    const jsText = String(bufferAfterBuild)
+    // ici on voudrait pouvoir ajouter le commentaire de la sourcemap
+    // sauf que cela se produit un poil plus tard je crois?
+    textNode.value = jsText
   }
 }
 
@@ -373,7 +377,7 @@ const importmapScriptSrcVisitor = (
   }
 
   const importmapReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "application/importmap+json",
+    contentTypeExpected: "application/importmap+json",
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(script, "src"),
     // here we want to force the fileName for the importmap
@@ -460,11 +464,11 @@ const importmapScriptTextNodeVisitor = (
   }
 
   const importmapReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "application/importmap+json",
+    contentTypeExpected: "application/importmap+json",
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
       scripts,
-      `${urlToBasename(htmlRessource.url)}.[id].importmap`,
+      `${urlToFilename(htmlRessource.url)}__inline__[id].importmap`,
     ),
     ...referenceLocationFromHtmlNode(script),
 
@@ -500,7 +504,7 @@ const linkStylesheetHrefVisitor = (
   }
 
   const cssReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "text/css",
+    contentTypeExpected: "text/css",
     ressourceSpecifier: hrefAttribute.value,
     ...referenceLocationFromHtmlNode(link, "href"),
   })
@@ -555,26 +559,25 @@ const linkHrefVisitor = (
     "modulepreload",
   ].includes(rel)
 
-  let ressourceContentTypeExpected
+  let contentTypeExpected
   const typeAttribute = getHtmlNodeAttributeByName(link, "type")
   const type = typeAttribute ? typeAttribute.value : ""
   let isJsModule = false
   if (type) {
-    ressourceContentTypeExpected = type
+    contentTypeExpected = type
   } else if (rel === "manifest") {
-    ressourceContentTypeExpected = "application/manifest+json"
+    contentTypeExpected = "application/manifest+json"
   } else if (rel === "modulepreload") {
-    ressourceContentTypeExpected = "application/javascript"
+    contentTypeExpected = "application/javascript"
     isJsModule = true
   }
 
   const linkReference = notifyReferenceFound({
     isRessourceHint,
-    ressourceContentTypeExpected,
+    contentTypeExpected,
     ressourceSpecifier: hrefAttribute.value,
     ...referenceLocationFromHtmlNode(link, "href"),
-    urlVersioningDisabled:
-      ressourceContentTypeExpected === "application/manifest+json",
+    urlVersioningDisabled: contentTypeExpected === "application/manifest+json",
     isJsModule,
   })
   return ({ getUrlRelativeToImporter }) => {
@@ -636,11 +639,11 @@ const styleTextNodeVisitor = (
   }
 
   const inlineStyleReference = notifyReferenceFound({
-    ressourceContentTypeExpected: "text/css",
+    contentTypeExpected: "text/css",
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       style,
       styles,
-      `${urlToBasename(htmlRessource.url)}.[id].css`,
+      `${urlToFilename(htmlRessource.url)}__inline__[id].css`,
     ),
     ...referenceLocationFromHtmlNode(style),
 
@@ -714,9 +717,7 @@ const sourceSrcVisitor = (source, { notifyReferenceFound }) => {
 
   const typeAttribute = getHtmlNodeAttributeByName(source, "type")
   const srcReference = notifyReferenceFound({
-    ressourceContentTypeExpected: typeAttribute
-      ? typeAttribute.value
-      : undefined,
+    contentTypeExpected: typeAttribute ? typeAttribute.value : undefined,
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(source, "src"),
   })

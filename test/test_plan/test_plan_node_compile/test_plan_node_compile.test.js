@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { executeTestPlan, launchNode } from "@jsenv/core"
+import { executeTestPlan, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
 
@@ -15,7 +15,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}file.js`
 const testPlan = {
   [fileRelativeUrl]: {
     node: {
-      launch: launchNode,
+      runtime: nodeRuntime,
       measureDuration: false,
       captureConsole: false,
     },

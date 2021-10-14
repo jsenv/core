@@ -13,18 +13,18 @@ You can use them to tell on which runtime to execute a file.<br />
 For instance the following code would execute `/Users/you/directory/index.js` on Node.js.
 
 ```js
-import { execute, launchNode } from "@jsenv/core"
+import { execute, nodeRuntime } from "@jsenv/core"
 
-execute({
+await execute({
   projectDirectoryUrl: "/Users/you/directory",
   fileRelativeUrl: "./index.js",
-  launch: launchNode,
+  runtime: nodeRuntime,
 })
 ```
 
 # Browser launchers
 
-Jsenv uses [playwright](https://github.com/microsoft/playwright) to launch browser runtime environments. If you want to use one of the browser launcher (_launchChromium_, _launchFirefox_ or _launchWebkit_) you need to:
+Jsenv uses [playwright](https://github.com/microsoft/playwright) to launch browser runtime environments. If you want to use one of the browser launcher (_chromiumRuntime_, _firefoxRuntime_ or _webkitRuntime_) you need to:
 
 1. Install browser executable dependencies
 
@@ -43,16 +43,16 @@ See also how to install a single browser at https://playwright.dev/docs/test-ins
 # Passing options to a launcher
 
 You can pass option to a runtime launcher but you have to be sure you forward the options it receives.<br />
-By default `launchChromium` execute a file inside a headless chromium, but you can make it launch a chromium with a UI like this:
+By default `chromiumRuntime` execute a file inside a headless chromium, but you can make it launch a chromium with a UI like this:
 
 ```js
-import { execute, launchChromium } from "@jsenv/core"
+import { execute, chromiumRuntime } from "@jsenv/core"
 
 execute({
   projectDirectoryUrl: "/Users/you/directory",
   fileRelativeUrl: "./index.js",
-  launch: launchChromium,
-  launchParams: {
+  runtime: chromiumRuntime,
+  runtimeParams: {
     headless: false,
   },
 })
@@ -60,10 +60,10 @@ execute({
 
 # List of available launcher
 
-- [launchChromium](../src/launchBrowser.js)
-- [launchChromiumTab](../src/launchBrowser.js)
-- [launchFirefox](../src/launchBrowser.js)
-- [launchFirefoxTab](../src/launchBrowser.js)
-- [launchWebkit](../src/launchBrowser.js)
-- [launchWebkitTab](../src/launchBrowser.js)
-- [launchNode](../src/launchNode.js)
+- [chromiumRuntime](../src/launchBrowser.js)
+- [chromiumRuntimeTab](../src/launchBrowser.js)
+- [firefoxRuntime](../src/launchBrowser.js)
+- [firefoxRuntimeTab](../src/launchBrowser.js)
+- [wekbitRuntime](../src/launchBrowser.js)
+- [wekbitRuntimeTab](../src/launchBrowser.js)
+- [nodeRuntime](../src/nodeRuntime.js)

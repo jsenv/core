@@ -1,6 +1,6 @@
 import { require } from "@jsenv/core/src/internal/require.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-import { babelPluginReplaceExpressions } from "@jsenv/core/src/internal/babel-plugin-replace-expressions.js"
+import { babelPluginReplaceExpressions } from "@jsenv/core/src/internal/babel_plugin_replace_expressions.js"
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
 
 export const convertCommonJsWithBabel = async ({

@@ -2,7 +2,7 @@
 import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
-import { babelPluginTransformImportMeta } from "@jsenv/core/src/internal/babel-plugin-transform-import-meta.js"
+import { babelPluginTransformImportMeta } from "@jsenv/core/src/internal/babel_plugin_transform_import_meta.js"
 import {
   getMinimalBabelPluginMap,
   babelPluginsFromBabelPluginMap,
@@ -11,9 +11,8 @@ import {
 
 import { findAsyncPluginNameInBabelPluginMap } from "./findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"
-import { ensureRegeneratorRuntimeImportBabelPlugin } from "./ensureRegeneratorRuntimeImportBabelPlugin.js"
-import { ensureGlobalThisImportBabelPlugin } from "./ensureGlobalThisImportBabelPlugin.js"
-import { transformBabelHelperToImportBabelPlugin } from "./transformBabelHelperToImportBabelPlugin.js"
+import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./babel_plugin_regenerator_runtime_as_jsenv_import.js"
+import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js"
 import { filePathToBabelHelperName } from "./babelHelper.js"
 
 export const jsenvTransform = async ({
@@ -31,7 +30,6 @@ export const jsenvTransform = async ({
   allowTopLevelAwait,
   transformTopLevelAwait,
   transformGenerator,
-  transformGlobalThis,
   regeneratorRuntimeImportPath,
   sourcemapEnabled,
 }) => {
@@ -67,19 +65,12 @@ export const jsenvTransform = async ({
   if (transformGenerator) {
     babelPluginMap = {
       ...babelPluginMap,
-      "ensure-regenerator-runtime-import": [
-        ensureRegeneratorRuntimeImportBabelPlugin,
+      "regenerator-runtime-as-jsenv-import": [
+        babelPluginRegeneratorRuntimeAsJsenvImport,
         {
           regeneratorRuntimeImportPath,
         },
       ],
-    }
-  }
-
-  if (transformGlobalThis) {
-    babelPluginMap = {
-      ...babelPluginMap,
-      "ensure-global-this-import": [ensureGlobalThisImportBabelPlugin],
     }
   }
 
@@ -145,8 +136,8 @@ export const jsenvTransform = async ({
     ...babelPluginMap,
     ...(babelHelpersInjectionAsImport
       ? {
-          "transform-babel-helpers-to-import": [
-            transformBabelHelperToImportBabelPlugin,
+          "babel-helpers-as-jsenv-imports": [
+            babelPluginBabelHelpersAsJsenvImports,
           ],
         }
       : {}),

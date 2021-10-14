@@ -19,6 +19,8 @@ export const EXECUTE_TEST_PARAMS = {
 
   executionLogLevel: "warn",
   inheritCoverage: coverageIsEnabled(),
+  mirrorConsole: false,
+  stopAfterExecute: true,
 }
 
 export const EXECUTION_TEST_PARAMS = {

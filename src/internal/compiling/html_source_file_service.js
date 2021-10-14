@@ -15,7 +15,7 @@ import {
   urlToRelativeUrl,
   urlToExtension,
   readFile,
-  urlToBasename,
+  urlToFilename,
   urlIsInsideOf,
 } from "@jsenv/filesystem"
 import { moveImportMap } from "@jsenv/importmap"
@@ -195,7 +195,7 @@ const transformHTMLSourceFile = async ({
         const scriptIdentifier = getUniqueNameForInlineHtmlNode(
           script,
           scripts,
-          `${urlToBasename(fileUrl)}_script_inline_[id].js`,
+          `${urlToFilename(fileUrl)}__inline__[id].js`,
         )
         onInlineModuleScript({
           scriptContent: textNode.value,

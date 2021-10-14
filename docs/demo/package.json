@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "@jsenv/core": "../../",
-    "playwright-chromium": "1.14.1",
-    "playwright-firefox": "1.14.1"
+    "playwright-chromium": "1.15.2",
+    "playwright-firefox": "1.15.2"
   }
 }

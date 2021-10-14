@@ -70,7 +70,8 @@ const CONTENT_TYPE_AS_TEXT = [
 
 const normalizeLineBreaks = (stringOrBuffer) => {
   if (typeof stringOrBuffer === "string") {
-    return stringOrBuffer.replace(/\r\n/g, "\n")
+    const stringWithLinuxBreaks = stringOrBuffer.replace(/\r\n/g, "\n")
+    return stringWithLinuxBreaks
   }
   return normalizeLineBreaksForBuffer(stringOrBuffer)
 }

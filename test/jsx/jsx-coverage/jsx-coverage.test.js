@@ -7,8 +7,8 @@ import {
 
 import {
   executeTestPlan,
-  launchNode,
-  launchChromium,
+  nodeRuntime,
+  chromiumRuntime,
   commonJsToJavaScriptModule,
 } from "@jsenv/core"
 import { require } from "@jsenv/core/src/internal/require.js"
@@ -41,12 +41,12 @@ const { testPlanCoverage } = await executeTestPlan({
   testPlan: {
     [htmlFileRelativeUrl]: {
       chromium: {
-        launch: launchChromium,
+        runtime: chromiumRuntime,
       },
     },
     [fileRelativeUrl]: {
       node: {
-        launch: launchNode,
+        runtime: nodeRuntime,
       },
     },
   },

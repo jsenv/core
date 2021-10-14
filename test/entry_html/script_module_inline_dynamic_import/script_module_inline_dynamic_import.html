@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <link rel="icon" href="data:," />
+    <meta charset="utf-8" />
+  </head>
+
+  <body>
+    <script type="module">
+      let resolveNamespace
+      window.namespace = new Promise((resolve) => {
+        resolveNamespace = resolve
+      })
+
+      const { value } = await import("./file.js")
+
+      const answer = value
+
+      resolveNamespace({
+        answer,
+      })
+    </script>
+  </body>
+</html>

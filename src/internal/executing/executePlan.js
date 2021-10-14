@@ -1,5 +1,6 @@
+import { mergeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
-import { babelPluginInstrument } from "./coverage/babel-plugin-instrument.js"
+import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
 import { generateExecutionSteps } from "./generateExecutionSteps.js"
 import { executeConcurrently } from "./executeConcurrently.js"
 
@@ -41,7 +42,6 @@ export const executePlan = async (
     babelPluginMap,
     babelConfigFileUrl,
     customCompilers,
-    runtimeSupport,
   } = {},
 ) => {
   if (coverage) {
@@ -53,6 +53,20 @@ export const executePlan = async (
       ],
     }
   }
+
+  const runtimeSupport = {}
+  Object.keys(plan).forEach((filePattern) => {
+    const filePlan = plan[filePattern]
+    Object.keys(filePlan).forEach((executionName) => {
+      const executionConfig = filePlan[executionName]
+      const { runtime } = executionConfig
+      if (runtime) {
+        mergeRuntimeSupport(runtimeSupport, {
+          [runtime.name]: runtime.version,
+        })
+      }
+    })
+  })
 
   const compileServer = await startCompileServer({
     cancellationToken,

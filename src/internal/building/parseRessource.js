@@ -29,8 +29,9 @@ export const parseRessource = (
     projectDirectoryUrl,
     format,
     systemJsUrl,
-    urlToOriginalFileUrl,
-    urlToOriginalServerUrl,
+    asProjectUrl,
+    asOriginalUrl,
+    asOriginalServerUrl,
     ressourceHintNeverUsedCallback,
     useImportMapToMaximizeCacheReuse,
     createImportMapForFilesUsedInJs,
@@ -114,7 +115,7 @@ export const parseRessource = (
         ressourceHintNeverUsedCallback({
           ...info,
           htmlSource: String(ressource.bufferBeforeBuild),
-          htmlUrl: urlToOriginalFileUrl(ressource.url),
+          htmlUrl: asOriginalUrl(ressource.url),
           htmlAttributeName: "href",
         })
       },
@@ -123,7 +124,8 @@ export const parseRessource = (
 
   if (contentType === "text/css") {
     return parseCssRessource(ressource, notifiers, {
-      urlToOriginalServerUrl,
+      asOriginalUrl,
+      asOriginalServerUrl,
       minify,
       minifyCssOptions,
     })
@@ -140,8 +142,7 @@ export const parseRessource = (
 
   if (
     contentType === "application/manifest+json" ||
-    ressource.references[0].ressourceContentTypeExpected ===
-      "application/manifest+json"
+    ressource.references[0].contentTypeExpected === "application/manifest+json"
   ) {
     return parseWebmanifestRessource(ressource, notifiers, { minify })
   }
@@ -151,8 +152,10 @@ export const parseRessource = (
     contentType === "text/javascript"
   ) {
     return parseJsRessource(ressource, notifiers, {
-      urlToOriginalFileUrl,
-      urlToOriginalServerUrl,
+      projectDirectoryUrl,
+      asProjectUrl,
+      asOriginalUrl,
+      asOriginalServerUrl,
       minify,
       minifyJsOptions,
     })

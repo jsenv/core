@@ -1162,19 +1162,15 @@
         version = _ref.version;
     return Object.keys(groupMap).find(function (compileIdCandidate) {
       var minRuntimeVersions = groupMap[compileIdCandidate].minRuntimeVersions;
+      var versionForGroup = minRuntimeVersions[name];
 
-      if (name in minRuntimeVersions === false) {
+      if (!versionForGroup) {
         return false;
       }
 
-      var versionForGroup = minRuntimeVersions[name];
       var highestVersion = findHighestVersion(version, versionForGroup);
       return highestVersion === version;
     });
-  };
-
-  var resolveBrowserGroup = function resolveBrowserGroup(groupMap) {
-    return resolveGroup(detectBrowser(), groupMap);
   };
 
   function _await$2(value, then, direct) {
@@ -1216,6 +1212,16 @@
     }
   }
 
+  function _invoke(body, then) {
+    var result = body();
+
+    if (result && result.then) {
+      return result.then(then);
+    }
+
+    return then(result);
+  }
+
   function _catch$1(body, recover) {
     try {
       var result = body();
@@ -1232,8 +1238,8 @@
 
   var scanBrowserRuntimeFeatures = _async$2(function () {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        _ref$coverageInstrume = _ref.coverageInstrumentationRequired,
-        coverageInstrumentationRequired = _ref$coverageInstrume === void 0 ? true : _ref$coverageInstrume,
+        _ref$coverageHandledF = _ref.coverageHandledFromOutside,
+        coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF,
         _ref$failFastOnFeatur = _ref.failFastOnFeatureDetection,
         failFastOnFeatureDetection = _ref$failFastOnFeatur === void 0 ? false : _ref$failFastOnFeatur;
 
@@ -1246,57 +1252,56 @@
             groupMap = _ref4[0],
             envJson = _ref4[1];
 
+        var browser = detectBrowser();
         var compileId = computeCompileIdFromGroupId({
-          groupId: resolveBrowserGroup(groupMap),
+          groupId: resolveGroup(browser, groupMap),
           groupMap: groupMap
         });
         var groupInfo = groupMap[compileId];
         var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML,
             customCompilerPatterns = envJson.customCompilerPatterns;
-
-        var _babelPluginRequiredN = babelPluginRequiredNamesFromGroupInfo(groupInfo, {
-          coverageInstrumentationRequired: coverageInstrumentationRequired
-        });
-
-        return _await$2(getFeaturesReport({
+        var featuresReport = {
+          importmap: undefined,
+          dynamicImport: undefined,
+          topLevelAwait: undefined,
+          jsonImportAssertions: undefined,
+          cssImportAssertions: undefined,
+          newStylesheet: undefined
+        };
+        return _await$2(detectSupportedFeatures({
+          featuresReport: featuresReport,
           failFastOnFeatureDetection: failFastOnFeatureDetection,
-          groupInfo: groupInfo,
-          inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-          customCompilerPatterns: customCompilerPatterns,
-          coverageInstrumentationRequired: coverageInstrumentationRequired
-        }), function (_getFeaturesReport) {
-          var featuresReport = _objectSpread2(_objectSpread2({
-            babelPluginRequiredNames: _babelPluginRequiredN
-          }, _getFeaturesReport), {}, {
-            customCompilerPatterns: customCompilerPatterns
-          });
-
-          var canAvoidCompilation = featuresReport.customCompilerPatterns.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
-          return {
+          inlineImportMapIntoHTML: inlineImportMapIntoHTML
+        }), function () {
+          return _await$2(pluginRequiredNamesFromGroupInfo(groupInfo, {
             featuresReport: featuresReport,
-            canAvoidCompilation: canAvoidCompilation,
-            inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-            compileId: compileId
-          };
+            coverageHandledFromOutside: coverageHandledFromOutside
+          }), function (pluginRequiredNameArray) {
+            var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmap && featuresReport.dynamicImport && featuresReport.topLevelAwait;
+            return {
+              canAvoidCompilation: canAvoidCompilation,
+              featuresReport: featuresReport,
+              customCompilerPatterns: customCompilerPatterns,
+              pluginRequiredNameArray: pluginRequiredNameArray,
+              inlineImportMapIntoHTML: inlineImportMapIntoHTML,
+              outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+              compileId: compileId,
+              browser: browser
+            };
+          });
         });
       });
     });
   });
 
-  var getFeaturesReport = _async$2(function (_ref5) {
-    var failFastOnFeatureDetection = _ref5.failFastOnFeatureDetection,
-        groupInfo = _ref5.groupInfo,
+  var detectSupportedFeatures = _async$2(function (_ref5) {
+    var featuresReport = _ref5.featuresReport,
+        failFastOnFeatureDetection = _ref5.failFastOnFeatureDetection,
         inlineImportMapIntoHTML = _ref5.inlineImportMapIntoHTML;
-    var featuresReport = {
-      jsenvPluginRequiredNames: [],
-      importmapSupported: undefined,
-      dynamicImportSupported: undefined,
-      topLevelAwaitSupported: undefined
-    };
-    var jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray;
-    featuresReport.jsenvPluginRequiredNames = jsenvPluginRequiredNames;
-    return jsenvPluginRequiredNames.length > 0 && failFastOnFeatureDetection ? featuresReport : _await$2(supportsImportmap({
+    // start testing importmap support first and not in paralell
+    // so that there is not module script loaded beore importmap is injected
+    // it would log an error in chrome console and return undefined
+    return _await$2(supportsImportmap({
       // chrome supports inline but not remote importmap
       // https://github.com/WICG/import-maps/issues/235
       // at this stage we won't know if the html file will use
@@ -1306,32 +1311,80 @@
       // and in that case we can test only the local importmap support
       // so we test importmap support and the remote one
       remote: !inlineImportMapIntoHTML
-    }), function (importmapSupported) {
-      featuresReport.importmapSupported = importmapSupported;
-      return !importmapSupported && failFastOnFeatureDetection ? featuresReport : _call(supportsDynamicImport, function (dynamicImportSupported) {
-        featuresReport.dynamicImportSupported = dynamicImportSupported;
-        return !dynamicImportSupported && failFastOnFeatureDetection ? featuresReport : _call(supportsTopLevelAwait, function (topLevelAwaitSupported) {
-          featuresReport.topLevelAwaitSupported = topLevelAwaitSupported;
-          return featuresReport;
+    }), function (importmap) {
+      featuresReport.importmap = importmap;
+
+      if (!importmap && failFastOnFeatureDetection) {
+        return;
+      }
+
+      return _call(supportsDynamicImport, function (dynamicImport) {
+        featuresReport.dynamicImport = dynamicImport;
+
+        if (!dynamicImport && failFastOnFeatureDetection) {
+          return;
+        }
+
+        return _call(supportsTopLevelAwait, function (topLevelAwait) {
+          featuresReport.topLevelAwait = topLevelAwait;
         });
       });
     });
   });
 
-  var babelPluginRequiredNamesFromGroupInfo = function babelPluginRequiredNamesFromGroupInfo(groupInfo, _ref6) {
-    var coverageInstrumentationRequired = _ref6.coverageInstrumentationRequired;
-    var babelPluginRequiredNameArray = groupInfo.babelPluginRequiredNameArray;
-    var babelPluginRequiredNames = babelPluginRequiredNameArray.slice(); // When instrumentation CAN be handed by playwright
+  var pluginRequiredNamesFromGroupInfo = _async$2(function (groupInfo, _ref6) {
+    var featuresReport = _ref6.featuresReport,
+        coverageHandledFromOutside = _ref6.coverageHandledFromOutside;
+    var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
+    var requiredPluginNames = pluginRequiredNameArray.slice();
+
+    var markPluginAsSupported = function markPluginAsSupported(name) {
+      var index = requiredPluginNames.indexOf(name);
+
+      if (index > -1) {
+        requiredPluginNames.splice(index, 1);
+      }
+    }; // When instrumentation CAN be handed by playwright
     // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-    // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
+    // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
 
-    var transformInstrumentIndex = babelPluginRequiredNames.indexOf("transform-instrument");
 
-    if (transformInstrumentIndex > -1 && !coverageInstrumentationRequired) {
-      babelPluginRequiredNames.splice(transformInstrumentIndex, 1);
+    if (coverageHandledFromOutside) {
+      markPluginAsSupported("transform-instrument");
     }
 
-    return babelPluginRequiredNames;
+    return _invoke(function () {
+      if (pluginRequiredNameArray.includes("transform-import-assertions")) {
+        return _call(supportsJsonImportAssertions, function (jsonImportAssertions) {
+          featuresReport.jsonImportAssertions = jsonImportAssertions;
+          return _call(supportsCssImportAssertions, function (cssImportAssertions) {
+            featuresReport.cssImportAssertions = cssImportAssertions;
+
+            if (jsonImportAssertions && cssImportAssertions) {
+              markPluginAsSupported("transform-import-assertions");
+            }
+          });
+        });
+      }
+    }, function () {
+      if (pluginRequiredNameArray.includes("new-stylesheet-as-jsenv-import")) {
+        var newStylesheet = supportsNewStylesheet();
+        featuresReport.newStylesheet = newStylesheet;
+        markPluginAsSupported("new-stylesheet-as-jsenv-import");
+      }
+
+      return requiredPluginNames;
+    });
+  });
+
+  var supportsNewStylesheet = function supportsNewStylesheet() {
+    try {
+      // eslint-disable-next-line no-new
+      new CSSStyleSheet();
+      return true;
+    } catch (e) {
+      return false;
+    }
   };
 
   var supportsImportmap = _async$2(function () {
@@ -1339,9 +1392,9 @@
         _ref7$remote = _ref7.remote,
         remote = _ref7$remote === void 0 ? true : _ref7$remote;
 
-    var specifier = jsToTextUrl("export default false");
+    var specifier = asBase64Url("export default false");
     var importMap = {
-      imports: _defineProperty({}, specifier, jsToTextUrl("export default true"))
+      imports: _defineProperty({}, specifier, asBase64Url("export default true"))
     };
     var importmapScript = document.createElement("script");
     var importmapString = JSON.stringify(importMap, null, "  ");
@@ -1356,7 +1409,7 @@
     document.body.appendChild(importmapScript);
     var scriptModule = document.createElement("script");
     scriptModule.type = "module";
-    scriptModule.src = jsToTextUrl("import supported from \"".concat(specifier, "\"; window.__importmap_supported = supported"));
+    scriptModule.src = asBase64Url("import supported from \"".concat(specifier, "\"; window.__importmap_supported = supported"));
     return new Promise(function (resolve, reject) {
       scriptModule.onload = function () {
         var supported = window.__importmap_supported;
@@ -1376,12 +1429,8 @@
     });
   });
 
-  var jsToTextUrl = function jsToTextUrl(js) {
-    return "data:text/javascript;base64,".concat(window.btoa(js));
-  };
-
   var supportsDynamicImport = _async$2(function () {
-    var moduleSource = jsToTextUrl("export default 42");
+    var moduleSource = asBase64Url("export default 42");
     return _catch$1(function () {
       return _await$2(import(moduleSource), function (namespace) {
         return namespace.default === 42;
@@ -1392,7 +1441,7 @@
   });
 
   var supportsTopLevelAwait = _async$2(function () {
-    var moduleSource = jsToTextUrl("export default await Promise.resolve(42)");
+    var moduleSource = asBase64Url("export default await Promise.resolve(42)");
     return _catch$1(function () {
       return _await$2(import(moduleSource), function (namespace) {
         return namespace.default === 42;
@@ -1401,6 +1450,35 @@
       return false;
     });
   });
+
+  var supportsJsonImportAssertions = _async$2(function () {
+    var jsonBase64Url = asBase64Url("42", "application/json");
+    var moduleSource = asBase64Url("export { default } from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }"));
+    return _catch$1(function () {
+      return _await$2(import(moduleSource), function (namespace) {
+        return namespace.default === 42;
+      });
+    }, function () {
+      return false;
+    });
+  });
+
+  var supportsCssImportAssertions = _async$2(function () {
+    var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
+    var moduleSource = asBase64Url("export { default } from \"".concat(cssBase64Url, "\" assert { type: \"css\" }"));
+    return _catch$1(function () {
+      return _await$2(import(moduleSource), function (namespace) {
+        return namespace.default instanceof CSSStyleSheet;
+      });
+    }, function () {
+      return false;
+    });
+  });
+
+  var asBase64Url = function asBase64Url(text) {
+    var mimeType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "application/javascript";
+    return "data:".concat(mimeType, ";base64,").concat(window.btoa(text));
+  };
 
   function _await$1(value, then, direct) {
     if (direct) {
@@ -1473,7 +1551,6 @@
 
   var redirect = _async(function () {
     return _await(Promise.all([scanBrowserRuntimeFeatures({
-      coverageInstrumentationRequired: false,
       failFastOnFeatureDetection: true
     }), fetchExploringJson()]), function (_ref) {
       var _ref2 = _slicedToArray(_ref, 2),

@@ -1,12 +1,19 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import {
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  urlToBasename,
+} from "@jsenv/filesystem"
 
-import { executeTestPlan, launchNode, launchChromium } from "@jsenv/core"
+import { executeTestPlan, nodeRuntime, chromiumRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.html`
@@ -19,16 +26,15 @@ const { testPlanCoverage } = await executeTestPlan({
   testPlan: {
     [htmlFileRelativeUrl]: {
       chromium: {
-        launch: launchChromium,
+        runtime: chromiumRuntime,
       },
     },
     [fileRelativeUrl]: {
       node: {
-        launch: (params) =>
-          launchNode({
-            ...params,
-            // logProcessCommand: true,
-          }),
+        runtime: nodeRuntime,
+        runtimeParams: {
+          // logProcessCommand: true,
+        },
       },
     },
   },

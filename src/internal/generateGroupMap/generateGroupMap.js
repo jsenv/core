@@ -17,7 +17,7 @@
 
 {
   "best": {
-    "babelPluginRequiredNameArray" : [
+    "pluginRequiredNameArray" : [
       "transform-block-scoping",
     ],
     "minRuntimeVersions": {
@@ -34,6 +34,7 @@ Take chars below to update legends
 
 import { COMPILE_ID_OTHERWISE, COMPILE_ID_BEST } from "../CONSTANTS.js"
 import { jsenvBabelPluginCompatMap } from "./jsenvBabelPluginCompatMap.js"
+import { jsenvPluginCompatMap } from "./jsenvPluginCompatMap.js"
 import { createRuntimeCompat } from "./runtime_compat.js"
 
 export const generateGroupMap = ({
@@ -42,7 +43,6 @@ export const generateGroupMap = ({
   babelPluginCompatMap = jsenvBabelPluginCompatMap,
   // jsenv plugin are for later, for now, nothing is using them
   jsenvPluginMap = {},
-  jsenvPluginCompatMap,
 }) => {
   if (typeof babelPluginMap !== "object") {
     throw new TypeError(
@@ -63,8 +63,10 @@ export const generateGroupMap = ({
   const runtimeNames = Object.keys(runtimeSupport)
 
   const groupWithoutFeature = {
-    babelPluginRequiredNameArray: Object.keys(babelPluginMap),
-    jsenvPluginRequiredNameArray: Object.keys(jsenvPluginMap),
+    pluginRequiredNameArray: [
+      ...Object.keys(babelPluginMap),
+      ...Object.keys(jsenvPluginMap),
+    ],
     minRuntimeVersions: {},
   }
   if (runtimeNames.length === 0) {
@@ -75,12 +77,14 @@ export const generateGroupMap = ({
 
   const runtimeCompat = createRuntimeCompat({
     runtimeSupport,
-
-    babelPluginMap,
-    babelPluginCompatMap,
-
-    jsenvPluginMap,
-    jsenvPluginCompatMap,
+    pluginMap: {
+      ...babelPluginMap,
+      ...jsenvPluginMap,
+    },
+    pluginCompatMap: {
+      ...babelPluginCompatMap,
+      ...jsenvPluginCompatMap,
+    },
   })
 
   return {

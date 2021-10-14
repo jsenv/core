@@ -16,15 +16,13 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
   })
   const expected = {
     best: {
-      babelPluginRequiredNameArray: ["transform-block-scoping"],
-      jsenvPluginRequiredNameArray: [],
+      pluginRequiredNameArray: ["transform-block-scoping"],
       minRuntimeVersions: {
         node: "0.0.0",
       },
     },
     otherwise: {
-      babelPluginRequiredNameArray: ["transform-block-scoping"],
-      jsenvPluginRequiredNameArray: [],
+      pluginRequiredNameArray: ["transform-block-scoping"],
       minRuntimeVersions: {},
     },
   }
@@ -43,13 +41,11 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
   })
   const expected = {
     best: {
-      babelPluginRequiredNameArray: [],
-      jsenvPluginRequiredNameArray: [],
+      pluginRequiredNameArray: [],
       minRuntimeVersions: { node: "6" },
     },
     otherwise: {
-      babelPluginRequiredNameArray: ["transform-block-scoping"],
-      jsenvPluginRequiredNameArray: [],
+      pluginRequiredNameArray: ["transform-block-scoping"],
       minRuntimeVersions: {},
     },
   }
@@ -70,19 +66,17 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
   })
   const expected = {
     best: {
-      babelPluginRequiredNameArray: ["transform-modules-systemjs"],
-      jsenvPluginRequiredNameArray: [],
+      pluginRequiredNameArray: ["transform-modules-systemjs"],
       minRuntimeVersions: {
         chrome: "49",
         firefox: "51",
       },
     },
     otherwise: {
-      babelPluginRequiredNameArray: [
+      pluginRequiredNameArray: [
         "transform-block-scoping",
         "transform-modules-systemjs",
       ],
-      jsenvPluginRequiredNameArray: [],
       minRuntimeVersions: {},
     },
   }
@@ -103,8 +97,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
   })
   const expected = {
     best: {
-      babelPluginRequiredNameArray: [],
-      jsenvPluginRequiredNameArray: [],
+      pluginRequiredNameArray: [],
       minRuntimeVersions: {
         chrome: "49",
         firefox: "51",
@@ -112,8 +105,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
       },
     },
     otherwise: {
-      babelPluginRequiredNameArray: ["transform-block-scoping"],
-      jsenvPluginRequiredNameArray: [],
+      pluginRequiredNameArray: ["transform-block-scoping"],
       minRuntimeVersions: {},
     },
   }
@@ -135,11 +127,10 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
   })
   const expected = {
     best: {
-      babelPluginRequiredNameArray: [
+      pluginRequiredNameArray: [
         "transform-block-scoping",
         "transform-modules-systemjs",
       ],
-      jsenvPluginRequiredNameArray: [],
       minRuntimeVersions: {
         chrome: "0.0.0",
         firefox: "0.0.0",
@@ -147,11 +138,10 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
       },
     },
     otherwise: {
-      babelPluginRequiredNameArray: [
+      pluginRequiredNameArray: [
         "transform-block-scoping",
         "transform-modules-systemjs",
       ],
-      jsenvPluginRequiredNameArray: [],
       minRuntimeVersions: {},
     },
   }
@@ -171,14 +161,13 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
   })
   const expected = {
     best: {
-      babelPluginRequiredNameArray: [
+      pluginRequiredNameArray: [
         "proposal-numeric-separator",
         "proposal-optional-chaining",
         "proposal-json-strings",
         "proposal-unicode-property-regex",
         "transform-dotall-regex",
       ],
-      jsenvPluginRequiredNameArray: [],
       minRuntimeVersions: {
         chrome: "66",
         firefox: "58",
@@ -187,7 +176,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
       },
     },
     otherwise: {
-      babelPluginRequiredNameArray: [
+      pluginRequiredNameArray: [
         "proposal-numeric-separator",
         "proposal-json-strings",
         "proposal-object-rest-spread",
@@ -218,7 +207,6 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
         "transform-typeof-symbol",
         "transform-unicode-regex",
       ],
-      jsenvPluginRequiredNameArray: [],
       minRuntimeVersions: {},
     },
   }
@@ -233,8 +221,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
   })
   const expected = {
     best: {
-      babelPluginRequiredNameArray: [],
-      jsenvPluginRequiredNameArray: [],
+      pluginRequiredNameArray: [],
       minRuntimeVersions: {
         chrome: "80",
         firefox: "78",
@@ -243,7 +230,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
       },
     },
     otherwise: {
-      babelPluginRequiredNameArray: [
+      pluginRequiredNameArray: [
         "proposal-numeric-separator",
         "proposal-json-strings",
         "proposal-object-rest-spread",
@@ -274,7 +261,6 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
         "transform-typeof-symbol",
         "transform-unicode-regex",
       ],
-      jsenvPluginRequiredNameArray: [],
       minRuntimeVersions: {},
     },
   }

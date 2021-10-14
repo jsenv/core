@@ -104,7 +104,6 @@ export const jsenvToolbarJsFileInfo = {
     jsenvCoreDirectoryUrl,
   ),
   jsenvBuildUrl: resolveUrl("./dist/jsenv_toolbar.js", jsenvCoreDirectoryUrl),
-  sourcemapFilename: "jsenv_toolbar.js.map",
 }
 
 export const jsenvSystemJsFileInfo = {

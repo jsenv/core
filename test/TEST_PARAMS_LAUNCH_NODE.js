@@ -20,6 +20,8 @@ export const EXECUTE_TEST_PARAMS = {
   executionLogLevel: "warn",
   inheritCoverage: coverageIsEnabled(),
   debugPort: 40001,
+  mirrorConsole: false,
+  stopAfterExecute: true,
 }
 
 export const LAUNCH_AND_EXECUTE_TEST_PARAMS = {

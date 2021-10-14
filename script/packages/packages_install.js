@@ -39,3 +39,8 @@ if (packageNames.length) {
     }),
   )
 }
+
+const demoDirectoryUrl = resolveUrl("./docs/demo/", jsenvDirectoryUrl)
+await execCommand("npm install", {
+  cwd: urlToFileSystemPath(demoDirectoryUrl),
+})

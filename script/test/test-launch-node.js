@@ -1,13 +1,13 @@
-import { executeTestPlan, launchNode } from "@jsenv/core"
+import { executeTestPlan, nodeRuntime } from "@jsenv/core"
 
 import * as jsenvConfig from "../../jsenv.config.mjs"
 
-executeTestPlan({
+await executeTestPlan({
   ...jsenvConfig,
   testPlan: {
     "test/**/*-launch-node/*.test.js": {
       node: {
-        launch: launchNode,
+        runtime: nodeRuntime,
       },
     },
   },

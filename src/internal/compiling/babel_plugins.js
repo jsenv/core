@@ -4,11 +4,13 @@ export const getMinimalBabelPluginMap = () => {
   const syntaxDynamicImport = require("@babel/plugin-syntax-dynamic-import")
   const syntaxImportMeta = require("@babel/plugin-syntax-import-meta")
   const syntaxNumericSeparator = require("@babel/plugin-syntax-numeric-separator")
+  const syntaxImportAssertions = require("@babel/plugin-syntax-import-assertions")
 
   return {
     "syntax-dynamic-import": syntaxDynamicImport,
     "syntax-import-meta": syntaxImportMeta,
     "syntax-numeric-separator": syntaxNumericSeparator,
+    "synyax-import-assertions": syntaxImportAssertions,
   }
 }
 

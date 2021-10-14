@@ -53,7 +53,7 @@ export const getCallerLocation = () => {
   }
 }
 
-export const compareContentType = (leftContentType, rightContentType) => {
+const compareContentType = (leftContentType, rightContentType) => {
   if (leftContentType === rightContentType) {
     return true
   }
@@ -76,24 +76,20 @@ export const checkContentType = (
   reference,
   { logger, showReferenceSourceLocation },
 ) => {
-  const { ressourceContentTypeExpected } = reference
+  const { contentTypeExpected } = reference
   const { contentType } = reference.ressource
 
-  if (!ressourceContentTypeExpected) {
+  if (!contentTypeExpected) {
     return
   }
 
-  if (compareContentType(ressourceContentTypeExpected, contentType)) {
-    return
-  }
+  const contentTypeIsOk = Array.isArray(contentTypeExpected)
+    ? contentTypeExpected.some((allowedContentType) => {
+        return compareContentType(allowedContentType, contentType)
+      })
+    : compareContentType(contentTypeExpected, contentType)
 
-  // sourcemap content type is fine if we got octet-stream too
-  const { ressource } = reference
-  if (
-    ressourceContentTypeExpected === "application/json" &&
-    contentType === "application/octet-stream" &&
-    ressource.url.endsWith(".map")
-  ) {
+  if (contentTypeIsOk) {
     return
   }
 
@@ -108,11 +104,11 @@ const formatContentTypeMismatchLog = (
   reference,
   { showReferenceSourceLocation },
 ) => {
-  const { ressourceContentTypeExpected, ressource } = reference
+  const { contentTypeExpected, ressource } = reference
   const { contentType, url } = ressource
 
   return createDetailedMessage(
-    `A reference was expecting ${ressourceContentTypeExpected} but found ${contentType} instead.`,
+    `A reference was expecting ${contentTypeExpected} but found ${contentType} instead.`,
     {
       ["reference"]: showReferenceSourceLocation(reference),
       ["ressource url"]: url,
@@ -126,7 +122,6 @@ export const formatFoundReference = ({
   referenceEffects,
 }) => {
   const { isRessourceHint } = reference
-
   if (isRessourceHint) {
     return formatFoundRessourceHint({
       reference,
@@ -137,7 +132,6 @@ export const formatFoundReference = ({
 
   const { ressource } = reference
   const { isEntryPoint } = ressource
-
   if (isEntryPoint) {
     return formatCreateReferenceForEntry({
       reference,
@@ -147,9 +141,17 @@ export const formatFoundReference = ({
   }
 
   const { isExternal } = ressource
-
   if (isExternal) {
     return formatFoundReferenceToExternalRessource({
+      reference,
+      showReferenceSourceLocation,
+      referenceEffects,
+    })
+  }
+
+  const { isPlaceholder } = ressource
+  if (isPlaceholder) {
+    return formatCreateRessourcePlaceholder({
       reference,
       showReferenceSourceLocation,
       referenceEffects,
@@ -215,6 +217,17 @@ const formatFoundReferenceToExternalRessource = ({
 Found external url in ${showReferenceSourceLocation(reference)}${appendEffects(
     referenceEffects,
   )}`
+}
+
+const formatCreateRessourcePlaceholder = ({
+  reference,
+  showReferenceSourceLocation,
+  referenceEffects,
+}) => {
+  return `
+Create placeholder for ressource in ${showReferenceSourceLocation(
+    reference,
+  )}${appendEffects(referenceEffects)}`
 }
 
 const formatFoundReferenceToInlineRessource = ({

@@ -3,7 +3,6 @@ import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   resolveUrl,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -19,10 +18,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
-const mainFilename = `${testDirectoryname}.js`
+const mainFilename = `sourcemap_build_commonjs.js`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
 }

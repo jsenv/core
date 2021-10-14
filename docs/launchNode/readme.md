@@ -1,4 +1,4 @@
-## `launchNode` params
+## `nodeRuntime` params
 
 ### env
 

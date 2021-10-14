@@ -1,11 +1,7 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
+import { chromiumRuntime, firefoxRuntime, webkitRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
@@ -21,9 +17,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryBasename = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryBasename}.html`
+const filename = `top_level_await.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
@@ -34,21 +29,19 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
 await launchBrowsers(
   [
     // comment to force-multiline
-    launchChromium,
-    launchFirefox,
-    launchWebkit,
+    chromiumRuntime,
+    firefoxRuntime,
+    webkitRuntime,
   ],
-  async (launchBrowser) => {
+  async (browserRuntime) => {
     const actual = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
-
-      launch: (options) =>
-        launchBrowser({
-          ...LAUNCH_TEST_PARAMS,
-          ...options,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-        }),
+      runtime: browserRuntime,
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+      },
       executeParams: {
         fileRelativeUrl,
       },

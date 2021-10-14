@@ -1,19 +1,17 @@
 import { require } from "@jsenv/core/src/internal/require.js"
 import { applyPostCss } from "./applyPostCss.js"
-import { postCssUrlHashPlugin } from "./postcss-urlhash-plugin.js"
+import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
 
-export const replaceCssUrls = async (
-  css,
-  cssUrl,
+export const replaceCssUrls = async ({
+  url,
+  code,
+  map,
   getUrlReplacementValue,
-  {
-    cssMinification = false,
-    cssMinificationOptions,
-    sourcemapOptions = {},
-  } = {},
-) => {
+  cssMinification = false,
+  cssMinificationOptions,
+} = {}) => {
   const postcssPlugins = [
-    postCssUrlHashPlugin,
+    postCssPluginUrlVisitor,
     ...(cssMinification
       ? [await getCssMinificationPlugin(cssMinificationOptions)]
       : []),
@@ -22,11 +20,16 @@ export const replaceCssUrls = async (
     getUrlReplacementValue,
     map: {
       inline: false,
-      ...sourcemapOptions,
+      // https://postcss.org/api/#sourcemapoptions
+      ...(map ? { prev: JSON.stringify(map) } : {}),
     },
   }
-  const result = await applyPostCss(css, cssUrl, postcssPlugins, postcssOptions)
-  return result
+  const result = await applyPostCss(code, url, postcssPlugins, postcssOptions)
+
+  return {
+    code: result.css,
+    map: result.map.toJSON(),
+  }
 }
 
 const getCssMinificationPlugin = async (cssMinificationOptions = {}) => {

@@ -5,14 +5,16 @@ import {
   urlToFileSystemPath,
 } from "@jsenv/filesystem"
 
-import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
+import {
+  execute,
+  chromiumRuntime,
+  firefoxRuntime,
+  webkitRuntime,
+} from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import {
-  START_COMPILE_SERVER_TEST_PARAMS,
-  EXECUTION_TEST_PARAMS,
+  EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
 import { launchBrowsers } from "@jsenv/core/test/launchBrowsers.js"
@@ -32,44 +34,35 @@ const importedFileUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 const importedFilePath = urlToFileSystemPath(importedFileUrl)
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-  await startCompileServer({
-    ...START_COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-  })
-const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
 
 await launchBrowsers(
   [
     // comment force multiline
-    launchChromium,
-    launchFirefox,
-    launchWebkit,
+    chromiumRuntime,
+    firefoxRuntime,
+    webkitRuntime,
   ],
-  async (launchBrowser) => {
-    const result = await launchAndExecute({
-      ...EXECUTION_TEST_PARAMS,
+  async (browserRuntime) => {
+    const { status, error, outDirectoryRelativeUrl } = await execute({
+      ...EXECUTE_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
       launchAndExecuteLogLevel: "off",
-      launch: (options) =>
-        launchBrowser({
-          ...LAUNCH_TEST_PARAMS,
-          ...options,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-        }),
-      executeParams: {
-        fileRelativeUrl: htmlFileRelativeUrl,
+      runtime: browserRuntime,
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        // headless: false,
       },
-      // launchParams: {
-      //   headless: false,
-      // },
       // stopAfterExecute: false,
+      fileRelativeUrl: htmlFileRelativeUrl,
+      collectCompileServerInfo: true,
+      ignoreError: true,
     })
+    const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
 
-    if (launchBrowser === launchChromium) {
+    if (browserRuntime === chromiumRuntime) {
       const actual = {
-        status: result.status,
-        error: result.error,
+        status,
+        error,
       }
       const expected = {
         status: "errored",
@@ -80,9 +73,9 @@ await launchBrowsers(
     }
 
     const actual = {
-      status: result.status,
-      errorMessage: result.error.message,
-      errorParsingErrror: result.error.parsingError,
+      status,
+      errorMessage: error.message,
+      errorParsingErrror: error.parsingError,
     }
     const expected = {
       status: "errored",

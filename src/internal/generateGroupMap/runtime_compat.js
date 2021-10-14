@@ -2,45 +2,30 @@ import { createOneRuntimeCompat } from "./one_runtime_compat.js"
 
 export const createRuntimeCompat = ({
   runtimeSupport,
-
-  babelPluginMap,
-  babelPluginCompatMap,
-
-  jsenvPluginMap,
-  jsenvPluginCompatMap,
+  pluginMap,
+  pluginCompatMap,
 }) => {
   const minRuntimeVersions = {}
-  const babelPluginRequiredNameArray = []
-  const jsenvPluginRequiredNameArray = []
+  const pluginRequiredNameArray = []
   Object.keys(runtimeSupport).forEach((runtimeName) => {
     const runtimeVersion = runtimeSupport[runtimeName]
     const oneRuntimeCompat = createOneRuntimeCompat({
       runtimeName,
       runtimeVersion,
-
-      babelPluginMap,
-      babelPluginCompatMap,
-
-      jsenvPluginMap,
-      jsenvPluginCompatMap,
+      pluginMap,
+      pluginCompatMap,
     })
 
     minRuntimeVersions[runtimeName] = oneRuntimeCompat.minRuntimeVersion
-    oneRuntimeCompat.babelPluginRequiredNameArray.forEach((babelPluginName) => {
-      if (!babelPluginRequiredNameArray.includes(babelPluginName)) {
-        babelPluginRequiredNameArray.push(babelPluginName)
-      }
-    })
-    oneRuntimeCompat.jsenvPluginRequiredNameArray.forEach((jsenvPluginName) => {
-      if (!jsenvPluginRequiredNameArray.includes(jsenvPluginName)) {
-        jsenvPluginRequiredNameArray.push(jsenvPluginName)
+    oneRuntimeCompat.pluginRequiredNameArray.forEach((babelPluginName) => {
+      if (!pluginRequiredNameArray.includes(babelPluginName)) {
+        pluginRequiredNameArray.push(babelPluginName)
       }
     })
   })
 
   return {
-    babelPluginRequiredNameArray,
-    jsenvPluginRequiredNameArray,
+    pluginRequiredNameArray,
     minRuntimeVersions,
   }
 }

@@ -4,15 +4,11 @@ export const computeBuildRelativeUrlForRessource = (
   ressource,
   { lineBreakNormalization },
 ) => {
-  return computeBuildRelativeUrl(
-    ressource.url,
-    ressource.bufferAfterBuild,
-    {
-      pattern: fileNamePatternFromRessource(ressource),
-      contentType: ressource.contentType,
-      lineBreakNormalization,
-    },
-  )
+  return computeBuildRelativeUrl(ressource.url, ressource.bufferAfterBuild, {
+    pattern: fileNamePatternFromRessource(ressource),
+    contentType: ressource.contentType,
+    lineBreakNormalization,
+  })
 }
 
 const assetFileNamePattern = "assets/[name]-[hash][extname]"

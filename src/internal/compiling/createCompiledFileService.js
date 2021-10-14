@@ -255,14 +255,12 @@ const babelPluginMapFromCompileId = (
 ) => {
   const babelPluginMapForGroup = {}
 
-  groupMap[compileId].babelPluginRequiredNameArray.forEach(
-    (babelPluginRequiredName) => {
-      if (babelPluginRequiredName in babelPluginMap) {
-        babelPluginMapForGroup[babelPluginRequiredName] =
-          babelPluginMap[babelPluginRequiredName]
-      }
-    },
-  )
+  groupMap[compileId].pluginRequiredNameArray.forEach((requiredPluginName) => {
+    const babelPlugin = babelPluginMap[requiredPluginName]
+    if (babelPlugin) {
+      babelPluginMapForGroup[requiredPluginName] = babelPlugin
+    }
+  })
 
   Object.keys(babelPluginMap).forEach((key) => {
     if (key.startsWith("syntax-")) {

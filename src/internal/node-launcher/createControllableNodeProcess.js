@@ -1,5 +1,5 @@
 /* eslint-disable import/max-dependencies */
-import { fork as forkChildProcess } from "child_process"
+import { fork as forkChildProcess } from "node:child_process"
 
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
@@ -9,6 +9,7 @@ import {
   resolveUrl,
   assertFilePresence,
 } from "@jsenv/filesystem"
+
 import { nodeSupportsDynamicImport } from "../runtime/node-feature-detect/nodeSupportsDynamicImport.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { require } from "../require.js"
@@ -290,8 +291,6 @@ ${JSON.stringify(env, null, "  ")}`)
   }
 
   return {
-    runtimeName: "node",
-    runtimeVersion: process.version.slice(1),
     execArgv,
     gracefulStop,
     stop,

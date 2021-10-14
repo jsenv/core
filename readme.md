@@ -25,6 +25,7 @@ Each standard listed in this section is potentially supported natively by the br
 - top level await
 - import.meta.url
 - dynamic imports
+- import assertions
 
 # Test runner overview
 
@@ -71,8 +72,8 @@ npm install --save-dev @jsenv/core
 ```js
 import {
   executeTestPlan,
-  launchChromiumTab,
-  launchFirefoxTab,
+  chromiumRuntimeTab,
+  firefoxRuntimeTab,
 } from "@jsenv/core"
 
 executeTestPlan({
@@ -80,10 +81,10 @@ executeTestPlan({
   testPlan: {
     "./animals.test.html": {
       chromium: {
-        launch: launchChromiumTab,
+        runtime: chromiumRuntimeTab,
       },
       firefox: {
-        launch: launchFirefoxTab,
+        runtime: firefoxRuntimeTab,
       },
     },
   },

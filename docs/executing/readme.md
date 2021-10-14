@@ -21,12 +21,12 @@ That being said, execute can still be useful, for instance to execute typescript
 `execute` is an async function launching a runtime, executing a file in it and returning the result of that execution.
 
 ```js
-import { execute, launchNode } from "@jsenv/core"
+import { execute, nodeRuntime } from "@jsenv/core"
 
 const result = await execute({
   projectDirectoryUrl: new URL("./", import.meta.url),
   fileRelativeUrl: "./index.js",
-  launch: launchNode,
+  runtime: nodeRuntime,
 })
 ```
 

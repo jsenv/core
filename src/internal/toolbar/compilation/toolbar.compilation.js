@@ -11,8 +11,10 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
 
   scanBrowserRuntimeFeatures().then(
     ({
-      featuresReport,
       canAvoidCompilation,
+      featuresReport,
+      customCompilerPatterns,
+      pluginRequiredNameArray,
       inlineImportMapIntoHTML,
       outDirectoryRelativeUrl,
       compileId,
@@ -35,6 +37,8 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
               {
                 missingOnly: true,
                 featuresReport,
+                customCompilerPatterns,
+                pluginRequiredNameArray,
                 inlineImportMapIntoHTML,
               },
             )}`,
@@ -49,6 +53,8 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
             `Source files (except html) can be executed directly in this browser because: ${getBrowserSupportMessage(
               {
                 featuresReport,
+                customCompilerPatterns,
+                pluginRequiredNameArray,
                 inlineImportMapIntoHTML,
               },
             )}`,
@@ -63,6 +69,8 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
             `Source files can be executed directly in this browser because: ${getBrowserSupportMessage(
               {
                 featuresReport,
+                customCompilerPatterns,
+                pluginRequiredNameArray,
                 inlineImportMapIntoHTML,
               },
             )}`,
@@ -119,6 +127,8 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
 const getBrowserSupportMessage = ({
   missingOnly,
   featuresReport,
+  customCompilerPatterns,
+  pluginRequiredNameArray,
   inlineImportMapIntoHTML,
 }) => {
   const parts = []
@@ -154,35 +164,23 @@ const getBrowserSupportMessage = ({
     parts.push(`top level await is not supported`)
   }
 
-  const { babelPluginRequiredNames } = featuresReport
-  const babelPluginRequiredCount = babelPluginRequiredNames.length
-  if (babelPluginRequiredCount === 0) {
+  const pluginRequiredCount = pluginRequiredNameArray.length
+  if (pluginRequiredCount === 0) {
     if (!missingOnly) {
-      parts.push(`all babel plugins are natively supported`)
+      parts.push(`all plugins are natively supported`)
     }
   } else {
     parts.push(
-      `${babelPluginRequiredCount} babel plugins are mandatory: ${babelPluginRequiredNames}`,
+      `${pluginRequiredCount} plugins are mandatory: ${pluginRequiredNameArray}`,
     )
   }
 
-  const { customCompilerPatterns } = featuresReport
   const customCompilerCount = customCompilerPatterns.length
   if (customCompilerCount === 0) {
     // no need to talk about something unused
   } else {
     parts.push(
       `${customCompilerCount} custom compilers enabled: ${customCompilerPatterns}`,
-    )
-  }
-
-  const { jsenvPluginRequiredNames } = featuresReport
-  const jsenvPluginRequiredCount = jsenvPluginRequiredNames.length
-  if (jsenvPluginRequiredCount === 0) {
-    // no need to talk about something unused
-  } else {
-    parts.push(
-      `${jsenvPluginRequiredCount} jsenv plugins are mandatory: ${jsenvPluginRequiredNames}`,
     )
   }
 

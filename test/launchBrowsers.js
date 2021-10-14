@@ -12,7 +12,8 @@ The unpredictible nature of this bug associated to being windows only makes it h
 
 For now let's launch browser in sequence on windows.
 */
-const launchInSequence = process.platform === "win32"
+
+const launchInSequence = true // process.platform === "win32"
 
 export const launchBrowsers = (launchers, fn) => {
   if (launchInSequence) {

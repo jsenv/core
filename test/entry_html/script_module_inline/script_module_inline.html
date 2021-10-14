@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <link rel="icon" href="data:," />
+    <meta charset="utf-8" />
+  </head>
+
+  <body>
+    <script type="module" id="script_module_inline">
+      import value from "./main.js"
+
+      const answer = value
+
+      window.namespace = {
+        answer,
+      }
+
+      export { answer }
+    </script>
+  </body>
+</html>

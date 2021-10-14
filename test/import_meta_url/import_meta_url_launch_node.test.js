@@ -1,13 +1,10 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { launchNode } from "@jsenv/core"
+import { execute, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import {
-  START_COMPILE_SERVER_TEST_PARAMS,
-  LAUNCH_AND_EXECUTE_TEST_PARAMS,
+  EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
 
@@ -20,28 +17,16 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `import_meta_url.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const test = async ({ babelPluginMap } = {}) => {
-  const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-    await startCompileServer({
-      ...START_COMPILE_SERVER_TEST_PARAMS,
-      jsenvDirectoryRelativeUrl,
-      importMapFileRelativeUrl: `${testDirectoryRelativeUrl}test.importmap`,
-      babelPluginMap,
-    })
-
-  const result = await launchAndExecute({
-    ...LAUNCH_AND_EXECUTE_TEST_PARAMS,
-    launch: (options) =>
-      launchNode({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-      }),
-    executeParams: {
-      fileRelativeUrl,
+  const result = await execute({
+    ...EXECUTE_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    babelPluginMap,
+    runtime: nodeRuntime,
+    runtimeParams: {
+      ...LAUNCH_TEST_PARAMS,
     },
+    fileRelativeUrl,
   })
-
   return result
 }
 
@@ -71,7 +56,7 @@ const test = async ({ babelPluginMap } = {}) => {
     status: "completed",
     namespace: {
       isInstanceOfUrl: false,
-      urlString: `${testDirectoryUrl}.jsenv/out/best/${fileRelativeUrl}`,
+      urlString: `${testDirectoryUrl}.jsenv/out-dev/best/${fileRelativeUrl}`,
     },
   }
   assert({ actual, expected })

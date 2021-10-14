@@ -1,6 +1,5 @@
 /* eslint-disable import/max-dependencies */
-import { Script } from "vm"
-
+import { Script } from "node:vm"
 import cuid from "cuid"
 import { loggerToLogLevel } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
@@ -17,7 +16,11 @@ import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCha
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
 import { v8CoverageFromNodeV8Directory } from "./internal/executing/coverage/v8CoverageFromNodeV8Directory.js"
 
-export const launchNode = async ({
+export const nodeRuntime = {
+  name: "node",
+  version: process.version.slice(1),
+}
+nodeRuntime.launch = async ({
   logger,
   logProcessCommand,
   cancellationToken = createCancellationToken(),

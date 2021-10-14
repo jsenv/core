@@ -80,7 +80,10 @@ const renderToolbar = async () => {
   renderCompilationInToolbar({ compileGroup })
   // this might become active but we need to detect this somehow
   deactivateToolbarSection(document.querySelector("#file-list-link"))
-  initToolbarEventSource({ executedFileRelativeUrl, livereloading })
+  initToolbarEventSource({
+    executedFileRelativeUrl,
+    livereloading,
+  })
 
   // if user click enter or space quickly while closing toolbar
   // it will cancel the closing
@@ -188,13 +191,13 @@ const getCompileGroup = ({
   outDirectoryRelativeUrl,
   compileServerOrigin,
 }) => {
-  const outDirectoryRemoteUrl = String(
+  const outDirectoryServerUrl = String(
     new URL(outDirectoryRelativeUrl, compileServerOrigin),
   )
-  if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryRemoteUrl)) {
+  if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryServerUrl)) {
     const afterCompileDirectory = urlToRelativeUrl(
       executedFileCompiledUrl,
-      outDirectoryRemoteUrl,
+      outDirectoryServerUrl,
     )
     const slashIndex = afterCompileDirectory.indexOf("/")
     const fileRelativeUrl = afterCompileDirectory.slice(slashIndex + 1)

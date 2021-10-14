@@ -1,14 +1,16 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { launchChromium, launchFirefox, launchWebkit } from "@jsenv/core"
+import {
+  execute,
+  chromiumRuntime,
+  firefoxRuntime,
+  webkitRuntime,
+} from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import { launchBrowsers } from "@jsenv/core/test/launchBrowsers.js"
 import {
-  START_COMPILE_SERVER_TEST_PARAMS,
-  EXECUTION_TEST_PARAMS,
+  EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
 
@@ -21,41 +23,30 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const htmlFilename = `export_missing.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
 
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-  await startCompileServer({
-    ...START_COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-  })
-
 await launchBrowsers(
   [
     // comment force multiline
-    launchChromium,
-    launchFirefox,
-    launchWebkit,
+    chromiumRuntime,
+    firefoxRuntime,
+    webkitRuntime,
   ],
-  async (launchBrowser) => {
-    const result = await launchAndExecute({
-      ...EXECUTION_TEST_PARAMS,
+  async (browserRuntime) => {
+    const result = await execute({
+      ...EXECUTE_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
       launchAndExecuteLogLevel: "off",
-      launch: (options) =>
-        launchBrowser({
-          ...LAUNCH_TEST_PARAMS,
-          ...options,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-        }),
-      executeParams: {
-        fileRelativeUrl: htmlFileRelativeUrl,
+      runtime: browserRuntime,
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        // headless: false,
       },
-      captureConsole: true,
-      // launchParams: {
-      //   headless: false,
-      // },
       // stopAfterExecute: false,
+      fileRelativeUrl: htmlFileRelativeUrl,
+      captureConsole: true,
+      ignoreError: true,
     })
 
-    if (launchBrowser === launchChromium) {
+    if (browserRuntime === chromiumRuntime) {
       const actual = {
         status: result.status,
         errorMessage: result.error.message,

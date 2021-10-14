@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { execute, launchNode } from "@jsenv/core"
+import { execute, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXECUTE.js"
 
@@ -10,31 +10,48 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}process-stay-alive-execute-node.js`
+const test = async (params) => {
+  let nodeRuntimeHooks
+  const result = await execute({
+    ...EXECUTE_TEST_PARAMS,
+    // executionLogLevel: "debug",
+    jsenvDirectoryRelativeUrl,
+    runtime: {
+      ...nodeRuntime,
+      launch: async (params) => {
+        nodeRuntimeHooks = await nodeRuntime.launch({
+          ...params,
+          debugPort: 40001,
+        })
+        return nodeRuntimeHooks
+      },
+    },
+    fileRelativeUrl,
+    ...params,
+  })
+
+  return {
+    ...result,
+    nodeRuntimeHooks,
+  }
+}
 
 // node child process outlives execution if something keeps it alive
 // and stopAfterExecute is false (default value)
 {
-  let nodeRuntimeHooks
-  {
-    const actual = await execute({
-      ...EXECUTE_TEST_PARAMS,
-      // executionLogLevel: "debug",
-      jsenvDirectoryRelativeUrl,
-      launch: async (options) => {
-        nodeRuntimeHooks = await launchNode({ ...options, debugPort: 40001 })
-        return nodeRuntimeHooks
-      },
-      fileRelativeUrl,
-    })
-    const expected = {
-      status: "completed",
-      namespace: {},
-    }
-    assert({ actual, expected })
+  const { status, namespace, nodeRuntimeHooks } = await test({
+    stopAfterExecute: false,
+  })
+
+  const actual = { status, namespace }
+  const expected = {
+    status: "completed",
+    namespace: {},
   }
+  assert({ actual, expected })
+
   {
     // to ensure the child process is still alive let's wait enought
     // and check for disconnected promise, disconnected must still be pending
@@ -53,26 +70,18 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
 
 // now if we redo the experiment with stopAfterExecute child process should be killed
 {
-  let nodeRuntimeHooks
-  {
-    const actual = await execute({
-      ...EXECUTE_TEST_PARAMS,
-      // executionLogLevel: "debug",
-      jsenvDirectoryRelativeUrl,
-      launch: async (options) => {
-        nodeRuntimeHooks = await launchNode({ ...options, debugPort: 40001 })
-        return nodeRuntimeHooks
-      },
-      fileRelativeUrl,
-      stopAfterExecute: true,
-      gracefulStopAllocatedMs: 100,
-    })
-    const expected = {
-      status: "completed",
-      namespace: {},
-    }
-    assert({ actual, expected })
+  const { status, namespace, nodeRuntimeHooks } = await test({
+    stopAfterExecute: true,
+    gracefulStopAllocatedMs: 100,
+  })
+
+  const actual = { status, namespace }
+  const expected = {
+    status: "completed",
+    namespace: {},
   }
+  assert({ actual, expected })
+
   {
     const actual = await Promise.race([
       nodeRuntimeHooks.disconnected.then(() => "disconnected"),

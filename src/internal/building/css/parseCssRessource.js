@@ -1,5 +1,5 @@
-import { basename } from "path"
 import { urlToFilename, urlToRelativeUrl, resolveUrl } from "@jsenv/filesystem"
+
 import {
   getCssSourceMappingUrl,
   setCssSourceMappingUrl,
@@ -11,19 +11,27 @@ import { replaceCssUrls } from "./replaceCssUrls.js"
 export const parseCssRessource = async (
   cssRessource,
   { notifyReferenceFound },
-  { urlToOriginalServerUrl, minify, minifyCssOptions },
+  { asProjectUrl, asOriginalUrl, minify, minifyCssOptions },
 ) => {
   const cssString = String(cssRessource.bufferBeforeBuild)
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
   let sourcemapReference
   if (cssSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
-      ressourceContentTypeExpected: "application/json",
+      contentTypeExpected: ["application/json", "application/octet-stream"],
       ressourceSpecifier: cssSourcemapUrl,
       // we don't really know the line or column
       // but let's asusme it the last line and first column
       referenceLine: cssString.split(/\r?\n/).length - 1,
       referenceColumn: 0,
+      isSourcemap: true,
+    })
+  } else {
+    sourcemapReference = notifyReferenceFound({
+      contentType: "application/octet-stream",
+      ressourceSpecifier: `${urlToFilename(cssRessource.url)}.map`,
+      isPlaceholder: true,
+      isSourcemap: true,
     })
   }
 
@@ -48,15 +56,22 @@ export const parseCssRessource = async (
     urlNodeReferenceMapping.set(urlDeclaration.urlNode, urlReference)
   })
 
-  return async ({
-    getUrlRelativeToImporter,
-    precomputeBuildRelativeUrl,
-    registerAssetEmitter,
-  }) => {
-    const cssReplaceResult = await replaceCssUrls(
-      cssString,
-      cssRessource.url,
-      ({ urlNode }) => {
+  return async ({ getUrlRelativeToImporter, buildDirectoryUrl }) => {
+    const sourcemapRessource = sourcemapReference.ressource
+
+    let code = cssString
+    let map = sourcemapRessource.isPlaceholder
+      ? undefined
+      : JSON.parse(String(sourcemapRessource.bufferBeforeBuild))
+
+    const cssCompiledUrl = cssRessource.url
+    const cssOriginalUrl = asOriginalUrl(cssCompiledUrl)
+
+    const replaceCssResult = await replaceCssUrls({
+      url: map ? asProjectUrl(cssCompiledUrl) : cssOriginalUrl,
+      code: cssString,
+      map,
+      getUrlReplacementValue: ({ urlNode }) => {
         const nodeCandidates = Array.from(urlNodeReferenceMapping.keys())
         const urlNodeFound = nodeCandidates.find((urlNodeCandidate) =>
           isSameCssDocumentUrlNode(urlNodeCandidate, urlNode),
@@ -65,7 +80,7 @@ export const parseCssRessource = async (
           return urlNode.value
         }
 
-        // url node nous dit quel réfrence y correspond
+        // url node nous dit quel référence y correspond
         const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
         const cssUrlRessource = urlNodeReference.ressource
 
@@ -80,74 +95,55 @@ export const parseCssRessource = async (
         }
         return getUrlRelativeToImporter(cssUrlRessource)
       },
-      {
-        cssMinification: minify,
-        cssMinificationOptions: minifyCssOptions,
-        // https://postcss.org/api/#sourcemapoptions
-        sourcemapOptions: sourcemapReference
-          ? { prev: String(sourcemapReference.ressource.bufferAfterBuild) }
-          : {},
-      },
-    )
-    const code = cssReplaceResult.css
-    const map = cssReplaceResult.map.toJSON()
-    const cssBuildRelativeUrl = precomputeBuildRelativeUrl(code)
+      cssMinification: minify,
+      cssMinificationOptions: minifyCssOptions,
+    })
+    code = replaceCssResult.code
+    map = replaceCssResult.map
 
-    const cssSourcemapFilename = `${basename(cssBuildRelativeUrl)}.map`
+    cssRessource.buildEnd(code)
 
-    // In theory code should never be modified once the url for caching is computed
-    // because url for caching depends on file content.
+    // In theory code should never be modified once buildEnd() is called
+    // because buildRelativeUrl might be versioned based on file content
     // There is an exception for sourcemap because we want to update sourcemap.file
     // to the cached filename of the css file.
     // To achieve that we set/update the sourceMapping url comment in compiled css file.
     // This is totally fine to do that because sourcemap and css file lives togethers
     // so this comment changes nothing regarding cache invalidation and is not important
-    // to decide the filename for this css asset.
-    const cssSourceAfterTransformation = setCssSourceMappingUrl(
-      code,
-      cssSourcemapFilename,
+    // to decide buildRelativeUrl for this css file.
+    const cssBuildUrl = resolveUrl(
+      cssRessource.buildRelativeUrl,
+      buildDirectoryUrl,
+    )
+    const sourcemapPrecomputedBuildUrl = resolveUrl(
+      `${urlToFilename(cssBuildUrl)}.map`,
+      cssBuildUrl,
     )
 
-    registerAssetEmitter(({ buildDirectoryUrl, emitAsset }) => {
-      const cssBuildUrl = resolveUrl(
-        cssRessource.buildRelativeUrl,
-        buildDirectoryUrl,
-      )
-      const mapBuildUrl = resolveUrl(cssSourcemapFilename, cssBuildUrl)
-      map.file = urlToFilename(cssBuildUrl)
-      if (map.sources) {
-        // hum en fait si css est inline, alors la source n'est pas le fichier compilé
-        // mais bien le fichier html compilé ?
-        const importerUrl = cssRessource.isInline
-          ? urlToOriginalServerUrl(cssRessource.url)
-          : cssRessource.url
-        map.sources = map.sources.map((source) => {
-          const sourceUrl = resolveUrl(source, importerUrl)
-          const sourceUrlRelativeToSourceMap = urlToRelativeUrl(
-            sourceUrl,
-            mapBuildUrl,
-          )
-          return sourceUrlRelativeToSourceMap
-        })
-      }
-
-      const mapSource = JSON.stringify(map, null, "  ")
-      const buildRelativeUrl = urlToRelativeUrl(mapBuildUrl, buildDirectoryUrl)
-      if (sourcemapReference) {
-        sourcemapReference.ressource.buildRelativeUrl = buildRelativeUrl
-        sourcemapReference.ressource.bufferAfterBuild = mapSource
-      } else {
-        emitAsset({
-          fileName: buildRelativeUrl,
-          source: mapSource,
-        })
-      }
-    })
-
-    return {
-      buildRelativeUrl: cssBuildRelativeUrl,
-      bufferAfterBuild: cssSourceAfterTransformation,
+    map.file = urlToFilename(cssBuildUrl)
+    if (map.sources) {
+      map.sources = map.sources.map((source) => {
+        const sourceUrl = resolveUrl(source, cssOriginalUrl)
+        const sourceUrlRelativeToSourceMap = urlToRelativeUrl(
+          sourceUrl,
+          sourcemapPrecomputedBuildUrl,
+        )
+        return sourceUrlRelativeToSourceMap
+      })
     }
+    const mapSource = JSON.stringify(map, null, "  ")
+    sourcemapRessource.buildEnd(mapSource)
+
+    const sourcemapBuildUrl = resolveUrl(
+      sourcemapRessource.buildRelativeUrl,
+      buildDirectoryUrl,
+    )
+    const sourcemapUrlForCss = urlToRelativeUrl(sourcemapBuildUrl, cssBuildUrl)
+    const codeWithSourcemapComment = setCssSourceMappingUrl(
+      code,
+      sourcemapUrlForCss,
+    )
+    cssRessource.bufferAfterBuild = codeWithSourcemapComment
   }
 }
 

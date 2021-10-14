@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { execute, launchNode } from "@jsenv/core"
+import { execute, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXECUTE.js"
 
@@ -10,9 +10,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}natural-exit-execute-node.js`
 
 let nodeRuntimeHooks
 {
@@ -20,9 +19,15 @@ let nodeRuntimeHooks
     ...EXECUTE_TEST_PARAMS,
     // executionLogLevel: "debug",
     jsenvDirectoryRelativeUrl,
-    launch: async (options) => {
-      nodeRuntimeHooks = await launchNode({ ...options, debugPort: 40001 })
-      return nodeRuntimeHooks
+    runtime: {
+      ...nodeRuntime,
+      launch: async (params) => {
+        nodeRuntimeHooks = await nodeRuntime.launch({
+          ...params,
+          debugPort: 40001,
+        })
+        return nodeRuntimeHooks
+      },
     },
     fileRelativeUrl,
   })

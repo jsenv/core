@@ -2157,19 +2157,15 @@
         version = _ref.version;
     return Object.keys(groupMap).find(function (compileIdCandidate) {
       var minRuntimeVersions = groupMap[compileIdCandidate].minRuntimeVersions;
+      var versionForGroup = minRuntimeVersions[name];
 
-      if (name in minRuntimeVersions === false) {
+      if (!versionForGroup) {
         return false;
       }
 
-      var versionForGroup = minRuntimeVersions[name];
       var highestVersion = findHighestVersion(version, versionForGroup);
       return highestVersion === version;
     });
-  };
-
-  var resolveBrowserGroup = function resolveBrowserGroup(groupMap) {
-    return resolveGroup(detectBrowser(), groupMap);
   };
 
   function _await(value, then, direct) {
@@ -2211,6 +2207,16 @@
     }
   }
 
+  function _invoke(body, then) {
+    var result = body();
+
+    if (result && result.then) {
+      return result.then(then);
+    }
+
+    return then(result);
+  }
+
   function _catch(body, recover) {
     try {
       var result = body();
@@ -2227,8 +2233,8 @@
 
   var scanBrowserRuntimeFeatures = _async$1(function () {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        _ref$coverageInstrume = _ref.coverageInstrumentationRequired,
-        coverageInstrumentationRequired = _ref$coverageInstrume === void 0 ? true : _ref$coverageInstrume,
+        _ref$coverageHandledF = _ref.coverageHandledFromOutside,
+        coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF,
         _ref$failFastOnFeatur = _ref.failFastOnFeatureDetection,
         failFastOnFeatureDetection = _ref$failFastOnFeatur === void 0 ? false : _ref$failFastOnFeatur;
 
@@ -2241,57 +2247,56 @@
             groupMap = _ref4[0],
             envJson = _ref4[1];
 
+        var browser = detectBrowser();
         var compileId = computeCompileIdFromGroupId({
-          groupId: resolveBrowserGroup(groupMap),
+          groupId: resolveGroup(browser, groupMap),
           groupMap: groupMap
         });
         var groupInfo = groupMap[compileId];
         var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML,
             customCompilerPatterns = envJson.customCompilerPatterns;
-
-        var _babelPluginRequiredN = babelPluginRequiredNamesFromGroupInfo(groupInfo, {
-          coverageInstrumentationRequired: coverageInstrumentationRequired
-        });
-
-        return _await(getFeaturesReport({
+        var featuresReport = {
+          importmap: undefined,
+          dynamicImport: undefined,
+          topLevelAwait: undefined,
+          jsonImportAssertions: undefined,
+          cssImportAssertions: undefined,
+          newStylesheet: undefined
+        };
+        return _await(detectSupportedFeatures({
+          featuresReport: featuresReport,
           failFastOnFeatureDetection: failFastOnFeatureDetection,
-          groupInfo: groupInfo,
-          inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-          customCompilerPatterns: customCompilerPatterns,
-          coverageInstrumentationRequired: coverageInstrumentationRequired
-        }), function (_getFeaturesReport) {
-          var featuresReport = _objectSpread2(_objectSpread2({
-            babelPluginRequiredNames: _babelPluginRequiredN
-          }, _getFeaturesReport), {}, {
-            customCompilerPatterns: customCompilerPatterns
-          });
-
-          var canAvoidCompilation = featuresReport.customCompilerPatterns.length === 0 && featuresReport.jsenvPluginRequiredNames.length === 0 && featuresReport.babelPluginRequiredNames.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
-          return {
+          inlineImportMapIntoHTML: inlineImportMapIntoHTML
+        }), function () {
+          return _await(pluginRequiredNamesFromGroupInfo(groupInfo, {
             featuresReport: featuresReport,
-            canAvoidCompilation: canAvoidCompilation,
-            inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-            compileId: compileId
-          };
+            coverageHandledFromOutside: coverageHandledFromOutside
+          }), function (pluginRequiredNameArray) {
+            var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmap && featuresReport.dynamicImport && featuresReport.topLevelAwait;
+            return {
+              canAvoidCompilation: canAvoidCompilation,
+              featuresReport: featuresReport,
+              customCompilerPatterns: customCompilerPatterns,
+              pluginRequiredNameArray: pluginRequiredNameArray,
+              inlineImportMapIntoHTML: inlineImportMapIntoHTML,
+              outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+              compileId: compileId,
+              browser: browser
+            };
+          });
         });
       });
     });
   });
 
-  var getFeaturesReport = _async$1(function (_ref5) {
-    var failFastOnFeatureDetection = _ref5.failFastOnFeatureDetection,
-        groupInfo = _ref5.groupInfo,
+  var detectSupportedFeatures = _async$1(function (_ref5) {
+    var featuresReport = _ref5.featuresReport,
+        failFastOnFeatureDetection = _ref5.failFastOnFeatureDetection,
         inlineImportMapIntoHTML = _ref5.inlineImportMapIntoHTML;
-    var featuresReport = {
-      jsenvPluginRequiredNames: [],
-      importmapSupported: undefined,
-      dynamicImportSupported: undefined,
-      topLevelAwaitSupported: undefined
-    };
-    var jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray;
-    featuresReport.jsenvPluginRequiredNames = jsenvPluginRequiredNames;
-    return jsenvPluginRequiredNames.length > 0 && failFastOnFeatureDetection ? featuresReport : _await(supportsImportmap({
+    // start testing importmap support first and not in paralell
+    // so that there is not module script loaded beore importmap is injected
+    // it would log an error in chrome console and return undefined
+    return _await(supportsImportmap({
       // chrome supports inline but not remote importmap
       // https://github.com/WICG/import-maps/issues/235
       // at this stage we won't know if the html file will use
@@ -2301,32 +2306,80 @@
       // and in that case we can test only the local importmap support
       // so we test importmap support and the remote one
       remote: !inlineImportMapIntoHTML
-    }), function (importmapSupported) {
-      featuresReport.importmapSupported = importmapSupported;
-      return !importmapSupported && failFastOnFeatureDetection ? featuresReport : _call$1(supportsDynamicImport, function (dynamicImportSupported) {
-        featuresReport.dynamicImportSupported = dynamicImportSupported;
-        return !dynamicImportSupported && failFastOnFeatureDetection ? featuresReport : _call$1(supportsTopLevelAwait, function (topLevelAwaitSupported) {
-          featuresReport.topLevelAwaitSupported = topLevelAwaitSupported;
-          return featuresReport;
+    }), function (importmap) {
+      featuresReport.importmap = importmap;
+
+      if (!importmap && failFastOnFeatureDetection) {
+        return;
+      }
+
+      return _call$1(supportsDynamicImport, function (dynamicImport) {
+        featuresReport.dynamicImport = dynamicImport;
+
+        if (!dynamicImport && failFastOnFeatureDetection) {
+          return;
+        }
+
+        return _call$1(supportsTopLevelAwait, function (topLevelAwait) {
+          featuresReport.topLevelAwait = topLevelAwait;
         });
       });
     });
   });
 
-  var babelPluginRequiredNamesFromGroupInfo = function babelPluginRequiredNamesFromGroupInfo(groupInfo, _ref6) {
-    var coverageInstrumentationRequired = _ref6.coverageInstrumentationRequired;
-    var babelPluginRequiredNameArray = groupInfo.babelPluginRequiredNameArray;
-    var babelPluginRequiredNames = babelPluginRequiredNameArray.slice(); // When instrumentation CAN be handed by playwright
+  var pluginRequiredNamesFromGroupInfo = _async$1(function (groupInfo, _ref6) {
+    var featuresReport = _ref6.featuresReport,
+        coverageHandledFromOutside = _ref6.coverageHandledFromOutside;
+    var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
+    var requiredPluginNames = pluginRequiredNameArray.slice();
+
+    var markPluginAsSupported = function markPluginAsSupported(name) {
+      var index = requiredPluginNames.indexOf(name);
+
+      if (index > -1) {
+        requiredPluginNames.splice(index, 1);
+      }
+    }; // When instrumentation CAN be handed by playwright
     // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-    // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
+    // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
 
-    var transformInstrumentIndex = babelPluginRequiredNames.indexOf("transform-instrument");
 
-    if (transformInstrumentIndex > -1 && !coverageInstrumentationRequired) {
-      babelPluginRequiredNames.splice(transformInstrumentIndex, 1);
+    if (coverageHandledFromOutside) {
+      markPluginAsSupported("transform-instrument");
     }
 
-    return babelPluginRequiredNames;
+    return _invoke(function () {
+      if (pluginRequiredNameArray.includes("transform-import-assertions")) {
+        return _call$1(supportsJsonImportAssertions, function (jsonImportAssertions) {
+          featuresReport.jsonImportAssertions = jsonImportAssertions;
+          return _call$1(supportsCssImportAssertions, function (cssImportAssertions) {
+            featuresReport.cssImportAssertions = cssImportAssertions;
+
+            if (jsonImportAssertions && cssImportAssertions) {
+              markPluginAsSupported("transform-import-assertions");
+            }
+          });
+        });
+      }
+    }, function () {
+      if (pluginRequiredNameArray.includes("new-stylesheet-as-jsenv-import")) {
+        var newStylesheet = supportsNewStylesheet();
+        featuresReport.newStylesheet = newStylesheet;
+        markPluginAsSupported("new-stylesheet-as-jsenv-import");
+      }
+
+      return requiredPluginNames;
+    });
+  });
+
+  var supportsNewStylesheet = function supportsNewStylesheet() {
+    try {
+      // eslint-disable-next-line no-new
+      new CSSStyleSheet();
+      return true;
+    } catch (e) {
+      return false;
+    }
   };
 
   var supportsImportmap = _async$1(function () {
@@ -2334,9 +2387,9 @@
         _ref7$remote = _ref7.remote,
         remote = _ref7$remote === void 0 ? true : _ref7$remote;
 
-    var specifier = jsToTextUrl("export default false");
+    var specifier = asBase64Url("export default false");
     var importMap = {
-      imports: _defineProperty({}, specifier, jsToTextUrl("export default true"))
+      imports: _defineProperty({}, specifier, asBase64Url("export default true"))
     };
     var importmapScript = document.createElement("script");
     var importmapString = JSON.stringify(importMap, null, "  ");
@@ -2351,7 +2404,7 @@
     document.body.appendChild(importmapScript);
     var scriptModule = document.createElement("script");
     scriptModule.type = "module";
-    scriptModule.src = jsToTextUrl("import supported from \"".concat(specifier, "\"; window.__importmap_supported = supported"));
+    scriptModule.src = asBase64Url("import supported from \"".concat(specifier, "\"; window.__importmap_supported = supported"));
     return new Promise(function (resolve, reject) {
       scriptModule.onload = function () {
         var supported = window.__importmap_supported;
@@ -2371,12 +2424,8 @@
     });
   });
 
-  var jsToTextUrl = function jsToTextUrl(js) {
-    return "data:text/javascript;base64,".concat(window.btoa(js));
-  };
-
   var supportsDynamicImport = _async$1(function () {
-    var moduleSource = jsToTextUrl("export default 42");
+    var moduleSource = asBase64Url("export default 42");
     return _catch(function () {
       return _await(import(moduleSource), function (namespace) {
         return namespace.default === 42;
@@ -2387,7 +2436,7 @@
   });
 
   var supportsTopLevelAwait = _async$1(function () {
-    var moduleSource = jsToTextUrl("export default await Promise.resolve(42)");
+    var moduleSource = asBase64Url("export default await Promise.resolve(42)");
     return _catch(function () {
       return _await(import(moduleSource), function (namespace) {
         return namespace.default === 42;
@@ -2397,6 +2446,35 @@
     });
   });
 
+  var supportsJsonImportAssertions = _async$1(function () {
+    var jsonBase64Url = asBase64Url("42", "application/json");
+    var moduleSource = asBase64Url("export { default } from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }"));
+    return _catch(function () {
+      return _await(import(moduleSource), function (namespace) {
+        return namespace.default === 42;
+      });
+    }, function () {
+      return false;
+    });
+  });
+
+  var supportsCssImportAssertions = _async$1(function () {
+    var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
+    var moduleSource = asBase64Url("export { default } from \"".concat(cssBase64Url, "\" assert { type: \"css\" }"));
+    return _catch(function () {
+      return _await(import(moduleSource), function (namespace) {
+        return namespace.default instanceof CSSStyleSheet;
+      });
+    }, function () {
+      return false;
+    });
+  });
+
+  var asBase64Url = function asBase64Url(text) {
+    var mimeType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "application/javascript";
+    return "data:".concat(mimeType, ";base64,").concat(window.btoa(text));
+  };
+
   var renderCompilationInToolbar = function renderCompilationInToolbar(_ref) {
     var compileGroup = _ref.compileGroup;
     var browserSupportRootNode = document.querySelector("#browser_support");
@@ -2404,8 +2482,10 @@
     removeForceHideElement(browserSupportRootNode);
     removeForceHideElement(filesCompilationRootNode);
     scanBrowserRuntimeFeatures().then(function (_ref2) {
-      var featuresReport = _ref2.featuresReport,
-          canAvoidCompilation = _ref2.canAvoidCompilation,
+      var canAvoidCompilation = _ref2.canAvoidCompilation,
+          featuresReport = _ref2.featuresReport,
+          customCompilerPatterns = _ref2.customCompilerPatterns,
+          pluginRequiredNameArray = _ref2.pluginRequiredNameArray,
           inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
           outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
           compileId = _ref2.compileId;
@@ -2420,6 +2500,8 @@
           window.alert("Source files needs to be compiled to be executable in this browser because: ".concat(getBrowserSupportMessage({
             missingOnly: true,
             featuresReport: featuresReport,
+            customCompilerPatterns: customCompilerPatterns,
+            pluginRequiredNameArray: pluginRequiredNameArray,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           })));
         };
@@ -2428,6 +2510,8 @@
           // eslint-disable-next-line no-alert
           window.alert("Source files (except html) can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
             featuresReport: featuresReport,
+            customCompilerPatterns: customCompilerPatterns,
+            pluginRequiredNameArray: pluginRequiredNameArray,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           })));
         };
@@ -2436,6 +2520,8 @@
           // eslint-disable-next-line no-alert
           window.alert("Source files can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
             featuresReport: featuresReport,
+            customCompilerPatterns: customCompilerPatterns,
+            pluginRequiredNameArray: pluginRequiredNameArray,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           })));
         };
@@ -2472,6 +2558,8 @@
   var getBrowserSupportMessage = function getBrowserSupportMessage(_ref3) {
     var missingOnly = _ref3.missingOnly,
         featuresReport = _ref3.featuresReport,
+        customCompilerPatterns = _ref3.customCompilerPatterns,
+        pluginRequiredNameArray = _ref3.pluginRequiredNameArray,
         inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
     var parts = [];
     var importmapSupported = featuresReport.importmapSupported;
@@ -2508,29 +2596,20 @@
       parts.push("top level await is not supported");
     }
 
-    var babelPluginRequiredNames = featuresReport.babelPluginRequiredNames;
-    var babelPluginRequiredCount = babelPluginRequiredNames.length;
+    var pluginRequiredCount = pluginRequiredNameArray.length;
 
-    if (babelPluginRequiredCount === 0) {
+    if (pluginRequiredCount === 0) {
       if (!missingOnly) {
-        parts.push("all babel plugins are natively supported");
+        parts.push("all plugins are natively supported");
       }
     } else {
-      parts.push("".concat(babelPluginRequiredCount, " babel plugins are mandatory: ").concat(babelPluginRequiredNames));
+      parts.push("".concat(pluginRequiredCount, " plugins are mandatory: ").concat(pluginRequiredNameArray));
     }
 
-    var customCompilerPatterns = featuresReport.customCompilerPatterns;
     var customCompilerCount = customCompilerPatterns.length;
 
     if (customCompilerCount === 0) ; else {
       parts.push("".concat(customCompilerCount, " custom compilers enabled: ").concat(customCompilerPatterns));
-    }
-
-    var jsenvPluginRequiredNames = featuresReport.jsenvPluginRequiredNames;
-    var jsenvPluginRequiredCount = jsenvPluginRequiredNames.length;
-
-    if (jsenvPluginRequiredCount === 0) ; else {
-      parts.push("".concat(jsenvPluginRequiredCount, " jsenv plugins are mandatory: ").concat(jsenvPluginRequiredNames));
     }
 
     return "\n- ".concat(parts.join("\n- "));
@@ -2858,8 +2937,17 @@
   var initToolbarEventSource = function initToolbarEventSource(_ref) {
     var executedFileRelativeUrl = _ref.executedFileRelativeUrl,
         livereloading = _ref.livereloading;
+
+    var getLivereloadCallback = function getLivereloadCallback(originalFileProjectRelativeUrl) {
+      var callbacks = window.parent.__jsenv__.livereloadingCallbacks;
+      return callbacks[originalFileProjectRelativeUrl];
+    };
+
     removeForceHideElement(document.querySelector("#eventsource-indicator"));
-    connectEventSource(executedFileRelativeUrl);
+    connectEventSource({
+      executedFileRelativeUrl: executedFileRelativeUrl,
+      getLivereloadCallback: getLivereloadCallback
+    });
     livereloadingAvailableOnServer = livereloading;
 
     if (!livereloadingAvailableOnServer) {
@@ -2894,12 +2982,21 @@
   var eventSourceConnection;
   var connectionReadyPromise;
 
-  var handleFileChange = function handleFileChange(file, type) {
-    latestChangeMap[file] = type;
+  var handleFileChange = function handleFileChange(_ref2) {
+    var file = _ref2.file,
+        eventType = _ref2.eventType,
+        livereloadCallback = _ref2.livereloadCallback;
+    latestChangeMap[file] = eventType;
     updateEventSourceIndicator();
 
     if (shouldLivereload()) {
-      if (file.endsWith(".css") || file.endsWith(".scss") || file.endsWith(".sass")) {
+      if (livereloadCallback) {
+        livereloadCallback({
+          file: file,
+          latestChangeMap: latestChangeMap,
+          reloadPage: reloadPage
+        });
+      } else if (file.endsWith(".css") || file.endsWith(".scss") || file.endsWith(".sass")) {
         reloadAllCss();
         delete latestChangeMap[file];
         updateEventSourceIndicator();
@@ -2950,45 +3047,59 @@
     }
   };
 
-  var connectEventSource = function connectEventSource(executedFileRelativeUrl) {
+  var connectEventSource = function connectEventSource(_ref3) {
+    var executedFileRelativeUrl = _ref3.executedFileRelativeUrl,
+        getLivereloadCallback = _ref3.getLivereloadCallback;
     updateEventSourceIndicator();
     connectionReadyPromise = createPromiseAndHooks();
     eventSourceConnection = connectCompileServerEventSource(executedFileRelativeUrl, {
       onFileModified: function onFileModified(file) {
-        handleFileChange(file, "modified");
+        handleFileChange({
+          file: file,
+          eventType: "modified",
+          livereloadCallback: getLivereloadCallback(file)
+        });
       },
       onFileRemoved: function onFileRemoved(file) {
-        handleFileChange(file, "removed");
+        handleFileChange({
+          file: file,
+          eventType: "removed",
+          livereloadCallback: getLivereloadCallback(file)
+        });
       },
       onFileAdded: function onFileAdded(file) {
-        handleFileChange(file, "added");
+        handleFileChange({
+          file: file,
+          eventType: "added",
+          livereloadCallback: getLivereloadCallback(file)
+        });
       },
-      onConnecting: function onConnecting(_ref2) {
-        var cancel = _ref2.cancel;
+      onConnecting: function onConnecting(_ref4) {
+        var cancel = _ref4.cancel;
         eventSourceState = "connecting";
         eventSourceHooks = {
           abort: cancel
         };
         updateEventSourceIndicator();
       },
-      onConnectionCancelled: function onConnectionCancelled(_ref3) {
-        var connect = _ref3.connect;
+      onConnectionCancelled: function onConnectionCancelled(_ref5) {
+        var connect = _ref5.connect;
         eventSourceState = "disabled";
         eventSourceHooks = {
           connect: connect
         };
         updateEventSourceIndicator();
       },
-      onConnectionFailed: function onConnectionFailed(_ref4) {
-        var connect = _ref4.connect;
+      onConnectionFailed: function onConnectionFailed(_ref6) {
+        var connect = _ref6.connect;
         eventSourceState = "failed";
         eventSourceHooks = {
           reconnect: connect
         };
         updateEventSourceIndicator();
       },
-      onConnected: function onConnected(_ref5) {
-        var cancel = _ref5.cancel;
+      onConnected: function onConnected(_ref7) {
+        var cancel = _ref7.cancel;
         eventSourceState = "connected";
         eventSourceHooks = {
           disconnect: cancel
@@ -3348,10 +3459,10 @@
     var executedFileCompiledUrl = _ref3.executedFileCompiledUrl,
         outDirectoryRelativeUrl = _ref3.outDirectoryRelativeUrl,
         compileServerOrigin = _ref3.compileServerOrigin;
-    var outDirectoryRemoteUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
+    var outDirectoryServerUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
 
-    if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryRemoteUrl)) {
-      var afterCompileDirectory = urlToRelativeUrl(executedFileCompiledUrl, outDirectoryRemoteUrl);
+    if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryServerUrl)) {
+      var afterCompileDirectory = urlToRelativeUrl(executedFileCompiledUrl, outDirectoryServerUrl);
       var slashIndex = afterCompileDirectory.indexOf("/");
       var fileRelativeUrl = afterCompileDirectory.slice(slashIndex + 1);
       return {

@@ -36,8 +36,10 @@ try {
   })
 } catch (e) {
   const actual = e.message
-  const expected = `404 on importmap url
---- importmap url ---
+  const expected = `invalid response status on url
+--- response status ---
+404
+--- url ---
 ${importMapFileUrl}
 --- url trace ---
 importMapFileRelativeUrl parameter`

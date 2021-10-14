@@ -66,7 +66,7 @@ export const rollupPluginCommonJsNamedExports = ({ logger }) => {
   }
 }
 
-/**
+/*
  * Attempt #1: Static analysis: Lower Fidelity, but faster.
  * Do our best job to statically scan a file for named exports. This uses "cjs-module-lexer", the
  * same CJS export scanner that Node.js uses internally. Very fast, but only works on some modules,
@@ -117,7 +117,7 @@ const detectStaticExports = ({ logger, fileUrl, visited = new Set() }) => {
   }
 }
 
-/**
+/*
  * Attempt #2b - Sandboxed runtime analysis: More powerful, but slower.
  * This will only work on UMD and very simple CJS files (require not supported).
  * Uses VM2 to run safely sandbox untrusted code (no access no Node.js primitives, just JS).

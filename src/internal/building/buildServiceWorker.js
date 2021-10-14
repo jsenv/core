@@ -31,19 +31,12 @@ export const buildServiceWorker = async ({
   const serviceWorkerCode = serviceWorkerTransformer(workerBundle.code)
 
   if (minify) {
-    const minifyResult = await minifyJs(
-      serviceWorkerCode,
-      serviceWorkerProjectRelativeUrl,
-      {
-        sourceMap: {
-          ...(workerBundle.map
-            ? { content: JSON.stringify(workerBundle.map) }
-            : {}),
-          asObject: true,
-          includeSources: true,
-        },
-      },
-    )
+    const minifyResult = await minifyJs({
+      url: serviceWorkerProjectUrl,
+      code: serviceWorkerCode,
+      map: workerBundle.map,
+      sourcemapIncludeSources: true,
+    })
     await writeJsAndSourcemap(
       serviceWorkerBuildUrl,
       minifyResult.code,

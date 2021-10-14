@@ -17,11 +17,17 @@
       "babel-plugin-transform-async-to-promises": [
         "./node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js"
       ],
+      "@babel/plugin-syntax-import-assertions/*": [
+        "./node_modules/@babel/plugin-syntax-import-assertions/*"
+      ],
       "@babel/plugin-syntax-numeric-separator/*": [
         "./node_modules/@babel/plugin-syntax-numeric-separator/*"
       ],
       "@babel/plugin-proposal-dynamic-import/*": [
         "./node_modules/@babel/plugin-proposal-dynamic-import/*"
+      ],
+      "@babel/plugin-syntax-import-assertions": [
+        "./node_modules/@babel/plugin-syntax-import-assertions/lib/index.js"
       ],
       "@babel/plugin-syntax-numeric-separator": [
         "./node_modules/@babel/plugin-syntax-numeric-separator/lib/index.js"
@@ -37,6 +43,9 @@
       ],
       "@babel/plugin-syntax-dynamic-import/*": [
         "./node_modules/@babel/plugin-syntax-dynamic-import/*"
+      ],
+      "acorn-import-assertions/package.json": [
+        "./node_modules/acorn-import-assertions/package.json"
       ],
       "@babel/plugin-syntax-dynamic-import": [
         "./node_modules/@babel/plugin-syntax-dynamic-import/lib/index.js"
@@ -74,6 +83,12 @@
       "@jsenv/importmap-eslint-resolver": [
         "./node_modules/@jsenv/importmap-eslint-resolver/main.js"
       ],
+      "construct-style-sheets-polyfill/*": [
+        "./node_modules/construct-style-sheets-polyfill/*"
+      ],
+      "construct-style-sheets-polyfill": [
+        "./node_modules/construct-style-sheets-polyfill/dist/adoptedStyleSheets.js"
+      ],
       "postcss/lib/terminal-highlight": [
         "./node_modules/postcss/lib/terminal-highlight.js"
       ],
@@ -98,11 +113,17 @@
       "postcss/lib/css-syntax-error": [
         "./node_modules/postcss/lib/css-syntax-error.js"
       ],
+      "rollup-plugin-import-assert/*": [
+        "./node_modules/rollup-plugin-import-assert/*"
+      ],
       "rollup-plugin-polyfill-node/*": [
         "./node_modules/rollup-plugin-polyfill-node/*"
       ],
       "@rollup/plugin-node-resolve": [
         "./node_modules/@rollup/plugin-node-resolve/dist/es/index.js"
+      ],
+      "rollup-plugin-import-assert": [
+        "./node_modules/rollup-plugin-import-assert/dist/import-assert.js"
       ],
       "rollup-plugin-node-globals/*": [
         "./node_modules/rollup-plugin-node-globals/*"
@@ -131,6 +152,9 @@
       "@rollup/plugin-commonjs/*": [
         "./node_modules/@rollup/plugin-commonjs/*"
       ],
+      "acorn-import-assertions/*": [
+        "./node_modules/acorn-import-assertions/*"
+      ],
       "istanbul-lib-instrument/*": [
         "./node_modules/istanbul-lib-instrument/*"
       ],
@@ -145,6 +169,9 @@
       ],
       "@rollup/plugin-replace/*": [
         "./node_modules/@rollup/plugin-replace/*"
+      ],
+      "acorn-import-assertions": [
+        "./node_modules/acorn-import-assertions/lib/index.mjs"
       ],
       "cssnano-preset-default/*": [
         "./node_modules/cssnano-preset-default/*"
@@ -491,6 +518,9 @@
       "@jsenv/pwa/*": [
         "./node_modules/@jsenv/pwa/*"
       ],
+      "node-fetch/*": [
+        "./node_modules/node-fetch/*"
+      ],
       "playwright/*": [
         "./node_modules/playwright/*"
       ],
@@ -499,6 +529,9 @@
       ],
       "@jsenv/pwa": [
         "./node_modules/@jsenv/pwa/main.js"
+      ],
+      "node-fetch": [
+        "./node_modules/node-fetch/src/index.js"
       ],
       "playwright": [
         "./node_modules/playwright/index.mjs"
@@ -602,6 +635,8 @@
     }
   },
   "exclude": [
-    "node_modules/agent-base"
+    "experimental/jsenv-sass",
+    "node_modules/agent-base",
+    "node_modules/source-map"
   ]
 }

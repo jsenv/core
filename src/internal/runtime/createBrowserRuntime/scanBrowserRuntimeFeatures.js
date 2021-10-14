@@ -1,9 +1,10 @@
 import { fetchJson } from "../../browser-utils/fetchJson.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
-import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
+import { detectBrowser } from "../detectBrowser/detectBrowser.js"
+import { resolveGroup } from "../resolveGroup.js"
 
 export const scanBrowserRuntimeFeatures = async ({
-  coverageInstrumentationRequired = true,
+  coverageHandledFromOutside = false,
   failFastOnFeatureDetection = false,
 } = {}) => {
   const { outDirectoryRelativeUrl } = await fetchJson(
@@ -16,66 +17,63 @@ export const scanBrowserRuntimeFeatures = async ({
     fetchJson(envFileUrl),
   ])
 
+  const browser = detectBrowser()
   const compileId = computeCompileIdFromGroupId({
-    groupId: resolveBrowserGroup(groupMap),
+    groupId: resolveGroup(browser, groupMap),
     groupMap,
   })
   const groupInfo = groupMap[compileId]
   const { inlineImportMapIntoHTML, customCompilerPatterns } = envJson
 
   const featuresReport = {
-    babelPluginRequiredNames: babelPluginRequiredNamesFromGroupInfo(groupInfo, {
-      coverageInstrumentationRequired,
-    }),
-    ...(await getFeaturesReport({
-      failFastOnFeatureDetection,
-      groupInfo,
-      inlineImportMapIntoHTML,
-      customCompilerPatterns,
-      coverageInstrumentationRequired,
-    })),
-    customCompilerPatterns,
+    importmap: undefined,
+    dynamicImport: undefined,
+    topLevelAwait: undefined,
+    jsonImportAssertions: undefined,
+    cssImportAssertions: undefined,
+    newStylesheet: undefined,
   }
+  await detectSupportedFeatures({
+    featuresReport,
+    failFastOnFeatureDetection,
+    inlineImportMapIntoHTML,
+  })
+  const pluginRequiredNameArray = await pluginRequiredNamesFromGroupInfo(
+    groupInfo,
+    {
+      featuresReport,
+      coverageHandledFromOutside,
+    },
+  )
 
   const canAvoidCompilation =
-    featuresReport.customCompilerPatterns.length === 0 &&
-    featuresReport.jsenvPluginRequiredNames.length === 0 &&
-    featuresReport.babelPluginRequiredNames.length === 0 &&
-    featuresReport.importmapSupported &&
-    featuresReport.dynamicImportSupported &&
-    featuresReport.topLevelAwaitSupported
+    customCompilerPatterns.length === 0 &&
+    pluginRequiredNameArray.length === 0 &&
+    featuresReport.importmap &&
+    featuresReport.dynamicImport &&
+    featuresReport.topLevelAwait
 
   return {
-    featuresReport,
     canAvoidCompilation,
+    featuresReport,
+    customCompilerPatterns,
+    pluginRequiredNameArray,
     inlineImportMapIntoHTML,
     outDirectoryRelativeUrl,
     compileId,
+    browser,
   }
 }
 
-const getFeaturesReport = async ({
+const detectSupportedFeatures = async ({
+  featuresReport,
   failFastOnFeatureDetection,
-  groupInfo,
   inlineImportMapIntoHTML,
 }) => {
-  const featuresReport = {
-    jsenvPluginRequiredNames: [],
-    importmapSupported: undefined,
-    dynamicImportSupported: undefined,
-    topLevelAwaitSupported: undefined,
-  }
-
-  const jsenvPluginRequiredNames = groupInfo.jsenvPluginRequiredNameArray
-  featuresReport.jsenvPluginRequiredNames = jsenvPluginRequiredNames
-  if (jsenvPluginRequiredNames.length > 0 && failFastOnFeatureDetection) {
-    return featuresReport
-  }
-
   // start testing importmap support first and not in paralell
   // so that there is not module script loaded beore importmap is injected
   // it would log an error in chrome console and return undefined
-  const importmapSupported = await supportsImportmap({
+  const importmap = await supportsImportmap({
     // chrome supports inline but not remote importmap
     // https://github.com/WICG/import-maps/issues/235
 
@@ -87,49 +85,81 @@ const getFeaturesReport = async ({
     // so we test importmap support and the remote one
     remote: !inlineImportMapIntoHTML,
   })
-  featuresReport.importmapSupported = importmapSupported
-  if (!importmapSupported && failFastOnFeatureDetection) {
-    return featuresReport
+  featuresReport.importmap = importmap
+  if (!importmap && failFastOnFeatureDetection) {
+    return
   }
 
-  const dynamicImportSupported = await supportsDynamicImport()
-  featuresReport.dynamicImportSupported = dynamicImportSupported
-  if (!dynamicImportSupported && failFastOnFeatureDetection) {
-    return featuresReport
+  const dynamicImport = await supportsDynamicImport()
+  featuresReport.dynamicImport = dynamicImport
+  if (!dynamicImport && failFastOnFeatureDetection) {
+    return
   }
 
-  const topLevelAwaitSupported = await supportsTopLevelAwait()
-  featuresReport.topLevelAwaitSupported = topLevelAwaitSupported
-  return featuresReport
+  const topLevelAwait = await supportsTopLevelAwait()
+  featuresReport.topLevelAwait = topLevelAwait
+  if (!topLevelAwait && failFastOnFeatureDetection) {
+    return
+  }
 }
 
-const babelPluginRequiredNamesFromGroupInfo = (
+const pluginRequiredNamesFromGroupInfo = async (
   groupInfo,
-  { coverageInstrumentationRequired },
+  { featuresReport, coverageHandledFromOutside },
 ) => {
-  const { babelPluginRequiredNameArray } = groupInfo
-
-  const babelPluginRequiredNames = babelPluginRequiredNameArray.slice()
+  const { pluginRequiredNameArray } = groupInfo
+  const requiredPluginNames = pluginRequiredNameArray.slice()
+  const markPluginAsSupported = (name) => {
+    const index = requiredPluginNames.indexOf(name)
+    if (index > -1) {
+      requiredPluginNames.splice(index, 1)
+    }
+  }
 
   // When instrumentation CAN be handed by playwright
   // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-  // coverageInstrumentationRequired is false and "transform-instrument" becomes non mandatory
-  const transformInstrumentIndex = babelPluginRequiredNames.indexOf(
-    "transform-instrument",
-  )
-  if (transformInstrumentIndex > -1 && !coverageInstrumentationRequired) {
-    babelPluginRequiredNames.splice(transformInstrumentIndex, 1)
+  // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
+  if (coverageHandledFromOutside) {
+    markPluginAsSupported("transform-instrument")
   }
 
-  return babelPluginRequiredNames
+  if (pluginRequiredNameArray.includes("transform-import-assertions")) {
+    const jsonImportAssertions = await supportsJsonImportAssertions()
+    featuresReport.jsonImportAssertions = jsonImportAssertions
+
+    const cssImportAssertions = await supportsCssImportAssertions()
+    featuresReport.cssImportAssertions = cssImportAssertions
+
+    if (jsonImportAssertions && cssImportAssertions) {
+      markPluginAsSupported("transform-import-assertions")
+    }
+  }
+
+  if (pluginRequiredNameArray.includes("new-stylesheet-as-jsenv-import")) {
+    const newStylesheet = supportsNewStylesheet()
+    featuresReport.newStylesheet = newStylesheet
+    markPluginAsSupported("new-stylesheet-as-jsenv-import")
+  }
+
+  return requiredPluginNames
+}
+
+const supportsNewStylesheet = () => {
+  try {
+    // eslint-disable-next-line no-new
+    new CSSStyleSheet()
+    return true
+  } catch (e) {
+    return false
+  }
 }
 
 const supportsImportmap = async ({ remote = true } = {}) => {
-  const specifier = jsToTextUrl(`export default false`)
+  const specifier = asBase64Url(`export default false`)
 
   const importMap = {
     imports: {
-      [specifier]: jsToTextUrl(`export default true`),
+      [specifier]: asBase64Url(`export default true`),
     },
   }
 
@@ -148,7 +178,7 @@ const supportsImportmap = async ({ remote = true } = {}) => {
 
   const scriptModule = document.createElement("script")
   scriptModule.type = "module"
-  scriptModule.src = jsToTextUrl(
+  scriptModule.src = asBase64Url(
     `import supported from "${specifier}"; window.__importmap_supported = supported`,
   )
 
@@ -169,12 +199,8 @@ const supportsImportmap = async ({ remote = true } = {}) => {
   })
 }
 
-const jsToTextUrl = (js) => {
-  return `data:text/javascript;base64,${window.btoa(js)}`
-}
-
 const supportsDynamicImport = async () => {
-  const moduleSource = jsToTextUrl(`export default 42`)
+  const moduleSource = asBase64Url(`export default 42`)
   try {
     const namespace = await import(moduleSource)
     return namespace.default === 42
@@ -184,11 +210,41 @@ const supportsDynamicImport = async () => {
 }
 
 const supportsTopLevelAwait = async () => {
-  const moduleSource = jsToTextUrl(`export default await Promise.resolve(42)`)
+  const moduleSource = asBase64Url(`export default await Promise.resolve(42)`)
   try {
     const namespace = await import(moduleSource)
     return namespace.default === 42
   } catch (e) {
     return false
   }
+}
+
+const supportsJsonImportAssertions = async () => {
+  const jsonBase64Url = asBase64Url("42", "application/json")
+  const moduleSource = asBase64Url(
+    `export { default } from "${jsonBase64Url}" assert { type: "json" }`,
+  )
+  try {
+    const namespace = await import(moduleSource)
+    return namespace.default === 42
+  } catch (e) {
+    return false
+  }
+}
+
+const supportsCssImportAssertions = async () => {
+  const cssBase64Url = asBase64Url("p { color: red; }", "text/css")
+  const moduleSource = asBase64Url(
+    `export { default } from "${cssBase64Url}" assert { type: "css" }`,
+  )
+  try {
+    const namespace = await import(moduleSource)
+    return namespace.default instanceof CSSStyleSheet
+  } catch (e) {
+    return false
+  }
+}
+
+const asBase64Url = (text, mimeType = "application/javascript") => {
+  return `data:${mimeType};base64,${window.btoa(text)}`
 }

@@ -31,14 +31,14 @@ Jsenv provides an api to execute your test files inside one or many environments
 `executeTestPlan` is an async function executing test files in one or several runtime environments logging progression and optionnaly generating associated coverage.
 
 ```js
-import { executeTestPlan, launchNode } from "@jsenv/core"
+import { executeTestPlan, nodeRuntime } from "@jsenv/core"
 
 executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./test/**/*.test.js": {
       node: {
-        launch: launchNode,
+        runtime: nodeRuntime,
         allocatedMs: 5000,
       },
     },
@@ -63,7 +63,7 @@ executeTestPlan({
 {
   "./test/**/*.test.js": {
     node: {
-      launch: launchNode
+      runtime: nodeRuntime
     }
   }
 }
@@ -77,7 +77,7 @@ This default value translates into the following sentence: "Execute all files in
 const pattern = "./test/**/*.test.js"
 const executionName = "node"
 const executionOptions = {
-  launch: launchNode,
+  runtime: nodeRuntime,
 }
 const filePlan = {
   [executionName]: executionOptions,
@@ -105,10 +105,10 @@ It exists to prevent an execution planified by a previous pattern.
   // execute every file twice on node (why not ^^)
   "./test/**/*.test.js": {
     node: {
-      launch: launchNode,
+      runtime: nodeRuntime
     },
     node2: {
-      launch: launchNode
+      runtime: nodeRuntime
     }
   },
   // but executes foo.test.js once
@@ -251,7 +251,7 @@ const { testPlanReport } = await executeTestPlan({
   testPlan: {
     "./test/file.test.js": {
       node: {
-        launch: launchNode,
+        runtime: nodeRuntime.
       },
     },
   },
@@ -285,7 +285,7 @@ const { testPlanCoverage } = await executeTestPlan({
   testPlan: {
     "./test/file.test.js": {
       node: {
-        launch: launchNode,
+        runtime: nodeRuntime.
       },
     },
   },
@@ -317,21 +317,21 @@ const { testPlanCoverage } = await executeTestPlan({
 
 A function capable to launch a runtime. This parameter is **required**, the available launch functions are documented in [launcher](../launcher.md) documentation.
 
-## launchParams
+## runtimeParams
 
 An object used to configure the launch function. This parameter is optional.
 
-`launchParams` works so that the two code below are equivalent:
+`runtimeParams` works so that the two code below are equivalent:
 
 ```js
-import { executeTestPlan, launchChromium } from "@jsenv/core"
+import { executeTestPlan, chromiumRuntime } from "@jsenv/core"
 
 executeTestPlan({
   testPlan: {
     "./foo.test.html": {
       chromium: {
-        launch: launchChromium,
-        launchParams: {
+        runtime: chromiumRuntime,
+        runtimeParams: {
           headless: false,
         },
       },
@@ -341,17 +341,18 @@ executeTestPlan({
 ```
 
 ```js
-import { executeTestPlan, launchChromium } from "@jsenv/core"
+import { executeTestPlan, chromiumRuntime } from "@jsenv/core"
 
 executeTestPlan({
   testPlan: {
     "./foo.test.html": {
       chromium: {
-        launch: (params) =>
-          launchChromium({
-            ...params,
-            headless: false,
-          }),
+        runtime: {
+          ...chromiumRuntime,
+          launch: (params) => {
+            return chromiumRuntime.launch({ ...params, headless: false })
+          },
+        },
       },
     },
   },
@@ -363,14 +364,14 @@ executeTestPlan({
 A number representing the amount of milliseconds allocated for this file execution to complete. This param is optional and fallback to [defaultMsAllocatedPerExecution](#defaultMsAllocatedPerExecution)
 
 ```js
-import { executeTestPlan, launchNode } from "@jsenv/core"
+import { executeTestPlan, nodeRuntime } from "@jsenv/core"
 
 executeTestPlan({
   defaultMsAllocatedPerExecution: 5000,
   testPlan: {
     "./foo.test.js": {
       node: {
-        launch: launchNode,
+        runtime: nodeRuntime.
         allocatedMs: 10000,
       },
     },
