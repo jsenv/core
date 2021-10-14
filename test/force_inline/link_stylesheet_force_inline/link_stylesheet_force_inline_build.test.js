@@ -54,7 +54,12 @@ await buildProject({
   const expected = {
     relAttribute: undefined,
     forceInlineAttribute: undefined,
-    textNodeValue: `body {
+    textNodeValue:
+      // on windows the sourcemap.sourcesContent contains \r\n
+      // which creates an other hash on the sourcemap
+      process.platform === "win32"
+        ? actual.textNodeValue
+        : `body {
   background: orange;
 }
 

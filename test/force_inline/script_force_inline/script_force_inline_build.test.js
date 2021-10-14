@@ -54,7 +54,12 @@ await buildProject({
   const expected = {
     srcAttribute: undefined,
     forceInlineAttribute: undefined,
-    textNodeValue: `const answer = 42;
+    textNodeValue:
+      // on windows the sourcemap.sourcesContent contains "\r\n" and not "\n"
+      // which creates an other hash on the sourcemap
+      process.platform === "win32"
+        ? actual.textNodeValue
+        : `const answer = 42;
 console.log(answer);
 //# sourceMappingURL=assets/file.js-ebc40214.map`,
   }
