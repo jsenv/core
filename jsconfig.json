@@ -122,9 +122,6 @@
       "@rollup/plugin-node-resolve": [
         "./node_modules/@rollup/plugin-node-resolve/dist/es/index.js"
       ],
-      "eslint/use-at-your-own-risk": [
-        "./node_modules/eslint/lib/unsupported-api.js"
-      ],
       "rollup-plugin-import-assert": [
         "./node_modules/rollup-plugin-import-assert/dist/import-assert.js"
       ],
@@ -304,9 +301,6 @@
       ],
       "eslint-plugin-react": [
         "./node_modules/eslint-plugin-react/index.js"
-      ],
-      "eslint/package.json": [
-        "./node_modules/eslint/package.json"
       ],
       "is-valid-identifier": [
         "./node_modules/is-valid-identifier/index.js"
@@ -577,6 +571,9 @@
       ],
       "cssnano": [
         "./node_modules/cssnano/dist/index.js"
+      ],
+      "eslint/*": [
+        "./node_modules/eslint/*"
       ],
       "parse5/*": [
         "./node_modules/parse5/*"
