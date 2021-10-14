@@ -83,6 +83,12 @@
       "@jsenv/importmap-eslint-resolver": [
         "./node_modules/@jsenv/importmap-eslint-resolver/main.js"
       ],
+      "construct-style-sheets-polyfill/*": [
+        "./node_modules/construct-style-sheets-polyfill/*"
+      ],
+      "construct-style-sheets-polyfill": [
+        "./node_modules/construct-style-sheets-polyfill/dist/adoptedStyleSheets.js"
+      ],
       "postcss/lib/terminal-highlight": [
         "./node_modules/postcss/lib/terminal-highlight.js"
       ],
@@ -107,11 +113,17 @@
       "postcss/lib/css-syntax-error": [
         "./node_modules/postcss/lib/css-syntax-error.js"
       ],
+      "rollup-plugin-import-assert/*": [
+        "./node_modules/rollup-plugin-import-assert/*"
+      ],
       "rollup-plugin-polyfill-node/*": [
         "./node_modules/rollup-plugin-polyfill-node/*"
       ],
       "@rollup/plugin-node-resolve": [
         "./node_modules/@rollup/plugin-node-resolve/dist/es/index.js"
+      ],
+      "rollup-plugin-import-assert": [
+        "./node_modules/rollup-plugin-import-assert/dist/import-assert.js"
       ],
       "rollup-plugin-node-globals/*": [
         "./node_modules/rollup-plugin-node-globals/*"
@@ -506,6 +518,9 @@
       "@jsenv/pwa/*": [
         "./node_modules/@jsenv/pwa/*"
       ],
+      "node-fetch/*": [
+        "./node_modules/node-fetch/*"
+      ],
       "playwright/*": [
         "./node_modules/playwright/*"
       ],
@@ -514,6 +529,9 @@
       ],
       "@jsenv/pwa": [
         "./node_modules/@jsenv/pwa/main.js"
+      ],
+      "node-fetch": [
+        "./node_modules/node-fetch/src/index.js"
       ],
       "playwright": [
         "./node_modules/playwright/index.mjs"

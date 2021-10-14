@@ -6,7 +6,7 @@ import {
   getMinimalBabelPluginMap,
 } from "@jsenv/core/src/internal/compiling/babel_plugins.js"
 
-import { babelPluginInstrument } from "./babel-plugin-instrument.js"
+import { babelPluginInstrument } from "./babel_plugin_instrument.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
 export const relativeUrlToEmptyCoverage = async (

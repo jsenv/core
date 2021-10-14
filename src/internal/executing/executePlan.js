@@ -1,6 +1,6 @@
 import { mergeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
-import { babelPluginInstrument } from "./coverage/babel-plugin-instrument.js"
+import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
 import { generateExecutionSteps } from "./generateExecutionSteps.js"
 import { executeConcurrently } from "./executeConcurrently.js"
 

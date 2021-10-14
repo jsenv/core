@@ -1,5 +1,5 @@
 import { jsenvCoverageConfig } from "@jsenv/core"
-import { babelPluginInstrument } from "../src/internal/executing/coverage/babel-plugin-instrument.js"
+import { babelPluginInstrument } from "../src/internal/executing/coverage/babel_plugin_instrument.js"
 import { jsenvCoreDirectoryUrl } from "../src/internal/jsenvCoreDirectoryUrl.js"
 import { coverageIsEnabled } from "./coverageIsEnabled.js"
 

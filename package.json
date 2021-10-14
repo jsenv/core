@@ -28,7 +28,7 @@
     "/main.js"
   ],
   "scripts": {
-    "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.html",
+    "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.cjs,.html",
     "generate-importmap": "node ./script/importmap/generate_importmap.js",
     "build": "node ./script/build/build.js",
     "dist": "npm run build",
@@ -124,7 +124,7 @@
     "@jsenv/assert": "2.3.1",
     "@jsenv/babel-preset": "./packages/jsenv-babel-preset",
     "@jsenv/codecov-upload": "3.5.0",
-    "@jsenv/eslint-config": "16.0.6",
+    "@jsenv/eslint-config": "16.0.7",
     "@jsenv/github-release-package": "1.2.3",
     "@jsenv/importmap-eslint-resolver": "5.1.2",
     "@jsenv/importmap-node-module": "2.3.1",
