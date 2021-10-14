@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { chromiumRuntime, firefoxRuntime, webkitRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -21,9 +17,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryBasename = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryBasename}.html`
+const filename = `top_level_await.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
   await startCompileServer({
@@ -41,13 +36,12 @@ await launchBrowsers(
   async (browserRuntime) => {
     const actual = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
-
       runtime: browserRuntime,
-runtimeParams: {
-          ...LAUNCH_TEST_PARAMS,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-        }
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+      },
       executeParams: {
         fileRelativeUrl,
       },

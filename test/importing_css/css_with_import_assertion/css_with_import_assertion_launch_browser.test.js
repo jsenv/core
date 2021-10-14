@@ -41,11 +41,11 @@ await launchBrowsers(
       ...EXECUTION_TEST_PARAMS,
       launchAndExecuteLogLevel: "off",
       runtime: browserRuntime,
-runtimeParams: {
-          ...LAUNCH_TEST_PARAMS,
-          outDirectoryRelativeUrl,
-          compileServerOrigin,
-        }
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+      },
       executeParams: {
         fileRelativeUrl: htmlFileRelativeUrl,
       },

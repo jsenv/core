@@ -1,13 +1,10 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { firefoxRuntime } from "@jsenv/core"
+import { execute, firefoxRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import {
-  START_COMPILE_SERVER_TEST_PARAMS,
-  EXECUTION_TEST_PARAMS,
+  EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
 
@@ -19,25 +16,16 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const filename = `firefox.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-  await startCompileServer({
-    ...START_COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-  })
 
-const actual = await launchAndExecute({
-  ...EXECUTION_TEST_PARAMS,
+const actual = await execute({
+  ...EXECUTE_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
   runtime: firefoxRuntime,
   runtimeParams: {
     ...LAUNCH_TEST_PARAMS,
-    compileServerOrigin,
-    outDirectoryRelativeUrl,
     // headless: false,
   },
-  executeParams: {
-    fileRelativeUrl,
-  },
-  stopAfterExecute: true,
+  fileRelativeUrl,
 })
 const expected = {
   status: "completed",
