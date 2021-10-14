@@ -1275,8 +1275,10 @@
           });
           var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
           return {
-            featuresReport: featuresReport,
             canAvoidCompilation: canAvoidCompilation,
+            featuresReport: featuresReport,
+            customCompilerPatterns: customCompilerPatterns,
+            pluginRequiredNameArray: pluginRequiredNameArray,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
             compileId: compileId
@@ -1445,6 +1447,6 @@
   /* eslint-env browser */
   window.scanBrowserRuntimeFeatures = scanBrowserRuntimeFeatures;
 
-})();
+}());
 
 //# sourceMappingURL=jsenv_compile_proxy.js.map

@@ -40,8 +40,10 @@ export const scanBrowserRuntimeFeatures = async ({
     featuresReport.topLevelAwaitSupported
 
   return {
-    featuresReport,
     canAvoidCompilation,
+    featuresReport,
+    customCompilerPatterns,
+    pluginRequiredNameArray,
     inlineImportMapIntoHTML,
     outDirectoryRelativeUrl,
     compileId,

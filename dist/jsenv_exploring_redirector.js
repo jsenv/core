@@ -1279,8 +1279,10 @@
           });
           var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
           return {
-            featuresReport: featuresReport,
             canAvoidCompilation: canAvoidCompilation,
+            featuresReport: featuresReport,
+            customCompilerPatterns: customCompilerPatterns,
+            pluginRequiredNameArray: pluginRequiredNameArray,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
             compileId: compileId
@@ -1551,6 +1553,6 @@
 
   redirect();
 
-})();
+}());
 
 //# sourceMappingURL=jsenv_exploring_redirector.js.map

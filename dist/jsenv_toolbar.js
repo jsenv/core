@@ -2274,8 +2274,10 @@
           });
           var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmapSupported && featuresReport.dynamicImportSupported && featuresReport.topLevelAwaitSupported;
           return {
-            featuresReport: featuresReport,
             canAvoidCompilation: canAvoidCompilation,
+            featuresReport: featuresReport,
+            customCompilerPatterns: customCompilerPatterns,
+            pluginRequiredNameArray: pluginRequiredNameArray,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML,
             outDirectoryRelativeUrl: outDirectoryRelativeUrl,
             compileId: compileId
@@ -2448,8 +2450,10 @@
     removeForceHideElement(browserSupportRootNode);
     removeForceHideElement(filesCompilationRootNode);
     scanBrowserRuntimeFeatures().then(function (_ref2) {
-      var featuresReport = _ref2.featuresReport,
-          canAvoidCompilation = _ref2.canAvoidCompilation,
+      var canAvoidCompilation = _ref2.canAvoidCompilation,
+          featuresReport = _ref2.featuresReport,
+          customCompilerPatterns = _ref2.customCompilerPatterns,
+          pluginRequiredNameArray = _ref2.pluginRequiredNameArray,
           inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
           outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
           compileId = _ref2.compileId;
@@ -2464,6 +2468,8 @@
           window.alert("Source files needs to be compiled to be executable in this browser because: ".concat(getBrowserSupportMessage({
             missingOnly: true,
             featuresReport: featuresReport,
+            customCompilerPatterns: customCompilerPatterns,
+            pluginRequiredNameArray: pluginRequiredNameArray,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           })));
         };
@@ -2472,6 +2478,8 @@
           // eslint-disable-next-line no-alert
           window.alert("Source files (except html) can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
             featuresReport: featuresReport,
+            customCompilerPatterns: customCompilerPatterns,
+            pluginRequiredNameArray: pluginRequiredNameArray,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           })));
         };
@@ -2480,6 +2488,8 @@
           // eslint-disable-next-line no-alert
           window.alert("Source files can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
             featuresReport: featuresReport,
+            customCompilerPatterns: customCompilerPatterns,
+            pluginRequiredNameArray: pluginRequiredNameArray,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           })));
         };
@@ -2516,6 +2526,8 @@
   var getBrowserSupportMessage = function getBrowserSupportMessage(_ref3) {
     var missingOnly = _ref3.missingOnly,
         featuresReport = _ref3.featuresReport,
+        customCompilerPatterns = _ref3.customCompilerPatterns,
+        pluginRequiredNameArray = _ref3.pluginRequiredNameArray,
         inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
     var parts = [];
     var importmapSupported = featuresReport.importmapSupported;
@@ -2552,7 +2564,6 @@
       parts.push("top level await is not supported");
     }
 
-    var pluginRequiredNameArray = featuresReport.pluginRequiredNameArray;
     var pluginRequiredCount = pluginRequiredNameArray.length;
 
     if (pluginRequiredCount === 0) {
@@ -2563,7 +2574,6 @@
       parts.push("".concat(pluginRequiredCount, " plugins are mandatory: ").concat(pluginRequiredNameArray));
     }
 
-    var customCompilerPatterns = featuresReport.customCompilerPatterns;
     var customCompilerCount = customCompilerPatterns.length;
 
     if (customCompilerCount === 0) ; else {
@@ -3447,6 +3457,6 @@
 
   window.renderToolbar = renderToolbar;
 
-})();
+}());
 
 //# sourceMappingURL=jsenv_toolbar.js.map

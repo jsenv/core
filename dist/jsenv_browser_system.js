@@ -5167,6 +5167,6 @@
     executeFileUsingSystemJs: executeFileUsingSystemJs
   };
 
-})();
+}());
 
 //# sourceMappingURL=jsenv_browser_system.js.map
