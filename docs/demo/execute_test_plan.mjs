@@ -1,18 +1,18 @@
 import {
   executeTestPlan,
-  chromiumRuntimeTab,
-  firefoxRuntimeTab,
+  chromiumTabRuntime,
+  firefoxTabRuntime,
 } from "@jsenv/core"
 
-executeTestPlan({
+await executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./animals.test.html": {
       chromium: {
-        runtime: chromiumRuntimeTab,
+        runtime: chromiumTabRuntime,
       },
       firefox: {
-        runtime: firefoxRuntimeTab,
+        runtime: firefoxTabRuntime,
       },
     },
   },

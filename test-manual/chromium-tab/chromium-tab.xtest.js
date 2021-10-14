@@ -1,9 +1,17 @@
+/*
+ * This test exists to ensure chromiumRuntimeTab actually shares
+ * the chromium browser and opens tab inside it.
+ * By uncommenting stopAfterExecute: false, I can manually ensure that after executeTestPlan
+ * two chromium are opened (not three)
+ * and one of them has two tabs
+ */
+
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   executeTestPlan,
-  chromiumRuntimeTab,
+  chromiumTabRuntime,
   chromiumRuntime,
   nodeRuntime,
 } from "@jsenv/core"
@@ -21,7 +29,7 @@ const headless = false
 const testPlan = {
   [fileRelativeUrl]: {
     tab1: {
-      runtime: chromiumRuntimeTab,
+      runtime: chromiumTabRuntime,
       runtimeParams: { headless },
     },
     chromium: {
@@ -29,7 +37,7 @@ const testPlan = {
       runtimeParams: { headless },
     },
     tab2: {
-      runtime: chromiumRuntimeTab,
+      runtime: chromiumTabRuntime,
       runtimeParams: { headless },
     },
     node: {
@@ -41,13 +49,7 @@ const { testPlanSummary, testPlanReport } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
-  // this test exists to ensure chromiumRuntimeTab actually shares
-  // the chromium browser and opens tab inside it
-  // by passing stopAfterExecute: false,
-  // I can manually ensure that after executeTestPlan
-  // two chromium are opened (not three)
-  // and one of them has two tabs
-  // stopAfterExecute: false,
+  stopAfterExecute: false,
 })
 const actual = {
   testPlanSummary,
