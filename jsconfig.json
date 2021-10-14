@@ -617,6 +617,8 @@
     }
   },
   "exclude": [
-    "node_modules/agent-base"
+    "experimental/",
+    "node_modules/agent-base",
+    "node_modules/source-map"
   ]
 }
