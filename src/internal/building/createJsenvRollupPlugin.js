@@ -679,6 +679,7 @@ export const createJsenvRollupPlugin = async ({
         cancellationToken,
         logger,
         rollupModuleInfo: this.getModuleInfo(rollupUrl),
+        markBuildRelativeUrlAsUsedByJs,
       })
 
       url = loadResult.url

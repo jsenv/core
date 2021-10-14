@@ -21,7 +21,7 @@ export const transformImportReferences = async ({
   const importAssertions = {}
 
   await asyncWalk(ast, {
-    enter: async (node) => {
+    enter: async (node, parent) => {
       await urlAndImportMetaUrlVisitor(node, {
         mutations,
         url,
@@ -29,6 +29,7 @@ export const transformImportReferences = async ({
         urlAndImportMetaUrls,
       })
       await importAssertionsVisitor(node, {
+        parent,
         mutations,
         url,
         resolve,
@@ -50,8 +51,7 @@ export const transformImportReferences = async ({
   const { default: MagicString } = await import("magic-string")
   const magicString = new MagicString(code)
   mutations.forEach((mutation) => {
-    const { node, value } = mutation()
-    magicString.overwrite(node.start, node.end, value)
+    mutation(magicString)
   })
   code = magicString.toString()
   map = magicString.generateMap({ hires: true })
@@ -87,11 +87,12 @@ const urlAndImportMetaUrlVisitor = async (
     return
   }
 
-  mutations.push(() => {
-    return {
-      node,
-      value: referenceToCodeForRollup(reference),
-    }
+  mutations.push((magicString) => {
+    magicString.overwrite(
+      node.start,
+      node.end,
+      referenceToCodeForRollup(reference),
+    )
   })
   urlAndImportMetaUrls[ressourceUrl] = reference
 }
@@ -114,6 +115,7 @@ const isNewUrlImportMetaUrl = (node) => {
 const importAssertionsVisitor = async (
   node,
   {
+    parent,
     mutations,
     url,
     resolve,
@@ -122,65 +124,115 @@ const importAssertionsVisitor = async (
     importAssertions,
   },
 ) => {
-  if (node.type !== "ImportDeclaration") {
-    return
-  }
+  const handleImportAssertion = async ({ node, assert, mutate }) => {
+    const { source } = node
+    const importSpecifier = source.value
 
-  const { assertions = [] } = node
-  if (assertions.length === 0) {
-    return
-  }
-
-  const { source } = node
-  if (source.type !== "Literal") {
-    // dynamic specifier, we'll ignore them for now
-    return
-  }
-
-  const importSpecifier = source.value
-  const { type } = getImportAssertionsDescriptor(assertions)
-
-  const urlResolution = await resolve(importSpecifier, url, {
-    custom: {
-      importAssertionType: type,
-    },
-  })
-  if (urlResolution === null) {
-    return
-  }
-
-  const { id, external } =
-    typeof urlResolution === "object"
-      ? urlResolution
-      : { id: urlResolution, external: false }
-  if (external) {
-    return
-  }
-
-  if (!jsConcatenation && importAssertionsSupport[type]) {
-    // The rollup way to reference an asset is with
-    // "import.meta.ROLLUP_FILE_URL_${rollupAssetId}"
-    // However it would not work here because
-    // It's the static import path that we want to override, not a variable in the script
-    console.warn(
-      `Due to technical limitations ${url} file will be transformed to js module even if it could be kept as ${type} module`,
-    )
-  }
-
-  const importedUrlWithoutAssertion = id
-  const importedUrlWithAssertion = setUrlSearchParamsDescriptor(id, {
-    import_type: type,
-  })
-  mutations.push(() => {
-    return {
-      node: source,
-      value: `"${importedUrlWithAssertion}"`,
+    const urlResolution = await resolve(importSpecifier, url, {
+      custom: {
+        importAssertionType: assert.type,
+      },
+    })
+    if (urlResolution === null) {
+      return
     }
-  })
-  importAssertions[importedUrlWithAssertion] = {
-    importedUrlWithoutAssertion,
-    importNode: source,
-    type,
+
+    const { id, external } =
+      typeof urlResolution === "object"
+        ? urlResolution
+        : { id: urlResolution, external: false }
+    if (external) {
+      return
+    }
+
+    if (!jsConcatenation && importAssertionsSupport[assert.type]) {
+      // The rollup way to reference an asset is with
+      // "import.meta.ROLLUP_FILE_URL_${rollupAssetId}"
+      // However it would not work here because
+      // It's the static import path that we want to override, not a variable in the script
+      console.warn(
+        `Due to technical limitations ${url} file will be transformed to js module even if it could be kept as ${assert.type} module`,
+      )
+    }
+
+    const importedUrlWithoutAssertion = id
+    const importedUrlWithAssertion = setUrlSearchParamsDescriptor(id, {
+      import_type: assert.type,
+    })
+    mutations.push((magicString) => {
+      mutate({ magicString, importedUrlWithAssertion })
+    })
+    importAssertions[importedUrlWithAssertion] = {
+      importedUrlWithoutAssertion,
+      importNode: source,
+      type: assert.type,
+    }
+  }
+
+  if (node.type === "ImportDeclaration") {
+    const { assertions = [] } = node
+    if (assertions.length === 0) {
+      return
+    }
+    const { type } = getImportAssertionsDescriptor(assertions)
+    handleImportAssertion({
+      node,
+      assert: { type },
+      mutate: ({ magicString, importedUrlWithAssertion }) => {
+        magicString.overwrite(
+          node.source.start,
+          node.source.end,
+          `"${importedUrlWithAssertion}"`,
+        )
+      },
+    })
+    return
+  }
+
+  if (node.type === "ObjectExpression" && parent.type === "ImportExpression") {
+    // dynamic expression not supported for now
+    const { source } = parent
+    if (source.type !== "Literal") {
+      return
+    }
+
+    const { properties } = node
+    const assertProperty = properties.find((property) => {
+      return property.key.name === "assert"
+    })
+    if (!assertProperty) {
+      return
+    }
+
+    const assertProperties = assertProperty.value.properties
+    const typeProperty = assertProperties.find((property) => {
+      return property.key.name === "type"
+    })
+    if (!typeProperty) {
+      return
+    }
+
+    const typePropertyValue = typeProperty.value
+    // dynamic type not supported
+    if (typePropertyValue.type !== "Literal") {
+      return
+    }
+
+    // TODO: cela doit mettre une entrée dans l'importmap
+    const typeAssertion = typePropertyValue.value
+    handleImportAssertion({
+      node: parent,
+      assert: { type: typeAssertion },
+      mutate: ({ magicString, importedUrlWithAssertion }) => {
+        magicString.overwrite(
+          parent.source.start,
+          parent.source.end,
+          `"${importedUrlWithAssertion}"`,
+        )
+        magicString.remove(typeProperty.start, typeProperty.end)
+      },
+    })
+    return
   }
 }
 

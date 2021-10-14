@@ -26,13 +26,15 @@ export const createUrlLoader = ({
 }) => {
   const urlResponseBodyMap = {}
 
-  const loadUrl = async (rollupUrl, { cancellationToken, logger }) => {
+  const loadUrl = async (
+    rollupUrl,
+    { cancellationToken, logger, markBuildRelativeUrlAsUsedByJs },
+  ) => {
     const { import_type } = getUrlSearchParamsDescriptor(rollupUrl)
     let url = asServerUrl(rollupUrl)
 
     // importing CSS from JS with import assertions
     if (import_type === "css") {
-      // si le format est esmodule et qu'on génere un chunk pour ce fichier
       const ressourceAsImportAssertion = await loadRessourceAsImportAssertion({
         buildDirectoryUrl,
         url,
@@ -40,6 +42,10 @@ export const createUrlLoader = ({
         ressourceBuilder: getRessourceBuilder(),
         contentTypeExpected: "text/css",
       })
+      // TODO: only when import is dynamic
+      markBuildRelativeUrlAsUsedByJs(
+        ressourceAsImportAssertion.buildRelativeUrl,
+      )
       let code = ressourceAsImportAssertion.code
       let map = await loadSourcemap({
         cancellationToken,
@@ -55,7 +61,6 @@ export const createUrlLoader = ({
         code,
         map,
       })
-
       code = jsModuleConversionResult.code
       map = jsModuleConversionResult.map
 
@@ -63,6 +68,35 @@ export const createUrlLoader = ({
         url,
         code,
         map,
+      }
+    }
+
+    // importing json from JS with import assertion
+    if (import_type === "json") {
+      const ressourceAsImportAssertion = await loadRessourceAsImportAssertion({
+        buildDirectoryUrl,
+        url,
+        urlImporterMap,
+        ressourceBuilder: getRessourceBuilder(),
+        contentTypeExpected: "application/json",
+      })
+      // TODO: only when import is dynamic
+      markBuildRelativeUrlAsUsedByJs(
+        ressourceAsImportAssertion.buildRelativeUrl,
+      )
+
+      let code = ressourceAsImportAssertion.code
+      let map
+      const jsModuleConversionResult = await convertJsonTextToJavascriptModule({
+        code,
+        map,
+      })
+      code = jsModuleConversionResult.code
+      map = jsModuleConversionResult.map
+
+      return {
+        url,
+        code,
       }
     }
 
@@ -117,10 +151,10 @@ export const createUrlLoader = ({
     // param and this is only possible in Node.js where minification is less (not?) important
     const jsonText = await response.text()
     saveUrlResponseBody(response.url, jsonText)
-    const jsonAsJsModule = convertJsonTextToJavascriptModule(jsonText)
+    const { code } = convertJsonTextToJavascriptModule({ code: jsonText })
     return {
       url: response.url,
-      code: jsonAsJsModule,
+      code,
       map: null,
     }
   }
@@ -221,12 +255,14 @@ const loadRessourceAsImportAssertion = async ({
   }
 }
 
-const convertJsonTextToJavascriptModule = (jsonText) => {
+const convertJsonTextToJavascriptModule = ({ code }) => {
   // here we could do the following
   // return export default jsonText
   // This would return valid js, that would be minified later
   // however we will prefer using JSON.parse because it's faster
   // for js engine to parse JSON than JS
 
-  return `export default JSON.parse(${JSON.stringify(jsonText)})`
+  return {
+    code: `export default JSON.parse(${JSON.stringify(code)})`,
+  }
 }
