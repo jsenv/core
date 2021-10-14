@@ -617,7 +617,7 @@
     }
   },
   "exclude": [
-    "experimental/",
+    "experimental/jsenv-sass",
     "node_modules/agent-base",
     "node_modules/source-map"
   ]

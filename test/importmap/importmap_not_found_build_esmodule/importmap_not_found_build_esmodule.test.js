@@ -37,7 +37,7 @@ try {
 } catch (e) {
   const actual = e.message
   const expected = `invalid response status on url
---- reponse status ---
+--- response status ---
 404
 --- url ---
 ${importMapFileUrl}

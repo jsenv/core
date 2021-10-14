@@ -36,7 +36,7 @@ try {
 } catch (e) {
   const actual = e.message
   const expected = `Invalid response status on url
---- reponse status ---
+--- response status ---
 404
 --- js url ---
 ${fooFileUrl}

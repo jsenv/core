@@ -8,7 +8,7 @@ import {
   webkitRuntime,
 } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
+import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
 import {
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
@@ -24,7 +24,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const htmlFilename = `import_meta_url.html`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}import_meta_url.js`
-const compileId = COMPILE_ID_OTHERWISE
+const compileId = COMPILE_ID_BEST
 
 await launchBrowsers(
   [

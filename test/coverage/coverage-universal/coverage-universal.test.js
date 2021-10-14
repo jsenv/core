@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   executeTestPlan,
@@ -16,10 +16,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}coverage-universal.html`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}coverage-universal.js`
 const testPlan = {
   [htmlFileRelativeUrl]: {
     chromium: {
@@ -53,7 +52,7 @@ const test = async (options = {}) => {
     },
     ...options,
     // concurrencyLimit: 1,
-    // logLevel: "info",
+    logLevel: "info",
     // coverageHtmlDirectory: true,
   })
   return result.testPlanCoverage
@@ -62,7 +61,7 @@ const test = async (options = {}) => {
 // without forcing istanbul
 {
   const actual = await test({
-    coverageV8MergeConflictIsExpected: true,
+    // coverageV8MergeConflictIsExpected: true,
   })
   const expected = {
     [`./${testDirectoryRelativeUrl}file.js`]: {

@@ -40,7 +40,7 @@ await launchBrowsers(
     webkitRuntime,
   ],
   async (browserRuntime) => {
-    const result = await execute({
+    const { status, error, outDireectoryRelativeUrl } = await execute({
       ...EXECUTE_TEST_PARAMS,
       jsenvDirectoryRelativeUrl,
       launchAndExecuteLogLevel: "off",
@@ -49,6 +49,7 @@ await launchBrowsers(
         ...LAUNCH_TEST_PARAMS,
       },
       fileRelativeUrl: htmlFileRelativeUrl,
+      collectCompileServerInfo: true,
       ignoreError: true,
       // runtimeParams: {
       //   headless: false,
@@ -59,8 +60,8 @@ await launchBrowsers(
     if (browserRuntime === chromiumRuntime) {
       const mainFileUrl = resolveUrl(mainFileRelativeUrl, jsenvCoreDirectoryUrl)
       const actual = {
-        status: result.status,
-        errorMessage: result.error.message,
+        status,
+        errorMessage: error.message,
       }
       const expected = {
         status: "errored",
@@ -70,13 +71,10 @@ await launchBrowsers(
       return
     }
 
-    const importedFileUrl = resolveUrl(
-      `./.jsenv/out/${compileId}/${importedFileRelativeUrl}`,
-      jsenvCoreDirectoryUrl,
-    )
+    const importedFileUrl = `${jsenvCoreDirectoryUrl}${outDireectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
     const actual = {
-      status: result.status,
-      errorMessage: result.error.message,
+      status,
+      errorMessage: error.message,
     }
     const expected = {
       status: "errored",

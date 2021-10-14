@@ -23,7 +23,6 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
 const filePath = urlToFileSystemPath(fileUrl)
 const compileId = "best"
-const compiledFileUrl = `${jsenvCoreDirectoryUrl}.jsenv/out-dev/${compileId}/${fileRelativeUrl}`
 
 const test = async ({ canUseNativeModuleSystem } = {}) => {
   const result = await execute({
@@ -36,6 +35,7 @@ const test = async ({ canUseNativeModuleSystem } = {}) => {
       canUseNativeModuleSystem,
     },
     fileRelativeUrl,
+    collectCompileServerInfo: true,
     ignoreError: true,
   })
   return result
@@ -51,9 +51,15 @@ const test = async ({ canUseNativeModuleSystem } = {}) => {
 
 // with systemjs
 {
-  const actual = await test({
+  const { status, error, outDirectoryRelativeUrl } = await test({
     canUseNativeModuleSystem: false,
   })
+  const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
+
+  const actual = {
+    status,
+    error,
+  }
   const parsingError = {
     message: `${filePath}: Unexpected token (1:11)
 
@@ -77,9 +83,9 @@ ${fileRelativeUrl}
 ${compiledFileUrl}`),
     {
       parsingError,
-      filename: actual.error.filename,
-      lineno: actual.error.lineno,
-      columnno: actual.error.columnno,
+      filename: error.filename,
+      lineno: error.lineno,
+      columnno: error.columnno,
     },
   )
   const expected = {

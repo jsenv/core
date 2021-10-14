@@ -57,7 +57,7 @@ const sourcemap = await readFile(sourcemapUrl, { as: "json" })
   const actual = sourcemap
   const expected = {
     version: 3,
-    file: "script_module_inline.script_module_inline.js",
+    file: "script_module_inline.html__inline__script_module_inline.js",
     sources: ["../../main.js"],
     sourcesContent: [await readFile(new URL("./main.js", import.meta.url))],
     names: [],

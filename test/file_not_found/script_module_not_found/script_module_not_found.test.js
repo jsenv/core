@@ -35,8 +35,8 @@ try {
   throw new Error("should throw")
 } catch (e) {
   const actual = e.message
-  const expected = `Invalid response status on url
---- reponse status ---
+  const expected = `invalid response status on url
+--- response status ---
 404
 --- js url ---
 ${jsFileUrl}

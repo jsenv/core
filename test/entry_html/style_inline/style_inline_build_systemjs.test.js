@@ -71,7 +71,7 @@ const text = textNode.value
   const actual = sourcemap
   const expected = {
     version: 3,
-    sources: [`../../style_inline.7.css`],
+    sources: ["../../style_inline.html__inline__7.css"],
     names: actual.names,
     mappings: actual.mappings,
     file: actual.file,
