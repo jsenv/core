@@ -25,6 +25,7 @@ Each standard listed in this section is potentially supported natively by the br
 - top level await
 - import.meta.url
 - dynamic imports
+- import assertions
 
 # Test runner overview
 

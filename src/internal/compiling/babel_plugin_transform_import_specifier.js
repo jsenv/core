@@ -78,21 +78,9 @@ const transformStringLiteralAtPath = (path, transform, babel) => {
   const value = path.node.value
   const valueTransformed = transform({
     specifier: value,
-    node: path.node,
-    assertionsDescriptor: getImportAssertionsDescriptor(path.parent.assertions),
+    path,
   })
   if (valueTransformed !== value) {
     path.replaceWith(babel.types.stringLiteral(valueTransformed))
   }
-}
-
-const getImportAssertionsDescriptor = (importAssertions) => {
-  const importAssertionsDescriptor = {}
-  if (importAssertions) {
-    importAssertions.forEach((importAssertion) => {
-      importAssertionsDescriptor[importAssertion.key.name] =
-        importAssertion.value.value
-    })
-  }
-  return importAssertionsDescriptor
 }
