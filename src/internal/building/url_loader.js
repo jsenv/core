@@ -2,10 +2,7 @@ import { resolveUrl, urlToFilename } from "@jsenv/filesystem"
 
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import { convertCssTextToJavascriptModule } from "@jsenv/core/src/internal/building/css_module.js"
-import {
-  getJavaScriptSourceMappingUrl,
-  getCssSourceMappingUrl,
-} from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { loadSourcemap } from "./sourcemap_loader.js"
 
 export const createUrlLoader = ({
@@ -57,14 +54,14 @@ export const createUrlLoader = ({
         buildDirectoryUrl,
       )
       let code = String(cssReference.ressource.bufferAfterBuild)
-      let map = await loadSourcemap({
-        cancellationToken,
-        logger,
-
-        url: cssBuildUrl,
-        code,
-        getSourceMappingUrl: getCssSourceMappingUrl,
-      })
+      const sourcemapReference = cssReference.ressource.dependencies.find(
+        (dependency) => {
+          return dependency.ressource.isSourcemap
+        },
+      )
+      let map = sourcemapReference
+        ? JSON.parse(sourcemapReference.ressource.bufferAfterBuild)
+        : undefined
 
       const jsModuleConversionResult = await convertCssTextToJavascriptModule({
         cssUrl: cssBuildUrl,
