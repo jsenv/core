@@ -264,6 +264,6 @@ const convertJsonTextToJavascriptModule = ({ code }) => {
   // for js engine to parse JSON than JS
 
   return {
-    code: `export default JSON.parse(${JSON.stringify(code)})`,
+    code: `export default JSON.parse(${JSON.stringify(code.trim())})`,
   }
 }
