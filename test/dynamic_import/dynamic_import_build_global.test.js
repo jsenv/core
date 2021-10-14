@@ -25,8 +25,9 @@ try {
   })
 } catch (actual) {
   const expected = new Error(
-    `UMD and IIFE output formats are not supported for code-splitting builds.`,
+    `Invalid value "iife" for option "output.format" - UMD and IIFE output formats are not supported for code-splitting builds.`,
   )
   expected.code = "INVALID_OPTION"
+  expected.url = "https://rollupjs.org/guide/en/#outputformat"
   assert({ actual, expected })
 }

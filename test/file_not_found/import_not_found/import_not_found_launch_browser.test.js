@@ -40,7 +40,7 @@ await launchBrowsers(
     webkitRuntime,
   ],
   async (browserRuntime) => {
-    const { status, error, outDireectoryRelativeUrl } = await execute({
+    const { status, error, outDirectoryRelativeUrl } = await execute({
       ...EXECUTE_TEST_PARAMS,
       jsenvDirectoryRelativeUrl,
       launchAndExecuteLogLevel: "off",
@@ -71,7 +71,7 @@ await launchBrowsers(
       return
     }
 
-    const importedFileUrl = `${jsenvCoreDirectoryUrl}${outDireectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
+    const importedFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
     const actual = {
       status,
       errorMessage: error.message,
