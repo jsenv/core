@@ -3255,6 +3255,20 @@
     return _await$8(fetchSource(url, {
       contentTypeExpected: "text/css"
     }), function (response) {
+      // There is a logic inside "toolbar.eventsource.js" which is reloading
+      // all link rel="stylesheet" when file ending with ".css" are modified
+      // But here it would not work because we have to replace the css in
+      // the adopted stylsheet + all module importing this css module
+      // should be reinstantiated
+      // -> store a livereload callback forcing whole page reload
+      var compileDirectoryServerUrl = "".concat(window.location.origin, "/").concat(compileDirectoryRelativeUrl);
+      var originalFileRelativeUrl = response.url.slice(compileDirectoryServerUrl.length);
+
+      window.__jsenv__.livereloadingCallbacks[originalFileRelativeUrl] = function (_ref4) {
+        var reloadPage = _ref4.reloadPage;
+        reloadPage();
+      };
+
       return _await$8(response.text(), function (cssText) {
         var cssTextWithBaseUrl = cssWithBaseUrl({
           cssText: cssText,
@@ -3270,21 +3284,7 @@
               _export("default", sheet);
             }
           };
-        }); // There is a logic inside "toolbar.eventsource.js" which is reloading
-        // all link rel="stylesheet" when file ending with ".css" are modified
-        // But here it would not work because we have to replace the css in
-        // the adopted stylsheet + all module importing this css module
-        // should be reinstantiated
-        // -> store a livereload callback forcing whole page reload
-
-        var compileDirectoryServerUrl = "".concat(window.location.origin, "/").concat(compileDirectoryRelativeUrl);
-        var originalFileRelativeUrl = response.url.slice(compileDirectoryServerUrl.length);
-
-        window.__jsenv__.livereloadingCallbacks[originalFileRelativeUrl] = function (_ref4) {
-          var reloadPage = _ref4.reloadPage;
-          reloadPage();
-        };
-
+        });
         return loader.getRegister(url);
       });
     });

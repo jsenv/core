@@ -107,22 +107,6 @@ const instantiateAsCssModule = async (
   const response = await fetchSource(url, {
     contentTypeExpected: "text/css",
   })
-  const cssText = await response.text()
-  const cssTextWithBaseUrl = cssWithBaseUrl({
-    cssText,
-    cssUrl: url,
-    baseUrl: importerUrl,
-  })
-
-  window.System.register([], (_export) => {
-    return {
-      execute: () => {
-        var sheet = new CSSStyleSheet()
-        sheet.replaceSync(cssTextWithBaseUrl)
-        _export("default", sheet)
-      },
-    }
-  })
 
   // There is a logic inside "toolbar.eventsource.js" which is reloading
   // all link rel="stylesheet" when file ending with ".css" are modified
@@ -140,6 +124,22 @@ const instantiateAsCssModule = async (
     reloadPage()
   }
 
+  const cssText = await response.text()
+  const cssTextWithBaseUrl = cssWithBaseUrl({
+    cssText,
+    cssUrl: url,
+    baseUrl: importerUrl,
+  })
+
+  window.System.register([], (_export) => {
+    return {
+      execute: () => {
+        const sheet = new CSSStyleSheet()
+        sheet.replaceSync(cssTextWithBaseUrl)
+        _export("default", sheet)
+      },
+    }
+  })
   return loader.getRegister(url)
 }
 

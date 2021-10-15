@@ -24,26 +24,8 @@ await executeTestPlan({
         allocatedMs: 180 * 1000,
       },
     },
-    "test/**/execute-basic/*.browser.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        allocatedMs: 80 * 1000,
-      },
-    },
-    "test/**/*-launch-browser/**/*.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        allocatedMs: process.platform === "win32" ? 120 * 1000 : 60 * 1000,
-      },
-    },
-    "test/**/*-exploring/**/*.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        // allocate more time (60s) for these tests, they can be long
-        allocatedMs: 80 * 1000,
-      },
-    },
   },
+  coverage: process.argv.includes("--coverage"),
   coverageConfig: {
     "./index.js": true,
     "./src/**/*.js": true,
