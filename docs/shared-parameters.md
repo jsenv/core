@@ -55,7 +55,7 @@ This parameter only adds an extension on extensionless import, it cannot try dif
 
 # customCompilers
 
-`customCompilers` parameter is an object describing how file should be compiled. This parameter is optionnal with a default value of `{}`. The default value means all your project files uses standard files and nothing needs to be compiled.
+`customCompilers` parameter is an object describing how file should be compiled. This parameter is optionnal with a default value of `{}`. The default value means all your project files uses standard files and nothing needs to be compiled. Using this parameter indicates to jsenv that some code cannot run directly in the browser and forces compilation.
 
 But if your code or some of your dependencies use an other format you need to convert it using this parameter. For instance, the following code makes jsenv compatible with `react`.
 

@@ -54,14 +54,16 @@ export const createUrlLoader = ({
         buildDirectoryUrl,
       )
       let code = String(cssReference.ressource.bufferAfterBuild)
+      let map
       const sourcemapReference = cssReference.ressource.dependencies.find(
         (dependency) => {
           return dependency.ressource.isSourcemap
         },
       )
-      let map = sourcemapReference
-        ? JSON.parse(sourcemapReference.ressource.bufferAfterBuild)
-        : undefined
+      if (sourcemapReference) {
+        await sourcemapReference.ressource.getReadyPromise()
+        map = JSON.parse(sourcemapReference.ressource.bufferAfterBuild)
+      }
 
       const jsModuleConversionResult = await convertCssTextToJavascriptModule({
         cssUrl: cssBuildUrl,

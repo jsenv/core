@@ -909,6 +909,8 @@ export const createJsenvRollupPlugin = async ({
 
           // we want to convert the import assertions into a js module
           // to do that we append ?import_type to the url
+          // In theory this is not needed anymore:
+          // This is already done by the compile server
           const ressourceUrlAsJsModule = setUrlSearchParamsDescriptor(
             ressourceUrl,
             {

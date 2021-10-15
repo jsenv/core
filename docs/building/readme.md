@@ -4,7 +4,7 @@ This is an in-depth documentation about jsenv build. For a quick overview go to 
 
 This documentation list [key features](#key-features) and gives the [definition of a build for jsenv](#Definition-of-a-build-for-jsenv) to get an idea of how things where designed. Then it documents [buildProject](#buildProject) function, its parameters and return value. Finally you can find:
 
-- [How to reference js assets?](#How-to-reference-js-assets)
+- [How to reference assets?](#How-to-reference-assets)
 - [Long term caching](#Long-term-caching)
 - [SystemJS format](#SystemJS-format)
 - [Frontend build](#Frontend-build)
@@ -291,15 +291,82 @@ The value above can be translated into the following sentence where build direct
 "Three files where written in _dist/_ from project directory:
 _main.html_ can be found at _dist/main.html_, _src/main.css_ at _dist/assets/main-2e7e167b.css_ and _src/main.js_ at _dist/main-a340d0ae.js_"
 
-## How to reference js assets?
+## How to reference assets?
 
-The following pattern should be used to o reference an asset from a js file:
+### With import.meta.url
+
+With this pattern you get an url to a file that can be used later to fetch that file.
 
 ```js
 const imageUrl = new URL("./img.png", import.meta.url)
+
+const img = document.createElement("img")
+img.src = imageUrl
+document.body.appendChild(img)
 ```
 
-This pattern is recognized by jsenv build which detects the dependency to `"./img.png"`.
+### With import assertions
+
+There is 2 standard import assertions type: `"css"` and `"json"`. Ad the time of writing this documentation only chrome natively supports them. With this solution you can use static and dynamic import to reference non-js files.
+
+#### JSON
+
+```js
+// static import for JSON
+import json from "./data.json" assert { type: "json" }
+
+console.log(json)
+
+// dynamic import for JSON
+const jsonModule = await import("./data.json", {
+  assert: { type: "css" },
+})
+
+console.log(jsonModule.default)
+```
+
+#### CSS
+
+```js
+// static import for CSS
+import sheet from "./style.css" assert { type: "css" }
+
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
+
+// dynamic import for CSS
+const cssModule = await import("./style.css", {
+  assert: { type: "css" },
+})
+
+document.adoptedStyleSheets = [
+  ...document.adoptedStyleSheets,
+  cssModule.default,
+]
+```
+
+### With customCompilers
+
+You can import non-js ressources using static import as shown below
+
+```js
+import text from "./data.txt"
+
+console.log(text)
+```
+
+However this cannot run directly in the browser. It needs to be transformed into something standard.
+This can be achieved by associating `"**/*.txt"` with `textToJavaScriptModule` in [customCompilers](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters.md#customcompilers).
+
+```js
+import { textToJavaScriptModule } from "@jsenv/core"
+
+export const customCompilers = {
+  // Dynamically convert text files to javascript modules
+  "**/*.txt": textToJavaScriptModule,
+}
+```
+
+Keep in mind jsenv tries to use source files when possible. Using `customCompilers` indicates some of your code needs to be compiled, forcing jsenv to compile files before executing them.
 
 # Long term caching
 

@@ -27,7 +27,7 @@ export const setUrlSearchParamsDescriptor = (url, searchParamsDescriptor) => {
   const urlObject = new URL(url)
   const { searchParams } = urlObject
   Object.keys(searchParamsDescriptor).forEach((key) => {
-    searchParams.append(key, searchParamsDescriptor[key])
+    searchParams.set(key, searchParamsDescriptor[key])
   })
   return String(urlObject)
 }

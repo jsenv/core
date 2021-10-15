@@ -9,8 +9,10 @@ export const babelPluginImportAssertions = (
 ) => {
   return {
     ...babelPluginTransformImportSpecifier(babel, {
-      // TODO: throw when import specifier is dynamic
-      // as we do during build
+      // During the build we throw when for import call expression where
+      // sepcifier or type is dynamic.
+      // Here there is no strong need to throw because keeping the source code intact
+      // will throw an error when browser will execute the code
       transformImportSpecifier: ({ specifier, path }) => {
         const importPath = path.parentPath
         const importNode = importPath.node
@@ -40,8 +42,6 @@ export const babelPluginImportAssertions = (
 
           const typePropertyValue = typePropertyNode.value
           if (typePropertyValue.type !== "StringLiteral") {
-            // TODO: throw when "type" is dynamic
-            // as we do during build
             return specifier
           }
 
@@ -50,7 +50,7 @@ export const babelPluginImportAssertions = (
           }
         } else {
           assertionsDescriptor = getImportAssertionsDescriptor(
-            importPath.assertions,
+            importPath.node.assertions,
           )
         }
 
