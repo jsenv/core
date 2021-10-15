@@ -94,6 +94,7 @@ export const showSourceLocation = ({
   }
 
   const lines = source.split(/\r?\n/)
+  if (line === 0) line = 1
   let lineRange = {
     start: line - 1,
     end: line,
@@ -104,6 +105,8 @@ export const showSourceLocation = ({
   const linesToShow = lines.slice(lineRange.start, lineRange.end)
   const endLineNumber = lineRange.end
   const lineNumberMaxWidth = String(endLineNumber).length
+
+  if (column === 0) column = 1
 
   const columnRange = {}
   if (column === undefined) {

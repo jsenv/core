@@ -208,3 +208,16 @@ const e = false;
   4 |${" "}`.slice(1)
   assert({ actual, expected })
 }
+
+// line and column being 0
+{
+  const actual = showSourceLocation({
+    source: `const a = false;`,
+    line: 0,
+    column: 0,
+  })
+  const expected = `
+> 1 | const a = false;
+      ^`.slice(1)
+  assert({ actual, expected })
+}
