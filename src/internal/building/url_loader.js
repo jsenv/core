@@ -61,7 +61,8 @@ export const createUrlLoader = ({
         },
       )
       if (sourcemapReference) {
-        await sourcemapReference.ressource.getReadyPromise()
+        // because css is ready, it's sourcemap is also ready
+        // we can read directly sourcemapReference.ressource.bufferAfterBuild
         map = JSON.parse(sourcemapReference.ressource.bufferAfterBuild)
       }
 
