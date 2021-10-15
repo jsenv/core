@@ -12,7 +12,7 @@ export const createBrowserSystem = ({
     throw new Error(`window.System is undefined`)
   }
 
-  const browserSystem = new window.System.constructor()
+  const browserSystem = window.System
 
   const resolve = (specifier, importer = document.location.href) => {
     return importResolver.resolveImport(specifier, importer)
@@ -25,7 +25,7 @@ export const createBrowserSystem = ({
     const { importType, urlWithoutImportType } = extractImportTypeFromUrl(url)
     if (importType === "json") {
       const jsonModule = await instantiateAsJsonModule(urlWithoutImportType, {
-        loader: this,
+        browserSystem,
         fetchSource,
       })
       return jsonModule
@@ -33,9 +33,9 @@ export const createBrowserSystem = ({
 
     if (importType === "css") {
       const cssModule = await instantiateAsCssModule(urlWithoutImportType, {
+        browserSystem,
         importerUrl,
         compileDirectoryRelativeUrl,
-        loader: this,
         fetchSource,
       })
       return cssModule
@@ -85,24 +85,24 @@ const extractImportTypeFromUrl = (url) => {
   }
 }
 
-const instantiateAsJsonModule = async (url, { loader, fetchSource }) => {
+const instantiateAsJsonModule = async (url, { browserSystem, fetchSource }) => {
   const response = await fetchSource(url, {
     contentTypeExpected: "application/json",
   })
   const json = await response.json()
-  window.System.register([], (_export) => {
+  browserSystem.register([], (_export) => {
     return {
       execute: () => {
         _export("default", json)
       },
     }
   })
-  return loader.getRegister(url)
+  return browserSystem.getRegister(url)
 }
 
 const instantiateAsCssModule = async (
   url,
-  { importerUrl, compileDirectoryRelativeUrl, loader, fetchSource },
+  { importerUrl, compileDirectoryRelativeUrl, browserSystem, fetchSource },
 ) => {
   const response = await fetchSource(url, {
     contentTypeExpected: "text/css",
@@ -131,7 +131,7 @@ const instantiateAsCssModule = async (
     baseUrl: importerUrl,
   })
 
-  window.System.register([], (_export) => {
+  browserSystem.register([], (_export) => {
     return {
       execute: () => {
         const sheet = new CSSStyleSheet()
@@ -140,7 +140,13 @@ const instantiateAsCssModule = async (
       },
     }
   })
-  return loader.getRegister(url)
+  const registration = browserSystem.getRegister(url)
+  if (!registration) {
+    throw new Error(
+      `no registration found for CSS at ${url}. Navigator.vendor: ${window.navigator.vendor}. CSS text: ${cssTextWithBaseUrl}`,
+    )
+  }
+  return registration
 }
 
 // CSSStyleSheet accepts a "baseUrl" parameter

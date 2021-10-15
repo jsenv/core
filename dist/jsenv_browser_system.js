@@ -3136,7 +3136,7 @@
       throw new Error("window.System is undefined");
     }
 
-    var browserSystem = new window.System.constructor();
+    var browserSystem = window.System;
 
     var _resolve = function resolve(specifier) {
       var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : document.location.href;
@@ -3157,7 +3157,7 @@
       return _invoke$5(function () {
         if (importType === "json") {
           return _await$8(instantiateAsJsonModule(urlWithoutImportType, {
-            loader: _this,
+            browserSystem: browserSystem,
             fetchSource: fetchSource
           }), function (jsonModule) {
             _exit = true;
@@ -3170,9 +3170,9 @@
         return _invoke$5(function () {
           if (importType === "css") {
             return _await$8(instantiateAsCssModule(urlWithoutImportType, {
+              browserSystem: browserSystem,
               importerUrl: importerUrl,
               compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
-              loader: _this,
               fetchSource: fetchSource
             }), function (cssModule) {
               _exit2 = true;
@@ -3229,20 +3229,20 @@
   };
 
   var instantiateAsJsonModule = _async$8(function (url, _ref2) {
-    var loader = _ref2.loader,
+    var browserSystem = _ref2.browserSystem,
         fetchSource = _ref2.fetchSource;
     return _await$8(fetchSource(url, {
       contentTypeExpected: "application/json"
     }), function (response) {
       return _await$8(response.json(), function (json) {
-        window.System.register([], function (_export) {
+        browserSystem.register([], function (_export) {
           return {
             execute: function execute() {
               _export("default", json);
             }
           };
         });
-        return loader.getRegister(url);
+        return browserSystem.getRegister(url);
       });
     });
   });
@@ -3250,7 +3250,7 @@
   var instantiateAsCssModule = _async$8(function (url, _ref3) {
     var importerUrl = _ref3.importerUrl,
         compileDirectoryRelativeUrl = _ref3.compileDirectoryRelativeUrl,
-        loader = _ref3.loader,
+        browserSystem = _ref3.browserSystem,
         fetchSource = _ref3.fetchSource;
     return _await$8(fetchSource(url, {
       contentTypeExpected: "text/css"
@@ -3275,7 +3275,7 @@
           cssUrl: url,
           baseUrl: importerUrl
         });
-        window.System.register([], function (_export) {
+        browserSystem.register([], function (_export) {
           return {
             execute: function execute() {
               var sheet = new CSSStyleSheet();
@@ -3285,7 +3285,13 @@
             }
           };
         });
-        return loader.getRegister(url);
+        var registration = browserSystem.getRegister(url);
+
+        if (!registration) {
+          throw new Error("no registration found for CSS at ".concat(url, ". Navigator.vendor: ").concat(window.navigator.vendor, ". CSS text: ").concat(cssTextWithBaseUrl));
+        }
+
+        return registration;
       });
     });
   }); // CSSStyleSheet accepts a "baseUrl" parameter
