@@ -9,6 +9,10 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 import { humanizeUrl } from "@jsenv/core/src/internal/building/url_trace.js"
+import {
+  isNodePartOfSupportedRuntimes,
+  isBrowserPartOfSupportedRuntimes,
+} from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
@@ -57,17 +61,8 @@ export const buildUsingRollup = async ({
   serviceWorkers,
   serviceWorkerFinalizer,
 }) => {
-  const node = Boolean(runtimeSupport.node)
-  const browser = Boolean(
-    runtimeSupport.android ||
-      runtimeSupport.chrome ||
-      runtimeSupport.edge ||
-      runtimeSupport.electron ||
-      runtimeSupport.firefox ||
-      runtimeSupport.ios ||
-      runtimeSupport.opera ||
-      runtimeSupport.safari,
-  )
+  const node = isNodePartOfSupportedRuntimes(runtimeSupport)
+  const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
 
   const runtimeCompatMap = createRuntimeCompat({
     runtimeSupport,

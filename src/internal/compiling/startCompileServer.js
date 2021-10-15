@@ -28,6 +28,7 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
+import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
@@ -132,6 +133,7 @@ export const startCompileServer = async ({
 
   const logger = createLogger({ logLevel: compileServerLogLevel })
 
+  const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
   const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
     projectDirectoryUrl,
     babelConfigFileUrl,
@@ -172,23 +174,45 @@ export const startCompileServer = async ({
   })
 
   babelPluginMap = {
-    "transform-replace-expressions": [
-      babelPluginReplaceExpressions,
-      {
-        replaceMap: {
-          ...(replaceProcessEnvNodeEnv
-            ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` }
-            : {}),
-          ...(replaceGlobalObject ? { global: "globalThis" } : {}),
-          ...(replaceGlobalFilename
-            ? { __filename: __filenameReplacement }
-            : {}),
-          ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
-          ...replaceMap,
-        },
-        allowConflictingReplacements: true,
-      },
-    ],
+    // When code should be compatible with browsers, ensure
+    // process.env.NODE_ENV is replaced to be executable in a browser by forcing
+    // "transform-replace-expressions" babel plugin.
+    // It happens for module written in ESM but also using process.env.NODE_ENV
+    // for example "react-redux"
+    // This babel plugin won't force compilation because it's added after "generateGroupMap"
+    // however it will be used even if not part of "pluginRequiredNameArray"
+    // as visible in "babelPluginMapFromCompileId"
+    // This is a quick workaround to get things working because:
+    // - If none of your code needs to be compiled but one of your dependency
+    //   uses process.env.NODE_ENV, the code will throw "process" is undefined
+    //   This is fine but you won't have a dedicated way to force compilation to ensure
+    //   "process.env.NODE_ENV" is replaced.
+    // Ideally this should be a custom compiler dedicated for this use case. It's not the case
+    // for now because it was faster to do it this way and the use case is a bit blurry:
+    // What should this custom compiler do? Just replace some node globals? How would it be named and documented?
+    ...(browser
+      ? {
+          "transform-replace-expressions": [
+            babelPluginReplaceExpressions,
+            {
+              replaceMap: {
+                ...(replaceProcessEnvNodeEnv
+                  ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` }
+                  : {}),
+                ...(replaceGlobalObject ? { global: "globalThis" } : {}),
+                ...(replaceGlobalFilename
+                  ? { __filename: __filenameReplacement }
+                  : {}),
+                ...(replaceGlobalDirname
+                  ? { __dirname: __dirnameReplacement }
+                  : {}),
+                ...replaceMap,
+              },
+              allowConflictingReplacements: true,
+            },
+          ],
+        }
+      : {}),
     ...babelSyntaxPluginMap,
     ...babelPluginMap,
   }

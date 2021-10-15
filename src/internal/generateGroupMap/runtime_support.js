@@ -1,5 +1,22 @@
 import { findLowestVersion } from "../semantic-versioning/findLowestVersion.js"
 
+export const isNodePartOfSupportedRuntimes = (runtimeSupport) => {
+  return Boolean(runtimeSupport.node)
+}
+
+export const isBrowserPartOfSupportedRuntimes = (runtimeSupport) => {
+  return Boolean(
+    runtimeSupport.android ||
+      runtimeSupport.chrome ||
+      runtimeSupport.edge ||
+      runtimeSupport.electron ||
+      runtimeSupport.firefox ||
+      runtimeSupport.ios ||
+      runtimeSupport.opera ||
+      runtimeSupport.safari,
+  )
+}
+
 export const normalizeRuntimeSupport = (runtimeSupport) => {
   const runtimeSupportNormalized = {}
 

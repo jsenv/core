@@ -1,21 +1,18 @@
-import { resolveDirectoryUrl, resolveUrl } from "@jsenv/filesystem"
 import { createNodeSystem } from "@jsenv/core/src/internal/runtime/createNodeRuntime/createNodeSystem.js"
 import { fetchSource } from "@jsenv/core/src/internal/runtime/createNodeRuntime/fetchSource.js"
 
 export const nodeImportSystemJsBuild = async ({
   projectDirectoryUrl,
-  testDirectoryRelativeUrl,
+  compileServerOrigin,
+  compileDirectoryRelativeUrl,
   mainRelativeUrl,
 }) => {
-  const testDirectoryUrl = resolveDirectoryUrl(
-    testDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
-  const mainFileUrl = resolveUrl(mainRelativeUrl, testDirectoryUrl)
+  const mainFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${mainRelativeUrl}`
   const nodeSystem = await createNodeSystem({
     fetchSource,
     projectDirectoryUrl,
-    compileServerOrigin: "https://jsenv.com",
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
   })
   const namespace = await nodeSystem.import(mainFileUrl)
 
