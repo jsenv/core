@@ -369,20 +369,24 @@ export const createRessourceBuilder = (
       ressource.usedCallback = resolve
     })
     ressource.inlinedCallbacks = []
-    ressource.buildDoneCallbacks = []
-    ressource.buildDonePromise = new Promise((resolve) => {
-      ressource.buildDoneCallbacks.push(resolve)
+    ressource.buildEndCalledCallbacks = []
+    ressource.buildEndCalledPromise = new Promise((resolve) => {
+      ressource.buildEndCalledCallbacks.push(resolve)
+    })
+    ressource.rollupBuildDoneCallbacks = []
+    ressource.rollupBuildDonePromise = new Promise((resolve) => {
+      ressource.rollupBuildDoneCallbacks.push(resolve)
     })
 
     const getBufferAvailablePromise = memoize(async () => {
       if (ressource.isJsModule) {
-        await ressource.buildDonePromise
+        await ressource.rollupBuildDonePromise
         return
       }
 
-      // sourcemap placeholder buffer is ready only once the build is done
+      // sourcemap placeholder buffer is ready once buildEnd is called on it
       if (ressource.isPlaceholder) {
-        await ressource.buildDonePromise
+        await ressource.buildEndCalledPromise
         return
       }
 
@@ -395,12 +399,12 @@ export const createRessourceBuilder = (
         //    could do the same later. It means we should synchronize rollup
         //    and this asset builder fetching to avoid fetching twice.
         //    This scenario would be reproduced for every js module preloaded
-        const { usedPromise, buildDonePromise } = ressource
+        const { usedPromise, rollupBuildDonePromise } = ressource
         const { winner } = await promiseTrackRace([
           usedPromise,
-          buildDonePromise,
+          rollupBuildDonePromise,
         ])
-        if (winner === buildDonePromise) {
+        if (winner === rollupBuildDonePromise) {
           return
         }
       }
@@ -769,9 +773,9 @@ export const createRessourceBuilder = (
       )
       const buildFileInfo = jsModuleBuild[buildRelativeUrl]
       applyBuildEndEffects(ressource, { buildFileInfo, buildManifest })
-      const { buildDoneCallbacks } = ressource
-      buildDoneCallbacks.forEach((buildDoneCallback) => {
-        buildDoneCallback()
+      const { rollupBuildDoneCallbacks } = ressource
+      rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
+        rollupBuildDoneCallback()
       })
     })
   }
