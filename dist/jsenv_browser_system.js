@@ -2163,8 +2163,7 @@
         compileServerOrigin: compileServerOrigin,
         compileDirectoryRelativeUrl: compileDirectoryRelativeUrl
       })), {}, {
-        "suggestion": "Prefer import.meta.url as documented in https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md#How-to-reference-js-assets",
-        "suggestion 2": "Use customCompilers to convert non-js to js"
+        suggestion: "Use import.meta.url or import assertions as documented in https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md#How-to-reference-assets"
       }))) : null;
     });
   });
