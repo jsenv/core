@@ -175,6 +175,10 @@ const validateCompiledFile = async ({
 }
 
 const validateSources = ({ meta, compiledFileUrl }) => {
+  // what about sequential version with early return?
+  // but when there is a cache version
+  // it's more likely to match than no-match so I don't expect early return
+  // to improve perf
   return Promise.all(
     meta.sources.map((source, index) =>
       validateSource({
@@ -235,8 +239,8 @@ const validateSource = async ({ compiledFileUrl, source, eTag }) => {
   }
 }
 
-const validateAssets = ({ compiledFileUrl, meta }) =>
-  Promise.all(
+const validateAssets = ({ compiledFileUrl, meta }) => {
+  return Promise.all(
     meta.assets.map((asset, index) =>
       validateAsset({
         asset,
@@ -245,6 +249,7 @@ const validateAssets = ({ compiledFileUrl, meta }) =>
       }),
     ),
   )
+}
 
 const validateAsset = async ({ asset, compiledFileUrl, eTag }) => {
   const metaJsonFileUrl = getMetaJsonFileUrl(compiledFileUrl)
