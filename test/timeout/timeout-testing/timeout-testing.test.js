@@ -41,8 +41,8 @@ const actual = {
 const expected = {
   testPlanSummary: {
     executionCount: 1,
-    disconnectedCount: 0,
-    timedoutCount: 1,
+    disconnectedCount: 1,
+    timedoutCount: 0,
     erroredCount: 0,
     completedCount: 0,
     startMs: testPlanSummary.startMs,
@@ -51,7 +51,7 @@ const expected = {
   testPlanReport: {
     [fileRelativeUrl]: {
       node: {
-        status: "timedout",
+        status: "disconnected",
         runtimeName: "node",
         runtimeVersion: testPlanReport[fileRelativeUrl].node.runtimeVersion,
       },

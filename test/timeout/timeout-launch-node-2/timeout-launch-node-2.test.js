@@ -29,6 +29,6 @@ const actual = await execute({
   mirrorConsole: true,
 })
 const expected = {
-  status: "timedout",
+  status: "disconnected",
 }
 assert({ actual, expected })
