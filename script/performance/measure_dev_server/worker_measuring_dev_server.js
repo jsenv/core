@@ -35,15 +35,12 @@ const { msEllapsed } = startMeasure.stop()
 metrics.timeToStartDevServer = msEllapsed
 await new Promise((resolve) => setTimeout(resolve, 500))
 
-const browser = await chromium.launch({
-  args: [],
-})
-
 const measureAppDisplayed = async ({ appUrl }) => {
+  const browser = await chromium.launch({
+    args: [],
+  })
   const browserContext = await browser.newContext({ ignoreHTTPSErrors: true })
   const page = await browserContext.newPage()
-  // disable cache otherwise it influences perf measures
-  page.route("**", (route) => route.continue())
   await page.goto(appUrl)
 
   const { appDisplayedDuration } = await page.evaluate(
@@ -54,10 +51,16 @@ const measureAppDisplayed = async ({ appUrl }) => {
     },
   )
 
-  await browserContext.close()
+  await browser.close()
 
   return { appDisplayedDuration }
 }
+// for some reason I have to do this to make perf metrics more reliable
+// as if playwright sometimes have to warmup
+await measureAppDisplayed({
+  appUrl: `${devServer.origin}/${directoryRelativeUrl}basic_app/main.html`,
+})
+await new Promise((resolve) => setTimeout(resolve, 500))
 
 {
   const { appDisplayedDuration } = await measureAppDisplayed({
@@ -81,8 +84,6 @@ const measureAppDisplayed = async ({ appUrl }) => {
   })
   metrics.timeToDisplayAppCompiledAndSecondVisit = appDisplayedDuration
 }
-
-await browser.close()
 
 parentPort.postMessage({
   ...metrics,
