@@ -20,7 +20,7 @@ jobs:
       - name: Setup npm
         run: npm install
       - name: Setup playwright
-        run: npx playwright install-deps
+        run: npm run playwright-install
       - name: Report performance impact
         run: node --expose-gc ./.github/workflows/performance_impact/report_performance_impact.js
         env:
