@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Basic website</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Basic website used to measure dev server performances"
+    />
+    <link rel="icon" href="./src/logo.png" />
+    <link rel="apple-touch-icon" href="./src/logo.png" />
+    <!--
+      boot.css contains styles for the following use cases:
+      - JavaScript is disabled
+      - Browser is not supported
+      - App is "booting" (detailed later in this file)
+      boot.css is part of the ressources inlined in this HTML during build
+      by [data-jsenv-force-inline] attribute
+    --->
+    <link rel="stylesheet" href="./src/boot/boot.css" data-jsenv-force-inline />
+    <!--
+      This HTML uses "dev.importmap" to control how js import are resolved.
+      It is used to have code specific to dev or prod.
+      See https://github.com/jsenv/jsenv-template-pwa/blob/main/docs/production_mode/readme.md#production-mode
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "root": "./root/",
+          "#env": "./env.dev.js"
+        }
+      }
+    </script>
+    <!--
+      Tell browser to start fetching theses ressources right now:
+      - The font
+      - CSS and JS used to load the app
+      - CSS and JS of the app
+    -->
+    <link
+      rel="preload"
+      href="./src/app_loader/roboto_v27_latin_regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="preload" href="./src/app_loader/app_loader.css" as="style" />
+    <link rel="modulepreload" href="./src/app_loader/app_loader.js" />
+    <link rel="preload" href="./src/app/app.css" as="style" />
+    <link rel="modulepreload" href="./src/app/app.js" />
+  </head>
+
+  <body>
+    <!--
+      Displaying a message when JavaScript is disabled
+    -->
+    <noscript>
+      <h1>JavaScript is required</h1>
+      <p>This page needs JavaScript to run but JavaScript is not available</p>
+    </noscript>
+    <!--
+      Displaying a message when browser is not supported
+      - "browser_support_detection.js" sets display block when browser is not supported.
+      - When browser is not supported, the application won't try to boot.
+    -->
+    <div id="browser_not_supported" style="display: none">
+      <h1>Browser not supported</h1>
+      <p>Please update your internet browser or try with an other one</p>
+    </div>
+    <script
+      src="./src/boot/browser_support_detection.js"
+      data-jsenv-force-inline
+    ></script>
+    <!--
+      Booting the application
+      - <div id="app"> is hidden until [data-booting] is removed by app_loader.js
+      - <div id="splashscreen"> is displayed when:
+        - Network is slow, so HTML is slow to fetch "app_loader.js"
+        - Error while fetching, parsing or executing "app_loader.js"
+        - Application starts in less than 300ms (yes it happens thanks to long term cache)
+      The code implementing this logic is configurable and visible in "boot.js"
+      See https://github.com/jsenv/jsenv-template-pwa/tree/main/docs/booting#booting
+    -->
+    <div id="app" data-booting></div>
+    <div id="splashscreen">
+      <div id="splashscreen_logo">
+        <img
+          src="./src/logo.png"
+          width="128"
+          height="128"
+          alt="jsenv logo"
+          data-jsenv-force-inline
+        />
+      </div>
+      <div id="splashscreen_message"></div>
+      <div style="display: none">
+        <div id="booting_start"></div>
+        <div id="booting_is_slow">Booting...</div>
+        <div id="booting_error">
+          <p>An error occured while booting</p>
+          <br />
+          <details>
+            <summary>See error stack</summary>
+            <pre id="boot_runtime_error_stack">${errorStack}</pre>
+          </details>
+        </div>
+      </div>
+    </div>
+    <script>
+      window.appDisplayedMetricsPromise = new Promise((resolve) => {
+        window.resolveAppDisplayedMetricsPromise = resolve
+      })
+    </script>
+    <script
+      type="module"
+      src="./src/boot/boot.js"
+      data-jsenv-force-inline
+    ></script>
+  </body>
+</html>

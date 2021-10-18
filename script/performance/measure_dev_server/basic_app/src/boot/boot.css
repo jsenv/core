@@ -1,0 +1,112 @@
+/*
+ * This file is inlined in the HTML file by [data-jsenv-force-inline]
+ * Responsabilities:
+ * - Set styles for js disabled (<noscript>)
+ * - Set styles for "browser not supported" message
+ * - Set styles for initial html while the app is booting (splashscreen)
+ * Not in the scope of this file:
+ * - Styles while the app is loading, it's the role of app_loader.css
+ */
+
+noscript {
+  display: block;
+  text-align: center;
+  width: 80%;
+  max-width: 640px;
+  margin: auto;
+}
+
+#browser_not_supported {
+  display: block;
+  text-align: center;
+  width: 80%;
+  max-width: 640px;
+  margin: auto;
+}
+
+#app[data-booting] {
+  width: 100%;
+  height: 100%;
+  visibility: hidden; /* Hides app while its booting */
+  overflow: hidden; /* While app is booting layout might be broken -> prevent scrollbar */
+}
+
+#splashscreen {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #030713;
+  color: #a9a8a8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+}
+#splashscreen[data-splashin] {
+  animation-name: splashin;
+  animation-duration: 0.4s;
+  animation-fill-mode: forwards;
+}
+@keyframes splashin {
+  from {
+    opacity: 0;
+    /* transform: scale(0); */
+  }
+
+  to {
+    opacity: 1;
+    /* transform: scale(1); */
+  }
+}
+#splashscreen_logo {
+  margin: 32px;
+}
+#splashscreen_message {
+  display: flex;
+  justify-content: center;
+  flex: 1;
+  width: 80%;
+  max-width: 640px;
+  margin: 32px;
+}
+#booting_error {
+  display: block;
+  text-align: center;
+  width: 100%;
+}
+#booting_error p {
+  display: inline-block;
+  color: #ba3939;
+  background: #ffe0e0;
+  border: 1px solid #a33a3a;
+  padding: 16px 48px;
+}
+#booting_error details {
+  display: inline-block;
+  max-width: 100%;
+}
+#booting_error details summary {
+  text-align: center;
+}
+#booting_error details pre {
+  text-align: left;
+  overflow: auto;
+}
+#splashscreen[data-splashout] {
+  animation-duration: 0.3s;
+  animation-name: splashout;
+  animation-fill-mode: forwards;
+}
+@keyframes splashout {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+    display: none;
+  }
+}
