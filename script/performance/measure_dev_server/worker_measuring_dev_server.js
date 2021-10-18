@@ -38,9 +38,9 @@ await new Promise((resolve) => setTimeout(resolve, 500))
 const browser = await chromium.launch({
   args: [],
 })
-const browserContext = await browser.newContext({ ignoreHTTPSErrors: true })
 
 const measureAppDisplayed = async ({ appUrl }) => {
+  const browserContext = await browser.newContext({ ignoreHTTPSErrors: true })
   const page = await browserContext.newPage()
   // disable cache otherwise it influences perf measures
   page.route("**", (route) => route.continue())
@@ -54,7 +54,7 @@ const measureAppDisplayed = async ({ appUrl }) => {
     },
   )
 
-  await page.close()
+  await browserContext.close()
 
   return { appDisplayedDuration }
 }
