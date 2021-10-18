@@ -22,6 +22,7 @@ import {
   replaceHtmlNode,
 } from "./compileHtml.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
+import { composeTwoImportMaps } from "@jsenv/importmap"
 
 export const compileHtml = async ({
   // cancellationToken,
@@ -80,12 +81,26 @@ export const compileHtml = async ({
     const typeAttribute = getHtmlNodeAttributeByName(script, "type")
     const srcAttribute = getHtmlNodeAttributeByName(script, "src")
 
-    // remote
-    if (typeAttribute && typeAttribute.value === "importmap" && srcAttribute) {
+    // importmap
+    if (typeAttribute && typeAttribute.value === "importmap") {
+      if (srcAttribute) {
+        hasImportmap = true
+        typeAttribute.value = "jsenv-importmap"
+        return
+      }
+      const defaultImportMap = getDefaultImportMap({
+        importMapFileUrl: compiledUrl,
+        projectDirectoryUrl,
+        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
+      })
+      const inlineImportMap = JSON.parse(getHtmlNodeTextNode(script).value)
+      const mappings = composeTwoImportMaps(defaultImportMap, inlineImportMap)
       hasImportmap = true
       typeAttribute.value = "jsenv-importmap"
+      setHtmlNodeText(script, JSON.stringify(mappings, null, "  "))
       return
     }
+
     if (typeAttribute && typeAttribute.value === "module" && srcAttribute) {
       removeHtmlNodeAttribute(script, typeAttribute)
       removeHtmlNodeAttribute(script, srcAttribute)

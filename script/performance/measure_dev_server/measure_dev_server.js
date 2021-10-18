@@ -7,9 +7,6 @@ import {
 } from "@jsenv/performance-impact"
 
 export const measureDevServer = async ({ iterations = 10 } = {}) => {
-  if (!global.gc) {
-    throw new Error("missing --expose-gc")
-  }
   const workerFileUrl = new URL(
     "./worker_measuring_dev_server.js",
     import.meta.url,
@@ -20,21 +17,28 @@ export const measureDevServer = async ({ iterations = 10 } = {}) => {
     async () => {
       const worker = new Worker(workerFilePath)
       const {
-        heapUsed,
-        msEllapsed,
-        fileSystemReadOperationCount,
-        fileSystemWriteOperationCount,
+        timeToStartDevServer,
+        timeToDisplayAppUsingSourceFiles,
+        timeToDisplayAppUsingCompiledFiles,
+        timeToDisplayAppCompiledAndSecondVisit,
       } = await new Promise((resolve, reject) => {
         worker.on("message", resolve)
         worker.on("error", reject)
       })
 
       return {
-        "start duration": { value: msEllapsed, unit: "ms" },
-        "dev server memory heap used": { value: heapUsed, unit: "byte" },
-        "number of fs read operation": { value: fileSystemReadOperationCount },
-        "number of fs write operation": {
-          value: fileSystemWriteOperationCount,
+        "time to start dev server": { value: timeToStartDevServer, unit: "ms" },
+        "time to display app using source files": {
+          value: timeToDisplayAppUsingSourceFiles,
+          unit: "ms",
+        },
+        "time to display app using compiled files": {
+          value: timeToDisplayAppUsingCompiledFiles,
+          unit: "ms",
+        },
+        "time to display app compiled and second visit": {
+          value: timeToDisplayAppCompiledAndSecondVisit,
+          unit: "ms",
         },
       }
     },
