@@ -17,8 +17,7 @@ export const createNodeExecutionWithDynamicImport = ({
     const importWithDynamicImport = async () => {
       try {
         const status = "completed"
-        const importPromise = import(fileUrl)
-        const namespace = await makePromiseKeepNodeProcessAlive(importPromise)
+        const namespace = await import(fileUrl)
 
         return {
           status,
@@ -43,16 +42,5 @@ export const createNodeExecutionWithDynamicImport = ({
 
   return {
     executeFile,
-  }
-}
-
-const makePromiseKeepNodeProcessAlive = async (promise) => {
-  const timerId = setInterval(() => {}, 1000)
-
-  try {
-    const value = await promise
-    return value
-  } finally {
-    clearInterval(timerId)
   }
 }
