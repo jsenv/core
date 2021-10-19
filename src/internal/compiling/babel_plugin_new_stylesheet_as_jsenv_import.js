@@ -1,3 +1,9 @@
+/*
+ * TODO:
+ * - code should also inject helper when code uses new keyword on "CSSStyleSheet"
+ * - code should also inject helper when code uses "document.adoptedStylesheets"
+ */
+
 import { require } from "../require.js"
 
 export const babelPluginNewStylesheetAsJsenvImport = (
@@ -18,8 +24,6 @@ export const babelPluginNewStylesheetAsJsenvImport = (
     addSideEffect(path.scope.getProgramParent().path, newStylesheetImportPath)
   }
 
-  // TODO: we should detect usage of new keyword on "CSSStyleSheet"
-  // and inject too in that case
   return {
     name: "constructable-stylesheet-as-jsenv-import",
     visitor: {
