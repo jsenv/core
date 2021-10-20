@@ -133,7 +133,10 @@ const computeCompileReport = async ({
         return {
           isValid: false,
           code: "META_FILE_NOT_FOUND",
-          data: {},
+          meta: {
+            isValid: false,
+            code: "META_FILE_NOT_FOUND",
+          },
         }
       }
       return validateCache({

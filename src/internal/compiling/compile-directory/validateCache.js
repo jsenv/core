@@ -12,7 +12,7 @@ export const validateCache = async ({
   ifEtagMatch,
   ifModifiedSinceDate,
   compileCacheSourcesValidation = true,
-  compileCacheAssetsValidation = true,
+  compileCacheAssetsValidation = true, // TODO: put false because it's unlikely to ever happen
 }) => {
   const validity = { isValid: true }
 
@@ -56,7 +56,7 @@ export const validateCache = async ({
 
 const mergeValidity = (parentValidity, childValidityName, childValidity) => {
   parentValidity.isValid = childValidity.isValid
-  parentValidity.code = childValidity.code
+  if (childValidity.code) parentValidity.code = childValidity.code
   parentValidity[childValidityName] = childValidity
 }
 
@@ -197,7 +197,7 @@ const validateAssets = async ({ metaJsonFileUrl, meta }) => {
   const assetsValidity = { isValid: true }
   await Promise.all(
     meta.assets.map(async (asset, index) => {
-      const assetValidity = validateAsset({
+      const assetValidity = await validateAsset({
         asset,
         metaJsonFileUrl,
         eTag: meta.assetsEtag[index],

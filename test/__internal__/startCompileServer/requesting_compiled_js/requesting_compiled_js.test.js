@@ -71,7 +71,7 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
     }
     const expected = {
       status: 200,
-      etag: bufferToEtag(Buffer.from(await readFile(compiledFileUrl))),
+      etag: bufferToEtag(await readFile(compiledFileUrl, { as: "buffer" })),
     }
     assert({ actual, expected })
   }
