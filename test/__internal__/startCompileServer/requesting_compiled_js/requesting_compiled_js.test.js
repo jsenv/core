@@ -75,6 +75,9 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
     }
     assert({ actual, expected })
   }
+  // let time to write the compiled files on filesystem
+  await new Promise((resolve) => setTimeout(resolve, 500))
+
   const secondResponse = await fetchUrl(fileServerUrl, {
     ignoreHttpsError: true,
     headers: {
@@ -106,6 +109,9 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
   const firstResponse = await fetchUrl(fileServerUrl, {
     ignoreHttpsError: true,
   })
+
+  // let time to write the compiled files on filesystem
+  await new Promise((resolve) => setTimeout(resolve, 500))
   {
     const actual = {
       status: firstResponse.status,
@@ -119,6 +125,7 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
     }
     assert({ actual, expected })
   }
+
   const secondResponse = await fetchUrl(fileServerUrl, {
     ignoreHttpsError: true,
     headers: {

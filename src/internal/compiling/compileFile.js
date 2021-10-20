@@ -5,7 +5,9 @@ import {
   resolveUrl,
   bufferToEtag,
 } from "@jsenv/filesystem"
+
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
+import { updateMeta } from "./compile-directory/updateMeta.js"
 
 export const compileFile = async ({
   // cancellatioToken,
@@ -58,7 +60,7 @@ export const compileFile = async ({
   }
 
   try {
-    const { compileResult, compileResultStatus, timing } =
+    const { meta, compileResult, compileResultStatus, timing } =
       await getOrGenerateCompiledFile({
         logger,
         projectDirectoryUrl,
@@ -67,12 +69,55 @@ export const compileFile = async ({
         fileContentFallback,
         ifEtagMatch,
         ifModifiedSinceDate,
-        writeOnFilesystem,
         useFilesystemAsCache,
         compileCacheSourcesValidation,
         compileCacheAssetsValidation,
         compile,
       })
+
+    const clientNeedsEtagHeader = cacheWithETag && !clientCacheDisabled
+    const clientNeedsLastModifiedHeader = cacheWithMtime && !clientCacheDisabled
+
+    if (
+      compileResultStatus === "created" ||
+      compileResultStatus === "updated"
+    ) {
+      if (clientNeedsEtagHeader) {
+        compileResult.compiledEtag = bufferToEtag(
+          Buffer.from(compileResult.compiledSource),
+        )
+      }
+
+      if (clientNeedsLastModifiedHeader) {
+        // Here we know the compiled file will be written on the filesystem
+        // We could wait for the file to be written before responding to the client
+        // but it could delay a bit the response.
+        // Inside "updateMeta" the file might be written synchronously
+        // or batched to be written later for perf reasons.
+        // Fron this side of the code we would like to be agnostic about this to allow
+        // eventual perf improvments in that field.
+        // For this reason the "mtime" we send to the client is decided here
+        // by "compileResult.compiledMtime = Date.now()"
+        // "updateMeta" will respect this and when it will write the compiled file it will
+        // use "utimes" to ensure the file mtime is the one we sent to the client
+        // This is important so that a request sending an mtime
+        // can be compared with the compiled file mtime on the filesystem
+        // In the end etag is preffered over mtime by default so this will rarely
+        // be useful
+        compileResult.compiledMtime = Date.now()
+      }
+
+      if (writeOnFilesystem) {
+        updateMeta({
+          logger,
+          meta,
+          compileResult,
+          compileResultStatus,
+          compiledFileUrl,
+          // originalFileUrl,
+        })
+      }
+    }
 
     compileResult.sources.forEach((source) => {
       const sourceFileUrl = resolveUrl(source, compiledFileUrl)
@@ -103,44 +148,30 @@ export const compileFile = async ({
       return response
     }
 
-    if (cacheWithETag && !clientCacheDisabled) {
-      if (compileResultStatus === "cached") {
-        if (ifEtagMatch) {
-          return {
-            status: 304,
-            timing,
-          }
+    if (clientNeedsEtagHeader) {
+      if (ifEtagMatch && compileResultStatus === "cached") {
+        return {
+          status: 304,
+          timing,
         }
-        return respondUsingRAM((response) => {
-          // eslint-disable-next-line dot-notation
-          response.headers["etag"] = compiledEtag
-        })
       }
-      // a compiled version of the source file was just created or updated
-      // we don't want to rely on filesystem because we might want to delay
-      // when the file is written for perf reasons
-      // Moreover we already got the data in RAM
       return respondUsingRAM((response) => {
         // eslint-disable-next-line dot-notation
-        response.headers["etag"] = bufferToEtag(Buffer.from(compiledSource))
+        response.headers["etag"] = compiledEtag
       })
     }
 
-    if (cacheWithMtime && !clientCacheDisabled) {
-      if (compileResultStatus === "cached") {
-        if (ifModifiedSinceDate) {
-          return {
-            status: 304,
-            timing,
-          }
+    if (clientNeedsLastModifiedHeader) {
+      if (ifModifiedSinceDate && compileResultStatus === "cached") {
+        return {
+          status: 304,
+          timing,
         }
-        return respondUsingRAM((response) => {
-          response.headers["last-modified"] = compiledMtime
-        })
       }
-
       return respondUsingRAM((response) => {
-        response.headers["last-modified"] = new Date().toUTCString()
+        response.headers["last-modified"] = new Date(
+          compiledMtime,
+        ).toUTCString()
       })
     }
 

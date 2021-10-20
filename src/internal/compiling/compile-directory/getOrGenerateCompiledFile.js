@@ -3,7 +3,6 @@ import { createDetailedMessage } from "@jsenv/logger"
 import { timeStart, timeFunction } from "@jsenv/server"
 import { readFileContent } from "./fs-optimized-for-cache.js"
 import { validateCache } from "./validateCache.js"
-import { updateMeta } from "./updateMeta.js"
 import { getMetaJsonFileUrl } from "./compile-asset.js"
 import { createLockRegistry } from "./createLockRegistry.js"
 
@@ -15,7 +14,6 @@ export const getOrGenerateCompiledFile = async ({
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl = originalFileUrl,
-  writeOnFilesystem,
   useFilesystemAsCache,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
@@ -77,25 +75,6 @@ export const getOrGenerateCompiledFile = async ({
           logger,
         })
 
-      let cacheWriteTiming = {}
-      if (
-        (compileResultStatus === "created" ||
-          compileResultStatus === "updated") &&
-        writeOnFilesystem
-      ) {
-        const result = await timeFunction("cache write", () =>
-          updateMeta({
-            logger,
-            meta,
-            compileResult,
-            compileResultStatus,
-            compiledFileUrl,
-            // originalFileUrl,
-          }),
-        )
-        cacheWriteTiming = result[0]
-      }
-
       return {
         meta,
         compileResult,
@@ -103,7 +82,6 @@ export const getOrGenerateCompiledFile = async ({
         timing: {
           ...lockTiming,
           ...timing,
-          ...cacheWriteTiming,
         },
       }
     },

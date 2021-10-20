@@ -3,6 +3,7 @@ import {
   urlToFileSystemPath,
   bufferToEtag,
 } from "@jsenv/filesystem"
+import { utimesSync } from "node:fs"
 
 import { writeFileContent, testFilePresence } from "./fs-optimized-for-cache.js"
 import { getMetaJsonFileUrl } from "./compile-asset.js"
@@ -63,6 +64,15 @@ ${sourcesToRemove.join(`\n`)}`)
       promises.push(
         writeFileContent(compiledFileUrl, compiledSource, {
           fileLikelyNotFound: isNew,
+        }).then(() => {
+          const mtime = compileResult.compiledMtime
+          // when compileResult.compiledMtime do not exists it means
+          // the client is not interested in it so
+          // -> moment we write the file is not important
+          // -> There is no need to update mtime
+          if (mtime) {
+            utimesSync(urlToFileSystemPath(compiledFileUrl), new Date(mtime), new Date(mtime))
+          }
         }),
       )
     }

@@ -48,13 +48,13 @@ export const validateCache = async ({
           meta,
           metaJsonFileUrl,
         })
-      : [],
+      : { isValid: true, code: "SOURCES_VALIDATION_DISABLED" },
     compileCacheAssetsValidation
       ? validateAssets({
           meta,
           metaJsonFileUrl,
         })
-      : [],
+      : { isValid: true, code: "ASSETS_VALIDATION_DISABLED" },
   ])
   mergeValidity(validity, "sources", sourcesValidity)
   mergeValidity(validity, "assets", assetsValidity)
