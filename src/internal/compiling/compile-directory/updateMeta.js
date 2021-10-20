@@ -3,6 +3,7 @@ import {
   urlToFileSystemPath,
   bufferToEtag,
 } from "@jsenv/filesystem"
+import { utimesSync } from "node:fs"
 
 import { writeFileContent, testFilePresence } from "./fs-optimized-for-cache.js"
 import { getMetaJsonFileUrl } from "./compile-asset.js"
@@ -11,13 +12,11 @@ export const updateMeta = async ({
   logger,
   meta,
   compiledFileUrl,
-  cacheHitTracking,
   compileResult,
   compileResultStatus,
 }) => {
   const isNew = compileResultStatus === "created"
   const isUpdated = compileResultStatus === "updated"
-  const isCached = compileResultStatus === "cached"
   const {
     compiledSource,
     contentType,
@@ -65,6 +64,15 @@ ${sourcesToRemove.join(`\n`)}`)
       promises.push(
         writeFileContent(compiledFileUrl, compiledSource, {
           fileLikelyNotFound: isNew,
+        }).then(() => {
+          const mtime = compileResult.compiledMtime
+          // when compileResult.compiledMtime do not exists it means
+          // the client is not interested in it so
+          // -> moment we write the file is not important
+          // -> There is no need to update mtime
+          if (mtime) {
+            utimesSync(urlToFileSystemPath(compiledFileUrl), new Date(mtime), new Date(mtime))
+          }
         }),
       )
     }
@@ -85,7 +93,7 @@ ${sourcesToRemove.join(`\n`)}`)
 
   const metaJsonFileUrl = getMetaJsonFileUrl(compiledFileUrl)
 
-  if (isNew || isUpdated || (isCached && cacheHitTracking)) {
+  if (isNew || isUpdated) {
     let latestMeta
 
     const sourceAndAssetProps = {
@@ -117,14 +125,6 @@ ${sourcesToRemove.join(`\n`)}`)
     } else {
       latestMeta = {
         ...meta,
-      }
-    }
-
-    if (cacheHitTracking) {
-      latestMeta = {
-        ...latestMeta,
-        matchCount: 1,
-        lastMatchMs: Number(Date.now()),
       }
     }
 

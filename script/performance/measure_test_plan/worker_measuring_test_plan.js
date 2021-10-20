@@ -51,6 +51,9 @@ await executeTestPlan({
   logLevel: "warn",
   compileServerProtocol: "http",
   coverage: true,
+  coverageConfig: {
+    [`${currentDirectoryRelativeUrl}animals.js`]: true,
+  },
   coverageHtmlDirectory: false,
   coverageTextLog: false,
   // here we should also clean jsenv directory to ensure
