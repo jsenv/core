@@ -1,7 +1,4 @@
-import {
-  serveFile,
-  convertFileSystemErrorToResponseProperties,
-} from "@jsenv/server"
+import { convertFileSystemErrorToResponseProperties } from "@jsenv/server"
 import {
   urlToRelativeUrl,
   fileSystemPathToUrl,
@@ -88,20 +85,6 @@ export const compileFile = async ({
     const { contentType, compiledEtag, compiledMtime, compiledSource } =
       compileResult
 
-    // For now there is no reason to prefer the filesystem over the data we would have in RAM
-    // but I would like to try to put validateMeta.js in a worker
-    // If I do so, this file should minimize the input/output data transfered
-    // so it would not return the "compiledSource"
-    const respondUsingFileSystem = async (finalizeResponse = () => {}) => {
-      const response = await serveFile(request, {
-        rootDirectoryUrl: projectDirectoryUrl,
-      })
-      response.headers["content-type"] = contentType
-      response.timing = { ...timing, ...response.timing }
-      finalizeResponse(response)
-      return response
-    }
-
     // when a compiled version of the source file was just created or updated
     // we don't want to rely on filesystem because we might want to delay
     // when the file is written for perf reasons
@@ -128,7 +111,7 @@ export const compileFile = async ({
             timing,
           }
         }
-        return respondUsingFileSystem((response) => {
+        return respondUsingRAM((response) => {
           // eslint-disable-next-line dot-notation
           response.headers["etag"] = compiledEtag
         })
@@ -151,7 +134,7 @@ export const compileFile = async ({
             timing,
           }
         }
-        return respondUsingFileSystem((response) => {
+        return respondUsingRAM((response) => {
           response.headers["last-modified"] = compiledMtime
         })
       }
@@ -161,9 +144,6 @@ export const compileFile = async ({
       })
     }
 
-    if (compileResultStatus === "cached") {
-      return respondUsingFileSystem()
-    }
     return respondUsingRAM()
   } catch (error) {
     if (error && error.code === "PARSE_ERROR") {
