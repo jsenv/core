@@ -2,8 +2,7 @@ import { urlToFileSystemPath } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 import { timeStart, timeFunction } from "@jsenv/server"
 import { readFileContent } from "./fs-optimized-for-cache.js"
-import { readMeta } from "./readMeta.js"
-import { validateMeta } from "./validateMeta.js"
+import { validateCache } from "./validateCache.js"
 import { updateMeta } from "./updateMeta.js"
 import { getMetaJsonFileUrl } from "./compile-asset.js"
 import { createLockRegistry } from "./createLockRegistry.js"
@@ -18,7 +17,6 @@ export const getOrGenerateCompiledFile = async ({
   compiledFileUrl = originalFileUrl,
   writeOnFilesystem,
   useFilesystemAsCache,
-  cacheHitTracking = false,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
   fileContentFallback,
@@ -80,7 +78,11 @@ export const getOrGenerateCompiledFile = async ({
         })
 
       let cacheWriteTiming = {}
-      if (writeOnFilesystem) {
+      if (
+        (compileResultStatus === "created" ||
+          compileResultStatus === "updated") &&
+        writeOnFilesystem
+      ) {
         const result = await timeFunction("cache write", () =>
           updateMeta({
             logger,
@@ -89,7 +91,6 @@ export const getOrGenerateCompiledFile = async ({
             compileResultStatus,
             compiledFileUrl,
             // originalFileUrl,
-            cacheHitTracking,
           }),
         )
         cacheWriteTiming = result[0]
@@ -125,17 +126,35 @@ const computeCompileReport = async ({
   compileCacheAssetsValidation,
   logger,
 }) => {
-  const [cacheReadTiming, meta] = await timeFunction("cache read", async () => {
-    if (useFilesystemAsCache) {
-      return readMeta({
+  const [readCacheTiming, cacheValidity] = await timeFunction(
+    "read cache",
+    () => {
+      if (!useFilesystemAsCache) {
+        return {
+          isValid: false,
+          code: "META_FILE_NOT_FOUND",
+          data: {},
+        }
+      }
+      return validateCache({
         logger,
+        useFilesystemAsCache,
         compiledFileUrl,
+        ifEtagMatch,
+        ifModifiedSinceDate,
+        compileCacheSourcesValidation,
+        compileCacheAssetsValidation,
       })
-    }
-    return null
-  })
+    },
+  )
 
-  if (!meta) {
+  if (!cacheValidity.isValid) {
+    if (cacheValidity.code === "SOURCES_EMPTY") {
+      logger.warn(`WARNING: meta.sources is empty for ${compiledFileUrl}`)
+    }
+
+    const metaIsValid = cacheValidity.meta.isValid
+
     const [compileTiming, compileResult] = await timeFunction("compile", () =>
       callCompile({
         logger,
@@ -146,63 +165,30 @@ const computeCompileReport = async ({
     )
 
     return {
-      meta: null,
+      meta: metaIsValid ? cacheValidity.meta.data : null,
       compileResult,
-      compileResultStatus: "created",
+      compileResultStatus: metaIsValid ? "updated" : "created",
       timing: {
-        ...cacheReadTiming,
+        ...readCacheTiming,
         ...compileTiming,
       },
     }
   }
 
-  const metaValidation = await validateMeta({
-    logger,
-    meta,
-    compiledFileUrl,
-    ifEtagMatch,
-    ifModifiedSinceDate,
-    compileCacheSourcesValidation,
-    compileCacheAssetsValidation,
-  })
-
-  if (!metaValidation.valid) {
-    const [compileTiming, compileResult] = await timeFunction("compile", () =>
-      callCompile({
-        logger,
-        originalFileUrl,
-        fileContentFallback,
-        compile,
-      }),
-    )
-    return {
-      meta,
-      compileResult,
-      compileResultStatus: "updated",
-      timing: {
-        ...cacheReadTiming,
-        ...metaValidation.timing,
-        ...compileTiming,
-      },
-    }
-  }
-
+  const meta = cacheValidity.meta.data
   const { contentType, sources, assets } = meta
-  const { compiledSource, sourcesContent, assetsContent } = metaValidation.data
   return {
     meta,
     compileResult: {
+      compiledEtag: cacheValidity.compiledFile.data.compiledEtag,
+      compiledMtime: cacheValidity.compiledFile.data.compiledMtime,
       contentType,
-      compiledSource,
       sources,
-      sourcesContent,
       assets,
-      assetsContent,
     },
     compileResultStatus: "cached",
     timing: {
-      ...cacheReadTiming,
-      ...metaValidation.timing,
+      ...readCacheTiming,
     },
   }
 }

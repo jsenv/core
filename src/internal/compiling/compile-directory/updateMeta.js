@@ -11,13 +11,11 @@ export const updateMeta = async ({
   logger,
   meta,
   compiledFileUrl,
-  cacheHitTracking,
   compileResult,
   compileResultStatus,
 }) => {
   const isNew = compileResultStatus === "created"
   const isUpdated = compileResultStatus === "updated"
-  const isCached = compileResultStatus === "cached"
   const {
     compiledSource,
     contentType,
@@ -85,7 +83,7 @@ ${sourcesToRemove.join(`\n`)}`)
 
   const metaJsonFileUrl = getMetaJsonFileUrl(compiledFileUrl)
 
-  if (isNew || isUpdated || (isCached && cacheHitTracking)) {
+  if (isNew || isUpdated) {
     let latestMeta
 
     const sourceAndAssetProps = {
@@ -117,14 +115,6 @@ ${sourcesToRemove.join(`\n`)}`)
     } else {
       latestMeta = {
         ...meta,
-      }
-    }
-
-    if (cacheHitTracking) {
-      latestMeta = {
-        ...latestMeta,
-        matchCount: 1,
-        lastMatchMs: Number(Date.now()),
       }
     }
 

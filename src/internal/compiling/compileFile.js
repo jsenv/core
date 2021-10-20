@@ -1,10 +1,12 @@
-import { convertFileSystemErrorToResponseProperties } from "@jsenv/server"
+import {
+  serveFile,
+  convertFileSystemErrorToResponseProperties,
+} from "@jsenv/server"
 import {
   urlToRelativeUrl,
   fileSystemPathToUrl,
   resolveUrl,
   bufferToEtag,
-  readFileSystemNodeModificationTime,
 } from "@jsenv/filesystem"
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
 
@@ -22,7 +24,6 @@ export const compileFile = async ({
   writeOnFilesystem,
   useFilesystemAsCache,
   compileCacheStrategy = "etag",
-  serverCompileCacheHitTracking = false,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
 }) => {
@@ -71,7 +72,6 @@ export const compileFile = async ({
         ifModifiedSinceDate,
         writeOnFilesystem,
         useFilesystemAsCache,
-        cacheHitTracking: serverCompileCacheHitTracking,
         compileCacheSourcesValidation,
         compileCacheAssetsValidation,
         compile,
@@ -85,57 +85,86 @@ export const compileFile = async ({
       )
     })
 
-    const { contentType, compiledSource } = compileResult
+    const { contentType, compiledEtag, compiledMtime, compiledSource } =
+      compileResult
 
-    if (cacheWithETag && !clientCacheDisabled) {
-      if (ifEtagMatch && compileResultStatus === "cached") {
-        return {
-          status: 304,
-          timing,
-        }
-      }
-      return {
+    // For now there is no reason to prefer the filesystem over the data we would have in RAM
+    // but I would like to try to put validateMeta.js in a worker
+    // If I do so, this file should minimize the input/output data transfered
+    // so it would not return the "compiledSource"
+    const respondUsingFileSystem = async (finalizeResponse = () => {}) => {
+      const response = await serveFile(request, {
+        rootDirectoryUrl: projectDirectoryUrl,
+      })
+      response.headers["content-type"] = contentType
+      response.timing = { ...timing, ...response.timing }
+      finalizeResponse(response)
+      return response
+    }
+
+    // when a compiled version of the source file was just created or updated
+    // we don't want to rely on filesystem because we might want to delay
+    // when the file is written for perf reasons
+    // Moreover we already got the data in RAM
+    const respondUsingRAM = (finalizeResponse = () => {}) => {
+      const response = {
         status: 200,
         headers: {
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
-          "etag": bufferToEtag(Buffer.from(compiledSource)),
         },
         body: compiledSource,
         timing,
       }
+      finalizeResponse(response)
+      return response
+    }
+
+    if (cacheWithETag && !clientCacheDisabled) {
+      if (compileResultStatus === "cached") {
+        if (ifEtagMatch) {
+          return {
+            status: 304,
+            timing,
+          }
+        }
+        return respondUsingFileSystem((response) => {
+          // eslint-disable-next-line dot-notation
+          response.headers["etag"] = compiledEtag
+        })
+      }
+      // a compiled version of the source file was just created or updated
+      // we don't want to rely on filesystem because we might want to delay
+      // when the file is written for perf reasons
+      // Moreover we already got the data in RAM
+      return respondUsingRAM((response) => {
+        // eslint-disable-next-line dot-notation
+        response.headers["etag"] = bufferToEtag(Buffer.from(compiledSource))
+      })
     }
 
     if (cacheWithMtime && !clientCacheDisabled) {
-      if (ifModifiedSinceDate && compileResultStatus === "cached") {
-        return {
-          status: 304,
-          timing,
+      if (compileResultStatus === "cached") {
+        if (ifModifiedSinceDate) {
+          return {
+            status: 304,
+            timing,
+          }
         }
+        return respondUsingFileSystem((response) => {
+          response.headers["last-modified"] = compiledMtime
+        })
       }
-      return {
-        status: 200,
-        headers: {
-          "content-length": Buffer.byteLength(compiledSource),
-          "content-type": contentType,
-          "last-modified": new Date(
-            await readFileSystemNodeModificationTime(compiledFileUrl),
-          ).toUTCString(),
-        },
-        body: compiledSource,
-        timing,
-      }
+
+      return respondUsingRAM((response) => {
+        response.headers["last-modified"] = new Date().toUTCString()
+      })
     }
 
-    return {
-      status: 200,
-      headers: {
-        "content-length": Buffer.byteLength(compiledSource),
-        "content-type": contentType,
-      },
-      body: compiledSource,
-      timing,
+    if (compileResultStatus === "cached") {
+      return respondUsingFileSystem()
     }
+    return respondUsingRAM()
   } catch (error) {
     if (error && error.code === "PARSE_ERROR") {
       const { data } = error
