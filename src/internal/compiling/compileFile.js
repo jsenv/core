@@ -59,6 +59,9 @@ export const compileFile = async ({
     }
   }
 
+  const clientNeedsEtagHeader = cacheWithETag && !clientCacheDisabled
+  const clientNeedsLastModifiedHeader = cacheWithMtime && !clientCacheDisabled
+
   try {
     const { meta, compileResult, compileResultStatus, timing } =
       await getOrGenerateCompiledFile({
@@ -67,6 +70,8 @@ export const compileFile = async ({
         originalFileUrl,
         compiledFileUrl,
         fileContentFallback,
+        clientNeedsEtagHeader,
+        clientNeedsLastModifiedHeader,
         ifEtagMatch,
         ifModifiedSinceDate,
         useFilesystemAsCache,
@@ -75,38 +80,38 @@ export const compileFile = async ({
         compile,
       })
 
-    const clientNeedsEtagHeader = cacheWithETag && !clientCacheDisabled
-    const clientNeedsLastModifiedHeader = cacheWithMtime && !clientCacheDisabled
+    if (clientNeedsEtagHeader && !compileResult.compiledEtag) {
+      // happens when file was just compiled so etag was not computed
+
+      compileResult.compiledEtag = bufferToEtag(
+        Buffer.from(compileResult.compiledSource),
+      )
+    }
+
+    if (clientNeedsLastModifiedHeader && !compileResult.compiledMtime) {
+      // happens when file was just compiled so it's not yet written on filesystem
+      // Here we know the compiled file will be written on the filesystem
+      // We could wait for the file to be written before responding to the client
+      // but it could delay a bit the response.
+      // Inside "updateMeta" the file might be written synchronously
+      // or batched to be written later for perf reasons.
+      // Fron this side of the code we would like to be agnostic about this to allow
+      // eventual perf improvments in that field.
+      // For this reason the "mtime" we send to the client is decided here
+      // by "compileResult.compiledMtime = Date.now()"
+      // "updateMeta" will respect this and when it will write the compiled file it will
+      // use "utimes" to ensure the file mtime is the one we sent to the client
+      // This is important so that a request sending an mtime
+      // can be compared with the compiled file mtime on the filesystem
+      // In the end etag is preffered over mtime by default so this will rarely
+      // be useful
+      compileResult.compiledMtime = Date.now()
+    }
 
     if (
       compileResultStatus === "created" ||
       compileResultStatus === "updated"
     ) {
-      if (clientNeedsEtagHeader) {
-        compileResult.compiledEtag = bufferToEtag(
-          Buffer.from(compileResult.compiledSource),
-        )
-      }
-
-      if (clientNeedsLastModifiedHeader) {
-        // Here we know the compiled file will be written on the filesystem
-        // We could wait for the file to be written before responding to the client
-        // but it could delay a bit the response.
-        // Inside "updateMeta" the file might be written synchronously
-        // or batched to be written later for perf reasons.
-        // Fron this side of the code we would like to be agnostic about this to allow
-        // eventual perf improvments in that field.
-        // For this reason the "mtime" we send to the client is decided here
-        // by "compileResult.compiledMtime = Date.now()"
-        // "updateMeta" will respect this and when it will write the compiled file it will
-        // use "utimes" to ensure the file mtime is the one we sent to the client
-        // This is important so that a request sending an mtime
-        // can be compared with the compiled file mtime on the filesystem
-        // In the end etag is preffered over mtime by default so this will rarely
-        // be useful
-        compileResult.compiledMtime = Date.now()
-      }
-
       if (writeOnFilesystem) {
         updateMeta({
           logger,

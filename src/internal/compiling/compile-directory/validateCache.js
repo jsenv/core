@@ -1,15 +1,13 @@
-import {
-  resolveUrl,
-  readFileSystemNodeModificationTime,
-  bufferToEtag,
-} from "@jsenv/filesystem"
+import { resolveUrl, bufferToEtag } from "@jsenv/filesystem"
 
 import { fileURLToPath } from "node:url"
-import { readFileSync } from "node:fs"
+import { readFileSync, statSync } from "node:fs"
 
 export const validateCache = async ({
   compiledFileUrl,
+  clientNeedsEtagHeader,
   ifEtagMatch,
+  clientNeedsLastModifiedHeader,
   ifModifiedSinceDate,
   compileCacheSourcesValidation = true,
   // When "compileCacheAssetsValidation" is enabled, code ensures that
@@ -33,7 +31,9 @@ export const validateCache = async ({
 
   const compiledFileValidation = await validateCompiledFile({
     compiledFileUrl,
+    clientNeedsEtagHeader,
     ifEtagMatch,
+    clientNeedsLastModifiedHeader,
     ifModifiedSinceDate,
   })
   mergeValidity(validity, "compiledFile", compiledFileValidation)
@@ -108,7 +108,9 @@ const validateMetaFile = async (metaJsonFileUrl) => {
 
 const validateCompiledFile = async ({
   compiledFileUrl,
+  clientNeedsEtagHeader,
   ifEtagMatch,
+  clientNeedsLastModifiedHeader,
   ifModifiedSinceDate,
 }) => {
   const validity = { isValid: true, data: {} }
@@ -117,22 +119,24 @@ const validateCompiledFile = async ({
     const compiledSourceBuffer = readFileSync(fileURLToPath(compiledFileUrl))
     validity.data.compiledSourceBuffer = compiledSourceBuffer
 
-    if (ifEtagMatch) {
+    if (clientNeedsEtagHeader) {
       const compiledEtag = bufferToEtag(compiledSourceBuffer)
       validity.data.compiledEtag = compiledEtag
-      if (ifEtagMatch !== compiledEtag) {
+      if (ifEtagMatch && ifEtagMatch !== compiledEtag) {
         validity.isValid = false
         validity.code = "COMPILED_FILE_ETAG_MISMATCH"
         return validity
       }
     }
 
-    if (ifModifiedSinceDate) {
-      const compiledMtime = await readFileSystemNodeModificationTime(
-        compiledFileUrl,
-      )
+    if (clientNeedsLastModifiedHeader) {
+      const stats = statSync(fileURLToPath(compiledFileUrl))
+      const compiledMtime = Math.floor(stats.mtimeMs)
       validity.data.compiledMtime = compiledMtime
-      if (ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)) {
+      if (
+        ifModifiedSinceDate &&
+        ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)
+      ) {
         validity.isValid = false
         validity.code = "COMPILED_FILE_MTIME_OUTDATED"
         return validity
