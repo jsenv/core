@@ -17,38 +17,10 @@ export const validateCache = async ({
   const validity = { isValid: true }
 
   const metaJsonFileUrl = `${compiledFileUrl}__asset__meta.json`
-  let metaJsonBuffer
-  try {
-    metaJsonBuffer = readFileSync(fileURLToPath(metaJsonFileUrl))
-  } catch (error) {
-    if (error && error.code === "ENOENT") {
-      const metaValidity = {
-        isValid: false,
-        code: "META_FILE_NOT_FOUND",
-        data: { metaJsonFileUrl },
-      }
-      mergeValidity(validity, "meta", metaValidity)
-      return validity
-    }
-    throw error
-  }
-  const metaJsonString = String(metaJsonBuffer)
-  let meta
-  try {
-    meta = JSON.parse(metaJsonString)
-    const metaValidity = { isValid: true, data: { meta } }
-    mergeValidity(validity, "meta", metaValidity)
-  } catch (error) {
-    if (error && error.name === "SyntaxError") {
-      const metaValidity = {
-        isValid: false,
-        code: "META_FILE_SYNTAX_ERROR",
-        data: { metaJsonString },
-      }
-      mergeValidity(validity, "meta", metaValidity)
-      return validity
-    }
-    throw error
+  const metaValidity = await validateMetaFile(metaJsonFileUrl)
+  mergeValidity(validity, "meta", metaValidity)
+  if (!validity.isValid) {
+    return validity
   }
 
   const compiledFileValidation = await validateCompiledFile({
@@ -58,15 +30,10 @@ export const validateCache = async ({
   })
   mergeValidity(validity, "compiledFile", compiledFileValidation)
   if (!validity.isValid) {
-    return compiledFileValidation
-  }
-
-  if (meta.sources.length === 0) {
-    const sourcesValidity = { isValid: false, code: "SOURCES_EMPTY" }
-    mergeValidity(validity, "sources", sourcesValidity)
     return validity
   }
 
+  const meta = metaValidity.data
   const [sourcesValidity, assetsValidity] = await Promise.all([
     compileCacheSourcesValidation
       ? validateSources({
@@ -93,22 +60,62 @@ const mergeValidity = (parentValidity, childValidityName, childValidity) => {
   parentValidity[childValidityName] = childValidity
 }
 
+const validateMetaFile = async (metaJsonFileUrl) => {
+  const validity = { isValid: true, data: {} }
+
+  let metaJsonBuffer
+  try {
+    metaJsonBuffer = readFileSync(fileURLToPath(metaJsonFileUrl))
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      validity.isValid = false
+      validity.code = "META_FILE_NOT_FOUND"
+      return validity
+    }
+    throw error
+  }
+
+  const metaJsonString = String(metaJsonBuffer)
+  let meta
+  try {
+    meta = JSON.parse(metaJsonString)
+  } catch (error) {
+    if (error && error.name === "SyntaxError") {
+      validity.isValid = false
+      validity.code = "META_FILE_SYNTAX_ERROR"
+      return validity
+    }
+    throw error
+  }
+
+  validity.data = meta
+  if (meta.sources.length === 0) {
+    validity.isValid = false
+    validity.code = "SOURCES_EMPTY"
+    return validity
+  }
+
+  return validity
+}
+
 const validateCompiledFile = async ({
   compiledFileUrl,
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
+  const validity = { isValid: true, data: {} }
+
   try {
     const compiledSourceBuffer = readFileSync(fileURLToPath(compiledFileUrl))
+    validity.data.compiledSourceBuffer = compiledSourceBuffer
 
     if (ifEtagMatch) {
       const compiledEtag = bufferToEtag(compiledSourceBuffer)
+      validity.data.compiledEtag = compiledEtag
       if (ifEtagMatch !== compiledEtag) {
-        return {
-          isValid: false,
-          code: "COMPILED_FILE_ETAG_MISMATCH",
-          data: { compiledEtag },
-        }
+        validity.isValid = false
+        validity.code = "COMPILED_FILE_ETAG_MISMATCH"
+        return validity
       }
     }
 
@@ -116,28 +123,22 @@ const validateCompiledFile = async ({
       const compiledMtime = await readFileSystemNodeModificationTime(
         compiledFileUrl,
       )
+      validity.data.compiledMtime = compiledMtime
       if (ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)) {
-        return {
-          isValid: false,
-          code: "COMPILED_FILE_MTIME_OUTDATED",
-          data: { compiledMtime },
-        }
+        validity.isValid = false
+        validity.code = "COMPILED_FILE_MTIME_OUTDATED"
+        return validity
       }
     }
 
-    return {
-      isValid: true,
-      data: {},
-    }
+    return validity
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      return {
-        isValid: false,
-        code: "COMPILED_FILE_NOT_FOUND",
-        data: {},
-      }
+      validity.isValid = false
+      validity.code = "COMPILED_FILE_NOT_FOUND"
+      return validity
     }
-    return Promise.reject(error)
+    throw error
   }
 }
 
@@ -157,24 +158,22 @@ const validateSources = async ({ meta, metaJsonFileUrl }) => {
 }
 
 const validateSource = async ({ metaJsonFileUrl, source, eTag }) => {
+  const validity = { isValid: true, data: {} }
   const sourceFileUrl = resolveUrl(source, metaJsonFileUrl)
 
   try {
     const sourceBuffer = readFileSync(fileURLToPath(sourceFileUrl))
     const sourceETag = bufferToEtag(sourceBuffer)
+    validity.data.sourceBuffer = sourceBuffer
+    validity.data.sourceETag = sourceETag
 
     if (sourceETag !== eTag) {
-      return {
-        isValid: false,
-        code: "SOURCE_ETAG_MISMATCH",
-        data: {},
-      }
+      validity.isValid = false
+      validity.code = "SOURCE_ETAG_MISMATCH"
+      return validity
     }
 
-    return {
-      isValid: true,
-      data: { sourceETag },
-    }
+    return validity
   } catch (e) {
     if (e && e.code === "ENOENT") {
       // missing source invalidates the cache because
@@ -186,11 +185,9 @@ const validateSource = async ({ metaJsonFileUrl, source, eTag }) => {
       // which are not truly on the filesystem
       // (IN theory the above happens only for convertCommonJsWithRollup because jsenv
       // always have a concrete file especially to avoid that kind of thing)
-      return {
-        isValid: false,
-        code: "SOURCE_NOT_FOUND",
-        data: {},
-      }
+      validity.isValid = false
+      validity.code = "SOURCE_NOT_FOUND"
+      return validity
     }
     throw e
   }
@@ -212,33 +209,29 @@ const validateAssets = async ({ metaJsonFileUrl, meta }) => {
 }
 
 const validateAsset = async ({ asset, metaJsonFileUrl, eTag }) => {
+  const validity = { isValid: true, data: {} }
   const assetFileUrl = resolveUrl(asset, metaJsonFileUrl)
 
   try {
     const assetBuffer = readFileSync(fileURLToPath(assetFileUrl))
     const assetContentETag = bufferToEtag(assetBuffer)
+    validity.data.buffer = assetBuffer
+    validity.data.etag = assetContentETag
 
     if (eTag !== assetContentETag) {
-      return {
-        isValid: false,
-        code: "ASSET_ETAG_MISMATCH",
-        data: { assetContentETag },
-      }
+      validity.isValid = false
+      validity.code = "ASSET_ETAG_MISMATCH"
+      return validity
     }
 
-    return {
-      valid: true,
-      data: { assetContentETag },
-    }
+    return validity
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      return {
-        isValid: false,
-        code: "ASSET_FILE_NOT_FOUND",
-        data: {},
-      }
+      validity.isValid = false
+      validity.code = "ASSET_FILE_NOT_FOUND"
+      return validity
     }
-    return Promise.reject(error)
+    throw error
   }
 }
 
