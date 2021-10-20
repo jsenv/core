@@ -12,7 +12,15 @@ export const validateCache = async ({
   ifEtagMatch,
   ifModifiedSinceDate,
   compileCacheSourcesValidation = true,
-  compileCacheAssetsValidation = true, // TODO: put false because it's unlikely to ever happen
+  // When "compileCacheAssetsValidation" is enabled, code ensures that
+  // - asset file exists
+  // - asset file content matches an etag generated when the file was compiled
+  // In practice a compiled file asset is a sourcemap file or a coverage.json file.
+  // It's unlikely that something or someone would update an asset file
+  // and even when it happens it would be a bit strict to invalidate the cache
+  // so by default "compileCacheAssetsValidation" is disabled
+  // to avoid checking things for nothing
+  compileCacheAssetsValidation = false,
 }) => {
   const validity = { isValid: true }
 
