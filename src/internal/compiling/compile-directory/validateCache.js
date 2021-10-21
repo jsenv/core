@@ -57,6 +57,9 @@ export const validateCache = async ({
       : { isValid: true, code: "ASSETS_VALIDATION_DISABLED" },
   ])
   mergeValidity(validity, "sources", sourcesValidity)
+  if (!validity.valid) {
+    return validity
+  }
   mergeValidity(validity, "assets", assetsValidity)
 
   return validity
