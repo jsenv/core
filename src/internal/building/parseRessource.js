@@ -36,9 +36,9 @@ export const parseRessource = (
     useImportMapToMaximizeCacheReuse,
     createImportMapForFilesUsedInJs,
     minify,
-    minifyHtmlOptions,
+    minifyJs,
+    minifyHtml,
     minifyCssOptions,
-    minifyJsOptions,
   },
 ) => {
   const { contentType } = ressource
@@ -49,7 +49,7 @@ export const parseRessource = (
   if (contentType === "text/html") {
     return parseHtmlRessource(ressource, notifiers, {
       minify,
-      minifyHtmlOptions,
+      minifyHtml,
       htmlStringToHtmlAst: async (htmlString) => {
         const htmlAst = parseHtmlString(htmlString)
 
@@ -157,14 +157,14 @@ export const parseRessource = (
       asOriginalUrl,
       asOriginalServerUrl,
       minify,
-      minifyJsOptions,
+      minifyJs,
     })
   }
 
   if (contentType === "image/svg+xml") {
     return parseSvgRessource(ressource, notifiers, {
       minify,
-      minifyHtmlOptions,
+      minifyHtml,
     })
   }
 

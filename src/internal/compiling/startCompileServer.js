@@ -630,7 +630,7 @@ const setupServerSentEventsForLivereload = ({
 
   // each time a file is requested for the first time its dependencySet is computed
   projectFileRequested.register((mainRelativeUrl) => {
-    // for now node use case of livereloading + node.js
+    // for now no use case of livereloading on node.js
     // and for browsers only html file can be main files
     // this avoid collecting dependencies of non html files that will never be used
     if (!mainRelativeUrl.endsWith(".html")) {

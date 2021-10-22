@@ -19,7 +19,7 @@ export const parseSvgRessource = async (
   const htmlRessources = parseHtmlAstRessources(svgAst)
   const mutations = collectSvgMutations(htmlRessources, notifiers, svgRessource)
 
-  return ({ getUrlRelativeToImporter }) => {
+  return async ({ getUrlRelativeToImporter }) => {
     mutations.forEach((mutationCallback) => {
       mutationCallback({ getUrlRelativeToImporter })
     })
@@ -27,7 +27,7 @@ export const parseSvgRessource = async (
     // could also benefit of minification https://github.com/svg/svgo
     if (minify) {
       svgRessource.buildEnd(
-        minifyHtml(svgAfterTransformation, minifyHtmlOptions),
+        await minifyHtml(svgAfterTransformation, minifyHtmlOptions),
       )
       return
     }

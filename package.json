@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "23.0.6",
+  "version": "23.0.7",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -70,6 +70,7 @@
     "@jsenv/node-signals": "2.0.1",
     "@jsenv/server": "7.2.0",
     "@jsenv/uneval": "1.6.0",
+    "@jsenv/workers": "1.1.0",
     "@rollup/plugin-commonjs": "21.0.0",
     "@rollup/plugin-json": "4.1.0",
     "@rollup/plugin-node-resolve": "13.0.5",
@@ -77,8 +78,8 @@
     "acorn-import-assertions": "1.8.0",
     "ansi-to-html": "0.7.2",
     "bytes": "3.1.0",
-    "construct-style-sheets-polyfill": "3.0.4",
     "cjs-module-lexer": "1.2.2",
+    "construct-style-sheets-polyfill": "3.0.4",
     "cssnano": "5.0.8",
     "cssnano-preset-default": "5.1.4",
     "cuid": "2.1.8",
