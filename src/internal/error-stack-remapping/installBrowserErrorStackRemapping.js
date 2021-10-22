@@ -8,7 +8,11 @@ export const installBrowserErrorStackRemapping = (options = {}) =>
       // browser having Error.captureStackTrace got window.fetch
       // and this executes only when Error.captureStackTrace exists
       // so no need for polyfill or whatever here
-      const response = await window.fetch(url)
+      const response = await window.fetch(url, {
+        // by default a script tag is in "no-cors"
+        // so we also fetch url with "no-cors"
+        mode: "no-cors",
+      })
       // we read response test before anything because once memoized fetch
       // gets annoying preventing you to read
       // body multiple times, even using response.clone()
