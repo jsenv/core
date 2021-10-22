@@ -27,9 +27,10 @@ const actual = await execute({
     ...LAUNCH_TEST_PARAMS,
   },
   fileRelativeUrl,
-  runtimeErrorCallback: (value) => {
+  runtimeErrorAfterExecutionCallback: (value) => {
     errorCallbackArgValue = value
   },
+  stopAfterExecute: false, // let runtime error occuring after timeout kill the process
 })
 const expected = {
   status: "completed",
@@ -39,9 +40,9 @@ assert({ actual, expected })
 
 process.on("beforeExit", () => {
   const actual = errorCallbackArgValue
-  const expected = {
-    error: Object.assign(new Error("child exited with 1"), { exitCode: 1 }),
-    timing: "after-execution",
-  }
+  const expected = Object.assign(new Error("child exited with 1"), {
+    exitCode: 1,
+  })
+
   assert({ actual, expected })
 })

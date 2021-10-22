@@ -11,7 +11,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}natural-exit-execute-node.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}natural_exit.js`
 
 let nodeRuntimeHooks
 {
@@ -29,6 +29,7 @@ let nodeRuntimeHooks
         return nodeRuntimeHooks
       },
     },
+    mirrorConsole: false,
     fileRelativeUrl,
   })
   const expected = {

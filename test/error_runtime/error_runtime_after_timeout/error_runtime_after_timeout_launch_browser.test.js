@@ -31,7 +31,7 @@ const actual = await execute({
   },
   fileRelativeUrl,
   stopAfterExecute: false,
-  runtimeErrorCallback: (argValue) => {
+  runtimeErrorAfterExecutionCallback: (argValue) => {
     errorCallbackArg = argValue
     cancel("error") // kill chromium browser to let process end
   },
@@ -50,12 +50,10 @@ assert({ actual, expected })
 
 process.on("beforeExit", () => {
   const actual = {
-    errorMessage: errorCallbackArg.error.message,
-    timing: errorCallbackArg.timing,
+    errorMessage: errorCallbackArg.message,
   }
   const expected = {
     errorMessage: actual.errorMessage,
-    timing: "after-execution",
   }
   assert({ actual, expected })
 })
