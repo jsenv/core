@@ -381,6 +381,12 @@ const browserToRuntimeHooks = (
   const errorCallbackArray = []
   const registerErrorCallback = (callback) => {
     errorCallbackArray.push(callback)
+    return () => {
+      const index = errorCallbackArray.indexOf(callback)
+      if (index > -1) {
+        errorCallbackArray.splice(index, 1)
+      }
+    }
   }
 
   const consoleCallbackArray = []
@@ -439,10 +445,14 @@ const browserToRuntimeHooks = (
 
   return {
     stop: async (reason) => {
-      const errorPromise = new Promise((resolve, reject) => {
-        registerErrorCallback(reject)
-      })
-      await Promise.race([errorPromise, ressourceTracker.cleanup(reason)])
+      let unregisterErrorCallback
+      await Promise.race([
+        new Promise((resolve, reject) => {
+          unregisterErrorCallback = registerErrorCallback(reject)
+        }),
+        ressourceTracker.cleanup(reason),
+      ])
+      unregisterErrorCallback()
     },
     disconnected,
     registerErrorCallback,
