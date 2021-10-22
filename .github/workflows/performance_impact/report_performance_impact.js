@@ -7,6 +7,6 @@ await reportPerformanceImpact({
   ...readGitHubWorkflowEnv(),
   logLevel: "debug",
   installCommand: "npm install",
-  moduleGeneratingPerformanceReportRelativeUrl:
-    "./script/performance/generate_performance_report.js",
+  performanceReportPath:
+    "./script/performance/generate_performance_report.js#performanceReport",
 })

@@ -1,51 +1,82 @@
-import { Worker } from "node:worker_threads"
-import { fileURLToPath } from "node:url"
-import {
-  measurePerformanceMultipleTimes,
-  computeMetricsMedian,
-  logPerformanceMetrics,
-} from "@jsenv/performance-impact"
+import { startMeasures } from "@jsenv/performance-impact"
 
-export const measureTestPlan = async ({ iterations = 5 } = {}) => {
-  if (!global.gc) {
-    throw new Error("missing --expose-gc")
-  }
-  const workerFileUrl = new URL(
-    "./worker_measuring_test_plan.js",
-    import.meta.url,
-  )
-  const workerFilePath = fileURLToPath(workerFileUrl)
+const measures = startMeasures({
+  gc: true,
+  memoryHeapUsage: true,
+  filesystemUsage: true,
+})
 
-  const metrics = await measurePerformanceMultipleTimes(
-    async () => {
-      const worker = new Worker(workerFilePath)
-      const {
-        heapUsed,
-        msEllapsed,
-        fileSystemReadOperationCount,
-        fileSystemWriteOperationCount,
-      } = await new Promise((resolve, reject) => {
-        worker.on("message", resolve)
-        worker.on("error", reject)
-      })
+const {
+  executeTestPlan,
+  chromiumRuntime,
+  firefoxRuntime,
+  webkitRuntime,
+  nodeRuntime,
+} = await import("@jsenv/core")
 
-      return {
-        "test plan duration": { value: msEllapsed, unit: "ms" },
-        "test plan memory heap used": { value: heapUsed, unit: "byte" },
-        "number of fs read operation": { value: fileSystemReadOperationCount },
-        "number of fs write operation": {
-          value: fileSystemWriteOperationCount,
-        },
-      }
+const projectDirectoryUrl = new URL("../../../", import.meta.url)
+const currentDirectoryUrl = new URL("./", import.meta.url)
+const currentDirectoryRelativeUrl = new URL(
+  currentDirectoryUrl,
+  projectDirectoryUrl,
+)
+await executeTestPlan({
+  projectDirectoryUrl,
+  testPlan: {
+    [`${currentDirectoryRelativeUrl}animals.test.html`]: {
+      chromium: {
+        runtime: chromiumRuntime,
+        measureDuration: false,
+        captureConsole: false,
+      },
+      firefox: {
+        runtime: firefoxRuntime,
+        measureDuration: false,
+        captureConsole: false,
+      },
+      webkit: {
+        runtime: webkitRuntime,
+        measureDuration: false,
+        captureConsole: false,
+      },
     },
-    iterations,
-    { msToWaitBetweenEachMeasure: 1000 },
-  )
-  return computeMetricsMedian(metrics)
-}
+    [`${currentDirectoryRelativeUrl}animals.test.js`]: {
+      node: {
+        runtime: nodeRuntime,
+        measureDuration: false,
+        captureConsole: false,
+      },
+    },
+  },
+  logLevel: "warn",
+  compileServerProtocol: "http",
+  coverage: true,
+  coverageConfig: {
+    [`${currentDirectoryRelativeUrl}animals.js`]: true,
+  },
+  coverageV8MergeConflictIsExpected: true,
+  coverageHtmlDirectory: false,
+  coverageTextLog: false,
+  // here we should also clean jsenv directory to ensure
+  // the compile server cannot reuse cache
+  // to mitigate this compileServerCanReadFromFilesystem and compileServerCanWriteOnFilesystem
+  // are false for now
+  compileServerCanReadFromFilesystem: false,
+  compileServerCanWriteOnFilesystem: false,
+})
 
-const executeAndLog = process.argv.includes("--local")
-if (executeAndLog) {
-  const performanceMetrics = await measureTestPlan({ iterations: 1 })
-  logPerformanceMetrics(performanceMetrics)
+const {
+  duration,
+  heapUsed,
+  fileSystemReadOperationCount,
+  fileSystemWriteOperationCount,
+} = measures.stop()
+
+export const testPlanMetrics = {
+  "test plan duration": { value: duration, unit: "ms" },
+  "test plan memory heap used": { value: heapUsed, unit: "byte" },
+  "number of fs read operation": { value: fileSystemReadOperationCount },
+  "number of fs write operation": {
+    value: fileSystemWriteOperationCount,
+  },
 }

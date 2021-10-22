@@ -1,48 +1,37 @@
-import { Worker } from "node:worker_threads"
-import { fileURLToPath } from "node:url"
-import {
-  measurePerformanceMultipleTimes,
-  computeMetricsMedian,
-  logPerformanceMetrics,
-} from "@jsenv/performance-impact"
+import { startMeasures } from "@jsenv/performance-impact"
 
-export const measureBuild = async ({ iterations = 10 } = {}) => {
-  if (!global.gc) {
-    throw new Error("missing --expose-gc")
-  }
-  const workerFileUrl = new URL("./worker_measuring_build.js", import.meta.url)
-  const workerFilePath = fileURLToPath(workerFileUrl)
+const measures = startMeasures({
+  gc: true,
+  memoryHeapUsage: true,
+  filesystemUsage: true,
+})
 
-  const metrics = await measurePerformanceMultipleTimes(
-    async () => {
-      const worker = new Worker(workerFilePath)
-      const {
-        heapUsed,
-        msEllapsed,
-        fileSystemReadOperationCount,
-        fileSystemWriteOperationCount,
-      } = await new Promise((resolve, reject) => {
-        worker.on("message", resolve)
-        worker.on("error", reject)
-      })
+const { buildProject } = await import("@jsenv/core")
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  buildDirectoryRelativeUrl: "./dist/",
+  format: "esmodule",
+  entryPointMap: {
+    "./main.html": "./main.min.html",
+  },
+  jsenvDirectoryClean: true,
+  buildDirectoryClean: true,
+  logLevel: "warn",
+  minify: true,
+})
 
-      return {
-        "build duration": { value: msEllapsed, unit: "ms" },
-        "build memory heap used": { value: heapUsed, unit: "byte" },
-        "number of fs read operation": { value: fileSystemReadOperationCount },
-        "number of fs write operation": {
-          value: fileSystemWriteOperationCount,
-        },
-      }
-    },
-    iterations,
-    { msToWaitBetweenEachMeasure: 100 },
-  )
-  return computeMetricsMedian(metrics)
-}
+const {
+  duration,
+  heapUsed,
+  fileSystemReadOperationCount,
+  fileSystemWriteOperationCount,
+} = measures.stop()
 
-const executeAndLog = process.argv.includes("--local")
-if (executeAndLog) {
-  const performanceMetrics = await measureBuild({ iterations: 1 })
-  logPerformanceMetrics(performanceMetrics)
+export const buildMetrics = {
+  "build duration": { value: duration, unit: "ms" },
+  "build memory heap used": { value: heapUsed, unit: "byte" },
+  "number of fs read operation": { value: fileSystemReadOperationCount },
+  "number of fs write operation": {
+    value: fileSystemWriteOperationCount,
+  },
 }
