@@ -138,6 +138,12 @@ ${JSON.stringify(env, null, "  ")}`)
   const errorCallbackArray = []
   const registerErrorCallback = (callback) => {
     errorCallbackArray.push(callback)
+    return () => {
+      const index = errorCallbackArray.indexOf(callback)
+      if (index > -1) {
+        errorCallbackArray.splice(index, 1)
+      }
+    }
   }
   let killing = false
   installProcessErrorListener(childProcess, (error) => {
@@ -240,14 +246,28 @@ ${JSON.stringify(env, null, "  ")}`)
     return disconnectChildProcess()
   }
 
-  const stop = ({ gracefulFailed } = {}) => {
-    return killChildProcess({
-      signal: gracefulFailed ? GRACEFUL_STOP_FAILED_SIGNAL : STOP_SIGNAL,
-    })
+  const stop = async ({ gracefulFailed } = {}) => {
+    let unregisterErrorCallback
+    await Promise.race([
+      new Promise((resolve, reject) => {
+        unregisterErrorCallback = registerErrorCallback(reject)
+      }),
+      killChildProcess({
+        signal: gracefulFailed ? GRACEFUL_STOP_FAILED_SIGNAL : STOP_SIGNAL,
+      }),
+    ])
+    unregisterErrorCallback()
   }
 
-  const gracefulStop = () => {
-    return killChildProcess({ signal: GRACEFUL_STOP_SIGNAL })
+  const gracefulStop = async () => {
+    let unregisterErrorCallback
+    await Promise.race([
+      new Promise((resolve, reject) => {
+        unregisterErrorCallback = registerErrorCallback(reject)
+      }),
+      killChildProcess({ signal: GRACEFUL_STOP_SIGNAL }),
+    ])
+    unregisterErrorCallback()
   }
 
   const requestActionOnChildProcess = ({ actionType, actionParams }) => {
