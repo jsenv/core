@@ -255,7 +255,9 @@ export const createJsenvRollupPlugin = async ({
     jsenvRollupPlugin.renderChunk = async (code, chunk) => {
       let map = chunk.map
       const result = await minifyJs({
-        url: asOriginalUrl(chunk.facadeModuleId),
+        url: chunk.facadeModuleId
+          ? asOriginalUrl(chunk.facadeModuleId)
+          : resolveUrl(chunk.fileName, buildDirectoryUrl),
         code,
         map,
         ...(format === "global" ? { toplevel: false } : { toplevel: true }),
