@@ -222,6 +222,8 @@ export const createJsenvRollupPlugin = async ({
   let minifyJs
   let minifyHtml
 
+  const jsenvRollupPlugin = {}
+
   if (minify) {
     const { methodHooks, workers } = createWorkersForJavaScriptModules({
       minifyJs: `${new URL("./js/minifyJs.js", import.meta.url)}#minifyJs`,
@@ -271,8 +273,6 @@ export const createJsenvRollupPlugin = async ({
       workers.destroy()
     }
   }
-
-  const jsenvRollupPlugin = {}
 
   Object.assign(jsenvRollupPlugin, {
     name: "jsenv",
