@@ -152,7 +152,7 @@ export const parseHtmlRessource = async (
 
     const htmlAfterTransformation = htmlAstToHtmlString(htmlAst)
     const html = minify
-      ? minifyHtml(htmlAfterTransformation)
+      ? await minifyHtml(htmlAfterTransformation)
       : htmlAfterTransformation
     htmlRessource.buildEnd(html)
   }
