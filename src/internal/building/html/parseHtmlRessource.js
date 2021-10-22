@@ -51,14 +51,13 @@ import {
 import { collectNodesMutations } from "../parsing.utils.js"
 
 import { collectSvgMutations } from "../svg/parseSvgRessource.js"
-import { minifyHtml } from "./minifyHtml.js"
 
 export const parseHtmlRessource = async (
   htmlRessource,
   notifiers,
   {
     minify,
-    minifyHtmlOptions,
+    minifyHtml,
     htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString),
     htmlAstToHtmlString = (htmlAst) => stringifyHtmlAst(htmlAst),
     ressourceHintNeverUsedCallback = () => {},
@@ -153,7 +152,7 @@ export const parseHtmlRessource = async (
 
     const htmlAfterTransformation = htmlAstToHtmlString(htmlAst)
     const html = minify
-      ? minifyHtml(htmlAfterTransformation, minifyHtmlOptions)
+      ? minifyHtml(htmlAfterTransformation)
       : htmlAfterTransformation
     htmlRessource.buildEnd(html)
   }

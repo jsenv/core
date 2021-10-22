@@ -5,12 +5,11 @@ import {
   setJavaScriptSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { bundleWorker } from "@jsenv/core/src/internal/building/bundleWorker.js"
-import { minifyJs } from "./minifyJs.js"
 
 export const parseJsRessource = async (
   jsRessource,
   { notifyReferenceFound },
-  { asProjectUrl, asOriginalUrl, minify, minifyJsOptions },
+  { asProjectUrl, asOriginalUrl, minify, minifyJs },
 ) => {
   const jsUrl = jsRessource.url
   const jsString = String(jsRessource.bufferBeforeBuild)
@@ -72,7 +71,6 @@ export const parseJsRessource = async (
         code: jsString,
         map,
         toplevel: false,
-        ...minifyJsOptions,
       })
       code = result.code
       map = result.map

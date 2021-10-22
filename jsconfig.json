@@ -410,6 +410,9 @@
       "@babel/helpers/*": [
         "./node_modules/@babel/helpers/*"
       ],
+      "@jsenv/workers/*": [
+        "./node_modules/@jsenv/workers/*"
+      ],
       "preact/devtools": [
         "./node_modules/preact/devtools/dist/devtools.mjs"
       ],
@@ -430,6 +433,9 @@
       ],
       "@jsenv/server/*": [
         "./node_modules/@jsenv/server/*"
+      ],
+      "@jsenv/workers": [
+        "./node_modules/@jsenv/workers/main.js"
       ],
       "html-minifier/*": [
         "./node_modules/html-minifier/*"

@@ -15,6 +15,7 @@ import {
   normalizeStructuredMetaMap,
   urlToMeta,
 } from "@jsenv/filesystem"
+import { createWorkersForJavaScriptModules } from "@jsenv/workers"
 
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
@@ -42,7 +43,6 @@ import {
 import { computeBuildRelativeUrl } from "./url-versioning.js"
 import { visitImportReferences } from "./import_references.js"
 
-import { minifyJs } from "./js/minifyJs.js"
 import { createImportResolverForNode } from "../import-resolution/import-resolver-node.js"
 import { createImportResolverForImportmap } from "../import-resolution/import-resolver-importmap.js"
 import { getDefaultImportMap } from "../import-resolution/importmap-default.js"
@@ -218,7 +218,63 @@ export const createJsenvRollupPlugin = async ({
     return rollupSetAssetSource(rollupReferenceId, assetSource)
   }
 
-  const jsenvRollupPlugin = {
+  let onBundleEnd = () => {}
+  let minifyJs
+  let minifyHtml
+
+  if (minify) {
+    const { methodHooks, workers } = createWorkersForJavaScriptModules({
+      minifyJs: `${new URL("./js/minifyJs.js", import.meta.url)}#minifyJs`,
+      minifyHtml: `${new URL(
+        "./html/minifyHtml.js",
+        import.meta.url,
+      )}#minifyHtml`,
+    })
+
+    // inspired from https://github.com/vitejs/vite/blob/06d86e4a2e90ca916a43d450bca1e6c28bc4bfe2/packages/vite/src/node/plugins/terser.ts#L23
+    minifyJs = async ({ url, code, map, ...rest }) => {
+      const result = await methodHooks.minifyJs({
+        url,
+        code,
+        map,
+        ...minifyJsOptions,
+        ...rest,
+      })
+      return {
+        code: result.code,
+        map: result.map,
+      }
+    }
+
+    minifyHtml = async (html) => {
+      return methodHooks.minifyHtml(html, minifyHtmlOptions)
+    }
+
+    jsenvRollupPlugin.renderChunk = async (code, chunk) => {
+      let map = chunk.map
+      const result = await minifyJs({
+        url: asOriginalUrl(chunk.facadeModuleId),
+        code,
+        map,
+        ...(format === "global" ? { toplevel: false } : { toplevel: true }),
+      })
+
+      code = result.code
+      map = result.map
+      return {
+        code,
+        map,
+      }
+    }
+
+    onBundleEnd = () => {
+      workers.destroy()
+    }
+  }
+
+  const jsenvRollupPlugin = {}
+
+  Object.assign(jsenvRollupPlugin, {
     name: "jsenv",
 
     async buildStart() {
@@ -414,9 +470,9 @@ export const createJsenvRollupPlugin = async ({
               useImportMapToMaximizeCacheReuse,
               createImportMapForFilesUsedInJs,
               minify,
-              minifyHtmlOptions,
+              minifyJs,
+              minifyHtml,
               minifyCssOptions,
-              minifyJsOptions,
             })
           },
         },
@@ -1001,28 +1057,6 @@ export const createJsenvRollupPlugin = async ({
       return outputOptions
     },
 
-    renderChunk: async (code, chunk) => {
-      let map = chunk.map
-
-      if (!minify) {
-        return null
-      }
-
-      const result = await minifyJs({
-        url: asOriginalUrl(chunk.facadeModuleId),
-        code,
-        map,
-        ...(format === "global" ? { toplevel: false } : { toplevel: true }),
-        ...minifyJsOptions,
-      })
-      code = result.code
-      map = result.map
-      return {
-        code,
-        map,
-      }
-    },
-
     async generateBundle(outputOptions, rollupResult) {
       const jsChunks = {}
       // rollupResult can be mutated by late asset emission
@@ -1119,6 +1153,7 @@ export const createJsenvRollupPlugin = async ({
       ressourceBuilder.rollupBuildEnd({ jsModuleBuild, buildManifest })
       // wait html files to be emitted
       await ressourceBuilder.getAllEntryPointsEmittedPromise()
+      onBundleEnd()
 
       const assetBuild = {}
       Object.keys(rollupResult).forEach((rollupFileId) => {
@@ -1260,7 +1295,7 @@ export const createJsenvRollupPlugin = async ({
         }),
       )
     },
-  }
+  })
 
   const fetchImportMapFromUrl = async (importMapUrl, importer) => {
     const importMapResponse = await urlFetcher.fetchUrl(importMapUrl, {
