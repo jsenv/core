@@ -43,6 +43,7 @@ await launchBrowsers(
       fileRelativeUrl,
       captureConsole: true,
       ignoreError: true,
+      // stopAfterExecute: false,
     })
 
     const actual = {
@@ -69,8 +70,19 @@ await launchBrowsers(
         const actual = stack.slice(0, expected.length)
         assert({ actual, expected })
       } else {
-        const actual = typeof stack
-        const expected = `string`
+        const actual = {
+          stackType: typeof stack,
+          stackContainsErrorMessage: stack.includes(
+            "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
+          ),
+        }
+        const expected = {
+          stackType: "string",
+          // Webkit omits the error message in the stack trace
+          // during test execution there is a special behaviour to ensure
+          // error.message will appear in error logs when runtime is webkit
+          stackContainsErrorMessage: false,
+        }
         assert({ actual, expected })
       }
     }
