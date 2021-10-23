@@ -47,7 +47,10 @@ export const launchAndExecute = async ({
   runtimeConsoleCallback = () => {},
   runtimeStartedCallback = () => {},
   runtimeStoppedCallback = () => {},
-  runtimeErrorCallback = () => {},
+  runtimeErrorAfterExecutionCallback = (error) => {
+    // by default throw on error after execution
+    throw error
+  },
   runtimeDisconnectCallback = () => {},
 
   coverageV8MergeConflictIsExpected,
@@ -205,7 +208,7 @@ export const launchAndExecute = async ({
     stopAfterExecuteReason,
     gracefulStopAllocatedMs,
     runtimeConsoleCallback,
-    runtimeErrorCallback,
+    runtimeErrorAfterExecutionCallback,
     runtimeDisconnectCallback,
     runtimeStartedCallback,
     runtimeStoppedCallback,
@@ -280,7 +283,7 @@ const computeExecutionResult = async ({
   runtimeStartedCallback,
   runtimeStoppedCallback,
   runtimeConsoleCallback,
-  runtimeErrorCallback,
+  runtimeErrorAfterExecutionCallback,
   runtimeDisconnectCallback,
 }) => {
   const runtimeLabel = `${runtime.name}/${runtime.version}`
@@ -387,17 +390,6 @@ const computeExecutionResult = async ({
 
       timing = TIMING_DURING_EXECUTION
 
-      registerErrorCallback((error) => {
-        logger.error(
-          createDetailedMessage(`error ${timing}.`, {
-            ["error stack"]: error.stack,
-            ["execute params"]: JSON.stringify(executeParams, null, "  "),
-            ["runtime"]: runtimeLabel,
-          }),
-        )
-        runtimeErrorCallback({ error, timing })
-      })
-
       const raceResult = await promiseTrackRace([disconnected, executed])
       timing = TIMING_AFTER_EXECUTION
 
@@ -406,7 +398,24 @@ const computeExecutionResult = async ({
       }
 
       if (stopAfterExecute) {
-        launchOperation.stop(stopAfterExecuteReason)
+        // if there is an error while stopping the runtine
+        // the execution is considered as failed
+        try {
+          await launchOperation.stop(stopAfterExecuteReason)
+        } catch (e) {
+          return finalizeExecutionResult(
+            createErroredExecutionResult({
+              error: e,
+            }),
+          )
+        }
+      } else {
+        // when the process is still alive
+        // we want to catch error to notify runtimeErrorAfterExecutionCallback
+        // and throw that error by default
+        registerErrorCallback((error) => {
+          runtimeErrorAfterExecutionCallback(error)
+        })
       }
 
       const executionResult = raceResult.value

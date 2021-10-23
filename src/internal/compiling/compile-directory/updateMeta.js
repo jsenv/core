@@ -71,7 +71,11 @@ ${sourcesToRemove.join(`\n`)}`)
           // -> moment we write the file is not important
           // -> There is no need to update mtime
           if (mtime) {
-            utimesSync(urlToFileSystemPath(compiledFileUrl), new Date(mtime), new Date(mtime))
+            utimesSync(
+              urlToFileSystemPath(compiledFileUrl),
+              new Date(mtime),
+              new Date(mtime),
+            )
           }
         }),
       )

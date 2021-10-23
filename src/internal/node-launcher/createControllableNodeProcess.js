@@ -123,14 +123,17 @@ ${JSON.stringify(env, null, "  ")}`)
   const registerConsoleCallback = (callback) => {
     consoleCallbackArray.push(callback)
   }
-  installProcessOutputListener(childProcess, ({ type, text }) => {
-    consoleCallbackArray.forEach((callback) => {
-      callback({
-        type,
-        text,
+  const removeOutputListener = installProcessOutputListener(
+    childProcess,
+    ({ type, text }) => {
+      consoleCallbackArray.forEach((callback) => {
+        callback({
+          type,
+          text,
+        })
       })
-    })
-  })
+    },
+  )
   // keep listening process outputs while child process is killed to catch
   // outputs until it's actually disconnected
   // registerCleanupCallback(removeProcessOutputListener)
@@ -138,38 +141,86 @@ ${JSON.stringify(env, null, "  ")}`)
   const errorCallbackArray = []
   const registerErrorCallback = (callback) => {
     errorCallbackArray.push(callback)
+    return () => {
+      const index = errorCallbackArray.indexOf(callback)
+      if (index > -1) {
+        errorCallbackArray.splice(index, 1)
+      }
+    }
   }
   let killing = false
-  installProcessErrorListener(childProcess, (error) => {
-    if (!childProcess.connected && error.code === "ERR_IPC_DISCONNECTED") {
-      return
-    }
-    // on windows killProcessTree uses taskkill which seems to kill the process
-    // with an exitCode of 1
-    if (process.platform === "win32" && killing && error.exitCode === 1) {
-      return
-    }
-    errorCallbackArray.forEach((callback) => {
-      callback(error)
-    })
-  })
+  const removeErrorListener = installProcessErrorListener(
+    childProcess,
+    (error) => {
+      removeOutputListener()
+      if (!childProcess.connected && error.code === "ERR_IPC_DISCONNECTED") {
+        return
+      }
+      // on windows killProcessTree uses taskkill which seems to kill the process
+      // with an exitCode of 1
+      if (process.platform === "win32" && killing && error.exitCode === 1) {
+        return
+      }
+      errorCallbackArray.forEach((callback) => {
+        callback(error)
+      })
+    },
+  )
   // keep listening process errors while child process is killed to catch
   // errors until it's actually disconnected
   // registerCleanupCallback(removeProcessErrorListener)
 
   // https://nodejs.org/api/child_process.html#child_process_event_disconnect
   let resolveDisconnect
+  let hasExitedOrDisconnected = false
   const disconnected = new Promise((resolve) => {
-    resolveDisconnect = resolve
-    onceProcessMessage(childProcess, "disconnect", () => {
-      resolve()
-    })
-    onceProcessEvent(childProcess, "disconnect", () => {
+    resolveDisconnect = () => {
+      hasExitedOrDisconnected = true
+      removeExitListener()
+      removeDisconnectListener()
+    }
+
+    let removeCloseListener = () => {}
+    const removeReadyListener = onceProcessMessage(
+      childProcess,
+      "ready",
+      () => {
+        removeCloseListener = onceProcessEvent(childProcess, "close", () => {
+          hasExitedOrDisconnected = true
+          removeErrorListener()
+          removeDisconnectListener()
+          resolve()
+        })
+      },
+    )
+
+    const removeDisconnectListener = onceProcessEvent(
+      childProcess,
+      "disconnect",
+      () => {
+        hasExitedOrDisconnected = true
+        removeErrorListener()
+        removeReadyListener()
+        removeCloseListener()
+        removeExitListener()
+        resolve()
+      },
+    )
+
+    const removeExitListener = onceProcessEvent(childProcess, "exit", () => {
+      hasExitedOrDisconnected = true
+      removeErrorListener()
+      removeReadyListener()
+      removeCloseListener()
+      removeDisconnectListener()
       resolve()
     })
   })
 
-  const disconnectChildProcess = () => {
+  const disconnectChildProcess = async () => {
+    if (hasExitedOrDisconnected) {
+      return
+    }
     try {
       childProcess.disconnect()
     } catch (e) {
@@ -179,14 +230,20 @@ ${JSON.stringify(env, null, "  ")}`)
         throw e
       }
     }
-    return disconnected
+    await disconnected
   }
 
   const killChildProcess = async ({ signal }) => {
+    if (hasExitedOrDisconnected) {
+      await disconnectChildProcess()
+      return
+    }
+
     killing = true
     logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`)
 
     await new Promise((resolve) => {
+      // see also https://github.com/sindresorhus/execa/issues/96
       const killProcessTree = require("tree-kill")
       killProcessTree(childProcess.pid, signal, (error) => {
         if (error) {
@@ -214,7 +271,7 @@ ${JSON.stringify(env, null, "  ")}`)
             return
           }
 
-          logger.error(
+          logger.warn(
             createDetailedMessage(
               `error while killing process tree with ${signal}`,
               {
@@ -234,20 +291,36 @@ ${JSON.stringify(env, null, "  ")}`)
       })
     })
 
+    childProcess.kill()
+
     // in case the child process did not disconnect by itself at this point
     // something is keeping it alive and it cannot be propely killed.
     // wait for the child process to disconnect by itself
-    return disconnectChildProcess()
+    await disconnectChildProcess()
   }
 
-  const stop = ({ gracefulFailed } = {}) => {
-    return killChildProcess({
-      signal: gracefulFailed ? GRACEFUL_STOP_FAILED_SIGNAL : STOP_SIGNAL,
-    })
+  const stop = async ({ gracefulFailed } = {}) => {
+    let unregisterErrorCallback
+    await Promise.race([
+      new Promise((resolve, reject) => {
+        unregisterErrorCallback = registerErrorCallback(reject)
+      }),
+      killChildProcess({
+        signal: gracefulFailed ? GRACEFUL_STOP_FAILED_SIGNAL : STOP_SIGNAL,
+      }),
+    ])
+    unregisterErrorCallback()
   }
 
-  const gracefulStop = () => {
-    return killChildProcess({ signal: GRACEFUL_STOP_SIGNAL })
+  const gracefulStop = async () => {
+    let unregisterErrorCallback
+    await Promise.race([
+      new Promise((resolve, reject) => {
+        unregisterErrorCallback = registerErrorCallback(reject)
+      }),
+      killChildProcess({ signal: GRACEFUL_STOP_SIGNAL }),
+    ])
+    unregisterErrorCallback()
   }
 
   const requestActionOnChildProcess = ({ actionType, actionParams }) => {
@@ -338,15 +411,13 @@ const installProcessOutputListener = (childProcess, callback) => {
 
 const installProcessErrorListener = (childProcess, callback) => {
   // https://nodejs.org/api/child_process.html#child_process_event_error
-  const errorListener = (error) => {
-    removeExitListener() // if an error occured we ignore the child process exitCode
-    callback(error)
-    onceProcessMessage(childProcess, "error", errorListener)
-  }
   const removeErrorListener = onceProcessMessage(
     childProcess,
     "error",
-    errorListener,
+    (error) => {
+      removeExitListener() // if an error occured we ignore the child process exitCode
+      callback(error)
+    },
   )
   // process.exit(1) in child process or process.exitCode = 1 + process.exit()
   // means there was an error even if we don't know exactly what.

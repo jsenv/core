@@ -54,6 +54,12 @@ export const execute = async ({
   customCompilers,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
+
+  runtimeConsoleCallback,
+  runtimeStartedCallback,
+  runtimeStoppedCallback,
+  runtimeErrorAfterExecutionCallback,
+  runtimeDisconnectCallback,
 }) => {
   const jsenvExecutionFunction = async ({ jsenvCancellationToken }) => {
     cancellationToken = composeCancellationToken(
@@ -138,6 +144,12 @@ export const execute = async ({
       stopAfterExecute,
       stopAfterExecuteReason,
       gracefulStopAllocatedMs,
+
+      runtimeConsoleCallback,
+      runtimeStartedCallback,
+      runtimeStoppedCallback,
+      runtimeErrorAfterExecutionCallback,
+      runtimeDisconnectCallback,
     })
 
     stop("single-execution-done")

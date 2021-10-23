@@ -36,7 +36,7 @@ await launchBrowsers(
       await execute({
         ...EXECUTE_TEST_PARAMS,
         jsenvDirectoryRelativeUrl,
-        launchAndExecuteLogLevel: "off",
+        launchAndExecuteLogLevel: "warn",
         runtime: browserRuntime,
         runtimeParams: {
           ...LAUNCH_TEST_PARAMS,

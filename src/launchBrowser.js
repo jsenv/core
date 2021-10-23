@@ -107,25 +107,26 @@ chromiumRuntime.launch = async ({
     console.log(`Debugger listening on ${webSocketDebuggerUrl}`)
   }
 
+  const browserHooks = browserToRuntimeHooks(browser, {
+    browserServerLogLevel,
+    cancellationToken,
+    ressourceTracker,
+
+    projectDirectoryUrl,
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+
+    collectPerformance,
+    measurePerformance,
+    collectCoverage,
+    coverageConfig,
+    coverageForceIstanbul,
+    coveragePlaywrightAPIAvailable: true,
+  })
+
   return {
     browser,
-    stop: ressourceTracker.cleanup,
-    ...browserToRuntimeHooks(browser, {
-      browserServerLogLevel,
-      cancellationToken,
-      ressourceTracker,
-
-      projectDirectoryUrl,
-      compileServerOrigin,
-      outDirectoryRelativeUrl,
-
-      measurePerformance,
-      collectPerformance,
-      collectCoverage,
-      coverageConfig,
-      coverageForceIstanbul,
-      coveragePlaywrightAPIAvailable: true,
-    }),
+    ...browserHooks,
   }
 }
 export const chromiumTabRuntime = {
@@ -186,24 +187,25 @@ firefoxRuntime.launch = async ({
 
   const browser = await launchOperation
 
+  const browserHooks = browserToRuntimeHooks(browser, {
+    browserServerLogLevel,
+    cancellationToken,
+    ressourceTracker,
+
+    projectDirectoryUrl,
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+
+    collectPerformance,
+    measurePerformance,
+    collectCoverage,
+    coverageConfig,
+    coverageForceIstanbul,
+  })
+
   return {
     browser,
-    stop: ressourceTracker.cleanup,
-    ...browserToRuntimeHooks(browser, {
-      browserServerLogLevel,
-      cancellationToken,
-      ressourceTracker,
-
-      projectDirectoryUrl,
-      compileServerOrigin,
-      outDirectoryRelativeUrl,
-
-      collectPerformance,
-      measurePerformance,
-      collectCoverage,
-      coverageConfig,
-      coverageForceIstanbul,
-    }),
+    ...browserHooks,
   }
 }
 export const firefoxTabRuntime = {
@@ -264,25 +266,25 @@ webkitRuntime.launch = async ({
 
   const browser = await launchOperation
 
+  const browserHooks = browserToRuntimeHooks(browser, {
+    browserServerLogLevel,
+    cancellationToken,
+    ressourceTracker,
+
+    projectDirectoryUrl,
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+
+    collectPerformance,
+    measurePerformance,
+    collectCoverage,
+    coverageConfig,
+    coverageForceIstanbul,
+  })
+
   return {
     browser,
-
-    stop: ressourceTracker.cleanup,
-    ...browserToRuntimeHooks(browser, {
-      browserServerLogLevel,
-      cancellationToken,
-      ressourceTracker,
-
-      projectDirectoryUrl,
-      compileServerOrigin,
-      outDirectoryRelativeUrl,
-
-      collectPerformance,
-      measurePerformance,
-      collectCoverage,
-      coverageConfig,
-      coverageForceIstanbul,
-    }),
+    ...browserHooks,
   }
 }
 export const webkitTabRuntime = {
@@ -379,6 +381,12 @@ const browserToRuntimeHooks = (
   const errorCallbackArray = []
   const registerErrorCallback = (callback) => {
     errorCallbackArray.push(callback)
+    return () => {
+      const index = errorCallbackArray.indexOf(callback)
+      if (index > -1) {
+        errorCallbackArray.splice(index, 1)
+      }
+    }
   }
 
   const consoleCallbackArray = []
@@ -436,6 +444,16 @@ const browserToRuntimeHooks = (
   }
 
   return {
+    stop: async (reason) => {
+      let unregisterErrorCallback
+      await Promise.race([
+        new Promise((resolve, reject) => {
+          unregisterErrorCallback = registerErrorCallback(reject)
+        }),
+        ressourceTracker.cleanup(reason),
+      ])
+      unregisterErrorCallback()
+    },
     disconnected,
     registerErrorCallback,
     registerConsoleCallback,
