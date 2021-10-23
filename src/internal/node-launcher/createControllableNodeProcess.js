@@ -290,6 +290,8 @@ ${JSON.stringify(env, null, "  ")}`)
       })
     })
 
+    childProcess.kill()
+
     // in case the child process did not disconnect by itself at this point
     // something is keeping it alive and it cannot be propely killed.
     // wait for the child process to disconnect by itself

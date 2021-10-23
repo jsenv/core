@@ -25,7 +25,7 @@ await executeTestPlan({
       },
     },
   },
-  coverage: process.argv.includes("--coverage"),
+  coverage: false, // process.argv.includes("--coverage"),
   coverageConfig: {
     "./index.js": true,
     "./src/**/*.js": true,
