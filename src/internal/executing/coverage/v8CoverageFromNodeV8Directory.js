@@ -4,6 +4,7 @@ import {
   readFile,
   resolveUrl,
 } from "@jsenv/filesystem"
+import { createDetailedMessage } from "@jsenv/logger"
 
 import { v8CoverageFromAllV8Coverages } from "./v8CoverageFromAllV8Coverages.js"
 
@@ -30,33 +31,47 @@ const readV8CoverageReportsFromDirectory = async (coverageDirectory) => {
     if (dirContent.length > 0) {
       return dirContent
     }
-    if (timeSpentTrying > 1500) {
-      console.warn(`v8 coverage directory is empty at ${coverageDirectory}`)
-      return dirContent
+    if (timeSpentTrying < 800) {
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      return tryReadDirectory(timeSpentTrying + 100)
     }
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    return tryReadDirectory(timeSpentTrying + 100)
+    console.warn(`v8 coverage directory is empty at ${coverageDirectory}`)
+    return dirContent
   }
   const dirContent = await tryReadDirectory()
 
   const coverageReports = []
-
   const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageDirectory)
   await Promise.all(
     dirContent.map(async (dirEntry) => {
       const dirEntryUrl = resolveUrl(dirEntry, coverageDirectoryUrl)
-      try {
-        const fileContent = await readFile(dirEntryUrl, { as: "json" })
-        if (fileContent) {
-          coverageReports.push(fileContent)
+      const tryReadJsonFile = async (timeSpentTrying = 0) => {
+        try {
+          const fileContent = await readFile(dirEntryUrl, { as: "json" })
+          return fileContent
+        } catch (e) {
+          if (e.name === "SyntaxError") {
+            // If there is a syntax error it's likely because Node.js
+            // is not done writing the json file content
+            // -> let's retry to read file after 100ms
+            if (timeSpentTrying < 100) {
+              await new Promise((resolve) => setTimeout(resolve, 100))
+              return tryReadJsonFile(timeSpentTrying + 100)
+            }
+          }
+          console.warn(
+            createDetailedMessage(`Error while reading coverage file`, {
+              "error stack": e.stack,
+              "file": dirEntryUrl,
+            }),
+          )
+          return null
         }
-      } catch (e) {
-        console.warn(`Error while reading coverage file
---- error stack ---
-${e.stack}
---- file ---
-${dirEntryUrl}`)
-        return
+      }
+
+      const fileContent = await tryReadJsonFile()
+      if (fileContent) {
+        coverageReports.push(fileContent)
       }
     }),
   )
