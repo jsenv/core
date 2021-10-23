@@ -166,16 +166,27 @@ ${JSON.stringify(env, null, "  ")}`)
   // https://nodejs.org/api/child_process.html#child_process_event_disconnect
   let resolveDisconnect
   const disconnected = new Promise((resolve) => {
-    resolveDisconnect = resolve
-    onceProcessMessage(childProcess, "disconnect", () => {
-      resolve()
-    })
-    onceProcessEvent(childProcess, "disconnect", () => {
+    resolveDisconnect = () => {
+      removeExitListener()
+      removeDisconnectListener()
+    }
+
+    const removeDisconnectListener = onceProcessEvent(
+      childProcess,
+      "disconnect",
+      () => {
+        removeExitListener()
+        resolve()
+      },
+    )
+
+    const removeExitListener = onceProcessEvent(childProcess, "exit", () => {
+      removeDisconnectListener()
       resolve()
     })
   })
 
-  const disconnectChildProcess = () => {
+  const disconnectChildProcess = async () => {
     try {
       childProcess.disconnect()
     } catch (e) {
@@ -185,7 +196,7 @@ ${JSON.stringify(env, null, "  ")}`)
         throw e
       }
     }
-    return disconnected
+    await disconnected
   }
 
   const killChildProcess = async ({ signal }) => {
@@ -243,7 +254,7 @@ ${JSON.stringify(env, null, "  ")}`)
     // in case the child process did not disconnect by itself at this point
     // something is keeping it alive and it cannot be propely killed.
     // wait for the child process to disconnect by itself
-    return disconnectChildProcess()
+    await disconnectChildProcess()
   }
 
   const stop = async ({ gracefulFailed } = {}) => {
