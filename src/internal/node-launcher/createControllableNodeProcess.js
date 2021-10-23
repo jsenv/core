@@ -123,14 +123,17 @@ ${JSON.stringify(env, null, "  ")}`)
   const registerConsoleCallback = (callback) => {
     consoleCallbackArray.push(callback)
   }
-  installProcessOutputListener(childProcess, ({ type, text }) => {
-    consoleCallbackArray.forEach((callback) => {
-      callback({
-        type,
-        text,
+  const removeOutputListener = installProcessOutputListener(
+    childProcess,
+    ({ type, text }) => {
+      consoleCallbackArray.forEach((callback) => {
+        callback({
+          type,
+          text,
+        })
       })
-    })
-  })
+    },
+  )
   // keep listening process outputs while child process is killed to catch
   // outputs until it's actually disconnected
   // registerCleanupCallback(removeProcessOutputListener)
@@ -146,19 +149,23 @@ ${JSON.stringify(env, null, "  ")}`)
     }
   }
   let killing = false
-  installProcessErrorListener(childProcess, (error) => {
-    if (!childProcess.connected && error.code === "ERR_IPC_DISCONNECTED") {
-      return
-    }
-    // on windows killProcessTree uses taskkill which seems to kill the process
-    // with an exitCode of 1
-    if (process.platform === "win32" && killing && error.exitCode === 1) {
-      return
-    }
-    errorCallbackArray.forEach((callback) => {
-      callback(error)
-    })
-  })
+  const removeErrorListener = installProcessErrorListener(
+    childProcess,
+    (error) => {
+      removeOutputListener()
+      if (!childProcess.connected && error.code === "ERR_IPC_DISCONNECTED") {
+        return
+      }
+      // on windows killProcessTree uses taskkill which seems to kill the process
+      // with an exitCode of 1
+      if (process.platform === "win32" && killing && error.exitCode === 1) {
+        return
+      }
+      errorCallbackArray.forEach((callback) => {
+        callback(error)
+      })
+    },
+  )
   // keep listening process errors while child process is killed to catch
   // errors until it's actually disconnected
   // registerCleanupCallback(removeProcessErrorListener)
@@ -180,6 +187,7 @@ ${JSON.stringify(env, null, "  ")}`)
       () => {
         removeCloseListener = onceProcessEvent(childProcess, "close", () => {
           hasExitedOrDisconnected = true
+          removeErrorListener()
           removeDisconnectListener()
           resolve()
         })
@@ -191,6 +199,7 @@ ${JSON.stringify(env, null, "  ")}`)
       "disconnect",
       () => {
         hasExitedOrDisconnected = true
+        removeErrorListener()
         removeReadyListener()
         removeCloseListener()
         removeExitListener()
@@ -200,6 +209,7 @@ ${JSON.stringify(env, null, "  ")}`)
 
     const removeExitListener = onceProcessEvent(childProcess, "exit", () => {
       hasExitedOrDisconnected = true
+      removeErrorListener()
       removeReadyListener()
       removeCloseListener()
       removeDisconnectListener()
