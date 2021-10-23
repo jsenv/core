@@ -106,8 +106,6 @@ nodeRuntime.launch = async ({
             return executionResult.coverage
           }
 
-          await controllableNodeProcess.disconnected
-          await new Promise((resolve) => setTimeout(resolve))
           const v8Coverage = await v8CoverageFromNodeV8Directory({
             projectDirectoryUrl,
             NODE_V8_COVERAGE,
