@@ -42,8 +42,17 @@ export const createBrowserSystem = ({
     }
 
     try {
-      const returnValue = await instantiate.call(this, url, importerUrl)
-      return returnValue
+      const registration = await instantiate.call(this, url, importerUrl)
+      if (!registration) {
+        throw new Error(
+          `no registration found for JS at ${url}
+--- importer url ---
+${importerUrl}
+--- navigator.vendor ---
+${window.navigator.vendor}`,
+        )
+      }
+      return registration
     } catch (e) {
       const jsenvError = await createDetailedInstantiateError({
         instantiateError: e,
@@ -97,7 +106,13 @@ const instantiateAsJsonModule = async (url, { browserSystem, fetchSource }) => {
       },
     }
   })
-  return browserSystem.getRegister(url)
+  const registration = browserSystem.getRegister(url)
+  if (!registration) {
+    throw new Error(
+      `no registration found for JSON at ${url}. Navigator.vendor: ${window.navigator.vendor}. JSON text: ${json}`,
+    )
+  }
+  return registration
 }
 
 const instantiateAsCssModule = async (

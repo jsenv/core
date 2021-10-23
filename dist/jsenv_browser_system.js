@@ -3181,7 +3181,13 @@
           }
         }, function (_result2) {
           return _exit2 ? _result2 : _catch$4(function () {
-            return _await$8(instantiate.call(_this, url, importerUrl));
+            return _await$8(instantiate.call(_this, url, importerUrl), function (registration) {
+              if (!registration) {
+                throw new Error("no registration found for JS at ".concat(url, "\n--- importer url ---\n").concat(importerUrl, "\n--- navigator.vendor ---\n").concat(window.navigator.vendor));
+              }
+
+              return registration;
+            });
           }, function (e) {
             return _await$8(createDetailedInstantiateError({
               instantiateError: e,
@@ -3242,7 +3248,13 @@
             }
           };
         });
-        return browserSystem.getRegister(url);
+        var registration = browserSystem.getRegister(url);
+
+        if (!registration) {
+          throw new Error("no registration found for JSON at ".concat(url, ". Navigator.vendor: ").concat(window.navigator.vendor, ". JSON text: ").concat(json));
+        }
+
+        return registration;
       });
     });
   });
