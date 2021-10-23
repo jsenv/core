@@ -243,6 +243,7 @@ ${JSON.stringify(env, null, "  ")}`)
     logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`)
 
     await new Promise((resolve) => {
+      // see also https://github.com/sindresorhus/execa/issues/96
       const killProcessTree = require("tree-kill")
       killProcessTree(childProcess.pid, signal, (error) => {
         if (error) {
