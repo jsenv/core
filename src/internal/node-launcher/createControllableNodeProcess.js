@@ -180,28 +180,12 @@ ${JSON.stringify(env, null, "  ")}`)
       removeDisconnectListener()
     }
 
-    let removeCloseListener = () => {}
-    const removeReadyListener = onceProcessMessage(
-      childProcess,
-      "ready",
-      () => {
-        removeCloseListener = onceProcessEvent(childProcess, "close", () => {
-          hasExitedOrDisconnected = true
-          removeErrorListener()
-          removeDisconnectListener()
-          resolve()
-        })
-      },
-    )
-
     const removeDisconnectListener = onceProcessEvent(
       childProcess,
       "disconnect",
       () => {
         hasExitedOrDisconnected = true
         removeErrorListener()
-        removeReadyListener()
-        removeCloseListener()
         removeExitListener()
         resolve()
       },
@@ -210,8 +194,6 @@ ${JSON.stringify(env, null, "  ")}`)
     const removeExitListener = onceProcessEvent(childProcess, "exit", () => {
       hasExitedOrDisconnected = true
       removeErrorListener()
-      removeReadyListener()
-      removeCloseListener()
       removeDisconnectListener()
       resolve()
     })
@@ -290,8 +272,6 @@ ${JSON.stringify(env, null, "  ")}`)
         resolve()
       })
     })
-
-    childProcess.kill()
 
     // in case the child process did not disconnect by itself at this point
     // something is keeping it alive and it cannot be propely killed.
