@@ -5,6 +5,8 @@ const canUseUnicode = isUnicodeSupported()
 const processSupportsBasicColor =
   process.env.FORCE_COLOR === 0
     ? false
+    : process.env.FORCE_COLOR === 1
+    ? true
     : // GitHub workflow does support ANSI but "supports-color" would return false
       process.env.GITHUB_WORKFLOW ||
       createSupportsColor(process.stdout).hasBasic
