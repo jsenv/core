@@ -208,6 +208,9 @@ ${JSON.stringify(env, null, "  ")}`)
   })
 
   const disconnectChildProcess = async () => {
+    if (hasExitedOrDisconnected) {
+      return
+    }
     try {
       childProcess.disconnect()
     } catch (e) {
@@ -395,15 +398,13 @@ const installProcessOutputListener = (childProcess, callback) => {
 
 const installProcessErrorListener = (childProcess, callback) => {
   // https://nodejs.org/api/child_process.html#child_process_event_error
-  const errorListener = (error) => {
-    removeExitListener() // if an error occured we ignore the child process exitCode
-    callback(error)
-    onceProcessMessage(childProcess, "error", errorListener)
-  }
   const removeErrorListener = onceProcessMessage(
     childProcess,
     "error",
-    errorListener,
+    (error) => {
+      removeExitListener() // if an error occured we ignore the child process exitCode
+      callback(error)
+    },
   )
   // process.exit(1) in child process or process.exitCode = 1 + process.exit()
   // means there was an error even if we don't know exactly what.
