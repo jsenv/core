@@ -3,8 +3,11 @@ import { createSupportsColor } from "supports-color"
 
 const canUseUnicode = isUnicodeSupported()
 const processSupportsBasicColor =
-  // GitHub workflow does support ANSI but "supports-color" would return false
-  process.env.GITHUB_WORKFLOW || createSupportsColor(process.stdout).hasBasic
+  process.env.FORCE_COLOR === 0
+    ? false
+    : // GitHub workflow does support ANSI but "supports-color" would return false
+      process.env.GITHUB_WORKFLOW ||
+      createSupportsColor(process.stdout).hasBasic
 
 const ansiStyles = {
   red: { open: 31, close: 39 },
