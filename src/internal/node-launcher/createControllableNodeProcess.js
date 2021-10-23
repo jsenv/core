@@ -173,11 +173,26 @@ ${JSON.stringify(env, null, "  ")}`)
       removeDisconnectListener()
     }
 
+    let removeCloseListener = () => {}
+    const removeReadyListener = onceProcessMessage(
+      childProcess,
+      "ready",
+      () => {
+        removeCloseListener = onceProcessEvent(childProcess, "close", () => {
+          hasExitedOrDisconnected = true
+          removeDisconnectListener()
+          resolve()
+        })
+      },
+    )
+
     const removeDisconnectListener = onceProcessEvent(
       childProcess,
       "disconnect",
       () => {
         hasExitedOrDisconnected = true
+        removeReadyListener()
+        removeCloseListener()
         removeExitListener()
         resolve()
       },
@@ -185,6 +200,8 @@ ${JSON.stringify(env, null, "  ")}`)
 
     const removeExitListener = onceProcessEvent(childProcess, "exit", () => {
       hasExitedOrDisconnected = true
+      removeReadyListener()
+      removeCloseListener()
       removeDisconnectListener()
       resolve()
     })
