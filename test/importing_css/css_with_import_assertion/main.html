@@ -17,10 +17,10 @@
         resolveNamespace = resolve
       })
 
-      // on firefox we have to wait a bit,
+      // on firefox + webkit we have to wait a bit,
       // it seems the styles are applied on next js event loop
       await new Promise((resolve) => {
-        setTimeout(resolve, 50)
+        setTimeout(resolve, 200)
       })
 
       const bodyBackgroundColor = getComputedStyle(
@@ -29,9 +29,9 @@
 
       console.log({ bodyBackgroundColor })
 
-      // let 500ms for the background image to load
+      // let 700ms for the background image to load
       await new Promise((resolve) => {
-        setTimeout(resolve, 500)
+        setTimeout(resolve, 700)
       })
 
       const bodyBackgroundImage = getComputedStyle(
