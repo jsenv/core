@@ -165,8 +165,10 @@ ${JSON.stringify(env, null, "  ")}`)
 
   // https://nodejs.org/api/child_process.html#child_process_event_disconnect
   let resolveDisconnect
+  let hasExitedOrDisconnected = false
   const disconnected = new Promise((resolve) => {
     resolveDisconnect = () => {
+      hasExitedOrDisconnected = true
       removeExitListener()
       removeDisconnectListener()
     }
@@ -175,12 +177,14 @@ ${JSON.stringify(env, null, "  ")}`)
       childProcess,
       "disconnect",
       () => {
+        hasExitedOrDisconnected = true
         removeExitListener()
         resolve()
       },
     )
 
     const removeExitListener = onceProcessEvent(childProcess, "exit", () => {
+      hasExitedOrDisconnected = true
       removeDisconnectListener()
       resolve()
     })
@@ -200,6 +204,11 @@ ${JSON.stringify(env, null, "  ")}`)
   }
 
   const killChildProcess = async ({ signal }) => {
+    if (hasExitedOrDisconnected) {
+      await disconnectChildProcess()
+      return
+    }
+
     killing = true
     logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`)
 
@@ -231,7 +240,7 @@ ${JSON.stringify(env, null, "  ")}`)
             return
           }
 
-          logger.error(
+          logger.warn(
             createDetailedMessage(
               `error while killing process tree with ${signal}`,
               {
