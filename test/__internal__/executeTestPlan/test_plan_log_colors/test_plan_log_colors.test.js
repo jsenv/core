@@ -49,7 +49,7 @@ const getLogs = async () => {
 
 // execution with colors disabled
 if (process.platform !== "win32") {
-  process.env.FORCE_COLOR = 0
+  process.env.FORCE_COLOR = "false"
   const actual = await getLogs()
   const expected = `
 ✔ execution 1 of 1 completed (all completed)
@@ -66,7 +66,7 @@ runtime: node/${process.version.slice(1)}
 
 // execution with colors enabled
 if (process.platform !== "win32") {
-  process.env.FORCE_COLOR = 1
+  process.env.FORCE_COLOR = "true"
   const actual = await getLogs()
   const expected = `
 [32m✔ execution 1 of 1 completed[39m (all [32mcompleted[39m)

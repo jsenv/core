@@ -77,16 +77,17 @@ export const createControllableNodeProcess = async ({
   }
 
   await assertFilePresence(nodeControllableFileUrl)
+  const envForChildProcess = {
+    ...(inheritProcessEnv ? process.env : {}),
+    ...env,
+  }
   const childProcess = forkChildProcess(
     urlToFileSystemPath(nodeControllableFileUrl),
     {
       execArgv,
       // silent: true
       stdio: ["pipe", "pipe", "pipe", "ipc"],
-      env: {
-        ...(inheritProcessEnv ? process.env : {}),
-        ...env,
-      },
+      env: envForChildProcess,
     },
   )
 

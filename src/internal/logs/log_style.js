@@ -2,14 +2,19 @@ import isUnicodeSupported from "is-unicode-supported"
 import { createSupportsColor } from "supports-color"
 
 const canUseUnicode = isUnicodeSupported()
-const processSupportsBasicColor =
-  process.env.FORCE_COLOR === 0
-    ? false
-    : process.env.FORCE_COLOR === 1
-    ? true
-    : // GitHub workflow does support ANSI but "supports-color" would return false
-      process.env.GITHUB_WORKFLOW ||
-      createSupportsColor(process.stdout).hasBasic
+const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic
+let canUseColors = processSupportsBasicColor
+
+// GitHub workflow does support ANSI but "supports-color" returns false
+// because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
+if (process.env.GITHUB_WORKFLOW) {
+  // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
+  if (process.env.FORCE_COLOR !== "false") {
+    // in unit test we use process.env.FORCE_COLOR = 'false' to fake
+    // that colors are not supported. Let it have priority
+    canUseColors = true
+  }
+}
 
 const ansiStyles = {
   red: { open: 31, close: 39 },
@@ -29,7 +34,7 @@ export const ANSI_GREY = ansiStyles.grey
 
 export const ANSI_RESET = "\x1b[0m"
 
-export const setANSIColor = processSupportsBasicColor
+export const setANSIColor = canUseColors
   ? (text, ansiColor) =>
       `\x1b[${ansiColor.open}m${text}\x1b[${ansiColor.close}m`
   : (text) => text
