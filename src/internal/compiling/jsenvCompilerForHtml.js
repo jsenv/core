@@ -6,7 +6,10 @@ import {
   jsenvToolbarInjectorFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
-import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
+import {
+  setJavaScriptSourceMappingUrl,
+  sourcemapToBase64Url,
+} from "../sourceMappingURLUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import {
   parseHtmlString,
@@ -41,6 +44,7 @@ export const compileHtml = async ({
   babelPluginMap,
 
   jsenvToolbarInjection,
+  sourcemapMethod,
 }) => {
   const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
     jsenvBrowserSystemFileInfo.jsenvBuildUrl,
@@ -203,12 +207,22 @@ export const compileHtml = async ({
         sourcemapFileUrl,
         compiledUrl,
       )
-      code = setJavaScriptSourceMappingUrl(
-        code,
-        sourcemapFileRelativePathForModule,
-      )
-      assets = [...assets, scriptAssetUrl, sourcemapFileUrl]
-      assetsContent = [...assetsContent, code, JSON.stringify(map, null, "  ")]
+
+      if (sourcemapMethod === "inline") {
+        code = setJavaScriptSourceMappingUrl(code, sourcemapToBase64Url(map))
+      } else {
+        // TODO: respect "sourcemapMethod" parameter
+        code = setJavaScriptSourceMappingUrl(
+          code,
+          sourcemapFileRelativePathForModule,
+        )
+        assets = [...assets, scriptAssetUrl, sourcemapFileUrl]
+        assetsContent = [
+          ...assetsContent,
+          code,
+          JSON.stringify(map, null, "  "),
+        ]
+      }
     }),
   )
 

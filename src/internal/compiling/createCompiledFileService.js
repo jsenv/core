@@ -51,6 +51,7 @@ export const createCompiledFileService = ({
   projectFileRequestedCallback,
   useFilesystemAsCache,
   compileCacheStrategy,
+  sourcemapMethod,
   sourcemapExcludeSources,
 }) => {
   Object.keys(customCompilers).forEach((key) => {
@@ -175,7 +176,7 @@ export const createCompiledFileService = ({
             groupMap,
           }),
 
-          sourcemapMethod: "comment", // "inline" is also possible
+          sourcemapMethod,
           sourcemapExcludeSources,
           jsenvToolbarInjection,
         })

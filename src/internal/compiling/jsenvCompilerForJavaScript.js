@@ -14,6 +14,7 @@ export const compileJavascript = async ({
   importMetaFormat,
 
   sourcemapExcludeSources,
+  sourcemapMethod,
 }) => {
   const transformResult = await transformJs({
     code,
@@ -42,6 +43,7 @@ export const compileJavascript = async ({
       compiledFileUrl: compiledUrl,
       sourcemapFileUrl: `${compiledUrl}.map`,
       sourcemapExcludeSources,
+      sourcemapMethod,
     },
   )
 }

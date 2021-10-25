@@ -59,6 +59,7 @@ export const startCompileServer = async ({
   jsenvDirectoryClean = false,
   outDirectoryName = "out",
 
+  sourcemapMethod = "comment", // "inline" is also possible
   sourcemapExcludeSources = false, // this should increase perf (no need to download source for browser)
   compileServerCanReadFromFilesystem = true,
   compileServerCanWriteOnFilesystem = true,
@@ -269,6 +270,8 @@ export const startCompileServer = async ({
     babelPluginMap,
     customCompilers,
     jsenvToolbarInjection,
+    sourcemapMethod,
+    sourcemapExcludeSources,
   })
   if (compileServerCanWriteOnFilesystem) {
     await setupOutDirectory({
@@ -345,6 +348,7 @@ export const startCompileServer = async ({
       projectFileRequestedCallback,
       useFilesystemAsCache: compileServerCanReadFromFilesystem,
       writeOnFilesystem: compileServerCanWriteOnFilesystem,
+      sourcemapMethod,
       sourcemapExcludeSources,
       compileCacheStrategy,
     }),
@@ -361,7 +365,8 @@ export const startCompileServer = async ({
     ip: compileServerIp,
     port: compileServerPort,
     sendServerTiming: true,
-    nagle: false,
+    // nagle: false,
+    requestWaitingMs: 60 * 1000,
     sendServerInternalErrorDetails: true,
     requestToResponse: composeServicesWithTiming({
       ...customServices,
@@ -945,6 +950,8 @@ const createOutJSONFiles = ({
   inlineImportMapIntoHTML,
   customCompilers,
   jsenvToolbarInjection,
+  sourcemapMethod,
+  sourcemapExcludeSources,
 }) => {
   const outJSONFiles = {}
   const outDirectoryUrl = resolveUrl(
@@ -968,6 +975,8 @@ const createOutJSONFiles = ({
     processEnvNodeEnv,
     customCompilerPatterns,
     jsenvToolbarInjection,
+    sourcemapMethod,
+    sourcemapExcludeSources,
   }
   outJSONFiles.meta = {
     url: metaOutFileUrl,
