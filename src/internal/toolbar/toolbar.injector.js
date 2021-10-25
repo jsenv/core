@@ -91,6 +91,14 @@ const connectLivereload = () => {
 window.__jsenv_eventsource__ = connectLivereload()
 
 const injectToolbar = async () => {
+  await new Promise((resolve) => {
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(resolve)
+    } else {
+      window.requestAnimationFrame(resolve)
+    }
+  })
+
   const { jsenvDirectoryRelativeUrl } = await fetchExploringJson()
   const jsenvDirectoryServerUrl = resolveUrl(
     jsenvDirectoryRelativeUrl,
