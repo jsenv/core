@@ -1726,6 +1726,10 @@
       return "Execution failed in ".concat(endTime - startTime, "ms");
     }
 
+    if (status === "running") {
+      return "Executing...";
+    }
+
     return "";
   };
 

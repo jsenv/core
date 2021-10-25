@@ -74,6 +74,10 @@ const computeText = ({ status, startTime, endTime }) => {
     return `Execution failed in ${endTime - startTime}ms`
   }
 
+  if (status === "running") {
+    return "Executing..."
+  }
+
   return ""
 }
 
