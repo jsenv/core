@@ -1,4 +1,4 @@
-import { serveFile } from "@jsenv/server"
+import { serveFile, nextService } from "@jsenv/server"
 import {
   resolveUrl,
   resolveDirectoryUrl,
@@ -31,7 +31,6 @@ const jsenvCompilers = {
 }
 
 export const createCompiledFileService = ({
-  sourceFileService,
   cancellationToken,
   logger,
 
@@ -81,7 +80,7 @@ export const createCompiledFileService = ({
 
     // not inside compile directory -> nothing to compile
     if (!requestCompileInfo.insideCompileDirectory) {
-      return sourceFileService(request)
+      return null
     }
 
     const { compileId, afterCompileId } = requestCompileInfo
@@ -111,7 +110,7 @@ export const createCompiledFileService = ({
 
     // nothing after compileId, we don't know what to compile (not supposed to happen)
     if (afterCompileId === "") {
-      return sourceFileService(request)
+      return null
     }
 
     const originalFileRelativeUrl = afterCompileId
@@ -133,7 +132,7 @@ export const createCompiledFileService = ({
     // we don't redirect otherwise it complexify ressource tracking
     // and url resolution
     if (!compiler) {
-      return sourceFileService({
+      return nextService({
         ...request,
         ressource: `/${originalFileRelativeUrl}`,
       })
