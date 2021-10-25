@@ -27,7 +27,7 @@ const {
       iterations: 1,
     },
     devServerMetrics: {
-      file: "./measure_dev_server/measure_dev_server.js#devServerMetrics",
+      file: "./dev_server/measure_dev_server.js#devServerMetrics",
       iterations: process.argv.includes("--once") ? 1 : 3,
       msToWaitBetweenEachIteration: 500,
     },
