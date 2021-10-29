@@ -23,11 +23,11 @@ if (DEV) {
 const BOOTING_SLOW = 2500
 // When it takes less than "SPLASHIN_DELAY"ms for loadApp to resolve
 // -> we won't even show the splashscreen (happens on user second visit because everything is in browser cache)
-const SPLASHIN_DELAY = 3000
+const SPLASHIN_DELAY = 300
 // When less than "SPLASHOUT_MIN_INTERVAL"ms have ellapsed since splashin animation started
 // -> code ensures "SPLASHOUT_MIN_INTERVAL"ms ellapses before playing the splashout animation
 // This is to prevent a disturbing blink when loadApp resolves shortly after splashin animation
-const SPLASHOUT_MIN_INTERVAL = 1650
+const SPLASHOUT_MIN_INTERVAL = 650
 
 const appNode = document.querySelector("#app")
 const splashscreenNode = document.querySelector("#splashscreen")
@@ -92,7 +92,6 @@ const boot = async () => {
     clearTimeout(bootingIsSlowTimeout)
 
     if (!splashIsVisible) {
-      console.log("super fast")
       appNode.removeAttribute("data-booting")
       // app was super fast to load, splashscreen was not even displayed, cool
       killSplashscreen()
