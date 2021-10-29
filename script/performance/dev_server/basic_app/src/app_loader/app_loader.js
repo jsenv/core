@@ -2,7 +2,7 @@
  * This is where you can orchestrate the loading of your application
  */
 
-import { loadCSSAndFonts, nextIDLEPromise } from "./app_loader_utils.js"
+import { loadCSSAndFonts } from "./app_loader_utils.js"
 
 export const loadApp = async () => {
   // try to load CSS + get the main fonts before displaying any text
@@ -35,7 +35,7 @@ export const loadApp = async () => {
   // app.render() can be very expensive so we wait a bit
   // to let navigator an opportunity to cooldown
   // This should help to save battery power and RAM
-  await nextIDLEPromise()
+  // await nextIDLEPromise()
 }
 
 const importApp = async ({ onJsReady = () => {} }) => {

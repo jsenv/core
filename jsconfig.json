@@ -290,6 +290,9 @@
       "@jsenv/cancellation": [
         "./node_modules/@jsenv/cancellation/main.node.js"
       ],
+      "@jsenv/https-local/*": [
+        "./node_modules/@jsenv/https-local/*"
+      ],
       "@jsenv/node-signals": [
         "./node_modules/@jsenv/node-signals/index.js"
       ],
@@ -337,6 +340,9 @@
       ],
       "@jsenv/filesystem/*": [
         "./node_modules/@jsenv/filesystem/*"
+      ],
+      "@jsenv/https-local": [
+        "./node_modules/@jsenv/https-local/main.js"
       ],
       "eslint-plugin-html": [
         "./node_modules/eslint-plugin-html/src/index.js"

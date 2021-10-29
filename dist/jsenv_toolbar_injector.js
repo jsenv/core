@@ -157,7 +157,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$3(f) {
+  function _async$4(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -184,7 +184,7 @@
     }
   }
 
-  var fetchUsingXHR = _async$3(function (url) {
+  var fetchUsingXHR = _async$4(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         _ref$cancellationToke = _ref.cancellationToken,
         cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
@@ -311,7 +311,7 @@
         return _call$1(text, JSON.parse);
       };
 
-      var blob = _async$3(function () {
+      var blob = _async$4(function () {
         if (!hasBlob) {
           throw new Error("blob not supported");
         }
@@ -348,7 +348,7 @@
         });
       };
 
-      var formData = _async$3(function () {
+      var formData = _async$4(function () {
         if (!hasFormData) {
           throw new Error("formData not supported");
         }
@@ -529,7 +529,7 @@
     return form;
   };
 
-  var blobToArrayBuffer = _async$3(function (blob) {
+  var blobToArrayBuffer = _async$4(function (blob) {
     var reader = new FileReader();
     var promise = fileReaderReady(reader);
     reader.readAsArrayBuffer(blob);
@@ -592,7 +592,7 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchNative = _async$2(function (url) {
+  var fetchNative = _async$3(function (url) {
 
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -673,7 +673,7 @@
     return value && value.then ? value.then(then) : then(value);
   }
 
-  function _async$2(f) {
+  function _async$3(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -701,7 +701,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$1(f) {
+  function _async$2(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -715,7 +715,7 @@
     };
   }
 
-  var fetchJson = _async$1(function (url) {
+  var fetchJson = _async$2(function (url) {
     var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     return _await$2(fetchUrl(url, options), function (response) {
       return _await$2(response.json());
@@ -748,7 +748,7 @@
     return result;
   }
 
-  function _async(f) {
+  function _async$1(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -762,7 +762,7 @@
     };
   }
 
-  var fetchExploringJson = _async(function () {
+  var fetchExploringJson = _async$1(function () {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         cancellationToken = _ref.cancellationToken;
 
@@ -929,116 +929,138 @@
     }
   }
 
+  function _async(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
   window.__jsenv_eventsource__ = connectLivereload();
 
-  var injectToolbar = function injectToolbar() {
-    return _call(fetchExploringJson, function (_ref4) {
-      var jsenvDirectoryRelativeUrl = _ref4.jsenvDirectoryRelativeUrl;
-      var jsenvDirectoryServerUrl = resolveUrl(jsenvDirectoryRelativeUrl, document.location.origin);
-      var placeholder = getToolbarPlaceholder();
-      var iframe = document.createElement("iframe");
-      setAttributes(iframe, {
-        tabindex: -1,
-        // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
-        // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
-        allowtransparency: true
-      });
-      setStyles(iframe, {
-        "position": "fixed",
-        "zIndex": 1000,
-        "bottom": 0,
-        "left": 0,
-        "width": "100%",
-        "height": 0,
-
-        /* ensure toolbar children are not focusable when hidden */
-        "visibility": "hidden",
-        "transition-duration": "300ms",
-        "transition-property": "height, visibility",
-        "border": "none"
-      });
-      var iframeLoadedPromise = iframeToLoadedPromise(iframe);
-      var jsenvToolbarHtmlServerUrl = resolveUrl("./src/internal/toolbar/toolbar.html", jsenvDirectoryServerUrl); // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
-
-      iframe.setAttribute("src", jsenvToolbarHtmlServerUrl);
-      placeholder.parentNode.replaceChild(iframe, placeholder);
-      return _await(iframeLoadedPromise, function () {
-        iframe.removeAttribute("tabindex");
-
-        var listenToolbarIframeEvent = function listenToolbarIframeEvent(event, fn) {
-          window.addEventListener("message", function (messageEvent) {
-            var data = messageEvent.data;
-            if (_typeof(data) !== "object") return;
-            var jsenv = data.jsenv;
-            if (!jsenv) return;
-            var type = data.type;
-            if (type !== event) return;
-            fn(data.value);
-          }, false);
-        };
-
-        listenToolbarIframeEvent("toolbar-visibility-change", function (visible) {
-          if (visible) {
-            hideToolbarTrigger();
-          } else {
-            showToolbarTrigger();
-          }
+  var injectToolbar = _async(function () {
+    return _await(new Promise(function (resolve) {
+      if (window.requestIdleCallback) {
+        window.requestIdleCallback(resolve);
+      } else {
+        window.requestAnimationFrame(resolve);
+      }
+    }), function () {
+      return _call(fetchExploringJson, function (_ref4) {
+        var jsenvDirectoryRelativeUrl = _ref4.jsenvDirectoryRelativeUrl;
+        var jsenvDirectoryServerUrl = resolveUrl(jsenvDirectoryRelativeUrl, document.location.origin);
+        var placeholder = getToolbarPlaceholder();
+        var iframe = document.createElement("iframe");
+        setAttributes(iframe, {
+          tabindex: -1,
+          // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
+          // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
+          allowtransparency: true
         });
-        var div = document.createElement("div");
-        var jsenvLogoUrl = resolveUrl("./src/internal/toolbar/jsenv-logo.svg", jsenvDirectoryServerUrl);
-        var jsenvLogoSvgSrc = jsenvLogoUrl;
-        div.innerHTML = "\n<div id=\"jsenv-toolbar-trigger\">\n  <svg id=\"jsenv-toolbar-trigger-icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgSrc, "#jsenv-logo\"></use>\n  </svg>\n  <style>\n    #jsenv-toolbar-trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv-toolbar-trigger-icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
-        var toolbarTrigger = div.firstElementChild;
-        iframe.parentNode.appendChild(toolbarTrigger);
-        var timer;
+        setStyles(iframe, {
+          "position": "fixed",
+          "zIndex": 1000,
+          "bottom": 0,
+          "left": 0,
+          "width": "100%",
+          "height": 0,
 
-        toolbarTrigger.onmouseenter = function () {
-          toolbarTrigger.setAttribute("data-animate", "");
-          timer = setTimeout(expandToolbarTrigger, 500);
-        };
+          /* ensure toolbar children are not focusable when hidden */
+          "visibility": "hidden",
+          "transition-duration": "300ms",
+          "transition-property": "height, visibility",
+          "border": "none"
+        });
+        var iframeLoadedPromise = iframeToLoadedPromise(iframe);
+        var jsenvToolbarHtmlServerUrl = resolveUrl("./src/internal/toolbar/toolbar.html", jsenvDirectoryServerUrl); // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
 
-        toolbarTrigger.onmouseleave = function () {
-          clearTimeout(timer);
-          collapseToolbarTrigger();
-        };
+        iframe.setAttribute("src", jsenvToolbarHtmlServerUrl);
+        placeholder.parentNode.replaceChild(iframe, placeholder);
+        return _await(iframeLoadedPromise, function () {
+          iframe.removeAttribute("tabindex");
 
-        toolbarTrigger.onfocus = function () {
-          toolbarTrigger.removeAttribute("data-animate");
-          expandToolbarTrigger();
-        };
+          var listenToolbarIframeEvent = function listenToolbarIframeEvent(event, fn) {
+            window.addEventListener("message", function (messageEvent) {
+              var data = messageEvent.data;
+              if (_typeof(data) !== "object") return;
+              var jsenv = data.jsenv;
+              if (!jsenv) return;
+              var type = data.type;
+              if (type !== event) return;
+              fn(data.value);
+            }, false);
+          };
 
-        toolbarTrigger.onblur = function () {
-          toolbarTrigger.removeAttribute("data-animate");
-          clearTimeout(timer);
-          collapseToolbarTrigger();
-        };
+          listenToolbarIframeEvent("toolbar-visibility-change", function (visible) {
+            if (visible) {
+              hideToolbarTrigger();
+            } else {
+              showToolbarTrigger();
+            }
+          });
+          var div = document.createElement("div");
+          var jsenvLogoUrl = resolveUrl("./src/internal/toolbar/jsenv-logo.svg", jsenvDirectoryServerUrl);
+          var jsenvLogoSvgSrc = jsenvLogoUrl;
+          div.innerHTML = "\n<div id=\"jsenv-toolbar-trigger\">\n  <svg id=\"jsenv-toolbar-trigger-icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgSrc, "#jsenv-logo\"></use>\n  </svg>\n  <style>\n    #jsenv-toolbar-trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv-toolbar-trigger-icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
+          var toolbarTrigger = div.firstElementChild;
+          iframe.parentNode.appendChild(toolbarTrigger);
+          var timer;
 
-        toolbarTrigger.onclick = function () {
-          window.__jsenv__.toolbar.show();
-        };
+          toolbarTrigger.onmouseenter = function () {
+            toolbarTrigger.setAttribute("data-animate", "");
+            timer = setTimeout(expandToolbarTrigger, 500);
+          };
 
-        var showToolbarTrigger = function showToolbarTrigger() {
-          toolbarTrigger.style.display = "block";
-        };
+          toolbarTrigger.onmouseleave = function () {
+            clearTimeout(timer);
+            collapseToolbarTrigger();
+          };
 
-        var hideToolbarTrigger = function hideToolbarTrigger() {
-          toolbarTrigger.style.display = "none";
-        };
+          toolbarTrigger.onfocus = function () {
+            toolbarTrigger.removeAttribute("data-animate");
+            expandToolbarTrigger();
+          };
 
-        var expandToolbarTrigger = function expandToolbarTrigger() {
-          toolbarTrigger.setAttribute("data-expanded", "");
-        };
+          toolbarTrigger.onblur = function () {
+            toolbarTrigger.removeAttribute("data-animate");
+            clearTimeout(timer);
+            collapseToolbarTrigger();
+          };
 
-        var collapseToolbarTrigger = function collapseToolbarTrigger() {
-          toolbarTrigger.removeAttribute("data-expanded", "");
-        };
+          toolbarTrigger.onclick = function () {
+            window.__jsenv__.toolbar.show();
+          };
 
-        hideToolbarTrigger();
-        iframe.contentWindow.renderToolbar();
-        return iframe;
+          var showToolbarTrigger = function showToolbarTrigger() {
+            toolbarTrigger.style.display = "block";
+          };
+
+          var hideToolbarTrigger = function hideToolbarTrigger() {
+            toolbarTrigger.style.display = "none";
+          };
+
+          var expandToolbarTrigger = function expandToolbarTrigger() {
+            toolbarTrigger.setAttribute("data-expanded", "");
+          };
+
+          var collapseToolbarTrigger = function collapseToolbarTrigger() {
+            toolbarTrigger.removeAttribute("data-expanded", "");
+          };
+
+          hideToolbarTrigger();
+          iframe.contentWindow.renderToolbar();
+          return iframe;
+        });
       });
     });
-  };
+  });
 
   var getToolbarPlaceholder = function getToolbarPlaceholder() {
     var placeholder = queryPlaceholder();

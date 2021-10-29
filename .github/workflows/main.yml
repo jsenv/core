@@ -46,7 +46,7 @@ jobs:
           sudo sh -c "ulimit -n 65536 && exec su $LOGNAME"
           ulimit -n
         # sudo ulimit should prevent npm link failure
-      - name: npm install
+      - name: NPM installation
         run: npm install
       - name: check lint
         run: npm run eslint-check
