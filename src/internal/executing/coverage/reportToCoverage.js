@@ -1,4 +1,5 @@
 import { collectFiles } from "@jsenv/filesystem"
+
 import { relativeUrlToEmptyCoverage } from "./relativeUrlToEmptyCoverage.js"
 import { istanbulCoverageFromCoverages } from "./istanbulCoverageFromCoverages.js"
 import { normalizeIstanbulCoverage } from "./normalizeIstanbulCoverage.js"
@@ -7,7 +8,7 @@ export const reportToCoverage = async (
   report,
   {
     logger,
-    cancellationToken,
+    abortSignal,
     projectDirectoryUrl,
     babelPluginMap,
     coverageConfig,
@@ -15,50 +16,62 @@ export const reportToCoverage = async (
     coverageV8MergeConflictIsExpected,
   },
 ) => {
-  const istanbulCoverageFromExecution = await executionReportToCoverage(report, {
-    logger,
-    projectDirectoryUrl,
-    coverageV8MergeConflictIsExpected,
-  })
+  const istanbulCoverageFromExecution = await executionReportToCoverage(
+    report,
+    {
+      logger,
+      projectDirectoryUrl,
+      coverageV8MergeConflictIsExpected,
+    },
+  )
 
   if (!coverageIncludeMissing) {
     return istanbulCoverageFromExecution
   }
 
   const relativeFileUrlToCoverArray = await listRelativeFileUrlToCover({
-    cancellationToken,
+    abortSignal,
     projectDirectoryUrl,
     coverageConfig,
   })
 
-  const relativeFileUrlMissingCoverageArray = relativeFileUrlToCoverArray.filter(
-    (relativeFileUrlToCover) =>
+  const relativeFileUrlMissingCoverageArray =
+    relativeFileUrlToCoverArray.filter((relativeFileUrlToCover) =>
       Object.keys(istanbulCoverageFromExecution).every((key) => {
         return key !== `./${relativeFileUrlToCover}`
       }),
-  )
+    )
 
   const istanbulCoverageFromMissedFiles = {}
   await Promise.all(
-    relativeFileUrlMissingCoverageArray.map(async (relativeFileUrlMissingCoverage) => {
-      const emptyCoverage = await relativeUrlToEmptyCoverage(relativeFileUrlMissingCoverage, {
-        cancellationToken,
-        projectDirectoryUrl,
-        babelPluginMap,
-      })
-      istanbulCoverageFromMissedFiles[relativeFileUrlMissingCoverage] = emptyCoverage
-      return emptyCoverage
-    }),
+    relativeFileUrlMissingCoverageArray.map(
+      async (relativeFileUrlMissingCoverage) => {
+        const emptyCoverage = await relativeUrlToEmptyCoverage(
+          relativeFileUrlMissingCoverage,
+          {
+            abortSignal,
+            projectDirectoryUrl,
+            babelPluginMap,
+          },
+        )
+        istanbulCoverageFromMissedFiles[relativeFileUrlMissingCoverage] =
+          emptyCoverage
+        return emptyCoverage
+      },
+    ),
   )
 
   return {
     ...istanbulCoverageFromExecution, // already normalized
-    ...normalizeIstanbulCoverage(istanbulCoverageFromMissedFiles, projectDirectoryUrl),
+    ...normalizeIstanbulCoverage(
+      istanbulCoverageFromMissedFiles,
+      projectDirectoryUrl,
+    ),
   }
 }
 
 const listRelativeFileUrlToCover = async ({
-  cancellationToken,
+  abortSignal,
   projectDirectoryUrl,
   coverageConfig,
 }) => {
@@ -67,7 +80,7 @@ const listRelativeFileUrlToCover = async ({
   }
 
   const matchingFileResultArray = await collectFiles({
-    cancellationToken,
+    abortSignal,
     directoryUrl: projectDirectoryUrl,
     structuredMetaMap: structuredMetaMapForCoverage,
     predicate: ({ cover }) => cover,
@@ -85,7 +98,8 @@ const executionReportToCoverage = async (
   Object.keys(report).forEach((file) => {
     const executionResultForFile = report[file]
     Object.keys(executionResultForFile).forEach((executionName) => {
-      const executionResultForFileOnRuntime = executionResultForFile[executionName]
+      const executionResultForFileOnRuntime =
+        executionResultForFile[executionName]
 
       const { status, coverage } = executionResultForFileOnRuntime
       if (!coverage) {
@@ -108,7 +122,9 @@ const executionReportToCoverage = async (
         // that were suppose to be coverage but were not.
 
         if (status === "completed") {
-          logger.warn(`No execution.coverage from execution named "${executionName}" of ${file}`)
+          logger.warn(
+            `No execution.coverage from execution named "${executionName}" of ${file}`,
+          )
         }
         return
       }

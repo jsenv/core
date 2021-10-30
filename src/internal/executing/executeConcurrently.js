@@ -219,9 +219,7 @@ export const executeConcurrently = async (
     ...(coverage
       ? {
           coverage: await reportToCoverage(report, {
-            // not sure we want to pass an abort signal here?
-            // or we likely should just not call this at all when aborted?
-            // abortSignal: executionOperation.abortSignal,
+            abortSignal: multipleExecutionsOperation.abortSignal,
             logger,
             projectDirectoryUrl,
             babelPluginMap,

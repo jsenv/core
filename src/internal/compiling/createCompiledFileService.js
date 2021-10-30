@@ -140,7 +140,7 @@ export const createCompiledFileService = ({
 
     // compile this if needed
     const compileResponsePromise = compileFile({
-      cancellationToken,
+      abortSignal,
       logger,
 
       projectDirectoryUrl,
@@ -154,7 +154,7 @@ export const createCompiledFileService = ({
       request,
       compile: ({ code, map }) => {
         return compiler({
-          cancellationToken,
+          abortSignal,
           logger,
 
           code,

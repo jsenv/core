@@ -1,16 +1,15 @@
-import { convertFileSystemErrorToResponseProperties } from "@jsenv/server"
 import {
   urlToRelativeUrl,
   fileSystemPathToUrl,
   resolveUrl,
   bufferToEtag,
 } from "@jsenv/filesystem"
+import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
 import { updateMeta } from "./compile-directory/updateMeta.js"
 
 export const compileFile = async ({
-  // cancellatioToken,
   logger,
 
   projectDirectoryUrl,

@@ -1,4 +1,3 @@
-import { createCancellationSource } from "@jsenv/cancellation"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
@@ -17,14 +16,14 @@ const testDirectoryRelativePath = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
 const filename = `error_runtime_after_timeout.html`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
-const { cancel, token: cancellationToken } = createCancellationSource()
+const abortController = new AbortController()
 
 let errorCallbackArg
 const actual = await execute({
   ...EXECUTE_TEST_PARAMS,
+  abortSignal: abortController.signal,
   jsenvDirectoryRelativeUrl,
   launchAndExecuteLogLevel: "off",
-  cancellationToken,
   runtime: chromiumRuntime,
   runtimeParams: {
     ...LAUNCH_TEST_PARAMS,
@@ -33,7 +32,7 @@ const actual = await execute({
   stopAfterExecute: false,
   runtimeErrorAfterExecutionCallback: (argValue) => {
     errorCallbackArg = argValue
-    cancel("error") // kill chromium browser to let process end
+    abortController.abort() // kill chromium browser to let process end
   },
 })
 

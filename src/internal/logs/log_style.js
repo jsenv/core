@@ -28,8 +28,12 @@ export const setANSIColor = canUseColors
   ? (text, ANSI_COLOR) => `${ANSI_COLOR}${text}${ANSI_RESET}`
   : (text) => text
 
-export const commandSign = setANSIColor(canUseUnicode ? `❯` : `>`, ANSI_GREY) // ANSI_MAGENTA)
-export const okSign = setANSIColor(canUseUnicode ? `✔` : `√`, ANSI_GREEN)
-export const failureSign = setANSIColor(canUseUnicode ? `✖` : `×`, ANSI_RED)
+export const commandSignColorLess = canUseUnicode ? `❯` : `>`
+export const okSignColorLess = canUseUnicode ? `✔` : `√`
+export const failureSignColorLess = canUseUnicode ? `✖` : `×`
+
+export const commandSign = setANSIColor(commandSignColorLess, ANSI_GREY) // ANSI_MAGENTA)
+export const okSign = setANSIColor(okSignColorLess, ANSI_GREEN)
+export const failureSign = setANSIColor(failureSignColorLess, ANSI_RED)
 export const infoSign = setANSIColor(canUseUnicode ? `ℹ` : `i`, ANSI_BLUE)
 export const warningSign = setANSIColor(canUseUnicode ? `⚠` : `‼`, ANSI_YELLOW)
