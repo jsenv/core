@@ -1,8 +1,3 @@
-/* eslint-disable import/max-dependencies */
-import {
-  createCancellationToken,
-  composeCancellationToken,
-} from "@jsenv/cancellation"
 import {
   normalizeStructuredMetaMap,
   urlToFileSystemPath,
@@ -13,7 +8,6 @@ import {
 } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 
-import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
@@ -26,11 +20,11 @@ import { generateCoverageTextLog } from "./internal/executing/coverage/generateC
 import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 
 export const executeTestPlan = async ({
+  abortSignal,
+  handleSIGINT = true,
   logLevel = "info",
   compileServerLogLevel = "warn",
   launchAndExecuteLogLevel = "warn",
-  cancellationToken = createCancellationToken(),
-  cancelOnSIGINT = false,
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -40,7 +34,7 @@ export const executeTestPlan = async ({
   testPlan,
   defaultMsAllocatedPerExecution,
 
-  concurrencyLimit,
+  maxExecutionsInParallel,
 
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
@@ -80,170 +74,152 @@ export const executeTestPlan = async ({
   customCompilers,
   jsenvDirectoryClean,
 }) => {
-  const jsenvExecuteTestPlanFunction = async ({ jsenvCancellationToken }) => {
-    cancellationToken = composeCancellationToken(
-      cancellationToken,
-      jsenvCancellationToken,
-    )
+  const logger = createLogger({ logLevel })
 
-    const logger = createLogger({ logLevel })
+  projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
+  await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-    cancellationToken.register((cancelError) => {
-      if (cancelError.reason === "process SIGINT") {
-        logger.info(`process SIGINT -> cancelling test execution`)
-      }
-    })
+  if (typeof testPlan !== "object") {
+    throw new Error(`testPlan must be an object, got ${testPlan}`)
+  }
 
-    projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
-    await assertProjectDirectoryExists({ projectDirectoryUrl })
-
-    if (typeof testPlan !== "object") {
-      throw new Error(`testPlan must be an object, got ${testPlan}`)
-    }
-
-    if (coverage) {
-      if (typeof coverageConfig !== "object") {
-        throw new TypeError(
-          `coverageConfig must be an object, got ${coverageConfig}`,
-        )
-      }
-      if (Object.keys(coverageConfig).length === 0) {
-        logger.warn(
-          `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
-        )
-      }
-      if (!coverageAndExecutionAllowed) {
-        const structuredMetaMapForExecute = normalizeStructuredMetaMap(
-          {
-            execute: testPlan,
-          },
-          "file:///",
-        )
-        const structuredMetaMapForCover = normalizeStructuredMetaMap(
-          {
-            cover: coverageConfig,
-          },
-          "file:///",
-        )
-        const patternsMatchingCoverAndExecute = Object.keys(
-          structuredMetaMapForExecute.execute,
-        ).filter((testPlanPattern) => {
-          return urlToMeta({
-            url: testPlanPattern,
-            structuredMetaMap: structuredMetaMapForCover,
-          }).cover
-        })
-
-        if (patternsMatchingCoverAndExecute.length) {
-          // I think it is an error, it would be strange, for a given file
-          // to be both covered and executed
-          throw new Error(
-            createDetailedMessage(
-              `some file will be both covered and executed`,
-              {
-                patterns: patternsMatchingCoverAndExecute,
-              },
-            ),
-          )
-        }
-      }
-    }
-
-    const result = await executePlan(testPlan, {
-      logger,
-      compileServerLogLevel,
-      launchAndExecuteLogLevel,
-      cancellationToken,
-
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-
-      importResolutionMethod,
-      importDefaultExtension,
-
-      defaultMsAllocatedPerExecution,
-      concurrencyLimit,
-      completedExecutionLogMerging,
-      completedExecutionLogAbbreviation,
-      logSummary,
-      measureGlobalDuration,
-
-      coverage,
-      coverageConfig,
-      coverageIncludeMissing,
-      coverageForceIstanbul,
-      coverageV8MergeConflictIsExpected,
-
-      jsenvDirectoryClean,
-      compileServerProtocol,
-      compileServerPrivateKey,
-      compileServerCertificate,
-      compileServerIp,
-      compileServerPort,
-      compileServerCanReadFromFilesystem,
-      compileServerCanWriteOnFilesystem,
-      babelPluginMap,
-      babelConfigFileUrl,
-      customCompilers,
-    })
-
-    if (updateProcessExitCode && !executionIsPassed(result)) {
-      process.exitCode = 1
-    }
-
-    const promises = []
-    // keep this one first because it does ensureEmptyDirectory
-    // and in case coverage json file gets written in the same directory
-    // it must be done before
-    if (coverage && coverageHtmlDirectory) {
-      const coverageHtmlDirectoryUrl = resolveDirectoryUrl(
-        coverageHtmlDirectoryRelativeUrl,
-        projectDirectoryUrl,
-      )
-      await ensureEmptyDirectory(coverageHtmlDirectoryUrl)
-      if (coverageHtmlDirectoryIndexLog) {
-        const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`
-        logger.info(
-          `-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`,
-        )
-      }
-      promises.push(
-        generateCoverageHtmlDirectory(result.planCoverage, {
-          projectDirectoryUrl,
-          coverageHtmlDirectoryRelativeUrl,
-        }),
+  if (coverage) {
+    if (typeof coverageConfig !== "object") {
+      throw new TypeError(
+        `coverageConfig must be an object, got ${coverageConfig}`,
       )
     }
-    if (coverage && coverageJsonFile) {
-      const coverageJsonFileUrl = resolveUrl(
-        coverageJsonFileRelativeUrl,
-        projectDirectoryUrl,
-      )
-      if (coverageJsonFileLog) {
-        logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
-      }
-      promises.push(
-        generateCoverageJsonFile(result.planCoverage, coverageJsonFileUrl),
+    if (Object.keys(coverageConfig).length === 0) {
+      logger.warn(
+        `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
       )
     }
-    if (coverage && coverageTextLog) {
-      promises.push(
-        generateCoverageTextLog(result.planCoverage, {
-          coverageSkipEmpty,
-          coverageSkipFull,
-        }),
+    if (!coverageAndExecutionAllowed) {
+      const structuredMetaMapForExecute = normalizeStructuredMetaMap(
+        {
+          execute: testPlan,
+        },
+        "file:///",
       )
-    }
-    await Promise.all(promises)
+      const structuredMetaMapForCover = normalizeStructuredMetaMap(
+        {
+          cover: coverageConfig,
+        },
+        "file:///",
+      )
+      const patternsMatchingCoverAndExecute = Object.keys(
+        structuredMetaMapForExecute.execute,
+      ).filter((testPlanPattern) => {
+        return urlToMeta({
+          url: testPlanPattern,
+          structuredMetaMap: structuredMetaMapForCover,
+        }).cover
+      })
 
-    return {
-      testPlanSummary: result.planSummary,
-      testPlanReport: result.planReport,
-      testPlanCoverage: result.planCoverage,
+      if (patternsMatchingCoverAndExecute.length) {
+        // I think it is an error, it would be strange, for a given file
+        // to be both covered and executed
+        throw new Error(
+          createDetailedMessage(`some file will be both covered and executed`, {
+            patterns: patternsMatchingCoverAndExecute,
+          }),
+        )
+      }
     }
   }
 
-  return executeJsenvAsyncFunction(jsenvExecuteTestPlanFunction, {
-    cancelOnSIGINT,
+  const result = await executePlan(testPlan, {
+    abortSignal,
+    handleSIGINT,
+
+    logger,
+    compileServerLogLevel,
+    launchAndExecuteLogLevel,
+
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+
+    importResolutionMethod,
+    importDefaultExtension,
+
+    defaultMsAllocatedPerExecution,
+    maxExecutionsInParallel,
+    completedExecutionLogMerging,
+    completedExecutionLogAbbreviation,
+    logSummary,
+    measureGlobalDuration,
+
+    coverage,
+    coverageConfig,
+    coverageIncludeMissing,
+    coverageForceIstanbul,
+    coverageV8MergeConflictIsExpected,
+
+    jsenvDirectoryClean,
+    compileServerProtocol,
+    compileServerPrivateKey,
+    compileServerCertificate,
+    compileServerIp,
+    compileServerPort,
+    compileServerCanReadFromFilesystem,
+    compileServerCanWriteOnFilesystem,
+    babelPluginMap,
+    babelConfigFileUrl,
+    customCompilers,
   })
+
+  if (updateProcessExitCode && !executionIsPassed(result)) {
+    process.exitCode = 1
+  }
+
+  const promises = []
+  // keep this one first because it does ensureEmptyDirectory
+  // and in case coverage json file gets written in the same directory
+  // it must be done before
+  if (coverage && coverageHtmlDirectory) {
+    const coverageHtmlDirectoryUrl = resolveDirectoryUrl(
+      coverageHtmlDirectoryRelativeUrl,
+      projectDirectoryUrl,
+    )
+    await ensureEmptyDirectory(coverageHtmlDirectoryUrl)
+    if (coverageHtmlDirectoryIndexLog) {
+      const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`
+      logger.info(
+        `-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`,
+      )
+    }
+    promises.push(
+      generateCoverageHtmlDirectory(result.planCoverage, {
+        projectDirectoryUrl,
+        coverageHtmlDirectoryRelativeUrl,
+      }),
+    )
+  }
+  if (coverage && coverageJsonFile) {
+    const coverageJsonFileUrl = resolveUrl(
+      coverageJsonFileRelativeUrl,
+      projectDirectoryUrl,
+    )
+    if (coverageJsonFileLog) {
+      logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
+    }
+    promises.push(
+      generateCoverageJsonFile(result.planCoverage, coverageJsonFileUrl),
+    )
+  }
+  if (coverage && coverageTextLog) {
+    promises.push(
+      generateCoverageTextLog(result.planCoverage, {
+        coverageSkipEmpty,
+        coverageSkipFull,
+      }),
+    )
+  }
+  await Promise.all(promises)
+
+  return {
+    testPlanSummary: result.planSummary,
+    testPlanReport: result.planReport,
+    testPlanCoverage: result.planCoverage,
+  }
 }

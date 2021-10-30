@@ -1,13 +1,9 @@
-import { createCancellationToken } from "@jsenv/cancellation/main.browser.js"
 import { createDetailedMessage } from "@jsenv/logger"
-// ideally we should do some window.fetch detection (ensuring it has cancellation) and accordingly
-// fallback to this polyfill (or even use an existing polyfill would be better)
-// https://github.com/github/fetch/blob/master/fetch.js
 
 export const fetchUsingXHR = async (
   url,
   {
-    cancellationToken = createCancellationToken(),
+    signal,
     method = "GET",
     credentials = "same-origin",
     headers = {},
@@ -52,9 +48,11 @@ export const fetchUsingXHR = async (
     bodyPromise.resolve()
   }
 
-  cancellationToken.register((cancelError) => {
+  signal.addEventListener("abort", () => {
     xhr.abort()
-    failure(cancelError)
+    const abortError = new Error("aborted")
+    abortError.name = "AbortError"
+    failure(abortError)
   })
 
   xhr.onreadystatechange = () => {

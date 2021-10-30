@@ -1,7 +1,7 @@
-import { createCancellationToken } from "@jsenv/cancellation"
 import { findFreePort } from "@jsenv/server"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { Abort } from "@jsenv/core/src/abort/main.js"
 import { processOptionsFromExecArgv } from "./processOptions.js"
 
 const AVAILABLE_DEBUG_MODE = [
@@ -14,7 +14,7 @@ const AVAILABLE_DEBUG_MODE = [
 ]
 
 export const createChildProcessOptions = async ({
-  cancellationToken = createCancellationToken(),
+  abortSignal = Abort.dormantSignal(),
   // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
   processExecArgv = process.execArgv,
   processDebugPort = process.debugPort,
@@ -38,7 +38,7 @@ export const createChildProcessOptions = async ({
   const childProcessOptions = processOptionsFromExecArgv(processExecArgv)
 
   await mutateDebuggingOptions(childProcessOptions, {
-    cancellationToken,
+    abortSignal,
     processDebugPort,
     debugMode,
     debugPort,
@@ -52,7 +52,7 @@ const mutateDebuggingOptions = async (
   childProcessOptions,
   {
     // ensure multiline
-    cancellationToken,
+    abortSignal,
     processDebugPort,
     debugMode,
     debugPort,
@@ -92,7 +92,7 @@ const mutateDebuggingOptions = async (
   // support assigning a child spawned without a specific port
   const childDebugPortOptionValue =
     debugPort === 0
-      ? await findFreePort(processDebugPort + 37, { cancellationToken })
+      ? await findFreePort(processDebugPort + 37, { abortSignal })
       : debugPort
   // replace child debug port
   if (parentDebugPortOptionName) {

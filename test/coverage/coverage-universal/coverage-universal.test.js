@@ -51,7 +51,7 @@ const test = async (options = {}) => {
       [`./${testDirectoryRelativeUrl}file.js`]: true,
     },
     ...options,
-    // concurrencyLimit: 1,
+    // maxExecutionsInParallel: 1,
     // logLevel: "info",
     // coverageHtmlDirectory: true,
   })

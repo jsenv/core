@@ -1,3 +1,4 @@
+import { createOperation } from "@jsenv/core/src/abort/main.js"
 import { mergeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
 import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
@@ -7,10 +8,12 @@ import { executeConcurrently } from "./executeConcurrently.js"
 export const executePlan = async (
   plan,
   {
+    abortSignal,
+    handleSIGINT,
+
     logger,
     compileServerLogLevel,
     launchAndExecuteLogLevel,
-    cancellationToken,
 
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
@@ -20,7 +23,7 @@ export const executePlan = async (
     importDefaultExtension,
 
     defaultMsAllocatedPerExecution,
-    concurrencyLimit,
+    maxExecutionsInParallel,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     logSummary,
@@ -68,8 +71,13 @@ export const executePlan = async (
     })
   })
 
+  const executionOperation = createOperation({
+    abortSignal,
+    handleSIGINT,
+  })
+
   const compileServer = await startCompileServer({
-    cancellationToken,
+    abortSignal: executionOperation.abortSignal,
     compileServerLogLevel,
 
     projectDirectoryUrl,
@@ -94,21 +102,25 @@ export const executePlan = async (
     runtimeSupport,
   })
 
+  executionOperation.cleaner.addCallback(() => {
+    compileServer.stop()
+  })
+
   const executionSteps = await generateExecutionSteps(
     {
       ...plan,
       [compileServer.outDirectoryRelativeUrl]: null,
     },
     {
-      cancellationToken,
+      abortSignal: executionOperation.abortSignal,
       projectDirectoryUrl,
     },
   )
 
   const result = await executeConcurrently(executionSteps, {
+    executionOperation,
     logger,
     launchAndExecuteLogLevel,
-    cancellationToken,
 
     projectDirectoryUrl,
     compileServerOrigin: compileServer.origin,
@@ -121,7 +133,7 @@ export const executePlan = async (
     babelPluginMap: compileServer.babelPluginMap,
 
     defaultMsAllocatedPerExecution,
-    concurrencyLimit,
+    maxExecutionsInParallel,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     logSummary,
@@ -134,7 +146,7 @@ export const executePlan = async (
     coverageV8MergeConflictIsExpected,
   })
 
-  compileServer.stop("all execution done")
+  executionOperation.cleaner.clean("all execution done")
 
   return {
     planSummary: result.summary,

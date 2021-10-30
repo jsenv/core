@@ -1,16 +1,17 @@
 import { collectFiles } from "@jsenv/filesystem"
+
 import { generateFileExecutionSteps } from "./generateFileExecutionSteps.js"
 
 export const generateExecutionSteps = async (
   plan,
-  { cancellationToken, projectDirectoryUrl },
+  { abortSignal, projectDirectoryUrl },
 ) => {
   const structuredMetaMap = {
     filePlan: plan,
   }
 
   const fileResultArray = await collectFiles({
-    cancellationToken,
+    abortSignal,
     directoryUrl: projectDirectoryUrl,
     structuredMetaMap,
     predicate: ({ filePlan }) => filePlan,

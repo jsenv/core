@@ -2,7 +2,6 @@
 import { fork as forkChildProcess } from "node:child_process"
 
 import { uneval } from "@jsenv/uneval"
-import { createCancellationToken } from "@jsenv/cancellation"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import {
   urlToFileSystemPath,
@@ -10,6 +9,7 @@ import {
   assertFilePresence,
 } from "@jsenv/filesystem"
 
+import { Abort } from "@jsenv/core/src/abort/main.js"
 import { nodeSupportsDynamicImport } from "../runtime/node-feature-detect/nodeSupportsDynamicImport.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { require } from "../require.js"
@@ -40,7 +40,7 @@ const STOP_SIGNAL = "SIGKILL"
 const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL"
 
 export const createControllableNodeProcess = async ({
-  cancellationToken = createCancellationToken(),
+  abortSignal = Abort.dormantSignal(),
   logLevel,
   debugPort,
   debugMode,
@@ -61,7 +61,7 @@ export const createControllableNodeProcess = async ({
   }
 
   const childProcessOptions = await createChildProcessOptions({
-    cancellationToken,
+    abortSignal,
     debugPort,
     debugMode,
     debugModeInheritBreak,

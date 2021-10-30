@@ -148,9 +148,9 @@ Becomes
 
 > Note how the first two completed execution got merged into one line. The idea is to reduce output length as long as execution are completed.
 
-## concurrencyLimit
+## maxExecutionsInParallel
 
-`concurrencyLimit` parameter is a number representing the max amount of execution allowed to run simultaneously. This parameter is optional with a default value being the number of cpus available minus one. To ensure one execution at a time you can pass `1`.
+`maxExecutionsInParallel` parameter is a number representing the max amount of execution allowed to run simultaneously. This parameter is optional with a default value of `1`.
 
 ## coverage parameters
 

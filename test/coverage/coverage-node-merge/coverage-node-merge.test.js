@@ -48,7 +48,7 @@ const getCoverage = async (params) => {
       [`./${testDirectoryRelativeUrl}message.js`]: true,
     },
     // coverageHtmlDirectory: true,
-    // concurrencyLimit: 1,
+    // maxExecutionsInParallel: 1,
     ...params,
     // coverageTextLog: true,
     // coverageJsonFile: true,

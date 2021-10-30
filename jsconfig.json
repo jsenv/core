@@ -287,9 +287,6 @@
       "@jsenv/https-local/*": [
         "./node_modules/@jsenv/https-local/*"
       ],
-      "@jsenv/node-signals": [
-        "./node_modules/@jsenv/node-signals/index.js"
-      ],
       "@rollup/plugin-json": [
         "./node_modules/@rollup/plugin-json/dist/index.es.js"
       ],

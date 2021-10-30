@@ -2,7 +2,6 @@
 import { Script } from "node:vm"
 import cuid from "cuid"
 import { loggerToLogLevel } from "@jsenv/logger"
-import { createCancellationToken } from "@jsenv/cancellation"
 import {
   writeDirectory,
   resolveUrl,
@@ -21,9 +20,9 @@ export const nodeRuntime = {
   version: process.version.slice(1),
 }
 nodeRuntime.launch = async ({
+  abortSignal,
   logger,
   logProcessCommand,
-  cancellationToken = createCancellationToken(),
 
   projectDirectoryUrl,
   compileServerOrigin,
@@ -129,7 +128,7 @@ nodeRuntime.launch = async ({
 
   const logLevel = loggerToLogLevel(logger)
   const controllableNodeProcess = await createControllableNodeProcess({
-    cancellationToken,
+    abortSignal,
     logLevel,
     debugPort,
     debugMode,

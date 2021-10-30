@@ -5,6 +5,7 @@ import {
   urlToExtension,
 } from "@jsenv/filesystem"
 
+import { Abort } from "@jsenv/core/src/abort/main.js"
 import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { v8CoverageFromAllV8Coverages } from "@jsenv/core/src/internal/executing/coverage/v8CoverageFromAllV8Coverages.js"
 import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
@@ -14,7 +15,7 @@ import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.
 export const executeHtmlFile = async (
   fileRelativeUrl,
   {
-    cancellationToken,
+    abortSignal,
     projectDirectoryUrl,
     compileServerOrigin,
     outDirectoryRelativeUrl,
@@ -45,11 +46,13 @@ export const executeHtmlFile = async (
     compileProxyProjectRelativeUrl,
     compileServerOrigin,
   )
+  Abort.throwIfAborted(abortSignal)
   await page.goto(compileProxyClientUrl)
 
   const coverageHandledFromOutside =
     coveragePlaywrightAPIAvailable && !coverageForceIstanbul
 
+  Abort.throwIfAborted(abortSignal)
   const browserRuntimeFeaturesReport = await page.evaluate(
     /* istanbul ignore next */
     ({ coverageHandledFromOutside }) => {
@@ -65,6 +68,7 @@ export const executeHtmlFile = async (
   try {
     let executionResult
     const { canAvoidCompilation, compileId } = browserRuntimeFeaturesReport
+    Abort.throwIfAborted(abortSignal)
     if (canAvoidCompilation) {
       executionResult = await executeSource({
         projectDirectoryUrl,
@@ -115,16 +119,15 @@ export const executeHtmlFile = async (
 
     return executionResult
   } catch (e) {
-    // if browser is closed due to cancellation
+    // if browser is closed due to abort
     // before it is able to finish evaluate we can safely ignore
-    // and rethrow with current cancelError
+    // and rethrow with current abort error
     if (
       e.message.match(/^Protocol error \(.*?\): Target closed/) &&
-      cancellationToken.cancellationRequested
+      abortSignal.aborted
     ) {
-      cancellationToken.throwIfRequested()
+      Abort.throwIfAborted(abortSignal)
     }
-
     throw e
   }
 }

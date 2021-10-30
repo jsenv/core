@@ -1,7 +1,7 @@
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 
-import { Abort } from "@jsenv/core/src/abort/main.js"
+import { createOperation } from "@jsenv/core/src/abort/main.js"
 import { COMPILE_ID_BEST } from "./internal/CONSTANTS.js"
 import {
   assertProjectDirectoryUrl,
@@ -15,7 +15,7 @@ import {
 } from "./internal/generateGroupMap/jsenvRuntimeSupport.js"
 
 export const buildProject = async ({
-  abortSignal = Abort.dormantSignal(),
+  abortSignal,
   handleSIGINT = true,
   logLevel = "info",
   compileServerLogLevel = "warn",
@@ -133,17 +133,10 @@ export const buildProject = async ({
     projectDirectoryUrl,
   })
 
-  if (handleSIGINT) {
-    const abortControllerSIGINT = new AbortController()
-    abortSignal = Abort.composeTwoAbortSignals(
-      abortSignal,
-      abortControllerSIGINT.signal,
-    )
-    const SIGINTEventCallback = () => {
-      abortControllerSIGINT.abort()
-    }
-    process.once("SIGINT", SIGINTEventCallback)
-  }
+  const buildOperation = createOperation({
+    abortSignal,
+    handleSIGINT,
+  })
 
   const compileServer = await startCompileServer({
     abortSignal,
@@ -178,6 +171,10 @@ export const buildProject = async ({
     // here we don't need to inline importmap
     // nor to inject jsenv script
     transformHtmlSourceFiles: false,
+  })
+
+  buildOperation.cleaner.addCallback(() => {
+    compileServer.stop(`build cleanup`)
   })
 
   const { outDirectoryRelativeUrl, origin: compileServerOrigin } = compileServer
@@ -232,7 +229,7 @@ export const buildProject = async ({
 
     return result
   } finally {
-    compileServer.stop("build generated")
+    buildOperation.cleaner.clean()
   }
 }
 

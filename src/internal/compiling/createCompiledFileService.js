@@ -31,7 +31,7 @@ const jsenvCompilers = {
 }
 
 export const createCompiledFileService = ({
-  cancellationToken,
+  abortSignal,
   logger,
 
   projectDirectoryUrl,

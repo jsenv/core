@@ -1,14 +1,13 @@
 /* eslint-disable import/max-dependencies */
 // https://github.com/microsoft/playwright/blob/master/docs/api.md
 
-import {
-  createCancellationToken,
-  createStoppableOperation,
-} from "@jsenv/cancellation"
 import { createDetailedMessage } from "@jsenv/logger"
-import { teardownSignal } from "@jsenv/node-signals"
 
-import { trackRessources } from "./internal/trackRessources.js"
+import {
+  createOperation,
+  addProcessTeardownInOperationAbortSignal,
+  Abort,
+} from "@jsenv/core/src/abort/main.js"
 import { fetchUrl } from "./internal/fetchUrl.js"
 import { validateResponse } from "./internal/response_validation.js"
 import { trackPageToNotify } from "./internal/browser-launcher/trackPageToNotify.js"
@@ -26,8 +25,8 @@ export const chromiumRuntime = {
   version: PLAYWRIGHT_CHROMIUM_VERSION,
 }
 chromiumRuntime.launch = async ({
+  abortSignal,
   browserServerLogLevel,
-  cancellationToken = createCancellationToken(),
   chromiumExecutablePath,
 
   projectDirectoryUrl,
@@ -47,7 +46,7 @@ chromiumRuntime.launch = async ({
   stopOnExit = true,
   share = false,
 }) => {
-  const ressourceTracker = trackRessources()
+  const launchBrowserOperation = createOperation({ abortSignal })
   const sharingToken = share
     ? chromiumSharing.getSharingToken({
         chromiumExecutablePath,
@@ -62,8 +61,7 @@ chromiumRuntime.launch = async ({
 
     const launchOperation = launchBrowser("chromium", {
       browserClass: chromium,
-      cancellationToken,
-      ressourceTracker,
+      launchBrowserOperation,
       options: {
         headless,
         executablePath: chromiumExecutablePath,
@@ -81,7 +79,7 @@ chromiumRuntime.launch = async ({
   }
 
   const [launchOperation, stopUsingBrowser] = sharingToken.useSharedValue()
-  ressourceTracker.registerCleanupCallback(stopUsingBrowser)
+  launchBrowserOperation.cleaner.addCallback(stopUsingBrowser)
 
   const browser = await launchOperation
 
@@ -92,7 +90,7 @@ chromiumRuntime.launch = async ({
     const webSocketUrl = new URL(webSocketEndpoint)
     const browserEndpoint = `http://${webSocketUrl.host}/json/version`
     const browserResponse = await fetchUrl(browserEndpoint, {
-      cancellationToken,
+      abortSignal,
       ignoreHttpsError: true,
     })
     const { isValid, message, details } = await validateResponse(
@@ -108,9 +106,8 @@ chromiumRuntime.launch = async ({
   }
 
   const browserHooks = browserToRuntimeHooks(browser, {
+    launchBrowserOperation,
     browserServerLogLevel,
-    cancellationToken,
-    ressourceTracker,
 
     projectDirectoryUrl,
     compileServerOrigin,
@@ -144,7 +141,7 @@ export const firefoxRuntime = {
   version: PLAYWRIGHT_FIREFOX_VERSION,
 }
 firefoxRuntime.launch = async ({
-  cancellationToken = createCancellationToken(),
+  abortSignal,
   firefoxExecutablePath,
   browserServerLogLevel,
 
@@ -162,7 +159,7 @@ firefoxRuntime.launch = async ({
   stopOnExit = true,
   share = false,
 }) => {
-  const ressourceTracker = trackRessources()
+  const launchBrowserOperation = createOperation({ abortSignal })
   const sharingToken = share
     ? firefoxSharing.getSharingToken({ firefoxExecutablePath, headless })
     : firefoxSharing.getUniqueSharingToken()
@@ -171,8 +168,8 @@ firefoxRuntime.launch = async ({
     const { firefox } = await import("playwright")
     const launchOperation = launchBrowser("firefox", {
       browserClass: firefox,
-      cancellationToken,
-      ressourceTracker,
+
+      launchBrowserOperation,
       options: {
         headless,
         executablePath: firefoxExecutablePath,
@@ -183,14 +180,13 @@ firefoxRuntime.launch = async ({
   }
 
   const [launchOperation, stopUsingBrowser] = sharingToken.useSharedValue()
-  ressourceTracker.registerCleanupCallback(stopUsingBrowser)
+  launchBrowserOperation.cleaner.addCallback(stopUsingBrowser)
 
   const browser = await launchOperation
 
   const browserHooks = browserToRuntimeHooks(browser, {
+    launchBrowserOperation,
     browserServerLogLevel,
-    cancellationToken,
-    ressourceTracker,
 
     projectDirectoryUrl,
     compileServerOrigin,
@@ -224,7 +220,7 @@ export const webkitRuntime = {
 }
 webkitRuntime.launch = async ({
   browserServerLogLevel,
-  cancellationToken = createCancellationToken(),
+  abortSignal,
   webkitExecutablePath,
 
   projectDirectoryUrl,
@@ -241,7 +237,7 @@ webkitRuntime.launch = async ({
   stopOnExit = true,
   share = false,
 }) => {
-  const ressourceTracker = trackRessources()
+  const launchBrowserOperation = createOperation({ abortSignal })
   const sharingToken = share
     ? webkitSharing.getSharingToken({ webkitExecutablePath, headless })
     : webkitSharing.getUniqueSharingToken()
@@ -250,8 +246,7 @@ webkitRuntime.launch = async ({
     const { webkit } = await import("playwright")
     const launchOperation = launchBrowser("webkit", {
       browserClass: webkit,
-      cancellationToken,
-      ressourceTracker,
+      launchBrowserOperation,
       options: {
         headless,
         executablePath: webkitExecutablePath,
@@ -262,14 +257,13 @@ webkitRuntime.launch = async ({
   }
 
   const [launchOperation, stopUsingBrowser] = sharingToken.useSharedValue()
-  ressourceTracker.registerCleanupCallback(stopUsingBrowser)
+  launchBrowserOperation.cleaner.addCallback(stopUsingBrowser)
 
   const browser = await launchOperation
 
   const browserHooks = browserToRuntimeHooks(browser, {
+    launchBrowserOperation,
     browserServerLogLevel,
-    cancellationToken,
-    ressourceTracker,
 
     projectDirectoryUrl,
     compileServerOrigin,
@@ -298,68 +292,75 @@ export const webkitTabRuntime = {
 
 const launchBrowser = async (
   browserName,
-  { cancellationToken, browserClass, ressourceTracker, options, stopOnExit },
+  {
+    launchBrowserOperation,
+    browserClass,
+    ressourceTracker,
+    options,
+    stopOnExit,
+  },
 ) => {
-  const launchOperation = createStoppableOperation({
-    cancellationToken,
-    start: async () => {
-      if (stopOnExit) {
-        const unregisterProcessTeardown = teardownSignal.addCallback(
-          (reason) => {
-            unregisterProcessTeardown()
-            launchOperation.stop(`process ${reason}`)
-          },
-        )
-        ressourceTracker.registerCleanupCallback(unregisterProcessTeardown)
-        cancellationToken.register(unregisterProcessTeardown)
-      }
+  if (stopOnExit) {
+    const removeProcessTeardownListeners =
+      addProcessTeardownInOperationAbortSignal(launchBrowserOperation, {
+        SIGHUP: true,
+        SIGTERM: true,
+        SIGINT: true,
+        beforeExit: true,
+        exit: true,
+      })
+    ressourceTracker.registerCleanupCallback(removeProcessTeardownListeners)
+  }
 
-      try {
-        const browser = await browserClass.launch({
-          ...options,
-          // let's handle them to close properly browser + remove listener
-          // instead of relying on playwright to do so
-          handleSIGINT: false,
-          handleSIGTERM: false,
-          handleSIGHUP: false,
-        })
-        return browser
-      } catch (e) {
-        if (cancellationToken.cancellationRequested && isTargetClosedError(e)) {
-          return e
+  try {
+    const browser = await browserClass.launch({
+      ...options,
+      // let's handle them to close properly browser + remove listener
+      // instead of relying on playwright to do so
+      handleSIGINT: false,
+      handleSIGTERM: false,
+      handleSIGHUP: false,
+    })
+    if (launchBrowserOperation.abortSignal.aborted) {
+      stopBrowser(browser)
+      Abort.throwIfAborted(launchBrowserOperation.abortSignal)
+    }
+
+    launchBrowserOperation.cleanup.addCallback(() => {
+      stopBrowser(browser)
+    })
+    return browser
+  } catch (e) {
+    if (launchBrowserOperation.abortSignal.aborted && isTargetClosedError(e)) {
+      return e
+    }
+    throw e
+  }
+}
+
+const stopBrowser = async (browser) => {
+  const disconnected = browser.isConnected()
+    ? new Promise((resolve) => {
+        const disconnectedCallback = () => {
+          browser.removeListener("disconnected", disconnectedCallback)
+          resolve()
         }
-        throw e
-      }
-    },
-    stop: async (browser) => {
-      const disconnected = browser.isConnected()
-        ? new Promise((resolve) => {
-            const disconnectedCallback = () => {
-              browser.removeListener("disconnected", disconnectedCallback)
-              resolve()
-            }
-            browser.on("disconnected", disconnectedCallback)
-          })
-        : Promise.resolve()
+        browser.on("disconnected", disconnectedCallback)
+      })
+    : Promise.resolve()
 
-      // for some reason without this 100ms timeout
-      // browser.close() never resolves (playwright does not like something)
-      await new Promise((resolve) => setTimeout(resolve, 100))
+  // for some reason without this 100ms timeout
+  // browser.close() never resolves (playwright does not like something)
+  await new Promise((resolve) => setTimeout(resolve, 100))
 
-      await browser.close()
-      await disconnected
-    },
-  })
-  ressourceTracker.registerCleanupCallback(launchOperation.stop)
-
-  return launchOperation
+  await browser.close()
+  await disconnected
 }
 
 const browserToRuntimeHooks = (
   browser,
   {
-    cancellationToken,
-    ressourceTracker,
+    launchBrowserOperation,
 
     projectDirectoryUrl,
     compileServerOrigin,
@@ -402,7 +403,7 @@ const browserToRuntimeHooks = (
     // open a tab to execute to the file
     const browserContext = await browser.newContext({ ignoreHTTPSErrors })
     const page = await browserContext.newPage()
-    ressourceTracker.registerCleanupCallback(async () => {
+    launchBrowserOperation.cleaner.addCallback(async () => {
       try {
         await browserContext.close()
       } catch (e) {
@@ -425,9 +426,9 @@ const browserToRuntimeHooks = (
         })
       },
     })
-    ressourceTracker.registerCleanupCallback(stopTrackingToNotify)
+    launchBrowserOperation.cleaner.addCallback(stopTrackingToNotify)
     return executeHtmlFile(fileRelativeUrl, {
-      cancellationToken,
+      launchBrowserOperation,
 
       projectDirectoryUrl,
       compileServerOrigin,
@@ -450,7 +451,7 @@ const browserToRuntimeHooks = (
         new Promise((resolve, reject) => {
           unregisterErrorCallback = registerErrorCallback(reject)
         }),
-        ressourceTracker.cleanup(reason),
+        launchBrowserOperation.cleaner.clean(reason),
       ])
       unregisterErrorCallback()
     },
