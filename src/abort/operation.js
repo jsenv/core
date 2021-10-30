@@ -7,36 +7,28 @@ export const createOperation = ({
   handleSIGINT = false,
 } = {}) => {
   const cleaner = createCleaner()
+  const operation = { abortSignal, cleaner }
 
   if (handleSIGINT) {
-    const abortControllerSIGINT = new AbortController()
-    abortSignal = Abort.composeTwoAbortSignals(
-      abortSignal,
-      abortControllerSIGINT.signal,
-    )
-    const SIGINTEventCallback = () => {
-      abortControllerSIGINT.abort()
-    }
-    process.once("SIGINT", SIGINTEventCallback)
-    cleaner.addCallback(() => {
-      process.removeEventListener("SIGINT", SIGINTEventCallback)
+    addProcessTeardownInOperationAbortSignal(operation, {
+      SIGINT: true,
     })
   }
 
   const abortEventCallback = () => {
-    abortSignal.removeEventListener("abort", abortEventCallback)
+    operation.abortSignal.removeEventListener("abort", abortEventCallback)
     cleaner.clean()
   }
   // when aborted -> call clean()
-  abortSignal.addEventListener("abort", abortEventCallback)
+  operation.abortSignal.addEventListener("abort", abortEventCallback)
   // when cleanup -> remove "abort" listener
   // so that when cleanup is called by something else than abort signal
   // we remove the callback
   cleaner.addCallback(() => {
-    abortSignal.removeEventListener("abort", abortEventCallback)
+    operation.abortSignal.removeEventListener("abort", abortEventCallback)
   })
 
-  return { abortSignal, cleaner }
+  return operation
 }
 
 export const addProcessTeardownInOperationAbortSignal = (
@@ -54,7 +46,7 @@ export const addProcessTeardownInOperationAbortSignal = (
     operation.abortSignal,
     processSignalAbortController.signal,
   )
-  return raceCallbacks(
+  const removeProcessEventCallbacks = raceCallbacks(
     {
       ...(SIGHUP ? SIGHUP_CALLBACK : {}),
       ...(SIGTERM ? SIGTERM_CALLBACK : {}),
@@ -66,6 +58,10 @@ export const addProcessTeardownInOperationAbortSignal = (
       processSignalAbortController.abort()
     },
   )
+  operation.cleaner.addCallback(() => {
+    removeProcessEventCallbacks()
+  })
+  return removeProcessEventCallbacks()
 }
 
 const SIGHUP_CALLBACK = {

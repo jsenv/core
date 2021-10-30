@@ -232,7 +232,7 @@ export const launchAndExecute = async ({
       ...runtimeParams,
     })
     validateLaunchReturnValue(launchReturnValue)
-    launchAndExecuteOperation.cleanup.addCallback(async (reason) => {
+    launchAndExecuteOperation.cleaner.addCallback(async (reason) => {
       const { stoppedGracefully } = await stopRuntime({
         logger,
         runtimeLabel,

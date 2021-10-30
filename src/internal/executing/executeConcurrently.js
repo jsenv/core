@@ -269,7 +269,9 @@ const executeInParallel = async ({
   const executeOne = async (index) => {
     const input = executionSteps[index]
     const output = await start(input)
-    executionResults[index] = output
+    if (!abortSignal.aborted) {
+      executionResults[index] = output
+    }
   }
 
   await nextChunk()
