@@ -6,9 +6,13 @@ globalAgent.options.rejectUnauthorized = false
 
 export const fetchUrl = async (
   url,
-  { ignoreHttpsError = true, ...rest } = {},
+  { ignoreHttpsError = true, abortSignal, ...rest } = {},
 ) => {
-  const response = await serverFetchUrl(url, { ignoreHttpsError, ...rest })
+  const response = await serverFetchUrl(url, {
+    ignoreHttpsError,
+    signal: abortSignal,
+    ...rest,
+  })
 
   return {
     url: response.url,

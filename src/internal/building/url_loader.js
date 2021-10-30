@@ -23,7 +23,7 @@ export const createUrlLoader = ({
 
   const loadUrl = async (
     rollupUrl,
-    { cancellationToken, logger, ressourceBuilder },
+    { abortSignal, logger, ressourceBuilder },
   ) => {
     let url = asServerUrl(rollupUrl)
     const { importType, urlWithoutImportType } = extractImportTypeFromUrl(url)
@@ -133,7 +133,7 @@ export const createUrlLoader = ({
     }
 
     const response = await urlFetcher.fetchUrl(url, {
-      cancellationToken,
+      abortSignal,
       contentTypeExpected: [
         "application/javascript",
         ...(allowJson ? ["application/json"] : []),
@@ -154,7 +154,7 @@ export const createUrlLoader = ({
       const jsText = await response.text()
       saveUrlResponseBody(response.url, jsText)
       const map = await loadSourcemap({
-        cancellationToken,
+        abortSignal,
         logger,
 
         url,

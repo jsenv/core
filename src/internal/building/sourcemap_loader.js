@@ -1,6 +1,5 @@
-import { createCancellationToken } from "@jsenv/cancellation"
 import { resolveUrl } from "@jsenv/filesystem"
-import { createLogger, createDetailedMessage } from "@jsenv/logger"
+import { createDetailedMessage } from "@jsenv/logger"
 
 import {
   dataUrlToRawData,
@@ -10,8 +9,8 @@ import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponse } from "@jsenv/core/src/internal/response_validation.js"
 
 export const loadSourcemap = async ({
-  cancellationToken = createCancellationToken(),
-  logger = createLogger(),
+  abortSignal,
+  logger,
 
   code,
   url,
@@ -33,7 +32,7 @@ export const loadSourcemap = async ({
   }
 
   const sourcemapResponse = await fetchUrl(sourcemapUrl, {
-    cancellationToken,
+    abortSignal,
     ignoreHttpsError: true,
   })
   const { isValid, details } = await validateResponse(sourcemapResponse, {

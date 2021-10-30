@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "23.1.4",
+  "version": "23.2.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -63,7 +63,6 @@
     "@babel/plugin-syntax-numeric-separator": "7.10.4",
     "@babel/plugin-transform-modules-systemjs": "7.15.4",
     "@c88/v8-coverage": "0.1.1",
-    "@jsenv/cancellation": "3.0.0",
     "@jsenv/filesystem": "2.3.1",
     "@jsenv/importmap": "1.1.0",
     "@jsenv/logger": "4.0.1",

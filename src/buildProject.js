@@ -1,11 +1,7 @@
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
-import {
-  createCancellationToken,
-  composeCancellationToken,
-} from "@jsenv/cancellation"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 
-import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
+import { Abort } from "@jsenv/core/src/abort/main.js"
 import { COMPILE_ID_BEST } from "./internal/CONSTANTS.js"
 import {
   assertProjectDirectoryUrl,
@@ -19,8 +15,8 @@ import {
 } from "./internal/generateGroupMap/jsenvRuntimeSupport.js"
 
 export const buildProject = async ({
-  cancellationToken = createCancellationToken(),
-  cancelOnSIGINT = false,
+  abortSignal = Abort.dormantSignal(),
+  handleSIGINT = true,
   logLevel = "info",
   compileServerLogLevel = "warn",
   logger,
@@ -103,141 +99,141 @@ export const buildProject = async ({
   // (to fix that sourcemap could be inlined)
   filesystemCache = true,
 }) => {
-  const jsenvBuildFunction = async ({ jsenvCancellationToken }) => {
-    cancellationToken = composeCancellationToken(
-      cancellationToken,
-      jsenvCancellationToken,
+  logger = logger || createLogger({ logLevel })
+  if (!["esmodule", "systemjs", "commonjs", "global"].includes(format)) {
+    throw new TypeError(
+      `unexpected format: ${format}. Must be "esmodule", "systemjs", "commonjs" or "global".`,
     )
-
-    logger = logger || createLogger({ logLevel })
-    if (!["esmodule", "systemjs", "commonjs", "global"].includes(format)) {
-      throw new TypeError(
-        `unexpected format: ${format}. Must be "esmodule", "systemjs", "commonjs" or "global".`,
-      )
-    }
-    if (typeof runtimeSupport !== "object" || runtimeSupport === null) {
-      throw new TypeError(
-        `runtimeSupport must be an object, got ${runtimeSupport}`,
-      )
-    }
-
-    projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
-    await assertProjectDirectoryExists({ projectDirectoryUrl })
-
-    assertEntryPointMap({ entryPointMap })
-
-    if (Object.keys(entryPointMap).length === 0) {
-      logger.error(`entryPointMap is an empty object`)
-      return {
-        rollupBuilds: {},
-      }
-    }
-
-    assertBuildDirectoryRelativeUrl({ buildDirectoryRelativeUrl })
-    const buildDirectoryUrl = resolveDirectoryUrl(
-      buildDirectoryRelativeUrl,
-      projectDirectoryUrl,
+  }
+  if (typeof runtimeSupport !== "object" || runtimeSupport === null) {
+    throw new TypeError(
+      `runtimeSupport must be an object, got ${runtimeSupport}`,
     )
-    assertBuildDirectoryInsideProject({
-      buildDirectoryUrl,
-      projectDirectoryUrl,
-    })
+  }
 
-    const compileServer = await startCompileServer({
-      cancellationToken,
-      compileServerLogLevel,
+  projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
+  await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-      jsenvDirectoryClean,
-      // build compiled files are written into a different directory
-      // than exploring-server. This is because here we compile for rollup
-      // that is expecting esmodule format, not systemjs
-      // + some more differences like import.meta.dev
-      outDirectoryName: "out-build",
-      importDefaultExtension,
-      moduleOutFormat: "esmodule", // rollup will transform into systemjs
-      importMetaFormat: format, // but ensure import.meta are correctly transformed into the right format
+  assertEntryPointMap({ entryPointMap })
 
-      compileServerProtocol,
-      compileServerPrivateKey,
-      compileServerCertificate,
-      compileServerIp,
-      compileServerPort,
-      env,
-      babelPluginMap,
-      transformTopLevelAwait,
-      customCompilers,
-      runtimeSupport,
-
-      compileServerCanReadFromFileSystem: filesystemCache,
-      compileServerCanWriteOnFilesystem: filesystemCache,
-      // keep source html untouched
-      // here we don't need to inline importmap
-      // nor to inject jsenv script
-      transformHtmlSourceFiles: false,
-    })
-
-    const { outDirectoryRelativeUrl, origin: compileServerOrigin } =
-      compileServer
-
-    try {
-      const result = await buildUsingRollup({
-        cancellationToken,
-        logger,
-
-        entryPointMap,
-        projectDirectoryUrl,
-        compileServerOrigin,
-        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_BEST}/`,
-        buildDirectoryUrl,
-        buildDirectoryClean,
-        assetManifestFile,
-        assetManifestFileRelativeUrl,
-
-        urlMappings,
-        importResolutionMethod,
-        importMapFileRelativeUrl,
-        importDefaultExtension,
-        externalImportSpecifiers,
-        externalImportUrlPatterns,
-        importPaths,
-
-        format,
-        systemJsUrl,
-        globalName,
-        globals,
-        babelPluginMap,
-        transformTopLevelAwait,
-        runtimeSupport,
-
-        urlVersioning,
-        lineBreakNormalization,
-        useImportMapToMaximizeCacheReuse,
-        preserveEntrySignatures,
-        jsConcatenation,
-
-        minify,
-        minifyHtmlOptions,
-        minifyJsOptions,
-        minifyCssOptions,
-
-        serviceWorkers,
-        serviceWorkerFinalizer,
-
-        writeOnFileSystem,
-        sourcemapExcludeSources,
-      })
-
-      return result
-    } finally {
-      compileServer.stop("build generated")
+  if (Object.keys(entryPointMap).length === 0) {
+    logger.error(`entryPointMap is an empty object`)
+    return {
+      rollupBuilds: {},
     }
   }
 
-  return executeJsenvAsyncFunction(jsenvBuildFunction, {
-    cancelOnSIGINT,
+  assertBuildDirectoryRelativeUrl({ buildDirectoryRelativeUrl })
+  const buildDirectoryUrl = resolveDirectoryUrl(
+    buildDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
+  assertBuildDirectoryInsideProject({
+    buildDirectoryUrl,
+    projectDirectoryUrl,
   })
+
+  if (handleSIGINT) {
+    const abortControllerSIGINT = new AbortController()
+    abortSignal = Abort.composeTwoAbortSignals(
+      abortSignal,
+      abortControllerSIGINT.signal,
+    )
+    const SIGINTEventCallback = () => {
+      abortControllerSIGINT.abort()
+    }
+    process.once("SIGINT", SIGINTEventCallback)
+  }
+
+  const compileServer = await startCompileServer({
+    abortSignal,
+    compileServerLogLevel,
+
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    jsenvDirectoryClean,
+    // build compiled files are written into a different directory
+    // than exploring-server. This is because here we compile for rollup
+    // that is expecting esmodule format, not systemjs
+    // + some more differences like import.meta.dev
+    outDirectoryName: "out-build",
+    importDefaultExtension,
+    moduleOutFormat: "esmodule", // rollup will transform into systemjs
+    importMetaFormat: format, // but ensure import.meta are correctly transformed into the right format
+
+    compileServerProtocol,
+    compileServerPrivateKey,
+    compileServerCertificate,
+    compileServerIp,
+    compileServerPort,
+    env,
+    babelPluginMap,
+    transformTopLevelAwait,
+    customCompilers,
+    runtimeSupport,
+
+    compileServerCanReadFromFileSystem: filesystemCache,
+    compileServerCanWriteOnFilesystem: filesystemCache,
+    // keep source html untouched
+    // here we don't need to inline importmap
+    // nor to inject jsenv script
+    transformHtmlSourceFiles: false,
+  })
+
+  const { outDirectoryRelativeUrl, origin: compileServerOrigin } = compileServer
+
+  try {
+    const result = await buildUsingRollup({
+      abortSignal,
+      logger,
+
+      entryPointMap,
+      projectDirectoryUrl,
+      compileServerOrigin,
+      compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_BEST}/`,
+      buildDirectoryUrl,
+      buildDirectoryClean,
+      assetManifestFile,
+      assetManifestFileRelativeUrl,
+
+      urlMappings,
+      importResolutionMethod,
+      importMapFileRelativeUrl,
+      importDefaultExtension,
+      externalImportSpecifiers,
+      externalImportUrlPatterns,
+      importPaths,
+
+      format,
+      systemJsUrl,
+      globalName,
+      globals,
+      babelPluginMap,
+      transformTopLevelAwait,
+      runtimeSupport,
+
+      urlVersioning,
+      lineBreakNormalization,
+      useImportMapToMaximizeCacheReuse,
+      preserveEntrySignatures,
+      jsConcatenation,
+
+      minify,
+      minifyHtmlOptions,
+      minifyJsOptions,
+      minifyCssOptions,
+
+      serviceWorkers,
+      serviceWorkerFinalizer,
+
+      writeOnFileSystem,
+      sourcemapExcludeSources,
+    })
+
+    return result
+  } finally {
+    compileServer.stop("build generated")
+  }
 }
 
 const assertEntryPointMap = ({ entryPointMap }) => {

@@ -2,8 +2,7 @@ import { generateContentHash } from "./internal/building/url-versioning.js"
 
 export const jsenvServiceWorkerFinalizer = (
   code,
-  { buildManifest, rollupBuild },
-  { lineBreakNormalization },
+  { buildManifest, rollupBuild, lineBreakNormalization },
 ) => {
   const generatedUrlsConfig = {}
   Object.keys(buildManifest).forEach((projectRelativeUrl) => {

@@ -1,10 +1,4 @@
-/* eslint-disable import/max-dependencies */
 import { readFileSync } from "node:fs"
-import {
-  createCancellationToken,
-  createCancellationSource,
-  composeCancellationToken,
-} from "@jsenv/cancellation"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -28,6 +22,7 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
+import { Abort, Cleanup } from "@jsenv/core/src/abort/main.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
@@ -48,7 +43,7 @@ import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
 import { createTransformHtmlSourceFileService } from "./html_source_file_service.js"
 
 export const startCompileServer = async ({
-  cancellationToken = createCancellationToken(),
+  abortSignal = Abort.dormantSignal(),
   compileServerLogLevel,
 
   projectDirectoryUrl,
@@ -218,15 +213,12 @@ export const startCompileServer = async ({
     ...babelPluginMap,
   }
 
-  const serverStopCancellationSource = createCancellationSource()
+  const serverCleanup = Cleanup.create()
 
   let projectFileRequestedCallback = () => {}
   if (livereloadSSE) {
     const sseSetup = setupServerSentEventsForLivereload({
-      cancellationToken: composeCancellationToken(
-        cancellationToken,
-        serverStopCancellationSource.token,
-      ),
+      serverCleanup,
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       outDirectoryRelativeUrl,
@@ -236,7 +228,7 @@ export const startCompileServer = async ({
 
     projectFileRequestedCallback = sseSetup.projectFileRequestedCallback
     const serveSSEForLivereload = createSSEForLivereloadService({
-      cancellationToken,
+      serverCleanup,
       outDirectoryRelativeUrl,
       trackMainAndDependencies: sseSetup.trackMainAndDependencies,
     })
@@ -302,7 +294,7 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
     }),
     "service:compiled file": createCompiledFileService({
-      cancellationToken,
+      abortSignal,
       logger,
 
       projectDirectoryUrl,
@@ -351,7 +343,7 @@ export const startCompileServer = async ({
   }
 
   const compileServer = await startServer({
-    cancellationToken,
+    abortSignal,
     logLevel: compileServerLogLevel,
 
     protocol: compileServerProtocol,
@@ -571,7 +563,7 @@ const compareValueJson = (left, right) => {
  *
  */
 const setupServerSentEventsForLivereload = ({
-  cancellationToken,
+  serverCleanup,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
@@ -617,7 +609,7 @@ const setupServerSentEventsForLivereload = ({
       recursive: true,
     },
   )
-  cancellationToken.register(unregisterDirectoryLifecyle)
+  serverCleanup.addCallback(unregisterDirectoryLifecyle)
 
   const getDependencySet = (mainRelativeUrl) => {
     if (trackerMap.has(mainRelativeUrl)) {
@@ -773,11 +765,14 @@ const setupServerSentEventsForLivereload = ({
     }
   }
 
-  return { projectFileRequestedCallback, trackMainAndDependencies }
+  return {
+    projectFileRequestedCallback,
+    trackMainAndDependencies,
+  }
 }
 
 const createSSEForLivereloadService = ({
-  cancellationToken,
+  serverCleanup,
   outDirectoryRelativeUrl,
   trackMainAndDependencies,
 }) => {
@@ -811,9 +806,8 @@ const createSSEForLivereloadService = ({
       },
     })
 
-    const cancelRegistration = cancellationToken.register(() => {
-      cancelRegistration.unregister()
-
+    const removeSSECleanupCallback = serverCleanup.addCallback(() => {
+      removeSSECleanupCallback()
       sseRoom.close()
       stopTracking()
     })
@@ -821,7 +815,7 @@ const createSSEForLivereloadService = ({
       mainFileRelativeUrl,
       sseRoom,
       cleanup: () => {
-        cancelRegistration.unregister()
+        removeSSECleanupCallback()
         sseRoom.close()
         stopTracking()
       },

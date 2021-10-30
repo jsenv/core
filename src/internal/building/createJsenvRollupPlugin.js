@@ -9,7 +9,6 @@ import {
   resolveUrl,
   urlToRelativeUrl,
   resolveDirectoryUrl,
-  writeFile,
   comparePathnames,
   urlIsInsideOf,
   normalizeStructuredMetaMap,
@@ -50,7 +49,7 @@ import { injectSourcemapInRollupBuild } from "./rollup_build_sourcemap.js"
 import { createBuildStats } from "./build_stats.js"
 
 export const createJsenvRollupPlugin = async ({
-  cancellationToken,
+  abortSignal,
   logger,
 
   projectDirectoryUrl,
@@ -58,9 +57,6 @@ export const createJsenvRollupPlugin = async ({
   compileServerOrigin,
   compileDirectoryRelativeUrl,
   buildDirectoryUrl,
-  assetManifestFile,
-  assetManifestFileRelativeUrl,
-  writeOnFileSystem,
 
   urlMappings,
   importResolutionMethod,
@@ -756,7 +752,7 @@ export const createJsenvRollupPlugin = async ({
 
       let url = asServerUrl(rollupUrl)
       const loadResult = await urlLoader.loadUrl(rollupUrl, {
-        cancellationToken,
+        abortSignal,
         logger,
         ressourceBuilder,
       })
@@ -1265,27 +1261,6 @@ export const createJsenvRollupPlugin = async ({
         ressourceBuilder,
         buildDuration,
       })
-
-      if (assetManifestFile) {
-        const assetManifestFileUrl = resolveUrl(
-          assetManifestFileRelativeUrl,
-          buildDirectoryUrl,
-        )
-        await writeFile(
-          assetManifestFileUrl,
-          JSON.stringify(buildManifest, null, "  "),
-        )
-      }
-
-      if (writeOnFileSystem) {
-        const buildRelativeUrls = Object.keys(buildFileContents)
-        await Promise.all(
-          buildRelativeUrls.map(async (buildRelativeUrl) => {
-            const fileBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
-            await writeFile(fileBuildUrl, buildFileContents[buildRelativeUrl])
-          }),
-        )
-      }
 
       logger.info(
         formatBuildDoneInfo({

@@ -242,9 +242,6 @@
       "@jsenv/babel-preset/*": [
         "./node_modules/@jsenv/babel-preset/*"
       ],
-      "@jsenv/cancellation/*": [
-        "./node_modules/@jsenv/cancellation/*"
-      ],
       "@jsenv/eslint-config": [
         "./node_modules/@jsenv/eslint-config/main.js"
       ],
@@ -286,9 +283,6 @@
       ],
       "@jsenv/babel-preset": [
         "./node_modules/@jsenv/babel-preset/jsenv_babel_preset.cjs"
-      ],
-      "@jsenv/cancellation": [
-        "./node_modules/@jsenv/cancellation/main.node.js"
       ],
       "@jsenv/https-local/*": [
         "./node_modules/@jsenv/https-local/*"
