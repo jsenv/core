@@ -1,1 +1,1 @@
-export const value = 43
+export const value = 42

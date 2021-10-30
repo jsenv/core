@@ -181,7 +181,7 @@ export const buildProject = async ({
 
   try {
     const result = await buildUsingRollup({
-      abortSignal,
+      abortSignal: buildOperation.abortSignal,
       logger,
 
       entryPointMap,

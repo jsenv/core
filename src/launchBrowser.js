@@ -292,24 +292,16 @@ export const webkitTabRuntime = {
 
 const launchBrowser = async (
   browserName,
-  {
-    launchBrowserOperation,
-    browserClass,
-    ressourceTracker,
-    options,
-    stopOnExit,
-  },
+  { launchBrowserOperation, browserClass, options, stopOnExit },
 ) => {
   if (stopOnExit) {
-    const removeProcessTeardownListeners =
-      addProcessTeardownInOperationAbortSignal(launchBrowserOperation, {
-        SIGHUP: true,
-        SIGTERM: true,
-        SIGINT: true,
-        beforeExit: true,
-        exit: true,
-      })
-    ressourceTracker.registerCleanupCallback(removeProcessTeardownListeners)
+    addProcessTeardownInOperationAbortSignal(launchBrowserOperation, {
+      SIGHUP: true,
+      SIGTERM: true,
+      SIGINT: true,
+      beforeExit: true,
+      exit: true,
+    })
   }
 
   try {
@@ -326,7 +318,7 @@ const launchBrowser = async (
       Abort.throwIfAborted(launchBrowserOperation.abortSignal)
     }
 
-    launchBrowserOperation.cleanup.addCallback(() => {
+    launchBrowserOperation.cleaner.addCallback(() => {
       stopBrowser(browser)
     })
     return browser

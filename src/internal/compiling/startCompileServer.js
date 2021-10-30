@@ -382,7 +382,7 @@ export const startCompileServer = async ({
     }),
     onStop: () => {
       onStop()
-      compileServerOperation.cleaner.cleanup()
+      compileServerOperation.cleaner.clean()
     },
   })
 

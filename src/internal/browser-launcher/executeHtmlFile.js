@@ -15,7 +15,7 @@ import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.
 export const executeHtmlFile = async (
   fileRelativeUrl,
   {
-    abortSignal,
+    launchBrowserOperation,
     projectDirectoryUrl,
     compileServerOrigin,
     outDirectoryRelativeUrl,
@@ -46,13 +46,13 @@ export const executeHtmlFile = async (
     compileProxyProjectRelativeUrl,
     compileServerOrigin,
   )
-  Abort.throwIfAborted(abortSignal)
+  Abort.throwIfAborted(launchBrowserOperation.abortSignal)
   await page.goto(compileProxyClientUrl)
 
   const coverageHandledFromOutside =
     coveragePlaywrightAPIAvailable && !coverageForceIstanbul
 
-  Abort.throwIfAborted(abortSignal)
+  Abort.throwIfAborted(launchBrowserOperation.abortSignal)
   const browserRuntimeFeaturesReport = await page.evaluate(
     /* istanbul ignore next */
     ({ coverageHandledFromOutside }) => {
@@ -68,7 +68,7 @@ export const executeHtmlFile = async (
   try {
     let executionResult
     const { canAvoidCompilation, compileId } = browserRuntimeFeaturesReport
-    Abort.throwIfAborted(abortSignal)
+    Abort.throwIfAborted(launchBrowserOperation.abortSignal)
     if (canAvoidCompilation) {
       executionResult = await executeSource({
         projectDirectoryUrl,
@@ -124,9 +124,9 @@ export const executeHtmlFile = async (
     // and rethrow with current abort error
     if (
       e.message.match(/^Protocol error \(.*?\): Target closed/) &&
-      abortSignal.aborted
+      launchBrowserOperation.abortSignal.aborted
     ) {
-      Abort.throwIfAborted(abortSignal)
+      Abort.throwIfAborted(launchBrowserOperation.abortSignal)
     }
     throw e
   }

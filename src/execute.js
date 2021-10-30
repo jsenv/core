@@ -55,7 +55,7 @@ export const execute = async ({
   runtimeStartedCallback,
   runtimeStoppedCallback,
   runtimeErrorAfterExecutionCallback,
-  runtimeDisconnectCallback,
+  runtimeDisconnectCallback = () => {},
 }) => {
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
