@@ -16,7 +16,6 @@ import {
   readFile,
   writeFile,
   ensureEmptyDirectory,
-  registerFileLifecycle,
   registerDirectoryLifecycle,
   urlIsInsideOf,
   urlToBasename,
@@ -84,7 +83,7 @@ export const startCompileServer = async ({
   compileServerIp = "0.0.0.0",
   compileServerPort = 0,
   keepProcessAlive = false,
-  stopOnPackageVersionChange = false,
+  onStop = () => {},
 
   // remaining options
   runtimeSupport,
@@ -369,26 +368,12 @@ export const startCompileServer = async ({
     ],
     accessControlAllowCredentials: true,
     keepProcessAlive,
+
+    onStop: () => {
+      onStop()
+      serverCleanup.cleanup()
+    },
   })
-
-  compileServer.stoppedPromise.then(serverStopCancellationSource.cancel)
-
-  if (stopOnPackageVersionChange) {
-    const stopListeningJsenvPackageVersionChange =
-      listenJsenvPackageVersionChange({
-        projectDirectoryUrl,
-        jsenvDirectoryRelativeUrl,
-        onJsenvPackageVersionChange: () => {
-          compileServer.stop(STOP_REASON_PACKAGE_VERSION_CHANGED)
-        },
-      })
-    compileServer.stoppedPromise.then(
-      () => {
-        stopListeningJsenvPackageVersionChange()
-      },
-      () => {},
-    )
-  }
 
   return {
     jsenvDirectoryRelativeUrl,
@@ -1112,60 +1097,11 @@ const createCompileProxyService = ({ projectDirectoryUrl }) => {
   }
 }
 
-const listenJsenvPackageVersionChange = ({
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  onJsenvPackageVersionChange = () => {},
-}) => {
-  const jsenvCoreDirectoryUrl = resolveUrl(
-    jsenvDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
-  const packageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
-  const packageFilePath = urlToFileSystemPath(packageFileUrl)
-  let packageVersion
-
-  try {
-    packageVersion = readPackage(packageFilePath).version
-  } catch (e) {
-    if (e.code === "ENOENT") return () => {}
-  }
-
-  const checkPackageVersion = () => {
-    let packageObject
-    try {
-      packageObject = readPackage(packageFilePath)
-    } catch (e) {
-      // package json deleted ? not a problem
-      // let's wait for it to show back
-      if (e.code === "ENOENT") return
-      // package.json malformed ? not a problem
-      // let's wait for use to fix it or filesystem to finish writing the file
-      if (e.name === "SyntaxError") return
-      throw e
-    }
-
-    if (packageVersion !== packageObject.version) {
-      onJsenvPackageVersionChange()
-    }
-  }
-
-  return registerFileLifecycle(packageFilePath, {
-    added: checkPackageVersion,
-    updated: checkPackageVersion,
-    keepProcessAlive: false,
-  })
-}
-
 const readPackage = (packagePath) => {
   const buffer = readFileSync(packagePath)
   const string = String(buffer)
   const packageObject = JSON.parse(string)
   return packageObject
-}
-
-export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
-  toString: () => `package version changed`,
 }
 
 const __filenameReplacement = `import.meta.url.slice('file:///'.length)`

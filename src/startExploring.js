@@ -98,7 +98,6 @@ export const startExploring = async ({
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,
       accessControlAllowCredentials: true,
-      stopOnPackageVersionChange: true,
       jsenvToolbarInjection: jsenvToolbar,
       customServices: {
         "service:exploring-redirect": (request) => redirectFiles(request),
