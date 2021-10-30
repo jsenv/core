@@ -14,10 +14,11 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `timeout-launch-node.js`
+const filename = `timeout.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
-const actual = await execute({
+const startMs = Date.now()
+const { status } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   runtime: nodeRuntime,
@@ -27,7 +28,16 @@ const actual = await execute({
   fileRelativeUrl,
   allocatedMs: 12000,
 })
+const endMs = Date.now()
+const duration = endMs - startMs
+const durationIsAroundAllocatedMs = duration > 5000 && duration < 20000
+
+const actual = {
+  status,
+  durationIsAroundAllocatedMs,
+}
 const expected = {
   status: "timedout",
+  durationIsAroundAllocatedMs: true,
 }
 assert({ actual, expected })

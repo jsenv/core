@@ -59,9 +59,11 @@ const expected = {
   testPlanSummary: {
     executionCount: 4,
     disconnectedCount: 0,
+    abortedCount: 0,
     timedoutCount: 0,
     erroredCount: 0,
     completedCount: 4,
+    cancelledCount: 0,
     startMs: testPlanSummary.startMs,
     endMs: testPlanSummary.endMs,
   },

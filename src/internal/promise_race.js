@@ -1,13 +1,13 @@
-export const promiseTrackRace = (promiseArray) => {
+export const racePromises = (promiseArray) => {
   return new Promise((resolve, reject) => {
     let resolved = false
 
     const visit = (index) => {
       const promise = promiseArray[index]
-      promise.then((value) => {
+      promise.then(() => {
         if (resolved) return
         resolved = true
-        resolve({ winner: promise, value, index })
+        resolve(promise)
       }, reject)
     }
 

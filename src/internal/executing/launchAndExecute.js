@@ -1,7 +1,7 @@
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 
 import { Abort, createOperation } from "@jsenv/core/src/abort/main.js"
-import { promiseTrackRace } from "../promise_track_race.js"
+import { racePromises } from "../promise_race.js"
 import { composeIstanbulCoverages } from "./coverage/composeIstanbulCoverages.js"
 
 const TIMING_BEFORE_EXECUTION = "before-execution"
@@ -269,12 +269,20 @@ export const launchAndExecute = async ({
     timing = TIMING_DURING_EXECUTION
 
     Abort.throwIfAborted(launchAndExecuteOperation.abortSignal)
-    const raceResult = await promiseTrackRace([disconnected, executed])
-    timing = TIMING_AFTER_EXECUTION
+    const aborted = new Promise((resolve) => {
+      launchAndExecuteOperation.abortSignal.addEventListener("abort", resolve)
+    })
+    const winner = await racePromises([aborted, disconnected, executed])
 
-    if (raceResult.winner === disconnected) {
+    if (winner === aborted) {
+      Abort.throwIfAborted(launchAndExecuteOperation.abortSignal)
+    }
+
+    if (winner === disconnected) {
       return executionResultTransformer(createDisconnectedExecutionResult())
     }
+
+    timing = TIMING_AFTER_EXECUTION
 
     if (stopAfterExecute) {
       // if there is an error while cleaning (stopping the runtime)
@@ -297,7 +305,7 @@ export const launchAndExecute = async ({
       })
     }
 
-    const executionResult = raceResult.value
+    const executionResult = await executed
     const { status } = executionResult
 
     if (status === "errored") {
