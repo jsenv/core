@@ -71,13 +71,13 @@ export const executePlan = async (
     })
   })
 
-  const executionOperation = createOperation({
+  const multipleExecutionsOperation = createOperation({
     abortSignal,
     handleSIGINT,
   })
 
   const compileServer = await startCompileServer({
-    abortSignal: executionOperation.abortSignal,
+    abortSignal: multipleExecutionsOperation.abortSignal,
     compileServerLogLevel,
 
     projectDirectoryUrl,
@@ -102,8 +102,8 @@ export const executePlan = async (
     runtimeSupport,
   })
 
-  executionOperation.cleaner.addCallback(() => {
-    compileServer.stop()
+  multipleExecutionsOperation.cleaner.addCallback(async () => {
+    await compileServer.stop()
   })
 
   const executionSteps = await generateExecutionSteps(
@@ -112,13 +112,13 @@ export const executePlan = async (
       [compileServer.outDirectoryRelativeUrl]: null,
     },
     {
-      abortSignal: executionOperation.abortSignal,
+      abortSignal: multipleExecutionsOperation.abortSignal,
       projectDirectoryUrl,
     },
   )
 
   const result = await executeConcurrently(executionSteps, {
-    executionOperation,
+    multipleExecutionsOperation,
     logger,
     launchAndExecuteLogLevel,
 
@@ -146,7 +146,8 @@ export const executePlan = async (
     coverageV8MergeConflictIsExpected,
   })
 
-  executionOperation.cleaner.clean("all execution done")
+  // (used to stop potential chrome browser still opened to be reused)
+  multipleExecutionsOperation.cleaner.clean("all execution done")
 
   return {
     planSummary: result.summary,

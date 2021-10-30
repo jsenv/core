@@ -13,7 +13,7 @@ import { createSummaryLog } from "./createSummaryLog.js"
 export const executeConcurrently = async (
   executionSteps,
   {
-    executionOperation,
+    multipleExecutionsOperation,
 
     logger,
     launchAndExecuteLogLevel,
@@ -59,11 +59,12 @@ export const executeConcurrently = async (
   let previousExecutionResult
   let previousExecutionLog
   let disconnectedCount = 0
+  let abortedCount = 0
   let timedoutCount = 0
   let erroredCount = 0
   let completedCount = 0
-  await executeInParallel({
-    abortSignal: executionOperation.abortSignal,
+  const executionsDone = await executeInParallel({
+    abortSignal: multipleExecutionsOperation.abortSignal,
     maxExecutionsInParallel,
     executionSteps,
     start: async (paramsFromStep) => {
@@ -108,8 +109,11 @@ export const executeConcurrently = async (
 
       beforeExecutionCallback(beforeExecutionInfo)
 
+      // launchAndExecute peut retourner un aborted
+      // et c'est bien, on veut le gérer, si tous les suivants sont aborted
+      // on le gere en dehors de cette boucle
       const executionResult = await launchAndExecute({
-        abortSignal: executionOperation.abortSignal,
+        abortSignal: multipleExecutionsOperation.abortSignal,
         launchAndExecuteLogLevel,
 
         ...executionParams,
@@ -127,7 +131,6 @@ export const executeConcurrently = async (
           fileRelativeUrl,
           ...executionParams.executeParams,
         },
-
         coverageV8MergeConflictIsExpected,
       })
       const afterExecutionInfo = {
@@ -136,10 +139,12 @@ export const executeConcurrently = async (
       }
       afterExecutionCallback(afterExecutionInfo)
 
-      if (executionResult.status === "timedout") {
-        timedoutCount++
-      } else if (executionResult.status === "disconnected") {
+      if (executionResult.status === "disconnected") {
         disconnectedCount++
+      } else if (executionResult.status === "aborted") {
+        abortedCount++
+      } else if (executionResult.status === "timedout") {
+        timedoutCount++
       } else if (executionResult.status === "errored") {
         erroredCount++
       } else if (executionResult.status === "completed") {
@@ -151,6 +156,7 @@ export const executeConcurrently = async (
           completedExecutionLogAbbreviation,
           executionCount,
           disconnectedCount,
+          abortedCount,
           timedoutCount,
           erroredCount,
           completedCount,
@@ -188,26 +194,23 @@ export const executeConcurrently = async (
     },
   })
 
-  if (executionOperation.abortSignal.aborted) {
-    // take this into account
-    // like return a report marking all remaining operationss
-    // as "aborted"
-    // in the logs we'll handle that to avoid showing 100 canceled operation
-    // and regroup them instead
+  const summary = {
+    executionCount,
+    ...reportToSummary(report),
+    // when execution is aborted, the remaining executions are "cancelled"
+    cancelledCount: executionCount - executionsDone.length,
+    ...(measureGlobalDuration ? { startMs, endMs: Date.now() } : {}),
   }
-
-  // tell everyone we are done
-  // (used to stop potential chrome browser still opened to be reused)
-  executionOperation.cleaner.clean("all execution done")
-
-  const summary = reportToSummary(report)
-  if (measureGlobalDuration) {
-    summary.startMs = startMs
-    summary.endMs = Date.now()
-  }
-
   if (logSummary) {
     logger.info(createSummaryLog(summary))
+  }
+
+  if (multipleExecutionsOperation.abortSignal.aborted) {
+    // don't try to do the coverage stuff
+    return {
+      summary,
+      report,
+    }
   }
 
   return {
@@ -294,9 +297,6 @@ const pathLeadsToFile = (path) => {
 
 const reportToSummary = (report) => {
   const fileNames = Object.keys(report)
-  const executionCount = fileNames.reduce((previous, fileName) => {
-    return previous + Object.keys(report[fileName]).length
-  }, 0)
 
   const countResultMatching = (predicate) => {
     return fileNames.reduce((previous, fileName) => {
@@ -316,6 +316,7 @@ const reportToSummary = (report) => {
   const disconnectedCount = countResultMatching(
     ({ status }) => status === "disconnected",
   )
+  const abortedCount = countResultMatching(({ status }) => status === "aborted")
   const timedoutCount = countResultMatching(
     ({ status }) => status === "timedout",
   )
@@ -325,8 +326,8 @@ const reportToSummary = (report) => {
   )
 
   return {
-    executionCount,
     disconnectedCount,
+    abortedCount,
     timedoutCount,
     erroredCount,
     completedCount,
