@@ -9,20 +9,20 @@ await executeTestPlan({
     "test/**/*.test.js": {
       node: {
         runtime: nodeRuntime,
+        allocatedMs: 30 * 1000,
+      },
+    },
+    // give more time to some tests
+    "test/dev_server/**/*.test.js": {
+      node: {
+        runtime: nodeRuntime,
         allocatedMs: 60 * 1000,
       },
     },
-    // give more time to the first test because it generates many file cached afterwards
-    "test/__internal__/buildServiceWorker/basic/*.test.js": {
+    "test/test_plan/**/*.test.js": {
       node: {
         runtime: nodeRuntime,
-        allocatedMs: 180 * 1000,
-      },
-    },
-    "test/__internal__/executeTestPlan/**/*.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        allocatedMs: 180 * 1000,
+        allocatedMs: 60 * 1000,
       },
     },
   },

@@ -1,9 +1,7 @@
-/**
-
-to enable/disable color process.env.FORCE_COLOR is used.
-It is documented in https://nodejs.org/api/tty.html#tty_writestream_getcolordepth_env
-
-*/
+/*
+ * to enable/disable color process.env.FORCE_COLOR is used.
+ * It is documented in https://nodejs.org/api/tty.html#tty_writestream_getcolordepth_env
+ */
 
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
