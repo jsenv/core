@@ -172,54 +172,58 @@ export const executeTestPlan = async ({
     process.exitCode = 1
   }
 
-  const promises = []
-  // keep this one first because it does ensureEmptyDirectory
-  // and in case coverage json file gets written in the same directory
-  // it must be done before
-  if (coverage && coverageHtmlDirectory) {
-    const coverageHtmlDirectoryUrl = resolveDirectoryUrl(
-      coverageHtmlDirectoryRelativeUrl,
-      projectDirectoryUrl,
-    )
-    await ensureEmptyDirectory(coverageHtmlDirectoryUrl)
-    if (coverageHtmlDirectoryIndexLog) {
-      const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`
-      logger.info(
-        `-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`,
+  const planCoverage = result.planCoverage
+  // planCoverage can be null when execution is abortes
+  if (planCoverage) {
+    const promises = []
+    // keep this one first because it does ensureEmptyDirectory
+    // and in case coverage json file gets written in the same directory
+    // it must be done before
+    if (coverage && coverageHtmlDirectory) {
+      const coverageHtmlDirectoryUrl = resolveDirectoryUrl(
+        coverageHtmlDirectoryRelativeUrl,
+        projectDirectoryUrl,
+      )
+      await ensureEmptyDirectory(coverageHtmlDirectoryUrl)
+      if (coverageHtmlDirectoryIndexLog) {
+        const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`
+        logger.info(
+          `-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`,
+        )
+      }
+      promises.push(
+        generateCoverageHtmlDirectory(planCoverage, {
+          projectDirectoryUrl,
+          coverageHtmlDirectoryRelativeUrl,
+        }),
       )
     }
-    promises.push(
-      generateCoverageHtmlDirectory(result.planCoverage, {
+    if (coverage && coverageJsonFile) {
+      const coverageJsonFileUrl = resolveUrl(
+        coverageJsonFileRelativeUrl,
         projectDirectoryUrl,
-        coverageHtmlDirectoryRelativeUrl,
-      }),
-    )
-  }
-  if (coverage && coverageJsonFile) {
-    const coverageJsonFileUrl = resolveUrl(
-      coverageJsonFileRelativeUrl,
-      projectDirectoryUrl,
-    )
-    if (coverageJsonFileLog) {
-      logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
+      )
+      if (coverageJsonFileLog) {
+        logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
+      }
+      promises.push(
+        generateCoverageJsonFile(result.planCoverage, coverageJsonFileUrl),
+      )
     }
-    promises.push(
-      generateCoverageJsonFile(result.planCoverage, coverageJsonFileUrl),
-    )
+    if (coverage && coverageTextLog) {
+      promises.push(
+        generateCoverageTextLog(result.planCoverage, {
+          coverageSkipEmpty,
+          coverageSkipFull,
+        }),
+      )
+    }
+    await Promise.all(promises)
   }
-  if (coverage && coverageTextLog) {
-    promises.push(
-      generateCoverageTextLog(result.planCoverage, {
-        coverageSkipEmpty,
-        coverageSkipFull,
-      }),
-    )
-  }
-  await Promise.all(promises)
 
   return {
     testPlanSummary: result.planSummary,
     testPlanReport: result.planReport,
-    testPlanCoverage: result.planCoverage,
+    testPlanCoverage: planCoverage,
   }
 }
