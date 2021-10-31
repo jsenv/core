@@ -26,9 +26,7 @@
  *
  */
 
-export { Abort } from "./abort.js"
-export { createCleaner } from "./cleaner.js"
+export { AbortableOperation } from "./abortable_operation.js"
 
-// When these file will become a NPM package, this export should be Node.js only
-export { createOperation } from "./operation.js"
-export { abortOperationOnProcessTeardown } from "./process_teardown_abort.js"
+// when will be a package this should be a Node.js export only
+export { raceProcessTeardownEvents } from "./process_teardown_events.js"

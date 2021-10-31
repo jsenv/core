@@ -8,7 +8,7 @@ import {
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { Abort } from "@jsenv/core/src/abort/main.js"
+import { AbortableOperation } from "@jsenv/core/src/abort/main.js"
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 import { humanizeUrl } from "@jsenv/core/src/internal/building/url_trace.js"
 import {
@@ -19,7 +19,7 @@ import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/r
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
 export const buildUsingRollup = async ({
-  abortSignal,
+  signal,
   logger,
 
   projectDirectoryUrl,
@@ -63,6 +63,7 @@ export const buildUsingRollup = async ({
   serviceWorkers,
   serviceWorkerFinalizer,
 }) => {
+  const rollupBuildOperation = AbortableOperation.fromSignal(signal)
   const node = isNodePartOfSupportedRuntimes(runtimeSupport)
   const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
 
@@ -103,7 +104,7 @@ export const buildUsingRollup = async ({
     asOriginalUrl,
     asProjectUrl,
   } = await createJsenvRollupPlugin({
-    abortSignal,
+    rollupBuildOperation,
     logger,
 
     projectDirectoryUrl,
@@ -141,7 +142,7 @@ export const buildUsingRollup = async ({
 
   try {
     await useRollup({
-      abortSignal,
+      rollupBuildOperation,
       logger,
 
       jsenvRollupPlugin,
@@ -260,7 +261,7 @@ export const buildUsingRollup = async ({
 }
 
 const useRollup = async ({
-  abortSignal,
+  rollupBuildOperation,
   logger,
   jsenvRollupPlugin,
   format,
@@ -272,7 +273,7 @@ const useRollup = async ({
   buildDirectoryUrl,
   asOriginalUrl,
 }) => {
-  Abort.throwIfAborted(abortSignal)
+  AbortableOperation.throwIfAborted(rollupBuildOperation)
   const { rollup } = await import("rollup")
   const { importAssertions } = await import("acorn-import-assertions")
 
@@ -350,10 +351,10 @@ const useRollup = async ({
       : {}),
   }
 
-  Abort.throwIfAborted(abortSignal)
+  AbortableOperation.throwIfAborted(rollupBuildOperation)
   const rollupReturnValue = await rollup(rollupInputOptions)
 
-  Abort.throwIfAborted(abortSignal)
+  AbortableOperation.throwIfAborted(rollupBuildOperation)
   const rollupOutputArray = await rollupReturnValue.generate(
     rollupOutputOptions,
   )

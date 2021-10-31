@@ -63,7 +63,7 @@ export const executeConcurrently = async (
   let erroredCount = 0
   let completedCount = 0
   const executionsDone = await executeInParallel({
-    abortSignal: multipleExecutionsOperation.abortSignal,
+    multipleExecutionsOperation,
     maxExecutionsInParallel,
     executionSteps,
     start: async (paramsFromStep) => {
@@ -112,7 +112,7 @@ export const executeConcurrently = async (
       // et c'est bien, on veut le gérer, si tous les suivants sont aborted
       // on le gere en dehors de cette boucle
       const executionResult = await launchAndExecute({
-        abortSignal: multipleExecutionsOperation.abortSignal,
+        signal: multipleExecutionsOperation.signal,
         launchAndExecuteLogLevel,
 
         ...executionParams,
@@ -215,7 +215,7 @@ export const executeConcurrently = async (
     ...(coverage
       ? {
           coverage: await reportToCoverage(report, {
-            abortSignal: multipleExecutionsOperation.abortSignal,
+            multipleExecutionsOperation,
             logger,
             projectDirectoryUrl,
             babelPluginMap,
@@ -229,7 +229,7 @@ export const executeConcurrently = async (
 }
 
 const executeInParallel = async ({
-  abortSignal,
+  multipleExecutionsOperation,
   executionSteps,
   start,
   maxExecutionsInParallel = 1,
@@ -239,7 +239,7 @@ const executeInParallel = async ({
   let remainingExecutionCount = executionSteps.length
 
   const nextChunk = async () => {
-    if (abortSignal.aborted) {
+    if (multipleExecutionsOperation.signal.aborted) {
       return
     }
 
@@ -265,7 +265,7 @@ const executeInParallel = async ({
   const executeOne = async (index) => {
     const input = executionSteps[index]
     const output = await start(input)
-    if (!abortSignal.aborted) {
+    if (!multipleExecutionsOperation.signal.aborted) {
       executionResults[index] = output
     }
   }

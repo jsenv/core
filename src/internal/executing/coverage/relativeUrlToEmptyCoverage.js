@@ -1,6 +1,6 @@
 import { resolveUrl, urlToFileSystemPath, readFile } from "@jsenv/filesystem"
 
-import { Abort } from "@jsenv/core/src/abort/main.js"
+import { AbortableOperation } from "@jsenv/core/src/abort/main.js"
 import {
   babelPluginsFromBabelPluginMap,
   getMinimalBabelPluginMap,
@@ -10,7 +10,7 @@ import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
 export const relativeUrlToEmptyCoverage = async (
   relativeUrl,
-  { abortSignal, projectDirectoryUrl, babelPluginMap },
+  { multipleExecutionsOperation, projectDirectoryUrl, babelPluginMap },
 ) => {
   const { transformAsync } = await import("@babel/core")
 
@@ -24,7 +24,7 @@ export const relativeUrlToEmptyCoverage = async (
       "transform-instrument": [babelPluginInstrument, { projectDirectoryUrl }],
     }
 
-    Abort.throwIfAborted(abortSignal)
+    AbortableOperation.throwIfAborted(multipleExecutionsOperation)
     const { metadata } = await transformAsync(source, {
       filename: urlToFileSystemPath(fileUrl),
       filenameRelative: relativeUrl,

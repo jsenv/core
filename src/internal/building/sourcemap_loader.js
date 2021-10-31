@@ -9,7 +9,7 @@ import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponse } from "@jsenv/core/src/internal/response_validation.js"
 
 export const loadSourcemap = async ({
-  abortSignal,
+  signal,
   logger,
 
   code,
@@ -32,7 +32,7 @@ export const loadSourcemap = async ({
   }
 
   const sourcemapResponse = await fetchUrl(sourcemapUrl, {
-    abortSignal,
+    signal,
     ignoreHttpsError: true,
   })
   const { isValid, details } = await validateResponse(sourcemapResponse, {

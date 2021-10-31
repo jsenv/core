@@ -5,8 +5,8 @@ import {
 } from "@jsenv/filesystem"
 
 import {
-  createOperation,
-  abortOperationOnProcessTeardown,
+  AbortableOperation,
+  raceProcessTeardownEvents,
 } from "@jsenv/core/src/abort/main.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import {
@@ -30,7 +30,7 @@ import {
 import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
 
 export const startExploring = async ({
-  abortSignal,
+  signal = new AbortController().signal,
   handleSIGINT = true,
 
   explorableConfig = jsenvExplorableConfig,
@@ -60,13 +60,16 @@ export const startExploring = async ({
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  const exploringServerOperation = createOperation({
-    abortSignal,
-  })
+  const exploringServerOperation = AbortableOperation.fromSignal(signal)
   if (handleSIGINT) {
-    abortOperationOnProcessTeardown(exploringServerOperation, {
-      SIGINT: true,
-    })
+    AbortableOperation.effect(exploringServerOperation, (cb) =>
+      raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        cb,
+      ),
+    )
   }
 
   const outDirectoryRelativeUrl = computeOutDirectoryRelativeUrl({
@@ -92,7 +95,7 @@ export const startExploring = async ({
   })
 
   const compileServer = await startCompileServer({
-    abortSignal: exploringServerOperation.abortSignal,
+    signal: exploringServerOperation.signal,
     keepProcessAlive,
 
     projectDirectoryUrl,

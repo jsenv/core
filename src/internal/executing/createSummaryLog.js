@@ -75,7 +75,7 @@ const createMixedDetails = ({
 
   if (abortedCount) {
     parts.push(
-      `${timedoutCount} ${setANSIColor(`aborted`, EXECUTION_COLORS.aborted)}`,
+      `${abortedCount} ${setANSIColor(`aborted`, EXECUTION_COLORS.aborted)}`,
     )
   }
 
@@ -105,7 +105,7 @@ const createMixedDetails = ({
 
   if (cancelledCount) {
     parts.push(
-      `${completedCount} ${setANSIColor(
+      `${cancelledCount} ${setANSIColor(
         `cancelled`,
         EXECUTION_COLORS.cancelled,
       )}`,

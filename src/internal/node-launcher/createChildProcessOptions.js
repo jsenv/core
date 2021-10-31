@@ -13,7 +13,7 @@ const AVAILABLE_DEBUG_MODE = [
 ]
 
 export const createChildProcessOptions = async ({
-  abortSignal = new AbortController().signal,
+  signal = new AbortController().signal,
   // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
   processExecArgv = process.execArgv,
   processDebugPort = process.debugPort,
@@ -37,7 +37,7 @@ export const createChildProcessOptions = async ({
   const childProcessOptions = processOptionsFromExecArgv(processExecArgv)
 
   await mutateDebuggingOptions(childProcessOptions, {
-    abortSignal,
+    signal,
     processDebugPort,
     debugMode,
     debugPort,
@@ -51,7 +51,7 @@ const mutateDebuggingOptions = async (
   childProcessOptions,
   {
     // ensure multiline
-    abortSignal,
+    signal,
     processDebugPort,
     debugMode,
     debugPort,
@@ -91,7 +91,7 @@ const mutateDebuggingOptions = async (
   // support assigning a child spawned without a specific port
   const childDebugPortOptionValue =
     debugPort === 0
-      ? await findFreePort(processDebugPort + 37, { abortSignal })
+      ? await findFreePort(processDebugPort + 37, { signal })
       : debugPort
   // replace child debug port
   if (parentDebugPortOptionName) {

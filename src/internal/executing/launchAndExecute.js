@@ -1,6 +1,6 @@
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 
-import { Abort, createOperation } from "@jsenv/core/src/abort/main.js"
+import { AbortableOperation } from "@jsenv/core/src/abort/main.js"
 import { raceCallbacks } from "../../abort/callback_race.js"
 import { composeIstanbulCoverages } from "./coverage/composeIstanbulCoverages.js"
 
@@ -9,7 +9,7 @@ const TIMING_DURING_EXECUTION = "during-execution"
 const TIMING_AFTER_EXECUTION = "after-execution"
 
 export const launchAndExecute = async ({
-  abortSignal,
+  signal = new AbortController().signal,
   launchAndExecuteLogLevel,
 
   runtime,
@@ -58,11 +58,30 @@ export const launchAndExecute = async ({
     )
   }
 
-  const launchAndExecuteOperation = createOperation({
-    abortSignal,
-  })
-
   let executionResultTransformer = (executionResult) => executionResult
+
+  const launchAndExecuteOperation = AbortableOperation.fromSignal(signal)
+
+  const hasAllocatedMs =
+    typeof allocatedMs === "number" && allocatedMs !== Infinity
+  let timeoutAbortEffect
+
+  if (hasAllocatedMs) {
+    timeoutAbortEffect = AbortableOperation.timeout(
+      launchAndExecuteOperation,
+      // FIXME: if allocatedMs is veryyyyyy big
+      // setTimeout may be called immediatly
+      // in that case we should just throw that the number is too big
+      allocatedMs,
+    )
+    executionResultTransformer = composeTransformer(
+      executionResultTransformer,
+      (executionResult) => {
+        timeoutAbortEffect.cleanup()
+        return executionResult
+      },
+    )
+  }
 
   if (measureDuration) {
     const startMs = Date.now()
@@ -207,41 +226,11 @@ export const launchAndExecute = async ({
     )
   }
 
-  const hasAllocatedMs =
-    typeof allocatedMs === "number" && allocatedMs !== Infinity
-  const timeoutAbortController = new AbortController()
-  if (hasAllocatedMs) {
-    const timeoutId = setTimeout(
-      () => {
-        timeoutAbortController.abort()
-      },
-      // FIXME: if allocatedMs is veryyyyyy big
-      // setTimeout may be called immediatly
-      // in that case we should just throw that the number is too big
-      allocatedMs,
-    )
-    launchAndExecuteOperation.abortSignal = Abort.composeTwoAbortSignals(
-      launchAndExecuteOperation.abortSignal,
-      timeoutAbortController.signal,
-    )
-    launchAndExecuteOperation.cleaner.addCallback(() => {
-      clearTimeout(timeoutId)
-    })
-
-    executionResultTransformer = composeTransformer(
-      executionResultTransformer,
-      (executionResult) => {
-        clearTimeout(timeoutId)
-        return executionResult
-      },
-    )
-  }
-
   try {
     const runtimeLabel = `${runtime.name}/${runtime.version}`
     logger.debug(`launch ${runtimeLabel} to execute something in it`)
 
-    Abort.throwIfAborted(launchAndExecuteOperation.abortSignal)
+    AbortableOperation.throwIfAborted(launchAndExecuteOperation)
     const launchReturnValue = await runtime.launch({
       logger,
       abortSignal: launchAndExecuteOperation.abortSignal,
@@ -315,12 +304,12 @@ export const launchAndExecute = async ({
       )
     })
 
-    Abort.throwIfAborted(launchAndExecuteOperation.abortSignal)
+    AbortableOperation.throwIfAborted(launchAndExecuteOperation)
 
     const winner = await winnerPromise
 
     if (winner.name === "aborted") {
-      Abort.throwIfAborted(launchAndExecuteOperation.abortSignal)
+      AbortableOperation.throwIfAborted(launchAndExecuteOperation)
     }
 
     if (winner.name === "error") {
@@ -383,7 +372,7 @@ export const launchAndExecute = async ({
     )
   } catch (e) {
     if (e.name === "AbortError") {
-      if (timeoutAbortController.signal.aborted) {
+      if (timeoutAbortEffect && timeoutAbortEffect.signal.aborted) {
         const executionResult = createTimedoutExecutionResult()
         return executionResultTransformer(executionResult)
       }

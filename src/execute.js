@@ -1,6 +1,6 @@
 import {
-  createOperation,
-  abortOperationOnProcessTeardown,
+  AbortableOperation,
+  raceProcessTeardownEvents,
 } from "@jsenv/core/src/abort/main.js"
 import { normalizeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import {
@@ -11,7 +11,7 @@ import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
 
 export const execute = async ({
-  abortSignal,
+  signal = new AbortController().signal,
   handleSIGINT = true,
 
   logLevel = "warn",
@@ -79,13 +79,16 @@ export const execute = async ({
     )
   }
 
-  const executeOperation = createOperation({
-    abortSignal,
-  })
+  const executeOperation = AbortableOperation.fromSignal(signal)
   if (handleSIGINT) {
-    abortOperationOnProcessTeardown(executeOperation, {
-      SIGINT: true,
-    })
+    AbortableOperation.effect(executeOperation, (cb) =>
+      raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        cb,
+      ),
+    )
   }
 
   const {

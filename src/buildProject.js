@@ -2,8 +2,8 @@ import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 
 import {
-  createOperation,
-  abortOperationOnProcessTeardown,
+  AbortableOperation,
+  raceProcessTeardownEvents,
 } from "@jsenv/core/src/abort/main.js"
 import { COMPILE_ID_BEST } from "./internal/CONSTANTS.js"
 import {
@@ -18,7 +18,7 @@ import {
 } from "./internal/generateGroupMap/jsenvRuntimeSupport.js"
 
 export const buildProject = async ({
-  abortSignal,
+  signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
   compileServerLogLevel = "warn",
@@ -136,17 +136,20 @@ export const buildProject = async ({
     projectDirectoryUrl,
   })
 
-  const buildOperation = createOperation({
-    abortSignal,
-  })
+  const buildOperation = AbortableOperation.fromSignal(signal)
   if (handleSIGINT) {
-    abortOperationOnProcessTeardown(buildOperation, {
-      SIGINT: true,
-    })
+    AbortableOperation.effect(buildOperation, (cb) =>
+      raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        cb,
+      ),
+    )
   }
 
   const compileServer = await startCompileServer({
-    abortSignal,
+    signal: AbortableOperation.signal,
     compileServerLogLevel,
 
     projectDirectoryUrl,
@@ -180,8 +183,8 @@ export const buildProject = async ({
     transformHtmlSourceFiles: false,
   })
 
-  buildOperation.cleaner.addCallback(() => {
-    compileServer.stop(`build cleanup`)
+  buildOperation.cleaner.addCallback(async () => {
+    await compileServer.stop(`build cleanup`)
   })
 
   const { outDirectoryRelativeUrl, origin: compileServerOrigin } = compileServer
@@ -236,7 +239,7 @@ export const buildProject = async ({
 
     return result
   } finally {
-    buildOperation.cleaner.clean()
+    await buildOperation.cleaner.clean()
   }
 }
 

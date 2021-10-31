@@ -5,7 +5,7 @@ import {
   urlToExtension,
 } from "@jsenv/filesystem"
 
-import { Abort } from "@jsenv/core/src/abort/main.js"
+import { AbortableOperation } from "@jsenv/core/src/abort/main.js"
 import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { v8CoverageFromAllV8Coverages } from "@jsenv/core/src/internal/executing/coverage/v8CoverageFromAllV8Coverages.js"
 import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
@@ -46,13 +46,13 @@ export const executeHtmlFile = async (
     compileProxyProjectRelativeUrl,
     compileServerOrigin,
   )
-  Abort.throwIfAborted(launchBrowserOperation.abortSignal)
+  AbortableOperation.throwIfAborted(launchBrowserOperation)
   await page.goto(compileProxyClientUrl)
 
   const coverageHandledFromOutside =
     coveragePlaywrightAPIAvailable && !coverageForceIstanbul
 
-  Abort.throwIfAborted(launchBrowserOperation.abortSignal)
+  AbortableOperation.throwIfAborted(launchBrowserOperation)
   const browserRuntimeFeaturesReport = await page.evaluate(
     /* istanbul ignore next */
     ({ coverageHandledFromOutside }) => {
@@ -68,7 +68,7 @@ export const executeHtmlFile = async (
   try {
     let executionResult
     const { canAvoidCompilation, compileId } = browserRuntimeFeaturesReport
-    Abort.throwIfAborted(launchBrowserOperation.abortSignal)
+    AbortableOperation.throwIfAborted(launchBrowserOperation)
     if (canAvoidCompilation) {
       executionResult = await executeSource({
         projectDirectoryUrl,
@@ -122,11 +122,8 @@ export const executeHtmlFile = async (
     // if browser is closed due to abort
     // before it is able to finish evaluate we can safely ignore
     // and rethrow with current abort error
-    if (
-      launchBrowserOperation.abortSignal.aborted &&
-      isBrowserClosedError(error)
-    ) {
-      Abort.throwIfAborted(launchBrowserOperation.abortSignal)
+    if (launchBrowserOperation.signal.aborted && isBrowserClosedError(error)) {
+      AbortableOperation.throwIfAborted(launchBrowserOperation)
     }
     throw error
   }

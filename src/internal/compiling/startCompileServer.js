@@ -24,7 +24,7 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { createOperation } from "@jsenv/core/src/abort/main.js"
+import { AbortableOperation } from "@jsenv/core/src/abort/main.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
@@ -45,7 +45,7 @@ import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
 import { createTransformHtmlSourceFileService } from "./html_source_file_service.js"
 
 export const startCompileServer = async ({
-  abortSignal,
+  signal = new AbortController().signal,
   compileServerLogLevel,
 
   projectDirectoryUrl,
@@ -215,7 +215,7 @@ export const startCompileServer = async ({
     ...babelPluginMap,
   }
 
-  const compileServerOperation = createOperation()
+  const compileServerOperation = AbortableOperation.fromSignal(signal)
 
   let projectFileRequestedCallback = () => {}
   if (livereloadSSE) {
@@ -296,7 +296,7 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
     }),
     "service:compiled file": createCompiledFileService({
-      abortSignal,
+      compileServerOperation,
       logger,
 
       projectDirectoryUrl,
@@ -345,7 +345,7 @@ export const startCompileServer = async ({
   }
 
   const compileServer = await startServer({
-    abortSignal,
+    signal: compileServerOperation.signal,
     stopOnExit: false,
     stopOnSIGINT: false,
     stopOnInternalError: false,

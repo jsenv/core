@@ -7,8 +7,8 @@ import { normalizeIstanbulCoverage } from "./normalizeIstanbulCoverage.js"
 export const reportToCoverage = async (
   report,
   {
+    multipleExecutionsOperation,
     logger,
-    abortSignal,
     projectDirectoryUrl,
     babelPluginMap,
     coverageConfig,
@@ -30,7 +30,7 @@ export const reportToCoverage = async (
   }
 
   const relativeFileUrlToCoverArray = await listRelativeFileUrlToCover({
-    abortSignal,
+    multipleExecutionsOperation,
     projectDirectoryUrl,
     coverageConfig,
   })
@@ -49,7 +49,7 @@ export const reportToCoverage = async (
         const emptyCoverage = await relativeUrlToEmptyCoverage(
           relativeFileUrlMissingCoverage,
           {
-            abortSignal,
+            multipleExecutionsOperation,
             projectDirectoryUrl,
             babelPluginMap,
           },
@@ -71,7 +71,7 @@ export const reportToCoverage = async (
 }
 
 const listRelativeFileUrlToCover = async ({
-  abortSignal,
+  multipleExecutionsOperation,
   projectDirectoryUrl,
   coverageConfig,
 }) => {
@@ -80,7 +80,7 @@ const listRelativeFileUrlToCover = async ({
   }
 
   const matchingFileResultArray = await collectFiles({
-    abortSignal,
+    signal: multipleExecutionsOperation.signal,
     directoryUrl: projectDirectoryUrl,
     structuredMetaMap: structuredMetaMapForCoverage,
     predicate: ({ cover }) => cover,

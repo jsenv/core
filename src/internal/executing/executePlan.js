@@ -1,6 +1,6 @@
 import {
-  createOperation,
-  abortOperationOnProcessTeardown,
+  AbortableOperation,
+  raceProcessTeardownEvents,
 } from "@jsenv/core/src/abort/main.js"
 import { mergeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
@@ -11,7 +11,7 @@ import { executeConcurrently } from "./executeConcurrently.js"
 export const executePlan = async (
   plan,
   {
-    abortSignal,
+    signal,
     handleSIGINT,
 
     logger,
@@ -74,17 +74,20 @@ export const executePlan = async (
     })
   })
 
-  const multipleExecutionsOperation = createOperation({
-    abortSignal,
-  })
+  const multipleExecutionsOperation = AbortableOperation.fromSignal(signal)
   if (handleSIGINT) {
-    abortOperationOnProcessTeardown(multipleExecutionsOperation, {
-      SIGINT: true,
-    })
+    AbortableOperation.effect(multipleExecutionsOperation, (cb) =>
+      raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        cb,
+      ),
+    )
   }
 
   const compileServer = await startCompileServer({
-    abortSignal: multipleExecutionsOperation.abortSignal,
+    signal: multipleExecutionsOperation.signal,
     compileServerLogLevel,
 
     projectDirectoryUrl,

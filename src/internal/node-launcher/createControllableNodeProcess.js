@@ -7,7 +7,7 @@ import {
   assertFilePresence,
 } from "@jsenv/filesystem"
 
-import { Abort } from "@jsenv/core/src/abort/main.js"
+import { AbortableOperation } from "@jsenv/core/src/abort/main.js"
 import { raceCallbacks } from "@jsenv/core/src/abort/callback_race.js"
 import { createSignal } from "@jsenv/core/src/signal/signal.js"
 import { nodeSupportsDynamicImport } from "../runtime/node-feature-detect/nodeSupportsDynamicImport.js"
@@ -40,7 +40,7 @@ const STOP_SIGNAL = "SIGKILL"
 const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL"
 
 export const createControllableNodeProcess = async ({
-  abortSignal = new AbortController().signal,
+  signal = new AbortController().signal,
   logLevel,
   debugPort,
   debugMode,
@@ -61,7 +61,7 @@ export const createControllableNodeProcess = async ({
   }
 
   const childProcessOptions = await createChildProcessOptions({
-    abortSignal,
+    signal,
     debugPort,
     debugMode,
     debugModeInheritBreak,
@@ -237,12 +237,14 @@ export const createControllableNodeProcess = async ({
   }
 
   const requestActionOnChildProcess = ({
-    abortSignal,
+    signal,
     actionType,
     actionParams,
   }) => {
+    const actionAbortable = AbortableOperation.fromSignal(signal)
+
     return new Promise(async (resolve, reject) => {
-      Abort.throwIfAborted(abortSignal)
+      AbortableOperation.throwIfAborted(actionAbortable)
       await childProcessReadyPromise
 
       onceProcessMessage(childProcess, "action-result", ({ status, value }) => {
@@ -261,13 +263,13 @@ export const createControllableNodeProcess = async ({
       )
 
       try {
-        Abort.throwIfAborted(abortSignal)
+        AbortableOperation.throwIfAborted(actionAbortable)
         await sendToProcess(childProcess, "action", {
           actionType,
           actionParams,
         })
       } catch (e) {
-        if (abortSignal.aborted && e.name === "AbortError") {
+        if (actionAbortable.signal.aborted && e.name === "AbortError") {
           throw e
         }
         logger.error(
