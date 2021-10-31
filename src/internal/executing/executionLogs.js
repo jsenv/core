@@ -13,6 +13,7 @@ export const createExecutionResultLog = (
   {
     completedExecutionLogAbbreviation,
     executionCount,
+    abortedCount,
     timedoutCount,
     erroredCount,
     completedCount,
@@ -29,6 +30,7 @@ export const createExecutionResultLog = (
   })
   const summary = `(${createSummaryDetails({
     executionCount: executionNumber,
+    abortedCount,
     timedoutCount,
     erroredCount,
     completedCount,
