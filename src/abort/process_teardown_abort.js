@@ -10,17 +10,17 @@ export const abortOperationOnProcessTeardown = (
     operation.abortSignal,
     processSignalAbortController.signal,
   )
-  const cancelProcessTeardownRace = raceProcessTeardownEvents(
+  const cleanupProcessTeardownRace = raceProcessTeardownEvents(
     processTeardownEvents,
     () => {
       processSignalAbortController.abort()
     },
   )
   const removeCleanCallback = operation.cleaner.addCallback(() => {
-    cancelProcessTeardownRace()
+    cleanupProcessTeardownRace()
   })
   return () => {
-    cancelProcessTeardownRace()
+    cleanupProcessTeardownRace()
     removeCleanCallback()
   }
 }
