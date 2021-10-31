@@ -58,7 +58,6 @@ export const executeConcurrently = async (
 
   let previousExecutionResult
   let previousExecutionLog
-  let disconnectedCount = 0
   let abortedCount = 0
   let timedoutCount = 0
   let erroredCount = 0
@@ -139,9 +138,7 @@ export const executeConcurrently = async (
       }
       afterExecutionCallback(afterExecutionInfo)
 
-      if (executionResult.status === "disconnected") {
-        disconnectedCount++
-      } else if (executionResult.status === "aborted") {
+      if (executionResult.status === "aborted") {
         abortedCount++
       } else if (executionResult.status === "timedout") {
         timedoutCount++
@@ -155,7 +152,6 @@ export const executeConcurrently = async (
         let log = createExecutionResultLog(afterExecutionInfo, {
           completedExecutionLogAbbreviation,
           executionCount,
-          disconnectedCount,
           abortedCount,
           timedoutCount,
           erroredCount,
@@ -313,9 +309,6 @@ const reportToSummary = (report) => {
     }, 0)
   }
 
-  const disconnectedCount = countResultMatching(
-    ({ status }) => status === "disconnected",
-  )
   const abortedCount = countResultMatching(({ status }) => status === "aborted")
   const timedoutCount = countResultMatching(
     ({ status }) => status === "timedout",
@@ -326,7 +319,6 @@ const reportToSummary = (report) => {
   )
 
   return {
-    disconnectedCount,
     abortedCount,
     timedoutCount,
     erroredCount,

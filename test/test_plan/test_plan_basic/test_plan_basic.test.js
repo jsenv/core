@@ -58,7 +58,6 @@ const actual = {
 const expected = {
   testPlanSummary: {
     executionCount: 4,
-    disconnectedCount: 0,
     abortedCount: 0,
     timedoutCount: 0,
     erroredCount: 0,

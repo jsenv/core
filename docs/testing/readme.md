@@ -234,10 +234,11 @@ const { testPlanSummary } = await executeTestPlan({
 ```js
 {
   executionCount: 0,
-  disconnectedCount: 0,
+  abortedCount: 0,
   timedoutCount: 0,
   erroredCount: 0,
-  completedCount: 0
+  completedCount: 0,
+  cancelledCount: 0
 }
 ```
 
