@@ -116,7 +116,8 @@ const onceProcessMessage = (type, callback) => {
   return removeListener
 }
 
-const removeActionRequestListener = onceProcessMessage(
+// const removeActionRequestListener = onceProcessMessage(
+onceProcessMessage(
   ACTION_REQUEST_EVENT_NAME,
   async ({ actionType, actionParams }) => {
     const action = ACTIONS_AVAILABLE[actionType]
