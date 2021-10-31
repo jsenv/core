@@ -3,7 +3,6 @@ import wrapAnsi from "wrap-ansi"
 import { loggerToLevels, createDetailedMessage } from "@jsenv/logger"
 import { urlToFileSystemPath } from "@jsenv/filesystem"
 
-// import { Abort } from "@jsenv/core/src/abort/main.js"
 import { launchAndExecute } from "../executing/launchAndExecute.js"
 import { reportToCoverage } from "./coverage/reportToCoverage.js"
 import { writeLog } from "./writeLog.js"

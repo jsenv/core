@@ -116,13 +116,6 @@ const onceProcessMessage = (type, callback) => {
   return removeListener
 }
 
-const onceSIGTERM = (callback) => {
-  process.once("SIGTERM", callback)
-  return () => {
-    process.removeListener("SIGTERM", callback)
-  }
-}
-
 const removeActionRequestListener = onceProcessMessage(
   ACTION_REQUEST_EVENT_NAME,
   async ({ actionType, actionParams }) => {
@@ -149,8 +142,9 @@ const removeActionRequestListener = onceProcessMessage(
 
     // removeActionRequestListener()
     if (actionParams.exitAfterAction) {
+      removeActionRequestListener()
       // for some reason this fixes v8 coverage directory somtimes empty
-      process.exit()
+      // process.exit()
     }
   },
 )
@@ -158,6 +152,7 @@ const removeActionRequestListener = onceProcessMessage(
 // remove listener to process.on('message')
 // which is sufficient to let child process die
 // assuming nothing else keeps it alive
-onceSIGTERM(removeActionRequestListener)
+// process.once("SIGTERM", removeActionRequestListener)
+process.once("SIGINT", removeActionRequestListener)
 
 setTimeout(() => sendToParent("ready"))
