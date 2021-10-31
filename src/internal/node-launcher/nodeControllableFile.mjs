@@ -143,8 +143,8 @@ const removeActionRequestListener = onceProcessMessage(
     // removeActionRequestListener()
     if (actionParams.exitAfterAction) {
       removeActionRequestListener()
-      // for some reason this fixes v8 coverage directory somtimes empty
-      // process.exit()
+      // for some reason this fixes v8 coverage directory sometimes empty on Ubuntu
+      process.exit()
     }
   },
 )
