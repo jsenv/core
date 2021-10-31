@@ -16,6 +16,8 @@ export const reportToCoverage = async (
     coverageV8MergeConflictIsExpected,
   },
 ) => {
+  // here we should forward multipleExecutionsOperation.signal
+  // to allow aborting this too
   const istanbulCoverageFromExecution = await executionReportToCoverage(
     report,
     {
@@ -43,6 +45,8 @@ export const reportToCoverage = async (
     )
 
   const istanbulCoverageFromMissedFiles = {}
+  // maybe we should prefer reduce over Promise.all here
+  // because it creates a LOT of things to do
   await Promise.all(
     relativeFileUrlMissingCoverageArray.map(
       async (relativeFileUrlMissingCoverage) => {

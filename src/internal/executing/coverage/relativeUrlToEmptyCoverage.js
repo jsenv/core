@@ -15,6 +15,7 @@ export const relativeUrlToEmptyCoverage = async (
   const { transformAsync } = await import("@babel/core")
 
   const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
+  Abortable.throwIfAborted(multipleExecutionsOperation)
   const source = await readFile(fileUrl)
 
   try {
