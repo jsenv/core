@@ -19,7 +19,7 @@ const testPlan = {
       runtimeParams: {
         env: { AWAIT_FOREVER: true },
       },
-      allocatedMs: 8000,
+      allocatedMs: 5000,
       gracefulStopAllocatedMs: 1000,
     },
   },
@@ -27,6 +27,7 @@ const testPlan = {
 
 const { testPlanCoverage } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
+  // launchAndExecuteLogLevel: "debug",
   jsenvDirectoryRelativeUrl,
   testPlan,
   coverage: true,
@@ -40,7 +41,7 @@ const actual = testPlanCoverage
 const expected = {
   [`./${fileRelativeUrl}`]: {
     ...actual[`./${fileRelativeUrl}`],
-    s: { 0: 0, 1: 0 },
+    s: { 0: 0, 1: 0, 2: 0 },
   },
 }
 assert({ actual, expected })

@@ -4,6 +4,7 @@
 
 export const raceCallbacks = (raceDescription, winnerCallback) => {
   const cleanCallbacks = []
+  let done = false
 
   const cleanup = () => {
     const cleanCallbacksCopy = cleanCallbacks.slice()
@@ -16,6 +17,8 @@ export const raceCallbacks = (raceDescription, winnerCallback) => {
   Object.keys(raceDescription).forEach((candidateName) => {
     const register = raceDescription[candidateName]
     const returnValue = register((data) => {
+      if (done) return
+      done = true
       cleanup()
       winnerCallback({
         name: candidateName,

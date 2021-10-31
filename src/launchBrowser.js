@@ -56,8 +56,8 @@ chromiumRuntime.launch = async ({
     : chromiumSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
+    Abort.throwIfAborted(launchBrowserOperation.abortSignal)
     const { chromium } = await import("playwright")
-
     const launchOperation = launchBrowser("chromium", {
       browserClass: chromium,
       launchBrowserOperation,
@@ -164,6 +164,7 @@ firefoxRuntime.launch = async ({
     : firefoxSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
+    Abort.throwIfAborted(launchBrowserOperation.abortSignal)
     const { firefox } = await import("playwright")
     const launchOperation = launchBrowser("firefox", {
       browserClass: firefox,
@@ -242,6 +243,7 @@ webkitRuntime.launch = async ({
     : webkitSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
+    Abort.throwIfAborted(launchBrowserOperation.abortSignal)
     const { webkit } = await import("playwright")
     const launchOperation = launchBrowser("webkit", {
       browserClass: webkit,
@@ -312,14 +314,13 @@ const launchBrowser = async (
       handleSIGTERM: false,
       handleSIGHUP: false,
     })
+    launchBrowserOperation.cleaner.addCallback(async () => {
+      await stopBrowser(browser)
+    })
     if (launchBrowserOperation.abortSignal.aborted) {
-      stopBrowser(browser)
+      await launchBrowserOperation.cleaner.clean()
       Abort.throwIfAborted(launchBrowserOperation.abortSignal)
     }
-
-    launchBrowserOperation.cleaner.addCallback(() => {
-      stopBrowser(browser)
-    })
     return browser
   } catch (e) {
     if (launchBrowserOperation.abortSignal.aborted && isTargetClosedError(e)) {

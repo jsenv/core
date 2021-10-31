@@ -99,6 +99,13 @@ nodeRuntime.launch = async ({
 
       // the v8 coverage directory is available once the child process is disconnected
       finalizeExecutionResult = async (executionResult) => {
+        if (
+          executionResult.status === "timedout" ||
+          executionResult.status === "aborted"
+        ) {
+          return executionResult
+        }
+
         const coverage = await ensureV8CoverageDirClean(async () => {
           // prefer istanbul if available
           if (executionResult.coverage) {
@@ -142,7 +149,7 @@ nodeRuntime.launch = async ({
     logProcessCommand,
   })
 
-  const execute = async ({ fileRelativeUrl, executionId }) => {
+  const execute = async ({ abortSignal, fileRelativeUrl, executionId }) => {
     const executeParams = {
       projectDirectoryUrl,
       compileServerOrigin,
@@ -164,6 +171,7 @@ nodeRuntime.launch = async ({
 
     let executionResult =
       await controllableNodeProcess.requestActionOnChildProcess({
+        abortSignal,
         actionType: "execute-using-dynamic-import-fallback-on-systemjs",
         actionParams: executeParams,
       })
