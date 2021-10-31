@@ -77,6 +77,12 @@ const descriptionFormatters = {
       EXECUTION_COLORS.completed,
     )
   },
+  cancelled: ({ executionNumber, executionCount }) => {
+    return setANSIColor(
+      `${failureSignColorLess} execution ${executionNumber} of ${executionCount} cancelled`,
+      EXECUTION_COLORS.cancelled,
+    )
+  },
 }
 
 const appendDuration = ({ endMs, startMs }) => {

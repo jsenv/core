@@ -1,5 +1,5 @@
 /*
- *
+ * https://github.com/whatwg/dom/issues/920
  */
 
 import { createCleaner } from "./cleaner.js"
