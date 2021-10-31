@@ -20,7 +20,7 @@ import { generateCoverageTextLog } from "./internal/executing/coverage/generateC
 import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 
 export const executeTestPlan = async ({
-  abortSignal,
+  signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
   compileServerLogLevel = "warn",
@@ -129,7 +129,7 @@ export const executeTestPlan = async ({
   }
 
   const result = await executePlan(testPlan, {
-    abortSignal,
+    signal,
     handleSIGINT,
 
     logger,

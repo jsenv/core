@@ -36,11 +36,11 @@ export const requireUsingChildProcess = async (
 
         return {
           ...controllableNodeProcess,
-          execute: async ({ abortSignal }) => {
+          execute: async ({ signal }) => {
             try {
               const namespace =
                 await controllableNodeProcess.requestActionOnChildProcess({
-                  abortSignal,
+                  signal,
                   actionType: "execute-using-require",
                   actionParams: { fileUrl },
                 })

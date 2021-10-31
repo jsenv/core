@@ -31,7 +31,7 @@ const jsenvCompilers = {
 }
 
 export const createCompiledFileService = ({
-  abortSignal,
+  compileServerOperation,
   logger,
 
   projectDirectoryUrl,
@@ -140,7 +140,7 @@ export const createCompiledFileService = ({
 
     // compile this if needed
     const compileResponsePromise = compileFile({
-      abortSignal,
+      compileServerOperation,
       logger,
 
       projectDirectoryUrl,
@@ -152,9 +152,9 @@ export const createCompiledFileService = ({
       compileCacheStrategy,
       projectFileRequestedCallback,
       request,
-      compile: ({ code, map }) => {
+      compile: ({ signal, code, map }) => {
         return compiler({
-          abortSignal,
+          signal,
           logger,
 
           code,

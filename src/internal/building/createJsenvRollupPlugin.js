@@ -49,7 +49,7 @@ import { injectSourcemapInRollupBuild } from "./rollup_build_sourcemap.js"
 import { createBuildStats } from "./build_stats.js"
 
 export const createJsenvRollupPlugin = async ({
-  rollupBuildOperation,
+  buildOperation,
   logger,
 
   projectDirectoryUrl,
@@ -752,7 +752,7 @@ export const createJsenvRollupPlugin = async ({
 
       let url = asServerUrl(rollupUrl)
       const loadResult = await urlLoader.loadUrl(rollupUrl, {
-        signal: rollupBuildOperation.signal,
+        signal: buildOperation.signal,
         logger,
         ressourceBuilder,
       })

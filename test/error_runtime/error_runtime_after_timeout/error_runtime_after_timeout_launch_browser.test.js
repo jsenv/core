@@ -21,7 +21,7 @@ const abortController = new AbortController()
 let errorCallbackArg
 const actual = await execute({
   ...EXECUTE_TEST_PARAMS,
-  abortSignal: abortController.signal,
+  signal: abortController.signal,
   jsenvDirectoryRelativeUrl,
   launchAndExecuteLogLevel: "off",
   runtime: chromiumRuntime,

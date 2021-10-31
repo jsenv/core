@@ -19,7 +19,7 @@ export const nodeRuntime = {
   version: process.version.slice(1),
 }
 nodeRuntime.launch = async ({
-  abortSignal,
+  signal = new AbortController().signal,
   logger,
   logProcessCommand,
 
@@ -142,7 +142,7 @@ nodeRuntime.launch = async ({
     stop,
     requestActionOnChildProcess,
   } = await createControllableNodeProcess({
-    abortSignal,
+    signal,
     logLevel,
     debugPort,
     debugMode,
@@ -156,7 +156,7 @@ nodeRuntime.launch = async ({
     logProcessCommand,
   })
 
-  const execute = async ({ abortSignal, fileRelativeUrl, executionId }) => {
+  const execute = async ({ signal, fileRelativeUrl, executionId }) => {
     const executeParams = {
       projectDirectoryUrl,
       compileServerOrigin,
@@ -177,7 +177,7 @@ nodeRuntime.launch = async ({
     }
 
     let executionResult = await requestActionOnChildProcess({
-      abortSignal,
+      signal,
       actionType: "execute-using-dynamic-import-fallback-on-systemjs",
       actionParams: executeParams,
     })

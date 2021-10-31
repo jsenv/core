@@ -19,7 +19,7 @@ import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/r
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
 export const buildUsingRollup = async ({
-  signal,
+  buildOperation,
   logger,
 
   projectDirectoryUrl,
@@ -63,7 +63,6 @@ export const buildUsingRollup = async ({
   serviceWorkers,
   serviceWorkerFinalizer,
 }) => {
-  const rollupBuildOperation = AbortableOperation.fromSignal(signal)
   const node = isNodePartOfSupportedRuntimes(runtimeSupport)
   const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
 
@@ -104,7 +103,7 @@ export const buildUsingRollup = async ({
     asOriginalUrl,
     asProjectUrl,
   } = await createJsenvRollupPlugin({
-    rollupBuildOperation,
+    buildOperation,
     logger,
 
     projectDirectoryUrl,
@@ -142,7 +141,7 @@ export const buildUsingRollup = async ({
 
   try {
     await useRollup({
-      rollupBuildOperation,
+      buildOperation,
       logger,
 
       jsenvRollupPlugin,
@@ -261,7 +260,7 @@ export const buildUsingRollup = async ({
 }
 
 const useRollup = async ({
-  rollupBuildOperation,
+  buildOperation,
   logger,
   jsenvRollupPlugin,
   format,
@@ -273,7 +272,7 @@ const useRollup = async ({
   buildDirectoryUrl,
   asOriginalUrl,
 }) => {
-  AbortableOperation.throwIfAborted(rollupBuildOperation)
+  AbortableOperation.throwIfAborted(buildOperation)
   const { rollup } = await import("rollup")
   const { importAssertions } = await import("acorn-import-assertions")
 
@@ -351,10 +350,10 @@ const useRollup = async ({
       : {}),
   }
 
-  AbortableOperation.throwIfAborted(rollupBuildOperation)
+  AbortableOperation.throwIfAborted(buildOperation)
   const rollupReturnValue = await rollup(rollupInputOptions)
 
-  AbortableOperation.throwIfAborted(rollupBuildOperation)
+  AbortableOperation.throwIfAborted(buildOperation)
   const rollupOutputArray = await rollupReturnValue.generate(
     rollupOutputOptions,
   )

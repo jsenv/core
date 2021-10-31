@@ -4,14 +4,14 @@ import { generateFileExecutionSteps } from "./generateFileExecutionSteps.js"
 
 export const generateExecutionSteps = async (
   plan,
-  { abortSignal, projectDirectoryUrl },
+  { signal, projectDirectoryUrl },
 ) => {
   const structuredMetaMap = {
     filePlan: plan,
   }
 
   const fileResultArray = await collectFiles({
-    abortSignal,
+    signal,
     directoryUrl: projectDirectoryUrl,
     structuredMetaMap,
     predicate: ({ filePlan }) => filePlan,

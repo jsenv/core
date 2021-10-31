@@ -232,8 +232,8 @@ export const launchAndExecute = async ({
 
     AbortableOperation.throwIfAborted(launchAndExecuteOperation)
     const launchReturnValue = await runtime.launch({
+      signal: launchAndExecuteOperation.signal,
       logger,
-      abortSignal: launchAndExecuteOperation.abortSignal,
       stopAfterExecute,
       measurePerformance,
       collectPerformance,
@@ -277,12 +277,9 @@ export const launchAndExecute = async ({
       raceCallbacks(
         {
           aborted: (cb) => {
-            launchAndExecuteOperation.abortSignal.addEventListener("abort", cb)
+            launchAndExecuteOperation.signal.addEventListener("abort", cb)
             return () => {
-              launchAndExecuteOperation.abortSignal.removeEventListener(
-                "abort",
-                cb,
-              )
+              launchAndExecuteOperation.signal.removeEventListener("abort", cb)
             }
           },
           error: (cb) => {
@@ -294,7 +291,7 @@ export const launchAndExecute = async ({
           executed: (cb) => {
             timing = TIMING_DURING_EXECUTION
             const executed = execute({
-              abortSignal: launchAndExecuteOperation.abortSignal,
+              signal: launchAndExecuteOperation.signal,
               ...executeParams,
             })
             executed.then(cb, reject)

@@ -322,13 +322,13 @@ const launchBrowser = async (
     launchBrowserOperation.cleaner.addCallback(async () => {
       await stopBrowser(browser)
     })
-    if (launchBrowserOperation.abortSignal.aborted) {
+    if (launchBrowserOperation.signal.aborted) {
       await launchBrowserOperation.cleaner.clean()
       AbortableOperation.throwIfAborted(launchBrowserOperation)
     }
     return browser
   } catch (e) {
-    if (launchBrowserOperation.abortSignal.aborted && isTargetClosedError(e)) {
+    if (launchBrowserOperation.signal.aborted && isTargetClosedError(e)) {
       return e
     }
     throw e
@@ -380,14 +380,15 @@ const browserToRuntimeHooks = (
   const outputSignal = createSignal()
 
   const execute = async ({
-    abortSignal,
+    signal,
     fileRelativeUrl,
     ignoreHTTPSErrors = true, // we mostly use self signed certificates during tests
   }) => {
-    AbortableOperation.throwIfAborted(abortSignal)
+    const executeOperation = AbortableOperation.fromSignal(signal)
+    AbortableOperation.throwIfAborted(executeOperation)
     // open a tab to execute to the file
     const browserContext = await browser.newContext({ ignoreHTTPSErrors })
-    AbortableOperation.throwIfAborted(abortSignal)
+    AbortableOperation.throwIfAborted(executeOperation)
     const page = await browserContext.newPage()
     launchBrowserOperation.cleaner.addCallback(async () => {
       try {

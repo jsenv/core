@@ -122,7 +122,7 @@ export const executePlan = async (
       [compileServer.outDirectoryRelativeUrl]: null,
     },
     {
-      abortSignal: multipleExecutionsOperation.abortSignal,
+      signal: multipleExecutionsOperation.signal,
       projectDirectoryUrl,
     },
   )

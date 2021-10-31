@@ -96,7 +96,7 @@ export const execute = async ({
     origin: compileServerOrigin,
     stop,
   } = await startCompileServer({
-    abortSignal: executeOperation.abortSignal,
+    signal: executeOperation.signal,
     compileServerLogLevel,
 
     projectDirectoryUrl,
@@ -124,7 +124,7 @@ export const execute = async ({
   })
 
   const result = await launchAndExecute({
-    abortSignal: executeOperation.abortSignal,
+    signal: executeOperation.signal,
     launchAndExecuteLogLevel,
 
     runtime,

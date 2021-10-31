@@ -201,7 +201,7 @@ export const executeConcurrently = async (
     logger.info(createSummaryLog(summary))
   }
 
-  if (multipleExecutionsOperation.abortSignal.aborted) {
+  if (multipleExecutionsOperation.signal.aborted) {
     // don't try to do the coverage stuff
     return {
       summary,
