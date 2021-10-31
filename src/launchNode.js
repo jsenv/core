@@ -138,7 +138,6 @@ nodeRuntime.launch = async ({
     stoppedSignal,
     errorSignal,
     outputSignal,
-    gracefulStop,
     stop,
     requestActionOnChildProcess,
   } = await createControllableNodeProcess({
@@ -200,7 +199,6 @@ nodeRuntime.launch = async ({
     stoppedSignal,
     errorSignal,
     outputSignal,
-    gracefulStop,
     stop,
     execute,
     finalizeExecutionResult,

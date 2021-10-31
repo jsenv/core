@@ -430,6 +430,7 @@ const browserToRuntimeHooks = (
     execute,
     stop: async (reason) => {
       await launchBrowserOperation.cleaner.clean(reason)
+      return { graceful: false }
     },
   }
 }

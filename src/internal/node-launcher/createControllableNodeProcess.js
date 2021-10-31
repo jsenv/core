@@ -176,32 +176,27 @@ export const createControllableNodeProcess = async ({
     },
   )
 
-  const killChildProcess = async ({ graceful, gracefulFailed }) => {
+  const stop = async ({ gracefulStopAllocatedMs }) => {
     if (stoppedSignal.emitted) {
-      return
+      return {}
     }
 
-    killing = true
-    const signalToSend = graceful
-      ? GRACEFUL_STOP_SIGNAL
-      : gracefulFailed
-      ? GRACEFUL_STOP_FAILED_SIGNAL
-      : STOP_SIGNAL
-    logger.debug(
-      `send ${signalToSend} to child process with pid ${childProcess.pid}`,
-    )
+    const killChildProcess = (signalToSend, { onError, onComplete }) => {
+      killing = true
+      logger.debug(
+        `send ${signalToSend} to child process with pid ${childProcess.pid}`,
+      )
 
-    await new Promise((resolve, reject) => {
       // see also https://github.com/sindresorhus/execa/issues/96
       const killProcessTree = require("tree-kill")
       killProcessTree(childProcess.pid, signalToSend, (error) => {
         if (!error) {
-          resolve()
+          onComplete()
           return
         }
 
         if (isChildProcessAlreadyKilledError(error, { childProcess })) {
-          resolve()
+          onComplete()
           return
         }
 
@@ -217,23 +212,67 @@ export const createControllableNodeProcess = async ({
           ),
           { cause: error },
         )
-        reject(killError)
+        onError(killError)
       })
-    })
-
-    if (stoppedSignal.emitted) {
-      return
     }
 
-    await new Promise((resolve) => stoppedSignal.addCallback(resolve))
-  }
+    const createStoppedPromise = async () => {
+      if (stoppedSignal.emitted) {
+        return
+      }
+      await new Promise((resolve) => stoppedSignal.addCallback(resolve))
+    }
 
-  const stop = async ({ gracefulFailed } = {}) => {
-    return killChildProcess({ graceful: false, gracefulFailed })
-  }
+    if (gracefulStopAllocatedMs) {
+      let timeoutReached = false
+      await new Promise((resolve, reject) => {
+        let timeout = setTimeout(() => {
+          timeoutReached = true
+          resolve()
+        }, gracefulStopAllocatedMs)
 
-  const gracefulStop = async () => {
-    return killChildProcess({ graceful: true })
+        killChildProcess(GRACEFUL_STOP_SIGNAL, {
+          onError: (error) => {
+            if (!timeoutReached) {
+              clearTimeout(timeout)
+              reject(error)
+            }
+          },
+          onComplete: () => {
+            if (!timeoutReached) {
+              clearTimeout(timeout)
+              resolve()
+            }
+          },
+        })
+      })
+
+      if (!timeoutReached) {
+        await createStoppedPromise()
+        return { graceful: true }
+      }
+
+      logger.debug(
+        `kill with SIGTERM because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
+      )
+      await new Promise((resolve, reject) => {
+        killChildProcess(GRACEFUL_STOP_FAILED_SIGNAL, {
+          onError: reject,
+          onComplete: resolve,
+        })
+      })
+      await createStoppedPromise()
+      return { graceful: false }
+    }
+
+    await new Promise((resolve, reject) => {
+      killChildProcess(STOP_SIGNAL, {
+        onError: reject,
+        onComplete: resolve,
+      })
+    })
+    await createStoppedPromise()
+    return { graceful: false }
   }
 
   const requestActionOnChildProcess = ({
@@ -287,7 +326,6 @@ export const createControllableNodeProcess = async ({
     stoppedSignal,
     errorSignal,
     outputSignal,
-    gracefulStop,
     stop,
     requestActionOnChildProcess,
   }
