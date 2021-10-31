@@ -401,7 +401,7 @@ export const createRessourceBuilder = (
         //    This scenario would be reproduced for every js module preloaded
         const { usedPromise, rollupBuildDonePromise } = ressource
         const winner = await racePromises([usedPromise, rollupBuildDonePromise])
-        if (winner === rollupBuildDonePromise) {
+        if (winner.promise === rollupBuildDonePromise) {
           return
         }
       }

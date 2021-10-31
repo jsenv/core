@@ -4,10 +4,10 @@ export const racePromises = (promiseArray) => {
 
     const visit = (index) => {
       const promise = promiseArray[index]
-      promise.then(() => {
+      promise.then((value) => {
         if (resolved) return
         resolved = true
-        resolve(promise)
+        resolve({ promise, value, index })
       }, reject)
     }
 
