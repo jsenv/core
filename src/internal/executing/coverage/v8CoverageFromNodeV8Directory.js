@@ -31,7 +31,7 @@ const readV8CoverageReportsFromDirectory = async (coverageDirectory) => {
     if (dirContent.length > 0) {
       return dirContent
     }
-    if (timeSpentTrying < 800) {
+    if (timeSpentTrying < 1500) {
       await new Promise((resolve) => setTimeout(resolve, 100))
       return tryReadDirectory(timeSpentTrying + 100)
     }
@@ -54,7 +54,7 @@ const readV8CoverageReportsFromDirectory = async (coverageDirectory) => {
             // If there is a syntax error it's likely because Node.js
             // is not done writing the json file content
             // -> let's retry to read file after 100ms
-            if (timeSpentTrying < 100) {
+            if (timeSpentTrying < 500) {
               await new Promise((resolve) => setTimeout(resolve, 100))
               return tryReadJsonFile(timeSpentTrying + 100)
             }
