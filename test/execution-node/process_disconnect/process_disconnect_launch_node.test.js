@@ -27,11 +27,13 @@ const actual = await execute({
     ...LAUNCH_TEST_PARAMS,
   },
   fileRelativeUrl,
+  ignoreError: true,
   captureConsole: true,
 })
 actual.consoleCalls = removeAnnoyingLogs(actual.consoleCalls)
 const expected = {
-  status: "disconnected",
+  error: new Error(`runtime stopped during execution`),
+  status: "errored",
   consoleCalls: [
     {
       type: "log",
