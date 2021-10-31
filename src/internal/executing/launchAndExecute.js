@@ -162,7 +162,7 @@ export const launchAndExecute = async ({
     executionResultTransformer = composeTransformer(
       executionResultTransformer,
       (executionResult) => {
-        const { coverage, indirectCoverage } = executionResult
+        const { coverage = {}, indirectCoverage } = executionResult
         if (indirectCoverage) {
           executionResult.coverage = composeIstanbulCoverages(
             [coverage, indirectCoverage],

@@ -17,8 +17,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}coverage-universal.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}coverage-universal.js`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}coverage_universal.html`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}coverage_universal.js`
 const testPlan = {
   [htmlFileRelativeUrl]: {
     chromium: {
