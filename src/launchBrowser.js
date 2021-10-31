@@ -7,6 +7,7 @@ import {
   abortOperationOnProcessTeardown,
   Abort,
 } from "@jsenv/core/src/abort/main.js"
+import { createSignal } from "@jsenv/core/src/signal/signal.js"
 import { fetchUrl } from "./internal/fetchUrl.js"
 import { validateResponse } from "./internal/response_validation.js"
 import { trackPageToNotify } from "./internal/browser-launcher/trackPageToNotify.js"
@@ -366,34 +367,23 @@ const browserToRuntimeHooks = (
     coveragePlaywrightAPIAvailable = false,
   },
 ) => {
-  const disconnected = new Promise((resolve) => {
-    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-    browser.on("disconnected", resolve)
-  })
+  const stoppedSignal = createSignal()
+  // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
+  browser.on("disconnected", stoppedSignal.emit)
 
-  const errorCallbackArray = []
-  const registerErrorCallback = (callback) => {
-    errorCallbackArray.push(callback)
-    return () => {
-      const index = errorCallbackArray.indexOf(callback)
-      if (index > -1) {
-        errorCallbackArray.splice(index, 1)
-      }
-    }
-  }
+  const errorSignal = createSignal()
 
-  const consoleCallbackArray = []
-  const registerConsoleCallback = (callback) => {
-    consoleCallbackArray.push(callback)
-  }
+  const outputSignal = createSignal()
 
   const execute = async ({
+    abortSignal,
     fileRelativeUrl,
-    // because we use a self signed certificate
-    ignoreHTTPSErrors = true,
+    ignoreHTTPSErrors = true, // we mostly use self signed certificates during tests
   }) => {
+    Abort.throwIfAborted(abortSignal)
     // open a tab to execute to the file
     const browserContext = await browser.newContext({ ignoreHTTPSErrors })
+    Abort.throwIfAborted(abortSignal)
     const page = await browserContext.newPage()
     launchBrowserOperation.cleaner.addCallback(async () => {
       try {
@@ -407,16 +397,8 @@ const browserToRuntimeHooks = (
     })
     // track tab error and console
     const stopTrackingToNotify = trackPageToNotify(page, {
-      onError: (error) => {
-        errorCallbackArray.forEach((callback) => {
-          callback(error)
-        })
-      },
-      onConsole: ({ type, text }) => {
-        consoleCallbackArray.forEach((callback) => {
-          callback({ type, text })
-        })
-      },
+      onError: errorSignal.emit,
+      onConsole: outputSignal.emit,
     })
     launchBrowserOperation.cleaner.addCallback(stopTrackingToNotify)
     return executeHtmlFile(fileRelativeUrl, {
@@ -437,20 +419,13 @@ const browserToRuntimeHooks = (
   }
 
   return {
-    stop: async (reason) => {
-      let unregisterErrorCallback
-      await Promise.race([
-        new Promise((resolve, reject) => {
-          unregisterErrorCallback = registerErrorCallback(reject)
-        }),
-        launchBrowserOperation.cleaner.clean(reason),
-      ])
-      unregisterErrorCallback()
-    },
-    disconnected,
-    registerErrorCallback,
-    registerConsoleCallback,
+    stoppedSignal,
+    errorSignal,
+    outputSignal,
     execute,
+    stop: async (reason) => {
+      await launchBrowserOperation.cleaner.clean(reason)
+    },
   }
 }
 

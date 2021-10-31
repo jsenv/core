@@ -282,15 +282,12 @@ export const createControllableNodeProcess = async ({
 
   return {
     execArgv,
-    gracefulStop,
-    stop,
     stoppedSignal,
     errorSignal,
     outputSignal,
+    gracefulStop,
+    stop,
     requestActionOnChildProcess,
-    onceChildProcessEvent: (event, callback) => {
-      onceProcessEvent(childProcess, event, callback)
-    },
   }
 }
 

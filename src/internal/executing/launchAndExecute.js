@@ -401,59 +401,49 @@ const stopRuntime = async ({
   gracefulStopAllocatedMs,
   reason,
 }) => {
-  const { gracefulStop, stop } = launchReturnValue
-
-  // external code can cancel using cancellationToken at any time.
-  // it is important to keep the code inside this stop function because once cancelled
-  // all code after the operation won't execute because it will be rejected with
-  // the cancellation error
-
-  let stoppedGracefully
+  const { errorSignal, gracefulStop, stop } = launchReturnValue
 
   if (gracefulStop && gracefulStopAllocatedMs) {
-    logger.debug(`${runtimeLabel}: runtime.gracefulStop() because ${reason}`)
-
-    const gracefulStopPromise = (async () => {
-      await gracefulStop({ reason })
-      return true
-    })()
-
-    const stopPromise = (async () => {
-      stoppedGracefully = await new Promise(async (resolve) => {
-        const timeoutId = setTimeout(() => {
-          resolve(false)
-        }, gracefulStopAllocatedMs)
-        try {
-          await gracefulStopPromise
-          resolve(true)
-        } finally {
-          clearTimeout(timeoutId)
-        }
-      })
-      if (stoppedGracefully) {
-        return stoppedGracefully
-      }
-
-      logger.debug(
-        `${runtimeLabel}: runtime.stop() because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
+    logger.debug(`${runtimeLabel}: gracefulStop() because ${reason}`)
+    const winner = await new Promise((resolve) => {
+      const gracefulStopPromise = gracefulStop({ reason })
+      raceCallbacks(
+        {
+          error: (cb) => {
+            return errorSignal.addCallback(cb)
+          },
+          graceful_stop_timeout: (cb) => {
+            const timeoutId = setTimeout(cb, gracefulStopAllocatedMs)
+            return () => {
+              clearTimeout(timeoutId)
+            }
+          },
+          graceful_stop_rejected: (cb) => {
+            gracefulStopPromise.catch(cb)
+          },
+          graceful_stop_resolved: (cb) => {
+            gracefulStopPromise.then(cb)
+          },
+        },
+        resolve,
       )
-      await stop({ reason, gracefulFailed: true })
-      return false
-    })()
+    })
+    if (winner.name === "graceful_stop_resolved") {
+      logger.debug(`${runtimeLabel}: runtime stopped gracefully`)
+      return
+    }
 
-    stoppedGracefully = await Promise.race([gracefulStopPromise, stopPromise])
-  } else {
-    await stop({ reason, gracefulFailed: false })
-    stoppedGracefully = false
+    if (winner.name === "error" || winner.name === "graceful_stop_rejected") {
+      throw winner.value
+    }
+
+    logger.debug(
+      `${runtimeLabel}: runtime.stop() because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
+    )
   }
 
-  logger.debug(
-    `${runtimeLabel}: runtime stopped${stoppedGracefully ? " gracefully" : ""}`,
-  )
-
-  return {
-    stoppedGracefully,
-  }
+  await stop({ reason, gracefulFailed: true })
+  logger.debug(`${runtimeLabel}: runtime stopped`)
 }
 
 const createAbortedExecutionResult = () => {

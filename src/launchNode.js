@@ -134,7 +134,15 @@ nodeRuntime.launch = async ({
   ]
 
   const logLevel = loggerToLogLevel(logger)
-  const controllableNodeProcess = await createControllableNodeProcess({
+  const {
+    execArgv,
+    stoppedSignal,
+    errorSignal,
+    outputSignal,
+    gracefulStop,
+    stop,
+    requestActionOnChildProcess,
+  } = await createControllableNodeProcess({
     abortSignal,
     logLevel,
     debugPort,
@@ -169,12 +177,11 @@ nodeRuntime.launch = async ({
       remap,
     }
 
-    let executionResult =
-      await controllableNodeProcess.requestActionOnChildProcess({
-        abortSignal,
-        actionType: "execute-using-dynamic-import-fallback-on-systemjs",
-        actionParams: executeParams,
-      })
+    let executionResult = await requestActionOnChildProcess({
+      abortSignal,
+      actionType: "execute-using-dynamic-import-fallback-on-systemjs",
+      actionParams: executeParams,
+    })
 
     executionResult = transformExecutionResult(executionResult, {
       compileServerOrigin,
@@ -185,13 +192,17 @@ nodeRuntime.launch = async ({
   }
 
   return {
-    ...controllableNodeProcess,
     options: {
-      execArgv: controllableNodeProcess.execArgv,
+      execArgv,
       // for now do not pass env, it make debug logs to verbose
       // because process.env is very big
       // env,
     },
+    stoppedSignal,
+    errorSignal,
+    outputSignal,
+    gracefulStop,
+    stop,
     execute,
     finalizeExecutionResult,
   }
