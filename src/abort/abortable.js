@@ -1,12 +1,11 @@
 /*
-TODO: rename just Abortable
-and favor something like const buildProjectAbortable = Abortable.start()
+ *
  */
 
 import { createCleaner } from "./cleaner.js"
 import { raceCallbacks } from "./callback_race.js"
 
-export const AbortableOperation = {
+export const Abortable = {
   throwIfAborted: (operation) => {
     if (operation.signal.aborted) {
       const error = new Error(`The operation was aborted`)
@@ -28,8 +27,8 @@ export const AbortableOperation = {
   },
 
   fromSignal: (signal) => {
-    const operation = AbortableOperation.start()
-    AbortableOperation.followSignal(operation, signal)
+    const operation = Abortable.start()
+    Abortable.followSignal(operation, signal)
     return operation
   },
 
@@ -80,12 +79,12 @@ export const AbortableOperation = {
 
   effect: (operation, effect) => {
     const abortController = new AbortController()
-    const returnValue = effect(abortController.abort)
+    const returnValue = effect((value) => abortController.abort(value))
     const cleanup =
       typeof returnValue === "function" ? returnValue : cleanupNoop
     const signal = abortController.signal
 
-    AbortableOperation.followSignal(operation, signal, cleanup)
+    Abortable.followSignal(operation, signal, cleanup)
     return {
       signal,
       cleanup,
@@ -93,7 +92,7 @@ export const AbortableOperation = {
   },
 
   timeout: (operation, ms) => {
-    return AbortableOperation.effect(operation, (abort) => {
+    return Abortable.effect(operation, (abort) => {
       const timeoutId = setTimeout(abort, ms)
       return () => {
         clearTimeout(timeoutId)

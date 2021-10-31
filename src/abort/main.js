@@ -26,7 +26,7 @@
  *
  */
 
-export { AbortableOperation } from "./abortable_operation.js"
+export { Abortable } from "./abortable.js"
 
 // when will be a package this should be a Node.js export only
 export { raceProcessTeardownEvents } from "./process_teardown_events.js"

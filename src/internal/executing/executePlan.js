@@ -1,5 +1,5 @@
 import {
-  AbortableOperation,
+  Abortable,
   raceProcessTeardownEvents,
 } from "@jsenv/core/src/abort/main.js"
 import { mergeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
@@ -74,9 +74,9 @@ export const executePlan = async (
     })
   })
 
-  const multipleExecutionsOperation = AbortableOperation.fromSignal(signal)
+  const multipleExecutionsOperation = Abortable.fromSignal(signal)
   if (handleSIGINT) {
-    AbortableOperation.effect(multipleExecutionsOperation, (cb) =>
+    Abortable.effect(multipleExecutionsOperation, (cb) =>
       raceProcessTeardownEvents(
         {
           SIGINT: true,

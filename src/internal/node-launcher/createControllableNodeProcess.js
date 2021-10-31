@@ -7,7 +7,7 @@ import {
   assertFilePresence,
 } from "@jsenv/filesystem"
 
-import { AbortableOperation } from "@jsenv/core/src/abort/main.js"
+import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { raceCallbacks } from "@jsenv/core/src/abort/callback_race.js"
 import { createSignal } from "@jsenv/core/src/signal/signal.js"
 import { nodeSupportsDynamicImport } from "../runtime/node-feature-detect/nodeSupportsDynamicImport.js"
@@ -241,10 +241,10 @@ export const createControllableNodeProcess = async ({
     actionType,
     actionParams,
   }) => {
-    const actionAbortable = AbortableOperation.fromSignal(signal)
+    const actionAbortable = Abortable.fromSignal(signal)
 
     return new Promise(async (resolve, reject) => {
-      AbortableOperation.throwIfAborted(actionAbortable)
+      Abortable.throwIfAborted(actionAbortable)
       await childProcessReadyPromise
 
       onceProcessMessage(childProcess, "action-result", ({ status, value }) => {
@@ -263,7 +263,7 @@ export const createControllableNodeProcess = async ({
       )
 
       try {
-        AbortableOperation.throwIfAborted(actionAbortable)
+        Abortable.throwIfAborted(actionAbortable)
         await sendToProcess(childProcess, "action", {
           actionType,
           actionParams,

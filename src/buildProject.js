@@ -2,7 +2,7 @@ import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 
 import {
-  AbortableOperation,
+  Abortable,
   raceProcessTeardownEvents,
 } from "@jsenv/core/src/abort/main.js"
 import { COMPILE_ID_BEST } from "./internal/CONSTANTS.js"
@@ -136,9 +136,9 @@ export const buildProject = async ({
     projectDirectoryUrl,
   })
 
-  const buildOperation = AbortableOperation.fromSignal(signal)
+  const buildOperation = Abortable.fromSignal(signal)
   if (handleSIGINT) {
-    AbortableOperation.effect(buildOperation, (cb) =>
+    Abortable.effect(buildOperation, (cb) =>
       raceProcessTeardownEvents(
         {
           SIGINT: true,
@@ -149,7 +149,7 @@ export const buildProject = async ({
   }
 
   const compileServer = await startCompileServer({
-    signal: AbortableOperation.signal,
+    signal: Abortable.signal,
     compileServerLogLevel,
 
     projectDirectoryUrl,

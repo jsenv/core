@@ -1,6 +1,6 @@
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 
-import { AbortableOperation } from "@jsenv/core/src/abort/main.js"
+import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { raceCallbacks } from "../../abort/callback_race.js"
 import { composeIstanbulCoverages } from "./coverage/composeIstanbulCoverages.js"
 
@@ -60,14 +60,14 @@ export const launchAndExecute = async ({
 
   let executionResultTransformer = (executionResult) => executionResult
 
-  const launchAndExecuteOperation = AbortableOperation.fromSignal(signal)
+  const launchAndExecuteOperation = Abortable.fromSignal(signal)
 
   const hasAllocatedMs =
     typeof allocatedMs === "number" && allocatedMs !== Infinity
   let timeoutAbortEffect
 
   if (hasAllocatedMs) {
-    timeoutAbortEffect = AbortableOperation.timeout(
+    timeoutAbortEffect = Abortable.timeout(
       launchAndExecuteOperation,
       // FIXME: if allocatedMs is veryyyyyy big
       // setTimeout may be called immediatly
@@ -230,7 +230,7 @@ export const launchAndExecute = async ({
     const runtimeLabel = `${runtime.name}/${runtime.version}`
     logger.debug(`launch ${runtimeLabel} to execute something in it`)
 
-    AbortableOperation.throwIfAborted(launchAndExecuteOperation)
+    Abortable.throwIfAborted(launchAndExecuteOperation)
     const launchReturnValue = await runtime.launch({
       signal: launchAndExecuteOperation.signal,
       logger,
@@ -301,12 +301,12 @@ export const launchAndExecute = async ({
       )
     })
 
-    AbortableOperation.throwIfAborted(launchAndExecuteOperation)
+    Abortable.throwIfAborted(launchAndExecuteOperation)
 
     const winner = await winnerPromise
 
     if (winner.name === "aborted") {
-      AbortableOperation.throwIfAborted(launchAndExecuteOperation)
+      Abortable.throwIfAborted(launchAndExecuteOperation)
     }
 
     if (winner.name === "error") {

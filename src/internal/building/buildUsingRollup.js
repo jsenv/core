@@ -8,7 +8,7 @@ import {
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { AbortableOperation } from "@jsenv/core/src/abort/main.js"
+import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 import { humanizeUrl } from "@jsenv/core/src/internal/building/url_trace.js"
 import {
@@ -272,7 +272,7 @@ const useRollup = async ({
   buildDirectoryUrl,
   asOriginalUrl,
 }) => {
-  AbortableOperation.throwIfAborted(buildOperation)
+  Abortable.throwIfAborted(buildOperation)
   const { rollup } = await import("rollup")
   const { importAssertions } = await import("acorn-import-assertions")
 
@@ -350,10 +350,10 @@ const useRollup = async ({
       : {}),
   }
 
-  AbortableOperation.throwIfAborted(buildOperation)
+  Abortable.throwIfAborted(buildOperation)
   const rollupReturnValue = await rollup(rollupInputOptions)
 
-  AbortableOperation.throwIfAborted(buildOperation)
+  Abortable.throwIfAborted(buildOperation)
   const rollupOutputArray = await rollupReturnValue.generate(
     rollupOutputOptions,
   )

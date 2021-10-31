@@ -5,7 +5,7 @@ import {
 } from "@jsenv/filesystem"
 
 import {
-  AbortableOperation,
+  Abortable,
   raceProcessTeardownEvents,
 } from "@jsenv/core/src/abort/main.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
@@ -60,9 +60,9 @@ export const startExploring = async ({
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  const exploringServerOperation = AbortableOperation.fromSignal(signal)
+  const exploringServerOperation = Abortable.fromSignal(signal)
   if (handleSIGINT) {
-    AbortableOperation.effect(exploringServerOperation, (cb) =>
+    Abortable.effect(exploringServerOperation, (cb) =>
       raceProcessTeardownEvents(
         {
           SIGINT: true,

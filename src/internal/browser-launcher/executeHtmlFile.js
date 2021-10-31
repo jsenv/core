@@ -5,7 +5,7 @@ import {
   urlToExtension,
 } from "@jsenv/filesystem"
 
-import { AbortableOperation } from "@jsenv/core/src/abort/main.js"
+import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { v8CoverageFromAllV8Coverages } from "@jsenv/core/src/internal/executing/coverage/v8CoverageFromAllV8Coverages.js"
 import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
@@ -46,13 +46,13 @@ export const executeHtmlFile = async (
     compileProxyProjectRelativeUrl,
     compileServerOrigin,
   )
-  AbortableOperation.throwIfAborted(launchBrowserOperation)
+  Abortable.throwIfAborted(launchBrowserOperation)
   await page.goto(compileProxyClientUrl)
 
   const coverageHandledFromOutside =
     coveragePlaywrightAPIAvailable && !coverageForceIstanbul
 
-  AbortableOperation.throwIfAborted(launchBrowserOperation)
+  Abortable.throwIfAborted(launchBrowserOperation)
   const browserRuntimeFeaturesReport = await page.evaluate(
     /* istanbul ignore next */
     ({ coverageHandledFromOutside }) => {
@@ -68,7 +68,7 @@ export const executeHtmlFile = async (
   try {
     let executionResult
     const { canAvoidCompilation, compileId } = browserRuntimeFeaturesReport
-    AbortableOperation.throwIfAborted(launchBrowserOperation)
+    Abortable.throwIfAborted(launchBrowserOperation)
     if (canAvoidCompilation) {
       executionResult = await executeSource({
         projectDirectoryUrl,
@@ -123,7 +123,7 @@ export const executeHtmlFile = async (
     // before it is able to finish evaluate we can safely ignore
     // and rethrow with current abort error
     if (launchBrowserOperation.signal.aborted && isBrowserClosedError(error)) {
-      AbortableOperation.throwIfAborted(launchBrowserOperation)
+      Abortable.throwIfAborted(launchBrowserOperation)
     }
     throw error
   }

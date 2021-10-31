@@ -24,7 +24,7 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { AbortableOperation } from "@jsenv/core/src/abort/main.js"
+import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
@@ -215,7 +215,7 @@ export const startCompileServer = async ({
     ...babelPluginMap,
   }
 
-  const compileServerOperation = AbortableOperation.fromSignal(signal)
+  const compileServerOperation = Abortable.fromSignal(signal)
 
   let projectFileRequestedCallback = () => {}
   if (livereloadSSE) {

@@ -3,7 +3,7 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
 import {
-  AbortableOperation,
+  Abortable,
   raceProcessTeardownEvents,
 } from "@jsenv/core/src/abort/main.js"
 import { createSignal } from "@jsenv/core/src/signal/signal.js"
@@ -45,7 +45,7 @@ chromiumRuntime.launch = async ({
   stopOnExit = true,
   share = false,
 }) => {
-  const launchBrowserOperation = AbortableOperation.fromSignal(signal)
+  const launchBrowserOperation = Abortable.fromSignal(signal)
   const sharingToken = share
     ? chromiumSharing.getSharingToken({
         chromiumExecutablePath,
@@ -56,7 +56,7 @@ chromiumRuntime.launch = async ({
     : chromiumSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
-    AbortableOperation.throwIfAborted(launchBrowserOperation)
+    Abortable.throwIfAborted(launchBrowserOperation)
     const { chromium } = await import("playwright")
     const launchOperation = launchBrowser("chromium", {
       browserClass: chromium,
@@ -158,13 +158,13 @@ firefoxRuntime.launch = async ({
   stopOnExit = true,
   share = false,
 }) => {
-  const launchBrowserOperation = AbortableOperation.fromSignal(signal)
+  const launchBrowserOperation = Abortable.fromSignal(signal)
   const sharingToken = share
     ? firefoxSharing.getSharingToken({ firefoxExecutablePath, headless })
     : firefoxSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
-    AbortableOperation.throwIfAborted(launchBrowserOperation)
+    Abortable.throwIfAborted(launchBrowserOperation)
     const { firefox } = await import("playwright")
     const launchOperation = launchBrowser("firefox", {
       browserClass: firefox,
@@ -237,13 +237,13 @@ webkitRuntime.launch = async ({
   stopOnExit = true,
   share = false,
 }) => {
-  const launchBrowserOperation = AbortableOperation.fromSignal(signal)
+  const launchBrowserOperation = Abortable.fromSignal(signal)
   const sharingToken = share
     ? webkitSharing.getSharingToken({ webkitExecutablePath, headless })
     : webkitSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
-    AbortableOperation.throwIfAborted(launchBrowserOperation)
+    Abortable.throwIfAborted(launchBrowserOperation)
     const { webkit } = await import("playwright")
     const launchOperation = launchBrowser("webkit", {
       browserClass: webkit,
@@ -296,7 +296,7 @@ const launchBrowser = async (
   { launchBrowserOperation, browserClass, options, stopOnExit },
 ) => {
   if (stopOnExit) {
-    AbortableOperation.effect(launchBrowserOperation, (cb) =>
+    Abortable.effect(launchBrowserOperation, (cb) =>
       raceProcessTeardownEvents(
         {
           SIGHUP: true,
@@ -324,7 +324,7 @@ const launchBrowser = async (
     })
     if (launchBrowserOperation.signal.aborted) {
       await launchBrowserOperation.cleaner.clean()
-      AbortableOperation.throwIfAborted(launchBrowserOperation)
+      Abortable.throwIfAborted(launchBrowserOperation)
     }
     return browser
   } catch (e) {
@@ -384,11 +384,11 @@ const browserToRuntimeHooks = (
     fileRelativeUrl,
     ignoreHTTPSErrors = true, // we mostly use self signed certificates during tests
   }) => {
-    const executeOperation = AbortableOperation.fromSignal(signal)
-    AbortableOperation.throwIfAborted(executeOperation)
+    const executeOperation = Abortable.fromSignal(signal)
+    Abortable.throwIfAborted(executeOperation)
     // open a tab to execute to the file
     const browserContext = await browser.newContext({ ignoreHTTPSErrors })
-    AbortableOperation.throwIfAborted(executeOperation)
+    Abortable.throwIfAborted(executeOperation)
     const page = await browserContext.newPage()
     launchBrowserOperation.cleaner.addCallback(async () => {
       try {
