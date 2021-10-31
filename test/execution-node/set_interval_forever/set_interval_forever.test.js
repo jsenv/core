@@ -11,19 +11,19 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}process-stay-alive-execute-node.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}set_interval_forever.js`
 const test = async (params) => {
   let nodeRuntimeHooks
   const result = await execute({
     ...EXECUTE_TEST_PARAMS,
-    // executionLogLevel: "debug",
+    // launchAndExecuteLogLevel: "debug",
     jsenvDirectoryRelativeUrl,
     runtime: {
       ...nodeRuntime,
       launch: async (params) => {
         nodeRuntimeHooks = await nodeRuntime.launch({
           ...params,
-          debugPort: 40001,
+          // debugPort: 40001,
         })
         return nodeRuntimeHooks
       },
@@ -56,7 +56,9 @@ const test = async (params) => {
     // to ensure the child process is still alive let's wait enought
     // and check for disconnected promise, disconnected must still be pending
     const actual = await Promise.race([
-      nodeRuntimeHooks.disconnected,
+      new Promise((resolve) =>
+        nodeRuntimeHooks.stoppedSignal.addCallback(() => resolve("stopped")),
+      ),
       new Promise((resolve) => {
         setTimeout(() => resolve("timeout"), 2000)
       }),
@@ -84,12 +86,15 @@ const test = async (params) => {
 
   {
     const actual = await Promise.race([
-      nodeRuntimeHooks.disconnected.then(() => "disconnected"),
+      new Promise((resolve) => {
+        if (nodeRuntimeHooks.stoppedSignal.emitted) resolve("stopped")
+        nodeRuntimeHooks.stoppedSignal.addCallback(() => resolve("stopped"))
+      }),
       new Promise((resolve) => {
         setTimeout(() => resolve("timeout"), 2000)
       }),
     ])
-    const expected = "disconnected"
+    const expected = "stopped"
     assert({ actual, expected })
   }
 }

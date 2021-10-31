@@ -81,7 +81,10 @@ export const executePlan = async (
         {
           SIGINT: true,
         },
-        cb,
+        () => {
+          logger.info("Aborting execution (SIGINT)")
+          cb()
+        },
       ),
     )
   }

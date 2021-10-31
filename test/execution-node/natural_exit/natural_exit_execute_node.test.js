@@ -38,13 +38,16 @@ let nodeRuntimeHooks
   }
   assert({ actual, expected })
 }
+
 {
   const actual = await Promise.race([
-    nodeRuntimeHooks.disconnected.then(() => "disconnected"),
+    new Promise((resolve) => {
+      nodeRuntimeHooks.stoppedSignal.addCallback(() => resolve("stopped"))
+    }),
     new Promise((resolve) => {
       setTimeout(() => resolve("timeout"), 5000)
     }),
   ])
-  const expected = "disconnected"
+  const expected = "stopped"
   assert({ actual, expected })
 }

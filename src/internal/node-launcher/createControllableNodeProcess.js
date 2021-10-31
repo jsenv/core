@@ -176,7 +176,7 @@ export const createControllableNodeProcess = async ({
     },
   )
 
-  const stop = async ({ gracefulStopAllocatedMs }) => {
+  const stop = async ({ gracefulStopAllocatedMs } = {}) => {
     if (stoppedSignal.emitted) {
       return {}
     }

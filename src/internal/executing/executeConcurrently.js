@@ -189,11 +189,17 @@ export const executeConcurrently = async (
     },
   })
 
+  const summaryCounts = reportToSummary(report)
+
   const summary = {
     executionCount,
-    ...reportToSummary(report),
+    ...summaryCounts,
     // when execution is aborted, the remaining executions are "cancelled"
-    cancelledCount: executionCount - executionsDone.length,
+    cancelledCount:
+      executionCount -
+      executionsDone.length -
+      // we substract abortedCount because they are not pushed into executionsDone
+      summaryCounts.abortedCount,
     ...(measureGlobalDuration ? { startMs, endMs: Date.now() } : {}),
   }
   if (logSummary) {
