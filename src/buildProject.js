@@ -1,7 +1,10 @@
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 
-import { createOperation } from "@jsenv/core/src/abort/main.js"
+import {
+  createOperation,
+  abortOperationOnProcessTeardown,
+} from "@jsenv/core/src/abort/main.js"
 import { COMPILE_ID_BEST } from "./internal/CONSTANTS.js"
 import {
   assertProjectDirectoryUrl,
@@ -135,8 +138,12 @@ export const buildProject = async ({
 
   const buildOperation = createOperation({
     abortSignal,
-    handleSIGINT,
   })
+  if (handleSIGINT) {
+    abortOperationOnProcessTeardown(buildOperation, {
+      SIGINT: true,
+    })
+  }
 
   const compileServer = await startCompileServer({
     abortSignal,

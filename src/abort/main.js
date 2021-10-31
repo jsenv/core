@@ -30,7 +30,5 @@ export { Abort } from "./abort.js"
 export { createCleaner } from "./cleaner.js"
 
 // When these file will become a NPM package, this export should be Node.js only
-export {
-  createOperation,
-  addProcessTeardownInOperationAbortSignal,
-} from "./operation.js"
+export { createOperation } from "./operation.js"
+export { abortOperationOnProcessTeardown } from "./process_teardown_abort.js"

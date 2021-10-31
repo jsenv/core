@@ -1,4 +1,7 @@
-import { createOperation } from "@jsenv/core/src/abort/main.js"
+import {
+  createOperation,
+  abortOperationOnProcessTeardown,
+} from "@jsenv/core/src/abort/main.js"
 import { mergeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
 import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
@@ -73,8 +76,12 @@ export const executePlan = async (
 
   const multipleExecutionsOperation = createOperation({
     abortSignal,
-    handleSIGINT,
   })
+  if (handleSIGINT) {
+    abortOperationOnProcessTeardown(multipleExecutionsOperation, {
+      SIGINT: true,
+    })
+  }
 
   const compileServer = await startCompileServer({
     abortSignal: multipleExecutionsOperation.abortSignal,

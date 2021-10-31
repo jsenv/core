@@ -4,7 +4,10 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
-import { createOperation } from "@jsenv/core/src/abort/main.js"
+import {
+  createOperation,
+  abortOperationOnProcessTeardown,
+} from "@jsenv/core/src/abort/main.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import {
   assertProjectDirectoryUrl,
@@ -59,8 +62,12 @@ export const startExploring = async ({
 
   const exploringServerOperation = createOperation({
     abortSignal,
-    handleSIGINT,
   })
+  if (handleSIGINT) {
+    abortOperationOnProcessTeardown(exploringServerOperation, {
+      SIGINT: true,
+    })
+  }
 
   const outDirectoryRelativeUrl = computeOutDirectoryRelativeUrl({
     projectDirectoryUrl,

@@ -1,4 +1,7 @@
-import { createOperation } from "@jsenv/core/src/abort/main.js"
+import {
+  createOperation,
+  abortOperationOnProcessTeardown,
+} from "@jsenv/core/src/abort/main.js"
 import { normalizeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import {
   assertProjectDirectoryUrl,
@@ -78,8 +81,12 @@ export const execute = async ({
 
   const executeOperation = createOperation({
     abortSignal,
-    handleSIGINT,
   })
+  if (handleSIGINT) {
+    abortOperationOnProcessTeardown(executeOperation, {
+      SIGINT: true,
+    })
+  }
 
   const {
     outDirectoryRelativeUrl,

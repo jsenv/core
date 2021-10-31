@@ -5,7 +5,7 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import {
   createOperation,
-  addProcessTeardownInOperationAbortSignal,
+  abortOperationOnProcessTeardown,
   Abort,
 } from "@jsenv/core/src/abort/main.js"
 import { fetchUrl } from "./internal/fetchUrl.js"
@@ -295,7 +295,7 @@ const launchBrowser = async (
   { launchBrowserOperation, browserClass, options, stopOnExit },
 ) => {
   if (stopOnExit) {
-    addProcessTeardownInOperationAbortSignal(launchBrowserOperation, {
+    abortOperationOnProcessTeardown(launchBrowserOperation, {
       SIGHUP: true,
       SIGTERM: true,
       SIGINT: true,
