@@ -19,6 +19,12 @@ await executeTestPlan({
         allocatedMs: 60 * 1000,
       },
     },
+    "test/execute/**/*.test.js": {
+      node: {
+        runtime: nodeRuntime,
+        allocatedMs: 60 * 1000,
+      },
+    },
     "test/test_plan/**/*.test.js": {
       node: {
         runtime: nodeRuntime,
