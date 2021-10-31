@@ -142,7 +142,7 @@ const removeActionRequestListener = onceProcessMessage(
 
     // removeActionRequestListener()
     if (actionParams.exitAfterAction) {
-      removeActionRequestListener()
+      // removeActionRequestListener()
       // for some reason this fixes v8 coverage directory sometimes empty on Ubuntu
       process.exit()
     }
@@ -153,6 +153,6 @@ const removeActionRequestListener = onceProcessMessage(
 // which is sufficient to let child process die
 // assuming nothing else keeps it alive
 // process.once("SIGTERM", removeActionRequestListener)
-process.once("SIGINT", removeActionRequestListener)
+// process.once("SIGINT", removeActionRequestListener)
 
 setTimeout(() => sendToParent("ready"))
