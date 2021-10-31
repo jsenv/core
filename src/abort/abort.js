@@ -6,10 +6,6 @@ if (typeof global.AbortController !== "function") {
 }
 
 export const Abort = {
-  dormantSignal: () => {
-    return dormantSignal
-  },
-
   throwIfAborted: (abortSignal) => {
     if (abortSignal.aborted) {
       const error = new Error(`The operation was aborted.`)
@@ -41,6 +37,3 @@ export const Abort = {
     return abortController.signal
   },
 }
-
-const dormantAbortController = new AbortController()
-const dormantSignal = dormantAbortController.signal

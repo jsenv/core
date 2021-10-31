@@ -1,7 +1,6 @@
 import { findFreePort } from "@jsenv/server"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { Abort } from "@jsenv/core/src/abort/main.js"
 import { processOptionsFromExecArgv } from "./processOptions.js"
 
 const AVAILABLE_DEBUG_MODE = [
@@ -14,7 +13,7 @@ const AVAILABLE_DEBUG_MODE = [
 ]
 
 export const createChildProcessOptions = async ({
-  abortSignal = Abort.dormantSignal(),
+  abortSignal = new AbortController().signal,
   // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
   processExecArgv = process.execArgv,
   processDebugPort = process.debugPort,

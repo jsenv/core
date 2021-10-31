@@ -1,9 +1,8 @@
-import { Abort } from "./abort.js"
 import { raceCallbacks } from "./callback_race.js"
 import { createCleaner } from "./cleaner.js"
 
 export const createOperation = ({
-  abortSignal = Abort.dormantSignal(),
+  abortSignal = new AbortController().signal,
   cleanOnAbort = false,
 } = {}) => {
   const cleaner = createCleaner()

@@ -40,7 +40,7 @@ const STOP_SIGNAL = "SIGKILL"
 const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL"
 
 export const createControllableNodeProcess = async ({
-  abortSignal = Abort.dormantSignal(),
+  abortSignal = new AbortController().signal,
   logLevel,
   debugPort,
   debugMode,
