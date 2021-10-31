@@ -563,6 +563,9 @@
       "cssnano/*": [
         "./node_modules/cssnano/*"
       ],
+      "pidtree/*": [
+        "./node_modules/pidtree/*"
+      ],
       "prettier": [
         "./node_modules/prettier/index.js"
       ],
@@ -580,6 +583,9 @@
       ],
       "parse5/*": [
         "./node_modules/parse5/*"
+      ],
+      "pidtree": [
+        "./node_modules/pidtree/index.js"
       ],
       "postcss": [
         "./node_modules/postcss/lib/postcss.mjs"

@@ -12,12 +12,12 @@ import { raceCallbacks } from "@jsenv/core/src/abort/callback_race.js"
 import { createSignal } from "@jsenv/core/src/signal/signal.js"
 import { nodeSupportsDynamicImport } from "../runtime/node-feature-detect/nodeSupportsDynamicImport.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { require } from "../require.js"
 import { createChildProcessOptions } from "./createChildProcessOptions.js"
 import {
   processOptionsFromExecArgv,
   execArgvFromProcessOptions,
 } from "./processOptions.js"
+import { killProcessTree } from "./kill_process_tree.js"
 
 const nodeControllableFileUrl = resolveUrl(
   "./src/internal/node-launcher/nodeControllableFile.mjs",
@@ -126,17 +126,11 @@ export const createControllableNodeProcess = async ({
   )
 
   const errorSignal = createSignal()
-  let killing = false
   const removeErrorListener = installProcessErrorListener(
     childProcess,
     (error) => {
       removeOutputListener()
       if (!childProcess.connected && error.code === "ERR_IPC_DISCONNECTED") {
-        return
-      }
-      // on windows killProcessTree uses taskkill which seems to kill the process
-      // with an exitCode of 1
-      if (process.platform === "win32" && killing && error.exitCode === 1) {
         return
       }
       errorSignal.transmit(error)
@@ -150,7 +144,7 @@ export const createControllableNodeProcess = async ({
   const stoppedSignal = createSignal({
     once: true,
   })
-  const cleanupStoppedRace = raceCallbacks(
+  raceCallbacks(
     {
       disconnect: (cb) => {
         return onceProcessEvent(childProcess, "disconnect", cb)
@@ -181,49 +175,6 @@ export const createControllableNodeProcess = async ({
       return {}
     }
 
-    const killChildProcess = (signalToSend, { onError, onComplete }) => {
-      killing = true
-      logger.debug(
-        `send ${signalToSend} to child process with pid ${childProcess.pid}`,
-      )
-
-      // see also https://github.com/sindresorhus/execa/issues/96
-      const killProcessTree = require("tree-kill")
-      killProcessTree(childProcess.pid, signalToSend, async (error) => {
-        if (!error) {
-          onComplete()
-          return
-        }
-
-        if (isChildProcessAlreadyKilledError(error, { childProcess })) {
-          onComplete()
-          return
-        }
-
-        logger.error(
-          `error while trying to kill process ${childProcess.pid} with ${signalToSend}`,
-        )
-
-        // let's try to see if process will exit on its own
-        const value = await Promise.race([
-          createStoppedPromise(),
-          new Promise((resolve) => setTimeout(() => resolve("timeout"), 1000)),
-        ])
-        if (value !== "timeout") {
-          // process could not be termindated but exited by itself
-          // There was an error but in the end things are as we wanted (child process is dead)
-          // so we keep going
-          onComplete()
-          return
-        }
-
-        // in case the child process did not disconnect at this point
-        // something is keeping it alive and it cannot be propely killed
-        cleanupStoppedRace()
-        onError(error)
-      })
-    }
-
     const createStoppedPromise = async () => {
       if (stoppedSignal.emitted) {
         return
@@ -232,53 +183,29 @@ export const createControllableNodeProcess = async ({
     }
 
     if (gracefulStopAllocatedMs) {
-      let timeoutReached = false
-      await new Promise((resolve, reject) => {
-        let timeout = setTimeout(() => {
-          timeoutReached = true
-          resolve()
-        }, gracefulStopAllocatedMs)
-
-        killChildProcess(GRACEFUL_STOP_SIGNAL, {
-          onError: (error) => {
-            if (!timeoutReached) {
-              clearTimeout(timeout)
-              reject(error)
-            }
-          },
-          onComplete: () => {
-            if (!timeoutReached) {
-              clearTimeout(timeout)
-              resolve()
-            }
-          },
+      try {
+        await killProcessTree(childProcess.pid, {
+          signal: GRACEFUL_STOP_SIGNAL,
+          timeout: gracefulStopAllocatedMs,
         })
-      })
-
-      if (!timeoutReached) {
         await createStoppedPromise()
         return { graceful: true }
+      } catch (e) {
+        if (e.code === "TIMEOUT") {
+          logger.debug(
+            `kill with SIGTERM because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
+          )
+          await killProcessTree(childProcess.pid, {
+            signal: GRACEFUL_STOP_FAILED_SIGNAL,
+          })
+          await createStoppedPromise()
+          return { graceful: false }
+        }
+        throw e
       }
-
-      logger.debug(
-        `kill with SIGTERM because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
-      )
-      await new Promise((resolve, reject) => {
-        killChildProcess(GRACEFUL_STOP_FAILED_SIGNAL, {
-          onError: reject,
-          onComplete: resolve,
-        })
-      })
-      await createStoppedPromise()
-      return { graceful: false }
     }
 
-    await new Promise((resolve, reject) => {
-      killChildProcess(STOP_SIGNAL, {
-        onError: reject,
-        onComplete: resolve,
-      })
-    })
+    await killProcessTree(childProcess.pid, { signal: STOP_SIGNAL })
     await createStoppedPromise()
     return { graceful: false }
   }
@@ -432,25 +359,4 @@ const onceProcessEvent = (childProcess, type, callback) => {
   return () => {
     childProcess.removeListener(type, callback)
   }
-}
-
-const isChildProcessAlreadyKilledError = (error, { childProcess }) => {
-  // on windows: process with pid cannot be found
-  if (error.stack.includes(`The process "${childProcess.pid}" not found`)) {
-    return true
-  }
-
-  // on windows: child process with a pid cannot be found
-  if (
-    error.stack.includes("Reason: There is no running instance of the task")
-  ) {
-    return true
-  }
-
-  // windows too
-  if (error.stack.includes("The operation attempted is not supported")) {
-    return true
-  }
-
-  return false
 }
