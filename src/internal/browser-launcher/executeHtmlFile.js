@@ -118,18 +118,30 @@ export const executeHtmlFile = async (
     }
 
     return executionResult
-  } catch (e) {
+  } catch (error) {
     // if browser is closed due to abort
     // before it is able to finish evaluate we can safely ignore
     // and rethrow with current abort error
     if (
-      e.message.match(/^Protocol error \(.*?\): Target closed/) &&
-      launchBrowserOperation.abortSignal.aborted
+      launchBrowserOperation.abortSignal.aborted &&
+      isBrowserClosedError(error)
     ) {
       Abort.throwIfAborted(launchBrowserOperation.abortSignal)
     }
-    throw e
+    throw error
   }
+}
+
+const isBrowserClosedError = (error) => {
+  if (error.message.match(/browserContext.newPage: Browser closed/)) {
+    return true
+  }
+
+  if (error.message.match(/^Protocol error \(.*?\): Target closed/)) {
+    return true
+  }
+
+  return false
 }
 
 const executeSource = async ({

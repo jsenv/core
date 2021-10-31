@@ -1,4 +1,3 @@
-/* eslint-disable import/max-dependencies */
 // https://github.com/microsoft/playwright/blob/master/docs/api.md
 
 import { createDetailedMessage } from "@jsenv/logger"
