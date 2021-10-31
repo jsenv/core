@@ -189,7 +189,7 @@ export const createControllableNodeProcess = async ({
 
       // see also https://github.com/sindresorhus/execa/issues/96
       const killProcessTree = require("tree-kill")
-      killProcessTree(childProcess.pid, signalToSend, (error) => {
+      killProcessTree(childProcess.pid, signalToSend, async (error) => {
         if (!error) {
           onComplete()
           return
@@ -200,19 +200,27 @@ export const createControllableNodeProcess = async ({
           return
         }
 
+        logger.error(
+          `error while trying to kill process ${childProcess.pid} with ${signalToSend}`,
+        )
+
+        // let's try to see if process will exit on its own
+        const value = await Promise.race([
+          createStoppedPromise(),
+          new Promise((resolve) => setTimeout(() => resolve("timeout"), 1000)),
+        ])
+        if (value !== "timeout") {
+          // process could not be termindated but exited by itself
+          // There was an error but in the end things are as we wanted (child process is dead)
+          // so we keep going
+          onComplete()
+          return
+        }
+
         // in case the child process did not disconnect at this point
         // something is keeping it alive and it cannot be propely killed
         cleanupStoppedRace()
-        const killError = new Error(
-          createDetailedMessage(
-            `error while killing process ${childProcess.pid} tree with ${signalToSend}`,
-            {
-              ["error stack"]: error.stack,
-            },
-          ),
-          { cause: error },
-        )
-        onError(killError)
+        onError(error)
       })
     }
 
