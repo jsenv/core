@@ -4,7 +4,7 @@
 
 import { createCleaner } from "./cleaner.js"
 import { raceCallbacks } from "./callback_race.js"
-import { createSignal } from "./signal.js"
+import { createCallbackList } from "./callback_list.js"
 
 export const Abortable = {
   throwIfAborted: (operation) => {
@@ -22,19 +22,31 @@ export const Abortable = {
 
   start: () => {
     const abortController = new AbortController()
-    const cleaner = createCleaner()
+    const abort = (value) => abortController.abort(value)
     const signal = abortController.signal
+    const cleaner = createCleaner()
 
-    // the abort Signal is used to ignore the max listeners warning from Node.js
-    // this warning is usefull but when followSignal is used
-    // we'll assume the signal will be correctly unfollowed later
-    const abortSignal = createSignal({ once: true })
-    signal.onabort = () => abortSignal.emit()
+    // abortCallbackList is used to ignore the max listeners warning from Node.js
+    // this warning is useful but becomes problematic when it's expected
+    // (a function doing 20 http call in parallel)
+    // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
+    // uses abortCallbackList to know when something is aborted
+    const abortCallbackList = createCallbackList()
+    signal.onabort = () => {
+      const callbacks = abortCallbackList.copy()
+      abortCallbackList.clear()
+      callbacks.forEach((callback) => {
+        callback()
+      })
+    }
+    cleaner.addCallback(() => {
+      abortCallbackList.clear()
+    })
 
     const operation = {
-      abort: (value) => abortController.abort(value),
+      abort,
       signal,
-      abortSignal,
+      abortCallbackList,
       cleaner,
     }
 
@@ -135,16 +147,16 @@ export const Abortable = {
     const abortController = new AbortController()
     const signal = abortController.signal
 
-    const removeParentAbortCallback = operation.abortSignal.addCallback(() => {
+    const removeOperationAbortCallback = operation.abortCallbackList.add(() => {
       abortController.abort()
     })
 
     try {
       const value = await asyncFunction(signal)
-      removeParentAbortCallback()
+      removeOperationAbortCallback()
       return value
     } catch (e) {
-      removeParentAbortCallback()
+      removeOperationAbortCallback()
       throw e
     }
   },

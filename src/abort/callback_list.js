@@ -1,9 +1,7 @@
-export const createSignal = ({ once = false } = {}) => {
+export const createCallbackList = () => {
   let callbacks = []
 
-  const signal = {}
-
-  const addCallback = (callback) => {
+  const add = (callback) => {
     if (typeof callback !== "function") {
       throw new Error(`callback must be a function, got ${callback}`)
     }
@@ -26,27 +24,28 @@ export const createSignal = ({ once = false } = {}) => {
     }
 
     return () => {
-      callbacks = arrayWithout(callbacks, callback)
+      remove(callback)
     }
   }
 
-  const emit = (value) => {
-    signal.emitted = true
-
-    const callbacksCopy = callbacks.slice()
-    if (once) {
-      callbacks.length = 0
-    }
-    callbacksCopy.forEach((callback) => {
-      callback(value)
-    })
+  const remove = (callback) => {
+    callbacks = arrayWithout(callbacks, callback)
   }
 
-  signal.emitted = false
-  signal.addCallback = addCallback
-  signal.emit = emit
+  const clear = () => {
+    callbacks = []
+  }
 
-  return signal
+  const copy = () => {
+    return callbacks.slice()
+  }
+
+  return {
+    add,
+    remove,
+    clear,
+    copy,
+  }
 }
 
 const arrayWithout = (array, item) => {
