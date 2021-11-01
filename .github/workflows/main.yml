@@ -52,10 +52,11 @@ jobs:
         run: npm run eslint-check
       - name: check tests
         run: npm run test-with-coverage
-      - name: upload coverage
-        run: node ./script/test/upload_coverage.mjs
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/coverage.json
+          verbose: true
 
   release:
     needs: [test]
