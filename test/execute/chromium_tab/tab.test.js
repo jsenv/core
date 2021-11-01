@@ -3,7 +3,10 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { execute, chromiumTabRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { EXECUTE_TEST_PARAMS, LAUNCH_TEST_PARAMS } from "../TEST_PARAMS.js"
+import {
+  EXECUTE_TEST_PARAMS,
+  LAUNCH_TEST_PARAMS,
+} from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(

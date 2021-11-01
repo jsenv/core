@@ -72,7 +72,7 @@ export const Abortable = {
     return raceCallbacks(
       {
         parent_abort: (cb) => {
-          return operation.abortSignal.addCallback(cb)
+          return operation.abortCallbackList.add(cb)
         },
         child_abort: (cb) => {
           return addEventListener(signal, "abort", cb)
