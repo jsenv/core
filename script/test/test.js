@@ -13,6 +13,12 @@ await executeTestPlan({
       },
     },
     // give more time to some tests
+    "test/coverage/**/*.test.js": {
+      node: {
+        runtime: nodeRuntime,
+        allocatedMs: 60 * 1000,
+      },
+    },
     "test/dev_server/**/*.test.js": {
       node: {
         runtime: nodeRuntime,
