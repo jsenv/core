@@ -137,9 +137,9 @@ const removeActionRequestListener = onceProcessMessage(
 
     if (process.env.NODE_V8_COVERAGE) {
       v8.takeCoverage()
-      if (actionParams.exitAfterAction) {
-        v8.stopCoverage()
-      }
+      // if (actionParams.stopCoverageAfterExecution) {
+      //   v8.stopCoverage()
+      // }
     }
 
     // setTimeout(() => {}, 100)
