@@ -52,13 +52,6 @@ jobs:
         run: npm run eslint-check
       - name: check tests
         run: npm run test-with-coverage
-      - uses: codecov/codecov-action@v2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: ./coverage
-          files: ./coverage.json
-          name: jsenv-coverage
-          verbose: true
 
   release:
     needs: [test]
