@@ -51,7 +51,7 @@ file: ${fileRelativeUrl}
 runtime: ${runtime}${appendDuration({
     startMs,
     endMs,
-  })}${appendConsole(consoleCalls)}${appendError(error, runtimeName)}`
+  })}${appendConsole(consoleCalls)}${appendError(error)}`
 }
 
 const descriptionFormatters = {
@@ -110,15 +110,9 @@ ${consoleOutputTrimmed}
 ${setANSIColor(`-------------------------`, ANSI_GREY)}`
 }
 
-const appendError = (error, runtimeName) => {
+const appendError = (error) => {
   if (!error) {
     return ``
-  }
-
-  if (runtimeName === "webkit") {
-    return `
-error: ${error.message}
-  at ${error.stack}`
   }
 
   return `
