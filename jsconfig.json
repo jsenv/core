@@ -545,17 +545,11 @@
       "source-map": [
         "./node_modules/source-map/source-map.js"
       ],
-      "tree-kill/*": [
-        "./node_modules/tree-kill/*"
-      ],
       "prettier/*": [
         "./node_modules/prettier/*"
       ],
       "react-dom": [
         "./node_modules/react-dom/index.js"
-      ],
-      "tree-kill": [
-        "./node_modules/tree-kill/index.js"
       ],
       "wrap-ansi": [
         "./node_modules/wrap-ansi/index.js"

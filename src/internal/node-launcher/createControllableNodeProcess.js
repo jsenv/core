@@ -176,6 +176,15 @@ export const createControllableNodeProcess = async ({
     }
 
     const createStoppedPromise = async () => {
+      try {
+        childProcess.disconnect()
+      } catch (e) {
+        if (e.code === "ERR_IPC_DISCONNECTED") {
+          return
+        }
+        throw e
+      }
+
       if (stoppedSignal.emitted) {
         return
       }
