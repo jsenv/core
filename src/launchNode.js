@@ -111,9 +111,6 @@ nodeRuntime.launch = async ({
             return executionResult.coverage
           }
 
-          // give Node.js more time to write the v8 coverage
-          await new Promise((resolve) => setTimeout(resolve, 50))
-
           const v8Coverage = await v8CoverageFromNodeV8Directory({
             projectDirectoryUrl,
             NODE_V8_COVERAGE,

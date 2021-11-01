@@ -1,3 +1,4 @@
+import v8 from "node:v8"
 import { uneval } from "@jsenv/uneval"
 
 import { jsenvNodeSystemFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
@@ -116,8 +117,7 @@ const onceProcessMessage = (type, callback) => {
   return removeListener
 }
 
-// const removeActionRequestListener = onceProcessMessage(
-onceProcessMessage(
+const removeActionRequestListener = onceProcessMessage(
   ACTION_REQUEST_EVENT_NAME,
   async ({ actionType, actionParams }) => {
     const action = ACTIONS_AVAILABLE[actionType]
@@ -135,6 +135,15 @@ onceProcessMessage(
       value = e
     }
 
+    if (process.env.NODE_V8_COVERAGE) {
+      v8.takeCoverage()
+      if (actionParams.exitAfterAction) {
+        v8.stopCoverage()
+      }
+    }
+
+    // setTimeout(() => {}, 100)
+
     if (failed) {
       sendActionFailed(value)
     } else {
@@ -143,9 +152,10 @@ onceProcessMessage(
 
     // removeActionRequestListener()
     if (actionParams.exitAfterAction) {
-      // removeActionRequestListener()
+      removeActionRequestListener()
+
       // for some reason this fixes v8 coverage directory sometimes empty on Ubuntu
-      process.exit()
+      // process.exit()
     }
   },
 )
