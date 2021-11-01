@@ -74,10 +74,12 @@ await launchBrowsers(
     const importedFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
     const actual = {
       status,
+      errorName: error.name,
       errorMessage: error.message,
     }
     const expected = {
       status: "errored",
+      errorName: "Error",
       errorMessage: `JavaScript module file cannot be found
 --- import declared in ---
 ${importerFileRelativeUrl}

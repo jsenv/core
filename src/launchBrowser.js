@@ -275,6 +275,11 @@ webkitRuntime.launch = async ({
     collectCoverage,
     coverageConfig,
     coverageForceIstanbul,
+    // we catch error during execution but safari throw unhandled rejection
+    // in a non-deterministic way.
+    // I suppose it's due to some race condition to decide if the promise is catched or not
+    // for now we'll ignore unhandled rejection on wekbkit
+    ignoreUnhandledRejections: true,
   })
 
   return {
@@ -369,6 +374,7 @@ const browserToRuntimeHooks = (
     coverageConfig,
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable = false,
+    ignoreUnhandledRejections,
   },
 ) => {
   const stoppedSignal = createSignal()
@@ -402,7 +408,15 @@ const browserToRuntimeHooks = (
     })
     // track tab error and console
     const stopTrackingToNotify = trackPageToNotify(page, {
-      onError: errorSignal.emit,
+      onError: (error) => {
+        if (
+          ignoreUnhandledRejections &&
+          error.name === "Unhandled Promise Rejection"
+        ) {
+          return
+        }
+        errorSignal.emit(error)
+      },
       onConsole: outputSignal.emit,
     })
     launchBrowserOperation.cleaner.addCallback(stopTrackingToNotify)

@@ -312,14 +312,7 @@ export const launchAndExecute = async ({
     if (winner.name === "error") {
       return executionResultTransformer(
         createErroredExecutionResult({
-          error: new Error(
-            createDetailedMessage(`runtime error during execution`, {
-              "error stack": winner.data.stack,
-            }),
-            {
-              cause: winner.data,
-            },
-          ),
+          error: winner.data,
         }),
       )
     }
