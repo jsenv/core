@@ -1,3 +1,10 @@
+/*
+ * The ability to let a runtime alive after execution is not documented
+ * and there is no use case for now.
+ * TODO: remove ability to keep a runtime alive after execution
+ * This test is disabled because it fail sometimes
+ */
+
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
