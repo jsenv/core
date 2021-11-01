@@ -1,8 +1,3 @@
-/* eslint-disable import/max-dependencies */
-import {
-  createCancellationToken,
-  composeCancellationToken,
-} from "@jsenv/cancellation"
 import {
   normalizeStructuredMetaMap,
   urlToFileSystemPath,
@@ -13,7 +8,6 @@ import {
 } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 
-import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
@@ -26,11 +20,11 @@ import { generateCoverageTextLog } from "./internal/executing/coverage/generateC
 import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 
 export const executeTestPlan = async ({
+  signal = new AbortController().signal,
+  handleSIGINT = true,
   logLevel = "info",
   compileServerLogLevel = "warn",
   launchAndExecuteLogLevel = "warn",
-  cancellationToken = createCancellationToken(),
-  cancelOnSIGINT = false,
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -40,7 +34,7 @@ export const executeTestPlan = async ({
   testPlan,
   defaultMsAllocatedPerExecution,
 
-  concurrencyLimit,
+  maxExecutionsInParallel,
 
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
@@ -80,117 +74,107 @@ export const executeTestPlan = async ({
   customCompilers,
   jsenvDirectoryClean,
 }) => {
-  const jsenvExecuteTestPlanFunction = async ({ jsenvCancellationToken }) => {
-    cancellationToken = composeCancellationToken(
-      cancellationToken,
-      jsenvCancellationToken,
-    )
+  const logger = createLogger({ logLevel })
 
-    const logger = createLogger({ logLevel })
+  projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
+  await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-    cancellationToken.register((cancelError) => {
-      if (cancelError.reason === "process SIGINT") {
-        logger.info(`process SIGINT -> cancelling test execution`)
-      }
-    })
+  if (typeof testPlan !== "object") {
+    throw new Error(`testPlan must be an object, got ${testPlan}`)
+  }
 
-    projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
-    await assertProjectDirectoryExists({ projectDirectoryUrl })
-
-    if (typeof testPlan !== "object") {
-      throw new Error(`testPlan must be an object, got ${testPlan}`)
+  if (coverage) {
+    if (typeof coverageConfig !== "object") {
+      throw new TypeError(
+        `coverageConfig must be an object, got ${coverageConfig}`,
+      )
     }
+    if (Object.keys(coverageConfig).length === 0) {
+      logger.warn(
+        `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
+      )
+    }
+    if (!coverageAndExecutionAllowed) {
+      const structuredMetaMapForExecute = normalizeStructuredMetaMap(
+        {
+          execute: testPlan,
+        },
+        "file:///",
+      )
+      const structuredMetaMapForCover = normalizeStructuredMetaMap(
+        {
+          cover: coverageConfig,
+        },
+        "file:///",
+      )
+      const patternsMatchingCoverAndExecute = Object.keys(
+        structuredMetaMapForExecute.execute,
+      ).filter((testPlanPattern) => {
+        return urlToMeta({
+          url: testPlanPattern,
+          structuredMetaMap: structuredMetaMapForCover,
+        }).cover
+      })
 
-    if (coverage) {
-      if (typeof coverageConfig !== "object") {
-        throw new TypeError(
-          `coverageConfig must be an object, got ${coverageConfig}`,
+      if (patternsMatchingCoverAndExecute.length) {
+        // I think it is an error, it would be strange, for a given file
+        // to be both covered and executed
+        throw new Error(
+          createDetailedMessage(`some file will be both covered and executed`, {
+            patterns: patternsMatchingCoverAndExecute,
+          }),
         )
-      }
-      if (Object.keys(coverageConfig).length === 0) {
-        logger.warn(
-          `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
-        )
-      }
-      if (!coverageAndExecutionAllowed) {
-        const structuredMetaMapForExecute = normalizeStructuredMetaMap(
-          {
-            execute: testPlan,
-          },
-          "file:///",
-        )
-        const structuredMetaMapForCover = normalizeStructuredMetaMap(
-          {
-            cover: coverageConfig,
-          },
-          "file:///",
-        )
-        const patternsMatchingCoverAndExecute = Object.keys(
-          structuredMetaMapForExecute.execute,
-        ).filter((testPlanPattern) => {
-          return urlToMeta({
-            url: testPlanPattern,
-            structuredMetaMap: structuredMetaMapForCover,
-          }).cover
-        })
-
-        if (patternsMatchingCoverAndExecute.length) {
-          // I think it is an error, it would be strange, for a given file
-          // to be both covered and executed
-          throw new Error(
-            createDetailedMessage(
-              `some file will be both covered and executed`,
-              {
-                patterns: patternsMatchingCoverAndExecute,
-              },
-            ),
-          )
-        }
       }
     }
+  }
 
-    const result = await executePlan(testPlan, {
-      logger,
-      compileServerLogLevel,
-      launchAndExecuteLogLevel,
-      cancellationToken,
+  const result = await executePlan(testPlan, {
+    signal,
+    handleSIGINT,
 
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
+    logger,
+    compileServerLogLevel,
+    launchAndExecuteLogLevel,
 
-      importResolutionMethod,
-      importDefaultExtension,
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
 
-      defaultMsAllocatedPerExecution,
-      concurrencyLimit,
-      completedExecutionLogMerging,
-      completedExecutionLogAbbreviation,
-      logSummary,
-      measureGlobalDuration,
+    importResolutionMethod,
+    importDefaultExtension,
 
-      coverage,
-      coverageConfig,
-      coverageIncludeMissing,
-      coverageForceIstanbul,
-      coverageV8MergeConflictIsExpected,
+    defaultMsAllocatedPerExecution,
+    maxExecutionsInParallel,
+    completedExecutionLogMerging,
+    completedExecutionLogAbbreviation,
+    logSummary,
+    measureGlobalDuration,
 
-      jsenvDirectoryClean,
-      compileServerProtocol,
-      compileServerPrivateKey,
-      compileServerCertificate,
-      compileServerIp,
-      compileServerPort,
-      compileServerCanReadFromFilesystem,
-      compileServerCanWriteOnFilesystem,
-      babelPluginMap,
-      babelConfigFileUrl,
-      customCompilers,
-    })
+    coverage,
+    coverageConfig,
+    coverageIncludeMissing,
+    coverageForceIstanbul,
+    coverageV8MergeConflictIsExpected,
 
-    if (updateProcessExitCode && !executionIsPassed(result)) {
-      process.exitCode = 1
-    }
+    jsenvDirectoryClean,
+    compileServerProtocol,
+    compileServerPrivateKey,
+    compileServerCertificate,
+    compileServerIp,
+    compileServerPort,
+    compileServerCanReadFromFilesystem,
+    compileServerCanWriteOnFilesystem,
+    babelPluginMap,
+    babelConfigFileUrl,
+    customCompilers,
+  })
 
+  if (updateProcessExitCode && !executionIsPassed(result)) {
+    process.exitCode = 1
+  }
+
+  const planCoverage = result.planCoverage
+  // planCoverage can be null when execution is abortes
+  if (planCoverage) {
     const promises = []
     // keep this one first because it does ensureEmptyDirectory
     // and in case coverage json file gets written in the same directory
@@ -208,7 +192,7 @@ export const executeTestPlan = async ({
         )
       }
       promises.push(
-        generateCoverageHtmlDirectory(result.planCoverage, {
+        generateCoverageHtmlDirectory(planCoverage, {
           projectDirectoryUrl,
           coverageHtmlDirectoryRelativeUrl,
         }),
@@ -235,15 +219,11 @@ export const executeTestPlan = async ({
       )
     }
     await Promise.all(promises)
-
-    return {
-      testPlanSummary: result.planSummary,
-      testPlanReport: result.planReport,
-      testPlanCoverage: result.planCoverage,
-    }
   }
 
-  return executeJsenvAsyncFunction(jsenvExecuteTestPlanFunction, {
-    cancelOnSIGINT,
-  })
+  return {
+    testPlanSummary: result.planSummary,
+    testPlanReport: result.planReport,
+    testPlanCoverage: planCoverage,
+  }
 }

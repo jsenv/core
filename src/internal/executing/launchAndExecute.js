@@ -1,14 +1,7 @@
-import {
-  createCancellationToken,
-  createOperation,
-  createStoppableOperation,
-  createCancellationSource,
-  composeCancellationToken,
-  errorToCancelReason,
-} from "@jsenv/cancellation"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 
-import { promiseTrackRace } from "../promise_track_race.js"
+import { Abortable } from "@jsenv/core/src/abort/main.js"
+import { raceCallbacks } from "../../abort/callback_race.js"
 import { composeIstanbulCoverages } from "./coverage/composeIstanbulCoverages.js"
 
 const TIMING_BEFORE_EXECUTION = "before-execution"
@@ -16,8 +9,8 @@ const TIMING_DURING_EXECUTION = "during-execution"
 const TIMING_AFTER_EXECUTION = "after-execution"
 
 export const launchAndExecute = async ({
+  signal = new AbortController().signal,
   launchAndExecuteLogLevel,
-  cancellationToken = createCancellationToken(),
 
   runtime,
   runtimeParams,
@@ -39,7 +32,7 @@ export const launchAndExecute = async ({
   // however unit test will pass true because they want to move on
   stopAfterExecute = false,
   stopAfterExecuteReason = "stop after execute",
-  // when launch returns { disconnected, gracefulStop, stop }
+  // when launch returns { stoppedSignal, gracefulStop, stop }
   // the launched runtime have that amount of ms for disconnected to resolve
   // before we call stop
   gracefulStopAllocatedMs = 4000,
@@ -51,7 +44,6 @@ export const launchAndExecute = async ({
     // by default throw on error after execution
     throw error
   },
-  runtimeDisconnectCallback = () => {},
 
   coverageV8MergeConflictIsExpected,
 } = {}) => {
@@ -67,6 +59,29 @@ export const launchAndExecute = async ({
   }
 
   let executionResultTransformer = (executionResult) => executionResult
+
+  const launchAndExecuteOperation = Abortable.fromSignal(signal)
+
+  const hasAllocatedMs =
+    typeof allocatedMs === "number" && allocatedMs !== Infinity
+  let timeoutAbortEffect
+
+  if (hasAllocatedMs) {
+    timeoutAbortEffect = Abortable.timeout(
+      launchAndExecuteOperation,
+      // FIXME: if allocatedMs is veryyyyyy big
+      // setTimeout may be called immediatly
+      // in that case we should just throw that the number is too big
+      allocatedMs,
+    )
+    executionResultTransformer = composeTransformer(
+      executionResultTransformer,
+      (executionResult) => {
+        timeoutAbortEffect.cleanup()
+        return executionResult
+      },
+    )
+  }
 
   if (measureDuration) {
     const startMs = Date.now()
@@ -166,7 +181,7 @@ export const launchAndExecute = async ({
     executionResultTransformer = composeTransformer(
       executionResultTransformer,
       (executionResult) => {
-        const { coverage, indirectCoverage } = executionResult
+        const { coverage = {}, indirectCoverage } = executionResult
         if (indirectCoverage) {
           executionResult.coverage = composeIstanbulCoverages(
             [coverage, indirectCoverage],
@@ -191,274 +206,199 @@ export const launchAndExecute = async ({
     )
   }
 
-  let executionResult
-  const executionParams = {
-    logger,
-    cancellationToken,
-
-    runtime,
-    runtimeParams: {
-      measurePerformance,
-      collectPerformance,
-      ...runtimeParams,
-    },
-    executeParams,
-
-    stopAfterExecute,
-    stopAfterExecuteReason,
-    gracefulStopAllocatedMs,
-    runtimeConsoleCallback,
-    runtimeErrorAfterExecutionCallback,
-    runtimeDisconnectCallback,
-    runtimeStartedCallback,
-    runtimeStoppedCallback,
-  }
-  const hasAllocatedMs =
-    typeof allocatedMs === "number" && allocatedMs !== Infinity
-  if (hasAllocatedMs) {
-    const TIMEOUT_CANCEL_REASON = "timeout"
-
-    const timeoutCancellationSource = createCancellationSource()
-
-    const id = setTimeout(() => {
-      // here if allocatedMs is very big
-      // setTimeout may be called immediatly
-      // in that case we should just throw that hte number is too big
-      timeoutCancellationSource.cancel(TIMEOUT_CANCEL_REASON)
-    }, allocatedMs)
-    const timeoutCancel = () => clearTimeout(id)
-
-    cancellationToken.register(timeoutCancel)
-
-    const externalOrTimeoutCancellationToken = composeCancellationToken(
-      cancellationToken,
-      timeoutCancellationSource.token,
-    )
-
-    try {
-      executionResult = await computeExecutionResult({
-        ...executionParams,
-        cancellationToken: externalOrTimeoutCancellationToken,
-      })
-      timeoutCancel()
-    } catch (e) {
-      if (errorToCancelReason(e) === TIMEOUT_CANCEL_REASON) {
-        executionResult = createTimedoutExecutionResult()
-      } else {
-        throw e
-      }
-    }
-  } else {
-    executionResult = await computeExecutionResult(executionParams)
-  }
-
-  return executionResultTransformer(executionResult)
-}
-
-const composeCallback = (previousCallback, callback) => {
-  return (...args) => {
-    previousCallback(...args)
-    return callback(...args)
-  }
-}
-
-const composeTransformer = (previousTransformer, transformer) => {
-  return (value) => {
-    const transformedValue = previousTransformer(value)
-    return transformer(transformedValue)
-  }
-}
-
-const computeExecutionResult = async ({
-  logger,
-  cancellationToken,
-
-  runtime,
-  runtimeParams,
-  executeParams,
-
-  stopAfterExecute,
-  stopAfterExecuteReason,
-  gracefulStopAllocatedMs,
-  runtimeStartedCallback,
-  runtimeStoppedCallback,
-  runtimeConsoleCallback,
-  runtimeErrorAfterExecutionCallback,
-  runtimeDisconnectCallback,
-}) => {
-  const runtimeLabel = `${runtime.name}/${runtime.version}`
-
-  logger.debug(`launch ${runtimeLabel} to execute something in it`)
-
-  const launchOperation = createStoppableOperation({
-    cancellationToken,
-    start: async () => {
-      const value = await runtime.launch({
-        logger,
-        cancellationToken,
-        stopAfterExecute,
-        ...runtimeParams,
-      })
-      runtimeStartedCallback()
-      return value
-    },
-    stop: async ({ gracefulStop, stop }, reason) => {
-      // external code can cancel using cancellationToken at any time.
-      // it is important to keep the code inside this stop function because once cancelled
-      // all code after the operation won't execute because it will be rejected with
-      // the cancellation error
-
-      let stoppedGracefully
-
-      if (gracefulStop && gracefulStopAllocatedMs) {
-        logger.debug(
-          `${runtimeLabel}: runtime.gracefulStop() because ${reason}`,
-        )
-
-        const gracefulStopPromise = (async () => {
-          await gracefulStop({ reason })
-          return true
-        })()
-
-        const stopPromise = (async () => {
-          stoppedGracefully = await new Promise(async (resolve) => {
-            const timeoutId = setTimeout(() => {
-              resolve(false)
-            }, gracefulStopAllocatedMs)
-            try {
-              await gracefulStopPromise
-              resolve(true)
-            } finally {
-              clearTimeout(timeoutId)
-            }
-          })
-          if (stoppedGracefully) {
-            return stoppedGracefully
-          }
-
-          logger.debug(
-            `${runtimeLabel}: runtime.stop() because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
-          )
-          await stop({ reason, gracefulFailed: true })
-          return false
-        })()
-
-        stoppedGracefully = await Promise.race([
-          gracefulStopPromise,
-          stopPromise,
-        ])
-      } else {
-        await stop({ reason, gracefulFailed: false })
-        stoppedGracefully = false
-      }
-
-      logger.debug(
-        `${runtimeLabel}: runtime stopped${
-          stoppedGracefully ? " gracefully" : ""
-        }`,
-      )
-      runtimeStoppedCallback({ stoppedGracefully })
-    },
-  })
-
-  const launchReturnValue = await launchOperation
-  validateLaunchReturnValue(launchReturnValue)
-  const {
-    execute,
-    disconnected,
-    registerErrorCallback = () => {},
-    registerConsoleCallback = () => {},
-    finalizeExecutionResult = (executionResult) => executionResult,
-  } = launchReturnValue
-
-  logger.debug(createDetailedMessage(`${runtimeLabel}: runtime launched.`))
-
-  logger.debug(`${runtimeLabel}: start execution.`)
-  registerConsoleCallback(runtimeConsoleCallback)
-
-  const executeOperation = createOperation({
-    cancellationToken,
-    start: async () => {
-      let timing = TIMING_BEFORE_EXECUTION
-
-      disconnected.then(() => {
-        logger.debug(`${runtimeLabel}: runtime disconnected ${timing}.`)
-        runtimeDisconnectCallback({ timing })
-      })
-
-      const executed = execute(executeParams)
-
-      timing = TIMING_DURING_EXECUTION
-
-      const raceResult = await promiseTrackRace([disconnected, executed])
-      timing = TIMING_AFTER_EXECUTION
-
-      if (raceResult.winner === disconnected) {
-        return createDisconnectedExecutionResult()
-      }
-
-      if (stopAfterExecute) {
-        // if there is an error while stopping the runtine
+  if (stopAfterExecute) {
+    executionResultTransformer = composeTransformer(
+      executionResultTransformer,
+      async (executionResult) => {
+        // if there is an error while cleaning (stopping the runtime)
         // the execution is considered as failed
         try {
-          await launchOperation.stop(stopAfterExecuteReason)
+          await launchAndExecuteOperation.cleaner.clean(stopAfterExecuteReason)
+          return executionResult
         } catch (e) {
-          return finalizeExecutionResult(
+          return executionResultTransformer(
             createErroredExecutionResult({
               error: e,
             }),
           )
         }
-      } else {
-        // when the process is still alive
-        // we want to catch error to notify runtimeErrorAfterExecutionCallback
-        // and throw that error by default
-        registerErrorCallback((error) => {
-          runtimeErrorAfterExecutionCallback(error)
-        })
-      }
+      },
+    )
+  }
 
-      const executionResult = raceResult.value
-      const { status } = executionResult
+  try {
+    const runtimeLabel = `${runtime.name}/${runtime.version}`
+    logger.debug(`launch ${runtimeLabel} to execute something in it`)
 
-      if (status === "errored") {
-        // debug log level because this error happens during execution
-        // there is no need to log it.
-        // the code will know the execution errored because it receives
-        // an errored execution result
-        logger.debug(
-          createDetailedMessage(`error ${TIMING_DURING_EXECUTION}.`, {
-            ["error stack"]: executionResult.error.stack,
-            ["execute params"]: JSON.stringify(executeParams, null, "  "),
-            ["runtime"]: runtime,
-          }),
-        )
-        return finalizeExecutionResult(
-          createErroredExecutionResult(executionResult),
-        )
-      }
+    Abortable.throwIfAborted(launchAndExecuteOperation)
+    const launchReturnValue = await runtime.launch({
+      signal: launchAndExecuteOperation.signal,
+      logger,
+      stopAfterExecute,
+      measurePerformance,
+      collectPerformance,
+      ...runtimeParams,
+    })
+    validateLaunchReturnValue(launchReturnValue)
+    launchAndExecuteOperation.cleaner.addCallback(async (reason) => {
+      await stopRuntime({
+        logger,
+        runtimeLabel,
+        launchReturnValue,
+        gracefulStopAllocatedMs,
+        reason,
+      })
+    })
 
-      logger.debug(`${runtimeLabel}: execution completed.`)
-      return finalizeExecutionResult(
-        createCompletedExecutionResult(executionResult),
+    logger.debug(createDetailedMessage(`${runtimeLabel}: runtime launched`))
+    runtimeStartedCallback()
+
+    logger.debug(`${runtimeLabel}: start execution`)
+    const {
+      errorSignal,
+      outputSignal,
+      stoppedSignal,
+      execute,
+      finalizeExecutionResult = (executionResult) => executionResult,
+    } = launchReturnValue
+    executionResultTransformer = composeTransformer(
+      executionResultTransformer,
+      finalizeExecutionResult,
+    )
+    outputSignal.addCallback(runtimeConsoleCallback)
+
+    let timing = TIMING_BEFORE_EXECUTION
+    stoppedSignal.addCallback(() => {
+      logger.debug(`${runtimeLabel}: runtime stopped ${timing}`)
+      runtimeStoppedCallback()
+    })
+
+    const winnerPromise = new Promise((resolve, reject) => {
+      raceCallbacks(
+        {
+          aborted: (cb) => {
+            launchAndExecuteOperation.signal.addEventListener("abort", cb)
+            return () => {
+              launchAndExecuteOperation.signal.removeEventListener("abort", cb)
+            }
+          },
+          error: (cb) => {
+            return errorSignal.addCallback(cb)
+          },
+          stopped: (cb) => {
+            return stoppedSignal.addCallback(cb)
+          },
+          executed: (cb) => {
+            timing = TIMING_DURING_EXECUTION
+            const executed = execute({
+              signal: launchAndExecuteOperation.signal,
+              ...executeParams,
+            })
+            executed.then(cb, reject)
+          },
+        },
+        resolve,
       )
-    },
-  })
+    })
 
-  const executionResult = await executeOperation
+    Abortable.throwIfAborted(launchAndExecuteOperation)
 
-  return executionResult
+    const winner = await winnerPromise
+
+    if (winner.name === "aborted") {
+      Abortable.throwIfAborted(launchAndExecuteOperation)
+    }
+
+    if (winner.name === "error") {
+      return executionResultTransformer(
+        createErroredExecutionResult({
+          error: winner.data,
+        }),
+      )
+    }
+
+    if (winner.name === "stopped") {
+      return executionResultTransformer(
+        createErroredExecutionResult({
+          error: new Error(`runtime stopped during execution`),
+        }),
+      )
+    }
+
+    timing = TIMING_AFTER_EXECUTION
+
+    if (!stopAfterExecute) {
+      // when the process is still alive
+      // we want to catch error to notify runtimeErrorAfterExecutionCallback
+      // and throw that error by default
+      errorSignal.addCallback((error) => {
+        runtimeErrorAfterExecutionCallback(error)
+      })
+    }
+
+    const executeResult = winner.data
+    const { status } = executeResult
+
+    if (status === "errored") {
+      // debug log level because this error happens during execution
+      // there is no need to log it.
+      // the code will know the execution errored because it receives
+      // an errored execution result
+      logger.debug(
+        createDetailedMessage(`error ${TIMING_DURING_EXECUTION}`, {
+          ["error stack"]: executeResult.error.stack,
+          ["execute params"]: JSON.stringify(executeParams, null, "  "),
+          ["runtime"]: runtime,
+        }),
+      )
+      return executionResultTransformer(
+        createErroredExecutionResult(executeResult),
+      )
+    }
+
+    logger.debug(`${runtimeLabel}: execution completed`)
+    return executionResultTransformer(
+      createCompletedExecutionResult(executeResult),
+    )
+  } catch (e) {
+    if (e.name === "AbortError") {
+      if (timeoutAbortEffect && timeoutAbortEffect.signal.aborted) {
+        const executionResult = createTimedoutExecutionResult()
+        return executionResultTransformer(executionResult)
+      }
+      const executionResult = createAbortedExecutionResult()
+      return executionResultTransformer(executionResult)
+    }
+    throw e
+  }
+}
+
+const stopRuntime = async ({
+  logger,
+  runtimeLabel,
+  launchReturnValue,
+  gracefulStopAllocatedMs,
+  reason,
+}) => {
+  const { stop } = launchReturnValue
+  logger.debug(`${runtimeLabel}: stop() because ${reason}`)
+  const { graceful } = await stop({ reason, gracefulStopAllocatedMs })
+  if (graceful) {
+    logger.debug(`${runtimeLabel}: runtime stopped gracefully`)
+  } else {
+    logger.debug(`${runtimeLabel}: runtime stopped`)
+  }
+}
+
+const createAbortedExecutionResult = () => {
+  return {
+    status: "aborted",
+  }
 }
 
 const createTimedoutExecutionResult = () => {
   return {
     status: "timedout",
-  }
-}
-
-const createDisconnectedExecutionResult = () => {
-  return {
-    status: "disconnected",
   }
 }
 
@@ -488,6 +428,20 @@ const normalizeNamespace = (namespace) => {
   return normalized
 }
 
+const composeCallback = (previousCallback, callback) => {
+  return (...args) => {
+    previousCallback(...args)
+    return callback(...args)
+  }
+}
+
+const composeTransformer = (previousTransformer, transformer) => {
+  return async (value) => {
+    const transformedValue = await previousTransformer(value)
+    return transformer(transformedValue)
+  }
+}
+
 const validateLaunchReturnValue = (launchReturnValue) => {
   if (launchReturnValue === null) {
     throw new Error(`launch must return an object, got null`)
@@ -502,8 +456,10 @@ const validateLaunchReturnValue = (launchReturnValue) => {
     throw new Error(`launch must return an execute function, got ${execute}`)
   }
 
-  const { disconnected } = launchReturnValue
-  if (!disconnected || typeof disconnected.then !== "function") {
-    throw new Error(`launch must return a disconnected promise, got ${execute}`)
+  const { stoppedSignal } = launchReturnValue
+  if (!stoppedSignal) {
+    throw new Error(
+      `launch must return a stoppedSignal object, got ${stoppedSignal}`,
+    )
   }
 }

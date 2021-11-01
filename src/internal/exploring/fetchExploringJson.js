@@ -1,16 +1,15 @@
 import { createDetailedMessage } from "@jsenv/logger"
-import { isCancelError } from "@jsenv/cancellation/main.browser.js"
 
 import { fetchJson } from "../browser-utils/fetchJson.js"
 
-export const fetchExploringJson = async ({ cancellationToken } = {}) => {
+export const fetchExploringJson = async ({ signal } = {}) => {
   try {
     const exploringInfo = await fetchJson("/.jsenv/exploring.json", {
-      cancellationToken,
+      signal,
     })
     return exploringInfo
   } catch (e) {
-    if (isCancelError(e)) {
+    if (signal && signal.aborted && e.name === "AbortError") {
       throw e
     }
     throw new Error(

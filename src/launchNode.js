@@ -1,8 +1,6 @@
-/* eslint-disable import/max-dependencies */
 import { Script } from "node:vm"
 import cuid from "cuid"
 import { loggerToLogLevel } from "@jsenv/logger"
-import { createCancellationToken } from "@jsenv/cancellation"
 import {
   writeDirectory,
   resolveUrl,
@@ -21,9 +19,9 @@ export const nodeRuntime = {
   version: process.version.slice(1),
 }
 nodeRuntime.launch = async ({
+  signal = new AbortController().signal,
   logger,
   logProcessCommand,
-  cancellationToken = createCancellationToken(),
 
   projectDirectoryUrl,
   compileServerOrigin,
@@ -100,14 +98,18 @@ nodeRuntime.launch = async ({
 
       // the v8 coverage directory is available once the child process is disconnected
       finalizeExecutionResult = async (executionResult) => {
+        if (
+          executionResult.status === "timedout" ||
+          executionResult.status === "aborted"
+        ) {
+          return executionResult
+        }
+
         const coverage = await ensureV8CoverageDirClean(async () => {
           // prefer istanbul if available
           if (executionResult.coverage) {
             return executionResult.coverage
           }
-
-          // give Node.js more time to write the v8 coverage
-          await new Promise((resolve) => setTimeout(resolve, 50))
 
           const v8Coverage = await v8CoverageFromNodeV8Directory({
             projectDirectoryUrl,
@@ -128,8 +130,15 @@ nodeRuntime.launch = async ({
   ]
 
   const logLevel = loggerToLogLevel(logger)
-  const controllableNodeProcess = await createControllableNodeProcess({
-    cancellationToken,
+  const {
+    execArgv,
+    stoppedSignal,
+    errorSignal,
+    outputSignal,
+    stop,
+    requestActionOnChildProcess,
+  } = await createControllableNodeProcess({
+    signal,
     logLevel,
     debugPort,
     debugMode,
@@ -143,7 +152,7 @@ nodeRuntime.launch = async ({
     logProcessCommand,
   })
 
-  const execute = async ({ fileRelativeUrl, executionId }) => {
+  const execute = async ({ signal, fileRelativeUrl, executionId }) => {
     const executeParams = {
       projectDirectoryUrl,
       compileServerOrigin,
@@ -163,11 +172,11 @@ nodeRuntime.launch = async ({
       remap,
     }
 
-    let executionResult =
-      await controllableNodeProcess.requestActionOnChildProcess({
-        actionType: "execute-using-dynamic-import-fallback-on-systemjs",
-        actionParams: executeParams,
-      })
+    let executionResult = await requestActionOnChildProcess({
+      signal,
+      actionType: "execute-using-dynamic-import-fallback-on-systemjs",
+      actionParams: executeParams,
+    })
 
     executionResult = transformExecutionResult(executionResult, {
       compileServerOrigin,
@@ -178,13 +187,16 @@ nodeRuntime.launch = async ({
   }
 
   return {
-    ...controllableNodeProcess,
     options: {
-      execArgv: controllableNodeProcess.execArgv,
+      execArgv,
       // for now do not pass env, it make debug logs to verbose
       // because process.env is very big
       // env,
     },
+    stoppedSignal,
+    errorSignal,
+    outputSignal,
+    stop,
     execute,
     finalizeExecutionResult,
   }
@@ -201,10 +213,13 @@ const ensureV8CoverageDirClean = async (fn, NODE_V8_COVERAGE) => {
         from: NODE_V8_COVERAGE,
         to: process.env.NODE_V8_COVERAGE,
       })
-      await removeFileSystemNode(NODE_V8_COVERAGE)
+      await removeFileSystemNode(NODE_V8_COVERAGE, {
+        allowUseless: true,
+      })
     } else {
       await removeFileSystemNode(NODE_V8_COVERAGE, {
         recursive: true,
+        allowUseless: true,
       })
     }
   }

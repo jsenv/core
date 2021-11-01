@@ -1,5 +1,6 @@
 import { globalAgent } from "node:https"
-import { fetchUrl as serverFetchUrl, headersToObject } from "@jsenv/server"
+import { fetchUrl as serverFetchUrl } from "@jsenv/server"
+import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 
 // ideally we should only pass this to the fetch below
 globalAgent.options.rejectUnauthorized = false
@@ -8,7 +9,10 @@ export const fetchUrl = async (
   url,
   { ignoreHttpsError = true, ...rest } = {},
 ) => {
-  const response = await serverFetchUrl(url, { ignoreHttpsError, ...rest })
+  const response = await serverFetchUrl(url, {
+    ignoreHttpsError,
+    ...rest,
+  })
 
   return {
     url: response.url,

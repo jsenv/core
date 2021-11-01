@@ -9,7 +9,6 @@ import {
   resolveUrl,
   urlToRelativeUrl,
   resolveDirectoryUrl,
-  writeFile,
   comparePathnames,
   urlIsInsideOf,
   normalizeStructuredMetaMap,
@@ -17,6 +16,7 @@ import {
 } from "@jsenv/filesystem"
 import { createWorkersForJavaScriptModules } from "@jsenv/workers"
 
+import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
 import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js"
@@ -50,7 +50,7 @@ import { injectSourcemapInRollupBuild } from "./rollup_build_sourcemap.js"
 import { createBuildStats } from "./build_stats.js"
 
 export const createJsenvRollupPlugin = async ({
-  cancellationToken,
+  buildOperation,
   logger,
 
   projectDirectoryUrl,
@@ -58,9 +58,6 @@ export const createJsenvRollupPlugin = async ({
   compileServerOrigin,
   compileDirectoryRelativeUrl,
   buildDirectoryUrl,
-  assetManifestFile,
-  assetManifestFileRelativeUrl,
-  writeOnFileSystem,
 
   urlMappings,
   importResolutionMethod,
@@ -755,11 +752,17 @@ export const createJsenvRollupPlugin = async ({
       }
 
       let url = asServerUrl(rollupUrl)
-      const loadResult = await urlLoader.loadUrl(rollupUrl, {
-        cancellationToken,
-        logger,
-        ressourceBuilder,
-      })
+
+      const loadResult = await Abortable.asyncCallback(
+        buildOperation,
+        (signal) => {
+          return urlLoader.loadUrl(rollupUrl, {
+            signal,
+            logger,
+            ressourceBuilder,
+          })
+        },
+      )
 
       url = loadResult.url
       const code = loadResult.code
@@ -1265,27 +1268,6 @@ export const createJsenvRollupPlugin = async ({
         ressourceBuilder,
         buildDuration,
       })
-
-      if (assetManifestFile) {
-        const assetManifestFileUrl = resolveUrl(
-          assetManifestFileRelativeUrl,
-          buildDirectoryUrl,
-        )
-        await writeFile(
-          assetManifestFileUrl,
-          JSON.stringify(buildManifest, null, "  "),
-        )
-      }
-
-      if (writeOnFileSystem) {
-        const buildRelativeUrls = Object.keys(buildFileContents)
-        await Promise.all(
-          buildRelativeUrls.map(async (buildRelativeUrl) => {
-            const fileBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
-            await writeFile(fileBuildUrl, buildFileContents[buildRelativeUrl])
-          }),
-        )
-      }
 
       logger.info(
         formatBuildDoneInfo({

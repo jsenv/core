@@ -1,35 +1,10 @@
-import { createCancellationToken } from "@jsenv/cancellation/main.browser.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
 
-const fetchNative = async (
-  url,
-  {
-    cancellationToken = createCancellationToken(),
-    mode = "cors",
-    ...options
-  } = {},
-) => {
-  const abortController = new AbortController()
-
-  let cancelError
-  cancellationToken.register((reason) => {
-    cancelError = reason
-    abortController.abort(reason)
+const fetchNative = async (url, { mode = "cors", ...options } = {}) => {
+  const response = await window.fetch(url, {
+    mode,
+    ...options,
   })
-
-  let response
-  try {
-    response = await window.fetch(url, {
-      signal: abortController.signal,
-      mode,
-      ...options,
-    })
-  } catch (e) {
-    if (cancelError && e.name === "AbortError") {
-      throw cancelError
-    }
-    throw e
-  }
 
   return {
     url: response.url,

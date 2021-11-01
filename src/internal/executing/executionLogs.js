@@ -1,14 +1,11 @@
 import {
-  failureSignDefault,
-  okSignDefault,
+  failureSignColorLess,
+  okSignColorLess,
   setANSIColor,
-  ANSI_MAGENTA,
-  ANSI_YELLOW,
-  ANSI_RED,
   ANSI_GREY,
-  ANSI_GREEN,
 } from "../logs/log_style.js"
 import { msAsDuration } from "../logs/msAsDuration.js"
+import { EXECUTION_COLORS } from "./execution_colors.js"
 import { createSummaryDetails } from "./createSummaryLog.js"
 
 export const createExecutionResultLog = (
@@ -16,7 +13,7 @@ export const createExecutionResultLog = (
   {
     completedExecutionLogAbbreviation,
     executionCount,
-    disconnectedCount,
+    abortedCount,
     timedoutCount,
     erroredCount,
     completedCount,
@@ -33,7 +30,7 @@ export const createExecutionResultLog = (
   })
   const summary = `(${createSummaryDetails({
     executionCount: executionNumber,
-    disconnectedCount,
+    abortedCount,
     timedoutCount,
     erroredCount,
     completedCount,
@@ -54,32 +51,38 @@ file: ${fileRelativeUrl}
 runtime: ${runtime}${appendDuration({
     startMs,
     endMs,
-  })}${appendConsole(consoleCalls)}${appendError(error, runtimeName)}`
+  })}${appendConsole(consoleCalls)}${appendError(error)}`
 }
 
 const descriptionFormatters = {
-  disconnected: ({ executionNumber, executionCount }) => {
+  aborted: ({ executionNumber, executionCount }) => {
     return setANSIColor(
-      `${failureSignDefault} execution ${executionNumber} of ${executionCount} disconnected`,
-      ANSI_MAGENTA,
+      `${failureSignColorLess} execution ${executionNumber} of ${executionCount} aborted`,
+      EXECUTION_COLORS.aborted,
     )
   },
   timedout: ({ executionNumber, allocatedMs, executionCount }) => {
     return setANSIColor(
-      `${failureSignDefault} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms`,
-      ANSI_YELLOW,
+      `${failureSignColorLess} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms`,
+      EXECUTION_COLORS.timedout,
     )
   },
   errored: ({ executionNumber, executionCount }) => {
     return setANSIColor(
-      `${failureSignDefault} execution ${executionNumber} of ${executionCount} error`,
-      ANSI_RED,
+      `${failureSignColorLess} execution ${executionNumber} of ${executionCount} error`,
+      EXECUTION_COLORS.errored,
     )
   },
   completed: ({ executionNumber, executionCount }) => {
     return setANSIColor(
-      `${okSignDefault} execution ${executionNumber} of ${executionCount} completed`,
-      ANSI_GREEN,
+      `${okSignColorLess} execution ${executionNumber} of ${executionCount} completed`,
+      EXECUTION_COLORS.completed,
+    )
+  },
+  cancelled: ({ executionNumber, executionCount }) => {
+    return setANSIColor(
+      `${failureSignColorLess} execution ${executionNumber} of ${executionCount} cancelled`,
+      EXECUTION_COLORS.cancelled,
     )
   },
 }
@@ -107,21 +110,15 @@ ${consoleOutputTrimmed}
 ${setANSIColor(`-------------------------`, ANSI_GREY)}`
 }
 
-const appendError = (error, runtimeName) => {
+const appendError = (error) => {
   if (!error) {
     return ``
-  }
-
-  if (runtimeName === "webkit") {
-    return `
-error: ${error.message}
-  at ${error.stack}`
   }
 
   return `
 error: ${error.stack}`
 }
 
-export const createShortExecutionResultLog = () => {
-  return `Execution completed (2/9) - (all completed)`
-}
+// export const createShortExecutionResultLog = () => {
+//   return `Execution completed (2/9) - (all completed)`
+// }

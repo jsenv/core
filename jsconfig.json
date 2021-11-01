@@ -179,6 +179,9 @@
       "istanbul-lib-instrument": [
         "./node_modules/istanbul-lib-instrument/src/index.js"
       ],
+      "playwright/package.json": [
+        "./node_modules/playwright/package.json"
+      ],
       "postcss/lib/declaration": [
         "./node_modules/postcss/lib/declaration.js"
       ],
@@ -242,9 +245,6 @@
       "@jsenv/babel-preset/*": [
         "./node_modules/@jsenv/babel-preset/*"
       ],
-      "@jsenv/cancellation/*": [
-        "./node_modules/@jsenv/cancellation/*"
-      ],
       "@jsenv/eslint-config": [
         "./node_modules/@jsenv/eslint-config/main.js"
       ],
@@ -287,14 +287,8 @@
       "@jsenv/babel-preset": [
         "./node_modules/@jsenv/babel-preset/jsenv_babel_preset.cjs"
       ],
-      "@jsenv/cancellation": [
-        "./node_modules/@jsenv/cancellation/main.node.js"
-      ],
       "@jsenv/https-local/*": [
         "./node_modules/@jsenv/https-local/*"
-      ],
-      "@jsenv/node-signals": [
-        "./node_modules/@jsenv/node-signals/index.js"
       ],
       "@rollup/plugin-json": [
         "./node_modules/@rollup/plugin-json/dist/index.es.js"
@@ -449,6 +443,9 @@
       "node-notifier/*": [
         "./node_modules/node-notifier/*"
       ],
+      "playwright/cli": [
+        "./node_modules/playwright/cli.js"
+      ],
       "supports-color": [
         "./node_modules/supports-color/index.js"
       ],
@@ -533,9 +530,6 @@
       "node-fetch/*": [
         "./node_modules/node-fetch/*"
       ],
-      "playwright/*": [
-        "./node_modules/playwright/*"
-      ],
       "source-map/*": [
         "./node_modules/source-map/*"
       ],
@@ -554,23 +548,20 @@
       "source-map": [
         "./node_modules/source-map/source-map.js"
       ],
-      "tree-kill/*": [
-        "./node_modules/tree-kill/*"
-      ],
       "prettier/*": [
         "./node_modules/prettier/*"
       ],
       "react-dom": [
         "./node_modules/react-dom/index.js"
       ],
-      "tree-kill": [
-        "./node_modules/tree-kill/index.js"
-      ],
       "wrap-ansi": [
         "./node_modules/wrap-ansi/index.js"
       ],
       "cssnano/*": [
         "./node_modules/cssnano/*"
+      ],
+      "pidtree/*": [
+        "./node_modules/pidtree/*"
       ],
       "prettier": [
         "./node_modules/prettier/index.js"
@@ -589,6 +580,9 @@
       ],
       "parse5/*": [
         "./node_modules/parse5/*"
+      ],
+      "pidtree": [
+        "./node_modules/pidtree/index.js"
       ],
       "postcss": [
         "./node_modules/postcss/lib/postcss.mjs"

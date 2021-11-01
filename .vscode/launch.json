@@ -10,7 +10,6 @@
       // "runtimeVersion": "14.5.0",
       "runtimeArgs": [
         "--inspect",
-        "--unhandled-rejections=strict",
         "--experimental-json-modules",
         "--experimental-import-meta-resolve"
       ],

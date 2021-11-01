@@ -1,11 +1,4 @@
-/* eslint-disable import/max-dependencies */
 import cuid from "cuid"
-import {
-  createCancellationToken,
-  composeCancellationToken,
-  createCancellationSource,
-  errorToCancelReason,
-} from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import {
   urlIsInsideOf,
@@ -14,7 +7,6 @@ import {
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
 
-import { executeJsenvAsyncFunction } from "@jsenv/core/src/internal/executeJsenvAsyncFunction.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
@@ -33,7 +25,7 @@ export const TESTING_WATCH_EXCLUDE_DESCRIPTION = {
 }
 
 export const startContinuousTesting = async ({
-  cancellationToken = createCancellationToken(),
+  abortSignal,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
@@ -53,46 +45,45 @@ export const startContinuousTesting = async ({
   measureTotalDuration = false,
   systemNotification = true,
 }) => {
-  return executeJsenvAsyncFunction(async () => {
-    const logger = createLogger({ logLevel })
+  const logger = createLogger({ logLevel })
 
-    projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
-    await assertProjectDirectoryExists({ projectDirectoryUrl })
+  projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
+  await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-    const dependencyTracker = createDependencyTracker()
-    let executionImportCallback = ({ relativeUrl, executionId }) => {
-      dependencyTracker.trackDependency(relativeUrl, executionId)
-    }
+  const dependencyTracker = createDependencyTracker()
+  let executionImportCallback = ({ relativeUrl, executionId }) => {
+    dependencyTracker.trackDependency(relativeUrl, executionId)
+  }
 
-    const projectFileSet = new Set()
-    const projectFileRequestedCallback = (relativeUrl, request) => {
-      projectFileSet.add(relativeUrl)
+  const projectFileSet = new Set()
+  const projectFileRequestedCallback = (relativeUrl, request) => {
+    projectFileSet.add(relativeUrl)
 
-      const { headers = {} } = request
-      if ("x-jsenv-execution-id" in headers) {
-        const executionId = headers["x-jsenv-execution-id"]
-        executionImportCallback({ relativeUrl, executionId })
-      } else if ("referer" in headers) {
-        const { referer } = headers
-        const { origin } = request
-        if (referer === origin || urlIsInsideOf(referer, origin)) {
-          const refererRelativeUrl = urlToRelativeUrl(referer, origin)
+    const { headers = {} } = request
+    if ("x-jsenv-execution-id" in headers) {
+      const executionId = headers["x-jsenv-execution-id"]
+      executionImportCallback({ relativeUrl, executionId })
+    } else if ("referer" in headers) {
+      const { referer } = headers
+      const { origin } = request
+      if (referer === origin || urlIsInsideOf(referer, origin)) {
+        const refererRelativeUrl = urlToRelativeUrl(referer, origin)
 
-          executionSteps.forEach(({ executionId, fileRelativeUrl }) => {
-            if (fileRelativeUrl === refererRelativeUrl) {
-              executionImportCallback({ relativeUrl, executionId })
-            }
-          })
-        } else {
-          executionImportCallback({ relativeUrl })
-        }
+        executionSteps.forEach(({ executionId, fileRelativeUrl }) => {
+          if (fileRelativeUrl === refererRelativeUrl) {
+            executionImportCallback({ relativeUrl, executionId })
+          }
+        })
       } else {
         executionImportCallback({ relativeUrl })
       }
+    } else {
+      executionImportCallback({ relativeUrl })
     }
+  }
 
-    const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-      cancellationToken,
+  const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
+    await startCompileServer({
       logLevel: "warn",
 
       projectDirectoryUrl,
@@ -106,282 +97,278 @@ export const startContinuousTesting = async ({
       keepProcessAlive: true,
     })
 
-    const unregisterProjectDirectoryLifecycle = registerDirectoryLifecycle(
-      urlToFileSystemPath(projectDirectoryUrl),
-      {
-        watchDescription: {
-          ...watchDescription,
-          [outDirectoryRelativeUrl]: false,
-        },
-        keepProcessAlive: false,
-        recursive: true,
-        added: ({ relativeUrl, type }) => {
-          if (type === "file") {
-            projectFileAddedCallback({ relativeUrl })
-          }
-        },
-        updated: ({ relativeUrl }) => {
-          if (!projectFileSet.has(relativeUrl)) return
-          projectFileUpdatedCallback({ relativeUrl })
-        },
-        removed: ({ relativeUrl }) => {
-          if (!projectFileSet.has(relativeUrl)) return
-          projectFileRemovedCallback({ relativeUrl })
-        },
+  const unregisterProjectDirectoryLifecycle = registerDirectoryLifecycle(
+    urlToFileSystemPath(projectDirectoryUrl),
+    {
+      watchDescription: {
+        ...watchDescription,
+        [outDirectoryRelativeUrl]: false,
       },
-    )
-    cancellationToken.register(unregisterProjectDirectoryLifecycle)
-
-    let executionSteps = await generateExecutionSteps(testPlan, {
-      cancellationToken,
-      projectDirectoryUrl,
-    })
-    executionSteps.forEach((executionStep) => {
-      executionStep.executionId = cuid()
-    })
-
-    let testingResult
-    let initialTestingDone = false
-    let fileMutationMapHandledAfterInitialTesting = {}
-    let fileMutationMap
-    let resolveActionRequired
-
-    const projectFileAddedCallback = ({ relativeUrl }) => {
-      projectFileSet.add(relativeUrl)
-
-      if (!initialTestingDone) {
-        fileMutationMapHandledAfterInitialTesting[relativeUrl] = "added"
-        return
-      }
-
-      fileMutationMap[relativeUrl] = "added"
-      checkActionRequiredResolution({
-        projectDirectoryUrl,
-        testPlan,
-        executionSteps,
-        dependencyTracker,
-        fileMutationMap,
-        resolveActionRequired,
-      })
-    }
-
-    const projectFileUpdatedCallback = ({ relativeUrl }) => {
-      if (!initialTestingDone) {
-        fileMutationMapHandledAfterInitialTesting[relativeUrl] = "updated"
-        return
-      }
-
-      fileMutationMap[relativeUrl] = "updated"
-      checkActionRequiredResolution({
-        projectDirectoryUrl,
-        testPlan,
-        executionSteps,
-        dependencyTracker,
-        fileMutationMap,
-        resolveActionRequired,
-      })
-    }
-
-    const projectFileRemovedCallback = ({ relativeUrl }) => {
-      if (!initialTestingDone) {
-        fileMutationMapHandledAfterInitialTesting[relativeUrl] = "removed"
-        return
-      }
-
-      fileMutationMap[relativeUrl] = "removed"
-      checkActionRequiredResolution({
-        projectDirectoryUrl,
-        testPlan,
-        executionSteps,
-        dependencyTracker,
-        fileMutationMap,
-        resolveActionRequired,
-      })
-    }
-
-    const getNextTestingResult = async (actionRequiredPromise) => {
-      const {
-        toAdd,
-        toRun,
-        toRemove,
-        // fileResponsibleOfAdd,
-        fileResponsibleOfRemove,
-        fileResponsibleOfRun,
-      } = await actionRequiredPromise
-
-      const nextActionRequiredPromise = generateActionRequiredPromise()
-      const actionRequiredCancellationSource = createCancellationSource()
-      const externalOrFileChangedCancellationToken = composeCancellationToken(
-        cancellationToken,
-        actionRequiredCancellationSource.token,
-      )
-
-      if (toRun.length > 0) {
-        logger.info(createRunLog({ fileResponsibleOfRun, toRun }))
-
-        const nextDependencyTracker = createDependencyTracker()
-        executionImportCallback = ({ relativeUrl, executionId }) => {
-          dependencyTracker.trackDependency(relativeUrl, executionId)
-          nextDependencyTracker.trackDependency(relativeUrl, executionId)
+      keepProcessAlive: false,
+      recursive: true,
+      added: ({ relativeUrl, type }) => {
+        if (type === "file") {
+          projectFileAddedCallback({ relativeUrl })
         }
-
-        let executing
-        nextActionRequiredPromise.then(
-          () => {
-            if (executing) {
-              logger.info(`cancel all execution`)
-              actionRequiredCancellationSource.cancel({
-                code: "ACTION_REQUIRED",
-              })
-            }
-          },
-          () => {},
-        )
-
-        const previousTestingResult = testingResult
-        try {
-          executing = true
-          testingResult = await executeConcurrently(toRun, {
-            cancellationToken: externalOrFileChangedCancellationToken,
-            logLevel,
-            executionLogLevel: "off",
-
-            projectDirectoryUrl,
-            jsenvDirectoryRelativeUrl,
-            outDirectoryRelativeUrl,
-            compileServerOrigin,
-            importDefaultExtension,
-
-            maxParallelExecution,
-            defaultAllocatedMsPerExecution,
-            logEachExecutionSuccess: false,
-            captureConsole,
-            measureDuration,
-            measureTotalDuration,
-            afterEachExecutionCallback: ({ executionId }) => {
-              // only once an execution is done,
-              // we update its dependencyArray
-              // because only then we know the actual dependencyArray
-              // in case it gets cancelled midway
-              // dependencyTracker is still tracking what is hapenning
-              // and will be notified of any new file
-              // becoming a dependency
-              dependencyTracker.setDependencySet(
-                executionId,
-                nextDependencyTracker.getDependencySet(executionId),
-              )
-            },
-            // we can realize a file is removed when we want to execute it
-            // it's not a big problem, let's just call projectFileRemovedCallback
-            // it can happen because fs.watch is not notified when a file is removed
-            // inside a folder on windows os for instance
-            mainFileNotFoundCallback: ({ relativeUrl }) => {
-              projectFileRemovedCallback({ relativeUrl })
-            },
-          })
-          executing = false
-
-          const updatedRelativeUrlArray = Object.keys(fileMutationMap).filter((relativeUrl) => {
-            return fileMutationMap[relativeUrl] === "removed"
-          })
-          // toRun handled
-          updatedRelativeUrlArray.forEach((relativeUrl) => {
-            delete fileMutationMap[relativeUrl]
-          })
-
-          if (systemNotification) {
-            showContinuousTestingNotification({
-              projectDirectoryUrl,
-              previousTestingResult,
-              testingResult,
-            })
-          }
-        } catch (error) {
-          const cancelReason = errorToCancelReason(error)
-          if (cancelReason && cancelReason.code === `ACTION_REQUIRED`) {
-            // do nothing special, we will just wait to next testing result at the bottom
-            // of this function
-          } else {
-            throw error
-          }
-        }
-      }
-
-      // if cancellation is requested we cannot consider the
-      // toAdd, toRun, toRemoved as handled
-      if (!externalOrFileChangedCancellationToken.cancellationRequested) {
-        if (toAdd.length > 0) {
-          // log(createAddLog({ fileResponsibleOfAdd, toAdd }))
-          // we should sort thoose execution, but it's ok for now
-          executionSteps.push(...toAdd)
-        }
-        if (toRemove.length > 0) {
-          logger.info(createRemoveLog({ fileResponsibleOfRemove, toRemove }))
-          // we should sort thoose execution, but it's ok for now
-          executionSteps = executionSteps.filter(
-            (executionStep) => !toRemove.includes(executionStep),
-          )
-        }
-        // all mutation handled, reset the map
-        fileMutationMap = {}
-      }
-
-      // we wait recursively for next testing result
-      // so that something can try/catch
-      // the whole execution because we still
-      // await for every promise
-      return await getNextTestingResult(nextActionRequiredPromise)
-    }
-
-    const generateActionRequiredPromise = () => {
-      return new Promise((resolve) => {
-        resolveActionRequired = resolve
-      })
-    }
-
-    logger.info("start initial testing")
-    testingResult = await executeConcurrently(executionSteps, {
-      cancellationToken,
-      logLevel,
-      executionLogLevel: "off",
-
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-      outDirectoryRelativeUrl,
-      compileServerOrigin,
-      importDefaultExtension,
-
-      maxParallelExecution,
-      defaultAllocatedMsPerExecution,
-      logEachExecutionSuccess: false,
-      captureConsole,
-      measureDuration,
-      measureTotalDuration,
-      // we can realize a file is removed when we want to execute it
-      // it's not a big problem, let's just call projectFileRemovedCallback
-      // it can happen because fs.watch is not notified when a file is removed
-      // inside a folder on windows os for instance
-      mainFileNotFoundCallback: ({ relativeUrl }) => {
+      },
+      updated: ({ relativeUrl }) => {
+        if (!projectFileSet.has(relativeUrl)) return
+        projectFileUpdatedCallback({ relativeUrl })
+      },
+      removed: ({ relativeUrl }) => {
+        if (!projectFileSet.has(relativeUrl)) return
         projectFileRemovedCallback({ relativeUrl })
       },
-    })
-    initialTestingDone = true
-    const actionRequiredPromise = generateActionRequiredPromise()
-    const willDoSomething = checkActionRequiredResolution({
+    },
+  )
+  abortSignal.register(unregisterProjectDirectoryLifecycle)
+
+  let executionSteps = await generateExecutionSteps(testPlan, {
+    abortSignal,
+    projectDirectoryUrl,
+  })
+  executionSteps.forEach((executionStep) => {
+    executionStep.executionId = cuid()
+  })
+
+  let testingResult
+  let initialTestingDone = false
+  let fileMutationMapHandledAfterInitialTesting = {}
+  let fileMutationMap
+  let resolveActionRequired
+
+  const projectFileAddedCallback = ({ relativeUrl }) => {
+    projectFileSet.add(relativeUrl)
+
+    if (!initialTestingDone) {
+      fileMutationMapHandledAfterInitialTesting[relativeUrl] = "added"
+      return
+    }
+
+    fileMutationMap[relativeUrl] = "added"
+    checkActionRequiredResolution({
       projectDirectoryUrl,
       testPlan,
       executionSteps,
       dependencyTracker,
-      fileMutationMap: fileMutationMapHandledAfterInitialTesting,
+      fileMutationMap,
       resolveActionRequired,
     })
-    fileMutationMapHandledAfterInitialTesting = undefined
-    fileMutationMap = {}
-    if (!willDoSomething) {
-      logger.info(`test execution will restart automatically`)
+  }
+
+  const projectFileUpdatedCallback = ({ relativeUrl }) => {
+    if (!initialTestingDone) {
+      fileMutationMapHandledAfterInitialTesting[relativeUrl] = "updated"
+      return
     }
-    await getNextTestingResult(actionRequiredPromise)
+
+    fileMutationMap[relativeUrl] = "updated"
+    checkActionRequiredResolution({
+      projectDirectoryUrl,
+      testPlan,
+      executionSteps,
+      dependencyTracker,
+      fileMutationMap,
+      resolveActionRequired,
+    })
+  }
+
+  const projectFileRemovedCallback = ({ relativeUrl }) => {
+    if (!initialTestingDone) {
+      fileMutationMapHandledAfterInitialTesting[relativeUrl] = "removed"
+      return
+    }
+
+    fileMutationMap[relativeUrl] = "removed"
+    checkActionRequiredResolution({
+      projectDirectoryUrl,
+      testPlan,
+      executionSteps,
+      dependencyTracker,
+      fileMutationMap,
+      resolveActionRequired,
+    })
+  }
+
+  const getNextTestingResult = async (actionRequiredPromise) => {
+    const {
+      toAdd,
+      toRun,
+      toRemove,
+      // fileResponsibleOfAdd,
+      fileResponsibleOfRemove,
+      fileResponsibleOfRun,
+    } = await actionRequiredPromise
+
+    const nextActionRequiredPromise = generateActionRequiredPromise()
+    const actionRequiredController = new AbortController()
+
+    if (toRun.length > 0) {
+      logger.info(createRunLog({ fileResponsibleOfRun, toRun }))
+
+      const nextDependencyTracker = createDependencyTracker()
+      executionImportCallback = ({ relativeUrl, executionId }) => {
+        dependencyTracker.trackDependency(relativeUrl, executionId)
+        nextDependencyTracker.trackDependency(relativeUrl, executionId)
+      }
+
+      let executing
+      nextActionRequiredPromise.then(
+        () => {
+          if (executing) {
+            logger.info(`cancel all execution`)
+            actionRequiredController.abort({
+              code: "ACTION_REQUIRED",
+            })
+          }
+        },
+        () => {},
+      )
+
+      const previousTestingResult = testingResult
+      try {
+        executing = true
+        testingResult = await executeConcurrently(toRun, {
+          abortSignal,
+          logLevel,
+          executionLogLevel: "off",
+
+          projectDirectoryUrl,
+          jsenvDirectoryRelativeUrl,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+          importDefaultExtension,
+
+          maxParallelExecution,
+          defaultAllocatedMsPerExecution,
+          logEachExecutionSuccess: false,
+          captureConsole,
+          measureDuration,
+          measureTotalDuration,
+          afterEachExecutionCallback: ({ executionId }) => {
+            // only once an execution is done,
+            // we update its dependencyArray
+            // because only then we know the actual dependencyArray
+            // in case it gets cancelled midway
+            // dependencyTracker is still tracking what is hapenning
+            // and will be notified of any new file
+            // becoming a dependency
+            dependencyTracker.setDependencySet(
+              executionId,
+              nextDependencyTracker.getDependencySet(executionId),
+            )
+          },
+          // we can realize a file is removed when we want to execute it
+          // it's not a big problem, let's just call projectFileRemovedCallback
+          // it can happen because fs.watch is not notified when a file is removed
+          // inside a folder on windows os for instance
+          mainFileNotFoundCallback: ({ relativeUrl }) => {
+            projectFileRemovedCallback({ relativeUrl })
+          },
+        })
+        executing = false
+
+        const updatedRelativeUrlArray = Object.keys(fileMutationMap).filter(
+          (relativeUrl) => {
+            return fileMutationMap[relativeUrl] === "removed"
+          },
+        )
+        // toRun handled
+        updatedRelativeUrlArray.forEach((relativeUrl) => {
+          delete fileMutationMap[relativeUrl]
+        })
+
+        if (systemNotification) {
+          showContinuousTestingNotification({
+            projectDirectoryUrl,
+            previousTestingResult,
+            testingResult,
+          })
+        }
+      } catch (error) {
+        if (error.code === `ACTION_REQUIRED`) {
+          // do nothing special, we will just wait to next testing result at the bottom
+          // of this function
+        } else {
+          throw error
+        }
+      }
+    }
+
+    // if cancellation is requested we cannot consider the
+    // toAdd, toRun, toRemoved as handled
+    if (!abortSignal.cancellationRequested) {
+      if (toAdd.length > 0) {
+        // log(createAddLog({ fileResponsibleOfAdd, toAdd }))
+        // we should sort thoose execution, but it's ok for now
+        executionSteps.push(...toAdd)
+      }
+      if (toRemove.length > 0) {
+        logger.info(createRemoveLog({ fileResponsibleOfRemove, toRemove }))
+        // we should sort thoose execution, but it's ok for now
+        executionSteps = executionSteps.filter(
+          (executionStep) => !toRemove.includes(executionStep),
+        )
+      }
+      // all mutation handled, reset the map
+      fileMutationMap = {}
+    }
+
+    // we wait recursively for next testing result
+    // so that something can try/catch
+    // the whole execution because we still
+    // await for every promise
+    return await getNextTestingResult(nextActionRequiredPromise)
+  }
+
+  const generateActionRequiredPromise = () => {
+    return new Promise((resolve) => {
+      resolveActionRequired = resolve
+    })
+  }
+
+  logger.info("start initial testing")
+  testingResult = await executeConcurrently(executionSteps, {
+    abortSignal,
+    logLevel,
+    executionLogLevel: "off",
+
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
+    compileServerOrigin,
+    importDefaultExtension,
+
+    maxParallelExecution,
+    defaultAllocatedMsPerExecution,
+    logEachExecutionSuccess: false,
+    captureConsole,
+    measureDuration,
+    measureTotalDuration,
+    // we can realize a file is removed when we want to execute it
+    // it's not a big problem, let's just call projectFileRemovedCallback
+    // it can happen because fs.watch is not notified when a file is removed
+    // inside a folder on windows os for instance
+    mainFileNotFoundCallback: ({ relativeUrl }) => {
+      projectFileRemovedCallback({ relativeUrl })
+    },
   })
+  initialTestingDone = true
+  const actionRequiredPromise = generateActionRequiredPromise()
+  const willDoSomething = checkActionRequiredResolution({
+    projectDirectoryUrl,
+    testPlan,
+    executionSteps,
+    dependencyTracker,
+    fileMutationMap: fileMutationMapHandledAfterInitialTesting,
+    resolveActionRequired,
+  })
+  fileMutationMapHandledAfterInitialTesting = undefined
+  fileMutationMap = {}
+  if (!willDoSomething) {
+    logger.info(`test execution will restart automatically`)
+  }
+  await getNextTestingResult(actionRequiredPromise)
 }
 
 const checkActionRequiredResolution = ({
@@ -422,9 +409,11 @@ const computeActionsToPerform = ({
 
   const fileIsAdded = (relativeUrl) => fileMutationMap[relativeUrl] === "added"
 
-  const fileIsUpdated = (relativeUrl) => fileMutationMap[relativeUrl] === "updated"
+  const fileIsUpdated = (relativeUrl) =>
+    fileMutationMap[relativeUrl] === "updated"
 
-  const fileIsRemoved = (relativeUrl) => fileMutationMap[relativeUrl] === "removed"
+  const fileIsRemoved = (relativeUrl) =>
+    fileMutationMap[relativeUrl] === "removed"
 
   executionSteps.forEach((executionStep) => {
     const { fileRelativeUrl } = executionStep
@@ -435,15 +424,21 @@ const computeActionsToPerform = ({
       }
       toRemove.push(executionStep)
     } else {
-      const dependencySet = dependencyTracker.getDependencySet(executionStep.executionId)
-      const executionDependencyChangedArray = Array.from(dependencySet).filter((relativeUrl) => {
-        if (fileIsUpdated(relativeUrl)) return true
-        if (relativeUrl !== fileRelativeUrl && fileIsRemoved(relativeUrl)) return true
-        // only indirect dependency added counts
-        // otherwise we could add it twice
-        if (relativeUrl !== fileRelativeUrl && fileIsAdded(relativeUrl)) return true
-        return false
-      })
+      const dependencySet = dependencyTracker.getDependencySet(
+        executionStep.executionId,
+      )
+      const executionDependencyChangedArray = Array.from(dependencySet).filter(
+        (relativeUrl) => {
+          if (fileIsUpdated(relativeUrl)) return true
+          if (relativeUrl !== fileRelativeUrl && fileIsRemoved(relativeUrl))
+            return true
+          // only indirect dependency added counts
+          // otherwise we could add it twice
+          if (relativeUrl !== fileRelativeUrl && fileIsAdded(relativeUrl))
+            return true
+          return false
+        },
+      )
       if (executionDependencyChangedArray.length) {
         executionDependencyChangedArray.forEach((relativeUrl) => {
           if (!fileResponsibleOfRun.includes(relativeUrl)) {

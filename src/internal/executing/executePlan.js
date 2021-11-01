@@ -1,3 +1,7 @@
+import {
+  Abortable,
+  raceProcessTeardownEvents,
+} from "@jsenv/core/src/abort/main.js"
 import { mergeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
 import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
@@ -7,10 +11,12 @@ import { executeConcurrently } from "./executeConcurrently.js"
 export const executePlan = async (
   plan,
   {
+    signal,
+    handleSIGINT,
+
     logger,
     compileServerLogLevel,
     launchAndExecuteLogLevel,
-    cancellationToken,
 
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
@@ -20,7 +26,7 @@ export const executePlan = async (
     importDefaultExtension,
 
     defaultMsAllocatedPerExecution,
-    concurrencyLimit,
+    maxExecutionsInParallel,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     logSummary,
@@ -68,8 +74,23 @@ export const executePlan = async (
     })
   })
 
+  const multipleExecutionsOperation = Abortable.fromSignal(signal)
+  if (handleSIGINT) {
+    Abortable.effect(multipleExecutionsOperation, (cb) =>
+      raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        () => {
+          logger.info("Aborting execution (SIGINT)")
+          cb()
+        },
+      ),
+    )
+  }
+
   const compileServer = await startCompileServer({
-    cancellationToken,
+    signal: multipleExecutionsOperation.signal,
     compileServerLogLevel,
 
     projectDirectoryUrl,
@@ -94,21 +115,25 @@ export const executePlan = async (
     runtimeSupport,
   })
 
+  multipleExecutionsOperation.cleaner.addCallback(async () => {
+    await compileServer.stop()
+  })
+
   const executionSteps = await generateExecutionSteps(
     {
       ...plan,
       [compileServer.outDirectoryRelativeUrl]: null,
     },
     {
-      cancellationToken,
+      signal: multipleExecutionsOperation.signal,
       projectDirectoryUrl,
     },
   )
 
   const result = await executeConcurrently(executionSteps, {
+    multipleExecutionsOperation,
     logger,
     launchAndExecuteLogLevel,
-    cancellationToken,
 
     projectDirectoryUrl,
     compileServerOrigin: compileServer.origin,
@@ -121,7 +146,7 @@ export const executePlan = async (
     babelPluginMap: compileServer.babelPluginMap,
 
     defaultMsAllocatedPerExecution,
-    concurrencyLimit,
+    maxExecutionsInParallel,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     logSummary,
@@ -134,7 +159,8 @@ export const executePlan = async (
     coverageV8MergeConflictIsExpected,
   })
 
-  compileServer.stop("all execution done")
+  // (used to stop potential chrome browser still opened to be reused)
+  multipleExecutionsOperation.cleaner.clean("all execution done")
 
   return {
     planSummary: result.summary,

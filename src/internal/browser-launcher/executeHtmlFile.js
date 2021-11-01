@@ -5,6 +5,7 @@ import {
   urlToExtension,
 } from "@jsenv/filesystem"
 
+import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { v8CoverageFromAllV8Coverages } from "@jsenv/core/src/internal/executing/coverage/v8CoverageFromAllV8Coverages.js"
 import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
@@ -14,7 +15,7 @@ import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.
 export const executeHtmlFile = async (
   fileRelativeUrl,
   {
-    cancellationToken,
+    launchBrowserOperation,
     projectDirectoryUrl,
     compileServerOrigin,
     outDirectoryRelativeUrl,
@@ -45,11 +46,13 @@ export const executeHtmlFile = async (
     compileProxyProjectRelativeUrl,
     compileServerOrigin,
   )
+  Abortable.throwIfAborted(launchBrowserOperation)
   await page.goto(compileProxyClientUrl)
 
   const coverageHandledFromOutside =
     coveragePlaywrightAPIAvailable && !coverageForceIstanbul
 
+  Abortable.throwIfAborted(launchBrowserOperation)
   const browserRuntimeFeaturesReport = await page.evaluate(
     /* istanbul ignore next */
     ({ coverageHandledFromOutside }) => {
@@ -65,6 +68,7 @@ export const executeHtmlFile = async (
   try {
     let executionResult
     const { canAvoidCompilation, compileId } = browserRuntimeFeaturesReport
+    Abortable.throwIfAborted(launchBrowserOperation)
     if (canAvoidCompilation) {
       executionResult = await executeSource({
         projectDirectoryUrl,
@@ -114,19 +118,27 @@ export const executeHtmlFile = async (
     }
 
     return executionResult
-  } catch (e) {
-    // if browser is closed due to cancellation
+  } catch (error) {
+    // if browser is closed due to abort
     // before it is able to finish evaluate we can safely ignore
-    // and rethrow with current cancelError
-    if (
-      e.message.match(/^Protocol error \(.*?\): Target closed/) &&
-      cancellationToken.cancellationRequested
-    ) {
-      cancellationToken.throwIfRequested()
+    // and rethrow with current abort error
+    if (launchBrowserOperation.signal.aborted && isBrowserClosedError(error)) {
+      Abortable.throwIfAborted(launchBrowserOperation)
     }
-
-    throw e
+    throw error
   }
+}
+
+const isBrowserClosedError = (error) => {
+  if (error.message.match(/browserContext.newPage: Browser closed/)) {
+    return true
+  }
+
+  if (error.message.match(/^Protocol error \(.*?\): Target closed/)) {
+    return true
+  }
+
+  return false
 }
 
 const executeSource = async ({

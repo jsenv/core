@@ -1,13 +1,5 @@
-/* eslint-disable import/max-dependencies */
-import { cpus } from "os"
-import { stat } from "fs"
-
+import { stat } from "node:fs"
 import wrapAnsi from "wrap-ansi"
-import {
-  createConcurrentOperations,
-  createCancellationSource,
-  composeCancellationToken,
-} from "@jsenv/cancellation"
 import { loggerToLevels, createDetailedMessage } from "@jsenv/logger"
 import { urlToFileSystemPath } from "@jsenv/filesystem"
 
@@ -20,9 +12,10 @@ import { createSummaryLog } from "./createSummaryLog.js"
 export const executeConcurrently = async (
   executionSteps,
   {
+    multipleExecutionsOperation,
+
     logger,
     launchAndExecuteLogLevel,
-    cancellationToken,
 
     projectDirectoryUrl,
     compileServerOrigin,
@@ -31,7 +24,7 @@ export const executeConcurrently = async (
     babelPluginMap,
 
     defaultMsAllocatedPerExecution = 30000,
-    concurrencyLimit = Math.max(cpus.length - 1, 1),
+    maxExecutionsInParallel = 1,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     measureGlobalDuration = true,
@@ -59,25 +52,19 @@ export const executeConcurrently = async (
 ) => {
   const startMs = Date.now()
 
-  const allStepDoneCancellationSource = createCancellationSource()
-  const executionCancellationToken = composeCancellationToken(
-    cancellationToken,
-    allStepDoneCancellationSource.token,
-  )
-
   const report = {}
   const executionCount = executionSteps.length
 
   let previousExecutionResult
   let previousExecutionLog
-  let disconnectedCount = 0
+  let abortedCount = 0
   let timedoutCount = 0
   let erroredCount = 0
   let completedCount = 0
-  await createConcurrentOperations({
-    cancellationToken,
-    concurrencyLimit,
-    array: executionSteps,
+  const executionsDone = await executeInParallel({
+    multipleExecutionsOperation,
+    maxExecutionsInParallel,
+    executionSteps,
     start: async (paramsFromStep) => {
       const executionIndex = executionSteps.indexOf(paramsFromStep)
       const { executionName, fileRelativeUrl } = paramsFromStep
@@ -120,9 +107,12 @@ export const executeConcurrently = async (
 
       beforeExecutionCallback(beforeExecutionInfo)
 
+      // launchAndExecute peut retourner un aborted
+      // et c'est bien, on veut le gérer, si tous les suivants sont aborted
+      // on le gere en dehors de cette boucle
       const executionResult = await launchAndExecute({
+        signal: multipleExecutionsOperation.signal,
         launchAndExecuteLogLevel,
-        cancellationToken: executionCancellationToken,
 
         ...executionParams,
         collectCoverage: coverage,
@@ -139,7 +129,6 @@ export const executeConcurrently = async (
           fileRelativeUrl,
           ...executionParams.executeParams,
         },
-
         coverageV8MergeConflictIsExpected,
       })
       const afterExecutionInfo = {
@@ -148,10 +137,10 @@ export const executeConcurrently = async (
       }
       afterExecutionCallback(afterExecutionInfo)
 
-      if (executionResult.status === "timedout") {
+      if (executionResult.status === "aborted") {
+        abortedCount++
+      } else if (executionResult.status === "timedout") {
         timedoutCount++
-      } else if (executionResult.status === "disconnected") {
-        disconnectedCount++
       } else if (executionResult.status === "errored") {
         erroredCount++
       } else if (executionResult.status === "completed") {
@@ -162,7 +151,7 @@ export const executeConcurrently = async (
         let log = createExecutionResultLog(afterExecutionInfo, {
           completedExecutionLogAbbreviation,
           executionCount,
-          disconnectedCount,
+          abortedCount,
           timedoutCount,
           erroredCount,
           completedCount,
@@ -200,18 +189,29 @@ export const executeConcurrently = async (
     },
   })
 
-  // tell everyone we are done
-  // (used to stop potential chrome browser still opened to be reused)
-  allStepDoneCancellationSource.cancel("all execution done")
+  const summaryCounts = reportToSummary(report)
 
-  const summary = reportToSummary(report)
-  if (measureGlobalDuration) {
-    summary.startMs = startMs
-    summary.endMs = Date.now()
+  const summary = {
+    executionCount,
+    ...summaryCounts,
+    // when execution is aborted, the remaining executions are "cancelled"
+    cancelledCount:
+      executionCount -
+      executionsDone.length -
+      // we substract abortedCount because they are not pushed into executionsDone
+      summaryCounts.abortedCount,
+    ...(measureGlobalDuration ? { startMs, endMs: Date.now() } : {}),
   }
-
   if (logSummary) {
     logger.info(createSummaryLog(summary))
+  }
+
+  if (multipleExecutionsOperation.signal.aborted) {
+    // don't try to do the coverage stuff
+    return {
+      summary,
+      report,
+    }
   }
 
   return {
@@ -220,8 +220,8 @@ export const executeConcurrently = async (
     ...(coverage
       ? {
           coverage: await reportToCoverage(report, {
+            multipleExecutionsOperation,
             logger,
-            cancellationToken,
             projectDirectoryUrl,
             babelPluginMap,
             coverageConfig,
@@ -233,8 +233,55 @@ export const executeConcurrently = async (
   }
 }
 
-const pathLeadsToFile = (path) =>
-  new Promise((resolve, reject) => {
+const executeInParallel = async ({
+  multipleExecutionsOperation,
+  executionSteps,
+  start,
+  maxExecutionsInParallel = 1,
+}) => {
+  const executionResults = []
+  let progressionIndex = 0
+  let remainingExecutionCount = executionSteps.length
+
+  const nextChunk = async () => {
+    if (multipleExecutionsOperation.signal.aborted) {
+      return
+    }
+
+    const outputPromiseArray = []
+    while (
+      remainingExecutionCount > 0 &&
+      outputPromiseArray.length < maxExecutionsInParallel
+    ) {
+      remainingExecutionCount--
+      const outputPromise = executeOne(progressionIndex)
+      progressionIndex++
+      outputPromiseArray.push(outputPromise)
+    }
+
+    if (outputPromiseArray.length) {
+      await Promise.all(outputPromiseArray)
+      if (remainingExecutionCount > 0) {
+        await nextChunk()
+      }
+    }
+  }
+
+  const executeOne = async (index) => {
+    const input = executionSteps[index]
+    const output = await start(input)
+    if (!multipleExecutionsOperation.signal.aborted) {
+      executionResults[index] = output
+    }
+  }
+
+  await nextChunk()
+
+  return executionResults
+}
+
+const pathLeadsToFile = (path) => {
+  return new Promise((resolve, reject) => {
     stat(path, (error, stats) => {
       if (error) {
         if (error.code === "ENOENT") {
@@ -247,12 +294,10 @@ const pathLeadsToFile = (path) =>
       }
     })
   })
+}
 
 const reportToSummary = (report) => {
   const fileNames = Object.keys(report)
-  const executionCount = fileNames.reduce((previous, fileName) => {
-    return previous + Object.keys(report[fileName]).length
-  }, 0)
 
   const countResultMatching = (predicate) => {
     return fileNames.reduce((previous, fileName) => {
@@ -269,9 +314,7 @@ const reportToSummary = (report) => {
     }, 0)
   }
 
-  const disconnectedCount = countResultMatching(
-    ({ status }) => status === "disconnected",
-  )
+  const abortedCount = countResultMatching(({ status }) => status === "aborted")
   const timedoutCount = countResultMatching(
     ({ status }) => status === "timedout",
   )
@@ -281,8 +324,7 @@ const reportToSummary = (report) => {
   )
 
   return {
-    executionCount,
-    disconnectedCount,
+    abortedCount,
     timedoutCount,
     erroredCount,
     completedCount,

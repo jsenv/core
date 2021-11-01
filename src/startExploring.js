@@ -1,14 +1,13 @@
 import {
-  createCancellationToken,
-  composeCancellationToken,
-} from "@jsenv/cancellation"
-import {
   normalizeStructuredMetaMap,
   collectFiles,
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
-import { executeJsenvAsyncFunction } from "./internal/executeJsenvAsyncFunction.js"
+import {
+  Abortable,
+  raceProcessTeardownEvents,
+} from "@jsenv/core/src/abort/main.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import {
   assertProjectDirectoryUrl,
@@ -31,8 +30,8 @@ import {
 import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
 
 export const startExploring = async ({
-  cancellationToken = createCancellationToken(),
-  cancelOnSIGINT = false,
+  signal = new AbortController().signal,
+  handleSIGINT = true,
 
   explorableConfig = jsenvExplorableConfig,
   projectDirectoryUrl,
@@ -58,79 +57,76 @@ export const startExploring = async ({
   livereloadWatchConfig,
   jsenvDirectoryClean,
 }) => {
-  const jsenvStartExploringFunction = async ({ jsenvCancellationToken }) => {
-    cancellationToken = composeCancellationToken(
-      cancellationToken,
-      jsenvCancellationToken,
+  projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
+  await assertProjectDirectoryExists({ projectDirectoryUrl })
+
+  const exploringServerOperation = Abortable.fromSignal(signal)
+  if (handleSIGINT) {
+    Abortable.effect(exploringServerOperation, (cb) =>
+      raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        cb,
+      ),
     )
-
-    projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
-    await assertProjectDirectoryExists({ projectDirectoryUrl })
-
-    const outDirectoryRelativeUrl = computeOutDirectoryRelativeUrl({
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-      outDirectoryName,
-    })
-
-    const redirectFiles = createRedirectFilesService({
-      projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-    })
-    const serveExploringData = createExploringDataService({
-      projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-      explorableConfig,
-      livereloading,
-    })
-    const serveExplorableListAsJson = createExplorableListAsJsonService({
-      projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-      explorableConfig,
-    })
-
-    const compileServer = await startCompileServer({
-      cancellationToken,
-      projectDirectoryUrl,
-      keepProcessAlive,
-      livereloadSSE: livereloading,
-      accessControlAllowRequestOrigin: true,
-      accessControlAllowRequestMethod: true,
-      accessControlAllowRequestHeaders: true,
-      accessControlAllowCredentials: true,
-      stopOnPackageVersionChange: true,
-      jsenvToolbarInjection: jsenvToolbar,
-      customServices: {
-        "service:exploring-redirect": (request) => redirectFiles(request),
-        "service:exploring-data": (request) => serveExploringData(request),
-        "service:explorables": (request) => serveExplorableListAsJson(request),
-      },
-      customCompilers,
-      jsenvDirectoryRelativeUrl,
-      outDirectoryName,
-      inlineImportMapIntoHTML,
-
-      compileServerLogLevel,
-      compileServerCanReadFromFilesystem,
-      compileServerCanWriteOnFilesystem,
-      compileServerPort,
-      compileServerProtocol,
-      compileServerHttp2,
-      compileServerCertificate,
-      compileServerPrivateKey,
-      sourcemapMethod,
-      babelPluginMap,
-      runtimeSupport: runtimeSupportDuringDev,
-      livereloadWatchConfig,
-      jsenvDirectoryClean,
-    })
-
-    return compileServer
   }
 
-  return executeJsenvAsyncFunction(jsenvStartExploringFunction, {
-    cancelOnSIGINT,
+  const outDirectoryRelativeUrl = computeOutDirectoryRelativeUrl({
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    outDirectoryName,
   })
+
+  const redirectFiles = createRedirectFilesService({
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+  })
+  const serveExploringData = createExploringDataService({
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    explorableConfig,
+    livereloading,
+  })
+  const serveExplorableListAsJson = createExplorableListAsJsonService({
+    projectDirectoryUrl,
+    outDirectoryRelativeUrl,
+    explorableConfig,
+  })
+
+  const compileServer = await startCompileServer({
+    signal: exploringServerOperation.signal,
+    keepProcessAlive,
+
+    projectDirectoryUrl,
+    livereloadSSE: livereloading,
+    jsenvToolbarInjection: jsenvToolbar,
+    customServices: {
+      "service:exploring-redirect": (request) => redirectFiles(request),
+      "service:exploring-data": (request) => serveExploringData(request),
+      "service:explorables": (request) => serveExplorableListAsJson(request),
+    },
+    customCompilers,
+    jsenvDirectoryRelativeUrl,
+    outDirectoryName,
+    inlineImportMapIntoHTML,
+
+    compileServerLogLevel,
+    compileServerCanReadFromFilesystem,
+    compileServerCanWriteOnFilesystem,
+    compileServerPort,
+    compileServerProtocol,
+    compileServerHttp2,
+    compileServerCertificate,
+    compileServerPrivateKey,
+    sourcemapMethod,
+    babelPluginMap,
+    runtimeSupport: runtimeSupportDuringDev,
+    livereloadWatchConfig,
+    jsenvDirectoryClean,
+  })
+
+  return compileServer
 }
 
 const createRedirectFilesService = ({ projectDirectoryUrl }) => {

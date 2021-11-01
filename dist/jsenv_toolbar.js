@@ -152,101 +152,6 @@
     return string;
   };
 
-  var objectWithoutPropertiesLoose = (function (source, excluded) {
-    if (source === null) return {};
-    var target = {};
-    var sourceKeys = Object.keys(source);
-    var key;
-    var i;
-
-    for (i = 0; i < sourceKeys.length; i++) {
-      key = sourceKeys[i];
-      if (excluded.indexOf(key) >= 0) continue;
-      target[key] = source[key];
-    }
-
-    return target;
-  });
-
-  var _objectWithoutProperties = (function (source, excluded) {
-    if (source === null) return {};
-    var target = objectWithoutPropertiesLoose(source, excluded);
-    var key;
-    var i;
-
-    if (Object.getOwnPropertySymbols) {
-      var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
-
-      for (i = 0; i < sourceSymbolKeys.length; i++) {
-        key = sourceSymbolKeys[i];
-        if (excluded.indexOf(key) >= 0) continue;
-        if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
-        target[key] = source[key];
-      }
-    }
-
-    return target;
-  });
-
-  var createCancellationToken = function createCancellationToken() {
-    var register = function register(callback) {
-      if (typeof callback !== "function") {
-        throw new Error("callback must be a function, got ".concat(callback));
-      }
-
-      return {
-        callback: callback,
-        unregister: function unregister() {}
-      };
-    };
-
-    var throwIfRequested = function throwIfRequested() {
-      return undefined;
-    };
-
-    return {
-      register: register,
-      cancellationRequested: false,
-      throwIfRequested: throwIfRequested
-    };
-  };
-
-  var nativeTypeOf = function nativeTypeOf(obj) {
-    return typeof obj;
-  };
-
-  var customTypeOf = function customTypeOf(obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-  };
-
-  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
-
-  var isCancelError = function isCancelError(value) {
-    return value && _typeof(value) === "object" && value.name === "CANCEL_ERROR";
-  };
-
-  /* eslint-disable no-eq-null, eqeqeq */
-  function arrayLikeToArray(arr, len) {
-    if (len == null || len > arr.length) len = arr.length;
-    var arr2 = new Array(len);
-
-    for (var i = 0; i < len; i++) {
-      arr2[i] = arr[i];
-    }
-
-    return arr2;
-  }
-
-  /* eslint-disable consistent-return */
-  function unsupportedIterableToArray(o, minLen) {
-    if (!o) return;
-    if (typeof o === "string") return arrayLikeToArray(o, minLen);
-    var n = Object.prototype.toString.call(o).slice(8, -1);
-    if (n === "Object" && o.constructor) n = o.constructor.name;
-    if (n === "Map" || n === "Set") return Array.from(o);
-    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
-  }
-
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
 
@@ -285,8 +190,51 @@
     return target;
   }
 
-  // fallback to this polyfill (or even use an existing polyfill would be better)
-  // https://github.com/github/fetch/blob/master/fetch.js
+  var objectWithoutPropertiesLoose = (function (source, excluded) {
+    if (source === null) return {};
+    var target = {};
+    var sourceKeys = Object.keys(source);
+    var key;
+    var i;
+
+    for (i = 0; i < sourceKeys.length; i++) {
+      key = sourceKeys[i];
+      if (excluded.indexOf(key) >= 0) continue;
+      target[key] = source[key];
+    }
+
+    return target;
+  });
+
+  var _objectWithoutProperties = (function (source, excluded) {
+    if (source === null) return {};
+    var target = objectWithoutPropertiesLoose(source, excluded);
+    var key;
+    var i;
+
+    if (Object.getOwnPropertySymbols) {
+      var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
+
+      for (i = 0; i < sourceSymbolKeys.length; i++) {
+        key = sourceSymbolKeys[i];
+        if (excluded.indexOf(key) >= 0) continue;
+        if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
+        target[key] = source[key];
+      }
+    }
+
+    return target;
+  });
+
+  var nativeTypeOf = function nativeTypeOf(obj) {
+    return typeof obj;
+  };
+
+  var customTypeOf = function customTypeOf(obj) {
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+  };
+
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
   function _await$5(value, then, direct) {
     if (direct) {
@@ -329,8 +277,7 @@
 
   var fetchUsingXHR = _async$6(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        _ref$cancellationToke = _ref.cancellationToken,
-        cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
+        signal = _ref.signal,
         _ref$method = _ref.method,
         method = _ref$method === void 0 ? "GET" : _ref$method,
         _ref$credentials = _ref.credentials,
@@ -379,9 +326,11 @@
       bodyPromise.resolve();
     };
 
-    cancellationToken.register(function (cancelError) {
+    signal.addEventListener("abort", function () {
       xhr.abort();
-      failure(cancelError);
+      var abortError = new Error("aborted");
+      abortError.name = "AbortError";
+      failure(abortError);
     });
 
     xhr.onreadystatechange = function () {
@@ -721,7 +670,7 @@
     return view.buffer;
   };
 
-  var _excluded$1 = ["cancellationToken", "mode"];
+  var _excluded$1 = ["mode"];
 
   function _await$4(value, then, direct) {
     if (direct) {
@@ -736,36 +685,15 @@
   }
 
   var fetchNative = _async$5(function (url) {
-
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
-    var _ref$cancellationToke = _ref.cancellationToken,
-        cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
-        _ref$mode = _ref.mode,
+    var _ref$mode = _ref.mode,
         mode = _ref$mode === void 0 ? "cors" : _ref$mode,
         options = _objectWithoutProperties(_ref, _excluded$1);
 
-    var abortController = new AbortController();
-    var cancelError;
-    cancellationToken.register(function (reason) {
-      cancelError = reason;
-      abortController.abort(reason);
-    });
-    var response;
-    return _continue(_catch$2(function () {
-      return _await$4(window.fetch(url, _objectSpread2({
-        signal: abortController.signal,
-        mode: mode
-      }, options)), function (_window$fetch) {
-        response = _window$fetch;
-      });
-    }, function (e) {
-      if (cancelError && e.name === "AbortError") {
-        throw cancelError;
-      }
-
-      throw e;
-    }), function (_result) {
+    return _await$4(window.fetch(url, _objectSpread2({
+      mode: mode
+    }, options)), function (response) {
       return {
         url: response.url,
         status: response.status,
@@ -790,32 +718,6 @@
     });
   });
 
-  function _catch$2(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  var responseToHeaders = function responseToHeaders(response) {
-    var headers = {};
-    response.headers.forEach(function (value, name) {
-      headers[name] = value;
-    });
-    return headers;
-  };
-
-  function _continue(value, then) {
-    return value && value.then ? value.then(then) : then(value);
-  }
-
   function _async$5(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
@@ -829,6 +731,14 @@
       }
     };
   }
+
+  var responseToHeaders = function responseToHeaders(response) {
+    var headers = {};
+    response.headers.forEach(function (value, name) {
+      headers[name] = value;
+    });
+    return headers;
+  };
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
@@ -907,14 +817,14 @@
 
   var fetchExploringJson = _async$3(function () {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        cancellationToken = _ref.cancellationToken;
+        signal = _ref.signal;
 
     return _catch$1(function () {
       return _await$2(fetchJson("/.jsenv/exploring.json", {
-        cancellationToken: cancellationToken
+        signal: signal
       }));
     }, function (e) {
-      if (isCancelError(e)) {
+      if (signal && signal.aborted && e.name === "AbortError") {
         throw e;
       }
 
@@ -1785,6 +1695,28 @@
     }
 
     return _arr;
+  }
+
+  /* eslint-disable no-eq-null, eqeqeq */
+  function arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+    var arr2 = new Array(len);
+
+    for (var i = 0; i < len; i++) {
+      arr2[i] = arr[i];
+    }
+
+    return arr2;
+  }
+
+  /* eslint-disable consistent-return */
+  function unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
   }
 
   var nonIterableRest = (function () {

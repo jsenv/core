@@ -4,14 +4,10 @@ const animateFallback = () => {
   return Promise.resolve()
 }
 
-const animateNative = (
-  node,
-  keyframes,
-  { cancellationToken, ...options } = {},
-) => {
+const animateNative = (node, keyframes, { signal, ...options } = {}) => {
   const animation = node.animate(keyframes, options)
-  if (cancellationToken) {
-    cancellationToken.register(() => {
+  if (signal) {
+    signal.addEventListener("abort", () => {
       animation.cancel()
     })
   }

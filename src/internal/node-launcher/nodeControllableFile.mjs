@@ -1,3 +1,4 @@
+import v8 from "node:v8"
 import { uneval } from "@jsenv/uneval"
 
 import { jsenvNodeSystemFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
@@ -116,13 +117,6 @@ const onceProcessMessage = (type, callback) => {
   return removeListener
 }
 
-const onceSIGTERM = (callback) => {
-  process.once("SIGTERM", callback)
-  return () => {
-    process.removeListener("SIGTERM", callback)
-  }
-}
-
 const removeActionRequestListener = onceProcessMessage(
   ACTION_REQUEST_EVENT_NAME,
   async ({ actionType, actionParams }) => {
@@ -141,6 +135,15 @@ const removeActionRequestListener = onceProcessMessage(
       value = e
     }
 
+    if (process.env.NODE_V8_COVERAGE) {
+      v8.takeCoverage()
+      // if (actionParams.stopCoverageAfterExecution) {
+      //   v8.stopCoverage()
+      // }
+    }
+
+    // setTimeout(() => {}, 100)
+
     if (failed) {
       sendActionFailed(value)
     } else {
@@ -149,8 +152,10 @@ const removeActionRequestListener = onceProcessMessage(
 
     // removeActionRequestListener()
     if (actionParams.exitAfterAction) {
-      // for some reason this fixes v8 coverage directory somtimes empty
-      process.exit()
+      removeActionRequestListener()
+
+      // for some reason this fixes v8 coverage directory sometimes empty on Ubuntu
+      // process.exit()
     }
   },
 )
@@ -158,6 +163,7 @@ const removeActionRequestListener = onceProcessMessage(
 // remove listener to process.on('message')
 // which is sufficient to let child process die
 // assuming nothing else keeps it alive
-onceSIGTERM(removeActionRequestListener)
+// process.once("SIGTERM", removeActionRequestListener)
+// process.once("SIGINT", removeActionRequestListener)
 
 setTimeout(() => sendToParent("ready"))

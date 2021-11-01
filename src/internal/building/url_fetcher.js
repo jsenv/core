@@ -13,14 +13,11 @@ export const createUrlFetcher = ({
 }) => {
   const urlRedirectionMap = {}
 
-  const fetchUrl = async (
-    url,
-    { cancellationToken, urlTrace, contentTypeExpected },
-  ) => {
+  const fetchUrl = async (url, { signal, urlTrace, contentTypeExpected }) => {
     const urlToFetch = applyUrlMappings(url)
 
     const response = await jsenvFetchUrl(urlToFetch, {
-      cancellationToken,
+      signal,
       ignoreHttpsError: true,
     })
     const responseUrl = response.url

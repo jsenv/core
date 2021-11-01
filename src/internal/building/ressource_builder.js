@@ -9,7 +9,7 @@ import {
 import { createLogger } from "@jsenv/logger"
 
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
-import { promiseTrackRace } from "../promise_track_race.js"
+import { racePromises } from "../promise_race.js"
 import { parseDataUrl } from "../dataUrl.utils.js"
 
 import {
@@ -400,11 +400,8 @@ export const createRessourceBuilder = (
         //    and this asset builder fetching to avoid fetching twice.
         //    This scenario would be reproduced for every js module preloaded
         const { usedPromise, rollupBuildDonePromise } = ressource
-        const { winner } = await promiseTrackRace([
-          usedPromise,
-          rollupBuildDonePromise,
-        ])
-        if (winner === rollupBuildDonePromise) {
+        const winner = await racePromises([usedPromise, rollupBuildDonePromise])
+        if (winner.promise === rollupBuildDonePromise) {
           return
         }
       }

@@ -1,12 +1,14 @@
-import { createOperation } from "@jsenv/cancellation"
 import {
   urlToFileSystemPath,
   ensureEmptyDirectory,
   readFile,
   urlToRelativeUrl,
+  writeFile,
+  resolveUrl,
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 import { humanizeUrl } from "@jsenv/core/src/internal/building/url_trace.js"
 import {
@@ -17,7 +19,7 @@ import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/r
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
 
 export const buildUsingRollup = async ({
-  cancellationToken,
+  buildOperation,
   logger,
 
   projectDirectoryUrl,
@@ -101,7 +103,7 @@ export const buildUsingRollup = async ({
     asOriginalUrl,
     asProjectUrl,
   } = await createJsenvRollupPlugin({
-    cancellationToken,
+    buildOperation,
     logger,
 
     projectDirectoryUrl,
@@ -109,9 +111,6 @@ export const buildUsingRollup = async ({
     compileServerOrigin,
     compileDirectoryRelativeUrl,
     buildDirectoryUrl,
-    assetManifestFile,
-    assetManifestFileRelativeUrl,
-    writeOnFileSystem,
 
     format,
     systemJsUrl,
@@ -142,7 +141,7 @@ export const buildUsingRollup = async ({
 
   try {
     await useRollup({
-      cancellationToken,
+      buildOperation,
       logger,
 
       jsenvRollupPlugin,
@@ -189,9 +188,41 @@ export const buildUsingRollup = async ({
     throw e
   }
 
-  const jsenvBuild = getResult()
+  const {
+    rollupBuild,
+    urlResponseBodyMap,
+    buildMappings,
+    buildManifest,
+    buildImportMap,
+    buildFileContents,
+    buildInlineFileContents,
+    buildStats,
+  } = getResult()
 
   if (writeOnFileSystem) {
+    if (buildDirectoryClean) {
+      await ensureEmptyDirectory(buildDirectoryUrl)
+    }
+
+    if (assetManifestFile) {
+      const assetManifestFileUrl = resolveUrl(
+        assetManifestFileRelativeUrl,
+        buildDirectoryUrl,
+      )
+      await writeFile(
+        assetManifestFileUrl,
+        JSON.stringify(buildManifest, null, "  "),
+      )
+    }
+
+    const buildRelativeUrls = Object.keys(buildFileContents)
+    await Promise.all(
+      buildRelativeUrls.map(async (buildRelativeUrl) => {
+        const fileBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
+        await writeFile(fileBuildUrl, buildFileContents[buildRelativeUrl])
+      }),
+    )
+
     await Promise.all(
       Object.keys(serviceWorkers).map(
         async (serviceWorkerProjectRelativeUrl) => {
@@ -203,7 +234,9 @@ export const buildUsingRollup = async ({
             serviceWorkerProjectRelativeUrl,
             serviceWorkerBuildRelativeUrl,
             serviceWorkerTransformer: (code) =>
-              serviceWorkerFinalizer(code, jsenvBuild, {
+              serviceWorkerFinalizer(code, {
+                buildManifest,
+                rollupBuild,
                 lineBreakNormalization,
               }),
 
@@ -214,11 +247,20 @@ export const buildUsingRollup = async ({
     )
   }
 
-  return jsenvBuild
+  return {
+    rollupBuild,
+    urlResponseBodyMap,
+    buildMappings,
+    buildManifest,
+    buildImportMap,
+    buildFileContents,
+    buildInlineFileContents,
+    buildStats,
+  }
 }
 
 const useRollup = async ({
-  cancellationToken,
+  buildOperation,
   logger,
   jsenvRollupPlugin,
   format,
@@ -228,9 +270,9 @@ const useRollup = async ({
   preserveEntrySignatures,
   // jsConcatenation,
   buildDirectoryUrl,
-  buildDirectoryClean,
   asOriginalUrl,
 }) => {
+  Abortable.throwIfAborted(buildOperation)
   const { rollup } = await import("rollup")
   const { importAssertions } = await import("acorn-import-assertions")
 
@@ -308,19 +350,13 @@ const useRollup = async ({
       : {}),
   }
 
-  const rollupReturnValue = await createOperation({
-    cancellationToken,
-    start: () => rollup(rollupInputOptions),
-  })
+  Abortable.throwIfAborted(buildOperation)
+  const rollupReturnValue = await rollup(rollupInputOptions)
 
-  if (buildDirectoryClean) {
-    await ensureEmptyDirectory(buildDirectoryUrl)
-  }
-
-  const rollupOutputArray = await createOperation({
-    cancellationToken,
-    start: () => rollupReturnValue.generate(rollupOutputOptions),
-  })
+  Abortable.throwIfAborted(buildOperation)
+  const rollupOutputArray = await rollupReturnValue.generate(
+    rollupOutputOptions,
+  )
 
   return rollupOutputArray
 }

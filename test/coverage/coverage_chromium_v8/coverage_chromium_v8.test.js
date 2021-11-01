@@ -34,7 +34,7 @@ const test = async (options = {}) => {
     },
     // defaultMsAllocatedPerExecution: Infinity,
     ...options,
-    // concurrencyLimit: 1,
+    // maxExecutionsInParallel: 1,
     // logLevel: "info",
     // coverageHtmlDirectory: true,
   })

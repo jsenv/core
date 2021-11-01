@@ -1,10 +1,4 @@
-/* eslint-disable import/max-dependencies */
 import { readFileSync } from "node:fs"
-import {
-  createCancellationToken,
-  createCancellationSource,
-  composeCancellationToken,
-} from "@jsenv/cancellation"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -12,6 +6,9 @@ import {
   createSSERoom,
   composeServicesWithTiming,
   urlToContentType,
+  pluginServerTiming,
+  pluginRequestWaitingCheck,
+  pluginCORS,
 } from "@jsenv/server"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import {
@@ -22,12 +19,12 @@ import {
   readFile,
   writeFile,
   ensureEmptyDirectory,
-  registerFileLifecycle,
   registerDirectoryLifecycle,
   urlIsInsideOf,
   urlToBasename,
 } from "@jsenv/filesystem"
 
+import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
@@ -48,7 +45,7 @@ import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
 import { createTransformHtmlSourceFileService } from "./html_source_file_service.js"
 
 export const startCompileServer = async ({
-  cancellationToken = createCancellationToken(),
+  signal = new AbortController().signal,
   compileServerLogLevel,
 
   projectDirectoryUrl,
@@ -89,7 +86,7 @@ export const startCompileServer = async ({
   compileServerIp = "0.0.0.0",
   compileServerPort = 0,
   keepProcessAlive = false,
-  stopOnPackageVersionChange = false,
+  onStop = () => {},
 
   // remaining options
   runtimeSupport,
@@ -218,15 +215,12 @@ export const startCompileServer = async ({
     ...babelPluginMap,
   }
 
-  const serverStopCancellationSource = createCancellationSource()
+  const compileServerOperation = Abortable.fromSignal(signal)
 
   let projectFileRequestedCallback = () => {}
   if (livereloadSSE) {
     const sseSetup = setupServerSentEventsForLivereload({
-      cancellationToken: composeCancellationToken(
-        cancellationToken,
-        serverStopCancellationSource.token,
-      ),
+      compileServerOperation,
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       outDirectoryRelativeUrl,
@@ -236,7 +230,7 @@ export const startCompileServer = async ({
 
     projectFileRequestedCallback = sseSetup.projectFileRequestedCallback
     const serveSSEForLivereload = createSSEForLivereloadService({
-      cancellationToken,
+      compileServerOperation,
       outDirectoryRelativeUrl,
       trackMainAndDependencies: sseSetup.trackMainAndDependencies,
     })
@@ -302,7 +296,7 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
     }),
     "service:compiled file": createCompiledFileService({
-      cancellationToken,
+      compileServerOperation,
       logger,
 
       projectDirectoryUrl,
@@ -351,7 +345,13 @@ export const startCompileServer = async ({
   }
 
   const compileServer = await startServer({
-    cancellationToken,
+    signal: compileServerOperation.signal,
+    stopOnExit: false,
+    stopOnSIGINT: false,
+    stopOnInternalError: false,
+    sendServerInternalErrorDetails: true,
+    keepProcessAlive,
+
     logLevel: compileServerLogLevel,
 
     protocol: compileServerProtocol,
@@ -360,43 +360,31 @@ export const startCompileServer = async ({
     serverCertificatePrivateKey: compileServerPrivateKey,
     ip: compileServerIp,
     port: compileServerPort,
-    sendServerTiming: true,
-    // nagle: false,
-    requestWaitingMs: 60 * 1000,
-    sendServerInternalErrorDetails: true,
+    plugins: {
+      ...pluginCORS({
+        accessControlAllowRequestOrigin: true,
+        accessControlAllowRequestMethod: true,
+        accessControlAllowRequestHeaders: true,
+        accessControlAllowedRequestHeaders: [
+          ...jsenvAccessControlAllowedHeaders,
+          "x-jsenv-execution-id",
+        ],
+        accessControlAllowCredentials: true,
+      }),
+      ...pluginServerTiming,
+      ...pluginRequestWaitingCheck({
+        requestWaitingMs: 60 * 1000,
+      }),
+    },
     requestToResponse: composeServicesWithTiming({
       ...customServices,
       ...jsenvServices,
     }),
-    accessControlAllowRequestOrigin: true,
-    accessControlAllowRequestMethod: true,
-    accessControlAllowRequestHeaders: true,
-    accessControlAllowedRequestHeaders: [
-      ...jsenvAccessControlAllowedHeaders,
-      "x-jsenv-execution-id",
-    ],
-    accessControlAllowCredentials: true,
-    keepProcessAlive,
+    onStop: () => {
+      onStop()
+      compileServerOperation.cleaner.clean()
+    },
   })
-
-  compileServer.stoppedPromise.then(serverStopCancellationSource.cancel)
-
-  if (stopOnPackageVersionChange) {
-    const stopListeningJsenvPackageVersionChange =
-      listenJsenvPackageVersionChange({
-        projectDirectoryUrl,
-        jsenvDirectoryRelativeUrl,
-        onJsenvPackageVersionChange: () => {
-          compileServer.stop(STOP_REASON_PACKAGE_VERSION_CHANGED)
-        },
-      })
-    compileServer.stoppedPromise.then(
-      () => {
-        stopListeningJsenvPackageVersionChange()
-      },
-      () => {},
-    )
-  }
 
   return {
     jsenvDirectoryRelativeUrl,
@@ -571,7 +559,7 @@ const compareValueJson = (left, right) => {
  *
  */
 const setupServerSentEventsForLivereload = ({
-  cancellationToken,
+  compileServerOperation,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
@@ -617,7 +605,7 @@ const setupServerSentEventsForLivereload = ({
       recursive: true,
     },
   )
-  cancellationToken.register(unregisterDirectoryLifecyle)
+  compileServerOperation.cleaner.addCallback(unregisterDirectoryLifecyle)
 
   const getDependencySet = (mainRelativeUrl) => {
     if (trackerMap.has(mainRelativeUrl)) {
@@ -773,11 +761,14 @@ const setupServerSentEventsForLivereload = ({
     }
   }
 
-  return { projectFileRequestedCallback, trackMainAndDependencies }
+  return {
+    projectFileRequestedCallback,
+    trackMainAndDependencies,
+  }
 }
 
 const createSSEForLivereloadService = ({
-  cancellationToken,
+  compileServerOperation,
   outDirectoryRelativeUrl,
   trackMainAndDependencies,
 }) => {
@@ -811,17 +802,18 @@ const createSSEForLivereloadService = ({
       },
     })
 
-    const cancelRegistration = cancellationToken.register(() => {
-      cancelRegistration.unregister()
-
-      sseRoom.close()
-      stopTracking()
-    })
+    const removeSSECleanupCallback = compileServerOperation.cleaner.addCallback(
+      () => {
+        removeSSECleanupCallback()
+        sseRoom.close()
+        stopTracking()
+      },
+    )
     cache.push({
       mainFileRelativeUrl,
       sseRoom,
       cleanup: () => {
-        cancelRegistration.unregister()
+        removeSSECleanupCallback()
         sseRoom.close()
         stopTracking()
       },
@@ -1118,60 +1110,11 @@ const createCompileProxyService = ({ projectDirectoryUrl }) => {
   }
 }
 
-const listenJsenvPackageVersionChange = ({
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  onJsenvPackageVersionChange = () => {},
-}) => {
-  const jsenvCoreDirectoryUrl = resolveUrl(
-    jsenvDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
-  const packageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
-  const packageFilePath = urlToFileSystemPath(packageFileUrl)
-  let packageVersion
-
-  try {
-    packageVersion = readPackage(packageFilePath).version
-  } catch (e) {
-    if (e.code === "ENOENT") return () => {}
-  }
-
-  const checkPackageVersion = () => {
-    let packageObject
-    try {
-      packageObject = readPackage(packageFilePath)
-    } catch (e) {
-      // package json deleted ? not a problem
-      // let's wait for it to show back
-      if (e.code === "ENOENT") return
-      // package.json malformed ? not a problem
-      // let's wait for use to fix it or filesystem to finish writing the file
-      if (e.name === "SyntaxError") return
-      throw e
-    }
-
-    if (packageVersion !== packageObject.version) {
-      onJsenvPackageVersionChange()
-    }
-  }
-
-  return registerFileLifecycle(packageFilePath, {
-    added: checkPackageVersion,
-    updated: checkPackageVersion,
-    keepProcessAlive: false,
-  })
-}
-
 const readPackage = (packagePath) => {
   const buffer = readFileSync(packagePath)
   const string = String(buffer)
   const packageObject = JSON.parse(string)
   return packageObject
-}
-
-export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
-  toString: () => `package version changed`,
 }
 
 const __filenameReplacement = `import.meta.url.slice('file:///'.length)`
