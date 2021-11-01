@@ -179,6 +179,9 @@
       "istanbul-lib-instrument": [
         "./node_modules/istanbul-lib-instrument/src/index.js"
       ],
+      "playwright/package.json": [
+        "./node_modules/playwright/package.json"
+      ],
       "postcss/lib/declaration": [
         "./node_modules/postcss/lib/declaration.js"
       ],
@@ -440,6 +443,9 @@
       "node-notifier/*": [
         "./node_modules/node-notifier/*"
       ],
+      "playwright/cli": [
+        "./node_modules/playwright/cli.js"
+      ],
       "supports-color": [
         "./node_modules/supports-color/index.js"
       ],
@@ -523,9 +529,6 @@
       ],
       "node-fetch/*": [
         "./node_modules/node-fetch/*"
-      ],
-      "playwright/*": [
-        "./node_modules/playwright/*"
       ],
       "source-map/*": [
         "./node_modules/source-map/*"
