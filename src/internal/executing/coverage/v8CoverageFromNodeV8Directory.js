@@ -31,7 +31,7 @@ const readV8CoverageReportsFromDirectory = async (coverageDirectory) => {
     if (dirContent.length > 0) {
       return dirContent
     }
-    if (timeSpentTrying < 1500) {
+    if (timeSpentTrying < 4500) {
       await new Promise((resolve) => setTimeout(resolve, 100))
       return tryReadDirectory(timeSpentTrying + 100)
     }
