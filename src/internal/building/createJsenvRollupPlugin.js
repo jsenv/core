@@ -16,6 +16,7 @@ import {
 } from "@jsenv/filesystem"
 import { createWorkersForJavaScriptModules } from "@jsenv/workers"
 
+import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
 import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js"
@@ -751,11 +752,17 @@ export const createJsenvRollupPlugin = async ({
       }
 
       let url = asServerUrl(rollupUrl)
-      const loadResult = await urlLoader.loadUrl(rollupUrl, {
-        signal: buildOperation.signal,
-        logger,
-        ressourceBuilder,
-      })
+
+      const loadResult = await Abortable.asyncCallback(
+        buildOperation,
+        (signal) => {
+          return urlLoader.loadUrl(rollupUrl, {
+            signal,
+            logger,
+            ressourceBuilder,
+          })
+        },
+      )
 
       url = loadResult.url
       const code = loadResult.code

@@ -4,6 +4,7 @@
 
 import { createCleaner } from "./cleaner.js"
 import { raceCallbacks } from "./callback_race.js"
+import { createSignal } from "./signal.js"
 
 export const Abortable = {
   throwIfAborted: (operation) => {
@@ -15,14 +16,28 @@ export const Abortable = {
     }
   },
 
+  isAbortError: (error) => {
+    return error.name === "AbortError"
+  },
+
   start: () => {
     const abortController = new AbortController()
     const cleaner = createCleaner()
+    const signal = abortController.signal
+
+    // the abort Signal is used to ignore the max listeners warning from Node.js
+    // this warning is usefull but when followSignal is used
+    // we'll assume the signal will be correctly unfollowed later
+    const abortSignal = createSignal({ once: true })
+    signal.onabort = () => abortSignal.emit()
+
     const operation = {
       abort: (value) => abortController.abort(value),
-      signal: abortController.signal,
+      signal,
+      abortSignal,
       cleaner,
     }
+
     return operation
   },
 
@@ -34,18 +49,18 @@ export const Abortable = {
 
   followSignal: (operation, signal, cleanup = cleanupNoop) => {
     if (operation.signal.aborted) {
-      return
+      return () => {}
     }
 
     if (signal.aborted) {
       operation.abort()
-      return
+      return () => {}
     }
 
-    raceCallbacks(
+    return raceCallbacks(
       {
         parent_abort: (cb) => {
-          return addEventListener(operation.signal, "abort", cb)
+          return operation.abortSignal.addCallback(cb)
         },
         child_abort: (cb) => {
           return addEventListener(signal, "abort", cb)
@@ -110,6 +125,28 @@ export const Abortable = {
       },
     )
     return removeAbortEventListener
+  },
+
+  // Provide a signal to the callback
+  // this signal won't inherit the current signal max listeners
+  asyncCallback: async (operation, asyncFunction) => {
+    Abortable.throwIfAborted(operation)
+
+    const abortController = new AbortController()
+    const signal = abortController.signal
+
+    const removeParentAbortCallback = operation.abortSignal.addCallback(() => {
+      abortController.abort()
+    })
+
+    try {
+      const value = await asyncFunction(signal)
+      removeParentAbortCallback()
+      return value
+    } catch (e) {
+      removeParentAbortCallback()
+      throw e
+    }
   },
 }
 

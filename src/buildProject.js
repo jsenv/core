@@ -149,7 +149,7 @@ export const buildProject = async ({
   }
 
   const compileServer = await startCompileServer({
-    signal: Abortable.signal,
+    signal: buildOperation.signal,
     compileServerLogLevel,
 
     projectDirectoryUrl,
@@ -238,6 +238,12 @@ export const buildProject = async ({
     })
 
     return result
+  } catch (e) {
+    if (Abortable.isAbortError(e)) {
+      logger.info("build aborted")
+      return null
+    }
+    throw e
   } finally {
     await buildOperation.cleaner.clean()
   }
