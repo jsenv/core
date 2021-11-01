@@ -126,28 +126,19 @@ export const createControllableNodeProcess = async ({
   )
 
   const errorSignal = createSignal()
-  const removeErrorListener = installProcessErrorListener(
-    childProcess,
-    (error) => {
-      removeOutputListener()
-      if (!childProcess.connected && error.code === "ERR_IPC_DISCONNECTED") {
-        return
-      }
-      errorSignal.transmit(error)
-    },
-  )
-  // keep listening process errors while child process is killed to catch
-  // errors until it's actually disconnected
-  // registerCleanupCallback(removeProcessErrorListener)
 
-  // https://nodejs.org/api/child_process.html#child_process_event_disconnect
   const stoppedSignal = createSignal({
     once: true,
   })
   raceCallbacks(
     {
-      disconnect: (cb) => {
-        return onceProcessEvent(childProcess, "disconnect", cb)
+      // https://nodejs.org/api/child_process.html#child_process_event_disconnect
+      // disconnect: (cb) => {
+      //   return onceProcessEvent(childProcess, "disconnect", cb)
+      // },
+      // https://nodejs.org/api/child_process.html#child_process_event_error
+      error: (cb) => {
+        return onceProcessEvent(childProcess, "error", cb)
       },
       exit: (cb) => {
         return onceProcessEvent(childProcess, "exit", (code, signal) => {
@@ -157,16 +148,35 @@ export const createControllableNodeProcess = async ({
     },
     (winner) => {
       const raceEffects = {
-        disconnect: () => {
-          removeErrorListener()
-          stoppedSignal.emit()
+        // disconnect: () => {
+        //   stoppedSignal.emit()
+        // },
+        error: (error) => {
+          removeOutputListener()
+          if (
+            !childProcess.connected &&
+            error.code === "ERR_IPC_DISCONNECTED"
+          ) {
+            return
+          }
+          errorSignal.emit(error)
         },
         exit: ({ code, signal }) => {
-          removeErrorListener()
+          // process.exit(1) in child process or process.exitCode = 1 + process.exit()
+          // means there was an error even if we don't know exactly what.
+          if (
+            code !== null &&
+            code !== 0 &&
+            code !== SIGINT_EXIT_CODE &&
+            code !== SIGTERM_EXIT_CODE &&
+            code !== SIGABORT_EXIT_CODE
+          ) {
+            errorSignal.emit(createExitWithFailureCodeError(code))
+          }
           stoppedSignal.emit({ code, signal })
         },
       }
-      raceEffects[winner.name](winner.value)
+      raceEffects[winner.name](winner.data)
     },
   )
 
@@ -295,36 +305,6 @@ const installProcessOutputListener = (childProcess, callback) => {
   return () => {
     childProcess.stdout.removeListener("data", stdoutDataCallback)
     childProcess.stderr.removeListener("data", stdoutDataCallback)
-  }
-}
-
-const installProcessErrorListener = (childProcess, callback) => {
-  // https://nodejs.org/api/child_process.html#child_process_event_error
-  const removeErrorListener = onceProcessMessage(
-    childProcess,
-    "error",
-    (error) => {
-      removeExitListener() // if an error occured we ignore the child process exitCode
-      callback(error)
-    },
-  )
-  // process.exit(1) in child process or process.exitCode = 1 + process.exit()
-  // means there was an error even if we don't know exactly what.
-  const removeExitListener = onceProcessEvent(childProcess, "exit", (code) => {
-    if (
-      code !== null &&
-      code !== 0 &&
-      code !== SIGINT_EXIT_CODE &&
-      code !== SIGTERM_EXIT_CODE &&
-      code !== SIGABORT_EXIT_CODE
-    ) {
-      removeErrorListener()
-      callback(createExitWithFailureCodeError(code))
-    }
-  })
-  return () => {
-    removeErrorListener()
-    removeExitListener()
   }
 }
 

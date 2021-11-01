@@ -99,6 +99,18 @@ export const Abortable = {
       }
     })
   },
+
+  cleanOnAbort: (operation) => {
+    const removeAbortEventListener = addEventListener(
+      operation.signal,
+      "abort",
+      () => {
+        removeAbortEventListener()
+        operation.cleaner.clean("operation aborted")
+      },
+    )
+    return removeAbortEventListener
+  },
 }
 
 const cleanupNoop = () => {}

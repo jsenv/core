@@ -377,7 +377,7 @@ const browserToRuntimeHooks = (
     ignoreUnhandledRejections,
   },
 ) => {
-  const stoppedSignal = createSignal()
+  const stoppedSignal = createSignal({ once: true })
   // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
   browser.on("disconnected", stoppedSignal.emit)
 
@@ -420,7 +420,8 @@ const browserToRuntimeHooks = (
       onConsole: outputSignal.emit,
     })
     launchBrowserOperation.cleaner.addCallback(stopTrackingToNotify)
-    return executeHtmlFile(fileRelativeUrl, {
+
+    const result = await executeHtmlFile(fileRelativeUrl, {
       launchBrowserOperation,
 
       projectDirectoryUrl,
@@ -435,7 +436,10 @@ const browserToRuntimeHooks = (
       coverageForceIstanbul,
       coveragePlaywrightAPIAvailable,
     })
+    return result
   }
+
+  Abortable.cleanOnAbort(launchBrowserOperation)
 
   return {
     stoppedSignal,
