@@ -121,7 +121,6 @@
     "@babel/preset-env": "7.15.8",
     "@jsenv/assert": "2.3.2",
     "@jsenv/babel-preset": "./packages/jsenv-babel-preset",
-    "@jsenv/codecov-upload": "3.5.0",
     "@jsenv/eslint-config": "16.0.8",
     "@jsenv/github-release-package": "1.2.3",
     "@jsenv/https-local": "1.0.2",
