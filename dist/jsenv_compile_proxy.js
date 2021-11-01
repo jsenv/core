@@ -169,29 +169,6 @@
     return target;
   });
 
-  var createCancellationToken = function createCancellationToken() {
-    var register = function register(callback) {
-      if (typeof callback !== "function") {
-        throw new Error("callback must be a function, got ".concat(callback));
-      }
-
-      return {
-        callback: callback,
-        unregister: function unregister() {}
-      };
-    };
-
-    var throwIfRequested = function throwIfRequested() {
-      return undefined;
-    };
-
-    return {
-      register: register,
-      cancellationRequested: false,
-      throwIfRequested: throwIfRequested
-    };
-  };
-
   var nativeTypeOf = function nativeTypeOf(obj) {
     return typeof obj;
   };
@@ -211,9 +188,6 @@
     });
     return string;
   };
-
-  // fallback to this polyfill (or even use an existing polyfill would be better)
-  // https://github.com/github/fetch/blob/master/fetch.js
 
   function _await$3(value, then, direct) {
     if (direct) {
@@ -256,8 +230,7 @@
 
   var fetchUsingXHR = _async$3(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        _ref$cancellationToke = _ref.cancellationToken,
-        cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
+        signal = _ref.signal,
         _ref$method = _ref.method,
         method = _ref$method === void 0 ? "GET" : _ref$method,
         _ref$credentials = _ref.credentials,
@@ -306,9 +279,11 @@
       bodyPromise.resolve();
     };
 
-    cancellationToken.register(function (cancelError) {
+    signal.addEventListener("abort", function () {
       xhr.abort();
-      failure(cancelError);
+      var abortError = new Error("aborted");
+      abortError.name = "AbortError";
+      failure(abortError);
     });
 
     xhr.onreadystatechange = function () {
@@ -648,7 +623,7 @@
     return view.buffer;
   };
 
-  var _excluded = ["cancellationToken", "mode"];
+  var _excluded = ["mode"];
 
   function _await$2(value, then, direct) {
     if (direct) {
@@ -663,36 +638,15 @@
   }
 
   var fetchNative = _async$2(function (url) {
-
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
-    var _ref$cancellationToke = _ref.cancellationToken,
-        cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
-        _ref$mode = _ref.mode,
+    var _ref$mode = _ref.mode,
         mode = _ref$mode === void 0 ? "cors" : _ref$mode,
         options = _objectWithoutProperties(_ref, _excluded);
 
-    var abortController = new AbortController();
-    var cancelError;
-    cancellationToken.register(function (reason) {
-      cancelError = reason;
-      abortController.abort(reason);
-    });
-    var response;
-    return _continue(_catch$1(function () {
-      return _await$2(window.fetch(url, _objectSpread2({
-        signal: abortController.signal,
-        mode: mode
-      }, options)), function (_window$fetch) {
-        response = _window$fetch;
-      });
-    }, function (e) {
-      if (cancelError && e.name === "AbortError") {
-        throw cancelError;
-      }
-
-      throw e;
-    }), function (_result) {
+    return _await$2(window.fetch(url, _objectSpread2({
+      mode: mode
+    }, options)), function (response) {
       return {
         url: response.url,
         status: response.status,
@@ -717,32 +671,6 @@
     });
   });
 
-  function _catch$1(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  var responseToHeaders = function responseToHeaders(response) {
-    var headers = {};
-    response.headers.forEach(function (value, name) {
-      headers[name] = value;
-    });
-    return headers;
-  };
-
-  function _continue(value, then) {
-    return value && value.then ? value.then(then) : then(value);
-  }
-
   function _async$2(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
@@ -756,6 +684,14 @@
       }
     };
   }
+
+  var responseToHeaders = function responseToHeaders(response) {
+    var headers = {};
+    response.headers.forEach(function (value, name) {
+      headers[name] = value;
+    });
+    return headers;
+  };
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 

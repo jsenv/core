@@ -1,63 +1,74 @@
 (function () {
   'use strict';
 
-  var _defineProperty = (function (obj, key, value) {
-    // Shortcircuit the slow defineProperty path when possible.
-    // We are trying to avoid issues where setters defined on the
-    // prototype cause side effects under the fast path of simple
-    // assignment. By checking for existence of the property with
-    // the in operator, we can optimize most of this overhead away.
-    if (key in obj) {
-      Object.defineProperty(obj, key, {
-        value: value,
-        enumerable: true,
-        configurable: true,
-        writable: true
-      });
-    } else {
-      obj[key] = value;
+  var memoize = function memoize(compute) {
+    var memoized = false;
+    var memoizedValue;
+
+    var fnWithMemoization = function fnWithMemoization() {
+      if (memoized) {
+        return memoizedValue;
+      } // if compute is recursive wait for it to be fully done before storing the lockValue
+      // so set locked later
+
+
+      memoizedValue = compute.apply(void 0, arguments);
+      memoized = true;
+      return memoizedValue;
+    };
+
+    fnWithMemoization.forget = function () {
+      var value = memoizedValue;
+      memoized = false;
+      memoizedValue = undefined;
+      return value;
+    };
+
+    return fnWithMemoization;
+  };
+
+  function _call$2(body, then, direct) {
+    if (direct) {
+      return then ? then(body()) : body();
     }
 
-    return obj;
+    try {
+      var result = Promise.resolve(body());
+      return then ? result.then(then) : result;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  var fetchPolyfill = function fetchPolyfill() {
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    return _call$2(loadPolyfill, function (_ref) {
+      var fetchUsingXHR = _ref.fetchUsingXHR;
+      return fetchUsingXHR.apply(void 0, args);
+    });
+  };
+
+  var loadPolyfill = memoize(function () {
+    return Promise.resolve().then(function () { return fetchUsingXHR$1; });
   });
+  var fetchUrl$1 = typeof window.fetch === "function" && typeof window.AbortController === "function" ? window.fetch : fetchPolyfill;
 
-  function ownKeys(object, enumerableOnly) {
-    var keys = Object.keys(object);
-
-    if (Object.getOwnPropertySymbols) {
-      var symbols = Object.getOwnPropertySymbols(object);
-
-      if (enumerableOnly) {
-        symbols = symbols.filter(function (sym) {
-          return Object.getOwnPropertyDescriptor(object, sym).enumerable;
-        });
+  var createPreference = function createPreference(name) {
+    return {
+      has: function has() {
+        return localStorage.hasOwnProperty(name);
+      },
+      get: function get() {
+        return localStorage.hasOwnProperty(name) ? JSON.parse(localStorage.getItem(name)) : undefined;
+      },
+      set: function set(value) {
+        return localStorage.setItem(name, JSON.stringify(value));
       }
-
-      keys.push.apply(keys, symbols);
-    }
-
-    return keys;
-  }
-
-  function _objectSpread2(target) {
-    for (var i = 1; i < arguments.length; i++) {
-      var source = arguments[i] != null ? arguments[i] : {};
-
-      if (i % 2) {
-        ownKeys(Object(source), true).forEach(function (key) {
-          _defineProperty(target, key, source[key]);
-        });
-      } else if (Object.getOwnPropertyDescriptors) {
-        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
-      } else {
-        ownKeys(Object(source)).forEach(function (key) {
-          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
-        });
-      }
-    }
-
-    return target;
-  }
+    };
+  };
 
   var objectWithoutPropertiesLoose = (function (source, excluded) {
     if (source === null) return {};
@@ -94,191 +105,6 @@
 
     return target;
   });
-
-  var createCancellationToken = function createCancellationToken() {
-    var register = function register(callback) {
-      if (typeof callback !== "function") {
-        throw new Error("callback must be a function, got ".concat(callback));
-      }
-
-      return {
-        callback: callback,
-        unregister: function unregister() {}
-      };
-    };
-
-    var throwIfRequested = function throwIfRequested() {
-      return undefined;
-    };
-
-    return {
-      register: register,
-      cancellationRequested: false,
-      throwIfRequested: throwIfRequested
-    };
-  };
-
-  var nativeTypeOf = function nativeTypeOf(obj) {
-    return typeof obj;
-  };
-
-  var customTypeOf = function customTypeOf(obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-  };
-
-  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
-
-  var isCancelError = function isCancelError(value) {
-    return value && _typeof(value) === "object" && value.name === "CANCEL_ERROR";
-  };
-
-  var memoize = function memoize(compute) {
-    var memoized = false;
-    var memoizedValue;
-
-    var fnWithMemoization = function fnWithMemoization() {
-      if (memoized) {
-        return memoizedValue;
-      } // if compute is recursive wait for it to be fully done before storing the lockValue
-      // so set locked later
-
-
-      memoizedValue = compute.apply(void 0, arguments);
-      memoized = true;
-      return memoizedValue;
-    };
-
-    fnWithMemoization.forget = function () {
-      var value = memoizedValue;
-      memoized = false;
-      memoizedValue = undefined;
-      return value;
-    };
-
-    return fnWithMemoization;
-  };
-
-  var _excluded$1 = ["cancellationToken"];
-
-  function _call$2(body, then, direct) {
-    if (direct) {
-      return then ? then(body()) : body();
-    }
-
-    try {
-      var result = Promise.resolve(body());
-      return then ? result.then(then) : result;
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  }
-
-  function _await$5(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  var fetchNative$1 = _async$5(function (url) {
-
-    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-    var _ref$cancellationToke = _ref.cancellationToken,
-        cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
-        options = _objectWithoutProperties(_ref, _excluded$1);
-
-    var abortController = new AbortController();
-    var cancelError;
-    cancellationToken.register(function (reason) {
-      cancelError = reason;
-      abortController.abort(reason);
-    });
-    var response;
-    return _continue$1(_catch$2(function () {
-      return _await$5(window.fetch(url, _objectSpread2({
-        signal: abortController.signal
-      }, options)), function (_window$fetch) {
-        response = _window$fetch;
-      });
-    }, function (e) {
-      if (cancelError && e.name === "AbortError") {
-        throw cancelError;
-      }
-
-      throw e;
-    }), function (_result) {
-      return response;
-    });
-  });
-
-  function _catch$2(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  var fetchPolyfill = function fetchPolyfill() {
-    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-
-    return _call$2(loadPolyfill, function (_ref2) {
-      var fetchUsingXHR = _ref2.fetchUsingXHR;
-      return fetchUsingXHR.apply(void 0, args);
-    });
-  };
-
-  function _continue$1(value, then) {
-    return value && value.then ? value.then(then) : then(value);
-  }
-
-  var loadPolyfill = memoize(function () {
-    return Promise.resolve().then(function () { return fetchUsingXHR$1; });
-  });
-
-  function _async$5(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  var fetchUrl$1 = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative$1 : fetchPolyfill;
-
-  var createPreference = function createPreference(name) {
-    return {
-      has: function has() {
-        return localStorage.hasOwnProperty(name);
-      },
-      get: function get() {
-        return localStorage.hasOwnProperty(name) ? JSON.parse(localStorage.getItem(name)) : undefined;
-      },
-      set: function set(value) {
-        return localStorage.setItem(name, JSON.stringify(value));
-      }
-    };
-  };
 
   var startJavaScriptAnimation = function startJavaScriptAnimation(_ref6) {
     var _ref6$duration = _ref6.duration,
@@ -345,6 +171,26 @@
     return stop;
   };
 
+  var _defineProperty = (function (obj, key, value) {
+    // Shortcircuit the slow defineProperty path when possible.
+    // We are trying to avoid issues where setters defined on the
+    // prototype cause side effects under the fast path of simple
+    // assignment. By checking for existence of the property with
+    // the in operator, we can optimize most of this overhead away.
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+
+    return obj;
+  });
+
   var createDetailedMessage = function createDetailedMessage(message) {
     var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var string = "".concat(message);
@@ -355,8 +201,53 @@
     return string;
   };
 
-  // fallback to this polyfill (or even use an existing polyfill would be better)
-  // https://github.com/github/fetch/blob/master/fetch.js
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+
+      if (enumerableOnly) {
+        symbols = symbols.filter(function (sym) {
+          return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+        });
+      }
+
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i] != null ? arguments[i] : {};
+
+      if (i % 2) {
+        ownKeys(Object(source), true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(Object(source)).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
+      }
+    }
+
+    return target;
+  }
+
+  var nativeTypeOf = function nativeTypeOf(obj) {
+    return typeof obj;
+  };
+
+  var customTypeOf = function customTypeOf(obj) {
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+  };
+
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
   function _await$4(value, then, direct) {
     if (direct) {
@@ -399,8 +290,7 @@
 
   var fetchUsingXHR = _async$4(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        _ref$cancellationToke = _ref.cancellationToken,
-        cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
+        signal = _ref.signal,
         _ref$method = _ref.method,
         method = _ref$method === void 0 ? "GET" : _ref$method,
         _ref$credentials = _ref.credentials,
@@ -449,9 +339,11 @@
       bodyPromise.resolve();
     };
 
-    cancellationToken.register(function (cancelError) {
+    signal.addEventListener("abort", function () {
       xhr.abort();
-      failure(cancelError);
+      var abortError = new Error("aborted");
+      abortError.name = "AbortError";
+      failure(abortError);
     });
 
     xhr.onreadystatechange = function () {
@@ -796,7 +688,7 @@
     fetchUsingXHR: fetchUsingXHR
   });
 
-  var _excluded = ["cancellationToken", "mode"];
+  var _excluded = ["mode"];
 
   function _await$3(value, then, direct) {
     if (direct) {
@@ -811,36 +703,15 @@
   }
 
   var fetchNative = _async$3(function (url) {
-
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
-    var _ref$cancellationToke = _ref.cancellationToken,
-        cancellationToken = _ref$cancellationToke === void 0 ? createCancellationToken() : _ref$cancellationToke,
-        _ref$mode = _ref.mode,
+    var _ref$mode = _ref.mode,
         mode = _ref$mode === void 0 ? "cors" : _ref$mode,
         options = _objectWithoutProperties(_ref, _excluded);
 
-    var abortController = new AbortController();
-    var cancelError;
-    cancellationToken.register(function (reason) {
-      cancelError = reason;
-      abortController.abort(reason);
-    });
-    var response;
-    return _continue(_catch$1(function () {
-      return _await$3(window.fetch(url, _objectSpread2({
-        signal: abortController.signal,
-        mode: mode
-      }, options)), function (_window$fetch) {
-        response = _window$fetch;
-      });
-    }, function (e) {
-      if (cancelError && e.name === "AbortError") {
-        throw cancelError;
-      }
-
-      throw e;
-    }), function (_result) {
+    return _await$3(window.fetch(url, _objectSpread2({
+      mode: mode
+    }, options)), function (response) {
       return {
         url: response.url,
         status: response.status,
@@ -865,32 +736,6 @@
     });
   });
 
-  function _catch$1(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  var responseToHeaders = function responseToHeaders(response) {
-    var headers = {};
-    response.headers.forEach(function (value, name) {
-      headers[name] = value;
-    });
-    return headers;
-  };
-
-  function _continue(value, then) {
-    return value && value.then ? value.then(then) : then(value);
-  }
-
   function _async$3(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
@@ -904,6 +749,14 @@
       }
     };
   }
+
+  var responseToHeaders = function responseToHeaders(response) {
+    var headers = {};
+    response.headers.forEach(function (value, name) {
+      headers[name] = value;
+    });
+    return headers;
+  };
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
@@ -982,14 +835,14 @@
 
   var fetchExploringJson = _async$1(function () {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        cancellationToken = _ref.cancellationToken;
+        signal = _ref.signal;
 
     return _catch(function () {
       return _await$1(fetchJson("/.jsenv/exploring.json", {
-        cancellationToken: cancellationToken
+        signal: signal
       }));
     }, function (e) {
-      if (isCancelError(e)) {
+      if (signal && signal.aborted && e.name === "AbortError") {
         throw e;
       }
 
