@@ -1,5 +1,5 @@
 /*
-* SJS 6.10.3
+* SJS 6.11.0
 * Minimal SystemJS Build
 */
 (function () {
@@ -598,15 +598,15 @@
   var lastAutoImportDeps, lastAutoImportTimeout;
   var autoImportCandidates = {};
   var systemRegister = systemJSPrototype.register;
-  var inlineScriptCount = 0
+  var inlineScriptCount = 0;
   systemJSPrototype.register = function (deps, declare) {
     if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
       var scripts = document.querySelectorAll('script[src]');
       var lastScript = scripts[scripts.length - 1];
       var lastAutoImportUrl
-      lastAutoImportDeps = deps;
       if (lastScript) {
         lastAutoImportUrl = lastScript.src;
+        lastAutoImportDeps = deps;
       }
       else {
         inlineScriptCount++
@@ -634,27 +634,28 @@
       return autoImportRegistration;
     }
     var loader = this;
-    return new Promise(function (resolve, reject) {
-      var script = systemJSPrototype.createScript(url);
-      script.addEventListener('error', function () {
-        reject(Error(errMsg(3,  [url, firstParentUrl].join(', ') )));
+    return Promise.resolve(systemJSPrototype.createScript(url)).then(function (script) {
+      return new Promise(function (resolve, reject) {
+        script.addEventListener('error', function () {
+          reject(Error(errMsg(3,  [url, firstParentUrl].join(', ') )));
+        });
+        script.addEventListener('load', function () {
+          document.head.removeChild(script);
+          // Note that if an error occurs that isn't caught by this if statement,
+          // that getRegister will return null and a "did not instantiate" error will be thrown.
+          if (lastWindowErrorUrl === url) {
+            reject(lastWindowError);
+          }
+          else {
+            var register = loader.getRegister(url);
+            // Clear any auto import registration for dynamic import scripts during load
+            if (register && register[0] === lastAutoImportDeps)
+              clearTimeout(lastAutoImportTimeout);
+            resolve(register);
+          }
+        });
+        document.head.appendChild(script);
       });
-      script.addEventListener('load', function () {
-        document.head.removeChild(script);
-        // Note that if an error occurs that isn't caught by this if statement,
-        // that getRegister will return null and a "did not instantiate" error will be thrown.
-        if (lastWindowErrorUrl === url) {
-          reject(lastWindowError);
-        }
-        else {
-          var register = loader.getRegister(url);
-          // Clear any auto import registration for dynamic import scripts during load
-          if (register && register[0] === lastAutoImportDeps)
-            clearTimeout(lastAutoImportTimeout);
-          resolve(register);
-        }
-      });
-      document.head.appendChild(script);
     });
   };
 
