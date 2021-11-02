@@ -209,9 +209,6 @@
       "preact/jsx-dev-runtime": [
         "./node_modules/preact/jsx-runtime/dist/jsxRuntime.mjs"
       ],
-      "@jsenv/codecov-upload": [
-        "./node_modules/@jsenv/codecov-upload/index.js"
-      ],
       "@jsenv/eslint-config/*": [
         "./node_modules/@jsenv/eslint-config/*"
       ],
@@ -461,6 +458,9 @@
       "@babel/parser": [
         "./node_modules/@babel/parser/lib/index.js"
       ],
+      "@jsenv/abort/*": [
+        "./node_modules/@jsenv/abort/*"
+      ],
       "@jsenv/assert": [
         "./node_modules/@jsenv/assert/main.js"
       ],
@@ -496,6 +496,9 @@
       ],
       "@babel/core/*": [
         "./node_modules/@babel/core/*"
+      ],
+      "@jsenv/abort": [
+        "./node_modules/@jsenv/abort/main_node.js"
       ],
       "@jsenv/core/*": [
         "./*"

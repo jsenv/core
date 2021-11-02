@@ -27,6 +27,7 @@ export const executeHtmlFile = async (
     coverageConfig,
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable,
+    transformErrorHook,
   },
 ) => {
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
@@ -77,6 +78,7 @@ export const executeHtmlFile = async (
         page,
         collectCoverage,
         coverageConfig,
+        transformErrorHook,
       })
     } else {
       executionResult = await executeCompiledVersion({
@@ -87,6 +89,7 @@ export const executeHtmlFile = async (
         outDirectoryRelativeUrl,
         compileId,
         collectCoverage,
+        transformErrorHook,
       })
     }
 
@@ -148,6 +151,7 @@ const executeSource = async ({
   page,
   collectCoverage,
   coverageConfig,
+  transformErrorHook,
 }) => {
   let transformResult = (result) => result
 
@@ -208,6 +212,7 @@ const executeSource = async ({
     const error = evalException(exceptionSource, {
       projectDirectoryUrl,
       compileServerOrigin,
+      transformErrorHook,
     })
     return transformResult({
       status: "errored",
@@ -230,6 +235,7 @@ const executeCompiledVersion = async ({
   outDirectoryRelativeUrl,
   compileId,
   collectCoverage,
+  transformErrorHook,
 }) => {
   let transformResult = (result) => result
   if (collectCoverage) {
@@ -276,6 +282,7 @@ const executeCompiledVersion = async ({
     const error = evalException(exceptionSource, {
       projectDirectoryUrl,
       compileServerOrigin,
+      transformErrorHook,
     })
     return transformResult({
       status: "errored",
@@ -304,9 +311,9 @@ const generateCoverageForPage = (fileExecutionResultMap) => {
 
 const evalException = (
   exceptionSource,
-  { projectDirectoryUrl, compileServerOrigin },
+  { projectDirectoryUrl, compileServerOrigin, transformErrorHook },
 ) => {
-  const error = evalSource(exceptionSource)
+  let error = evalSource(exceptionSource)
 
   if (error && error instanceof Error) {
     const remoteRootRegexp = new RegExp(
@@ -315,6 +322,8 @@ const evalException = (
     )
     error.stack = error.stack.replace(remoteRootRegexp, projectDirectoryUrl)
     error.message = error.message.replace(remoteRootRegexp, projectDirectoryUrl)
+
+    error = transformErrorHook(error)
   }
 
   return error

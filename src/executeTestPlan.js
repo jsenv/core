@@ -203,11 +203,13 @@ export const executeTestPlan = async ({
         coverageJsonFileRelativeUrl,
         projectDirectoryUrl,
       )
-      if (coverageJsonFileLog) {
-        logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
-      }
       promises.push(
-        generateCoverageJsonFile(result.planCoverage, coverageJsonFileUrl),
+        generateCoverageJsonFile({
+          coverage: result.planCoverage,
+          coverageJsonFileUrl,
+          coverageJsonFileLog,
+          logger,
+        }),
       )
     }
     if (coverage && coverageTextLog) {

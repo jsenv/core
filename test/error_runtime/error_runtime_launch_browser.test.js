@@ -79,9 +79,9 @@ await launchBrowsers(
         const expected = {
           stackType: "string",
           // Webkit omits the error message in the stack trace
-          // during test execution there is a special behaviour to ensure
-          // error.message will appear in error logs when runtime is webkit
-          stackContainsErrorMessage: false,
+          // but we ensure it appears because we rely on it to display
+          // error in logs
+          stackContainsErrorMessage: true,
         }
         assert({ actual, expected })
       }

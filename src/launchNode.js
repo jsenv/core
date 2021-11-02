@@ -213,13 +213,10 @@ const ensureV8CoverageDirClean = async (fn, NODE_V8_COVERAGE) => {
         from: NODE_V8_COVERAGE,
         to: process.env.NODE_V8_COVERAGE,
       })
-      await removeFileSystemNode(NODE_V8_COVERAGE, {
-        allowUseless: true,
-      })
+      await removeFileSystemNode(NODE_V8_COVERAGE, {})
     } else {
       await removeFileSystemNode(NODE_V8_COVERAGE, {
         recursive: true,
-        allowUseless: true,
       })
     }
   }

@@ -275,15 +275,17 @@ webkitRuntime.launch = async ({
     collectCoverage,
     coverageConfig,
     coverageForceIstanbul,
-    errorHook: (error) => {
+    ignoreErrorHook: (error) => {
       // we catch error during execution but safari throw unhandled rejection
       // in a non-deterministic way.
       // I suppose it's due to some race condition to decide if the promise is catched or not
       // for now we'll ignore unhandled rejection on wekbkit
       if (error.name === "Unhandled Promise Rejection") {
-        return null
+        return true
       }
-
+      return false
+    },
+    transformErrorHook: (error) => {
       // Force error stack to contain the error message
       // because it's not the case on webkit
       error.stack = `${error.message}
@@ -385,7 +387,8 @@ const browserToRuntimeHooks = (
     coverageConfig,
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable = false,
-    errorHook = (error) => error,
+    ignoreErrorHook = () => false,
+    transformErrorHook = (error) => error,
   },
 ) => {
   const stoppedSignal = createSignal({ once: true })
@@ -420,8 +423,8 @@ const browserToRuntimeHooks = (
     // track tab error and console
     const stopTrackingToNotify = trackPageToNotify(page, {
       onError: (error) => {
-        error = errorHook(error)
-        if (error) {
+        error = transformErrorHook(error)
+        if (!ignoreErrorHook(error)) {
           errorSignal.emit(error)
         }
       },
@@ -443,6 +446,7 @@ const browserToRuntimeHooks = (
       coverageConfig,
       coverageForceIstanbul,
       coveragePlaywrightAPIAvailable,
+      transformErrorHook,
     })
     return result
   }
