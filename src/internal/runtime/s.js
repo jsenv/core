@@ -604,13 +604,13 @@
       var scripts = document.querySelectorAll('script[src]');
       var lastScript = scripts[scripts.length - 1];
       var lastAutoImportUrl
+      lastAutoImportDeps = deps;
       if (lastScript) {
         lastAutoImportUrl = lastScript.src;
-        lastAutoImportDeps = deps;
       }
       else {
         inlineScriptCount++
-        lastAutoImportUrl = document.location.href + "__inline_script__" + inlineScriptCount ;
+        lastAutoImportUrl = document.location.href + "__inline_script__" + inlineScriptCount;
       }
       // if this is already a System load, then the instantiate has already begun
       // so this re-import has no consequence
