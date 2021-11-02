@@ -6,7 +6,7 @@ jobs:
   perf_impact:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-20.04]
         node: [16.13.0]
     runs-on: ${{ matrix.os }}
     name: performance impact
