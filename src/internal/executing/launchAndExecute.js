@@ -83,19 +83,6 @@ export const launchAndExecute = async ({
     )
   }
 
-  if (measureDuration) {
-    const startMs = Date.now()
-    executionResultTransformer = composeTransformer(
-      executionResultTransformer,
-      (executionResult) => {
-        const endMs = Date.now()
-        executionResult.startMs = startMs
-        executionResult.endMs = endMs
-        return executionResult
-      },
-    )
-  }
-
   if (mirrorConsole) {
     runtimeConsoleCallback = composeCallback(
       runtimeConsoleCallback,
@@ -222,6 +209,19 @@ export const launchAndExecute = async ({
             }),
           )
         }
+      },
+    )
+  }
+
+  if (measureDuration) {
+    const startMs = Date.now()
+    executionResultTransformer = composeTransformer(
+      executionResultTransformer,
+      (executionResult) => {
+        const endMs = Date.now()
+        executionResult.startMs = startMs
+        executionResult.endMs = endMs
+        return executionResult
       },
     )
   }
