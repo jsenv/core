@@ -75,7 +75,7 @@ export const executePlan = async (
   const multipleExecutionsOperation = Abort.startOperation()
   multipleExecutionsOperation.addAbortSignal(signal)
   if (handleSIGINT) {
-    Abort.addAbortSounce(multipleExecutionsOperation, (abort) => {
+    multipleExecutionsOperation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
         {
           SIGINT: true,

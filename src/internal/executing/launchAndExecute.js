@@ -420,22 +420,26 @@ const composeTransformer = (previousTransformer, transformer) => {
 
 const validateLaunchReturnValue = (launchReturnValue) => {
   if (launchReturnValue === null) {
-    throw new Error(`launch must return an object, got null`)
+    throw new Error(`runtime.launch must return an object, got null`)
   }
 
   if (typeof launchReturnValue !== "object") {
-    throw new Error(`launch must return an object, got ${launchReturnValue}`)
+    throw new Error(
+      `runtime.launch must return an object, got ${launchReturnValue}`,
+    )
   }
 
   const { execute } = launchReturnValue
   if (typeof execute !== "function") {
-    throw new Error(`launch must return an execute function, got ${execute}`)
+    throw new Error(
+      `runtime.launch must return an execute function, got ${execute}`,
+    )
   }
 
-  const { createCallbackList } = launchReturnValue
-  if (!createCallbackList) {
+  const { stoppedCallbackList } = launchReturnValue
+  if (!stoppedCallbackList) {
     throw new Error(
-      `launch must return a createCallbackList object, got ${createCallbackList}`,
+      `runtime.launch must return a stoppedCallbackList object, got ${stoppedCallbackList}`,
     )
   }
 }

@@ -433,10 +433,10 @@ const browserToRuntimeHooks = (
       onError: (error) => {
         error = transformErrorHook(error)
         if (!ignoreErrorHook(error)) {
-          errorCallbackList.call(error)
+          errorCallbackList.notify(error)
         }
       },
-      onConsole: outputCallbackList.call,
+      onConsole: outputCallbackList.notify,
     })
     stoppedCallbackList.add(stopTrackingToNotify)
 

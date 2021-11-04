@@ -42,7 +42,7 @@ let nodeRuntimeHooks
 {
   const actual = await Promise.race([
     new Promise((resolve) => {
-      nodeRuntimeHooks.stoppedSignal.addCallback(() => resolve("stopped"))
+      nodeRuntimeHooks.stoppedCallbackList.add(() => resolve("stopped"))
     }),
     new Promise((resolve) => {
       setTimeout(() => resolve("timeout"), 5000)

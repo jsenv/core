@@ -124,7 +124,7 @@ export const createControllableNodeProcess = async ({
   const removeOutputListener = installProcessOutputListener(
     childProcess,
     ({ type, text }) => {
-      outputCallbackList.call({ type, text })
+      outputCallbackList.notify({ type, text })
     },
   )
 
@@ -151,7 +151,7 @@ export const createControllableNodeProcess = async ({
     (winner) => {
       const raceEffects = {
         // disconnect: () => {
-        //   stoppedSignal.emit()
+        //   stoppedCallbackList.notify()
         // },
         error: (error) => {
           removeOutputListener()
@@ -161,7 +161,7 @@ export const createControllableNodeProcess = async ({
           ) {
             return
           }
-          errorCallbackList.call(error)
+          errorCallbackList.notify(error)
         },
         exit: ({ code, signal }) => {
           // process.exit(1) in child process or process.exitCode = 1 + process.exit()
@@ -173,9 +173,9 @@ export const createControllableNodeProcess = async ({
             code !== SIGTERM_EXIT_CODE &&
             code !== SIGABORT_EXIT_CODE
           ) {
-            errorCallbackList.call(createExitWithFailureCodeError(code))
+            errorCallbackList.notify(createExitWithFailureCodeError(code))
           }
-          stoppedCallbackList.call({ code, signal })
+          stoppedCallbackList.notify({ code, signal })
         },
       }
       raceEffects[winner.name](winner.data)
@@ -183,12 +183,12 @@ export const createControllableNodeProcess = async ({
   )
 
   const stop = async ({ gracefulStopAllocatedMs } = {}) => {
-    if (stoppedCallbackList.emitted) {
+    if (stoppedCallbackList.notified) {
       return {}
     }
 
     const createStoppedPromise = async () => {
-      if (stoppedCallbackList.emitted) {
+      if (stoppedCallbackList.notified) {
         return
       }
       await new Promise((resolve) => stoppedCallbackList.add(resolve))
@@ -227,7 +227,7 @@ export const createControllableNodeProcess = async ({
     actionType,
     actionParams,
   }) => {
-    const actionOperation = Abort.startOeration()
+    const actionOperation = Abort.startOperation()
     actionOperation.addAbortSignal(signal)
 
     return new Promise(async (resolve, reject) => {
