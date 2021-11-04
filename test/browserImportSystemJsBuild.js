@@ -1,4 +1,4 @@
-import { startServer, composeServices, serveFile } from "@jsenv/server"
+import { startServer, composeServices, fetchFileSystem } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl, readFile } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
@@ -100,6 +100,6 @@ const serveSystemJS = async ({ request: { ressource } }) => {
 }
 
 const serveTestDirectory = ({ testDirectoryUrl, request }) =>
-  serveFile(request, {
-    rootDirectoryUrl: testDirectoryUrl,
+  fetchFileSystem(new URL(request.ressource.slice(1), testDirectoryUrl), {
+    headers: request.headers,
   })

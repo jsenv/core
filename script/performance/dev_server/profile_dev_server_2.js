@@ -17,7 +17,7 @@ import {
   ensureEmptyDirectory,
 } from "@jsenv/filesystem"
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
-import { serveFile, startServer } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server"
 
 const { serverCertificate, serverCertificatePrivateKey } =
   await requestCertificateForLocalhost()
@@ -46,8 +46,11 @@ await startServer({
   port: 6789,
   sendServerTiming: true,
   requestToResponse: (request) => {
-    return serveFile(request, {
-      rootDirectoryUrl: projectDirectoryUrl,
-    })
+    return fetchFileSystem(
+      new URL(request.ressource.slice(1), projectDirectoryUrl),
+      {
+        headers: request.headers,
+      },
+    )
   },
 })
