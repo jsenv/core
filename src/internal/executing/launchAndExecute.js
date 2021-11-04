@@ -3,6 +3,8 @@ import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { Abort, raceCallbacks } from "@jsenv/abort"
 import { resolveUrl, writeFile } from "@jsenv/filesystem"
 
+import { composeTwoIstanbulCoverages } from "./coverage_utils/istanbul_coverage_composition.js"
+
 export const launchAndExecute = async ({
   signal = new AbortController().signal,
   launchAndExecuteLogLevel,
@@ -130,13 +132,12 @@ export const launchAndExecute = async ({
     executionResultTransformer = composeTransformer(
       executionResultTransformer,
       (executionResult) => {
-        // TODO: re-test and enable this?
-        // const { coverage, ...rest } = executionResult
-        // ensure the coverage of the executed file is taken into account
-        // global.__coverage__ = composeIstanbulCoverages([
-        //   global.__coverage__ || {},
-        //   coverage || {},
-        // ])
+        const { coverage } = executionResult
+        // propagate coverage from execution to this process
+        global.__coverage__ = composeTwoIstanbulCoverages([
+          global.__coverage__ || {},
+          coverage || {},
+        ])
 
         if (!collectCoverageSaved) {
           delete executionResult.coverage
@@ -150,21 +151,18 @@ export const launchAndExecute = async ({
   if (collectCoverage) {
     executionResultTransformer = composeTransformer(
       executionResultTransformer,
-      (executionResult) => {
+      async (executionResult) => {
         // we do not keep coverage in memory, it can grow very big
         // instead we store it on the filesystem, they will be read and merged together later on
         // in "executeConcurrently"
         const { coverage } = executionResult
         if (coverage) {
-          const executionCoverageFileUrl = resolveUrl(
+          const coverageFileUrl = resolveUrl(
             `./${runtime.name}/${cuid()}`,
             coverageTempDirectoryUrl,
           )
-          writeFile(
-            executionCoverageFileUrl,
-            JSON.stringify(coverage, null, "  "),
-          )
-          executionResult.executionCoverageFileUrl = executionCoverageFileUrl
+          await writeFile(coverageFileUrl, JSON.stringify(coverage, null, "  "))
+          executionResult.coverageFileUrl = coverageFileUrl
           delete executionResult.coverage
         }
 
@@ -177,16 +175,15 @@ export const launchAndExecute = async ({
         // This is used by jsenv during tests execution
         const { indirectCoverage } = executionResult
         if (indirectCoverage) {
-          const executionIndirectCoverageFileUrl = resolveUrl(
+          const indirectCoverageFileUrl = resolveUrl(
             `./${runtime.name}/${cuid()}`,
             coverageTempDirectoryUrl,
           )
-          writeFile(
-            executionIndirectCoverageFileUrl,
+          await writeFile(
+            indirectCoverageFileUrl,
             JSON.stringify(indirectCoverage, null, "  "),
           )
-          executionResult.executionIndirectCoverageFileUrl =
-            executionIndirectCoverageFileUrl
+          executionResult.indirectCoverageFileUrl = indirectCoverageFileUrl
           delete executionResult.indirectCoverage
         }
 

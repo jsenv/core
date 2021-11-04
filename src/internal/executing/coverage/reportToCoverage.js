@@ -5,7 +5,7 @@ import { composeTwoV8Coverages } from "../coverage_utils/v8_coverage_composition
 import { composeTwoIstanbulCoverages } from "../coverage_utils/istanbul_coverage_composition.js"
 import { v8CoverageToIstanbul } from "../coverage_utils/v8_coverage_to_istanbul.js"
 import { composeV8AndIstanbul } from "../coverage_utils/v8_and_istanbul.js"
-import { normalizeFileByFileCoverage } from "../coverage_utils/file_by_file_coverage.js"
+import { normalizeFileByFileCoveragePaths } from "../coverage_utils/file_by_file_coverage.js"
 import { listRelativeFileUrlToCover } from "../coverage_empty/list_files_not_covered.js"
 import { relativeUrlToEmptyCoverage } from "../coverage_empty/relativeUrlToEmptyCoverage.js"
 
@@ -93,12 +93,16 @@ export const reportToCoverage = async (
   if (currentV8Coverage) {
     let v8FileByFileCoverage = await v8CoverageToIstanbul(currentV8Coverage)
 
-    v8FileByFileCoverage = normalizeFileByFileCoverage(
+    v8FileByFileCoverage = normalizeFileByFileCoveragePaths(
       v8FileByFileCoverage,
       projectDirectoryUrl,
     )
+
     if (currentIstanbulCoverage) {
-      // it's here that merge conflict can happen
+      currentIstanbulCoverage = normalizeFileByFileCoveragePaths(
+        currentIstanbulCoverage,
+        projectDirectoryUrl,
+      )
       fileByFileCoverage = composeV8AndIstanbul(
         v8FileByFileCoverage,
         currentIstanbulCoverage,
@@ -107,6 +111,12 @@ export const reportToCoverage = async (
     } else {
       fileByFileCoverage = v8FileByFileCoverage
     }
+  } else {
+    fileByFileCoverage =
+      normalizeFileByFileCoveragePaths(
+        currentIstanbulCoverage,
+        projectDirectoryUrl,
+      ) || {}
   }
 
   // now add coverage for file not covered

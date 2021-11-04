@@ -40,18 +40,21 @@ export const v8CoverageToIstanbul = async (v8Coverage) => {
       : istanbulCoverage
   }, Promise.resolve())
 
-  return markCoverageAsConverted(istanbulCoverageComposed)
+  istanbulCoverageComposed = markAsConvertedFromV8(istanbulCoverageComposed)
+
+  return istanbulCoverageComposed
 }
 
-const markCoverageAsConverted = (istanbulCoverage) => {
-  const istanbulCoverageMarked = {}
-  Object.keys(istanbulCoverage).forEach((key) => {
-    istanbulCoverageMarked[key] = {
-      ...istanbulCoverage[key],
+const markAsConvertedFromV8 = (fileByFileCoverage) => {
+  const fileByFileMarked = {}
+  Object.keys(fileByFileCoverage).forEach((key) => {
+    const fileCoverage = fileByFileCoverage[key]
+    fileByFileMarked[key] = {
+      ...fileCoverage,
       fromV8: true,
     }
   })
-  return istanbulCoverageMarked
+  return fileByFileMarked
 }
 
 const sourcesFromSourceMapCache = (url, sourceMapCache) => {
