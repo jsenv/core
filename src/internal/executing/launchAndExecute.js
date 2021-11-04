@@ -1,12 +1,7 @@
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
+import { Abort, raceCallbacks } from "@jsenv/abort"
 
-import { Abortable } from "@jsenv/core/src/abort/main.js"
-import { raceCallbacks } from "../../abort/callback_race.js"
 import { composeIstanbulCoverages } from "./coverage/composeIstanbulCoverages.js"
-
-const TIMING_BEFORE_EXECUTION = "before-execution"
-const TIMING_DURING_EXECUTION = "during-execution"
-const TIMING_AFTER_EXECUTION = "after-execution"
 
 export const launchAndExecute = async ({
   signal = new AbortController().signal,
@@ -32,7 +27,7 @@ export const launchAndExecute = async ({
   // however unit test will pass true because they want to move on
   stopAfterExecute = false,
   stopAfterExecuteReason = "stop after execute",
-  // when launch returns { stoppedSignal, gracefulStop, stop }
+  // when launch returns { stoppedCallbackList, gracefulStop, stop }
   // the launched runtime have that amount of ms for disconnected to resolve
   // before we call stop
   gracefulStopAllocatedMs = 4000,
@@ -60,26 +55,19 @@ export const launchAndExecute = async ({
 
   let executionResultTransformer = (executionResult) => executionResult
 
-  const launchAndExecuteOperation = Abortable.fromSignal(signal)
+  const launchAndExecuteOperation = Abort.startOperation()
+  launchAndExecuteOperation.addAbortSignal(signal)
 
   const hasAllocatedMs =
     typeof allocatedMs === "number" && allocatedMs !== Infinity
-  let timeoutAbortEffect
+  let timeoutAbortSource
 
   if (hasAllocatedMs) {
-    timeoutAbortEffect = Abortable.timeout(
-      launchAndExecuteOperation,
+    timeoutAbortSource = launchAndExecuteOperation.timeout(
       // FIXME: if allocatedMs is veryyyyyy big
       // setTimeout may be called immediatly
       // in that case we should just throw that the number is too big
       allocatedMs,
-    )
-    executionResultTransformer = composeTransformer(
-      executionResultTransformer,
-      (executionResult) => {
-        timeoutAbortEffect.cleanup()
-        return executionResult
-      },
     )
   }
 
@@ -193,26 +181,6 @@ export const launchAndExecute = async ({
     )
   }
 
-  if (stopAfterExecute) {
-    executionResultTransformer = composeTransformer(
-      executionResultTransformer,
-      async (executionResult) => {
-        // if there is an error while cleaning (stopping the runtime)
-        // the execution is considered as failed
-        try {
-          await launchAndExecuteOperation.cleaner.clean(stopAfterExecuteReason)
-          return executionResult
-        } catch (e) {
-          return executionResultTransformer(
-            createErroredExecutionResult({
-              error: e,
-            }),
-          )
-        }
-      },
-    )
-  }
-
   if (measureDuration) {
     const startMs = Date.now()
     executionResultTransformer = composeTransformer(
@@ -230,7 +198,7 @@ export const launchAndExecute = async ({
     const runtimeLabel = `${runtime.name}/${runtime.version}`
     logger.debug(`launch ${runtimeLabel} to execute something in it`)
 
-    Abortable.throwIfAborted(launchAndExecuteOperation)
+    launchAndExecuteOperation.throwIfAborted()
     const launchReturnValue = await runtime.launch({
       signal: launchAndExecuteOperation.signal,
       logger,
@@ -240,14 +208,19 @@ export const launchAndExecute = async ({
       ...runtimeParams,
     })
     validateLaunchReturnValue(launchReturnValue)
-    launchAndExecuteOperation.cleaner.addCallback(async (reason) => {
-      await stopRuntime({
-        logger,
-        runtimeLabel,
-        launchReturnValue,
-        gracefulStopAllocatedMs,
-        reason,
-      })
+
+    const stopRuntime = async (reason) => {
+      const { stop } = launchReturnValue
+      logger.debug(`${runtimeLabel}: stop() because ${reason}`)
+      const { graceful } = await stop({ reason, gracefulStopAllocatedMs })
+      if (graceful) {
+        logger.debug(`${runtimeLabel}: runtime stopped gracefully`)
+      } else {
+        logger.debug(`${runtimeLabel}: runtime stopped`)
+      }
+    }
+    launchAndExecuteOperation.addAbortCallback(async () => {
+      await stopRuntime("Operation aborted")
     })
 
     logger.debug(createDetailedMessage(`${runtimeLabel}: runtime launched`))
@@ -255,9 +228,9 @@ export const launchAndExecute = async ({
 
     logger.debug(`${runtimeLabel}: start execution`)
     const {
-      errorSignal,
-      outputSignal,
-      stoppedSignal,
+      errorCallbackList,
+      outputCallbackList,
+      stoppedCallbackList,
       execute,
       finalizeExecutionResult = (executionResult) => executionResult,
     } = launchReturnValue
@@ -265,104 +238,60 @@ export const launchAndExecute = async ({
       executionResultTransformer,
       finalizeExecutionResult,
     )
-    outputSignal.addCallback(runtimeConsoleCallback)
+    outputCallbackList.add(runtimeConsoleCallback)
 
-    let timing = TIMING_BEFORE_EXECUTION
-    stoppedSignal.addCallback(() => {
-      logger.debug(`${runtimeLabel}: runtime stopped ${timing}`)
-      runtimeStoppedCallback()
+    let executionResult = await callExecute({
+      launchAndExecuteOperation,
+      errorCallbackList,
+      stoppedCallbackList,
+      execute,
+      executeParams,
     })
 
-    const winnerPromise = new Promise((resolve, reject) => {
-      raceCallbacks(
-        {
-          aborted: (cb) => {
-            launchAndExecuteOperation.signal.addEventListener("abort", cb)
-            return () => {
-              launchAndExecuteOperation.signal.removeEventListener("abort", cb)
-            }
-          },
-          error: (cb) => {
-            return errorSignal.addCallback(cb)
-          },
-          stopped: (cb) => {
-            return stoppedSignal.addCallback(cb)
-          },
-          executed: (cb) => {
-            timing = TIMING_DURING_EXECUTION
-            const executed = execute({
-              signal: launchAndExecuteOperation.signal,
-              ...executeParams,
-            })
-            executed.then(cb, reject)
-          },
-        },
-        resolve,
-      )
-    })
-
-    Abortable.throwIfAborted(launchAndExecuteOperation)
-
-    const winner = await winnerPromise
-
-    if (winner.name === "aborted") {
-      Abortable.throwIfAborted(launchAndExecuteOperation)
-    }
-
-    if (winner.name === "error") {
-      return executionResultTransformer(
-        createErroredExecutionResult({
-          error: winner.data,
-        }),
-      )
-    }
-
-    if (winner.name === "stopped") {
-      return executionResultTransformer(
-        createErroredExecutionResult({
-          error: new Error(`runtime stopped during execution`),
-        }),
-      )
-    }
-
-    timing = TIMING_AFTER_EXECUTION
-
-    if (!stopAfterExecute) {
+    if (stopAfterExecute) {
+      // stopping runtime is part of the execution
+      try {
+        await stopRuntime(stopAfterExecuteReason)
+      } catch (e) {
+        executionResult = createErroredExecutionResult({
+          error: e,
+        })
+      }
+    } else {
       // when the process is still alive
       // we want to catch error to notify runtimeErrorAfterExecutionCallback
       // and throw that error by default
-      errorSignal.addCallback((error) => {
+      errorCallbackList.add((error) => {
         runtimeErrorAfterExecutionCallback(error)
+      })
+      stoppedCallbackList.add(() => {
+        logger.debug(`${runtimeLabel}: runtime stopped after execution`)
+        runtimeStoppedCallback()
       })
     }
 
-    const executeResult = winner.data
-    const { status } = executeResult
-
-    if (status === "errored") {
+    if (executionResult.status === "errored") {
       // debug log level because this error happens during execution
       // there is no need to log it.
       // the code will know the execution errored because it receives
       // an errored execution result
       logger.debug(
-        createDetailedMessage(`error ${TIMING_DURING_EXECUTION}`, {
-          ["error stack"]: executeResult.error.stack,
+        createDetailedMessage(`error during execution`, {
+          ["error stack"]: executionResult.error.stack,
           ["execute params"]: JSON.stringify(executeParams, null, "  "),
           ["runtime"]: runtime,
         }),
       )
-      return executionResultTransformer(
-        createErroredExecutionResult(executeResult),
-      )
+    } else {
+      logger.debug(`${runtimeLabel}: execution ${executionResult.status}`)
     }
 
-    logger.debug(`${runtimeLabel}: execution completed`)
-    return executionResultTransformer(
-      createCompletedExecutionResult(executeResult),
-    )
+    return executionResultTransformer(executionResult)
   } catch (e) {
-    if (e.name === "AbortError") {
-      if (timeoutAbortEffect && timeoutAbortEffect.signal.aborted) {
+    if (Abort.isAbortError(e)) {
+      // we should stop runtime too
+
+      if (timeoutAbortSource && timeoutAbortSource.signal.aborted) {
         const executionResult = createTimedoutExecutionResult()
         return executionResultTransformer(executionResult)
       }
@@ -370,24 +299,71 @@ export const launchAndExecute = async ({
       return executionResultTransformer(executionResult)
     }
     throw e
+  } finally {
+    await launchAndExecuteOperation.end()
   }
 }
 
-const stopRuntime = async ({
-  logger,
-  runtimeLabel,
-  launchReturnValue,
-  gracefulStopAllocatedMs,
-  reason,
+const callExecute = async ({
+  launchAndExecuteOperation,
+  errorCallbackList,
+  stoppedCallbackList,
+  execute,
+  executeParams,
 }) => {
-  const { stop } = launchReturnValue
-  logger.debug(`${runtimeLabel}: stop() because ${reason}`)
-  const { graceful } = await stop({ reason, gracefulStopAllocatedMs })
-  if (graceful) {
-    logger.debug(`${runtimeLabel}: runtime stopped gracefully`)
-  } else {
-    logger.debug(`${runtimeLabel}: runtime stopped`)
+  const winnerPromise = new Promise((resolve, reject) => {
+    raceCallbacks(
+      {
+        aborted: (cb) => {
+          launchAndExecuteOperation.signal.addEventListener("abort", cb)
+          return () => {
+            launchAndExecuteOperation.signal.removeEventListener("abort", cb)
+          }
+        },
+        error: (cb) => {
+          return errorCallbackList.add(cb)
+        },
+        stopped: (cb) => {
+          return stoppedCallbackList.add(cb)
+        },
+        executed: (cb) => {
+          const executed = execute({
+            signal: launchAndExecuteOperation.signal,
+            ...executeParams,
+          })
+          executed.then(cb, reject)
+        },
+      },
+      resolve,
+    )
+  })
+
+  launchAndExecuteOperation.throwIfAborted()
+  const winner = await winnerPromise
+
+  if (winner.name === "aborted") {
+    launchAndExecuteOperation.throwIfAborted()
   }
+
+  if (winner.name === "error") {
+    return createErroredExecutionResult({
+      error: winner.data,
+    })
+  }
+
+  if (winner.name === "stopped") {
+    return createErroredExecutionResult({
+      error: new Error(`runtime stopped during execution`),
+    })
+  }
+
+  const executeResult = winner.data
+  const { status } = executeResult
+
+  if (status === "errored") {
+    return createErroredExecutionResult(executeResult)
+  }
+  return createCompletedExecutionResult(executeResult)
 }
 
 const createAbortedExecutionResult = () => {
@@ -456,10 +432,10 @@ const validateLaunchReturnValue = (launchReturnValue) => {
     throw new Error(`launch must return an execute function, got ${execute}`)
   }
 
-  const { stoppedSignal } = launchReturnValue
-  if (!stoppedSignal) {
+  const { createCallbackList } = launchReturnValue
+  if (!createCallbackList) {
     throw new Error(
-      `launch must return a stoppedSignal object, got ${stoppedSignal}`,
+      `launch must return a createCallbackList object, got ${createCallbackList}`,
     )
   }
 }

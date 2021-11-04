@@ -1,12 +1,14 @@
 // https://github.com/microsoft/playwright/blob/master/docs/api.md
 
 import { createDetailedMessage } from "@jsenv/logger"
-
 import {
-  Abortable,
+  Abort,
+  createCallbackListNotifiedOnce,
+  createCallbackList,
   raceProcessTeardownEvents,
-} from "@jsenv/core/src/abort/main.js"
-import { createSignal } from "@jsenv/core/src/signal/signal.js"
+} from "@jsenv/abort"
+import { memoize } from "@jsenv/filesystem"
+
 import { fetchUrl } from "./internal/fetchUrl.js"
 import { validateResponse } from "./internal/response_validation.js"
 import { trackPageToNotify } from "./internal/browser-launcher/trackPageToNotify.js"
@@ -45,7 +47,9 @@ chromiumRuntime.launch = async ({
   stopOnExit = true,
   share = false,
 }) => {
-  const launchBrowserOperation = Abortable.fromSignal(signal)
+  const launchBrowserOperation = Abort.startOperation()
+  launchBrowserOperation.addAbortSignal(signal)
+
   const sharingToken = share
     ? chromiumSharing.getSharingToken({
         chromiumExecutablePath,
@@ -54,9 +58,7 @@ chromiumRuntime.launch = async ({
         debugPort,
       })
     : chromiumSharing.getUniqueSharingToken()
-
   if (!sharingToken.isUsed()) {
-    Abortable.throwIfAborted(launchBrowserOperation)
     const { chromium } = await import("playwright")
     const launchOperation = launchBrowser("chromium", {
       browserClass: chromium,
@@ -77,10 +79,9 @@ chromiumRuntime.launch = async ({
     sharingToken.setSharedValue(launchOperation)
   }
 
-  const [launchOperation, stopUsingBrowser] = sharingToken.useSharedValue()
-  launchBrowserOperation.cleaner.addCallback(stopUsingBrowser)
-
-  const browser = await launchOperation
+  const [browserPromise, stopUsingBrowser] = sharingToken.useSharedValue()
+  launchBrowserOperation.addEndCallback(stopUsingBrowser)
+  const browser = await browserPromise
 
   if (debug) {
     // https://github.com/puppeteer/puppeteer/blob/v2.0.0/docs/api.md#browserwsendpoint
@@ -105,7 +106,6 @@ chromiumRuntime.launch = async ({
   }
 
   const browserHooks = browserToRuntimeHooks(browser, {
-    launchBrowserOperation,
     browserServerLogLevel,
 
     projectDirectoryUrl,
@@ -158,13 +158,13 @@ firefoxRuntime.launch = async ({
   stopOnExit = true,
   share = false,
 }) => {
-  const launchBrowserOperation = Abortable.fromSignal(signal)
+  const launchBrowserOperation = Abort.startOperation()
+  launchBrowserOperation.addAbortSignal(signal)
+
   const sharingToken = share
     ? firefoxSharing.getSharingToken({ firefoxExecutablePath, headless })
     : firefoxSharing.getUniqueSharingToken()
-
   if (!sharingToken.isUsed()) {
-    Abortable.throwIfAborted(launchBrowserOperation)
     const { firefox } = await import("playwright")
     const launchOperation = launchBrowser("firefox", {
       browserClass: firefox,
@@ -179,10 +179,9 @@ firefoxRuntime.launch = async ({
     sharingToken.setSharedValue(launchOperation)
   }
 
-  const [launchOperation, stopUsingBrowser] = sharingToken.useSharedValue()
-  launchBrowserOperation.cleaner.addCallback(stopUsingBrowser)
-
-  const browser = await launchOperation
+  const [browserPromise, stopUsingBrowser] = sharingToken.useSharedValue()
+  launchBrowserOperation.addEndCallback(stopUsingBrowser)
+  const browser = await browserPromise
 
   const browserHooks = browserToRuntimeHooks(browser, {
     launchBrowserOperation,
@@ -237,13 +236,14 @@ webkitRuntime.launch = async ({
   stopOnExit = true,
   share = false,
 }) => {
-  const launchBrowserOperation = Abortable.fromSignal(signal)
+  const launchBrowserOperation = Abort.startOperation()
+  launchBrowserOperation.addAbortSignal(signal)
+
   const sharingToken = share
     ? webkitSharing.getSharingToken({ webkitExecutablePath, headless })
     : webkitSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
-    Abortable.throwIfAborted(launchBrowserOperation)
     const { webkit } = await import("playwright")
     const launchOperation = launchBrowser("webkit", {
       browserClass: webkit,
@@ -257,10 +257,9 @@ webkitRuntime.launch = async ({
     sharingToken.setSharedValue(launchOperation)
   }
 
-  const [launchOperation, stopUsingBrowser] = sharingToken.useSharedValue()
-  launchBrowserOperation.cleaner.addCallback(stopUsingBrowser)
-
-  const browser = await launchOperation
+  const [browserPromise, stopUsingBrowser] = sharingToken.useSharedValue()
+  launchBrowserOperation.addEndCallback(stopUsingBrowser)
+  const browser = await browserPromise
 
   const browserHooks = browserToRuntimeHooks(browser, {
     launchBrowserOperation,
@@ -314,8 +313,8 @@ const launchBrowser = async (
   { launchBrowserOperation, browserClass, options, stopOnExit },
 ) => {
   if (stopOnExit) {
-    Abortable.effect(launchBrowserOperation, (cb) =>
-      raceProcessTeardownEvents(
+    launchBrowserOperation.addAbortSource((abort) => {
+      return raceProcessTeardownEvents(
         {
           SIGHUP: true,
           SIGTERM: true,
@@ -323,9 +322,9 @@ const launchBrowser = async (
           beforeExit: true,
           exit: true,
         },
-        cb,
-      ),
-    )
+        abort,
+      )
+    })
   }
 
   try {
@@ -337,19 +336,16 @@ const launchBrowser = async (
       handleSIGTERM: false,
       handleSIGHUP: false,
     })
-    launchBrowserOperation.cleaner.addCallback(async () => {
-      await stopBrowser(browser)
-    })
-    if (launchBrowserOperation.signal.aborted) {
-      await launchBrowserOperation.cleaner.clean()
-      Abortable.throwIfAborted(launchBrowserOperation)
-    }
+    launchBrowserOperation.throwIfAborted()
     return browser
   } catch (e) {
     if (launchBrowserOperation.signal.aborted && isTargetClosedError(e)) {
-      return e
+      // rethrow the abort error
+      launchBrowserOperation.throwIfAborted()
     }
     throw e
+  } finally {
+    await launchBrowserOperation.end()
   }
 }
 
@@ -375,8 +371,6 @@ const stopBrowser = async (browser) => {
 const browserToRuntimeHooks = (
   browser,
   {
-    launchBrowserOperation,
-
     projectDirectoryUrl,
     compileServerOrigin,
     outDirectoryRelativeUrl,
@@ -391,26 +385,40 @@ const browserToRuntimeHooks = (
     transformErrorHook = (error) => error,
   },
 ) => {
-  const stoppedSignal = createSignal({ once: true })
+  const stopCallbackList = createCallbackListNotifiedOnce()
+  const stoppedCallbackList = createCallbackListNotifiedOnce()
+  const stop = memoize(async (reason) => {
+    await stopCallbackList.notify({ reason })
+    stoppedCallbackList.notify({ reason })
+    return { graceful: false }
+  })
+
   // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-  browser.on("disconnected", stoppedSignal.emit)
+  browser.on("disconnected", () => {
+    stop()
+  })
 
-  const errorSignal = createSignal()
+  stopCallbackList.add(async () => {
+    await stopBrowser(browser)
+  })
 
-  const outputSignal = createSignal()
+  const errorCallbackList = createCallbackList()
+
+  const outputCallbackList = createCallbackList()
 
   const execute = async ({
     signal,
     fileRelativeUrl,
     ignoreHTTPSErrors = true, // we mostly use self signed certificates during tests
   }) => {
-    const executeOperation = Abortable.fromSignal(signal)
-    Abortable.throwIfAborted(executeOperation)
+    const executeOperation = Abort.startOperation()
+    executeOperation.addAbortSignal(signal)
+    executeOperation.throwIfAborted()
     // open a tab to execute to the file
     const browserContext = await browser.newContext({ ignoreHTTPSErrors })
-    Abortable.throwIfAborted(executeOperation)
+    executeOperation.throwIfAborted()
     const page = await browserContext.newPage()
-    launchBrowserOperation.cleaner.addCallback(async () => {
+    executeOperation.addEndCallback(async () => {
       try {
         await browserContext.close()
       } catch (e) {
@@ -425,15 +433,15 @@ const browserToRuntimeHooks = (
       onError: (error) => {
         error = transformErrorHook(error)
         if (!ignoreErrorHook(error)) {
-          errorSignal.emit(error)
+          errorCallbackList.call(error)
         }
       },
-      onConsole: outputSignal.emit,
+      onConsole: outputCallbackList.call,
     })
-    launchBrowserOperation.cleaner.addCallback(stopTrackingToNotify)
+    stoppedCallbackList.add(stopTrackingToNotify)
 
     const result = await executeHtmlFile(fileRelativeUrl, {
-      launchBrowserOperation,
+      executeOperation,
 
       projectDirectoryUrl,
       compileServerOrigin,
@@ -451,17 +459,12 @@ const browserToRuntimeHooks = (
     return result
   }
 
-  Abortable.cleanOnAbort(launchBrowserOperation)
-
   return {
-    stoppedSignal,
-    errorSignal,
-    outputSignal,
+    stoppedCallbackList,
+    errorCallbackList,
+    outputCallbackList,
     execute,
-    stop: async (reason) => {
-      await launchBrowserOperation.cleaner.clean(reason)
-      return { graceful: false }
-    },
+    stop,
   }
 }
 

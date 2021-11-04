@@ -1,7 +1,5 @@
-import {
-  Abortable,
-  raceProcessTeardownEvents,
-} from "@jsenv/core/src/abort/main.js"
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
+
 import { mergeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
 import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
@@ -74,97 +72,99 @@ export const executePlan = async (
     })
   })
 
-  const multipleExecutionsOperation = Abortable.fromSignal(signal)
+  const multipleExecutionsOperation = Abort.startOperation()
+  multipleExecutionsOperation.addAbortSignal(signal)
   if (handleSIGINT) {
-    Abortable.effect(multipleExecutionsOperation, (cb) =>
-      raceProcessTeardownEvents(
+    Abort.addAbortSounce(multipleExecutionsOperation, (abort) => {
+      return raceProcessTeardownEvents(
         {
           SIGINT: true,
         },
         () => {
           logger.info("Aborting execution (SIGINT)")
-          cb()
+          abort()
         },
-      ),
-    )
+      )
+    })
   }
 
-  const compileServer = await startCompileServer({
-    signal: multipleExecutionsOperation.signal,
-    compileServerLogLevel,
-
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    jsenvDirectoryClean,
-    outDirectoryName: "out-dev",
-
-    importResolutionMethod,
-    importDefaultExtension,
-
-    compileServerProtocol,
-    compileServerPrivateKey,
-    compileServerCertificate,
-    compileServerIp,
-    compileServerPort,
-    compileServerCanReadFromFilesystem,
-    compileServerCanWriteOnFilesystem,
-    keepProcessAlive: true, // to be sure it stays alive
-    babelPluginMap,
-    babelConfigFileUrl,
-    customCompilers,
-    runtimeSupport,
-  })
-
-  multipleExecutionsOperation.cleaner.addCallback(async () => {
-    await compileServer.stop()
-  })
-
-  const executionSteps = await generateExecutionSteps(
-    {
-      ...plan,
-      [compileServer.outDirectoryRelativeUrl]: null,
-    },
-    {
+  try {
+    const compileServer = await startCompileServer({
       signal: multipleExecutionsOperation.signal,
+      compileServerLogLevel,
+
       projectDirectoryUrl,
-    },
-  )
+      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryClean,
+      outDirectoryName: "out-dev",
 
-  const result = await executeConcurrently(executionSteps, {
-    multipleExecutionsOperation,
-    logger,
-    launchAndExecuteLogLevel,
+      importResolutionMethod,
+      importDefaultExtension,
 
-    projectDirectoryUrl,
-    compileServerOrigin: compileServer.origin,
-    outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
+      compileServerProtocol,
+      compileServerPrivateKey,
+      compileServerCertificate,
+      compileServerIp,
+      compileServerPort,
+      compileServerCanReadFromFilesystem,
+      compileServerCanWriteOnFilesystem,
+      keepProcessAlive: true, // to be sure it stays alive
+      babelPluginMap,
+      babelConfigFileUrl,
+      customCompilers,
+      runtimeSupport,
+    })
 
-    // not sure we actually have to pass import params to executeConcurrently
-    importResolutionMethod,
-    importDefaultExtension,
+    multipleExecutionsOperation.addEndCallback(async () => {
+      await compileServer.stop()
+    })
 
-    babelPluginMap: compileServer.babelPluginMap,
+    const executionSteps = await generateExecutionSteps(
+      {
+        ...plan,
+        [compileServer.outDirectoryRelativeUrl]: null,
+      },
+      {
+        signal: multipleExecutionsOperation.signal,
+        projectDirectoryUrl,
+      },
+    )
 
-    defaultMsAllocatedPerExecution,
-    maxExecutionsInParallel,
-    completedExecutionLogMerging,
-    completedExecutionLogAbbreviation,
-    logSummary,
-    measureGlobalDuration,
+    const result = await executeConcurrently(executionSteps, {
+      multipleExecutionsOperation,
+      logger,
+      launchAndExecuteLogLevel,
 
-    coverage,
-    coverageConfig,
-    coverageIncludeMissing,
-    coverageForceIstanbul,
-    coverageV8MergeConflictIsExpected,
-  })
+      projectDirectoryUrl,
+      compileServerOrigin: compileServer.origin,
+      outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
 
-  // (used to stop potential chrome browser still opened to be reused)
-  multipleExecutionsOperation.cleaner.clean("all execution done")
+      // not sure we actually have to pass import params to executeConcurrently
+      importResolutionMethod,
+      importDefaultExtension,
 
-  return {
-    planSummary: result.summary,
-    planReport: result.report,
-    planCoverage: result.coverage,
+      babelPluginMap: compileServer.babelPluginMap,
+
+      defaultMsAllocatedPerExecution,
+      maxExecutionsInParallel,
+      completedExecutionLogMerging,
+      completedExecutionLogAbbreviation,
+      logSummary,
+      measureGlobalDuration,
+
+      coverage,
+      coverageConfig,
+      coverageIncludeMissing,
+      coverageForceIstanbul,
+      coverageV8MergeConflictIsExpected,
+    })
+
+    return {
+      planSummary: result.summary,
+      planReport: result.report,
+      planCoverage: result.coverage,
+    }
+  } finally {
+    await multipleExecutionsOperation.end()
   }
 }

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
-  serveFile,
+  fetchFileSystem,
   createSSERoom,
   composeServicesWithTiming,
   urlToContentType,
@@ -23,13 +23,12 @@ import {
   urlIsInsideOf,
   urlToBasename,
 } from "@jsenv/filesystem"
+import { createCallbackList } from "@jsenv/abort"
 
-import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
-import { createCallbackList } from "../createCallbackList.js"
 import {
   jsenvCompileProxyFileInfo,
   sourcemapMainFileInfo,
@@ -46,6 +45,7 @@ import { createTransformHtmlSourceFileService } from "./html_source_file_service
 
 export const startCompileServer = async ({
   signal = new AbortController().signal,
+  handleSIGINT,
   compileServerLogLevel,
 
   projectDirectoryUrl,
@@ -215,12 +215,9 @@ export const startCompileServer = async ({
     ...babelPluginMap,
   }
 
-  const compileServerOperation = Abortable.fromSignal(signal)
-
   let projectFileRequestedCallback = () => {}
   if (livereloadSSE) {
     const sseSetup = setupServerSentEventsForLivereload({
-      compileServerOperation,
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       outDirectoryRelativeUrl,
@@ -230,7 +227,6 @@ export const startCompileServer = async ({
 
     projectFileRequestedCallback = sseSetup.projectFileRequestedCallback
     const serveSSEForLivereload = createSSEForLivereloadService({
-      compileServerOperation,
       outDirectoryRelativeUrl,
       trackMainAndDependencies: sseSetup.trackMainAndDependencies,
     })
@@ -296,7 +292,6 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
     }),
     "service:compiled file": createCompiledFileService({
-      compileServerOperation,
       logger,
 
       projectDirectoryUrl,
@@ -345,9 +340,9 @@ export const startCompileServer = async ({
   }
 
   const compileServer = await startServer({
-    signal: compileServerOperation.signal,
+    signal,
     stopOnExit: false,
-    stopOnSIGINT: false,
+    stopOnSIGINT: handleSIGINT,
     stopOnInternalError: false,
     sendServerInternalErrorDetails: true,
     keepProcessAlive,
@@ -382,7 +377,7 @@ export const startCompileServer = async ({
     }),
     onStop: () => {
       onStop()
-      compileServerOperation.cleaner.clean()
+      // compileServerOperation.cleaner.clean()
     },
   })
 
@@ -582,7 +577,7 @@ const setupServerSentEventsForLivereload = ({
       return
     }
 
-    projectFileRequested.notify(relativeUrl, request)
+    projectFileRequested.notify({ relativeUrl, request })
   }
   const watchDescription = {
     ...livereloadWatchConfig,
@@ -618,7 +613,7 @@ const setupServerSentEventsForLivereload = ({
   }
 
   // each time a file is requested for the first time its dependencySet is computed
-  projectFileRequested.register((mainRelativeUrl) => {
+  projectFileRequested.add(({ relativeUrl: mainRelativeUrl }) => {
     // for now no use case of livereloading on node.js
     // and for browsers only html file can be main files
     // this avoid collecting dependencies of non html files that will never be used
@@ -632,8 +627,8 @@ const setupServerSentEventsForLivereload = ({
     dependencySet.add(mainRelativeUrl)
     trackerMap.set(mainRelativeUrl, dependencySet)
 
-    const unregisterDependencyRequested = projectFileRequested.register(
-      (relativeUrl, request) => {
+    const removeDependencyRequestedCallback = projectFileRequested.add(
+      ({ relativeUrl, request }) => {
         if (dependencySet.has(relativeUrl)) {
           return
         }
@@ -656,10 +651,10 @@ const setupServerSentEventsForLivereload = ({
         dependencySet.add(relativeUrl)
       },
     )
-    const unregisterMainRemoved = projectFileRemoved.register((relativeUrl) => {
+    const removeMainRemovedCallback = projectFileRemoved.add((relativeUrl) => {
       if (relativeUrl === mainRelativeUrl) {
-        unregisterDependencyRequested()
-        unregisterMainRemoved()
+        removeDependencyRequestedCallback()
+        removeMainRemovedCallback()
         trackerMap.delete(mainRelativeUrl)
       }
     })
@@ -671,19 +666,19 @@ const setupServerSentEventsForLivereload = ({
   ) => {
     livereloadLogger.debug(`track ${mainRelativeUrl} and its dependencies`)
 
-    const unregisterModified = projectFileModified.register((relativeUrl) => {
+    const removeModifiedCallback = projectFileModified.add((relativeUrl) => {
       const dependencySet = getDependencySet(mainRelativeUrl)
       if (dependencySet.has(relativeUrl)) {
         modified(relativeUrl)
       }
     })
-    const unregisterRemoved = projectFileRemoved.register((relativeUrl) => {
+    const removeRemovedCallback = projectFileRemoved.add((relativeUrl) => {
       const dependencySet = getDependencySet(mainRelativeUrl)
       if (dependencySet.has(relativeUrl)) {
         removed(relativeUrl)
       }
     })
-    const unregisterAdded = projectFileAdded.register((relativeUrl) => {
+    const removeAddedCallback = projectFileAdded.add((relativeUrl) => {
       const dependencySet = getDependencySet(mainRelativeUrl)
       if (dependencySet.has(relativeUrl)) {
         added(relativeUrl)
@@ -694,9 +689,9 @@ const setupServerSentEventsForLivereload = ({
       livereloadLogger.debug(
         `stop tracking ${mainRelativeUrl} and its dependencies.`,
       )
-      unregisterModified()
-      unregisterRemoved()
-      unregisterAdded()
+      removeModifiedCallback()
+      removeRemovedCallback()
+      removeAddedCallback()
     }
   }
 
@@ -857,10 +852,13 @@ const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {
     const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
     if (urlIsCompilationAsset(requestUrl)) {
-      return serveFile(request, {
-        rootDirectoryUrl: projectDirectoryUrl,
-        etagEnabled: true,
-      })
+      return fetchFileSystem(
+        new URL(request.ressource.slice(1), projectDirectoryUrl),
+        {
+          headers: request.headers,
+          etagEnabled: true,
+        },
+      )
     }
     return null
   }
@@ -916,10 +914,13 @@ const createSourceFileService = ({
     const relativeUrl = ressource.slice(1)
     projectFileRequestedCallback(relativeUrl, request)
 
-    const responsePromise = serveFile(request, {
-      rootDirectoryUrl: projectDirectoryUrl,
-      etagEnabled: projectFileEtagEnabled,
-    })
+    const responsePromise = fetchFileSystem(
+      new URL(request.ressource.slice(1), projectDirectoryUrl),
+      {
+        headers: request.headers,
+        etagEnabled: projectFileEtagEnabled,
+      },
+    )
 
     return responsePromise
   }
@@ -1051,10 +1052,13 @@ const createOutFilesService = async ({
       if (!isOutRootFile(requestUrl)) {
         return null
       }
-      return serveFile(request, {
-        rootDirectoryUrl: projectDirectoryUrl,
-        etagEnabled: true,
-      })
+      return fetchFileSystem(
+        new URL(request.ressource.slice(1), projectDirectoryUrl),
+        {
+          headers: request.headers,
+          etagEnabled: true,
+        },
+      )
     }
   }
   // serve from memory

@@ -132,9 +132,9 @@ nodeRuntime.launch = async ({
   const logLevel = loggerToLogLevel(logger)
   const {
     execArgv,
-    stoppedSignal,
-    errorSignal,
-    outputSignal,
+    stoppedCallbackList,
+    errorCallbackList,
+    outputCallbackList,
     stop,
     requestActionOnChildProcess,
   } = await createControllableNodeProcess({
@@ -193,9 +193,9 @@ nodeRuntime.launch = async ({
       // because process.env is very big
       // env,
     },
-    stoppedSignal,
-    errorSignal,
-    outputSignal,
+    stoppedCallbackList,
+    errorCallbackList,
+    outputCallbackList,
     stop,
     execute,
     finalizeExecutionResult,

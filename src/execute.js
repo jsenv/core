@@ -1,7 +1,5 @@
-import {
-  Abortable,
-  raceProcessTeardownEvents,
-} from "@jsenv/core/src/abort/main.js"
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
+
 import { normalizeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import {
   assertProjectDirectoryUrl,
@@ -58,7 +56,7 @@ export const execute = async ({
   runtimeStartedCallback,
   runtimeStoppedCallback,
   runtimeErrorAfterExecutionCallback,
-  runtimeDisconnectCallback = () => {},
+  runtimeDisconnectCallback,
 }) => {
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
@@ -79,101 +77,99 @@ export const execute = async ({
     )
   }
 
-  const executeOperation = Abortable.fromSignal(signal)
+  const executeOperation = Abort.startOperation()
+  executeOperation.addAbortSignal(signal)
   if (handleSIGINT) {
-    Abortable.effect(executeOperation, (cb) =>
-      raceProcessTeardownEvents(
+    executeOperation.addAbortSource(executeOperation, (abort) => {
+      return raceProcessTeardownEvents(
         {
           SIGINT: true,
         },
-        cb,
-      ),
-    )
+        abort,
+      )
+    })
   }
 
-  const {
-    outDirectoryRelativeUrl,
-    origin: compileServerOrigin,
-    stop,
-  } = await startCompileServer({
-    signal: executeOperation.signal,
-    compileServerLogLevel,
-
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    jsenvDirectoryClean,
-    outDirectoryName: "out-dev",
-
-    importDefaultExtension,
-
-    compileServerProtocol,
-    compileServerPrivateKey,
-    compileServerCertificate,
-    compileServerIp,
-    compileServerPort,
-    babelPluginMap,
-    customCompilers,
-    runtimeSupport: normalizeRuntimeSupport({
-      [runtime.name]: runtime.version,
-    }),
-    compileServerCanReadFromFilesystem,
-    compileServerCanWriteOnFilesystem,
-  })
-  executeOperation.cleaner.addCallback(() => {
-    return stop()
-  })
-
-  const result = await launchAndExecute({
-    signal: executeOperation.signal,
-    launchAndExecuteLogLevel,
-
-    runtime,
-    runtimeParams: {
-      projectDirectoryUrl,
-      compileServerOrigin,
+  try {
+    const {
       outDirectoryRelativeUrl,
-      ...runtimeParams,
-    },
-    executeParams: {
-      fileRelativeUrl,
-    },
+      origin: compileServerOrigin,
+      stop,
+    } = await startCompileServer({
+      signal: executeOperation.signal,
+      compileServerLogLevel,
 
-    allocatedMs,
-    measureDuration,
-    mirrorConsole,
-    captureConsole,
-    collectRuntimeName,
-    collectRuntimeVersion,
-    inheritCoverage,
-    collectCoverage,
-    measurePerformance,
-    collectPerformance,
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryClean,
+      outDirectoryName: "out-dev",
 
-    stopAfterExecute,
-    stopAfterExecuteReason,
-    gracefulStopAllocatedMs,
+      importDefaultExtension,
 
-    runtimeConsoleCallback,
-    runtimeStartedCallback,
-    runtimeStoppedCallback,
-    runtimeErrorAfterExecutionCallback,
-    runtimeDisconnectCallback: () => {
-      // stop server when runtime disconnects
-      executeOperation.cleaner.clean("runtime-stopped")
-      runtimeDisconnectCallback()
-    },
-  })
+      compileServerProtocol,
+      compileServerPrivateKey,
+      compileServerCertificate,
+      compileServerIp,
+      compileServerPort,
+      babelPluginMap,
+      customCompilers,
+      runtimeSupport: normalizeRuntimeSupport({
+        [runtime.name]: runtime.version,
+      }),
+      compileServerCanReadFromFilesystem,
+      compileServerCanWriteOnFilesystem,
+    })
+    executeOperation.addEndCallback(async () => {
+      await stop("execution done")
+    })
 
-  if (collectCompileServerInfo) {
-    result.outDirectoryRelativeUrl = outDirectoryRelativeUrl
-    result.compileServerOrigin = compileServerOrigin
-  }
+    const result = await launchAndExecute({
+      signal: executeOperation.signal,
+      launchAndExecuteLogLevel,
 
-  if (result.status === "errored") {
-    if (ignoreError) {
-      return result
+      runtime,
+      runtimeParams: {
+        projectDirectoryUrl,
+        compileServerOrigin,
+        outDirectoryRelativeUrl,
+        ...runtimeParams,
+      },
+      executeParams: {
+        fileRelativeUrl,
+      },
+
+      allocatedMs,
+      measureDuration,
+      mirrorConsole,
+      captureConsole,
+      collectRuntimeName,
+      collectRuntimeVersion,
+      inheritCoverage,
+      collectCoverage,
+      measurePerformance,
+      collectPerformance,
+
+      stopAfterExecute,
+      stopAfterExecuteReason,
+      gracefulStopAllocatedMs,
+
+      runtimeConsoleCallback,
+      runtimeStartedCallback,
+      runtimeStoppedCallback,
+      runtimeErrorAfterExecutionCallback,
+      runtimeDisconnectCallback,
+    })
+
+    if (collectCompileServerInfo) {
+      result.outDirectoryRelativeUrl = outDirectoryRelativeUrl
+      result.compileServerOrigin = compileServerOrigin
     }
-    /*
+
+    if (result.status === "errored") {
+      if (ignoreError) {
+        return result
+      }
+      /*
     Warning: when node launched with --unhandled-rejections=strict, despites
     this promise being rejected by throw result.error node will compltely ignore it.
 
@@ -185,7 +181,10 @@ export const execute = async ({
     ```
     But it feels like a hack.
     */
-    throw result.error
+      throw result.error
+    }
+    return result
+  } finally {
+    await executeOperation.end()
   }
-  return result
 }

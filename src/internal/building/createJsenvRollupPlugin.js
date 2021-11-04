@@ -1,4 +1,3 @@
-/* eslint-disable import/max-dependencies */
 import { extname } from "node:path"
 import { normalizeImportMap } from "@jsenv/importmap"
 import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
@@ -17,7 +16,6 @@ import {
 import { createWorkersForJavaScriptModules } from "@jsenv/workers"
 import { UNICODE } from "@jsenv/log"
 
-import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
 import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js"
@@ -753,16 +751,13 @@ export const createJsenvRollupPlugin = async ({
 
       let url = asServerUrl(rollupUrl)
 
-      const loadResult = await Abortable.asyncCallback(
-        buildOperation,
-        (signal) => {
-          return urlLoader.loadUrl(rollupUrl, {
-            signal,
-            logger,
-            ressourceBuilder,
-          })
-        },
-      )
+      const loadResult = await buildOperation.withSignal((signal) => {
+        return urlLoader.loadUrl(rollupUrl, {
+          signal,
+          logger,
+          ressourceBuilder,
+        })
+      })
 
       url = loadResult.url
       const code = loadResult.code
