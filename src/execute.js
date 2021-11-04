@@ -80,7 +80,7 @@ export const execute = async ({
   const executeOperation = Abort.startOperation()
   executeOperation.addAbortSignal(signal)
   if (handleSIGINT) {
-    executeOperation.addAbortSource(executeOperation, (abort) => {
+    executeOperation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
         {
           SIGINT: true,
