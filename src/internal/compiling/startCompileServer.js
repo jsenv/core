@@ -23,7 +23,10 @@ import {
   urlIsInsideOf,
   urlToBasename,
 } from "@jsenv/filesystem"
-import { createCallbackList } from "@jsenv/abort"
+import {
+  createCallbackList,
+  createCallbackListNotifiedOnce,
+} from "@jsenv/abort"
 
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
@@ -215,9 +218,12 @@ export const startCompileServer = async ({
     ...babelPluginMap,
   }
 
+  const serverStopCallbackList = createCallbackListNotifiedOnce()
+
   let projectFileRequestedCallback = () => {}
   if (livereloadSSE) {
     const sseSetup = setupServerSentEventsForLivereload({
+      serverStopCallbackList,
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       outDirectoryRelativeUrl,
@@ -227,6 +233,7 @@ export const startCompileServer = async ({
 
     projectFileRequestedCallback = sseSetup.projectFileRequestedCallback
     const serveSSEForLivereload = createSSEForLivereloadService({
+      serverStopCallbackList,
       outDirectoryRelativeUrl,
       trackMainAndDependencies: sseSetup.trackMainAndDependencies,
     })
@@ -375,9 +382,9 @@ export const startCompileServer = async ({
       ...customServices,
       ...jsenvServices,
     }),
-    onStop: () => {
+    onStop: (reason) => {
       onStop()
-      // compileServerOperation.cleaner.clean()
+      serverStopCallbackList.notify(reason)
     },
   })
 
@@ -554,7 +561,7 @@ const compareValueJson = (left, right) => {
  *
  */
 const setupServerSentEventsForLivereload = ({
-  compileServerOperation,
+  serverStopCallbackList,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
@@ -600,7 +607,7 @@ const setupServerSentEventsForLivereload = ({
       recursive: true,
     },
   )
-  compileServerOperation.cleaner.addCallback(unregisterDirectoryLifecyle)
+  serverStopCallbackList.add(unregisterDirectoryLifecyle)
 
   const getDependencySet = (mainRelativeUrl) => {
     if (trackerMap.has(mainRelativeUrl)) {
@@ -763,7 +770,7 @@ const setupServerSentEventsForLivereload = ({
 }
 
 const createSSEForLivereloadService = ({
-  compileServerOperation,
+  serverStopCallbackList,
   outDirectoryRelativeUrl,
   trackMainAndDependencies,
 }) => {
@@ -797,13 +804,11 @@ const createSSEForLivereloadService = ({
       },
     })
 
-    const removeSSECleanupCallback = compileServerOperation.cleaner.addCallback(
-      () => {
-        removeSSECleanupCallback()
-        sseRoom.close()
-        stopTracking()
-      },
-    )
+    const removeSSECleanupCallback = serverStopCallbackList.add(() => {
+      removeSSECleanupCallback()
+      sseRoom.close()
+      stopTracking()
+    })
     cache.push({
       mainFileRelativeUrl,
       sseRoom,
