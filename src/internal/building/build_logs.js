@@ -1,5 +1,6 @@
+import { ANSI, UNICODE } from "@jsenv/log"
+
 import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { setANSIColor, ANSI_GREY, okSign } from "../logs/log_style.js"
 import { byteAsFileSize } from "../logs/byteAsFileSize.js"
 import { msAsDuration } from "../logs/msAsDuration.js"
 import { stringifyUrlSite } from "./url_trace.js"
@@ -47,7 +48,7 @@ export const formatBuildDoneInfo = ({
 }) => {
   return `${formatBuildDoneDetails({ buildStats, buildDirectoryRelativeUrl })}
 ${formatBuildSummary({ buildStats })}
-${okSign} build end
+${UNICODE.OK} build end
 `
 }
 
@@ -107,14 +108,14 @@ const formatBuildSummary = ({ buildStats }) => {
   const buildFileCount = Object.keys(buildFileSizes).length
 
   return `------- build summary -------
-${setANSIColor(
+${ANSI.color(
   `project files:`,
-  ANSI_GREY,
+  ANSI.GREY,
 )} ${projectFileCount} (${byteAsFileSize(projectTotalFileSize)})
-${setANSIColor(`build files:`, ANSI_GREY)} ${buildFileCount} (${byteAsFileSize(
+${ANSI.color(`build files:`, ANSI.GREY)} ${buildFileCount} (${byteAsFileSize(
     buildTotalFileSize,
   )})
-${setANSIColor(`build duration:`, ANSI_GREY)} ${msAsDuration(buildDuration)}
+${ANSI.color(`build duration:`, ANSI.GREY)} ${msAsDuration(buildDuration)}
 ------------------------------`
 }
 

@@ -1,4 +1,4 @@
-import { startServer, composeServices, serveFile } from "@jsenv/server"
+import { startServer, composeServices, fetchFileSystem } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
@@ -91,8 +91,8 @@ const startTestServer = ({ testDirectoryUrl }) => {
     logLevel: "off",
     protocol: "http",
     requestToResponse: composeServices((request) =>
-      serveFile(request, {
-        rootDirectoryUrl: testDirectoryUrl,
+      fetchFileSystem(new URL(request.ressource.slice(1), testDirectoryUrl), {
+        headers: request.headers,
       }),
     ),
   })

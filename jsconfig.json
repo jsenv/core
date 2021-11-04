@@ -527,6 +527,9 @@
       "@jsenv/core": [
         "./main.js"
       ],
+      "@jsenv/log/*": [
+        "./node_modules/@jsenv/log/*"
+      ],
       "@jsenv/pwa/*": [
         "./node_modules/@jsenv/pwa/*"
       ],
@@ -535,6 +538,9 @@
       ],
       "source-map/*": [
         "./node_modules/source-map/*"
+      ],
+      "@jsenv/log": [
+        "./node_modules/@jsenv/log/main.js"
       ],
       "@jsenv/pwa": [
         "./node_modules/@jsenv/pwa/main.js"

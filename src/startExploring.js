@@ -4,10 +4,6 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
-import {
-  Abortable,
-  raceProcessTeardownEvents,
-} from "@jsenv/core/src/abort/main.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import {
   assertProjectDirectoryUrl,
@@ -60,18 +56,6 @@ export const startExploring = async ({
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  const exploringServerOperation = Abortable.fromSignal(signal)
-  if (handleSIGINT) {
-    Abortable.effect(exploringServerOperation, (cb) =>
-      raceProcessTeardownEvents(
-        {
-          SIGINT: true,
-        },
-        cb,
-      ),
-    )
-  }
-
   const outDirectoryRelativeUrl = computeOutDirectoryRelativeUrl({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
@@ -95,7 +79,8 @@ export const startExploring = async ({
   })
 
   const compileServer = await startCompileServer({
-    signal: exploringServerOperation.signal,
+    signal,
+    handleSIGINT,
     keepProcessAlive,
 
     projectDirectoryUrl,

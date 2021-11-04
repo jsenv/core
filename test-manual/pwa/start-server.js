@@ -1,5 +1,10 @@
 import { resolveUrl, readFile, writeFile } from "@jsenv/filesystem"
-import { startServer, serveFile, composeServices, readRequestBody } from "@jsenv/server"
+import {
+  startServer,
+  fetchFileSystem,
+  composeServices,
+  readRequestBody,
+} from "@jsenv/server"
 
 const directoryUrl = resolveUrl("./app/dist/", import.meta.url)
 
@@ -36,10 +41,13 @@ startServer({
       if (ressource === "/") {
         ressource = "/main.html"
       }
-      return serveFile(request, {
-        rootDirectoryUrl: directoryUrl,
-        canReadDirectory: true,
-      })
+      return fetchFileSystem(
+        new URL(request.ressource.slice(1), directoryUrl),
+        {
+          headers: request.headers,
+          canReadDirectory: true,
+        },
+      )
     },
   ),
 })

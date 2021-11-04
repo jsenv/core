@@ -1,4 +1,4 @@
-import { startServer, composeServices, serveFile } from "@jsenv/server"
+import { startServer, composeServices, fetchFileSystem } from "@jsenv/server"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
@@ -90,6 +90,6 @@ const generateIndexPage = () => `<!doctype html>
 </html>`
 
 const serveBuildDirectory = ({ buildDirectoryUrl, request }) =>
-  serveFile(request, {
-    rootDirectoryUrl: buildDirectoryUrl,
+  fetchFileSystem(new URL(request.ressource.slice(1), buildDirectoryUrl), {
+    headers: request.headers,
   })

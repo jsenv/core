@@ -1,10 +1,7 @@
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import {
-  Abortable,
-  raceProcessTeardownEvents,
-} from "@jsenv/core/src/abort/main.js"
 import { COMPILE_ID_BEST } from "./internal/CONSTANTS.js"
 import {
   assertProjectDirectoryUrl,
@@ -136,16 +133,18 @@ export const buildProject = async ({
     projectDirectoryUrl,
   })
 
-  const buildOperation = Abortable.fromSignal(signal)
+  const buildOperation = Abort.startOperation()
+  buildOperation.addAbortSignal(signal)
+
   if (handleSIGINT) {
-    Abortable.effect(buildOperation, (cb) =>
-      raceProcessTeardownEvents(
+    buildOperation.addAbortSource((abort) => {
+      return raceProcessTeardownEvents(
         {
           SIGINT: true,
         },
-        cb,
-      ),
-    )
+        abort,
+      )
+    })
   }
 
   const compileServer = await startCompileServer({
@@ -183,7 +182,7 @@ export const buildProject = async ({
     transformHtmlSourceFiles: false,
   })
 
-  buildOperation.cleaner.addCallback(async () => {
+  buildOperation.addEndCallback(async () => {
     await compileServer.stop(`build cleanup`)
   })
 
@@ -239,13 +238,13 @@ export const buildProject = async ({
 
     return result
   } catch (e) {
-    if (Abortable.isAbortError(e)) {
+    if (Abort.isAbortError(e)) {
       logger.info("build aborted")
       return null
     }
     throw e
   } finally {
-    await buildOperation.cleaner.clean()
+    await buildOperation.end()
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "23.2.2",
+  "version": "23.3.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -52,7 +52,7 @@
     "postpublish": "node ./script/publish/restore_postinstall.mjs"
   },
   "dependencies": {
-    "@babel/core": "7.15.8",
+    "@babel/core": "7.16.0",
     "@babel/helper-module-imports": "7.15.4",
     "@babel/helpers": "7.15.4",
     "@babel/parser": "7.15.8",
@@ -63,11 +63,12 @@
     "@babel/plugin-syntax-numeric-separator": "7.10.4",
     "@babel/plugin-transform-modules-systemjs": "7.15.4",
     "@c88/v8-coverage": "0.1.1",
-    "@jsenv/abort": "1.0.0",
-    "@jsenv/filesystem": "2.3.1",
+    "@jsenv/abort": "4.0.0",
+    "@jsenv/filesystem": "2.5.0",
     "@jsenv/importmap": "1.1.0",
+    "@jsenv/log": "1.1.0",
     "@jsenv/logger": "4.0.1",
-    "@jsenv/server": "9.2.4",
+    "@jsenv/server": "10.0.0",
     "@jsenv/uneval": "1.6.0",
     "@jsenv/workers": "1.2.0",
     "@rollup/plugin-commonjs": "21.0.0",
@@ -79,13 +80,12 @@
     "bytes": "3.1.0",
     "cjs-module-lexer": "1.2.2",
     "construct-style-sheets-polyfill": "3.0.4",
-    "cssnano": "5.0.8",
-    "cssnano-preset-default": "5.1.4",
+    "cssnano": "5.0.9",
+    "cssnano-preset-default": "5.1.5",
     "cuid": "2.1.8",
     "estree-walker": "3.0.0",
     "html-minifier": "4.0.0",
     "humanize-duration": "3.27.0",
-    "is-unicode-supported": "1.1.0",
     "is-valid-identifier": "2.0.2",
     "istanbul-lib-coverage": "3.0.2",
     "istanbul-lib-instrument": "5.0.3",
@@ -105,8 +105,6 @@
     "rollup-plugin-node-globals": "1.4.0",
     "rollup-plugin-polyfill-node": "0.7.0",
     "source-map": "0.7.3",
-    "string-width": "5.0.1",
-    "supports-color": "9.0.2",
     "systemjs": "6.11.0",
     "terser": "5.9.0",
     "v8-to-istanbul": "8.1.0",
@@ -114,7 +112,7 @@
     "wrap-ansi": "8.0.1"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "7.15.8",
+    "@babel/eslint-parser": "7.16.0",
     "@babel/plugin-syntax-jsx": "7.14.5",
     "@babel/plugin-transform-block-scoping": "7.15.3",
     "@babel/plugin-transform-react-jsx": "7.14.9",
@@ -128,7 +126,7 @@
     "@jsenv/importmap-eslint-resolver": "5.1.2",
     "@jsenv/importmap-node-module": "2.4.1",
     "@jsenv/package-publish": "1.6.2",
-    "@jsenv/performance-impact": "2.2.0",
+    "@jsenv/performance-impact": "2.2.1",
     "@jsenv/prettier-check-project": "5.6.1",
     "@jsenv/pwa": "4.0.0",
     "babel-plugin-transform-async-to-promises": "0.8.15",
@@ -141,7 +139,7 @@
     "prettier": "2.4.1",
     "react": "17.0.2",
     "react-dom": "17.0.2",
-    "redux": "4.1.1",
+    "redux": "4.1.2",
     "rollup-plugin-import-assert": "1.1.1"
   }
 }

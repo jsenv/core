@@ -1,7 +1,7 @@
 import { createRequire } from "module"
 
 import { resolveUrl } from "@jsenv/filesystem"
-import { startServer, serveFile } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server"
 
 const require = createRequire(import.meta.url)
 const { chromium } = require("playwright")
@@ -10,8 +10,8 @@ const directoryUrl = resolveUrl("./", import.meta.url)
 
 const server = await startServer({
   requestToResponse: (request) => {
-    return serveFile(request, {
-      rootDirectoryUrl: directoryUrl,
+    return fetchFileSystem(new URL(request.ressource.slice(1), directoryUrl), {
+      headers: request.headers,
       canReadDirectory: true,
     })
   },

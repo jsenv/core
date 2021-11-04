@@ -1,4 +1,5 @@
-import { setANSIColor } from "../logs/log_style.js"
+import { ANSI } from "@jsenv/log"
+
 import { msAsDuration } from "../logs/msAsDuration.js"
 import { EXECUTION_COLORS } from "./execution_colors.js"
 
@@ -39,19 +40,19 @@ export const createSummaryDetails = ({
   cancelledCount,
 }) => {
   if (abortedCount === executionCount) {
-    return `all ${setANSIColor(`aborted`, EXECUTION_COLORS.aborted)}`
+    return `all ${ANSI.color(`aborted`, EXECUTION_COLORS.aborted)}`
   }
   if (timedoutCount === executionCount) {
-    return `all ${setANSIColor(`timed out`, EXECUTION_COLORS.timedout)}`
+    return `all ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`
   }
   if (erroredCount === executionCount) {
-    return `all ${setANSIColor(`errored`, EXECUTION_COLORS.errored)}`
+    return `all ${ANSI.color(`errored`, EXECUTION_COLORS.errored)}`
   }
   if (completedCount === executionCount) {
-    return `all ${setANSIColor(`completed`, EXECUTION_COLORS.completed)}`
+    return `all ${ANSI.color(`completed`, EXECUTION_COLORS.completed)}`
   }
   if (cancelledCount === executionCount) {
-    return `all ${setANSIColor(`cancelled`, EXECUTION_COLORS.cancelled)}`
+    return `all ${ANSI.color(`cancelled`, EXECUTION_COLORS.cancelled)}`
   }
 
   return createMixedDetails({
@@ -75,22 +76,19 @@ const createMixedDetails = ({
 
   if (timedoutCount) {
     parts.push(
-      `${timedoutCount} ${setANSIColor(
-        `timed out`,
-        EXECUTION_COLORS.timedout,
-      )}`,
+      `${timedoutCount} ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`,
     )
   }
 
   if (erroredCount) {
     parts.push(
-      `${erroredCount} ${setANSIColor(`errored`, EXECUTION_COLORS.errored)}`,
+      `${erroredCount} ${ANSI.color(`errored`, EXECUTION_COLORS.errored)}`,
     )
   }
 
   if (completedCount) {
     parts.push(
-      `${completedCount} ${setANSIColor(
+      `${completedCount} ${ANSI.color(
         `completed`,
         EXECUTION_COLORS.completed,
       )}`,
@@ -99,13 +97,13 @@ const createMixedDetails = ({
 
   if (abortedCount) {
     parts.push(
-      `${abortedCount} ${setANSIColor(`aborted`, EXECUTION_COLORS.aborted)}`,
+      `${abortedCount} ${ANSI.color(`aborted`, EXECUTION_COLORS.aborted)}`,
     )
   }
 
   if (cancelledCount) {
     parts.push(
-      `${cancelledCount} ${setANSIColor(
+      `${cancelledCount} ${ANSI.color(
         `cancelled`,
         EXECUTION_COLORS.cancelled,
       )}`,

@@ -1,4 +1,4 @@
-import { serveFile, nextService } from "@jsenv/server"
+import { nextService, fetchFileSystem } from "@jsenv/server"
 import {
   resolveUrl,
   resolveDirectoryUrl,
@@ -88,10 +88,13 @@ export const createCompiledFileService = ({
     // this is just to allow some files to be written inside outDirectory and read directly
     // if asked by the client (such as env.json, groupMap.json, meta.json)
     if (!compileId) {
-      return serveFile(request, {
-        rootDirectoryUrl: projectDirectoryUrl,
-        etagEnabled: true,
-      })
+      return fetchFileSystem(
+        new URL(request.ressource.slice(1), projectDirectoryUrl),
+        {
+          headers: request.headers,
+          etagEnabled: true,
+        },
+      )
     }
 
     const allowedCompileIds = [

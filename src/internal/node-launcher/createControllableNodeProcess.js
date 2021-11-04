@@ -6,10 +6,13 @@ import {
   resolveUrl,
   assertFilePresence,
 } from "@jsenv/filesystem"
+import {
+  Abort,
+  raceCallbacks,
+  createCallbackList,
+  createCallbackListNotifiedOnce,
+} from "@jsenv/abort"
 
-import { Abortable } from "@jsenv/core/src/abort/main.js"
-import { raceCallbacks } from "@jsenv/core/src/abort/callback_race.js"
-import { createSignal } from "@jsenv/core/src/signal/signal.js"
 import { nodeSupportsDynamicImport } from "../runtime/node-feature-detect/nodeSupportsDynamicImport.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { createChildProcessOptions } from "./createChildProcessOptions.js"
@@ -117,19 +120,18 @@ export const createControllableNodeProcess = async ({
     onceProcessMessage(childProcess, "ready", resolve)
   })
 
-  const outputSignal = createSignal()
+  const outputCallbackList = createCallbackList()
   const removeOutputListener = installProcessOutputListener(
     childProcess,
     ({ type, text }) => {
-      outputSignal.emit({ type, text })
+      outputCallbackList.notify({ type, text })
     },
   )
 
-  const errorSignal = createSignal()
+  const errorCallbackList = createCallbackList()
 
-  const stoppedSignal = createSignal({
-    once: true,
-  })
+  const stoppedCallbackList = createCallbackListNotifiedOnce()
+
   raceCallbacks(
     {
       // https://nodejs.org/api/child_process.html#child_process_event_disconnect
@@ -149,7 +151,7 @@ export const createControllableNodeProcess = async ({
     (winner) => {
       const raceEffects = {
         // disconnect: () => {
-        //   stoppedSignal.emit()
+        //   stoppedCallbackList.notify()
         // },
         error: (error) => {
           removeOutputListener()
@@ -159,7 +161,7 @@ export const createControllableNodeProcess = async ({
           ) {
             return
           }
-          errorSignal.emit(error)
+          errorCallbackList.notify(error)
         },
         exit: ({ code, signal }) => {
           // process.exit(1) in child process or process.exitCode = 1 + process.exit()
@@ -171,9 +173,9 @@ export const createControllableNodeProcess = async ({
             code !== SIGTERM_EXIT_CODE &&
             code !== SIGABORT_EXIT_CODE
           ) {
-            errorSignal.emit(createExitWithFailureCodeError(code))
+            errorCallbackList.notify(createExitWithFailureCodeError(code))
           }
-          stoppedSignal.emit({ code, signal })
+          stoppedCallbackList.notify({ code, signal })
         },
       }
       raceEffects[winner.name](winner.data)
@@ -181,15 +183,15 @@ export const createControllableNodeProcess = async ({
   )
 
   const stop = async ({ gracefulStopAllocatedMs } = {}) => {
-    if (stoppedSignal.emitted) {
+    if (stoppedCallbackList.notified) {
       return {}
     }
 
     const createStoppedPromise = async () => {
-      if (stoppedSignal.emitted) {
+      if (stoppedCallbackList.notified) {
         return
       }
-      await new Promise((resolve) => stoppedSignal.addCallback(resolve))
+      await new Promise((resolve) => stoppedCallbackList.add(resolve))
     }
 
     if (gracefulStopAllocatedMs) {
@@ -225,10 +227,11 @@ export const createControllableNodeProcess = async ({
     actionType,
     actionParams,
   }) => {
-    const actionAbortable = Abortable.fromSignal(signal)
+    const actionOperation = Abort.startOperation()
+    actionOperation.addAbortSignal(signal)
 
     return new Promise(async (resolve, reject) => {
-      Abortable.throwIfAborted(actionAbortable)
+      actionOperation.throwIfAborted()
       await childProcessReadyPromise
 
       onceProcessMessage(childProcess, "action-result", ({ status, value }) => {
@@ -247,13 +250,13 @@ export const createControllableNodeProcess = async ({
       )
 
       try {
-        Abortable.throwIfAborted(actionAbortable)
+        actionOperation.throwIfAborted()
         await sendToProcess(childProcess, "action", {
           actionType,
           actionParams,
         })
       } catch (e) {
-        if (actionAbortable.signal.aborted && e.name === "AbortError") {
+        if (Abort.isAbortError(e) && actionOperation.signal.aborted) {
           throw e
         }
         logger.error(
@@ -268,9 +271,9 @@ export const createControllableNodeProcess = async ({
 
   return {
     execArgv,
-    stoppedSignal,
-    errorSignal,
-    outputSignal,
+    stoppedCallbackList,
+    errorCallbackList,
+    outputCallbackList,
     stop,
     requestActionOnChildProcess,
   }

@@ -1,9 +1,5 @@
-import {
-  failureSignColorLess,
-  okSignColorLess,
-  setANSIColor,
-  ANSI_GREY,
-} from "../logs/log_style.js"
+import { ANSI, UNICODE } from "@jsenv/log"
+
 import { msAsDuration } from "../logs/msAsDuration.js"
 import { EXECUTION_COLORS } from "./execution_colors.js"
 import { createSummaryDetails } from "./createSummaryLog.js"
@@ -56,32 +52,32 @@ runtime: ${runtime}${appendDuration({
 
 const descriptionFormatters = {
   aborted: ({ executionNumber, executionCount }) => {
-    return setANSIColor(
-      `${failureSignColorLess} execution ${executionNumber} of ${executionCount} aborted`,
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} execution ${executionNumber} of ${executionCount} aborted`,
       EXECUTION_COLORS.aborted,
     )
   },
   timedout: ({ executionNumber, allocatedMs, executionCount }) => {
-    return setANSIColor(
-      `${failureSignColorLess} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms`,
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms`,
       EXECUTION_COLORS.timedout,
     )
   },
   errored: ({ executionNumber, executionCount }) => {
-    return setANSIColor(
-      `${failureSignColorLess} execution ${executionNumber} of ${executionCount} error`,
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} execution ${executionNumber} of ${executionCount} error`,
       EXECUTION_COLORS.errored,
     )
   },
   completed: ({ executionNumber, executionCount }) => {
-    return setANSIColor(
-      `${okSignColorLess} execution ${executionNumber} of ${executionCount} completed`,
+    return ANSI.color(
+      `${UNICODE.OK_RAW} execution ${executionNumber} of ${executionCount} completed`,
       EXECUTION_COLORS.completed,
     )
   },
   cancelled: ({ executionNumber, executionCount }) => {
-    return setANSIColor(
-      `${failureSignColorLess} execution ${executionNumber} of ${executionCount} cancelled`,
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} execution ${executionNumber} of ${executionCount} cancelled`,
       EXECUTION_COLORS.cancelled,
     )
   },
@@ -105,9 +101,9 @@ const appendConsole = (consoleCalls) => {
   if (consoleOutputTrimmed === "") return ""
 
   return `
-${setANSIColor(`-------- console --------`, ANSI_GREY)}
+${ANSI.color(`-------- console --------`, ANSI.GREY)}
 ${consoleOutputTrimmed}
-${setANSIColor(`-------------------------`, ANSI_GREY)}`
+${ANSI.color(`-------------------------`, ANSI.GREY)}`
 }
 
 const appendError = (error) => {
