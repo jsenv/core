@@ -15,6 +15,7 @@ import {
   urlToMeta,
 } from "@jsenv/filesystem"
 import { createWorkersForJavaScriptModules } from "@jsenv/workers"
+import { UNICODE } from "@jsenv/log"
 
 import { Abortable } from "@jsenv/core/src/abort/main.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
@@ -23,7 +24,6 @@ import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js
 import { stringifyUrlTrace } from "@jsenv/core/src/internal/building/url_trace.js"
 import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { infoSign } from "@jsenv/core/src/internal/logs/log_style.js"
 import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
 
 import {
@@ -1368,7 +1368,7 @@ const prepareEntryPoints = async (
       buildDirectoryUrl,
     )
 
-    logger.debug(`${infoSign} load entry point ${entryProjectRelativeUrl}`)
+    logger.debug(`${UNICODE.INFO} load entry point ${entryProjectRelativeUrl}`)
 
     const entryServerUrl = resolveUrl(
       entryProjectRelativeUrl,

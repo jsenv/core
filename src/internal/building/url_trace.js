@@ -4,8 +4,7 @@
 // https://github.com/babel/babel/blob/eea156b2cb8deecfcf82d52aa1b71ba4995c7d68/packages/babel-code-frame/src/index.js#L1
 
 import { urlToFileSystemPath } from "@jsenv/filesystem"
-
-import { setANSIColor, ANSI_GREY, ANSI_RED } from "../logs/log_style.js"
+import { ANSI } from "@jsenv/log"
 
 export const stringifyUrlTrace = (trace) => {
   let string = ""
@@ -89,8 +88,8 @@ export const showSourceLocation = ({
   let mark = (string) => string
   let aside = (string) => string
   if (color) {
-    mark = (string) => setANSIColor(string, ANSI_RED)
-    aside = (string) => setANSIColor(string, ANSI_GREY)
+    mark = (string) => ANSI.color(string, ANSI.RED)
+    aside = (string) => ANSI.color(string, ANSI.GREY)
   }
 
   const lines = source.split(/\r?\n/)

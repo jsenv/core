@@ -2,10 +2,10 @@ import { stat } from "node:fs"
 import wrapAnsi from "wrap-ansi"
 import { loggerToLevels, createDetailedMessage } from "@jsenv/logger"
 import { urlToFileSystemPath } from "@jsenv/filesystem"
+import { createLog } from "@jsenv/log"
 
 import { launchAndExecute } from "../executing/launchAndExecute.js"
 import { reportToCoverage } from "./coverage/reportToCoverage.js"
-import { writeLog } from "./writeLog.js"
 import { createExecutionResultLog } from "./executionLogs.js"
 import { createSummaryLog } from "./createSummaryLog.js"
 
@@ -173,11 +173,13 @@ export const executeConcurrently = async (
             : true) &&
           executionResult.status === "completed"
         ) {
-          previousExecutionLog = previousExecutionLog.update(log)
+          previousExecutionLog.write(log)
         } else {
-          previousExecutionLog = writeLog(log, {
-            mightUpdate: completedExecutionLogMerging,
-          })
+          if (previousExecutionLog) {
+            previousExecutionLog.destroy()
+          }
+          previousExecutionLog = createLog()
+          previousExecutionLog.write(log)
         }
       }
 
