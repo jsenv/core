@@ -1,8 +1,13 @@
-import { collectFiles } from "@jsenv/filesystem"
+import { readFile } from "@jsenv/filesystem"
 
-import { relativeUrlToEmptyCoverage } from "./relativeUrlToEmptyCoverage.js"
-import { istanbulCoverageFromCoverages } from "./istanbulCoverageFromCoverages.js"
-import { normalizeIstanbulCoverage } from "./normalizeIstanbulCoverage.js"
+import { v8CoverageFromNodeV8Directory } from "../coverage_utils/v8_coverage_from_directory.js"
+import { composeTwoV8Coverages } from "../coverage_utils/v8_coverage_composition.js"
+import { composeTwoIstanbulCoverages } from "../coverage_utils/istanbul_coverage_composition.js"
+import { v8CoverageToIstanbul } from "../coverage_utils/v8_coverage_to_istanbul.js"
+import { composeV8AndIstanbul } from "../coverage_utils/v8_and_istanbul.js"
+import { normalizeFileByFileCoverage } from "../coverage_utils/file_by_file_coverage.js"
+import { listRelativeFileUrlToCover } from "../coverage_empty/list_files_not_covered.js"
+import { relativeUrlToEmptyCoverage } from "../coverage_empty/relativeUrlToEmptyCoverage.js"
 
 export const reportToCoverage = async (
   report,
@@ -13,134 +18,127 @@ export const reportToCoverage = async (
     babelPluginMap,
     coverageConfig,
     coverageIncludeMissing,
+    coverageIgnorePredicate,
+    coverageForceIstanbul,
     coverageV8MergeConflictIsExpected,
   },
 ) => {
-  // here we should forward multipleExecutionsOperation.signal
-  // to allow aborting this too
-  const istanbulCoverageFromExecution = await executionReportToCoverage(
-    report,
-    {
-      logger,
-      projectDirectoryUrl,
-      coverageV8MergeConflictIsExpected,
-    },
-  )
+  let currentV8Coverage
+  let currentIstanbulCoverage
 
-  if (!coverageIncludeMissing) {
-    return istanbulCoverageFromExecution
+  if (!coverageForceIstanbul && process.env.NODE_V8_COVERAGE) {
+    currentV8Coverage = await v8CoverageFromNodeV8Directory({
+      NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE,
+      coverageIgnorePredicate,
+    })
   }
 
-  const relativeFileUrlToCoverArray = await listRelativeFileUrlToCover({
-    multipleExecutionsOperation,
-    projectDirectoryUrl,
-    coverageConfig,
-  })
+  await Object.keys(report).reduce(async (previous, file) => {
+    const executionResultForFile = report[file]
+    await Object.keys(executionResultForFile).reduce(
+      async (previous, executionName) => {
+        const executionResultForFileOnRuntime =
+          executionResultForFile[executionName]
+        const { status, coverageFileUrl } = executionResultForFileOnRuntime
+        if (!coverageFileUrl) {
+          // several reasons not to have coverage here:
+          // 1. the file we executed did not import an instrumented file.
+          // - a test file without import
+          // - a test file importing only file excluded from coverage
+          // - a coverDescription badly configured so that we don't realize
+          // a file should be covered
 
-  const relativeFileUrlMissingCoverageArray =
-    relativeFileUrlToCoverArray.filter((relativeFileUrlToCover) =>
-      Object.keys(istanbulCoverageFromExecution).every((key) => {
-        return key !== `./${relativeFileUrlToCover}`
-      }),
+          // 2. the file we wanted to executed timedout
+          // - infinite loop
+          // - too extensive operation
+          // - a badly configured or too low allocatedMs for that execution.
+
+          // 3. the file we wanted to execute contains syntax-error
+
+          // in any scenario we are fine because
+          // coverDescription will generate empty coverage for files
+          // that were suppose to be coverage but were not.
+
+          if (status === "completed") {
+            logger.warn(
+              `No execution.coverage from execution named "${executionName}" of ${file}`,
+            )
+          }
+          return
+        }
+
+        const executionCoverage = await readFile(coverageFileUrl, {
+          as: "json",
+        })
+
+        if (isV8Coverage(executionCoverage)) {
+          currentV8Coverage = currentV8Coverage
+            ? composeTwoV8Coverages(currentV8Coverage, executionCoverage)
+            : executionCoverage
+        } else {
+          currentIstanbulCoverage = currentIstanbulCoverage
+            ? composeTwoIstanbulCoverages(
+                currentIstanbulCoverage,
+                executionCoverage,
+              )
+            : executionCoverage
+        }
+      },
+      Promise.resolve(),
+    )
+  }, Promise.resolve())
+
+  // now let's try to merge v8 with istanbul, if any
+  let fileByFileCoverage
+  if (currentV8Coverage) {
+    let v8FileByFileCoverage = await v8CoverageToIstanbul(currentV8Coverage)
+
+    v8FileByFileCoverage = normalizeFileByFileCoverage(
+      v8FileByFileCoverage,
+      projectDirectoryUrl,
+    )
+    if (currentIstanbulCoverage) {
+      // it's here that merge conflict can happen
+      fileByFileCoverage = composeV8AndIstanbul(
+        v8FileByFileCoverage,
+        currentIstanbulCoverage,
+        { coverageV8MergeConflictIsExpected },
+      )
+    } else {
+      fileByFileCoverage = v8FileByFileCoverage
+    }
+  }
+
+  // now add coverage for file not covered
+  if (coverageIncludeMissing) {
+    const relativeUrlsToCover = await listRelativeFileUrlToCover({
+      multipleExecutionsOperation,
+      projectDirectoryUrl,
+      coverageConfig,
+    })
+
+    const relativeUrlsMissing = relativeUrlsToCover.filter(
+      (relativeUrlToCover) =>
+        Object.keys(fileByFileCoverage).every((key) => {
+          return key !== `./${relativeUrlToCover}`
+        }),
     )
 
-  const istanbulCoverageFromMissedFiles = {}
-  // maybe we should prefer reduce over Promise.all here
-  // because it creates a LOT of things to do
-  await Promise.all(
-    relativeFileUrlMissingCoverageArray.map(
-      async (relativeFileUrlMissingCoverage) => {
-        const emptyCoverage = await relativeUrlToEmptyCoverage(
-          relativeFileUrlMissingCoverage,
-          {
-            multipleExecutionsOperation,
-            projectDirectoryUrl,
-            babelPluginMap,
-          },
-        )
-        istanbulCoverageFromMissedFiles[relativeFileUrlMissingCoverage] =
-          emptyCoverage
-        return emptyCoverage
-      },
-    ),
-  )
-
-  return {
-    ...istanbulCoverageFromExecution, // already normalized
-    ...normalizeIstanbulCoverage(
-      istanbulCoverageFromMissedFiles,
-      projectDirectoryUrl,
-    ),
-  }
-}
-
-const listRelativeFileUrlToCover = async ({
-  multipleExecutionsOperation,
-  projectDirectoryUrl,
-  coverageConfig,
-}) => {
-  const structuredMetaMapForCoverage = {
-    cover: coverageConfig,
+    await relativeUrlsMissing.reduce(async (previous, relativeUrlMissing) => {
+      const emptyCoverage = await relativeUrlToEmptyCoverage(
+        relativeUrlMissing,
+        {
+          multipleExecutionsOperation,
+          projectDirectoryUrl,
+          babelPluginMap,
+        },
+      )
+      fileByFileCoverage[relativeUrlMissing] = emptyCoverage
+      return emptyCoverage
+    }, Promise.resolve())
   }
 
-  const matchingFileResultArray = await collectFiles({
-    signal: multipleExecutionsOperation.signal,
-    directoryUrl: projectDirectoryUrl,
-    structuredMetaMap: structuredMetaMapForCoverage,
-    predicate: ({ cover }) => cover,
-  })
-
-  return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl)
+  return fileByFileCoverage
 }
 
-const executionReportToCoverage = async (
-  report,
-  { logger, projectDirectoryUrl, coverageV8MergeConflictIsExpected },
-) => {
-  const coverages = []
-
-  Object.keys(report).forEach((file) => {
-    const executionResultForFile = report[file]
-    Object.keys(executionResultForFile).forEach((executionName) => {
-      const executionResultForFileOnRuntime =
-        executionResultForFile[executionName]
-
-      const { status, coverage } = executionResultForFileOnRuntime
-      if (!coverage) {
-        // several reasons not to have coverage here:
-        // 1. the file we executed did not import an instrumented file.
-        // - a test file without import
-        // - a test file importing only file excluded from coverage
-        // - a coverDescription badly configured so that we don't realize
-        // a file should be covered
-
-        // 2. the file we wanted to executed timedout
-        // - infinite loop
-        // - too extensive operation
-        // - a badly configured or too low allocatedMs for that execution.
-
-        // 3. the file we wanted to execute contains syntax-error
-
-        // in any scenario we are fine because
-        // coverDescription will generate empty coverage for files
-        // that were suppose to be coverage but were not.
-
-        if (status === "completed") {
-          logger.warn(
-            `No execution.coverage from execution named "${executionName}" of ${file}`,
-          )
-        }
-        return
-      }
-
-      coverages.push(coverage)
-    })
-  })
-
-  const istanbulCoverage = await istanbulCoverageFromCoverages(coverages, {
-    projectDirectoryUrl,
-    coverageV8MergeConflictIsExpected,
-  })
-
-  return istanbulCoverage
-}
+const isV8Coverage = (coverage) => Boolean(coverage.result)

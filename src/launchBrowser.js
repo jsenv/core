@@ -37,7 +37,7 @@ chromiumRuntime.launch = async ({
   collectPerformance,
   measurePerformance,
   collectCoverage,
-  coverageConfig,
+  coverageIgnorePredicate,
   coverageForceIstanbul,
 
   headless = true,
@@ -115,7 +115,7 @@ chromiumRuntime.launch = async ({
     collectPerformance,
     measurePerformance,
     collectCoverage,
-    coverageConfig,
+    coverageIgnorePredicate,
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable: true,
   })
@@ -151,7 +151,7 @@ firefoxRuntime.launch = async ({
   collectPerformance,
   measurePerformance,
   collectCoverage,
-  coverageConfig,
+  coverageIgnorePredicate,
   coverageForceIstanbul,
 
   headless = true,
@@ -194,7 +194,7 @@ firefoxRuntime.launch = async ({
     collectPerformance,
     measurePerformance,
     collectCoverage,
-    coverageConfig,
+    coverageIgnorePredicate,
     coverageForceIstanbul,
   })
 
@@ -229,7 +229,7 @@ webkitRuntime.launch = async ({
   collectPerformance,
   measurePerformance,
   collectCoverage,
-  coverageConfig,
+  coverageIgnorePredicate,
   coverageForceIstanbul,
 
   headless = true,
@@ -272,7 +272,7 @@ webkitRuntime.launch = async ({
     collectPerformance,
     measurePerformance,
     collectCoverage,
-    coverageConfig,
+    coverageIgnorePredicate,
     coverageForceIstanbul,
     ignoreErrorHook: (error) => {
       // we catch error during execution but safari throw unhandled rejection
@@ -378,7 +378,7 @@ const browserToRuntimeHooks = (
     collectPerformance,
     measurePerformance,
     collectCoverage,
-    coverageConfig,
+    coverageIgnorePredicate,
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable = false,
     ignoreErrorHook = () => false,
@@ -451,9 +451,9 @@ const browserToRuntimeHooks = (
       measurePerformance,
       collectPerformance,
       collectCoverage,
-      coverageConfig,
       coverageForceIstanbul,
       coveragePlaywrightAPIAvailable,
+      coverageIgnorePredicate,
       transformErrorHook,
     })
     return result

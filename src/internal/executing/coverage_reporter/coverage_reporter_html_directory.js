@@ -1,13 +1,17 @@
-import { readFileSync } from "fs"
+import { readFileSync } from "node:fs"
 import { resolveUrl, urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { require } from "../../require.js"
-
 import { istanbulCoverageMapFromCoverage } from "./istanbulCoverageMapFromCoverage.js"
 
 export const generateCoverageHtmlDirectory = async (
   coverage,
-  { projectDirectoryUrl, coverageHtmlDirectoryRelativeUrl, coverageSkipEmpty, coverageSkipFull },
+  {
+    projectDirectoryUrl,
+    coverageHtmlDirectoryRelativeUrl,
+    coverageSkipEmpty,
+    coverageSkipFull,
+  },
 ) => {
   const libReport = require("istanbul-lib-report")
   const reports = require("istanbul-reports")
@@ -16,7 +20,10 @@ export const generateCoverageHtmlDirectory = async (
     dir: urlToFileSystemPath(projectDirectoryUrl),
     coverageMap: istanbulCoverageMapFromCoverage(coverage),
     sourceFinder: (path) => {
-      return readFileSync(urlToFileSystemPath(resolveUrl(path, projectDirectoryUrl)), "utf8")
+      return readFileSync(
+        urlToFileSystemPath(resolveUrl(path, projectDirectoryUrl)),
+        "utf8",
+      )
     },
   })
 

@@ -14,9 +14,9 @@ import {
 } from "./internal/argUtils.js"
 import { executePlan } from "./internal/executing/executePlan.js"
 import { executionIsPassed } from "./internal/executing/executionIsPassed.js"
-import { generateCoverageJsonFile } from "./internal/executing/coverage/generateCoverageJsonFile.js"
-import { generateCoverageHtmlDirectory } from "./internal/executing/coverage/generateCoverageHtmlDirectory.js"
-import { generateCoverageTextLog } from "./internal/executing/coverage/generateCoverageTextLog.js"
+import { generateCoverageJsonFile } from "./internal/executing/coverage_reporter/coverage_reporter_json_file.js"
+import { generateCoverageHtmlDirectory } from "./internal/executing/coverage_reporter/coverage_reporter_html_directory.js"
+import { generateCoverageTextLog } from "./internal/executing/coverage_reporter/coverage_reporter_text_log.js"
 import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 
 export const executeTestPlan = async ({
@@ -44,18 +44,18 @@ export const executeTestPlan = async ({
 
   coverage = process.argv.includes("--cover") ||
     process.argv.includes("--coverage"),
+  coverageTempDirectoryRelativeUrl = "./coverage/tmp/",
   coverageConfig = jsenvCoverageConfig,
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
   coverageForceIstanbul = false,
   coverageV8MergeConflictIsExpected = false,
-
   coverageTextLog = true,
   coverageJsonFile = Boolean(process.env.CI),
   coverageJsonFileLog = true,
   coverageJsonFileRelativeUrl = "./coverage/coverage.json",
   coverageHtmlDirectory = !process.env.CI,
-  coverageHtmlDirectoryRelativeUrl = "./coverage",
+  coverageHtmlDirectoryRelativeUrl = "./coverage/",
   coverageHtmlDirectoryIndexLog = true,
   // skip empty means empty files won't appear in the coverage reports (log and html)
   coverageSkipEmpty = false,
@@ -154,6 +154,7 @@ export const executeTestPlan = async ({
     coverageIncludeMissing,
     coverageForceIstanbul,
     coverageV8MergeConflictIsExpected,
+    coverageTempDirectoryRelativeUrl,
 
     jsenvDirectoryClean,
     compileServerProtocol,
@@ -173,7 +174,7 @@ export const executeTestPlan = async ({
   }
 
   const planCoverage = result.planCoverage
-  // planCoverage can be null when execution is abortes
+  // planCoverage can be null when execution is aborted
   if (planCoverage) {
     const promises = []
     // keep this one first because it does ensureEmptyDirectory
