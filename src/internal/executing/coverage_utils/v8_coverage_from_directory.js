@@ -29,6 +29,7 @@ export const visitNodeV8Directory = async ({
     const tryReadJsonFile = async () => {
       const fileContent = await readFile(dirEntryUrl, { as: "string" })
       if (fileContent === "") {
+        console.warn(`Coverage JSON file is empty at ${dirEntryUrl}`)
         return null
       }
 
