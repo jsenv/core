@@ -88,7 +88,9 @@ export const executeConcurrently = async (
 
   if (coverage) {
     // in case runned multiple times, we don't want to keep writing lot of files in this directory
-    await ensureEmptyDirectory(coverageTempDirectoryUrl)
+    if (!process.env.NODE_V8_COVERAGE) {
+      await ensureEmptyDirectory(coverageTempDirectoryUrl)
+    }
 
     if (runtimeSupport.node) {
       // v8 coverage is written in a directoy and auto propagate to subprocesses
